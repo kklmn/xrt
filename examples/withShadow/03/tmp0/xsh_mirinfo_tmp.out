@@ -1,0 +1,38 @@
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+ ********************   MIRROR  DESCRIPTION   ********************
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+ mirinfo called from SHADOW VUI                                                  
+                                                                                 
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+ Input file specified:end.02                                  
+ Full file Specification :/ALBA/RAY-TRACING/WITHPYTHON/03-DCM-ENERGY/TMP0/end.02      
+ Creation Date           :                 
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+
+ Surface figure was defined as:        PLANE               
+ Cylindrical figure                      YES
+ Cylinder axis angle from X-axis          0.
+ Element type                            REFLECTOR
+ Element type                            CRYSTAL
+ Lattice Spacing                          3.13560086E-08
+ Bragg Reflection from                  
+ Si111.rc                                                                        
+ Reflectivity      ON     coefficients from: 
+ Si111.rc                                                                        
+ Polarization dependence                 YES
+ Mirror dimensions                       UNLIMITED
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+ Central Axis parameters :
+ Source Plane Distance                     20.
+ Image  Plane                              14.
+ Incidence Angle                           70.7584714
+ Reflection/Diffraction Angle              70.7584714
+  
+ Mirror parameters                       EXTERNAL
+ Parameters used follow:
+    Plane mirror 
+ Source of this O.E. moved               NO
+ Mirror at pole position ( no mov. )     YES
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+ ***************                 E N D                  ***************
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        

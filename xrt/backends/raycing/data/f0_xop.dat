@@ -1,0 +1,1136 @@
+#F f0_dabax.dat
+#D Fri May  2 09:38:54 2008
+#UT Parametrization of f0 (the non-dispersive part of the atomic scttering factor) vs sin(theta/lambda).
+#UF0TYPE PARAMETRIZATION ; TABLE OR PARAMETRIZATION? 
+#UIDL xf0
+#C This file has been created using f0_xop.pro 
+#C  This file belongs to the DABAX library. More information on
+#C  DABAX can be found at:
+#C  http://ftp.esrf.eu/pub/scisoft/DabaxFiles/
+#UD Parametrization of f0 (the non-dispersive part of the atomic scttering factor) vs sin(theta/lambda).
+#UD This file contains a Waasmaier&Kirfel-like parametrization 
+#UD for the f0 data evaluated by Kissel using modified relativistic form
+#UD factor [1]. For the fitting, model and the data error as in [2] are used.
+#UD The parametrization was calculating by fitting the 
+#UD original data in the RTAB database [1] (also in the DABAX file
+#UD f0_mf_Kissel.dat) using the MPFIT IDL procedure of Markwardt
+#UD (http://cow.physics.wisc.edu/~craigm/idl/idl.html) usind the 
+#UD function [2]:
+#UD    f0[k] = c + [SUM a_i*EXP(-b_i*(k^2)) ]
+#UD                i=1,5
+#UD
+#UD  where k = sin(theta) / lambda and c, a_i and b_i
+#UD  are the coefficients tabulated in this file (in columns:
+#UD  a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UD 
+#UD References
+#UD [1] L. Kissel, Radiation physics and chemistry 59 (2000) 185-200
+#UD     available at: 
+#UD     http://www-phys.llnl.gov/Research/scattering/RTAB.html
+#UD [2] D. Waasmaier & A. Kirfel (Acta Cryst. (1995). A51, 416-413)
+#UD 
+#UD 
+#UD  Remarks:
+#UD  1) This file contains data for only neutral atoms. For ionic states
+#UD     other DABAX files (like f0_WaasKirf.dat) could be used. 
+#UD  2) The coefficients in this file are prepared for xop2.1 and are
+#UD     unpublished. Some fitting parameters can be found in the keywords
+#UD     for each element. The IDL program used to create it is available
+#UD     under request (contact srio@esrf.fr) 
+#UD  3) We created this file for being used as a default for XOP2.1. The 
+#UD     reasons were two:
+#UD     i) It is more practical to use a parametrization rather than to use 
+#UD        the direct fata in file f0_mf.dat because of spped and storage 
+#UD        reasons. 
+#UD     ii) The previous defaulty file for XOP 2.0 was f0_WaasKirf.dat, which
+#UD        contained a published parametrization [2], but the original data 
+#UD        is from the International Tables for X-ray Crystallography, vol C,
+#UD        (1995) Edited by AJC Wilson, Kluwer Academic Press, table 6.1.1.3
+#UD        which contains data from multiple origins (and references). We 
+#UD        prefer to use evaluated data in the same conditions for all elements
+#UD        to keep some consistency in their origin.
+#UD        Additionally, Kissel data for f1f2 and CrossSec are also used in XOP.
+#UD 
+#UD Column description: a1  a2  a3  a4  a5  c  b1  b2  b3 b4  b5
+#UD 
+#UD 
+#UD Modified 2005-05-02 srio@esrf.eu, fixed WaasKird data in guess keyword
+
+#S  1  H 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           41
+#UO MPFIT Parameter error: [0.028242309,0.020248385,0.014038977,0.028629525,0.0023277653,6.4330346e-05,0.86729996,1.7325327,0.37672770,3.1751691,0.12257234]
+#UO MPFIT Standard Dev:    1.1616029e-05
+#UO MPFIT Max relative dev:        10.269206
+#UO MPFIT Average relative dev:       0.68612216
+#UP MPFIT guess (Waasmaier&Kirfel) data:      0.41304800     0.29495300     0.18749100     0.08070100     0.02373600     0.00004900    15.56994600    32.39846800     5.71140400    61.88987400     1.33411800
+     0.30426303     0.45440815     0.07977026     0.15268426     0.00871624     0.00006937     9.61768510    23.52152246     3.33237545    53.49579285     0.80301704
+#S  2  He
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           19
+#UO MPFIT Parameter error: [0.016736395,0.017749382,0.015191345,0.020244339,0.0031724104,8.9721539e-05,0.33981851,0.15627573,0.058098516,0.67729736,0.018744624]
+#UO MPFIT Standard Dev:    3.0709220e-05
+#UO MPFIT Max relative dev:        2.0887328
+#UO MPFIT Average relative dev:       0.13728398
+#UP MPFIT guess (Waasmaier&Kirfel) data:      0.73235400     0.75389600     0.28381900     0.19000300     0.03913900     0.00048700    11.55391800     4.59583100     1.54629900    26.46396400     0.37752300
+     0.79971010     0.63926998     0.25291139     0.27260951     0.03475295     0.00044196    10.35354478     3.93677741     1.38554540    25.50380187     0.34363759
+#S  3  Li
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           13
+#UO MPFIT Parameter error: [0.0050036842,0.0022863967,0.018499716,0.018885788,0.0037823269,8.9568668e-05,0.015837983,0.0030801135,0.95469155,3.3852740,0.0083249231]
+#UO MPFIT Standard Dev:    0.00044095927
+#UO MPFIT Max relative dev:        2.1208866
+#UO MPFIT Average relative dev:       0.15257155
+#UP MPFIT guess (Waasmaier&Kirfel) data:      0.97463700     0.15847200     0.81185500     0.26241600     0.79010800     0.00254200     4.33494600     0.34245100    97.10296600   201.36383100     1.40923400
+     0.93188799     0.17034671     0.71602201     0.35839485     0.82020547     0.00260460     4.17494209     0.33818181    85.52950781   175.66836887     1.37984909
+#S  4  Be
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            7
+#UO MPFIT Parameter error: [0.0085500529,0.0047641311,0.0088815852,0.0038541638,0.0072350810,0.00016266461,0.13671716,0.0067767463,0.49716758,0.0029587052,0.0080516167]
+#UO MPFIT Standard Dev:    0.00011150408
+#UO MPFIT Max relative dev:       0.35613746
+#UO MPFIT Average relative dev:      0.020819180
+#UP MPFIT guess (Waasmaier&Kirfel) data:      1.53371200     0.63828300     0.60105200     0.10613900     1.11841400     0.00251100    42.66207900     0.59542000    99.10649900     0.15134000     1.84309300
+     1.35769775     0.71952631     0.76849159     0.14970777     0.99985829     0.00347440    37.89541686     0.66643295    92.11060309     0.17800503     1.90321664
+#S  5  B 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            8
+#UO MPFIT Parameter error: [0.0037448963,0.012340197,0.0040320409,0.0069991748,0.0074347357,0.00032101190,0.030779507,0.0075726446,0.16044276,0.0032038851,0.0073583412]
+#UO MPFIT Standard Dev:    0.00057588270
+#UO MPFIT Max relative dev:      0.095347398
+#UO MPFIT Average relative dev:     0.0050482728
+#UP MPFIT guess (Waasmaier&Kirfel) data:      2.08518500     1.06458000     1.06278800     0.14051500     0.64178400     0.00382300    23.49406800     1.13789400    61.23897600     0.11488600     0.39903600
+     2.11021585     0.94826030     1.03175074     0.17991800     0.72039282     0.00538888    21.36228681     1.17425000    65.42872639     0.12888999     0.44259026
+#S  6  C 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          130
+#UO MPFIT Parameter error: [0.0031954619,0.0045084443,0.0034379351,5310.0977,0.0040101797,5310.0988,0.013130263,0.0023668901,0.072282004,0.0019445261,0.0013928753]
+#UO MPFIT Standard Dev:     0.0014607438
+#UO MPFIT Max relative dev:       0.23856377
+#UO MPFIT Average relative dev:      0.014253162
+#UP MPFIT guess (Waasmaier&Kirfel) data:      2.65750600     1.07807900     1.49090900    -4.24107000     0.71379100     4.29798300    14.78075800     0.77677500    42.08684200    -0.00029400     0.23953500
+     2.75491071     1.06083859     1.39000885   -61.38969569     0.72824752    61.44921510    13.55853062     0.76518509    43.40152845    -0.00002249     0.23756415
+#S  7  N 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           95
+#UO MPFIT Parameter error: [0.0031499736,0.014796608,0.015971976,0.026347319,0.0028873001,0.00023637695,0.00057526138,0.17499855,0.47264382,0.036065768,0.0012390661]
+#UO MPFIT Standard Dev:    0.00018562500
+#UO MPFIT Max relative dev:       0.16323054
+#UO MPFIT Average relative dev:      0.010618552
+#UP MPFIT guess (Waasmaier&Kirfel) data:     11.89378000     3.27747900     1.85809200     0.85892700     0.91298500   -11.80490200     0.00015800    10.23272300    30.34469000     0.65606500     0.21728700
+     0.59731711     2.28313328     0.63580984     2.26859990     1.18920099     0.02241857     0.13665445    17.86124963    47.32019642     7.67047709     0.49262938
+#S  8  O 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            8
+#UO MPFIT Parameter error: [0.013715634,0.023505099,0.0043571911,0.013688094,0.0041327877,0.00036514444,0.090821120,0.021411812,0.00062419672,0.25121764,0.0012955191]
+#UO MPFIT Standard Dev:    9.1789663e-05
+#UO MPFIT Max relative dev:      0.070130529
+#UO MPFIT Average relative dev:     0.0045335268
+#UP MPFIT guess (Waasmaier&Kirfel) data:      2.96042700     2.50881800     0.63785300     0.72283800     1.14275600     0.02701400    14.18225900     5.93685800     0.11272600    34.95848100     0.39024000
+     2.85010001     2.54410664     0.64919585     0.79765894     1.12558170     0.02853916    12.89518279     5.45538842     0.11296751    35.32893278     0.38721225
+#S  9  F 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.013191490,0.021742494,0.0063541073,0.012256233,0.0061735716,0.00059448818,0.053926653,0.014254831,0.00072822774,0.15194468,0.0015433567]
+#UO MPFIT Standard Dev:    8.4747049e-05
+#UO MPFIT Max relative dev:      0.034964156
+#UO MPFIT Average relative dev:     0.0021204799
+#UP MPFIT guess (Waasmaier&Kirfel) data:      3.51194300     2.77224400     0.67838500     0.91515900     1.08926100     0.03255700    10.68785900     4.38046600     0.09398200    27.25520300     0.31306600
+     3.40542650     2.84112029     0.71156027     0.94857450     1.05115146     0.03584797     9.84065316     4.07801707     0.09701872    27.57669889     0.31753486
+#S  10  Ne
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.012301349,0.019749095,0.0090530676,0.011234409,0.0089321736,0.00090513934,0.034425791,0.0097822820,0.00083678967,0.10019532,0.0019371209]
+#UO MPFIT Standard Dev:    0.00010011184
+#UO MPFIT Max relative dev:      0.019961481
+#UO MPFIT Average relative dev:     0.0013701636
+#UP MPFIT guess (Waasmaier&Kirfel) data:      4.18374900     2.90572600     0.52051300     1.13564100     1.22806500     0.02557600     8.17545700     3.25253600     0.06329500    21.81391000     0.22495200
+     3.93418627     3.17292749     0.78988890     1.08878497     0.96122888     0.04476065     7.82568355     3.17536738     0.08620371    22.24803408     0.27139624
+#S  11  Na
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           21
+#UO MPFIT Parameter error: [0.0073820342,0.0082362329,0.0049820313,0.00069834822,0.0042906164,0.00053967056,0.0039141290,0.012048048,0.00037619874,0.13832723,0.0032679105]
+#UO MPFIT Standard Dev:     0.0016371913
+#UO MPFIT Max relative dev:      0.055164507
+#UO MPFIT Average relative dev:     0.0046937758
+#UP MPFIT guess (Waasmaier&Kirfel) data:      4.91012700     3.08178300     1.26206700     1.09893800     0.56099100     0.07971200     3.28143400     9.11917800     0.10276300   132.01394700     0.40587800
+     4.67888021     3.31246434     1.20302749     1.11030781     0.60080617     0.07903453     2.97160025     8.01401365     0.09917076   119.87596938     0.36875620
+#S  12  Mg
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           22
+#UO MPFIT Parameter error: [0.0097797215,0.0080000741,0.00042140232,0.0067205062,0.011050793,0.00024935888,0.0067390780,0.28132385,7.8678839e-05,0.23014769,0.0032535814]
+#UO MPFIT Standard Dev:     0.0021508631
+#UO MPFIT Max relative dev:       0.13665462
+#UO MPFIT Average relative dev:      0.010581125
+#UP MPFIT guess (Waasmaier&Kirfel) data:      4.70897100     1.19481400     1.55815700     1.17041300     3.23940300     0.12684200     4.87520700   108.50608100     0.11151600    48.29240800     1.92817100
+     4.85834741     1.50402245     1.53555848     0.95416075     3.00404753     0.13060425     4.35307904    95.26343316     0.11044872    31.99246407     1.75670443
+#S  13  Al
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.012537082,0.0052685054,0.00046052639,0.0060045160,0.012955993,0.00032509618,0.0051052061,0.076899895,8.2981564e-05,0.38077557,0.0029285580]
+#UO MPFIT Standard Dev:    0.00087736182
+#UO MPFIT Max relative dev:      0.076215594
+#UO MPFIT Average relative dev:     0.0059028836
+#UP MPFIT guess (Waasmaier&Kirfel) data:      4.73079600     2.31395100     1.54198000     1.11756400     3.15475400     0.13950900     3.62893100    43.05116700     0.09596000   108.93238800     1.55591800
+     4.68669359     2.38879059     1.52287056     1.07903978     3.16354871     0.14361992     3.40015051    36.83643520     0.09557493   114.27524168     1.47492947
+#S  14  Si
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            8
+#UO MPFIT Parameter error: [0.017371199,0.0057486838,0.00057743917,0.0064280011,0.017522374,0.00045452533,0.0042032449,0.044414012,9.5378418e-05,0.26813513,0.0034319157]
+#UO MPFIT Standard Dev:    0.00028476605
+#UO MPFIT Max relative dev:      0.041621457
+#UO MPFIT Average relative dev:     0.0029038668
+#UP MPFIT guess (Waasmaier&Kirfel) data:      5.27532900     3.19103800     1.51151400     1.35684900     2.51911400     0.14507300     2.63133800    33.73072800     0.08111900    86.28864300     1.17008700
+     4.98816795     3.35710271     1.50292204     1.22172882     2.76143663     0.15142442     2.53600438    29.97580504     0.08254945    88.73513838     1.16712390
+#S  15  P 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            6
+#UO MPFIT Parameter error: [0.020302860,0.0057401072,0.00076299613,0.0063329229,0.020592658,0.00071842888,0.0041600214,0.026009430,0.00012429504,0.18346740,0.0030640807]
+#UO MPFIT Standard Dev:    0.00015148159
+#UO MPFIT Max relative dev:      0.018689241
+#UO MPFIT Average relative dev:     0.0012559285
+#UP MPFIT guess (Waasmaier&Kirfel) data:      1.95054100     4.14693000     1.49456000     1.52204200     5.72971100     0.15523300     0.90813900    27.04495200     0.07128000    67.52018700     1.98117300
+     2.10509260     4.36716206     1.48028761     1.33409382     5.53780604     0.15604602     0.89460753    24.41881968     0.07145192    69.85860169     1.90671824
+#S  16  S 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.018129289,0.0059082709,0.0010073552,0.0064509345,0.017307413,0.0011516289,0.0019292067,0.017072623,0.00016616256,0.13969546,0.0048723770]
+#UO MPFIT Standard Dev:    0.00027924635
+#UO MPFIT Max relative dev:     0.0052631049
+#UO MPFIT Average relative dev:    0.00083367406
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.37215700     5.15456800     1.47373200     1.63507300     1.20937200     0.15472200     1.51434700    22.09252700     0.06137300    55.44517500     0.64692500
+     6.20239600     5.39538819     1.45887725     1.42806579     1.33894393     0.15420384     1.46090299    20.14653917     0.06164271    56.73801104     0.64755460
+#S  17  Cl
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.0018852849,0.010003557,0.0056797423,0.0061165018,0.0075569087,0.0024679597,0.00029806521,0.00097753205,0.011012301,0.10305185,0.0056707488]
+#UO MPFIT Standard Dev:    0.00057267795
+#UO MPFIT Max relative dev:     0.0040539022
+#UO MPFIT Average relative dev:     0.0010880014
+#UP MPFIT guess (Waasmaier&Kirfel) data:      1.44607100     6.87060900     6.15180100     1.75034700     0.63416800     0.14677300     0.05235700     1.19316500    18.34341600    46.39839600     0.40100500
+     1.42704046     6.77857375     6.41364632     1.52938606     0.68790919     0.13835865     0.05185139     1.14744676    16.83234374    47.08267330     0.39585031
+#S  18  Ar
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           18
+#UO MPFIT Parameter error: [0.00049294090,414.99648,414.99619,0.0057448495,0.00046819741,0.00074827446,0.00014107490,936.02403,16080.023,0.073130696,9.0232991e-05]
+#UO MPFIT Standard Dev:     0.0017974078
+#UO MPFIT Max relative dev:      0.040334747
+#UO MPFIT Average relative dev:     0.0041411804
+#UP MPFIT guess (Waasmaier&Kirfel) data:      7.18800400     6.63845400     0.45418000     1.92959300     1.52365400     0.26595400     0.95622100    15.33987700    15.33986200    39.04382300     0.06240900
+     7.12496467     6.96362577     0.40535492     1.69961663     1.50025574     0.27745601     0.91908882    14.15475105    14.15474574    39.07709506     0.06417165
+#S  19  K 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           13
+#UO MPFIT Parameter error: [0.0056690686,0.00055535969,0.0049739090,0.0037159985,0.00068004979,0.0010980393,0.0056236052,0.00013441615,0.71888868,0.44824121,0.00010391532]
+#UO MPFIT Standard Dev:     0.0017231663
+#UO MPFIT Max relative dev:      0.019433996
+#UO MPFIT Average relative dev:     0.0027038505
+#UP MPFIT guess (Waasmaier&Kirfel) data:      8.16399100     7.14694500     1.07014000     0.87731600     1.48643400     0.25361400    12.81632300     0.80894500   210.32701100    39.59765200     0.05282100
+     8.37197122     7.07989232     1.01347196     0.77223727     1.46667316     0.26287737    11.89949237     0.78056461   198.44072308    41.56210501     0.05445260
+#S  20  Ca
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            8
+#UO MPFIT Parameter error: [0.0013844945,0.0013873640,0.016908022,0.017954766,0.00059258173,0.0019549328,0.0020308317,0.00012375096,0.45439825,1.1608435,0.00011872900]
+#UO MPFIT Standard Dev:     0.0026608339
+#UO MPFIT Max relative dev:     0.0069816798
+#UO MPFIT Average relative dev:     0.0022435641
+#UP MPFIT guess (Waasmaier&Kirfel) data:      8.59365500     1.47732400     1.43625400     1.18283900     7.11325800     0.19625500    10.46064400     0.04189100    81.39038100   169.84783900     0.68809800
+     8.64392994     1.46357896     1.56066861     1.05545005     7.04009562     0.19999674     9.69070226     0.04305143    72.04776233   166.55421240     0.66621783
+#S  21  Sc
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            7
+#UO MPFIT Parameter error: [0.0093582039,0.0022112449,0.010685617,0.0017895813,0.00067901613,0.0029076664,0.22959180,0.00014202602,0.51188184,0.0018953193,0.00011486250]
+#UO MPFIT Standard Dev:     0.0023912053
+#UO MPFIT Max relative dev:     0.0077254567
+#UO MPFIT Average relative dev:     0.0023708257
+#UP MPFIT guess (Waasmaier&Kirfel) data:      1.47656600     1.48727800     1.60018700     9.17746300     7.09975000     0.15776500    53.13102300     0.03532500   137.31948900     9.09803100     0.60210200
+     1.68383652     1.47480433     1.37047425     9.24659290     7.02207943     0.16099853    49.92976638     0.03653814   134.31889317     8.45519757     0.58503649
+#S  22  Ti
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            6
+#UO MPFIT Parameter error: [0.0022486785,0.0036478127,0.0063795538,0.0079930354,0.00078493081,0.0044964153,0.0017719689,0.00016633634,0.14236679,0.32875843,0.00011251042]
+#UO MPFIT Standard Dev:     0.0022506281
+#UO MPFIT Max relative dev:      0.010196381
+#UO MPFIT Average relative dev:     0.0024815368
+#UP MPFIT guess (Waasmaier&Kirfel) data:      9.81852400     1.52264600     1.70310100     1.76877400     7.08255500     0.10247300     8.00187900     0.02976300    39.88542200   120.15799700     0.53240500
+     9.88746586     1.50747326     1.90635535     1.54310395     7.00376164     0.10558296     7.44889667     0.03084452    38.16657035   115.68708856     0.51848158
+#S  23  V 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.0027355496,0.0061845104,0.0042890760,0.0060867218,0.00088967196,0.0071750434,0.0016360684,0.00019134413,0.091904589,0.22092524,0.00010960455]
+#UO MPFIT Standard Dev:     0.0019765638
+#UO MPFIT Max relative dev:      0.012516249
+#UO MPFIT Average relative dev:     0.0025382138
+#UP MPFIT guess (Waasmaier&Kirfel) data:     10.47357500     1.54788100     1.98638100     1.86561600     7.05625000     0.06774400     7.08194000     0.02604000    31.90967200   108.02284200     0.47488200
+    10.51693874     1.57393530     2.16699802     1.69193955     6.98396214     0.01430187     6.58802517     0.02534021    30.05889048   101.44514004     0.46207981
+#S  24  Cr
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           12
+#UO MPFIT Parameter error: [0.0048410448,0.0083337900,0.0033728893,0.0037106694,0.0010425284,0.0095185289,0.0019105278,0.00022421466,0.045611989,0.20439468,0.00011170816]
+#UO MPFIT Standard Dev:     0.0013872173
+#UO MPFIT Max relative dev:      0.011212406
+#UO MPFIT Average relative dev:     0.0022156790
+#UP MPFIT guess (Waasmaier&Kirfel) data:     11.00706900     1.55547700     2.98529300     1.34785500     7.03477900     0.06551000     6.36628100     0.02398700    23.24483900   105.77449800     0.42936900
+    11.07627441     1.58619669     2.93288168     1.37491086     6.96664643     0.00459082     5.94437112     0.02328655    20.59115302    96.88722975     0.41908215
+#S  25  Mn
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           11
+#UO MPFIT Parameter error: [0.0035460533,0.018112672,0.0028677711,0.0042084077,0.0011133166,0.019388316,0.0013516567,0.00024607625,0.044310268,0.12704230,0.00010306334]
+#UO MPFIT Standard Dev:     0.0013750170
+#UO MPFIT Max relative dev:      0.013615838
+#UO MPFIT Average relative dev:     0.0024081466
+#UP MPFIT guess (Waasmaier&Kirfel) data:     11.70954200     1.73341400     2.67314100     2.02336800     7.00318000    -0.14729300     5.59712000     0.01780000    21.78842000    89.51791400     0.38305400
+    11.73712145     1.82995875     2.81141301     1.90065220     6.94066322    -0.28355091     5.23367741     0.01636240    20.53719746    82.01631881     0.37401385
+#S  26  Fe
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            7
+#UO MPFIT Parameter error: [0.0038987806,0.047321028,0.0028425615,0.0035571491,0.0012402340,0.048772558,0.0012302940,0.00028672674,0.031801692,0.099321198,0.00010309172]
+#UO MPFIT Standard Dev:     0.0011349041
+#UO MPFIT Max relative dev:      0.013460814
+#UO MPFIT Average relative dev:     0.0023328365
+#UP MPFIT guess (Waasmaier&Kirfel) data:     12.31109800     1.87662300     3.06617700     2.07045100     6.97518500    -0.30493100     5.00941500     0.01446100    18.74304000    82.76787600     0.34650600
+    12.30434401     2.32437385     3.18807287     1.99400470     6.92612145    -0.80737786     4.69095987     0.01074597    17.39159075    74.61601310     0.33856083
+#S  27  Co
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           11
+#UO MPFIT Parameter error: [0.0041786333,0.29505397,0.0030480140,0.0031322153,0.0013672151,0.29667607,0.0011119486,0.00034281217,0.023886457,0.080685298,0.00010236602]
+#UO MPFIT Standard Dev:     0.0010502739
+#UO MPFIT Max relative dev:      0.015212263
+#UO MPFIT Average relative dev:     0.0022672195
+#UP MPFIT guess (Waasmaier&Kirfel) data:     12.91451000     2.48190800     3.46689400     2.10635100     6.96089200    -0.93657200     4.50713800     0.00912600    16.43812900    76.98732000     0.31441800
+    12.87035966     4.43881362     3.58294665     2.06698965     6.91586723    -2.95253425     4.22745007     0.00461408    15.08330800    68.44820515     0.30788472
+#S  28  Ni
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        5
+#UO MPFIT Iterations:          500
+#UO MPFIT Parameter error: [0.0046055829,0.0014844656,0.0034132392,0.0029477322,1834.2954,1834.2972,0.0010356125,0.00010142022,0.019244613,0.069071766,0.00039155993]
+#UO MPFIT Standard Dev:    0.00096289964
+#UO MPFIT Max relative dev:      0.013740578
+#UO MPFIT Average relative dev:     0.0021494403
+#UP MPFIT guess (Waasmaier&Kirfel) data:     13.52186500     6.94728500     3.86602800     2.13590000     4.28473100    -2.76269700     4.07727700     0.28676300    14.62263400    71.96608000     0.00443700
+    13.40782101     6.90042218     3.99539727     2.14745733   283.90205482  -282.43818444     3.82465894     0.28165040    13.17017325    62.81493664     0.00006082
+#S  29  Cu
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          495
+#UO MPFIT Parameter error: [0.0051159938,2442.9477,0.0041456821,0.0025242076,0.0017843400,2442.9498,0.00097302234,0.00046051259,0.012138756,0.090774644,0.00010523819]
+#UO MPFIT Standard Dev:    0.00084564836
+#UO MPFIT Max relative dev:     0.0093497533
+#UO MPFIT Average relative dev:     0.0016694024
+#UP MPFIT guess (Waasmaier&Kirfel) data:     14.01419200     4.78457700     5.05680600     1.45797100     6.93299600    -3.25447700     3.73828000     0.00374400    13.03498200    72.55479400     0.26566600
+    13.75399998   297.69542224     5.21908965     1.58299921     6.87528047  -296.22007511     3.49108135     0.00005604    11.26181897    62.07734534     0.26153431
+#S  30  Zn
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          293
+#UO MPFIT Parameter error: [0.0050053279,0.0014995018,0.0038388348,0.0026666684,6247.8532,6247.8548,0.00080364306,8.2122287e-05,0.012155632,0.052182935,0.00035468443]
+#UO MPFIT Standard Dev:    0.00081326353
+#UO MPFIT Max relative dev:     0.0048810054
+#UO MPFIT Average relative dev:     0.0016050980
+#UP MPFIT guess (Waasmaier&Kirfel) data:     14.74100200     6.90774800     4.64233700     2.19176600    38.42404200   -36.91582900     3.38823200     0.24331500    11.90368900    63.31213000     0.00039700
+    14.43242183     6.83363443     4.86041106     2.31023153   518.74776544  -517.28462315     3.16729215     0.24008925    10.34604629    53.61746648     0.00002943
+#S  31  Ga
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        5
+#UO MPFIT Iterations:          500
+#UO MPFIT Parameter error: [0.0030393370,0.0025715728,0.0024184178,0.0022135857,2334.6695,2334.6725,0.00056699121,0.00011433362,0.011682932,0.051000774,0.00061144831]
+#UO MPFIT Standard Dev:     0.0022360391
+#UO MPFIT Max relative dev:     0.0040079137
+#UO MPFIT Average relative dev:     0.0015943742
+#UP MPFIT guess (Waasmaier&Kirfel) data:     15.75894600     6.84112300     4.12101600     2.71468100     2.39524600    -0.84739500     3.12175400     0.22605700    12.48219600    66.20362100     0.00723800
+    15.57306569     6.80777698     4.48158313     2.55416620   237.18610925  -235.71998143     2.94104939     0.22275367    11.54501025    63.56972773     0.00006123
+#S  32  Ge
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          490
+#UO MPFIT Parameter error: [0.0022388078,3736.2026,0.0020669510,0.0027785068,0.0029039489,3736.2059,0.00043112879,0.00068075111,0.012697360,0.041582465,0.00011365456]
+#UO MPFIT Standard Dev:     0.0023945997
+#UO MPFIT Max relative dev:     0.0046066113
+#UO MPFIT Average relative dev:     0.0015503110
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.54061300     1.56790000     3.72782900     3.34509800     6.78507900     0.01872600     2.86661800     0.01219800    13.43216300    58.86604700     0.21097400
+    16.29213242   271.89501093     4.17901049     3.17804713     6.76929988  -270.43761631     2.69207459     0.00004947    12.10034542    55.59088173     0.20581071
+#S  33  As
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          472
+#UO MPFIT Parameter error: [0.0017677948,5653.0469,0.0030284753,0.0041628152,0.0025683889,5653.0498,0.00033995824,0.00060315412,0.014885736,0.037128944,9.3253086e-05]
+#UO MPFIT Standard Dev:     0.0019447007
+#UO MPFIT Max relative dev:     0.0051505140
+#UO MPFIT Average relative dev:     0.0016999594
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.02564200     4.50344100     3.71590400     3.93720000     6.79017500    -2.98411700     2.59773900     0.00301200    14.27211900    50.43799600     0.19301500
+    16.79861850   336.43256975     4.18039017     3.72954296     6.72535523  -334.99650264     2.44950901     0.00003586    12.83743210    47.67503824     0.18952317
+#S  34  Se
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          469
+#UO MPFIT Parameter error: [0.0012678972,6871.5779,0.0054154410,0.0063887534,0.0026086276,6871.5807,0.00025132062,0.00062869458,0.015997291,0.041546208,8.5083105e-05]
+#UO MPFIT Standard Dev:     0.0013618290
+#UO MPFIT Max relative dev:     0.0077859231
+#UO MPFIT Average relative dev:     0.0018514394
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.35407100     4.65324800     4.25948900     4.13645500     6.74916300    -3.16098200     2.34978700     0.00255000    15.57946000    45.18120200     0.17743200
+    17.16712180   336.96736021     4.71747652     3.89487231     6.68380463  -335.56546318     2.22463287     0.00003080    14.03902313    42.86632703     0.17412989
+#S  35  Br
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          433
+#UO MPFIT Parameter error: [0.00099168047,0.0075365695,7476.9656,0.0083047888,0.0019466337,7476.9675,0.00019562137,0.014505731,0.00048598723,0.049071295,6.5792956e-05]
+#UO MPFIT Standard Dev:    0.00084443321
+#UO MPFIT Max relative dev:      0.013192921
+#UO MPFIT Average relative dev:     0.0019809038
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.55057000     5.41188200     3.93718000     3.88064500     6.70779300    -2.49208800     2.11922600    16.55718400     0.00248100    42.16400900     0.16212100
+    17.40231392     5.93891344   354.54400524     3.52445295     6.64817985  -353.19765239     2.01532010    15.16569556     0.00002303    40.69766838     0.15923958
+#S  36  Kr
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          335
+#UO MPFIT Parameter error: [0.00084160082,0.0085973445,8115.1434,0.0092602839,0.0019620132,8115.1451,0.00016417013,0.011948155,0.00061487308,0.058650212,6.2716364e-05]
+#UO MPFIT Standard Dev:    0.00055444398
+#UO MPFIT Max relative dev:      0.017985477
+#UO MPFIT Average relative dev:     0.0021824773
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.65527900     6.84810500     4.17100400     3.44676000     6.68520000    -2.81059200     1.90823100    16.60623600     0.00159800    39.91747300     0.14689600
+    17.53267157     7.44816522   267.89934293     2.98742575     6.61999042  -266.63403399     1.82191497    15.41761348     0.00002029    39.30642110     0.14476941
+#S  37  Rb
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            6
+#UO MPFIT Parameter error: [0.016817624,0.015083312,0.00034862884,0.0033087715,0.00088221131,0.00023430154,0.014009222,0.27669001,1.9869090e-05,0.54140215,0.00013233727]
+#UO MPFIT Standard Dev:    0.00061411305
+#UO MPFIT Max relative dev:      0.028868049
+#UO MPFIT Average relative dev:     0.0026904575
+#UP MPFIT guess (Waasmaier&Kirfel) data:      8.12313400     2.13804200     6.76170200     1.15605100    17.67954600     1.13954800    15.14238500    33.54266700     0.12937200   224.13250700     1.71336800
+     8.87288109     1.56926290     6.66073618     1.08275119    17.57340057     1.08665457    14.34390518    35.97531308     0.12903646   209.51615220     1.64279492
+#S  38  Sr
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           19
+#UO MPFIT Parameter error: [0.00057473643,0.00082499005,412.70193,0.00094118462,412.70195,0.00025113555,9.8768298e-05,0.0022408503,8.0877900,0.067829786,89.747940]
+#UO MPFIT Standard Dev:     0.0015225274
+#UO MPFIT Max relative dev:      0.016351826
+#UO MPFIT Average relative dev:     0.0028342215
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.73021900     9.79586700     6.09976300     2.62002500     0.60005300     1.14025100     1.56306000    14.31086800     0.12057400   135.77131700     0.12057400
+    17.59670810     9.94862630     6.04462400     2.61652635     0.54472165     1.07329335     1.49577834    13.12002382     0.11972149   119.44032856     0.11972149
+#S  39  Y 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           23
+#UO MPFIT Parameter error: [0.00059184510,0.00090078436,674.84942,0.0010335337,674.84928,0.00029768579,9.2747474e-05,0.0020376910,12.635218,0.047445862,82.944117]
+#UO MPFIT Standard Dev:     0.0023140637
+#UO MPFIT Max relative dev:     0.0099421414
+#UO MPFIT Average relative dev:     0.0029324843
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.79204000    10.25325200     5.71494900     3.17051600     0.91825100     1.13178700     1.42969100    13.13281600     0.11217300   108.19702900     0.11217300
+    17.65536751    10.43931521     5.65885161     3.13610892     0.86203672     1.06017183     1.36826402    12.12449612     0.11133571    95.69676914     0.11133576
+#S  40  Zr
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           23
+#UO MPFIT Parameter error: [0.00057976004,0.00096263414,347.16415,0.0011452004,347.16420,0.00032031995,8.6761757e-05,0.0018943733,8.4762241,0.036090419,70.820054]
+#UO MPFIT Standard Dev:     0.0029908948
+#UO MPFIT Max relative dev:      0.011260974
+#UO MPFIT Average relative dev:     0.0032386141
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.85977200    10.91103800     5.82111500     3.51251300     0.74696500     1.12485900     1.31069200    12.31928500     0.10435300    91.77754200     0.10435300
+    17.70896284    11.09168541     5.76424243     3.49865793     0.68990337     1.04561396     1.25477542    11.37544137     0.10372418    80.89514696     0.10372414
+#S  41  Nb
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           20
+#UO MPFIT Parameter error: [0.00055998409,0.0011028623,870.48103,0.0013552132,870.48099,0.00035776514,7.8498131e-05,0.0017959687,15.586354,0.034373431,52.704803]
+#UO MPFIT Standard Dev:     0.0037651286
+#UO MPFIT Max relative dev:      0.014967517
+#UO MPFIT Average relative dev:     0.0037639126
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.95839900    12.06305400     5.00701500     3.28766700     1.53101900     1.12345200     1.21159000    12.24668700     0.09861500    75.01194800     0.09861500
+    17.82410279    12.34652807     4.93750714     3.19055176     1.46016577     1.02630932     1.15717637    11.35742646     0.09662928    69.39554321     0.09662930
+#S  42  Mo
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           43
+#UO MPFIT Parameter error: [78.488665,0.00053707434,0.0011670095,0.0014005683,78.488722,0.00039959982,1.1061035,7.2664967e-05,0.0015760022,0.029058746,45.092165]
+#UO MPFIT Standard Dev:     0.0044018388
+#UO MPFIT Max relative dev:      0.021460993
+#UO MPFIT Average relative dev:     0.0043012539
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.23621800    17.98771100    12.97312700     3.45142600     0.21089900     1.10877000     0.09078000     1.10831000    11.46872000    66.68415100     0.09078000
+     6.17787753    17.84044504    13.24473559     3.35857771     0.15154195     0.99960433     0.08963202     1.06333880    10.67451656    61.58100361     0.08963181
+#S  43  Tc
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           19
+#UO MPFIT Parameter error: [0.00063263590,0.0080735786,0.010507955,0.0033833658,0.00040197454,0.00045642657,7.7519785e-05,0.10672798,0.96801168,0.0023829314,2.1064281e-05]
+#UO MPFIT Standard Dev:     0.0041105134
+#UO MPFIT Max relative dev:      0.028798389
+#UO MPFIT Average relative dev:     0.0050236757
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.84096300     3.42823600     1.37301200    12.94736400     6.33546900     1.07478400     1.00572900    41.90138200   119.32054100     9.78154200     0.08339100
+    17.74278282     3.79497777     0.79808174    13.24774635     6.24221603     0.95794137     0.97113299    42.86390771   132.10191226     9.26979654     0.08236923
+#S  44  Ru
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           15
+#UO MPFIT Parameter error: [0.00041796409,0.00062190044,0.0042919247,0.0043193219,0.0062522681,0.00053370170,2.1909864e-05,7.2552764e-05,0.0023697906,0.079901417,0.82188263]
+#UO MPFIT Standard Dev:     0.0047262659
+#UO MPFIT Max relative dev:      0.032427096
+#UO MPFIT Average relative dev:     0.0051584023
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.27162400    17.90673800    14.12326900     3.74600800     0.90823500     1.04399200     0.07704000     0.92822200     9.55534500    35.86068000   123.55224600
+     6.18155275    17.80169136    14.63083035     3.59439161     0.64428903     0.91877951     0.07624173     0.89717697     9.12737711    36.30062507   130.83719947
+#S  45  Rh
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           16
+#UO MPFIT Parameter error: [0.00045445034,0.00061973512,0.0038572516,0.0055637859,0.0042979471,0.00062891794,2.2781987e-05,7.0885944e-05,0.069337904,0.76244352,0.0020900921]
+#UO MPFIT Standard Dev:     0.0053741077
+#UO MPFIT Max relative dev:      0.036671822
+#UO MPFIT Average relative dev:     0.0053762778
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.21664800    17.91973900     3.85425200     0.84032600    15.17349800     0.99545200     0.07078900     0.85612100    33.88948400   121.68669100     9.02951700
+     6.12780040    17.79870560     3.70551025     0.61262679    15.64710027     0.86745289     0.07028489     0.82885382    33.92215621   126.42588650     8.60698534
+#S  46  Pd
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           22
+#UO MPFIT Parameter error: [0.00048311070,1847.7157,0.0021578930,0.0024506343,1847.7157,0.00075782476,2.3980665e-05,313.07749,0.0012302162,0.018613968,111.61910]
+#UO MPFIT Standard Dev:     0.0062906988
+#UO MPFIT Max relative dev:      0.039695203
+#UO MPFIT Average relative dev:     0.0055077747
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.12151100     4.78406300    16.63168300     4.31825800    13.24677300     0.88309900     0.06254900     0.78403100     8.75139100    34.48998300     0.78403100
+     6.09085570     4.68870690    17.15641530     3.84300712    13.15123080     0.80254284     0.06457257     0.76863619     8.38997512    34.11521928     0.76863617
+#S  47  Ag
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           16
+#UO MPFIT Parameter error: [0.00055710517,0.0041107235,0.0031948498,0.0045373083,0.00063924406,0.00094912458,2.5692864e-05,0.0015663355,0.054255449,0.69807510,6.3014160e-05]
+#UO MPFIT Standard Dev:     0.0068075603
+#UO MPFIT Max relative dev:      0.042853159
+#UO MPFIT Average relative dev:     0.0057082993
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.07387400    17.15543700     4.17334400     0.85223800    17.98868600     0.75660300     0.05533300     7.89651200    28.44373900   110.37610600     0.71680900
+     6.05724103    17.76734177     3.85910747     0.54976811    17.79132902     0.70865971     0.05857511     7.66424959    30.20483695   121.19639558     0.70979037
+#S  48  Cd
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           16
+#UO MPFIT Parameter error: [0.00067778344,0.0032935079,0.0046286098,0.0064768404,0.00065563216,0.0011784761,2.7015692e-05,0.0012285515,0.053342718,0.58528945,5.8936788e-05]
+#UO MPFIT Standard Dev:     0.0075993214
+#UO MPFIT Max relative dev:      0.044059011
+#UO MPFIT Average relative dev:     0.0058895012
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.08098600    18.01946800     4.01819700     1.30351000    17.97466900     0.60350400     0.04899000     7.27364600    29.11928400    95.83120700     0.66123100
+     6.04036427    18.38160827     4.20316493     0.75471621    17.74206099     0.59841397     0.05297111     7.01093020    30.72014689   106.80764634     0.65631719
+#S  49  In
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.00094087879,0.0023218448,0.0030322109,0.0041312441,0.00068018005,0.0015550363,2.9183951e-05,0.00091048006,0.037961567,0.39009116,5.6177352e-05]
+#UO MPFIT Standard Dev:     0.0082114365
+#UO MPFIT Max relative dev:      0.046298465
+#UO MPFIT Average relative dev:     0.0059461895
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.19647700    18.81618300     4.05047900     1.63892900    17.96291200     0.33309700     0.04207200     6.69566500    31.00979000   103.28434800     0.61071400
+     6.06154651    19.00060821     4.45915941     1.04270193    17.69494384     0.44547768     0.04732772     6.43011640    31.38897338   129.84310238     0.60802939
+#S  50  Sn
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           11
+#UO MPFIT Parameter error: [0.0019157671,0.0013760102,0.0049411708,0.0062301236,0.00071511392,0.0021045453,0.00074262350,3.1539031e-05,0.039363960,0.39521473,5.4045026e-05]
+#UO MPFIT Standard Dev:     0.0087164056
+#UO MPFIT Max relative dev:      0.047426733
+#UO MPFIT Average relative dev:     0.0060737132
+#UP MPFIT guess (Waasmaier&Kirfel) data:     19.32517100     6.28157100     4.49886600     1.85693400    17.91731800     0.11902400     6.11810400     0.03691500    32.52904500    95.03718600     0.56565100
+    19.44406366     6.14105459     5.04240100     1.19460095    17.63952092     0.22942056     5.87081521     0.04153040    32.37864163   114.94916342     0.56396218
+#S  51  Sb
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           15
+#UO MPFIT Parameter error: [0.0060823802,0.0020535991,0.0016665287,0.0073434347,0.00076644863,0.0028856472,0.034419910,3.4391450e-05,0.00062964427,0.38323676,5.2965420e-05]
+#UO MPFIT Standard Dev:     0.0089623891
+#UO MPFIT Max relative dev:      0.045746082
+#UO MPFIT Average relative dev:     0.0061040175
+#UP MPFIT guess (Waasmaier&Kirfel) data:      5.39495600     6.54957000    19.65068100     1.82782000    17.86783200    -0.29050600    33.32652300     0.03097400     5.56492900    87.13096600     0.52399200
+     6.01179028     6.25268840    19.69743565     1.16859113    17.56401079    -0.01748380    32.17182048     0.03634623     5.33340196   103.27699871     0.52334570
+#S  52  Te
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           15
+#UO MPFIT Parameter error: [0.0060581026,0.0035700026,0.0014278557,0.0071555079,0.00081024973,0.0044893978,0.026118584,3.7585904e-05,0.00053813772,0.45473495,5.0600783e-05]
+#UO MPFIT Standard Dev:     0.0099546593
+#UO MPFIT Max relative dev:      0.046777697
+#UO MPFIT Average relative dev:     0.0062764630
+#UP MPFIT guess (Waasmaier&Kirfel) data:      6.66030200     6.94075600    19.84701500     1.55717500    17.80242700    -0.80666800    33.03165400     0.02575000     5.06554700    84.10161600     0.48766000
+     7.27011998     6.55126218    19.86580814     0.95229359    17.52010619    -0.49670130    31.27680875     0.02990172     4.84670590   100.88905997     0.48406725
+#S  53  I 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           22
+#UO MPFIT Parameter error: [0.0013050795,0.0066443931,0.0052161572,0.0062026875,0.00086589165,0.0076589593,0.00048123888,4.2038356e-05,0.018851050,0.45300465,4.9660244e-05]
+#UO MPFIT Standard Dev:      0.010360130
+#UO MPFIT Max relative dev:      0.045722042
+#UO MPFIT Average relative dev:     0.0062705195
+#UP MPFIT guess (Waasmaier&Kirfel) data:     19.88450200     6.73659300     8.11051600     1.17095300    17.54871600    -0.44881100     4.62859100     0.02775400    31.84909600    84.40638700     0.46355000
+    19.93807829     7.09598483     8.55254548     0.81322939    17.46003963    -1.21189020     4.40199492     0.02378768    29.37558678    96.37033204     0.44869824
+#S  54  Xe
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           28
+#UO MPFIT Parameter error: [0.0011998274,0.014838170,0.0042957700,0.0051992627,0.00091001800,0.015934711,0.00042804131,4.6743247e-05,0.013598665,0.51062070,4.7597883e-05]
+#UO MPFIT Standard Dev:      0.010643444
+#UO MPFIT Max relative dev:      0.046243073
+#UO MPFIT Average relative dev:     0.0064081527
+#UP MPFIT guess (Waasmaier&Kirfel) data:     19.97892000    11.77494500     9.33218200     1.24474900    17.73750100    -6.06590200     4.14335600     0.01014200    28.79620000    75.28068500     0.41361600
+    19.95850428     8.36420076     9.90402346     0.65245953    17.40931309    -2.65593783     4.00466253     0.01705338    27.35376466    96.62465241     0.41685323
+#S  55  Cs
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           18
+#UO MPFIT Parameter error: [0.00094370661,0.052856364,0.0011390597,0.0010073645,0.00099883620,0.054018142,4.5845579e-05,5.3123971e-05,0.0050613546,0.25866986,0.00036148222]
+#UO MPFIT Standard Dev:      0.011157152
+#UO MPFIT Max relative dev:      0.047645726
+#UO MPFIT Average relative dev:     0.0064879328
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.41867400     8.31444400    10.32319300     1.38383400    19.87625100    -2.32280200     0.39982800     0.01687200    25.60582700   233.33967600     3.82691500
+    17.37569453    12.13586009    10.55273124     1.29778936    19.87680486    -6.62800954     0.38664179     0.00966981    23.44864968   220.56960899     3.64363491
+#S  56  Ba
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           88
+#UO MPFIT Parameter error: [0.0012474689,0.00099152708,0.0016265854,0.0020734218,1.6529394,1.6541921,0.00038027321,4.5921231e-05,0.0061577112,0.15299820,6.1871487e-05]
+#UO MPFIT Standard Dev:      0.011669230
+#UO MPFIT Max relative dev:      0.047395815
+#UO MPFIT Average relative dev:     0.0065989497
+#UP MPFIT guess (Waasmaier&Kirfel) data:     19.74734300    17.36847700    10.46571800     2.59260200    11.00365300    -5.18349700     3.48182300     0.37122400    21.22664100   173.83427400     0.01071900
+    19.82277247    17.37211521    10.64912854     2.42340529    51.54683902   -46.21974320     3.34809910     0.36080812    20.04789088   161.05858343     0.00185019
+#S  57  La
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          498
+#UO MPFIT Parameter error: [0.0011488830,4654.5327,0.0013046278,0.0015381899,0.00095346561,4654.5339,0.00034520933,5.9091212e-05,0.0048607502,0.074104950,4.3169346e-05]
+#UO MPFIT Standard Dev:      0.011672266
+#UO MPFIT Max relative dev:      0.037993257
+#UO MPFIT Average relative dev:     0.0062712738
+#UP MPFIT guess (Waasmaier&Kirfel) data:     19.96601900    27.32965500    11.01842500     3.08669600    17.33545500   -21.74548900     3.19740800     0.00344600    19.95549200   141.38197300     0.34181700
+    19.96684466  2616.77020357    11.08605976     2.97061929    17.30250838 -2611.52103692     3.11105960     0.00003320    18.89301922   126.40106401     0.33961309
+#S  58  Ce
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        5
+#UO MPFIT Iterations:          500
+#UO MPFIT Parameter error: [0.00069767544,6729.9927,0.0011959078,0.0017052663,0.0015087740,6729.9932,3.0024820e-05,2.9871378e-05,0.00030142831,0.12478975,0.0043583242]
+#UO MPFIT Standard Dev:      0.010214626
+#UO MPFIT Max relative dev:      0.024078095
+#UO MPFIT Average relative dev:     0.0056606124
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.35512200    43.98849900    20.54665000     3.13067000    11.35366500   -38.38601700     0.32836900     0.00204700     3.08819600   134.90765400    18.83296000
+    17.29595781  4345.36340933    20.94755728     2.49690482    11.57180940 -4340.11668462     0.32551631     0.00001928     3.04729063   146.75357391    17.76655273
+#S  59  Pr
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          494
+#UO MPFIT Parameter error: [0.0012048129,0.00076379580,0.0013948344,0.0014466709,8161.9212,8161.9218,0.00027991618,2.7783404e-05,0.0037487958,0.10298057,3.0317594e-05]
+#UO MPFIT Standard Dev:     0.0095337691
+#UO MPFIT Max relative dev:      0.022598105
+#UO MPFIT Average relative dev:     0.0053119653
+#UP MPFIT guess (Waasmaier&Kirfel) data:     21.55131100    17.16173000    11.90385900     2.67910300     9.56419700    -3.87106800     2.99567500     0.31249100    17.71670500   152.19282500     0.01046800
+    21.56386679    17.23892858    11.96705606     2.55058606  4645.78355064 -4640.56446888     2.91250166     0.30985101    16.75073376   139.14334527     0.00001725
+#S  60  Nd
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          403
+#UO MPFIT Parameter error: [0.00064456543,8560.0069,0.0013905654,0.0014194488,0.0012151001,8560.0075,2.8874243e-05,2.3798887e-05,0.0034685079,0.095129794,0.00027014396]
+#UO MPFIT Standard Dev:     0.0094702023
+#UO MPFIT Max relative dev:      0.022294041
+#UO MPFIT Average relative dev:     0.0051382305
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.33124400    62.78392400    12.16009700     2.66348300    22.23995000   -57.18984200     0.30026900     0.00132000    17.02600100   148.74899300     2.91026800
+    17.18849734  5256.12632558    12.33127623     2.58243269    22.21683582 -5250.92543157     0.29580553     0.00001461    15.88877581   133.41685838     2.79253798
+#S  61  Pm
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          424
+#UO MPFIT Parameter error: [0.00068581210,8459.7854,0.0013427101,0.0012548276,0.0012233655,8459.7858,2.6992669e-05,2.0671102e-05,0.0030551397,0.083087160,0.00024616617]
+#UO MPFIT Standard Dev:     0.0089588176
+#UO MPFIT Max relative dev:      0.022785705
+#UO MPFIT Average relative dev:     0.0050350807
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.28638800    51.56016200    12.47855700     2.67551500    22.96094700   -45.97368200     0.28662000     0.00155000    16.22375500   143.98451200     2.79648000
+    17.14790054  5467.09133967    12.67590249     2.61445255    22.89314617 -5461.92264966     0.28225651     0.00001335    15.09888908   128.17517281     2.67966474
+#S  62  Sm
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          375
+#UO MPFIT Parameter error: [0.0012102974,6976.6319,0.0013254378,0.0012380758,0.00067588876,6976.6325,0.00022928409,2.5847595e-05,0.0028154463,0.077787359,2.7007792e-05]
+#UO MPFIT Standard Dev:     0.0087609111
+#UO MPFIT Max relative dev:      0.021885380
+#UO MPFIT Average relative dev:     0.0051856985
+#UP MPFIT guess (Waasmaier&Kirfel) data:     23.70036300    23.07221400    12.77778200     2.68421700    17.20436700   -17.45216600     2.68953900     0.00349100    15.49543700   139.86247300     0.27453600
+    23.57776892  4336.95334631    13.01186004     2.65112019    17.09246464 -4331.80653530     2.57205344     0.00001606    14.35914195   123.21157749     0.26967441
+#S  63  Eu
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          391
+#UO MPFIT Parameter error: [0.00067947549,8859.8987,0.0013765282,0.0012442993,0.0012257625,8859.8991,2.6510673e-05,2.2427996e-05,0.0026108407,0.077932066,0.00021646184]
+#UO MPFIT Standard Dev:     0.0080492313
+#UO MPFIT Max relative dev:      0.021034532
+#UO MPFIT Average relative dev:     0.0050602831
+#UP MPFIT guess (Waasmaier&Kirfel) data:     17.18619500    37.15683700    13.10338700     2.70724600    24.41927100   -31.58668700     0.26167800     0.00199500    14.78736000   134.81629900     2.58188300
+    17.07135563  5126.49069186    13.33466886     2.65426567    24.27237487 -5121.36316596     0.25889588     0.00001297    13.73081795   120.24251547     2.47764087
+#S  64  Gd
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          349
+#UO MPFIT Parameter error: [0.0013499943,0.00073088677,0.0014946731,0.0018130829,8632.1449,8632.1453,0.00021115934,2.6778845e-05,0.0030156488,0.056664859,2.6208580e-05]
+#UO MPFIT Standard Dev:     0.0081837986
+#UO MPFIT Max relative dev:      0.022084618
+#UO MPFIT Average relative dev:     0.0051141192
+#UP MPFIT guess (Waasmaier&Kirfel) data:     24.89811700    17.10495200    13.22258100     3.26615200    48.99521300   -43.50568400     2.43502800     0.24696100    13.99632500   110.86309100     0.00138300
+    24.64625088    16.99747848    13.36466048     3.34514581  4543.57338365 -4538.49039355     2.34262325     0.24679775    12.90194424    95.39774603     0.00001379
+#S  65  Tb
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          335
+#UO MPFIT Parameter error: [0.0012578852,7198.3938,0.0013648153,0.0011543020,0.00072809951,7198.3943,0.00019117223,2.4456918e-05,0.0022622947,0.066151394,2.6688123e-05]
+#UO MPFIT Standard Dev:     0.0068101442
+#UO MPFIT Max relative dev:      0.024678677
+#UO MPFIT Average relative dev:     0.0046969070
+#UP MPFIT guess (Waasmaier&Kirfel) data:     25.91001300    32.34413900    13.76511700     2.75140400    17.06440500   -26.85197100     2.37391200     0.00203400    13.48196900   125.83651000     0.23691600
+    25.66612063  4192.75632504    13.95736847     2.72815093    17.00044486 -4187.69180909     2.29102865     0.00001424    12.50615875   111.05763849     0.23787894
+#S  66  Dy
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          292
+#UO MPFIT Parameter error: [0.0012727428,8050.6417,0.0013755975,0.0011577383,0.00069924826,8050.6421,0.00017911884,2.3065995e-05,0.0021290949,0.063054136,2.6049128e-05]
+#UO MPFIT Standard Dev:     0.0065006199
+#UO MPFIT Max relative dev:      0.030379471
+#UO MPFIT Average relative dev:     0.0046367010
+#UP MPFIT guess (Waasmaier&Kirfel) data:     26.67178500    88.68757600    14.06544500     2.76849700    17.06778100   -83.27983100     2.28259300     0.00066500    12.92023000   121.93718700     0.22553100
+    26.38323252  4398.24494424    14.26736529     2.76532287    16.97289395 -4393.23947589     2.20308248     0.00001260    11.95434176   106.89618428     0.22734974
+#S  67  Ho
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          330
+#UO MPFIT Parameter error: [0.0012796200,0.00085994535,0.0013707434,0.0010845845,10284.449,10284.449,0.00016838488,2.7198849e-05,0.0019526207,0.057267933,3.8844211e-05]
+#UO MPFIT Standard Dev:     0.0060248075
+#UO MPFIT Max relative dev:      0.032246787
+#UO MPFIT Average relative dev:     0.0044235905
+#UP MPFIT guess (Waasmaier&Kirfel) data:     27.15019000    16.99981900    14.05933400     3.38697900    46.54647100   -41.16525300     2.16966000     0.21541400    12.21314800   100.50678300     0.00121100
+    27.09405383    16.93749917    14.58634079     2.80145206  3698.14032223 -3693.18846082     2.11867358     0.21749694    11.43043354   102.92181598     0.00001396
+#S  68  Er
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          309
+#UO MPFIT Parameter error: [0.0012873944,8307.0304,0.0013754021,0.0010729220,0.00074846752,8307.0308,0.00015766817,2.4221871e-05,0.0018271472,0.054670665,2.5045355e-05]
+#UO MPFIT Standard Dev:     0.0056550368
+#UO MPFIT Max relative dev:      0.032143151
+#UO MPFIT Average relative dev:     0.0044412749
+#UP MPFIT guess (Waasmaier&Kirfel) data:     28.17488700    82.49327100    14.62400200     2.80275600    17.01851500   -77.13522300     2.12099500     0.00064000    11.91525600   114.52993800     0.20751900
+    27.81053249  4104.64353871    14.88325935     2.83483528    16.89331430 -4099.71721767     2.04181579     0.00001196    10.95422544    99.42542607     0.20889623
+#S  69  Tm
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          226
+#UO MPFIT Parameter error: [0.0012925141,9736.1316,0.0014000182,0.0010878917,0.0011562959,9736.1326,0.00015287978,6.8348800e-05,0.0017560786,0.053828475,2.9494448e-05]
+#UO MPFIT Standard Dev:     0.0050643365
+#UO MPFIT Max relative dev:      0.042142252
+#UO MPFIT Average relative dev:     0.0040479124
+#UP MPFIT guess (Waasmaier&Kirfel) data:     28.92589400    76.17379800    14.90470400     2.81481200    16.99811700   -70.83981300     2.04620300     0.00065600    11.46537500   111.41198000     0.19937600
+    28.52850085  2445.57145486    15.22240776     2.86116529    16.92020688 -2440.77861007     1.96383816     0.00001716    10.48926663    96.46598501     0.19884908
+#S  70  Yb
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          216
+#UO MPFIT Parameter error: [0.0012916368,9026.2383,0.0013723065,0.0010231186,0.0011551208,9026.2393,0.00014317068,7.1794746e-05,0.0016091568,0.047040918,2.8560253e-05]
+#UO MPFIT Standard Dev:     0.0047427463
+#UO MPFIT Max relative dev:      0.043572115
+#UO MPFIT Average relative dev:     0.0039297307
+#UP MPFIT guess (Waasmaier&Kirfel) data:     29.67676000    65.62406900    15.16085400     2.83028800    16.99785000   -60.31381200     1.97763000     0.00072000    11.04462200   108.13915300     0.19211000
+    29.24441972  2212.27369164    15.49510957     2.92480251    16.89099012 -2207.52991878     1.89336193     0.00001759    10.05627636    91.69307079     0.19084871
+#S  71  Lu
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          217
+#UO MPFIT Parameter error: [0.0013775821,0.0014883124,7494.7993,0.0013976790,0.0011414998,7494.8002,0.00013741909,0.0017082903,6.0709482e-05,0.039461295,2.7515354e-05]
+#UO MPFIT Standard Dev:     0.0047556859
+#UO MPFIT Max relative dev:      0.042904174
+#UO MPFIT Average relative dev:     0.0040086084
+#UP MPFIT guess (Waasmaier&Kirfel) data:     30.12286600    15.09934600    56.31489900     3.54098000    16.94372900   -51.04941600     1.88309000    10.34276400     0.00078000    89.55925000     0.18384900
+    29.69788948    15.47177518  2097.86718749     3.60694158    16.82362572 -2093.19263162     1.80307602     9.47929223     0.00001698    77.64749351     0.18222067
+#S  72  Hf
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          236
+#UO MPFIT Parameter error: [0.0014602775,0.0014723407,8261.7812,0.0015785930,0.0010026263,8261.7816,0.00013658412,0.0017706452,4.9470361e-05,0.026148996,2.7296172e-05]
+#UO MPFIT Standard Dev:     0.0044951366
+#UO MPFIT Max relative dev:      0.043877119
+#UO MPFIT Average relative dev:     0.0039334873
+#UP MPFIT guess (Waasmaier&Kirfel) data:     30.61703300    15.14535100    54.93354800     4.09625300    16.89615600   -49.71983700     1.79561300     9.93446900     0.00073900    76.18970500     0.17591400
+    30.11062139    15.40407022  2274.03155954     4.38097094    16.78436412 -2269.46340922     1.71565360     8.96253008     0.00001361    63.95107044     0.17352112
+#S  73  Ta
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          177
+#UO MPFIT Parameter error: [0.0014088332,0.0014569331,10139.788,0.0015689114,0.0017104001,10139.790,0.00013025701,0.0016829524,0.00014607875,0.020364068,3.1473094e-05]
+#UO MPFIT Standard Dev:     0.0043265347
+#UO MPFIT Max relative dev:      0.043211827
+#UO MPFIT Average relative dev:     0.0038722409
+#UP MPFIT guess (Waasmaier&Kirfel) data:     31.06635900    15.34182300    49.27829700     4.57766500    16.82832100   -44.11902600     1.70873200     9.61845500     0.00076000    66.34619900     0.16800200
+    30.57052118    15.57376402  1353.88450796     4.87958160    16.74532612 -1349.42935153     1.63430749     8.68104102     0.00001949    56.83069217     0.16513675
+#S  74  W 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           49
+#UO MPFIT Parameter error: [0.0013839043,0.0014523387,8042.8741,0.0017012628,0.0015997995,8042.8755,0.00012098637,0.0016479740,0.00012941287,0.017445000,3.0806963e-05]
+#UO MPFIT Standard Dev:     0.0039791021
+#UO MPFIT Max relative dev:      0.041040607
+#UO MPFIT Average relative dev:     0.0037079665
+#UP MPFIT guess (Waasmaier&Kirfel) data:     31.50790000    15.68249800    37.96012900     4.88550900    16.79211200   -32.86457400     1.62948500     9.44644800     0.00089800    59.98067500     0.16079800
+    30.98784842    15.84365824  1085.37020439     5.34491722    16.75914099 -1081.10872457     1.55377182     8.43294944     0.00001745    50.66121806     0.15616127
+#S  75  Re
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          163
+#UO MPFIT Parameter error: [0.0013194050,0.0014668102,7765.9745,0.0018542480,0.0014131613,7765.9755,0.00011111005,0.0016054540,0.00010915141,0.015225467,2.8102747e-05]
+#UO MPFIT Standard Dev:     0.0041221442
+#UO MPFIT Max relative dev:      0.036958004
+#UO MPFIT Average relative dev:     0.0037828448
+#UP MPFIT guess (Waasmaier&Kirfel) data:     31.88845600    16.11710400    42.39029700     5.21166900    16.76759100   -37.41268200     1.54923800     9.23347400     0.00068900    54.51637300     0.15281500
+    31.36764074    16.20662904  1140.89802522     5.70714498    16.65069139 -1136.66620413     1.48081504     8.26474305     0.00001603    45.63908603     0.14966164
+#S  76  Os
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           34
+#UO MPFIT Parameter error: [0.0012532163,0.0015132397,8459.2258,0.0019314456,0.0019288693,8459.2271,0.00010334617,0.0015085378,0.00035974851,0.013985543,3.0042773e-05]
+#UO MPFIT Standard Dev:     0.0039031286
+#UO MPFIT Max relative dev:      0.037610976
+#UO MPFIT Average relative dev:     0.0036174920
+#UP MPFIT guess (Waasmaier&Kirfel) data:     32.21029700    16.67844000    48.55990600     5.45583900    16.73553300   -43.67795600     1.47353100     9.04969500     0.00051900    50.21020100     0.14577100
+    31.75193454    16.78095382   410.94969397     5.94974979    16.75723964  -407.05071307     1.40570152     8.12076847     0.00001747    42.41784435     0.13977093
+#S  77  Ir
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.0018295025,0.011416719,0.00056293400,0.0071309659,0.0070063132,0.00028613620,0.00010052472,0.33814579,1.0295174e-05,0.0031822663,0.055028130]
+#UO MPFIT Standard Dev:     0.0027653866
+#UO MPFIT Max relative dev:      0.035971951
+#UO MPFIT Average relative dev:     0.0035639860
+#UP MPFIT guess (Waasmaier&Kirfel) data:     32.00443600     1.97545400    17.07010500    15.93945400     5.99000300     4.01889300     1.35376700    81.01417500     0.12809300     7.66119600    26.65940300
+    31.76739790     1.41742145    16.74659192    16.21969187     6.34032022     3.65295339     1.32218506    81.15672344     0.13119994     7.35439190    26.57488749
+#S  78  Pt
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           26
+#UO MPFIT Parameter error: [322.22081,0.0016793187,0.00051501287,0.0022353238,322.22081,0.00029061062,16.593777,0.0013484901,9.7997885e-06,0.011927935,392.61733]
+#UO MPFIT Standard Dev:     0.0036155619
+#UO MPFIT Max relative dev:      0.031191049
+#UO MPFIT Average relative dev:     0.0035208558
+#UP MPFIT guess (Waasmaier&Kirfel) data:     31.27389100    18.44544000    17.06374500     5.55593300     1.57527000     4.05039400     1.31699200     8.79715400     0.12474100    40.17799400     1.31699700
+    30.98992203    18.15501717    16.67920729     6.30866056     1.30977395     3.63949590     1.27222945     7.83558995     0.12654931    36.86734925     1.27222941
+#S  79  Au
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:          159
+#UO MPFIT Parameter error: [0.0037956417,0.0021591573,0.0010789013,0.0028654302,4813.4873,4813.4905,3.5040068e-05,0.0014207821,8.2562148e-05,0.012788179,0.00034472234]
+#UO MPFIT Standard Dev:     0.0033099770
+#UO MPFIT Max relative dev:      0.037221067
+#UO MPFIT Average relative dev:     0.0034307499
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.77739000    19.31715600    32.97968300     5.59545300    10.57685400    -6.27907800     0.12273700     8.62157000     1.25690200    38.00882000     0.00060100
+    16.88254232    19.37581635    32.62146048     6.01941144   432.23434409  -429.07568590     0.11690541     7.87648778     1.20474478    32.97062267    -0.00003099
+#S  80  Hg
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           20
+#UO MPFIT Parameter error: [0.00052966205,0.0019072080,1695.7930,0.0025182657,1695.7931,0.00031816206,9.8209664e-06,0.0012345785,71.842485,0.011167523,406.67764]
+#UO MPFIT Standard Dev:     0.0037509673
+#UO MPFIT Max relative dev:      0.014910259
+#UO MPFIT Average relative dev:     0.0033649454
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.83989000    20.02382300    28.42856400     5.88156400     4.71470600     4.07647800     0.11590500     8.25692700     1.19525000    39.24722700     1.19525000
+    16.43979396    19.91863890    27.76463255     6.41022928     4.90481781     3.58984976     0.11673200     7.55331808     1.15426441    33.30365931     1.15426437
+#S  81  Tl
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            8
+#UO MPFIT Parameter error: [0.00057108057,0.0052625555,0.0013123518,0.0037353799,0.0044245677,0.00032973486,9.9590939e-06,0.0019154795,7.2047854e-05,0.28890663,0.027930821]
+#UO MPFIT Standard Dev:     0.0031696608
+#UO MPFIT Max relative dev:      0.013599401
+#UO MPFIT Average relative dev:     0.0033798231
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.63079500    19.38661600    32.80857100     1.74719100     6.35686200     4.06693900     0.11070400     7.18140100     1.11973000    90.66026300    26.01497800
+    16.27949672    19.61124539    32.52808287     1.21893192     6.82864702     3.56321128     0.11193237     6.83979837     1.09072759   118.61695437    25.09178834
+#S  82  Pb
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            7
+#UO MPFIT Parameter error: [0.00057784482,0.0012673567,0.0038656579,0.0052808794,0.0044969105,0.00034394808,9.8750632e-06,6.8489529e-05,0.031035917,0.23511264,0.0016245384]
+#UO MPFIT Standard Dev:     0.0035326256
+#UO MPFIT Max relative dev:      0.014043183
+#UO MPFIT Average relative dev:     0.0036439267
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.41956700    32.73859000     6.53024700     2.34274200    19.91647500     4.04982400     0.10549900     1.05504900    25.02589000    80.90659300     6.66444900
+    16.15573594    32.56471040     6.74799686     1.62318006    20.37867502     3.53108830     0.10731472     1.03828673    25.84002437   104.03280242     6.51727715
+#S  83  Bi
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            7
+#UO MPFIT Parameter error: [0.00059626447,0.0012602318,0.0050649722,0.0074426085,0.0037447125,0.00037227660,1.0116393e-05,6.7487076e-05,0.032693316,0.22994226,0.0013910790]
+#UO MPFIT Standard Dev:     0.0039400110
+#UO MPFIT Max relative dev:      0.014754438
+#UO MPFIT Average relative dev:     0.0039117386
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.28227400    32.72513600     6.67830200     2.69475000    20.57655900     4.04091400     0.10118000     1.00228700    25.71414600    77.05754900     6.29188200
+    16.05513439    32.57219633     7.10079270     1.82264739    20.92330655     3.49908832     0.10310727     0.99041508    26.79675111    92.39516651     6.16859916
+#S  84  Po
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.00061700738,0.0012732789,0.0032811513,0.0096683660,0.0070244691,0.00040808566,1.0397662e-05,6.6927021e-05,0.0012262352,0.24064279,0.032573321]
+#UO MPFIT Standard Dev:     0.0041896633
+#UO MPFIT Max relative dev:      0.017282810
+#UO MPFIT Average relative dev:     0.0040606113
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.28916400    32.80717100    21.09516300     2.50590100     7.25458900     4.04655600     0.09812100     0.96626500     6.04662200    76.59806800    28.09612800
+    15.92966393    32.53463621    21.26597071     1.85348130     7.90481807     3.45521535     0.09871917     0.94233879     5.77485734    84.25758041    27.14259799
+#S  85  At
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.00063852222,0.0012904059,0.0080169963,0.010501270,0.0028392172,0.00041918893,1.0406431e-05,6.5792669e-05,0.028259414,0.25355778,0.0010822999]
+#UO MPFIT Standard Dev:     0.0043559396
+#UO MPFIT Max relative dev:      0.018629143
+#UO MPFIT Average relative dev:     0.0042486875
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.01146100    32.61554700     8.11389900     2.88408200    21.37786700     3.99568400     0.09263900     0.90441600    26.54325700    68.37296300     5.49951200
+    15.82334418    32.46748196     9.01250570     1.72434540    21.46356994     3.42272786     0.09486320     0.89843768    27.00385753    79.63992570     5.39445822
+#S  86  Rn
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           13
+#UO MPFIT Parameter error: [0.00066450088,0.0013392946,0.0025211574,0.010536193,0.0082362048,0.00045936601,1.0812357e-05,6.5818035e-05,0.00097408888,0.27121511,0.023329840]
+#UO MPFIT Standard Dev:     0.0045279222
+#UO MPFIT Max relative dev:      0.021452608
+#UO MPFIT Average relative dev:     0.0042605840
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.07022900    32.64110600    21.48965800     2.29921800     9.48018400     4.02097700     0.09043700     0.87640900     5.23968700    69.18847700    27.63264100
+    15.71714768    32.36554794    21.55254018     1.54577949    10.31957180     3.38282129     0.09111052     0.85619893     5.01523482    76.65511543    26.25222808
+#S  87  Fr
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            8
+#UO MPFIT Parameter error: [0.00068096421,0.0013364590,0.0017610386,0.0014259003,0.0019817542,0.00050612331,1.1269463e-05,6.4258117e-05,0.00078398403,0.22296096,0.0075227794]
+#UO MPFIT Standard Dev:     0.0046517501
+#UO MPFIT Max relative dev:      0.023722606
+#UO MPFIT Average relative dev:     0.0041847782
+#UP MPFIT guess (Waasmaier&Kirfel) data:     16.00738500    32.66383000    21.59435100     1.59849700    11.12119200     4.00347200     0.08703100     0.84018700     4.95446700   199.80580100    26.90510600
+    15.61356578    32.29005100    21.58808798     1.52079712    11.49239752     3.33918799     0.08744016     0.81690795     4.68491604   187.13075688    24.42129865
+#S  88  Ra
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.0014304381,0.0020841826,0.0024068549,0.0021728803,0.00070626487,0.00052389719,6.4892922e-05,0.00081616501,0.0077935657,0.13133472,1.1164245e-05]
+#UO MPFIT Standard Dev:     0.0049756391
+#UO MPFIT Max relative dev:      0.025762553
+#UO MPFIT Average relative dev:     0.0044674636
+#UP MPFIT guess (Waasmaier&Kirfel) data:     32.56369000    21.39667100    11.29809300     2.83468800    15.91496500     3.98177300     0.80198000     4.59066600    22.75897200   160.40438800     0.08354400
+    32.26137613    21.47411433    11.54875240     2.70070705    15.53353668     3.29342205     0.78242755     4.39338862    21.26815521   145.78453108     0.08389021
+#S  89  Ac
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.00074103134,0.0015059680,0.0022582312,0.0023822597,0.0026888480,0.00057660257,1.1570128e-05,6.5769934e-05,0.00081033340,0.0083954561,0.076378965]
+#UO MPFIT Standard Dev:     0.0048690617
+#UO MPFIT Max relative dev:      0.027412028
+#UO MPFIT Average relative dev:     0.0043777774
+#UP MPFIT guess (Waasmaier&Kirfel) data:     15.91405300    32.53504200    21.55397600    11.43339400     3.61240900     3.93921200     0.08051100     0.77066900     4.35220600    21.38162200   130.50074800
+    15.44129352    32.19461688    21.67018557    11.62375491     3.60839956     3.23867141     0.08037991     0.74781467     4.14033299    19.84028498   113.68244239
+#S  90  Th
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           11
+#UO MPFIT Parameter error: [0.00075129834,0.0015081693,0.0021345094,0.0027256099,0.0022821825,0.00064450377,1.2101141e-05,6.4639235e-05,0.00074217605,0.053985271,0.0077786592]
+#UO MPFIT Standard Dev:     0.0046102313
+#UO MPFIT Max relative dev:      0.028140003
+#UO MPFIT Average relative dev:     0.0042215808
+#UP MPFIT guess (Waasmaier&Kirfel) data:     15.78402400    32.45489900    21.84922200     4.23907700    11.73619100     3.92253300     0.07706700     0.73513700     4.09797600   109.46411100    20.51213800
+    15.35041360    32.15264867    21.98489988     4.20304734    11.87984118     3.17150887     0.07685215     0.71518502     3.92354148    96.69516744    19.25785705
+#S  91  Pa
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.0014651206,0.0024072513,0.0024664196,0.0025877164,0.00074197054,0.00070282012,6.1430873e-05,0.00076010572,0.0066329524,0.064895783,1.2385822e-05]
+#UO MPFIT Standard Dev:     0.0043223072
+#UO MPFIT Max relative dev:      0.029540415
+#UO MPFIT Average relative dev:     0.0041096139
+#UP MPFIT guess (Waasmaier&Kirfel) data:     32.74020800    21.97367500    12.95739800     3.68383200    15.74405800     3.88606600     0.70954500     4.05088100    19.23154300   117.25500500     0.07404000
+    32.41734383    22.05085313    13.10871855     3.72910194    15.28123528     3.11865061     0.68922416     3.86872813    17.74443730   101.90118122     0.07385957
+#S  92  U 
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.00073370118,0.0014358285,0.0025382882,0.0025778516,0.0025082326,0.00078592827,1.2831474e-05,5.8985482e-05,0.0060238837,0.061524571,0.00073266588]
+#UO MPFIT Standard Dev:     0.0040298377
+#UO MPFIT Max relative dev:      0.030455456
+#UO MPFIT Average relative dev:     0.0039322888
+#UP MPFIT guess (Waasmaier&Kirfel) data:     15.67927500    32.82430600    13.66045900     3.68726100    22.27943400     3.85444400     0.07120600     0.68117700    18.23615600   112.50003800     3.93032500
+    15.20314929    32.53208188    13.81186567     3.76642798    22.31042147     3.04559348     0.07066435     0.66171756    16.79213936    97.72588956     3.75457984
+#S  93  Np
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           10
+#UO MPFIT Parameter error: [0.0014217933,0.0027196644,0.0026989410,0.0026574881,0.00072923204,0.00084498592,5.6969128e-05,0.00072618897,0.0056844900,0.059305602,1.3110899e-05]
+#UO MPFIT Standard Dev:     0.0038377075
+#UO MPFIT Max relative dev:      0.027379235
+#UO MPFIT Average relative dev:     0.0038780780
+#UP MPFIT guess (Waasmaier&Kirfel) data:     32.99990100    22.63807700    14.21997300     3.67295000    15.68324500     3.76939100     0.65708600     3.85491800    17.43547400   109.46448500     0.06803300
+    32.64327679    22.60430101    14.43752068     3.83052598    15.12931302     2.98794434     0.63635924     3.65636186    15.88803466    93.50959958     0.06783444
+#S  94  Pu
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.0013177470,0.0026249942,0.0027818623,0.0018499944,0.00071189748,0.00093277651,5.3215859e-05,0.00067132680,0.0043290773,0.069151405,1.3327144e-05]
+#UO MPFIT Standard Dev:     0.0035573003
+#UO MPFIT Max relative dev:      0.027487065
+#UO MPFIT Average relative dev:     0.0037461490
+#UP MPFIT guess (Waasmaier&Kirfel) data:     33.28117800    23.14854400    15.15375500     3.03149200    15.70421500     3.66420000     0.63499900     3.85616800    16.84973500   121.29203800     0.06485700
+    32.89114822    23.09839499    15.57640146     3.06849154    15.06334425     2.89811885     0.61290312     3.63716663    15.44356030   103.61518316     0.06473308
+#S  95  Am
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:           11
+#UO MPFIT Parameter error: [0.0012901574,0.0027588124,0.0029076006,0.0019080775,0.00069703361,0.0010417772,5.1038297e-05,0.00064821947,0.0040946172,0.070124642,1.3716256e-05]
+#UO MPFIT Standard Dev:     0.0034085187
+#UO MPFIT Max relative dev:      0.027581999
+#UO MPFIT Average relative dev:     0.0036825801
+#UP MPFIT guess (Waasmaier&Kirfel) data:     33.43516200    23.65725900    15.57633900     3.02702300    15.74610000     3.54116000     0.61278500     3.79294200    16.19577800   117.75700400     0.06175500
+    33.02310917    23.59414755    16.08710719     3.05160429    15.00738866     2.79583742     0.58946182     3.56398355    14.80962925   101.26355106     0.06167575
+#S  96  Cm
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.00070290559,0.0013136660,0.0030440945,0.0022053720,0.0030689700,0.0011837624,1.4293308e-05,5.0079495e-05,0.00064287163,0.051171344,0.0042594022]
+#UO MPFIT Standard Dev:     0.0032678969
+#UO MPFIT Max relative dev:      0.026975802
+#UO MPFIT Average relative dev:     0.0035563938
+#UP MPFIT guess (Waasmaier&Kirfel) data:     15.80483700    33.48080100    24.15019800     3.65556300    15.49986600     3.39084000     0.05861900     0.59016000     3.67472000   100.73619100    15.40829600
+    14.92952838    33.03254055    24.00228529     3.79349958    16.07933216     2.68191187     0.05858286     0.56470268     3.42619535    86.81878918    13.93081918
+#S  97  Bk
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.00070537609,0.0012583869,0.0030540437,0.0016970663,0.0032348573,0.0013340747,1.4749568e-05,4.7057205e-05,0.00061023993,0.060554551,0.0035750357]
+#UO MPFIT Standard Dev:     0.0030504634
+#UO MPFIT Max relative dev:      0.026547790
+#UO MPFIT Average relative dev:     0.0034070071
+#UP MPFIT guess (Waasmaier&Kirfel) data:     15.88907200    33.62528600    24.71038100     3.70713900    15.83926800     3.21316900     0.05550300     0.56957100     3.61547200    97.69478600    14.75430300
+    14.87484815    33.25429616    24.75369621     3.05890997    16.98364667     2.55564102     0.05561473     0.54346670     3.41941648    95.53275618    13.62900417
+#S  98  Cf
+#N 11
+#L a1  a2  a3  a4  a5  c  b1  b2  b3  b4  b5
+#UO MPFIT End status:        7
+#UO MPFIT Iterations:            9
+#UO MPFIT Parameter error: [0.0012527442,0.0032463639,0.0033917293,0.0017347298,0.00074932940,0.0015308025,4.5739270e-05,0.00059355945,0.0034466499,0.059227545,1.5437847e-05]
+#UO MPFIT Standard Dev:     0.0029545016
+#UO MPFIT Max relative dev:      0.025962962
+#UO MPFIT Average relative dev:     0.0033112696
+#UP MPFIT guess (Waasmaier&Kirfel) data:     33.79407500    25.46769300    16.04848700     3.65752500    16.00898200     3.00532600     0.55044700     3.58197300    14.35738800    96.06497200     0.05245000
+    33.35395184    25.38419399    17.37894160     3.08843097    14.82268135     2.41071058     0.52171734     3.34704782    13.07655187    91.79465535     0.05263332
