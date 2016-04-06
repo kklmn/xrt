@@ -268,7 +268,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 # one of 'u', 'w', 'bm', 'eu', 'wu':
-sourceType = 'u'
+sourceType = 'bm'
 suffix = ''
 isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
@@ -330,17 +330,17 @@ elif sourceType == 'eu':
     Source = rs.Undulator if isInternalSource else rs.UndulatorUrgent
     kwargs = dict(
         period=30., Ky=1.45, Kx=1.45, n=40, eE=3., eI=0.5,
-        xPrimeMax=0.25, zPrimeMax=0.25, eSigmaX=48.65, eSigmaZ=6.197,
+        xPrimeMax=0.6, zPrimeMax=0.6, eSigmaX=48.65, eSigmaZ=6.197,
         eEpsilonX=0.263, eEpsilonZ=0.008)
     if isInternalSource:
         kwargs['phaseDeg'] = 90
         kwargs['xPrimeMaxAutoReduce'] = False
         kwargs['zPrimeMaxAutoReduce'] = False
-    xlimits = [-5, 5]
-    zlimits = [-5, 5]
-    xlimitsZoom = [-1, 1]
-    zlimitsZoom = [-1, 1]
-    xPrimelimits = [-0.3, 0.3]
+    xlimits = [-12, 12]
+    zlimits = [-12, 12]
+    xlimitsZoom = [-5, 5]
+    zlimitsZoom = [-5, 5]
+    xPrimelimits = [-0.55, 0.55]
 elif sourceType == 'wu':  # wiggler by undulator code
     whose = '_xrt' if isInternalSource else '_ws'
     pprefix = '6'+sourceType+whose

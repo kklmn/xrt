@@ -66,7 +66,7 @@ modified Bessel functions :math:`K_v(y)`:
        A_{\pi}
        \end{bmatrix} &= \frac{\sqrt{3}}{2\pi}\gamma\frac{\omega}{\omega_c}
        (1+\gamma^2\psi^2)\begin{bmatrix}-i K_{2/3}(\eta)\\
-       \frac{\gamma^2\psi^2}{\sqrt{1+\gamma^2\psi^2}}
+       \frac{\gamma\psi}{\sqrt{1+\gamma^2\psi^2}}
        K_{1/3}(\eta)\end{bmatrix}
 
 where
@@ -886,7 +886,7 @@ class GeometricSource(object):
         distx='normal', dx=0.32, disty=None, dy=0, distz='normal', dz=0.018,
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,),
-            polarization='horizontal', filamentBeam=False):
+            polarization='horizontal', filamentBeam=False, pitch=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -925,6 +925,8 @@ class GeometricSource(object):
         *filamentBeam*: if True the source generates coherent monochromatic
             wavefronts. Required for the wave propagation calculations.
 
+        *pitch*, *yaw*: float
+            rotation angles around x and z axis. Useful for canted sources.
         """
         self.bl = bl
         bl.sources.append(self)
@@ -950,6 +952,8 @@ class GeometricSource(object):
             self.energies = energies
         self.polarization = polarization
         self.filamentBeam = filamentBeam
+        self.pitch = pitch
+        self.yaw = yaw
 
     def _apply_distribution(self, axis, distaxis, daxis):
         if (distaxis == 'normal') and (daxis > 0):
@@ -2142,7 +2146,7 @@ class BendingMagnet(object):
                  eEpsilonX=1., eEpsilonZ=0.01, betaX=9., betaZ=2.,
                  B0=1., rho=None, filamentBeam=False, uniformRayDensity=False,
                  eMin=5000., eMax=15000., eN=51, distE='eV',
-                 xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25):
+                 xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25, pitch=0, yaw=0):
         u"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
@@ -2205,6 +2209,9 @@ class BendingMagnet(object):
             If True the source generates coherent monochromatic wavefronts.
             Required for the wave propagation calculations.
 
+        *pitch*, *yaw*: float
+            rotation angles around x and z axis. Useful for canted sources.
+
 
         """
         self.Ee = eE
@@ -2253,6 +2260,8 @@ class BendingMagnet(object):
         self.mode = 1
         self.uniformRayDensity = uniformRayDensity
         self.filamentBeam = filamentBeam
+        self.pitch = pitch
+        self.yaw = yaw
 
         if (self.dx is None) and (self.betaX is not None):
             self.dx = np.sqrt(self.eEpsilonX * self.betaX * 0.001)
@@ -2539,11 +2548,8 @@ class BendingMagnet(object):
             Psi0 = rPsi[I_pass]
 
             if not self.filamentBeam:
-                if self.dxprime > 0:
-                    dtheta = np.random.normal(0, self.dxprime, npassed)
-                else:
-                    dtheta = 0
-
+                dtheta = np.random.normal(
+                    0, self.dxprime + 1/self.gamma, npassed)
                 if self.dzprime > 0:
                     dpsi = np.random.normal(0, self.dzprime, npassed)
                 else:
@@ -2636,6 +2642,8 @@ class BendingMagnet(object):
         bo.a /= norm
         bo.b /= norm
         bo.c /= norm
+        if self.pitch or self.yaw:
+            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
 
@@ -2717,7 +2725,7 @@ class Undulator(object):
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
                  gp=1e-6, gIntervals=1,
                  uniformRayDensity=False, filamentBeam=False,
-                 targetOpenCL='auto', precisionOpenCL='auto'):
+                 targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
@@ -2867,6 +2875,9 @@ class Undulator(object):
             calculations with doube precision are much slower. Double precision
             may be unavailable on your system.
 
+        *pitch*, *yaw*: float
+            rotation angles around x and z axis. Useful for canted sources.
+
 
         """
         self.bl = bl
@@ -2899,6 +2910,8 @@ class Undulator(object):
         self.distE = distE
         self.uniformRayDensity = uniformRayDensity
         self.filamentBeam = filamentBeam
+        self.pitch = pitch
+        self.yaw = yaw
         self.gIntervals = gIntervals
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
@@ -3622,6 +3635,8 @@ class Undulator(object):
             wave.Es *= mPh
             wave.Ep *= mPh
 
+        if self.pitch or self.yaw:
+            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
 
