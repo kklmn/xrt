@@ -1419,7 +1419,7 @@ class UndulatorUrgent(object):
     Undulator source that uses the external code Urgent. It has some drawbacks,
     as demonstrated in the section :ref:`comparison-synchrotron-sources`, but
     nonetheless can be used for comparison purposes. If you are going to use
-    it, the code is freely available as parts of XOP package.
+    it, the code is freely available as part of XOP package.
     """
     def __init__(
         self, bl=None, name='UrgentU', center=(0, 0, 0), nrays=raycing.nrays,
@@ -2036,7 +2036,7 @@ class WigglerWS(UndulatorUrgent):
     Wiggler source that uses the external code ws. It has some drawbacks,
     as demonstrated in the section :ref:`comparison-synchrotron-sources`, but
     nonetheless can be used for comparison purposes. If you are going to use
-    it, the code is freely available as parts of XOP package.
+    it, the code is freely available as part of XOP package.
     """
     def __init__(self, *args, **kwargs):
         u"""Uses WS code. All the parameters are the same as in
@@ -2548,8 +2548,9 @@ class BendingMagnet(object):
             Psi0 = rPsi[I_pass]
 
             if not self.filamentBeam:
-                dtheta = np.random.normal(
-                    0, self.dxprime + 1/self.gamma, npassed)
+                dtheta = np.random.normal(0, 1/self.gamma, npassed)
+                if self.dxprime > 0:
+                    dtheta += np.random.normal(0, self.dxprime, npassed)
                 if self.dzprime > 0:
                     dpsi = np.random.normal(0, self.dzprime, npassed)
                 else:
