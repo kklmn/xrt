@@ -3290,7 +3290,7 @@ class Undulator(object):
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic)
-        elif self.B0z is not None:
+        elif self.customField is not None:
             return self._build_I_map_custom(w, ddtheta, ddpsi, harmonic)
         else:
             return self._build_I_map_CL(w, ddtheta, ddpsi, harmonic)
