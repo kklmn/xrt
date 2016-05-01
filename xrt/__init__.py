@@ -146,9 +146,10 @@ The code can run in both Python branches without any modification.
 
 Get xrt
 -------
-xrt is available as source distribution from `here
-<https://pypi.python.org/pypi/xrt>`_. The distribution archive also includes
-tests, examples and the script generator xrtQook.
+xrt is available as source distribution from `pypi.python.org
+<https://pypi.python.org/pypi/xrt>`_ and from `GitHub
+<https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
+examples and the script generator xrtQook.
 
 Installation
 ------------

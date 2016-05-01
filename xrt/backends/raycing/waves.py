@@ -728,6 +728,6 @@ def _diffraction_integral_CL(oeLocal, n, nl, wave, good):
 
     Es_res, Ep_res, aE_res, bE_res, cE_res = waveCL.run_parallel(
         'integrate_kirchhoff', scalarArgs, slicedROArgs,
-        nonSlicedROArgs, slicedRWArgs, None, imageRays)
+        nonSlicedROArgs, slicedRWArgs, imageRays)
 
     return Es_res, Ep_res, aE_res, bE_res, cE_res
