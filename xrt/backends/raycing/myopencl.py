@@ -184,12 +184,14 @@ class XRT_CL(object):
 
     def run_parallel(self, kernelName='', scalarArgs=None,
                      slicedROArgs=None, nonSlicedROArgs=None,
-                     slicedRWArgs=None, dimension=0):
+                     slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0):
 
         ka_offset = len(scalarArgs) if scalarArgs is not None else 0
         ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
         ns_offset = len(nonSlicedROArgs) if nonSlicedROArgs is not None else 0
+        rw_offset = len(slicedRWArgs) if slicedRWArgs is not None else 0
         rw_pos = ka_offset + ro_offset + ns_offset
+        nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
 
         nctx = len(self.cl_ctx)
         kernel_bufs = []
@@ -202,8 +204,9 @@ class XRT_CL(object):
         ndsize = []
 
         for ictx, ctx in enumerate(self.cl_ctx):
-            nCUw = 0.25 if self.cl_ctx[ictx].devices[0].type == \
-                cl.device_type.CPU else 1.0
+            # nCUw = 0.25 if self.cl_ctx[ictx].devices[0].type == \
+            #    cl.device_type.CPU else 1.0
+            nCUw = 1.0
             nCU.extend([self.cl_ctx[ictx].devices[0].max_compute_units*nCUw])
 
         totalCUs = sum(nCU)
@@ -213,13 +216,17 @@ class XRT_CL(object):
             if scalarArgs is not None:
                 kernel_bufs[ictx].extend(scalarArgs)
             ndstart.extend([sum(ndsize)])
-            if ictx < nctx - 1:
-                ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
+            if dimension > 1:
+                if ictx < nctx - 1:
+                    ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
+                else:
+                    ndsize.extend([dimension-ndstart[ictx]])
+                ndslice.extend([slice(ndstart[ictx],
+                                      ndstart[ictx]+ndsize[ictx])])
             else:
-                ndsize.extend([dimension-ndstart[ictx]])
-            ndslice.extend([slice(ndstart[ictx], ndstart[ictx]+ndsize[ictx])])
+                ndslice.extend([0])
 
-            if slicedROArgs is not None:
+            if slicedROArgs is not None and dimension > 1:
                 for iarg, arg in enumerate(slicedROArgs):
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
@@ -231,12 +238,19 @@ class XRT_CL(object):
                         self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
 
-            for iarg, arg in enumerate(slicedRWArgs):
-                kernel_bufs[ictx].extend([cl.Buffer(
-                    self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
-                    self.cl_mf.COPY_HOST_PTR, hostbuf=arg[ndslice[ictx]])])
+            if slicedRWArgs is not None:
+                for iarg, arg in enumerate(slicedRWArgs):
+                    kernel_bufs[ictx].extend([cl.Buffer(
+                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[ndslice[ictx]])])
+                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
 
-            global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
+            if nonSlicedRWArgs is not None:
+                for iarg, arg in enumerate(nonSlicedRWArgs):
+                    kernel_bufs[ictx].extend([cl.Buffer(
+                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
+                global_size.extend([np.array([1]).shape])
 
         local_size = None
 
@@ -255,10 +269,17 @@ class XRT_CL(object):
                 print("ctx status {0} {1}".format(iev, status))
 
         for ictx, ctx in enumerate(self.cl_ctx):
-            for iarg, arg in enumerate(slicedRWArgs):
-                cl.enqueue_copy(self.cl_queue[ictx],
-                                slicedRWArgs[iarg][ndslice[ictx]],
-                                kernel_bufs[ictx][iarg + rw_pos],
-                                is_blocking=self.cl_is_blocking)
-
-        return tuple(slicedRWArgs)
+            if slicedRWArgs is not None:
+                for iarg, arg in enumerate(slicedRWArgs):
+                    cl.enqueue_copy(self.cl_queue[ictx],
+                                    slicedRWArgs[iarg][ndslice[ictx]],
+                                    kernel_bufs[ictx][iarg + rw_pos],
+                                    is_blocking=self.cl_is_blocking)
+                return tuple(slicedRWArgs)
+            elif nonSlicedRWArgs is not None:
+                for iarg, arg in enumerate(nonSlicedRWArgs):
+                    cl.enqueue_copy(self.cl_queue[ictx],
+                                    nonSlicedRWArgs[iarg],
+                                    kernel_bufs[ictx][iarg + nsrw_pos],
+                                    is_blocking=self.cl_is_blocking)
+                return tuple(nonSlicedRWArgs)

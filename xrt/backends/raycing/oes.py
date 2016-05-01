@@ -568,7 +568,7 @@ class OE(object):
 
         t2, x2, y2, z2 = self.ucl.run_parallel(
             'find_intersection', scalarArgs, slicedROArgs, None, slicedRWArgs,
-            NRAYS)
+            None, NRAYS)
         return t2, x2, y2, z2
 
     def _use_my_method(
@@ -1214,7 +1214,7 @@ class OE(object):
 
         curveS, curveP, a_out, b_out, c_out = self.ucl.run_parallel(
             'reflect_crystal', scalarArgs, slicedROArgs, nonSlicedROArgs,
-            slicedRWArgs, lenGood)
+            slicedRWArgs, None, lenGood)
 
         return a_out, b_out, c_out, curveS, curveP
 
@@ -3415,7 +3415,8 @@ class BlazedGrating(OE):
         return t2, x2, y2, z2
 
     def get_grating_area_fraction(self):
-        """This method is used in wave propagation for the calculation of the
+        """
+        This method is used in wave propagation for the calculation of the
         illuminated surface area. It returns the fraction of the longitudinal
         (along *y*) dimension that is illuminated.
         """
@@ -3426,3 +3427,93 @@ class BlazedGrating(OE):
         z2 = 0
         d = ((y2-y1)**2 + (z2-z1)**2)**0.5
         return d * self.rho
+
+class PlaneGrating(OE):
+    """
+    Implements a grating of rectangular shape.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """*blaze* and *antiblaze* are angles in radians. *rho* is the line
+        density in inverse mm."""
+        kwargs = self.__pop_kwargs(**kwargs)
+        OE.__init__(self, *args, **kwargs)
+        self.rho_1 = 1. / self.rho #Period of the grating in [mm]
+
+
+    def __pop_kwargs(self, **kwargs):
+        self.rho = kwargs.pop('rho')
+        self.blaze = kwargs.pop('blaze', np.pi*0.4999)
+        self.aspect = kwargs.pop('aspect', 0.5)
+        self.depth = kwargs.pop('depth', 0.5e-3)
+        return kwargs
+
+    def local_z(self, x, y):
+        yL = y % self.rho_1
+        z = np.array(np.zeros_like(y))
+        groove = self.rho_1 * (1.-self.aspect)
+        rindex = (yL < groove)
+        z[rindex] = -self.depth
+        return z
+
+    def local_n(self, x, y):
+        yL = y % self.rho_1
+        groove = self.rho_1 * (1.-self.aspect)
+        norm_x = np.zeros_like(y)
+        norm_y = np.zeros_like(y)
+        norm_z = np.ones_like(y)
+        rindex = (yL == 0)
+        norm_y[rindex] = 1
+        norm_z[rindex] = 0
+        rindex = (yL == groove)
+        norm_y[rindex] = -1
+        norm_z[rindex] = 0
+        return [norm_x, norm_y, norm_z]
+
+    def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
+                          invertNormal, derivOrder=0):
+        # t0 = time.time()
+        b_c = b / c
+        a_c = a / c
+        x2 = np.array(np.zeros_like(y))
+        y2 = np.array(np.zeros_like(y))
+        z2 = np.array(np.zeros_like(y))
+        dy = np.array(np.zeros_like(y))
+        dyRel = np.array(np.zeros_like(y))
+        y2 = y - z * b_c
+        yL = y2 % self.rho_1
+        groove = self.rho_1 * (1.-self.aspect)
+        x2 = x + z * a_c
+
+        gr = (yL < groove)
+        dyRel[gr] = b_c[gr] * self.depth
+        dy[gr] = yL[gr] - dyRel[gr]
+        bottom = (dy > abs(dyRel)) & (dy < groove-abs(dyRel))
+        # bottom = (dy>0) & (dy<groove)
+        z2[bottom] = -self.depth
+        y2[bottom] += dy[bottom] - yL[bottom]
+        x2[bottom] += a_c[bottom] * self.depth
+
+        leftwall = (dy < abs(dyRel))
+        # leftwall = (dy < 0)
+        z2[leftwall] = (yL[leftwall] / b_c[leftwall])
+        y2[leftwall] -= (yL[leftwall])
+        x2[leftwall] += (z2[leftwall] * a_c[leftwall])
+
+        rightwall = (dy > groove-abs(dyRel))
+        # rightwall = (dy > groove)
+        y2[rightwall] += (groove - yL[rightwall])
+        z2[rightwall] = (groove - yL[rightwall]) / b_c[rightwall]
+        x2[rightwall] += (z2[rightwall] * a_c[rightwall])
+        t2 = np.sqrt((x-x2)**2+(y-y2)**2+(z-z2)**2)
+        # print "find intersection for", len(y), "rays takes", time.time()-t0
+        return t2, x2, y2, z2
+
+    def get_grating_area_fraction(self):
+        """
+        This method is used in wave propagation for the calculation of the
+        illuminated surface area. It returns the fraction of the longitudinal
+        (along *y*) dimension that is illuminated.
+        """
+        return self.aspect

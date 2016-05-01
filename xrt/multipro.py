@@ -22,12 +22,6 @@ from .backends import shadow
 from .backends import dummy
 from .backends import raycing
 
-try:
-    import pyopencl as cl
-    isOpenCL = True
-    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-except ImportError:
-    isOpenCL = False
 __dir__ = os.path.dirname(__file__)
 
 
@@ -51,117 +45,7 @@ class GenericProcessOrThread(object):
         self.outPlotQueues = outPlotQueues
         self.alarmQueue = alarmQueue
         self.card = locCard
-        isOpenCL = False
-        self.cl_ctx = None
-        if isOpenCL:
-            iDevice = None
-            for platform in cl.get_platforms():
-                for device in platform.get_devices():
-                    if device.type == 2:
-                        iDevice = device
-                        break
-                if iDevice is not None:
-                    break
-            if iDevice is not None:
-                self.cl_ctx = cl.Context(devices=[iDevice])
-                self.cl_queue = cl.CommandQueue(self.cl_ctx)
-                cl_file = os.path.join(__dir__, r'hist.cl')
-                with open(cl_file, 'r') as f:
-                    kernelsource = f.read()
-                self.cl_program = cl.Program(self.cl_ctx, kernelsource).build()
-                self.cl_mf = cl.mem_flags
 
-    def hist1d_cl(self, x, bins, range, weights):
-        cl_weights = np.float64(np.array(weights))
-        cl_x = np.float64(np.array(x))
-        cl_bins = np.int32(bins)
-        hist_out = np.zeros(bins, dtype=np.float64)
-        locker = np.zeros(bins, dtype=np.int32)
-        r_max = np.max(range)
-        r_min = np.min(range)
-
-        cl_a = np.float64(np.float64(bins) / (r_max - r_min))
-        cl_b = np.float64(np.float64(bins) * r_min / (r_max - r_min))
-
-        cl_bin_edges = np.linspace(r_min, r_max, bins + 1)
-
-        x_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_ONLY |
-                          self.cl_mf.COPY_HOST_PTR, hostbuf=cl_x)
-        weights_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_ONLY |
-                                self.cl_mf.COPY_HOST_PTR, hostbuf=cl_weights)
-        hist_out_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_WRITE |
-                                 self.cl_mf.COPY_HOST_PTR, hostbuf=hist_out)
-        locker_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_WRITE |
-                               self.cl_mf.COPY_HOST_PTR, hostbuf=locker)
-
-        global_size = cl_x.shape
-        local_size = None
-        self.cl_program.hist_1d(self.cl_queue,
-                                global_size,
-                                local_size,
-                                cl_a, cl_b, cl_bins,
-                                x_buf, weights_buf, hist_out_buf,
-                                locker_buf
-                                ).wait()
-        cl.enqueue_read_buffer(self.cl_queue,
-                               hist_out_buf,
-                               hist_out).wait()
-        return hist_out, cl_bin_edges
-
-    def hist2d_cl(self, y, x, bins, range, weights):
-        cl_weights = np.float64(np.array(weights))
-        cl_x = np.float64(np.array(x))
-        cl_y = np.float64(np.array(y))
-
-        cl_xbins = np.int32(bins[1])
-        cl_ybins = np.int32(bins[0])
-
-        hist_out = np.zeros(bins[1]*bins[0])
-        locker = np.zeros(bins[1]*bins[0], dtype=np.int32)
-
-        rx_max = np.max(np.array(range)[1, :])
-        ry_max = np.max(np.array(range)[0, :])
-
-        rx_min = np.min(np.array(range)[1, :])
-        ry_min = np.min(np.array(range)[0, :])
-
-        cl_ax = np.float64(bins[1] / (rx_max - rx_min))
-        cl_ay = np.float64(bins[0] / (ry_max - ry_min))
-
-        cl_bx = np.float64(bins[1] * rx_min / (rx_max - rx_min))
-        cl_by = np.float64(bins[0] * ry_min / (ry_max - ry_min))
-
-        cl_xbin_edges = np.linspace(rx_min, rx_max, bins[1] + 1)
-        cl_ybin_edges = np.linspace(ry_min, ry_max, bins[0] + 1)
-
-        x_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_ONLY |
-                          self.cl_mf.COPY_HOST_PTR, hostbuf=cl_x)
-        y_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_ONLY |
-                          self.cl_mf.COPY_HOST_PTR, hostbuf=cl_y)
-        weights_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_ONLY |
-                                self.cl_mf.COPY_HOST_PTR, hostbuf=cl_weights)
-        hist_out_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_WRITE |
-                                 self.cl_mf.COPY_HOST_PTR, hostbuf=hist_out)
-        locker_buf = cl.Buffer(self.cl_ctx, self.cl_mf.READ_WRITE |
-                               self.cl_mf.COPY_HOST_PTR, hostbuf=locker)
-
-        global_size = cl_x.shape
-        local_size = None
-
-        self.cl_program.hist_2d(self.cl_queue,
-                                global_size,
-                                local_size,
-                                cl_ax, cl_bx, cl_ay, cl_by,
-                                cl_xbins, cl_ybins,
-                                x_buf, y_buf,
-                                weights_buf,
-                                hist_out_buf,
-                                locker_buf
-                                ).wait()
-        cl.enqueue_read_buffer(self.cl_queue,
-                               hist_out_buf,
-                               hist_out).wait()
-        return hist_out.reshape(bins[0], bins[1]), cl_ybin_edges, cl_xbin_edges
 
     def do_hist1d(self, x, intensity, cDataRGB, axis):
         """
@@ -190,10 +74,7 @@ class GenericProcessOrThread(object):
                     hist1dRGB[:, i] = kdeobj(binCenters)
                     hist1dRGB[:, i] *= norm / hist1dRGB[:, i].sum()
         else:
-            if self.cl_ctx is None:
-                histogram = np.histogram
-            else:
-                histogram = self.hist1d_cl
+            histogram = np.histogram
 
             hist1d, binEdges = histogram(
                 x, bins=axis.bins, range=axis.limits, weights=intensity)
@@ -248,10 +129,7 @@ class GenericProcessOrThread(object):
 
         """
         hist4d = None
-        if self.cl_ctx is None:
-            histogram2d = np.histogram2d
-        else:
-            histogram2d = self.hist2d_cl
+        histogram2d = np.histogram2d
 
         xyrange = [plot.yaxis.limits, plot.xaxis.limits]
         if not (raycing.is_sequence(plot.xaxis.limits) and

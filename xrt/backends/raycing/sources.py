@@ -438,6 +438,9 @@ try:
 except ImportError:
     isOpenCL = False
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 defaultEnergy = 9.0e3
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out
@@ -2287,8 +2290,8 @@ class BendingMagnet(object):
         self.gamma2 = self.gamma**2
         """" K2B: Conversion of Deflection parameter to magnetic field [T]
                         for the period in [mm]"""
-        #self.c_E = 0.0075 * HPLANCK * C * self.gamma**3 / PI / EV2ERG
-        #self.c_3 = 40. * PI * E0 * EV2ERG * self.I0 /\
+        # self.c_E = 0.0075 * HPLANCK * C * self.gamma**3 / PI / EV2ERG
+        # self.c_3 = 40. * PI * E0 * EV2ERG * self.I0 /\
         #    (np.sqrt(3) * HPLANCK * HPLANCK * C * self.gamma2) * \
         #    200. * EV2ERG / (np.sqrt(3) * HPLANCK * C * self.gamma2)
 
@@ -2720,11 +2723,11 @@ class Undulator(object):
                  eE=6.0, eI=0.1, eEspread=0., eSigmaX=None, eSigmaZ=None,
                  eEpsilonX=1., eEpsilonZ=0.01, betaX=20., betaZ=5.,
                  period=50, n=50, K=10., Kx=0, Ky=0., phaseDeg=0,
-                 taper=None, R0=None, targetE=None,
+                 taper=None, R0=None, targetE=None, targetEhel=None,
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-6, gIntervals=1,
+                 gp=1e-6, gIntervals=1, customField=None, nRK=10,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -2829,6 +2832,21 @@ class Undulator(object):
             significantly increase the calculation time and RAM consumption
             especially if OpenCL is not used.
 
+        *nRK*: int
+            Size of the Runge-Kutta integration grid per each interval
+            between Gauss-Legendre integration nodes (only valid in customField
+            is not None).
+
+        *customField*: None, float or tuple of filename and parameters
+            If not None velocities and trajectories of the electrons are
+            calculated numerically from the magnetic field. If float value is
+            given, it specifies the constant longitudinal magnetic field
+            component (Bz), amplitudes of the transverse magnetic field are
+            calculated from the deflection parameter K (Bx, By).
+            Magnetic field can be also read from 4-column file (z-coordinate,
+            Bx, By, Bz) using numpy.loadtxt in case of ASCII or
+            pandas.read_excel in case of Excel spreadsheet.
+
         *uniformRayDensity*: bool
             If True, the radiation is sampled uniformly, otherwise with the
             density proportional to intensity. Required as True for the wave
@@ -2916,6 +2934,7 @@ class Undulator(object):
         self.gIntervals = gIntervals
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
+        self.nRK = nRK
 
         self.cl_ctx = None
         if (self.R0 is not None):
@@ -2971,6 +2990,16 @@ class Undulator(object):
             if np.isnan(K):
                 raise ValueError("Cannot calculate K, try to increase the "
                                  "undulator harmonic number")
+
+        # For elliptical undulator Kx=Ky=K/sqrt(2)
+        if targetEhel is not None:
+            Kx = np.sqrt(targetEhel[1] * 8 * PI * C * 10 * self.gamma2 /
+                         period / targetEhel[0] / E2W - 2)/np.sqrt(2)
+            Ky = Kx
+            if _DEBUG:
+                print "Kx =", Kx
+                print "Ky =", Ky
+
         self.Kx = Kx
         self.Ky = Ky
         self.K = K
@@ -2985,6 +3014,25 @@ class Undulator(object):
             self.taper = None
         if self.Kx == 0 and self.Ky == 0:
             self.Ky = self.K
+
+        self.B0x = K2B * self.Kx / self.L0
+        self.B0y = K2B * self.Ky / self.L0
+        self.customField = customField
+
+        if customField is not None:
+            if isinstance(customField, (tuple, list)):
+                fname = customField[0]
+                kwargs = customField[1]
+            elif isinstance(customField, (float, int)):
+                fname = None
+                self.customFieldData = customField
+            else:
+                fname = customField
+                kwargs = {}
+            if fname:
+                self.customFieldData = self.read_custom_field(fname, kwargs)
+        else:
+            self.customFieldData = None
 
         if xPrimeMaxAutoReduce:
             xPrimeMaxTmp = self.Ky / self.gamma
@@ -3002,10 +3050,30 @@ class Undulator(object):
 
         self.reset()
 
+    def read_custom_field(self, fname, kwargs={}):
+        if fname.endswith('.xls') or fname.endswith('.xlsx'):
+            import pandas
+            data = pandas.read_excel(fname, **kwargs).values
+        else:
+            data = np.loadtxt(fname)
+        return data
+
+    def magnetic_field(self, z):  # 'z' in radians
+        if isinstance(self.customField, (float, int)):
+            Bx = self.B0x * np.sin(z + self.phase)
+            By = self.B0y * np.sin(z)
+            Bz = self.customFieldData * np.ones_like(z)
+        else:
+            dataz = self.customFieldData[:, 0] / self.L0 * PI2
+            Bx = np.interp(z, dataz, self.customFieldData[:, 1])
+            By = np.interp(z, dataz, self.customFieldData[:, 2])
+            Bz = np.interp(z, dataz, self.customFieldData[:, 3])
+        return (Bx, By, Bz)
+
     def reset(self):
         self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
             (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
-        #wnu = 2 * PI * (0.01 * C) / self.L0 / 1e-3 / E2W
+        # wnu = 2 * PI * (0.01 * C) / self.L0 / 1e-3 / E2W
         if _DEBUG:
             print("E1 = {0}".format(
                 2 * self.wu * self.gamma2 / (1 + 0.5 * self.Ky**2)))
@@ -3035,18 +3103,34 @@ class Undulator(object):
         self.dPsi = (self.Psi_max - self.Psi_min) / float(mPsi - 1)
 
         """Adjusting the number of points for Gauss integration"""
-#        self.gp = 1
+        # self.gp = 1
         gau_int_error = self.gp * 10.
         ii = 2
         self.gau = int(ii*2 + 1)
-        #self.gau = int(2**ii + 1)
+        # self.gau = int(2**ii + 1)
         while gau_int_error >= self.gp:
-#            ii += self.gIntervals
+            # ii += self.gIntervals
             ii = int(ii * 1.5)
             self.gau = int(ii*2)
-            I1 = self.build_I_map(self.E_max, self.Theta_max, self.Psi_max)[0]
-            self.gau = int(ii*2 + 1)
-            I2 = self.build_I_map(self.E_max, self.Theta_max, self.Psi_max)[0]
+            if self.cl_ctx is not None:
+                sE_max = self.E_max * np.ones(11)
+                sTheta_max = self.Theta_max * np.ones(11)
+                sPsi_max = self.Psi_max * np.ones(11)
+                I1 = self.build_I_map(sE_max,
+                                      sTheta_max,
+                                      sPsi_max)[0][0]
+                self.gau = int(ii*2 + 1)
+                I2 = self.build_I_map(sE_max,
+                                      sTheta_max,
+                                      sPsi_max)[0][0]
+            else:
+                I1 = self.build_I_map(self.E_max,
+                                      self.Theta_max,
+                                      self.Psi_max)[0]
+                self.gau = int(ii*2 + 1)
+                I2 = self.build_I_map(self.E_max,
+                                      self.Theta_max,
+                                      self.Psi_max)[0]
             gau_int_error = np.abs((I2 - I1)/I2)
             if _DEBUG:
                 print("G = {0}".format([self.gau, gau_int_error, np.abs(I2)]))
@@ -3241,12 +3325,14 @@ class Undulator(object):
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic)
+        elif self.customField is not None:
+            return self._build_I_map_custom(w, ddtheta, ddpsi, harmonic)
         else:
             return self._build_I_map_CL(w, ddtheta, ddpsi, harmonic)
 
     def _build_I_map_conv(self, w, ddtheta, ddpsi, harmonic):
-#        np.seterr(invalid='ignore')
-#        np.seterr(divide='ignore')
+        #        np.seterr(invalid='ignore')
+        #        np.seterr(divide='ignore')
         gamma = self.gamma
         if self.eEspread > 0:
             if np.array(w).shape:
@@ -3297,12 +3383,169 @@ class Undulator(object):
             Bsr[ww1 < harmonic-0.5] = 0
             Bpr[ww1 < harmonic-0.5] = 0
 
-#        np.seterr(invalid='warn')
-#        np.seterr(divide='warn')
+        #        np.seterr(invalid='warn')
+        #        np.seterr(divide='warn')
         return (Amp2Flux * AB**2 * 0.25 * dstep**2 *
                 (np.abs(Bsr)**2 + np.abs(Bpr)**2),
                 np.sqrt(Amp2Flux) * AB * Bsr,
                 np.sqrt(Amp2Flux) * AB * Bpr)
+
+    def _build_I_map_custom(self, w, ddtheta, ddpsi, harmonic):
+        # time1 = time.time()
+        gamma = self.gamma
+        if self.eEspread > 0:
+            if np.array(w).shape:
+                if w.shape[0] > 1:
+                    if self.filamentBeam:
+                        gamma += gamma * self.eEspread * \
+                            np.ones_like(w, dtype=self.cl_precisionF) *\
+                            np.random.standard_normal()
+                    else:
+                        gamma += np.random.normal(0,
+                                                  gamma*self.eEspread,
+                                                  w.shape)
+            gamma2 = gamma**2
+            wu = PI * C * 10 / self.L0 / gamma2 * \
+                (2*gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
+        else:
+            gamma = self.gamma * np.ones_like(w, dtype=self.cl_precisionF)
+            gamma2 = self.gamma2 * np.ones_like(w, dtype=self.cl_precisionF)
+            wu = self.wu * np.ones_like(w, dtype=self.cl_precisionF)
+        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
+
+        ww1 = w * ((1. + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) +
+                   gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
+            (2. * gamma2 * wu)
+        scalarArgs = []  # R0
+        R0 = self.R0 if self.R0 is not None else 0
+
+        Np = np.int32(self.Np)
+
+        tg_n, ag_n = np.polynomial.legendre.leggauss(self.gau)
+
+        ab = w / PI2 / wu
+        dstep = 2 * PI / float(self.gIntervals)
+        dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
+
+        tg = np.array([-PI*Np + PI/2.])
+        ag = [0]
+        tg = self.cl_precisionF(
+            np.concatenate((tg, (dI[:, None]+0.5*dstep*tg_n).flatten() +
+                            PI/2.)))
+        ag = self.cl_precisionF(np.concatenate(
+            (ag, (dI[:, None]*0+ag_n).flatten())))
+
+        nwt = self.nRK
+        wtGrid = []
+        for itg in range(len(tg) - 1):
+            tmppr, tmpstp = np.linspace(tg[itg],
+                                        tg[itg+1],
+                                        2*nwt,
+                                        endpoint=False, retstep=True)
+            wtGrid.extend(np.linspace(tg[itg],
+                                      tg[itg+1],
+                                      2*nwt,
+                                      endpoint=False))
+        wtGrid.append(tg[-1])
+
+        # print "Custom magnetic field: Bx={0}. By={1}, Bz={2}".format(
+        #    self.B0x, self.B0y, self.B0z)
+        Bx, By, Bz = self.magnetic_field(wtGrid)
+
+        if self.filamentBeam:
+            emcg = self.L0 * SIE0 / SIM0 / C / 10. / gamma[0] / PI2
+            scalarArgsTraj = [np.int32(len(tg)),  # jend
+                              np.int32(nwt),
+                              self.cl_precisionF(emcg),
+                              self.cl_precisionF(gamma[0])]
+
+            nonSlicedROArgs = [tg,  # Gauss-Legendre grid
+                               self.cl_precisionF(Bx),  # Mangetic field
+                               self.cl_precisionF(By),  # components on the
+                               self.cl_precisionF(Bz)]  # Runge-Kutta grid
+
+            nonSlicedRWArgs = [np.zeros_like(tg),  # beta.x
+                               np.zeros_like(tg),  # beta.y
+                               np.zeros_like(tg),  # beta.z average
+                               np.zeros_like(tg),  # traj.x
+                               np.zeros_like(tg),  # traj.y
+                               np.zeros_like(tg)]  # traj.z
+
+            clKernel = 'get_trajectory'
+
+            betax, betay, betazav, trajx, trajy, trajz = self.ucl.run_parallel(
+                clKernel, scalarArgsTraj, None, nonSlicedROArgs,
+                None, nonSlicedRWArgs, 1)
+            self.beta = [betax, betay]
+            self.trajectory = [trajx * self.L0 / 2. / np.pi,
+                               trajy * self.L0 / 2. / np.pi,
+                               trajz * self.L0 / 2. / np.pi]
+            wuAv = PI2 * C * 10. * betazav[-1] / self.L0 / E2W
+
+            scalarArgsTest = [np.int32(len(tg)),
+                              self.cl_precisionF(wuAv),
+                              self.cl_precisionF(self.L0),
+                              self.cl_precisionF(R0)]
+
+            slicedROArgs = [self.cl_precisionF(w),  # Energy
+                            self.cl_precisionF(ddtheta),  # Theta
+                            self.cl_precisionF(ddpsi)]  # Psi
+
+            nonSlicedROArgs = [tg,  # Gauss-Legendre grid
+                               ag,   # Gauss-Legendre weights
+                               self.cl_precisionF(betax),  # Components of the
+                               self.cl_precisionF(betay),  # velosity and
+                               self.cl_precisionF(trajx),  # trajectory of the
+                               self.cl_precisionF(trajy),  # electron on the
+                               self.cl_precisionF(trajz)]  # Gauss grid
+
+            slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
+                            np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
+
+            clKernel = 'undulator_custom_filament'
+
+            Is_local, Ip_local = self.ucl.run_parallel(
+                clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
+                slicedRWArgs, None, NRAYS)
+        else:
+            scalarArgs.extend([np.int32(len(tg)),  # jend
+                               np.int32(nwt),
+                               self.cl_precisionF(self.L0)])
+
+            slicedROArgs = [self.cl_precisionF(gamma),  # gamma
+                            self.cl_precisionF(w),  # Energy
+                            self.cl_precisionF(ddtheta),  # Theta
+                            self.cl_precisionF(ddpsi)]  # Psi
+
+            nonSlicedROArgs = [tg,  # Gauss-Legendre grid
+                               ag,   # Gauss-Legendre weights
+                               self.cl_precisionF(Bx),  # Mangetic field
+                               self.cl_precisionF(By),  # components on the
+                               self.cl_precisionF(Bz)]  # Runge-Kutta grid
+
+            slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
+                            np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
+
+            clKernel = 'undulator_custom'
+
+            Is_local, Ip_local = self.ucl.run_parallel(
+                clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
+                slicedRWArgs, None, NRAYS)
+
+        bwFact = 0.001 if self.distE == 'BW' else 1./w
+        Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
+
+        if harmonic is not None:
+            Is_local[ww1 > harmonic+0.5] = 0
+            Ip_local[ww1 > harmonic+0.5] = 0
+            Is_local[ww1 < harmonic-0.5] = 0
+            Ip_local[ww1 < harmonic-0.5] = 0
+
+        # print("Build_I_Map completed in {0} s".format(time.time() - time1))
+        return (Amp2Flux * ab**2 * 0.25 * dstep**2 *
+                (np.abs(Is_local)**2 + np.abs(Ip_local)**2),
+                np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
+                np.sqrt(Amp2Flux) * Ip_local * ab * 0.5 * dstep)
 
     def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic):
         # time1 = time.time()
@@ -3331,7 +3574,8 @@ class Undulator(object):
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
         if self.R0 is not None:
-            scalarArgs = [self.cl_precisionF(self.R0)]  # R0
+            scalarArgs = [self.cl_precisionF(self.R0),  # R0
+                          self.cl_precisionF(self.L0)]
         else:
             scalarArgs = [self.cl_precisionF(self.taper)] if self.taper\
                 is not None else [self.cl_precisionF(0.)]  # taper
@@ -3379,7 +3623,7 @@ class Undulator(object):
 
         Is_local, Ip_local = self.ucl.run_parallel(
             clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
-            slicedRWArgs, NRAYS)
+            slicedRWArgs, None, NRAYS)
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
@@ -3491,7 +3735,7 @@ class Undulator(object):
                 rPsi = rndg * (self.Psi_max - self.Psi_min) + self.Psi_min
 
             Intensity, mJs, mJp = self.build_I_map(rE, rTheta, rPsi)
-
+            print "map built"
             if self.uniformRayDensity:
                 seededI += mcRays * self.xzE
             else:

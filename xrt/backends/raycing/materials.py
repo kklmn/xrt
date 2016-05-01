@@ -701,7 +701,7 @@ class Multilayer(object):
 
             ri_s, ri_p = ucl.run_parallel(
                 'get_amplitude_graded_multilayer', scalarArgs, slicedROArgs,
-                nonSlicedROArgs, slicedRWArgs, len(E))
+                nonSlicedROArgs, slicedRWArgs, None, len(E))
             t2 = time.time()
             print('ML reflection calculated with OCL in {} s'.format(t2-t0))
         return ri_s, ri_p
