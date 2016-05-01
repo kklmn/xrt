@@ -559,6 +559,9 @@ class Multilayer(object):
                 a = -1 + 1e-16
         return np.arcsin(a)
 
+    def get_dtheta(self, E, order=1):
+        return self.get_dtheta_symmetric_Bragg(E, order=order)
+
     def get_dtheta_symmetric_Bragg(self, E, order=1):
         r"""
         The angle correction for the symmetric Bragg case:
@@ -701,7 +704,7 @@ class Multilayer(object):
 
             ri_s, ri_p = ucl.run_parallel(
                 'get_amplitude_graded_multilayer', scalarArgs, slicedROArgs,
-                nonSlicedROArgs, slicedRWArgs, None, len(E))
+                nonSlicedROArgs, slicedRWArgs, len(E))
             t2 = time.time()
             print('ML reflection calculated with OCL in {} s'.format(t2-t0))
         return ri_s, ri_p
@@ -1128,9 +1131,10 @@ class CrystalSi(CrystalDiamond):
         """
         self.tK = kwargs.pop('tK', 297.15)
         self.hkl = kwargs.get('hkl', (1, 1, 1))
-# Batchelder and Simmons, J. Chem. Phys. 41, 2324 (1964):
-        self.a0 = 5.419490
-        self.dl_l0 = self.dl_l(273.15)
+# O'Mara, William C. Handbook of Semiconductor Silicon Technology.
+# William Andrew Inc. (1990) pp. 349–352.
+        self.a0 = 5.430710
+        self.dl_l0 = self.dl_l(273.15 + 19.9)
         self.sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
         kwargs['d'] = self.get_a() / self.sqrthkl2
         kwargs['elements'] = 'Si'
