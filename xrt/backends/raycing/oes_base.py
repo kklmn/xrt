@@ -489,7 +489,7 @@ class OE(object):
 
         t2, x2, y2, z2 = self.ucl.run_parallel(
             'find_intersection', scalarArgs, slicedROArgs, None, slicedRWArgs,
-            NRAYS)
+            None, NRAYS)
         return t2, x2, y2, z2
 
     def _use_my_method(
@@ -1135,7 +1135,7 @@ class OE(object):
 
         curveS, curveP, a_out, b_out, c_out = self.ucl.run_parallel(
             'reflect_crystal', scalarArgs, slicedROArgs, nonSlicedROArgs,
-            slicedRWArgs, lenGood)
+            slicedRWArgs, None, lenGood)
 
         return a_out, b_out, c_out, curveS, curveP
 

@@ -615,7 +615,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-6, gIntervals=1,
+                 gp=1e-6, gIntervals=1, nRK=10,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -685,6 +685,11 @@ class Undulator(object):
             by :meth:`numpy.loadtxt()`, e.g. ``dict(skiprows=4)`` for skipping
             the file header. The file must contain the columns with
             longitudinal coordinate in mm, B_hor, B_ver, B_long, all in T.
+
+        *nRK*: int
+            Size of the Runge-Kutta integration grid per each interval
+            between Gauss-Legendre integration nodes (only valid in customField
+            is not None).
 
         *eMin*, *eMax*: float
             Minimum and maximum photon energy (eV).
@@ -817,6 +822,7 @@ class Undulator(object):
         self.gIntervals = gIntervals
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
+        self.nRK = nRK
 
         self.cl_ctx = None
         if (self.R0 is not None):
@@ -874,12 +880,10 @@ class Undulator(object):
                                  "undulator harmonic number")
             if len(targetE) > 2:
                 isElliptical = targetE[2]
-            else:
-                isElliptical = False
-            if isElliptical is not None:
-                Kx = Ky = K / 2**0.5
-                if _DEBUG:
-                    print("Kx = Ky = {0}".format(Kx))
+                if isElliptical:
+                    Kx = Ky = K / 2**0.5
+                    if _DEBUG:
+                        print("Kx = Ky = {0}".format(Kx))
 
         self.Kx = Kx
         self.Ky = Ky
@@ -1032,17 +1036,34 @@ class Undulator(object):
         gau_int_error = self.gp * 10.
         ii = 2
         self.gau = int(ii*2 + 1)
-        # self.gau = int(2**ii + 1)
+        tmpeEspread = self.eEspread
+        self.eEspread = 0
         while gau_int_error >= self.gp:
-            # ii += self.gIntervals
             ii = int(ii * 1.5)
             self.gau = int(ii*2)
-            I1 = self.build_I_map(self.E_max, self.Theta_max, self.Psi_max)[0]
-            self.gau = int(ii*2 + 1)
-            I2 = self.build_I_map(self.E_max, self.Theta_max, self.Psi_max)[0]
+            if self.cl_ctx is not None:
+                sE_max = self.E_max * np.ones(3)
+                sTheta_max = self.Theta_max * np.ones(3)
+                sPsi_max = self.Psi_max * np.ones(3)
+                I1 = self.build_I_map(sE_max,
+                                      sTheta_max,
+                                      sPsi_max)[0][0]
+                self.gau = int(ii*2 + 1)
+                I2 = self.build_I_map(sE_max,
+                                      sTheta_max,
+                                      sPsi_max)[0][0]
+            else:
+                I1 = self.build_I_map(self.E_max,
+                                      self.Theta_max,
+                                      self.Psi_max)[0]
+                self.gau = int(ii*2 + 1)
+                I2 = self.build_I_map(self.E_max,
+                                      self.Theta_max,
+                                      self.Psi_max)[0]
             gau_int_error = np.abs((I2 - I1)/I2)
             if _DEBUG:
                 print("G = {0}".format([self.gau, gau_int_error, np.abs(I2)]))
+        self.eEspread = tmpeEspread
         if _DEBUG:
             print("Done with Gaussian optimization")
 
@@ -1230,7 +1251,7 @@ class Undulator(object):
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None):
         useCL = False
         if isinstance(w, np.ndarray):
-            if w.shape[0] > 10:
+            if w.shape[0] > 2:
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic)
@@ -1326,10 +1347,7 @@ class Undulator(object):
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
         scalarArgs = []  # R0
-
-        # self.Np = 10
-        # self.gau = 30
-        # self.gIntervals = 1
+        R0 = self.R0 if self.R0 is not None else 0
 
         Np = np.int32(self.Np)
 
@@ -1339,15 +1357,15 @@ class Undulator(object):
         dstep = 2 * PI / float(self.gIntervals)
         dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
 
-        tg = np.array([-PI*Np + 0.*PI/2.])
+        tg = np.array([-PI*Np + PI/2.])
         ag = [0]
         tg = self.cl_precisionF(
             np.concatenate((tg, (dI[:, None]+0.5*dstep*tg_n).flatten() +
-                            0.*PI/2.)))
+                            PI/2.)))
         ag = self.cl_precisionF(np.concatenate(
             (ag, (dI[:, None]*0+ag_n).flatten())))
 
-        nwt = 10
+        nwt = self.nRK
         wtGrid = []
         for itg in range(len(tg) - 1):
             tmppr, tmpstp = np.linspace(tg[itg],
@@ -1364,34 +1382,85 @@ class Undulator(object):
         #    self.B0x, self.B0y, self.B0z)
         Bx, By, Bz = self.magnetic_field(wtGrid)
 
-        scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
-                           self.cl_precisionF(self.Ky),  # Ky
-                           self.cl_precisionF(self.phase),  # phase
-                           np.int32(len(tg)),  # jend
-                           np.int32(nwt),
-                           self.cl_precisionF(self.L0)])
+        if self.filamentBeam:
+            emcg = self.L0 * SIE0 / SIM0 / C / 10. / gamma[0] / PI2
+            scalarArgsTraj = [np.int32(len(tg)),  # jend
+                              np.int32(nwt),
+                              self.cl_precisionF(emcg),
+                              self.cl_precisionF(gamma[0])]
 
-        slicedROArgs = [self.cl_precisionF(gamma),  # gamma
-                        self.cl_precisionF(wu),  # Eund
-                        self.cl_precisionF(w),  # Energy
-                        self.cl_precisionF(ww1),  # Energy/Eund(0)
-                        self.cl_precisionF(ddtheta),  # Theta
-                        self.cl_precisionF(ddpsi)]  # Psi
+            nonSlicedROArgs = [tg,  # Gauss-Legendre grid
+                               self.cl_precisionF(Bx),  # Mangetic field
+                               self.cl_precisionF(By),  # components on the
+                               self.cl_precisionF(Bz)]  # Runge-Kutta grid
 
-        nonSlicedROArgs = [tg,  # Gauss-Legendre grid
-                           ag,   # Gauss-Legendre weights
-                           self.cl_precisionF(Bx),  # Mangetic field
-                           self.cl_precisionF(By),  # components on the
-                           self.cl_precisionF(Bz)]  # Runge-Kutta grid
+            nonSlicedRWArgs = [np.zeros_like(tg),  # beta.x
+                               np.zeros_like(tg),  # beta.y
+                               np.zeros_like(tg),  # beta.z average
+                               np.zeros_like(tg),  # traj.x
+                               np.zeros_like(tg),  # traj.y
+                               np.zeros_like(tg)]  # traj.z
 
-        slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
-                        np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
+            clKernel = 'get_trajectory'
 
-        clKernel = 'undulator_custom'
+            betax, betay, betazav, trajx, trajy, trajz = self.ucl.run_parallel(
+                clKernel, scalarArgsTraj, None, nonSlicedROArgs,
+                None, nonSlicedRWArgs, 1)
+            self.beta = [betax, betay]
+            self.trajectory = [trajx * self.L0 / 2. / np.pi,
+                               trajy * self.L0 / 2. / np.pi,
+                               trajz * self.L0 / 2. / np.pi]
+            wuAv = PI2 * C * 10. * betazav[-1] / self.L0 / E2W
 
-        Is_local, Ip_local = self.ucl.run_parallel(
-            clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
-            slicedRWArgs, NRAYS)
+            scalarArgsTest = [np.int32(len(tg)),
+                              self.cl_precisionF(wuAv),
+                              self.cl_precisionF(self.L0),
+                              self.cl_precisionF(R0)]
+
+            slicedROArgs = [self.cl_precisionF(w),  # Energy
+                            self.cl_precisionF(ddtheta),  # Theta
+                            self.cl_precisionF(ddpsi)]  # Psi
+
+            nonSlicedROArgs = [tg,  # Gauss-Legendre grid
+                               ag,   # Gauss-Legendre weights
+                               self.cl_precisionF(betax),  # Components of the
+                               self.cl_precisionF(betay),  # velosity and
+                               self.cl_precisionF(trajx),  # trajectory of the
+                               self.cl_precisionF(trajy),  # electron on the
+                               self.cl_precisionF(trajz)]  # Gauss grid
+
+            slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
+                            np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
+
+            clKernel = 'undulator_custom_filament'
+
+            Is_local, Ip_local = self.ucl.run_parallel(
+                clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
+                slicedRWArgs, None, NRAYS)
+        else:
+            scalarArgs.extend([np.int32(len(tg)),  # jend
+                               np.int32(nwt),
+                               self.cl_precisionF(self.L0)])
+
+            slicedROArgs = [self.cl_precisionF(gamma),  # gamma
+                            self.cl_precisionF(w),  # Energy
+                            self.cl_precisionF(ddtheta),  # Theta
+                            self.cl_precisionF(ddpsi)]  # Psi
+
+            nonSlicedROArgs = [tg,  # Gauss-Legendre grid
+                               ag,   # Gauss-Legendre weights
+                               self.cl_precisionF(Bx),  # Mangetic field
+                               self.cl_precisionF(By),  # components on the
+                               self.cl_precisionF(Bz)]  # Runge-Kutta grid
+
+            slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
+                            np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
+
+            clKernel = 'undulator_custom'
+
+            Is_local, Ip_local = self.ucl.run_parallel(
+                clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
+                slicedRWArgs, None, NRAYS)
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
@@ -1402,7 +1471,6 @@ class Undulator(object):
             Is_local[ww1 < harmonic-0.5] = 0
             Ip_local[ww1 < harmonic-0.5] = 0
 
-        # print("Build_I_Map completed in {0} s".format(time.time() - time1))
         return (Amp2Flux * ab**2 * 0.25 * dstep**2 *
                 (np.abs(Is_local)**2 + np.abs(Ip_local)**2),
                 np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
@@ -1435,7 +1503,8 @@ class Undulator(object):
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
         if self.R0 is not None:
-            scalarArgs = [self.cl_precisionF(self.R0)]  # R0
+            scalarArgs = [self.cl_precisionF(self.R0),  # R0
+                          self.cl_precisionF(self.L0)]
         else:
             scalarArgs = [self.cl_precisionF(self.taper)] if self.taper\
                 is not None else [self.cl_precisionF(0.)]  # taper
@@ -1483,7 +1552,7 @@ class Undulator(object):
 
         Is_local, Ip_local = self.ucl.run_parallel(
             clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
-            slicedRWArgs, NRAYS)
+            slicedRWArgs, None, NRAYS)
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
@@ -1678,9 +1747,6 @@ class Undulator(object):
                 sSP = 1.
             else:
                 sSP = mJs2 + mJp2
-                norm = sSP**0.5
-                mJs /= norm
-                mJp /= norm
 
             bot.Jsp[:] = np.where(sSP, mJs * np.conj(mJp) / sSP, 0)
             bot.Jss[:] = np.where(sSP, mJs2 / sSP, 0)
