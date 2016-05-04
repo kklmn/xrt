@@ -687,9 +687,9 @@ class Undulator(object):
             longitudinal coordinate in mm, B_hor, B_ver, B_long, all in T.
 
         *nRK*: int
-            Size of the Runge-Kutta integration grid per each interval
-            between Gauss-Legendre integration nodes (only valid in customField
-            is not None).
+            Size of the Runge-Kutta integration grid per each interval between
+            Gauss-Legendre integration nodes (only valid if customField is not
+            None).
 
         *eMin*, *eMax*: float
             Minimum and maximum photon energy (eV).

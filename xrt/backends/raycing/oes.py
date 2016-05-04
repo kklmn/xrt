@@ -83,7 +83,8 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'BentFlatMirror', 'ToroidMirror',
            'EllipticalMirror', 'EllipticalMirrorParam',
            'ParabolicMirror', 'ParabolicalMirrorParam',
-           'DCM', 'Plate', 'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
+           'DCM', 'DCMwithSagittalFocusing', 'Plate',
+           'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating')
 import os
@@ -1234,6 +1235,36 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
             c = -np.cos(phi) / norm
         bNew, cNew = raycing.rotate_x(b, c, self.cosGamma, -self.sinGamma)
         return [a, bNew, cNew]
+
+
+class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
+    """Creates a DCM with a horizontal focusing 2nd crystal."""
+
+    def __init__(self, *args, **kwargs):
+        r"""
+        Assume Bragg planes and physical surface planes are parallel
+        (no miscut angle).
+
+        *Rs*: float
+            Sagittal radius of second crystal.
+
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        DCM.__init__(self, *args, **kwargs)
+
+    def __pop_kwargs(self, **kwargs):
+        self.Rs = kwargs.pop('Rs', 1e12)
+        return kwargs
+
+    def local_z2(self, x, y):
+        return self.Rs - np.sqrt(self.Rs**2 - x**2)
+
+    def local_n2(self, x, y):
+        a = -x / self.Rs  # -dz/dx
+        c = (self.Rs**2-x**2)**0.5 / self.Rs
+        b = np.zeros_like(y)  # -dz/dy
+        return [a, b, c]
 
 
 class DCMOnTripodWithOneXStage(DCM, rst.Tripod, rst.OneXStage):
