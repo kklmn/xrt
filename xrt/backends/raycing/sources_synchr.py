@@ -823,6 +823,7 @@ class Undulator(object):
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
+        self.trajectory = None
 
         self.cl_ctx = None
         if (self.R0 is not None):
@@ -1407,9 +1408,9 @@ class Undulator(object):
                 clKernel, scalarArgsTraj, None, nonSlicedROArgs,
                 None, nonSlicedRWArgs, 1)
             self.beta = [betax, betay]
-            self.trajectory = [trajx * self.L0 / 2. / np.pi,
-                               trajy * self.L0 / 2. / np.pi,
-                               trajz * self.L0 / 2. / np.pi]
+            self.trajectory = [trajx[1:-1] * self.L0 / PI2,
+                               trajy[1:-1] * self.L0 / PI2,
+                               trajz[1:-1] * self.L0 / PI2]
             wuAv = PI2 * C * 10. * betazav[-1] / self.L0 / E2W
 
             scalarArgsTest = [np.int32(len(tg)),
