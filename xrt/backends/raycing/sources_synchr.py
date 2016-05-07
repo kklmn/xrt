@@ -905,7 +905,7 @@ class Undulator(object):
         self.B0y = K2B * self.Ky / self.L0
         self.customField = customField
 
-        if customField:
+        if customField is not None:
             if isinstance(customField, (tuple, list)):
                 fname = customField[0]
                 kwargs = customField[1]
