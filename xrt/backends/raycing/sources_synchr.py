@@ -120,8 +120,9 @@ class BendingMagnet(object):
             self.isMPW = False
 
         self.bl = bl
-        bl.sources.append(self)
-        self.ordinalNum = len(bl.sources)
+        if bl is not None:
+            bl.sources.append(self)
+            self.ordinalNum = len(bl.sources)
         self.name = name
         self.center = center  # 3D point in global system
         self.nrays = nrays
@@ -615,7 +616,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-6, gIntervals=1, nRK=10,
+                 gp=1e-6, gIntervals=1, nRK=30,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
