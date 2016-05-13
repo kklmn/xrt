@@ -1,0 +1,13 @@
+filenew.png
+fileopen.png
+filesave.png
+filesaveas.png
+pythonscript.png
+pythonscriptsave.png
+pythonscriptsaveas.png
+run.png
+GPU4.png
+home.png
+readme.png
+xrQt1.ico
+logo-xrQt.png
