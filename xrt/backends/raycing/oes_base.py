@@ -1523,6 +1523,11 @@ class DCM(OE):
             refer to the 2nd crystal and are similar to the same parameters
             of the parent class :class:`OE` without the trailing "2".
 
+        *fixedOffset*: float
+            Offset between the incoming and outcoming beams in mm. If not None
+            or zero the value of *cryst2perpTransl* is replaced by 
+            *fixedOffset*/2/cos(*bragg*)
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
@@ -1546,6 +1551,7 @@ class DCM(OE):
         self.limOptY2 = kwargs.pop('limOptY2', None)
         self.material = kwargs.get('material', None)
         self.material2 = kwargs.pop('material2', self.material)
+        self.fixedOffset = kwargs.pop('fixedOffset', None)
         return kwargs
 
     def get_surface_limits(self):
@@ -1585,6 +1591,10 @@ class DCM(OE):
 
     def local_n2(self, x, y):
         return self.local_n1(x, y)
+
+    def get_orientation(self):
+        if self.fixedOffset not in [0, None]:
+            self.cryst2perpTransl = self.fixedOffset/2./np.cos(self.bragg)
 
     def double_reflect(self, beam=None, needLocal=True,
                        fromVacuum1=True, fromVacuum2=True):
