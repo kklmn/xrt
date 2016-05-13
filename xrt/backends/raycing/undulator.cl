@@ -190,11 +190,11 @@ double2 f_beta(double Bx, double By, double Bz,
                           Bx - beta.x*Bz);
 }
 
-double3 f_traj(double gamma, double2 beta)
+double3 f_traj(double revgamma, double2 beta)
 {
     return (double3)(beta.x,
                      beta.y,
-                     sqrt(1.-1./gamma/gamma-beta.x*beta.x-beta.y*beta.y));
+                     sqrt(revgamma-beta.x*beta.x-beta.y*beta.y));
 }
 
 double2 next_beta_rk(double2 beta, int iZeroStep, int iHalfStep,
@@ -225,7 +225,8 @@ double2 next_beta_rk(double2 beta, int iZeroStep, int iHalfStep,
 }
 
 double8 next_traj_rk(double2 beta, double3 traj, int iZeroStep, int iHalfStep,
-                     int iFullStep, double rkStep, double emcg, double gamma,
+                     int iFullStep, double rkStep, double emcg,
+                     double revgamma,
                      __global double* Bx,
                      __global double* By,
                      __global double* Bz)
@@ -237,25 +238,25 @@ double8 next_traj_rk(double2 beta, double3 traj, int iZeroStep, int iHalfStep,
                              By[iZeroStep],
                              Bz[iZeroStep],
                              emcg, beta);
-    k1Traj = rkStep * f_traj(gamma, beta);
+    k1Traj = rkStep * f_traj(revgamma, beta);
 
     k2Beta = rkStep * f_beta(Bx[iHalfStep],
                              By[iHalfStep],
                              Bz[iHalfStep],
                              emcg, beta + 0.5*k1Beta);
-    k2Traj = rkStep * f_traj(gamma, beta + 0.5*k1Beta);
+    k2Traj = rkStep * f_traj(revgamma, beta + 0.5*k1Beta);
 
     k3Beta = rkStep * f_beta(Bx[iHalfStep],
                              By[iHalfStep],
                              Bz[iHalfStep],
                              emcg, beta + 0.5*k2Beta);
-    k3Traj = rkStep * f_traj(gamma, beta + 0.5*k2Beta);
+    k3Traj = rkStep * f_traj(revgamma, beta + 0.5*k2Beta);
 
     k4Beta = rkStep * f_beta(Bx[iFullStep],
                              By[iFullStep],
                              Bz[iFullStep],
                              emcg, beta + k3Beta);
-    k4Traj = rkStep * f_traj(gamma, beta + k3Beta);
+    k4Traj = rkStep * f_traj(revgamma, beta + k3Beta);
 
     return (double8)(beta + (k1Beta + 2.*k2Beta + 2.*k3Beta + k4Beta)/6.,
                      traj + (k1Traj + 2.*k2Traj + 2.*k3Traj + k4Traj)/6.,
@@ -334,7 +335,7 @@ __kernel void undulator_custom(const int jend,
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
                                     iZeroStep, iHalfStep, iFullStep,
-                                    rkStep, emcg, gamma[ii], Bx, By, Bz);
+                                    rkStep, emcg, revgamma, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234;
             traj0 += traj * rkStep;
@@ -357,7 +358,7 @@ __kernel void undulator_custom(const int jend,
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
             iZeroStep, iHalfStep, iFullStep,
-            rkStep, emcg, gamma[ii], Bx, By, Bz);
+            rkStep, emcg, revgamma, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234; }
 
@@ -413,7 +414,7 @@ __kernel void get_trajectory(const int jend,
             beta = next_beta_rk(beta, iZeroStep, iHalfStep, iFullStep,
                                 rkStep, emcg, Bx, By, Bz);
             beta0 += beta * rkStep; } }
-
+    mem_fence(CLK_LOCAL_MEM_FENCE);
     beta0 /= -(tg[jend-1] - tg[0]);
     beta = beta0;
     traj = (double3)(0., 0., 0.);
@@ -428,13 +429,13 @@ __kernel void get_trajectory(const int jend,
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
                                     iZeroStep, iHalfStep, iFullStep,
-                                    rkStep, emcg, gamma, Bx, By, Bz);
+                                    rkStep, emcg, revgamma, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234;
             traj0 += traj * rkStep;
             betam_int += rkStep*sqrt(revgamma - beta.x*beta.x -
                                      beta.y*beta.y); } }
-
+    mem_fence(CLK_LOCAL_MEM_FENCE);
     traj0 /= -(tg[jend-1] - tg[0]);
     beta = beta0;
     traj = traj0;
@@ -449,7 +450,7 @@ __kernel void get_trajectory(const int jend,
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
                                     iZeroStep, iHalfStep, iFullStep,
-                                    rkStep, emcg, gamma, Bx, By, Bz);
+                                    rkStep, emcg, revgamma, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234; }
 
