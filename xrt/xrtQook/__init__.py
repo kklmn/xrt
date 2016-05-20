@@ -1332,6 +1332,19 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.plotTree.setColumnWidth(0, int(self.plotTree.width()/3))
         self.isEmpty = False
 
+    def addPlotBeam(self, beamName):
+        self.addPlot()
+        tItem = self.rootPlotItem.child(self.rootPlotItem.rowCount() - 1, 0)
+        for ie in range(tItem.rowCount()):
+            if tItem.child(ie, 0).text() == 'beam':
+                child1 = tItem.child(ie, 1)
+                if child1 is not None:
+                    child1.setText(beamName)
+                    iWidget = self.plotTree.indexWidget(child1.index())
+                    if iWidget is not None:
+                        iWidget.setCurrentIndex(iWidget.findText(beamName))
+                break
+
     def getArgDescr(self, obj):
         argDescName = []
         argDescValue = []
@@ -2042,6 +2055,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             menu.addAction(deleteActionName, partial(self.deleteElement,
                                                      self.tree,
                                                      selectedItem))
+        elif level == 4:
+            selParent = selectedItem.parent()
+            selRow = selectedItem.row()
+            child0 = selParent.child(selRow, 0)
+            child1 = selParent.child(selRow, 1)
+            if str(child0.text()).lower().startswith('beam') and\
+                    self.tree.indexWidget(child1.index()) is not None:
+                menu.addAction(self.tr("Plot " + child1.text()),
+                               partial(self.addPlotBeam, child1.text()))
 
         menu.exec_(self.tree.viewport().mapToGlobal(position))
 
