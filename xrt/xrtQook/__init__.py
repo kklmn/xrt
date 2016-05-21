@@ -2061,6 +2061,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             child0 = selParent.child(selRow, 0)
             child1 = selParent.child(selRow, 1)
             if str(child0.text()).lower().startswith('beam') and\
+                    str(selParent.text()).lower().startswith('output') and\
+                    not str(child1.text()).lower().startswith('none') and\
                     self.tree.indexWidget(child1.index()) is not None:
                 menu.addAction(self.tr("Plot " + child1.text()),
                                partial(self.addPlotBeam, child1.text()))
