@@ -1400,13 +1400,22 @@ class ParaboloidFlatLens(Plate):
     }"""
 
     def __init__(self, *args, **kwargs):
-        """
+        u"""
         *focus*: float
             The focal distance of the of paraboloid in mm. The paraboloid is
             then defined by the equation:
 
             .. math::
                 z = (x^2 + y^2) / (4 * focus)
+
+            .. note::
+
+                This is not the focal distance of the lens but of the
+                parabola! The former also depends on the refractive index.
+                *focus* is only a shape parameter!
+
+        *pitch*: float
+            the default value is set to π/2, i.e. to normal incidence.
 
         *zmax*: float
             If given, limits the *z* coordinate; the object becomes then a
@@ -1421,6 +1430,7 @@ class ParaboloidFlatLens(Plate):
     def __pop_kwargs(self, **kwargs):
         self.focus = kwargs.pop('focus', 1.)
         self.zmax = kwargs.pop('zmax', None)
+        kwargs['pitch'] = kwargs.get('pitch', np.pi/2)
         return kwargs
 
     def local_z1(self, x, y):
