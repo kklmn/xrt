@@ -131,7 +131,8 @@ class GeometricSource(object):
         distx='normal', dx=0.32, disty=None, dy=0, distz='normal', dz=0.018,
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,),
-            polarization='horizontal', filamentBeam=False, pitch=0, yaw=0):
+        polarization='horizontal', filamentBeam=False,
+            uniformRayDensity=False, pitch=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -151,9 +152,9 @@ class GeometricSource(object):
             the pair.
 
         *dx*, *dy*, *dz*, *dxprime*, *dzprime*: float
-            for normal distribution is sigma, for flat is full width or tuple
-            (min, max), for annulus is tuple (rMin, rMax), otherwise is
-            ignored
+            for normal distribution is sigma or (sigma, cut_limit), for flat
+            is full width or tuple (min, max), for annulus is tuple
+            (rMin, rMax), otherwise is ignored.
 
         *distE*: 'normal', 'flat', 'lines', None
 
@@ -167,11 +168,24 @@ class GeometricSource(object):
             tuple of 4 components of the coherency matrix:
             (Jss, Jpp, Re(Jsp), Im(Jsp)).
 
-        *filamentBeam*: if True the source generates coherent monochromatic
+        *filamentBeam*: bool
+            If True the source generates coherent monochromatic
             wavefronts. Required for the wave propagation calculations.
+
+        *uniformRayDensity*: bool
+            If True, the radiation is sampled uniformly but with varying
+            amplitudes, otherwise with the density proportional to intensity
+            and with constant amplitudes. Required as True for wave propagation
+            calculations. False is usual for ray-tracing. This parameter
+            only affects normal distributions, as for flat and annulus
+            distributions the density is already uniform. If you set it True,
+            the size parameter (*dx* or *dz*) must be given as
+            (sigma, cut_limit).
 
         *pitch*, *yaw*: float
             rotation angles around x and z axis. Useful for canted sources.
+
+
         """
         self.bl = bl
         bl.sources.append(self)
@@ -197,12 +211,27 @@ class GeometricSource(object):
             self.energies = energies
         self.polarization = polarization
         self.filamentBeam = filamentBeam
+        self.uniformRayDensity = uniformRayDensity
         self.pitch = pitch
         self.yaw = yaw
 
-    def _apply_distribution(self, axis, distaxis, daxis):
-        if (distaxis == 'normal') and (daxis > 0):
-            axis[:] = np.random.normal(0, daxis, self.nrays)
+    def _apply_distribution(self, axis, distaxis, daxis, bo=None):
+        if distaxis == 'normal':
+            if self.uniformRayDensity:
+                if not isinstance(daxis, (list, tuple)):
+                    raise ValueError("Wrong distribution size!")
+                axis[:] = np.random.uniform(-daxis[1], daxis[1], self.nrays)
+                amp = np.exp(-axis**2 / daxis[0]**2 / 2) /\
+                    PI2**0.5 / daxis[0] * 2*daxis[1]
+                bo.Jss *= amp
+                bo.Jpp *= amp
+                bo.Jsp *= amp
+                amp = amp**0.5
+                bo.Es *= amp
+                bo.Ep *= amp
+            else:
+                sigma = daxis[0] if isinstance(daxis, (list, tuple)) else daxis
+                axis[:] = np.random.normal(0, sigma, self.nrays)
         elif (distaxis == 'flat'):
             if raycing.is_sequence(daxis):
                 aMin, aMax = daxis[0], daxis[1]
@@ -233,6 +262,8 @@ class GeometricSource(object):
 
         .. Returned values: beamGlobal
         """
+        if self.uniformRayDensity:
+            withAmplitudes = True
         bo = Beam(self.nrays, withAmplitudes=withAmplitudes)  # beam-out
         bo.state[:] = 1
 # =0: ignored, =1: good,
@@ -240,6 +271,7 @@ class GeometricSource(object):
 # =-NN: lost (absorbed) at OE#NN (OE numbering starts from 1!) If NN>1000 then
 # the slit with ordinal number NN-1000 is meant.
 
+        make_polarization(self.polarization, bo, self.nrays)
 # in local coordinate system:
         self._apply_distribution(bo.y, self.disty, self.dy)
 
@@ -257,8 +289,8 @@ class GeometricSource(object):
         if isAnnulus:
             self._set_annulus(bo.x, bo.z, rMin, rMax, phiMin, phiMax)
         else:
-            self._apply_distribution(bo.x, self.distx, self.dx)
-            self._apply_distribution(bo.z, self.distz, self.dz)
+            self._apply_distribution(bo.x, self.distx, self.dx, bo)
+            self._apply_distribution(bo.z, self.distz, self.dz, bo)
 
         isAnnulus = False
         if (self.distxprime == 'annulus') or (self.distzprime == 'annulus'):
@@ -292,7 +324,6 @@ class GeometricSource(object):
                                       self.filamentBeam)
             else:
                 bo.E[:] = accuBeam.E[:]
-        make_polarization(self.polarization, bo, self.nrays)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         return bo
