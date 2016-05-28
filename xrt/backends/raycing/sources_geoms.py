@@ -222,16 +222,18 @@ class GeometricSource(object):
                     raise ValueError("Wrong distribution size!")
                 axis[:] = np.random.uniform(-daxis[1], daxis[1], self.nrays)
                 amp = np.exp(-axis**2 / daxis[0]**2 / 2) /\
-                    PI2**0.5 / daxis[0] * 2*daxis[1]
+                    PI2**0.5 / daxis[0] * 2 * daxis[1]
                 bo.Jss *= amp
                 bo.Jpp *= amp
                 bo.Jsp *= amp
                 amp = amp**0.5
                 bo.Es *= amp
                 bo.Ep *= amp
+                bo.area *= 2 * daxis[1]
             else:
                 sigma = daxis[0] if isinstance(daxis, (list, tuple)) else daxis
                 axis[:] = np.random.normal(0, sigma, self.nrays)
+                bo.area *= 6 * daxis
         elif (distaxis == 'flat'):
             if raycing.is_sequence(daxis):
                 aMin, aMax = daxis[0], daxis[1]
@@ -240,6 +242,7 @@ class GeometricSource(object):
                     return
                 aMin, aMax = -daxis*0.5, daxis*0.5
             axis[:] = np.random.uniform(aMin, aMax, self.nrays)
+            bo.area *= aMax - aMin
 #        else:
 #            axis[:] = 0
 
@@ -266,6 +269,7 @@ class GeometricSource(object):
             withAmplitudes = True
         bo = Beam(self.nrays, withAmplitudes=withAmplitudes)  # beam-out
         bo.state[:] = 1
+        bo.area = 1.
 # =0: ignored, =1: good,
 # =2: reflected outside of working area, =3: transmitted without intersection
 # =-NN: lost (absorbed) at OE#NN (OE numbering starts from 1!) If NN>1000 then
