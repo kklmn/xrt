@@ -409,6 +409,7 @@ __all__ = ('GeometricSource', 'MeshSource', 'BendingMagnet', 'Wiggler',
 from .sources_beams import Beam, copy_beam, rotate_coherency_matrix,\
     defaultEnergy
 from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
-    CollimatedMeshSource, shrink_source
+    CollimatedMeshSource, shrink_source, make_energy, make_polarization,\
+    laguerre_gaussian_beam
 from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS
 from .sources_synchr import BendingMagnet, Wiggler, Undulator

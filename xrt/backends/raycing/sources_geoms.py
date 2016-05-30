@@ -2,10 +2,12 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Apr 2016"
 import numpy as np
+import scipy as sp
+
 from . import run as rr
 from .. import raycing
 from .sources_beams import Beam, defaultEnergy
-from .physconsts import PI2
+from .physconsts import PI2, CHBAR
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out
 
@@ -132,7 +134,7 @@ class GeometricSource(object):
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,),
         polarization='horizontal', filamentBeam=False,
-            uniformRayDensity=False, pitch=0, yaw=0):
+            uniformRayDensity=False, vortex=None, pitch=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -182,6 +184,11 @@ class GeometricSource(object):
             the size parameter (*dx* or *dz*) must be given as
             (sigma, cut_limit).
 
+        *vortex*: None or tuple(l, p)
+            in combination with normal x and z distributions (must be equal!)
+            and *uniformRayDensity*, specifies a Laguerre-Gaussian beam with
+            *l* the azimuthal index and *p>=0* the radial index.
+
         *pitch*, *yaw*: float
             rotation angles around x and z axis. Useful for canted sources.
 
@@ -212,6 +219,7 @@ class GeometricSource(object):
         self.polarization = polarization
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
+        self.vortex = vortex
         self.pitch = pitch
         self.yaw = yaw
 
@@ -295,6 +303,27 @@ class GeometricSource(object):
         else:
             self._apply_distribution(bo.x, self.distx, self.dx, bo)
             self._apply_distribution(bo.z, self.distz, self.dz, bo)
+
+        if self.vortex is not None:
+            l, p = self.vortex
+            phi = np.arctan2(bo.z, bo.x)
+            rSquare = bo.x**2 + bo.z**2
+            clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
+            if self.dx == self.dz:
+                w0 = 2 * self.dx[0]
+            else:
+                raise ValueError("x and z distributions must be equal" +
+                                 " to be used in vortex!")
+            amp = clp * ((rSquare*2)**0.5/w0)**abs(l) * np.exp(1j*l*phi)
+            if p > 0:
+                lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w0**2)
+                amp *= lg
+            bo.Es *= amp
+            bo.Ep *= amp
+            amp = np.abs(amp)**2
+            bo.Jss *= amp
+            bo.Jpp *= amp
+            bo.Jsp *= amp
 
         isAnnulus = False
         if (self.distxprime == 'annulus') or (self.distzprime == 'annulus'):
@@ -621,3 +650,47 @@ def shrink_source(beamLine, beams, minxprime, maxxprime, minzprime, maxzprime,
     beamLine.sources[0] = storeSource  # restore the 1st source
     beamLine.alarms = []
     return meshSource
+
+
+def laguerre_gaussian_beam(rSquare, phi, y, w0, E, l=0, p=0):
+    u"""
+    Laguerre-Gaussian beam with
+
+    *rSquare*: array
+        transverse r².
+
+    *phi*: array
+        polar angle in transverse plane.
+
+    *y*: float
+        coordinate along propagation direction.
+
+    *w0*: float
+        waist size.
+
+    *E*: float
+        energy.
+
+    *l*: float
+        azimuthal index
+
+    *p*: float
+         radial index, >0
+
+    Returns the amplitude and the beam size
+
+
+    """
+    k = E / CHBAR * 1e7  # mm^-1
+    yR = k/2 * w0**2
+    invR = y / (y**2 + yR**2)
+    psi = (abs(l) + 2*p + 1) * np.arctan2(y, yR)
+    w = w0 * (1 + (y/yR)**2)**0.5
+    u = (2/np.pi)**0.5 / w *\
+        np.exp(-rSquare/w**2 + 1j*k*(y + 0.5*rSquare*invR) - 1j*psi)
+    clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
+    u *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
+    if p > 0:
+        lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
+        u *= lg
+    return u, w
