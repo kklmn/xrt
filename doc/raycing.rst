@@ -38,3 +38,5 @@ Raycing backend
 
 .. automodule:: xrt.backends.raycing.screens
 .. automodule:: xrt.backends.raycing.waves
+
+.. automodule:: tests.raycing.laguerre_gaussian_beam
