@@ -346,6 +346,46 @@ double get_dtheta_symmetric_Bragg_E(double E, double d, int4 hkl,
         return (chi0 / sin(2 * get_Bragg_angle(E, d))).lo;
   }
 
+double get_dtheta(double E, double d, int4 hkl, 
+                   double chiToF, double factDW, 
+                   const int maxEl, __global double* elements, 
+                   __global double* f0cfs, __global double* E_vector, 
+                   __global double* f1_vector, __global double* f2_vector,
+                  double alpha, int2 geom)
+  {
+        double symm_dt = get_dtheta_symmetric_Bragg(E, d,
+                                                    hkl, chiToF, factDW,
+                                                    maxEl, elements,
+                                                    f0cfs, E_vector,
+                                                    f1_vector, f2_vector);
+        double thetaB = get_Bragg_angle(E, d);
+        double geom_factor = geom.lo == 1 ? -1. : 1.;
+        double gamma0 = sin(thetaB + alpha);
+        double gammah = geom_factor * sin(thetaB - alpha);
+        double osqg0 = sqrt(1. - gamma0*gamma0);
+        return -(geom_factor*gamma0 - geom_factor*sqrt(gamma0*gamma0 +
+                 geom_factor*(gamma0 - gammah) * osqg0 * symm_dt)) / osqg0;
+  }
+
+
+double get_dtheta_E(double E, double d, int4 hkl, 
+                   double chiToF, double factDW, 
+                   const int maxEl, __global double* elements, 
+                   __global double* f0cfs, __global double2* f1f2,
+                  double alpha, int2 geom)
+  {
+        double symm_dt = get_dtheta_symmetric_Bragg_E(E, d,
+                                                      hkl, chiToF, factDW,
+                                                      maxEl, elements,
+                                                      f0cfs, f1f2);
+        double thetaB = get_Bragg_angle(E, d);
+        double geom_factor = geom.lo == 1 ? -1. : 1.;
+        double gamma0 = sin(thetaB + alpha);
+        double gammah = geom_factor * sin(thetaB - alpha);
+        double osqg0 = sqrt(1. - gamma0*gamma0);
+        return -(geom_factor*gamma0 - geom_factor*sqrt(gamma0*gamma0 +
+                 geom_factor*(gamma0 - gammah) * osqg0 * symm_dt)) / osqg0;
+  }
 
 double4 get_amplitude_material(double E, int kind, double2 refrac_n, double beamInDotNormal, 
                                 double thickness, int fromVacuum)

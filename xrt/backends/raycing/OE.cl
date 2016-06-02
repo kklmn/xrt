@@ -385,11 +385,17 @@ double8 reflect_crystal_internal(const double factDW,
       d = plane_d.lo;
       chiToF = plane_d.hi;
       //printf("d, ctf: %g %g\n", d, chiToF);
-      dt = get_dtheta_symmetric_Bragg(E, d,
-                       hkl, chiToF, factDW,
-                       maxEl, elements,
-                       f0cfs, E_vector,
-                       f1_vector, f2_vector);
+      //dt = get_dtheta_symmetric_Bragg(E, d,
+      //                 hkl, chiToF, factDW,
+      //                 maxEl, elements,
+      //                 f0cfs, E_vector,
+      //                 f1_vector, f2_vector);
+      dt = get_dtheta(E, d,
+                      hkl, chiToF, factDW,
+                      maxEl, elements,
+                      f0cfs, E_vector,
+                      f1_vector, f2_vector,
+                      0, geom);
       mem_fence(CLK_LOCAL_MEM_FENCE);
       if (isnan(dt)) dt = 0;
       //printf("dt %g\n", dt);
@@ -488,6 +494,7 @@ double8 reflect_crystal_internal_E(const double factDW,
       double beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
       dhkl = (double4)(hkl.x, hkl.y, hkl.z, 0);
       double2 plane_d;
+      double alpha = 0;  
       //double epsilonB = 0.01;
       beamInDotNormal = dot(abc,planeNormal);
 
@@ -507,10 +514,14 @@ double8 reflect_crystal_internal_E(const double factDW,
       d = plane_d.lo;
       chiToF = plane_d.hi;
       //printf("d, ctf: %g %g\n", d, chiToF);
-      dt = get_dtheta_symmetric_Bragg_E(E, d,
-                       hkl, chiToF, factDW,
-                       maxEl, elements,
-                       f0cfs, f1f2);
+      //dt = get_dtheta_symmetric_Bragg_E(E, d,
+      //                 hkl, chiToF, factDW,
+      //                 maxEl, elements,
+      //                 f0cfs, f1f2, alpha, geom);
+      dt = get_dtheta_E(E, d,
+                        hkl, chiToF, factDW,
+                        maxEl, elements,
+                        f0cfs, f1f2, 0, geom);
       mem_fence(CLK_LOCAL_MEM_FENCE);
       if (isnan(dt)) dt = 0;
       //printf("dt %g\n", dt);
