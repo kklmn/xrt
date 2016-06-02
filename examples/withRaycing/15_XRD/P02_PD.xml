@@ -120,6 +120,7 @@
 			<taper type="param">None</taper>
 			<R0 type="param">None</R0>
 			<targetE type="param">[60000, 11]</targetE>
+			<customField type="param">None</customField>
 			<eMin type="param">59940</eMin>
 			<eMax type="param">60060</eMax>
 			<eN type="param">51</eN>
@@ -132,10 +133,13 @@
 			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
 			<gp type="param">1e-06</gp>
 			<gIntervals type="param">1</gIntervals>
+			<nRK type="param">30</nRK>
 			<uniformRayDensity type="param">False</uniformRayDensity>
 			<filamentBeam type="param">False</filamentBeam>
 			<targetOpenCL type="param">auto</targetOpenCL>
-			<precisionOpenCL type="param">float64</precisionOpenCL>
+			<precisionOpenCL type="param">auto</precisionOpenCL>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
@@ -410,7 +414,7 @@
 		<properties type="prop">
 			<bl type="param">P02_2</bl>
 			<name type="param">Detector</name>
-			<center type="param">P02_2.PowderSample.center[0], 65500, auto</center>
+			<center type="param">P02_2.PowderSample.center[0], 65500, P02_2.PowderSample.center[2]</center>
 			<x type="param">auto</x>
 			<z type="param">auto</z>
 			<compressX type="param">None</compressX>
@@ -730,6 +734,7 @@
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
 <description>
+
 Powder Diffraction
 ------------------
 
@@ -743,6 +748,7 @@ Cerium Dioxide powder as the sample.
 
 .. warning::
    Heavy computational load. Requires OpenCL.
+
 
 </description>
 </Project>
