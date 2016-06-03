@@ -46,7 +46,6 @@ class GenericProcessOrThread(object):
         self.alarmQueue = alarmQueue
         self.card = locCard
 
-
     def do_hist1d(self, x, intensity, cDataRGB, axis):
         """
         Calculates the specified 1D histogram.

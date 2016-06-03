@@ -534,7 +534,7 @@ class UndulatorUrgent(object):
             splines.append(spline)
         Imax = np.max(what[0])
         with open(pickleName, 'wb') as f:
-            pickle.dump((Imax, splines), f, -1)
+            pickle.dump((Imax, splines), f, protocol=2)
         return splines, Imax
 
     def restore_spline_arrays(

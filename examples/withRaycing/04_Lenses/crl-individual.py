@@ -1,72 +1,12 @@
 ﻿# -*- coding: utf-8 -*-
 r"""
-Compound Refractive Lenses
---------------------------
-
-Files in ``\examples\withRaycing\04_Lenses``
-
-This example demonstrates refraction in x-ray regime. Locus that refracts a
-collimated beam into a point focus is a paraboloid. The focal distance of such
-a vacuum-to-solid interface is, as in the usual optics, 2*p*/*δ* where *p* is
-the focal parameter of the lens paraboloid and *δ* = 1 - Re(*n*), *n* is the
-refractive index [snigirev]_. As for the usual lenses, the diopters of several
-consecutive lenses are summed up to give the total diopter:
-:math:`\frac{1}{f} = \frac{1}{f_1} + \frac{1}{f_2} + \ldots`.
-
-This example considers focusing of collimated x-rays of 9 keV at a distance
-*q* = 5 m from the lenses. The lenses are double-sided paraboloids (then *f* =
-*p*/*δ*) with *p* = 1 mm and zero spacing between the apices of the
-paraboloids. The thickness of each lens is 2 mm. Their number is an integer
-number *N* = round(*p*/*qδ*).
-
-The following images demonstrate the focusing along the optical axis close to
-the nominal focal position for Be and Al CRL's. The real focal position
-deviates from the nominal one, where d\ *q* = 0, due to the rounding of
-*p*/*qδ*:
-
-+----------------------+----------------------+
-|  |CRL_Be| |CRL_BeZ|  |  |CRL_Al| |CRL_BeZ|  |
-+----------------------+----------------------+
-
-.. |CRL_Be| image:: _images/CRL-Be.swf
-   :width: 223
-   :height: 204
-.. |CRL_BeZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/CRL-Be.swf
-.. |CRL_Al| image:: _images/CRL-AL.swf
-   :width: 216
-   :height: 204
-.. |CRL_AlZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/CRL-Al.swf
-
-This graph shows the relative flux in the focused beam at 9 keV after the given
-number of double-sided lenses which give approximately equal focal distance of
-*q* = 5 m. As seen, low absorbing materials are preferred:
-
-.. image:: _images/CRL-2-Flux.*
-   :scale: 50 %
-
-This graph shows the depth of focus as a function of the on-axis coordinate
-around the nominal focal position. For heavy materials the depth of focus is
-larger due to the higher absorption of the peripherical rays of the incoming
-beam. Such lenses act effectively also as apertures thus reducing the focal
-spot at the expense of flux:
-
-.. image:: _images/CRL-2-depthOfFocus.*
-   :scale: 50 %
-
-.. [snigirev] A. Snigirev, V. Kohn, I. Snigireva, A. Souvorov, and B. Lengeler,
-   *Focusing High-Energy X Rays by Compound Refractive Lenses*, Applied
-   Optics **37** (1998), 653-62.
+see crl-block.py
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"
 import matplotlib as mpl
-mpl.use('agg')
+#mpl.use('agg')
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -90,6 +30,12 @@ xyLimits = -5, 5
 #Lens = roe.ParaboloidFlatLens
 Lens = roe.DoubleParaboloidLens
 #Lens = roe.ParabolicCylinderFlatLens
+if Lens == roe.DoubleParaboloidLens:
+    lensName = '2-'
+elif Lens == roe.ParaboloidFlatLens:
+    lensName = '1-'
+else:
+    lensName = '3-'
 
 
 def build_beamline():
@@ -103,12 +49,12 @@ def build_beamline():
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     beamLine.lens = Lens(
-        beamLine, 'Lenslet', pitch=math.pi/2, t=0, focus=parabolaParam,
-        zmax=zmax, alarmLevel=0.1)
+        beamLine, 'Lenslet', pitch=np.pi/2, t=0,
+        focus=parabolaParam, zmax=zmax, alarmLevel=0.1)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
 #    beamLine.fsm2.dqs = np.linspace(-140, 140, 71)
-    beamLine.fsm2.dqs = np.linspace(-140, 140, 15)
+    beamLine.fsm2.dqs = np.linspace(-70, 70, 15)
     return beamLine
 
 
@@ -117,25 +63,20 @@ def run_process(beamLine):
     outDict = {'beamSource': beamSource}
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     outDict['beamFSM1'] = beamFSM1
-    pos = p
-    dp = zmax
-    if Lens == roe.DoubleParaboloidLens:
-        dp *= 2
     beamIn = beamSource
     for ilens in range(int(round(beamLine.curMaterial.nCRL))):
         if Lens == roe.ParabolicCylinderFlatLens:
             if ilens % 2 == 0:
-                beamLine.lens.roll = -math.pi / 4
+                beamLine.lens.roll = -np.pi / 4
             else:
-                beamLine.lens.roll = math.pi / 4
-        beamLine.lens.center[1] = pos
+                beamLine.lens.roll = np.pi / 4
         lglobal, llocal1, llocal2 = beamLine.lens.double_refract(
             beamIn, needLocal=False)
         beamIn = lglobal
-        outDict['beamLensGlobal_{0:02d}'.format(ilens)] = lglobal
+#        outDict['beamLensGlobal_{0:02d}'.format(ilens)] = lglobal
 #        outDict['beamLensLocal1_{0:02d}'.format(ilens)] = llocal1
 #        outDict['beamLensLocal2_{0:02d}'.format(ilens)] = llocal2
-        pos += dp
+        beamLine.lens.center[1] += zmax
     for i, dq in enumerate(beamLine.fsm2.dqs):
         beamLine.fsm2.center[1] = p + q + dq
         outDict['beamFSM2_{0:02d}'.format(i)] = beamLine.fsm2.expose(lglobal)
@@ -242,13 +183,10 @@ def define_plots(beamLine):
 def plot_generator(plots, plotsFSM2, beamLine):
     if Lens == roe.DoubleParaboloidLens:
         nFactor = 0.5
-        factorName = '2-'
     elif Lens == roe.ParaboloidFlatLens:
         nFactor = 1.
-        factorName = '1-'
     else:
         nFactor = 2.
-        factorName = '3-'
 
     mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
     get_nCRL(mBeryllium, parabolaParam, q, E0, nFactor)
@@ -287,8 +225,7 @@ def plot_generator(plots, plotsFSM2, beamLine):
     ax2.set_xlabel('material', fontsize=14)
     ax2.set_ylabel(u'flux (a.u.)', fontsize=14)
 
-#    prefix = 'CRL-'
-    prefix = 'CRL-mesh-'
+    prefix = 'CRL-indiv-'
 
     for pol in polarization:
         beamLine.sources[0].polarization = pol
@@ -300,12 +237,12 @@ def plot_generator(plots, plotsFSM2, beamLine):
         for material in materials:
             beamLine.curMaterial = material
             beamLine.lens.material = material
-            beamLine.lens.material2 = material
+            beamLine.lens.center = [0, p, 0]
             elem = material.elements[0].name
             print(elem)
             for plot in plots:
                 fileName = '{0}{1}{2}-{3}-{4}'.format(
-                    prefix, factorName, elem, suffix, plot.title)
+                    prefix, lensName, elem, suffix, plot.title)
                 plot.saveName = fileName + '.png'
 #                plot.persistentName = fileName + '.pickle'
                 try:
@@ -327,7 +264,7 @@ def plot_generator(plots, plotsFSM2, beamLine):
                     elem, round(material.nCRL)))
             xMaterials.append(elem)
     ax1.legend(loc=4)  # lower right
-    figDF.savefig(prefix + factorName + 'depthOfFocus.png')
+    figDF.savefig(prefix + lensName + 'depthOfFocus.png')
 #    plt.close(figDF)
 
     rects = ax2.bar(np.arange(len(materials)) + 0.1,
@@ -340,7 +277,7 @@ def plot_generator(plots, plotsFSM2, beamLine):
     ax2.set_xticks(np.arange(len(materials)) + 0.5)
     ax2.set_xticklabels(xMaterials)
     ax2.set_ylim(1e-3, 1)
-    figI.savefig(prefix + factorName + 'Flux.png')
+    figI.savefig(prefix + lensName + 'Flux.png')
 
 
 def main():
@@ -349,7 +286,7 @@ def main():
     xrtr.run_ray_tracing(
         plots, repeats=16, generator=plot_generator,
         generatorArgs=[plots, plotsFSM2, beamLine],
-        updateEvery=1, beamLine=beamLine, processes='half')
+        updateEvery=1, beamLine=beamLine, processes='')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

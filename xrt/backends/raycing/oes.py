@@ -1322,7 +1322,6 @@ class Plate(DCM):
         kwargs = self.__pop_kwargs(**kwargs)
         DCM.__init__(self, *args, **kwargs)
         self.cryst2perpTransl = -self.t
-        self.material2 = self.material
 
     def __pop_kwargs(self, **kwargs):
         self.t = kwargs.pop('t', 0)  # difference of z zeros in mm
@@ -1335,6 +1334,7 @@ class Plate(DCM):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
+        self.material2 = self.material
         self.cryst2perpTransl = -self.t
         return self.double_reflect(beam, needLocal, fromVacuum1=True,
                                    fromVacuum2=False)
@@ -1422,6 +1422,11 @@ class ParaboloidFlatLens(Plate):
             plate of the thickness *zmax* + *t* with a paraboloid hole at the
             origin.
 
+        *nCRL*: int or tuple (*focalDistance*, *E*)
+            If used as CRL, the number of the lenslets nCRL is either given
+            directly or calculated for *focalDistance* at energy *E* and then
+            rounded. For propagation, use :meth:`multiple_refract`.
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
@@ -1430,6 +1435,7 @@ class ParaboloidFlatLens(Plate):
     def __pop_kwargs(self, **kwargs):
         self.focus = kwargs.pop('focus', 1.)
         self.zmax = kwargs.pop('zmax', None)
+        self.nCRL = kwargs.pop('nCRL', 1)
         kwargs['pitch'] = kwargs.get('pitch', np.pi/2)
         return kwargs
 
@@ -1464,10 +1470,50 @@ class ParaboloidFlatLens(Plate):
     def local_n2(self, x, y):
         return self.local_n(x, y)
 
+    def get_nCRL(self, f, E):
+        if isinstance(self, DoubleParaboloidLens):
+            nFactor = 0.5
+        elif isinstance(self, ParabolicCylinderFlatLens):
+            nFactor = 2.
+        else:
+            nFactor = 1.
+        return 2 * self.focus / f /\
+            (1 - self.material.get_refractive_index(E).real) * nFactor
+
+    def multiple_refract(self, beam, needLocal=False):
+        if isinstance(self.nCRL, (int, float)):
+            nCRL = self.nCRL
+        elif isinstance(self.nCRL, (list, tuple)):
+            nCRL = self.get_nCRL(self.nCRL[0], self.nCRL[1])
+        else:
+            raise ValueError("wrong nCRL value!")
+        nCRL = int(round(nCRL))
+        if nCRL < 1:
+            raise ValueError("wrong nCRL value!")
+
+        if nCRL == 1:
+            return self.double_refract(beam, needLocal=needLocal)
+        else:
+            tempPos = self.center[1]
+            beamIn = beam
+            for ilens in range(nCRL):
+                if isinstance(self, ParabolicCylinderFlatLens):
+                    self.roll = -np.pi/4 if ilens % 2 == 0 else np.pi/4
+                lglobal, tlocal1, tlocal2 = self.double_refract(
+                    beamIn, needLocal=needLocal)
+                self.center[1] += self.zmax
+                beamIn = lglobal
+                if ilens == 0:
+                    llocal1, llocal2 = tlocal1, tlocal2
+            self.center[1] = tempPos
+            return lglobal, llocal1, llocal2
+
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):
-    """Implements a refractive lens with one side as parabolic cylinder and
-    the other one flat."""
+    u"""Implements a refractive lens with one side as parabolic cylinder and
+    the other one flat. If used as a CRL, the lenslets are arranged such that
+    they alternatively focus in the -45° and +45° planes. Therefore the total
+    number of lenslets is doubled as compared to ParaboloidFlatLens case."""
 
     cl_plist = ("zmax", "focus")
     cl_local_z = """

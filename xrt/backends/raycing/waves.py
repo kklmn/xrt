@@ -519,12 +519,12 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
 #        if _DEBUG > 10:
 #            print("The area of {0} under the beam will now be calculated".\
 #                  format(oe.name))
-        if hasattr(oe, 'pitch'):  # OE
+        if hasattr(oe, 'rotationSequence'):  # OE
             secondDim = oeLocal.y
         elif hasattr(oe, 'propagate'):  # aperture
             secondDim = oeLocal.z
         else:
-            raise ValueError('Wrong oe type!')
+            raise ValueError('Unknown diffracting element!')
         impactPoints = np.vstack((oeLocal.x[good], secondDim[good])).T
         try:  # convex hull
             hull = ConvexHull(impactPoints)
@@ -539,7 +539,7 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
         print("The area of {0} under the beam is {1}".format(
               oe.name, oeLocal.area))
 
-    if hasattr(oe, 'pitch'):  # OE
+    if hasattr(oe, 'rotationSequence'):  # OE
         if oe.isParametric:
             s, phi, r = oe.xyz_to_param(oeLocal.x, oeLocal.y, oeLocal.z)
             n = oe.local_n(s, phi)
@@ -547,7 +547,8 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
             n = oe.local_n(oeLocal.x, oeLocal.y)[-3:]
         nl = (oeLocal.a*np.asarray([n[-3]]) + oeLocal.b*np.asarray([n[-2]]) +
               oeLocal.c*np.asarray([n[-1]])).flatten()
-    elif hasattr(oe, 'propagate'):  # aperture
+#    elif hasattr(oe, 'propagate'):  # aperture
+    else:
         n = [0, 1, 0]
         nl = oeLocal.a*n[0] + oeLocal.b*n[1] + oeLocal.c*n[2]
 
@@ -577,11 +578,12 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
     wave.Jpp[:] = (wave.Ep * np.conj(wave.Ep)).real
     wave.Jsp[:] = wave.Es * np.conj(wave.Ep)
 
-    if hasattr(oe, 'pitch'):  # OE
+    if hasattr(oe, 'rotationSequence'):  # OE
         toRealComp = wave.cEacc if abs(wave.cEacc[0]) > abs(wave.bEacc[0]) \
             else wave.bEacc
         toReal = np.exp(-1j * np.angle(toRealComp))
-    elif hasattr(oe, 'propagate'):  # aperture
+#    elif hasattr(oe, 'propagate'):  # aperture
+    else:
         toReal = np.exp(-1j * np.angle(wave.bEacc))
     wave.a[:] = (wave.aEacc * toReal).real
     wave.b[:] = (wave.bEacc * toReal).real
@@ -617,7 +619,8 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
     glo.x[:] = wave.xDiffr
     glo.y[:] = wave.yDiffr
     glo.z[:] = wave.zDiffr
-    oe.local_to_global(glo)
+    if hasattr(oe, 'local_to_global'):
+        oe.local_to_global(glo)
 
 # rotate abc, coh.matrix, Es, Ep in the local system of the receiving surface
     if hasattr(wave, 'toOE'):

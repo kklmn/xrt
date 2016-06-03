@@ -1525,7 +1525,7 @@ class DCM(OE):
 
         *fixedOffset*: float
             Offset between the incoming and outcoming beams in mm. If not None
-            or zero the value of *cryst2perpTransl* is replaced by 
+            or zero the value of *cryst2perpTransl* is replaced by
             *fixedOffset*/2/cos(*bragg*)
 
 
