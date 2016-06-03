@@ -827,16 +827,6 @@ class Undulator(object):
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
         self.trajectory = None
-        dataDir = os.path.dirname(__file__)
-        with open(os.path.join(
-                dataDir, 'data', 'GaussLegendre.pickle'), 'rb') as f:
-            pickled = pickle.load(f)
-            self.quadx, self.quadw = pickled[2], pickled[3]
-#            self.quadsinx, self.quadcosx = pickled[4], pickled[5]
-#            self.quadsin2x = pickled[6]
-#        with open(os.path.join(
-#                dataDir, 'data', 'TanhSinh.pickle'), 'rb') as f:
-#            self.quadx, self.quadw = pickle.load(f)[2:]
 
         self.cl_ctx = None
         if (self.R0 is not None):
