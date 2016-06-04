@@ -1535,13 +1535,11 @@ class Undulator(object):
         extra = PI/2*0
         tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).flatten()) + extra
         ag = self.cl_precisionF((dI[:, None]*0+ag_n).flatten())
-        alim, blim = dI - 0.5*dstep + extra, dI + 0.5*dstep + extra
 
         scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
                            self.cl_precisionF(self.Ky),  # Ky
                            self.cl_precisionF(self.phase),  # phase
-                           np.int32(len(tg)),  # jend
-                           alim[0], blim[-1]])
+                           np.int32(len(tg))])  # jend
 
         slicedROArgs = [self.cl_precisionF(gamma),  # gamma
                         self.cl_precisionF(wu),  # Eund
