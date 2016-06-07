@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 r"""
-see crl-block.py
+see crl_stack.py
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"

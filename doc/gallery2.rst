@@ -7,7 +7,7 @@ Gallery of plots and scripts 2. X-ray optics
 
 .. automodule:: examples.withRaycing.03_LaueMono
 
-.. automodule:: examples.withRaycing.04_Lenses.crl 
+.. automodule:: examples.withRaycing.04_Lenses.crl_stack
 
 .. automodule:: examples.withRaycing.05_QWP
 
