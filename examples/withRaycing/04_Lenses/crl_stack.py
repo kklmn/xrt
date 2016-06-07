@@ -64,9 +64,8 @@ spot at the expense of flux:
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"
 import matplotlib as mpl
-mpl.use('agg')
+#mpl.use('agg')
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -90,6 +89,12 @@ xyLimits = -5, 5
 #Lens = roe.ParaboloidFlatLens
 Lens = roe.DoubleParaboloidLens
 #Lens = roe.ParabolicCylinderFlatLens
+if Lens == roe.DoubleParaboloidLens:
+    lensName = '2-'
+elif Lens == roe.ParaboloidFlatLens:
+    lensName = '1-'
+else:
+    lensName = '3-'
 
 
 def build_beamline():
@@ -103,12 +108,12 @@ def build_beamline():
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     beamLine.lens = Lens(
-        beamLine, 'Lenslet', pitch=math.pi/2, t=0, focus=parabolaParam,
-        zmax=zmax, alarmLevel=0.1)
+        beamLine, 'CRL', pitch=np.pi/2, t=0,
+        focus=parabolaParam, zmax=zmax, nCRL=(q, E0), alarmLevel=0.1)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
 #    beamLine.fsm2.dqs = np.linspace(-140, 140, 71)
-    beamLine.fsm2.dqs = np.linspace(-140, 140, 15)
+    beamLine.fsm2.dqs = np.linspace(-70, 70, 15)
     return beamLine
 
 
@@ -117,35 +122,12 @@ def run_process(beamLine):
     outDict = {'beamSource': beamSource}
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     outDict['beamFSM1'] = beamFSM1
-    pos = p
-    dp = zmax
-    if Lens == roe.DoubleParaboloidLens:
-        dp *= 2
-    beamIn = beamSource
-    for ilens in range(int(round(beamLine.curMaterial.nCRL))):
-        if Lens == roe.ParabolicCylinderFlatLens:
-            if ilens % 2 == 0:
-                beamLine.lens.roll = -math.pi / 4
-            else:
-                beamLine.lens.roll = math.pi / 4
-        beamLine.lens.center[1] = pos
-        lglobal, llocal1, llocal2 = beamLine.lens.double_refract(
-            beamIn, needLocal=False)
-        beamIn = lglobal
-        outDict['beamLensGlobal_{0:02d}'.format(ilens)] = lglobal
-#        outDict['beamLensLocal1_{0:02d}'.format(ilens)] = llocal1
-#        outDict['beamLensLocal2_{0:02d}'.format(ilens)] = llocal2
-        pos += dp
+    lglobal, llocal1, llocal2 = beamLine.lens.multiple_refract(beamSource)
     for i, dq in enumerate(beamLine.fsm2.dqs):
         beamLine.fsm2.center[1] = p + q + dq
         outDict['beamFSM2_{0:02d}'.format(i)] = beamLine.fsm2.expose(lglobal)
     return outDict
 rr.run_process = run_process
-
-
-def get_nCRL(material, parabParam, f, E, nFactor):
-    material.nCRL = 2 * parabParam / f /\
-        (1 - material.get_refractive_index(E).real) * nFactor
 
 
 def define_plots(beamLine):
@@ -240,36 +222,25 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, plotsFSM2, beamLine):
-    if Lens == roe.DoubleParaboloidLens:
-        nFactor = 0.5
-        factorName = '2-'
-    elif Lens == roe.ParaboloidFlatLens:
-        nFactor = 1.
-        factorName = '1-'
-    else:
-        nFactor = 2.
-        factorName = '3-'
-
     mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
-    get_nCRL(mBeryllium, parabolaParam, q, E0, nFactor)
     mDiamond = rm.Material('C', rho=3.52, kind='lens')
-    get_nCRL(mDiamond, parabolaParam, q, E0, nFactor)
-    mAluminum = rm.Material('Al', rho=2.7, kind='lens')
-    get_nCRL(mAluminum, parabolaParam, q, E0, nFactor)
-    mSilicon = rm.Material('Si', rho=2.33, kind='lens')
-    get_nCRL(mSilicon, parabolaParam, q, E0, nFactor)
-    mNickel = rm.Material('Ni', rho=8.9, kind='lens')
-    get_nCRL(mNickel, parabolaParam, q, E0, nFactor)
-    mLead = rm.Material('Pb', rho=11.35, kind='lens')
-    get_nCRL(mLead, parabolaParam, q, E0, nFactor)
+#    mAluminum = rm.Material('Al', rho=2.7, kind='lens')
+#    mSilicon = rm.Material('Si', rho=2.33, kind='lens')
+#    mNickel = rm.Material('Ni', rho=8.9, kind='lens')
+#    mLead = rm.Material('Pb', rho=11.35, kind='lens')
 
 #    materials = mBeryllium, mDiamond, mAluminum, mSilicon, mNickel, mLead
     materials = mBeryllium, mDiamond
 
     print('At E = {0} eV and parabola focus = {1} mm:'.format(
           E0, parabolaParam))
+    nCRLs = []
     for material in materials:
-        print(' n({0}) = {1}'.format(material.elements[0].name, material.nCRL))
+        beamLine.lens.material = material
+        beamLine.lens.center = [0, p, 0]
+        nCRL = beamLine.lens.get_nCRL(q, E0)
+        nCRLs.append(nCRL)
+        print(' n({0}) = {1}'.format(material.elements[0].name, nCRL))
 
 #    polarization = [
 #        'horizontal', 'vertical', '+45', '-45', 'right', 'left', None]
@@ -287,8 +258,7 @@ def plot_generator(plots, plotsFSM2, beamLine):
     ax2.set_xlabel('material', fontsize=14)
     ax2.set_ylabel(u'flux (a.u.)', fontsize=14)
 
-#    prefix = 'CRL-'
-    prefix = 'CRL-mesh-'
+    prefix = 'CRL-block-'
 
     for pol in polarization:
         beamLine.sources[0].polarization = pol
@@ -297,15 +267,13 @@ def plot_generator(plots, plotsFSM2, beamLine):
             suffix = 'none'
         xMaterials = []
         yFlux = []
-        for material in materials:
-            beamLine.curMaterial = material
+        for material, nCRL in zip(materials, nCRLs):
             beamLine.lens.material = material
-            beamLine.lens.material2 = material
             elem = material.elements[0].name
             print(elem)
             for plot in plots:
                 fileName = '{0}{1}{2}-{3}-{4}'.format(
-                    prefix, factorName, elem, suffix, plot.title)
+                    prefix, lensName, elem, suffix, plot.title)
                 plot.saveName = fileName + '.png'
 #                plot.persistentName = fileName + '.pickle'
                 try:
@@ -324,23 +292,23 @@ def plot_generator(plots, plotsFSM2, beamLine):
             yFlux.append(plotsFSM2[-1].intensity)
             ax1.plot(
                 xCurve, yCurve, 'o', label='{0}, n={1:.0f}'.format(
-                    elem, round(material.nCRL)))
+                    elem, round(nCRL)))
             xMaterials.append(elem)
     ax1.legend(loc=4)  # lower right
-    figDF.savefig(prefix + factorName + 'depthOfFocus.png')
+    figDF.savefig(prefix + lensName + 'depthOfFocus.png')
 #    plt.close(figDF)
 
     rects = ax2.bar(np.arange(len(materials)) + 0.1,
                     np.array(yFlux)/max(yFlux), bottom=1e-3, log=True)
-    for rect, material in zip(rects, materials):
+    for rect, material, nCRL in zip(rects, materials, nCRLs):
         height = rect.get_height()
         ax2.text(
             rect.get_x()+rect.get_width()/2., 0.9*height,
-            'n=%d' % material.nCRL, ha='center', va='top', color='w')
+            'n=%d' % nCRL, ha='center', va='top', color='w')
     ax2.set_xticks(np.arange(len(materials)) + 0.5)
     ax2.set_xticklabels(xMaterials)
     ax2.set_ylim(1e-3, 1)
-    figI.savefig(prefix + factorName + 'Flux.png')
+    figI.savefig(prefix + lensName + 'Flux.png')
 
 
 def main():
@@ -349,7 +317,7 @@ def main():
     xrtr.run_ray_tracing(
         plots, repeats=16, generator=plot_generator,
         generatorArgs=[plots, plotsFSM2, beamLine],
-        updateEvery=1, beamLine=beamLine, processes='half')
+        updateEvery=1, beamLine=beamLine, processes='')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

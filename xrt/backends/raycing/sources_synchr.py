@@ -2,6 +2,7 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Apr 2016"
 import os
+import pickle
 import numpy as np
 from scipy import optimize
 from scipy import special
@@ -616,7 +617,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-6, gIntervals=1, nRK=30,
+                 gp=1e-2, gIntervals=1, nRK=30,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -737,9 +738,10 @@ class Undulator(object):
             especially if OpenCL is not used.
 
         *uniformRayDensity*: bool
-            If True, the radiation is sampled uniformly, otherwise with the
-            density proportional to intensity. Required as True for the wave
-            propagation calculations.
+            If True, the radiation is sampled uniformly but with varying
+            amplitudes, otherwise with the density proportional to intensity
+            and with constant amplitudes. Required as True for wave propagation
+            calculations. False is usual for ray-tracing.
 
         *filamentBeam*: bool
             If True the source generates coherent monochromatic wavefronts.
@@ -953,32 +955,32 @@ class Undulator(object):
         maxBx = data[datalen4:-datalen4, 1].max()
         minBy = data[datalen4:-datalen4, 2].min()
         maxBy = data[datalen4:-datalen4, 2].max()
-        p0 = [(maxBx-minBx)/2., 2*np.pi/self.L0, 0.3, 1e-4]
+        p0 = [(maxBx-minBx)/2., PI2/self.L0, 0.3, 1e-4]
         poptx, pcovx = curve_fit(my_sin,
                                  data[datalen4:-datalen4, 0],
                                  data[datalen4:-datalen4, 1],
                                  p0=p0)
         if poptx[0] < 0:
             poptx[0] *= -1
-            poptx[2] += np.pi
-        p0 = [(maxBy-minBy)/2., 2*np.pi/self.L0, 0.3, 1e-4]
+            poptx[2] += PI
+        p0 = [(maxBy-minBy)/2., PI2/self.L0, 0.3, 1e-4]
         popty, pcovy = curve_fit(my_sin,
                                  data[datalen4:-datalen4, 0],
                                  data[datalen4:-datalen4, 2],
                                  p0=p0)
         if popty[0] < 0:
             popty[0] *= -1
-            popty[2] += np.pi
+            popty[2] += PI
         print(poptx)
         print(popty)
         B0x = poptx[0]
         B0y = popty[0]
         Kx = B0x * self.L0 / K2B
         Ky = B0y * self.L0 / K2B
-        lambdaUx = 2*np.pi / poptx[1]
-        lambdaUy = 2*np.pi / popty[1]
+        lambdaUx = PI2 / poptx[1]
+        lambdaUy = PI2 / popty[1]
         phase = poptx[2] - popty[2]
-        phaseDeg = phase / np.pi * 180
+        phaseDeg = phase / PI * 180
         print("field data in {0}:".format(fname))
         print("B0x={0:.3f}T, B0y={1:.3f}T".format(B0x, B0y))
         print("Kx={0:.3f}, Ky={1:.3f}".format(Kx, Ky))
@@ -1035,39 +1037,40 @@ class Undulator(object):
 
         """Adjusting the number of points for Gauss integration"""
         # self.gp = 1
-        gau_int_error = self.gp * 10.
-        ii = 2
-        self.gau = int(ii*2 + 1)
+        quad_int_error = self.gp * 10.
+        self.quadm = 0
         tmpeEspread = self.eEspread
         self.eEspread = 0
-        while gau_int_error >= self.gp:
-            ii = int(ii * 1.5)
-            self.gau = int(ii*2)
+        mstart = 5
+        m = mstart
+        while quad_int_error >= self.gp:
+            m += 1
+            self.quadm = int(1.5**m)
             if self.cl_ctx is not None:
-                sE_max = self.E_max * np.ones(3)
+#                sE = np.linspace(self.E_min, self.E_max, self.eN)
+                sE = self.E_max * np.ones(3)
                 sTheta_max = self.Theta_max * np.ones(3)
                 sPsi_max = self.Psi_max * np.ones(3)
-                I1 = self.build_I_map(sE_max,
-                                      sTheta_max,
-                                      sPsi_max)[0][0]
-                self.gau = int(ii*2 + 1)
-                I2 = self.build_I_map(sE_max,
-                                      sTheta_max,
-                                      sPsi_max)[0][0]
+                In = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
             else:
-                I1 = self.build_I_map(self.E_max,
-                                      self.Theta_max,
-                                      self.Psi_max)[0]
-                self.gau = int(ii*2 + 1)
-                I2 = self.build_I_map(self.E_max,
-                                      self.Theta_max,
-                                      self.Psi_max)[0]
-            gau_int_error = np.abs((I2 - I1)/I2)
+                In = self.build_I_map(
+                    self.E_max, self.Theta_max, self.Psi_max)[0]
+            if m == mstart+1:
+                I2 = In
+                continue
+            else:
+                I1 = I2
+                I2 = In
+            quad_int_error = np.abs((I2 - I1)/I2)
             if _DEBUG:
-                print("G = {0}".format([self.gau, gau_int_error, np.abs(I2)]))
+                print("G = {0}".format(
+                    [self.quadm, quad_int_error, I2, self.ag_n.sum()]))
+            if self.quadm > 2e3:
+                break  # end of the tabulation
         self.eEspread = tmpeEspread
         if _DEBUG:
-            print("Done with Gaussian optimization")
+            print("Done with Gaussian optimization, {0} points will be used".
+                  format(self.quadm))
 
         if self.filamentBeam:
             rMax = self.nrays
@@ -1213,12 +1216,12 @@ class Undulator(object):
             if self.eEspread > 0:
                 gS = gamma[:, :, :, np.newaxis]
         taperC = 1
+        sinx = np.sin(x)
+        cosx = np.cos(x)
+        sin2x = 2*sinx*cosx
         if self.taper is not None:
             alphaS = self.taper * C * 10 / E2W
             taperC = 1 - alphaS * x / wuS
-            sinx = np.sin(x)
-            sin2x = np.sin(2 * x)
-            cosx = np.cos(x)
             ucos = ww1S * x +\
                 wS / gS / wuS *\
                 (-self.Ky * ddphiS * (sinx + alphaS / wuS *
@@ -1232,22 +1235,23 @@ class Undulator(object):
             betam = 1 - (1 + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) / 2. / gS**2
             WR0 = self.R0 / 10 / C * E2W
             ddphiS = -ddphiS
-            drx = WR0 * np.tan(ddphiS) - self.Ky / wuS / gS * np.sin(x)
+            drx = WR0 * np.tan(ddphiS) - self.Ky / wuS / gS * sinx
             dry = WR0 * np.tan(ddpsiS) + self.Kx / wuS / gS * np.sin(
                 x + self.phase)
             drz = WR0 * np.cos(np.sqrt(ddphiS**2+ddpsiS**2)) -\
                 betam * x / wuS + 0.125 / wuS / gS**2 *\
-                (self.Ky**2 * np.sin(2 * x) +
+                (self.Ky**2 * sin2x +
                  self.Kx**2 * np.sin(2 * (x + self.phase)))
             ucos = wS * (x / wuS + np.sqrt(drx**2 + dry**2 + drz**2))
         else:
             ucos = ww1S * x + wS / gS / wuS *\
-                (-self.Ky * ddphiS * np.sin(x) +
+                (-self.Ky * ddphiS * sinx +
                  self.Kx * ddpsiS * np.sin(x + self.phase) +
-                 0.125 / gS * (self.Ky**2 * np.sin(2. * x) +
-                 self.Kx**2 * np.sin(2. * (x + self.phase))))
+                 0.125 / gS * (self.Ky**2 * sin2x +
+                               self.Kx**2 * np.sin(2. * (x + self.phase))))
+#            print 'ucos.shape', ucos.shape
         eucos = np.exp(1j * ucos)
-        return ((ddphiS - taperC * self.Ky / gS * np.cos(x)) * eucos,
+        return ((ddphiS - taperC * self.Ky / gS * cosx) * eucos,
                 (ddpsiS + self.Kx / gS * np.cos(x + self.phase)) * eucos)
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None):
@@ -1286,7 +1290,8 @@ class Undulator(object):
 
         ww1 = w * ((1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) +
                    gamma2 * (ddtheta**2 + ddpsi**2)) / (2. * gamma2 * wu)
-        tg_n, ag_n = np.polynomial.legendre.leggauss(self.gau)
+        tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
+        self.tg_n, self.ag_n = tg_n, ag_n
 
         if (self.taper is not None) or (self.R0 is not None):
             AB = w / PI2 / wu
@@ -1297,7 +1302,7 @@ class Undulator(object):
             dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
-        tg = (dI[:, None] + 0.5*dstep*tg_n).flatten() + PI/2
+        tg = (dI[:, None] + 0.5*dstep*tg_n).flatten()# + PI/2
         ag = (dI[:, None]*0 + ag_n).flatten()
         # Bsr = np.zeros_like(w, dtype='complex')
         # Bpr = np.zeros_like(w, dtype='complex')
@@ -1353,7 +1358,8 @@ class Undulator(object):
 
         Np = np.int32(self.Np)
 
-        tg_n, ag_n = np.polynomial.legendre.leggauss(self.gau)
+        tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
+        self.tg_n, self.ag_n = tg_n, ag_n
 
         ab = w / PI2 / wu
         dstep = 2 * PI / float(self.gIntervals)
@@ -1496,6 +1502,8 @@ class Undulator(object):
             wu = PI * C * 10 / self.L0 / gamma2 * \
                 (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         else:
+            self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
+                (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
             gamma = self.gamma * np.ones_like(w, dtype=self.cl_precisionF)
             gamma2 = self.gamma2 * np.ones_like(w, dtype=self.cl_precisionF)
             wu = self.wu * np.ones_like(w, dtype=self.cl_precisionF)
@@ -1513,18 +1521,19 @@ class Undulator(object):
 
         Np = np.int32(self.Np)
 
-        tg_n, ag_n = np.polynomial.legendre.leggauss(self.gau)
+        tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
+        self.tg_n, self.ag_n = tg_n, ag_n
 
+        dstep = 2 * PI / float(self.gIntervals)
         if (self.taper is not None) or (self.R0 is not None):
             ab = w / PI2 / wu
-            dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
         else:
             ab = w / PI2 / wu * np.sin(PI * Np * ww1) / np.sin(PI * ww1)
-            dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(-PI + 0.5*dstep, PI, dstep)
 
-        tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).flatten()) + PI/2
+        extra = PI/2*0
+        tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).flatten()) + extra
         ag = self.cl_precisionF((dI[:, None]*0+ag_n).flatten())
 
         scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
@@ -1538,7 +1547,6 @@ class Undulator(object):
                         self.cl_precisionF(ww1),  # Energy/Eund(0)
                         self.cl_precisionF(ddtheta),  # Theta
                         self.cl_precisionF(ddpsi)]  # Psi
-
         nonSlicedROArgs = [tg,  # Gauss-Legendre grid
                            ag]  # Gauss-Legendre weights
 

@@ -12,7 +12,7 @@ Gaussian beam
 Gaussian beam at the waist (at :math:`z=0`) is defined as
 
 .. math::
-    u_0 = \sqrt{\frac2\pi}\frac1{w_0}\exp\left(-\frac{r^2}{w_0^2}\right),
+    u_0(r) = \sqrt{\frac2\pi}\frac1{w_0}\exp\left(-\frac{r^2}{w_0^2}\right),
 
 where the pre-exponent factor provides normalization:
 :math:`\int{|u|^2dS} = 2\pi\int_0^\infty {|u|^2 rdr} = 1`.
@@ -28,7 +28,7 @@ Define
 Gaussian beam at arbitrary z is expressed as:
 
 .. math::
-    u(z) = \sqrt{\frac2\pi}\frac1{w_0}\frac1{1-i\frac{z}{z_R}}\exp
+    u(r, z) = \sqrt{\frac2\pi}\frac1{w_0}\frac1{1-i\frac{z}{z_R}}\exp
     \left(-\frac{r^2}{w^2}-\frac{i\pi r^2}{\lambda R}\right),
 
 where the exponent can also be rewritten as:  :math:`\exp\left(-\frac{r^2}
@@ -37,12 +37,12 @@ as :math:`\frac1{1-i\frac{z}{z_R}} = \frac{w_0}w\exp(i\psi)` with :math:`\psi=
 \arctan{\frac{z}{z_R}}=\frac{1}{2i}\log{\frac{1+i\frac{z}{z_R}}{1-i\frac{z}
 {z_R}}}`.
 
-:math:`U = u(z)\exp\left(-i(kz-\omega t)\right)` satisfies the wave equation
+:math:`U = u(r, z)\exp\left(-i(kz-\omega t)\right)` satisfies the wave equation
 
 .. math::
     \nabla^2U = \frac{1}{c^2}\frac{\partial^2U}{\partial t^2}.
 
-:math:`u(z)` can also be obtained by integrating the Gaussian beam waist in a
+:math:`u` can also be obtained by integrating the Gaussian beam waist in a
 diffraction integral (in our implementation, the Kirchhoff integral):
 
 .. math::
@@ -63,19 +63,19 @@ GeometricSource with :math:`w_0` = 15 µm:
 .. |g00m| image:: _images/Gauss-0-beamSource.png
    :scale: 50 %
 
-+-------+--------------+-----------------------+
-|       |  analytical  | Kirchhoff diffraction |
-+=======+==============+=======================+
-| z=5m  |    |g05m|    |         |k05m|        |
-+-------+--------------+-----------------------+
-| z=10m |    |g10m|    |         |k10m|        |
-+-------+--------------+-----------------------+
-| z=20m |    |g20m|    |         |k20m|        |
-+-------+--------------+-----------------------+
-| z=40m |    |g40m|    |         |k40m|        |
-+-------+--------------+-----------------------+
-| z=80m |    |g80m|    |         |k80m|        |
-+-------+--------------+-----------------------+
++-------+--------------------------+---------------------------------+
+|       | analytical Gaussian beam | numerical Kirchhoff diffraction |
++=======+==========================+=================================+
+| z=5m  |          |g05m|          |              |k05m|             |
++-------+--------------------------+---------------------------------+
+| z=10m |          |g10m|          |              |k10m|             |
++-------+--------------------------+---------------------------------+
+| z=20m |          |g20m|          |              |k20m|             |
++-------+--------------------------+---------------------------------+
+| z=40m |          |g40m|          |              |k40m|             |
++-------+--------------------------+---------------------------------+
+| z=80m |          |g80m|          |              |k80m|             |
++-------+--------------------------+---------------------------------+
 
 .. |g05m| image:: _images/Gauss-1-beamFSMg-at05m.png
    :scale: 50 %
@@ -104,9 +104,10 @@ Laguerre-Gaussian beam
 Vortex beams are given by Laguerre-Gaussian modes:
 
 .. math::
-    u^l_p = u(z) \sqrt{\frac{p!}{(p+|l|)!}}\left(\frac{r\sqrt{2}}{w}\right)
-    ^{|l|}L^{|l|}_p\left(\frac{2r^2}{w^2}\right)\exp\left(i(|l|+2p)\psi
-    \right)\exp(il\phi).
+    u^l_p(r, \phi, z) = u(r, z) \sqrt{\frac{p!}{(p+|l|)!}}
+    \left(\frac{r\sqrt{2}}{w}\right)^{|l|}
+    L^{|l|}_p\left(\frac{2r^2}{w^2}\right)
+    \exp\left(i(|l|+2p)\psi\right)\exp(il\phi).
 
 The flux is again normalized to unity.
 
@@ -124,19 +125,19 @@ as GeometricSource with :math:`w_0` = 15 µm, :math:`l` = 1 and :math:`p` = 1:
 .. |lg00m| image:: _images/Laguerre-Gauss-0-beamSource.png
    :scale: 50 %
 
-+-------+--------------+-----------------------+
-|       |  analytical  | Kirchhoff diffraction |
-+=======+==============+=======================+
-| z=5m  |    |lg05m|   |        |lk05m|        |
-+-------+--------------+-----------------------+
-| z=10m |    |lg10m|   |        |lk10m|        |
-+-------+--------------+-----------------------+
-| z=20m |    |lg20m|   |        |lk20m|        |
-+-------+--------------+-----------------------+
-| z=40m |    |lg40m|   |        |lk40m|        |
-+-------+--------------+-----------------------+
-| z=80m |    |lg80m|   |        |lk80m|        |
-+-------+--------------+-----------------------+
++-------+-----------------------------------+---------------------------------+
+|       | analytical Laguerre-Gaussian beam | numerical Kirchhoff diffraction |
++=======+===================================+=================================+
+| z=5m  |              |lg05m|              |             |lk05m|             |
++-------+-----------------------------------+---------------------------------+
+| z=10m |              |lg10m|              |             |lk10m|             |
++-------+-----------------------------------+---------------------------------+
+| z=20m |              |lg20m|              |             |lk20m|             |
++-------+-----------------------------------+---------------------------------+
+| z=40m |              |lg40m|              |             |lk40m|             |
++-------+-----------------------------------+---------------------------------+
+| z=80m |              |lg80m|              |             |lk80m|             |
++-------+-----------------------------------+---------------------------------+
 
 .. |lg05m| image:: _images/Laguerre-Gauss-1-beamFSMg-at05m.png
    :scale: 50 %
