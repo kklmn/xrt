@@ -57,6 +57,74 @@ __kernel void undulator(const float alpha,
     Ip_gl[ii] = Ip;
     }
 
+__kernel void undulator_byparts(const float alpha,
+                        const float Kx,
+                        const float Ky,
+                        const float phase,
+                        const int jend,
+                        __global float* gamma,
+                        __global float* wu,
+                        __global float* w,
+                        __global float* ww1,
+                        __global float* ddphi,
+                        __global float* ddpsi,
+                        __global float* tg,
+                        __global float* ag,
+                        __global float2* Is_gl,
+                        __global float2* Ip_gl)
+{
+    unsigned int ii = get_global_id(0);
+    int j;
+
+    float fs, fp, fsP, fpP;
+    float2 eg;
+    float g, gP, gPP, sing, cosg, sintgph, costgph;
+    float sintg, costg;
+    float sinph, cosph;
+    float2 zero2 = (float2)(0,0);
+    float2 Is = zero2;
+    float2 Ip = zero2;
+    float gam = gamma[ii];
+    float wgwu = w[ii] / gam / wu[ii];
+    float Kx2 = Kx * Kx;
+    float Ky2 = Ky * Ky;
+    float phi = ddphi[ii];
+    float psi = ddpsi[ii];
+
+    sinph = sincos(phase, &cosph);
+    for (j=0; j<jend; j++) {
+        sintg = sincos(tg[j], &costg);
+        sintgph = sintg*cosph + costg*sinph;
+        costgph = costg*cosph - sintg*sinph;
+
+        g = ww1[ii] * tg[j] + wgwu *
+           (-Ky * phi * sintg + Kx * psi * sintgph +
+            0.25 / gam * (Ky2 * sintg*costg + Kx2 * sintgph*costgph));
+        gP = ww1[ii] + wgwu *
+           (-Ky * phi * costg + Kx * psi * costgph +
+            0.25 / gam * (Ky2 * (costg*costg - sintg*sintg) +
+                          Kx2 * (costgph*costgph - sintgph*sintgph)));
+        gPP = wgwu *
+           (Ky * phi * sintg - Kx * psi * sintgph -
+            1. / gam * (Ky2 * sintg*costg + Kx2 * sintgph*costgph));
+
+        sing = sincos(g, &cosg);
+        eg.x = -sing;
+        eg.y = cosg;
+
+        fs = phi - Ky / gam * costg;
+        fp = psi + Kx / gam * costgph;
+        fsP = Ky / gam * sintg;
+        fpP = -Kx / gam * sintgph;
+
+        Is += ag[j] * (fsP - fs*gPP/gP)/gP * eg;
+        Ip += ag[j] * (fpP - fp*gPP/gP)/gP * eg;}
+
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+    Is_gl[ii] = Is;
+    Ip_gl[ii] = Ip;
+    }
+
 __kernel void undulator_taper(const float alpha,
                               const float Kx,
                               const float Ky,
@@ -114,6 +182,93 @@ __kernel void undulator_taper(const float alpha,
     Is_gl[ii] = Is;
     Ip_gl[ii] = Ip;
 }
+
+__kernel void undulator_taper_byparts(const float alpha,
+                        const float Kx,
+                        const float Ky,
+                        const float phase,
+                        const int jend,
+                        __global float* gamma,
+                        __global float* wu,
+                        __global float* w,
+                        __global float* ww1,
+                        __global float* ddphi,
+                        __global float* ddpsi,
+                        __global float* tg,
+                        __global float* ag,
+                        __global float2* Is_gl,
+                        __global float2* Ip_gl)
+{
+    const float E2W = 1.51926751475e15;
+    const float C = 2.99792458e11;
+
+    unsigned int ii = get_global_id(0);
+    int j;
+
+    float fs, fp, fsP, fpP;
+    float2 eg;
+    float g, gP, gPP, sing, cosg, sintgph, costgph, sin2tgph, cos2tgph;
+    float sintg, costg, sin2tg, cos2tg;
+    float sinph, cosph;
+    float2 zero2 = (float2)(0,0);
+    float2 Is = zero2;
+    float2 Ip = zero2;
+    float gam = gamma[ii];
+    float wgwu = w[ii] / gam / wu[ii];
+    float Kx2 = Kx * Kx;
+    float Ky2 = Ky * Ky;
+    float alphaS = alpha * C / wu[ii] / E2W;
+    float phi = ddphi[ii];
+    float psi = ddpsi[ii];
+
+    sinph = sincos(phase, &cosph);
+    for (j=0; j<jend; j++) {
+        sintg = sincos(tg[j], &costg);
+        sintgph = sintg*cosph + costg*sinph;
+        costgph = costg*cosph - sintg*sinph;
+        cos2tg = costg*costg - sintg*sintg;
+        cos2tgph = costgph*costgph - sintgph*sintgph;
+        sin2tg = 2*sintg*costg;
+        sin2tgph = 2*sintgph*costgph;
+
+
+        g = ww1[ii] * tg[j] + wgwu *
+           (-Ky*phi*(alphaS*(-tg[j]*sintg - costg + 1.0) + sintg) + 
+             Kx*psi*sintgph +
+            0.25/gam*(Ky2*(-alphaS*(tg[j]*tg[j] + 
+                                    tg[j]*sin2tg + 
+                                    0.5*(1 - cos2tg)) + 0.5*sin2tg) + 
+                      Kx2*sintgph*costgph));
+
+        gP = ww1[ii] + wgwu *
+            (Kx*psi*costgph -
+             Ky*phi*(-alphaS*tg[j]*costg + costg) +
+             0.25/gam*(Kx2*cos2tgph + 
+                       Ky2*(-2*alphaS*tg[j]*(cos2tg + 1) + cos2tg)));
+
+        gPP = wgwu*(-Kx*psi*sin(phase + tg[j]) - 
+                     Ky*phi*(alphaS*tg[j]*sintg - alphaS*costg - sintg) -
+                    0.5/gam*(Kx2*sin2tgph + 
+                             Ky2*(alphaS*(-2*tg[j]*sin2tg + cos2tg + 1) + 
+                                  sin2tg)));
+
+        sing = sincos(g, &cosg);
+        eg.x = -sing;
+        eg.y = cosg;
+
+        fs = phi - Ky/gam*costg*(-alphaS*tg[j] + 1);
+        fp = psi + Kx/gam*costgph;
+        fsP = Ky/gam*(alphaS*costg + (-alphaS*tg[j] + 1)*sintg);
+        fpP = -Kx/gam*sintgph;
+
+        Is += ag[j] * (fsP - fs*gPP/gP)/gP * eg;
+        Ip += ag[j] * (fpP - fp*gPP/gP)/gP * eg;}
+
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+    Is_gl[ii] = Is;
+    Ip_gl[ii] = Ip;
+    }
+
 
 __kernel void undulator_nf(const float R0,
                             const float L0,
@@ -180,7 +335,100 @@ __kernel void undulator_nf(const float R0,
     Is_gl[ii] = Is;
     Ip_gl[ii] = Ip;
 }
+/*
+__kernel void undulator_nf_byparts(const float alpha,
+                        const float Kx,
+                        const float Ky,
+                        const float phase,
+                        const int jend,
+                        const float alim,
+                        const float blim,
+                        __global float* gamma,
+                        __global float* wu,
+                        __global float* w,
+                        __global float* ww1,
+                        __global float* ddphi,
+                        __global float* ddpsi,
+                        __global float* tg,
+                        __global float* ag,
+                        __global float2* Is_gl,
+                        __global float2* Ip_gl)
+{
+    unsigned int ii = get_global_id(0);
+    int j;
 
+    float2 eg;
+    float f, fP, varx;
+    float g, gP, gPP, sing, cosg, sintgph, costgph;
+    float sintg, costg;
+    float sinph, cosph;
+    float2 zero2 = (float2)(0,0);
+    float2 Is = zero2;
+    float2 Ip = zero2;
+    float gam = gamma[ii];
+    float wwu = w[ii] / wu[ii];
+    float Kx2 = Kx * Kx;
+    float Ky2 = Ky * Ky;
+    float Ky2Kx2;
+    float gamma2 = gam * gam;
+    float phi = ddphi[ii];
+    float psi = ddpsi[ii];
+    float3 r, rP, rPP, n;
+    float betam = 1 - (0.5 + 0.25*Kx2 + 0.25*Ky2) / gamma2;
+
+
+    //n.x = phi;
+    //n.y = psi;
+    //n.z = sqrt(1 - phi*phi - psi*psi);
+
+    r0.x = wR0 * tan(ddphi[ii]);
+    r0.y = wR0 * tan(ddpsi[ii]);
+    r0.z = wR0 * cos(sqrt(ddphi[ii]*ddphi[ii] + ddpsi[ii]*ddpsi[ii]));
+
+    sinph = sincos(phase, &cosph);
+    for (j=0; j<jend; j++) {
+        varx = tg[j];
+        sintg = sincos(varx, &costg);
+        sintgph = sintg*cosph + costg*sinph;
+        costgph = costg*cosph - sintg*sinph;
+        Ky2Kx2 = (Ky2 * sintg*costg + Kx2 * sintgph*costgph) / gamma2;
+
+        r.x = Ky / gam * sintg;
+        r.y = -Kx / gam * sintgph;
+        r.z = betam * varx - 0.25 * Ky2Kx2;
+
+        g = wwu * (varx + length(r0 - r));
+
+        rP.x = Ky / gam * costg;
+        rP.y = -Kx / gam * costgph;
+        rP.z = betam - 0.25 / gamma2 *
+            (Ky2 * (costg*costg - sintg*sintg) +
+             Kx2 * (costgph*costgph - sintgph*sintgph));
+        gP = wwu * (1 + dot(n, rP));
+
+        rPP.x = -r.x;
+        rPP.y = -r.y;
+        rPP.z = Ky2Kx2;
+        gPP = -wwu * dot(n, rPP);
+
+        sing = sincos(g, &cosg);
+        eg.x = -sing;
+        eg.y = cosg;
+
+        f = phi - Ky / gam * costg;
+        fP = Ky / gam * sintg;
+        Is += ag[j] * (fP - f*gPP/gP)/gP * eg;
+
+        f = psi + Kx / gam * costgph;
+        fP = -Kx / gam * sintgph;
+        Ip += ag[j] * (fP - f*gPP/gP)/gP * eg;}
+
+
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+    Is_gl[ii] = Is;
+    Ip_gl[ii] = Ip;
+    }
+*/
 
 double2 f_beta(double Bx, double By, double Bz,
                double emcg,
