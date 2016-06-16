@@ -13,27 +13,27 @@
 #include "materials.cl"
 //#include "pyopencl-ranluxcl.cl"
 
-__constant double zEps = 1.e-12;
+__constant float zEps = 1.e-12;
 __constant bool isParametric = false;
 __constant int maxIteration = 100;
 //__constant long cl_gl=0;
-//__global double *cl_gl;
-//__constant double PI = 3.141592653589793238;
-//__constant double ch = 12398.4186;  // {5}   {c*h[eV*A]}
+//__global float *cl_gl;
+//__constant float PI = 3.141592653589793238;
+//__constant float ch = 12398.4186;  // {5}   {c*h[eV*A]}
 
-double2 rotate_x(double y, double z, double cosangle, double sinangle)
+float2 rotate_x(float y, float z, float cosangle, float sinangle)
 {
-    return (double2)(cosangle*y - sinangle*z, sinangle*y + cosangle*z);
+    return (float2)(cosangle*y - sinangle*z, sinangle*y + cosangle*z);
 }
 
-double2 rotate_y(double x, double z, double cosangle, double sinangle)
+float2 rotate_y(float x, float z, float cosangle, float sinangle)
 {
-    return (double2)(cosangle*x + sinangle*z, -sinangle*x + cosangle*z);
+    return (float2)(cosangle*x + sinangle*z, -sinangle*x + cosangle*z);
 }
 
-double2 rotate_z(double x, double y, double cosangle, double sinangle)
+float2 rotate_z(float x, float y, float cosangle, float sinangle)
 {
-    return (double2)(cosangle*x - sinangle*y, sinangle*x + cosangle*y);
+    return (float2)(cosangle*x - sinangle*y, sinangle*x + cosangle*y);
 }
 
 MY_LOCAL_Z
@@ -44,18 +44,18 @@ MY_LOCAL_G
 
 MY_XYZPARAM
 
-double4 find_dz(double8 cl_plist,
-               int local_f, double t, double x0, double y0, double z0,
-               double a, double b, double c, int invertNormal, int derivOrder)
+float4 find_dz(float8 cl_plist,
+               int local_f, float t, float x0, float y0, float z0,
+               float a, float b, float c, int invertNormal, int derivOrder)
 {
         /*Returns the z or r difference (in the local system) between the ray
         and the surface. Used for finding the intersection point.*/
 
-        double x = x0 + a * t;
-        double y = y0 + b * t;
-        double z = z0 + c * t;
-        double surf, dz;
-        double3 surf3;
+        float x = x0 + a * t;
+        float y = y0 + b * t;
+        float z = z0 + c * t;
+        float surf, dz;
+        float3 surf3;
         int diffSign = 1;
 
         if (derivOrder == 0)
@@ -77,7 +77,7 @@ double4 find_dz(double8 cl_plist,
         else
           {
             surf3 = local_n(cl_plist, local_f, x, y).s012;
-            //surf3 = (double3)(0,0,0);
+            //surf3 = (float3)(0,0,0);
             if (!isnormal(surf))
               {
                 surf3.s0 = 0;
@@ -87,20 +87,20 @@ double4 find_dz(double8 cl_plist,
             dz = (a * surf3.s0 + b * surf3.s1 + c * surf3.s2) * invertNormal;
           }
         //mem_fence(CLK_GLOBAL_MEM_FENCE);
-        return (double4)(dz, x, y, z);
+        return (float4)(dz, x, y, z);
 }
 
-double4 _use_my_method(double8 cl_plist,
-                      int local_f, double tMin, double tMax, double t1, double t2,
-                      double x, double y, double z,
-                      double a, double b, double c,
-                      int invertNormal, int derivOrder, double dz1, double dz2,
-                      double x2, double y2, double z2)
+float4 _use_my_method(float8 cl_plist,
+                      int local_f, float tMin, float tMax, float t1, float t2,
+                      float x, float y, float z,
+                      float a, float b, float c,
+                      int invertNormal, int derivOrder, float dz1, float dz2,
+                      float x2, float y2, float z2)
 {
 
-        double4 tmp;
+        float4 tmp;
         unsigned int numit=2;
-        double t, dz;
+        float t, dz;
         while ((fabs(dz2) > zEps) & (numit < maxIteration))
           {
             t = t1;
@@ -128,18 +128,18 @@ double4 _use_my_method(double8 cl_plist,
             numit++;
           }
         //mem_fence(CLK_GLOBAL_MEM_FENCE);
-        return (double4)(t2, x2, y2, z2);
+        return (float4)(t2, x2, y2, z2);
 }
-double4 _use_Brent_method(double8 cl_plist,
-                      int local_f, double tMin, double tMax, double t1, double t2,
-                      double x, double y, double z,
-                      double a, double b, double c,
-                      int invertNormal, int derivOrder, double dz1, double dz2,
-                      double x2, double y2, double z2)
+float4 _use_Brent_method(float8 cl_plist,
+                      int local_f, float tMin, float tMax, float t1, float t2,
+                      float x, float y, float z,
+                      float a, float b, float c,
+                      int invertNormal, int derivOrder, float dz1, float dz2,
+                      float x2, float y2, float z2)
 {
-        double4 tmp;
-        double tmpt, t3, t4, dz3, xa, xb, xc, xd, xs, xai, xbi, xci;
-        double fa, fb, fc, fai, fbi, fci, fs;
+        float4 tmp;
+        float tmpt, t3, t4, dz3, xa, xb, xc, xd, xs, xai, xbi, xci;
+        float fa, fb, fc, fai, fbi, fci, fs;
         bool mflag, mf, cond1, cond2, cond3, cond4, cond5, conds, fafsNeg;
 
 
@@ -227,15 +227,15 @@ double4 _use_Brent_method(double8 cl_plist,
             numit++;
           }
 
-        return (double4)(t2, x2, y2, z2);
+        return (float4)(t2, x2, y2, z2);
 }
 
 
-double4 find_intersection_internal(double8 cl_plist,
-                          int local_f, double tMin, double tMax,
-                          double t1, double t2,
-                          double x, double y, double z,
-                          double a, double b, double c,
+float4 find_intersection_internal(float8 cl_plist,
+                          int local_f, float tMin, float tMax,
+                          float t1, float t2,
+                          float x, float y, float z,
+                          float a, float b, float c,
                           int invertNormal, int derivOrder)
 {
         /*Finds the ray parameter *t* at the intersection point with the
@@ -244,8 +244,8 @@ double4 find_intersection_internal(double8 cl_plist,
         direction (*a*, *b*, *c*). *t* is then the distance between the origin
         point and the intersection point. *derivOrder* tells if minimized is
         the z-difference (=0) or its derivative (=1).*/
-        double4 tmp1, res;
-        double dz1, dz2;
+        float4 tmp1, res;
+        float dz1, dz2;
         int state = 1;
 
         res = find_dz(cl_plist, local_f,
@@ -287,27 +287,27 @@ double4 find_intersection_internal(double8 cl_plist,
 
 
 __kernel void find_intersection(
-                  const double8 cl_plist_gl,
+                  const float8 cl_plist_gl,
                   const int invertNormal,
                   const int derivOrder,
                   const int local_zN,
-                  const double tMin,
-                  const double tMax,
-                  __global double *t1,
-                  __global double *x,
-                  __global double *y,
-                  __global double *z,
-                  __global double *a,
-                  __global double *b,
-                  __global double *c,
-                  __global double *t2,
-                  __global double *x2,
-                  __global double *y2,
-                  __global double *z2
+                  const float tMin,
+                  const float tMax,
+                  __global float *t1,
+                  __global float *x,
+                  __global float *y,
+                  __global float *z,
+                  __global float *a,
+                  __global float *b,
+                  __global float *c,
+                  __global float *t2,
+                  __global float *x2,
+                  __global float *y2,
+                  __global float *z2
                   )
 {
-      double4 res;
-      double8 cl_plist = cl_plist_gl;
+      float4 res;
+      float8 cl_plist = cl_plist_gl;
       //unsigned int i = get_local_id(0);
       //unsigned int group_id = get_group_id(0);
       //unsigned int nloc = get_local_size(0);
@@ -323,12 +323,12 @@ __kernel void find_intersection(
 }
 
 
-double4 _grating_deflection(double4 abc, double4 oeNormal, double4 gNormal,
-                            double E, double beamInDotNormal, double order,
+float4 _grating_deflection(float4 abc, float4 oeNormal, float4 gNormal,
+                            float E, float beamInDotNormal, float order,
                             bool isTransmitting, unsigned int ray)
   {
-        double4 abc_out;
-        double beamInDotG, G2, locOrder, orderLambda, sig, dn;
+        float4 abc_out;
+        float beamInDotG, G2, locOrder, orderLambda, sig, dn;
         beamInDotG = dot(abc,gNormal);
         G2 = pown(length(gNormal),2);
         locOrder = order;
@@ -342,31 +342,31 @@ double4 _grating_deflection(double4 abc, double4 oeNormal, double4 gNormal,
         return abc_out;
   }
 
-double8 reflect_crystal_internal(const double factDW,
-                              const double thickness,
+float8 reflect_crystal_internal(const float factDW,
+                              const float thickness,
                               int2 geom,
-                              const double8 lattice,
-                              const double temperature,
-                              double4 abc,
-                              double E,
-                              double4 planeNormal,
-                              double4 surfNormal,
+                              const float8 lattice,
+                              const float temperature,
+                              float4 abc,
+                              float E,
+                              float4 planeNormal,
+                              float4 surfNormal,
                               int4  hkl,
                               const int maxEl,
-                              __global double* elements,
-                              __global double* f0cfs,
-                              __global double* E_vector,
-                              __global double* f1_vector,
-                              __global double* f2_vector, unsigned int ray
+                              __global float* elements,
+                              __global float* f0cfs,
+                              __global float* E_vector,
+                              __global float* f1_vector,
+                              __global float* f2_vector, unsigned int ray
                               )
 {
       //printf("got to rsi, ray %i\n", ray);
-      double4 abc_out, dhkl, amplitudes, gNormalCryst, gNormal;
-      double beamInDotNormal, d, chiToF, normalDotSurfNormal;
-      double beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
-      dhkl = (double4)(hkl.x, hkl.y, hkl.z, 0);
-      double2 plane_d;
-      //double epsilonB = 0.01;
+      float4 abc_out, dhkl, amplitudes, gNormalCryst, gNormal;
+      float beamInDotNormal, d, chiToF, normalDotSurfNormal;
+      float beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
+      dhkl = (float4)(hkl.x, hkl.y, hkl.z, 0);
+      float2 plane_d;
+      //float epsilonB = 0.01;
       beamInDotNormal = dot(abc,planeNormal);
 
       if (temperature>0)
@@ -469,33 +469,33 @@ double8 reflect_crystal_internal(const double factDW,
                   amplitudes.hi = cmp0;
                 }*/
       abc_out.w = geom.lo;
-      return (double8)(amplitudes,abc_out);
+      return (float8)(amplitudes,abc_out);
 }
 
-double8 reflect_crystal_internal_E(const double factDW,
-                              const double thickness,
+float8 reflect_crystal_internal_E(const float factDW,
+                              const float thickness,
                               int2 geom,
-                              const double8 lattice,
-                              const double temperature,
-                              double4 abc,
-                              double E,
-                              double4 planeNormal,
-                              double4 surfNormal,
+                              const float8 lattice,
+                              const float temperature,
+                              float4 abc,
+                              float E,
+                              float4 planeNormal,
+                              float4 surfNormal,
                               int4  hkl,
                               const int maxEl,
-                              __global double* elements,
-                              __global double* f0cfs,
-                              __global double2* f1f2, unsigned int ray
+                              __global float* elements,
+                              __global float* f0cfs,
+                              __global float2* f1f2, unsigned int ray
                               )
 {
       //printf("got to rsi, ray %i\n", ray);
-      double4 abc_out, dhkl, amplitudes, gNormalCryst, gNormal;
-      double beamInDotNormal, d, chiToF, normalDotSurfNormal;
-      double beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
-      dhkl = (double4)(hkl.x, hkl.y, hkl.z, 0);
-      double2 plane_d;
-      double alpha = 0;  
-      //double epsilonB = 0.01;
+      float4 abc_out, dhkl, amplitudes, gNormalCryst, gNormal;
+      float beamInDotNormal, d, chiToF, normalDotSurfNormal;
+      float beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
+      dhkl = (float4)(hkl.x, hkl.y, hkl.z, 0);
+      float2 plane_d;
+      float alpha = 0;  
+      //float epsilonB = 0.01;
       beamInDotNormal = dot(abc,planeNormal);
 
       if (temperature>0)
@@ -594,65 +594,65 @@ double8 reflect_crystal_internal_E(const double factDW,
                   amplitudes.hi = cmp0;
                 }*/
       abc_out.w = geom.lo;
-      return (double8)(amplitudes,abc_out);
+      return (float8)(amplitudes,abc_out);
 }
 
-double8 reflect_single_crystal(const double factDW,
-                              const double thickness,
+float8 reflect_single_crystal(const float factDW,
+                              const float thickness,
                               int2 geom,
-                              const double8 lattice,
-                              const double temperature,
-                              double4 abc,
-                              double E,
-                              double4 planeNormal,
-                              double4 surfNormal,
+                              const float8 lattice,
+                              const float temperature,
+                              float4 abc,
+                              float E,
+                              float4 planeNormal,
+                              float4 surfNormal,
                               int4 hkl,
                               int nmax,
                               const int maxEl,
-                              __global double* elements,
-                              __global double* f0cfs,
-                              __global double* E_vector,
-                              __global double* f1_vector,
-                              __global double* f2_vector,
+                              __global float* elements,
+                              __global float* f0cfs,
+                              __global float* E_vector,
+                              __global float* f1_vector,
+                              __global float* f2_vector,
                               unsigned int ray
                               )
   {
 
-      double4 abc_out, max_abc;
+      float4 abc_out, max_abc;
       //unsigned int Z = 14; //for debug only
-      double  iPlaneMod = 0;
-      //double2 zero2 = (double2)(0,0);
+      float  iPlaneMod = 0;
+      //float2 zero2 = (float2)(0,0);
       //abc=normalize(abc);
       abc_out = abc;
       max_abc = abc_out;
-      double2 maxS = cmp0;
-      double2 maxP = cmp0;
-      //double beamDotiPlane;
+      float2 maxS = cmp0;
+      float2 maxP = cmp0;
+      //float beamDotiPlane;
       int ih, ik, il;
-      double4 cutNormal = (double4)(1,1,1,0);
-      double cutNormalMod = length(cutNormal);
+      float4 cutNormal = (float4)(1,1,1,0);
+      float cutNormalMod = length(cutNormal);
       //int4 maxhkl = (int4)(0,0,0,0);
-      double2 curveS, curveP;
-      double8 dirflux;
-      double4 iPlaneinCut, iPlane, iPlaneOrt;
-      double4 dmaxhkl = (double4)(0,0,0,0);
-      double rAngle = -acos(dot(planeNormal / length(planeNormal),cutNormal / length(cutNormal)));
-      double Qw = cos(0.5*rAngle);
-      double4 Qvp = cross(planeNormal / length(planeNormal),cutNormal / length(cutNormal));
-      double4 Qv = Qvp / length(Qvp) * sin(0.5*rAngle);
+      float2 curveS, curveP;
+      float8 dirflux;
+      float4 iPlaneinCut, iPlane, iPlaneOrt;
+      float4 dmaxhkl = (float4)(0,0,0,0);
+      float rAngle = -acos(dot(planeNormal / length(planeNormal),cutNormal / length(cutNormal)));
+      float Qw = cos(0.5*rAngle);
+      float4 Qvp = cross(planeNormal / length(planeNormal),cutNormal / length(cutNormal));
+      float4 Qv = Qvp / length(Qvp) * sin(0.5*rAngle);
       //setting up quarternions
-      double Qxx = Qv.x*Qv.x;
-      double Qxy = Qv.x*Qv.y;
-      double Qxz = Qv.x*Qv.z;
-      double Qxw = Qv.x*Qw;
-      double Qyy = Qv.y*Qv.y;
-      double Qyz = Qv.y*Qv.z;
-      double Qyw = Qv.y*Qw;
-      double Qzz = Qv.z*Qv.z;
-      double Qzw = Qv.z*Qw;
-      double4 Mrx = (double4)(1 - 2 * (Qyy + Qzz), 2 * (Qxy - Qzw), 2 * (Qxz + Qyw), 0);
-      double4 Mry = (double4)(2 * (Qxy + Qzw), 1 - 2 * (Qxx + Qzz), 2 * (Qyz - Qxw), 0);
-      double4 Mrz = (double4)(2 * (Qxz - Qyw), 2 * (Qyz + Qxw), 1 - 2 * (Qxx + Qyy), 0);
+      float Qxx = Qv.x*Qv.x;
+      float Qxy = Qv.x*Qv.y;
+      float Qxz = Qv.x*Qv.z;
+      float Qxw = Qv.x*Qw;
+      float Qyy = Qv.y*Qv.y;
+      float Qyz = Qv.y*Qv.z;
+      float Qyw = Qv.y*Qw;
+      float Qzz = Qv.z*Qv.z;
+      float Qzw = Qv.z*Qw;
+      float4 Mrx = (float4)(1 - 2 * (Qyy + Qzz), 2 * (Qxy - Qzw), 2 * (Qxz + Qyw), 0);
+      float4 Mry = (float4)(2 * (Qxy + Qzw), 1 - 2 * (Qxx + Qzz), 2 * (Qyz - Qxw), 0);
+      float4 Mrz = (float4)(2 * (Qxz - Qyw), 2 * (Qyz + Qxw), 1 - 2 * (Qxx + Qyy), 0);
 
       for (ih=-nmax; ih<nmax+1; ih++)
         {
@@ -662,7 +662,7 @@ double8 reflect_single_crystal(const double factDW,
             {
 
               if (abs(ih)+abs(ik)+abs(il) == 0) continue;
-              iPlane = (double4)(ih,ik,il,0);
+              iPlane = (float4)(ih,ik,il,0);
               iPlaneMod = length(iPlane);
               iPlaneOrt = iPlane / iPlaneMod;
               iPlaneinCut.x = dot(Mrx,iPlaneOrt);
@@ -690,39 +690,39 @@ double8 reflect_single_crystal(const double factDW,
       }
       mem_fence(CLK_LOCAL_MEM_FENCE);
       max_abc.w = 0;
-      return (double8)(maxS,maxP,max_abc);
+      return (float8)(maxS,maxP,max_abc);
   }
 
-double8 reflect_harmonics(const double factDW,
-                              const double thickness,
+float8 reflect_harmonics(const float factDW,
+                              const float thickness,
                               int2 geom,
-                              const double8 lattice,
-                              const double temperature,
-                              double4 abc,
-                              double E,
-                              double4 planeNormal,
-                              double4 surfNormal,
+                              const float8 lattice,
+                              const float temperature,
+                              float4 abc,
+                              float E,
+                              float4 planeNormal,
+                              float4 surfNormal,
                               int4 hkl,
                               int nmax,
                               const int maxEl,
-                              __global double* elements,
-                              __global double* f0cfs,
-                              __global double* E_vector,
-                              __global double* f1_vector,
-                              __global double* f2_vector,
+                              __global float* elements,
+                              __global float* f0cfs,
+                              __global float* E_vector,
+                              __global float* f1_vector,
+                              __global float* f2_vector,
                               unsigned int ray
                               )
   {
 
-      double4 abc_out, max_abc;
-      //double2 zero2 = (double2)(0,0);
+      float4 abc_out, max_abc;
+      //float2 zero2 = (float2)(0,0);
       abc_out = abc;
       max_abc = abc_out;
-      double2 maxS = cmp0;
-      double2 maxP = cmp0;
+      float2 maxS = cmp0;
+      float2 maxP = cmp0;
       int nh;
-      double2 curveS, curveP;
-      double8 dirflux;
+      float2 curveS, curveP;
+      float8 dirflux;
 
       for (nh=1;nh<nmax+1;nh++)
         {
@@ -746,38 +746,38 @@ double8 reflect_harmonics(const double factDW,
       }
       mem_fence(CLK_LOCAL_MEM_FENCE);
       max_abc.w = 0;
-      return (double8)(maxS,maxP,max_abc);
+      return (float8)(maxS,maxP,max_abc);
   }
 
-double8 reflect_powder(const double factDW,
-                              const double thickness,
+float8 reflect_powder(const float factDW,
+                              const float thickness,
                               int2 geom,
-                              const double8 lattice,
-                              const double temperature,
-                              double4 abc,
-                              double E,
-                              double4 planeNormal,
-                              double4 surfNormal,
+                              const float8 lattice,
+                              const float temperature,
+                              float4 abc,
+                              float E,
+                              float4 planeNormal,
+                              float4 surfNormal,
                               int4 hklmax,
                               const int maxEl,
-                              __global double* elements,
-                              __global double* f0cfs,
-                              __global double* E_vector,
-                              __global double* f1_vector,
-                              __global double* f2_vector,
+                              __global float* elements,
+                              __global float* f0cfs,
+                              __global float* E_vector,
+                              __global float* f1_vector,
+                              __global float* f2_vector,
                               unsigned int ray
                               )
   {
 
-      double4 abc_out;
-      double4 max_abc = (double4)(0,0,0,0);
-      //double2 zero2 = (double2)(0,0);
-      double2 maxS = cmp0;
-      double2 maxP = cmp0;
+      float4 abc_out;
+      float4 max_abc = (float4)(0,0,0,0);
+      //float2 zero2 = (float2)(0,0);
+      float2 maxS = cmp0;
+      float2 maxP = cmp0;
       int ih, ik, il;
       //int4 maxhkl;
-      double2 curveS, curveP;
-      double8 dirflux;
+      float2 curveS, curveP;
+      float8 dirflux;
       for (ih = 0; ih < hklmax.x + 1; ih++)
         {
         for (ik = 0; ik < hklmax.y + 1; ik++)
@@ -817,47 +817,47 @@ double8 reflect_powder(const double factDW,
 
      mem_fence(CLK_LOCAL_MEM_FENCE);
       max_abc.w = 0;
-      return (double8)(maxS,maxP,max_abc);
+      return (float8)(maxS,maxP,max_abc);
   }
 
 __kernel void reflect_crystal(const int calctype,
                             const int4 hkl,
-                            const double factDW,
-                            const double thickness,
-                            const double temperature,
+                            const float factDW,
+                            const float thickness,
+                            const float temperature,
                             const int geom_b,
                             const int maxEl,
-                            const double8 lattice,
-                            __global double* a_gl,
-                            __global double* b_gl,
-                            __global double* c_gl,
-                            __global double* E_gl,
-                            __global double* planeNormalX,
-                            __global double* planeNormalY,
-                            __global double* planeNormalZ,
-                            __global double* surfNormalX,
-                            __global double* surfNormalY,
-                            __global double* surfNormalZ,
-                            __global double* elements,
-                            __global double* f0cfs,
-                            __global double* E_vector,
-                            __global double* f1_vector,
-                            __global double* f2_vector,
+                            const float8 lattice,
+                            __global float* a_gl,
+                            __global float* b_gl,
+                            __global float* c_gl,
+                            __global float* E_gl,
+                            __global float* planeNormalX,
+                            __global float* planeNormalY,
+                            __global float* planeNormalZ,
+                            __global float* surfNormalX,
+                            __global float* surfNormalY,
+                            __global float* surfNormalZ,
+                            __global float* elements,
+                            __global float* f0cfs,
+                            __global float* E_vector,
+                            __global float* f1_vector,
+                            __global float* f2_vector,
                             //__global ranluxcl_state_t *ranluxcltab,
-                            __global double2* refl_s,
-                            __global double2* refl_p,
-                            __global double* a_out,
-                            __global double* b_out,
-                            __global double* c_out
+                            __global float2* refl_s,
+                            __global float2* refl_p,
+                            __global float* a_out,
+                            __global float* b_out,
+                            __global float* c_out
                             )
   {
       unsigned int ii = get_global_id(0);
-      double Energy = E_gl[ii];
-      double8 dirflux;
-      double4 planeNormal, surfNormal;
-      double4 abc = (double4)(a_gl[ii],b_gl[ii],c_gl[ii],0);
-      planeNormal = (double4)(planeNormalX[ii],planeNormalY[ii],planeNormalZ[ii],0);
-      surfNormal = (double4)(surfNormalX[ii],surfNormalY[ii],surfNormalZ[ii],0);
+      float Energy = E_gl[ii];
+      float8 dirflux;
+      float4 planeNormal, surfNormal;
+      float4 abc = (float4)(a_gl[ii],b_gl[ii],c_gl[ii],0);
+      planeNormal = (float4)(planeNormalX[ii],planeNormalY[ii],planeNormalZ[ii],0);
+      surfNormal = (float4)(surfNormalX[ii],surfNormalY[ii],surfNormalZ[ii],0);
       //printf("planeNormal: %g %g %g\n", planeNormal.x, planeNormal.y, planeNormal.z);
       //printf("surfNormal: %g %g %g\n", surfNormal.x, surfNormal.y, surfNormal.z);
       //uint ins = floor(Energy*100);
@@ -902,7 +902,7 @@ __kernel void reflect_crystal(const int calctype,
             mem_fence(CLK_LOCAL_MEM_FENCE);
         }
       //params.s01 = ranluxcl64(&ranluxclstate).s01;
-      //double4 randomnr = ranluxcl64(&ranluxclstate);
+      //float4 randomnr = ranluxcl64(&ranluxclstate);
 
 
       //printf("S, P: %g+j%g, %g+j%g, ray %i\n",
@@ -921,40 +921,40 @@ __kernel void reflect_crystal(const int calctype,
 __kernel void propagate_wave_material(
                     const unsigned int nInputRays,
                     const unsigned int nOutputRays,
-                    const double chbar,
-                    const double2 refrac_n,
-                    const double thickness,
+                    const float chbar,
+                    const float2 refrac_n,
+                    const float thickness,
                     const int kind,
                     const unsigned int fromVacuum,
-                    const double E_loc,
-                    //__global double* cosGamma,
-                    __global double* x_glo,
-                    __global double* y_glo,
-                    __global double* z_glo,
-                    __global double* ag,
-                    __global double2* Es,
-                    __global double2* Ep,
-                    //__global double* E_loc,
-                    __global double4* beamOEglo,
+                    const float E_loc,
+                    //__global float* cosGamma,
+                    __global float* x_glo,
+                    __global float* y_glo,
+                    __global float* z_glo,
+                    __global float* ag,
+                    __global float2* Es,
+                    __global float2* Ep,
+                    //__global float* E_loc,
+                    __global float4* beamOEglo,
 
-                    __global double* surfNormalX,
-                    __global double* surfNormalY,
-                    __global double* surfNormalZ,
-                    __global double2* KirchS_gl,
-                    __global double2* KirchP_gl)
+                    __global float* surfNormalX,
+                    __global float* surfNormalY,
+                    __global float* surfNormalZ,
+                    __global float2* KirchS_gl,
+                    __global float2* KirchP_gl)
 
 {
     unsigned int i;
-    double4 beam_coord_glo, beam_angle_glo;
-    double2 gi, KirchS_loc, KirchP_loc, Esr, Epr;
-    double pathAfter, cosAlpha, cr;
+    float4 beam_coord_glo, beam_angle_glo;
+    float2 gi, KirchS_loc, KirchP_loc, Esr, Epr;
+    float pathAfter, cosAlpha, cr;
     unsigned int ii_screen = get_global_id(0);
-    double k, wavelength;
-    double phase, ag_loc;
+    float k, wavelength;
+    float phase, ag_loc;
     KirchS_loc = cmp0;
     KirchP_loc = cmp0;
-    double4 refl_amp=(double4)(cmp1,cmp1);
-    double4 oe_surface_normal = (double4)(surfNormalX[ii_screen], 
+    float4 refl_amp=(float4)(cmp1,cmp1);
+    float4 oe_surface_normal = (float4)(surfNormalX[ii_screen], 
                                             surfNormalY[ii_screen], 
                                             surfNormalZ[ii_screen], 0);
 
@@ -966,7 +966,7 @@ __kernel void propagate_wave_material(
     
     for (i=0; i<nInputRays; i++)
     {
-        refl_amp = (double4)(cmp1,cmp1);
+        refl_amp = (float4)(cmp1,cmp1);
         beam_angle_glo = beam_coord_glo - beamOEglo[i];
         pathAfter = length(beam_angle_glo);
         cosAlpha = dot(beam_angle_glo, oe_surface_normal) / pathAfter;
@@ -989,7 +989,7 @@ __kernel void propagate_wave_material(
         //Esr = Es[i];
         //Epr = Ep[i];
         cr = cosAlpha / pathAfter;
-        gi = (double2)(cr * cos(phase), cr * sin(phase));
+        gi = (float2)(cr * cos(phase), cr * sin(phase));
         //ag_loc = pown(ag[i],gau);
         
         KirchS_loc += (ag[i] * prod_c(gi, Esr));
@@ -1006,63 +1006,63 @@ __kernel void propagate_wave_material(
 __kernel void propagate_wave_crystal(
                     const unsigned int nInputRays,
                     const unsigned int nOutputRays,
-                    const double chbar,
+                    const float chbar,
 
                     const int kind,
                     const int4 hkl,
-                    const double factDW,
-                    const double thickness,
-                    const double temperature,
+                    const float factDW,
+                    const float thickness,
+                    const float temperature,
                     const int geom_b,
                     const int maxEl,
-                    const double8 lattice,
+                    const float8 lattice,
 
-                    const double E_loc,
+                    const float E_loc,
 
-                    __global double* x_glo,
-                    __global double* y_glo,
-                    __global double* z_glo,
-                    __global double* ag,
-                    __global double2* Es,
-                    __global double2* Ep,
+                    __global float* x_glo,
+                    __global float* y_glo,
+                    __global float* z_glo,
+                    __global float* ag,
+                    __global float2* Es,
+                    __global float2* Ep,
 
-                    __global double4* beamOEglo,
+                    __global float4* beamOEglo,
 
-                    __global double* planeNormalX,
-                    __global double* planeNormalY,
-                    __global double* planeNormalZ,
-                    __global double* surfNormalX,
-                    __global double* surfNormalY,
-                    __global double* surfNormalZ,
+                    __global float* planeNormalX,
+                    __global float* planeNormalY,
+                    __global float* planeNormalZ,
+                    __global float* surfNormalX,
+                    __global float* surfNormalY,
+                    __global float* surfNormalZ,
 
-                    __global double* elements,
-                    __global double* f0cfs,
-                    __global double2* f1f2,
+                    __global float* elements,
+                    __global float* f0cfs,
+                    __global float2* f1f2,
 
-                    __global double2* KirchS_gl,
-                    __global double2* KirchP_gl)
+                    __global float2* KirchS_gl,
+                    __global float2* KirchP_gl)
 
 {
     unsigned int i;
     int2 geom;
-    double4 beam_coord_glo, beam_angle_glo, abc;
-    double2 gi, KirchS_loc, KirchP_loc, Esr, Epr;
-    double pathAfter, cosAlpha, cr;
+    float4 beam_coord_glo, beam_angle_glo, abc;
+    float2 gi, KirchS_loc, KirchP_loc, Esr, Epr;
+    float pathAfter, cosAlpha, cr;
     unsigned int ii_screen = get_global_id(0);
-    double k, wavelength;
-    double phase, ag_loc;
+    float k, wavelength;
+    float phase, ag_loc;
     KirchS_loc = cmp0;
     KirchP_loc = cmp0;
-    double4 refl_amp=(double4)(cmp1,cmp1);
+    float4 refl_amp=(float4)(cmp1,cmp1);
 
     geom.lo = geom_b > 1 ? 1 : 0;
     geom.hi = (int)(fabs(remainder(geom_b,2.)));
 
-    double4 planeNormal = (double4)(planeNormalX[ii_screen],
+    float4 planeNormal = (float4)(planeNormalX[ii_screen],
                             planeNormalY[ii_screen],
                             planeNormalZ[ii_screen],0);
 
-    double4 surfNormal = (double4)(surfNormalX[ii_screen],
+    float4 surfNormal = (float4)(surfNormalX[ii_screen],
                             surfNormalY[ii_screen],
                             surfNormalZ[ii_screen],0);
 
@@ -1076,7 +1076,7 @@ __kernel void propagate_wave_crystal(
     
     for (i=0; i<nInputRays; i++)
     {
-        refl_amp = (double4)(cmp1,cmp1);
+        refl_amp = (float4)(cmp1,cmp1);
         beam_angle_glo = beam_coord_glo - beamOEglo[i];
         pathAfter = length(beam_angle_glo);
         cosAlpha = dot(beam_angle_glo, surfNormal) / pathAfter;
@@ -1098,7 +1098,7 @@ __kernel void propagate_wave_crystal(
         //Esr = Es[i];
         //Epr = Ep[i];
         cr = cosAlpha / pathAfter;
-        gi = (double2)(cr * cos(phase), cr * sin(phase));
+        gi = (float2)(cr * cos(phase), cr * sin(phase));
         //ag_loc = pown(ag[i],gau);
         
         KirchS_loc += (ag[i] * prod_c(gi, Esr));

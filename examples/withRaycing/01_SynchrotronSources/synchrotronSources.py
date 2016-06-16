@@ -286,7 +286,7 @@ if sourceType == 'u':
         eEspread=0.001,  # Energy spread of the electrons in the ring
         period=30., n=40,  # Parameters of the undulator, period in [mm]
         K=1.45,  # Deflection parameter (ignored if targetE is not None)
-        targetE=[6940, 5, False],  # [energy [eV], harmonic]
+        targetE=[6940, 5, False],  # [energy [eV], harmonic, isElliptical]
         xPrimeMax=0.25, zPrimeMax=0.25,  # Limits of the output angle [mrad]
         eSigmaX=48.65, eSigmaZ=6.197,  # Size of the electron beam [mkm]
         # customField=0.0,  # Longitudinal magnetic field. If not None,
@@ -294,7 +294,7 @@ if sourceType == 'u':
         # the integration must be decreased to 1e-2.
         # eSigmaX=0., eSigmaZ=0.,  # Zero size electron beam
         # uniformRayDensity=True, filamentBeam=True,  # Single wavefront
-        # R0=R0,   # Near Field.
+#        R0=R0,   # Near Field.
         # gIntervals=33,  # Number of the integration intervals. Must be
         # increased for the near field and custom magnetic field cases.
         # gp=1e-2,  # Precision of the integration.
@@ -502,7 +502,7 @@ def define_plots(beamLine):
         'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis,
         caxis=xrtp.XYCAxis('degree of polarization', '',
                            data=raycing.get_polarization_degree,
-                           limits=[0, 1.0005], bins=bins, ppb=ppb),
+                           limits=[0.9, 1.01], bins=bins, ppb=ppb),
         aspect='auto', title='degree of polarization')
     plot.saveName = prefix + '4DegPol' + suffix + '.png'
     plot.caxis.fwhmFormatStr = None
@@ -514,7 +514,7 @@ def define_plots(beamLine):
         'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis,
         caxis=xrtp.XYCAxis('degree of polarization', '',
                            data=raycing.get_polarization_degree,
-                           limits=[0, 1.0005], bins=bins, ppb=ppb),
+                           limits=[0.9, 1.01], bins=bins, ppb=ppb),
         aspect='auto', title='degree of polarization zoom')
     plot.saveName = prefix + '4DegPolZoom' + suffix + '.png'
     plot.caxis.fwhmFormatStr = None
@@ -623,7 +623,7 @@ def afterScript(*plots):
     cwd = os.getcwd()
     pickleName = os.path.join(cwd, prefix+'.pickle')
     with open(pickleName, 'wb') as f:
-        pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f, -1)
+        pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f, protocol=2)
 
 
 def main():

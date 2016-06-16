@@ -430,28 +430,28 @@ __kernel void undulator_nf_by_parts(const float alpha,
     }
 */
 
-double2 f_beta(double Bx, double By, double Bz,
-               double emcg,
-               double2 beta)
+float2 f_beta(float Bx, float By, float Bz,
+               float emcg,
+               float2 beta)
 {
-    return emcg*(double2)(beta.y*Bz - By,
+    return emcg*(float2)(beta.y*Bz - By,
                           Bx - beta.x*Bz);
 }
 
-double3 f_traj(double revgamma, double2 beta)
+float3 f_traj(float revgamma, float2 beta)
 {
-    return (double3)(beta.x,
+    return (float3)(beta.x,
                      beta.y,
                      sqrt(revgamma-beta.x*beta.x-beta.y*beta.y));
 }
 
-double2 next_beta_rk(double2 beta, int iZeroStep, int iHalfStep,
-                     int iFullStep, double rkStep, double emcg,
-                     __global double* Bx,
-                     __global double* By,
-                     __global double* Bz)
+float2 next_beta_rk(float2 beta, int iZeroStep, int iHalfStep,
+                     int iFullStep, float rkStep, float emcg,
+                     __global float* Bx,
+                     __global float* By,
+                     __global float* Bz)
 {
-    double2 k1Beta, k2Beta, k3Beta, k4Beta;
+    float2 k1Beta, k2Beta, k3Beta, k4Beta;
 
     k1Beta = rkStep * f_beta(Bx[iZeroStep],
                              By[iZeroStep],
@@ -472,15 +472,15 @@ double2 next_beta_rk(double2 beta, int iZeroStep, int iHalfStep,
     return beta + (k1Beta + 2.*k2Beta + 2.*k3Beta + k4Beta) / 6.;
 }
 
-double8 next_traj_rk(double2 beta, double3 traj, int iZeroStep, int iHalfStep,
-                     int iFullStep, double rkStep, double emcg,
-                     double revgamma,
-                     __global double* Bx,
-                     __global double* By,
-                     __global double* Bz)
+float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
+                     int iFullStep, float rkStep, float emcg,
+                     float revgamma,
+                     __global float* Bx,
+                     __global float* By,
+                     __global float* Bz)
 {
-    double2 k1Beta, k2Beta, k3Beta, k4Beta;
-    double3 k1Traj, k2Traj, k3Traj, k4Traj;
+    float2 k1Beta, k2Beta, k3Beta, k4Beta;
+    float3 k1Traj, k2Traj, k3Traj, k4Traj;
 
     k1Beta = rkStep * f_beta(Bx[iZeroStep],
                              By[iZeroStep],
@@ -506,7 +506,7 @@ double8 next_traj_rk(double2 beta, double3 traj, int iZeroStep, int iHalfStep,
                              emcg, beta + k3Beta);
     k4Traj = rkStep * f_traj(revgamma, beta + k3Beta);
 
-    return (double8)(beta + (k1Beta + 2.*k2Beta + 2.*k3Beta + k4Beta)/6.,
+    return (float8)(beta + (k1Beta + 2.*k2Beta + 2.*k3Beta + k4Beta)/6.,
                      traj + (k1Traj + 2.*k2Traj + 2.*k3Traj + k4Traj)/6.,
                      0., 0., 0.);
 }
@@ -514,40 +514,40 @@ double8 next_traj_rk(double2 beta, double3 traj, int iZeroStep, int iHalfStep,
 
 __kernel void undulator_custom(const int jend,
                                 const int nwt,
-                                const double lUnd,
-                                __global double* gamma,
-                                __global double* w,
-                                __global double* ddphi,
-                                __global double* ddpsi,
-                                __global double* tg,
-                                __global double* ag,
-                                __global double* Bx,
-                                __global double* By,
-                                __global double* Bz,
-                                __global double2* Is_gl,
-                                __global double2* Ip_gl)
+                                const float lUnd,
+                                __global float* gamma,
+                                __global float* w,
+                                __global float* ddphi,
+                                __global float* ddpsi,
+                                __global float* tg,
+                                __global float* ag,
+                                __global float* Bx,
+                                __global float* By,
+                                __global float* Bz,
+                                __global float2* Is_gl,
+                                __global float2* Ip_gl)
 {
-    const double E2W = 1.51926751475e15;
-    const double C = 2.99792458e11;
-    const double SIE0 = 1.602176565e-19;
-    const double SIM0 = 9.10938291e-31;
-    //const double PI = 3.1415926535897932384626433832795;
-    const double PI2 = 6.283185307179586476925286766559;
+    const float E2W = 1.51926751475e15;
+    const float C = 2.99792458e11;
+    const float SIE0 = 1.602176565e-19;
+    const float SIM0 = 9.10938291e-31;
+    //const float PI = 3.1415926535897932384626433832795;
+    const float PI2 = 6.283185307179586476925286766559;
 
     unsigned int ii = get_global_id(0);
     int j, k;
     int iBase, iZeroStep, iHalfStep, iFullStep;
 
-    double ucos, rkStep, wu_int, betam_int;
-    double emcg = lUnd * SIE0 / SIM0 / C / gamma[ii] / PI2;
-    double revgamma = 1. - 1./gamma[ii]/gamma[ii];
-    double8 betaTraj;
-    double2 eucos;
-    double2 zero2 = (double2)(0,0);
-    double2 Is = zero2;
-    double2 Ip = zero2;
-    double2 beta, beta0;
-    double3 traj, n, traj0;
+    float ucos, rkStep, wu_int, betam_int;
+    float emcg = lUnd * SIE0 / SIM0 / C / gamma[ii] / PI2;
+    float revgamma = 1. - 1./gamma[ii]/gamma[ii];
+    float8 betaTraj;
+    float2 eucos;
+    float2 zero2 = (float2)(0,0);
+    float2 Is = zero2;
+    float2 Ip = zero2;
+    float2 beta, beta0;
+    float3 traj, n, traj0;
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
@@ -571,8 +571,8 @@ __kernel void undulator_custom(const int jend,
     mem_fence(CLK_LOCAL_MEM_FENCE);
     beta0 /= -(tg[jend-1] - tg[0]);
     beta = beta0;
-    traj = (double3)(0., 0., 0.);
-    traj0 = (double3)(0., 0., 0.);
+    traj = (float3)(0., 0., 0.);
+    traj0 = (float3)(0., 0., 0.);
 
     for (j=1; j<jend; j++) {
         iBase = (j-1)*2*nwt;
@@ -625,29 +625,29 @@ __kernel void undulator_custom(const int jend,
 
 __kernel void get_trajectory(const int jend,
                              const int nwt,
-                             const double emcg,
-                             const double gamma,
-                             __global double* tg,
-                             __global double* Bx,
-                             __global double* By,
-                             __global double* Bz,
-                             __global double* betax,
-                             __global double* betay,
-                             __global double* betazav,
-                             __global double* trajx,
-                             __global double* trajy,
-                             __global double* trajz)
+                             const float emcg,
+                             const float gamma,
+                             __global float* tg,
+                             __global float* Bx,
+                             __global float* By,
+                             __global float* Bz,
+                             __global float* betax,
+                             __global float* betay,
+                             __global float* betazav,
+                             __global float* trajx,
+                             __global float* trajy,
+                             __global float* trajz)
 {
     int j, k;
     int iBase, iZeroStep, iHalfStep, iFullStep;
 
-    double rkStep;
-    double revgamma = 1. - 1./gamma/gamma;
-    double betam_int = 0;
-    double2 zero2 = (double2)(0,0);
-    double2 beta, beta0;
-    double3 traj, traj0;
-    double8 betaTraj;
+    float rkStep;
+    float revgamma = 1. - 1./gamma/gamma;
+    float betam_int = 0;
+    float2 zero2 = (float2)(0,0);
+    float2 beta, beta0;
+    float3 traj, traj0;
+    float8 betaTraj;
 
     beta = zero2;
     beta0 = zero2;
@@ -665,8 +665,8 @@ __kernel void get_trajectory(const int jend,
     mem_fence(CLK_LOCAL_MEM_FENCE);
     beta0 /= -(tg[jend-1] - tg[0]);
     beta = beta0;
-    traj = (double3)(0., 0., 0.);
-    traj0 = (double3)(0., 0., 0.);
+    traj = (float3)(0., 0., 0.);
+    traj0 = (float3)(0., 0., 0.);
 
     for (j=1; j<jend; j++) {
         iBase = 2*(j-1)*nwt;
@@ -713,34 +713,34 @@ __kernel void get_trajectory(const int jend,
 }
 
 __kernel void undulator_custom_filament(const int jend,
-                                        const double wu,
-                                        const double L0,
-                                        const double R0,
-                                        __global double* w,
-                                        __global double* ddphi,
-                                        __global double* ddpsi,
-                                        __global double* tg,
-                                        __global double* ag,
-                                        __global double* betax,
-                                        __global double* betay,
-                                        __global double* trajx,
-                                        __global double* trajy,
-                                        __global double* trajz,
-                                        __global double2* Is_gl,
-                                        __global double2* Ip_gl)
+                                        const float wu,
+                                        const float L0,
+                                        const float R0,
+                                        __global float* w,
+                                        __global float* ddphi,
+                                        __global float* ddpsi,
+                                        __global float* tg,
+                                        __global float* ag,
+                                        __global float* betax,
+                                        __global float* betay,
+                                        __global float* trajx,
+                                        __global float* trajy,
+                                        __global float* trajz,
+                                        __global float2* Is_gl,
+                                        __global float2* Ip_gl)
 {
-    const double PI2 = 6.283185307179586476925286766559;
+    const float PI2 = 6.283185307179586476925286766559;
 
     unsigned int ii = get_global_id(0);
     int j;
 
-    double ucos, wR0;
+    float ucos, wR0;
 
-    double2 eucos;
-    double2 Is = (double2)(0., 0.);
-    double2 Ip = (double2)(0., 0.);
+    float2 eucos;
+    float2 Is = (float2)(0., 0.);
+    float2 Ip = (float2)(0., 0.);
 
-    double3 traj, n, r0;
+    float3 traj, n, r0;
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
