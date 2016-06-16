@@ -57,7 +57,7 @@ __kernel void undulator(const float alpha,
     Ip_gl[ii] = Ip;
     }
 
-__kernel void undulator_byparts(const float alpha,
+__kernel void undulator_by_parts(const float alpha,
                         const float Kx,
                         const float Ky,
                         const float phase,
@@ -183,7 +183,7 @@ __kernel void undulator_taper(const float alpha,
     Ip_gl[ii] = Ip;
 }
 
-__kernel void undulator_taper_byparts(const float alpha,
+__kernel void undulator_taper_by_parts(const float alpha,
                         const float Kx,
                         const float Ky,
                         const float phase,
@@ -336,7 +336,7 @@ __kernel void undulator_nf(const float R0,
     Ip_gl[ii] = Ip;
 }
 /*
-__kernel void undulator_nf_byparts(const float alpha,
+__kernel void undulator_nf_by_parts(const float alpha,
                         const float Kx,
                         const float Ky,
                         const float phase,

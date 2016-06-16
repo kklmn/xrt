@@ -28,7 +28,7 @@ _DEBUG = 20  # if non-zero, some diagnostics is printed out
 if os.name == 'posix':
     xopBinDir = r'/home/konkle/xop2.3/bin.linux'
 else:
-    xopBinDir = r'c:\Program Files\xop2.3\bin.x86'
+    xopBinDir = r'c:\XOP\bin.x86'
 
 
 def run_one(path, tmpwd, infile, msg=None):

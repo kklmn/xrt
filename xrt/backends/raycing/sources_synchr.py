@@ -2,7 +2,6 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Apr 2016"
 import os
-import pickle
 import numpy as np
 from scipy import optimize
 from scipy import special
@@ -617,7 +616,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-2, gIntervals=1, nRK=30, byparts=False,
+                 gp=1e-2, gIntervals=1, nRK=30, byParts=True,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -693,7 +692,7 @@ class Undulator(object):
             Gauss-Legendre integration nodes (only valid if customField is not
             None).
         
-        *byparts*: boolean
+        *byParts*: boolean
             If True, the amplitude integral is calculated by parts. Usually
             slower, but gives better results for high harmonics. Only
             applicable for conventional and tapered undulators in OpenCL.
@@ -831,7 +830,7 @@ class Undulator(object):
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
-        self.byparts = byparts
+        self.byParts = byParts
         self.trajectory = None
 
         self.cl_ctx = None
@@ -1559,7 +1558,7 @@ class Undulator(object):
         slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
                         np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
         
-        bpStr = '_byparts' if self.byparts else ''
+        bpStr = '_by_parts' if self.byParts else ''
         if self.taper is not None:
             clKernel = 'undulator_taper' + bpStr
         elif self.R0 is not None:
