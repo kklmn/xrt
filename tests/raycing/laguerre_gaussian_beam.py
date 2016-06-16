@@ -60,7 +60,7 @@ GeometricSource with :math:`w_0` = 15 µm:
 |        |g00m|          |
 +------------------------+
 
-.. |g00m| image:: _images/Gauss-0-beamSource.png
+.. |g00m| image:: _images/Gauss-0-beamFSMg-at00m.png
    :scale: 50 %
 
 +-------+--------------------------+---------------------------------+
@@ -122,7 +122,7 @@ as GeometricSource with :math:`w_0` = 15 µm, :math:`l` = 1 and :math:`p` = 1:
 |            |lg00m|              |
 +---------------------------------+
 
-.. |lg00m| image:: _images/Laguerre-Gauss-0-beamSource.png
+.. |lg00m| image:: _images/Laguerre-Gauss-0-beamFSMg-at00m.png
    :scale: 50 %
 
 +-------+-----------------------------------+---------------------------------+
@@ -174,109 +174,102 @@ import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
 import xrt.plotter as xrtp
+xrtp.colorFactor = 1.
 import xrt.runner as xrtr
 
 prefix = 'Laguerre-Gauss-'
+lVortex, pVortex = 1, 1
+#prefix = 'Gauss-'
+#lVortex, pVortex = 0, 0
 
 nrays = 1e6
 E0 = 9000.  # eV
 w0 = 15e-3  # mm, waist size of the amplitude (not of intensity!)
-lVortex = 1
-pVortex = 1
-maxFactor = 4.  # factor that determines the screen limits as ±w*maxFactor
+maxFactor = 2.  # factor that determines the screen limits as ±w*maxFactor
 maxFactor *= (abs(lVortex)+pVortex+1)**0.25
 uniformRayDensity = True
-ps = np.array([0.5, 1, 2, 4, 8]) * 10000.
+ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
 
+bins, ppb = 256, 1
 
 def build_beamline():
     beamLine = raycing.BeamLine(height=0)
-
-    sig = w0 / 2  # gaussian beam is I~exp(-2r²/w²) but 'normal' I~exp(-r²/2σ²)
-    beamLine.source = rs.GeometricSource(
-        beamLine, 'Gaussian', nrays=nrays,
-        uniformRayDensity=uniformRayDensity, vortex=(lVortex, pVortex),
-        distx='normal', dx=(sig, sig*maxFactor),
-        distz='normal', dz=(sig, sig*maxFactor),
-        distxprime=None, distzprime=None, energies=(E0,))
-
+    beamLine.source = rs.LaguerreGaussianBeam(
+        beamLine, 'Laguerre-Gaussian', w0=w0, vortex=(lVortex, pVortex),
+        energies=(E0,))
     beamLine.fsmFar = rsc.Screen(beamLine, 'FSM', [0, 0, 0])
     return beamLine
 
 
+def report_vorticity(wave, (x, z), what):
+    dx = np.gradient(x)
+    dz = np.gradient(z)
+    field = wave.Es.reshape((len(dz), len(dx)))
+    dFdz, dFdx = np.gradient(field)
+    ly = dFdx/dx*z[:, None] - dFdz/dz[:, None]*x
+    msum = (np.real(1j*field.conjugate()*ly).flatten()).sum()
+    nsum = (np.real(field.conjugate()*field).flatten()).sum()
+    print('vorticity in {0} = {1}'.format(what, msum/nsum))
+
+
 def run_process(beamLine):
-    beamSource = beamLine.source.shine()
-    beamSource.Es /= nrays**0.5
-    beamSource.Jss /= nrays
-    outDict = {'beamSource': beamSource}
+    outDict = {}
     for ip, (p, (x, z)) in enumerate(zip(ps, beamLine.fsmXZmeshes)):
         beamLine.fsmFar.center[1] = p
         waveOnFSMg = beamLine.fsmFar.prepare_wave(beamLine.source, x, z)
-        phi = np.arctan2(waveOnFSMg.z, waveOnFSMg.x)
-        gb = rs.laguerre_gaussian_beam(
-            waveOnFSMg.x**2+waveOnFSMg.z**2, phi, p, w0, E0,
-            lVortex, pVortex)[0]
-        dxdz = (x[1]-x[0]) * (z[1]-z[0])
-        waveOnFSMg.Es[:] = gb * dxdz**0.5
-        waveOnFSMg.Jss[:] = np.abs(gb)**2 * dxdz
-        outDict['beamFSMg{0}'.format(ip)] = waveOnFSMg
+        beamLine.source.shine(wave=waveOnFSMg)
+        if outDict == {}:
+            beamSource = waveOnFSMg
+        what = 'beamFSMg{0}'.format(ip)
+        outDict[what] = waveOnFSMg
+        report_vorticity(waveOnFSMg, (x, z), what)
 
-        wrepeats = 1
-        waveOnFSMk = beamLine.fsmFar.prepare_wave(beamLine.source, x, z)
-        for r in range(wrepeats):
-            rw.diffract(beamSource, waveOnFSMk)
-            if wrepeats > 1:
-                print('wave repeats: {0} of {1} done'.format(r+1, wrepeats))
-        outDict['beamFSMk{0}'.format(ip)] = waveOnFSMk
+        if p > 100:
+            wrepeats = 1
+            waveOnFSMk = beamLine.fsmFar.prepare_wave(beamLine.source, x, z)
+            for r in range(wrepeats):
+                rw.diffract(beamSource, waveOnFSMk)
+                if wrepeats > 1:
+                    print('wave repeats: {0} of {1} done'.format(r+1, wrepeats))
+            what = 'beamFSMk{0}'.format(ip)
+            outDict[what] = waveOnFSMk
+            report_vorticity(waveOnFSMk, (x, z), what)
     return outDict
 rr.run_process = run_process
 
 
 def define_plots(beamLine):
     plots = []
-
-    plot = xrtp.XYCPlot(
-        'beamSource', (1,),
-        xaxis=xrtp.XYCAxis(r'$x$', u'µm'),
-        yaxis=xrtp.XYCAxis(r'$z$', u'µm'),
-        caxis=xrtp.XYCAxis('Es phase', '', data=raycing.get_Es_phase,
-                           bins=256, ppb=1))
-    lim = w0 / 2 * maxFactor * 1e3
-    plot.xaxis.limits = [-lim, lim]
-    plot.yaxis.limits = [-lim, lim]
-    plot.saveName = prefix + '0-beamSource.png'
-    plots.append(plot)
-
     beamLine.fsmXZmeshes = []
     for ip, p in enumerate(ps):
-        lim = rs.laguerre_gaussian_beam(
-            0, 0, p, w0, E0, lVortex, pVortex)[1] / 2 * maxFactor * 1e3
+        lim = beamLine.source.w(p, E0) * maxFactor * 1e3
 
         plot = xrtp.XYCPlot(
             'beamFSMg{0}'.format(ip), (1,),
-            xaxis=xrtp.XYCAxis(r'$x$', u'µm'),
-            yaxis=xrtp.XYCAxis(r'$z$', u'µm'),
+            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=bins, ppb=ppb),
+            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=bins, ppb=ppb),
             caxis=xrtp.XYCAxis('Es phase', '', data=raycing.get_Es_phase,
-                               bins=256, ppb=1))
+                               bins=bins, ppb=ppb))
         plot.xaxis.limits = [-lim, lim]
         plot.yaxis.limits = [-lim, lim]
         plot.title = '{0}{1}-beamFSMg-at{2:02.0f}m'.format(
-            prefix, ip+1, p*1e-3)
+            prefix, ip, p*1e-3)
         plot.saveName = plot.title + '.png'
         plots.append(plot)
 
-        plot = xrtp.XYCPlot(
-            'beamFSMk{0}'.format(ip), (1,),
-            xaxis=xrtp.XYCAxis(r'$x$', u'µm'),
-            yaxis=xrtp.XYCAxis(r'$z$', u'µm'),
-            caxis=xrtp.XYCAxis('Es phase', '', data=raycing.get_Es_phase,
-                               bins=256, ppb=1))
-        plot.xaxis.limits = [-lim, lim]
-        plot.yaxis.limits = [-lim, lim]
-        plot.title = '{0}{1}-beamFSMk-at{2:02.0f}m'.format(
-            prefix, ip+1, p*1e-3)
-        plot.saveName = plot.title + '.png'
-        plots.append(plot)
+        if p > 100:
+            plot = xrtp.XYCPlot(
+                'beamFSMk{0}'.format(ip), (1,),
+                xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=bins, ppb=ppb),
+                yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=bins, ppb=ppb),
+                caxis=xrtp.XYCAxis('Es phase', '', data=raycing.get_Es_phase,
+                                   bins=bins, ppb=ppb))
+            plot.xaxis.limits = [-lim, lim]
+            plot.yaxis.limits = [-lim, lim]
+            plot.title = '{0}{1}-beamFSMk-at{2:02.0f}m'.format(
+                prefix, ip, p*1e-3)
+            plot.saveName = plot.title + '.png'
+            plots.append(plot)
 
         ax = plot.xaxis
         edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)

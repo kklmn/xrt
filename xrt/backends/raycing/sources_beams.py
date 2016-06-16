@@ -74,6 +74,7 @@ class Beam(object):
             self.Jpp = np.copy(copyFrom.Jpp)
             self.Jsp = np.copy(copyFrom.Jsp)
             if withNumberOfReflections and hasattr(copyFrom, 'nRefl'):
+#            if hasattr(copyFrom, 'nRefl'):
                 self.nRefl = np.copy(copyFrom.nRefl)
             if hasattr(copyFrom, 'elevationD'):
                 self.elevationD = np.copy(copyFrom.elevationD)
@@ -231,6 +232,14 @@ class Beam(object):
         self.Jpp = inBeam.Jpp - self.Jpp
         self.Jsp = inBeam.Jsp - self.Jsp
         self.displayAsAbsorbedPower = True
+
+    def add_wave(self, wave, sign=1):
+        self.Es = sign*wave.Es
+        self.Ep = sign*wave.Ep
+        self.Jss = (self.Es * self.Es.conjugate()).real
+        self.Jss = (self.Ep * self.Ep.conjugate()).real
+        self.Jsp = self.Es * self.Ep.conjugate()
+
 
     def project_energy_to_band(self, EnewMin, EnewMax):
         """Uniformly projects the energy array self.E to a new band determined
