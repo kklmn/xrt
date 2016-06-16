@@ -617,7 +617,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-2, gIntervals=1, nRK=30,
+                 gp=1e-2, gIntervals=1, nRK=30, byparts=False,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -692,6 +692,11 @@ class Undulator(object):
             Size of the Runge-Kutta integration grid per each interval between
             Gauss-Legendre integration nodes (only valid if customField is not
             None).
+        
+        *byparts*: boolean
+            If True, the amplitude integral is calculated by parts. Usually
+            slower, but gives better results for high harmonics. Only
+            applicable for conventional and tapered undulators in OpenCL.
 
         *eMin*, *eMax*: float
             Minimum and maximum photon energy (eV).
@@ -826,6 +831,7 @@ class Undulator(object):
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
+        self.byparts = byparts
         self.trajectory = None
 
         self.cl_ctx = None
@@ -1552,13 +1558,14 @@ class Undulator(object):
 
         slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
                         np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
-
+        
+        bpStr = '_byparts' if self.byparts else ''
         if self.taper is not None:
-            clKernel = 'undulator_taper'
+            clKernel = 'undulator_taper' + bpStr
         elif self.R0 is not None:
             clKernel = 'undulator_nf'
         else:
-            clKernel = 'undulator'
+            clKernel = 'undulator' + bpStr
 
         Is_local, Ip_local = self.ucl.run_parallel(
             clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
