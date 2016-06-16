@@ -1139,7 +1139,7 @@ class EllipticalMirrorParam(OE):
 
     def local_n(self, s, phi):
         A2s2 = self.ellipseA**2 - s**2
-        A2s2[A2s2 < 0] = 1e22
+        A2s2[A2s2 <= 0] = 1e22
         nr = -self.ellipseB / self.ellipseA * s / np.sqrt(A2s2)
         norm = np.sqrt(nr**2 + 1)
         b = nr / norm
@@ -1423,9 +1423,10 @@ class ParaboloidFlatLens(Plate):
             origin.
 
         *nCRL*: int or tuple (*focalDistance*, *E*)
-            If used as CRL, the number of the lenslets nCRL is either given
-            directly or calculated for *focalDistance* at energy *E* and then
-            rounded. For propagation, use :meth:`multiple_refract`.
+            If used as CRL (a stack of several lenslets), the number of the
+            lenslets nCRL is either given by the user directly or calculated
+            for *focalDistance* at energy *E* and then rounded. For
+            propagation, use :meth:`multiple_refract`.
 
 
         """

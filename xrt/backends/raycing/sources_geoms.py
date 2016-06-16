@@ -134,7 +134,7 @@ class GeometricSource(object):
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,),
         polarization='horizontal', filamentBeam=False,
-            uniformRayDensity=False, vortex=None, pitch=0, yaw=0):
+            uniformRayDensity=False, pitch=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -184,11 +184,6 @@ class GeometricSource(object):
             the size parameter (*dx* or *dz*) must be given as
             (sigma, cut_limit).
 
-        *vortex*: None or tuple(l, p)
-            in combination with normal x and z distributions (must be equal!)
-            and *uniformRayDensity*, specifies a Laguerre-Gaussian beam with
-            *l* the azimuthal index and *p>=0* the radial index.
-
         *pitch*, *yaw*: float
             rotation angles around x and z axis. Useful for canted sources.
 
@@ -219,7 +214,6 @@ class GeometricSource(object):
         self.polarization = polarization
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
-        self.vortex = vortex
         self.pitch = pitch
         self.yaw = yaw
 
@@ -237,11 +231,9 @@ class GeometricSource(object):
                 amp = amp**0.5
                 bo.Es *= amp
                 bo.Ep *= amp
-                bo.area *= 2 * daxis[1]
             else:
                 sigma = daxis[0] if isinstance(daxis, (list, tuple)) else daxis
                 axis[:] = np.random.normal(0, sigma, self.nrays)
-                bo.area *= 6 * daxis
         elif (distaxis == 'flat'):
             if raycing.is_sequence(daxis):
                 aMin, aMax = daxis[0], daxis[1]
@@ -250,7 +242,6 @@ class GeometricSource(object):
                     return
                 aMin, aMax = -daxis*0.5, daxis*0.5
             axis[:] = np.random.uniform(aMin, aMax, self.nrays)
-            bo.area *= aMax - aMin
 #        else:
 #            axis[:] = 0
 
@@ -277,11 +268,6 @@ class GeometricSource(object):
             withAmplitudes = True
         bo = Beam(self.nrays, withAmplitudes=withAmplitudes)  # beam-out
         bo.state[:] = 1
-        bo.area = 1.
-# =0: ignored, =1: good,
-# =2: reflected outside of working area, =3: transmitted without intersection
-# =-NN: lost (absorbed) at OE#NN (OE numbering starts from 1!) If NN>1000 then
-# the slit with ordinal number NN-1000 is meant.
 
         make_polarization(self.polarization, bo, self.nrays)
 # in local coordinate system:
@@ -303,27 +289,6 @@ class GeometricSource(object):
         else:
             self._apply_distribution(bo.x, self.distx, self.dx, bo)
             self._apply_distribution(bo.z, self.distz, self.dz, bo)
-
-        if self.vortex is not None:
-            l, p = self.vortex
-            phi = np.arctan2(bo.z, bo.x)
-            rSquare = bo.x**2 + bo.z**2
-            clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
-            if self.dx == self.dz:
-                w0 = 2 * self.dx[0]
-            else:
-                raise ValueError("x and z distributions must be equal" +
-                                 " to be used in vortex!")
-            amp = clp * ((rSquare*2)**0.5/w0)**abs(l) * np.exp(1j*l*phi)
-            if p > 0:
-                lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w0**2)
-                amp *= lg
-            bo.Es *= amp
-            bo.Ep *= amp
-            amp = np.abs(amp)**2
-            bo.Jss *= amp
-            bo.Jpp *= amp
-            bo.Jsp *= amp
 
         isAnnulus = False
         if (self.distxprime == 'annulus') or (self.distzprime == 'annulus'):
@@ -357,9 +322,149 @@ class GeometricSource(object):
                                       self.filamentBeam)
             else:
                 bo.E[:] = accuBeam.E[:]
+
+        if self.pitch or self.yaw:
+            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         return bo
+
+
+class GaussianBeam(object):
+    r"""Implements a Gaussian beam. https://en.wikipedia.org/wiki/Gaussian_beam
+    It *must* be used for an already available set of 3D points which are
+    obtained by :meth:`prepare_wave` of a slit, oe or screen."""
+    def __init__(
+        self, bl=None, name='', center=(0, 0, 0), w0=0.1,
+        distE='lines', energies=(defaultEnergy,), polarization='horizontal',
+            pitch=0, yaw=0):
+        """
+        *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
+
+        *name*: str
+
+        *center*: tuple of 3 floats
+            3D point in global system
+
+        *w0*: float
+            Gaussian beam waist size.
+
+        *distE*: 'normal', 'flat', 'lines', None
+
+        *energies*: all in eV. (centerE, sigmaE) for *distE* = 'normal',
+            (minE, maxE) for *distE* = 'flat', a sequence of E values for
+            *distE* = 'lines'
+
+        *polarization*:
+            'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]', 'l[eft]',
+            None, custom. In the latter case the polarization is given by a
+            tuple of 4 components of the coherency matrix:
+            (Jss, Jpp, Re(Jsp), Im(Jsp)).
+
+        *pitch*, *yaw*: float
+            rotation angles around x and z axis. Useful for canted sources.
+
+
+        """
+        self.bl = bl
+        bl.sources.append(self)
+        self.ordinalNum = len(bl.sources)
+        self.name = name
+        self.center = center  # 3D point in global system
+        self.w0 = w0
+        self.distE = distE
+        if self.distE == 'lines':
+            self.energies = np.array(energies)
+        else:
+            self.energies = energies
+        self.polarization = polarization
+        self.vortex = None
+        self.pitch = pitch
+        self.yaw = yaw
+
+    def w(self, y, E=None, yR=None):
+        if yR is None:
+            k = E / CHBAR * 1e7  # mm^-1
+            yR = k/2 * self.w0**2
+        return self.w0 * (1 + (y/yR)**2)**0.5
+        
+    def shine(self, toGlobal=True, wave=None, accuBeam=None):
+        u"""
+        Returns the source beam. If *toGlobal* is True, the output is in
+        the global system.
+
+        .. note::
+            You must run :meth:`prepare_wave` before shine() as it needs a wave
+            object for which the intensities will be calculated!
+
+        .. Returned values: beamGlobal
+        """
+        try:
+            mcRays = len(wave.rDiffr)
+        except AttributeError:
+            raise ValueError("run a `prepare_wave` before shine!")
+        if self.distE is not None:
+            if accuBeam is None:
+                wave.E[:] = make_energy(self.distE, self.energies, mcRays,
+                                        filamentBeam=False)
+            else:
+                wave.E[:] = accuBeam.E[:]
+        make_polarization(self.polarization, wave, mcRays)
+
+        l, p = self.vortex if self.vortex is not None else (0, 0)
+        k = wave.E / CHBAR * 1e7  # mm^-1
+        yR = k/2 * self.w0**2
+        invR = wave.yDiffr / (wave.yDiffr**2 + yR**2)
+        psi = (abs(l) + 2*p + 1) * np.arctan2(wave.yDiffr, yR)
+        w = self.w(wave.yDiffr, yR=yR)
+        phi = np.arctan2(wave.z, wave.x)
+        rSquare = wave.x**2 + wave.z**2
+        amp = (2/np.pi)**0.5 / w * np.exp(
+            -rSquare/w**2 + 1j*k*(wave.yDiffr + 0.5*rSquare*invR) - 1j*psi)
+        clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
+        amp *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
+        if p > 0:
+            lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
+            amp *= lg
+        amp *= wave.dS**0.5
+        wave.Es *= amp
+        wave.Ep *= amp
+        amp2 = np.abs(amp)**2
+        wave.Jss *= amp2
+        wave.Jpp *= amp2
+        wave.Jsp *= amp2
+
+        wave.a[:] = wave.xDiffr
+        with np.errstate(divide='ignore'):
+            wave.b[:] = 1/invR
+        wave.b[invR == 0] = 1e20
+        wave.c[:] = wave.zDiffr
+# normalize (a,b,c):
+        norm = (wave.a**2 + wave.b**2 + wave.c**2)**0.5
+        wave.a /= norm
+        wave.b /= norm
+        wave.c /= norm
+        bo = Beam(copyFrom=wave)
+        if toGlobal:  # in global coordinate system:
+            raycing.virgin_local_to_global(self.bl, bo, self.center)
+        return bo
+
+class LaguerreGaussianBeam(GaussianBeam):
+    r"""Implements a Laguerre-Gaussian beam.
+    https://en.wikipedia.org/wiki/Gaussian_beam
+    It must be used for an already available set of 3D points which are
+    obtained by :meth:`prepare_wave` of a slit, oe or screen."""
+    def __init__(self, *args, **kwargs):
+        """
+        *vortex*: None or tuple(l, p)
+            specifies a Laguerre-Gaussian beam with *l* the azimuthal index and
+            *p>=0* the radial index.
+
+
+        """
+        vortex = kwargs.pop('vortex', None)
+        GaussianBeam.__init__(self, *args, **kwargs)
+        self.vortex = vortex
 
 
 class MeshSource(object):
@@ -652,45 +757,45 @@ def shrink_source(beamLine, beams, minxprime, maxxprime, minzprime, maxzprime,
     return meshSource
 
 
-def laguerre_gaussian_beam(rSquare, phi, y, w0, E, l=0, p=0):
-    u"""
-    Laguerre-Gaussian beam with
-
-    *rSquare*: array
-        transverse r².
-
-    *phi*: array
-        polar angle in transverse plane.
-
-    *y*: float
-        coordinate along propagation direction.
-
-    *w0*: float
-        waist size.
-
-    *E*: float
-        energy.
-
-    *l*: float
-        azimuthal index
-
-    *p*: float
-         radial index, >0
-
-    Returns the amplitude and the beam size
-
-
-    """
-    k = E / CHBAR * 1e7  # mm^-1
-    yR = k/2 * w0**2
-    invR = y / (y**2 + yR**2)
-    psi = (abs(l) + 2*p + 1) * np.arctan2(y, yR)
-    w = w0 * (1 + (y/yR)**2)**0.5
-    u = (2/np.pi)**0.5 / w *\
-        np.exp(-rSquare/w**2 + 1j*k*(y + 0.5*rSquare*invR) - 1j*psi)
-    clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
-    u *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
-    if p > 0:
-        lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
-        u *= lg
-    return u, w
+#def laguerre_gaussian_beam(rSquare, phi, y, w0, E, l=0, p=0):
+#    u"""
+#    Laguerre-Gaussian beam with
+#
+#    *rSquare*: array
+#        transverse r².
+#
+#    *phi*: array
+#        polar angle in transverse plane.
+#
+#    *y*: float
+#        coordinate along propagation direction.
+#
+#    *w0*: float
+#        waist size.
+#
+#    *E*: float
+#        energy.
+#
+#    *l*: float
+#        azimuthal index
+#
+#    *p*: float
+#         radial index, >0
+#
+#    Returns the amplitude and the beam size
+#
+#
+#    """
+#    k = E / CHBAR * 1e7  # mm^-1
+#    yR = k/2 * w0**2
+#    invR = y / (y**2 + yR**2)
+#    psi = (abs(l) + 2*p + 1) * np.arctan2(y, yR)
+#    w = w0 * (1 + (y/yR)**2)**0.5
+#    u = (2/np.pi)**0.5 / w *\
+#        np.exp(-rSquare/w**2 + 1j*k*(y + 0.5*rSquare*invR) - 1j*psi)
+#    clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
+#    u *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
+#    if p > 0:
+#        lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
+#        u *= lg
+#    return u, w

@@ -516,9 +516,9 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
             shouldCalculateArea = True
 
     if shouldCalculateArea:
-#        if _DEBUG > 10:
-#            print("The area of {0} under the beam will now be calculated".\
-#                  format(oe.name))
+        if _DEBUG > 10:
+            print("The area of {0} under the beam will now be calculated".\
+                  format(oe.name))
         if hasattr(oe, 'rotationSequence'):  # OE
             secondDim = oeLocal.y
         elif hasattr(oe, 'propagate'):  # aperture
@@ -566,6 +566,12 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
         kcode = _diffraction_integral_CL
 
     Es, Ep, aE, bE, cE = kcode(oeLocal, n, nl, wave, good)
+    # rotate coherency matrix back:
+    if hasattr(oe, 'rotationSequence'):  # OE
+        rollAngle = oe.roll + oe.positionRoll
+        cosY, sinY = np.cos(rollAngle), np.sin(rollAngle)
+        Es[:], Ep[:] = raycing.rotate_y(Es, Ep, cosY, -sinY)
+
     wave.EsAcc += Es
     wave.EpAcc += Ep
     wave.aEacc += aE
