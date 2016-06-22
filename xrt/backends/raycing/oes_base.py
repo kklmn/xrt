@@ -392,6 +392,13 @@ class OE(object):
         if self.isParametric:  # s, phi, r =
             x, y, z = self.xyz_to_param(x, y, z)
         surf = local_f(x, y)  # z or r
+        if self.isParametric:
+            z_distorted = self.local_r_distorted(x, y)
+        else:
+            z_distorted = self.local_z_distorted(x, y)
+        if z_distorted is not None:
+            surf += z_distorted
+
         if derivOrder == 0:
             if surf is None:  # lost
                 surf = np.zeros_like(z)
@@ -1215,14 +1222,15 @@ class OE(object):
                         lb.x[good], lb.y[good], lb.z[good],
                         lb.a[good], lb.b[good], lb.c[good], invertNormal)
 # state:
+# the distortion part has moved from here to find_dz                  
         if self.isParametric:
-            z_distorted = self.local_r_distorted(lb.x[good], lb.y[good])
+#            z_distorted = self.local_r_distorted(lb.x[good], lb.y[good])
             tX, tY, tZ = self.param_to_xyz(lb.x[good], lb.y[good], lb.z[good])
         else:
-            z_distorted = self.local_z_distorted(lb.x[good], lb.y[good])
+#            z_distorted = self.local_z_distorted(lb.x[good], lb.y[good])
             tX, tY = lb.x[good], lb.y[good]
-        if z_distorted is not None:
-            lb.z[good] += z_distorted
+#        if z_distorted is not None:
+#            lb.z[good] += z_distorted
 
         res = self.rays_good(tX, tY, is2ndXtal)
         gNormal = None
