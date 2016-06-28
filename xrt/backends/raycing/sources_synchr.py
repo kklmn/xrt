@@ -2,6 +2,7 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Apr 2016"
 import os
+import pickle
 import numpy as np
 from scipy import optimize
 from scipy import special
@@ -10,7 +11,7 @@ from .. import raycing
 from . import myopencl as mcl
 from .sources_beams import Beam
 from .physconsts import E0, C, M0, EV2ERG, K2B, SIE0,\
-    SIM0, FINE_STR, PI, PI2, SQ3, E2W, CHeVcm, CHBAR
+    SIM0, FINE_STR, PI, PI2, SQ3, E2W, CHeVcm, CHBAR, SIC
 
 try:
     import pyopencl as cl  # analysis:ignore
@@ -616,7 +617,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-2, gIntervals=1, nRK=30, byParts=True,
+                 gp=1e-2, gIntervals=1, nRK=30, byparts=False,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -691,8 +692,8 @@ class Undulator(object):
             Size of the Runge-Kutta integration grid per each interval between
             Gauss-Legendre integration nodes (only valid if customField is not
             None).
-        
-        *byParts*: boolean
+
+        *byparts*: boolean
             If True, the amplitude integral is calculated by parts. Usually
             slower, but gives better results for high harmonics. Only
             applicable for conventional and tapered undulators in OpenCL.
@@ -830,7 +831,7 @@ class Undulator(object):
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
-        self.byParts = byParts
+        self.byparts = byparts
         self.trajectory = None
 
         self.cl_ctx = None
@@ -1070,7 +1071,7 @@ class Undulator(object):
             if _DEBUG:
                 print("G = {0}".format(
                     [self.quadm, quad_int_error, I2, self.ag_n.sum()]))
-            if self.quadm > 2e3:
+            if self.quadm > 2e5:
                 break  # end of the tabulation
         self.eEspread = tmpeEspread
         if _DEBUG:
@@ -1366,7 +1367,7 @@ class Undulator(object):
         tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
         self.tg_n, self.ag_n = tg_n, ag_n
 
-        ab = w / PI2 / wu
+        ab = 1. / PI2 / wu
         dstep = 2 * PI / float(self.gIntervals)
         dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
 
@@ -1426,6 +1427,9 @@ class Undulator(object):
             wuAv = PI2 * C * 10. * betazav[-1] / self.L0 / E2W
 
             scalarArgsTest = [np.int32(len(tg)),
+                              np.int32(nwt),
+                              self.cl_precisionF(emcg),
+                              self.cl_precisionF(gamma[0]**2),
                               self.cl_precisionF(wuAv),
                               self.cl_precisionF(self.L0),
                               self.cl_precisionF(R0)]
@@ -1436,6 +1440,9 @@ class Undulator(object):
 
             nonSlicedROArgs = [tg,  # Gauss-Legendre grid
                                ag,   # Gauss-Legendre weights
+                               self.cl_precisionF(Bx),  # Mangetic field
+                               self.cl_precisionF(By),  # components on the
+                               self.cl_precisionF(Bz),  # Runge-Kutta grid
                                self.cl_precisionF(betax),  # Components of the
                                self.cl_precisionF(betay),  # velosity and
                                self.cl_precisionF(trajx),  # trajectory of the
@@ -1531,10 +1538,11 @@ class Undulator(object):
 
         dstep = 2 * PI / float(self.gIntervals)
         if (self.taper is not None) or (self.R0 is not None):
-            ab = w / PI2 / wu
+            ab = 1. / PI2 / wu
+            #ab = 1. / PI2**2 / wu
             dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
         else:
-            ab = w / PI2 / wu * np.sin(PI * Np * ww1) / np.sin(PI * ww1)
+            ab = 1. / PI2 / wu * np.sin(PI * Np * ww1) / np.sin(PI * ww1)
             dI = np.arange(-PI + 0.5*dstep, PI, dstep)
 
         extra = PI/2*0
@@ -1557,8 +1565,8 @@ class Undulator(object):
 
         slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
                         np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
-        
-        bpStr = '_by_parts' if self.byParts else ''
+
+        bpStr = '_byparts' if self.byparts else ''
         if self.taper is not None:
             clKernel = 'undulator_taper' + bpStr
         elif self.R0 is not None:
