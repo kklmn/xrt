@@ -1216,6 +1216,7 @@ class Undulator(object):
             if self.eEspread > 0:
                 gS = gamma[:, :, :, np.newaxis]
         taperC = 1
+        alphaS = 0
         sinx = np.sin(x)
         cosx = np.cos(x)
         sin2x = 2*sinx*cosx
@@ -1249,10 +1250,27 @@ class Undulator(object):
                  self.Kx * ddpsiS * np.sin(x + self.phase) +
                  0.125 / gS * (self.Ky**2 * sin2x +
                                self.Kx**2 * np.sin(2. * (x + self.phase))))
-#            print 'ucos.shape', ucos.shape
-        eucos = np.exp(1j * ucos)
-        return ((ddphiS - taperC * self.Ky / gS * cosx) * eucos,
-                (ddpsiS + self.Kx / gS * np.cos(x + self.phase)) * eucos)
+
+        nz = 1 - 0.5*(ddphiS**2 + ddpsiS**2)
+        betax = taperC * self.Ky / gS * cosx
+        betay = -self.Kx / gS * np.cos(x + self.phase)
+        betaz = 1 - 0.5*(1./gS**2 + betax**2 + betay**2)
+
+        betaPx = -wuS * self.Ky / gS * (alphaS * cosx + taperC * sinx)
+        betaPy = wuS * self.Kx / gS * np.sin(x + self.phase)
+        betaPz = 0.5 * wuS / gS**2 *\
+            (self.Ky**2 * taperC * (alphaS*cosx**2 + taperC * sin2x) +
+             self.Kx**2 * np.sin(2. * (x + self.phase)))
+        krel = 1. - ddphiS*betax - ddpsiS*betay - nz*betaz
+        eucos = np.exp(1j * ucos) / krel**2
+
+        bnx = betax - ddphiS
+        bny = betay - ddpsiS
+        bnz = betaz - nz
+        primexy = betaPx*bny - betaPy*bnx
+
+        return ((nz*(betaPx*bnz - betaPz*bnx) + ddpsiS*primexy) * eucos,
+                (nz*(betaPy*bnz - betaPz*bny) - ddphiS*primexy) * eucos)
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None):
         useCL = False
@@ -1294,11 +1312,11 @@ class Undulator(object):
         self.tg_n, self.ag_n = tg_n, ag_n
 
         if (self.taper is not None) or (self.R0 is not None):
-            AB = w / PI2 / wu
+            AB = 1. / PI2 / wu
             dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(0.5 * dstep - PI * self.Np, PI * self.Np, dstep)
         else:
-            AB = w / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
+            AB = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
             dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
