@@ -10,7 +10,7 @@
 //#define N_LAYERS 501
 //#define N_INPUT 5001
 //#define RANLUXCL_SUPPORT_DOUBLE
-#include "materials.cl"
+//#include "materials.cl"
 //#include "pyopencl-ranluxcl.cl"
 
 __constant float zEps = 1.e-12;
@@ -494,7 +494,7 @@ float8 reflect_crystal_internal_E(const float factDW,
       float beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
       dhkl = (float4)(hkl.x, hkl.y, hkl.z, 0);
       float2 plane_d;
-      float alpha = 0;  
+//      float alpha = 0;  
       //float epsilonB = 0.01;
       beamInDotNormal = dot(abc,planeNormal);
 

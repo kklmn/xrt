@@ -232,9 +232,12 @@ class OE(object):
             if not isOpenCL:
                 print("pyopencl is not available!")
             else:
-                cl_template = os.path.join(__dir__, r'OE.cl')
+                cl_template = os.path.join(__dir__, r'materials.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource = f.read()
+                cl_template = os.path.join(__dir__, r'OE.cl')
+                with open(cl_template, 'r') as f:
+                    kernelsource += f.read()
                 kernelsource = kernelsource.replace('MY_LOCAL_Z',
                                                     self.cl_local_z)
                 kernelsource = kernelsource.replace('MY_LOCAL_N',
