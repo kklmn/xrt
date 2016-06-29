@@ -107,6 +107,7 @@ the corresponding velosity components are
 
     .. math::
         \beta_x &= \frac{K_y}{\gamma}\cos(\omega_u t),\\
+        \beta_y &= -\frac{K_x}{\gamma}\cos(\omega_u t + \phi),\\
         \beta_z &= \sqrt{1-\frac{1}{\gamma^2}-\beta_{x}^{2}-\beta_{y}^{2}},
 
 where :math:`\omega_u = 2\pi c /\lambda_u` - undulator frequency,
