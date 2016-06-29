@@ -93,9 +93,11 @@ numerically, starting from the magnetic field.
         \begin{bmatrix}
         A_{\sigma}\\
         A_{\pi}
-        \end{bmatrix} &= \frac{\omega}{2\pi}\int\limits_{-\infty}^{+\infty}dt'
-        \begin{bmatrix}\theta-\beta_x\\
-        \psi-\beta_y \end{bmatrix}e^{i\omega (t' + R(t')/c)}
+        \end{bmatrix} &= \frac{1}{2\pi}\int\limits_{-\infty}^{+\infty}dt'
+        \begin{bmatrix}\frac{[\textbf{n}\times[(\textbf{n}-
+        \boldsymbol{\beta})\times\dot{\boldsymbol{\beta}}]]}
+        {1 - \textbf{n}\cdot\boldsymbol{\beta}}\end{bmatrix}_{x, y}
+        e^{i\omega (t' + R(t')/c)}
 
     .. math::
         B_x &= B_{x0}\sin(2\pi z /\lambda_u + \phi),\\
@@ -105,7 +107,7 @@ the corresponding velosity components are
 
     .. math::
         \beta_x &= \frac{K_y}{\gamma}\cos(\omega_u t),\\
-        \beta_y &= -\frac{K_x}{\gamma}\cos(\omega_u t + \phi),
+        \beta_z &= \sqrt{1-\frac{1}{\gamma^2}-\beta_{x}^{2}-\beta_{y}^{2}},
 
 where :math:`\omega_u = 2\pi c /\lambda_u` - undulator frequency,
 :math:`\phi` - phase shift between the magnetic field components. In this
@@ -114,6 +116,10 @@ replacing the exponential series by a factor of
 :math:`\frac{\sin(N\pi\omega_1/\omega)}{\sin(\pi\omega_1/\omega)}`, where
 :math:`\omega_1 = \frac{2\gamma^2}{1+K_x^2/2+K_y^2/2+\gamma^2(\theta^2+\psi^2)}
 \omega_u`.
+
+In case of the tapered undulator vertical magnetic field is multiplied by an 
+additional factor :math:`1 - \alpha z`, that in turn results in modification of
+horizontal velocity and coordinate.
 
 In the far-field approximation we consider the undulator as a point source and
 replace the vector :math:`\mathbf{R}` by a projection
@@ -131,10 +137,30 @@ integration grid is generated around the center of each undulator period. Most
 typical cases with reasonably narrow solid angles require around 10 integration
 points per period for satisfactory convergence.
 
-Custom field configurations i.e. tapered undulator require integration over
-full undulator length, therefore the integration grid is multiplied by the
-number of periods. Similar approach is used for the near field calculations,
-where the undulator extension is taken into account.
+Configurations with non-equivalent undulator periods i.e. tapered undulator
+require integration over full undulator length, therefore the size of the 
+integration grid is multiplied by the number of periods. Similar approach is 
+used for the near field calculations, where the undulator extension is taken 
+into account and the phase component in the integral is taken in its initial
+form :math:`i\omega (t' + R(t')/c)`.
+
+For the custom configuratiuons, where the magnetic field components 
+are tabulated as functions of longitudinal coordinate 
+:math:`\textbf{B}=(B_{x}(z), B_{y}(z), B_{z}(z))` preliminary numerical
+calculation of the velocity and coordinate is nesessary. For that we solve the
+system of differential equations
+
+    .. math::
+        \begin{bmatrix}{\ddot{x}\\ \ddot{y}\\ \ddot{z}}\end{bmatrix} &= 
+        \frac{e^{-}}{\gamma m_{e} c} 
+        \begin{bmatrix}{\beta_{y}B_{z}-B_{y}\\
+        -\beta_{x}B_{z}+B_{x}\\ 
+        -\beta_{y}B_{x}+\beta_{x}B_{y}}\end{bmatrix}
+    
+using classical Runge-Kutta method. Integration step is varied in order to
+provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of 
+the Gauss-Legendre grid.
+
 
 .. [Kim] K.-J. Kim, Characteristics of Synchrotron Radiation, AIP Conference
    Proceedings, **184** (AIP, 1989) 565.
