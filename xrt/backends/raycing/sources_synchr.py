@@ -2,7 +2,8 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Apr 2016"
 import os
-import pickle
+import sys
+#import pickle
 import numpy as np
 from scipy import optimize
 from scipy import special
@@ -11,7 +12,7 @@ from .. import raycing
 from . import myopencl as mcl
 from .sources_beams import Beam
 from .physconsts import E0, C, M0, EV2ERG, K2B, SIE0,\
-    SIM0, FINE_STR, PI, PI2, SQ3, E2W, CHeVcm, CHBAR, SIC
+    SIM0, FINE_STR, PI, PI2, SQ3, E2W, CHeVcm, CHBAR
 
 try:
     import pyopencl as cl  # analysis:ignore
@@ -521,6 +522,8 @@ class BendingMagnet(object):
                 rep_condition = length < self.nrays
             if self.uniformRayDensity:
                 rep_condition = False
+            if _DEBUG:
+                sys.stdout.flush()
 
         if length >= self.nrays:
             bo.accepted = length * self.fluxConst
@@ -909,6 +912,7 @@ class Undulator(object):
         self.customField = customField
 
         if customField is not None:
+            self.gIntervals *= 2
             if isinstance(customField, (tuple, list)):
                 fname = customField[0]
                 kwargs = customField[1]
@@ -1065,8 +1069,14 @@ class Undulator(object):
             if _DEBUG:
                 print("G = {0}".format(
                     [self.quadm, quad_int_error, I2, self.ag_n.sum()]))
-            if self.quadm > 2e5:
-                break  # end of the tabulation
+            if self.quadm > 400:
+                self.gIntervals *= 2
+                m = mstart
+                quad_int_error = self.gp * 10.
+                if self.gIntervals > 100:
+                    break
+                continue
+        """end of Adjusting the number of points for Gauss integration"""
         self.eEspread = tmpeEspread
         if _DEBUG:
             print("Done with Gaussian optimization, {0} points will be used".
@@ -1612,7 +1622,6 @@ class Undulator(object):
     def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=False,
               wave=None, accuBeam=None):
         u"""
-
         Returns the source beam. If *toGlobal* is True, the output is in
         the global system. If *withAmplitudes* is True, the resulted beam
         contains arrays Es and Ep with the *s* and *p* components of the
@@ -1811,6 +1820,8 @@ class Undulator(object):
             bo.acceptedE = bo.E.sum() * self.fluxConst * SIE0
             bo.seeded = seeded
             bo.seededI = seededI
+            if _DEBUG:
+                sys.stdout.flush()
 
         if length > self.nrays and not self.filamentBeam:
             bo.filter_by_index(slice(0, self.nrays))
