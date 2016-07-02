@@ -255,6 +255,7 @@ __date__ = "08 Mar 2016"
 
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import time
+import numpy as np
 #import matplotlib
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
@@ -265,14 +266,18 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 # one of 'u', 'w', 'bm', 'eu', 'wu':
-sourceType = 'u'
-# one of 'single', 'mono', 'smaller', 'wide'
-# Electron beam emittance is set to zero in case of 'single' energy
-energyRange = 'mono'
+sourceType = 'bm'
+# one of 'mono', '1harmonic', 'smaller', 'wide'
+#energyRange = '1harmonic'
+#energyRange = 'mono'
+energyRange = 'wide'
+what = 'rays'
+#what = 'wave' # only for Undulator
 suffix = ''
 isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
 limitsFSM0Z = 'symmetric'
+E0 = 6900  # eV
 R0 = 25000.  # Distance to the screen [mm]
 bins = 256  # Number of bins in the plot histogram
 ppb = 1  # Number of pixels per histogram bin
@@ -281,32 +286,35 @@ if sourceType == 'u':
     whose = '_xrt' if isInternalSource else '_urgent'
     pprefix = '1'+sourceType+whose
     Source = rs.Undulator if isInternalSource else rs.UndulatorUrgent
+    Kmax = 1.92
     kwargs = dict(
         eE=3., eI=0.5,  # Parameters of the synchrotron ring [GeV], [Ampere]
         eEspread=0.001,  # Energy spread of the electrons in the ring
         period=30., n=40,  # Parameters of the undulator, period in [mm]
         K=1.45,  # Deflection parameter (ignored if targetE is not None)
-        targetE=[6940, 5, False],  # [energy [eV], harmonic, isElliptical]
-        xPrimeMax=0.25, zPrimeMax=0.25,  # Limits of the output angle [mrad]
+#        targetE=[6940, 5, False],  # [energy [eV], harmonic]
+        xPrimeMax=0.4, zPrimeMax=0.4,  # Limits of the output angle [mrad]
         eSigmaX=48.65, eSigmaZ=6.197,  # Size of the electron beam [mkm]
         # customField=0.0,  # Longitudinal magnetic field. If not None,
-        # trajectory of the electron is calculated numerically. Precision of
-        # the integration must be decreased to 1e-2.
+        # trajectory of the electron is calculated numerically.
         # eSigmaX=0., eSigmaZ=0.,  # Zero size electron beam
         # uniformRayDensity=True, filamentBeam=True,  # Single wavefront
-#        R0=R0,   # Near Field.
-        # gIntervals=33,  # Number of the integration intervals. Must be
+        # R0=R0,   # Near Field.
+        # gIntervals=5,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
-        # gp=1e-2,  # Precision of the integration.
+        # gp=1e-4,  # Precision of the integration.
+        # targetOpenCL=None,
         eEpsilonX=0.263, eEpsilonZ=0.008)  # Emittance [nmrad]
-    xlimits = [-5, 5]  # Horizontal limits of the plot [mm]
-    zlimits = [-5, 5]  # Vertical limits of the plot [mm]
+    xlimits = [-10, 10]  # Horizontal limits of the plot [mm]
+    zlimits = [-10, 10]  # Vertical limits of the plot [mm]
     xlimitsZoom = [-1, 1]
     zlimitsZoom = [-1, 1]
     xPrimelimits = [-0.3, 0.3]  # Angular limits of the plot [mrad]
     if isInternalSource:
         kwargs['xPrimeMaxAutoReduce'] = False
         kwargs['zPrimeMaxAutoReduce'] = False
+    else:
+        kwargs['icalc'] = 3
 elif sourceType == 'w':
     whose = '_xrt' if isInternalSource else '_ws'
     pprefix = '3'+sourceType+whose
@@ -360,7 +368,7 @@ elif sourceType == 'wu':  # wiggler by undulator code
     xlimitsZoom = [-5, 5]
     zlimitsZoom = [-5, 5]
     kwargs['uniformRayDensity'] = True
-    kwargs['gIntervals'] = 99
+#    kwargs['gIntervals'] = 99
     kwargs['zPrimeMaxAutoReduce'] = False
     xPrimelimits = [-2.3, 2.3]
     limitsFSM0X = [-1000, 1000]
@@ -368,9 +376,9 @@ elif sourceType == 'wu':  # wiggler by undulator code
 else:
     raise ValueError('Unknown source type!')
 
-if energyRange == 'single':  # zero source size:
-    kwargs['eSigmaX'] = 0  # 1e-3
-    kwargs['eSigmaZ'] = 0  # 1e-3
+if False:  # force zero source size:
+    kwargs['eSigmaX'] = 0
+    kwargs['eSigmaZ'] = 0
     kwargs['eEpsilonX'] = 0
     kwargs['eEpsilonZ'] = 0
 
@@ -378,17 +386,19 @@ if energyRange == 'single':  # zero source size:
 else:
     eEpsilonC = 'n'
 
-eUnit = 'eV'
-
 prefix = pprefix+'-{0}-{1}E-'.format(eEpsilonC, energyRange)
-if energyRange == 'single':
-    eMinRays, eMaxRays = 6899, 6901
-elif energyRange == 'mono':
-    eMinRays, eMaxRays = 6600, 7200
+if energyRange == 'mono':
+    eMinRays, eMaxRays = E0-1, E0+1
+    eUnit = 'eV'
+elif energyRange == '1harmonic':
+    eMinRays, eMaxRays = E0-300, E0+300
+    eUnit = 'eV'
 elif energyRange == 'smaller':
     eMinRays, eMaxRays = 1500, 7500
+    eUnit = 'keV'
 elif energyRange == 'wide':
     eMinRays, eMaxRays = 1500, 35000
+    eUnit = 'keV'
 
 kwargs['eMin'] = eMinRays
 kwargs['eMax'] = eMaxRays
@@ -398,7 +408,8 @@ if Source == rs.UndulatorUrgent:
 
 def build_beamline(nrays=1e5):
     beamLine = raycing.BeamLine()
-    Source(beamLine, eN=1000, nx=40, nz=20, nrays=nrays, **kwargs)
+    beamLine.source = Source(
+        beamLine, eN=1000, nx=40, nz=20, nrays=nrays, **kwargs)
     beamLine.fsm0 = rsc.Screen(beamLine, 'FSM0', (0, 0, 0))
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, R0, 0))
     return beamLine
@@ -406,15 +417,30 @@ def build_beamline(nrays=1e5):
 
 def run_process(beamLine):
     startTime = time.time()
-    if 'fixedE' in prefix:
-        beamSource = beamLine.sources[0].shine(fixedEnergy=6900)
+    kw = {}
+    if 'mono' in prefix and isInternalSource:
+        kw['fixedEnergy'] = E0
+
+    if 'wave' in what and Source == rs.Undulator:
+        wave1 = beamLine.fsm1.prepare_wave(
+            beamLine.source, beamLine.fsmExpX, beamLine.fsmExpZ)
+        wave1zoom = beamLine.fsm1.prepare_wave(
+            beamLine.source, beamLine.fsmExpXzoom, beamLine.fsmExpZzoom)
+
+        kw['wave'] = wave1
+        beamSource = beamLine.source.shine(**kw)
+        beamFSM0 = beamLine.fsm0.expose(beamSource)
+        kw['wave'] = wave1zoom
+        beamSource = beamLine.source.shine(**kw)
+        outDict = {'beamSource': beamSource, 'beamFSM0': beamFSM0,
+                   'beamFSM1': wave1, 'beamFSM1zoom': wave1zoom}
     else:
-        beamSource = beamLine.sources[0].shine()
+        beamSource = beamLine.source.shine(**kw)
+        beamFSM0 = beamLine.fsm0.expose(beamSource)
+        beamFSM1 = beamLine.fsm1.expose(beamSource)
+        outDict = {'beamSource': beamSource, 'beamFSM0': beamFSM0,
+                   'beamFSM1': beamFSM1, 'beamFSM1zoom': beamFSM1}
     print('shine time = {0}s'.format(time.time() - startTime))
-    beamFSM0 = beamLine.fsm0.expose(beamSource)
-    beamFSM1 = beamLine.fsm1.expose(beamSource)
-    outDict = {'beamSource': beamSource,
-               'beamFSM0': beamFSM0, 'beamFSM1': beamFSM1}
     return outDict
 
 rr.run_process = run_process
@@ -435,18 +461,30 @@ def define_plots(beamLine):
     plot.saveName = prefix + '1TotalFlux' + suffix + '.png'
     plots.append(plot)
     plotsE.append(plot)
+    ax = plot.xaxis
+    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
+    beamLine.fsmExpX = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
+    ax = plot.yaxis
+    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
+    beamLine.fsmExpZ = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
 
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimitsZoom, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimitsZoom, bins=bins, ppb=ppb)
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
                          bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
-        'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        'beamFSM1zoom', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
         aspect='auto', title='total flux zoom')
     plot.caxis.fwhmFormatStr = None
     plot.saveName = prefix + '1TotalFluxZoom' + suffix + '.png'
     plots.append(plot)
     plotsE.append(plot)
+    ax = plot.xaxis
+    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
+    beamLine.fsmExpXzoom = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
+    ax = plot.yaxis
+    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
+    beamLine.fsmExpZzoom = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
 
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimits, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimits, bins=bins, ppb=ppb)
@@ -465,7 +503,7 @@ def define_plots(beamLine):
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
                          bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
-        'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        'beamFSM1zoom', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
         fluxKind='s', aspect='auto', title='horizontal polarization flux zoom')
     plot.caxis.fwhmFormatStr = None
     plot.saveName = prefix + '2horizFluxZoom' + suffix + '.png'
@@ -489,7 +527,7 @@ def define_plots(beamLine):
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
                          bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
-        'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        'beamFSM1zoom', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
         fluxKind='p', aspect='auto', title='vertical polarization flux zoom')
     plot.caxis.fwhmFormatStr = None
     plot.saveName = prefix + '3vertFluxZoom' + suffix + '.png'
@@ -511,7 +549,7 @@ def define_plots(beamLine):
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimitsZoom, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimitsZoom, bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
-        'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis,
+        'beamFSM1zoom', (1,), xaxis=xaxis, yaxis=yaxis,
         caxis=xrtp.XYCAxis('degree of polarization', '',
                            data=raycing.get_polarization_degree,
                            limits=[0.9, 1.01], bins=bins, ppb=ppb),
@@ -535,7 +573,7 @@ def define_plots(beamLine):
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimitsZoom, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimitsZoom, bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
-        'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis,
+        'beamFSM1zoom', (1,), xaxis=xaxis, yaxis=yaxis,
         caxis=xrtp.XYCAxis('circular polarization rate', '',
                            data=raycing.get_circular_polarization_rate,
                            limits=[-1, 1], bins=bins, ppb=ppb),
@@ -573,7 +611,7 @@ def define_plots(beamLine):
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
                          bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
-        'beamFSM0', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
         aspect='auto', title='image at 0')
     plot.saveName = prefix + 'fsm0' + suffix + '.png'
     plot.caxis.fwhmFormatStr = None
@@ -581,7 +619,6 @@ def define_plots(beamLine):
     plotsE.append(plot)
 
     beam = 'beamFSM0'
-#    beam = 'beamSource'
     xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X)
     yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=xPrimelimits)
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
@@ -629,7 +666,7 @@ def afterScript(*plots):
 def main():
     beamLine = build_beamline()
     plots, plotsE = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=10,
+    xrtr.run_ray_tracing(plots, repeats=1,
                          #afterScript=afterScript, afterScriptArgs=plots,
                          beamLine=beamLine)
 

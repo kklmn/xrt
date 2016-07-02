@@ -322,7 +322,8 @@ class BendingMagnet(object):
             Pol3 = np.where(s0, 2. * self.Isp / s0, s0)
         return (self.Itotal, Pol1, self.Is*0., Pol3)
 
-    def shine(self, toGlobal=True, withAmplitudes=False, accuBeam=None):
+    def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=False,
+              accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
         the global system. If *withAmplitudes* is True, the resulted beam
@@ -379,6 +380,8 @@ class BendingMagnet(object):
                 rZ = accuBeam.z[0]
                 dtheta = accuBeam.filamentDtheta
                 dpsi = accuBeam.filamentDpsi
+        if fixedEnergy:
+            rE = fixedEnergy
 
         nrep = 0
         rep_condition = True
@@ -396,12 +399,7 @@ class BendingMagnet(object):
                 rThetaMax = np.min(self.Theta_max, rTheta0 + 1 / self.gamma)
                 rTheta = (rnd_r[:, 1]) * (rThetaMax - rThetaMin) +\
                     rThetaMin
-                if False:  # self.mono:
-                    rE = np.ones(mcRays) * 0.5 *\
-                        float(self.E_max - self.E_min) + self.E_min
-                else:
-                    rE *= np.ones(mcRays)
-
+                rE *= np.ones(mcRays)
             else:
                 rE = rnd_r[:, 0] * float(self.E_max - self.E_min) +\
                     self.E_min
@@ -491,8 +489,12 @@ class BendingMagnet(object):
                     bot.x[:] = rX
                     bot.y[:] = rY
                 else:
-                    bot.z[:] = np.random.normal(0., self.dz, npassed)
-                    R1 = np.random.normal(self.ro * 1000., self.dx, npassed)
+                    if self.dz > 0:
+                        bot.z[:] = np.random.normal(0., self.dz, npassed)
+                    if self.dx > 0:
+                        R1 = np.random.normal(self.ro*1e3, self.dx, npassed)
+                    else:
+                        R1 = self.ro * 1e3
                     bot.x[:] = -R1 * np.cos(Theta0) + self.ro*1000.
                     bot.y[:] = R1 * np.sin(Theta0)
 
