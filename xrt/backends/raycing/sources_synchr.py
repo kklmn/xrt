@@ -1079,8 +1079,9 @@ class Undulator(object):
         """end of Adjusting the number of points for Gauss integration"""
         self.eEspread = tmpeEspread
         if _DEBUG:
-            print("Done with Gaussian optimization, {0} points will be used".
-                  format(self.quadm))
+            print("Done with Gaussian optimization, {0} points in {1}"
+                  " intervals will be used". format(self.quadm,
+                                                   self.gIntervals))
 
         if self.filamentBeam:
             rMax = self.nrays
@@ -1823,7 +1824,8 @@ class Undulator(object):
             if _DEBUG:
                 sys.stdout.flush()
 
-        if length > self.nrays and not self.filamentBeam:
+#        if length > self.nrays and not self.filamentBeam:
+        if length > self.nrays and wave is None:
             bo.filter_by_index(slice(0, self.nrays))
         if self.filamentBeam:
             bo.filamentDtheta = dtheta
