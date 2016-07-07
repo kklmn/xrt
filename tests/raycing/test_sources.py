@@ -6,15 +6,13 @@ energy distributions of synchrotron sources in 2D and 3D."""
 __author__ = "Konstantin Klementiev"
 __date__ = "12 Mar 2014"
 
-import sys
 #import cmath
 import time
 import numpy as np
 #import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-sys.path.append(r"c:\Ray-tracing")
-#sys.path.append(r"/media/sf_Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 
@@ -207,25 +205,25 @@ def test_synchrotron_source(SourceClass, **kwargs):
 
     I0, l1, l2, l3 = source.intensities_on_mesh()
 
-###visualize in 2D:
-#    visualize(source, I0, r'$I_0$', 'I0')
-#    visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
-#    visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
-#    visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
-#    sign = -1
-#    if hasattr(source, 'Kx'):
-#        if source.Kx > 0:
-#            sign = 1
-#    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
+##visualize in 2D:
+    visualize(source, I0, r'$I_0$', 'I0')
+    visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
+    visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
+    visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
+    sign = -1
+    if hasattr(source, 'Kx'):
+        if source.Kx > 0:
+            sign = 1
+    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
 ##select only one visualize3D at a time:
-    visualize3D(source, I0, saveName='Itot')
+#    visualize3D(source, I0, saveName='Itot')
 #    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
 #    visualize3D(source, I0*l2/2., saveName='IspRe')
 #    visualize3D(source, I0*l3/2., saveName='IspIm')
 #
-#    print('finished')
-#    print('calculations took {0:.1f} s'.format(time.time() - tstart))
+    print('finished')
+    print('calculations took {0:.1f} s'.format(time.time() - tstart))
 
 if __name__ == '__main__':
     """Uncomment the block you want to test."""

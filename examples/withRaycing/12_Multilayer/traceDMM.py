@@ -72,7 +72,7 @@ def main():
     myBalder = BalderDMM.build_beamline(stripe=stripe,
                                         eMinRays=E0-dE, eMaxRays=E0+dE)
     plots = define_plots(myBalder)
-    xrtr.run_ray_tracing(plots, repeats=12, generator=plot_generator,
+    xrtr.run_ray_tracing(plots, repeats=120, generator=plot_generator,
                          beamLine=myBalder,
                          globalNorm=True,
                          processes=1)

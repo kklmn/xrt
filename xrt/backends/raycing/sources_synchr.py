@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "12 Apr 2016"
+__date__ = "03 Jul 2016"
 import os
 import sys
 #import pickle
@@ -691,7 +691,7 @@ class Undulator(object):
             reading Excel by :meth:`pandas.read_excel()` or reading text file
             by :meth:`numpy.loadtxt()`, e.g. ``dict(skiprows=4)`` for skipping
             the file header. The file must contain the columns with
-            longitudinal coordinate in mm, B_hor, B_ver, B_long, all in T.
+            longitudinal coordinate in mm, B_hor, B_ver {, B_long}, all in T.
 
         *nRK*: int
             Size of the Runge-Kutta integration grid per each interval between
@@ -801,7 +801,7 @@ class Undulator(object):
             self.ordinalNum = len(bl.sources)
         self.name = name
         self.center = center  # 3D point in global system
-        self.nrays = nrays
+        self.nrays = np.long(nrays)
         self.gp = gp
         self.dx = eSigmaX * 1e-3 if eSigmaX else None
         self.dz = eSigmaZ * 1e-3 if eSigmaZ else None
@@ -1332,7 +1332,7 @@ class Undulator(object):
             dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
-        tg = (dI[:, None] + 0.5*dstep*tg_n).flatten()# + PI/2
+        tg = (dI[:, None] + 0.5*dstep*tg_n).flatten()  # + PI/2
         ag = (dI[:, None]*0 + ag_n).flatten()
         # Bsr = np.zeros_like(w, dtype='complex')
         # Bpr = np.zeros_like(w, dtype='complex')
@@ -1659,8 +1659,6 @@ class Undulator(object):
         seededI = 0.
         np.seterr(invalid='warn')
         np.seterr(divide='warn')
-        rX = 0.
-        rZ = 0.
         if self.filamentBeam:
             if accuBeam is None:
                 rsE = np.random.random_sample() * \
@@ -1677,6 +1675,7 @@ class Undulator(object):
                 dpsi = accuBeam.filamentDpsi
                 seeded = accuBeam.seeded
                 seededI = accuBeam.seededI
+
         if fixedEnergy:
             rsE = fixedEnergy
 
@@ -1694,8 +1693,20 @@ class Undulator(object):
 
             if wave is not None:
                 self.xzE = (self.E_max - self.E_min)
-                rTheta = np.array(wave.a)
-                rPsi = np.array(wave.c)
+                if self.filamentBeam:
+                    shiftX = rX
+                    shiftZ = rZ
+                else:
+                    shiftX = np.random.normal(
+                        0, self.dx, mcRays) if self.dx > 0 else 0
+                    shiftZ = np.random.normal(
+                        0, self.dz, mcRays) if self.dz > 0 else 0
+                x = wave.xDiffr + shiftX
+                y = wave.yDiffr
+                z = wave.zDiffr + shiftZ
+                rDiffr = (x**2 + y**2 + z**2)**0.5
+                rTheta = x / rDiffr
+                rPsi = z / rDiffr
                 if self.filamentBeam:
                     rTheta += dtheta
                     rPsi += dpsi
@@ -1825,7 +1836,7 @@ class Undulator(object):
             if _DEBUG:
                 sys.stdout.flush()
 
-        if length > self.nrays and not self.filamentBeam:
+        if length > self.nrays and not self.filamentBeam and wave is None:
             bo.filter_by_index(slice(0, self.nrays))
         if self.filamentBeam:
             bo.filamentDtheta = dtheta

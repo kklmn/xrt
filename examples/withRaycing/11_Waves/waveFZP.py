@@ -172,13 +172,17 @@ def plot_generator(plots, beamLine):
     if visualizeCrossSection:
         dump.append(extIntensityDiff)
     with open(pickleName, 'wb') as f:
-        pickle.dump(dump, f, -1)
+        pickle.dump(dump, f, protocol=2)
+
+
+def afterScript():
+    print('Now run "visualize_efficiency()"')
 
 
 def get_efficiency():
     beamLine = build_beamline()
     xrtr.run_ray_tracing([], repeats=1, beamLine=beamLine, processes=1,
-                         generator=plot_generator)
+                         generator=plot_generator, afterScript=afterScript)
 
 
 def read_curves(fname):

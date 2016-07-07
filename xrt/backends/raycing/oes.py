@@ -34,14 +34,14 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: GroundBentLaueCylinder(BentLaueCylinder)
 .. autoclass:: BentLaueSphere(BentLaueCylinder)
-.. autoclass:: MirrorOnTripodWithTwoXStages(OE, stages.Tripod, stages.TwoXStages)  # analysis:ignore
-   :members: __init__
-.. autoclass:: SimpleVCM(OE)
-.. autoclass:: VCM(MirrorOnTripodWithTwoXStages)
-.. autoclass:: SimpleVFM(OE)
-.. autoclass:: VFM(MirrorOnTripodWithTwoXStages, SimpleVFM)
-.. autoclass:: DualVFM(MirrorOnTripodWithTwoXStages)
-   :members: __init__
+.. .. autoclass:: MirrorOnTripodWithTwoXStages(OE, stages.Tripod, stages.TwoXStages)  # analysis:ignore
+..    :members: __init__
+.. .. autoclass:: SimpleVCM(OE)
+.. .. autoclass:: VCM(MirrorOnTripodWithTwoXStages)
+.. .. autoclass:: SimpleVFM(OE)
+.. .. autoclass:: VFM(MirrorOnTripodWithTwoXStages, SimpleVFM)
+.. .. autoclass:: DualVFM(MirrorOnTripodWithTwoXStages)
+..    :members: __init__
 .. autoclass:: EllipticalMirror(OE)
 .. autoclass:: ParabolicMirror(OE)
 .. autoclass:: EllipticalMirrorParam(OE)

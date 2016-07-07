@@ -4,6 +4,7 @@ r"""
 
 Synchrotron sources
 -------------------
+
 The images below are produced by
 ``\tests\raycing\test_sources.py`` and by
 ``\examples\withRaycing\01_SynchrotronSources\synchrotronSources.py``.
@@ -78,15 +79,15 @@ distribution is red-shifted for off-plane photons. The polarization is
 primarily horizontal. The off-plane radiation has non-zero projection to the
 vertical polarization plane.
 
-+----------+--------------+------------------+-----------------+
-| source   | total flux   | horiz. pol. flux | vert. pol. flux |
-+==========+==============+==================+=================+
-| using    |              |                  |                 |
-| WS       |  |wTotalWS|  |    |wHorizWS|    |    |wVertWS|    |
-+----------+--------------+------------------+-----------------+
-| internal |              |                  |                 |
-| xrt      |  |wTotalXRT| |    |wHorizXRT|   |    |wVertXRT|   |
-+----------+--------------+------------------+-----------------+
++----------+------------------+------------------+------------------+
+| source   | total flux       | horiz. pol. flux | vert. pol. flux  |
++==========+==================+==================+==================+
+| using    |                  |                  |                  |
+| WS       |    |wTotalWS|    |    |wHorizWS|    |    |wVertWS|     |
++----------+------------------+------------------+------------------+
+| internal |                  |                  |                  |
+| xrt      |    |wTotalXRT|   |    |wHorizXRT|   |    |wVertXRT|    |
++----------+------------------+------------------+------------------+
 
 .. |wTotalWS| image:: _images/2w_ws1-n-wideE-1TotalFlux.png
    :scale: 50 %
@@ -105,13 +106,13 @@ The horizontal longitudinal cross-section reveals a sinusoidal shape of the
 source. The horizontal phase space projected to the transversal plane at the
 origin has individual branches for each pole.
 
-+-------------------------+---------------------+
-| zero electron beam size | σ\ :sub:`x` = 49 µm |
-+=========================+=====================+
-|           |wYX0|        |        |wYXN|       |
-+-------------------------+---------------------+
-|        |wPhaseSp0|      |     |wPhaseSpN|     |
-+-------------------------+---------------------+
++-------------------------+-------------------------+
+| zero electron beam size |   σ\ :sub:`x` = 49 µm   |
++=========================+=========================+
+|          |wYX0|         |          |wYXN|         |
++-------------------------+-------------------------+
+|       |wPhaseSp0|       |       |wPhaseSpN|       |
++-------------------------+-------------------------+
 
 .. |wYX0| image:: _images/2w_xrt1-0-wideE-crossectionYX.png
    :scale: 50 %
@@ -124,6 +125,7 @@ origin has individual branches for each pole.
 
 Undulator
 ~~~~~~~~~
+
 The module :mod:`~tests.raycing.test_sources` has functions for
 visualization of the angular and energy distributions of the implemented
 sources in 2D and 3D. This is especially useful for undulators because they
@@ -151,15 +153,15 @@ The ray traced images of an undulator source are feature-rich. The polarization
 is primarily horizontal. The off-plane radiation has non-zero projection to the
 vertical polarization plane.
 
-+----------+-------------+------------------+-----------------+--------------+
-| source   | total flux  | horiz. pol. flux | vert. pol. flux | deg. of pol. |
-+==========+=============+==================+=================+==============+
-| using    |             |                  |                 |              |
-| Urgent   | |uTotalUr|  |    |uHorizUr|    |    |uVertUr|    | |uDegPolUr|  |
-+----------+-------------+------------------+-----------------+--------------+
-| internal |             |                  |                 |              |
-| xrt      | |uTotalXRT| |   |uHorizXRT|    |    |uVertXRT|   | |uDegPolXRT| |
-+----------+-------------+------------------+-----------------+--------------+
++---------+----------------+----------------+----------------+----------------+
+| source  |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
++=========+================+================+================+================+
+| using   |                |                |                |                |
+| Urgent  | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
++---------+----------------+----------------+----------------+----------------+
+|internal |                |                |                |                |
+| xrt     | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
++---------+----------------+----------------+----------------+----------------+
 
 .. |uTotalUr| image:: _images/1u_urgent3-n-monoE-1TotalFlux.png
    :scale: 50 %
@@ -184,15 +186,15 @@ Elliptical undulator
 An elliptical undulator gives circular images with a higher circular
 polarization rate in the inner rings:
 
-+----------+--------------+------------------+-----------------+
-| source   |  total flux  | horiz. pol. flux | vert. pol. flux |
-+==========+==============+==================+=================+
-| using    |              |                  |                 |
-| Urgent   | |euTotalUr|  |    |euHorizUr|   |   |euVertUr|    |
-+----------+--------------+------------------+-----------------+
-| internal |              |                  |                 |
-| xrt      | |euTotalXRT| |   |euHorizXRT|   |   |euVertXRT|   |
-+----------+--------------+------------------+-----------------+
++----------+------------------+------------------+------------------+
+| source   |   total flux     |  hor. pol. flux  |  ver. pol. flux  |
++==========+==================+==================+==================+
+| using    |                  |                  |                  |
+| Urgent   |   |euTotalUr|    |    |euHorizUr|   |    |euVertUr|    |
++----------+------------------+------------------+------------------+
+| internal |                  |                  |                  |
+| xrt      |   |euTotalXRT|   |   |euHorizXRT|   |   |euVertXRT|    |
++----------+------------------+------------------+------------------+
 
 .. |euTotalUr| image:: _images/4eu_urgent3-n-monoE-1TotalFlux.png
    :scale: 50 %
@@ -207,15 +209,15 @@ polarization rate in the inner rings:
 .. |euVertXRT| image:: _images/4eu_xrt3-n-monoE-3vertFlux.png
    :scale: 50 %
 
-+----------+---------------+----------------------------+
-| source   |  deg. of pol. | circular polarization rate |
-+==========+===============+============================+
-| using    |               |                            |
-| Urgent   | |euDegPolUr|  |     |euCircPolRateUr|      |
-+----------+---------------+----------------------------+
-| internal |               |                            |
-| xrt      | |euDegPolXRT| |    |euCircPolRateXRT|      |
-+----------+---------------+----------------------------+
++----------+----------------------------+----------------------------+
+| source   |     deg. of pol.           | circular polarization rate |
++==========+============================+============================+
+| using    |                            |                            |
+| Urgent   |       |euDegPolUr|         |     |euCircPolRateUr|      |
++----------+----------------------------+----------------------------+
+| internal |                            |                            |
+| xrt      |        |euDegPolXRT|       |    |euCircPolRateXRT|      |
++----------+----------------------------+----------------------------+
 
 .. |euDegPolUr| image:: _images/4eu_urgent3-n-monoE-4DegPol.png
    :scale: 50 %
@@ -225,6 +227,71 @@ polarization rate in the inner rings:
    :scale: 50 %
 .. |euCircPolRateXRT| image:: _images/4eu_xrt3-n-monoE-5CircPolRate.png
    :scale: 50 %
+
+.. _undulator_custom:
+
+Custom field undulator
+~~~~~~~~~~~~~~~~~~~~~~
+
+A custom magnetic field can be specified by an Excel file or a column text
+file. The example below is based on a table supplied by Hamed Tarawneh
+[Tarawneh]_. The idea of introducing quasi-periodicity is to shift the n-th
+harmonics down in energy relative to the exact n-fold multiple of the 1st
+harmonic energy. This trick eliminates higher *monochromator* harmonics that
+are situated at the exact n-fold energies, which is a safer solution compared
+to a gas absorption filter.
+
+Compare the harmonic energies (half-maximum position at the higher energy side)
+of the 3rd harmonic with the triple energy of the 1st harmonic.
+
+.. [Tarawneh] Quasi-periodic undulator field for ARPES beamline at
+   MAX IV 1.5 GeV ring, unpublished.
+
+.. note::
+
+    The definition of xyz coordinate system differs for the tabulated field and
+    for xrt screens: z is along the beam direction in the tabulation and as a
+    vertical axis in xrt.
+
++--------------------+--------------------------+--------------------------+
+|                    |         periodic         |       quasi-periodic     |
++====================+==========================+==========================+
+| tabulated field    |       |EPU_field|        |      |QEPU_field|        |
++--------------------+--------------------------+--------------------------+
+| trajectory         |                          |                          |
+| top view           |        |EPU_traj|        |       |QEPU_traj|        |
++--------------------+--------------------------+--------------------------+
+| wide band          |                          |                          |
+| image and spectrum |        |EPU_wide|        |       |QEPU_wide|        |
++--------------------+--------------------------+--------------------------+
+| 1st harmonic       |                          |                          |
+| image and spectrum |        |EPU_1sth|        |       |QEPU_1sth|        |
++--------------------+--------------------------+--------------------------+
+| 3rd harmonic       |                          |                          |
+| image and spectrum |        |EPU_3rdh|        |       |QEPU_3rdh|        |
++--------------------+--------------------------+--------------------------+
+
+.. |EPU_field| image:: _images/1-EPU_HP_field.png
+   :scale: 45 %
+.. |EPU_traj| image:: _images/1-EPU_HP_mode-x_average.png
+   :scale: 37 %
+.. |EPU_wide| image:: _images/1EPU_HP_mode-1-band1totalFlux.png
+   :scale: 50 %
+.. |EPU_1sth| image:: _images/1EPU_HP_mode-2-1stHarmonic1totalFlux.png
+   :scale: 50 %
+.. |EPU_3rdh| image:: _images/1EPU_HP_mode-6-3rdHarmonic1totalFlux.png
+   :scale: 50 %
+.. |QEPU_field| image:: _images/2-QEPU_HP_field.png
+   :scale: 45 %
+.. |QEPU_traj| image:: _images/2-QEPU_HP_mode-x_average.png
+   :scale: 37 %
+.. |QEPU_wide| image:: _images/2QEPU_HP_mode-1-band1totalFlux.png
+   :scale: 50 %
+.. |QEPU_1sth| image:: _images/2QEPU_HP_mode-2-1stHarmonic1totalFlux.png
+   :scale: 50 %
+.. |QEPU_3rdh| image:: _images/2QEPU_HP_mode-6-3rdHarmonic1totalFlux.png
+   :scale: 50 %
+
 """
 """
 .. _THz:
@@ -266,13 +333,13 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 # one of 'u', 'w', 'bm', 'eu', 'wu':
-sourceType = 'bm'
+sourceType = 'u'
 # one of 'mono', '1harmonic', 'smaller', 'wide'
 #energyRange = '1harmonic'
-#energyRange = 'mono'
-energyRange = 'wide'
-what = 'rays'
-#what = 'wave' # only for Undulator
+energyRange = 'mono'
+#energyRange = 'wide'
+#what = 'rays'
+what = 'wave'  # only for rs.Undulator
 suffix = ''
 isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
@@ -292,14 +359,13 @@ if sourceType == 'u':
         eEspread=0.001,  # Energy spread of the electrons in the ring
         period=30., n=40,  # Parameters of the undulator, period in [mm]
         K=1.45,  # Deflection parameter (ignored if targetE is not None)
-#        targetE=[6940, 5, False],  # [energy [eV], harmonic]
-        xPrimeMax=0.4, zPrimeMax=0.4,  # Limits of the output angle [mrad]
+        # targetE=[6940, 5, False],  # [energy [eV], harmonic]
         eSigmaX=48.65, eSigmaZ=6.197,  # Size of the electron beam [mkm]
         # customField=0.0,  # Longitudinal magnetic field. If not None,
         # trajectory of the electron is calculated numerically.
         # eSigmaX=0., eSigmaZ=0.,  # Zero size electron beam
         # uniformRayDensity=True, filamentBeam=True,  # Single wavefront
-        # R0=R0,   # Near Field.
+#        R0=R0,   # Near Field.
         # gIntervals=5,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
         # gp=1e-4,  # Precision of the integration.
@@ -319,7 +385,7 @@ elif sourceType == 'w':
     whose = '_xrt' if isInternalSource else '_ws'
     pprefix = '3'+sourceType+whose
     Source = rs.Wiggler if isInternalSource else rs.WigglerWS
-    kwargs = dict(period=80., K=13., n=10, eE=3., xPrimeMax=5, zPrimeMax=0.3)
+    kwargs = dict(period=80., K=13., n=10, eE=3.)
     xlimits = [-40, 40]
     zlimits = [-20, 20]
     xlimitsZoom = [-8, 8]
@@ -331,12 +397,13 @@ elif sourceType == 'bm':
     whose = '_xrt' if isInternalSource else '_ws'
     pprefix = '4'+sourceType+whose
     Source = rs.BendingMagnet if isInternalSource else rs.BendingMagnetWS
-    kwargs = dict(B0=1.7, eE=3., xPrimeMax=5, zPrimeMax=0.3)
+    kwargs = dict(B0=1.7, eI=0.1, eE=3.)
+#    kwargs['uniformRayDensity'] = True
     xlimits = [-40, 40]
     zlimits = [-20, 20]
     xlimitsZoom = [-8, 8]
     zlimitsZoom = [-4, 4]
-    xPrimelimits = None  # [-0.65, 0.65]
+    xPrimelimits = 'symmetric'
     limitsFSM0X = [-500, 500]
     limitsFSM0Z = [-20, 20]
 elif sourceType == 'eu':
@@ -346,7 +413,6 @@ elif sourceType == 'eu':
     kwargs = dict(
         period=30., Ky=1.45, Kx=1.45, n=40,
         eE=3., eI=0.5,
-        xPrimeMax=0.6, zPrimeMax=0.6,
         eSigmaX=48.65, eSigmaZ=6.197,
         eEpsilonX=0.263, eEpsilonZ=0.008)
     if isInternalSource:
@@ -362,12 +428,12 @@ elif sourceType == 'wu':  # wiggler by undulator code
     whose = '_xrt' if isInternalSource else '_ws'
     pprefix = '6'+sourceType+whose
     Source = rs.Undulator if isInternalSource else rs.WigglerWS
-    kwargs = dict(period=80., K=13., n=10, eE=3., xPrimeMax=5, zPrimeMax=0.3)
+    kwargs = dict(period=80., K=13., n=10, eE=3., eI=0.5)
     xlimits = [-40, 40]
     zlimits = [-20, 20]
     xlimitsZoom = [-5, 5]
     zlimitsZoom = [-5, 5]
-    kwargs['uniformRayDensity'] = True
+#    kwargs['uniformRayDensity'] = True
 #    kwargs['gIntervals'] = 99
     kwargs['zPrimeMaxAutoReduce'] = False
     xPrimelimits = [-2.3, 2.3]
@@ -376,15 +442,19 @@ elif sourceType == 'wu':  # wiggler by undulator code
 else:
     raise ValueError('Unknown source type!')
 
-if False:  # force zero source size:
+if True:  # force zero source size:
     kwargs['eSigmaX'] = 0
     kwargs['eSigmaZ'] = 0
     kwargs['eEpsilonX'] = 0
     kwargs['eEpsilonZ'] = 0
+    kwargs['eEspread'] = 0
 
     eEpsilonC = '0'
 else:
     eEpsilonC = 'n'
+
+kwargs['xPrimeMax'] = xlimits[-1] / R0 * 1e3
+kwargs['zPrimeMax'] = zlimits[-1] / R0 * 1e3
 
 prefix = pprefix+'-{0}-{1}E-'.format(eEpsilonC, energyRange)
 if energyRange == 'mono':
@@ -397,7 +467,7 @@ elif energyRange == 'smaller':
     eMinRays, eMaxRays = 1500, 7500
     eUnit = 'keV'
 elif energyRange == 'wide':
-    eMinRays, eMaxRays = 1500, 35000
+    eMinRays, eMaxRays = 1500, 37500
     eUnit = 'keV'
 
 kwargs['eMin'] = eMinRays
@@ -431,14 +501,16 @@ def run_process(beamLine):
         beamSource = beamLine.source.shine(**kw)
         beamFSM0 = beamLine.fsm0.expose(beamSource)
         kw['wave'] = wave1zoom
-        beamSource = beamLine.source.shine(**kw)
-        outDict = {'beamSource': beamSource, 'beamFSM0': beamFSM0,
+        beamSourceZ = beamLine.source.shine(**kw)
+        outDict = {'beamSource': beamSourceZ,
+                   'beamFSM0': beamFSM0,
                    'beamFSM1': wave1, 'beamFSM1zoom': wave1zoom}
     else:
         beamSource = beamLine.source.shine(**kw)
         beamFSM0 = beamLine.fsm0.expose(beamSource)
         beamFSM1 = beamLine.fsm1.expose(beamSource)
-        outDict = {'beamSource': beamSource, 'beamFSM0': beamFSM0,
+        outDict = {'beamSource': beamSource,
+                   'beamFSM0': beamFSM0,
                    'beamFSM1': beamFSM1, 'beamFSM1zoom': beamFSM1}
     print('shine time = {0}s'.format(time.time() - startTime))
     return outDict
@@ -449,6 +521,65 @@ rr.run_process = run_process
 def define_plots(beamLine):
     plots = []
     plotsE = []
+
+    xaxis = xrtp.XYCAxis(r'$y$', 'mm', bins=256)
+    yaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits='symmetric')
+    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
+    plot = xrtp.XYCPlot(
+        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        aspect='auto', title='YX source cross-section')
+    plot.saveName = prefix + 'crossectionYX' + suffix + '.png'
+    plot.caxis.fwhmFormatStr = None
+    plots.append(plot)
+    plotsE.append(plot)
+
+    xaxis = xrtp.XYCAxis(r'$y$', 'mm', bins=256)
+    yaxis = xrtp.XYCAxis(r'$z$', '$\mu$m', limits='symmetric')
+    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
+    plot = xrtp.XYCPlot(
+        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        aspect='auto', title='YZ source cross-section')
+    plot.saveName = prefix + 'crossectionYZ' + suffix + '.png'
+    plot.caxis.fwhmFormatStr = None
+    plots.append(plot)
+    plotsE.append(plot)
+
+    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X,
+                         bins=bins, ppb=ppb)
+    yaxis = xrtp.XYCAxis(r'$z$', '$\mu$m', limits=limitsFSM0Z,
+                         bins=bins, ppb=ppb)
+    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
+                         bins=bins, ppb=ppb)
+    plot = xrtp.XYCPlot(
+        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        aspect='auto', title='image at 0')
+    plot.saveName = prefix + 'fsm0' + suffix + '.png'
+    plot.caxis.fwhmFormatStr = None
+    plots.append(plot)
+    plotsE.append(plot)
+
+    beam = 'beamFSM0'
+    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X)
+    yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=xPrimelimits)
+    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
+    plot = xrtp.XYCPlot(
+        beam, (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        aspect='auto', title='horizontal phase space')
+    plot.saveName = prefix + 'horPhaseSpace' + suffix + '.png'
+    plot.caxis.fwhmFormatStr = None
+    plots.append(plot)
+    plotsE.append(plot)
+
+    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=[-80, 80])
+    yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=[-0.15, 0.15])
+    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
+    plot = xrtp.XYCPlot(
+        beam, (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
+        aspect='auto', title='horizontal phase space zoomed')
+    plot.saveName = prefix + 'horPhaseSpaceZoom' + suffix + '.png'
+    plot.caxis.fwhmFormatStr = None
+    plots.append(plot)
+    plotsE.append(plot)
 
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimits, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimits, bins=bins, ppb=ppb)
@@ -582,65 +713,6 @@ def define_plots(beamLine):
     plot.caxis.fwhmFormatStr = None
     plots.append(plot)
 
-    xaxis = xrtp.XYCAxis(r'$y$', 'mm', bins=256)
-    yaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits='symmetric')
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
-    plot = xrtp.XYCPlot(
-        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-        aspect='auto', title='YX source cross-section')
-    plot.saveName = prefix + 'crossectionYX' + suffix + '.png'
-    plot.caxis.fwhmFormatStr = None
-    plots.append(plot)
-    plotsE.append(plot)
-
-    xaxis = xrtp.XYCAxis(r'$y$', 'mm', bins=256)
-    yaxis = xrtp.XYCAxis(r'$z$', '$\mu$m', limits='symmetric')
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
-    plot = xrtp.XYCPlot(
-        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-        aspect='auto', title='YZ source cross-section')
-    plot.saveName = prefix + 'crossectionYZ' + suffix + '.png'
-    plot.caxis.fwhmFormatStr = None
-    plots.append(plot)
-    plotsE.append(plot)
-
-    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X,
-                         bins=bins, ppb=ppb)
-    yaxis = xrtp.XYCAxis(r'$z$', '$\mu$m', limits=limitsFSM0Z,
-                         bins=bins, ppb=ppb)
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
-                         bins=bins, ppb=ppb)
-    plot = xrtp.XYCPlot(
-        'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-        aspect='auto', title='image at 0')
-    plot.saveName = prefix + 'fsm0' + suffix + '.png'
-    plot.caxis.fwhmFormatStr = None
-    plots.append(plot)
-    plotsE.append(plot)
-
-    beam = 'beamFSM0'
-    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X)
-    yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=xPrimelimits)
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
-    plot = xrtp.XYCPlot(
-        beam, (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-        aspect='auto', title='horizontal phase space')
-    plot.saveName = prefix + 'horPhaseSpace' + suffix + '.png'
-    plot.caxis.fwhmFormatStr = None
-    plots.append(plot)
-    plotsE.append(plot)
-
-    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=[-80, 80])
-    yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=[-0.15, 0.15])
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
-    plot = xrtp.XYCPlot(
-        beam, (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-        aspect='auto', title='horizontal phase space zoomed')
-    plot.saveName = prefix + 'horPhaseSpaceZoom' + suffix + '.png'
-    plot.caxis.fwhmFormatStr = None
-    plots.append(plot)
-    plotsE.append(plot)
-
     for plot in plotsE:
         f = plot.caxis.factor
         plot.caxis.limits = eMinRays*f, eMaxRays*f
@@ -652,7 +724,6 @@ def define_plots(beamLine):
 
 
 def afterScript(*plots):
-#    return
     import os
     import pickle
     plot = plots[-1]
@@ -660,14 +731,15 @@ def afterScript(*plots):
     cwd = os.getcwd()
     pickleName = os.path.join(cwd, prefix+'.pickle')
     with open(pickleName, 'wb') as f:
-        pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f, protocol=2)
+        pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f,
+                    protocol=2)
 
 
 def main():
     beamLine = build_beamline()
     plots, plotsE = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=1,
-                         #afterScript=afterScript, afterScriptArgs=plots,
+                         # afterScript=afterScript, afterScriptArgs=plots,
                          beamLine=beamLine)
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python

@@ -879,7 +879,7 @@ def afterScript(toSave):
 
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'wb') as f:
-        pickle.dump(dump, f, -1)
+        pickle.dump(dump, f, protocol=2)
 
 
 def main():

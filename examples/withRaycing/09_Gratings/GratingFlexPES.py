@@ -413,7 +413,7 @@ def plot_generator(plots, plotsMono, plotsFocus, beamLine):
 
 def main():
     beamLine = build_beamline(azimuth=-2*pitch, nrays=10000)
-#    align_beamline(beamLine)
+    align_beamline(beamLine)
     plots, plotsMono, plotsFocus = define_plots(beamLine)
     args = [plots, plotsMono, plotsFocus, beamLine]
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine,

@@ -1412,6 +1412,13 @@ class XYCPlot(object):
 #            return "0"
 #        return r"{0}$\cdot$10$^{{{1}}}$".format(f_SF, power)
 
+    def _get_flux(self):
+        self.flux = self.intensity / self.nRaysAll *\
+            self.nRaysSeededI / self.nRaysSeeded
+
+    def _get_power(self):
+        self.power = self.intensity / self.nRaysAll
+
     def plot_plots(self):
         """
         Does all graphics update.
@@ -1475,7 +1482,7 @@ class XYCPlot(object):
                 else:
                     if self.fluxKind.startswith('power'):
                         if self.nRaysAll > 0:
-                            self.power = self.intensity / self.nRaysAll
+                            self._get_power()
                             if self.displayAsAbsorbedPower:
                                 powerStr2 = r'P$_{\rm abs} = $'
                             else:
@@ -1484,10 +1491,7 @@ class XYCPlot(object):
                             self.textI.set_text(powerStr % self.power)
                     else:
                         if (self.nRaysAll > 0) and (self.nRaysSeeded > 0):
-#                            self.flux = self.intensity / self.nRaysAll *\
-#                                self.nRaysAccepted / self.nRaysSeeded
-                            self.flux = self.intensity / self.nRaysAll *\
-                                self.nRaysSeededI / self.nRaysSeeded
+                            self._get_flux()
                             if isPowerOfTen:
                                 intensityStr = self._pow10(
                                     self.flux, powerOfTenDecN)

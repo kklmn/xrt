@@ -5,7 +5,7 @@ see crl_stack.py
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"
 import matplotlib as mpl
-#mpl.use('agg')
+mpl.use('agg')
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,12 +38,12 @@ else:
     lensName = '3-'
 
 
-def build_beamline():
+def build_beamline(nrays=1e4):
     beamLine = raycing.BeamLine(height=0)
 #    rs.CollimatedMeshSource(beamLine, 'CollimatedMeshSource', dx=2, dz=2,
 #      nx=21, nz=21, energies=(E0,), withCentralRay=False, autoAppendToBL=True)
     rs.GeometricSource(
-        beamLine, 'CollimatedSource', nrays=25000,
+        beamLine, 'CollimatedSource', nrays=nrays,
         dx=0.5, dz=0.5, distxprime=None, distzprime=None, energies=(E0,))
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))

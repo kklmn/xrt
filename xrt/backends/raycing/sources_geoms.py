@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "12 Apr 2016"
+__date__ = "03 Jul 2016"
 import numpy as np
 import scipy as sp
 
@@ -19,7 +19,10 @@ def make_energy(distE, energies, nrays, filamentBeam=False):
     """
     locnrays = 1 if filamentBeam else nrays
     if distE == 'normal':
-        E = np.random.normal(energies[0], energies[1], locnrays)
+        try:
+            E = np.random.normal(energies[0], energies[1], locnrays)
+        except ValueError:
+            E = np.zeros(locnrays)
     elif distE == 'flat':
         E = np.random.uniform(energies[0], energies[1], locnrays)
     elif distE == 'lines':
@@ -233,7 +236,10 @@ class GeometricSource(object):
                 bo.Ep *= amp
             else:
                 sigma = daxis[0] if isinstance(daxis, (list, tuple)) else daxis
-                axis[:] = np.random.normal(0, sigma, self.nrays)
+                try:
+                    axis[:] = np.random.normal(0, sigma, self.nrays)
+                except ValueError:
+                    axis[:] = np.zeros(self.nrays)
         elif (distaxis == 'flat'):
             if raycing.is_sequence(daxis):
                 aMin, aMax = daxis[0], daxis[1]
@@ -331,9 +337,10 @@ class GeometricSource(object):
 
 
 class GaussianBeam(object):
-    r"""Implements a Gaussian beam. https://en.wikipedia.org/wiki/Gaussian_beam
+    r"""Implements a Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
     It *must* be used for an already available set of 3D points which are
-    obtained by :meth:`prepare_wave` of a slit, oe or screen."""
+    obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
+    example in ``\tests\raycing\laguerre_gaussian_beam.py``."""
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), polarization='horizontal',
@@ -387,7 +394,7 @@ class GaussianBeam(object):
             k = E / CHBAR * 1e7  # mm^-1
             yR = k/2 * self.w0**2
         return self.w0 * (1 + (y/yR)**2)**0.5
-        
+
     def shine(self, toGlobal=True, wave=None, accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
@@ -451,16 +458,18 @@ class GaussianBeam(object):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         return bo
 
+
 class LaguerreGaussianBeam(GaussianBeam):
-    r"""Implements a Laguerre-Gaussian beam.
-    https://en.wikipedia.org/wiki/Gaussian_beam
+    r"""Implements a Laguerre-Gaussian beam
+    https://en.wikipedia.org/wiki/Gaussian_beam.
     It must be used for an already available set of 3D points which are
-    obtained by :meth:`prepare_wave` of a slit, oe or screen."""
+    obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
+    example in ``\tests\raycing\laguerre_gaussian_beam.py``."""
     def __init__(self, *args, **kwargs):
         """
         *vortex*: None or tuple(l, p)
             specifies a Laguerre-Gaussian beam with *l* the azimuthal index and
-            *p>=0* the radial index.
+            *p* >= 0 the radial index.
 
 
         """

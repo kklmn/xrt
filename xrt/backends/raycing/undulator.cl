@@ -1,5 +1,5 @@
 //__author__ = "Konstantin Klementiev, Roman Chernikov"
-//__date__ = "10 Apr 2015"
+//__date__ = "03 Jul 2016"
 
 #ifdef cl_khr_fp64
 #if __OPENCL_VERSION__<120
@@ -23,7 +23,7 @@ __kernel void undulator(const float alpha,
                         __global float2* Is_gl,
                         __global float2* Ip_gl)
 {
-    const float PI = 3.1415926535897932384626433832795;
+//    const float PI = 3.1415926535897932384626433832795;
     unsigned int ii = get_global_id(0);
     int j;
 
@@ -33,40 +33,45 @@ __kernel void undulator(const float alpha,
     float2 zero2 = (float2)(0,0);
     float2 Is = zero2;
     float2 Ip = zero2;
-    float wgwu = w[ii] / gamma[ii] / wu[ii];
+//    float wgwu = w[ii] / gamma[ii] / wu[ii];
+    float wwu2 = w[ii] / (wu[ii] * wu[ii]);
     float Kx2 = Kx * Kx;
     float Ky2 = Ky * Ky;
     gamma2 = gamma[ii]*gamma[ii];
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
-    //n.z = sqrt(1. - n.x*n.x - n.y*n.y);
-    n.z = 1 - 0.5*(n.x*n.x + n.y*n.y);
+    n.z = sqrt(1. - n.x*n.x - n.y*n.y);
+//    n.z = 1 - 0.5*(n.x*n.x + n.y*n.y);
 
     for (j=0; j<jend; j++) {
         sintg = sincos(tg[j], &costg);
         sintgph = sincos(tg[j] + phase, &costgph);
-        ucos = ww1[ii] * tg[j] + wgwu *
-           (-Ky * ddphi[ii] * sintg + Kx * ddpsi[ii] * sintgph +
-            0.25 / gamma[ii] * (Ky2 * sintg*costg + Kx2 * sintgph*costgph));
-
-        sinucos = sincos(ucos, &cosucos);
-        eucos.x = cosucos;
-        eucos.y = sinucos;
 
         beta.x = Ky / gamma[ii] * costg;
         beta.y = -Kx / gamma[ii] * costgph;
-        //beta.z = sqrt(1. - 1./gamma2 - beta.x*beta.x - beta.y*beta.y);
+//        beta.z = sqrt(1. - 1./gamma2 - beta.x*beta.x - beta.y*beta.y);
         beta.z = 1 - 0.5*(1./gamma2 + beta.x*beta.x + beta.y*beta.y);
 
         betaP.x = -Ky * wu[ii] / gamma[ii] * sintg;
         betaP.y = Kx * wu[ii] / gamma[ii] * sintgph;
-        betaP.z = wu[ii] /gamma2*(Ky2*sintg*costg + Kx2*sintgph*costgph);
-        //betaP.z = wu[ii]/beta.z/gamma2*(Ky2*sintg*costg + Kx2*sintgph*costgph);
+//        betaP.z = -(betaP.x*beta.x + betaP.y*beta.y) / beta.z;
+        betaP.z = 0;
+//        betaP.z = -(betaP.x*beta.x + betaP.y*beta.y);
+
+        ucos = ww1[ii] * tg[j] + wwu2 * dot((n - 0.25*beta), betaP);
+//        ucos = ww1[ii] * tg[j] + wgwu *
+//           (-Ky * ddphi[ii] * sintg + Kx * ddpsi[ii] * sintgph +
+//            0.25 / gamma[ii] * (Ky2 * sintg*costg + Kx2 * sintgph*costgph));
+
+        betaP.z = -(betaP.x*beta.x + betaP.y*beta.y) / beta.z;
+        sinucos = sincos(ucos, &cosucos);
+        eucos.x = cosucos;
+        eucos.y = sinucos;
 
         krel = 1. - dot(n, beta);
-        nnb = cross(n, cross((n - beta), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        nnb = cross(n, cross((n - beta), betaP))/(krel*krel);
+//        nnb = (n-beta)*dot(n, betaP)/(krel*krel) - betaP/krel;
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }

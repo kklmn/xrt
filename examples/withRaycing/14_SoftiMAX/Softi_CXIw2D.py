@@ -667,7 +667,7 @@ def afterScript(complexPlotsIs, complexPlotsEs):
         stop = time.time()
         print(w)
         rE = np.dot(np.dot(v, np.diag(w)), np.conj(v.T))
-        print("diff source--decomposed = {0}".format(np.abs(cE-rE).sum()))
+#        print("diff source--decomposed = {0}".format(np.abs(cE-rE).sum()))
 
         nI = np.outer(Ixy, Ixy)
         cE = Exy4D / nI**0.5
@@ -682,7 +682,7 @@ def afterScript(complexPlotsIs, complexPlotsEs):
 
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'wb') as f:
-        pickle.dump(dump, f, -1)
+        pickle.dump(dump, f, protocol=2)
     print("Done")
 
 

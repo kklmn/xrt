@@ -31,6 +31,10 @@ Using xrtQook for script generation
 - In Beamline tab right click → Add OE → OE. This will add an optical element
   with a flat surface.
 
+  .. note::
+     The sequence of the inserted optical elements does matter! This sequence
+     determines the order of beam propagation.
+
   .. image:: _images/qookTutor4.png
      :scale: 60 %
 

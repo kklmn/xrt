@@ -240,7 +240,6 @@ class Beam(object):
         self.Jss = (self.Ep * self.Ep.conjugate()).real
         self.Jsp = self.Es * self.Ep.conjugate()
 
-
     def project_energy_to_band(self, EnewMin, EnewMax):
         """Uniformly projects the energy array self.E to a new band determined
         by *EnewMin* and *EnewMax*. This function is useful for simultaneous

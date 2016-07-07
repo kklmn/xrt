@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "12 Apr 2016"
+__date__ = "03 Jul 2016"
 import os
 import sys
 # import copy
@@ -204,8 +204,9 @@ class UndulatorUrgent(object):
 
         """
         self.bl = bl
-        bl.sources.append(self)
-        self.ordinalNum = len(bl.sources)
+        if bl is not None:
+            bl.sources.append(self)
+            self.ordinalNum = len(bl.sources)
         self.name = name
         self.center = center  # 3D point in global system
         self.nrays = nrays

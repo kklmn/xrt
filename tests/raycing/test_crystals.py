@@ -5,8 +5,7 @@ Created on Thu Jun 19 15:15:38 2014
 @author: konkle
 """
 
-import sys
-sys.path.append(r"c:\Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
 
 xtalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=300, rho=2.3296)

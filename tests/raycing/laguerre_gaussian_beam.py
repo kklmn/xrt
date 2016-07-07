@@ -1,10 +1,12 @@
 ﻿# -*- coding: utf-8 -*-
 r"""
+.. _test-Laguerre-Gaussian:
+
 Tests of Kirchhoff integral with Gaussian and Laguerre-Gaussian beams
 ---------------------------------------------------------------------
 
-Find the test module test_wave.py, as well as several other tests for raycing
-backend, in ``\tests\raycing``.
+Find the test module laguerre_gaussian_beam.py, as well as several other tests
+for raycing backend, in ``\tests\raycing``.
 
 Gaussian beam
 ~~~~~~~~~~~~~
@@ -52,7 +54,7 @@ diffraction integral (in our implementation, the Kirchhoff integral):
 The table below compares Kirchhoff diffraction integrals of a Gaussian waist
 with analytical solutions. The coloring is by wave phase. Notice equal shape
 and (almost) equal total flux. The Gaussian waist was calculated as
-GeometricSource with :math:`w_0` = 15 µm:
+GaussianBeam with :math:`w_0` = 15 µm:
 
 +------------------------+
 |  Gaussian waist (z=0)  |
@@ -114,7 +116,8 @@ The flux is again normalized to unity.
 The table below compares Kirchhoff diffraction integrals of a Laguerre-Gaussian
 waist with analytical solutions. The coloring is by wave phase. Notice equal
 shape and (almost) equal total flux. The Laguerre-Gaussian waist was calculated
-as GeometricSource with :math:`w_0` = 15 µm, :math:`l` = 1 and :math:`p` = 1:
+as LaguerreGaussianBeam with :math:`w_0` = 15 µm, :math:`l` = 1 and
+:math:`p` = 1:
 
 +---------------------------------+
 |  Laguerre-Gaussian waist (z=0)  |
@@ -163,8 +166,7 @@ as GeometricSource with :math:`w_0` = 15 µm, :math:`l` = 1 and :math:`p` = 1:
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "28 May 2016"
-import sys
-sys.path.append(r"c:\Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import numpy as np
 
 import xrt.backends.raycing as raycing
@@ -192,6 +194,7 @@ ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
 
 bins, ppb = 256, 1
 
+
 def build_beamline():
     beamLine = raycing.BeamLine(height=0)
     beamLine.source = rs.LaguerreGaussianBeam(
@@ -201,28 +204,22 @@ def build_beamline():
     return beamLine
 
 
-def report_vorticity(wave, (x, z), what):
-    dx = np.gradient(x)
-    dz = np.gradient(z)
-    field = wave.Es.reshape((len(dz), len(dx)))
-    dFdz, dFdx = np.gradient(field)
-    ly = dFdx/dx*z[:, None] - dFdz/dz[:, None]*x
-    msum = (np.real(1j*field.conjugate()*ly).flatten()).sum()
-    nsum = (np.real(field.conjugate()*field).flatten()).sum()
-    print('vorticity in {0} = {1}'.format(what, msum/nsum))
-
-
 def run_process(beamLine):
     outDict = {}
     for ip, (p, (x, z)) in enumerate(zip(ps, beamLine.fsmXZmeshes)):
         beamLine.fsmFar.center[1] = p
         waveOnFSMg = beamLine.fsmFar.prepare_wave(beamLine.source, x, z)
         beamLine.source.shine(wave=waveOnFSMg)
+#        mult = np.exp(0.5j * waveOnFSMg.x / x.max())
+#        waveOnFSMg.Es *= mult
+#        waveOnFSMg.Ep *= mult
+#        mult = np.exp(0.5j * waveOnFSMg.z / z.max())
+#        waveOnFSMg.Es *= mult
+#        waveOnFSMg.Ep *= mult
         if outDict == {}:
             beamSource = waveOnFSMg
         what = 'beamFSMg{0}'.format(ip)
         outDict[what] = waveOnFSMg
-        report_vorticity(waveOnFSMg, (x, z), what)
 
         if p > 100:
             wrepeats = 1
@@ -230,10 +227,10 @@ def run_process(beamLine):
             for r in range(wrepeats):
                 rw.diffract(beamSource, waveOnFSMk)
                 if wrepeats > 1:
-                    print('wave repeats: {0} of {1} done'.format(r+1, wrepeats))
+                    print('wave repeats: {0} of {1} done'.format(
+                        r+1, wrepeats))
             what = 'beamFSMk{0}'.format(ip)
             outDict[what] = waveOnFSMk
-            report_vorticity(waveOnFSMk, (x, z), what)
     return outDict
 rr.run_process = run_process
 

@@ -259,16 +259,13 @@ to slight differences in tabulated values of the atomic scattering factors.
 __author__ = "Konstantin Klementiev"
 __date__ = "12 Mar 2014"
 
-import os
-import sys
 import math
 #import cmath
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-sys.path.append(r"c:\Ray-tracing")
-#sys.path.append(r"/media/sf_Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
 
 
@@ -509,15 +506,16 @@ def compare_reflectivity():
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
         ax.legend([p1, p3], ['Xf1f2/XOP', 'xrt'], loc=6)
         ax.add_artist(l1)
-# phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
+## phases:
+#        ax2 = ax.twinx()
+#        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+#        phi = np.unwrap(np.angle(rs * rp.conj()))
+#        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+#        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+#        ax2.yaxis.set_major_formatter(formatter)
+#        for tl in ax2.get_yticklabels():
+#            tl.set_color('c')
+
         fname = 'MirrorRefl' + stripe.name + reprAngle
         fig.savefig(fname + '.png')
 

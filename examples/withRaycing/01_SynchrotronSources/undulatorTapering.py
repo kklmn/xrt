@@ -73,13 +73,14 @@ def afterScript(plots):
     cwd = os.getcwd()
     pickleName = os.path.join(cwd, plot.baseName+'.pickle')
     with open(pickleName, 'wb') as f:
-        pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f, -1)
+        pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f,
+                    protocol=2)
 
 
 def main():
     beamLine = build_beamline()
     plots, plotsE = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine,
+    xrtr.run_ray_tracing(plots, repeats=100, beamLine=beamLine,
                          afterScript=afterScript, afterScriptArgs=[plots])
 
 
@@ -101,8 +102,8 @@ def plot():
                       usecols=[0, 1], unpack=True)
     ax.plot(e*1e-3, f/max(f), 'b', label='calculated by Spectra', lw=2)
 
-    e, f = np.loadtxt('yaup-0.out', skiprows=32, usecols=[0, 1], unpack=True)
-    ax.plot(e*1e-3, f/max(f), 'g', label='calculated by YAUP/XOP', lw=2)
+#    e, f = np.loadtxt('yaup-0.out', skiprows=32, usecols=[0, 1], unpack=True)
+#    ax.plot(e*1e-3, f/max(f), 'g', label='calculated by YAUP/XOP', lw=2)
 
     theta, fl = np.loadtxt("thetaexafssc1an_zn_hgap_00002r2.fio",
                            skiprows=113, usecols=(0, 5), unpack=True)

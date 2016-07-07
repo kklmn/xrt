@@ -4,9 +4,9 @@ wave propagation in x-ray regime. It is primarily meant for modeling
 synchrotron sources, beamlines and beamline elements. Includes a GUI tool for
 creating scripts.
 
-+---------+-----------+--------------------+
-| |IpPol| | |MontelM| | |vcmSi-FootprintP| |
-+---------+-----------+--------------------+
++-----------+-----------+-----------+-----------+
+|  |IpPol|  | |MontelM| | |vcmSi-P| | |VortexB| |
++-----------+-----------+-----------+-----------+
 
 .. |IpPol| image:: _images/IpPol.swf
    :alt: Undulator source vs. (x', z', E), vertical polarization
@@ -15,10 +15,13 @@ creating scripts.
 .. |MontelM| image:: _images/Montel_par_exit_n.png
    :alt: Reflection from Montel mirror
    :scale: 40 %
-.. |vcmSi-FootprintP| image:: _images/vcmSi-FootprintP.swf
+.. |vcmSi-P| image:: _images/vcmSi-FootprintP.swf
    :alt: Absorbed power and power density on a mirror at varying pitch angle
    :width: 248
    :height: 164
+.. |VortexB| image:: _images/Laguerre-Gauss-3-beamFSMk-at20m-cut.png
+   :alt: Laguerre-Gaussian beam propagated by Kirchhoff integral
+   :scale: 40 %
 
 xrtQook -- a GUI for creating scripts
 -------------------------------------
@@ -70,8 +73,9 @@ Features of xrt
   and is reported in W. The power density can be visualized by isolines. The
   magnetic gap of undulators can be :ref:`tapered <tapering_comparison>`.
   Undulators can be calculated in :ref:`near field <near_field_comparison>`.
-  Undulators can be :ref:`calculated on GPU <calculations_on_GPU>`, with a high
-  gain in computation speed, which is important for tapering and near field
+  :ref:`Custom magnetic field <undulator_custom>` is also possible. Undulators
+  can be :ref:`calculated on GPU <calculations_on_GPU>`, with a high gain in
+  computation speed, which is important for tapering and near field
   calculations.
 
 * *Shapes*. There are several predefined shapes of optical elements implemented
@@ -114,6 +118,10 @@ Features of xrt
 * *Non-sequential optics*. xrt can trace non-sequential optics where different
   parts of the incoming beam meet different surfaces. Examples of such optics
   are :ref:`poly-capillaries<polycapillary>` and Wolter mirrors.
+
+* *Singular optics*. xrt correctly propagates :ref:`vortex beams
+  <test-Laguerre-Gaussian>`, which can be used for studying the creation of
+  vortex beams by transmissive or reflective optics.
 
 * *Global coordinate system*. The optical elements are positioned in a global
   coordinate system. This is convenient for modeling a real synchrotron
@@ -176,7 +184,9 @@ project. Summer students of DESY Andrew Geondzhian and Victoria Kabanova are
 acknowledged for their help in coding the classes of synchrotron sources. Rami
 Sankari and Alexei Preobrajenski (MAX IV Laboratory) are thanked for
 discussion, testing and comparing with external codes. Hasan Yavaş and Jozef
-Bednarčik (DESY Photon Science) are acknowledged for supplied cases.
+Bednarčik (DESY Photon Science) are acknowledged for supplied cases. Hamed
+Tarawneh (MAX IV Laboratory) has initiated the custom field undulator project
+and supplied tables of magnetic field.
 """
 
 # ========Convention: note the difference from PEP8 for variables!=============
@@ -191,9 +201,9 @@ __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory)",\
     "Roman Chernikov (DESY Photon Science)"
 __email__ = "first dot last at gmail dot com"
-__versioninfo__ = (1, 1, 0)
+__versioninfo__ = (1, 2, 0)
 __version__ = '.'.join(map(str, __versioninfo__))
-__date__ = "26 Mar 2016"
+__date__ = "05 Jul 2016"
 __license__ = "MIT license"
 
 #__all__ = ['plotter', 'runner', 'multipro']

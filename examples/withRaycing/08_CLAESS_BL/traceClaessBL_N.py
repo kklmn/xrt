@@ -314,10 +314,4 @@ def main():
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:
 if __name__ == '__main__':
-#    import cProfile
-#    cProfile.run('main()', 'stats')
-#    import pstats
-#    p = pstats.Stats('stats')
-#    p.sort_stats('cumulative').print_stats(40)
-
     main()

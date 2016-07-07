@@ -626,7 +626,7 @@ def afterScript(complexPlotsIs, complexPlotsEs, complexPlotsPCAs):
         w, v = spl.eigh(cE, **kwargs)
         print(w)
         rE = np.dot(np.dot(v, np.diag(w)), np.conj(v.T))
-        print("diff source--decomposed = {0}".format(np.abs(cE-rE).sum()))
+#        print("diff source--decomposed = {0}".format(np.abs(cE-rE).sum()))
 
         wN, vN = None, None
 #        nI = np.outer(Ixy, Ixy)
@@ -660,7 +660,7 @@ def afterScript(complexPlotsIs, complexPlotsEs, complexPlotsPCAs):
 
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'wb') as f:
-        pickle.dump(dump, f, -1)
+        pickle.dump(dump, f, protocol=2)
     print("Done")
 
 

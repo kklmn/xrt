@@ -495,12 +495,12 @@ def plot_generator(plots, plotsR, beamLine):
     if visualizeCrossSection:
         dump.append(extFlux)
     with open(pickleName, 'wb') as f:
-        pickle.dump(dump, f, -1)
+        pickle.dump(dump, f, protocol=2)
 
     if whatToScan == 'energy':
         dump = [energies, eff, minOrder, maxOrder]
         with open(efficiencyFileName+'.pickle', 'wb') as f:
-            pickle.dump(dump, f, -1)
+            pickle.dump(dump, f, protocol=2)
 
         dump = [energies]
         dump += [eff[:, o] for o in range(orders)]
@@ -509,12 +509,17 @@ def plot_generator(plots, plotsR, beamLine):
                        minOrder, maxOrder))
 
 
+def afterScript():
+    print('Now run "visualize_efficiency()"')
+
+
 def get_efficiency():
     beamLine = build_beamline()
     plots, plotsR = define_plots(beamLine)
     args = [plots, plotsR, beamLine]
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine, processes=1,
-                         generator=plot_generator, generatorArgs=args)
+                         generator=plot_generator, generatorArgs=args,
+                         afterScript=afterScript)
 
 
 def read_curves():

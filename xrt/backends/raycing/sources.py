@@ -3,6 +3,9 @@ r"""
 Sources
 -------
 
+Geometric sources
+^^^^^^^^^^^^^^^^^
+
 Module :mod:`~xrt.backends.raycing.sources` defines the container class
 :class:`Beam` that holds beam properties as numpy arrays and defines the beam
 sources. The sources are geometric sources in continuous and mesh forms and
@@ -18,6 +21,9 @@ components of the coherency matrix of different rays are simply added.
 .. autoclass:: MeshSource()
    :members: __init__
 .. autoclass:: CollimatedMeshSource
+.. autoclass:: GaussianBeam
+.. autoclass:: LaguerreGaussianBeam
+
 .. autofunction:: make_energy
 .. autofunction:: make_polarization
 .. autofunction:: rotate_coherency_matrix
@@ -96,7 +102,7 @@ numerically, starting from the magnetic field.
         \end{bmatrix} &= \frac{1}{2\pi}\int\limits_{-\infty}^{+\infty}dt'
         \begin{bmatrix}\frac{[\textbf{n}\times[(\textbf{n}-
         \boldsymbol{\beta})\times\dot{\boldsymbol{\beta}}]]}
-        {1 - \textbf{n}\cdot\boldsymbol{\beta}}\end{bmatrix}_{x, y}
+        {(1 - \textbf{n}\cdot\boldsymbol{\beta})^2}\end{bmatrix}_{x, y}
         e^{i\omega (t' + R(t')/c)}
 
     .. math::
@@ -107,7 +113,7 @@ the corresponding velosity components are
 
     .. math::
         \beta_x &= \frac{K_y}{\gamma}\cos(\omega_u t),\\
-        \beta_y &= -\frac{K_x}{\gamma}\cos(\omega_u t + \phi),\\
+        \beta_y &= -\frac{K_x}{\gamma}\cos(\omega_u t + \phi)\\
         \beta_z &= \sqrt{1-\frac{1}{\gamma^2}-\beta_{x}^{2}-\beta_{y}^{2}},
 
 where :math:`\omega_u = 2\pi c /\lambda_u` - undulator frequency,
@@ -118,12 +124,12 @@ replacing the exponential series by a factor of
 :math:`\omega_1 = \frac{2\gamma^2}{1+K_x^2/2+K_y^2/2+\gamma^2(\theta^2+\psi^2)}
 \omega_u`.
 
-In case of the tapered undulator vertical magnetic field is multiplied by an 
+In case of the tapered undulator vertical magnetic field is multiplied by an
 additional factor :math:`1 - \alpha z`, that in turn results in modification of
 horizontal velocity and coordinate.
 
 In the far-field approximation we consider the undulator as a point source and
-replace the vector :math:`\mathbf{R}` by a projection
+replace the distance :math:`R` by a projection
 :math:`-\mathbf{n}\cdot\mathbf{r}`, where :math:`\mathbf{n} =
 [\theta,\psi,1-\frac{1}{2}(\theta^2+\psi^2)]` - direction to the observation
 point, :math:`\mathbf{r} = [\frac{K_y}{\gamma}\sin(\omega_u t'),
@@ -139,27 +145,27 @@ typical cases with reasonably narrow solid angles require around 10 integration
 points per period for satisfactory convergence.
 
 Configurations with non-equivalent undulator periods i.e. tapered undulator
-require integration over full undulator length, therefore the size of the 
-integration grid is multiplied by the number of periods. Similar approach is 
-used for the near field calculations, where the undulator extension is taken 
+require integration over full undulator length, therefore the size of the
+integration grid is multiplied by the number of periods. Similar approach is
+used for the near field calculations, where the undulator extension is taken
 into account and the phase component in the integral is taken in its initial
 form :math:`i\omega (t' + R(t')/c)`.
 
-For the custom configuratiuons, where the magnetic field components 
-are tabulated as functions of longitudinal coordinate 
+For the custom field configuratiuons, where the magnetic field components
+are tabulated as functions of longitudinal coordinate
 :math:`\textbf{B}=(B_{x}(z), B_{y}(z), B_{z}(z))` preliminary numerical
 calculation of the velocity and coordinate is nesessary. For that we solve the
 system of differential equations
 
     .. math::
-        \begin{bmatrix}{\ddot{x}\\ \ddot{y}\\ \ddot{z}}\end{bmatrix} &= 
-        \frac{e^{-}}{\gamma m_{e} c} 
+        \begin{bmatrix}{\ddot{x}\\ \ddot{y}\\ \ddot{z}}\end{bmatrix} &=
+        \frac{e^{-}}{\gamma m_{e} c}
         \begin{bmatrix}{\beta_{y}B_{z}-B_{y}\\
-        -\beta_{x}B_{z}+B_{x}\\ 
+        -\beta_{x}B_{z}+B_{x}\\
         -\beta_{y}B_{x}+\beta_{x}B_{y}}\end{bmatrix}
-    
+
 using classical Runge-Kutta method. Integration step is varied in order to
-provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of 
+provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of
 the Gauss-Legendre grid.
 
 
@@ -232,6 +238,20 @@ harmonic is shown below.
     various energy ranges.
 
 .. image:: _images/compareUndulators.png
+   :scale: 50 %
+
+.. _undulator_highE:
+
+Undulator spectrum at very high energies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The codes Urgent [Urgent]_ and SPECTRA [SPECTRA]_ result in saturation at high
+energies (see the image below) thus leading to a divergent total power
+integral. The false radiation has a circular off-axis shape. To the contrary,
+xrt flux at high energies vanishes and follows the wiggler approximation. More
+discussion will follow in a future journal article about xrt.
+
+.. image:: _images/flux_BioNanoMAX.png
    :scale: 50 %
 
 .. _tapering_comparison:
@@ -341,95 +361,96 @@ on-axis radiation (bluish color).
 Undulator radiation in near field
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Notice that on the following pictures the p-polarized flux is almost 3 orders
-of magnitude lower than the full flux.
+Notice that on the following pictures the p-polarized flux is only ~6% of the
+total flux.
 
 +------------------------+--------------------+----------------+
-|                        | SPECTRA [SPECTRA]_ |       xrt      |
+|  at 5 m                | SPECTRA [SPECTRA]_ |       xrt      |
 +========================+====================+================+
-|   near field at 5 m,   |                    |                |
-|   full flux            |  |spectra_n05m0|   |  |xrt_n05m0|   |
-+------------------------+--------------------+----------------+
-|   near field at 5 m,   |                    |                |
-|   p-polarized          |  |spectra_n05mP|   |  |xrt_n05mP|   |
-+------------------------+--------------------+----------------+
 |   far field at 5 m,    |                    |                |
 |   full flux            |  |spectra_f05m0|   |  |xrt_f05m0|   |
 +------------------------+--------------------+----------------+
 |   far field at 5 m,    |                    |                |
 |   p-polarized          |  |spectra_f05mP|   |  |xrt_f05mP|   |
 +------------------------+--------------------+----------------+
+|   near field at 5 m,   |                    |                |
+|   full flux            |  |spectra_n05m0|   |  |xrt_n05m0|   |
++------------------------+--------------------+----------------+
+|   near field at 5 m,   |                    |                |
+|   p-polarized          |  |spectra_n05mP|   |  |xrt_n05mP|   |
++------------------------+--------------------+----------------+
 
-.. |spectra_n05m0| image:: _images/spectra_near_R0=05m.*
+.. |spectra_f05m0| image:: _images/spectra-05m-far.png
    :scale: 50 %
    :align: bottom
-.. |spectra_n05mP| image:: _images/spectra_near_R0=05m_p.*
+.. |spectra_f05mP| image:: _images/spectra-05m-far_p.png
    :scale: 50 %
    :align: bottom
-.. |spectra_f05m0| image:: _images/spectra_far_R0=05m.*
+.. |spectra_n05m0| image:: _images/spectra-05m-near.png
    :scale: 50 %
    :align: bottom
-.. |spectra_f05mP| image:: _images/spectra_far_R0=05m_p.*
+.. |spectra_n05mP| image:: _images/spectra-05m-near_p.png
    :scale: 50 %
    :align: bottom
 
-.. |xrt_n05m0| image:: _images/1u_xrt4-n-near05m-E0-1TotalFlux.*
+.. |xrt_f05m0| image:: _images/xrt-far05m1TotalFlux-rays.png
    :scale: 50 %
    :align: bottom
-.. |xrt_n05mP| image:: _images/1u_xrt4-n-near05m-E0-3vertFlux.*
+.. |xrt_f05mP| image:: _images/xrt-far05m3vertFlux-rays.png
    :scale: 50 %
    :align: bottom
-.. |xrt_f05m0| image:: _images/1u_xrt4-n-far05m-E0-1TotalFlux.*
+.. |xrt_n05m0| image:: _images/xrt-near05m1TotalFlux-rays.png
    :scale: 50 %
    :align: bottom
-.. |xrt_f05mP| image:: _images/1u_xrt4-n-far05m-E0-3vertFlux.*
+.. |xrt_n05mP| image:: _images/xrt-near05m3vertFlux-rays.png
    :scale: 50 %
    :align: bottom
 
 +------------------------+--------------------+----------------+
-|                        | SPECTRA [SPECTRA]_ |       xrt      |
+|  at 25 m               | SPECTRA [SPECTRA]_ |       xrt      |
 +========================+====================+================+
-|   near field at 25 m   |                    |                |
-|   full flux            |  |spectra_n25m0|   |  |xrt_n25m0|   |
-+------------------------+--------------------+----------------+
-|   near field at 25 m,  |                    |                |
-|   p-polarized          |  |spectra_n25mP|   |  |xrt_n25mP|   |
-+------------------------+--------------------+----------------+
 |   far field at 25 m,   |                    |                |
 |   full flux            |  |spectra_f25m0|   |  |xrt_f25m0|   |
 +------------------------+--------------------+----------------+
 |   far field at 25 m,   |                    |                |
 |   p-polarized          |  |spectra_f25mP|   |  |xrt_f25mP|   |
 +------------------------+--------------------+----------------+
+|   near field at 25 m   |                    |                |
+|   full flux            |  |spectra_n25m0|   |  |xrt_n25m0|   |
++------------------------+--------------------+----------------+
+|   near field at 25 m,  |                    |                |
+|   p-polarized          |  |spectra_n25mP|   |  |xrt_n25mP|   |
++------------------------+--------------------+----------------+
 
-.. |spectra_n25m0| image:: _images/spectra_near_R0=25m.*
+.. |spectra_f25m0| image:: _images/spectra-25m-far.png
    :scale: 50 %
    :align: bottom
-.. |spectra_n25mP| image:: _images/spectra_near_R0=25m_p.*
+.. |spectra_f25mP| image:: _images/spectra-25m-far_p.png
    :scale: 50 %
    :align: bottom
-.. |spectra_f25m0| image:: _images/spectra_far_R0=25m.*
+.. |spectra_n25m0| image:: _images/spectra-25m-near.png
    :scale: 50 %
    :align: bottom
-.. |spectra_f25mP| image:: _images/spectra_far_R0=25m_p.*
+.. |spectra_n25mP| image:: _images/spectra-25m-near_p.png
    :scale: 50 %
    :align: bottom
 
-.. |xrt_n25m0| image:: _images/1u_xrt4-n-near25m-E0-1TotalFlux.*
+.. |xrt_f25m0| image:: _images/xrt-far25m1TotalFlux-rays.png
    :scale: 50 %
    :align: bottom
-.. |xrt_n25mP| image:: _images/1u_xrt4-n-near25m-E0-3vertFlux.*
+.. |xrt_f25mP| image:: _images/xrt-far25m3vertFlux-rays.png
    :scale: 50 %
    :align: bottom
-.. |xrt_f25m0| image:: _images/1u_xrt4-n-far25m-E0-1TotalFlux.*
+.. |xrt_n25m0| image:: _images/xrt-near25m1TotalFlux-rays.png
    :scale: 50 %
    :align: bottom
-.. |xrt_f25mP| image:: _images/1u_xrt4-n-far25m-E0-3vertFlux.*
+.. |xrt_n25mP| image:: _images/xrt-near25m3vertFlux-rays.png
    :scale: 50 %
    :align: bottom
+
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "12 Apr 2016"
+__date__ = "03 Jul 2016"
 __all__ = ('GeometricSource', 'MeshSource', 'BendingMagnet', 'Wiggler',
            'Undulator')
 

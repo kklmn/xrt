@@ -178,11 +178,13 @@ def plot_res_eff():
     ax1.add_artist(legBragg)
 
     if band == 'narrow':
-        fig.savefig('ResolutionEfficiency1D-narrowBand.png')
+        fname = 'ResolutionEfficiency1D-narrowBand'
     elif band == '8e-4':
-        fig.savefig('ResolutionEfficiency1D-8e-4Band.png')
+        fname = 'ResolutionEfficiency1D-8e-4Band'
     else:
         raise
+    fig.savefig(fname+'.png')
+    fig.savefig(fname+'.pdf')
 
 
 if __name__ == '__main__':

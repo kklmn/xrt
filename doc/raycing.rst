@@ -20,13 +20,13 @@ Raycing backend
 
 .. automodule:: tests.raycing.test_materials
 
-.. automodule:: xrt.backends.raycing.stages
-.. autoclass:: xrt.backends.raycing.stages.Tripod()
-   :members: __init__, set_jacks, get_orientation
-.. autoclass:: xrt.backends.raycing.stages.OneXStage()
-   :members: __init__, select_surface
-.. autoclass:: xrt.backends.raycing.stages.TwoXStages(OneXStage)
-   :members: __init__, set_x_stages, get_orientation
+.. .. automodule:: xrt.backends.raycing.stages
+.. .. autoclass:: xrt.backends.raycing.stages.Tripod()
+..    :members: __init__, set_jacks, get_orientation
+.. .. autoclass:: xrt.backends.raycing.stages.OneXStage()
+..    :members: __init__, select_surface
+.. .. autoclass:: xrt.backends.raycing.stages.TwoXStages(OneXStage)
+..    :members: __init__, set_x_stages, get_orientation
 
 .. automodule:: xrt.backends.raycing.apertures
 .. autoclass:: xrt.backends.raycing.apertures.RectangularAperture()

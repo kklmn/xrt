@@ -3,9 +3,29 @@
 Version history
 ---------------
 
+1.2.0 (07 Jul 2016):
+    - We've created a repository on `GitHub <https://github.com/kklmn/xrt>`_.
+
+    - Added custom field undulator, see :ref:`an example <undulator_custom>`.
+
+    - Improved and optimized formulas of undulator source, resulting in correct
+      behaviour at high energies, see :ref:`here <undulator_highE>`.
+
+    - Prepared for singular optics (vortex beams): added GaussianBeam and
+      LaguerreGaussianBeam as geometric sources. We have used them for testing
+      our Kirchhoff integration. The tests demonstrate identical images in
+      analytical and numerically diffracted fields, see
+      :ref:`here <test-Laguerre-Gaussian>`.
+
+    - Modified CRLs to get loops over the lenses internally by
+      ``multiple_refract`` method. The number of lenses can also be calculated
+      internally given energy, material and focal distance.
+
+    - Several minor bug fixes and updates.
+
 1.1.0 (26 Mar 2016):
-    - :ref:`xrtQook <qook>` -- a GUI for creating scripts. Tested with Python 2 and 3,
-      PyQt4, PyQt5 and PySide, Windows and Linux.
+    - :ref:`xrtQook <qook>` -- a GUI for creating scripts. Tested with Python 2
+      and 3, PyQt4, PyQt5 and PySide, Windows and Linux.
 
     - The examples have been restructured such that the creation of plots and
       scan generators has moved into module-level functions. With this
@@ -18,7 +38,7 @@ Version history
     - Several minor bug fixes and updates.
 
     - The documentation has switched to MathJax from pngmath (nicer view of
-      mathematics formulas).
+      mathematical formulas).
 
 1.0.2 (21 Jan 2016):
     - :ref:`A new analysis method <coh_signs_PCA>` for the quantification of

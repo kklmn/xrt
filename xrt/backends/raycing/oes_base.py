@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "12 Apr 2016"
+__date__ = "03 Jul 2016"
 import os
 import time
 import numpy as np
@@ -115,7 +115,7 @@ class OE(object):
 
         *material*: None or sequence of material objects
             The material(s) must have
-            :meth:`get_amplitude` or :meth:`get_refraction_index` method. If
+            :meth:`get_amplitude` or :meth:`get_refractive_index` method. If
             not None, must correspond to *surface*. If None, the reflectivities
             are equal to 1.
 
@@ -1225,12 +1225,12 @@ class OE(object):
                         lb.x[good], lb.y[good], lb.z[good],
                         lb.a[good], lb.b[good], lb.c[good], invertNormal)
 # state:
-# the distortion part has moved from here to find_dz                  
+# the distortion part has moved from here to find_dz
         if self.isParametric:
-#            z_distorted = self.local_r_distorted(lb.x[good], lb.y[good])
+            # z_distorted = self.local_r_distorted(lb.x[good], lb.y[good])
             tX, tY, tZ = self.param_to_xyz(lb.x[good], lb.y[good], lb.z[good])
         else:
-#            z_distorted = self.local_z_distorted(lb.x[good], lb.y[good])
+            # z_distorted = self.local_z_distorted(lb.x[good], lb.y[good])
             tX, tY = lb.x[good], lb.y[good]
 #        if z_distorted is not None:
 #            lb.z[good] += z_distorted
@@ -1368,12 +1368,12 @@ class OE(object):
 #                print('after.b', lb.b)
 #                print('after.c', lb.c)
             elif toWhere == 1:  # refract
-                refraction_index = \
+                refractive_index = \
                     matSur.get_refractive_index(lb.E[goodN]).real
                 if fromVacuum:
-                    n1overn2 = 1. / refraction_index
+                    n1overn2 = 1. / refractive_index
                 else:
-                    n1overn2 = refraction_index
+                    n1overn2 = refractive_index
                 signN = np.sign(-beamInDotNormal)
                 n1overn2cosTheta1 = -n1overn2 * beamInDotNormal
                 cosTheta2 = signN * \

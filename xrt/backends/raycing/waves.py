@@ -110,8 +110,8 @@ histogramming and (b) kernel density estimation [KDE]_. However, the easiest
 approach is to sample the source with uniform ray density (and not proportional
 to intensity) and to assign to each ray its physical wave amplitudes as *s* and
 *p* projections. In this case we do not have to reconstruct the physical
-intensity. The uniform ray density is an option for the synchrotron sources in
-:mod:`~xrt.backends.raycing.sources`.
+intensity. The uniform ray density is an option for the geometric and
+synchrotron sources in :mod:`~xrt.backends.raycing.sources`.
 
 Notice that this formulation does not require paraxial propagation and thus xrt
 is more general than other wave propagation codes. For instance, it can work
@@ -517,7 +517,7 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
 
     if shouldCalculateArea:
         if _DEBUG > 10:
-            print("The area of {0} under the beam will now be calculated".\
+            print("The area of {0} under the beam will now be calculated".
                   format(oe.name))
         if hasattr(oe, 'rotationSequence'):  # OE
             secondDim = oeLocal.y
