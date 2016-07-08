@@ -126,24 +126,25 @@ try:
 except ImportError:
     from matplotlib.backends import qt4_compat
     qt_compat = qt4_compat
-use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
-if use_pyside:
+
+if qt_compat.QT_API == 'PySide':
     QtName = "PySide"
     import PySide
     from PySide import QtGui, QtCore
     import PySide.QtGui as myQtGUI
     import PySide.QtWebKit as myQtWeb
+elif qt_compat.QT_API == 'PyQt5':
+    QtName = "PyQt5"
+    from PyQt5 import QtGui, QtCore
+    import PyQt5.QtWidgets as myQtGUI
+    import PyQt5.QtWebKitWidgets as myQtWeb
+elif qt_compat.QT_API == 'PyQt4':
+    QtName = "PyQt4"
+    from PyQt4 import QtGui, QtCore
+    import PyQt4.QtGui as myQtGUI
+    import PyQt4.QtWebKit as myQtWeb
 else:
-    try:
-        QtName = "PyQt4"
-        from PyQt4 import QtGui, QtCore
-        import PyQt4.QtGui as myQtGUI
-        import PyQt4.QtWebKit as myQtWeb
-    except ImportError:
-        QtName = "PyQt5"
-        from PyQt5 import QtGui, QtCore
-        import PyQt5.QtWidgets as myQtGUI
-        import PyQt5.QtWebKitWidgets as myQtWeb
+    raise ImportError
 
 QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
     QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
