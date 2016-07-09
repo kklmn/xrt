@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from distutils.core import setup
+import os
 
 #import importLongDescription
 #long_description = importLongDescription.output()
@@ -150,7 +151,7 @@ setup(name='xrt',
       package_data={'xrt.backends.raycing': ['data/*.*', '*.cl'],
                     'xrt': ['*.cl, *.ico'],
                     'xrt.xrtQook': ['_icons/*.*', '_images/*.*', 'xmls/*.*']},
-      scripts=[r'xrt\xrtQook\xrtQook.pyw'],
+      scripts=[os.path.join('xrt', 'xrtQook', 'xrtQook.pyw')],
       classifiers=['Development Status :: 5 - Production/Stable',
                    'Intended Audience :: Science/Research',
                    'Natural Language :: English',
