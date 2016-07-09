@@ -11,7 +11,7 @@ import xrt.backends.raycing.sources as rs
 from xrt.backends.raycing.physconsts import SIE0
 
 withUndulator = True
-withUrgentUndulator = True
+withUrgentUndulator = False
 
 
 def run(case):

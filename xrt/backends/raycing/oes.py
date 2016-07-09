@@ -1341,8 +1341,8 @@ class Plate(DCM):
 
 
 class ParaboloidFlatLens(Plate):
-    """Implements a refractive lens with one side parabolic and the other one
-    flat."""
+    """Implements a refractive lens or a stack of lenses (CRL) with one side
+    as paraboloid and the other one flat."""
 
     cl_plist = ("zmax", "focus")
     cl_local_z = """
@@ -1426,7 +1426,7 @@ class ParaboloidFlatLens(Plate):
             If used as CRL (a stack of several lenslets), the number of the
             lenslets nCRL is either given by the user directly or calculated
             for *focalDistance* at energy *E* and then rounded. For
-            propagation, use :meth:`multiple_refract`.
+            propagation with *nCRL* > 1 use :meth:`multiple_refract`.
 
 
         """
@@ -1511,10 +1511,11 @@ class ParaboloidFlatLens(Plate):
 
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):
-    u"""Implements a refractive lens with one side as parabolic cylinder and
-    the other one flat. If used as a CRL, the lenslets are arranged such that
-    they alternatively focus in the -45° and +45° planes. Therefore the total
-    number of lenslets is doubled as compared to ParaboloidFlatLens case."""
+    u"""Implements a refractive lens or a stack of lenses (CRL) with one side
+    as parabolic cylinder and the other one flat. If used as a CRL, the
+    lenslets are arranged such that they alternatively focus in the -45° and
+    +45° planes. Therefore the total number of lenslets is doubled as compared
+    to ParaboloidFlatLens case."""
 
     cl_plist = ("zmax", "focus")
     cl_local_z = """
@@ -1579,8 +1580,8 @@ class ParabolicCylinderFlatLens(ParaboloidFlatLens):
 
 
 class DoubleParaboloidLens(ParaboloidFlatLens):
-    """Implements a refractive lens with two equal paraboloids from both
-    sides."""
+    """Implements a refractive lens or a stack of lenses (CRL) with two equal
+    paraboloids from both sides."""
 
     cl_local_z = """
     float local_z(float8 cl_plist, int i, float x, float y)

@@ -22,14 +22,12 @@ suffix = ''
 R0 = 25000
 xPrimeMax = 0.6
 zPrimeMax = 0.6
-bins = 256  # Number of bins in the plot histogram
-ppb = 1  # Number of pixels per histogram bin
-repeats = 100
+repeats = 1000
 #repeats = 1
 
-sheet, prefix = 'EPU_HP_mode', '1'
-#sheet, prefix = 'QEPU_HP_mode', '2'
+#sheet, prefix = 'EPU_HP_mode', '1'
 #sheet, prefix = 'EPU_VP_mode', '3'
+sheet, prefix = 'QEPU_HP_mode', '2'
 #sheet, prefix = 'QEPU_VP_mode', '4'
 
 prefix += sheet
@@ -39,8 +37,8 @@ prefix += sheet
 #prefix += '-3-mono1stHarmonic'
 #prefix += '-4-2ndHarmonic'
 #prefix += '-5-mono2ndHarmonic'
-prefix += '-6-3rdHarmonic'
-#prefix += '-7-mono3rdHarmonic'
+#prefix += '-6-3rdHarmonic'
+prefix += '-7-mono3rdHarmonic'
 #prefix += '-8-5thHarmonic'
 #prefix += '-9-mono5thHarmonic'
 
@@ -82,6 +80,7 @@ if 'mono' in prefix:
         else:
             if 'QEPU' in prefix:
                 fixedEnergy = 20.65
+#                fixedEnergy = 20.5
             else:
                 fixedEnergy = 21.45
     elif '5th' in prefix:
@@ -98,7 +97,7 @@ if 'mono' in prefix:
     else:
         raise ValueError('unknown harmonic')
     prefix += '-E={0:.2f}eV'.format(fixedEnergy)
-    filamentBeam = True
+#    filamentBeam = True
 elif 'Harm' in prefix:
     if '1st' in prefix:
         if 'VP' in prefix:
@@ -146,6 +145,13 @@ elif 'Harm' in prefix:
                 eMinRays, eMaxRays = 30., 36.
     else:
         raise ValueError('unknown harmonic')
+
+if 'mono' in prefix:
+    bins = 64  # Number of bins in the plot histogram
+    ppb = 4  # Number of pixels per histogram bin
+else:
+    bins = 256  # Number of bins in the plot histogram
+    ppb = 1  # Number of pixels per histogram bin
 
 Source = rs.Undulator
 kwargs = dict(

@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""Package xrt (XRayTracer) is a python software library for ray tracing and
+u"""Package xrt (XRayTracer) is a python software library for ray tracing and
 wave propagation in x-ray regime. It is primarily meant for modeling
 synchrotron sources, beamlines and beamline elements. Includes a GUI tool for
 creating scripts.
@@ -105,7 +105,7 @@ Features of xrt
   retarders.
 
 * *Materials*. The material properties are incorporated using :class:`three
-  different tabulations <xrt.backends.raycing.materials.Element>` of the
+  different tabulations <xrt.backends.raycing.materials.Material>` of the
   scattering factors, with differently wide and differently dense energy
   meshes. Refractive index and absorption coefficient are calculated from the
   scattering factors. Two-surface bodies, such as plates or refractive lenses,
@@ -183,10 +183,11 @@ discussion and for their Matlab codes used as examples at early stages of the
 project. Summer students of DESY Andrew Geondzhian and Victoria Kabanova are
 acknowledged for their help in coding the classes of synchrotron sources. Rami
 Sankari and Alexei Preobrajenski (MAX IV Laboratory) are thanked for
-discussion, testing and comparing with external codes. Hasan Yavaş and Jozef
-Bednarčik (DESY Photon Science) are acknowledged for supplied cases. Hamed
-Tarawneh (MAX IV Laboratory) has initiated the custom field undulator project
-and supplied tables of magnetic field.
+discussion, testing and comparing with external codes. Hasan Yavaş, Jozef
+Bednarčik, Dmitri Novikov and Alexey Zozulya (DESY Photon Science) are
+acknowledged for supplied cases. Hamed Tarawneh (MAX IV Laboratory) has
+initiated the custom field undulator project and supplied tables of magnetic
+field.
 """
 
 # ========Convention: note the difference from PEP8 for variables!=============

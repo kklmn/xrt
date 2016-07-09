@@ -34,9 +34,9 @@ print(u'sigmaZ={} µm'.format(sigmaZ*1e6))
 print(u'sigmaZp={} mrad'.format(sigmaZp*1e6))
 
 #sheet, prefix = 'EPU_HP_mode', '1'
-#sheet, prefix = 'QEPU_HP_mode', '2'
+sheet, prefix = 'QEPU_HP_mode', '2'
 #sheet, prefix = 'EPU_VP_mode', '3'
-sheet, prefix = 'QEPU_VP_mode', '4'
+#sheet, prefix = 'QEPU_VP_mode', '4'
 customField = ['B-Hamed.xlsx', dict(sheetname=sheet, skiprows=0)]
 
 #kwargs = dict(eE=3, period=18.5*3, n=108/3, targetE=[9000, 7])

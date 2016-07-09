@@ -702,6 +702,14 @@ class Multilayer(object):
             slicedRWArgs = [ri_s,
                             ri_p]
 
+            try:
+                iterator = iter(E)
+            except TypeError:  # not iterable
+                E *= np.ones_like(beamInDotNormal)
+            try:
+                iterator = iter(beamInDotNormal)
+            except TypeError:  # not iterable
+                beamInDotNormal *= np.ones_like(E)
             ri_s, ri_p = ucl.run_parallel(
                 'get_amplitude_graded_multilayer', scalarArgs, slicedROArgs,
                 nonSlicedROArgs, slicedRWArgs, None, len(E))

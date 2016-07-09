@@ -292,6 +292,34 @@ of the 3rd harmonic with the triple energy of the 1st harmonic.
 .. |QEPU_3rdh| image:: _images/2QEPU_HP_mode-6-3rdHarmonic1totalFlux.png
    :scale: 50 %
 
+For validation, our calculations are compared here with those by Spectra for a
+particular case — quasi-periodic undulator defined by the same tabulated field,
+the 3rd harmonic, at E=20.5 eV. Notice again that Spectra provides either a
+spectrum *or* a transverse image while xrt can combine both by using colors and
+brightness. Notice also that on the following pictures the p-polarized flux is
+only ~3% of the total flux.
+
++------------+------------+
+|  SPECTRA   |    xrt     |
++============+============+
+|  |CFspeT|  |  |CFxrtT|  |
++------------+------------+
+|  |CFspeP|  |  |CFxrtP|  |
++------------+------------+
+
+.. |CFspeT| image:: _images/spectra-custom.png
+   :scale: 50 %
+   :align: bottom
+.. |CFspeP| image:: _images/spectra-custom_p.png
+   :scale: 50 %
+   :align: bottom
+.. |CFxrtT| image:: _images/2QEPU_mono3rdHarmonic.png
+   :scale: 50 %
+   :align: bottom
+.. |CFxrtP| image:: _images/2QEPU_mono3rdHarmonic_p.png
+   :scale: 50 %
+   :align: bottom
+
 """
 """
 .. _THz:
