@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-1.2.0 (07 Jul 2016):
+1.2.0 (09 Jul 2016):
     - We've created a repository on `GitHub <https://github.com/kklmn/xrt>`_.
 
     - Added custom field undulator, see :ref:`an example <undulator_custom>`.
