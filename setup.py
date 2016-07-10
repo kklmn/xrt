@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from distutils.core import setup
 
 #import importLongDescription
@@ -11,6 +12,7 @@ scripts.
 
 Features of xrt
 ---------------
+
 * *Rays and waves*. Classical ray tracing and wave propagation via Kirchhoff
   integrals, also freely intermixed. No further approximations, such as thin
   lens or paraxial. The optical surfaces may have figure errors, analytical or
@@ -43,15 +45,16 @@ Features of xrt
 * *Synchrotron sources*. Bending magnet, wiggler, undulator and elliptic
   undulator are calculated internally within xrt. There is also a legacy
   approach to sampling synchrotron sources using the codes `ws` and `urgent`
-  which are parts of XOP package. Please look the section `Comparison of
-  synchrotron source codes` for the comparison between the implementations. If
+  which are parts of XOP package. Please look the section "Comparison of
+  synchrotron source codes" for the comparison between the implementations. If
   the photon source is one of the synchrotron sources, the total flux in the
   beam is reported not just in number of rays but in physical units of ph/s.
   The total power or absorbed power can be opted instead of flux and is
   reported in W. The power density can be visualized by isolines. The magnetic
   gap of undulators can be tapered. Undulators can be calculated in near field.
-  Undulators can be calculated on GPU, with a high gain in computation speed,
-  which is important for tapering and near field calculations.
+  Custom magnetic field is also possible. Undulators can be calculated on GPU,
+  with a high gain in computation speed, which is important for tapering and
+  near field calculations.
 
 * *Shapes*. There are several predefined shapes of optical elements implemented
   as python classes. The inheritance mechanism simplifies creation of other
@@ -91,6 +94,10 @@ Features of xrt
   parts of the incoming beam meet different surfaces. Examples of such optics
   are poly-capillaries and Wolter mirrors.
 
+* *Singular optics*. xrt correctly propagates vortex beams, which can be used
+  for studying the creation of vortex beams by transmissive or reflective
+  optics.
+
 * *Global coordinate system*. The optical elements are positioned in a global
   coordinate system. This is convenient for modeling a real synchrotron
   beamline. The coordinates in this system can be directly taken from a CAD
@@ -105,7 +112,8 @@ Features of xrt
 * *Portability*. xrt runs on Windows and Unix-like platforms, wherever you can
   run python.
 
-* *Examples*. xrt comes with many examples, see the galleries.
+* *Examples*. xrt comes with many examples; see the galleries, the links are at
+  the top bar.
 
 xrtQook -- a GUI for creating scripts
 -------------------------------------
@@ -125,10 +133,10 @@ recipes of beamlines into/from xml files.
 
 Dependencies
 ------------
-numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
-GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
-(these are search key words), pytools and pyopencl. Spiderlib is highly
-recommended for nicer view of xrtQook.
+numpy, scipy matplotlib are required. If you use OpenCL for calculations on GPU
+or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime`` (these
+are search key words), pytools and pyopencl. Spiderlib is highly recommended
+for nicer view of xrtQook.
 
 Python 2 and 3
 --------------
@@ -136,10 +144,11 @@ The code can run in both Python branches without any modification.
 """
 
 setup(name='xrt',
-      version='1.1.0',
+      version='1.2.0',
       description='Ray tracing and wave propagation in x-ray regime, '
                   'primarily meant for modeling '
-                  'synchrotron beamlines and beamline elements',
+                  'synchrotron sources, beamlines and beamline elements. '
+                  'Includes a GUI tool for creating scripts.',
       long_description=long_description,
       author=('Konstantin Klementiev', 'Roman Chernikov'),
       author_email='first DOT last AT gmail DOT com',
@@ -147,10 +156,13 @@ setup(name='xrt',
       platforms='OS Independent',
       license='MIT License',
       packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.xrtQook'],
-      package_data={'xrt.backends.raycing': ['data/*.*', '*.cl'],
-                    'xrt': ['*.cl, *.ico'],
-                    'xrt.xrtQook': ['_icons/*.*', '_images/*.*', 'xmls/*.*']},
-      scripts=[r'xrt\xrtQook\xrtQook.pyw'],
+      package_data={
+          'xrt.backends.raycing': [os.path.join('data', '*.*'), '*.cl'],
+          'xrt': ['*.cl, *.ico'],
+          'xrt.xrtQook': [os.path.join('_icons', '*.*'),
+                          os.path.join('_images', '*.*'),
+                          os.path.join('xmls', '*.*')]},
+      scripts=[os.path.join('xrt', 'xrtQook', 'xrtQook.pyw')],
       classifiers=['Development Status :: 5 - Production/Stable',
                    'Intended Audience :: Science/Research',
                    'Natural Language :: English',
