@@ -2681,12 +2681,15 @@ if __name__ == '__main__':
  generation tool for the <a href='http://pythonhosted.org/xrt'>xrt ray tracing\
  package</a>.\nFor a quick start see this short \
  <a href='http://pythonhosted.org/xrt/qook.html'>tutorial</a>.")
+        locos = platform.platform(terse=True)
+        if 'Linux' in locos:
+            locos = " ".join(platform.linux_distribution())
         infText = """Created by:\
 \nRoman Chernikov (DESY Photon Science)\
 \nKonstantin Klementiev (MAX IV Laboratory)\
 \nLicensed under the terms of the MIT License\nMarch 2016\
 \n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(
-                platform.platform(terse=True), platform.python_version(),
+                locos, platform.python_version(),
                 Qt_version, QtName, PyQt_version)
         infText += '\npyopencl {}'.format(
             cl.VERSION if isOpenCL else 'not found')
