@@ -243,7 +243,7 @@ def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
 #    BalderBL.run_process(myBalder)
 #    myBalder.slitEH.touch_beam(myBalder.beams['beamVFMglobal'])
     plots = define_plots(myBalder, prefix, suffix)
-    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes='h')
+    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes='half')
 
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python

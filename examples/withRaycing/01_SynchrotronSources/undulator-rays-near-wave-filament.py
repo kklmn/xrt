@@ -33,8 +33,8 @@ bins = 256  # Number of bins in the plot histogram
 ppb = 1  # Number of pixels per histogram bin
 eUnit = 'eV'
 
-#prefix = 'xrt-far' + case
-prefix = 'xrt-near' + case
+prefix = 'xrt-far' + case
+#prefix = 'xrt-near' + case
 filamentBeam = False
 
 kwargs = dict(
@@ -85,19 +85,18 @@ rr.run_process = run_process
 
 def define_plots(beamLine):
     plots = []
-    plotsE = []
 
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimits, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimits, bins=bins, ppb=ppb)
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
+    caxis = xrtp.XYCAxis('Es phase', '',
+                         data=raycing.get_Es_phase, limits=[-np.pi, np.pi],
                          bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
         'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-        aspect='auto', title='total flux')
-    plot.caxis.fwhmFormatStr = None
-    plot.saveName = prefix + '1TotalFlux' + suffix + '.png'
+        fluxKind='s', aspect='auto', title='horizontal polarization flux')
+    plot.saveName = prefix + '1horFlux' + suffix + '.png'
     plots.append(plot)
-    plotsE.append(plot)
+
     ax = plot.xaxis
     edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
     beamLine.fsmExpX = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
@@ -107,29 +106,29 @@ def define_plots(beamLine):
 
     xaxis = xrtp.XYCAxis(r'$x$', 'mm', limits=xlimits, bins=bins, ppb=ppb)
     yaxis = xrtp.XYCAxis(r'$z$', 'mm', limits=zlimits, bins=bins, ppb=ppb)
-    caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
+    caxis = xrtp.XYCAxis('Ep phase', '',
+                         data=raycing.get_Ep_phase, limits=[-np.pi, np.pi],
                          bins=bins, ppb=ppb)
     plot = xrtp.XYCPlot(
         'beamFSM1', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
         fluxKind='p', aspect='auto', title='vertical polarization flux')
-    plot.caxis.fwhmFormatStr = None
-    plot.saveName = prefix + '3vertFlux' + suffix + '.png'
+    plot.saveName = prefix + '3verFlux' + suffix + '.png'
     plots.append(plot)
-    plotsE.append(plot)
 
-    for plot in plotsE:
-        f = plot.caxis.factor
-        plot.caxis.limits = (E0-0.1)*f, (E0+0.1)*f
     for plot in plots:
         plot.xaxis.fwhmFormatStr = '%.3f'
         plot.yaxis.fwhmFormatStr = '%.3f'
+        plot.caxis.fwhmFormatStr = None
         plot.fluxFormatStr = '%.2p'
-    return plots, plotsE
+        plot.ax1dHistE.set_yticks([l*np.pi for l in (-1, -0.5, 0, 0.5, 1)])
+        plot.ax1dHistE.set_yticklabels(
+            (r'$-\pi$', r'-$\frac{\pi}{2}$', 0, r'$\frac{\pi}{2}$', r'$\pi$'))
+    return plots
 
 
 def main():
     beamLine = build_beamline()
-    plots, plotsE = define_plots(beamLine)
+    plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine)
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python

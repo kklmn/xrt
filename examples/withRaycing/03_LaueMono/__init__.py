@@ -15,33 +15,15 @@ the flux is lowering in going to smaller radii.
 +----------------+----------------+----------------+----------------+
 |  *E* = 9 keV   |  *E* = 16 keV  |  *E* = 25 keV  |  *E* = 36 keV  |
 +================+================+================+================+
-|  |E09| |E09Z|  |  |E16| |E16Z|  |  |E25| |E25Z|  |  |E36| |E36Z|  |
+|      |E09|     |      |E16|     |      |E25|     |      |E36|     |
 +----------------+----------------+----------------+----------------+
 
-.. |E09| image:: _images/BentLaueSCM09keV.swf
-   :width: 300
-   :height: 205
-.. |E09Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueSCM09keV.swf
-.. |E16| image:: _images/BentLaueSCM16keV.swf
-   :width: 300
-   :height: 205
-.. |E16Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueSCM16keV.swf
-.. |E25| image:: _images/BentLaueSCM25keV.swf
-   :width: 300
-   :height: 205
-.. |E25Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueSCM25keV.swf
-.. |E36| image:: _images/BentLaueSCM36keV.swf
-   :width: 300
-   :height: 205
-.. |E36Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueSCM36keV.swf
+.. |E09| animation:: _images/BentLaueSCM09keV
+.. |E16| animation:: _images/BentLaueSCM16keV
+.. |E25| animation:: _images/BentLaueSCM25keV
+   :loc: upper-right-corner
+.. |E36| animation:: _images/BentLaueSCM36keV
+   :loc: upper-right-corner
 
 Double bent-crystal Laue monochromator (beam cleaner)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,48 +36,25 @@ Si111 double Laue crystal monochromator (similar to the *beam cleaner*
    for selecting and rejecting X-ray harmonics in synchrotron radiation beams*,
    J. Synchrotron Rad. **11** (2004) 393-8.
 
-Beam images at various detuning angles of the second crystal, *R* = 5 m, *E* ~
+Beam images at various detuning angles of the second crystal, *R* = 25 m, *E* ~
 9 keV. Watch how the energy band becomes split and the flux goes down in going
 away from the parallel positioning (*dθ* = 0).
 
-.. image:: _images/BentLaueDCM09keV.swf
-   :width: 300
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueDCM09keV.swf
+.. animation:: _images/BentLaueDCM09keV
 
 Flux vs. detuning angle of the second crystal (rocking curves)
 
-+------------------+------------------+------------------+------------------+
-|   *E* = 9 keV    |   *E* = 16 keV   |  *E* = 25 keV    |   *E* = 36 keV   |
-+==================+==================+==================+==================+
-|  |rc09| |rc09Z|  |  |rc16| |rc16Z|  |  |rc25| |rc25Z|  |  |rc36| |rc36Z|  |
-+------------------+------------------+------------------+------------------+
++----------------+----------------+----------------+----------------+
+|  *E* = 9 keV   |  *E* = 16 keV  |  *E* = 25 keV  |  *E* = 36 keV  |
++================+================+================+================+
+|     |rc09|     |     |rc16|     |     |rc25|     |     |rc36|     |
++----------------+----------------+----------------+----------------+
 
-.. |rc09| image:: _images/BentLaueDCM_rc09keV.swf
-   :width: 300
-   :height: 205
-.. |rc09Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueDCM_rc09keV.swf
-.. |rc16| image:: _images/BentLaueDCM_rc16keV.swf
-   :width: 300
-   :height: 205
-.. |rc16Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueDCM_rc16keV.swf
-.. |rc25| image:: _images/BentLaueDCM_rc25keV.swf
-   :width: 300
-   :height: 205
-.. |rc25Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueDCM_rc25keV.swf
-.. |rc36| image:: _images/BentLaueDCM_rc36keV.swf
-   :width: 300
-   :height: 205
-.. |rc36Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/BentLaueDCM_rc36keV.swf
+.. |rc09| animation:: _images/BentLaueDCM_rc09keV
+.. |rc16| animation:: _images/BentLaueDCM_rc16keV
+.. |rc25| animation:: _images/BentLaueDCM_rc25keV
+   :loc: upper-right-corner
+.. |rc36| animation:: _images/BentLaueDCM_rc36keV
+   :loc: upper-right-corner
 """
 pass

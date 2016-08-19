@@ -17,54 +17,44 @@ because the horizontal emittance is much larger than the vertical one.
 .. [Zozulya_Sprung] A. Zozulya and M. Sprung, measured at P10 beamline,
     DESY Photon Science (2014) unpublished.
 
-+-----------+----------------+----------------+----------------+--------------+
-| slit size | ray tracing,   | diffraction,   | diffraction,   | experimental |
-| (µm²)     | zero emittance | zero emittance | real emittance |              |
-+===========+================+================+================+==============+
-| 100×100   | |slit_r0_100|  | |slit_w0_100|  | |slit_wr_100|  | |slit_e_100| |
-+-----------+----------------+----------------+----------------+--------------+
-| 150×150   | |slit_r0_150|  | |slit_w0_150|  | |slit_wr_150|  | |slit_e_150| |
-+-----------+----------------+----------------+----------------+--------------+
-| 200×200   | |slit_r0_200|  | |slit_w0_200|  | |slit_wr_200|  | |slit_e_200| |
-+-----------+----------------+----------------+----------------+--------------+
-| 300×300   | |slit_r0_300|  | |slit_w0_300|  | |slit_wr_300|  | |slit_e_300| |
-+-----------+----------------+----------------+----------------+--------------+
++---------+----------------+----------------+----------------+--------------+
+| slit    | ray tracing,   | diffraction,   | diffraction,   | experimental |
+| size    | zero emittance | zero emittance | real emittance |              |
+| (µm²)   |                |                |                |              |
++=========+================+================+================+==============+
+| 100×100 | |slit_r0_100|  | |slit_w0_100|  | |slit_wr_100|  | |slit_e_100| |
++---------+----------------+----------------+----------------+--------------+
+| 150×150 | |slit_r0_150|  | |slit_w0_150|  | |slit_wr_150|  | |slit_e_150| |
++---------+----------------+----------------+----------------+--------------+
+| 200×200 | |slit_r0_200|  | |slit_w0_200|  | |slit_wr_200|  | |slit_e_200| |
++---------+----------------+----------------+----------------+--------------+
+| 300×300 | |slit_r0_300|  | |slit_w0_300|  | |slit_wr_300|  | |slit_e_300| |
++---------+----------------+----------------+----------------+--------------+
 
-.. |slit_r0_100| image:: _images/slit_r0_100.*
-   :scale: 50 %
-.. |slit_r0_150| image:: _images/slit_r0_150.*
-   :scale: 50 %
-.. |slit_r0_200| image:: _images/slit_r0_200.*
-   :scale: 50 %
-.. |slit_r0_300| image:: _images/slit_r0_300.*
-   :scale: 50 %
+.. |slit_r0_100| imagezoom:: _images/slit_r0_100.*
+.. |slit_r0_150| imagezoom:: _images/slit_r0_150.*
+.. |slit_r0_200| imagezoom:: _images/slit_r0_200.*
+.. |slit_r0_300| imagezoom:: _images/slit_r0_300.*
 
-.. |slit_w0_100| image:: _images/slit_w0_100.*
-   :scale: 50 %
-.. |slit_w0_150| image:: _images/slit_w0_150.*
-   :scale: 50 %
-.. |slit_w0_200| image:: _images/slit_w0_200.*
-   :scale: 50 %
-.. |slit_w0_300| image:: _images/slit_w0_300.*
-   :scale: 50 %
+.. |slit_w0_100| imagezoom:: _images/slit_w0_100.*
+.. |slit_w0_150| imagezoom:: _images/slit_w0_150.*
+.. |slit_w0_200| imagezoom:: _images/slit_w0_200.*
+.. |slit_w0_300| imagezoom:: _images/slit_w0_300.*
 
-.. |slit_wr_100| image:: _images/slit_wr_100.*
-   :scale: 50 %
-.. |slit_wr_150| image:: _images/slit_wr_150.*
-   :scale: 50 %
-.. |slit_wr_200| image:: _images/slit_wr_200.*
-   :scale: 50 %
-.. |slit_wr_300| image:: _images/slit_wr_300.*
-   :scale: 50 %
+.. |slit_wr_100| imagezoom:: _images/slit_wr_100.*
+.. |slit_wr_150| imagezoom:: _images/slit_wr_150.*
+.. |slit_wr_200| imagezoom:: _images/slit_wr_200.*
+.. |slit_wr_300| imagezoom:: _images/slit_wr_300.*
 
-.. |slit_e_100| image:: _images/slit_e_100.*
-   :scale: 50 %
-.. |slit_e_150| image:: _images/slit_e_150.*
-   :scale: 50 %
-.. |slit_e_200| image:: _images/slit_e_200.*
-   :scale: 50 %
-.. |slit_e_300| image:: _images/slit_e_300.*
-   :scale: 50 %
+.. |slit_e_100| imagezoom:: _images/slit_e_100.*
+   :loc: upper-right-corner
+.. |slit_e_150| imagezoom:: _images/slit_e_150.*
+   :loc: upper-right-corner
+.. |slit_e_200| imagezoom:: _images/slit_e_200.*
+   :loc: upper-right-corner
+.. |slit_e_300| imagezoom:: _images/slit_e_300.*
+   :loc: upper-right-corner
+
 """
 __author__ = "Roman Chernikov", "Konstantin Klementiev"
 __date__ = "08 Mar 2016"

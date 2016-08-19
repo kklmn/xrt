@@ -9,7 +9,7 @@ Using xrtQook for script generation
   to, only for demonstration).
 - Right-click on myTestBeamline and Add Source → BendingMagnet.
 
-  .. image:: _images/qookTutor1.png
+  .. imagezoom:: _images/qookTutor1.png
      :scale: 60 %
 
 - In its properties change eMin to 10000-1 and eMax to 10000+1. The middle of
@@ -18,14 +18,14 @@ Using xrtQook for script generation
   included into the generated script. All the default-valued parameters do not
   propagate into the script.
 
-  .. image:: _images/qookTutor2.png
+  .. imagezoom:: _images/qookTutor2.png
      :scale: 60 %
 
 - In Materials tab create a crystalline material:
   right click → Add Material → CrystalSi. This will create a Si111 crystal at
   room temperature.
 
-  .. image:: _images/qookTutor3.png
+  .. imagezoom:: _images/qookTutor3.png
      :scale: 60 %
 
 - In Beamline tab right click → Add OE → OE. This will add an optical element
@@ -35,7 +35,7 @@ Using xrtQook for script generation
      The sequence of the inserted optical elements does matter! This sequence
      determines the order of beam propagation.
 
-  .. image:: _images/qookTutor4.png
+  .. imagezoom:: _images/qookTutor4.png
      :scale: 60 %
 
 - In its properties select the created crystal as 'material', put [0, 20000, 0]
@@ -45,7 +45,7 @@ Using xrtQook for script generation
   height -- the last coordinate -- will be automatically calculated from the
   previous elements.
 
-  .. image:: _images/qookTutor5.png
+  .. imagezoom:: _images/qookTutor5.png
      :scale: 60 %
 
 - Add methods to the beamline elements (with right click):
@@ -60,7 +60,7 @@ Using xrtQook for script generation
   Red colored words indicate None as a selected beam. If you continue with the
   script generation, the script will result in a run time error.
 
-  .. image:: _images/qookTutor6.png
+  .. imagezoom:: _images/qookTutor6.png
      :scale: 60 %
 
 - Add a plot in Plots tab and select the local screen beam.
@@ -70,8 +70,9 @@ Using xrtQook for script generation
 - In the console output you can read the actual pitch (Bragg angle) for the
   crystal and the screen position.
 
-  .. image:: _images/qookTutor7.png
+  .. imagezoom:: _images/qookTutor7.png
      :scale: 60 %
+     :loc: lower-left-corner
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
@@ -832,6 +833,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     note=noteStr,
                     math=True)
 
+            argDocStr = argDocStr.replace('imagezoom::', 'image::')
             html_text = sphinxify(textwrap.dedent(argDocStr), cntx)
             if err is None:
                 html2 = re.findall(' {4}return.*', html_text)[0]
@@ -899,6 +901,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     argspec="",
                     note="",
                     math=True)
+            argDocStr = argDocStr.replace('imagezoom::', 'image::')
             html_text = sphinxify(textwrap.dedent(argDocStr), cntx)
             if err is None:
                 html2 = re.findall(' {4}return.*', html_text)[0]
@@ -982,6 +985,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 argspec="",
                 note="",
                 math=True)
+            argDocStr = argDocStr.replace('imagezoom::', 'image::')
             html_text = sphinxify(textwrap.dedent(argDocStr), cntx)
             self.webHelp.setHtml(html_text, QtCore.QUrl(CSS_PATH))
         else:

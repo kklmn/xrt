@@ -138,8 +138,7 @@ def plot_generator(plots, beamLine):
 #                        plot.persistentName = fileName + '.pickle'
                         try:
                             plot.textPanel.set_text(
-                                u'{0}\n$R=${1}\n'.format(
-                                    suffix, radiusStr2))
+                                u'{0}\n$R=${1}\n'.format('', radiusStr2))
                         except:
                             pass
                     yield
@@ -149,8 +148,8 @@ def main():
     beamLine = build_beamline()
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
-        plots, repeats=24, generator=plot_generator,
-        beamLine=beamLine, processes='all')
+        plots, repeats=360, generator=plot_generator,
+        beamLine=beamLine, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

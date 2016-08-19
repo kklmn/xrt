@@ -466,19 +466,24 @@ def run_ray_tracing(
             shown here) and the normalization shown below was done relative to
             that image:
 
-            +------------------------------+----------------+
-            | normalized to local maximum  | |image_nonorm| |
-            +------------------------------+----------------+
-            | global normalization, type 1 | |image_norm1|  |
-            +------------------------------+----------------+
-            | global normalization, type 2 | |image_norm2|  |
-            +------------------------------+----------------+
+            +------------------+-----------------------------------------+
+            | normalized       |                                         |
+            | to local maximum |              |image_nonorm|             |
+            +------------------+-----------------------------------------+
+            | global           |                                         |
+            | normalization,   |                                         |
+            | type 1           |              |image_norm1|              |
+            +------------------+-----------------------------------------+
+            | global           |                                         |
+            | normalization,   |                                         |
+            | type 2           |              |image_norm2|              |
+            +------------------+-----------------------------------------+
 
-            .. |image_nonorm| image:: _images/filterFootprint2_I400mum.png
+            .. |image_nonorm| imagezoom:: _images/filterFootprint2_I400mum.png
                :scale: 50 %
-            .. |image_norm1| image:: _images/filterFootprint2_I400mum_norm1.png
+            .. |image_norm1| imagezoom:: _images/filterFootprint2_I400mum_norm1.png
                :scale: 50 %
-            .. |image_norm2| image:: _images/filterFootprint2_I400mum_norm2.png
+            .. |image_norm2| imagezoom:: _images/filterFootprint2_I400mum_norm2.png
                :scale: 50 %
 
         *afterScript*: function object

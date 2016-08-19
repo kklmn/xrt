@@ -32,12 +32,15 @@ ray tracing approach. In that approach the rays were deflected according to the
 grating equation. Here, in wave propagation, the grating equation was only used
 to position the screen.
 
-.. image:: _images/1-LEG_E-orders-tr1.*
-   :scale: 50 %
-.. image:: _images/1-LEG_E-orders-x.*
-   :scale: 50 %
-.. image:: _images/1-LEG_E-orders-z.*
-   :scale: 50 %
+.. imagezoom:: _images/1-LEG_E-orders-tr1.*
+
+\
+
+.. imagezoom:: _images/1-LEG_E-orders-x.*
+
+\
+
+.. imagezoom:: _images/1-LEG_E-orders-z.*
 
 Notice that in contrast to the conventional grating theories (also used in
 ``REFLEC``), the diffraction orders here have the sagittal dimension. And that
@@ -57,14 +60,12 @@ rapid low-energy decrease. It seems that the detector had a pinhole that might
 cut the beam at low energies as the diffracted beam becomes wider there (see
 the transverse pictures above), which may explain lower measured efficiency.
 
-.. image:: _images/1-LEG_E-eff.*
-   :scale: 50 %
+.. imagezoom:: _images/1-LEG_E-eff.*
 
 For the IMP grating ("impurity", see its properties in the figure below), the
 difference is bigger.
 
-.. image:: _images/2-IMP_E-eff.*
-   :scale: 50 %
+.. imagezoom:: _images/2-IMP_E-eff.*
 
 We believe that ``REFLEC`` is essentially wrong at high energies. If we
 mentally translate the working terraces of a blazed grating to form a
@@ -79,10 +80,8 @@ portion of the front side behind it stay in the shadow. We compare the two
 gratings shown below, one is with 90 degree anti-blaze angle and the other is
 with *pitch* as anti-blaze angle.
 
-.. image:: _images/1-LEG_profile-adhoc.*
-   :scale: 50 %
-.. image:: _images/1-LEG_profile-anti.*
-   :scale: 50 %
+.. imagezoom:: _images/1-LEG_profile-adhoc.*
+.. imagezoom:: _images/1-LEG_profile-anti.*
 
 ``REFLEC`` gives different efficiencies for these two cases (see above) whereas
 xrt cannot distinguish them. We tried to artificially remove the shadows by

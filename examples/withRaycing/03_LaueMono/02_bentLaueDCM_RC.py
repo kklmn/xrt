@@ -82,7 +82,7 @@ def define_plots(beamLine):
         ePos=1, title=beamLine.fsm1.name+'_E')
     plot1.caxis.invertAxis = True
     plot1.textPanel = plot1.fig.text(
-        0.88, 0.8, '', transform=plot1.fig.transFigure, size=14, color='r',
+        0.86, 0.8, '', transform=plot1.fig.transFigure, size=14, color='r',
         ha='center')
     plots.append(plot1)
 
@@ -109,10 +109,10 @@ def define_plots(beamLine):
         ePos=1, title=beamLine.fsm2.name+'_E')
     plot2.caxis.invertAxis = True
     plot2.textPanel = plot2.fig.text(
-        0.88, 0.8, '', transform=plot2.fig.transFigure, size=14, color='r',
+        0.86, 0.8, '', transform=plot2.fig.transFigure, size=14, color='r',
         ha='center')
     plots.append(plot2)
-
+    
     return plots
 
 
@@ -122,7 +122,8 @@ def plot_generator(plots, beamLine):
         suffix = polar
         if suffix is None:
             suffix = 'none'
-        for iradius in 2, 3, 4:  # range(5):
+        for iradius in [0, 1]:
+#        for iradius in [2, 3, 4]:  # range(5):
             radius = radii[iradius]
             beamLine.laueDCM1.R = radius
             beamLine.laueDCM2.R = radius
@@ -174,7 +175,7 @@ def plot_generator(plots, beamLine):
                                 plot.textPanel.set_text(
                                     (u'{0}\n$R=${1}\n' +
                                      r'$d\theta=${2} mrad').format(
-                                        suffix, radiusStr2,
+                                        '', radiusStr2,
                                         repr(round(dtheta, 3))))
                             except:
                                 pass
@@ -201,8 +202,8 @@ def main():
     beamLine = build_beamline()
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
-        plots, repeats=24, generator=plot_generator,
-        beamLine=beamLine, processes='all')
+        plots, repeats=36, generator=plot_generator,
+        beamLine=beamLine, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

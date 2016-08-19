@@ -134,8 +134,8 @@ def plot_generator(plots, beamLine):
 def main():
     beamLine = build_beamline()
     plots = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=60, generator=plot_generator,
-                         beamLine=beamLine, processes='all')
+    xrtr.run_ray_tracing(plots, repeats=360, generator=plot_generator,
+                         beamLine=beamLine, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

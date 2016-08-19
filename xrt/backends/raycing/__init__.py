@@ -61,9 +61,7 @@ The following coordinate systems are considered (always right-handed):
       and Y is along the beam line. The origin is given by the user. Usually it
       is on the original beam line.
 
-.. image:: _images/axes.*
-   :scale: 50 %
-
+.. imagezoom:: _images/axes.png
 
 Units
 -----

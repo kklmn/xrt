@@ -418,7 +418,7 @@ def main():
     args = [plots, plotsMono, plotsFocus, beamLine]
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine,
                          generator=plot_generator, generatorArgs=args,
-                         processes='all')
+                         processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

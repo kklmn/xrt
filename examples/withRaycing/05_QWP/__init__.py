@@ -33,30 +33,16 @@ polarization ellipse becomes close to 1 or -1 and with narrow distribution.
 
 *E* ~ 9 keV, crystal thickness = 200 µm.
 
-.. image:: _images/QWP-BT-E.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-BT-E.swf
-.. image:: _images/QWP-BT-CircPolRate.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-BT-CircPolRate.swf
-.. image:: _images/QWP-BT-PhaseShift.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-BT-PhaseShift.swf
-.. image:: _images/QWP-BT-PolAxesRatio.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-BT-PolAxesRatio.swf
++------------+------------+------------+------------+
+|  |QWPBTE|  |  |QWPBTC|  |  |QWPBTP|  |  |QWPBTA|  |
++------------+------------+------------+------------+
+
+.. |QWPBTE| animation:: _images/QWP-1BT-E
+.. |QWPBTC| animation:: _images/QWP-1BT-CircPolRate
+.. |QWPBTP| animation:: _images/QWP-1BT-PhaseShift
+   :loc: upper-right-corner
+.. |QWPBTA| animation:: _images/QWP-1BT-PolAxesRatio
+   :loc: top: -208px; left: -450px;
 
 Collimated beam, Laue transmission case
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -67,30 +53,16 @@ case.
 
 *E* ~ 9 keV, crystal thickness = 500 µm.
 
-.. image:: _images/QWP-LT-E.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-LT-E.swf
-.. image:: _images/QWP-LT-CircPolRate.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-LT-CircPolRate.swf
-.. image:: _images/QWP-LT-PhaseShift.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-LT-PhaseShift.swf
-.. image:: _images/QWP-LT-PolAxesRatio.swf
-   :width: 315
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-LT-PolAxesRatio.swf
++------------+------------+------------+------------+
+|  |QWPLTE|  |  |QWPLTC|  |  |QWPLTP|  |  |QWPLTA|  |
++------------+------------+------------+------------+
+
+.. |QWPLTE| animation:: _images/QWP-2LT-E
+.. |QWPLTC| animation:: _images/QWP-2LT-CircPolRate
+.. |QWPLTP| animation:: _images/QWP-2LT-PhaseShift
+   :loc: upper-right-corner
+.. |QWPLTA| animation:: _images/QWP-2LT-PolAxesRatio
+   :loc: top: -208px; left: -450px;
 
 Convergent beam, Laue transmission case
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,12 +74,7 @@ horizontal and the diffraction plane of the QWP is turned by 45º from vertical.
 
 *E* ~ 9 keV, crystal thickness = 500 µm.
 
-.. image:: _images/QWP-LT-conv-CircPolRate.swf
-   :width: 323
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-LT-conv-CircPolRate.swf
+.. animation:: _images/QWP-3LT-conv-CircPolRate
 
 Convergent beam, bent-Laue transmission case
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,11 +90,6 @@ polarization plane (horizontal). Watch the circular polarization rate at
 
 *E* ~ 9 keV, crystal thickness = 500 µm.
 
-.. image:: _images/QWP-LT-conv-bent-CircPolRate.swf
-   :width: 323
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/QWP-LT-conv-bent-CircPolRate.swf
+.. animation:: _images/QWP-4LT-conv-bent-CircPolRate
 """
 pass

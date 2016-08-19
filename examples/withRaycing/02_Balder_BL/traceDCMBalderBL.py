@@ -73,7 +73,7 @@ def main():
     myBalder = build_beamline(stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     plots = define_plots()
     xrtr.run_ray_tracing(plots, repeats=16, generator=plot_generator,
-                         beamLine=myBalder, globalNorm=True, processes='')
+                         beamLine=myBalder, globalNorm=True, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

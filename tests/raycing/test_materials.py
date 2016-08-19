@@ -31,43 +31,31 @@ XOP programs and therefore is given without comparison.
 |       |   |bSi333_007_-5|  |  |bSi333_007_0|  |  |bSi333_007_5|   |
 +-------+--------------------+------------------+-------------------+
 
-.. |bSi111_thick_-5| image:: _images/bSi111_thick_-5.*
-   :scale: 35 %
-.. |bSi111_thick_0| image:: _images/bSi111_thick_0.*
-   :scale: 35 %
-.. |bSi111_thick_5| image:: _images/bSi111_thick_5.*
-   :scale: 35 %
-.. |bSi111_100_-5| image:: _images/bSi111_100mum_-5.*
-   :scale: 35 %
-.. |bSi111_100_0| image:: _images/bSi111_100mum_0.*
-   :scale: 35 %
-.. |bSi111_100_5| image:: _images/bSi111_100mum_5.*
-   :scale: 35 %
-.. |bSi111_007_-5| image:: _images/bSi111_007mum_-5.*
-   :scale: 35 %
-.. |bSi111_007_0| image:: _images/bSi111_007mum_0.*
-   :scale: 35 %
-.. |bSi111_007_5| image:: _images/bSi111_007mum_5.*
-   :scale: 35 %
+.. |bSi111_thick_-5| imagezoom:: _images/bSi111_thick_-5.*
+.. |bSi111_thick_0| imagezoom:: _images/bSi111_thick_0.*
+.. |bSi111_thick_5| imagezoom:: _images/bSi111_thick_5.*
+   :loc: upper-right-corner
+.. |bSi111_100_-5| imagezoom:: _images/bSi111_100mum_-5.*
+.. |bSi111_100_0| imagezoom:: _images/bSi111_100mum_0.*
+.. |bSi111_100_5| imagezoom:: _images/bSi111_100mum_5.*
+   :loc: upper-right-corner
+.. |bSi111_007_-5| imagezoom:: _images/bSi111_007mum_-5.*
+.. |bSi111_007_0| imagezoom:: _images/bSi111_007mum_0.*
+.. |bSi111_007_5| imagezoom:: _images/bSi111_007mum_5.*
+   :loc: upper-right-corner
 
-.. |bSi333_thick_-5| image:: _images/bSi333_thick_-5.*
-   :scale: 35 %
-.. |bSi333_thick_0| image:: _images/bSi333_thick_0.*
-   :scale: 35 %
-.. |bSi333_thick_5| image:: _images/bSi333_thick_5.*
-   :scale: 35 %
-.. |bSi333_100_-5| image:: _images/bSi333_100mum_-5.*
-   :scale: 35 %
-.. |bSi333_100_0| image:: _images/bSi333_100mum_0.*
-   :scale: 35 %
-.. |bSi333_100_5| image:: _images/bSi333_100mum_5.*
-   :scale: 35 %
-.. |bSi333_007_-5| image:: _images/bSi333_007mum_-5.*
-   :scale: 35 %
-.. |bSi333_007_0| image:: _images/bSi333_007mum_0.*
-   :scale: 35 %
-.. |bSi333_007_5| image:: _images/bSi333_007mum_5.*
-   :scale: 35 %
+.. |bSi333_thick_-5| imagezoom:: _images/bSi333_thick_-5.*
+.. |bSi333_thick_0| imagezoom:: _images/bSi333_thick_0.*
+.. |bSi333_thick_5| imagezoom:: _images/bSi333_thick_5.*
+   :loc: upper-right-corner
+.. |bSi333_100_-5| imagezoom:: _images/bSi333_100mum_-5.*
+.. |bSi333_100_0| imagezoom:: _images/bSi333_100mum_0.*
+.. |bSi333_100_5| imagezoom:: _images/bSi333_100mum_5.*
+   :loc: upper-right-corner
+.. |bSi333_007_-5| imagezoom:: _images/bSi333_007mum_-5.*
+.. |bSi333_007_0| imagezoom:: _images/bSi333_007mum_0.*
+.. |bSi333_007_5| imagezoom:: _images/bSi333_007mum_5.*
+   :loc: upper-right-corner
 
 Reflectivity of Laue crystals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,31 +76,23 @@ XOP programs and therefore is given without comparison.
 |       |   |lSi333_007_-5|  |  |lSi333_007_0|  |  |lSi333_007_5|   |
 +-------+--------------------+------------------+-------------------+
 
-.. |lSi111_100_-5| image:: _images/lSi111_100mum_-5.*
-   :scale: 35 %
-.. |lSi111_100_0| image:: _images/lSi111_100mum_0.*
-   :scale: 35 %
-.. |lSi111_100_5| image:: _images/lSi111_100mum_5.*
-   :scale: 35 %
-.. |lSi111_007_-5| image:: _images/lSi111_007mum_-5.*
-   :scale: 35 %
-.. |lSi111_007_0| image:: _images/lSi111_007mum_0.*
-   :scale: 35 %
-.. |lSi111_007_5| image:: _images/lSi111_007mum_5.*
-   :scale: 35 %
+.. |lSi111_100_-5| imagezoom:: _images/lSi111_100mum_-5.*
+.. |lSi111_100_0| imagezoom:: _images/lSi111_100mum_0.*
+.. |lSi111_100_5| imagezoom:: _images/lSi111_100mum_5.*
+   :loc: upper-right-corner
+.. |lSi111_007_-5| imagezoom:: _images/lSi111_007mum_-5.*
+.. |lSi111_007_0| imagezoom:: _images/lSi111_007mum_0.*
+.. |lSi111_007_5| imagezoom:: _images/lSi111_007mum_5.*
+   :loc: upper-right-corner
 
-.. |lSi333_100_-5| image:: _images/lSi333_100mum_-5.*
-   :scale: 35 %
-.. |lSi333_100_0| image:: _images/lSi333_100mum_0.*
-   :scale: 35 %
-.. |lSi333_100_5| image:: _images/lSi333_100mum_5.*
-   :scale: 35 %
-.. |lSi333_007_-5| image:: _images/lSi333_007mum_-5.*
-   :scale: 35 %
-.. |lSi333_007_0| image:: _images/lSi333_007mum_0.*
-   :scale: 35 %
-.. |lSi333_007_5| image:: _images/lSi333_007mum_5.*
-   :scale: 35 %
+.. |lSi333_100_-5| imagezoom:: _images/lSi333_100mum_-5.*
+.. |lSi333_100_0| imagezoom:: _images/lSi333_100mum_0.*
+.. |lSi333_100_5| imagezoom:: _images/lSi333_100mum_5.*
+   :loc: upper-right-corner
+.. |lSi333_007_-5| imagezoom:: _images/lSi333_007mum_-5.*
+.. |lSi333_007_0| imagezoom:: _images/lSi333_007mum_0.*
+.. |lSi333_007_5| imagezoom:: _images/lSi333_007mum_5.*
+   :loc: upper-right-corner
 
 .. _transmittivity_Bragg:
 
@@ -133,31 +113,23 @@ give too low or too high (>1) transmittivity.
 |       |  |btSi333_007_-5|  |  |btSi333_007_0|  |  |btSi333_007_5|   |
 +-------+--------------------+-------------------+--------------------+
 
-.. |btSi111_100_-5| image:: _images/btSi111_100mum_-5.*
-   :scale: 35 %
-.. |btSi111_100_0| image:: _images/btSi111_100mum_0.*
-   :scale: 35 %
-.. |btSi111_100_5| image:: _images/btSi111_100mum_5.*
-   :scale: 35 %
-.. |btSi111_007_-5| image:: _images/btSi111_007mum_-5.*
-   :scale: 35 %
-.. |btSi111_007_0| image:: _images/btSi111_007mum_0.*
-   :scale: 35 %
-.. |btSi111_007_5| image:: _images/btSi111_007mum_5.*
-   :scale: 35 %
+.. |btSi111_100_-5| imagezoom:: _images/btSi111_100mum_-5.*
+.. |btSi111_100_0| imagezoom:: _images/btSi111_100mum_0.*
+.. |btSi111_100_5| imagezoom:: _images/btSi111_100mum_5.*
+   :loc: upper-right-corner
+.. |btSi111_007_-5| imagezoom:: _images/btSi111_007mum_-5.*
+.. |btSi111_007_0| imagezoom:: _images/btSi111_007mum_0.*
+.. |btSi111_007_5| imagezoom:: _images/btSi111_007mum_5.*
+   :loc: upper-right-corner
 
-.. |btSi333_100_-5| image:: _images/btSi333_100mum_-5.*
-   :scale: 35 %
-.. |btSi333_100_0| image:: _images/btSi333_100mum_0.*
-   :scale: 35 %
-.. |btSi333_100_5| image:: _images/btSi333_100mum_5.*
-   :scale: 35 %
-.. |btSi333_007_-5| image:: _images/btSi333_007mum_-5.*
-   :scale: 35 %
-.. |btSi333_007_0| image:: _images/btSi333_007mum_0.*
-   :scale: 35 %
-.. |btSi333_007_5| image:: _images/btSi333_007mum_5.*
-   :scale: 35 %
+.. |btSi333_100_-5| imagezoom:: _images/btSi333_100mum_-5.*
+.. |btSi333_100_0| imagezoom:: _images/btSi333_100mum_0.*
+.. |btSi333_100_5| imagezoom:: _images/btSi333_100mum_5.*
+   :loc: upper-right-corner
+.. |btSi333_007_-5| imagezoom:: _images/btSi333_007mum_-5.*
+.. |btSi333_007_0| imagezoom:: _images/btSi333_007mum_0.*
+.. |btSi333_007_5| imagezoom:: _images/btSi333_007mum_5.*
+   :loc: upper-right-corner
 
 Transmittivity of Laue crystals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -177,31 +149,23 @@ essentially different and wrong with Laue transmittivity.
 |       |  |ltSi333_007_-5|  |  |ltSi333_007_0|  |  |ltSi333_007_5|   |
 +-------+--------------------+-------------------+--------------------+
 
-.. |ltSi111_100_-5| image:: _images/ltSi111_100mum_-5.*
-   :scale: 35 %
-.. |ltSi111_100_0| image:: _images/ltSi111_100mum_0.*
-   :scale: 35 %
-.. |ltSi111_100_5| image:: _images/ltSi111_100mum_5.*
-   :scale: 35 %
-.. |ltSi111_007_-5| image:: _images/ltSi111_007mum_-5.*
-   :scale: 35 %
-.. |ltSi111_007_0| image:: _images/ltSi111_007mum_0.*
-   :scale: 35 %
-.. |ltSi111_007_5| image:: _images/ltSi111_007mum_5.*
-   :scale: 35 %
+.. |ltSi111_100_-5| imagezoom:: _images/ltSi111_100mum_-5.*
+.. |ltSi111_100_0| imagezoom:: _images/ltSi111_100mum_0.*
+.. |ltSi111_100_5| imagezoom:: _images/ltSi111_100mum_5.*
+   :loc: upper-right-corner
+.. |ltSi111_007_-5| imagezoom:: _images/ltSi111_007mum_-5.*
+.. |ltSi111_007_0| imagezoom:: _images/ltSi111_007mum_0.*
+.. |ltSi111_007_5| imagezoom:: _images/ltSi111_007mum_5.*
+   :loc: upper-right-corner
 
-.. |ltSi333_100_-5| image:: _images/ltSi333_100mum_-5.*
-   :scale: 35 %
-.. |ltSi333_100_0| image:: _images/ltSi333_100mum_0.*
-   :scale: 35 %
-.. |ltSi333_100_5| image:: _images/ltSi333_100mum_5.*
-   :scale: 35 %
-.. |ltSi333_007_-5| image:: _images/ltSi333_007mum_-5.*
-   :scale: 35 %
-.. |ltSi333_007_0| image:: _images/ltSi333_007mum_0.*
-   :scale: 35 %
-.. |ltSi333_007_5| image:: _images/ltSi333_007mum_5.*
-   :scale: 35 %
+.. |ltSi333_100_-5| imagezoom:: _images/ltSi333_100mum_-5.*
+.. |ltSi333_100_0| imagezoom:: _images/ltSi333_100mum_0.*
+.. |ltSi333_100_5| imagezoom:: _images/ltSi333_100mum_5.*
+   :loc: upper-right-corner
+.. |ltSi333_007_-5| imagezoom:: _images/ltSi333_007mum_-5.*
+.. |ltSi333_007_0| imagezoom:: _images/ltSi333_007mum_0.*
+.. |ltSi333_007_5| imagezoom:: _images/ltSi333_007mum_5.*
+   :loc: upper-right-corner
 
 Mirror reflectivity
 ~~~~~~~~~~~~~~~~~~~
@@ -212,14 +176,11 @@ The phase difference between s- and p-polarized rays (calculated by xrt,
 cyan line, right Y axis) is not calculated by the XOP programs and
 therefore is given without comparison.
 
-.. image:: _images/MirrorReflSi@0.5deg.*
-   :scale: 35 %
-.. image:: _images/MirrorReflSiO2@0.5deg.*
-   :scale: 35 %
-.. image:: _images/MirrorReflRh@2mrad.*
-   :scale: 35 %
-.. image:: _images/MirrorReflPt@4mrad.*
-   :scale: 35 %
+.. imagezoom:: _images/MirrorReflSi@0.5deg.*
+.. imagezoom:: _images/MirrorReflSiO2@0.5deg.*
+.. imagezoom:: _images/MirrorReflRh@2mrad.*
+   :loc: upper-right-corner
+.. imagezoom:: _images/MirrorReflPt@4mrad.*
 
 .. _multilayer_reflectivity:
 
@@ -231,12 +192,10 @@ to slight differences in tabulated values of the atomic scattering factors.
 The phase difference between s- and p-polarized rays is given without
 comparison.
 
-.. image:: _images/SlabReflW.*
-   :scale: 35 %
-.. image:: _images/MultilayerSiW.*
-   :scale: 35 %
-.. image:: _images/MultilayerSiW-graded.*
-   :scale: 35 %
+.. imagezoom:: _images/SlabReflW.*
+.. imagezoom:: _images/MultilayerSiW.*
+.. imagezoom:: _images/MultilayerSiW-graded.*
+   :loc: upper-right-corner
 
 Transmittivity of materials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -244,8 +203,7 @@ Transmittivity of materials
 The curves are basically equal. The small amplitude differences are due
 to slight differences in tabulated values of the atomic scattering factors.
 
-.. image:: _images/TransmDiamond.*
-   :scale: 35 %
+.. imagezoom:: _images/TransmDiamond.*
 
 Absorption of materials
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -253,8 +211,8 @@ Absorption of materials
 The curves are basically equal. The small amplitude differences are due
 to slight differences in tabulated values of the atomic scattering factors.
 
-.. image:: _images/AbsorptionBe.*
-   :scale: 35 %
+.. imagezoom:: _images/AbsorptionBe.*
+
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "12 Mar 2014"
@@ -506,17 +464,17 @@ def compare_reflectivity():
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
         ax.legend([p1, p3], ['Xf1f2/XOP', 'xrt'], loc=6)
         ax.add_artist(l1)
-## phases:
-#        ax2 = ax.twinx()
-#        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-#        phi = np.unwrap(np.angle(rs * rp.conj()))
-#        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
-#        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-#        ax2.yaxis.set_major_formatter(formatter)
-#        for tl in ax2.get_yticklabels():
-#            tl.set_color('c')
+# phases:
+        ax2 = ax.twinx()
+        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        phi = np.unwrap(np.angle(rs * rp.conj()))
+        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        ax2.yaxis.set_major_formatter(formatter)
+        for tl in ax2.get_yticklabels():
+            tl.set_color('c')
 
-        fname = 'MirrorRefl' + stripe.name + reprAngle
+        fname = 'MirrorRefl' + stripe.name + "".join(reprAngle.split())
         fig.savefig(fname + '.png')
 
     dataDir = os.path.join('', 'XOP-Reflectivities')
@@ -589,7 +547,7 @@ def compare_reflectivity_slab():
 
 def compare_reflectivity_multilayer():
     """A comparison subroutine used in the module test suit."""
-    cl_list = None
+#    cl_list = None
     try:
         import pyopencl as cl
         os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
@@ -600,7 +558,7 @@ def compare_reflectivity_multilayer():
     if isOpenCL:
         import xrt.backends.raycing.myopencl as mcl
         matCL = mcl.XRT_CL(r'materials.cl')
-        cl_list = matCL.cl_ctx[0], matCL.cl_queue[0], matCL.cl_program[0]
+#        cl_list = matCL.cl_ctx[0], matCL.cl_queue[0], matCL.cl_program[0]
     else:
         matCL = None
 
@@ -614,7 +572,7 @@ def compare_reflectivity_multilayer():
         fig.suptitle(label, fontsize=14)
         x, R2s = np.loadtxt(refs, unpack=True)
         p1, = ax.plot(x, R2s, '-k', label='s Mlayer')
-        refl = ml.get_amplitude(E, np.sin(np.deg2rad(theta)), cl_list=cl_list)
+        refl = ml.get_amplitude(E, np.sin(np.deg2rad(theta)), ucl=matCL)
         rs, rp = refl[0], refl[1]
         p3, = ax.plot(theta, abs(rs)**2, '-r', lw=1)
         p4, = ax.plot(theta, abs(rp)**2, '--r')
@@ -642,9 +600,9 @@ def compare_reflectivity_multilayer():
     mSi = rm.Material('Si', rho=2.33)
     mW = rm.Material('W', rho=19.3)
 
-#    mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi)
-#    for_one_material(mL, os.path.join(dataDir, "WSi45A04.mlayer.gz"), 8050,
-#                     u'40 × [27 Å Si + 18 Å W] multilayer @ 8.05 keV')
+    mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi)
+    for_one_material(mL, os.path.join(dataDir, "WSi45A04.mlayer.gz"), 8050,
+                     u'40 × [27 Å Si + 18 Å W] multilayer @ 8.05 keV')
 
     mL = rm.Multilayer(mSi, 27*2, mW, 18*2, 40, mSi, 27, 18, 2)
     for_one_material(mL, os.path.join(dataDir, "WSi45_100A40.mlayer.gz"), 8050,
@@ -773,7 +731,7 @@ def run_tests():
 
 #Compare the calculated reflectivities of Si, Pt, SiO_2 with those by Xf1f2
 #(part of XOP):
-    compare_reflectivity()
+#    compare_reflectivity()
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
@@ -781,7 +739,7 @@ def run_tests():
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
-#    compare_reflectivity_multilayer()
+    compare_reflectivity_multilayer()
 
 #    compare_dTheta()
 

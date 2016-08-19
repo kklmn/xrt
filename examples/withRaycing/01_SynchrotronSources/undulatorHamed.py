@@ -79,8 +79,8 @@ if 'mono' in prefix:
                 fixedEnergy = 32.0
         else:
             if 'QEPU' in prefix:
-                fixedEnergy = 20.65
-#                fixedEnergy = 20.5
+#                fixedEnergy = 20.65
+                fixedEnergy = 20.5
             else:
                 fixedEnergy = 21.45
     elif '5th' in prefix:

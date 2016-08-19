@@ -24,29 +24,18 @@ the nominal focal position for Be and Al CRL's. The real focal position
 deviates from the nominal one, where d\ *q* = 0, due to the rounding of
 *p*/*qδ*:
 
-+----------------------+----------------------+
-|  |CRL_Be| |CRL_BeZ|  |  |CRL_Al| |CRL_BeZ|  |
-+----------------------+----------------------+
++------------+------------+
+|  |CRL_Be|  |  |CRL_Al|  |
++------------+------------+
 
-.. |CRL_Be| image:: _images/CRL-Be.swf
-   :width: 223
-   :height: 204
-.. |CRL_BeZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/CRL-Be.swf
-.. |CRL_Al| image:: _images/CRL-AL.swf
-   :width: 216
-   :height: 204
-.. |CRL_AlZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/CRL-Al.swf
+.. |CRL_Be| animation:: _images/CRL-Be
+.. |CRL_Al| animation:: _images/CRL-AL
 
 This graph shows the relative flux in the focused beam at 9 keV after the given
 number of double-sided lenses which give approximately equal focal distance of
 *q* = 5 m. As seen, low absorbing materials are preferred:
 
-.. image:: _images/CRL-2-Flux.*
-   :scale: 50 %
+.. imagezoom:: _images/CRL-2-Flux.*
 
 This graph shows the depth of focus as a function of the on-axis coordinate
 around the nominal focal position. For heavy materials the depth of focus is
@@ -54,8 +43,7 @@ larger due to the higher absorption of the peripherical rays of the incoming
 beam. Such lenses act effectively also as apertures thus reducing the focal
 spot at the expense of flux:
 
-.. image:: _images/CRL-2-depthOfFocus.*
-   :scale: 50 %
+.. imagezoom:: _images/CRL-2-depthOfFocus.*
 
 .. [snigirev] A. Snigirev, V. Kohn, I. Snigireva, A. Souvorov, and B. Lengeler,
    *Focusing High-Energy X Rays by Compound Refractive Lenses*, Applied
@@ -223,14 +211,14 @@ def define_plots(beamLine):
 
 def plot_generator(plots, plotsFSM2, beamLine):
     mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
-    mDiamond = rm.Material('C', rho=3.52, kind='lens')
-#    mAluminum = rm.Material('Al', rho=2.7, kind='lens')
+#    mDiamond = rm.Material('C', rho=3.52, kind='lens')
+    mAluminum = rm.Material('Al', rho=2.7, kind='lens')
 #    mSilicon = rm.Material('Si', rho=2.33, kind='lens')
 #    mNickel = rm.Material('Ni', rho=8.9, kind='lens')
 #    mLead = rm.Material('Pb', rho=11.35, kind='lens')
 
 #    materials = mBeryllium, mDiamond, mAluminum, mSilicon, mNickel, mLead
-    materials = mBeryllium, mDiamond
+    materials = mBeryllium, mAluminum
 
     print('At E = {0} eV and parabola focus = {1} mm:'.format(
           E0, parabolaParam))
@@ -315,9 +303,9 @@ def main():
     beamLine = build_beamline()
     plots, plotsFSM2 = define_plots(beamLine)
     xrtr.run_ray_tracing(
-        plots, repeats=16, generator=plot_generator,
+        plots, repeats=400, generator=plot_generator,
         generatorArgs=[plots, plotsFSM2, beamLine],
-        updateEvery=1, beamLine=beamLine, processes='')
+        updateEvery=1, beamLine=beamLine, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

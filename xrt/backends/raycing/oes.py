@@ -1843,9 +1843,9 @@ class BlazedGrating(OE):
             | |OE_shadowing|  | |Blazed_shadowing| |
             +-----------------+--------------------+
 
-            .. |OE_shadowing| image:: _images/1-LEG_profile-default.png
+            .. |OE_shadowing| imagezoom:: _images/1-LEG_profile-default.png
                :scale: 50 %
-            .. |Blazed_shadowing| image:: _images/1-LEG_profile-adhoc.png
+            .. |Blazed_shadowing| imagezoom:: _images/1-LEG_profile-adhoc.png
                :scale: 50 %
     """
 

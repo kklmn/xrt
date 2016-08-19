@@ -17,28 +17,23 @@ limited by the front end). The energy distribution is red-shifted for off-plane
 photons. The polarization is primarily horizontal. The off-plane radiation has
 non-zero projection to the vertical polarization plane.
 
-+----------+--------------+------------------+-----------------+
-| source   | total flux   | horiz. pol. flux | vert. pol. flux |
-+==========+==============+==================+=================+
-| using    |              |                  |                 |
-| WS       |  |bmTotalWS| |   |bmHorizWS|    |   |bmVertWS|    |
-+----------+--------------+------------------+-----------------+
-| internal |              |                  |                 |
-| xrt      | |bmTotalXRT| |   |bmHorizXRT|   |   |bmVertXRT|   |
-+----------+--------------+------------------+-----------------+
++----------+---------------------+---------------------+---------------------+
+| source   |     total flux      |   horiz. pol. flux  |   vert. pol. flux   |
++==========+=====================+=====================+=====================+
+| using WS |    |bmTotalWS|      |    |bmHorizWS|      |     |bmVertWS|      |
++----------+---------------------+---------------------+---------------------+
+| internal |                     |                     |                     |
+| xrt      |    |bmTotalXRT|     |    |bmHorizXRT|     |     |bmVertXRT|     |
++----------+---------------------+---------------------+---------------------+
 
-.. |bmTotalWS| image:: _images/3bm_ws1-n-wideE-1TotalFlux.png
-   :scale: 50 %
-.. |bmHorizWS| image:: _images/3bm_ws1-n-wideE-2horizFlux.png
-   :scale: 50 %
-.. |bmVertWS| image:: _images/3bm_ws1-n-wideE-3vertFlux.png
-   :scale: 50 %
-.. |bmTotalXRT| image:: _images/3bm_xrt1-n-wideE-1TotalFlux.png
-   :scale: 50 %
-.. |bmHorizXRT| image:: _images/3bm_xrt1-n-wideE-2horizFlux.png
-   :scale: 50 %
-.. |bmVertXRT| image:: _images/3bm_xrt1-n-wideE-3vertFlux.png
-   :scale: 50 %
+.. |bmTotalWS| imagezoom:: _images/3bm_ws1-n-wideE-1TotalFlux.png
+.. |bmHorizWS| imagezoom:: _images/3bm_ws1-n-wideE-2horizFlux.png
+.. |bmVertWS| imagezoom:: _images/3bm_ws1-n-wideE-3vertFlux.png
+   :loc: upper-right-corner
+.. |bmTotalXRT| imagezoom:: _images/3bm_xrt1-n-wideE-1TotalFlux.png
+.. |bmHorizXRT| imagezoom:: _images/3bm_xrt1-n-wideE-2horizFlux.png
+.. |bmVertXRT| imagezoom:: _images/3bm_xrt1-n-wideE-3vertFlux.png
+   :loc: upper-right-corner
 
 The off-plane radiation is in fact left and right polarized:
 
@@ -52,10 +47,8 @@ The off-plane radiation is in fact left and right polarized:
 | xrt      |     |bmCircPolRateXRT|      |
 +----------+-----------------------------+
 
-.. |bmCircPolRateWS| image:: _images/3bm_ws1-n-wideE-5CircPolRate.png
-   :scale: 50 %
-.. |bmCircPolRateXRT| image:: _images/3bm_xrt1-n-wideE-5CircPolRate.png
-   :scale: 50 %
+.. |bmCircPolRateWS| imagezoom:: _images/3bm_ws1-n-wideE-5CircPolRate.png
+.. |bmCircPolRateXRT| imagezoom:: _images/3bm_xrt1-n-wideE-5CircPolRate.png
 
 The horizontal phase space projected to a transversal plane at the origin is
 parabolic:
@@ -66,10 +59,8 @@ parabolic:
 |         |bmPhaseSp0|    |     |bmPhaseSpN|    |
 +-------------------------+---------------------+
 
-.. |bmPhaseSp0| image:: _images/3bm_xrt1-0-wideE-horPhaseSpace.png
-   :scale: 50 %
-.. |bmPhaseSpN| image:: _images/3bm_xrt1-n-wideE-horPhaseSpace.png
-   :scale: 50 %
+.. |bmPhaseSp0| imagezoom:: _images/3bm_xrt1-0-wideE-horPhaseSpace.png
+.. |bmPhaseSpN| imagezoom:: _images/3bm_xrt1-n-wideE-horPhaseSpace.png
 
 Multipole wiggler
 ~~~~~~~~~~~~~~~~~
@@ -89,18 +80,14 @@ vertical polarization plane.
 | xrt      |    |wTotalXRT|   |    |wHorizXRT|   |    |wVertXRT|    |
 +----------+------------------+------------------+------------------+
 
-.. |wTotalWS| image:: _images/2w_ws1-n-wideE-1TotalFlux.png
-   :scale: 50 %
-.. |wHorizWS| image:: _images/2w_ws1-n-wideE-2horizFlux.png
-   :scale: 50 %
-.. |wVertWS| image:: _images/2w_ws1-n-wideE-3vertFlux.png
-   :scale: 50 %
-.. |wTotalXRT| image:: _images/2w_xrt1-n-wideE-1TotalFlux.png
-   :scale: 50 %
-.. |wHorizXRT| image:: _images/2w_xrt1-n-wideE-2horizFlux.png
-   :scale: 50 %
-.. |wVertXRT| image:: _images/2w_xrt1-n-wideE-3vertFlux.png
-   :scale: 50 %
+.. |wTotalWS| imagezoom:: _images/2w_ws1-n-wideE-1TotalFlux.png
+.. |wHorizWS| imagezoom:: _images/2w_ws1-n-wideE-2horizFlux.png
+.. |wVertWS| imagezoom:: _images/2w_ws1-n-wideE-3vertFlux.png
+   :loc: upper-right-corner
+.. |wTotalXRT| imagezoom:: _images/2w_xrt1-n-wideE-1TotalFlux.png
+.. |wHorizXRT| imagezoom:: _images/2w_xrt1-n-wideE-2horizFlux.png
+.. |wVertXRT| imagezoom:: _images/2w_xrt1-n-wideE-3vertFlux.png
+   :loc: upper-right-corner
 
 The horizontal longitudinal cross-section reveals a sinusoidal shape of the
 source. The horizontal phase space projected to the transversal plane at the
@@ -114,14 +101,12 @@ origin has individual branches for each pole.
 |       |wPhaseSp0|       |       |wPhaseSpN|       |
 +-------------------------+-------------------------+
 
-.. |wYX0| image:: _images/2w_xrt1-0-wideE-crossectionYX.png
-   :scale: 50 %
-.. |wYXN| image:: _images/2w_xrt1-n-wideE-crossectionYX.png
-   :scale: 50 %
-.. |wPhaseSp0| image:: _images/2w_xrt1-0-wideE-horPhaseSpace.png
-   :scale: 50 %
-.. |wPhaseSpN| image:: _images/2w_xrt1-n-wideE-horPhaseSpace.png
-   :scale: 50 %
+.. |wYX0| imagezoom:: _images/2w_xrt1-0-wideE-crossectionYX.png
+.. |wYXN| imagezoom:: _images/2w_xrt1-n-wideE-crossectionYX.png
+   :loc: upper-right-corner
+.. |wPhaseSp0| imagezoom:: _images/2w_xrt1-0-wideE-horPhaseSpace.png
+.. |wPhaseSpN| imagezoom:: _images/2w_xrt1-n-wideE-horPhaseSpace.png
+   :loc: upper-right-corner
 
 Undulator
 ~~~~~~~~~
@@ -133,52 +118,38 @@ have sharp peaks, which requires a proper selection of angular and energy
 meshes (not important in the new versions of xrt (>0.9), where there are no
 angular and energy meshes and the intensity is calculated *for each* ray).
 
-.. image:: _images/I0_x'E_mode4-1-und-urgent.png
-   :scale: 50 %
-.. image:: _images/I0_z'E_mode4-1-und-urgent.png
-   :scale: 50 %
+.. imagezoom:: _images/I0_x'E_mode4-1-und-urgent.png
+.. imagezoom:: _images/I0_z'E_mode4-1-und-urgent.png
+   :loc: upper-right-corner
 
-+--------------------+
-|  |IpPol|  |IpPolZ| |
-+--------------------+
-
-.. |IpPol| image:: _images/IpPol.swf
-   :width: 420
-   :height: 200
-.. |IpPolZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/IpPol.swf
+.. imagezoom:: _images/IpPol
 
 The ray traced images of an undulator source are feature-rich. The polarization
 is primarily horizontal. The off-plane radiation has non-zero projection to the
 vertical polarization plane.
 
-+---------+----------------+----------------+----------------+----------------+
-| source  |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
-+=========+================+================+================+================+
-| using   |                |                |                |                |
-| Urgent  | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
-+---------+----------------+----------------+----------------+----------------+
-|internal |                |                |                |                |
-| xrt     | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
-+---------+----------------+----------------+----------------+----------------+
++--------+----------------+----------------+----------------+----------------+
+| source |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
++========+================+================+================+================+
+| using  |                |                |                |                |
+| Urgent | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
++--------+----------------+----------------+----------------+----------------+
+|internal|                |                |                |                |
+|xrt     | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
++--------+----------------+----------------+----------------+----------------+
 
-.. |uTotalUr| image:: _images/1u_urgent3-n-monoE-1TotalFlux.png
-   :scale: 50 %
-.. |uHorizUr| image:: _images/1u_urgent3-n-monoE-2horizFlux.png
-   :scale: 50 %
-.. |uVertUr| image:: _images/1u_urgent3-n-monoE-3vertFlux.png
-   :scale: 50 %
-.. |uDegPolUr| image:: _images/1u_urgent3-n-monoE-4DegPol.png
-   :scale: 50 %
-.. |uTotalXRT| image:: _images/1u_xrt3-n-monoE-1TotalFlux-Espread.png
-   :scale: 50 %
-.. |uHorizXRT| image:: _images/1u_xrt3-n-monoE-2horizFlux-Espread.png
-   :scale: 50 %
-.. |uVertXRT| image:: _images/1u_xrt3-n-monoE-3vertFlux-Espread.png
-   :scale: 50 %
-.. |uDegPolXRT| image:: _images/1u_xrt3-n-monoE-4DegPol-Espread.png
-   :scale: 50 %
+.. |uTotalUr| imagezoom:: _images/1u_urgent3-n-monoE-1TotalFlux.png
+.. |uHorizUr| imagezoom:: _images/1u_urgent3-n-monoE-2horizFlux.png
+.. |uVertUr| imagezoom:: _images/1u_urgent3-n-monoE-3vertFlux.png
+   :loc: upper-right-corner
+.. |uDegPolUr| imagezoom:: _images/1u_urgent3-n-monoE-4DegPol.png
+   :loc: upper-right-corner
+.. |uTotalXRT| imagezoom:: _images/1u_xrt3-n-monoE-1TotalFlux-Espread.png
+.. |uHorizXRT| imagezoom:: _images/1u_xrt3-n-monoE-2horizFlux-Espread.png
+.. |uVertXRT| imagezoom:: _images/1u_xrt3-n-monoE-3vertFlux-Espread.png
+   :loc: upper-right-corner
+.. |uDegPolXRT| imagezoom:: _images/1u_xrt3-n-monoE-4DegPol-Espread.png
+   :loc: upper-right-corner
 
 Elliptical undulator
 ~~~~~~~~~~~~~~~~~~~~
@@ -186,28 +157,24 @@ Elliptical undulator
 An elliptical undulator gives circular images with a higher circular
 polarization rate in the inner rings:
 
-+----------+------------------+------------------+------------------+
-| source   |   total flux     |  hor. pol. flux  |  ver. pol. flux  |
-+==========+==================+==================+==================+
-| using    |                  |                  |                  |
-| Urgent   |   |euTotalUr|    |    |euHorizUr|   |    |euVertUr|    |
-+----------+------------------+------------------+------------------+
-| internal |                  |                  |                  |
-| xrt      |   |euTotalXRT|   |   |euHorizXRT|   |   |euVertXRT|    |
-+----------+------------------+------------------+------------------+
++----------+--------------------+--------------------+--------------------+
+| source   |    total flux      |   hor. pol. flux   |   ver. pol. flux   |
++==========+====================+====================+====================+
+| using    |                    |                    |                    |
+| Urgent   |     |euTotalUr|    |     |euHorizUr|    |     |euVertUr|     |
++----------+--------------------+--------------------+--------------------+
+| internal |                    |                    |                    |
+| xrt      |    |euTotalXRT|    |    |euHorizXRT|    |     |euVertXRT|    |
++----------+--------------------+--------------------+--------------------+
 
-.. |euTotalUr| image:: _images/4eu_urgent3-n-monoE-1TotalFlux.png
-   :scale: 50 %
-.. |euHorizUr| image:: _images/4eu_urgent3-n-monoE-2horizFlux.png
-   :scale: 50 %
-.. |euVertUr| image:: _images/4eu_urgent3-n-monoE-3vertFlux.png
-   :scale: 50 %
-.. |euTotalXRT| image:: _images/4eu_xrt3-n-monoE-1TotalFlux.png
-   :scale: 50 %
-.. |euHorizXRT| image:: _images/4eu_xrt3-n-monoE-2horizFlux.png
-   :scale: 50 %
-.. |euVertXRT| image:: _images/4eu_xrt3-n-monoE-3vertFlux.png
-   :scale: 50 %
+.. |euTotalUr| imagezoom:: _images/4eu_urgent3-n-monoE-1TotalFlux.png
+.. |euHorizUr| imagezoom:: _images/4eu_urgent3-n-monoE-2horizFlux.png
+.. |euVertUr| imagezoom:: _images/4eu_urgent3-n-monoE-3vertFlux.png
+   :loc: upper-right-corner
+.. |euTotalXRT| imagezoom:: _images/4eu_xrt3-n-monoE-1TotalFlux.png
+.. |euHorizXRT| imagezoom:: _images/4eu_xrt3-n-monoE-2horizFlux.png
+.. |euVertXRT| imagezoom:: _images/4eu_xrt3-n-monoE-3vertFlux.png
+   :loc: upper-right-corner
 
 +----------+----------------------------+----------------------------+
 | source   |     deg. of pol.           | circular polarization rate |
@@ -219,14 +186,12 @@ polarization rate in the inner rings:
 | xrt      |        |euDegPolXRT|       |    |euCircPolRateXRT|      |
 +----------+----------------------------+----------------------------+
 
-.. |euDegPolUr| image:: _images/4eu_urgent3-n-monoE-4DegPol.png
-   :scale: 50 %
-.. |euCircPolRateUr| image:: _images/4eu_urgent3-n-monoE-5CircPolRate.png
-   :scale: 50 %
-.. |euDegPolXRT| image:: _images/4eu_xrt3-n-monoE-4DegPol.png
-   :scale: 50 %
-.. |euCircPolRateXRT| image:: _images/4eu_xrt3-n-monoE-5CircPolRate.png
-   :scale: 50 %
+.. |euDegPolUr| imagezoom:: _images/4eu_urgent3-n-monoE-4DegPol.png
+.. |euCircPolRateUr| imagezoom:: _images/4eu_urgent3-n-monoE-5CircPolRate.png
+   :loc: upper-right-corner
+.. |euDegPolXRT| imagezoom:: _images/4eu_xrt3-n-monoE-4DegPol.png
+.. |euCircPolRateXRT| imagezoom:: _images/4eu_xrt3-n-monoE-5CircPolRate.png
+   :loc: upper-right-corner
 
 .. _undulator_custom:
 
@@ -271,26 +236,21 @@ of the 3rd harmonic with the triple energy of the 1st harmonic.
 | image and spectrum |        |EPU_3rdh|        |       |QEPU_3rdh|        |
 +--------------------+--------------------------+--------------------------+
 
-.. |EPU_field| image:: _images/1-EPU_HP_field.png
-   :scale: 45 %
-.. |EPU_traj| image:: _images/1-EPU_HP_mode-x_average.png
-   :scale: 37 %
-.. |EPU_wide| image:: _images/1EPU_HP_mode-1-band1totalFlux.png
-   :scale: 50 %
-.. |EPU_1sth| image:: _images/1EPU_HP_mode-2-1stHarmonic1totalFlux.png
-   :scale: 50 %
-.. |EPU_3rdh| image:: _images/1EPU_HP_mode-6-3rdHarmonic1totalFlux.png
-   :scale: 50 %
-.. |QEPU_field| image:: _images/2-QEPU_HP_field.png
-   :scale: 45 %
-.. |QEPU_traj| image:: _images/2-QEPU_HP_mode-x_average.png
-   :scale: 37 %
-.. |QEPU_wide| image:: _images/2QEPU_HP_mode-1-band1totalFlux.png
-   :scale: 50 %
-.. |QEPU_1sth| image:: _images/2QEPU_HP_mode-2-1stHarmonic1totalFlux.png
-   :scale: 50 %
-.. |QEPU_3rdh| image:: _images/2QEPU_HP_mode-6-3rdHarmonic1totalFlux.png
-   :scale: 50 %
+.. |EPU_field| imagezoom:: _images/1-EPU_HP_field.png
+.. |EPU_traj| imagezoom:: _images/1-EPU_HP_mode-x_average.png
+.. |EPU_wide| imagezoom:: _images/1EPU_HP_mode-1-band1totalFlux.png
+.. |EPU_1sth| imagezoom:: _images/1EPU_HP_mode-2-1stHarmonic1totalFlux.png
+.. |EPU_3rdh| imagezoom:: _images/1EPU_HP_mode-6-3rdHarmonic1totalFlux.png
+.. |QEPU_field| imagezoom:: _images/2-QEPU_HP_field.png
+   :loc: upper-right-corner
+.. |QEPU_traj| imagezoom:: _images/2-QEPU_HP_mode-x_average.png
+   :loc: upper-right-corner
+.. |QEPU_wide| imagezoom:: _images/2QEPU_HP_mode-1-band1totalFlux.png
+   :loc: upper-right-corner
+.. |QEPU_1sth| imagezoom:: _images/2QEPU_HP_mode-2-1stHarmonic1totalFlux.png
+   :loc: upper-right-corner
+.. |QEPU_3rdh| imagezoom:: _images/2QEPU_HP_mode-6-3rdHarmonic1totalFlux.png
+   :loc: upper-right-corner
 
 For validation, our calculations are compared here with those by Spectra for a
 particular case — quasi-periodic undulator defined by the same tabulated field,
@@ -307,20 +267,15 @@ only ~3% of the total flux.
 |  |CFspeP|  |  |CFxrtP|  |
 +------------+------------+
 
-.. |CFspeT| image:: _images/spectra-custom.png
-   :scale: 50 %
-   :align: bottom
-.. |CFspeP| image:: _images/spectra-custom_p.png
-   :scale: 50 %
-   :align: bottom
-.. |CFxrtT| image:: _images/2QEPU_mono3rdHarmonic.png
-   :scale: 50 %
-   :align: bottom
-.. |CFxrtP| image:: _images/2QEPU_mono3rdHarmonic_p.png
-   :scale: 50 %
-   :align: bottom
+.. |CFspeT| imagezoom:: _images/spectra-custom.png
+.. |CFspeP| imagezoom:: _images/spectra-custom_p.png
+   :loc: lower-left-corner
+.. |CFxrtT| imagezoom:: _images/2QEPU_mono3rdHarmonic.png
+.. |CFxrtP| imagezoom:: _images/2QEPU_mono3rdHarmonic_p.png
+   :loc: lower-left-corner
 
 """
+
 """
 .. _THz:
 
@@ -363,11 +318,12 @@ import xrt.runner as xrtr
 # one of 'u', 'w', 'bm', 'eu', 'wu':
 sourceType = 'u'
 # one of 'mono', '1harmonic', 'smaller', 'wide'
-#energyRange = '1harmonic'
-energyRange = 'mono'
+energyRange = '1harmonic'
+#energyRange = 'mono'
 #energyRange = 'wide'
-#what = 'rays'
-what = 'wave'  # only for rs.Undulator
+what = 'rays'
+#what = 'wave'  # only for rs.Undulator
+#suffix = '_fullLength_emittance_NF'
 suffix = ''
 isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
@@ -384,7 +340,7 @@ if sourceType == 'u':
     Kmax = 1.92
     kwargs = dict(
         eE=3., eI=0.5,  # Parameters of the synchrotron ring [GeV], [Ampere]
-        eEspread=0.001,  # Energy spread of the electrons in the ring
+        #eEspread=0.001,  # Energy spread of the electrons in the ring
         period=30., n=40,  # Parameters of the undulator, period in [mm]
         K=1.45,  # Deflection parameter (ignored if targetE is not None)
         # targetE=[6940, 5, False],  # [energy [eV], harmonic]
@@ -392,17 +348,20 @@ if sourceType == 'u':
         # customField=0.0,  # Longitudinal magnetic field. If not None,
         # trajectory of the electron is calculated numerically.
         # eSigmaX=0., eSigmaZ=0.,  # Zero size electron beam
-        # uniformRayDensity=True, filamentBeam=True,  # Single wavefront
-#        R0=R0,   # Near Field.
+        # uniformRayDensity=True,
+        # filamentBeam=True,  # Single wavefront
+        # R0=R0,   # Near Field.
         # gIntervals=5,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
-        # gp=1e-4,  # Precision of the integration.
+        # gp=1e-2,  # Precision of the integration.
         # targetOpenCL=None,
+        #taper = [0 ,10],
+        #eEpsilonX=0.0, eEpsilonZ=0.0)  # Emittance [nmrad]
         eEpsilonX=0.263, eEpsilonZ=0.008)  # Emittance [nmrad]
     xlimits = [-10, 10]  # Horizontal limits of the plot [mm]
     zlimits = [-10, 10]  # Vertical limits of the plot [mm]
-    xlimitsZoom = [-1, 1]
-    zlimitsZoom = [-1, 1]
+    xlimitsZoom = [-2, 2]
+    zlimitsZoom = [-2, 2]
     xPrimelimits = [-0.3, 0.3]  # Angular limits of the plot [mrad]
     if isInternalSource:
         kwargs['xPrimeMaxAutoReduce'] = False
@@ -470,7 +429,7 @@ elif sourceType == 'wu':  # wiggler by undulator code
 else:
     raise ValueError('Unknown source type!')
 
-if True:  # force zero source size:
+if False:  # force zero source size:
     kwargs['eSigmaX'] = 0
     kwargs['eSigmaZ'] = 0
     kwargs['eEpsilonX'] = 0
@@ -618,6 +577,7 @@ def define_plots(beamLine):
         aspect='auto', title='total flux')
     plot.caxis.fwhmFormatStr = None
     plot.saveName = prefix + '1TotalFlux' + suffix + '.png'
+    #plot.persistentName = prefix + '1TotalFlux' + suffix + '.mat'
     plots.append(plot)
     plotsE.append(plot)
     ax = plot.xaxis

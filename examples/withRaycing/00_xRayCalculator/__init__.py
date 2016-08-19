@@ -41,8 +41,10 @@ Each script consists of:
     plt.plot(energy, flux)
     plt.show()
 
-.. image:: _images/calc_undulator.png
-   :scale: 50 %
+.. imagezoomhover:: _images/calc_undulator.png
+   :width: 400
+   :height: 298
+   :loc: top: -400px; left: 400px;
 
 .. rubric:: Example 1b: Undulator, tuning curves
 
@@ -55,8 +57,10 @@ Use the method:
 See the script
 ``\examples\withRaycing\00_xRayCalculator\calc_undulator_tune.py``.
 
-.. image:: _images/calc_undulator_tune.png
-   :scale: 50 %
+.. imagezoomhover:: _images/calc_undulator_tune.png
+   :width: 400
+   :height: 300
+   :loc: top: -400px; left: 400px;
 
 .. rubric:: Example 2: Crystal reflectivity
 .. code-block:: python
@@ -77,8 +81,10 @@ See the script
     plt.plot(dtheta, abs(curS)**2, 'r', dtheta, abs(curP)**2, 'b')
     plt.show()
 
-.. image:: _images/calc_crystal.png
-   :scale: 50 %
+.. imagezoomhover:: _images/calc_crystal.png
+   :width: 400
+   :height: 298
+   :loc: top: -400px; left: 400px;
 
 .. rubric:: Example 3: Multilayer reflectivity
 .. code-block:: python
@@ -95,8 +101,10 @@ See the script
     plt.plot(theta, abs(rs)**2, 'r', theta, abs(rp)**2, 'b')
     plt.show()
 
-.. image:: _images/calc_multilayer.png
-   :scale: 50 %
+.. imagezoomhover:: _images/calc_multilayer.png
+   :width: 400
+   :height: 298
+   :loc: top: -400px; left: 400px;
 
 .. rubric:: Example 4: Mirror reflectivity
 .. code-block:: python
@@ -112,8 +120,10 @@ See the script
     plt.gca().set_xlim(E[0], E[-1])
     plt.show()
 
-.. image:: _images/calc_mirror.png
-   :scale: 50 %
+.. imagezoomhover:: _images/calc_mirror.png
+   :width: 400
+   :height: 298
+   :loc: top: -400px; left: 400px;
 
 .. rubric:: Example 5: Material absorption
 .. code-block:: python
@@ -128,8 +138,10 @@ See the script
     plt.gca().set_xlim(E[0], E[-1])
     plt.show()
 
-.. image:: _images/calc_absorption.png
-   :scale: 50 %
+.. imagezoomhover:: _images/calc_absorption.png
+   :width: 400
+   :height: 298
+   :loc: top: -500px; left: 400px;
 
 """
 pass

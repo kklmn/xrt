@@ -546,7 +546,7 @@ def main():
     args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE, beamLine]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes='all')
+        beamLine=beamLine, processes='half')
 
 
 def plotCylinders():

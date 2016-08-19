@@ -11,8 +11,7 @@ Rowland circle based analyzers
 This study compares simply bent and ground-bent spectrometers utilizing Bragg
 and Laue crystals. The bending is cylindrical (one-dimensional).
 
-.. image:: _images/BraggLaue.*
-   :scale: 50 %
+.. imagezoom:: _images/BraggLaue.*
 
 :Conditions: Rowland circle diameter = 1 m, 70v × 200h µm² unpolarized
    fluorescence source, crystal size = 100meridional × 20saggittal mm².
@@ -28,42 +27,42 @@ scan in front of a bulk detector. From these two images the energy resolution
 of 7 energy lines evenly spaced with the found step *δE*. Such images are shown
 for the four crystal geometries at a particular Bragg angle:
 
-+-------------------+-------------+-------------+-----------+
-|      geometry     | flat source | line source |  7 lines  |
-+===================+=============+=============+===========+
-| Bragg simply bent |  |bb_flat|  |  |bb_line|  | |bb_7lin| |
-+-------------------+-------------+-------------+-----------+
-| Bragg ground-bent |  |bg_flat|  |  |bg_line|  | |bg_7lin| |
-+-------------------+-------------+-------------+-----------+
-| Laue simply bent  |  |lb_flat|  |  |lb_line|  | |lb_7lin| |
-+-------------------+-------------+-------------+-----------+
-| Laue ground-bent  |  |lg_flat|  |  |lg_line|  | |lg_7lin| |
-+-------------------+-------------+-------------+-----------+
++----------+---------------------+---------------------+---------------------+
+| geometry |     flat source     |     line source     |       7 lines       |
++==========+=====================+=====================+=====================+
+| Bragg    |                     |                     |                     |
+| simply   |      |bb_flat|      |      |bb_line|      |      |bb_7lin|      |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| Bragg    |                     |                     |                     |
+| ground   |      |bg_flat|      |      |bg_line|      |      |bg_7lin|      |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| Laue     |                     |                     |                     |
+| simply   |      |lb_flat|      |      |lb_line|      |      |lb_7lin|      |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| Laue     |                     |                     |                     |
+| ground   |      |lg_flat|      |      |lg_line|      |      |lg_7lin|      |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
 
-.. |bb_flat| image:: _images/1D-01b-Si444-60-det_E-flat.*
-   :scale: 50 %
-.. |bb_line| image:: _images/1D-01b-Si444-60-det_E-line.*
-   :scale: 50 %
-.. |bb_7lin| image:: _images/1D-01b-Si444-60-det_E-7lin.*
-   :scale: 50 %
-.. |bg_flat| image:: _images/1D-02gb-Si444-60-det_E-flat.*
-   :scale: 50 %
-.. |bg_line| image:: _images/1D-02gb-Si444-60-det_E-line.*
-   :scale: 50 %
-.. |bg_7lin| image:: _images/1D-02gb-Si444-60-det_E-7lin.*
-   :scale: 50 %
-.. |lb_flat| image:: _images/1D-03lb-Si444-60-det_E-flat.*
-   :scale: 50 %
-.. |lb_line| image:: _images/1D-03lb-Si444-60-det_E-line.*
-   :scale: 50 %
-.. |lb_7lin| image:: _images/1D-03lb-Si444-60-det_E-7lin.*
-   :scale: 50 %
-.. |lg_flat| image:: _images/1D-04lgb-Si444-60-det_E-flat.*
-   :scale: 50 %
-.. |lg_line| image:: _images/1D-04lgb-Si444-60-det_E-line.*
-   :scale: 50 %
-.. |lg_7lin| image:: _images/1D-04lgb-Si444-60-det_E-7lin.*
-   :scale: 50 %
+.. |bb_flat| imagezoom:: _images/1D-01b-Si444-60-det_E-flat.*
+.. |bb_line| imagezoom:: _images/1D-01b-Si444-60-det_E-line.*
+.. |bb_7lin| imagezoom:: _images/1D-01b-Si444-60-det_E-7lin.*
+   :loc: upper-right-corner
+.. |bg_flat| imagezoom:: _images/1D-02gb-Si444-60-det_E-flat.*
+.. |bg_line| imagezoom:: _images/1D-02gb-Si444-60-det_E-line.*
+.. |bg_7lin| imagezoom:: _images/1D-02gb-Si444-60-det_E-7lin.*
+   :loc: upper-right-corner
+.. |lb_flat| imagezoom:: _images/1D-03lb-Si444-60-det_E-flat.*
+.. |lb_line| imagezoom:: _images/1D-03lb-Si444-60-det_E-line.*
+.. |lb_7lin| imagezoom:: _images/1D-03lb-Si444-60-det_E-7lin.*
+   :loc: upper-right-corner
+.. |lg_flat| imagezoom:: _images/1D-04lgb-Si444-60-det_E-flat.*
+.. |lg_line| imagezoom:: _images/1D-04lgb-Si444-60-det_E-line.*
+.. |lg_7lin| imagezoom:: _images/1D-04lgb-Si444-60-det_E-7lin.*
+   :loc: upper-right-corner
 
 The energy distribution over the crystal surface is hyperbolic for Bragg and
 ellipsoidal for Laue crystals. Therefore, Laue crystals have limited acceptance
@@ -71,66 +70,56 @@ in the sagittal direction whereas Bragg crystals have the hyperbola branches
 even for large sagittal sizes. Notice the full crystal coverage in the
 meridional direction for the two ground-bent cases.
 
-+-------------------+--------------+--------------+------------+
-|      geometry     |  flat source |  mono source |  7 lines   |
-+===================+==============+==============+============+
-| Bragg simply bent |  |xbb_flat|  |  |xbb_line|  | |xbb_7lin| |
-+-------------------+--------------+--------------+------------+
-| Bragg ground-bent |  |xbg_flat|  |  |xbg_line|  | |xbg_7lin| |
-+-------------------+--------------+--------------+------------+
-| Laue simply bent  |  |xlb_flat|  |  |xlb_line|  | |xlb_7lin| |
-+-------------------+--------------+--------------+------------+
-| Laue ground-bent  |  |xlg_flat|  |  |xlg_line|  | |xlg_7lin| |
-+-------------------+--------------+--------------+------------+
++----------+---------------------+---------------------+---------------------+
+| geometry |     flat source     |     line source     |       7 lines       |
++==========+=====================+=====================+=====================+
+| Bragg    |                     |                     |                     |
+| simply   |      |xbb_flat|     |      |xbb_line|     |      |xbb_7lin|     |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| Bragg    |                     |                     |                     |
+| ground   |      |xbg_flat|     |      |xbg_line|     |      |xbg_7lin|     |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| Laue     |                     |                     |                     |
+| simply   |      |xlb_flat|     |      |xlb_line|     |      |xlb_7lin|     |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| Laue     |                     |                     |                     |
+| ground   |      |xlg_flat|     |      |xlg_line|     |      |xlg_7lin|     |
+| bent     |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
 
-.. |xbb_flat| image:: _images/1D-01b-Si444-60-xtal_E-flat.*
-   :scale: 40 %
-.. |xbb_line| image:: _images/1D-01b-Si444-60-xtal_E-line.*
-   :scale: 40 %
-.. |xbb_7lin| image:: _images/1D-01b-Si444-60-xtal_E-7lin.*
-   :scale: 40 %
-.. |xbg_flat| image:: _images/1D-02gb-Si444-60-xtal_E-flat.*
-   :scale: 40 %
-.. |xbg_line| image:: _images/1D-02gb-Si444-60-xtal_E-line.*
-   :scale: 40 %
-.. |xbg_7lin| image:: _images/1D-02gb-Si444-60-xtal_E-7lin.*
-   :scale: 40 %
-.. |xlb_flat| image:: _images/1D-03lb-Si444-60-xtal_E-flat.*
-   :scale: 40 %
-.. |xlb_line| image:: _images/1D-03lb-Si444-60-xtal_E-line.*
-   :scale: 40 %
-.. |xlb_7lin| image:: _images/1D-03lb-Si444-60-xtal_E-7lin.*
-   :scale: 40 %
-.. |xlg_flat| image:: _images/1D-04lgb-Si444-60-xtal_E-flat.*
-   :scale: 40 %
-.. |xlg_line| image:: _images/1D-04lgb-Si444-60-xtal_E-line.*
-   :scale: 40 %
-.. |xlg_7lin| image:: _images/1D-04lgb-Si444-60-xtal_E-7lin.*
-   :scale: 40 %
+.. |xbb_flat| imagezoom:: _images/1D-01b-Si444-60-xtal_E-flat.*
+.. |xbb_line| imagezoom:: _images/1D-01b-Si444-60-xtal_E-line.*
+.. |xbb_7lin| imagezoom:: _images/1D-01b-Si444-60-xtal_E-7lin.*
+   :loc: upper-right-corner
+.. |xbg_flat| imagezoom:: _images/1D-02gb-Si444-60-xtal_E-flat.*
+.. |xbg_line| imagezoom:: _images/1D-02gb-Si444-60-xtal_E-line.*
+.. |xbg_7lin| imagezoom:: _images/1D-02gb-Si444-60-xtal_E-7lin.*
+   :loc: upper-right-corner
+.. |xlb_flat| imagezoom:: _images/1D-03lb-Si444-60-xtal_E-flat.*
+.. |xlb_line| imagezoom:: _images/1D-03lb-Si444-60-xtal_E-line.*
+.. |xlb_7lin| imagezoom:: _images/1D-03lb-Si444-60-xtal_E-7lin.*
+   :loc: upper-right-corner
+.. |xlg_flat| imagezoom:: _images/1D-04lgb-Si444-60-xtal_E-flat.*
+.. |xlg_line| imagezoom:: _images/1D-04lgb-Si444-60-xtal_E-line.*
+.. |xlg_7lin| imagezoom:: _images/1D-04lgb-Si444-60-xtal_E-7lin.*
+   :loc: upper-right-corner
 
 As a matter of principles checking, let us consider how the initially
 unpolarized beam becomes partially polarized after being diffracted by the
 crystal analyzer. As expected, the beam is fully polarized at 45° Bragg angle
 (Brewster angle in x-ray regime). CAxis here is degree of polarization:
 
-+----------------------------+--------------------------+
-|         Bragg              |           Laue           |
-+=============+==============+============+=============+
-|  |DPBragg|  |  |DPBraggZ|  |  |DPLaue|  |  |DPLaueZ|  |
-+-------------+--------------+------------+-------------+
++-------------+-------------+
+|    Bragg    |    Laue     |
++=============+=============+
+|  |DPBragg|  |  |DPLaue|   |
++-------------+-------------+
 
-.. |DPBragg| image:: _images/1D-DegOfPol_Bragg.swf
-   :width: 322
-   :height: 205
-.. |DPBraggZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/1D-DegOfPol_Bragg.swf
-.. |DPLaue| image:: _images/1D-DegOfPol_Laue.swf
-   :width: 315
-   :height: 205
-.. |DPLaueZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/1D-DegOfPol_Laue.swf
+.. |DPBragg| animation:: _images/1D-DegOfPol_Bragg
+.. |DPLaue| animation:: _images/1D-DegOfPol_Laue
 
 .. rubric:: Comments
 
@@ -178,10 +167,8 @@ source–detector line. The detector plane is perpendicular to the sketch.
 Left: the classical setup [vH]_ with 2 translations.
 Right: the setup with an invariant escape direction.
 
-.. image:: _images/vonHamosPositionsClassic.*
-   :scale: 40 %
-.. image:: _images/vonHamosPositionsFixedEscape.*
-   :scale: 40 %
+.. imagezoom:: _images/vonHamosPositionsClassic.*
+.. imagezoom:: _images/vonHamosPositionsFixedEscape.*
 
 The geometrical parameters for the von Hamos spectrometer were taken from
 [vH_SLS]_: a diced 100 (sagittal) × 50 (meridional) mm² Si(444) crystal is
@@ -207,34 +194,33 @@ was ray-traced for a source of 7 energy lines evenly spaced with the found step
 *δE*. Such images are shown for different dicing sizes at a particular Bragg
 angle.
 
-+-------------+-------------+-------------+------------+
-|  crystal    | flat source | line source |  7 lines   |
-+=============+=============+=============+============+
-| diced 5 mm  |  |vH5_flat| |  |vH5_line| | |vH5_7lin| |
-+-------------+-------------+-------------+------------+
-| diced 1 mm  |  |vH1_flat| |  |vH1_line| | |vH1_7lin| |
-+-------------+-------------+-------------+------------+
-| not diced   |  |vHc_flat| |  |vHc_line| | |vHc_7lin| |
-+-------------+-------------+-------------+------------+
++---------+--------------------+--------------------+--------------------+
+| crystal |     flat source    |     line source    |       7 lines      |
++=========+====================+====================+====================+
+| diced   |                    |                    |                    |
+| 5 mm    |     |vH5_flat|     |     |vH5_line|     |     |vH5_7lin|     |
++---------+--------------------+--------------------+--------------------+
+| diced   |                    |                    |                    |
+| 1 mm    |     |vH1_flat|     |     |vH1_line|     |     |vH1_7lin|     |
++---------+--------------------+--------------------+--------------------+
+| not     |                    |                    |                    |
+| diced   |     |vHc_flat|     |     |vHc_line|     |     |vHc_7lin|     |
++---------+--------------------+--------------------+--------------------+
 
-.. |vH5_flat| image:: _images/SivonHamos-5mmDiced60-det_E-flat.*
-   :scale: 50 %
-.. |vH5_line| image:: _images/SivonHamos-5mmDiced60-det_E-line.*
-   :scale: 50 %
-.. |vH5_7lin| image:: _images/SivonHamos-5mmDiced60-det_E-7lin.*
+.. |vH5_flat| imagezoom:: _images/SivonHamos-5mmDiced60-det_E-flat.*
+.. |vH5_line| imagezoom:: _images/SivonHamos-5mmDiced60-det_E-line.*
+.. |vH5_7lin| imagezoom:: _images/SivonHamos-5mmDiced60-det_E-7lin.*
+   :loc: upper-right-corner
 
-.. |vH1_flat| image:: _images/SivonHamos-1mmDiced60-det_E-flat.*
-   :scale: 50 %
-.. |vH1_line| image:: _images/SivonHamos-1mmDiced60-det_E-line.*
-   :scale: 50 %
-.. |vH1_7lin| image:: _images/SivonHamos-1mmDiced60-det_E-7lin.*
+.. |vH1_flat| imagezoom:: _images/SivonHamos-1mmDiced60-det_E-flat.*
+.. |vH1_line| imagezoom:: _images/SivonHamos-1mmDiced60-det_E-line.*
+.. |vH1_7lin| imagezoom:: _images/SivonHamos-1mmDiced60-det_E-7lin.*
+   :loc: upper-right-corner
 
-.. |vHc_flat| image:: _images/SivonHamos-notDiced60-det_E-flat.*
-   :scale: 50 %
-.. |vHc_line| image:: _images/SivonHamos-notDiced60-det_E-line.*
-   :scale: 50 %
-.. |vHc_7lin| image:: _images/SivonHamos-notDiced60-det_E-7lin.*
-   :scale: 50 %
+.. |vHc_flat| imagezoom:: _images/SivonHamos-notDiced60-det_E-flat.*
+.. |vHc_line| imagezoom:: _images/SivonHamos-notDiced60-det_E-line.*
+.. |vHc_7lin| imagezoom:: _images/SivonHamos-notDiced60-det_E-7lin.*
+   :loc: upper-right-corner
 
 With the coloring by stripe (crystal facet) number, the image below explains
 why energy resolution is worse when stripes are wider and the crystal is
@@ -249,10 +235,8 @@ increase the detector image.
 | diced 1 mm |      |vH1_line_stripes|              |
 +------------+--------------------------------------+
 
-.. |vH5_line_stripes| image:: _images/SivonHamos-5mmDiced60-det_stripes-line.*
-   :scale: 50 %
-.. |vH1_line_stripes| image:: _images/SivonHamos-1mmDiced60-det_stripes-line.*
-   :scale: 50 %
+.. |vH5_line_stripes| imagezoom:: _images/SivonHamos-5mmDiced60-det_stripes-line.*
+.. |vH1_line_stripes| imagezoom:: _images/SivonHamos-1mmDiced60-det_stripes-line.*
 
 
 The efficiency of a von Hamos spectrometer is significantly lower as compared
@@ -262,8 +246,7 @@ is shown: only a narrow part of the crystal surface contributes to a given
 energy band. Here, in the 5-mm-stripe case a bandwidth of ~12 eV uses less than
 1 mm of the crystal!
 
-.. image:: _images/SivonHamos-5mmDiced60-xtal_E_zoom-7lin.*
-   :scale: 50 %
+.. imagezoom:: _images/SivonHamos-5mmDiced60-xtal_E_zoom-7lin.*
 
 Comparison of Rowland circle based and von Hamos analyzers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -291,12 +274,10 @@ size. Inversely, if the crystal is put at a further distance, the energy
 resolution is improved (square symbols) but the efficiency is low because of a
 smaller solid angle collected. The left figure is with a narrow energy band
 equal to the 6-fold energy resolution. The right figure is with a wide energy
-band equal to 8•10 :sup:`-4`•E (approximate width of K β lines [Henke]_).
+band equal to 8·10 :sup:`-4`·E (approximate width of K β lines [Henke]_).
 
-.. image:: _images/ResolutionEfficiency1D-narrowBand.*
-   :scale: 50 %
-.. image:: _images/ResolutionEfficiency1D-8e-4Band.*
-   :scale: 50 %
+.. imagezoom:: _images/ResolutionEfficiency1D-narrowBand.*
+.. imagezoom:: _images/ResolutionEfficiency1D-8e-4Band.*
 
 Finally, among the compared 1D-bent spectrometers the Johansson type is the
 best in the combination of good energy resolution and high efficiency. It is
@@ -328,40 +309,36 @@ holds the source (sample) and the upper one holds the detector. The crystal in
 the figure has the magnification 1:1 for the circular crystal (left part) and
 1.5:1 for the elliptical one (right part).
 
-.. image:: _images/CircularAndElliptical_vonHamos_s.*
-   :scale: 50 %
+.. imagezoom:: _images/CircularAndElliptical_vonHamos_s.*
 
 The crystal is diced along the cylinder axis with 1 mm pitch. The difference in
 the circular and elliptical figures is shown below.
 
-.. image:: _images/Cylinders.*
-   :scale: 50 %
+.. imagezoom:: _images/Cylinders.*
 
 The elliptical figure results in some aberrations, as seen by the monochromatic
 images below, which worsens energy resolution.
 
-+--------------------+-------------+-------------+-------------+
-|     crystal        | flat source | line source |   7 lines   |
-+====================+=============+=============+=============+
-|  bent as circular  | |circ_flat| | |circ_line| | |circ_7lin| |
-|      cylinder      |             |             |             |
-+--------------------+-------------+-------------+-------------+
-| bent as elliptical |  |ell_flat| |  |ell_line| |  |ell_7lin| |
-|     cylinder       |             |             |             |
-+--------------------+-------------+-------------+-------------+
++------------+--------------------+--------------------+--------------------+
+| crystal    |    flat source     |     line source    |      7 lines       |
++============+====================+====================+====================+
+| bent as    |                    |                    |                    |
+| circular   |     |circ_flat|    |     |circ_line|    |     |circ_7lin|    |
+| cylinder   |                    |                    |                    |
++------------+--------------------+--------------------+--------------------+
+| bent as    |                    |                    |                    |
+| elliptical |     |ell_flat|     |     |ell_line|     |     |ell_7lin|     |
+| cylinder   |                    |                    |                    |
++------------+--------------------+--------------------+--------------------+
 
-.. |circ_flat| image:: _images/SivonHamosDicedCircular60-det_E-flat.*
-   :scale: 50 %
-.. |circ_line| image:: _images/SivonHamosDicedCircular60-det_E-line.*
-   :scale: 50 %
-.. |circ_7lin| image:: _images/SivonHamosDicedCircular60-det_E-7lin.*
-   :scale: 50 %
-.. |ell_flat| image:: _images/SivonHamosDicedElliptical60-det_E-flat.*
-   :scale: 50 %
-.. |ell_line| image:: _images/SivonHamosDicedElliptical60-det_E-line.*
-   :scale: 50 %
-.. |ell_7lin| image:: _images/SivonHamosDicedElliptical60-det_E-7lin.*
-   :scale: 50 %
+.. |circ_flat| imagezoom:: _images/SivonHamosDicedCircular60-det_E-flat.*
+.. |circ_line| imagezoom:: _images/SivonHamosDicedCircular60-det_E-line.*
+.. |circ_7lin| imagezoom:: _images/SivonHamosDicedCircular60-det_E-7lin.*
+   :loc: upper-right-corner
+.. |ell_flat| imagezoom:: _images/SivonHamosDicedElliptical60-det_E-flat.*
+.. |ell_line| imagezoom:: _images/SivonHamosDicedElliptical60-det_E-line.*
+.. |ell_7lin| imagezoom:: _images/SivonHamosDicedElliptical60-det_E-7lin.*
+   :loc: upper-right-corner
 
 """
 pass

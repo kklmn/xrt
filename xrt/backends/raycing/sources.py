@@ -237,22 +237,25 @@ harmonic is shown below.
     them, especially on the energy mesh. Try different numbers of points and
     various energy ranges.
 
-.. image:: _images/compareUndulators.png
-   :scale: 50 %
+.. imagezoom:: _images/compareUndulators.png
 
 .. _undulator_highE:
 
 Undulator spectrum at very high energies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The codes Urgent [Urgent]_ and SPECTRA [SPECTRA]_ result in saturation at high
-energies (see the image below) thus leading to a divergent total power
-integral. The false radiation has a circular off-axis shape. To the contrary,
-xrt flux at high energies vanishes and follows the wiggler approximation. More
-discussion will follow in a future journal article about xrt.
+The codes Urgent [Urgent]_, SRW [SRW]_ and SPECTRA [SPECTRA]_ result in
+saturation or failure at high energies (see the image below) thus leading to a
+divergent total power integral. The false radiation has a circular off-axis
+shape. To the contrary, xrt flux at high energies vanishes and follows the
+wiggler approximation. More discussion will follow in a future journal article
+about xrt.
 
-.. image:: _images/flux_BioNanoMAX.png
-   :scale: 50 %
+.. [SRW] O. Chubar, P. Elleaume, *Accurate And Efficient Computation Of
+   Synchrotron Radiation In The Near Field Region*, proc. of the EPAC98
+   Conference, 22-26 June 1998, p.1177-1179.
+
+.. imagezoom:: _images/flux_BioNanoMAX.png
 
 .. _tapering_comparison:
 
@@ -276,20 +279,14 @@ trustful.
 
 The source code is in ``examples\withRaycing\01_SynchrotronSources``
 
-.. image:: _images/compareTaper.png
-   :scale: 50 %
+.. imagezoom:: _images/compareTaper.png
 
 Notice that not only the band width is affected by tapering. Also the
 transverse distribution attains inhomogeneity which varies with energy, see the
 animation below. Notice also that such a picture is sensitive to emittance; the
 one below was calculated for the emittance of Petra III ring.
 
-.. image:: _images/taperingEnergyScan.swf
-   :width: 300
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/taperingEnergyScan.swf
+.. imagezoom:: _images/taperingEnergyScan
 
 Undulator spectrum in transverse plane
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -303,8 +300,7 @@ coordinates.
 Whereas xrt gives equal results to other codes in such univariate
 distributions as flux through an aperture:
 
-.. image:: _images/compareFlux.png
-   :scale: 50 %
+.. imagezoom:: _images/compareFlux.png
 
 ... and transversal distribution at a fixed energy:
 
@@ -318,16 +314,12 @@ distributions as flux through an aperture:
 | (7th harmonic) |   |spectra_highE|  | |xrt_highE| |
 +----------------+--------------------+-------------+
 
-.. |spectra_lowE| image:: _images/undulator-E=04850eV-spectra.*
-   :scale: 50 %
-   :align: bottom
-.. |spectra_highE| image:: _images/undulator-E=11350eV-spectra.*
-   :scale: 50 %
-   :align: bottom
-.. |xrt_lowE| image:: _images/undulator-E=04850eV-xrt.*
-   :scale: 50 %
-.. |xrt_highE| image:: _images/undulator-E=11350eV-xrt.*
-   :scale: 50 %
+.. |spectra_lowE| imagezoom:: _images/undulator-E=04850eV-spectra.*
+.. |spectra_highE| imagezoom:: _images/undulator-E=11350eV-spectra.*
+.. |xrt_lowE| imagezoom:: _images/undulator-E=04850eV-xrt.*
+   :loc: upper-right-corner
+.. |xrt_highE| imagezoom:: _images/undulator-E=11350eV-xrt.*
+   :loc: upper-right-corner
 
 ..., xrt can combine the two distributions in one image and thus be more
 informative:
@@ -342,14 +334,12 @@ informative:
 | (7th harmonic) |      |xrtHi|      |      |xrtHi5|      |
 +----------------+-------------------+--------------------+
 
-.. |xrtLo| image:: _images/oneHarmonic-E=04850eV-xrt.*
-   :scale: 50 %
-.. |xrtHi| image:: _images/oneHarmonic-E=11350eV-xrt.*
-   :scale: 50 %
-.. |xrtLo5| image:: _images/oneHarmonic-E=04850eV-xrt_x5.*
-   :scale: 50 %
-.. |xrtHi5| image:: _images/oneHarmonic-E=11350eV-xrt_x5.*
-   :scale: 50 %
+.. |xrtLo| imagezoom:: _images/oneHarmonic-E=04850eV-xrt.*
+.. |xrtHi| imagezoom:: _images/oneHarmonic-E=11350eV-xrt.*
+.. |xrtLo5| imagezoom:: _images/oneHarmonic-E=04850eV-xrt_x5.*
+   :loc: upper-right-corner
+.. |xrtHi5| imagezoom:: _images/oneHarmonic-E=11350eV-xrt_x5.*
+   :loc: upper-right-corner
 
 In particular, it is seen that divergence strongly depends on energy, even for
 such a narrow energy band within one harmonic. It is also seen that the maximum
@@ -380,31 +370,19 @@ total flux.
 |   p-polarized          |  |spectra_n05mP|   |  |xrt_n05mP|   |
 +------------------------+--------------------+----------------+
 
-.. |spectra_f05m0| image:: _images/spectra-05m-far.png
-   :scale: 50 %
-   :align: bottom
-.. |spectra_f05mP| image:: _images/spectra-05m-far_p.png
-   :scale: 50 %
-   :align: bottom
-.. |spectra_n05m0| image:: _images/spectra-05m-near.png
-   :scale: 50 %
-   :align: bottom
-.. |spectra_n05mP| image:: _images/spectra-05m-near_p.png
-   :scale: 50 %
-   :align: bottom
+.. |spectra_f05m0| imagezoom:: _images/spectra-05m-far.png
+.. |spectra_f05mP| imagezoom:: _images/spectra-05m-far_p.png
+.. |spectra_n05m0| imagezoom:: _images/spectra-05m-near.png
+.. |spectra_n05mP| imagezoom:: _images/spectra-05m-near_p.png
 
-.. |xrt_f05m0| image:: _images/xrt-far05m1TotalFlux-rays.png
-   :scale: 50 %
-   :align: bottom
-.. |xrt_f05mP| image:: _images/xrt-far05m3vertFlux-rays.png
-   :scale: 50 %
-   :align: bottom
-.. |xrt_n05m0| image:: _images/xrt-near05m1TotalFlux-rays.png
-   :scale: 50 %
-   :align: bottom
-.. |xrt_n05mP| image:: _images/xrt-near05m3vertFlux-rays.png
-   :scale: 50 %
-   :align: bottom
+.. |xrt_f05m0| imagezoom:: _images/xrt-far05m1TotalFlux-rays.png
+   :loc: upper-right-corner
+.. |xrt_f05mP| imagezoom:: _images/xrt-far05m3vertFlux-rays.png
+   :loc: upper-right-corner
+.. |xrt_n05m0| imagezoom:: _images/xrt-near05m1TotalFlux-rays.png
+   :loc: upper-right-corner
+.. |xrt_n05mP| imagezoom:: _images/xrt-near05m3vertFlux-rays.png
+   :loc: upper-right-corner
 
 +------------------------+--------------------+----------------+
 |  at 25 m               | SPECTRA [SPECTRA]_ |       xrt      |
@@ -422,31 +400,44 @@ total flux.
 |   p-polarized          |  |spectra_n25mP|   |  |xrt_n25mP|   |
 +------------------------+--------------------+----------------+
 
-.. |spectra_f25m0| image:: _images/spectra-25m-far.png
-   :scale: 50 %
-   :align: bottom
-.. |spectra_f25mP| image:: _images/spectra-25m-far_p.png
-   :scale: 50 %
-   :align: bottom
-.. |spectra_n25m0| image:: _images/spectra-25m-near.png
-   :scale: 50 %
-   :align: bottom
-.. |spectra_n25mP| image:: _images/spectra-25m-near_p.png
-   :scale: 50 %
-   :align: bottom
+.. |spectra_f25m0| imagezoom:: _images/spectra-25m-far.png
+.. |spectra_f25mP| imagezoom:: _images/spectra-25m-far_p.png
+.. |spectra_n25m0| imagezoom:: _images/spectra-25m-near.png
+.. |spectra_n25mP| imagezoom:: _images/spectra-25m-near_p.png
 
-.. |xrt_f25m0| image:: _images/xrt-far25m1TotalFlux-rays.png
-   :scale: 50 %
-   :align: bottom
-.. |xrt_f25mP| image:: _images/xrt-far25m3vertFlux-rays.png
-   :scale: 50 %
-   :align: bottom
-.. |xrt_n25m0| image:: _images/xrt-near25m1TotalFlux-rays.png
-   :scale: 50 %
-   :align: bottom
-.. |xrt_n25mP| image:: _images/xrt-near25m3vertFlux-rays.png
-   :scale: 50 %
-   :align: bottom
+.. |xrt_f25m0| imagezoom:: _images/xrt-far25m1TotalFlux-rays.png
+   :loc: upper-right-corner
+.. |xrt_f25mP| imagezoom:: _images/xrt-far25m3vertFlux-rays.png
+   :loc: upper-right-corner
+.. |xrt_n25m0| imagezoom:: _images/xrt-near25m1TotalFlux-rays.png
+   :loc: upper-right-corner
+.. |xrt_n25mP| imagezoom:: _images/xrt-near25m3vertFlux-rays.png
+   :loc: upper-right-corner
+
+Field phase in near field
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The phase of the radiation field on a flat screen as calculated by the three
+codes is compared below. Notice that the visualization (brightness=intensity,
+color=phase) is not by SRW and SPECTRA but was done by us.
+
++--------------------+--------------------+--------------------+
+|     SRW [SRW]_     | SPECTRA [SPECTRA]_ |         xrt        |
++====================+====================+====================+
+|      |srw_ps|      |    |spectra_ps|    |      |xrt_ps|      |
++--------------------+--------------------+--------------------+
+|      |srw_pp|      |    |spectra_pp|    |      |xrt_pp|      |
++--------------------+--------------------+--------------------+
+
+.. |srw_ps| imagezoom:: _images/phase_SRWres-0em-05m_s.png
+.. |srw_pp| imagezoom:: _images/phase_SRWres-0em-05m_p.png
+.. |spectra_ps| imagezoom:: _images/phase_spectra-near5-0em-field_s.png
+.. |spectra_pp| imagezoom:: _images/phase_spectra-near5-0em-field_p.png
+.. |xrt_ps| imagezoom:: _images/phase_xrt-near05m1horFlux-wave-filament.png
+   :loc: upper-right-corner
+.. |xrt_pp| imagezoom:: _images/phase_xrt-near05m3verFlux-wave-filament.png
+   :loc: upper-right-corner
+
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"

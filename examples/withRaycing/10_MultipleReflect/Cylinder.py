@@ -161,7 +161,7 @@ def main():
     beamLine, fName = build_beamline()
     plots = define_plots(beamLine, fName)
     xrtr.run_ray_tracing(plots, repeats=40, updateEvery=1, beamLine=beamLine,
-                         processes='all')
+                         processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

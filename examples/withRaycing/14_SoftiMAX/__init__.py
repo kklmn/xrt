@@ -14,8 +14,7 @@ The beamline will have two branches:
 
 see the scheme provided by K. Thånell.
 
-.. image:: _images/softiMAX_layout.*
-   :scale: 50 %
+.. imagezoom:: _images/softiMAX_layout.*
 
 
 STXM branch
@@ -32,14 +31,11 @@ end (FE) slit, to M1, to M2 and to plane grating (PG) – is done with rays:
 |  |st_rFE|  |  |st_rM1|  |  |st_rM2|  |  |st_rPG|  |
 +------------+------------+------------+------------+
 
-.. |st_rFE| image:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-00-FE.*
-   :scale: 50 %
-.. |st_rM1| image:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-01-M1local.*
-   :scale: 50 %
-.. |st_rM2| image:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-02-M2local.*
-   :scale: 50 %
-.. |st_rPG| image:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-02a-PGlocal.*
-   :scale: 50 %
+.. |st_rFE| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-00-FE.*
+.. |st_rM1| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-01-M1local.*
+.. |st_rM2| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-02-M2local.*
+.. |st_rPG| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-02a-PGlocal.*
+   :loc: upper-right-corner
 
 Starting from PG – to M3, to exit slit, to Fresnel zone plate (FZP) and to
 variously positioned sample screen – the propagation is done by rays or waves,
@@ -55,31 +51,18 @@ similar image. Notice a micron-sized depth of focus.
 +-----------+---------------------+---------------------+
 | exit slit |       |st_rES|      |      |st_hES|       |
 +-----------+---------------------+---------------------+
-|  sample   |  |st_rS| |st_rSZ|   |  |st_hS| |st_hSZ|   |
+|  sample   |       |st_rS|       |      |st_hS|        |
 +-----------+---------------------+---------------------+
 
-.. |st_rM3| image:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |st_hM3| image:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |st_rES| image:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-04-ExitSlit.*
-   :scale: 50 %
-.. |st_hES| image:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-04-ExitSlit.*
-   :scale: 50 %
-.. |st_rS| image::
-    _images/stxm-2D-1-rays-0emit-0enSpread-monoE-06i-ExpFocus-Is.swf
-   :width: 326
-   :height: 210
-.. |st_rSZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-06i-ExpFocus-Is.swf
-.. |st_hS| image::
-    _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-06i-ExpFocus-Is.swf
-   :width: 326
-   :height: 210
-.. |st_hSZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-06i-ExpFocus-Is.swf
+.. |st_rM3| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-03-M3local.*
+.. |st_hM3| imagezoom:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-03-M3local.*
+   :loc: upper-right-corner
+.. |st_rES| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-04-ExitSlit.*
+.. |st_hES| imagezoom:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-04-ExitSlit.*
+   :loc: upper-right-corner
+.. |st_rS| animation:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-06i-ExpFocus-Is
+.. |st_hS| imagezoom:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-06i-ExpFocus-Is
+   :loc: upper-right-corner
 
 
 .. rubric:: Influence of emittance
@@ -99,28 +82,20 @@ broadening due to a chromatic dependence of the focal length.
 +-----------+------------------+--------------------+--------------------+
 |           |   0 emittance    |   real emittance   |      |refeb|       |
 +===========+==================+====================+====================+
-| exit slit |     |st_hES|     |      |st_hES2|     |      |st_hES3|     |
+| exit slit |     |st_hESb|    |      |st_hES2|     |      |st_hES3|     |
 +-----------+------------------+--------------------+--------------------+
-|  sample   | |st_hS| |st_hSZ| | |st_hS2| |st_hS2Z| | |st_hS3| |st_hS3Z| |
+|  sample   |     |st_hSb|     |      |st_hS2|      |      |st_hS3|      |
 +-----------+------------------+--------------------+--------------------+
 
 .. |refeb| replace:: real emittance, finite energy band
-.. |st_hES2| image:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-04-ExitSlit.*
-   :scale: 50 %
-.. |st_hS2| image:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-06i-ExpFocus-Is.swf
-   :width: 326
-   :height: 210
-.. |st_hS2Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-06i-ExpFocus-Is.swf
-.. |st_hES3| image:: _images/stxm-2D-2-hybr-non0e-0enSpread-wideE-04-ExitSlit.*
-   :scale: 50 %
-.. |st_hS3| image:: _images/stxm-2D-2-hybr-non0e-0enSpread-wideE-06i-ExpFocus-Is.swf
-   :width: 326
-   :height: 210
-.. |st_hS3Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-2D-2-hybr-non0e-0enSpread-wideE-06i-ExpFocus-Is.swf
+.. |st_hESb| imagezoom:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-04-ExitSlit.*
+.. |st_hES2| imagezoom:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-04-ExitSlit.*
+.. |st_hS2| animation:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-06i-ExpFocus-Is
+.. |st_hES3| imagezoom:: _images/stxm-2D-2-hybr-non0e-0enSpread-wideE-04-ExitSlit.*
+   :loc: upper-right-corner
+.. |st_hSb| imagezoom:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-06i-ExpFocus-Is
+.. |st_hS3| animation:: _images/stxm-2D-2-hybr-non0e-0enSpread-wideE-06i-ExpFocus-Is
+   :loc: upper-right-corner
 
 .. rubric:: Correction of emittance effects
 
@@ -130,19 +105,17 @@ loss of about 2/3 the focal size is almost restored.
 +-----------+--------------------+--------------------+
 |           |  80 µm exit slit   |  20 µm exit slit   |
 +===========+====================+====================+
-| exit slit |     |st_hES2|      |      |st_hES4|     |
+| exit slit |     |st_hES2b|     |      |st_hES4|     |
 +-----------+--------------------+--------------------+
-|  sample   | |st_hS2| |st_hS2Z| | |st_hS4| |st_hS4Z| |
+|  sample   |     |st_hS2b|      |      |st_hS4|      |
 +-----------+--------------------+--------------------+
 
-.. |st_hES4| image:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-025H-04-ExitSlit.*
-   :scale: 50 %
-.. |st_hS4| image:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-025H-06i-ExpFocus-Is.swf
-   :width: 326
-   :height: 210
-.. |st_hS4Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-025H-06i-ExpFocus-Is.swf
+.. |st_hES2b| imagezoom:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-04-ExitSlit.*
+.. |st_hES4| imagezoom:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-025H-04-ExitSlit.*
+   :loc: upper-right-corner
+.. |st_hS2b| animation:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-06i-ExpFocus-Is
+.. |st_hS4| animation:: _images/stxm-2D-2-hybr-non0e-0enSpread-monoE-025H-06i-ExpFocus-Is
+   :loc: upper-right-corner
 
 .. rubric:: Coherence signatures
 
@@ -163,49 +136,22 @@ mathematically equal results; the calculated figures differ by
 +-----------+--------------------------+--------------------------+
 |           |     80 µm exit slit      |     20 µm exit slit      |
 +===========+==========================+==========================+
-| method 1  | |st_hS80m1| |st_hS80m1Z| | |st_hS20m1| |st_hS20m1Z| |
+| method 1  |        |st_hS80m1|       |       |st_hS20m1|        |
 +-----------+--------------------------+--------------------------+
-| method 3  | |st_hS80m3| |st_hS80m3Z| | |st_hS20m3| |st_hS20m3Z| |
+| method 3  |        |st_hS80m3|       |       |st_hS20m3|        |
 +-----------+--------------------------+--------------------------+
-| method 4  | |st_hS80m4| |st_hS80m4Z| | |st_hS20m4| |st_hS20m4Z| |
+| method 4  |        |st_hS80m4|       |       |st_hS20m4|        |
 +-----------+--------------------------+--------------------------+
 
-.. |st_hS80m1| image:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE.swf
-   :width: 300
-   :height: 250
-.. |st_hS80m1Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE.swf
-.. |st_hS20m1| image:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE-025H.swf
-   :width: 300
-   :height: 250
-.. |st_hS20m1Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE-025H.swf
-.. |st_hS80m3| image:: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE.swf
-   :width: 400
-   :height: 400
-.. |st_hS80m3Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE.swf
-.. |st_hS20m3| image:: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE-025%H.swf
-   :width: 400
-   :height: 400
-.. |st_hS20m3Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE-025%H.swf
-.. |st_hS80m4| image:: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE.swf
-   :width: 400
-   :height: 400
-.. |st_hS80m4Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE.swf
-.. |st_hS20m4| image:: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE-025%H.swf
-   :width: 400
-   :height: 400
-.. |st_hS20m4Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE-025%H.swf
+.. |st_hS80m1| animation:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE
+.. |st_hS20m1| animation:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE-025H
+   :loc: upper-right-corner
+.. |st_hS80m3| animation:: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE
+.. |st_hS20m3| animation:: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE-025%H
+   :loc: upper-right-corner
+.. |st_hS80m4| animation:: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE
+.. |st_hS20m4| animation:: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE-025%H
+   :loc: upper-right-corner
 
 CXI branch
 ~~~~~~~~~~
@@ -223,39 +169,22 @@ directions, which dramatically improves the quality of the footprints.
 Disadvantages of the cuts are losses in visual representation and incorrect
 evaluation of the flux.
 
-+---------------+-------------+--------------+--------------+
-|               |      2D     |  1D hor cut  |  1D ver cut  |
-+===============+=============+==============+==============+
-| M3 footprint  |  |cxiM32D|  |  |cxiM31Dh|  |  |cxiM31Dv|  |
-+---------------+-------------+--------------+--------------+
-| sample screen |  |cxiS2D|   |  |cxiS1Dh|   |  |cxiS1Dv|   |
-|               |  |cxiS2DZ|  |  |cxiS1DhZ|  |  |cxiS1DvZ|  |
-+---------------+-------------+--------------+--------------+
++---------------+-------------------+--------------------+--------------------+
+|               |         2D        |     1D hor cut     |     1D ver cut     |
++===============+===================+====================+====================+
+| M3 footprint  |     |cxiM32D|     |     |cxiM31Dh|     |     |cxiM31Dv|     |
++---------------+-------------------+--------------------+--------------------+
+| sample screen |     |cxiS2D|      |     |cxiS1Dh|      |     |cxiS1Dv|      |
++---------------+-------------------+--------------------+--------------------+
 
-.. |cxiM32D| image:: _images/cxi_2D-2-hybr-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |cxiM31Dh| image:: _images/cxi_1D-2-hybr-1e6hor-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |cxiM31Dv| image:: _images/cxi_1D-2-hybr-1e6ver-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |cxiS2D| image:: _images/cxi_S2D.swf
-   :width: 326
-   :height: 210
-.. |cxiS2DZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi_S2D.swf
-.. |cxiS1Dh| image:: _images/cxi_S1Dh.swf
-   :width: 244
-   :height: 171
-.. |cxiS1DhZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi_S1Dh.swf
-.. |cxiS1Dv| image:: _images/cxi_S1Dv.swf
-   :width: 202
-   :height: 210
-.. |cxiS1DvZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi_S1Dv.swf
+.. |cxiM32D| imagezoom:: _images/cxi_2D-2-hybr-0emit-0enSpread-monoE-03-M3local.*
+.. |cxiM31Dh| imagezoom:: _images/cxi_1D-2-hybr-1e6hor-0emit-0enSpread-monoE-03-M3local.*
+.. |cxiM31Dv| imagezoom:: _images/cxi_1D-2-hybr-1e6ver-0emit-0enSpread-monoE-03-M3local.*
+   :loc: upper-right-corner
+.. |cxiS2D| animation:: _images/cxi_S2D
+.. |cxiS1Dh| animation:: _images/cxi_S1Dh
+.. |cxiS1Dv| animation:: _images/cxi_S1Dv
+   :loc: upper-right-corner
 
 .. _wavefronts:
 
@@ -280,32 +209,22 @@ wave front. The flat screens at the same positions have rapid phase variation
         demonstrate the correctness of the local propagation directions after
         having calculated the diffracted field.
 
-+------------------------+------------------------------+
-|      flat screen       |  curved screen (wave front)  |
-+========================+==============================+
-|  |cxiFlat| |cxiFlatZ|  |    |cxiFront| |cxiFrontZ|    |
-+------------------------+------------------------------+
++------------------------------+------------------------------+
+|         flat screen          |  curved screen (wave front)  |
++==============================+==============================+
+|          |cxiFlat|           |          |cxiFront|          |
++------------------------------+------------------------------+
 
-.. |cxiFlat| image:: _images/cxi-S1DhFlat.swf
-   :width: 244
-   :height: 171
-.. |cxiFlatZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-S1DhFlat.swf
-.. |cxiFront| image:: _images/cxi-S1DhFront.swf
-   :width: 244
-   :height: 171
-.. |cxiFrontZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-S1DhFront.swf
+.. |cxiFlat| animation:: _images/cxi-S1DhFlat
+.. |cxiFront| animation:: _images/cxi-S1DhFront
+   :loc: upper-right-corner
 
 The curvature of the calculated wave fronts varies across the focus position.
 The wave fronts become more flat as one approaches the focus, see the figure
 below. This is in contrast to *ray* propagation, where the angular ray
 distribution is invariant at any position between two optical elements.
 
-.. image:: _images/cxi-waveFronts.*
-   :scale: 50 %
+.. imagezoom:: _images/cxi-waveFronts.*
 
 .. rubric:: Rays, waves and hybrid
 
@@ -336,67 +255,40 @@ calculated by
 | footprint on M5 |  |cxi-rM5|  |  |cxi-hM5|   |  |cxi-wM5|  |
 +-----------------+-------------+--------------+-------------+
 |  sample screen  |  |cxi-rS|   |  |cxi-hS|    |  |cxi-wS|   |
-|                 |  |cxi-rSZ|  |  |cxi-hSZ|   |  |cxi-wSZ|  |
 +-----------------+-------------+--------------+-------------+
 
-.. |cxi-hFE| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-00-FE.*
-   :scale: 50 %
-.. |cxi-wFE| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-00-FE.*
-   :scale: 50 %
-.. |cxi-hM1| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-01-M1local.*
-   :scale: 50 %
-.. |cxi-wM1| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-01-M1local.*
-   :scale: 50 %
-.. |cxi-hM2| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-02-M2local.*
-   :scale: 50 %
-.. |cxi-wM2| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-02-M2local.*
-   :scale: 50 %
-.. |cxi-hPG| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-02-PGlocal.*
-   :scale: 50 %
-.. |cxi-wPG| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-02-PGlocal.*
-   :scale: 50 %
-.. |cxi-rM3| image:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |cxi-hM3| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |cxi-wM3| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-03-M3local.*
-   :scale: 50 %
-.. |cxi-rES| image:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-04-ExitSlit.*
-   :scale: 50 %
-.. |cxi-hES| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-04-ExitSlit.*
-   :scale: 50 %
-.. |cxi-wES| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-04-ExitSlit.*
-   :scale: 50 %
-.. |cxi-rM4| image:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-05-M4local.*
-   :scale: 50 %
-.. |cxi-hM4| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-05-M4local.*
-   :scale: 50 %
-.. |cxi-wM4| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-05-M4local.*
-   :scale: 50 %
-.. |cxi-rM5| image:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-06-M5local.*
-   :scale: 50 %
-.. |cxi-hM5| image:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-06-M5local.*
-   :scale: 50 %
-.. |cxi-wM5| image:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-06-M5local.*
-   :scale: 50 %
-.. |cxi-rS| image:: _images/cxi-rS.swf
-   :width: 244
-   :height: 170
-.. |cxi-rSZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-rS.swf
-.. |cxi-hS| image:: _images/cxi-hS.swf
-   :width: 244
-   :height: 170
-.. |cxi-hSZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-rS.swf
-.. |cxi-wS| image:: _images/cxi-wS.swf
-   :width: 244
-   :height: 170
-.. |cxi-wSZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-rS.swf
+.. |cxi-hFE| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-00-FE.*
+.. |cxi-wFE| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-00-FE.*
+   :loc: upper-right-corner
+.. |cxi-hM1| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-01-M1local.*
+.. |cxi-wM1| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-01-M1local.*
+   :loc: upper-right-corner
+.. |cxi-hM2| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-02-M2local.*
+.. |cxi-wM2| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-02-M2local.*
+   :loc: upper-right-corner
+.. |cxi-hPG| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-02-PGlocal.*
+.. |cxi-wPG| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-02-PGlocal.*
+   :loc: upper-right-corner
+.. |cxi-rM3| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-03-M3local.*
+.. |cxi-hM3| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-03-M3local.*
+.. |cxi-wM3| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-03-M3local.*
+   :loc: upper-right-corner
+.. |cxi-rES| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-04-ExitSlit.*
+.. |cxi-hES| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-04-ExitSlit.*
+.. |cxi-wES| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-04-ExitSlit.*
+   :loc: upper-right-corner
+.. |cxi-rM4| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-05-M4local.*
+.. |cxi-hM4| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-05-M4local.*
+.. |cxi-wM4| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-05-M4local.*
+   :loc: upper-right-corner
+.. |cxi-rM5| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-06-M5local.*
+.. |cxi-hM5| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-06-M5local.*
+.. |cxi-wM5| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-06-M5local.*
+   :loc: upper-right-corner
+.. |cxi-rS| animation:: _images/cxi-rS
+.. |cxi-hS| animation:: _images/cxi-hS
+.. |cxi-wS| animation:: _images/cxi-wS
+   :loc: upper-right-corner
 
 .. rubric:: Coherence signatures
 
@@ -408,22 +300,14 @@ correlation between two symmetric points relative 0. Normalized by intensity,
 it gives the absolute value of the degree of coherence.
 
 +--------------------------------------+--------------------------------------+
-|               0 emittance            |            real emittance            |
+|             0 emittance              |            real emittance            |
 +======================================+======================================+
-|  |cxi-coh2-0emit| |cxi-coh2-0emitZ|  |  |cxi-coh2-non0e| |cxi-coh2-non0eZ|  |
+|           |cxi-coh2-0emit|           |           |cxi-coh2-non0e|           |
 +--------------------------------------+--------------------------------------+
 
-.. |cxi-coh2-0emit| image:: _images/cxi-coh2-0emit.swf
-   :width: 500
-   :height: 400
-.. |cxi-coh2-0emitZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-coh2-0emit.swf
-.. |cxi-coh2-non0e| image:: _images/cxi-coh2-non0e.swf
-   :width: 500
-   :height: 400
-.. |cxi-coh2-non0eZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/cxi-coh2-non0e.swf
+.. |cxi-coh2-0emit| animation:: _images/cxi-coh2-0emit
+.. |cxi-coh2-non0e| animation:: _images/cxi-coh2-non0e
+   :loc: upper-right-corner
+
 """
 pass

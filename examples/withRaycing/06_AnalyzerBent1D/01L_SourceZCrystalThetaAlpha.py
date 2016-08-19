@@ -42,9 +42,9 @@ else:
 orders = (1, 4, 8, 12)
 crystals = [rm.CrystalDiamond((i, i, i), d111/i, geom='Laue',
                               elements=crystalMaterial) for i in orders]
-crystalsMask = (0, 1, 0, 0)
-numiters = [24, 360, 1280, 5120]  # @crysals
-numiters = [24, 24, 48, 120]  # @crysals
+crystalsMask = (1, 0, 0, 0)
+#numiters = [40, 360, 1280, 5120]  # @crysals
+numiters = [40, 40, 80, 120]  # @crysals
 
 R = 500.  # mm
 isGroundBent = True
@@ -78,7 +78,7 @@ else:  # GroundBent
                  [6.0e-4, 2.4e-4, 1.8e-4, 2.0e-4],
                  [8.0e-4, 3.0e-4, 2.5e-4, 2.0e-4]]
 thetasDegree = 10., 30., 45., 60., 80.  # degree
-thetaMask = 0, 0, 1, 0, 0
+thetaMask = 1, 1, 1, 1, 1
 alphasDegree = 0.,  # degree
 
 
@@ -140,15 +140,15 @@ def define_plots(beamLine):
     plotsAnalyzer.append(plotAnE)
     plotsE.append(plotAnE)
 
-#    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
-#      xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
-#      yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limYCrystal, bins=400, ppb=1),
-#      caxis=xrtp.XYCAxis('degree of polarization', '', bins=200, ppb=2,
-#      data=raycing.get_polarization_degree, limits=[0, 1]),
-#      title='xtal_DegOfPol', oe=beamLine.analyzer)
-#    plot.textPanel = plot.fig.text(0.88, 0.85, '',
-#      transform=plot.fig.transFigure, size=14, color='r', ha='center')
-#    plotsAnalyzer.append(plot)
+    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
+      xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
+      yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limYCrystal, bins=400, ppb=1),
+      caxis=xrtp.XYCAxis('degree of polarization', '', bins=200, ppb=2,
+      data=raycing.get_polarization_degree, limits=[-0.01, 1.01]),
+      title='xtal_DegOfPol', oe=beamLine.analyzer)
+    plot.textPanel = plot.fig.text(0.88, 0.85, '',
+      transform=plot.fig.transFigure, size=14, color='r', ha='center')
+    plotsAnalyzer.append(plot)
 #
 #    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
 #      xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
@@ -197,19 +197,19 @@ def define_plots(beamLine):
     plotsDetector.append(plotDetE)
     plotsE.append(plotDetE)
 
-#    plot = xrtp.XYCPlot(
-#        'beamDetector', (1,), aspect='auto',
-#        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal,
-#                           fwhmFormatStr='%.2f'),
-#        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=limYCrystal,
-#                           fwhmFormatStr='%.2f'),
-#        caxis=xrtp.XYCAxis('degree of polarization', '',
-#                           data=raycing.get_polarization_degree,
-#                           limits=[-0.01, 1.01]), title='det_DegOfPol')
-#    plot.textPanel = plot.fig.text(
-#        0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
-#        ha='center')
-#    plotsDetector.append(plot)
+    plot = xrtp.XYCPlot(
+        'beamDetector', (1,), aspect='auto',
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal,
+                           fwhmFormatStr='%.2f'),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=limYCrystal,
+                           fwhmFormatStr='%.2f'),
+        caxis=xrtp.XYCAxis('degree of polarization', '',
+                           data=raycing.get_polarization_degree,
+                           limits=[-0.01, 1.01]), title='det_DegOfPol')
+    plot.textPanel = plot.fig.text(
+        0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
+        ha='center')
+    plotsDetector.append(plot)
 #
 #    plot = xrtp.XYCPlot('beamDetector', (1,), aspect='auto',
 #      xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal,
@@ -306,6 +306,7 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
 
                     dELine, dzLine, dEFlat, dzFlat = 0, 0, 0, 1
                     for isource in np.arange(3):
+#                    for isource in [0,]:
                         xrtr.runCardVals.repeats = numiter
                         if isource == 0:  # flat
 #                            xrtr.runCardVals.repeats = 0
@@ -410,7 +411,7 @@ def main():
             beamLine]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes='all')
+        beamLine=beamLine, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

@@ -104,13 +104,14 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         """Example showing how to view a 3D numpy array in mayavi2.
         """
         def set_labelE(ind):
-            return '{0:.0f} eV'.format(source.energies[ipwX.ipw.slice_index])
+            return '{0:.0f} eV'.format(source.energies[ind])
 
         def move_view(obj, evt):
             labelE.text = set_labelE(ipwX.ipw.slice_index)
             pos = labelE.position
             labelE.position = ipwX.ipw.slice_index * src.spacing[0] + 1,\
                 pos[1], pos[2]
+            labelE.vector_text.update()
 
         def set_lut(ipw):
             lutM = ipw.module_manager.scalar_lut_manager
@@ -120,10 +121,12 @@ def visualize3D(source, data, isZplane=True, saveName=None):
             lutM.lut.range = [dataMax/100, dataMax]
             lutM.lut_mode = 'hot'
 
-        @animate(delay=10)
+        @animate()
         def anim(data, ipwX):
-            for i in range(0, data.shape[0], 10):
-                ipwX.ipw.slice_index = i  # data.shape[0] / 2
+            scene.scene.off_screen_rendering = True
+            scene.scene.anti_aliasing_frames = 0
+            for i in range(0, data.shape[0], 50):
+                ipwX.ipw.slice_index = i
                 move_view(None, None)
                 if saveName is not None:
                     scene.scene.save('{0}{1:04d}.png'.format(saveName, i))
@@ -134,7 +137,11 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         scene.scene.background = (0, 0, 0)
 
         src = ArraySource(transpose_input_array=True)
-        src.scalar_data = data[:, ::-1, ::-1].copy()
+        if 'xrt' in source.prefix_save_name():
+            sh = data.shape
+            src.scalar_data = data[:, :sh[1]//2, :sh[2]//2].copy()
+        else:
+            src.scalar_data = data[:, ::-1, ::-1].copy()
         src.spacing = np.array([-0.05, 1, 1])
         mayavi.add_source(src)  # analysis:ignore
         # Visualize the data.
@@ -145,9 +152,8 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         mayavi.add_module(ipwY)  # analysis:ignore
         ipwY.ipw.plane_orientation = 'y_axes'  # our x-axis
         ipwY.ipw.slice_index = int(data.shape[1] - 1)
-        if 'xrt' in source.prefix_save_name():
-            ipwY.ipw.slice_index /= int(2)
-
+#        if 'xrt' in source.prefix_save_name():
+#            ipwY.ipw.slice_index /= int(2)
         ipwY.ipw.left_button_action = 0
         set_lut(ipwY)
 
@@ -156,8 +162,8 @@ def visualize3D(source, data, isZplane=True, saveName=None):
             mayavi.add_module(ipwZ)  # analysis:ignore
             ipwZ.ipw.plane_orientation = 'z_axes'  # our z-axis
             ipwZ.ipw.slice_index = int(data.shape[2] - 1)
-            if 'xrt' in source.prefix_save_name():
-                ipwZ.ipw.slice_index /= int(2)
+#            if 'xrt' in source.prefix_save_name():
+#                ipwZ.ipw.slice_index /= int(2)
             ipwZ.ipw.left_button_action = 0
 
         if 'xrt' in source.prefix_save_name():
@@ -177,20 +183,19 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         ipwX.ipw.add_observer('WindowLevelEvent', move_view)
         ipwX.ipw.add_observer('StartInteractionEvent', move_view)
         ipwX.ipw.add_observer('EndInteractionEvent', move_view)
+
         labelE = Text3D()
         mayavi.add_module(labelE)  # analysis:ignore
         labelE.position = 1, data.shape[1]*0.73, data.shape[2]*0.85
         labelE.orientation = 90, 0, 90
         labelE.text = 'Energy'
         labelE.scale = 3, 3, 1
-        labelE.actor.property.color = 1, 1, 1
+        labelE.actor.property.color = 0, 1, 1
         labelE.orient_to_camera = False
-        print('aaaaaaaaaaaaaaaaaaaaaa', ipwX.ipw.slice_index)
-        print(len(source.energies))
         labelE.text = set_labelE(0)
 
         view(45, 70, 200)
-#        anim(data, ipwX)
+        anim(data, ipwX)
 
     data[data < 1e-7] = 1e-7
     dataMax = np.max(data)
@@ -206,19 +211,19 @@ def test_synchrotron_source(SourceClass, **kwargs):
     I0, l1, l2, l3 = source.intensities_on_mesh()
 
 ##visualize in 2D:
-    visualize(source, I0, r'$I_0$', 'I0')
-    visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
-    visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
-    visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
-    sign = -1
-    if hasattr(source, 'Kx'):
-        if source.Kx > 0:
-            sign = 1
-    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
+#    visualize(source, I0, r'$I_0$', 'I0')
+#    visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
+#    visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
+#    visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
+#    sign = -1
+#    if hasattr(source, 'Kx'):
+#        if source.Kx > 0:
+#            sign = 1
+#    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
 ##select only one visualize3D at a time:
-#    visualize3D(source, I0, saveName='Itot')
-#    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
+#    visualize3D(source, I0, isZplane=False, saveName='Itot')
+    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
 #    visualize3D(source, I0*l2/2., saveName='IspRe')
 #    visualize3D(source, I0*l3/2., saveName='IspIm')
 #
@@ -247,18 +252,28 @@ if __name__ == '__main__':
 #    Source = rs.Wiggler
 
 #*********** undulator ***************
+#    kwargs = dict(
+#        period=31.4, K=2.7, n=63, eE=6.08,
+#        xPrimeMax=0.3, zPrimeMax=0.3,
+#        eMin=500, eMax=31500, eN=1000, nx=20, nz=20)
+#    Kmax = 1.92
+#    thetaMax, psiMax = 100e-6, 50e-6
+#    kwargs = dict(name='IVU18.5', eE=3.0, eI=0.5,
+#                  eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
+#                  period=18.5, n=108, K=Kmax,
+#                  eMin=1500, eMax=31500, eN=1000, nx=40, nz=4,
+#                  xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3, distE='BW')
     kwargs = dict(
-        period=31.4, K=2.7, n=63, eE=6.08,
-        xPrimeMax=0.3, zPrimeMax=0.3,
-        eMin=500, eMax=10500, eN=1000, nx=20, nz=20)
-##by Urgent:
-#    Source = rs.UndulatorUrgent
-#by xrt:
-    kwargs['targetOpenCL'] = 'auto'
-    kwargs['distE'] = 'BW'
-    kwargs['xPrimeMaxAutoReduce'] = False
-    kwargs['zPrimeMaxAutoReduce'] = False
-    Source = rs.Undulator
+        period=31.4, K=2.7, n=63, eE=6.08, xPrimeMax=0.3, zPrimeMax=0.15,
+#        eSigmaX=134.2, eSigmaZ=6.325, eEpsilonX=1., eEpsilonZ=0.01,
+        eMin=1500, eMax=31500, eN=3000, nx=40, nz=20)
+#by Urgent:
+    Source = rs.UndulatorUrgent
+##by xrt:
+#    kwargs['distE'] = 'BW'
+#    kwargs['xPrimeMaxAutoReduce'] = False
+#    kwargs['zPrimeMaxAutoReduce'] = False
+#    Source = rs.Undulator
 
 ##*** helical undulator **************
 #    kwargs = dict(
@@ -268,7 +283,6 @@ if __name__ == '__main__':
 ###by Urgent:
 ##    Source = rs.UndulatorUrgent
 ##by xrt:
-#    kwargs['targetOpenCL'] = 'auto'
 #    kwargs['phaseDeg'] = 90
 #    kwargs['distE'] = 'BW'
 #    kwargs['xPrimeMaxAutoReduce'] = False

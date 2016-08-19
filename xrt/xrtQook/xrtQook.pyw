@@ -21,8 +21,11 @@ supplied examples and the present documentation.
 
 See a short :ref:`tutorial for xrtQook <qook>`.
 
-.. image:: _images/xrtQook.png
-   :scale: 60 %
+.. imagezoom:: _images/xrtQook.png
+   :width: 661
+   :height: 383
+   :widthzoom: 1102
+   :heightzoom: 639
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"

@@ -21,77 +21,69 @@ The images for flat and line sources were used to calculate energy resolution
 *δE*. After this, a 7-line source is created with the energy spacing between
 the lines equal to *δE*.
 
-+-----------------+-------------+-------------+-----------+
-|    crystal      | flat source | line source |  7 lines  |
-+=================+=============+=============+===========+
-| Johann          |  |nb_flat|  |  |nb_line|  | |nb_7lin| |
-+-----------------+-------------+-------------+-----------+
-| Johansson       |  |ng_flat|  |  |ng_line|  | |ng_7lin| |
-+-----------------+-------------+-------------+-----------+
-| Johann diced    |  |db_flat|  |  |db_line|  | |db_7lin| |
-+-----------------+-------------+-------------+-----------+
-| Johansson diced |  |dg_flat|  |  |dg_line|  | |dg_7lin| |
-+-----------------+-------------+-------------+-----------+
++-----------+---------------------+---------------------+---------------------+
+|  crystal  |     flat source     |     line source     |       7 lines       |
++===========+=====================+=====================+=====================+
+| Johann    |      |nb_flat|      |      |nb_line|      |      |nb_7lin|      |
++-----------+---------------------+---------------------+---------------------+
+| Johansson |      |ng_flat|      |      |ng_line|      |      |ng_7lin|      |
++-----------+---------------------+---------------------+---------------------+
+| Johann    |                     |                     |                     |
+| diced     |      |db_flat|      |      |db_line|      |      |db_7lin|      |
++-----------+---------------------+---------------------+---------------------+
+| Johansson |                     |                     |                     |
+| diced     |      |dg_flat|      |      |dg_line|      |      |dg_7lin|      |
++-----------+---------------------+---------------------+---------------------+
 
-.. |nb_flat| image:: _images/2D-01b-Si444-60.0-det_E-flat.*
-   :scale: 50 %
-.. |nb_line| image:: _images/2D-01b-Si444-60.0-det_E-line.*
-   :scale: 50 %
-.. |nb_7lin| image:: _images/2D-01b-Si444-60.0-det_E-7lin.*
-   :scale: 50 %
-.. |ng_flat| image:: _images/2D-02gb-Si444-60.0-det_E-flat.*
-   :scale: 50 %
-.. |ng_line| image:: _images/2D-02gb-Si444-60.0-det_E-line.*
-   :scale: 50 %
-.. |ng_7lin| image:: _images/2D-02gb-Si444-60.0-det_E-7lin.*
-   :scale: 50 %
-.. |db_flat| image:: _images/2D-03bd-Si444-60.0-det_E-flat.*
-   :scale: 50 %
-.. |db_line| image:: _images/2D-03bd-Si444-60.0-det_E-line.*
-   :scale: 50 %
-.. |db_7lin| image:: _images/2D-03bd-Si444-60.0-det_E-7lin.*
-   :scale: 50 %
-.. |dg_flat| image:: _images/2D-04gbd-Si444-60.0-det_E-flat.*
-   :scale: 50 %
-.. |dg_line| image:: _images/2D-04gbd-Si444-60.0-det_E-line.*
-   :scale: 50 %
-.. |dg_7lin| image:: _images/2D-04gbd-Si444-60.0-det_E-7lin.*
-   :scale: 50 %
+.. |nb_flat| imagezoom:: _images/2D-01b-Si444-60.0-det_E-flat.*
+.. |nb_line| imagezoom:: _images/2D-01b-Si444-60.0-det_E-line.*
+.. |nb_7lin| imagezoom:: _images/2D-01b-Si444-60.0-det_E-7lin.*
+   :loc: upper-right-corner
+.. |ng_flat| imagezoom:: _images/2D-02gb-Si444-60.0-det_E-flat.*
+.. |ng_line| imagezoom:: _images/2D-02gb-Si444-60.0-det_E-line.*
+.. |ng_7lin| imagezoom:: _images/2D-02gb-Si444-60.0-det_E-7lin.*
+   :loc: upper-right-corner
+.. |db_flat| imagezoom:: _images/2D-03bd-Si444-60.0-det_E-flat.*
+.. |db_line| imagezoom:: _images/2D-03bd-Si444-60.0-det_E-line.*
+.. |db_7lin| imagezoom:: _images/2D-03bd-Si444-60.0-det_E-7lin.*
+   :loc: upper-right-corner
+.. |dg_flat| imagezoom:: _images/2D-04gbd-Si444-60.0-det_E-flat.*
+.. |dg_line| imagezoom:: _images/2D-04gbd-Si444-60.0-det_E-line.*
+.. |dg_7lin| imagezoom:: _images/2D-04gbd-Si444-60.0-det_E-7lin.*
+   :loc: upper-right-corner
 
 Notice the energy distribution over the crystal area: the sagittal bending
 makes it uniform in the sagittal direction (here horizontal) and the
 ground-bent technology makes it uniform also in the meridional direction
 (here vertical):
 
-+-----------------+-----------+-----------+
-|    crystal      | footprint | zoomed in |
-|                 | image     | footprint |
-+=================+===========+===========+
-| Johann          | |nb_out|  |  |nb_in|  |
-+-----------------+-----------+-----------+
-| Johansson       | |ng_out|  |  |ng_in|  |
-+-----------------+-----------+-----------+
-| Johann diced    | |db_out|  |  |db_in|  |
-+-----------------+-----------+-----------+
-| Johansson diced | |dg_out|  |  |dg_in|  |
-+-----------------+-----------+-----------+
++-----------+----------------------------+----------------------------+
+|  crystal  |      footprint image       |    zoomed in footprint     |
++===========+============================+============================+
+| Johann    |          |nb_out|          |          |nb_in|           |
++-----------+----------------------------+----------------------------+
+| Johansson |          |ng_out|          |          |ng_in|           |
++-----------+----------------------------+----------------------------+
+| Johann    |                            |                            |
+| diced     |          |db_out|          |          |db_in|           |
++-----------+----------------------------+----------------------------+
+| Johansson |                            |                            |
+| diced     |          |dg_out|          |          |dg_in|           |
++-----------+----------------------------+----------------------------+
 
-.. |nb_out| image:: _images/2D-01b-Si444-60.0-xtal_E-7lin.*
-   :scale: 40 %
-.. |ng_out| image:: _images/2D-02gb-Si444-60.0-xtal_E-7lin.*
-   :scale: 40 %
-.. |db_out| image:: _images/2D-03bd-Si444-60.0-xtal_E-7lin.*
-   :scale: 40 %
-.. |dg_out| image:: _images/2D-04gbd-Si444-60.0-xtal_E-7lin.*
-   :scale: 40 %
-.. |nb_in| image:: _images/2D-01b-Si444-60.0-xtal_E_zoom-7lin.*
-   :scale: 40 %
-.. |ng_in| image:: _images/2D-02gb-Si444-60.0-xtal_E_zoom-7lin.*
-   :scale: 40 %
-.. |db_in| image:: _images/2D-03bd-Si444-60.0-xtal_E_zoom-7lin.*
-   :scale: 40 %
-.. |dg_in| image:: _images/2D-04gbd-Si444-60.0-xtal_E_zoom-7lin.*
-   :scale: 40 %
+.. |nb_out| imagezoom:: _images/2D-01b-Si444-60.0-xtal_E-7lin.*
+.. |ng_out| imagezoom:: _images/2D-02gb-Si444-60.0-xtal_E-7lin.*
+.. |db_out| imagezoom:: _images/2D-03bd-Si444-60.0-xtal_E-7lin.*
+.. |dg_out| imagezoom:: _images/2D-04gbd-Si444-60.0-xtal_E-7lin.*
+.. |nb_in| imagezoom:: _images/2D-01b-Si444-60.0-xtal_E_zoom-7lin.*
+   :loc: upper-right-corner
+.. |ng_in| imagezoom:: _images/2D-02gb-Si444-60.0-xtal_E_zoom-7lin.*
+   :loc: upper-right-corner
+.. |db_in| imagezoom:: _images/2D-03bd-Si444-60.0-xtal_E_zoom-7lin.*
+   :loc: upper-right-corner
+.. |dg_in| imagezoom:: _images/2D-04gbd-Si444-60.0-xtal_E_zoom-7lin.*
+   :loc: upper-right-corner
+
 """
 
 r"""
@@ -621,7 +613,7 @@ def main():
             beamLine]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes='all')
+        beamLine=beamLine, processes='half')
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

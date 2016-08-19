@@ -10,19 +10,8 @@ slit width is 10 µm, the slit separation is variable (displayed is edge-to-edge
 distance), the slit position is 90 m from the source and the screen is at 110
 m.
 
-.. image:: _images/YoungRays.swf
-   :width: 300
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/YoungRays.swf
-
-.. image:: _images/YoungWave.swf
-   :width: 300
-   :height: 205
-.. image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/YoungWave.swf
+.. animation:: _images/YoungRays
+.. animation:: _images/YoungWave
 
 """
 __author__ = "Roman Chernikov", "Konstantin Klementiev"
@@ -54,7 +43,7 @@ SCRx = 0.7
 SCRz = 10
 dE = 1e-5
 
-nrep = 8
+nrep = 512
 #finite divergence
 
 E0 = 12000

@@ -99,7 +99,8 @@ class BendingMagnet(object):
             Required for the wave propagation calculations.
 
         *pitch*, *yaw*: float
-            rotation angles around x and z axis. Useful for canted sources.
+            rotation angles around x and z axis. Useful for canted sources and
+            declined electron beams.
 
 
         """
@@ -622,7 +623,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-2, gIntervals=1, nRK=30,
+                 gp=1e-2, gIntervals=1, nRK=30, fullLength=False,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -832,6 +833,11 @@ class Undulator(object):
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
         self.trajectory = None
+        self.full = fullLength
+        if fullLength:
+            #self.filamentBeam = True
+            self.theta0 = 0
+            self.psi0 = 0
 
         self.cl_ctx = None
         if (self.R0 is not None):
@@ -1070,7 +1076,8 @@ class Undulator(object):
             quad_int_error = np.abs((I2 - I1)/I2)
             if _DEBUG:
                 print("G = {0}".format(
-                    [self.quadm, quad_int_error, I2, self.ag_n.sum()]))
+                    [self.gIntervals, self.quadm, quad_int_error, I2,
+                     2-self.ag_n.sum()]))
             if self.quadm > 400:
                 self.gIntervals *= 2
                 m = mstart
@@ -1081,8 +1088,10 @@ class Undulator(object):
         """end of Adjusting the number of points for Gauss integration"""
         self.eEspread = tmpeEspread
         if _DEBUG:
-            print("Done with Gaussian optimization, {0} points will be used".
-                  format(self.quadm))
+            print("Done with Gaussian optimization, {0} points will be used"
+                  " in {1} interval{2}".format(
+                      self.quadm, self.gIntervals,
+                      's' if self.gIntervals > 1 else ''))
 
         if self.filamentBeam:
             rMax = self.nrays
@@ -1416,8 +1425,8 @@ class Undulator(object):
                                       endpoint=False))
         wtGrid.append(tg[-1])
 
-        # print "Custom magnetic field: Bx={0}. By={1}, Bz={2}".format(
-        #    self.B0x, self.B0y, self.B0z)
+        # print("Custom magnetic field: Bx={0}. By={1}, Bz={2}".format(
+        #    self.B0x, self.B0y, self.B0z))
         Bx, By, Bz = self.magnetic_field(wtGrid)
 
         if self.filamentBeam:
@@ -1548,12 +1557,13 @@ class Undulator(object):
         ww1 = w * ((1. + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) +
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
+        scalarArgs = [self.cl_precisionF(0.)]
+
         if self.R0 is not None:
             scalarArgs = [self.cl_precisionF(self.R0),  # R0
                           self.cl_precisionF(self.L0)]
-        else:
-            scalarArgs = [self.cl_precisionF(self.taper)] if self.taper\
-                is not None else [self.cl_precisionF(0.)]  # taper
+        elif self.taper:
+            scalarArgs = [self.cl_precisionF(self.taper)]
 
         Np = np.int32(self.Np)
 
@@ -1561,9 +1571,8 @@ class Undulator(object):
         self.tg_n, self.ag_n = tg_n, ag_n
 
         dstep = 2 * PI / float(self.gIntervals)
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self.taper is not None) or (self.R0 is not None) or self.full:
             ab = 1. / PI2 / wu
-            #ab = 1. / PI2**2 / wu
             dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
         else:
             ab = 1. / PI2 / wu * np.sin(PI * Np * ww1) / np.sin(PI * ww1)
@@ -1584,6 +1593,16 @@ class Undulator(object):
                         self.cl_precisionF(ww1),  # Energy/Eund(0)
                         self.cl_precisionF(ddtheta),  # Theta
                         self.cl_precisionF(ddpsi)]  # Psi
+        if self.full:
+            if isinstance(self.theta0, np.ndarray):
+                slicedROArgs.extend([self.cl_precisionF(self.theta0),
+                                     self.cl_precisionF(self.psi0)])
+            else:
+                slicedROArgs.extend([self.cl_precisionF(
+                                        self.theta0*np.ones_like(w)),
+                                     self.cl_precisionF(
+                                        self.psi0*np.ones_like(w))])
+
         nonSlicedROArgs = [tg,  # Gauss-Legendre grid
                            ag]  # Gauss-Legendre weights
 
@@ -1594,6 +1613,10 @@ class Undulator(object):
             clKernel = 'undulator_taper'
         elif self.R0 is not None:
             clKernel = 'undulator_nf'
+            if self.full:
+                clKernel = 'undulator_nf_full'
+        elif self.full:
+            clKernel = 'undulator_full'
         else:
             clKernel = 'undulator'
 
@@ -1675,10 +1698,16 @@ class Undulator(object):
                 dpsi = accuBeam.filamentDpsi
                 seeded = accuBeam.seeded
                 seededI = accuBeam.seededI
+        if self.full:
+            if self.filamentBeam:
+                self.theta0 = dtheta
+                self.psi0 = dpsi
+            else:
+                self.theta0 = np.random.normal(0, self.dxprime, mcRays)
+                self.psi0 = np.random.normal(0, self.dzprime, mcRays)
 
         if fixedEnergy:
             rsE = fixedEnergy
-
         nrep = 0
         rep_condition = True
 #        while length < self.nrays:
@@ -1765,10 +1794,16 @@ class Undulator(object):
 #                dxR += np.random.normal(0, sigma_r2**0.5, npassed)
 #                dzR += np.random.normal(0, sigma_r2**0.5, npassed)
             else:
-                bot.sourceSIGMAx = (self.dx**2 + sigma_r2)**0.5
-                bot.sourceSIGMAz = (self.dz**2 + sigma_r2)**0.5
-                dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
-                dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
+                if self.full:
+                    bot.sourceSIGMAx = self.dx
+                    bot.sourceSIGMAz = self.dz
+                    dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
+                    dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
+                else:
+                    bot.sourceSIGMAx = (self.dx**2 + sigma_r2)**0.5
+                    bot.sourceSIGMAz = (self.dz**2 + sigma_r2)**0.5
+                    dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
+                    dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
 
             if wave is not None:
                 wave.rDiffr = ((wave.xDiffr - dxR)**2 + wave.yDiffr**2 +
@@ -1782,14 +1817,18 @@ class Undulator(object):
                 bot.z[:] = dzR
                 bot.a[:] = rTheta[I_pass]
                 bot.c[:] = rPsi[I_pass]
-                if self.filamentBeam:
-                    bot.a[:] += dtheta
-                    bot.c[:] += dpsi
-                else:
-                    if self.dxprime > 0:
-                        bot.a[:] += np.random.normal(0, self.dxprime, npassed)
-                    if self.dzprime > 0:
-                        bot.c[:] += np.random.normal(0, self.dzprime, npassed)
+
+                if not self.full:
+                    if self.filamentBeam:
+                        bot.a[:] += dtheta
+                        bot.c[:] += dpsi
+                    else:
+                        if self.dxprime > 0:
+                            bot.a[:] += np.random.normal(
+                                0, self.dxprime, npassed)
+                        if self.dzprime > 0:
+                            bot.c[:] += np.random.normal(
+                                0, self.dzprime, npassed)
 
             mJs = mJs[I_pass]
             mJp = mJp[I_pass]
@@ -1860,6 +1899,8 @@ class Undulator(object):
 #            self._reportNaN(bo.a, 'a')
 #            self._reportNaN(bo.b, 'b')
 #            self._reportNaN(bo.c, 'c')
+        if self.pitch or self.yaw:
+            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         bor = Beam(copyFrom=bo)
         if wave is not None:
             bor.x[:] = dxR
@@ -1870,8 +1911,6 @@ class Undulator(object):
             wave.Es *= mPh
             wave.Ep *= mPh
 
-        if self.pitch or self.yaw:
-            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
 

@@ -38,7 +38,7 @@ def run_one(path, tmpwd, infile, msg=None):
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K "+msg)
             else:
-                sys.stdout.write("\r" + "    ")
+#                sys.stdout.write("\r" + "    ")
                 print(msg + ' ')
             sys.stdout.flush()
     with open(os.devnull, 'w') as fn:
@@ -52,7 +52,7 @@ def gzip_output(tmpwd, outName, msg=None):
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K "+msg)
             else:
-                sys.stdout.write("\r" + "    ")
+#                sys.stdout.write("\r" + "    ")
                 print(msg + ' ')
             sys.stdout.flush()
     fname = os.path.join(tmpwd, outName)
@@ -83,7 +83,7 @@ def read_output(tmpwd, outName, skiprows, usecols, comments, useZip, msg=None):
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K "+msg)
             else:
-                sys.stdout.write("\r" + "    ")
+#                sys.stdout.write("\r" + "    ")
                 print(msg + ' ')
             sys.stdout.flush()
     try:
@@ -346,6 +346,7 @@ class UndulatorUrgent(object):
         self.xs = np.linspace(0, self.xPrimeMax, self.nx+1)
         self.zs = np.linspace(0, self.zPrimeMax, self.nz+1)
         self.Es = np.linspace(self.eMin, self.eMax, self.eN+1)
+        self.energies = self.Es
         cwd = os.getcwd()
         inpName = os.path.join(cwd, self.prefix_save_name()+'.inp')
         infile = self.make_input(0, 0, self.eMin)

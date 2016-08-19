@@ -29,32 +29,19 @@ The following 13 images are:
 10) image at the EH 4-blade slit,
 11) image at the focal (sample) point.
 
-.. image:: _images/ClaessBL_N-Rh-01DiamondFSM1+FixedMask-wideE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-02DiamondFSM1+FEMaskLT-wideE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-03DiamondFSM1+FEmaskRB-wideE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-05VCM_footprintE-wideE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-08Xtal1_footprint-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-11Xtal2_footprintE-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-12BSBlock-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-13XBPM4foils-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-16VFM_footprint-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-18OH-PS-FrontCollimator-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-19eh100To40Flange-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-20slitEH-monoE.*
-   :scale: 50 %
-.. image:: _images/ClaessBL_N-Rh-22FocusAtSampleE-monoE.*
-   :scale: 50 %
+.. imagezoom:: _images/ClaessBL_N-Rh-01DiamondFSM1+FixedMask-wideE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-02DiamondFSM1+FEMaskLT-wideE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-03DiamondFSM1+FEmaskRB-wideE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-05VCM_footprintE-wideE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-08Xtal1_footprint-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-11Xtal2_footprintE-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-12BSBlock-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-13XBPM4foils-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-16VFM_footprint-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-18OH-PS-FrontCollimator-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-19eh100To40Flange-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-20slitEH-monoE.*
+.. imagezoom:: _images/ClaessBL_N-Rh-22FocusAtSampleE-monoE.*
 
 The script also exemplifies the usage of
 :func:`~xrt.backends.raycing.apertures.RectangularAperture.touch_beam` for

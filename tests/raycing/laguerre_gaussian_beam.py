@@ -62,8 +62,7 @@ GaussianBeam with :math:`w_0` = 15 µm:
 |        |g00m|          |
 +------------------------+
 
-.. |g00m| image:: _images/Gauss-0-beamFSMg-at00m.png
-   :scale: 50 %
+.. |g00m| imagezoom:: _images/Gauss-0-beamFSMg-at00m.png
 
 +-------+--------------------------+---------------------------------+
 |       | analytical Gaussian beam | numerical Kirchhoff diffraction |
@@ -79,26 +78,21 @@ GaussianBeam with :math:`w_0` = 15 µm:
 | z=80m |          |g80m|          |              |k80m|             |
 +-------+--------------------------+---------------------------------+
 
-.. |g05m| image:: _images/Gauss-1-beamFSMg-at05m.png
-   :scale: 50 %
-.. |k05m| image:: _images/Gauss-1-beamFSMk-at05m.png
-   :scale: 50 %
-.. |g10m| image:: _images/Gauss-2-beamFSMg-at10m.png
-   :scale: 50 %
-.. |k10m| image:: _images/Gauss-2-beamFSMk-at10m.png
-   :scale: 50 %
-.. |g20m| image:: _images/Gauss-3-beamFSMg-at20m.png
-   :scale: 50 %
-.. |k20m| image:: _images/Gauss-3-beamFSMk-at20m.png
-   :scale: 50 %
-.. |g40m| image:: _images/Gauss-4-beamFSMg-at40m.png
-   :scale: 50 %
-.. |k40m| image:: _images/Gauss-4-beamFSMk-at40m.png
-   :scale: 50 %
-.. |g80m| image:: _images/Gauss-5-beamFSMg-at80m.png
-   :scale: 50 %
-.. |k80m| image:: _images/Gauss-5-beamFSMk-at80m.png
-   :scale: 50 %
+.. |g05m| imagezoom:: _images/Gauss-1-beamFSMg-at05m.png
+.. |k05m| imagezoom:: _images/Gauss-1-beamFSMk-at05m.png
+   :loc: upper-right-corner
+.. |g10m| imagezoom:: _images/Gauss-2-beamFSMg-at10m.png
+.. |k10m| imagezoom:: _images/Gauss-2-beamFSMk-at10m.png
+   :loc: upper-right-corner
+.. |g20m| imagezoom:: _images/Gauss-3-beamFSMg-at20m.png
+.. |k20m| imagezoom:: _images/Gauss-3-beamFSMk-at20m.png
+   :loc: upper-right-corner
+.. |g40m| imagezoom:: _images/Gauss-4-beamFSMg-at40m.png
+.. |k40m| imagezoom:: _images/Gauss-4-beamFSMk-at40m.png
+   :loc: upper-right-corner
+.. |g80m| imagezoom:: _images/Gauss-5-beamFSMg-at80m.png
+.. |k80m| imagezoom:: _images/Gauss-5-beamFSMk-at80m.png
+   :loc: upper-right-corner
 
 Laguerre-Gaussian beam
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -125,8 +119,7 @@ as LaguerreGaussianBeam with :math:`w_0` = 15 µm, :math:`l` = 1 and
 |            |lg00m|              |
 +---------------------------------+
 
-.. |lg00m| image:: _images/Laguerre-Gauss-0-beamFSMg-at00m.png
-   :scale: 50 %
+.. |lg00m| imagezoom:: _images/Laguerre-Gauss-0-beamFSMg-at00m.png
 
 +-------+-----------------------------------+---------------------------------+
 |       | analytical Laguerre-Gaussian beam | numerical Kirchhoff diffraction |
@@ -142,26 +135,22 @@ as LaguerreGaussianBeam with :math:`w_0` = 15 µm, :math:`l` = 1 and
 | z=80m |              |lg80m|              |             |lk80m|             |
 +-------+-----------------------------------+---------------------------------+
 
-.. |lg05m| image:: _images/Laguerre-Gauss-1-beamFSMg-at05m.png
-   :scale: 50 %
-.. |lk05m| image:: _images/Laguerre-Gauss-1-beamFSMk-at05m.png
-   :scale: 50 %
-.. |lg10m| image:: _images/Laguerre-Gauss-2-beamFSMg-at10m.png
-   :scale: 50 %
-.. |lk10m| image:: _images/Laguerre-Gauss-2-beamFSMk-at10m.png
-   :scale: 50 %
-.. |lg20m| image:: _images/Laguerre-Gauss-3-beamFSMg-at20m.png
-   :scale: 50 %
-.. |lk20m| image:: _images/Laguerre-Gauss-3-beamFSMk-at20m.png
-   :scale: 50 %
-.. |lg40m| image:: _images/Laguerre-Gauss-4-beamFSMg-at40m.png
-   :scale: 50 %
-.. |lk40m| image:: _images/Laguerre-Gauss-4-beamFSMk-at40m.png
-   :scale: 50 %
-.. |lg80m| image:: _images/Laguerre-Gauss-5-beamFSMg-at80m.png
-   :scale: 50 %
-.. |lk80m| image:: _images/Laguerre-Gauss-5-beamFSMk-at80m.png
-   :scale: 50 %
+.. |lg05m| imagezoom:: _images/Laguerre-Gauss-1-beamFSMg-at05m.png
+.. |lk05m| imagezoom:: _images/Laguerre-Gauss-1-beamFSMk-at05m.png
+   :loc: upper-right-corner
+.. |lg10m| imagezoom:: _images/Laguerre-Gauss-2-beamFSMg-at10m.png
+.. |lk10m| imagezoom:: _images/Laguerre-Gauss-2-beamFSMk-at10m.png
+   :loc: upper-right-corner
+.. |lg20m| imagezoom:: _images/Laguerre-Gauss-3-beamFSMg-at20m.png
+.. |lk20m| imagezoom:: _images/Laguerre-Gauss-3-beamFSMk-at20m.png
+   :loc: upper-right-corner
+.. |lg40m| imagezoom:: _images/Laguerre-Gauss-4-beamFSMg-at40m.png
+.. |lk40m| imagezoom:: _images/Laguerre-Gauss-4-beamFSMk-at40m.png
+   :loc: upper-right-corner
+.. |lg80m| imagezoom:: _images/Laguerre-Gauss-5-beamFSMg-at80m.png
+   :loc: lower-left-corner
+.. |lk80m| imagezoom:: _images/Laguerre-Gauss-5-beamFSMk-at80m.png
+   :loc: lower-right-corner
 
 """
 __author__ = "Konstantin Klementiev"

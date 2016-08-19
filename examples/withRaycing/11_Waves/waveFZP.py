@@ -13,24 +13,22 @@ shown in the figure below for a 70-nm-outer-zone FZP. Notice that the 2nd order
 was also calculated and together with other even orders indeed results in
 vanishing intensity.
 
-.. image:: _images/1-LE-FZP_70nm-orders-r_E.*
-   :scale: 50 %
+.. imagezoom:: _images/1-LE-FZP_70nm-orders-r_E.*
 
 The energy dependence of efficiency for 3 different FZPs is shown below. The
 horizontal bars mark the expected :math:`1/m^2\pi^2` levels for odd orders and
 25% transmission for the 0th order. Watch how a zone plate becomes a band pass
 filter as the outer zone size approaches the wavelength, here ~10 nm.
 
-+----------+-----------+----------+
-| |FZP_70| | |FZP_50|  | |FZP_30| |
-+----------+-----------+----------+
++----------+----------+----------+
+| |FZP_70| | |FZP_50| | |FZP_30| |
++----------+----------+----------+
 
-.. |FZP_70| image:: _images/1-LE-FZP_70nm-eff_E.*
-   :scale: 50 %
-.. |FZP_50| image:: _images/1-LE-FZP_50nm-eff_E.*
-   :scale: 50 %
-.. |FZP_30| image:: _images/1-LE-FZP_30nm-eff_E.*
-   :scale: 50 %
+.. |FZP_70| imagezoom:: _images/1-LE-FZP_70nm-eff_E.*
+.. |FZP_50| imagezoom:: _images/1-LE-FZP_50nm-eff_E.*
+.. |FZP_30| imagezoom:: _images/1-LE-FZP_30nm-eff_E.*
+   :loc: upper-right-corner
+
 """
 #Set proper setting for the FZP and comment/uncomment one of the two main
 #invoked functions (at the very bottom).

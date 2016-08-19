@@ -8,19 +8,17 @@ File: `\\examples\\withDummy\\logo_xrt.py`
 :mod:`xrt` logo (on the right, in two versions) created from a "flat" python
 logo (on the left).
 
- |ini_image|  --------------  |logo_image|     |logo_image_inv|
+ |ini_image|  -------------->  |logo_image|     |logo_image_inv|
 
-.. |ini_image| image:: _images/logo-python.*
+.. |ini_image| imagezoom:: _images/logo-python.*
    :scale: 50 %
-   :align: bottom
 
-.. |logo_image| image:: _images/logo-xrt.*
+.. |logo_image| imagezoom:: _images/logo-xrt.*
    :scale: 50 %
-   :align: bottom
 
-.. |logo_image_inv| image:: _images/logo-xrt-inv.*
+.. |logo_image_inv| imagezoom:: _images/logo-xrt-inv.*
    :scale: 50 %
-   :align: bottom
+
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "1 Mar 2012"

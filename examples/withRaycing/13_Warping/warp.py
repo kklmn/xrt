@@ -38,83 +38,46 @@ where the height is calculated by interpolation (cf. the color (height) of the
 circles with the color of the surface) together with the interpolated normals
 (white arrows as projected onto the xy plane).
 
-+------------+------------+------------------------+
-|  Gaussian  |  waviness  |  mock NOM measurement  |
-+============+============+========================+
-|  |warp_G|  |  |warp_w|  |          |warp_N|      |
-+------------+------------+------------------------+
++------------------------+------------------------+------------------------+
+|        Gaussian        |        waviness        |  mock NOM measurement  |
++========================+========================+========================+
+|        |warp_G|        |        |warp_w|        |          |warp_N|      |
++------------------------+------------------------+------------------------+
 
-.. |warp_G| image:: _images/warp_surf_gaussian.*
-   :scale: 50 %
-.. |warp_w| image:: _images/warp_surf_waviness.*
-   :scale: 50 %
-.. |warp_N| image:: _images/warp_surf_mock_NOM.*
-   :scale: 50 %
+.. |warp_G| imagezoom:: _images/warp_surf_gaussian.*
+.. |warp_w| imagezoom:: _images/warp_surf_waviness.*
+.. |warp_N| imagezoom:: _images/warp_surf_mock_NOM.*
+   :loc: upper-right-corner
 
 Defocused images reveal horizontal stripes seen both by ray tracing and wave
 propagation. Notice that wave propagation 'sees' less distortion in the best
 focusing case.
 
-+------------+--------------------------+--------------------------+
-|            |       ray tracing        |     wave propagation     |
-+============+==========================+==========================+
-|   ideal    |  |warp_rt0| |warp_rt0Z|  |  |warp_wp0| |warp_wp0Z|  |
-+------------+--------------------------+--------------------------+
-|  Gaussian  |  |warp_rtG| |warp_rtGZ|  |  |warp_wpG| |warp_wpGZ|  |
-+------------+--------------------------+--------------------------+
-|  waviness  |  |warp_rtw| |warp_rtwZ|  |  |warp_wpw| |warp_wpwZ|  |
-+------------+--------------------------+--------------------------+
-|  mock NOM  |  |warp_rtN| |warp_rtNZ|  |  |warp_wpN| |warp_wpNZ|  |
-+------------+--------------------------+--------------------------+
++----------+--------------------------+--------------------------+
+|          |       ray tracing        |     wave propagation     |
++==========+==========================+==========================+
+| ideal    |        |warp_rt0|        |        |warp_wp0|        |
++----------+--------------------------+--------------------------+
+| Gaussian |        |warp_rtG|        |        |warp_wpG|        |
++----------+--------------------------+--------------------------+
+| waviness |        |warp_rtw|        |        |warp_wpw|        |
++----------+--------------------------+--------------------------+
+| mock NOM |        |warp_rtN|        |        |warp_wpN|        |
++----------+--------------------------+--------------------------+
 
-.. |warp_rt0| image:: _images/warp_rt0.swf
-   :width: 244
-   :height: 209
-.. |warp_rt0Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_rt0.swf
-.. |warp_rtG| image:: _images/warp_rtG.swf
-   :width: 244
-   :height: 209
-.. |warp_rtGZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_rtG.swf
-.. |warp_rtw| image:: _images/warp_rtw.swf
-   :width: 244
-   :height: 209
-.. |warp_rtwZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_rtw.swf
-.. |warp_rtN| image:: _images/warp_rtN.swf
-   :width: 244
-   :height: 209
-.. |warp_rtNZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_rtN.swf
-.. |warp_wp0| image:: _images/warp_wp0.swf
-   :width: 244
-   :height: 209
-.. |warp_wp0Z| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_wp0.swf
-.. |warp_wpG| image:: _images/warp_wpG.swf
-   :width: 244
-   :height: 209
-.. |warp_wpGZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_wpG.swf
-.. |warp_wpw| image:: _images/warp_wpw.swf
-   :width: 244
-   :height: 209
-.. |warp_wpwZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_wpw.swf
-.. |warp_wpN| image:: _images/warp_wpN.swf
-   :width: 244
-   :height: 209
-.. |warp_wpNZ| image:: _images/zoomIcon.png
-   :width: 20
-   :target: _images/warp_wpN.swf
+.. |warp_rt0| animation:: _images/warp_rt0
+.. |warp_rtG| animation:: _images/warp_rtG
+.. |warp_rtw| animation:: _images/warp_rtw
+.. |warp_rtN| animation:: _images/warp_rtN
+   :loc: lower-left-corner
+.. |warp_wp0| animation:: _images/warp_wp0
+   :loc: upper-right-corner
+.. |warp_wpG| animation:: _images/warp_wpG
+   :loc: upper-right-corner
+.. |warp_wpw| animation:: _images/warp_wpw
+   :loc: upper-right-corner
+.. |warp_wpN| animation:: _images/warp_wpN
+   :loc: lower-right-corner
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
