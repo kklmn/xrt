@@ -217,10 +217,10 @@ class XYCAxis(object):
             | |image_offset0| | |image_offset5000| |
             +-----------------+--------------------+
 
-            .. |image_offset0| image:: _images/offset0.png
-               :scale: 66 %
-            .. |image_offset5000| image:: _images/offset5000.png
-               :scale: 66 %
+            .. |image_offset0| imagezoom:: _images/offset0.png
+               :scale: 50 %
+            .. |image_offset5000| imagezoom:: _images/offset5000.png
+               :scale: 50 %
 
         *bins*: int
             Number of bins in the corresponding 1D and 2D histograms.
@@ -252,12 +252,12 @@ class XYCAxis(object):
             | |image_outline0.0| | |image_outline0.5| | |image_outline1.0| |
             +--------------------+--------------------+--------------------+
 
-            .. |image_outline0.0| image:: _images/outline00.png
-               :scale: 66 %
-            .. |image_outline0.5| image:: _images/outline05.png
-               :scale: 66 %
-            .. |image_outline1.0| image:: _images/outline10.png
-               :scale: 66 %
+            .. |image_outline0.0| imagezoom:: _images/outline00.png
+               :scale: 50 %
+            .. |image_outline0.5| imagezoom:: _images/outline05.png
+               :scale: 50 %
+            .. |image_outline1.0| imagezoom:: _images/outline10.png
+               :scale: 50 %
 
         *fwhmFormatStr*: str
             Python format string for the FWHM value. if None, the FWHM value
@@ -464,22 +464,27 @@ class XYCPlot(object):
         *ePos*: int
             Flag for specifying the positioning of the color axis histogram:
 
-            +--------------------------------------------+---------------+
-            | *ePos* =1: at the right (default, as       | |image_ePos1| |
-            | usually the diffraction plane is vertical) |               |
-            +--------------------------------------------+---------------+
-            | *ePos* =2: at the top                      | |image_ePos2| |
-            | (for horizontal diffraction plane)         |               |
-            +--------------------------------------------+---------------+
-            | *ePos* =0: no color axis histogram         | |image_ePos0| |
-            +--------------------------------------------+---------------+
+            +-------------------------+---------------------------------------+
+            | *ePos* =1: at the right |             |image_ePos1|             |
+            | (default, as usually    |                                       |
+            | the diffraction plane   |                                       |
+            | is vertical)            |                                       |
+            +-------------------------+---------------------------------------+
+            | *ePos* =2: at the top   |             |image_ePos2|             |
+            | (for horizontal         |                                       |
+            | diffraction plane)      |                                       |
+            +-------------------------+---------------------------------------+
+            | *ePos* =0: no           |             |image_ePos0|             |
+            | color axis histogram    |                                       |
+            +-------------------------+---------------------------------------+
 
-            .. |image_ePos1| image:: _images/ePos=1.png
+            .. |image_ePos1| imagezoom:: _images/ePos=1.png
                :scale: 50 %
-            .. |image_ePos2| image:: _images/ePos=2.png
+            .. |image_ePos2| imagezoom:: _images/ePos=2.png
                :scale: 50 %
-            .. |image_ePos0| image:: _images/ePos=0.png
+            .. |image_ePos0| imagezoom:: _images/ePos=0.png
                :scale: 50 %
+
 
         *title*: str
             If non-empty, this string will appear in the window caption,
@@ -501,29 +506,31 @@ class XYCPlot(object):
             The following table demonstrates the combinations of
             *invertColorMap* and *negative*:
 
-            +-------------------+------------------+------------------+
-            |                   | *invertColorMap* | *invertColorMap* |
-            |                   |      =False      |       =True      |
-            +===================+==================+==================+
-            | *negative* =False |    |image00|     |    |image10|     |
-            +-------------------+------------------+------------------+
-            | *negative* =True  |    |image01|     |    |image11|     |
-            +-------------------+------------------+------------------+
+            +-------------+-------------------------+-------------------------+
+            |             |    *invertColorMap*     |     *invertColorMap*    |
+            |             |    =False               |     =True               |
+            +=============+=========================+=========================+
+            | *negative*  |        |image00|        |        |image10|        |
+            | =False      |                         |                         |
+            +-------------+-------------------------+-------------------------+
+            | *negative*  |        |image01|        |        |image11|        |
+            | =True       |                         |                         |
+            +-------------+-------------------------+-------------------------+
 
-            .. |image00| image:: _images/invertColorMap=0_negative=0.png
+            .. |image00| imagezoom:: _images/invertColorMap=0_negative=0.png
                :scale: 50 %
-            .. |image01| image:: _images/invertColorMap=0_negative=1.png
+            .. |image01| imagezoom:: _images/invertColorMap=0_negative=1.png
                :scale: 50 %
-            .. |image10| image:: _images/invertColorMap=1_negative=0.png
+            .. |image10| imagezoom:: _images/invertColorMap=1_negative=0.png
                :scale: 50 %
-            .. |image11| image:: _images/invertColorMap=1_negative=1.png
+            .. |image11| imagezoom:: _images/invertColorMap=1_negative=1.png
                :scale: 50 %
 
             Note that *negative* inverts only the colors of the graphs, not
             the white global background. Use a common graphical editor to
             invert the whole picture after doing *negative=True*:
 
-            .. image:: _images/negative=1+fullNegative.png
+            .. imagezoom:: _images/negative=1+fullNegative.png
                :scale: 50 %
 
             (such a picture would nicely look on a black journal cover, e.g.
@@ -793,7 +800,7 @@ class XYCPlot(object):
             plt.setp(self.ax1dHistE.yaxis.offsetText, visible=False)
             plt.setp(self.ax1dHistEbar, xticks=())
             self.ax1dHistE.yaxis.set_major_formatter(
-                OffsetFormatter(useOffset=True))
+                OffsetFormatter())
             if self.caxis.limits is not None:
                 self.ax1dHistE.set_ylim(self.caxis.limits)
         elif self.ePos == 2:  # top
@@ -817,7 +824,7 @@ class XYCPlot(object):
             plt.setp(self.ax1dHistE.xaxis.offsetText, visible=False)
             plt.setp(self.ax1dHistEbar, yticks=())
             self.ax1dHistE.xaxis.set_major_formatter(
-                OffsetFormatter(useOffset=True))
+                OffsetFormatter())
             if self.caxis.limits is not None:
                 self.ax1dHistE.set_xlim(self.caxis.limits)
 
@@ -1155,10 +1162,11 @@ class XYCPlot(object):
             elif self.ePos == 2:
                 orientation = 'horizontal'
             histoPixelHeight = heightE1d
-        if orientation == 'horizontal':
-            graph.xaxis.get_major_formatter().offset = axis.offset
-        else:  # 'vertical'
-            graph.yaxis.get_major_formatter().offset = axis.offset
+        if axis.offset:
+            if orientation == 'horizontal':
+                graph.xaxis.get_major_formatter().set_useOffset(axis.offset)
+            else:  # 'vertical'
+                graph.yaxis.get_major_formatter().set_useOffset(axis.offset)
 
         t1D = axis.total1D
         axis.max1D = float(np.max(t1D))
@@ -1413,7 +1421,7 @@ class XYCPlot(object):
 #        return r"{0}$\cdot$10$^{{{1}}}$".format(f_SF, power)
 
     def _get_flux(self):
-        self.flux = self.intensity / self.nRaysAll *\
+        self.flux = float(self.intensity) / self.nRaysAll *\
             self.nRaysSeededI / self.nRaysSeeded
 
     def _get_power(self):
