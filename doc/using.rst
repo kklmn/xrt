@@ -16,7 +16,7 @@ Running a python script
 -----------------------
 
 You can run it from your shell as `python your-script.py` or from within
-an IDE, e.g. `Spyder <http://code.google.com/p/spyderlib/>`_.
+an IDE, e.g. `Spyder <https://github.com/spyder-ide/spyder>`_.
 
 Interacting with the plots
 --------------------------

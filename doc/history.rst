@@ -3,6 +3,18 @@
 Version history
 ---------------
 
+1.2.1 (18 Aug 2016):
+    - Added SRW to some comparisons of synchrotron sources. See :ref:`here
+      <undulator_highE>`.
+
+    - As the main browsers stop supporting flash animations, we have rebuilt
+      all our animations on the documentation pages. The images are animated in
+      JavaScript and feature on spot zooming by mouse click. The total size of
+      the images has become smaller at better image quality and bidirectional
+      animations (doubled number of frames).
+
+    - Minor bug fixes and updates.
+
 1.2.0 (09 Jul 2016):
     - We've created a repository on `GitHub <https://github.com/kklmn/xrt>`_.
 
