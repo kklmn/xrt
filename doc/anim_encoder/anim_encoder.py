@@ -474,15 +474,15 @@ if __name__ == '__main__':
 #    fname = 'cxi-1D-2-hybr-1e6hor-0emit-0enSpread-monoE-08p-ExpFocusPhase*.png'
 #    fname = 'cxi-1D-2-hybr-1e6hor-0emit-0enSpread-monoE-08pf-ExpFocusPhaseFront*.png'
 
-    dirName = r'c:\Ray-tracing\examples\withRaycing\44_SoftiCXI'
-#    fname = '1D-1-rays-hor-0emit-0enSpread-monoE-08e-ExpFocus*.png'
-    fname = '1D-2-hybr-hor-0emit-0enSpread-monoE-08e-ExpFocus*.png'
-#    fname = '1D-3-wave-hor-0emit-0enSpread-monoE-08e-ExpFocus*.png'
-#    fname = 'XXIDOC-1D-2-hybr-hor-0emit-0enSpread-monoE--*.png'
-#    fname = 'XXIDOC-1D-2-hybr-hor-non0e-0enSpread-monoE--*.png'
-
-    generate_animation(dirName, "s_"+fname, time_factor=20, endFrameDelay=2000)
-    generate_animation(dirName, fname, time_factor=20, endFrameDelay=2000)
+#    dirName = r'c:\Ray-tracing\examples\withRaycing\44_SoftiCXI'
+##    fname = '1D-1-rays-hor-0emit-0enSpread-monoE-08e-ExpFocus*.png'
+#    fname = '1D-2-hybr-hor-0emit-0enSpread-monoE-08e-ExpFocus*.png'
+##    fname = '1D-3-wave-hor-0emit-0enSpread-monoE-08e-ExpFocus*.png'
+##    fname = 'XXIDOC-1D-2-hybr-hor-0emit-0enSpread-monoE--*.png'
+##    fname = 'XXIDOC-1D-2-hybr-hor-non0e-0enSpread-monoE--*.png'
+#
+#    generate_animation(dirName, "s_"+fname, time_factor=20, endFrameDelay=2000)
+#    generate_animation(dirName, fname, time_factor=20, endFrameDelay=2000)
 
 #    dirName = r'c:\Ray-tracing\examples\withRaycing\33_Warping'
 #    fname = 'rays-perfect-*.png'
@@ -503,3 +503,9 @@ if __name__ == '__main__':
 #
 #    generate_animation(dirName, "s_"+fname, time_factor=10, endFrameDelay=1000)
 #    generate_animation(dirName, fname, time_factor=10, endFrameDelay=1000)
+
+    dirName = r'c:\Ray-tracing\tests\raycing'
+    fname = '_Laguerre-Gauss-*.png'
+
+    generate_animation(dirName, "s_"+fname, endFrameDelay=1000)
+    generate_animation(dirName, fname, endFrameDelay=1000)

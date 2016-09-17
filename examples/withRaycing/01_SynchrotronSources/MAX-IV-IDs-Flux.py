@@ -10,16 +10,23 @@ import xrt.backends.raycing.sources as rs
 from xrt.backends.raycing.physconsts import SIE0
 
 withUndulator = True
-withUrgentUndulator = False
-withSRWUndulator = False
+#withUndulator = False
+withUrgentUndulator = True
+#withUrgentUndulator = False
+withSRWUndulator = True
+#withSRWUndulator = False
 
 
 def run(case):
     eMax = 200100.
+    eN = 201
     thetaMax, psiMax = 500e-6, 500e-6
     if case == 'Balder':
         Kmax = 8.446
+#        Kmax = 3
         thetaMax, psiMax = 200e-6, 50e-6
+#        thetaMax, psiMax = 1130e-6/2, 1180e-6/2  # asked by Magnus
+        eMax, eN = 400100, 401
         kwargs = dict(name='SoleilW50', eE=3.0, eI=0.5,
                       eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
                       period=50., n=39, K=Kmax, eMax=eMax,
@@ -32,8 +39,8 @@ def run(case):
                       period=18.5, n=108, K=Kmax, eMax=eMax,
                       xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3, distE='BW')
     elif case == 'Veritas' or case == 'Hippie':
-#        thetaMax, psiMax = 100e-6, 50e-6
-        thetaMax, psiMax = 100e-6, 200e-6  # asked by Magnus
+        thetaMax, psiMax = 100e-6, 50e-6
+#        thetaMax, psiMax = 100e-6, 200e-6  # asked by Magnus
 #        thetaMax, psiMax = 500e-6, 500e-6  # asked by Magnus
         kwargs = dict(name='U48', eE=3.0, eI=0.5,
                       eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
@@ -48,9 +55,8 @@ def run(case):
             kwargs['n'] = 73
             kwargs['K'] = 5.28
 
-
     sourceW = rs.Wiggler(**kwargs)
-    energy = np.linspace(100., eMax, 201)
+    energy = np.linspace(100., eMax, eN)
     theta = np.linspace(-1, 1, 101) * thetaMax
     psi = np.linspace(-1, 1, 101) * psiMax
 #    theta = np.linspace(-1, 1, 15) * thetaMax
@@ -89,8 +95,8 @@ def run(case):
 
     if withSRWUndulator:
         import pickle
-        with open('c:\Ray-tracing\srw\SRWres.pickle ', 'rb') as f:
-            energySRW, thetaSRW, psiSRW, I0SRW = pickle.load(f)
+        with open('c:\Ray-tracing\srw\SRWres.pickle', 'rb') as f:
+            energySRW, thetaSRW, psiSRW, I0SRW = pickle.load(f)[0:4]
         dtheta = thetaSRW[1] - thetaSRW[0]
         dpsi = psiSRW[1] - psiSRW[0]
         fluxSRWU = I0SRW.sum(axis=(1, 2)) * dtheta * dpsi
@@ -107,8 +113,13 @@ def run(case):
     fig.suptitle(case, fontsize=14)
     rect2d1 = [0.12, 0.12, 0.85, 0.8]
     ax1 = fig.add_axes(rect2d1, aspect='auto')
-    rect2d2 = [0.2, 0.17, 0.3, 0.35]
+    rect2d2 = [0.22, 0.19, 0.33, 0.5]
     ax2 = fig.add_axes(rect2d2, aspect='auto')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax2.xaxis.set_ticks_position('bottom')
+    ax2.yaxis.set_ticks_position('left')
+    ax2.patch.set_visible(False)
     for ax, lw in zip([ax1, ax2], [2, 2]):
     #    plot = ax.plot
         plot = ax.semilogy
@@ -123,7 +134,7 @@ def run(case):
                      label='Urgent')
             if withSRWUndulator:
                 plot(energySRW/1000., fluxSRWU, '-', lw=lw, alpha=0.7,
-                     label='SRW')
+                     label='SRW (zero emittance)')
             if case == 'BioMAX & NanoMAX':  # Spectra results
     #            fnames = ['bionano2.dc0', 'bionano3.dc0']
     #            labels = ['Spectra, accuracy {0}'.format(i) for i in [2, 3]]
@@ -142,7 +153,7 @@ def run(case):
     else:
         ax1.set_ylim(1e3, None)
     ax2.set_xlim(1, 30)
-    ax2.set_ylim(1e12, None)
+    ax2.set_ylim(1e12, 2e15)
     if withUndulator:
         ax1.legend(loc='upper right')
 
@@ -154,8 +165,10 @@ def run(case):
     ws.write(0, 0, u'energy (eV)')
     ws.write(0, 1, u'fluxW through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
              theta[-1]*2e6, psi[-1]*2e6))
-    ws.write(0, 2, u'fluxU through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
-             theta[-1]*2e6, psi[-1]*2e6))
+    if withUndulator:
+        ws.write(0, 2,
+                 u'fluxU through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
+                     theta[-1]*2e6, psi[-1]*2e6))
 
     for i, e in enumerate(energy):
         ws.write(i+1, 0, e)
@@ -170,7 +183,6 @@ def run(case):
 
 if __name__ == '__main__':
 #    run('Balder')
-#    run('BioMAX & NanoMAX')
+    run('BioMAX & NanoMAX')
 #    run('Veritas')
-    run('Hippie')
-
+#    run('Hippie')

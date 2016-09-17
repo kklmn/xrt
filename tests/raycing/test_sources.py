@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
-import xrt.backends.raycing as raycing
+#import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 
 
@@ -63,7 +63,8 @@ def visualize(source, data, title, saveName=None, sign=1):
     zs = source.zs
     xSlice = 0
     zSlice = 0
-    if 'xrt' in source.prefix_save_name():
+    if 'xrt' in source.prefix_save_name() or\
+            'srw' in source.prefix_save_name():
         pass
     else:
         data = np.concatenate((data[:, :0:-1, :], data), axis=1)
@@ -135,14 +136,19 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         # 'mayavi' is always defined on the interpreter.
         scene = mayavi.new_scene()  # analysis:ignore
         scene.scene.background = (0, 0, 0)
+        print(source.prefix_save_name())
 
         src = ArraySource(transpose_input_array=True)
-        if 'xrt' in source.prefix_save_name():
-            sh = data.shape
-            src.scalar_data = data[:, :sh[1]//2, :sh[2]//2].copy()
+        sh = data.shape
+#        print(sh)
+        if 'xrt' in source.prefix_save_name() or\
+                'srw' in source.prefix_save_name():
+            src.scalar_data = data[:, :sh[1]//2+1, :sh[2]//2+1].copy()
         else:
             src.scalar_data = data[:, ::-1, ::-1].copy()
-        src.spacing = np.array([-0.05, 1, 1])
+#        src.spacing = np.array([-0.05, 1, 1])
+#        src.spacing = np.array([-0.25, 1, 1])
+        src.spacing = np.array([-0.25, 0.25, 0.25])
         mayavi.add_source(src)  # analysis:ignore
         # Visualize the data.
 #            o = Outline()
@@ -166,14 +172,19 @@ def visualize3D(source, data, isZplane=True, saveName=None):
 #                ipwZ.ipw.slice_index /= int(2)
             ipwZ.ipw.left_button_action = 0
 
-        if 'xrt' in source.prefix_save_name():
+        if 'xrt' in source.prefix_save_name() or\
+                'srw' in source.prefix_save_name():
             pass
         else:
             data = np.concatenate((data[:, :0:-1, :], data), axis=1)
             data = np.concatenate((data[:, :, :0:-1], data), axis=2)
+        sh = data.shape
+        print(sh)
         src = ArraySource(transpose_input_array=True)
         src.scalar_data = data.copy()
-        src.spacing = np.array([-0.05, 1, 1])
+#        src.spacing = np.array([-0.05, 1, 1])
+#        src.spacing = np.array([-0.25, 1, 1])
+        src.spacing = np.array([-0.25, 0.25, 0.25])
         mayavi.add_source(src)  # analysis:ignore
 
         ipwX = ImagePlaneWidget()
@@ -186,7 +197,8 @@ def visualize3D(source, data, isZplane=True, saveName=None):
 
         labelE = Text3D()
         mayavi.add_module(labelE)  # analysis:ignore
-        labelE.position = 1, data.shape[1]*0.73, data.shape[2]*0.85
+        labelE.position = (1, data.shape[1]*0.73*src.spacing[1],
+                           data.shape[2]*0.85*src.spacing[2])
         labelE.orientation = 90, 0, 90
         labelE.text = 'Energy'
         labelE.scale = 3, 3, 1
@@ -195,7 +207,12 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         labelE.text = set_labelE(0)
 
         view(45, 70, 200)
-        anim(data, ipwX)
+        wantToAnimate = False
+        if wantToAnimate:
+            anim(data, ipwX)
+        else:
+            ipwX.ipw.slice_index = data.shape[0]-1
+            move_view(None, None)
 
     data[data < 1e-7] = 1e-7
     dataMax = np.max(data)
@@ -205,10 +222,25 @@ def visualize3D(source, data, isZplane=True, saveName=None):
 def test_synchrotron_source(SourceClass, **kwargs):
     tstart = time.time()
 
-    beamLine = raycing.BeamLine()
-    source = SourceClass(beamLine, **kwargs)
+    source = SourceClass(**kwargs)
+
+#    if source.prefix_save_name().startswith('srw'):
+#        import pickle
+#        pickleName = 'srw-und-non0em.pickle'
+#        with open(pickleName, 'rb') as f:
+#            I0, l1, l2, l3 = pickle.load(f)[0:4]
 
     I0, l1, l2, l3 = source.intensities_on_mesh()
+    print('finished')
+    tstop = time.time()
+    print('calculations took {0:.1f} s'.format(tstop - tstart))
+
+##for long calculations like srw:
+#    if source.prefix_save_name().startswith('srw'):
+#        import pickle
+#        pickleName = source.prefix_save_name()+'.pickle'
+#        with open(pickleName, 'wb') as f:
+#            pickle.dump((I0, l1, l2, l3, tstop-tstart), f, protocol=2)
 
 ##visualize in 2D:
 #    visualize(source, I0, r'$I_0$', 'I0')
@@ -222,14 +254,12 @@ def test_synchrotron_source(SourceClass, **kwargs):
 #    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
 ##select only one visualize3D at a time:
-#    visualize3D(source, I0, isZplane=False, saveName='Itot')
-    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
+    visualize3D(source, I0, isZplane=False, saveName='Itot')
+#    visualize3D(source, I0*(1+l1)/2., isZplane=False, saveName='IsPol')
+#    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
 #    visualize3D(source, I0*l2/2., saveName='IspRe')
 #    visualize3D(source, I0*l3/2., saveName='IspIm')
 #
-    print('finished')
-    print('calculations took {0:.1f} s'.format(time.time() - tstart))
-
 if __name__ == '__main__':
     """Uncomment the block you want to test."""
 
@@ -264,16 +294,39 @@ if __name__ == '__main__':
 #                  eMin=1500, eMax=31500, eN=1000, nx=40, nz=4,
 #                  xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3, distE='BW')
     kwargs = dict(
-        period=31.4, K=2.7, n=63, eE=6.08, xPrimeMax=0.3, zPrimeMax=0.15,
-#        eSigmaX=134.2, eSigmaZ=6.325, eEpsilonX=1., eEpsilonZ=0.01,
-        eMin=1500, eMax=31500, eN=3000, nx=40, nz=20)
-#by Urgent:
-    Source = rs.UndulatorUrgent
-##by xrt:
-#    kwargs['distE'] = 'BW'
-#    kwargs['xPrimeMaxAutoReduce'] = False
-#    kwargs['zPrimeMaxAutoReduce'] = False
-#    Source = rs.Undulator
+        period=31.4, K=2.7, n=63, eE=6.08, eI=0.5, xPrimeMax=0.3, zPrimeMax=0.15,
+        eSigmaX=134.2, eSigmaZ=6.325, eEpsilonX=1., eEpsilonZ=0.01,
+#        eMin=1500, eMax=31500, eN=3000, nx=40, nz=20)
+        eMin=1500, eMax=4500, eN=300, nx=40*4, nz=20*4)
+##by Urgent:
+##    kwargs['icalc'] = 3  # 0 emittance
+#    Source = rs.UndulatorUrgent
+###by SRW:
+#    import srw.xrtSRW as xrtSRW
+#    kwargs['R0'] = 50000
+## 974 s - single electron
+## 65501 s - zero spread
+## 66180 s -nonzero spread
+#    kwargs['eSigmaX'] = 0
+#    kwargs['eSigmaZ'] = 0
+#    kwargs['eEpsilonX'] = 0
+#    kwargs['eEpsilonZ'] = 0
+##    kwargs['eEspread'] = 1e-3
+#    kwargs['harmonicStart'] = 1
+#    kwargs['harmonicFin'] = 4
+#    Source = xrtSRW.UndulatorSRW
+#by xrt:
+    kwargs['R0'] = 50000
+    kwargs['eSigmaX'] = 0
+    kwargs['eSigmaZ'] = 0
+    kwargs['eEpsilonX'] = 0
+    kwargs['eEpsilonZ'] = 0
+#    kwargs['eEspread'] = 1e-3
+    kwargs['distE'] = 'BW'
+    kwargs['xPrimeMaxAutoReduce'] = False
+    kwargs['zPrimeMaxAutoReduce'] = False
+#    kwargs['filamentBeam'] = True
+    Source = rs.Undulator
 
 ##*** helical undulator **************
 #    kwargs = dict(

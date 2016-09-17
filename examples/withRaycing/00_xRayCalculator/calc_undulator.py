@@ -104,8 +104,8 @@ def main():
         I0 = np.concatenate((I0[:, :0:-1, :], I0), axis=1)
         I0 = np.concatenate((I0[:, :, :0:-1], I0), axis=2)
 
-#    flux_through_aperture(energy, theta, psi, I0)
-    intensity_in_transverse_plane(energy, theta, psi, I0)
+    flux_through_aperture(energy, theta, psi, I0)
+#    intensity_in_transverse_plane(energy, theta, psi, I0)
 #    colored_intensity_in_transverse_plane(energy, theta, psi, I0)
 
     plt.show()

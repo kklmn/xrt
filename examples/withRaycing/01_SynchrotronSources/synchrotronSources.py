@@ -118,25 +118,27 @@ have sharp peaks, which requires a proper selection of angular and energy
 meshes (not important in the new versions of xrt (>0.9), where there are no
 angular and energy meshes and the intensity is calculated *for each* ray).
 
-.. imagezoom:: _images/I0_x'E_mode4-1-und-urgent.png
-.. imagezoom:: _images/I0_z'E_mode4-1-und-urgent.png
-   :loc: upper-right-corner
+| |I0_x'E|
+| |I0_z'E|
+| |IpPol|
 
-.. imagezoom:: _images/IpPol
+.. |I0_x'E| imagezoom:: _images/I0_x'E_mode4-1-und-urgent.png
+.. |I0_z'E| imagezoom:: _images/I0_z'E_mode4-1-und-urgent.png
+.. |IpPol| imagezoom:: _images/IpPol
 
 The ray traced images of an undulator source are feature-rich. The polarization
 is primarily horizontal. The off-plane radiation has non-zero projection to the
 vertical polarization plane.
 
-+--------+----------------+----------------+----------------+----------------+
-| source |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
-+========+================+================+================+================+
-| using  |                |                |                |                |
-| Urgent | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
-+--------+----------------+----------------+----------------+----------------+
-|internal|                |                |                |                |
-|xrt     | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
-+--------+----------------+----------------+----------------+----------------+
++---------+----------------+----------------+----------------+----------------+
+| source  |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
++=========+================+================+================+================+
+| using   |                |                |                |                |
+| Urgent  | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
++---------+----------------+----------------+----------------+----------------+
+| internal|                |                |                |                |
+| xrt     | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
++---------+----------------+----------------+----------------+----------------+
 
 .. |uTotalUr| imagezoom:: _images/1u_urgent3-n-monoE-1TotalFlux.png
 .. |uHorizUr| imagezoom:: _images/1u_urgent3-n-monoE-2horizFlux.png
@@ -210,7 +212,7 @@ Compare the harmonic energies (half-maximum position at the higher energy side)
 of the 3rd harmonic with the triple energy of the 1st harmonic.
 
 .. [Tarawneh] Quasi-periodic undulator field for ARPES beamline at
-   MAX IV 1.5 GeV ring, unpublished.
+   MAX IV 1.5 GeV ring, (2016) unpublished.
 
 .. note::
 

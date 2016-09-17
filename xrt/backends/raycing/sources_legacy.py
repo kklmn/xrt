@@ -199,7 +199,7 @@ class UndulatorUrgent(object):
 
         *processes*: int or any other type as 'auto'
             the number of worker processes to use. If the type is not int then
-            the number returned by multiprocessing.cpu_count() is used.
+            the number returned by multiprocessing.cpu_count()/2 is used.
 
 
         """
@@ -248,7 +248,7 @@ class UndulatorUrgent(object):
             pp = processes
         else:
             self.processes = None
-            pp = cpu_count()
+            pp = cpu_count() // 2
         if _DEBUG:
             print('{0} process{1} will be requested'.format(
                   pp, ('' if pp == 1 else 'es')))

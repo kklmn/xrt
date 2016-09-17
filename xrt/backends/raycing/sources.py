@@ -244,18 +244,58 @@ harmonic is shown below.
 Undulator spectrum at very high energies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The codes Urgent [Urgent]_, SRW [SRW]_ and SPECTRA [SPECTRA]_ result in
-saturation or failure at high energies (see the image below) thus leading to a
-divergent total power integral. The false radiation has a circular off-axis
-shape. To the contrary, xrt flux at high energies vanishes and follows the
-wiggler approximation. More discussion will follow in a future journal article
-about xrt.
+The codes Urgent [Urgent]_ and SPECTRA [SPECTRA]_ result in saturation at high
+energies (see the image below) thus leading to a divergent total power
+integral. The false radiation has a circular off-axis shape. To the contrary,
+xrt and SRW [SRW]_ flux at high energies vanishes and follows the wiggler
+approximation. More discussion will follow in a future journal article about
+xrt.
+
+.. imagezoom:: _images/flux_BioNanoMAX.png
+
+Single-electron and multi-electron undulator radiation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here we compare single-electron and multi-electron (i.e. with a finite electron
+beam size and energy spread) undulator radiation, as calculated by xrt and SRW
+[SRW]_. The calculations are done on a 3D mesh of energy (the long axis on the
+images below) and two transverse angles. Notice also the duration of execution
+given below each image. The 3D mesh was the following: theta = 321 point, -0.3
+to +0.3 mrad, psi = 161 point, -0.15 to +0.15 mrad, energy: 301 point 1.5 to
+4.5 keV.
 
 .. [SRW] O. Chubar, P. Elleaume, *Accurate And Efficient Computation Of
    Synchrotron Radiation In The Near Field Region*, proc. of the EPAC98
    Conference, 22-26 June 1998, p.1177-1179.
 
-.. imagezoom:: _images/flux_BioNanoMAX.png
++-------------+------------------------+------------------------+
+|             |         SRW            |           xrt          |
++=============+========================+========================+
+|  single     |    |srw_single|        |    |xrt_single|        |
+|  electron   +------------------------+------------------------+
+|             | execution time 974 s   | execution time 17.4 s  |
++-------------+------------------------+------------------------+
+|  non-zero   |    |srw_non0em|        |    |xrt_non0em|        |
+|  emittance  +------------------------+------------------------+
+|             | execution time 65501 s | execution time 18.6 s  |
+|             | (*sic*)                |                        |
++-------------+------------------------+------------------------+
+|  non-zero   |   |srw_non0emsp|       |   |xrt_non0emsp|       |
+|  emittance, +------------------------+------------------------+
+|  non-zero   | execution time 66180 s | execution time 216 s   |
+|  energy     | (*sic*)                |                        |
+|  spread     |                        |                        |
++-------------+------------------------+------------------------+
+
+.. |srw_single| imagezoom:: _images/mayavi_0em_2srw.png
+.. |srw_non0em| imagezoom:: _images/mayavi_non0em_2srw.png
+.. |srw_non0emsp| imagezoom:: _images/mayavi_non0em_non0spread_2srw.png
+.. |xrt_single| imagezoom:: _images/mayavi_0em_3xrt.png
+   :loc: upper-right-corner
+.. |xrt_non0em| imagezoom:: _images/mayavi_non0em_3xrt.png
+   :loc: upper-right-corner
+.. |xrt_non0emsp| imagezoom:: _images/mayavi_non0em_non0spread_3xrt.png
+   :loc: upper-right-corner
 
 .. _tapering_comparison:
 
@@ -304,15 +344,15 @@ distributions as flux through an aperture:
 
 ... and transversal distribution at a fixed energy:
 
-+----------------+--------------------+-------------+
-|                | SPECTRA [SPECTRA]_ |     xrt     |
-+================+====================+=============+
-| *E* = 4850 eV  |                    |             |
-| (3rd harmonic) |  |spectra_lowE|    |  |xrt_lowE| |
-+----------------+--------------------+-------------+
-| *E* = 11350 eV |                    |             |
-| (7th harmonic) |   |spectra_highE|  | |xrt_highE| |
-+----------------+--------------------+-------------+
++----------------+--------------------+--------------------+
+|                |       SPECTRA      |        xrt         |
++================+====================+====================+
+| *E* = 4850 eV  |                    |                    |
+| (3rd harmonic) |   |spectra_lowE|   |     |xrt_lowE|     |
++----------------+--------------------+--------------------+
+| *E* = 11350 eV |                    |                    |
+| (7th harmonic) |   |spectra_highE|  |    |xrt_highE|     |
++----------------+--------------------+--------------------+
 
 .. |spectra_lowE| imagezoom:: _images/undulator-E=04850eV-spectra.*
 .. |spectra_highE| imagezoom:: _images/undulator-E=11350eV-spectra.*
@@ -354,21 +394,21 @@ Undulator radiation in near field
 Notice that on the following pictures the p-polarized flux is only ~6% of the
 total flux.
 
-+------------------------+--------------------+----------------+
-|  at 5 m                | SPECTRA [SPECTRA]_ |       xrt      |
-+========================+====================+================+
-|   far field at 5 m,    |                    |                |
-|   full flux            |  |spectra_f05m0|   |  |xrt_f05m0|   |
-+------------------------+--------------------+----------------+
-|   far field at 5 m,    |                    |                |
-|   p-polarized          |  |spectra_f05mP|   |  |xrt_f05mP|   |
-+------------------------+--------------------+----------------+
-|   near field at 5 m,   |                    |                |
-|   full flux            |  |spectra_n05m0|   |  |xrt_n05m0|   |
-+------------------------+--------------------+----------------+
-|   near field at 5 m,   |                    |                |
-|   p-polarized          |  |spectra_n05mP|   |  |xrt_n05mP|   |
-+------------------------+--------------------+----------------+
++------------------------+--------------------+--------------------+
+|  at 5 m                |      SPECTRA       |         xrt        |
++========================+====================+====================+
+|   far field at 5 m,    |                    |                    |
+|   full flux            |  |spectra_f05m0|   |    |xrt_f05m0|     |
++------------------------+--------------------+--------------------+
+|   far field at 5 m,    |                    |                    |
+|   p-polarized          |  |spectra_f05mP|   |    |xrt_f05mP|     |
++------------------------+--------------------+--------------------+
+|   near field at 5 m,   |                    |                    |
+|   full flux            |  |spectra_n05m0|   |    |xrt_n05m0|     |
++------------------------+--------------------+--------------------+
+|   near field at 5 m,   |                    |                    |
+|   p-polarized          |  |spectra_n05mP|   |    |xrt_n05mP|     |
++------------------------+--------------------+--------------------+
 
 .. |spectra_f05m0| imagezoom:: _images/spectra-05m-far.png
 .. |spectra_f05mP| imagezoom:: _images/spectra-05m-far_p.png
@@ -384,21 +424,21 @@ total flux.
 .. |xrt_n05mP| imagezoom:: _images/xrt-near05m3vertFlux-rays.png
    :loc: upper-right-corner
 
-+------------------------+--------------------+----------------+
-|  at 25 m               | SPECTRA [SPECTRA]_ |       xrt      |
-+========================+====================+================+
-|   far field at 25 m,   |                    |                |
-|   full flux            |  |spectra_f25m0|   |  |xrt_f25m0|   |
-+------------------------+--------------------+----------------+
-|   far field at 25 m,   |                    |                |
-|   p-polarized          |  |spectra_f25mP|   |  |xrt_f25mP|   |
-+------------------------+--------------------+----------------+
-|   near field at 25 m   |                    |                |
-|   full flux            |  |spectra_n25m0|   |  |xrt_n25m0|   |
-+------------------------+--------------------+----------------+
-|   near field at 25 m,  |                    |                |
-|   p-polarized          |  |spectra_n25mP|   |  |xrt_n25mP|   |
-+------------------------+--------------------+----------------+
++------------------------+--------------------+--------------------+
+|  at 25 m               |      SPECTRA       |         xrt        |
++========================+====================+====================+
+|   far field at 25 m,   |                    |                    |
+|   full flux            |  |spectra_f25m0|   |    |xrt_f25m0|     |
++------------------------+--------------------+--------------------+
+|   far field at 25 m,   |                    |                    |
+|   p-polarized          |  |spectra_f25mP|   |    |xrt_f25mP|     |
++------------------------+--------------------+--------------------+
+|   near field at 25 m   |                    |                    |
+|   full flux            |  |spectra_n25m0|   |    |xrt_n25m0|     |
++------------------------+--------------------+--------------------+
+|   near field at 25 m,  |                    |                    |
+|   p-polarized          |  |spectra_n25mP|   |    |xrt_n25mP|     |
++------------------------+--------------------+--------------------+
 
 .. |spectra_f25m0| imagezoom:: _images/spectra-25m-far.png
 .. |spectra_f25mP| imagezoom:: _images/spectra-25m-far_p.png
@@ -422,7 +462,7 @@ codes is compared below. Notice that the visualization (brightness=intensity,
 color=phase) is not by SRW and SPECTRA but was done by us.
 
 +--------------------+--------------------+--------------------+
-|     SRW [SRW]_     | SPECTRA [SPECTRA]_ |         xrt        |
+|     SRW [SRW]_     |      SPECTRA       |         xrt        |
 +====================+====================+====================+
 |      |srw_ps|      |    |spectra_ps|    |      |xrt_ps|      |
 +--------------------+--------------------+--------------------+

@@ -1,7 +1,7 @@
 .thumbnail{
 position: relative;
 z-index: 0;
-cursor: pointer;
+cursor: zoom-in;
 transition: 0.3s;
 }
 .thumbnail:hover{
@@ -29,7 +29,7 @@ visibility: visible;
 .thumbnailhover{
 position: relative;
 z-index: 0;
-cursor: pointer;
+cursor: zoom-in;
 transition: 0.3s;
 }
 .thumbnailhover:hover{

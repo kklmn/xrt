@@ -19,28 +19,30 @@ suffix = '_average'
 # Integration grid (per period)
 nRKPoins = 30
 
-kwargs = dict(eE=1.5, period=84., n=36)
-eEpsilonX = 6.0e-9
-eEpsilonZ = 0.06e-9
-betaX = 5.66
-betaZ = 2.85
-sigmaX = (eEpsilonX * betaX)**0.5
-sigmaXp = (eEpsilonX / betaX)**0.5
-print(u'sigmaX={} µm'.format(sigmaX*1e6))
-print(u'sigmaXp={} mrad'.format(sigmaXp*1e6))
-sigmaZ = (eEpsilonZ * betaZ)**0.5
-sigmaZp = (eEpsilonZ / betaZ)**0.5
-print(u'sigmaZ={} µm'.format(sigmaZ*1e6))
-print(u'sigmaZp={} mrad'.format(sigmaZp*1e6))
+#kwargs = dict(eE=1.5, period=84., n=36)
+#eEpsilonX = 4e-9
+#eEpsilonZ = 0.04e-9
+#betaX = 5.66
+#betaZ = 2.85
+#sigmaX = (eEpsilonX * betaX)**0.5
+#sigmaXp = (eEpsilonX / betaX)**0.5
+#print(u'sigmaX={} µm'.format(sigmaX*1e6))
+#print(u'sigmaXp={} mrad'.format(sigmaXp*1e6))
+#sigmaZ = (eEpsilonZ * betaZ)**0.5
+#sigmaZp = (eEpsilonZ / betaZ)**0.5
+#print(u'sigmaZ={} µm'.format(sigmaZ*1e6))
+#print(u'sigmaZp={} mrad'.format(sigmaZp*1e6))
 
 #sheet, prefix = 'EPU_HP_mode', '1'
-sheet, prefix = 'QEPU_HP_mode', '2'
+#sheet, prefix = 'QEPU_HP_mode', '2'
 #sheet, prefix = 'EPU_VP_mode', '3'
 #sheet, prefix = 'QEPU_VP_mode', '4'
-customField = ['B-Hamed.xlsx', dict(sheetname=sheet, skiprows=0)]
+#customField = ['B-Hamed.xlsx', dict(sheetname=sheet, skiprows=0)]
 
 #kwargs = dict(eE=3, period=18.5*3, n=108/3, targetE=[9000, 7])
-#customField = 20.
+kwargs = dict(eE=2.739, period=20., n=98, K=1.7425)
+#kwargs = dict(eE=2.739, period=20., n=98, targetE=[12700, 9])
+customField = 20.
 
 eE = kwargs['eE']  # [GeV]
 gamma = eE * 1e9 * SIE0 / (SIM0 * SIC**2)
@@ -391,9 +393,9 @@ def iterate_rk():
             dzgrid.append(dz)
 
         betaZav /= betaZpath
-        print "betaZav", betaZav, ", betam", betam
+        print("betaZav", betaZav, ", betam", betam)
         wuAv = 2. * np.pi * SIC * betaZav / Lu / E2W
-        print "wuAv", wuAv, ", wu", wu
+        print("wuAv", wuAv, ", wu", wu)
 
         # test of the integration: taking arbitrary direction
         norm_ref = np.array(
@@ -478,24 +480,28 @@ def iterate_rk():
         # plt.savefig("beta_z"+suffix+'.png')
 
         plt.figure(6)
-        plt.plot(z, np.array(xgrid[:-1]) / tgwmm * 1e3)
+        x = np.array(xgrid[:-1]) / tgwmm * 1e3
+        plt.plot(z, x)
         if compare2reference:
             plt.plot(z, np.array(r_ref[0]) / tgwmm * wu * 1e3)
         plt.title("Trajectory, $x$ plane")
         plt.xlabel(r"z, mm")
         plt.ylabel(u"x, µm")
         plt.gca().set_xlim(z[0], z[-1])
-        plt.gca().set_ylim(-60, 60)
+#        plt.gca().set_ylim(-60, 60)
+        plt.gca().set_ylim(x.min(), x.max())
         plt.savefig("x"+suffix+'.png')
 
         plt.figure(7)
-        plt.plot(z, np.array(ygrid[:-1]) / tgwmm * 1e3)
+        y = np.array(ygrid[:-1]) / tgwmm * 1e3
+        plt.plot(z, y)
         if compare2reference:
             plt.plot(z[:-1], np.array(r_ref[1]) / tgwmm * wu * 1e3)
         plt.title("Trajectory, $y$ plane")
         plt.xlabel(r"z, mm")
         plt.ylabel(u"y, µm")
         plt.gca().set_xlim(z[0], z[-1])
+        plt.gca().set_ylim(y.min(), y.max())
         plt.savefig("y"+suffix+'.png')
 
         plt.figure(8)

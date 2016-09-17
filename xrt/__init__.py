@@ -4,24 +4,19 @@ wave propagation in x-ray regime. It is primarily meant for modeling
 synchrotron sources, beamlines and beamline elements. Includes a GUI tool for
 creating scripts.
 
-+-----------+-----------+-----------+-----------+
-|  |IpPol|  | |MontelM| | |vcmSi-P| | |VortexB| |
-+-----------+-----------+-----------+-----------+
++-------------------+---------------+-----------+
+|      |IpPol|      |   |vcmSi-P|   | |VortexB| |
++-------------------+---------------+-----------+
 
 .. |IpPol| animation:: _images/IpPol
    :alt: &ensp;Intensity of vertically polarized undulator radiation on a
          transverse flat screen. The long axis is energy.
-.. |MontelM| imagezoom:: _images/Montel_par_exit_n.png
-   :alt: &ensp;Screen image downstream of a Montel mirror. Colored by number
-         of reflections.
 .. |vcmSi-P| animation:: _images/vcmSi-FootprintP
    :alt: &ensp;Absorbed power and power density on a mirror at varying pitch
          angle.
    :loc: upper-right-corner
-.. |VortexB| imagezoom:: _images/Laguerre-Gauss-3-beamFSMk-at20m-cut.png
-   :alt: &ensp;Vortex beam calculated by Kirchhoff diffraction integral of
-         Laguerre-Gaussian beam waist with <i>l</i>=1 and <i>p</i>=1.
-         Colored by phase.
+.. |VortexB| animation:: _images/Laguerre-Gauss-ani
+   :alt: &ensp;Vortex beam with <i>l</i>=1 and <i>p</i>=1. Colored by phase.
    :loc: upper-right-corner
 
 xrtQook -- a GUI for creating scripts
@@ -146,8 +141,8 @@ Dependencies
 :mod:`numpy`, :mod:`scipy` and :mod:`matplotlib` are required. If you use
 OpenCL for calculations on GPU or CPU, you need AMD/NVIDIA drivers,
 ``Intel CPU only OpenCL runtime`` (these are search key words), :mod:`pytools`
-and :mod:`pyopencl`. :mod:`Spiderlib` is highly recommended for nicer view of
-xrtQook.
+and :mod:`pyopencl`. :mod:`Spyderlib` (the foundation of Spyder IDE) is highly
+recommended for nicer view of xrtQook.
 
 Python 2 and 3
 --------------

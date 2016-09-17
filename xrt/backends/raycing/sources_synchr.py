@@ -623,7 +623,7 @@ class Undulator(object):
                  eMin=5000., eMax=15000., eN=51, distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, nx=25, nz=25,
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
-                 gp=1e-2, gIntervals=1, nRK=30, fullLength=False,
+                 gp=1e-2, gIntervals=1, nRK=30,
                  uniformRayDensity=False, filamentBeam=False,
                  targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
         u"""
@@ -833,6 +833,7 @@ class Undulator(object):
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
         self.nRK = nRK
         self.trajectory = None
+        fullLength = False  # NOTE maybe a future input parameter
         self.full = fullLength
         if fullLength:
             #self.filamentBeam = True
@@ -861,11 +862,11 @@ class Undulator(object):
         if (self.dx is None) and (self.betaX is not None):
             self.dx = np.sqrt(self.eEpsilonX*self.betaX)
         elif (self.dx is None) and (self.betaX is None):
-            print("Set either dx or mean_betaX!")
+            print("Set either dx or betaX!")
         if (self.dz is None) and (self.betaZ is not None):
             self.dz = np.sqrt(self.eEpsilonZ*self.betaZ)
         elif (self.dz is None) and (self.betaZ is None):
-            print("Set either dz or mean_betaZ!")
+            print("Set either dz or betaZ!")
         dxprime, dzprime = None, None
         if dxprime:
             self.dxprime = dxprime
@@ -1059,7 +1060,7 @@ class Undulator(object):
             m += 1
             self.quadm = int(1.5**m)
             if self.cl_ctx is not None:
-#                sE = np.linspace(self.E_min, self.E_max, self.eN)
+                #sE = np.linspace(self.E_min, self.E_max, self.eN)
                 sE = self.E_max * np.ones(3)
                 sTheta_max = self.Theta_max * np.ones(3)
                 sPsi_max = self.Psi_max * np.ones(3)
@@ -1180,36 +1181,72 @@ class Undulator(object):
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
                             harmonic=None):
-        if isinstance(energy, str):
+        if isinstance(energy, str):  # i.e. if 'auto'
             energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
+
         if isinstance(theta, str):
             theta = np.mgrid[
                 self.Theta_min:self.Theta_max + 0.5*self.dTheta:self.dTheta]
+
         if isinstance(psi, str):
             psi = np.mgrid[self.Psi_min:self.Psi_max + 0.5*self.dPsi:self.dPsi]
+
+        tomesh = energy, theta, psi
         if harmonic is None:
-            xE, xTheta, xPsi = np.meshgrid(energy, theta, psi, indexing='ij')
             xH = None
         else:
-            xE, xTheta, xPsi, xH = np.meshgrid(energy, theta, psi, harmonic,
-                                               indexing='ij')
-            xH = xH.flatten()
-# linear arrays for OpenCL:
-        sh = xE.shape
-        res = self.build_I_map(xE.flatten(), xTheta.flatten(), xPsi.flatten(),
-                               xH)
-# restore the shape:
-        self.Itotal = res[0].reshape(sh)
-        self.Is = res[1].reshape(sh)
-        self.Ip = res[2].reshape(sh)
+            tomesh.append(harmonic)
+        mesh = np.meshgrid(*tomesh, indexing='ij')
+        xE, xTheta, xPsi = mesh[0].ravel(), mesh[1].ravel(), mesh[2].ravel()
+        if harmonic is not None:
+            xH = mesh[3].ravel()
 
-        s0 = (self.Is*np.conj(self.Is) + self.Ip*np.conj(self.Ip)).real
-        s1 = (self.Is*np.conj(self.Is) - self.Ip*np.conj(self.Ip)).real
-        s2 = 2. * np.real(self.Is * np.conj(self.Ip))
-        s3 = -2. * np.imag(self.Is * np.conj(self.Ip))
+        if self.eEspread > 0:
+            spreads = np.linspace(-3, 3, 13)
+            wspreads = np.exp(-0.5 * spreads**2)
+            wspreads /= wspreads.sum()
+        else:
+            spreads = [0]
+            wspreads = [1]
+
+        sh = len(energy), len(theta), len(psi)
+        self.Is = np.zeros(sh, dtype=float)
+        self.Ip = np.zeros(sh, dtype=float)
+        self.Isp = np.zeros(sh, dtype=complex)
+        for spread, wspread in zip(spreads, wspreads):
+            dgamma = self.gamma * spread * self.eEspread
+            res = self.build_I_map(xE, xTheta, xPsi, xH, dgamma)
+            Es = res[1]
+            Ep = res[2]
+            Is = (Es*np.conj(Es)).real
+            Ip = (Ep*np.conj(Ep)).real
+            Isp = Es*np.conj(Ep)
+            self.Is += Is.reshape(sh) * wspread
+            self.Ip += Ip.reshape(sh) * wspread
+            self.Isp += Isp.reshape(sh) * wspread
+
+        s0 = (self.Is + self.Ip) * wspread
+        s1 = (self.Is - self.Ip) * wspread
+        s2 = (2. * np.real(self.Isp)) * wspread
+        s3 = (-2. * np.imag(self.Isp)) * wspread
+
+# convolution with the angular size:
+        if self.dx > 0 or self.dz > 0:
+            from scipy.ndimage.filters import gaussian_filter
+            dxP = theta[1] - theta[0]
+            dzP = psi[1] - psi[0]
+            for ie, ee in enumerate(energy):
+                #sigma_rP2 = CHeVcm/ee*10 / (self.L0*self.Np)
+                sigma_rP2 = 0.
+                Sx = ((self.dxprime**2 + sigma_rP2)**0.5) / dxP
+                Sz = ((self.dzprime**2 + sigma_rP2)**0.5) / dzP
+                s0[ie, :, :] = gaussian_filter(s0[ie, :, :], [Sx, Sz])
+                s1[ie, :, :] = gaussian_filter(s1[ie, :, :], [Sx, Sz])
+                s2[ie, :, :] = gaussian_filter(s2[ie, :, :], [Sx, Sz])
+                s3[ie, :, :] = gaussian_filter(s3[ie, :, :], [Sx, Sz])
 
         with np.errstate(divide='ignore'):
-            return (self.Itotal,
+            return (s0,
                     np.where(s0, s1 / s0, s0),
                     np.where(s0, s2 / s0, s0),
                     np.where(s0, s3 / s0, s0))
@@ -1293,19 +1330,19 @@ class Undulator(object):
         return ((nz*(betaPx*bnz - betaPz*bnx) + ddpsiS*primexy) * eucos,
                 (nz*(betaPy*bnz - betaPz*bny) - ddphiS*primexy) * eucos)
 
-    def build_I_map(self, w, ddtheta, ddpsi, harmonic=None):
+    def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=0):
         useCL = False
         if isinstance(w, np.ndarray):
             if w.shape[0] > 2:
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
-            return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic)
+            return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic, dg)
         elif self.customField is not None:
-            return self._build_I_map_custom(w, ddtheta, ddpsi, harmonic)
+            return self._build_I_map_custom(w, ddtheta, ddpsi, harmonic, dg)
         else:
-            return self._build_I_map_CL(w, ddtheta, ddpsi, harmonic)
+            return self._build_I_map_CL(w, ddtheta, ddpsi, harmonic, dg)
 
-    def _build_I_map_conv(self, w, ddtheta, ddpsi, harmonic):
+    def _build_I_map_conv(self, w, ddtheta, ddpsi, harmonic, dgamma=0):
         #        np.seterr(invalid='ignore')
         #        np.seterr(divide='ignore')
         gamma = self.gamma
@@ -1316,9 +1353,7 @@ class Undulator(object):
                         gamma += gamma * self.eEspread * np.ones_like(w) *\
                             np.random.standard_normal()
                     else:
-                        gamma += np.random.normal(0,
-                                                  gamma*self.eEspread,
-                                                  w.shape)
+                        gamma += dgamma * np.ones_like(w)
             gamma2 = gamma**2
             wu = PI * C * 10 / self.L0 / gamma2 * \
                 (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
@@ -1341,8 +1376,8 @@ class Undulator(object):
             dstep = 2 * PI / float(self.gIntervals)
             dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
-        tg = (dI[:, None] + 0.5*dstep*tg_n).flatten()  # + PI/2
-        ag = (dI[:, None]*0 + ag_n).flatten()
+        tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
+        ag = (dI[:, None]*0 + ag_n).ravel()
         # Bsr = np.zeros_like(w, dtype='complex')
         # Bpr = np.zeros_like(w, dtype='complex')
         dim = len(np.array(w).shape)
@@ -1366,7 +1401,7 @@ class Undulator(object):
                 np.sqrt(Amp2Flux) * AB * Bsr,
                 np.sqrt(Amp2Flux) * AB * Bpr)
 
-    def _build_I_map_custom(self, w, ddtheta, ddpsi, harmonic):
+    def _build_I_map_custom(self, w, ddtheta, ddpsi, harmonic, dgamma=0):
         # time1 = time.time()
         gamma = self.gamma
         if self.eEspread > 0:
@@ -1377,9 +1412,8 @@ class Undulator(object):
                             np.ones_like(w, dtype=self.cl_precisionF) *\
                             np.random.standard_normal()
                     else:
-                        gamma += np.random.normal(0,
-                                                  gamma*self.eEspread,
-                                                  w.shape)
+                        gamma += dgamma * \
+                            np.ones_like(w, dtype=self.cl_precisionF)
             gamma2 = gamma**2
             wu = PI * C * 10 / self.L0 / gamma2 * \
                 (2*gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
@@ -1407,10 +1441,9 @@ class Undulator(object):
         tg = np.array([-PI*Np + PI/2.])
         ag = [0]
         tg = self.cl_precisionF(
-            np.concatenate((tg, (dI[:, None]+0.5*dstep*tg_n).flatten() +
-                            PI/2.)))
+            np.concatenate((tg, (dI[:, None]+0.5*dstep*tg_n).ravel() + PI/2.)))
         ag = self.cl_precisionF(np.concatenate(
-            (ag, (dI[:, None]*0+ag_n).flatten())))
+            (ag, (dI[:, None]*0+ag_n).ravel())))
 
         nwt = self.nRK
         wtGrid = []
@@ -1529,7 +1562,7 @@ class Undulator(object):
                 np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
                 np.sqrt(Amp2Flux) * Ip_local * ab * 0.5 * dstep)
 
-    def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic):
+    def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic, dgamma=0):
         # time1 = time.time()
         gamma = self.gamma
         if self.eEspread > 0:
@@ -1540,9 +1573,8 @@ class Undulator(object):
                             np.ones_like(w, dtype=self.cl_precisionF) *\
                             np.random.standard_normal()
                     else:
-                        gamma += np.random.normal(0,
-                                                  gamma*self.eEspread,
-                                                  w.shape)
+                        gamma += dgamma * \
+                            np.ones_like(w, dtype=self.cl_precisionF)
             gamma2 = gamma**2
             wu = PI * C * 10 / self.L0 / gamma2 * \
                 (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
@@ -1579,8 +1611,8 @@ class Undulator(object):
             dI = np.arange(-PI + 0.5*dstep, PI, dstep)
 
         extra = PI/2*0
-        tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).flatten()) + extra
-        ag = self.cl_precisionF((dI[:, None]*0+ag_n).flatten())
+        tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).ravel()) + extra
+        ag = self.cl_precisionF((dI[:, None]*0+ag_n).ravel())
 
         scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
                            self.cl_precisionF(self.Ky),  # Ky

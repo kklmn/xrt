@@ -179,9 +179,13 @@ w0 = 15e-3  # mm, waist size of the amplitude (not of intensity!)
 maxFactor = 2.  # factor that determines the screen limits as ±w*maxFactor
 maxFactor *= (abs(lVortex)+pVortex+1)**0.25
 uniformRayDensity = True
-ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
+#ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
+ps = np.array(range(10) + range(1, 11) + range(20, 101, 10)) * 1000.
+ps[0:10] /= 10.
+#print(ps)
 
 bins, ppb = 256, 1
+wantKirchhoff = False
 
 
 def build_beamline():
@@ -210,7 +214,7 @@ def run_process(beamLine):
         what = 'beamFSMg{0}'.format(ip)
         outDict[what] = waveOnFSMg
 
-        if p > 100:
+        if p > 100 and wantKirchhoff:
             wrepeats = 1
             waveOnFSMk = beamLine.fsmFar.prepare_wave(beamLine.source, x, z)
             for r in range(wrepeats):
@@ -238,12 +242,17 @@ def define_plots(beamLine):
                                bins=bins, ppb=ppb))
         plot.xaxis.limits = [-lim, lim]
         plot.yaxis.limits = [-lim, lim]
-        plot.title = '{0}{1}-beamFSMg-at{2:02.0f}m'.format(
+        plot.title = '{0}{1:02d}-beamFSMg-at{2:03.1f}m'.format(
             prefix, ip, p*1e-3)
+        tpf = '{0:2.1f} m' if p < 1000 else '{0:2.0f} m'
+        plot.textPanel = plot.ax2dHist.text(
+            0.02, 0.98, tpf.format(p*1e-3), size=14, color='w',
+            transform=plot.ax2dHist.transAxes,
+            ha='left', va='top')
         plot.saveName = plot.title + '.png'
         plots.append(plot)
 
-        if p > 100:
+        if p > 100 and wantKirchhoff:
             plot = xrtp.XYCPlot(
                 'beamFSMk{0}'.format(ip), (1,),
                 xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=bins, ppb=ppb),
@@ -252,7 +261,11 @@ def define_plots(beamLine):
                                    bins=bins, ppb=ppb))
             plot.xaxis.limits = [-lim, lim]
             plot.yaxis.limits = [-lim, lim]
-            plot.title = '{0}{1}-beamFSMk-at{2:02.0f}m'.format(
+            plot.textPanel = plot.ax2dHist.text(
+                0.02, 0.98, tpf.format(p*1e-3), size=14, color='w',
+                transform=plot.ax2dHist.transAxes,
+                ha='left', va='top')
+            plot.title = '{0}{1:02d}-beamFSMk-at{2:03.1f}m'.format(
                 prefix, ip, p*1e-3)
             plot.saveName = plot.title + '.png'
             plots.append(plot)

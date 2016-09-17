@@ -120,7 +120,6 @@ if not isSphinx:
                                                     generate_context)  # analysis:ignore
         isSphinx = True
     except (ImportError, TypeError):
-        raise
         pass
 
 try:
@@ -140,7 +139,6 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
     import PyQt5.QtWebKitWidgets as myQtWeb
-#    import PyQt5.QtWebEngineWidgets as myQtWeb    
 elif 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     QtName = "PyQt4"
     from PyQt4 import QtGui, QtCore
@@ -163,10 +161,6 @@ QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
 QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
      QtGui.QStandardItem, QtGui.QPixmap)
-
-#if QtName in ["PyQt5"]:
-#    QWebView = myQtWeb.QWebEngineView
-#else:
 QWebView = myQtWeb.QWebView
 
 sys.path.append(os.path.join('..', '..'))
@@ -301,17 +295,6 @@ class XrtQook(QWidget):
         self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
-#        self.objectFlag = QtCore.Qt.ItemFlags(-33)
-#        self.paramFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-#                                             QtCore.Qt.ItemIsEditable | ~
-#                                             QtCore.Qt.ItemIsSelectable)
-#        self.valueFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-#                                             QtCore.Qt.ItemIsEditable |
-#                                             QtCore.Qt.ItemIsSelectable)
-#        self.checkFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled | ~
-#                                             QtCore.Qt.ItemIsEditable |
-#                                             QtCore.Qt.ItemIsUserCheckable |
-#                                             QtCore.Qt.ItemIsSelectable)
         self.objectFlag = QtCore.Qt.ItemFlags(0)
         self.paramFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
                                              QtCore.Qt.ItemIsSelectable)
@@ -328,7 +311,7 @@ class XrtQook(QWidget):
         self.runTree = QTreeView()
 
         self.defaultFont = QFont("Courier New", 9)
-        if isSphinx:
+        if isSphinx and QWebView is not None:
             self.webHelp = QWebView()
             self.webHelp.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
             self.webHelp.customContextMenuRequested.connect(self.docMenu)
@@ -375,8 +358,8 @@ class XrtQook(QWidget):
             self.codeEdit.setFont(self.defaultFont)
 
         self.descrEdit = QTextEdit()
-        self.descrEdit.setFont(self.defaultFont)
-        self.descrEdit.textChanged.connect(self.updateDescription)
+#        self.descrEdit.setFont(self.defaultFont)
+#        self.descrEdit.textChanged.connect(self.updateDescription)
 
         self.setGeometry(100, 100, 1100, 600)
 
@@ -725,7 +708,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.blColorCounter = 0
         self.pltColorCounter = 0
         self.fileDescription = ""
-        self.descrEdit.setText("")
+        self.descrEdit.setText(r"")
         self.showWelcomeScreen()
 
     def newBL(self):
@@ -865,8 +848,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 sbsPath = re.sub('img_name',
                                  'attr',
                                  re.sub('\\\\', '/', html2))
-                if 'file://' not in sbsPath:
-                    sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
+                sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
                 new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
             else:
                 spyder_crutch = "<script>\n$(document).ready(\

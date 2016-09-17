@@ -22,7 +22,7 @@ def main():
 
     source = rs.BendingMagnet(**kwargs)
     I0xrt = source.intensities_on_mesh(energy, theta, psi)[0]
-    print I0xrt.shape, I0xrt.max()
+    print(I0xrt.shape, I0xrt.max())
     flux_xrt = I0xrt.sum(axis=(1, 2)) * dtheta * dpsi
     plt.plot(energy/1e3, flux_xrt, 'r', label='xrt', lw=5)
 
@@ -36,7 +36,7 @@ def main():
         I0ws = source.intensities_on_mesh()[0]
         I0ws = np.concatenate((I0ws[:, :0:-1, :], I0ws), axis=1)
         I0ws = np.concatenate((I0ws[:, :, :0:-1], I0ws), axis=2)
-        print I0ws.shape, I0ws.max()
+        print(I0ws.shape, I0ws.max())
 
         dtheta = (theta[-1] - theta[0]) / 2
         flux_ws = I0ws.sum(axis=(1, 2)) * dtheta * dpsi * 1e6
