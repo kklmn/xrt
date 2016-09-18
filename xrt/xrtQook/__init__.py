@@ -76,8 +76,8 @@ Using xrtQook for script generation
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "07 Mar 2016"
-__version__ = "1.0"
+__date__ = "18 Sep 2016"
+__version__ = "1.1"
 
 import os
 import sys
@@ -139,8 +139,10 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
     QtName = "PyQt5"
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
-    import PyQt5.QtWebKitWidgets as myQtWeb
-#    import PyQt5.QtWebEngineWidgets as myQtWeb    
+    try:
+        import PyQt5.QtWebKitWidgets as myQtWeb
+    except ImportError:
+        import PyQt5.QtWebEngineWidgets as myQtWeb
 elif 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     QtName = "PyQt4"
     from PyQt4 import QtGui, QtCore
@@ -167,7 +169,42 @@ QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
 #if QtName in ["PyQt5"]:
 #    QWebView = myQtWeb.QWebEngineView
 #else:
-QWebView = myQtWeb.QWebView
+try:
+    QWebView = myQtWeb.QWebView
+except AttributeError:
+        #This piece of code borrowed from spyderlib.widgets.browser
+    class WebPage(myQtWeb.QWebEnginePage):
+        """
+        Web page subclass to manage hyperlinks for WebEngine
+
+        Note: This can't be used for WebKit because the
+        acceptNavigationRequest method has a different
+        functionality for it.
+        """
+        linkClicked = QtCore.Signal(QtCore.QUrl)
+        linkDelegationPolicy = 0
+
+        def setLinkDelegationPolicy(self, policy):
+            self.linkDelegationPolicy = policy
+
+        def acceptNavigationRequest(self, url, navigation_type, isMainFrame):
+            """
+            Overloaded method to handle links ourselves
+            """
+            if navigation_type ==\
+                    myQtWeb.QWebEnginePage.NavigationTypeLinkClicked and\
+                    self.linkDelegationPolicy == 1:
+                self.linkClicked.emit(url)
+                return False
+            return True
+
+
+    class QWebView(myQtWeb.QWebEngineView):
+        """Web view"""
+        def __init__(self):
+            myQtWeb.QWebEngineView.__init__(self)
+            web_page = WebPage(self)
+            self.setPage(web_page)
 
 sys.path.append(os.path.join('..', '..'))
 
