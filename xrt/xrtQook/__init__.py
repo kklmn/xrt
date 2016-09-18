@@ -166,13 +166,12 @@ QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
      QtGui.QStandardItem, QtGui.QPixmap)
 
-#if QtName in ["PyQt5"]:
-#    QWebView = myQtWeb.QWebEngineView
-#else:
 try:
     QWebView = myQtWeb.QWebView
 except AttributeError:
-        #This piece of code borrowed from spyderlib.widgets.browser
+    # QWebKit deprecated in Qt 5.7
+    # The idea and partly the code of the compatibility fix is borrowed from
+    # spyderlib.widgets.browser
     class WebPage(myQtWeb.QWebEnginePage):
         """
         Web page subclass to manage hyperlinks for WebEngine
