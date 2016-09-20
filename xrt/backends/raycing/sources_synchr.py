@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "03 Jul 2016"
+__date__ = "20 Sep 2016"
 import os
 import sys
 #import pickle
@@ -1225,10 +1225,10 @@ class Undulator(object):
             self.Ip += Ip.reshape(sh) * wspread
             self.Isp += Isp.reshape(sh) * wspread
 
-        s0 = (self.Is + self.Ip) * wspread
-        s1 = (self.Is - self.Ip) * wspread
-        s2 = (2. * np.real(self.Isp)) * wspread
-        s3 = (-2. * np.imag(self.Isp)) * wspread
+        s0 = self.Is + self.Ip
+        s1 = self.Is - self.Ip
+        s2 = 2. * np.real(self.Isp)
+        s3 = -2. * np.imag(self.Isp)
 
 # convolution with the angular size:
         if self.dx > 0 or self.dz > 0:

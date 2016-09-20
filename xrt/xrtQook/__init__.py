@@ -76,7 +76,7 @@ Using xrtQook for script generation
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "18 Sep 2016"
+__date__ = "20 Sep 2016"
 __version__ = "1.1"
 
 import os
@@ -426,7 +426,7 @@ class XrtQook(QWidget):
         self.descrEdit.setFont(self.defaultFont)
         self.descrEdit.textChanged.connect(self.updateDescription)
 
-        self.setGeometry(100, 100, 1100, 600)
+        self.setGeometry(100, 100, 1200, 600)
 
         if isSpyderConsole:
             self.codeConsole = pythonshell.ExternalPythonShell(
@@ -455,7 +455,7 @@ class XrtQook(QWidget):
         canvasSplitter.setChildrenCollapsible(False)
 
         mainWidget = QWidget()
-        mainWidget.setMinimumWidth(465)
+        mainWidget.setMinimumWidth(480)
         docWidget = QWidget()
         docWidget.setMinimumWidth(300)
         mainBox = QVBoxLayout()

@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-1.2.1 (18 Sep 2016):
+1.2.1 (19 Sep 2016):
     - Added SRW to some comparisons of synchrotron sources. See :ref:`here
       <undulator_highE>`.
 
@@ -13,12 +13,7 @@ Version history
       IE though). The total size of the images has become smaller at better
       image quality and bidirectional animations (doubled number of frames).
 
-    - The development of Qt is such that its every new version requires changes
-      in imports and invoked methods. To make a program work with several Qt
-      versions requires proliferating conditional structures. We try to follow
-      the Qt development. xrtQook works fine with the Qt versions up to 5.6.
-      With the Qt versions 5.6+, the functionality of xrtQook help is somewhat
-      restricted (so far).
+    - xrtQook works now with Qt versions up to 5.7.
 
     - Minor bug fixes and updates.
 
