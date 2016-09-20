@@ -166,8 +166,23 @@ QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
      QtGui.QStandardItem, QtGui.QPixmap)
 
+if CSS_PATH is not None:
+    CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
+
 try:
-    QWebView = myQtWeb.QWebView
+    class WebPage(myQtWeb.QWebPage):
+        """
+        Web page subclass to manage hyperlinks like in WebEngine
+        """
+        showHelp = QtCore.Signal()
+
+    class QWebView(myQtWeb.QWebView):
+        """Web view"""
+        def __init__(self):
+            myQtWeb.QWebView.__init__(self)
+            web_page = WebPage(self)
+            self.setPage(web_page)
+
 except AttributeError:
     # QWebKit deprecated in Qt 5.7
     # The idea and partly the code of the compatibility fix is borrowed from
@@ -181,6 +196,7 @@ except AttributeError:
         functionality for it.
         """
         linkClicked = QtCore.Signal(QtCore.QUrl)
+        showHelp = QtCore.Signal()
         linkDelegationPolicy = 0
 
         def setLinkDelegationPolicy(self, policy):
@@ -190,13 +206,21 @@ except AttributeError:
             """
             Overloaded method to handle links ourselves
             """
-            if navigation_type ==\
-                    myQtWeb.QWebEnginePage.NavigationTypeLinkClicked and\
-                    self.linkDelegationPolicy == 1:
-                self.linkClicked.emit(url)
+            if navigation_type in\
+                    [myQtWeb.QWebEnginePage.NavigationTypeLinkClicked] and\
+                    str(url.toString()).startswith('file:'):
+                if self.linkDelegationPolicy == 1 and\
+                        '.png' not in url.toString():
+                    self.linkClicked.emit(url)
                 return False
+            elif navigation_type in\
+                    [myQtWeb.QWebEnginePage.NavigationTypeBackForward] and\
+                    self.linkDelegationPolicy == 0:
+                if str(QtCore.QUrl(CSS_PATH).toString()).lower() in\
+                        str(url.toString()).lower():
+                    self.showHelp.emit()
+                    return False
             return True
-
 
     class QWebView(myQtWeb.QWebEngineView):
         """Web view"""
@@ -315,7 +339,6 @@ class XrtQook(QWidget):
         self.toolBar = QToolBar('File')
         self.statusBar = QStatusBar()
         self.statusBar.setSizeGripEnabled(False)
-        # self.statusBar.setStyleSheet("border:1px solid rgb(0, 0, 0);")
 
         self.toolBar.addAction(newBLAction)
         self.toolBar.addAction(loadBLAction)
@@ -337,17 +360,6 @@ class XrtQook(QWidget):
         self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
-#        self.objectFlag = QtCore.Qt.ItemFlags(-33)
-#        self.paramFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-#                                             QtCore.Qt.ItemIsEditable | ~
-#                                             QtCore.Qt.ItemIsSelectable)
-#        self.valueFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-#                                             QtCore.Qt.ItemIsEditable |
-#                                             QtCore.Qt.ItemIsSelectable)
-#        self.checkFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled | ~
-#                                             QtCore.Qt.ItemIsEditable |
-#                                             QtCore.Qt.ItemIsUserCheckable |
-#                                             QtCore.Qt.ItemIsSelectable)
         self.objectFlag = QtCore.Qt.ItemFlags(0)
         self.paramFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
                                              QtCore.Qt.ItemIsSelectable)
@@ -488,7 +500,18 @@ class XrtQook(QWidget):
                        lambda: self.zoomDoc(1))
         menu.addAction("Zoom Out", lambda: self.zoomDoc(-1))
         menu.addAction("Zoom reset", lambda: self.zoomDoc(0))
+        menu.addSeparator()
+        if str(self.webHelp.url().toString()).startswith('http:'):
+            menu.addAction("Back", self.goBack)
+            if self.webHelp.history().canGoForward():
+                menu.addAction("Forward", self.webHelp.forward)
         menu.exec_(self.webHelp.mapToGlobal(position))
+
+    def goBack(self):
+        if self.webHelp.history().canGoBack():
+            self.webHelp.back()
+        else: 
+            self.webHelp.page().showHelp.emit()
 
     def zoomDoc(self, factor):
         """Zoom in/out/reset"""
@@ -762,6 +785,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.pltColorCounter = 0
         self.fileDescription = ""
         self.descrEdit.setText("")
+        self.currHtml = ""
         self.showWelcomeScreen()
 
     def newBL(self):
@@ -879,6 +903,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             argDocStr += u'{2}{0}*: {1}\n\n'.format(dName, dVal, myTab)
 
         if isSphinx:
+            self.webHelp.history().clear()
+            self.webHelp.page().history().clear()
             err = None
             try:
                 cntx = generate_context(
@@ -915,6 +941,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 spyder_crutch += "    });\n});\n</script>\n<body>"
                 new_html = re.sub('<body>', spyder_crutch, html_text, 1)
             self.webHelp.setHtml(new_html, QtCore.QUrl(CSS_PATH))
+            self.currHtml = new_html
+            #self.webHelp.page().showHelp.connect(partial(
+            #    self.showObjHelp, self.curObj))
+            self.webHelp.page().showHelp.connect(partial(
+                self.webHelp.setHtml, self.currHtml, QtCore.QUrl(CSS_PATH)))
         else:
             argDocStr = u'{0}\nDefiniiton: {1}\n\nType: {2}\n\n\n'.format(
                 nameStr.upper(), argSpecStr, noteStr) + argDocStr
