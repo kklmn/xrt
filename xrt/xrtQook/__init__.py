@@ -640,6 +640,8 @@ class XrtQook(QWidget):
         if isOpenCL:
             iDeviceCPU = []
             iDeviceGPU = []
+            CPUdevices = []
+            GPUdevices = []
             for platform in cl.get_platforms():
                 try:  # at old pyopencl versions:
                     CPUdevices =\
