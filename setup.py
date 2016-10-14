@@ -4,7 +4,7 @@ from distutils.core import setup
 
 #import importLongDescription
 #long_description = importLongDescription.output()
-long_description = """
+long_description = u"""
 Package xrt (XRayTracer) is a python software library for ray tracing and wave
 propagation in x-ray regime. It is primarily meant for modeling synchrotron
 sources, beamlines and beamline elements. Includes a GUI tool for creating
@@ -135,41 +135,41 @@ Dependencies
 ------------
 numpy, scipy matplotlib are required. If you use OpenCL for calculations on GPU
 or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime`` (these
-are search key words), pytools and pyopencl. Spiderlib is highly recommended
-for nicer view of xrtQook.
+are search key words), pytools and pyopencl. Spyderlib (the foundation of
+Spyder IDE) is highly recommended for nicer view of xrtQook.
 
 Python 2 and 3
 --------------
 The code can run in both Python branches without any modification.
 """
 
-setup(name='xrt',
-      version='1.2.0',
-      description='Ray tracing and wave propagation in x-ray regime, '
-                  'primarily meant for modeling '
-                  'synchrotron sources, beamlines and beamline elements. '
-                  'Includes a GUI tool for creating scripts.',
-      long_description=long_description,
-      author=('Konstantin Klementiev', 'Roman Chernikov'),
-      author_email='first DOT last AT gmail DOT com',
-      url='http://pythonhosted.org/xrt',
-      platforms='OS Independent',
-      license='MIT License',
-      packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.xrtQook'],
-      package_data={
-          'xrt.backends.raycing': [os.path.join('data', '*.*'), '*.cl'],
-          'xrt': ['*.cl, *.ico'],
-          'xrt.xrtQook': [os.path.join('_icons', '*.*'),
-                          os.path.join('_images', '*.*'),
-                          os.path.join('xmls', '*.*')]},
-      scripts=[os.path.join('xrt', 'xrtQook', 'xrtQook.pyw')],
-      classifiers=['Development Status :: 5 - Production/Stable',
-                   'Intended Audience :: Science/Research',
-                   'Natural Language :: English',
-                   'Operating System :: OS Independent',
-                   'Programming Language :: Python :: 2',
-                   'Programming Language :: Python :: 3',
-                   'License :: OSI Approved :: MIT License',
-                   'Topic :: Scientific/Engineering :: Physics',
-                   'Topic :: Scientific/Engineering :: Visualization'],
-      )
+setup(
+    name='xrt',
+    version='1.2.1',
+    description='Ray tracing and wave propagation in x-ray regime, primarily '
+                'meant for modeling synchrotron sources, beamlines and '
+                'beamline elements. Includes a GUI tool for creating scripts.',
+    long_description=long_description,
+    author='Konstantin Klementiev, Roman Chernikov',
+    author_email='konstantin DOT klementiev AT gmail DOT com, '
+                 'rchernikov AT gmail DOT com',
+    url='http://pythonhosted.org/xrt',
+    platforms='OS Independent',
+    license='MIT License',
+    packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.xrtQook'],
+    package_data={
+        'xrt.backends.raycing': [os.path.join('data', '*.*'), '*.cl'],
+        'xrt': ['*.cl, *.ico'],
+        'xrt.xrtQook': [os.path.join('_icons', '*.*'),
+                        os.path.join('_images', '*.*'),
+                        os.path.join('xmls', '*.*')]},
+    scripts=[os.path.join('xrt', 'xrtQook', 'xrtQook.pyw')],
+    classifiers=['Development Status :: 5 - Production/Stable',
+                 'Intended Audience :: Science/Research',
+                 'Natural Language :: English',
+                 'Operating System :: OS Independent',
+                 'Programming Language :: Python :: 2',
+                 'Programming Language :: Python :: 3',
+                 'License :: OSI Approved :: MIT License',
+                 'Topic :: Scientific/Engineering :: Physics',
+                 'Topic :: Scientific/Engineering :: Visualization'])
