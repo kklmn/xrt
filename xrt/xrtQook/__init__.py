@@ -112,6 +112,7 @@ try:
                                                      generate_context)
     isSphinx = True
 except (ImportError, TypeError):
+    CSS_PATH = None
     sphinxify = None
     isSphinx = False
 if not isSphinx:
@@ -120,7 +121,7 @@ if not isSphinx:
                                                     generate_context)  # analysis:ignore
         isSphinx = True
     except (ImportError, TypeError):
-        raise
+#        raise
         pass
 
 try:
@@ -879,7 +880,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def showObjHelp(self, obj):
         self.curObj = obj
-        self.webHelp.page().setLinkDelegationPolicy(0)
+        if isSphinx:
+            self.webHelp.page().setLinkDelegationPolicy(0)
         argSpecStr = '('
         for arg, argVal in self.getParams(obj):
             argSpecStr += '{0}={1}, '.format(arg, argVal)
@@ -1074,8 +1076,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         fVal + (maxFVLen - len(fVal)) * ' ')
                     argDocStr += spacerH
         argDocStr += '\n'
-        self.webHelp.page().setLinkDelegationPolicy(0)
         if isSphinx:
+            self.webHelp.page().setLinkDelegationPolicy(0)
             cntx = generate_context(
                 name="OpenCL Platforms and Devices",
                 argspec="",
