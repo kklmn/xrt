@@ -928,6 +928,9 @@ class Undulator(object):
             elif isinstance(customField, (float, int)):
                 fname = None
                 self.customFieldData = customField
+                if customField > 0:
+                    betaL = 2 * M0*C**2*self.gamma / customField / E0 / 1e6
+                    print("Larmor betatron function = {0} m".format(betaL))
             else:
                 fname = customField
                 kwargs = {}
@@ -1191,11 +1194,11 @@ class Undulator(object):
         if isinstance(psi, str):
             psi = np.mgrid[self.Psi_min:self.Psi_max + 0.5*self.dPsi:self.dPsi]
 
-        tomesh = energy, theta, psi
         if harmonic is None:
             xH = None
+            tomesh = energy, theta, psi
         else:
-            tomesh.append(harmonic)
+            tomesh = energy, theta, psi, harmonic
         mesh = np.meshgrid(*tomesh, indexing='ij')
         xE, xTheta, xPsi = mesh[0].ravel(), mesh[1].ravel(), mesh[2].ravel()
         if harmonic is not None:
@@ -1209,7 +1212,10 @@ class Undulator(object):
             spreads = [0]
             wspreads = [1]
 
-        sh = len(energy), len(theta), len(psi)
+        if harmonic is None:
+            sh = len(energy), len(theta), len(psi)
+        else:
+            sh = len(energy), len(theta), len(psi), len(harmonic)
         self.Is = np.zeros(sh, dtype=float)
         self.Ip = np.zeros(sh, dtype=float)
         self.Isp = np.zeros(sh, dtype=complex)
@@ -1240,10 +1246,21 @@ class Undulator(object):
                 sigma_rP2 = 0.
                 Sx = ((self.dxprime**2 + sigma_rP2)**0.5) / dxP
                 Sz = ((self.dzprime**2 + sigma_rP2)**0.5) / dzP
-                s0[ie, :, :] = gaussian_filter(s0[ie, :, :], [Sx, Sz])
-                s1[ie, :, :] = gaussian_filter(s1[ie, :, :], [Sx, Sz])
-                s2[ie, :, :] = gaussian_filter(s2[ie, :, :], [Sx, Sz])
-                s3[ie, :, :] = gaussian_filter(s3[ie, :, :], [Sx, Sz])
+                if harmonic is None:
+                    s0[ie, :, :] = gaussian_filter(s0[ie, :, :], [Sx, Sz])
+                    s1[ie, :, :] = gaussian_filter(s1[ie, :, :], [Sx, Sz])
+                    s2[ie, :, :] = gaussian_filter(s2[ie, :, :], [Sx, Sz])
+                    s3[ie, :, :] = gaussian_filter(s3[ie, :, :], [Sx, Sz])
+                else:
+                    for ih, hh in enumerate(harmonic):
+                        s0[ie, :, :, ih] = gaussian_filter(
+                            s0[ie, :, :, ih], [Sx, Sz])
+                        s1[ie, :, :, ih] = gaussian_filter(
+                            s1[ie, :, :, ih], [Sx, Sz])
+                        s2[ie, :, :, ih] = gaussian_filter(
+                            s2[ie, :, :, ih], [Sx, Sz])
+                        s3[ie, :, :, ih] = gaussian_filter(
+                            s3[ie, :, :, ih], [Sx, Sz])
 
         with np.errstate(divide='ignore'):
             return (s0,
