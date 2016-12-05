@@ -123,6 +123,9 @@ if not isSphinx:
     except (ImportError, TypeError):
 #        raise
         pass
+if isSphinx:
+    if CSS_PATH is not None:
+        CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
 
 try:
     from matplotlib.backends import qt_compat
@@ -166,9 +169,6 @@ QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
 QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
      QtGui.QStandardItem, QtGui.QPixmap)
-
-if CSS_PATH is not None:
-    CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
 
 try:
     class WebPage(myQtWeb.QWebPage):
