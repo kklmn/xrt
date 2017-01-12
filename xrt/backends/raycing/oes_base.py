@@ -1642,7 +1642,9 @@ class DCM(OE):
             lo2 = rs.Beam(copyFrom=gb2)  # output beam in local coordinates
         else:
             lo2 = gb2
-        good2 = gb.state > 0
+        good2 = goodAfter1
+        if hasattr(self, 't'):  # is instance of Plate
+            gb2.state[~good2] = self.lostNum
         if good2.sum() == 0:
             return gb2, lo1, lo2
         self._reflect_local(
@@ -1657,6 +1659,8 @@ class DCM(OE):
         raycing.virgin_local_to_global(self.bl, gb2, self.center, goodAfter2)
 # not intersected rays remain unchanged except their state:
         notGood = ~goodAfter2
+        if hasattr(self, 't'):  # is instance of Plate
+            gb2.state[notGood] = self.lostNum
         if notGood.sum() > 0:
             rs.copy_beam(gb2, beam, notGood)
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates
