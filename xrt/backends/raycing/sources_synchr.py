@@ -1586,17 +1586,21 @@ class Undulator(object):
             if np.array(w).shape:
                 if w.shape[0] > 1:
                     if self.filamentBeam:
-                        gamma += gamma * self.eEspread * \
+                        gamma += gamma * self.eEspread *\
                             np.ones_like(w, dtype=self.cl_precisionF) *\
                             np.random.standard_normal()
                     else:
-                        gamma += dgamma * \
-                            np.ones_like(w, dtype=self.cl_precisionF)
+                        if dgamma:
+                            gamma += dgamma *\
+                                np.ones_like(w, dtype=self.cl_precisionF)
+                        else:
+                            gamma += gamma * self.eEspread *\
+                                np.random.normal(size=w.shape[0])
             gamma2 = gamma**2
-            wu = PI * C * 10 / self.L0 / gamma2 * \
+            wu = PI * C * 10 / self.L0 / gamma2 *\
                 (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         else:
-            self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
+            self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 *\
                 (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
             gamma = self.gamma * np.ones_like(w, dtype=self.cl_precisionF)
             gamma2 = self.gamma2 * np.ones_like(w, dtype=self.cl_precisionF)

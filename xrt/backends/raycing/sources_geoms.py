@@ -424,8 +424,8 @@ class GaussianBeam(object):
         invR = wave.yDiffr / (wave.yDiffr**2 + yR**2)
         psi = (abs(l) + 2*p + 1) * np.arctan2(wave.yDiffr, yR)
         w = self.w(wave.yDiffr, yR=yR)
-        phi = np.arctan2(wave.z, wave.x)
-        rSquare = wave.x**2 + wave.z**2
+        phi = np.arctan2(wave.zDiffr, wave.xDiffr)
+        rSquare = wave.xDiffr**2 + wave.zDiffr**2
         amp = (2/np.pi)**0.5 / w * np.exp(
             -rSquare/w**2 + 1j*k*(wave.yDiffr + 0.5*rSquare*invR) - 1j*psi)
         clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
@@ -445,6 +445,7 @@ class GaussianBeam(object):
         with np.errstate(divide='ignore'):
             wave.b[:] = 1/invR
         wave.b[invR == 0] = 1e20
+        wave.b[:] = (wave.b**2 - wave.a**2 - wave.c**2)**0.5
         wave.c[:] = wave.zDiffr
 # normalize (a,b,c):
         norm = (wave.a**2 + wave.b**2 + wave.c**2)**0.5
@@ -452,6 +453,9 @@ class GaussianBeam(object):
         wave.b /= norm
         wave.c /= norm
         bo = Beam(copyFrom=wave)
+        bo.x = wave.xDiffr
+        bo.y = wave.yDiffr
+        bo.z = wave.zDiffr
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:

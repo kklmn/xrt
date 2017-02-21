@@ -227,15 +227,15 @@ class Beam(object):
     def filter_good(self):
         return self.filter_by_index(self.state == 1)
 
-    def absorb_intensity(self, inBeam):
-        self.Jss = inBeam.Jss - self.Jss
-        self.Jpp = inBeam.Jpp - self.Jpp
-        self.Jsp = inBeam.Jsp - self.Jsp
+    def absorb_intensity(self, inBeam, sign=1):
+        self.Jss = (inBeam.Jss - self.Jss) * sign
+        self.Jpp = (inBeam.Jpp - self.Jpp) * sign
+        self.Jsp = (inBeam.Jsp - self.Jsp) * sign
         self.displayAsAbsorbedPower = True
 
     def add_wave(self, wave, sign=1):
-        self.Es = sign*wave.Es
-        self.Ep = sign*wave.Ep
+        self.Es += sign*wave.Es
+        self.Ep += sign*wave.Ep
         self.Jss = (self.Es * self.Es.conjugate()).real
         self.Jss = (self.Ep * self.Ep.conjugate()).real
         self.Jsp = self.Es * self.Ep.conjugate()

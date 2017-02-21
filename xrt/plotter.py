@@ -56,7 +56,9 @@ else:
 
 # otherwise it does not work correctly on my Ubuntu9.10 and mpl 0.99.1.1:
 mpl.rcParams['axes.unicode_minus'] = False
-# mpl.rcParams['font.family'] = 'serif'
+#mpl.rcParams['text.usetex'] = True
+#mpl.rcParams['font.family'] = 'serif'
+#mpl.rcParams['font.serif'] = 'cm'
 mpl.rcParams['axes.linewidth'] = 0.75
 # mpl.rcParams['backend'] = 'Qt4Agg'
 # mpl.rcParams['backend'] = 'Agg'
@@ -260,8 +262,8 @@ class XYCAxis(object):
                :scale: 50 %
 
         *fwhmFormatStr*: str
-            Python format string for the FWHM value. if None, the FWHM value
-            is not displayed.
+            Python format string for the FWHM value, e.g. '%.2f'. if None, the
+            FWHM value is not displayed.
 
 
         """
@@ -1131,7 +1133,7 @@ class XYCPlot(object):
                     yTextPos = r[2]
                 osl = self.ax2dHist.text(
                     (r[0]+r[1]) * 0.5, yTextPos, surf, ha='center',
-                    va='bottom', color='w')
+                    va='top', color='w')
                 self.oeSurfaceLabels.append(osl)
 
     def plot_hist1d(self, what_axis_char):
@@ -1197,7 +1199,7 @@ class XYCPlot(object):
         if orientation[0] == 'h':
             map2d = np.zeros((histoPixelHeight, len(xx), 3))
             for ix, cx in enumerate(xx):
-                maxPixel = round((histoPixelHeight-1) * cx)
+                maxPixel = int(round((histoPixelHeight-1) * cx))
                 if 0 <= maxPixel <= (histoPixelHeight-1):
                     map2d[0:maxPixel, ix, :] = xxRGB[ix, :]
                     if axis.outline:
@@ -1213,7 +1215,7 @@ class XYCPlot(object):
         elif orientation[0] == 'v':
             map2d = np.zeros((len(xx), histoPixelHeight, 3))
             for ix, cx in enumerate(xx):
-                maxPixel = round((histoPixelHeight-1) * cx)
+                maxPixel = int(round((histoPixelHeight-1) * cx))
                 if 0 <= maxPixel <= (histoPixelHeight-1):
                     map2d[ix, 0:maxPixel, :] = xxRGB[ix, :]
                     if axis.outline:

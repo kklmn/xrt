@@ -516,7 +516,7 @@ def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
             shouldCalculateArea = True
 
     if shouldCalculateArea:
-        if _DEBUG > 10:
+        if _DEBUG > 20:
             print("The area of {0} under the beam will now be calculated".
                   format(oe.name))
         if hasattr(oe, 'rotationSequence'):  # OE

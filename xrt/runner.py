@@ -10,6 +10,7 @@ __date__ = "26 Mar 2016"
 import os
 import sys
 import time
+import pickle
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -27,6 +28,7 @@ from . import multipro
 from .backends import raycing
 
 # _DEBUG = True
+__dir__ = os.path.abspath(os.path.dirname(__file__))
 runCardVals = None
 runCardProcs = None
 _plots = []
@@ -79,6 +81,21 @@ class RunCardVals(object):
         self.passNo = 0
         self.savedResults = []
         self.iteration = 0
+        self.lastRunsPickleName = os.path.join(__dir__, 'lastRuns.pickle')
+        self.lastRuns = []
+        try:
+            with open(self.lastRunsPickleName, 'rb') as f:
+                self.lastRuns = pickle.load(f)
+        except:
+            pass
+        if self.lastRuns:
+            print("The last {0} run{1}".format(len(self.lastRuns),
+                  's' if len(self.lastRuns) > 1 else ''))
+        for lastRun in self.lastRuns:
+            st0 = time.strftime("%a, %d %b %Y %H:%M:%S", lastRun[0])
+            st1 = time.strftime("%a, %d %b %Y %H:%M:%S", lastRun[1])
+            print("start: {0}; stop: {1}; duration: {2:.1f} s".format(
+                st0, st1, lastRun[2]))
 
 
 class RunCardProcs(object):
@@ -281,6 +298,7 @@ def on_finish():
         plot.plot_plots()
         plot.save()
     runCardVals.tstop = time.time()
+    runCardVals.tstopLong = time.localtime()
     print('The ray tracing with {0} iteration{1} took {2:0.1f} s'.format(
           runCardVals.iteration, 's' if runCardVals.iteration > 1 else '',
           runCardVals.tstop-runCardVals.tstart))
@@ -321,6 +339,11 @@ def on_finish():
                     plot.save('_norm' + str(runCardVals.passNo))
 
     print('finished')
+
+    runCardVals.lastRuns.append([runCardVals.tstartLong, runCardVals.tstopLong,
+                                 runCardVals.tstop-runCardVals.tstart])
+    with open(runCardVals.lastRunsPickleName, 'wb') as f:
+        pickle.dump(runCardVals.lastRuns[-10:], f, protocol=2)
 #    plt.close('all')
     if runCardProcs.afterScript:
         runCardProcs.afterScript(
@@ -560,5 +583,6 @@ def run_ray_tracing(
             next(runCardProcs.generatorPlot)
 
     runCardVals.tstart = time.time()
+    runCardVals.tstartLong = time.localtime()
     start_jobs()
     plt.show()
