@@ -90,39 +90,60 @@ import xml.etree.ElementTree as ET
 from functools import partial
 
 try:
-    from spyderlib.widgets.sourcecode import codeeditor
-    isSpyderlib = True
-except ImportError:
-    isSpyderlib = False
-
-try:
     import pyopencl as cl
     isOpenCL = True
 except ImportError:
     isOpenCL = False
 
+#  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
+#  It's definitely not the optimal solution, but it works.
+try:
+    from spyderlib.widgets.sourcecode import codeeditor
+    isSpyderlib = True
+except ImportError:
+    try:
+        from spyder.widgets.sourcecode import codeeditor
+        isSpyderlib = True
+    except:
+        isSpyderlib = False
+
 try:
     from spyderlib.widgets.externalshell import pythonshell
     isSpyderConsole = True
 except ImportError:
-    isSpyderConsole = False
+    try:
+        from spyder.widgets.externalshell import pythonshell
+        isSpyderConsole = True
+    except:
+        isSpyderConsole = False
 
 try:
     from spyderlib.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
                                                      generate_context)
     isSphinx = True
 except (ImportError, TypeError):
-    CSS_PATH = None
-    sphinxify = None
-    isSphinx = False
+    try:
+        from spyder.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
+                                                      generate_context)
+        isSphinx = True
+    except:
+        CSS_PATH = None
+        sphinxify = None
+        isSphinx = False
+
 if not isSphinx:
     try:
         from spyderlib.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
                                                     generate_context)  # analysis:ignore
         isSphinx = True
     except (ImportError, TypeError):
-#        raise
-        pass
+        try:
+            from spyderlib.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
+                                                        generate_context)  # analysis:ignore
+            isSphinx = True
+        except:
+            pass
+
 if isSphinx:
     if CSS_PATH is not None:
         CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
@@ -132,13 +153,18 @@ try:
 except ImportError:
     from matplotlib.backends import qt4_compat
     qt_compat = qt4_compat
-use_pyside = 'pyside' in qt_compat.QT_API.lower()  # also 'PySide2'
-if use_pyside:
-    QtName = "PySide"
-    import PySide
-    from PySide import QtGui, QtCore
-    import PySide.QtGui as myQtGUI
-    import PySide.QtWebKit as myQtWeb
+#use_pyside = 'pyside' in qt_compat.QT_API.lower()  # also 'PySide2'
+#if use_pyside:
+#    QtName = "PySide"
+#    import PySide
+#    from PySide import QtGui, QtCore
+#    import PySide.QtGui as myQtGUI
+#    import PySide.QtWebKit as myQtWeb
+if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
+    QtName = "PyQt4"
+    from PyQt4 import QtGui, QtCore
+    import PyQt4.QtGui as myQtGUI
+    import PyQt4.QtWebKit as myQtWeb
 elif 'pyqt5' in qt_compat.QT_API.lower():
     QtName = "PyQt5"
     from PyQt5 import QtGui, QtCore
@@ -147,11 +173,6 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
         import PyQt5.QtWebKitWidgets as myQtWeb
     except ImportError:
         import PyQt5.QtWebEngineWidgets as myQtWeb
-elif 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    QtName = "PyQt4"
-    from PyQt4 import QtGui, QtCore
-    import PyQt4.QtGui as myQtGUI
-    import PyQt4.QtWebKit as myQtWeb
 else:
     raise ImportError("Cannot import any Python Qt package!")
 
@@ -511,7 +532,7 @@ class XrtQook(QWidget):
     def goBack(self):
         if self.webHelp.history().canGoBack():
             self.webHelp.back()
-        else: 
+        else:
             self.webHelp.page().showHelp.emit()
 
     def zoomDoc(self, factor):
@@ -2468,7 +2489,7 @@ if __name__ == '__main__':
                                 rsources.__name__,
                                 'Beam(nrays=2)', myTab)
                             codeAlignBL += '{1}{0}.a[:] = 0\n{1}{0}.b[:] = 1\n{1}{0}.c[:] = 0\n\
-{1}{0}.x[:] = 0\n{1}{0}.y[:] = 0\n{1}{0}.z[:] = 0\n{1}{0}.state[:] = 1\n\n'.format(tmpSourceName, myTab) # analysis:ignore
+{1}{0}.x[:] = 0\n{1}{0}.y[:] = 0\n{1}{0}.z[:] = 0\n{1}{0}.state[:] = 1\n{1}{0}.E[:] = energy\n\n'.format(tmpSourceName, myTab) # analysis:ignore
                         else:
                             codeAlignBL += '{2}tmpy = {0}.{1}.center[1]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
                             if autoX:
@@ -2800,6 +2821,20 @@ if __name__ == '__main__':
         msgBox.setInformativeText(infText)
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.exec_()
+
+    def closeEvent(self, event):
+        ret = QtGui.QMessageBox.question(
+            self, 'Exit',
+            "Do you want to save Beamline Layout before exit?",
+            QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+
+        if ret == QtGui.QMessageBox.Yes:
+            if self.exportLayout():
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
 
 
 if __name__ == '__main__':
