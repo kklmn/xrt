@@ -138,7 +138,7 @@ if not isSphinx:
         isSphinx = True
     except (ImportError, TypeError):
         try:
-            from spyderlib.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
+            from spyder.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
                                                         generate_context)  # analysis:ignore
             isSphinx = True
         except:
