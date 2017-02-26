@@ -177,7 +177,7 @@ class XRT_CL(object):
                 self.cl_queue.extend([cl.CommandQueue(cl_ctx, device)])
                 self.cl_program.extend(
                     [cl.Program(cl_ctx, kernelsource).build(
-                        options=["-I "+__dir__])])
+                        options=['-I',__dir__])])
                 self.cl_ctx.extend([cl_ctx])
 
             self.cl_mf = cl.mem_flags
@@ -216,6 +216,7 @@ class XRT_CL(object):
             if scalarArgs is not None:
                 kernel_bufs[ictx].extend(scalarArgs)
             ndstart.extend([sum(ndsize)])
+
             if dimension > 1:
                 if ictx < nctx - 1:
                     ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
@@ -226,11 +227,15 @@ class XRT_CL(object):
             else:
                 ndslice.extend([0])
 
+# In case each photon has an array of input/output data we define a second dimension
             if slicedROArgs is not None and dimension > 1:
                 for iarg, arg in enumerate(slicedROArgs):
+                    secondDim = np.int(len(arg) / dimension)
+                    iSlice = slice(ndstart[ictx]*secondDim,
+                                   (ndstart[ictx]+ndsize[ictx])*secondDim)
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[ndslice[ictx]])])
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
 
             if nonSlicedROArgs is not None:
                 for iarg, arg in enumerate(nonSlicedROArgs):
@@ -240,11 +245,14 @@ class XRT_CL(object):
 
             if slicedRWArgs is not None:
                 for iarg, arg in enumerate(slicedRWArgs):
+                    secondDim = np.int(len(arg) / dimension)
+                    iSlice = slice(ndstart[ictx]*secondDim,
+                                   (ndstart[ictx]+ndsize[ictx])*secondDim)
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[ndslice[ictx]])])
-                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
-
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
+                global_size.extend([(ndsize[ictx],)])
+#                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
             if nonSlicedRWArgs is not None:
                 for iarg, arg in enumerate(nonSlicedRWArgs):
                     kernel_bufs[ictx].extend([cl.Buffer(
@@ -268,18 +276,27 @@ class XRT_CL(object):
             if _DEBUG > 20:
                 print("ctx status {0} {1}".format(iev, status))
 
-        for ictx, ctx in enumerate(self.cl_ctx):
-            if slicedRWArgs is not None:
+        ret = ()
+
+        if slicedRWArgs is not None:
+            for ictx, ctx in enumerate(self.cl_ctx):
                 for iarg, arg in enumerate(slicedRWArgs):
+                    secondDim = np.int(len(arg) / dimension)
+                    iSlice = slice(ndstart[ictx]*secondDim,
+                                   (ndstart[ictx]+ndsize[ictx])*secondDim)
                     cl.enqueue_copy(self.cl_queue[ictx],
-                                    slicedRWArgs[iarg][ndslice[ictx]],
+                                    slicedRWArgs[iarg][iSlice],
                                     kernel_bufs[ictx][iarg + rw_pos],
                                     is_blocking=self.cl_is_blocking)
-                return tuple(slicedRWArgs)
-            elif nonSlicedRWArgs is not None:
+            ret += tuple(slicedRWArgs)
+
+        if nonSlicedRWArgs is not None:
+            for ictx, ctx in enumerate(self.cl_ctx):
                 for iarg, arg in enumerate(nonSlicedRWArgs):
                     cl.enqueue_copy(self.cl_queue[ictx],
                                     nonSlicedRWArgs[iarg],
                                     kernel_bufs[ictx][iarg + nsrw_pos],
                                     is_blocking=self.cl_is_blocking)
-                return tuple(nonSlicedRWArgs)
+            ret += tuple(nonSlicedRWArgs)
+
+        return ret

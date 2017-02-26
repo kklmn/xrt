@@ -41,6 +41,7 @@ import time
 import struct
 import pickle
 import numpy as np
+from scipy.special import jn as besselJn
 
 from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO
 
@@ -726,7 +727,8 @@ class Crystal(Material):
     transmittivity of a crystal in Bragg and Laue cases."""
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
-                 geom='Bragg reflected', table='Chantler', name=''):
+                 geom='Bragg reflected', table='Chantler', name='',
+                 calcBorrmann=False, useTT=False):
         u"""
         *hkl*: sequence
             hkl indices.
@@ -766,6 +768,8 @@ class Crystal(Material):
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
+        self.calcBorrmann = calcBorrmann
+        self.useTT = useTT
 
 #    def get_amplitude_Authie(self, E, gamma0, gammah, beamInDotHNormal):
 #        """A. Authier, Dynamical Theory of X-ray Diffraction -1. Perfect
@@ -869,8 +873,162 @@ class Crystal(Material):
         dw = self.get_Darwin_width(E, 1., polarization)
         return self.d / 2. / dw * np.tan(theta0) * 1e-4   # in microns
 
+    def get_Borrmann_out(self, goodN, oeNormal, lb, a_out, b_out, c_out,
+                         alphaAsym=None, Rcurvmm=None, ucl=None, useTT=False):
+
+        asymmAngle = alphaAsym if alphaAsym is not None else 0
+
+        if ucl is None:
+            useTT = False
+            print('OpenCL required for bent crystals calculations.')
+            print('Emulating perfect crystal.')
+
+        if Rcurvmm is not None:
+            Rcurv = Rcurvmm * 1e7
+        else:
+            Rcurv = np.inf
+
+        E = lb.E[goodN]
+        beamOutDotNormal = a_out * oeNormal[-3] + \
+            b_out * oeNormal[-2] + c_out * oeNormal[-1]
+
+        beamInDotNormal = lb.a[goodN]*oeNormal[-3] +\
+            lb.b[goodN]*oeNormal[-2] + lb.c[goodN]*oeNormal[-1]
+
+        beamInDotHNormal = lb.a[goodN]*oeNormal[0] +\
+            lb.b[goodN]*oeNormal[1] + lb.c[goodN]*oeNormal[2]
+
+        t0 = -self.t / beamInDotNormal
+        tH = -self.t / beamOutDotNormal
+
+        #  Find intersection of S0 and output surface
+        point0x = lb.x + lb.a * t0
+        point0y = lb.y + lb.b * t0
+        point0z = lb.z + lb.c * t0
+
+        #  Find intersection of Sh and output surface
+        pointHx = lb.x + a_out * tH
+        pointHy = lb.y + b_out * tH
+        pointHz = lb.z + c_out * tH
+
+        waveLength = ch / E  # the word "lambda" is reserved
+        thickness = self.t * 1e7
+        k = PI2 / waveLength
+        HH = PI2 / self.d
+        F0, Fhkl, Fhkl_ = \
+            self.get_structure_factor(E, HH / 4. / PI)
+        lambdaSquare = waveLength ** 2
+
+        chiToFlambdaSquare = self.chiToF * lambdaSquare
+        chi0 = F0 * chiToFlambdaSquare
+        chih = Fhkl * chiToFlambdaSquare
+        chih_ = Fhkl_ * chiToFlambdaSquare
+
+        gamma_0 = -beamInDotNormal
+        gamma_h = -beamOutDotNormal
+
+        thetaB = self.get_Bragg_angle(E)
+        N_layers = int(thickness / 200)
+        bLength = len(E)
+        IhMap = np.zeros((bLength, (N_layers+1)))
+
+        for ipolFactor in [1., np.cos(2. * thetaB)]:
+            if useTT:
+                k0H = abs(beamInDotHNormal) * HH * k
+                dtsin2tb = (HH**2/2. - k0H) / (k**2)
+                betahprime = dtsin2tb - 0.5 * chi0
+                pmod = thickness/np.abs(beamInDotNormal)/(N_layers-1)
+                qmod = thickness/np.abs(beamOutDotNormal)/(N_layers-1)
+                AA = -0.25 * 1j * k * ipolFactor * chih_ * pmod
+                BB = -0.25 * 1j * k * ipolFactor * chih * qmod
+                WW = 0.5 * 1j * k * betahprime * qmod
+                if Rcurvmm is not None:
+                    Wgrad = -0.5 * 1j * thickness**2 * HH *\
+                        np.cos(asymmAngle) / -Rcurv / (N_layers-1)**2
+                else:
+                    Wgrad = 0
+
+                VV = -0.25 * 1j * k * chi0 * pmod
+
+                D0_local = np.zeros(bLength*(N_layers+1), dtype=np.complex128)
+                Dh_local = np.zeros(bLength*(N_layers+1), dtype=np.complex128)
+                D0t = np.zeros(bLength*(N_layers+3), dtype=np.complex128)
+                Dht = np.zeros(bLength*(N_layers+3), dtype=np.complex128)
+                scalarArgs = [np.int32(N_layers), np.complex128(Wgrad)]
+
+                slicedROArgs = [np.complex128(AA),
+                                np.complex128(BB),
+                                np.complex128(WW),
+                                np.complex128(VV)]
+
+                nonSlicedROArgs = [D0t, Dht]
+
+                slicedRWArgs = [D0_local, Dh_local]
+
+                kernel = 'tt_laue_spherical'
+
+                if Rcurvmm is not None:
+                    kernel += '_bent'
+
+                t0 = time.time()
+                D0_local, Dh_local = ucl.run_parallel(
+                    kernel, scalarArgs, slicedROArgs,
+                    nonSlicedROArgs, slicedRWArgs, None, bLength)
+
+                if self.geom.endswith('transmitted'):
+                    bFan = np.abs(D0_local.reshape((bLength, (N_layers+1))))**2
+                else:
+                    bFan = np.abs(Dh_local.reshape((bLength, (N_layers+1))))**2
+            else:
+                sqrtchchm = np.sqrt(chih*chih_)
+                lambda_pndl = waveLength * np.sqrt(
+                    np.abs(gamma_0 * gamma_h)) / sqrtchchm/ipolFactor
+                yrange = np.linspace(-1, 1, N_layers+1)
+                besselArgument = np.pi * thickness / lambda_pndl
+                bFan = np.abs(besselJn(
+                    0, besselArgument[:, np.newaxis] * np.sqrt(
+                        1. - np.square(yrange))))**2
+
+            IhMap += bFan
+        #  Sampling the coordinate of the exit point on the Borrmann fan
+        IhMax = np.max(IhMap, axis=1)
+        index = np.array(range(bLength))
+        iLeft = index
+        raysLeft = bLength
+        totalX = np.zeros(bLength)
+        counter = 0
+        while raysLeft > 0:
+            counter += 1
+            disc = np.random.random(raysLeft)*IhMax[index]
+            rawRand = np.random.random(raysLeft)
+            xrand = rawRand * 2. - 1.
+            if useTT:
+                deltaRand, ipLeft = np.modf(rawRand * N_layers)
+                rndmIntensity = IhMap[index, np.int32(ipLeft)] *\
+                    (1. - deltaRand) +\
+                    IhMap[index, np.int32(np.ceil(rawRand * N_layers))] *\
+                    deltaRand
+            else:
+                rndmIntensity = np.abs(besselJn(
+                    0, besselArgument[index]*np.sqrt(1-np.square(xrand))))**2
+
+            passed = np.where(rndmIntensity > disc)[0]
+            totalX[index[passed]] = xrand[passed]
+            iLeft = np.where(rndmIntensity <= disc)[0]
+            index = index[iLeft]
+            raysLeft = len(index)
+
+        totalX = 0.5*(totalX + 1.)
+
+        pointOutX = point0x * (1. - totalX) + totalX * pointHx
+        pointOutY = point0y * (1. - totalX) + totalX * pointHy
+        pointOutZ = point0z * (1. - totalX) + totalX * pointHz
+
+        return pointOutX, pointOutY, pointOutZ
+
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None):
+                      beamInDotHNormal=None, alphaAsym=None,
+                      Rcurvmm=None, ucl=None, useTT=False):
         r"""
         Calculates complex amplitude reflectivity and transmittivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases for the
@@ -984,6 +1142,86 @@ class Crystal(Material):
             if not self.geom.endswith('transmitted'):
                 ra /= np.sqrt(abs(b))
             return ra
+
+        def for_one_polarization_TT(polFactor):
+
+            if thickness == 0:
+                pmod = 1.0e2/np.abs(beamInDotNormal)
+                qmod = 1.0e2/np.abs(beamOutDotNormal)
+            else:
+                pmod = thickness/np.abs(beamInDotNormal)/N_layers
+                qmod = thickness/np.abs(beamOutDotNormal)/N_layers
+
+            AA = -0.25 * 1j * k * polFactor * chih_.conjugate() * pmod
+            BB = -0.25 * 1j * k * polFactor * chih.conjugate() * qmod
+            WW = 0.5 * 1j * k * betahprime * qmod
+
+            if Rcurvmm is not None:
+                if self.geom.startswith('Bragg'):
+                    Wgrad = np.zeros_like(AA)
+                    print("Bending in Bragg geometry not implemented")
+                    print("Emulating perfect crystal.")
+#  Bending in reflection geometry is not implemented
+#                    if thickness == 0:
+#                        Wgrad = -0.5 * 1j * qmod**2 *\
+#                            (1. - beamOutDotNormal**2) * HH *\
+#                            np.cos(alphaAsym) / Rcurv
+                else:
+                    Wgrad = -0.5 * 1j * thickness**2 * HH *\
+                        np.cos(asymmAngle) / -Rcurv / N_layers**2
+            else:
+                Wgrad = 0
+
+            if self.geom.startswith('Bragg'):
+                Wgrad = np.zeros_like(AA)
+
+            VV = -0.25 * 1j * k * chi0.conjugate() * pmod
+
+            D0_local = np.zeros_like(AA)
+            Dh_local = np.zeros_like(AA)
+
+            if self.geom.startswith('Bragg'):
+                scalarArgs = [np.int32(N_layers)]
+                slicedROArgs = [np.complex128(Wgrad)]
+            else:
+                scalarArgs = [np.int32(N_layers), np.complex128(Wgrad)]
+                slicedROArgs = []
+
+            slicedROArgs.extend([np.complex128(AA),
+                                 np.complex128(BB),
+                                 np.complex128(WW),
+                                 np.complex128(VV)])
+
+            slicedRWArgs = [D0_local, Dh_local]
+
+            if self.geom.startswith('Bragg'):
+                D0t = np.zeros(bLength*(N_layers+1), dtype=np.complex128)
+                Dht = np.zeros(bLength*(N_layers+1), dtype=np.complex128)
+                nonSlicedROArgs = [D0t, Dht]
+                kernel = "tt_bragg"
+            else:
+                nonSlicedROArgs = None
+                kernel = "tt_laue"
+
+            if Rcurv < np.inf:
+                kernel += '_plain_bent'
+            else:
+                kernel += '_plain'
+
+            D0_local, Dh_local = ucl.run_parallel(
+                kernel, scalarArgs, slicedROArgs,
+                nonSlicedROArgs, slicedRWArgs, None, bLength)
+
+            if self.geom.endswith('transmitted'):
+                ra = D0_local
+            else:
+                ra = Dh_local
+
+            if not self.geom.endswith('transmitted'):
+                ra /= np.sqrt(abs(beamInDotNormal/beamOutDotNormal))
+            return ra
+
+        asymmAngle = alphaAsym if alphaAsym is not None else 0
         waveLength = CH / E  # the word "lambda" is reserved
         k = PI2 / waveLength
         k0s = -beamInDotNormal * k
@@ -992,16 +1230,35 @@ class Crystal(Material):
         kHs = -beamOutDotNormal * k
         if beamInDotHNormal is None:
             beamInDotHNormal = beamInDotNormal
-        k0H = abs(beamInDotHNormal) * (PI2/self.d) * k
+        HH = PI2 / self.d
+        k0H = abs(beamInDotHNormal) * HH * k
         k02 = k**2
         H2 = (PI2 / self.d)**2
         b = k0s / kHs
-        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, H2**0.5/4/PI)
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, HH/4./PI)
         thetaB = self.get_Bragg_angle(E)
         alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
-        curveS = for_one_polarization(1.)  # s polarization
+        if useTT:
+            thickness = 0 if self.t is None else self.t * 1e7
+            if thickness == 0:
+                N_layers = 10000
+            else:
+                N_layers = thickness / 100.
+                if N_layers < 2000:
+                    N_layers = 2000
+            bLength = len(E)
+            dtsin2tb = (H2/2. - k0H) / (k**2)
+            if Rcurvmm in [0, None]:
+                Rcurv = np.inf
+            else:
+                Rcurv = Rcurvmm * 1.0e7
+            betahprime = dtsin2tb - 0.5 * chi0.conjugate()
+            calc_model = for_one_polarization_TT
+        else:
+            calc_model = for_one_polarization
+        curveS = calc_model(1.)  # s polarization
         polFactor = np.cos(2. * thetaB)
-        curveP = for_one_polarization(polFactor)  # p polarization
+        curveP = calc_model(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
     def get_Bragg_angle(self, E):

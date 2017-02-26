@@ -228,6 +228,7 @@ class OE(object):
         self.order = 1 if order is None else order
         self.get_surface_limits()
         self.cl_ctx = None
+        self.ucl = None
         if targetOpenCL is not None:
             if not isOpenCL:
                 print("pyopencl is not available!")
@@ -1360,6 +1361,26 @@ class OE(object):
                     a_out = lb.a[goodN] - oeNormal[0]*2*beamInDotNormal
                     b_out = lb.b[goodN] - oeNormal[1]*2*beamInDotNormal
                     c_out = lb.c[goodN] - oeNormal[2]*2*beamInDotNormal
+
+                if matSur.kind in ['crystal']:
+                    if matSur.geom.startswith('Laue') and matSur.calcBorrmann:
+                            pointOut =\
+                                matSur.get_Borrmann_out(
+                                    goodN, oeNormal,
+                                    lb, a_out, b_out, c_out,
+                                    alphaAsym=self.alpha,
+                                    Rcurvmm=self.R if 'R' in
+                                    self.__dict__.keys() else None,
+                                    ucl=self.ucl,
+                                    useTT=matSur.useTT)
+
+                            lb.x = pointOut[0]
+                            lb.y = pointOut[1]
+                            lb.z = pointOut[2]
+
+                            if matSur.t is not None:
+                                lb.z = self.local_z(lb.x, lb.y) + matSur.t
+
                 if toWhere == 0:  # reflect
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
@@ -1421,16 +1442,17 @@ class OE(object):
                         b_out * oeNormal[-2] + c_out * oeNormal[-1]
                     refl = matSur.get_amplitude(
                         lb.E[goodN], beamInDotSurfaceNormal,
-                        beamOutDotSurfaceNormal, beamInDotNormal)
+                        beamOutDotSurfaceNormal, beamInDotNormal,
+                        alphaAsym=self.alpha,
+                        Rcurvmm=self.R if 'R' in self.__dict__.keys()
+                        else None,
+                        ucl=self.ucl,
+                        useTT=matSur.useTT)
                 elif matSur.kind == 'multilayer':
-                    if (isOpenCL) and (self.cl_ctx is not None):
-                        ucl = self.ucl
-                    else:
-                        ucl = None
                     refl = matSur.get_amplitude(
                         lb.E[goodN], beamInDotSurfaceNormal,
                         lb.x[goodN], lb.y[goodN],
-                        ucl=ucl)
+                        ucl=self.ucl)
                 else:  # 'mirror', 'thin mirror', 'plate', 'lens', 'grating'
                     hasEfficiency = False
                     if hasattr(matSur, 'efficiency'):
