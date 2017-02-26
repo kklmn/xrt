@@ -29,7 +29,7 @@ modify them in the module or externally as in the xrt_logo.py example.
 
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
+__date__ = "25 Feb 2017"
 
 import os
 import copy
@@ -116,6 +116,11 @@ defaultFwhmFormatStrForCAxis = '%.2f'
 colorFactor = 0.85  # 2./3 for red-to-blue
 colorSaturation = 0.85
 # # end of rc-file ##
+
+
+def versiontuple(v):
+    a = v.split(".")
+    return tuple(map(int, [''.join(c for c in s if c.isdigit()) for s in a]))
 
 
 class XYCAxis(object):
@@ -390,18 +395,6 @@ class XYCAxis(object):
                 elif self.unit.startswith('deg'):
                     factor = np.degrees(1)
         self.factor = factor
-
-
-class OffsetFormatter(mpl.ticker.ScalarFormatter):
-    """
-     Removes the default scientific notation in the formatter of offset value.
-    """
-    def get_offset(self):
-        if self.offset:
-            s = '+' + str(self.offset)
-            return self.fix_minus(s)
-        else:
-            return mpl.ticker.ScalarFormatter.get_offset(self)
 
 
 class XYCPlot(object):
@@ -692,9 +685,17 @@ class XYCPlot(object):
 
         self.negative = negative
         if self.negative:
-            axisbg = 'w'  # white
+            facecolor = 'w'  # white
         else:
-            axisbg = 'k'  # black
+            facecolor = 'k'  # black
+        # MatplotlibDeprecationWarning: The axisbg attribute was deprecated in
+        # version 2.0. Use facecolor instead.
+        kwmpl = {}
+        if versiontuple(mpl.__version__) >= versiontuple("2.0.0"):
+            kwmpl['facecolor'] = facecolor
+        else:
+            kwmpl['axisbg'] = facecolor
+
         self.invertColorMap = invertColorMap
         self.utilityInvertColorMap = False
         self.fluxFormatStr = fluxFormatStr
@@ -743,40 +744,46 @@ class XYCPlot(object):
                   (self.yaxis.pixels-1+yExtra) / yFigSize]
         self.ax2dHist = self.fig.add_axes(
             rect2d, aspect=aspect, xlabel=self.xaxis.displayLabel,
-            ylabel=self.yaxis.displayLabel, axisbg=axisbg, autoscale_on=False,
-            frameon=frameon)
+            ylabel=self.yaxis.displayLabel, autoscale_on=False,
+            frameon=frameon, **kwmpl)
         self.ax2dHist.xaxis.labelpad = xlabelpad
         self.ax2dHist.yaxis.labelpad = ylabelpad
+
+        self.ax1dHistXOffset = self.fig.text(
+            rect2d[0]+rect2d[2], 0.01, '', ha='right', va='bottom',
+            color='gray')  # , fontweight='bold')
+        self.ax1dHistYOffset = self.fig.text(
+            0.01, rect2d[1]+rect2d[3], '', rotation=90, ha='left', va='top',
+            color='gray')  # , fontweight='bold')
 
         rect1dX = copy.deepcopy(rect2d)
         rect1dX[1] = rect2d[1] + rect2d[3] + space2dto1d/yFigSize
         rect1dX[3] = height1d / yFigSize
         self.ax1dHistX = self.fig.add_axes(
-            rect1dX, axisbg=axisbg, sharex=self.ax2dHist, autoscale_on=False,
-            frameon=frameon, visible=(xPos != 0))
+            rect1dX, sharex=self.ax2dHist, autoscale_on=False, frameon=frameon,
+            visible=(xPos != 0), **kwmpl)
 
         rect1dY = copy.deepcopy(rect2d)
         rect1dY[0] = rect2d[0] + rect2d[2] + space2dto1d/xFigSize
         rect1dY[2] = height1d / xFigSize
         self.ax1dHistY = self.fig.add_axes(
-            rect1dY, axisbg=axisbg, sharey=self.ax2dHist, autoscale_on=False,
-            frameon=frameon, visible=(yPos != 0))
+            rect1dY, sharey=self.ax2dHist, autoscale_on=False, frameon=frameon,
+            visible=(yPos != 0), **kwmpl)
 
         # make some labels invisible
         plt.setp(
             self.ax1dHistX.get_xticklabels() +
-            self.ax1dHistY.get_yticklabels() +
+            self.ax1dHistX.get_yticklabels() +
             self.ax1dHistY.get_xticklabels() +
-            self.ax1dHistX.get_yticklabels(), visible=False)
+            self.ax1dHistY.get_yticklabels(),
+            visible=False)
 
-        plt.setp(
-            self.ax1dHistY.yaxis.offsetText,
-            position=(-float(self.xaxis.pixels+space2dto1d) / height1d, 0),
-            ha='right')
+        self.ax1dHistX.set_yticks([])
+        self.ax1dHistY.set_xticks([])
 
-        self.ax1dHistX.xaxis.set_major_formatter(OffsetFormatter(
+        self.ax1dHistX.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter(
             useOffset=False))
-        self.ax1dHistY.yaxis.set_major_formatter(OffsetFormatter(
+        self.ax1dHistY.yaxis.set_major_formatter(mpl.ticker.ScalarFormatter(
             useOffset=False))
 #        for tick in (self.ax2dHist.xaxis.get_major_ticks() + \
 #          self.ax2dHist.yaxis.get_major_ticks()):
@@ -787,48 +794,54 @@ class XYCPlot(object):
             rect1dE[2] = heightE1dbar / xFigSize
             rect1dE[3] *= float(self.caxis.pixels) / self.yaxis.pixels
             self.ax1dHistEbar = self.fig.add_axes(
-                rect1dE, ylabel=self.caxis.displayLabel, axisbg=axisbg,
-                autoscale_on=False, frameon=frameon)
+                rect1dE, ylabel=self.caxis.displayLabel, autoscale_on=False,
+                frameon=frameon, **kwmpl)
             self.ax1dHistEbar.yaxis.labelpad = xlabelpad
+            self.ax1dHistEOffset = self.fig.text(
+                rect1dE[0], rect1dE[1]+rect1dE[3], '', ha='left', va='bottom',
+                color='g')  # , fontweight='bold')
             rect1dE[0] += rect1dE[2]
             rect1dE[2] = heightE1d / xFigSize
             self.ax1dHistE = self.fig.add_axes(
-                rect1dE, sharey=self.ax1dHistEbar, axisbg=axisbg,
-                autoscale_on=False, frameon=frameon)
+                rect1dE, sharey=self.ax1dHistEbar, autoscale_on=False,
+                frameon=frameon, **kwmpl)
             plt.setp(
                 self.ax1dHistEbar.get_xticklabels() +
                 self.ax1dHistE.get_xticklabels() +
                 self.ax1dHistE.get_yticklabels(), visible=False)
-            plt.setp(self.ax1dHistE.yaxis.offsetText, visible=False)
             plt.setp(self.ax1dHistEbar, xticks=())
             self.ax1dHistE.yaxis.set_major_formatter(
-                OffsetFormatter())
+                mpl.ticker.ScalarFormatter(useOffset=False))
             if self.caxis.limits is not None:
                 self.ax1dHistE.set_ylim(self.caxis.limits)
+            self.ax1dHistE.set_xticks([])
         elif self.ePos == 2:  # top
             rect1dE = copy.deepcopy(rect1dX)
             rect1dE[1] = rect1dX[1] + rect1dX[3] + yspace1dtoE1d/yFigSize
             rect1dE[3] = heightE1dbar / yFigSize
             rect1dE[2] *= float(self.caxis.pixels) / self.xaxis.pixels
             self.ax1dHistEbar = self.fig.add_axes(
-                rect1dE, xlabel=self.caxis.displayLabel, axisbg=axisbg,
-                autoscale_on=False, frameon=frameon)
+                rect1dE, xlabel=self.caxis.displayLabel, autoscale_on=False,
+                frameon=frameon, **kwmpl)
             self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+            self.ax1dHistEOffset = self.fig.text(
+                rect1dE[0]+rect1dE[2]+0.01, rect1dE[1]-0.01, '',
+                ha='left', va='top', color='g')  # , fontweight='bold')
             rect1dE[1] += rect1dE[3]
             rect1dE[3] = heightE1d / yFigSize
             self.ax1dHistE = self.fig.add_axes(
-                rect1dE, sharex=self.ax1dHistEbar, axisbg=axisbg,
-                autoscale_on=False, frameon=frameon)
+                rect1dE, sharex=self.ax1dHistEbar, autoscale_on=False,
+                frameon=frameon, **kwmpl)
             plt.setp(
                 self.ax1dHistEbar.get_yticklabels() +
                 self.ax1dHistE.get_yticklabels() +
                 self.ax1dHistE.get_xticklabels(), visible=False)
-            plt.setp(self.ax1dHistE.xaxis.offsetText, visible=False)
             plt.setp(self.ax1dHistEbar, yticks=())
             self.ax1dHistE.xaxis.set_major_formatter(
-                OffsetFormatter())
+                mpl.ticker.ScalarFormatter(useOffset=False))
             if self.caxis.limits is not None:
                 self.ax1dHistE.set_xlim(self.caxis.limits)
+            self.ax1dHistE.set_yticks([])
 
         allAxes = [self.ax1dHistX, self.ax1dHistY, self.ax2dHist]
         if self.ePos != 0:
@@ -1151,11 +1164,13 @@ class XYCPlot(object):
             graph = self.ax1dHistX
             orientation = 'horizontal'
             histoPixelHeight = height1d
+            offsetText = self.ax1dHistXOffset
         elif what_axis_char == 'y':
             axis = self.yaxis
             graph = self.ax1dHistY
             orientation = 'vertical'
             histoPixelHeight = height1d
+            offsetText = self.ax1dHistYOffset
         elif what_axis_char == 'c':
             axis = self.caxis
             graph = self.ax1dHistE
@@ -1163,12 +1178,8 @@ class XYCPlot(object):
                 orientation = 'vertical'
             elif self.ePos == 2:
                 orientation = 'horizontal'
+            offsetText = self.ax1dHistEOffset
             histoPixelHeight = heightE1d
-        if axis.offset:
-            if orientation == 'horizontal':
-                graph.xaxis.get_major_formatter().set_useOffset(axis.offset)
-            else:  # 'vertical'
-                graph.yaxis.get_major_formatter().set_useOffset(axis.offset)
 
         t1D = axis.total1D
         axis.max1D = float(np.max(t1D))
@@ -1211,7 +1222,8 @@ class XYCPlot(object):
             extent = None
             if (axis.limits is not None) and\
                     (not isinstance(axis.limits, str)):
-                extent = [axis.limits[0], axis.limits[1], 0, 1]
+                ll = [l-axis.offset for l in axis.limits]
+                extent = [ll[0], ll[1], 0, 1]
         elif orientation[0] == 'v':
             map2d = np.zeros((len(xx), histoPixelHeight, 3))
             for ix, cx in enumerate(xx):
@@ -1227,7 +1239,8 @@ class XYCPlot(object):
             extent = None
             if (axis.limits is not None) and \
                     not (isinstance(axis.limits, str)):
-                extent = [0, 1, axis.limits[0], axis.limits[1]]
+                ll = [l-axis.offset for l in axis.limits]
+                extent = [0, 1, ll[0], ll[1]]
 
         if self.negative:
             map2d = 1 - map2d
@@ -1245,8 +1258,8 @@ class XYCPlot(object):
             args = np.argwhere(xx >= xxMaxHalf)
             iHistFWHMlow = np.min(args)
             iHistFWHMhigh = np.max(args) + 1
-            histFWHMlow = axis.binEdges[iHistFWHMlow]
-            histFWHMhigh = axis.binEdges[iHistFWHMhigh]
+            histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
+            histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
             if axis.fwhmFormatStr is not None:
                 if orientation[0] == 'h':
                     graph.plot([histFWHMlow, histFWHMhigh],
@@ -1258,14 +1271,23 @@ class XYCPlot(object):
             histFWHMlow = 0
             histFWHMhigh = 0
 
+        if axis.offset:
+            ll = [l-axis.offset for l in axis.limits]
+            offsetText.set_text('{0}{1} {2}'.format(
+                '+' if axis.offset > 0 else '', axis.offset, axis.unit))
+            offsetText.set_visible(True)
+        else:
+            ll = axis.limits
+            offsetText.set_visible(False)
+
         if orientation[0] == 'h':
             if not isinstance(axis.limits, str):
-                graph.set_xlim(axis.limits)
+                graph.set_xlim(ll)
             graph.set_ylim([0, 1])
         elif orientation[0] == 'v':
             graph.set_xlim([0, 1])
             if not isinstance(axis.limits, str):
-                graph.set_ylim(axis.limits)
+                graph.set_ylim(ll)
 
         axis.binCenters = (axis.binEdges[:-1]+axis.binEdges[1:]) * 0.5
         weighted1D = axis.total1D * axis.binCenters
@@ -1285,7 +1307,7 @@ class XYCPlot(object):
             a[a < 0] += 1
         if self.caxis.limits is None:
             return
-        eMin, eMax = self.caxis.limits
+        eMin, eMax = [l-self.caxis.offset for l in self.caxis.limits]
         a = np.vstack((a, a))
         if self.ePos == 1:
             a = a.T
@@ -1605,15 +1627,15 @@ class XYCPlot(object):
         """
         self.negative = not self.negative
         if self.negative:
-            axisbg = 'w'
+            facecolor = 'w'  # previously - axisbg (depreceted)
         else:
-            axisbg = 'k'
+            facecolor = 'k'
         axesList = [self.ax2dHist, self.ax1dHistX, self.ax1dHistY]
         if self.ePos != 0:
             axesList.append(self.ax1dHistE)
             axesList.append(self.ax1dHistEbar)
         for axes in axesList:
-            axes.set_axis_bgcolor(axisbg)
+            axes.set_axis_bgcolor(facecolor)
         self.plot_plots()
 
     def set_invert_colors(self):
