@@ -1027,7 +1027,7 @@ class Crystal(Material):
         return pointOutX, pointOutY, pointOutZ
 
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None,
+                      beamInDotHNormal=None, alphaAsym=None,
                       Rcurvmm=None, ucl=None, useTT=False):
         r"""
         Calculates complex amplitude reflectivity and transmittivity for s- and
@@ -1167,7 +1167,8 @@ class Crystal(Material):
 #                            (1. - beamOutDotNormal**2) * HH *\
 #                            np.cos(alphaAsym) / Rcurv
                 else:
-                    Wgrad = -0.5j * thickness**2 * HH / -Rcurv / N_layers**2
+                    Wgrad = -0.5j * thickness**2 * HH * np.cos(asymmAngle) /\
+                        -Rcurv / N_layers**2
             else:
                 Wgrad = 0
 
@@ -1220,6 +1221,7 @@ class Crystal(Material):
                 ra /= np.sqrt(abs(beamInDotNormal/beamOutDotNormal))
             return ra
 
+        asymmAngle = alphaAsym if alphaAsym is not None else 0
         waveLength = CH / E  # the word "lambda" is reserved
         k = PI2 / waveLength
         k0s = -beamInDotNormal * k
