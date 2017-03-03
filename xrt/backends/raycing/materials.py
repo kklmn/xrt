@@ -1027,7 +1027,7 @@ class Crystal(Material):
         return pointOutX, pointOutY, pointOutZ
 
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None, alphaAsym=None,
+                      beamInDotHNormal=None,
                       Rcurvmm=None, ucl=None, useTT=False):
         r"""
         Calculates complex amplitude reflectivity and transmittivity for s- and
@@ -1152,9 +1152,9 @@ class Crystal(Material):
                 pmod = thickness/np.abs(beamInDotNormal)/N_layers
                 qmod = thickness/np.abs(beamOutDotNormal)/N_layers
 
-            AA = -0.25 * 1j * k * polFactor * chih_.conjugate() * pmod
-            BB = -0.25 * 1j * k * polFactor * chih.conjugate() * qmod
-            WW = 0.5 * 1j * k * betahprime * qmod
+            AA = -0.25j * k * polFactor * chih_.conjugate() * pmod
+            BB = -0.25j * k * polFactor * chih.conjugate() * qmod
+            WW = 0.5j * k * betahprime * qmod
 
             if Rcurvmm is not None:
                 if self.geom.startswith('Bragg'):
@@ -1167,15 +1167,14 @@ class Crystal(Material):
 #                            (1. - beamOutDotNormal**2) * HH *\
 #                            np.cos(alphaAsym) / Rcurv
                 else:
-                    Wgrad = -0.5 * 1j * thickness**2 * HH *\
-                        np.cos(asymmAngle) / -Rcurv / N_layers**2
+                    Wgrad = -0.5j * thickness**2 * HH / -Rcurv / N_layers**2
             else:
                 Wgrad = 0
 
             if self.geom.startswith('Bragg'):
                 Wgrad = np.zeros_like(AA)
 
-            VV = -0.25 * 1j * k * chi0.conjugate() * pmod
+            VV = -0.25j * k * chi0.conjugate() * pmod
 
             D0_local = np.zeros_like(AA)
             Dh_local = np.zeros_like(AA)
@@ -1221,7 +1220,6 @@ class Crystal(Material):
                 ra /= np.sqrt(abs(beamInDotNormal/beamOutDotNormal))
             return ra
 
-        asymmAngle = alphaAsym if alphaAsym is not None else 0
         waveLength = CH / E  # the word "lambda" is reserved
         k = PI2 / waveLength
         k0s = -beamInDotNormal * k
