@@ -878,7 +878,8 @@ __kernel void tt_laue_plain(
 
 __kernel void tt_laue_plain_bent(
                   const int nOfLayers,
-                  const double2 Wgrad,
+//                  const double2 Wgrad,
+                  __global double2 *Wgrad_global,
                   __global double2 *A,
                   __global double2 *B,
                   __global double2 *W,
@@ -888,23 +889,24 @@ __kernel void tt_laue_plain_bent(
                   )
 {
 
-      double2 C1, C2, C3, C4, D0t, Dht, Aloc, Bloc, Wloc, Vloc, Wi;
-      double8 D0_line, Dh_line, Mvec;
-      double2 cOne = (double2)(1.0, 0.0);
-      unsigned int ii = get_global_id(0);
-      int i;
+    double2 C1, C2, C3, C4, D0t, Dht, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
+    double8 D0_line, Dh_line, Mvec;
+    double2 cOne = (double2)(1.0, 0.0);
+    unsigned int ii = get_global_id(0);
+    int i;
+    
+    Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
+    Vloc = V[ii];
+    Wgrad = Wgrad_global[ii];
+    double2 AB = prod_c(Aloc, Bloc);
+    C2 = cOne - Vloc;
+    C4 = cOne + Vloc;
 
-      Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
-      Vloc = V[ii];
-      double2 AB = prod_c(Aloc, Bloc);
-      C2 = cOne - Vloc;
-      C4 = cOne + Vloc;
+    double2 BC2 = prod_c(Bloc, C2);
+    double2 BC4 = prod_c(Bloc, C4);
 
-      double2 BC2 = prod_c(Bloc, C2);
-      double2 BC4 = prod_c(Bloc, C4);
-
-      D0t = cOne;
-      Dht = (double2)(0.0, 0.0);
+    D0t = cOne;
+    Dht = (double2)(0.0, 0.0);
 
       for (i=0; i<nOfLayers; i++) {
           Wi = (i == 0) ? Wloc : Wloc + Wgrad*((double)i - 0.5);
@@ -1415,7 +1417,8 @@ __kernel void tt_laue_spherical(
 
 __kernel void tt_laue_spherical_bent(
                   const int nLayers,
-                  const double2 Wgrad,
+//                  const double2 Wgrad,
+                  __global double2 *Wgrad_global,
                   __global double2 *A,
                   __global double2 *B,
                   __global double2 *W,
@@ -1429,7 +1432,7 @@ __kernel void tt_laue_spherical_bent(
     int arrSize = PRIVATELAYERS;
     __private double2 D0Arr[PRIVATELAYERS+1];
     __private double2 DhArr[PRIVATELAYERS+1];
-    double2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi;
+    double2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
     double8 D0_line, Dh_line, Mvec;
     double2 cOne = (double2)(1.0, 0.0);
     int diff, stripeWidth, stripeHeight;
@@ -1440,6 +1443,7 @@ __kernel void tt_laue_spherical_bent(
 
     Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
     Vloc = V[ii];
+    Wgrad = Wgrad_global[ii];
     double2 AB = prod_c(Aloc, Bloc);
     C2 = cOne - Vloc;
     C4 = cOne + Vloc;
