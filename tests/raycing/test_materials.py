@@ -348,6 +348,185 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
     for_one_alpha(siCrystal, -5., hkl)
     for_one_alpha(siCrystal, 5., hkl)
 
+def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
+                                legendPos1=4, legendPos2=1, Rcurvmm=None,
+                                alphas=[0]):
+    try:
+        import pyopencl as cl
+        os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+        isOpenCL = True
+    except ImportError:
+        isOpenCL = False
+
+    if isOpenCL:
+        import xrt.backends.raycing.myopencl as mcl
+        matCL = mcl.XRT_CL(r'materials.cl', targetOpenCL='CPU')
+    else:
+        matCL = None
+
+    """A comparison subroutine used in the module test suit."""
+    def for_one_alpha(crystal, alphaDeg, hkl):
+        xcb_tt = True
+        xcb_pp = False
+
+        Rcurv=np.inf if Rcurvmm is None else Rcurvmm
+        if Rcurv==0:
+            Rcurv=np.inf
+        alpha = np.radians(alphaDeg)
+        s0 = (np.zeros_like(theta), np.cos(theta+alpha), -np.sin(theta+alpha))
+        sh = (np.zeros_like(theta), np.cos(theta-alpha), np.sin(theta-alpha))
+        if geom.startswith('Bragg'):
+            n = (0, 0, 1)  # outward surface normal
+        else:
+            n = (0, -1, 0)  # outward surface normal
+        hn = (0, np.sin(alpha), np.cos(alpha))  # outward Bragg normal
+        gamma0 = sum(i*j for i, j in zip(n, s0))
+        gammah = sum(i*j for i, j in zip(n, sh))
+        hns0 = sum(i*j for i, j in zip(hn, s0))
+
+        fig = plt.figure()
+        fig.subplots_adjust(right=0.88)
+        ax = fig.add_subplot(111)
+
+        curS, curP = crystal.get_amplitude(E, gamma0, gammah, hns0)
+        curSD, curPD = crystal.get_amplitude(E, gamma0, gammah, hns0,
+                                             ucl=matCL, alphaAsym=alpha,
+                                             useTT=True, Rcurvmm=Rcurv)
+
+# phases:
+#        ax2 = ax.twinx()
+#        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+#        phi = np.unwrap(np.angle(curS * curP.conj()))
+#        phiD = np.unwrap(np.angle(curSD * curPD.conj()))
+#        p9, = ax2.plot((theta-thetaCenter) * convFactor, phi, 'c', lw=1,
+#                       yunits=math.pi, zorder=0)
+#        p10, = ax2.plot((theta-thetaCenter) * convFactor, -phiD, 'm', lw=1,
+#                        yunits=math.pi, zorder=0)
+#        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+#        ax2.yaxis.set_major_formatter(formatter)
+#        for tl in ax2.get_yticklabels():
+#            tl.set_color('c')
+
+        if t is not None:
+            tt = u', t={0:.0f}µm'.format(t * 1e3)
+            tname = '{0:03d}mkm'.format(int(t * 1e3))
+        else:
+            tt = ' thick'
+            tname = 'thick'
+        if geom.startswith('Bragg'):
+            geomPrefix = 'b'
+        else:
+            geomPrefix = 'l'
+        if geom.endswith('transmitted'):
+            geomPrefix += 't'
+        if np.isinf(Rcurv):
+            fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ$, bending R=$\infty$, E={3:.0f}keV'.format(geom, # analysis:ignore
+                         hkl, alphaDeg, E0/1e3), fontsize=16)
+        else:
+            fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ$, bending R={3:.1f}m, E={4:.0f}keV'.format(geom, # analysis:ignore
+                         hkl, alphaDeg, Rcurv/1e3, E0/1e3), fontsize=16)
+
+        path = os.path.join('', 'XOP-RockingCurves-Bent') + os.sep
+        if np.isinf(Rcurv) or alphaDeg == 0:
+            x, R2p, R2s = np.loadtxt(
+                "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg.xc.gz".format( # analysis:ignore
+                    path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
+                unpack=True, usecols=(0, 2, 3))
+            p1, = ax.plot(x, R2s, '-k', label='s XCrystal', linewidth=2)
+#            p2, = ax.plot(x, R2p, '--k', label='p XCrystal')
+
+        if xcb_tt:
+            x, R2s = np.loadtxt(
+                "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_tt_sigma.xcb.gz".format( # analysis:ignore
+                    path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
+                unpack=True, usecols=(0, 3))
+            p3t, = ax.plot(x*1e3, R2s, '-b', label='s XCrystal_Bent TT')
+            x, R2p = np.loadtxt(
+                "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_tt_pi.xcb.gz".format( # analysis:ignore
+                    path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
+                unpack=True, usecols=(0, 3))
+    #        p4, = ax.plot(x*1e3, R2p, '--b', label='p XCrystal_Bent TT')
+        if xcb_pp:
+            x, R2s = np.loadtxt(
+                "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_pp_sigma.xcb.gz".format( # analysis:ignore
+                    path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
+                unpack=True, usecols=(0, 7))
+            p3p, = ax.plot(x*1e3, R2s, '-c', label='s XCrystal_Bent PP')
+            x, R2p = np.loadtxt(
+                "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_pp_pi.xcb.gz".format( # analysis:ignore
+                    path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
+                unpack=True, usecols=(0, 7))
+    #        p4, = ax.plot(x*1e3, R2p, '--b', label='p XCrystal_Bent TT')
+
+#        if np.isinf(Rcurv) or alphaDeg == 0:
+        p7, = ax.plot((theta - thetaCenter) * convFactor,
+                      abs(curS)**2, '-r', linewidth=2)
+#            p8, = ax.plot((theta - thetaCenter) * convFactor,
+#                          abs(curP)**2, '-c', linewidth=2)
+        p11, = ax.plot((theta - thetaCenter) * convFactor,
+                       abs(curSD)**2, '--g', linewidth=2)
+#        p12, = ax.plot((theta - thetaCenter) * convFactor,
+#                       abs(curPD)**2, '--r')
+
+        ax.set_xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
+        if geom.endswith('transmitted'):
+            ax.set_ylabel('transmittivity')
+        else:
+            ax.set_ylabel('reflectivity')
+        ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
+
+        plotList = [p7, p11]
+        curveList = ['xrt perfect', 'xrt TT']
+
+        if np.isinf(Rcurv) or alphaDeg == 0:
+            plotList.append(p1)
+            curveList.append('XCrystal')
+        if xcb_tt:
+            plotList.append(p3t)
+            curveList.append('XCrystal_Bent TT')
+        if xcb_pp:
+            plotList.append(p3p)
+            curveList.append('XCrystal_Bent PP')
+        legendPostmp = legendPos2 if alphaDeg > 0 else legendPos2+1
+        ax.legend(plotList, curveList, loc=legendPostmp)
+#        ax2.add_artist(l1)
+
+        fname = '{0}Si{1}_{2}_a{3:-.0f}_{4:-.2f}'.format(
+            geomPrefix, hkl, tname, alphaDeg, Rcurv/1e3)
+
+        fig.savefig(fname + '.png')
+
+    E0 = 50000.
+#    convFactor = 180 / np.pi * 3600.  # arcsec
+    convFactor = 1e6
+    for alpha in alphas:
+        if hkl == '111':  # Si111
+            if geom.startswith('Bragg'):
+                dtheta = np.linspace(0, 100, 400) * 1e-6
+            else:
+                dtheta = np.linspace(-5-np.abs(alpha)*2*50e3/Rcurvmm,
+                                     5+np.abs(alpha)*2*50e3/Rcurvmm,
+                                     1000) * 1e-6
+            dSpacing = 3.13562
+            hklInd = 1, 1, 1
+        elif hkl == '333':  # Si333
+            if geom.startswith('Bragg'):
+                dtheta = np.linspace(-25, 75, 400) * 1e-6
+            else:
+                dtheta = np.linspace(-2-np.abs(alpha)**1.2*50e3/Rcurvmm,
+                                     2+np.abs(alpha)**1.2*50e3/Rcurvmm,
+                                     1000) * 1e-6
+            dSpacing = 3.13562 / 3.
+            hklInd = 3, 3, 3
+
+        siCrystal = rm.CrystalDiamond(hklInd, dSpacing, t=t, geom=geom,
+                                      factDW=factDW)
+        thetaCenter = math.asin(rm.ch / (2*siCrystal.d*E0))
+
+        E = np.ones_like(dtheta) * E0
+        theta = dtheta + thetaCenter
+        for_one_alpha(siCrystal, alpha, hkl)
+
 
 def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
     """A comparison subroutine used in the module test suit."""
@@ -723,6 +902,20 @@ def run_tests():
 #    compare_rocking_curves('111', t=0.100, geom='Laue transmitted')
 #    compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
 
+# Compare rocking curves for bent Si crystals with those calculated by
+#XCrystal_Bent (Takagi-Taupin):
+    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+                           Rcurvmm=np.inf, alphas=[30])
+    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+                           Rcurvmm=np.inf, alphas=[30])
+    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+                           Rcurvmm=50*1e3,
+                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+                           Rcurvmm=50*1e3,
+                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+
+
 #check that Bragg transmitted and Laue transmitted give the same results if the
 #beam path is equal:
 #    beamPath = 0.1  # mm
@@ -739,7 +932,7 @@ def run_tests():
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
-    compare_reflectivity_multilayer()
+#    compare_reflectivity_multilayer()
 
 #    compare_dTheta()
 

@@ -1214,10 +1214,10 @@ class Crystal(Material):
                 nonSlicedROArgs = None
                 kernel = "tt_laue"
 
-            if Rcurv < np.inf:
-                kernel += '_plain_bent'
-            else:
+            if Rcurvmm is None:
                 kernel += '_plain'
+            else:
+                kernel += '_plain_bent'
 
             D0_local, Dh_local = ucl.run_parallel(
                 kernel, scalarArgs, slicedROArgs,
