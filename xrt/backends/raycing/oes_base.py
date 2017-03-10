@@ -357,14 +357,15 @@ class OE(object):
         Distortion can be given in two ways and is signaled by the length of
         the returned tuple:
 
-        1) As d_pitch and d_roll angles (i.e. rotations Rx and Ry). A tuple of
-           these two arrays must be returned. This option is not suitable for
-           parametric coordinates because the two rotations will be around
-           Cartesian, not parametric, axes.
+        1) As d_pitch and d_roll rotation angles of the normal (i.e. rotations
+           Rx and Ry). A tuple of the two arrays must be returned. This option
+           is also suitable for parametric coordinates because the two
+           rotations will be around Cartesian axes and the local normal
+           (local_n) is also a 3D vector in local xyz space.
 
         2) As a 3D vector that will be added to the local normal calculated at
            the same coordinates. The returned vector can have any length, not
-           necessarily unity. As for local_n, the  3D vector is in local xyz
+           necessarily unity. As for local_n, the 3D vector is in local xyz
            space even for a parametric surface. The resulted vector
            `local_n + local_n_distorted` will be normalized internally before
            calculating the reflected beam direction. A tuple of 3 arrays must
