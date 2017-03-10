@@ -363,10 +363,12 @@ class OE(object):
            Cartesian, not parametric, axes.
 
         2) As a 3D vector that will be added to the local normal calculated at
-           the same coordinates. The vector can have any length, not
-           necessarily unity. The resulted vector local_n + local_n_distorted
-           will be normalized internally before calculating the reflected beam
-           direction. A tuple of 3 arrays must be returned.
+           the same coordinates. The returned vector can have any length, not
+           necessarily unity. As for local_n, the  3D vector is in local xyz
+           space even for a parametric surface. The resulted vector
+           `local_n + local_n_distorted` will be normalized internally before
+           calculating the reflected beam direction. A tuple of 3 arrays must
+           be returned.
         """
         return
 
