@@ -350,8 +350,24 @@ class OE(object):
         else:
             return [a, b, c]
 
-    def local_n_distorted(self, x, y):
-        """Angles d_pitch and d_roll."""
+    def local_n_distorted(self, x, y):  # or as (self, s, phi)
+        """Distortion to the local normal. If *isParametric* in the
+        constructor is True, the input arrays are understood as (*s*, *phi*).
+
+        Distortion can be given in two ways and is signaled by the length of
+        the returned tuple:
+
+        1) As d_pitch and d_roll angles (i.e. rotations Rx and Ry). A tuple of
+           these two arrays must be returned. This option is not suitable for
+           parametric coordinates because the two rotations will be around
+           Cartesian, not parametric, axes.
+
+        2) As a 3D vector that will be added to the local normal calculated at
+           the same coordinates. The vector can have any length, not
+           necessarily unity. The resulted vector local_n + local_n_distorted
+           will be normalized internally before calculating the reflected beam
+           direction. A tuple of 3 arrays must be returned.
+        """
         return
 
     _h = 20.
@@ -370,7 +386,7 @@ class OE(object):
         length of *s* and *phi*."""
         return self._h / np.cos(phi)
 
-    def local_r_distorted(self, x, y):
+    def local_r_distorted(self, s, phi):
         return
 
     def find_dz(
@@ -1320,12 +1336,25 @@ class OE(object):
                 oeNormal = list(local_n(lb.x[goodN], lb.y[goodN]))
             n_distorted = self.local_n_distorted(lb.x[goodN], lb.y[goodN])
             if n_distorted is not None:
-                cosX, sinX = np.cos(n_distorted[0]), np.sin(n_distorted[0])
-                oeNormal[1], oeNormal[2] = raycing.rotate_x(
-                    oeNormal[1], oeNormal[2], cosX, sinX)
-                cosY, sinY = np.cos(n_distorted[1]), np.sin(n_distorted[1])
-                oeNormal[0], oeNormal[2] = raycing.rotate_y(
-                    oeNormal[0], oeNormal[2], cosY, sinY)
+                if len(n_distorted) == 2:
+                    cosX, sinX = np.cos(n_distorted[0]), np.sin(n_distorted[0])
+                    oeNormal[-2], oeNormal[-1] = raycing.rotate_x(
+                        oeNormal[-2], oeNormal[-1], cosX, sinX)
+                    cosY, sinY = np.cos(n_distorted[1]), np.sin(n_distorted[1])
+                    oeNormal[-3], oeNormal[-1] = raycing.rotate_y(
+                        oeNormal[-3], oeNormal[-1], cosY, sinY)
+                elif len(n_distorted) == 3:
+                    oeNormal[-3] += n_distorted[0]
+                    oeNormal[-2] += n_distorted[1]
+                    oeNormal[-1] += n_distorted[2]
+                    norm = (oeNormal[-3]**2 + oeNormal[-2]**2 +
+                            oeNormal[-1]**2)**0.5
+                    oeNormal[-3] /= norm
+                    oeNormal[-2] /= norm
+                    oeNormal[-1] /= norm
+                else:
+                    raise ValueError(
+                        "wrong length returned by 'local_n_distorted'")
             if toWhere < 5:
                 oeNormal = np.asarray(oeNormal, order='F')
                 beamInDotNormal = lb.a[goodN]*oeNormal[0] +\
