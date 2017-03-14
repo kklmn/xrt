@@ -456,7 +456,7 @@ class DoubleSlit(RectangularAperture):
     """Implements an aperture or an obstacle with a combination of horizontal
     and/or vertical edge(s)."""
     def __init__(self, *args, **kwargs):
-        self.shadeFraction = kwargs.pop('shadeFraction')
+        self.shadeFraction = kwargs.pop('shadeFraction', 0.5)
         super(DoubleSlit, self).__init__(*args, **kwargs)
 
     def propagate(self, beam=None, needNewGlobal=False):
