@@ -1188,6 +1188,8 @@ class Crystal(Material):
                 else:
                     Bm = np.sin(asymmAngle) *\
                         (1. + gamma_0h * (1. + self.nuPoisson)) / gamma_0h
+#  Calculating reflectivities in Laue geometry is still experimental
+#  Use at your own risk
                     Wgrad = -0.25j * HH * Bm * pmod * qmod / Rcurv
 
             else:
