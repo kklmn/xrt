@@ -744,9 +744,7 @@ Uses Undulator source and double Laue Plate monochromator.
 Cerium Dioxide powder as the sample.
 
 .. imagezoom:: _images/rings_on_detector.png
-   :widthzoom: 652
-   :heightzoom: 420
-   :loc: lower-left-corner
+   :scale: 60%
 
 .. warning::
    Heavy computational load. Requires OpenCL.

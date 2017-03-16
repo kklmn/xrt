@@ -1,4 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
+"""Select one of the 3 functions at the end of main()"""
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "22 Jan 2016"
 import numpy as np

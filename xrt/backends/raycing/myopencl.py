@@ -177,7 +177,7 @@ class XRT_CL(object):
                 self.cl_queue.extend([cl.CommandQueue(cl_ctx, device)])
                 self.cl_program.extend(
                     [cl.Program(cl_ctx, kernelsource).build(
-                        options=['-I',__dir__])])
+                        options=['-I', __dir__])])
                 self.cl_ctx.extend([cl_ctx])
 
             self.cl_mf = cl.mem_flags
@@ -227,7 +227,8 @@ class XRT_CL(object):
             else:
                 ndslice.extend([0])
 
-# In case each photon has an array of input/output data we define a second dimension
+# In case each photon has an array of input/output data we define a second
+# dimension
             if slicedROArgs is not None and dimension > 1:
                 for iarg, arg in enumerate(slicedROArgs):
                     secondDim = np.int(len(arg) / dimension)

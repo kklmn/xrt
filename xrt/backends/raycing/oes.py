@@ -17,7 +17,8 @@ Module :mod:`~xrt.backends.raycing.oes` defines also several other optical
 elements with various geometries.
 
 .. autoclass:: OE()
-   :members: __init__, local_z, local_n, local_g, reflect, multiple_reflect
+   :members: __init__, local_z, local_n, local_n_distorted, local_g, reflect,
+             multiple_reflect
 .. autoclass:: DicedOE(OE)
    :members: __init__, facet_center_z, facet_center_n, facet_delta_z,
              facet_delta_n
@@ -71,11 +72,12 @@ Distorted surfaces
 For introducing an error to an ideal surface you must define two methods in
 your descendant of the :class:`OE`: ``local_z_distorted`` (or
 ``local_r_distorted`` for a parametric surface) and ``local_n_distorted``. The
-latter method returns two angles d_pitch and d_roll. See the example
-':ref:`warping`'.
+latter method returns two angles d_pitch and d_roll or a 3D vector that will be
+added to the local normal. See the docstrings of
+:meth:`OE.local_n_distorted`` and the example ':ref:`warping`'.
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
+__date__ = "16 Mar 2017"
 __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'JohannToroid', 'JohanssonToroid', 'GeneralBraggToroid',
            'DicedJohannToroid', 'DicedJohanssonToroid', 'LauePlate',

@@ -84,7 +84,7 @@ def build_beamline(nrays=raycing.nrays, hkl=(1, 1, 1), stripe='Si',
         beamLine, 'DCM', [0, 27060, height], surface=('Si111',),
         material=(si_1,), material2=(si_2,),
         limPhysX=(-10, 10), limPhysY=(-30, 30),
-        cryst2perpTransl=20, cryst2longTransl = 65,
+        cryst2perpTransl=20, cryst2longTransl=65,
         limPhysX2=(-10, 10), limPhysY2=(-90, 90), alarmLevel=0.)
 
     beamLine.BSBlock = ra.RectangularAperture(

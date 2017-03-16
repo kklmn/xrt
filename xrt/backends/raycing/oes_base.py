@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "03 Jul 2016"
+__date__ = "16 Mar 2017"
 import os
 import time
 import numpy as np
@@ -325,11 +325,11 @@ class OE(object):
         length of *x* and *y*."""
         return 0, rho, 0  # constant line spacing along y
 
-    def local_n(self, x, y):
+    def local_n(self, x, y):  # or as (self, s, phi)
         """Determines the normal vector of OE at (*x*, *y*) position. Typically
         is overridden in the derived classes. If OE is an asymmetric crystal,
-        *local_n* must return 2 normals: the 1st one of the atomic planes and
-        the 2nd one of the surface. Note the order!
+        *local_n* must return 2 normals as a 6-sequence: the 1st one of the
+        atomic planes and the 2nd one of the surface. Note the order!
 
         If *isParametric* in the constructor is True, :meth:`local_n` still
         returns 3D vector(s) in local xyz space but now the two input
@@ -766,15 +766,14 @@ class OE(object):
 
         .. math::
 
-            \vec{out} &= \vec{in} - dn\vec{n} + \vec{g}m\lambda
+            \vec{out} = \vec{in} - dn\vec{n} + \vec{g}m\lambda
 
         where
 
         .. math::
 
             dn &= -\cos{\theta_1} \pm \sqrt{\cos^2{\theta_1} -
-            2\sin{\alpha}m\lambda - \vec{g}^2 m^2\lambda^2}
-
+            2\sin{\alpha}m\lambda - \vec{g}^2 m^2\lambda^2}\\
             \sin{\alpha} &= \vec{g}\cdot\vec{in}\\
 
         .. [wikiSnell] http://en.wikipedia.org/wiki/Snell%27s_law .
@@ -1400,85 +1399,89 @@ class OE(object):
                     b_out = lb.b[goodN] - oeNormal[1]*2*beamInDotNormal
                     c_out = lb.c[goodN] - oeNormal[2]*2*beamInDotNormal
 
-                if matSur.kind in ['crystal']:
-                    if matSur.geom.startswith('Laue') and\
-                            matSur.calcBorrmann is not None:
-                        beamOutDotSurfaceNormal = a_out * oeNormal[-3] + \
-                            b_out * oeNormal[-2] + c_out * oeNormal[-1]
+                calcBorrmann = False
+                if material is not None:
+                    if matSur.kind in ['crystal'] and \
+                        matSur.geom.startswith('Laue') and \
+                            matSur.calcBorrmann:
+                        calcBorrmann = True
+                if calcBorrmann:
+                    beamOutDotSurfaceNormal = a_out * oeNormal[-3] + \
+                        b_out * oeNormal[-2] + c_out * oeNormal[-1]
 
-                        """
-                        if self.crossSection.startswith('para'):
+                    """
+                    if self.crossSection.startswith('para'):
 
-                            This block was used to estimate the influence
-                            of the surface curvature on focusing. I will
-                            enable it later to preserve the exact phase for
-                            the wave propagation.
+                        This block was used to estimate the influence
+                        of the surface curvature on focusing. I will
+                        enable it later to preserve the exact phase for
+                        the wave propagation.
 
-                            paraA = 0.5/(self.R - matSur.t)
-                            paraB = -np.divide(lb.c, lb.b)
-                            paraC = -paraB*lb.y - lb.z - matSur.t
-                            paraD = np.sqrt(paraB**2 - 4*paraA*paraC)
-                            yOut01 = (-paraB + paraD) / 2 / paraA
-                            yOut02 = (-paraB - paraD) / 2 / paraA
-                            print oeNormal
-                            print "yOut01, yOut02", yOut01, yOut02
-                            paraB = -np.divide(c_out, b_out)
-                            paraC = -paraB*lb.y - lb.z - matSur.t
-                            paraD = np.sqrt(paraB**2 - 4*paraA*paraC)
-                            yOutH1 = (-paraB + paraD) / 2 / paraA
-                            yOutH2 = (-paraB - paraD) / 2 / paraA
-                            print "yOutH1, yOutH2",yOutH1, yOutH2
-                            xOut0 = lb.x + (yOut02 - lb.y)*lb.a/lb.b
-                            xOutH = lb.x + (yOutH2 - lb.y)*a_out/b_out
-                            print "xOut0, xOutH", xOut0, xOutH
-                            zOut0 = yOut02**2/2./(self.R - matSur.t) +\
-                                matSur.t
-                            zOutH = yOut02**2/2./(self.R - matSur.t) +\
-                                matSur.t
-                            print "zOut0, zOutH", zOut0, zOutH
-                        """
+                        paraA = 0.5/(self.R - matSur.t)
+                        paraB = -np.divide(lb.c, lb.b)
+                        paraC = -paraB*lb.y - lb.z - matSur.t
+                        paraD = np.sqrt(paraB**2 - 4*paraA*paraC)
+                        yOut01 = (-paraB + paraD) / 2 / paraA
+                        yOut02 = (-paraB - paraD) / 2 / paraA
+                        print oeNormal
+                        print "yOut01, yOut02", yOut01, yOut02
+                        paraB = -np.divide(c_out, b_out)
+                        paraC = -paraB*lb.y - lb.z - matSur.t
+                        paraD = np.sqrt(paraB**2 - 4*paraA*paraC)
+                        yOutH1 = (-paraB + paraD) / 2 / paraA
+                        yOutH2 = (-paraB - paraD) / 2 / paraA
+                        print "yOutH1, yOutH2",yOutH1, yOutH2
+                        xOut0 = lb.x + (yOut02 - lb.y)*lb.a/lb.b
+                        xOutH = lb.x + (yOutH2 - lb.y)*a_out/b_out
+                        print "xOut0, xOutH", xOut0, xOutH
+                        zOut0 = yOut02**2/2./(self.R - matSur.t) +\
+                            matSur.t
+                        zOutH = yOut02**2/2./(self.R - matSur.t) +\
+                            matSur.t
+                        print "zOut0, zOutH", zOut0, zOutH
+                    """
 
 #                        Getting the thickness projections in forward
 #                        and diffracted directions
-                        t0 = -matSur.t / beamInDotSurfaceNormal
-                        tH = -matSur.t / beamOutDotSurfaceNormal
+                    t0 = -matSur.t / beamInDotSurfaceNormal
+                    tH = -matSur.t / beamOutDotSurfaceNormal
 #                        Find intersection of S0 and output surface
-                        point0x = lb.x + lb.a * t0
-                        point0y = lb.y + lb.b * t0
+                    point0x = lb.x + lb.a * t0
+                    point0y = lb.y + lb.b * t0
 #                        Find intersection of Sh and output surface
-                        pointHx = lb.x + a_out * tH
-                        pointHy = lb.y + b_out * tH
+                    pointHx = lb.x + a_out * tH
+                    pointHy = lb.y + b_out * tH
 
-                        pointOnFan =\
-                            matSur.get_Borrmann_out(
-                                goodN, oeNormal,
-                                lb, a_out, b_out, c_out,
-                                alphaAsym=self.alpha,
-                                Rcurvmm=self.R if 'R' in
-                                self.__dict__.keys() else None,
-                                ucl=self.ucl,
-                                useTT=matSur.useTT)
+                    pointOnFan =\
+                        matSur.get_Borrmann_out(
+                            goodN, oeNormal,
+                            lb, a_out, b_out, c_out,
+                            alphaAsym=self.alpha,
+                            Rcurvmm=self.R if 'R' in
+                            self.__dict__.keys() else None,
+                            ucl=self.ucl,
+                            useTT=matSur.useTT)
 
-                        pointOutX = point0x * (1. - pointOnFan) +\
-                            pointOnFan * pointHx
-                        pointOutY = point0y * (1. - pointOnFan) +\
-                            pointOnFan * pointHy
+                    pointOutX = point0x * (1. - pointOnFan) +\
+                        pointOnFan * pointHx
+                    pointOutY = point0y * (1. - pointOnFan) +\
+                        pointOnFan * pointHy
 
-                        lb.x = pointOutX
-                        deltaY = point0y * (1. - pointOnFan) +\
-                            pointOnFan * lb.y
-                        lb.y = pointOutY
+                    lb.x = pointOutX
+                    deltaY = point0y * (1. - pointOnFan) +\
+                        pointOnFan * lb.y
+                    lb.y = pointOutY
 
-                        if matSur.t is not None:
-                            tmpR = self.R
-                            self.R -= matSur.t
-                            lb.z = -self.local_z(lb.x, lb.y) - matSur.t
-                            self.R = self.R - (1 - pointOnFan) * matSur.t
-                            oeNormalOut = list(self.local_n(lb.x,
-                                                            deltaY))
-                            a_out, b_out, c_out = _getAsymmetricNormal(
-                                oeNormalOut, gNormal)
-                            self.R = tmpR
+                    if matSur.t is not None:
+                        tmpR = self.R
+                        self.R -= matSur.t
+                        lb.z = -self.local_z(lb.x, lb.y) - matSur.t
+                        self.R = self.R - (1 - pointOnFan) * matSur.t
+                        oeNormalOut = list(self.local_n(lb.x,
+                                                        deltaY))
+                        a_out, b_out, c_out = _getAsymmetricNormal(
+                            oeNormalOut, gNormal)
+                        self.R = tmpR
 
                 if toWhere == 0:  # reflect
                     lb.a[goodN] = a_out

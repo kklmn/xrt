@@ -74,7 +74,6 @@ class Beam(object):
             self.Jpp = np.copy(copyFrom.Jpp)
             self.Jsp = np.copy(copyFrom.Jsp)
             if withNumberOfReflections and hasattr(copyFrom, 'nRefl'):
-#            if hasattr(copyFrom, 'nRefl'):
                 self.nRefl = np.copy(copyFrom.nRefl)
             if hasattr(copyFrom, 'elevationD'):
                 self.elevationD = np.copy(copyFrom.elevationD)

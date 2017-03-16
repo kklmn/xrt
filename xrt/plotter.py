@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""
+u"""
 Module :mod:`plotter` provides classes describing axes and plots, as well as
 containers for the accumulated arrays (histograms) for subsequent
 pickling/unpickling or for global flux normalization. The module defines
@@ -28,8 +28,9 @@ modify them in the module or externally as in the xrt_logo.py example.
     physical or optical limits of an optical element.
 
 """
+from __future__ import unicode_literals
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "25 Feb 2017"
+__date__ = "16 Mar 2017"
 
 import os
 import copy
@@ -284,6 +285,8 @@ class XYCAxis(object):
         self.data = data
         self.limits = limits
         self.offset = offset
+        self.offsetDisplayUnit = self.unit
+        self.offsetDisplayFactor = 1
         self.bins = bins
         self.ppb = ppb
         self.pixels = bins * ppb
@@ -749,13 +752,6 @@ class XYCPlot(object):
         self.ax2dHist.xaxis.labelpad = xlabelpad
         self.ax2dHist.yaxis.labelpad = ylabelpad
 
-        self.ax1dHistXOffset = self.fig.text(
-            rect2d[0]+rect2d[2], 0.01, '', ha='right', va='bottom',
-            color='gray')  # , fontweight='bold')
-        self.ax1dHistYOffset = self.fig.text(
-            0.01, rect2d[1]+rect2d[3], '', rotation=90, ha='left', va='top',
-            color='gray')  # , fontweight='bold')
-
         rect1dX = copy.deepcopy(rect2d)
         rect1dX[1] = rect2d[1] + rect2d[3] + space2dto1d/yFigSize
         rect1dX[3] = height1d / yFigSize
@@ -788,6 +784,14 @@ class XYCPlot(object):
 #        for tick in (self.ax2dHist.xaxis.get_major_ticks() + \
 #          self.ax2dHist.yaxis.get_major_ticks()):
 #            tick.label1.set_fontsize(axisLabelFontSize)
+
+        self.ax1dHistXOffset = self.fig.text(
+            rect1dY[0]+rect1dY[2], 0.01, '', ha='right', va='bottom',
+            color='gray')  # , fontweight='bold')
+        self.ax1dHistYOffset = self.fig.text(
+            0.01, rect1dX[1]+rect1dX[3], '', rotation=90, ha='left', va='top',
+            color='gray')  # , fontweight='bold')
+
         if self.ePos == 1:  # right
             rect1dE = copy.deepcopy(rect1dY)
             rect1dE[0] = rect1dY[0] + rect1dY[2] + xspace1dtoE1d/xFigSize
@@ -1273,8 +1277,9 @@ class XYCPlot(object):
 
         if axis.offset:
             ll = [l-axis.offset for l in axis.limits]
-            offsetText.set_text('{0}{1} {2}'.format(
-                '+' if axis.offset > 0 else '', axis.offset, axis.unit))
+            offsetText.set_text('{0}{1:g} {2}'.format(
+                '+' if axis.offset > 0 else '',
+                axis.offset*axis.offsetDisplayFactor, axis.offsetDisplayUnit))
             offsetText.set_visible(True)
         else:
             ll = axis.limits
@@ -1359,8 +1364,10 @@ class XYCPlot(object):
         if (self.xaxis.limits is not None) and (self.yaxis.limits is not None):
             if (not isinstance(self.xaxis.limits, str)) and\
                (not isinstance(self.yaxis.limits, str)):
-                extent = [self.xaxis.limits[0], self.xaxis.limits[1],
-                          self.yaxis.limits[0], self.yaxis.limits[1]]
+                extent = [self.xaxis.limits[0]-self.xaxis.offset,
+                          self.xaxis.limits[1]-self.xaxis.offset,
+                          self.yaxis.limits[0]-self.yaxis.offset,
+                          self.yaxis.limits[1]-self.yaxis.offset]
         self.ax2dHist.images[0].set_data(xyRGB)
         if extent is not None:
             self.ax2dHist.images[0].set_extent(extent)

@@ -72,12 +72,11 @@ Using xrtQook for script generation
 
   .. imagezoom:: _images/qookTutor7.png
      :scale: 60 %
-     :loc: lower-left-corner
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "20 Sep 2016"
-__version__ = "1.1"
+__date__ = "16 Mar 2017"
+__version__ = "1.2"
 
 import os
 import sys
@@ -2787,12 +2786,13 @@ if __name__ == '__main__':
 
     def aboutCode(self):
         import platform
-        if use_pyside:
-            Qt_version = QtCore.__version__
-            PyQt_version = PySide.__version__
-        else:
-            Qt_version = QtCore.QT_VERSION_STR
-            PyQt_version = QtCore.PYQT_VERSION_STR
+#        if use_pyside:
+#            Qt_version = QtCore.__version__
+#            PyQt_version = PySide.__version__
+#        else:
+        Qt_version = QtCore.QT_VERSION_STR
+        PyQt_version = QtCore.PYQT_VERSION_STR
+
         msgBox = QMessageBox()
         msgBox.setWindowIcon(QIcon(
             os.path.join(self.xrtQookDir, '_icons', 'xrQt1.ico')))

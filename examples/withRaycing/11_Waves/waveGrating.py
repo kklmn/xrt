@@ -98,7 +98,7 @@ scientists.
 #Set proper setting for the grating and comment/uncomment one of the three main
 #invoked functions (at the very bottom).
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "08 Mar 2016"
+__date__ = "16 Mar 2017"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import pickle
 import numpy as np
@@ -467,6 +467,8 @@ def plot_generator(plots, plotsR, beamLine):
                     ef = plot.caxis.factor
                     plot.caxis.limits = [(E0-dE/2)*ef, (E0+dE/2)*ef]
                     plot.caxis.offset = E0 * ef
+                    plot.caxis.offsetDisplayFactor = 1e-3
+                    plot.caxis.offsetDisplayUnit = 'eV'
             beamLine.sources[0].energies = [E0]
 
         beamLine.orderThetas = np.pi/2 - order_2theta(
@@ -477,6 +479,8 @@ def plot_generator(plots, plotsR, beamLine):
             plot.xaxis.limits = [-xmaxW*xFactor, xmaxW*xFactor]
             plot.yaxis.limits = [(th-zmaxW)*zFactor, (th+zmaxW)*zFactor]
             plot.yaxis.offset = round(th * zFactor, -1)
+            plot.yaxis.offsetDisplayFactor = 1e-6
+            plot.yaxis.offsetDisplayUnit = 'rad'
         yield
 
         flux = beamLine.waveFSM.Jss + beamLine.waveFSM.Jpp
@@ -516,7 +520,7 @@ def get_efficiency():
     beamLine = build_beamline()
     plots, plotsR = define_plots(beamLine)
     args = [plots, plotsR, beamLine]
-    xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine, processes=1,
+    xrtr.run_ray_tracing(plots, repeats=2, beamLine=beamLine, processes=1,
                          generator=plot_generator, generatorArgs=args,
                          afterScript=afterScript)
 

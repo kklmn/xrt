@@ -31,7 +31,7 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
    :members: __init__
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
+__date__ = "16 Mar 2017"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics')
@@ -183,28 +183,32 @@ class Element(object):
     def read_f1f2_vs_E(self, table):
         """Reads f1 and f2 scattering factors from the given *table* at the
         instantiation time."""
-        table += '.Ef'
-        E, f1, f2 = [], [], []
-        startFound = False
         dataDir = os.path.dirname(__file__)
-        with open(os.path.join(dataDir, 'data', table), "rb") as f:
-            while True:
-                structEf1f2 = f.read(12)
-                if not structEf1f2:
-                    break
-                ELoc, f1Loc, f2Loc = struct.unpack_from("<3f", structEf1f2)
-                if startFound and ELoc == -1:
-                    break
-                if ELoc == -1 and f2Loc == self.Z:
-                    startFound = True
-                    continue
-                if startFound:
-                    E.append(ELoc)
-                    f1.append(f1Loc - self.Z)
-                    f2.append(f2Loc)
-        #pylab.plot(E, f1, '.', label=table+'f1')
-        #pylab.plot(E, f2, '.', label=table+'f2')
-        return np.array(E), np.array(f1), np.array(f2)
+        pname = os.path.join(dataDir, 'data', table+'.pickle')
+        if os.path.isfile(pname):  # new tabulations as pickle files
+            with open(pname, 'rb') as f:
+                res = pickle.load(f)
+            return res[self.Z]
+        else:  # old tabulations as ad hoc binary files
+            pname = os.path.join(dataDir, 'data', table+'.Ef')
+            E, f1, f2 = [], [], []
+            startFound = False
+            with open(pname, "rb") as f:
+                while True:
+                    structEf1f2 = f.read(12)
+                    if not structEf1f2:
+                        break
+                    ELoc, f1Loc, f2Loc = struct.unpack_from("<3f", structEf1f2)
+                    if startFound and ELoc == -1:
+                        break
+                    if ELoc == -1 and f2Loc == self.Z:
+                        startFound = True
+                        continue
+                    if startFound:
+                        E.append(ELoc)
+                        f1.append(f1Loc - self.Z)
+                        f2.append(f2Loc)
+            return np.array(E), np.array(f1), np.array(f2)
 
     def get_f1f2(self, E):
         """Calculates (interpolates) f1 and f2 for the given array *E*."""
@@ -416,7 +420,6 @@ class Material(object):
             {n_1\cos{\theta_1} + n_2\cos{\theta_2}}\\
             r_p^{\rm mirror} &= \frac{n_2\cos{\theta_1} - n_1\cos{\theta_2}}
             {n_2\cos{\theta_1} + n_1\cos{\theta_2}}\\
-
             r_{s,p}^{\rm thin\ mirror} &= r_{s,p}^{\rm mirror}\frac{1 - p^2}
             {1 - (r_{s,p}^{\rm mirror})^2p^2},
 
@@ -708,7 +711,7 @@ class Multilayer(object):
             except TypeError:  # not iterable
                 E *= np.ones_like(beamInDotNormal)
             try:
-                iterator = iter(beamInDotNormal)
+                iterator = iter(beamInDotNormal)  # analysis:ignore
             except TypeError:  # not iterable
                 beamInDotNormal *= np.ones_like(E)
             ri_s, ri_p = ucl.run_parallel(

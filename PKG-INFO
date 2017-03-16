@@ -1,10 +1,10 @@
 Metadata-Version: 1.1
 Name: xrt
-Version: 1.2.1
+Version: 1.2.2
 Summary: Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI tool for creating scripts.
 Home-page: http://pythonhosted.org/xrt
 Author: Konstantin Klementiev, Roman Chernikov
-Author-email: first DOT last AT gmail DOT com for both
+Author-email: konstantin DOT klementiev AT gmail DOT com, rchernikov AT gmail DOT com
 License: MIT License
 Description: 
         Package xrt (XRayTracer) is a python software library for ray tracing and wave
