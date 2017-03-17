@@ -58,10 +58,12 @@ try:  # for Python 3 compatibility:
     unicode = unicode
 except NameError:
     # 'unicode' is undefined, must be Python 3
+    isPython3 = True
     unicode = str
     basestring = (str, bytes)
 else:
     # 'unicode' exists, must be Python 2
+    isPython3 = False
     unicode = unicode
     basestring = basestring
 
@@ -187,7 +189,8 @@ class Element(object):
         pname = os.path.join(dataDir, 'data', table+'.pickle')
         if os.path.isfile(pname):  # new tabulations as pickle files
             with open(pname, 'rb') as f:
-                res = pickle.load(f, encoding='latin1')
+                res = pickle.load(f, encoding='latin1') if isPython3 else\
+                    pickle.load(f)
             return res[self.Z]
         else:  # old tabulations as ad hoc binary files
             pname = os.path.join(dataDir, 'data', table+'.Ef')
