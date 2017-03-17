@@ -140,9 +140,10 @@ class XRT_CL(object):
                             idn, idv.name))
                 if len(iDevice) == 0:
                     targetOpenCL = None
+                    self.lastTargetOpenCL = targetOpenCL
             else:  # None
                 targetOpenCL = None
-
+                self.lastTargetOpenCL = targetOpenCL
         if targetOpenCL is not None:
             if self.kernelsource is None:
                 cl_file = os.path.join(os.path.dirname(__file__),

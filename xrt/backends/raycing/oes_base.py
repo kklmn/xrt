@@ -254,13 +254,14 @@ class OE(object):
                                       targetOpenCL,
                                       precisionOpenCL,
                                       kernelsource)
-                self.cl_precisionF = self.ucl.cl_precisionF
-                self.cl_precisionC = self.ucl.cl_precisionC
-                self.cl_queue = self.ucl.cl_queue
-                self.cl_ctx = self.ucl.cl_ctx
-                self.cl_program = self.ucl.cl_program
-                self.cl_mf = self.ucl.cl_mf
-                self.cl_is_blocking = self.ucl.cl_is_blocking
+                if self.ucl.lastTargetOpenCL is not None:
+                    self.cl_precisionF = self.ucl.cl_precisionF
+                    self.cl_precisionC = self.ucl.cl_precisionC
+                    self.cl_queue = self.ucl.cl_queue
+                    self.cl_ctx = self.ucl.cl_ctx
+                    self.cl_program = self.ucl.cl_program
+                    self.cl_mf = self.ucl.cl_mf
+                    self.cl_is_blocking = self.ucl.cl_is_blocking
 
     def set_alpha(self, alpha):
         """Sets the asymmetry angle *alpha* for a crystal OE. It calculates

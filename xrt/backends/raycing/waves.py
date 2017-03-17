@@ -415,6 +415,8 @@ _DEBUG = 20
 
 if isOpenCL:
     waveCL = mcl.XRT_CL(r'diffract.cl')
+    if waveCL.lastTargetOpenCL is None:
+        waveCL = None
 else:
     waveCL = None
 
