@@ -58,12 +58,10 @@ try:  # for Python 3 compatibility:
     unicode = unicode
 except NameError:
     # 'unicode' is undefined, must be Python 3
-    isPython3 = True
     unicode = str
     basestring = (str, bytes)
 else:
     # 'unicode' exists, must be Python 2
-    isPython3 = False
     unicode = unicode
     basestring = basestring
 
@@ -186,32 +184,40 @@ class Element(object):
         """Reads f1 and f2 scattering factors from the given *table* at the
         instantiation time."""
         dataDir = os.path.dirname(__file__)
-        pname = os.path.join(dataDir, 'data', table+'.pickle')
-        if os.path.isfile(pname):  # new tabulations as pickle files
-            with open(pname, 'rb') as f:
-                res = pickle.load(f, encoding='latin1') if isPython3 else\
-                    pickle.load(f)
-            return res[self.Z]
-        else:  # old tabulations as ad hoc binary files
-            pname = os.path.join(dataDir, 'data', table+'.Ef')
-            E, f1, f2 = [], [], []
-            startFound = False
-            with open(pname, "rb") as f:
-                while True:
-                    structEf1f2 = f.read(12)
-                    if not structEf1f2:
-                        break
-                    ELoc, f1Loc, f2Loc = struct.unpack_from("<3f", structEf1f2)
-                    if startFound and ELoc == -1:
-                        break
-                    if ELoc == -1 and f2Loc == self.Z:
-                        startFound = True
-                        continue
-                    if startFound:
-                        E.append(ELoc)
-                        f1.append(f1Loc - self.Z)
-                        f2.append(f2Loc)
-            return np.array(E), np.array(f1), np.array(f2)
+
+#        pname = os.path.join(dataDir, 'data', table+'.pickle')
+#        with open(pname, 'rb') as f:
+#            res = pickle.load(f, encoding='bytes') if isPython3 else\
+#                pickle.load(f)
+#        return res[self.Z]
+
+        pname = os.path.join(dataDir, 'data', table+'.npz')
+        with open(pname, 'rb') as f:
+            res = np.load(f)
+            ef1f2 = (np.array(res[self.name+'_E']),
+                     np.array(res[self.name+'_f1']),
+                     np.array(res[self.name+'_f2']))
+        return ef1f2
+
+#        pname = os.path.join(dataDir, 'data', table+'.Ef')
+#        E, f1, f2 = [], [], []
+#        startFound = False
+#        with open(pname, "rb") as f:
+#            while True:
+#                structEf1f2 = f.read(12)
+#                if not structEf1f2:
+#                    break
+#                ELoc, f1Loc, f2Loc = struct.unpack_from("<3f", structEf1f2)
+#                if startFound and ELoc == -1:
+#                    break
+#                if ELoc == -1 and f2Loc == self.Z:
+#                    startFound = True
+#                    continue
+#                if startFound:
+#                    E.append(ELoc)
+#                    f1.append(f1Loc - self.Z)
+#                    f2.append(f2Loc)
+#        return np.array(E), np.array(f1), np.array(f2)
 
     def get_f1f2(self, E):
         """Calculates (interpolates) f1 and f2 for the given array *E*."""

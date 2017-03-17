@@ -20,6 +20,7 @@ elementsList = (
     'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U')
 
 outType = np.single
+#outType = np.double
 
 
 def read_f1f2_vs_E(elZ, table):
@@ -72,9 +73,9 @@ def read_f1f2_vs_E(elZ, table):
 
 
 def main():
-#    table = 'Henke'
+    table = 'Henke'
 #    table = 'Chantler'
-    table = 'BrCo'
+#    table = 'BrCo'
 
     fig = plt.figure(figsize=(7, 6))
     ax = fig.add_axes([0.15*6/7, 0.15, 0.7*6/7, 0.7])
@@ -83,6 +84,7 @@ def main():
 
     maxZ = 0
     out = {}
+    outnp = {}
     for element in elementsList:
 #    for element in ['Cu', 'Zn']:
 #    for element in ['Si']:
@@ -93,6 +95,9 @@ def main():
         maxZ = max(maxZ, elZ)
         E, f1, f2 = read_f1f2_vs_E(elZ, table)
         out[elZ] = E, f1, f2
+        outnp[element+'_E'] = E
+        outnp[element+'_f1'] = f1
+        outnp[element+'_f2'] = f2
         ax.plot(E*1e-3, f1+elZ, '-')
         ax.plot(E*1e-3, f2, '.')
     ax.set_ylim(0, maxZ*1.1)
@@ -100,6 +105,11 @@ def main():
     pickleName = os.path.join(dataDir, table+'.pickle')
     with open(pickleName, 'wb') as f:
         pickle.dump(out, f, protocol=2)
+
+    saveName = os.path.join(dataDir, table+'.npz')
+    with open(saveName, 'wb') as f:
+        np.savez_compressed(f, **outnp)
+
     print("Done")
 
     plt.show()
