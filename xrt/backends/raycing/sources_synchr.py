@@ -128,7 +128,7 @@ class BendingMagnet(object):
             self.ordinalNum = len(bl.sources)
         self.name = name
         self.center = center  # 3D point in global system
-        self.nrays = nrays
+        self.nrays = np.long(nrays)
         self.dx = eSigmaX * 1e-3 if eSigmaX else None
         self.dz = eSigmaZ * 1e-3 if eSigmaZ else None
         self.eEpsilonX = eEpsilonX
@@ -342,7 +342,8 @@ class BendingMagnet(object):
         seededI = 0.
         np.seterr(invalid='warn')
         np.seterr(divide='warn')
-        mcRays = self.nrays * 1.2 if not self.uniformRayDensity else self.nrays
+        mcRays = np.long(self.nrays * 1.2) if not self.uniformRayDensity else\
+            self.nrays
         if self.filamentBeam:
             if accuBeam is None:
                 rE = np.random.random_sample() *\

@@ -187,7 +187,7 @@ class Element(object):
         pname = os.path.join(dataDir, 'data', table+'.pickle')
         if os.path.isfile(pname):  # new tabulations as pickle files
             with open(pname, 'rb') as f:
-                res = pickle.load(f)
+                res = pickle.load(f, encoding='latin1')
             return res[self.Z]
         else:  # old tabulations as ad hoc binary files
             pname = os.path.join(dataDir, 'data', table+'.Ef')

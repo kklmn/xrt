@@ -197,7 +197,7 @@ class GeometricSource(object):
         self.ordinalNum = len(bl.sources)
         self.name = name
         self.center = center  # 3D point in global system
-        self.nrays = nrays
+        self.nrays = np.long(nrays)
 
         self.distx = distx
         self.dx = dx

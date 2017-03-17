@@ -28,6 +28,7 @@ class Beam(object):
                  xyzOnly=False):
         if copyFrom is None:
             # coordinates of starting points
+            nrays = np.long(nrays)
             self.x = np.zeros(nrays)
             self.y = np.zeros(nrays)
             self.z = np.zeros(nrays)
