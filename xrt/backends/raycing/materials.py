@@ -738,9 +738,9 @@ class Crystal(Material):
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
-                 quantities=None, rho=0, t=None, factDW=1., nuPoisson=0,
+                 quantities=None, rho=0, t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler', name='',
-                 calcBorrmann=None, useTT=False):
+                 nuPoisson=0., calcBorrmann=None, useTT=False):
         u"""
         *hkl*: sequence
             hkl indices.
@@ -755,9 +755,6 @@ class Crystal(Material):
         *factDW*: float
             Debye-Waller factor applied to the structure factor.
 
-        *nuPoisson*: float
-            Poisson's ratio. Used to calculate the properties of bent crystals.
-
         *geom*: str
             The 1st word is either 'Bragg' or 'Laue', the 2nd word is either
             'transmitted' or 'reflected' or 'Fresnel' (the optical element must
@@ -766,6 +763,9 @@ class Crystal(Material):
         *table*: str
             This parameter is explained in the description of the parent class
             :class:`Material`.
+
+        *nuPoisson*: float
+            Poisson's ratio. Used to calculate the properties of bent crystals.
 
         *calcBorrmann*: str
             Controls the origin of the ray leaving the crystal. Can be 'None',
@@ -800,9 +800,9 @@ class Crystal(Material):
         self.geometry = 2*int(geom.startswith('Bragg')) +\
             int(geom.endswith('transmitted'))
         self.factDW = factDW
-        self.nuPoisson = nuPoisson
         self.kind = 'crystal'
         self.t = t  # in mm
+        self.nuPoisson = nuPoisson
         self.calcBorrmann = calcBorrmann
         self.useTT = useTT
 
@@ -1507,8 +1507,9 @@ class CrystalFromCell(Crystal):
                            [0.75, 0.25, 0.75],
                            [0.75, 0.75, 0.25]],
                  atomsFraction=None, tK=297.15,
-                 t=None, factDW=1., geom='Bragg reflected', table='Chantler',
-                 calcBorrmann=None, useTT=False):
+                 t=None, factDW=1.,
+                 geom='Bragg reflected', table='Chantler',
+                 nuPoisson=0., calcBorrmann=None, useTT=False):
         u"""
         *name*: str
             Crystal name. Not used by xrt.
@@ -1531,6 +1532,9 @@ class CrystalFromCell(Crystal):
 
         *atomsFraction*: a list of float or None
             Atomic fractions. If None, all values are 1.
+
+        *nuPoisson*: float
+            Poisson's ratio. Used to calculate the properties of bent crystals.
 
         *calcBorrmann*: str
             Controls the origin of the ray leaving the crystal. Can be 'None',
@@ -1597,6 +1601,7 @@ class CrystalFromCell(Crystal):
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
+        self.nuPoisson = nuPoisson
         self.calcBorrmann = calcBorrmann
         self.useTT = useTT
 
