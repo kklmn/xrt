@@ -883,7 +883,7 @@ def run_tests():
 
 #Compare the calculated rocking curves of Si crystals with those calculated by
 #XCrystal and XInpro (parts of XOP):
-#    compare_rocking_curves('111')
+    compare_rocking_curves('111')
 #    compare_rocking_curves('333')
 #    compare_rocking_curves('111', t=0.007)  # t is thickness in mm
 #    compare_rocking_curves('333', t=0.007)
@@ -904,16 +904,16 @@ def run_tests():
 
 # Compare rocking curves for bent Si crystals with those calculated by
 #XCrystal_Bent (Takagi-Taupin):
-    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-                           Rcurvmm=np.inf, alphas=[30])
-    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-                           Rcurvmm=np.inf, alphas=[30])
-    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-                           Rcurvmm=50*1e3,
-                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
-    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-                           Rcurvmm=50*1e3,
-                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+#    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+#                           Rcurvmm=np.inf, alphas=[30])
+#    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+#                           Rcurvmm=np.inf, alphas=[30])
+#    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+#                           Rcurvmm=50*1e3,
+#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+#    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+#                           Rcurvmm=50*1e3,
+#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
 
 
 #check that Bragg transmitted and Laue transmitted give the same results if the
@@ -932,7 +932,7 @@ def run_tests():
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
-#    compare_reflectivity_multilayer()
+    compare_reflectivity_multilayer()
 
 #    compare_dTheta()
 

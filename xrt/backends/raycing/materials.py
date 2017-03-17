@@ -38,7 +38,7 @@ __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'Crystal', 'CrystalFcc',
 import sys
 import os
 import time
-import struct
+#import struct
 import pickle
 import numpy as np
 from scipy.special import jn as besselJn
@@ -777,8 +777,8 @@ class Crystal(Material):
             'TT' is exact solution of Takagi-Taupin equations for bent and flat
             crystals ('TT' requires *targetOpenCL* in the Optical Element to be
             not 'None' and *useTT* in the :class:`Crystal` to be 'True'. Not
-            recommended for crystals thicker than 100 mkm due to heavy
-            computational load)
+            recommended for crystals thicker than 100 µm due to heavy
+            computational load).
 
         *useTT*: bool
             Specifies whether the reflectivity will by calculated by analytical
@@ -1547,8 +1547,8 @@ class CrystalFromCell(Crystal):
             'TT' is exact solution of Takagi-Taupin equations for bent and flat
             crystals ('TT' requires *targetOpenCL* in the Optical Element to be
             not 'None' and *useTT* in the :class:`Crystal` to be 'True'. Not
-            recommended for crystals thicker than 100 mkm due to heavy
-            computational load)
+            recommended for crystals thicker than 100 µm due to heavy
+            computational load).
 
         *useTT*: bool
             Specifies whether the reflectivity will by calculated by analytical
