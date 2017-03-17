@@ -918,7 +918,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             if len(headerDocRip) > 0:
                 headerDoc = headerDocRip[0].strip()
 
-        argDocStr = '{0}{1}\n\n'.format(myTab, headerDoc) if\
+        argDocStr = u'{0}{1}\n\n'.format(myTab, headerDoc) if\
             objP.__doc__ is not None else "\n\n"
         dNames, dVals = self.getArgDescr(obj)
         if len(dNames) > 0:
@@ -982,10 +982,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.layoutFileName
         self.showTutorial(self.fileDescription,
                           "Description",
-                          os.path.dirname(os.path.abspath(img_path)))
+                          os.path.dirname(os.path.abspath(str(img_path))))
 
     def showWelcomeScreen(self):
-        argDescr = r"""
+        argDescr = u"""
 
         .. image:: _images/qookSplashSmall_ani.gif
 
@@ -1051,7 +1051,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.curObj = None
 
     def showOCLinfo(self):
-        argDocStr = ""
+        argDocStr = u""
         for iplatform, platform in enumerate(cl.get_platforms()):
             argDocStr += '=' * 25 + '\n'
             argDocStr += 'Platform {0}: {1}\n'.format(iplatform, platform.name)
@@ -1756,7 +1756,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     self.showTutorial(
                         self.fileDescription,
                         "Descriprion",
-                        os.path.dirname(os.path.abspath(self.layoutFileName)))
+                        os.path.dirname(os.path.abspath(str(
+                            self.layoutFileName))))
                     self.setWindowTitle(self.layoutFileName + " - xrtQook")
                     self.writeCodeBox("")
                     self.plotTree.expand(self.rootPlotItem.index())
