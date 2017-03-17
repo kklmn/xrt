@@ -1507,7 +1507,8 @@ class CrystalFromCell(Crystal):
                            [0.75, 0.25, 0.75],
                            [0.75, 0.75, 0.25]],
                  atomsFraction=None, tK=297.15,
-                 t=None, factDW=1., geom='Bragg reflected', table='Chantler'):
+                 t=None, factDW=1., geom='Bragg reflected', table='Chantler',
+                 calcBorrmann=None, useTT=False):
         u"""
         *name*: str
             Crystal name. Not used by xrt.
@@ -1530,6 +1531,24 @@ class CrystalFromCell(Crystal):
 
         *atomsFraction*: a list of float or None
             Atomic fractions. If None, all values are 1.
+
+        *calcBorrmann*: str
+            Controls the origin of the ray leaving the crystal. Can be 'None',
+            'uniform', 'Bessel' or 'TT'. If 'None', the point of reflection
+            is located on the surface of incidence. In all other cases the
+            coordinate of the exit point is sampled according to the
+            corresponding distribution: 'uniform' is a fast approximation for
+            thick crystals, 'Bessel' is exact solution for the flat crystals,
+            'TT' is exact solution of Takagi-Taupin equations for bent and flat
+            crystals ('TT' requires OpenCL in the Optical Element to be not
+            None and useTT to be True. Not recommended for crystals thicker
+            than 100 mkm due to heavy computational load)
+
+        *useTT*: bool
+            Specifies whether the reflectivity will by calculated by analytical
+            formula or by solution of the Takagi-Taupin equations (so far only
+            for the Laue geometry). Must be set to True in order to calculate
+            the reflectivity of bent crystals.
 
 
         """
@@ -1578,6 +1597,8 @@ class CrystalFromCell(Crystal):
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
+        self.calcBorrmann = calcBorrmann
+        self.useTT = useTT
 
     def get_structure_factor(self, E, sinThetaOverLambda):
         F0, Fhkl, Fhkl_ = 0, 0, 0
