@@ -68,6 +68,8 @@ class XRT_CL(object):
                 iDeviceAcc = []
                 iDevice = []
                 for platform in cl.get_platforms():
+                    if 'mesa' in platform.vendor.lower():
+                        continue  # for new Linuxes Mesa provides OpenCL 1
                     CPUdevices = []
                     GPUdevices = []
                     AccDevices = []
@@ -100,8 +102,6 @@ class XRT_CL(object):
                             except:
                                 pass
                     for GPUDevice in GPUdevices:
-                        if 'mesa' in platform.vendor.lower():
-                            continue  # for new Linuxes Mesa provides OpenCL 1
                         try:
                             tmpctx = cl.Context(devices=[GPUDevice])
                             if GPUDevice.double_fp_config > 0:
