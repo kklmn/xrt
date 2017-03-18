@@ -100,6 +100,8 @@ class XRT_CL(object):
                             except:
                                 pass
                     for GPUDevice in GPUdevices:
+                        if 'mesa' in platform.vendor.lower():
+                            continue  # for new Linuxes Mesa provides OpenCL 1
                         try:
                             tmpctx = cl.Context(devices=[GPUDevice])
                             if GPUDevice.double_fp_config > 0:
