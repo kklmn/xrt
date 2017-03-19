@@ -198,9 +198,9 @@ __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory), " +\
     "Roman Chernikov (DESY Photon Science)"
 __email__ = "first dot last at gmail dot com"
-__versioninfo__ = (1, 2, 2)
+__versioninfo__ = (1, 2, 3)
 __version__ = '.'.join(map(str, __versioninfo__))
-__date__ = "16 Mar 2017"
+__date__ = "19 Mar 2017"
 __license__ = "MIT license"
 
 #__all__ = ['plotter', 'runner', 'multipro']
