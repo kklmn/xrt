@@ -11,6 +11,7 @@ for platform in cl.get_platforms():  # Print each platform on this computer
     for device in platform.get_devices():  # Print each device per-platform
         print('    ' + '-' * 56)
         print('    Device - Name:  ' + device.name)
+        print('    Device - Vendor:  ' + device.vendor)
         print('    Device - Type:  ' +
               cl.device_type.to_string(device.type))
         print('    Device - Max Clock Speed:  {0} Mhz'.format(

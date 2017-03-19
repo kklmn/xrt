@@ -4,7 +4,7 @@ r"""
 Initialization code of pyopencl.
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
+__date__ = "19 Mar 2017"
 import numpy as np
 import os
 try:
@@ -69,7 +69,7 @@ class XRT_CL(object):
                 iDevice = []
                 for platform in cl.get_platforms():
                     if 'mesa' in platform.vendor.lower():
-                        continue  # for new Linuxes Mesa provides OpenCL 1
+                        continue  # for new Linuxes Mesa provides OpenCL 1.1
                     CPUdevices = []
                     GPUdevices = []
                     AccDevices = []
