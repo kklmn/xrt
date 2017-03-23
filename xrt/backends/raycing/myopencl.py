@@ -21,8 +21,7 @@ _DEBUG = 20
 
 class XRT_CL(object):
     def __init__(self, filename=None, targetOpenCL=raycing.targetOpenCL,
-                 precisionOpenCL=raycing.targetOpenCL,
-                 kernelsource=None):
+                 precisionOpenCL='auto', kernelsource=None):
         self.kernelsource = kernelsource
         self.cl_filename = filename
         self.lastTargetOpenCL = None
