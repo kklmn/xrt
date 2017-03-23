@@ -488,7 +488,8 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     return wave
 
 
-def diffract(oeLocal, wave, targetOpenCL='auto', precisionOpenCL='auto'):
+def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
+             precisionOpenCL='auto'):
     r"""
     Calculates the diffracted field – the amplitudes and the local directions –
     contained in the *wave* object. The field on the diffracting surface is

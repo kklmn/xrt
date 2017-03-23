@@ -159,6 +159,8 @@ hueDead = 0.2
 hueMin = 0.
 hueMax = 10.
 
+targetOpenCL = 'auto'
+
 
 def is_sequence(arg):
     """Checks whether *arg* is a sequence."""

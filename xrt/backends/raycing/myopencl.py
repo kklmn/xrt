@@ -7,6 +7,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "19 Mar 2017"
 import numpy as np
 import os
+from .. import raycing
 try:
     import pyopencl as cl
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
@@ -19,8 +20,8 @@ _DEBUG = 20
 
 
 class XRT_CL(object):
-    def __init__(self, filename=None, targetOpenCL='auto',
-                 precisionOpenCL='auto',
+    def __init__(self, filename=None, targetOpenCL=raycing.targetOpenCL,
+                 precisionOpenCL=raycing.targetOpenCL,
                  kernelsource=None):
         self.kernelsource = kernelsource
         self.cl_filename = filename
@@ -29,7 +30,8 @@ class XRT_CL(object):
         self.set_cl(targetOpenCL, precisionOpenCL)
         self.cl_is_blocking = True
 
-    def set_cl(self, targetOpenCL='auto', precisionOpenCL='auto'):
+    def set_cl(self, targetOpenCL=raycing.targetOpenCL,
+               precisionOpenCL='auto'):
         if (targetOpenCL == self.lastTargetOpenCL) and\
                 (precisionOpenCL == self.lastPrecisionOpenCL):
             return
@@ -44,7 +46,10 @@ class XRT_CL(object):
                 if isinstance(targetOpenCL[0], int):
                     nPlatform, nDevice = targetOpenCL
                     platform = cl.get_platforms()[nPlatform]
-                    iDevice.extend([platform.get_devices()[nDevice]])
+                    dev = platform.get_devices()[nDevice]
+                    iDevice.extend([dev])
+                    print("OpenCL device {0}: {1}".format(
+                        platform.name, dev.name))
                 else:
                     for target in targetOpenCL:
                         if isinstance(target, (tuple, list)):

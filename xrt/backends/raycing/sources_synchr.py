@@ -626,7 +626,8 @@ class Undulator(object):
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
                  gp=1e-2, gIntervals=1, nRK=30,
                  uniformRayDensity=False, filamentBeam=False,
-                 targetOpenCL='auto', precisionOpenCL='auto', pitch=0, yaw=0):
+                 targetOpenCL=raycing.targetOpenCL, precisionOpenCL='auto',
+                 pitch=0, yaw=0):
         u"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
