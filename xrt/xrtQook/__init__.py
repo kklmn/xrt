@@ -2824,12 +2824,12 @@ if __name__ == '__main__':
         msgBox.exec_()
 
     def closeEvent(self, event):
-        ret = QtGui.QMessageBox.question(
+        ret = QMessageBox.question(
             self, 'Exit',
             "Do you want to save Beamline Layout before exit?",
-            QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+            QMessageBox.Yes, QMessageBox.No)
 
-        if ret == QtGui.QMessageBox.Yes:
+        if ret == QMessageBox.Yes:
             if self.exportLayout():
                 event.accept()
             else:
