@@ -1587,6 +1587,10 @@ class XYCPlot(object):
             pass
         self.nRaysAll = np.long(0)
         self.nRaysAllRestored = np.long(-1)
+        self.nRaysAccepted = np.long(0)
+        self.nRaysAcceptedE = 0.
+        self.nRaysSeeded = np.long(0)
+        self.nRaysSeededI = 0.
         self.intensity = 0.
         self.cidp = self.fig.canvas.mpl_connect(
             'button_press_event', self.on_press)
