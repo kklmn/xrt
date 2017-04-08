@@ -259,7 +259,7 @@ class XRT_CL(object):
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
-                global_size.extend([(ndsize[ictx],)])
+                global_size.extend([(np.int(ndsize[ictx]),)])
 #                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
             if nonSlicedRWArgs is not None:
                 for iarg, arg in enumerate(nonSlicedRWArgs):
