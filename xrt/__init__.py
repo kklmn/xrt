@@ -141,8 +141,11 @@ Dependencies
 :mod:`numpy`, :mod:`scipy` and :mod:`matplotlib` are required. If you use
 OpenCL for calculations on GPU or CPU, you need AMD/NVIDIA drivers,
 ``Intel CPU only OpenCL runtime`` (these are search key words), :mod:`pytools`
-and :mod:`pyopencl`. :mod:`Spyderlib` (the foundation of Spyder IDE) is highly
-recommended for nicer view of xrtQook.
+and :mod:`pyopencl`.
+
+The IDE Spyder is highly recommended for working with python scripts. Its
+foundation, the module :mod:`spyderlib` (recently renamed to :mod:`spyder`),
+is used for nicer view of the script generator xrtQook.
 
 Python 2 and 3
 --------------
@@ -153,7 +156,8 @@ Get xrt
 xrt is available as source distribution from `pypi.python.org
 <https://pypi.python.org/pypi/xrt>`_ and from `GitHub
 <https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
-examples and the script generator xrtQook.
+examples and the script generator xrtQook. The complete documentation is
+available as zip file from `GitHub <https://github.com/kklmn/xrt>`_.
 
 Installation
 ------------
@@ -163,7 +167,8 @@ standard location by running ``python setup.py install`` from the directory
 where you have unzipped the archive, which is less convenient if you try
 different versions of xrt and/or different versions of python. Note that
 python-64-bit is by ~20% faster than the 32-bit version (tested with
-WinPython).
+WinPython). Also consider :ref:`Speed tests <tests>` for making choice between
+Windows and Linux and between Python 2 and Python 3.
 
 Citing xrt
 ----------
@@ -196,11 +201,11 @@ field.
 __module__ = "xrt"
 __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory), " +\
-    "Roman Chernikov (DESY Photon Science)"
+    "Roman Chernikov (Canadian Light Source)"
 __email__ = "first dot last at gmail dot com"
-__versioninfo__ = (1, 2, 3)
+__versioninfo__ = (1, 2, 4)
 __version__ = '.'.join(map(str, __versioninfo__))
-__date__ = "19 Mar 2017"
+__date__ = "10 Apr 2017"
 __license__ = "MIT license"
 
 #__all__ = ['plotter', 'runner', 'multipro']

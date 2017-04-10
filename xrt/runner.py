@@ -10,6 +10,7 @@ __date__ = "26 Mar 2016"
 import os
 import sys
 import time
+import inspect
 import pickle
 import numpy as np
 import matplotlib as mpl
@@ -58,7 +59,7 @@ class RunCardVals(object):
     objects for passing it to job processes or threads.
     """
     def __init__(self, threads, processes, repeats, updateEvery, pickleEvery,
-                 backend, globalNorm):
+                 backend, globalNorm, runfile):
         if threads >= processes:
             self.Event = threading.Event
             self.Queue = Queue.Queue
@@ -78,6 +79,7 @@ class RunCardVals(object):
         self.pickleEvery = pickleEvery
         self.backend = backend
         self.globalNorm = globalNorm
+        self.runfile = runfile
         self.passNo = 0
         self.savedResults = []
         self.iteration = 0
@@ -92,8 +94,14 @@ class RunCardVals(object):
             print("The last {0} run{1}".format(len(self.lastRuns),
                   's' if len(self.lastRuns) > 1 else ''))
         for lastRun in self.lastRuns:
+            if len(lastRun) > 3:
+                print("{0}::".format(lastRun[3]))
             st0 = time.strftime("%a, %d %b %Y %H:%M:%S", lastRun[0])
-            st1 = time.strftime("%a, %d %b %Y %H:%M:%S", lastRun[1])
+            if (time.strftime("%a, %d %b %Y", lastRun[0]) ==
+                    time.strftime("%a, %d %b %Y", lastRun[1])):
+                st1 = time.strftime("%H:%M:%S", lastRun[1])
+            else:
+                st1 = time.strftime("%a, %d %b %Y %H:%M:%S", lastRun[1])
             print("start: {0}; stop: {1}; duration: {2:.1f} s".format(
                 st0, st1, lastRun[2]))
 
@@ -341,7 +349,8 @@ def on_finish():
     print('finished')
 
     runCardVals.lastRuns.append([runCardVals.tstartLong, runCardVals.tstopLong,
-                                 runCardVals.tstop-runCardVals.tstart])
+                                 runCardVals.tstop-runCardVals.tstart,
+                                 runCardVals.runfile])
     with open(runCardVals.lastRunsPickleName, 'wb') as f:
         pickle.dump(runCardVals.lastRuns[-10:], f, protocol=2)
 #    plt.close('all')
@@ -519,6 +528,9 @@ def run_ray_tracing(
 
     """
     global runCardVals, runCardProcs, _plots
+    frm = inspect.stack()[1]
+    mod = inspect.getmodule(frm[0])
+    runfile = mod.__file__
     if isinstance(plots, (list, tuple)):
         _plots = plots
     else:
@@ -545,12 +557,11 @@ def run_ray_tracing(
         else:
             threads = max(cpuCount // 2, 1)
     runCardVals = RunCardVals(threads, processes, repeats, updateEvery,
-                              pickleEvery, backend, globalNorm)
+                              pickleEvery, backend, globalNorm, runfile)
     runCardProcs = RunCardProcs(
         afterScript, afterScriptArgs, afterScriptKWargs)
 
     runCardVals.cwd = os.getcwd()
-    cpus = max(threads, processes)
     if backend.startswith('shadow'):
         from .backends import shadow
         shadow.check_shadow_dirs(cpus, runCardVals.cwd)
