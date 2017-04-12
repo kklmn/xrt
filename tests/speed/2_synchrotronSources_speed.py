@@ -83,7 +83,7 @@ import time
 #import matplotlib
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
-raycing.targetOpenCL = (0, 0)
+raycing.targetOpenCL = 'CPU'
 #raycing.targetOpenCL = (0, 1)
 #raycing.targetOpenCL = None
 
@@ -101,12 +101,12 @@ ppb = 1  # Number of pixels per histogram bin
 
 pprefix = '1_xrt'
 Source = rs.Undulator
-Kmax = 1.92
 kwargs = dict(
     eE=3., eI=0.5,  # Parameters of the synchrotron ring [GeV], [Ampere]
-    period=30., n=40,  # Parameters of the undulator, period in [mm]
-    K=1.45,  # Deflection parameter (ignored if targetE is not None)
+    period=100., n=100,  # Parameters of the undulator, period in [mm]
+    K=25,  # Deflection parameter (ignored if targetE is not None)
     eSigmaX=48.65, eSigmaZ=6.197,  # Size of the electron beam [mkm]
+    taper=(0, 15),
     eEpsilonX=0.263, eEpsilonZ=0.008,  # Emittance [nmrad]
     xPrimeMaxAutoReduce=False,
     zPrimeMaxAutoReduce=False)
