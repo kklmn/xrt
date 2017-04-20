@@ -178,7 +178,6 @@ E0 = 9000.  # eV
 w0 = 15e-3  # mm, waist size of the amplitude (not of intensity!)
 maxFactor = 2.  # factor that determines the screen limits as ±w*maxFactor
 maxFactor *= (abs(lVortex)+pVortex+1)**0.25
-uniformRayDensity = True
 #ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
 ps = np.array(list(range(10)) + list(range(1, 11)) +
               list(range(20, 101, 10))) * 1000.

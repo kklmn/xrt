@@ -12,16 +12,16 @@ around one harmonic.
 +-----------------+---------------+---------------+---------------+
 |     system      |   no OpenCL   | OpenCL on CPU | OpenCL on GPU |
 +====+============+===============+===============+===============+
-|[1]_|   |win|    |     1764      |     197.5     |      36.1     |
+|[1]_|   |winW|   |     1764      |     197.5     |      36.1     |
 |    |            |     1894      |     198.0     |      33.2     |
 |    +------------+---------------+---------------+---------------+
-|    |   |lin|    |     1869      |     153.7     |      37.1     |
+|    |   |linW|   |     1869      |     153.7     |      37.1     |
 |    |            |     1893      |     153.1     |      35.5     |
 +----+------------+---------------+---------------+---------------+
-|[2]_|   |win|    |     1801      |      61.0     |      126      |
+|[2]_|   |winH|   |     1801      |      61.0     |      126      |
 |    |            |     1909      |      60.3     |      123      |
 |    +------------+---------------+---------------+---------------+
-|    |   |lin|    |     1245      |      57.6     |      122      |
+|    |   |linH|   |     1245      |      57.6     |      122      |
 |    |            |     1255      |      60.2     |      127      |
 +----+------------+---------------+---------------+---------------+
 
@@ -83,7 +83,7 @@ import time
 #import matplotlib
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
-raycing.targetOpenCL = 'CPU'
+raycing.targetOpenCL = "GPU"
 #raycing.targetOpenCL = (0, 1)
 #raycing.targetOpenCL = None
 
@@ -101,12 +101,12 @@ ppb = 1  # Number of pixels per histogram bin
 
 pprefix = '1_xrt'
 Source = rs.Undulator
+Kmax = 1.92
 kwargs = dict(
     eE=3., eI=0.5,  # Parameters of the synchrotron ring [GeV], [Ampere]
-    period=100., n=100,  # Parameters of the undulator, period in [mm]
-    K=25,  # Deflection parameter (ignored if targetE is not None)
+    period=30., n=40,  # Parameters of the undulator, period in [mm]
+    K=1.45,  # Deflection parameter (ignored if targetE is not None)
     eSigmaX=48.65, eSigmaZ=6.197,  # Size of the electron beam [mkm]
-    taper=(0, 15),
     eEpsilonX=0.263, eEpsilonZ=0.008,  # Emittance [nmrad]
     xPrimeMaxAutoReduce=False,
     zPrimeMaxAutoReduce=False)

@@ -18,10 +18,10 @@ on a laptop. Notice also that for the real example a larger number of samples,
 +--------------------+---------------+---------------+
 |       system       | OpenCL on CPU | OpenCL on GPU |
 +====+===============+===============+===============+
-|[1]_|     |win|     |     1956      |      80.3     |
+|[1]_|     |winW|    |     1956      |      80.3     |
 |    |               |     2012      |      79.4     |
 |    +---------------+---------------+---------------+
-|    |     |lin|     |     1944      |      80.0     |
+|    |     |linW|    |     1944      |      80.0     |
 |    |               |     1963      |      80.4     |
 +----+---------------+---------------+---------------+
 
@@ -58,7 +58,7 @@ import numpy as np
 
 import xrt.backends.raycing as raycing
 #raycing.targetOpenCL = (0, 0)
-raycing.targetOpenCL = (0, 1)
+raycing.targetOpenCL = "GPU"
 
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.apertures as ra
