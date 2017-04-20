@@ -51,7 +51,7 @@ __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
 
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
-import ClaessBL_N
+from . import ClaessBL_N
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 

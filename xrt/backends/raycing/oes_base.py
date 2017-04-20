@@ -224,6 +224,8 @@ class OE(object):
         self.limOptX = limOptX
         self.limOptY = limOptY
         self.isParametric = isParametric
+        self.use_rays_good_gn = False  # use rays_good_gn instead of rays_good
+
         self.shape = shape
         self.order = 1 if order is None else order
         self.get_surface_limits()
@@ -922,7 +924,7 @@ class OE(object):
 
         raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays, shape='rect', area='auto'):
+    def prepare_wave(self, prevOE, nrays, shape='auto', area='auto'):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -933,8 +935,11 @@ class OE(object):
         """
         from . import waves as rw
 
+        nrays = int(nrays)
         lb = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
         xy = np.random.rand(nrays, 2)
+        if shape == 'auto':
+            shape = self.shape
         if shape.startswith('ro'):  # round
             dR = (self.limPhysX[1] - self.limPhysX[0]) / 2
             r = xy[:, 0]**0.5 * dR
@@ -943,13 +948,15 @@ class OE(object):
             y = r * np.sin(phi)
             if area == 'auto':
                 area = np.pi * dR**2
-        else:  # if shape.startswith('rect'):
+        elif shape.startswith('re'):  # rect
             dX = self.limPhysX[1] - self.limPhysX[0]
             dY = self.limPhysY[1] - self.limPhysY[0]
             x = xy[:, 0] * dX + self.limPhysX[0]
             y = xy[:, 1] * dY + self.limPhysY[0]
             if area == 'auto':
                 area = dX * dY
+        else:
+            raise ValueError("unknown shape!")
 
 # this works even for a parametric case because we prepare rays started at the
 # center of the previous oe and directed towards this oe (self). The found
@@ -971,7 +978,7 @@ class OE(object):
         lb.z[:] = prevOE.center[2]
 
         waveGlobal, waveLocal = self.reflect(lb)
-        good = waveLocal.state > 0
+        good = (waveLocal.state == 1) | (waveLocal.state == 2)
         waveGlobal.filter_by_index(good)
         waveLocal.filter_by_index(good)
         area *= good.sum() / float(len(good))
@@ -1288,16 +1295,15 @@ class OE(object):
             tX, tY, tZ = self.param_to_xyz(lb.x[good], lb.y[good], lb.z[good])
         else:
             # z_distorted = self.local_z_distorted(lb.x[good], lb.y[good])
-            tX, tY = lb.x[good], lb.y[good]
+            tX, tY, tZ = lb.x[good], lb.y[good], lb.z[good]
 #        if z_distorted is not None:
 #            lb.z[good] += z_distorted
 
-        res = self.rays_good(tX, tY, is2ndXtal)
-        gNormal = None
-        if isinstance(res, tuple):
-            lb.state[good], gNormal = res
+        if self.use_rays_good_gn:
+            lb.state[good], gNormal = self.rays_good_gn(tX, tY, tZ)
         else:
-            lb.state[good] = res
+            gNormal = None
+            lb.state[good] = self.rays_good(tX, tY, is2ndXtal)
         goodN = (lb.state == 1) | (lb.state == 2)
 # normal at x, y, z:
         if goodN.sum() > 0:

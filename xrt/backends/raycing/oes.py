@@ -76,6 +76,7 @@ latter method returns two angles d_pitch and d_roll or a 3D vector that will be
 added to the local normal. See the docstrings of
 :meth:`OE.local_n_distorted`` and the example ':ref:`warping`'.
 """
+from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Mar 2017"
 __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
@@ -737,7 +738,10 @@ class ToroidMirror(OE):
 
     def local_z(self, x, y):
         rx = self.r**2 - x**2
-        rx[rx < 0] = 0.
+        try:
+            rx[rx < 0] = 0.
+        except TypeError:
+            pass
         return y**2/2.0/self.R + self.r - rx**0.5
 
     def local_n(self, x, y):
@@ -1671,6 +1675,7 @@ class NormalFZP(OE):
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
+        self.use_rays_good_gn = True  # use rays_good_gn instead of rays_good
 
     def __pop_kwargs(self, **kwargs):
         self.f = kwargs.pop('f')
@@ -1701,13 +1706,14 @@ class NormalFZP(OE):
             self.zones, self.rn, bounds_error=False, fill_value=0)
 #        self.drn = self.rn[1:] - self.rn[:-1]
 
-    def rays_good(self, x, y, is2ndXtal=False):
+    def rays_good_gn(self, x, y, z):
         """Returns *state* value as inherited from :class:`OE`. The rays that
-        fall inside the screening zones are additionally considered as lost."""
-        locState = OE.rays_good(self, x, y, is2ndXtal)
+        fall inside the opaque zones are additionally considered as lost."""
+        locState = OE.rays_good(self, x, y)
         r = np.sqrt(x**2 + y**2)
         i = (self.r_to_i(r)).astype(int)
-        good = (i % 2 == int(self.isCentralZoneBlack)) & (r < self.rn[-1])
+        good = ((i % 2 == int(self.isCentralZoneBlack)) & (r < self.rn[-1]) &
+                (locState == 1))
         locState[~good] = self.lostNum
         gz = np.zeros_like(x[good])
 
@@ -1719,6 +1725,8 @@ class NormalFZP(OE):
 
 
 class GeneralFZPin0YZ(OE):
+#class GeneralFZPin0YZ(ToroidMirror):
+#class GeneralFZPin0YZ(EllipticalMirrorParam):
     """Implements a general Fresnel Zone Plate, where the zones are determined
     by two foci and the surface shape of the OE.
 
@@ -1727,15 +1735,21 @@ class GeneralFZPin0YZ(OE):
         Do not forget to specify ``kind='FZP'`` in the material!"""
     def __init__(self, *args, **kwargs):
         """
-        *f1* and *f2*: float
+        *f1* and *f2*: 3- or 4-sequence or str
             The two foci given by 3-sequences representing 3D points in
-            _local_ coordinates or 'inf' for infinite position.
+            _local_ coordinates or 'inf' for infinite position. The 4th member
+            in the sequence can be -1 to give the negative sign to the path if
+            both foci are on the same side of the FZP.
 
         *E*: float
             Energy (eV) for which *f* is calculated.
 
         *N*: int
             The number of zones.
+
+        *grazingAngle*: float
+            The angle of the main optical axis to the surface. Defaults to
+            self.pitch.
 
         *phaseShift*: float
             The zones can be phase shifted, which affects the zone structure
@@ -1748,7 +1762,11 @@ class GeneralFZPin0YZ(OE):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        OE.__init__(self, *args, **kwargs)
+        super(GeneralFZPin0YZ, self).__init__(*args, **kwargs)
+        self.use_rays_good_gn = True  # use rays_good_gn instead of rays_good
+        if self.grazingAngle is None:
+            self.grazingAngle = self.pitch
+        self.reset()
 
     def __pop_kwargs(self, **kwargs):
         self.f1 = kwargs.pop('f1')  # in local coordinates!!!
@@ -1756,55 +1774,72 @@ class GeneralFZPin0YZ(OE):
         self.E = kwargs.pop('E')
         self.N = kwargs.pop('N', 1000)
         self.phaseShift = kwargs.pop('phaseShift', 0)
-        self.reset()
+        self.vorticity = kwargs.pop('vorticity', 0)
+        self.grazingAngle = kwargs.pop('grazingAngle', None)
         return kwargs
 
     def reset(self):
         self.lambdaE = CH / self.E * 1e-7
+        self.minHalfLambda = None
         self.set_phase_shift(self.phaseShift)
 
     def set_phase_shift(self, phaseShift):
         self.phaseShift = phaseShift
         if self.phaseShift:
             self.phaseShift /= np.pi
-        z = self.local_z(0, 0)
-        d1 = 0 if isinstance(self.f1, str) else\
-            raycing.distance_xyz([0, 0, z], self.f1)
-        d2 = 0 if isinstance(self.f2, str) else\
-            raycing.distance_xyz([0, 0, z], self.f2)
-        self.poleHalfLambda = (d1+d2) / (self.lambdaE/2) - self.phaseShift
 
-    def rays_good(self, x, y, is2ndXtal=False):
-        locState = OE.rays_good(self, x, y, is2ndXtal)
-        z = self.local_z(x, y)
-        d1 = y * np.cos(self.pitch) if isinstance(self.f1, str) else\
-            raycing.distance_xyz([x, y, z], self.f1)
-        d2 = y * np.cos(self.pitch) if isinstance(self.f2, str) else\
-            raycing.distance_xyz([x, y, z], self.f2)
-        halfLambda = (d1+d2) / (self.lambdaE/2) - self.poleHalfLambda
+    def rays_good_gn(self, x, y, z):
+        locState = super(GeneralFZPin0YZ, self).rays_good(x, y)
+        good = locState == 1
+        if isinstance(self.f1, str):
+            d1 = y[good] * np.cos(self.grazingAngle)
+        else:
+            d1 = raycing.distance_xyz([x[good], y[good], z[good]], self.f1)
+            if len(self.f1) > 3:
+                d1 *= self.f1[3]
+        if isinstance(self.f2, str):
+            d2 = y[good] * np.cos(self.grazingAngle)
+        else:
+            d2 = raycing.distance_xyz([x[good], y[good], z[good]], self.f2)
+            if len(self.f2) > 3:
+                d2 *= self.f2[3]
+        halfLambda = (d1+d2) / (self.lambdaE/2)
+        phi = np.arctan2(y[good]*np.sin(self.grazingAngle), x[good]) / np.pi
+        if self.minHalfLambda is None:
+            self.minHalfLambda = halfLambda.min()
+        halfLambda -= self.minHalfLambda + self.phaseShift - phi*self.vorticity
+        zone = np.ones_like(x, dtype=np.int) * (self.N+2)
+        zone[good] = np.floor(halfLambda).astype(np.int)
+#        N = 0
+#        while N < self.N:
+#            if (zone == (N+1)).sum() == 0:
+#                print("No rays in zone {0}".format(N+1))
+#                break
+#            N += 1
+        N = self.N
+        goodN = (zone % 2 == 0) & (zone < N) & good
+        badN = ((zone % 2 == 1) | (zone >= N)) & good
+        locState[badN] = self.lostNum
+#        locState[badN] = 2  # out
 
-        zone = np.floor(halfLambda).astype(np.int64)
-        N = 0
-        while N < self.N:
-            if (zone == (N+1)).sum() == 0:
-                break
-            N += 1
-        good = (zone % 2 == 0) & (zone < N)
-        locState[~good] = self.lostNum
-
-        a = np.zeros(N+1)
-        b = np.zeros(N+1)
+        a = np.zeros(N)
+        b = np.zeros(N)
         for i in range(1, N+1, 2):
-            # if (zone == i).sum() == 0: continue
+            if (zone == i).sum() == 0:
+                continue
             a[i] = max(abs(x[zone == i]))
             b[i] = max(abs(y[zone == i]))
+#        print("a", np.diff(a[a > 0]))
 
-        gz = np.zeros_like(x[good])
-        r = np.sqrt(x[good]**2 + y[good]**2)
-        l = (x[good]**2 / (a[zone[good]+1]-a[zone[good]-1]) +
-             y[good]**2 / (b[zone[good]+1]-b[zone[good]-1])) / r**2
-        gx = -x[good] * l / r
-        gy = -y[good] * l / r
+        gz = np.zeros_like(x[goodN])
+        r = np.sqrt(x[goodN]**2 + y[goodN]**2)
+        diva = a[zone[goodN]+1] - a[zone[goodN]-1]
+        diva[diva == 0] = 1e20
+        divb = b[zone[goodN]+1] - b[zone[goodN]-1]
+        divb[divb == 0] = 1e20
+        l = (x[goodN]**2/diva + y[goodN]**2/divb) / r**2
+        gx = -x[goodN] * l / r
+        gy = -y[goodN] * l / r
 
         gn = gx, gy, gz
         return locState, gn

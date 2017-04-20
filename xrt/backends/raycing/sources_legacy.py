@@ -209,7 +209,7 @@ class UndulatorUrgent(object):
             self.ordinalNum = len(bl.sources)
         self.name = name
         self.center = center  # 3D point in global system
-        self.nrays = nrays
+        self.nrays = int(nrays)
 
         self.period = period
         self.K = K if Ky == 0 else Ky

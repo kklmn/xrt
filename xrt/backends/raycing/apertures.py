@@ -205,6 +205,7 @@ class RectangularAperture(object):
         """
         from . import waves as rw
 
+        nrays = int(nrays)
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
         xy = np.random.rand(nrays, 2)
         dX = self.limOptX[1] - self.limOptX[0]
@@ -384,6 +385,7 @@ class RoundAperture(object):
         """
         from . import waves as rw
 
+        nrays = int(nrays)
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
         xy = np.random.rand(nrays, 2)
         r = xy[:, 0]**0.5 * self.r

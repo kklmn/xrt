@@ -47,8 +47,6 @@ class XRT_CL(object):
                     platform = cl.get_platforms()[nPlatform]
                     dev = platform.get_devices()[nDevice]
                     iDevice.extend([dev])
-                    print("OpenCL device {0}: {1}".format(
-                        platform.name, dev.name))
                 else:
                     for target in targetOpenCL:
                         if isinstance(target, (tuple, list)):
@@ -140,10 +138,6 @@ class XRT_CL(object):
                         iDevice = iDeviceAcc
                     else:
                         iDevice = iDeviceCPU
-                if _DEBUG > 10:
-                    for idn, idv in enumerate(iDevice):
-                        print("OpenCL: Autoselected device {0}: {1}".format(
-                            idn, idv.name))
                 if len(iDevice) == 0:
                     targetOpenCL = None
                     self.lastTargetOpenCL = targetOpenCL
@@ -151,6 +145,12 @@ class XRT_CL(object):
                 targetOpenCL = None
                 self.lastTargetOpenCL = targetOpenCL
         if targetOpenCL is not None:
+            if _DEBUG > 10:
+                autoStr = "Autos" if isinstance(targetOpenCL, str) else "S"
+                for idn, idv in enumerate(iDevice):
+                    print("OpenCL for {0}: {1}elected device {2}: {3}".format(
+                        self.cl_filename, autoStr, idn, idv.name))
+
             if self.kernelsource is None:
                 cl_file = os.path.join(os.path.dirname(__file__),
                                        self.cl_filename)

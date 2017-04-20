@@ -209,7 +209,7 @@ class BendingMagnet(object):
         E0fit = 0.5 * (self.E_max+self.E_min)
 
         precalc = True
-        rMax = int(self.nrays)
+        rMax = self.nrays
         if precalc:
             rE = np.random.uniform(self.E_min, self.E_max, rMax)
             rTheta = np.random.uniform(0., self.Theta_max, rMax)

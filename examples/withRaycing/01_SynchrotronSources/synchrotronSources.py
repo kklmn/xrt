@@ -356,7 +356,8 @@ if sourceType == 'u':
         # gIntervals=5,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
         # gp=1e-2,  # Precision of the integration.
-        # targetOpenCL=None,
+#        targetOpenCL=(0, 0),
+#        precisionOpenCL='float32',
         #taper = [0 ,10],
         #eEpsilonX=0.0, eEpsilonZ=0.0)  # Emittance [nmrad]
         eEpsilonX=0.263, eEpsilonZ=0.008)  # Emittance [nmrad]

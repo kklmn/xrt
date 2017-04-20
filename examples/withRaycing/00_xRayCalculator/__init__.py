@@ -62,7 +62,7 @@ See the script
    :height: 300
    :loc: top: -400px; left: 400px;
 
-.. rubric:: Example 2: Crystal reflectivity
+.. rubric:: Example 2a: Crystal reflectivity
 .. code-block:: python
     :emphasize-lines: 6,11
 
@@ -84,6 +84,16 @@ See the script
 .. imagezoomhover:: _images/calc_crystal.png
    :width: 400
    :height: 298
+   :loc: top: -400px; left: 400px;
+
+.. rubric:: Example 2b: Crystal reflectivity: Single and double crystal
+
+See the script
+``\examples\withRaycing\00_xRayCalculator\calc_crystal_rocking_curve.py``.
+
+.. imagezoomhover:: _images/calc_crystal_rocking_curve.png
+   :width: 400
+   :height: 300
    :loc: top: -400px; left: 400px;
 
 .. rubric:: Example 3: Multilayer reflectivity

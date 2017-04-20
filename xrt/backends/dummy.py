@@ -15,6 +15,7 @@ nrays = 25000
 
 
 def run_process(nrays=nrays):
+    nrays = int(nrays)
     x = np.random.normal(size=nrays)
     y = np.random.normal(size=nrays)
     intensity = np.ones_like(x)

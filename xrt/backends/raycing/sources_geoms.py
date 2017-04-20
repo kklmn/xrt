@@ -17,7 +17,7 @@ def make_energy(distE, energies, nrays, filamentBeam=False):
     *energies* either determine the limits or is a sequence of discrete
     energies.
     """
-    locnrays = 1 if filamentBeam else nrays
+    locnrays = 1 if filamentBeam else int(nrays)
     if distE == 'normal':
         try:
             E = np.random.normal(energies[0], energies[1], locnrays)
@@ -99,7 +99,7 @@ def make_polarization(polarization, bo, nrays=raycing.nrays):
         if hasattr(bo, 'Es'):
             bo.Es.fill(Es)
             if isinstance(Ep, str):
-                bo.Ep[:] = np.random.uniform(size=nrays) * 2**(-0.5)
+                bo.Ep[:] = np.random.uniform(size=int(nrays)) * 2**(-0.5)
             else:
                 bo.Ep.fill(Ep)
 
