@@ -303,7 +303,7 @@ def main():
     beamLine = build_beamline()
     plots, plotsFSM2 = define_plots(beamLine)
     xrtr.run_ray_tracing(
-        plots, repeats=400, generator=plot_generator,
+        plots, repeats=16, generator=plot_generator,
         generatorArgs=[plots, plotsFSM2, beamLine],
         updateEvery=1, beamLine=beamLine, processes='half')
 

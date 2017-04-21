@@ -22,7 +22,7 @@ suffix = ''
 R0 = 25000
 xPrimeMax = 0.6
 zPrimeMax = 0.6
-repeats = 1000
+repeats = 100
 #repeats = 1
 
 #sheet, prefix = 'EPU_HP_mode', '1'

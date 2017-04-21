@@ -26,7 +26,7 @@
 			<table type="param">Chantler</table>
 			<efficiency type="param">None</efficiency>
 			<efficiencyFile type="param">None</efficiencyFile>
-			<name type="param"></name>
+			<name type="param">None</name>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.Material</_object>
 	</matRh>
@@ -43,7 +43,10 @@
 			<factDW type="param">1.0</factDW>
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
-			<name type="param"></name>
+			<name type="param">None</name>
+			<nuPoisson type="param">0.0</nuPoisson>
+			<calcBorrmann type="param">None</calcBorrmann>
+			<useTT type="param">False</useTT>
 			<kind type="param">mirror</kind>
 			<efficiency type="param">None</efficiency>
 			<efficiencyFile type="param">None</efficiencyFile>
@@ -76,6 +79,9 @@
 			<factDW type="param">1.0</factDW>
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
+			<nuPoisson type="param">0.0</nuPoisson>
+			<calcBorrmann type="param">None</calcBorrmann>
+			<useTT type="param">False</useTT>
 			<d type="param">0</d>
 			<V type="param">None</V>
 			<elements type="param">Si</elements>
@@ -118,6 +124,7 @@
 			<taper type="param">None</taper>
 			<R0 type="param">None</R0>
 			<targetE type="param">[2840, 1]</targetE>
+			<customField type="param">None</customField>
 			<eMin type="param">2839</eMin>
 			<eMax type="param">2841</eMax>
 			<eN type="param">51</eN>
@@ -130,10 +137,13 @@
 			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
 			<gp type="param">1e-06</gp>
 			<gIntervals type="param">1</gIntervals>
+			<nRK type="param">30</nRK>
 			<uniformRayDensity type="param">False</uniformRayDensity>
 			<filamentBeam type="param">False</filamentBeam>
-			<targetOpenCL type="param">CPU</targetOpenCL>
+			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
@@ -197,7 +207,7 @@
 			<shape type="param">rect</shape>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">CPU</targetOpenCL>
+			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
@@ -240,7 +250,7 @@
 			<shape type="param">rect</shape>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">CPU</targetOpenCL>
+			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
@@ -304,7 +314,7 @@
 			<shape type="param">rect</shape>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">CPU</targetOpenCL>
+			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
@@ -347,7 +357,7 @@
 			<shape type="param">rect</shape>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">CPU</targetOpenCL>
+			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
@@ -897,4 +907,7 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
+<description>
+
+</description>
 </Project>
