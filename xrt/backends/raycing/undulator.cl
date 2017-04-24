@@ -7,6 +7,12 @@
 #endif
 #endif
 
+__constant float QUAR = 0.25;
+__constant float HALF = 0.5;
+__constant float TWO = 2.;
+__constant float SIX = 6.;
+__constant bool isHiPrecision = sizeof(TWO) == 8;
+
 __kernel void undulator(const float alpha,
                         const float Kx,
                         const float Ky,
@@ -35,14 +41,14 @@ __kernel void undulator(const float alpha,
     float2 Ip = zero2;
 //    float wgwu = w[ii] / gamma[ii] / wu[ii];
     float wwu2 = w[ii] / (wu[ii] * wu[ii]);
-    float Kx2 = Kx * Kx;
-    float Ky2 = Ky * Ky;
+//    float Kx2 = Kx * Kx;
+//    float Ky2 = Ky * Ky;
     gamma2 = gamma[ii]*gamma[ii];
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
-    n.z = sqrt(1. - n.x*n.x - n.y*n.y);
-//    n.z = 1 - 0.5*(n.x*n.x + n.y*n.y);
+//    n.z = sqrt(1. - n.x*n.x - n.y*n.y);
+    n.z = 1. - 0.5*(n.x*n.x + n.y*n.y);
 
     for (j=0; j<jend; j++) {
         sintg = sincos(tg[j], &costg);
@@ -51,26 +57,24 @@ __kernel void undulator(const float alpha,
         beta.x = Ky / gamma[ii] * costg;
         beta.y = -Kx / gamma[ii] * costgph;
 //        beta.z = sqrt(1. - 1./gamma2 - beta.x*beta.x - beta.y*beta.y);
-        beta.z = 1 - 0.5*(1./gamma2 + beta.x*beta.x + beta.y*beta.y);
+        beta.z = 1. - 0.5*(1./gamma2 + beta.x*beta.x + beta.y*beta.y);
 
         betaP.x = -Ky * wu[ii] / gamma[ii] * sintg;
         betaP.y = Kx * wu[ii] / gamma[ii] * sintgph;
-//        betaP.z = -(betaP.x*beta.x + betaP.y*beta.y) / beta.z;
         betaP.z = 0;
-//        betaP.z = -(betaP.x*beta.x + betaP.y*beta.y);
 
-        ucos = ww1[ii] * tg[j] + wwu2 * dot((n - 0.25*beta), betaP);
-//        ucos = ww1[ii] * tg[j] + wgwu *
-//           (-Ky * ddphi[ii] * sintg + Kx * ddpsi[ii] * sintgph +
-//            0.25 / gamma[ii] * (Ky2 * sintg*costg + Kx2 * sintgph*costgph));
+        ucos = ww1[ii] * tg[j] + wwu2 * dot((n - QUAR*beta), betaP);
 
         betaP.z = -(betaP.x*beta.x + betaP.y*beta.y) / beta.z;
         sinucos = sincos(ucos, &cosucos);
         eucos.x = cosucos;
         eucos.y = sinucos;
 
-        krel = 1. - dot(n, beta);
-        nnb = cross(n, cross((n - beta), betaP))/(krel*krel);
+        if (isHiPrecision) {
+            krel = 1. - dot(n, beta);
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+        else
+            nnb = (n - beta) * w[ii];
 //        nnb = (n-beta)*dot(n, betaP)/(krel*krel) - betaP/krel;
 
         Is += (ag[j] * nnb.x) * eucos;
@@ -144,9 +148,11 @@ __kernel void undulator_taper(const float alpha,
             (Kx2*sintgph*costgph + Ky2*(1 - alphaS*tg[j])*
              (alphaS * costg * costg + (1 - alphaS*tg[j])*sintg*costg));
 
-        krel = 1. - dot(n, beta);
-        nnb = cross(n, cross((n - beta), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        if (isHiPrecision) {
+            krel = 1. - dot(n, beta);
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+        else
+            nnb = (n - beta) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
@@ -227,9 +233,11 @@ __kernel void undulator_nf(const float R0,
         betaP.z = wu[ii] / gamma2 * (Ky2*sintg*costg + Kx2*sintgph*costgph);
         //betaP.z = wu[ii]/beta.z/gamma2*(Ky2*sintg*costg + Kx2*sintgph*costgph);
 
-        krel = 1. - dot(n, beta);
-        nnb = cross(n, cross((n - beta), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        if (isHiPrecision) {
+            krel = 1. - dot(n, beta);
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+        else
+            nnb = (n - beta) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
@@ -321,9 +329,11 @@ __kernel void undulator_full(const float alpha,
         betaP.z = wu[ii] / gamma2 * (Ky2*sintg*costg + Kx2*sintgph*costgph);
         //betaP.z = wu[ii]/beta.z/gamma2*(Ky2*sintg*costg + Kx2*sintgph*costgph);
 
-        krel = 1. - dot(n, beta);
-        nnb = cross(n, cross((n - beta), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        if (isHiPrecision) {
+            krel = 1. - dot(n, beta);
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+        else
+            nnb = (n - beta) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
@@ -417,9 +427,11 @@ __kernel void undulator_nf_full(const float R0,
         betaP.z = wu[ii] / gamma2 * (Ky2*sintg*costg + Kx2*sintgph*costgph);
         //betaP.z = wu[ii]/beta.z/gamma2*(Ky2*sintg*costg + Kx2*sintgph*costgph);
 
-        krel = 1. - dot(n, beta);
-        nnb = cross(n, cross((n - beta), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        if (isHiPrecision) {
+            krel = 1. - dot(n, beta);
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+        else
+            nnb = (n - beta) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
@@ -556,16 +568,16 @@ float2 next_beta_rk(float2 beta, int iZeroStep, int iHalfStep,
     k2Beta = rkStep * f_beta(Bx[iHalfStep],
                              By[iHalfStep],
                              Bz[iHalfStep],
-                             emcg, beta + 0.5*k1Beta);
+                             emcg, beta + HALF*k1Beta);
     k3Beta = rkStep * f_beta(Bx[iHalfStep],
                              By[iHalfStep],
                              Bz[iHalfStep],
-                             emcg, beta + 0.5*k2Beta);
+                             emcg, beta + HALF*k2Beta);
     k4Beta = rkStep * f_beta(Bx[iFullStep],
                              By[iFullStep],
                              Bz[iFullStep],
                              emcg, beta + k3Beta);
-    return beta + (k1Beta + 2.*k2Beta + 2.*k3Beta + k4Beta) / 6.;
+    return beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta) / SIX;
 }
 
 float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
@@ -587,14 +599,14 @@ float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
     k2Beta = rkStep * f_beta(Bx[iHalfStep],
                              By[iHalfStep],
                              Bz[iHalfStep],
-                             emcg, beta + 0.5*k1Beta);
-    k2Traj = rkStep * f_traj(revgamma, beta + 0.5*k1Beta);
+                             emcg, beta + HALF*k1Beta);
+    k2Traj = rkStep * f_traj(revgamma, beta + HALF*k1Beta);
 
     k3Beta = rkStep * f_beta(Bx[iHalfStep],
                              By[iHalfStep],
                              Bz[iHalfStep],
-                             emcg, beta + 0.5*k2Beta);
-    k3Traj = rkStep * f_traj(revgamma, beta + 0.5*k2Beta);
+                             emcg, beta + HALF*k2Beta);
+    k3Traj = rkStep * f_traj(revgamma, beta + HALF*k2Beta);
 
     k4Beta = rkStep * f_beta(Bx[iFullStep],
                              By[iFullStep],
@@ -602,8 +614,8 @@ float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
                              emcg, beta + k3Beta);
     k4Traj = rkStep * f_traj(revgamma, beta + k3Beta);
 
-    return (float8)(beta + (k1Beta + 2.*k2Beta + 2.*k3Beta + k4Beta)/6.,
-                     traj + (k1Traj + 2.*k2Traj + 2.*k3Traj + k4Traj)/6.,
+    return (float8)(beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta)/SIX,
+                     traj + (k1Traj + TWO*k2Traj + TWO*k3Traj + k4Traj)/SIX,
                      0., 0., 0.);
 }
 
@@ -722,9 +734,11 @@ __kernel void undulator_custom(const int jend,
         betaP.y = wu_int * emcg * (-betaC.x*Bz[jb] + Bx[jb]);
         betaP.z = wu_int * emcg * (betaC.x*By[jb] - betaC.y*Bx[jb]);
 
-        krel = 1. - dot(n, betaC);
-        nnb = cross(n, cross((n - betaC), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        if (isHiPrecision) {
+            krel = 1. - dot(n, betaC);
+            nnb = cross(n, cross((n - betaC), betaP))/(krel*krel); }
+        else
+            nnb = (n - betaC) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
@@ -894,9 +908,11 @@ __kernel void undulator_custom_filament(const int jend,
         betaP.y = wu * emcg * (-betaC.x*Bz[jb] + Bx[jb]);
         betaP.z = wu * emcg * (betaC.x*By[jb] - betaC.y*Bx[jb]);
 
-        krel = 1. - dot(n, betaC);
-        nnb = cross(n, cross((n - betaC), betaP))/krel/krel;
-        //nnb = cross(n, cross(n, beta));
+        if (isHiPrecision) {
+            krel = 1. - dot(n, betaC);
+            nnb = cross(n, cross((n - betaC), betaP))/(krel*krel); }
+        else
+            nnb = (n - betaC) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
