@@ -489,7 +489,7 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
 
 
 def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
-             precisionOpenCL='auto'):
+             precisionOpenCL=raycing.precisionOpenCL):
     r"""
     Calculates the diffracted field – the amplitudes and the local directions –
     contained in the *wave* object. The field on the diffracting surface is
@@ -712,17 +712,17 @@ def _diffraction_integral_CL(oeLocal, n, nl, wave, good):
     if len(n.shape) < 2:
         n = n[:, None] * np.ones(oeLocal.x.shape)
 
-    scalarArgs = [frontRays,
-                  myfloat(CHBAR)]
+    scalarArgs = [frontRays]
 
     slicedROArgs = [myfloat(wave.xDiffr),  # x_mesh
                     myfloat(wave.yDiffr),  # y_mesh
                     myfloat(wave.zDiffr)]  # z_mesh
 
+    k = oeLocal.E[good] / CHBAR * 1e7
     nonSlicedROArgs = [myfloat(nl[good]),  # nl_loc
                        mycomplex(oeLocal.Es[good]),  # Es_loc
                        mycomplex(oeLocal.Ep[good]),  # Ep_loc
-                       myfloat(oeLocal.E[good]),  # E_loc
+                       myfloat(k),
                        np.array(
                            [oeLocal.x[good], oeLocal.y[good],
                             oeLocal.z[good], 0*oeLocal.z[good]],

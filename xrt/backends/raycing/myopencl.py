@@ -21,7 +21,7 @@ _DEBUG = 20
 
 class XRT_CL(object):
     def __init__(self, filename=None, targetOpenCL=raycing.targetOpenCL,
-                 precisionOpenCL='auto', kernelsource=None):
+                 precisionOpenCL=raycing.precisionOpenCL, kernelsource=None):
         self.kernelsource = kernelsource
         self.cl_filename = filename
         self.lastTargetOpenCL = None
@@ -30,7 +30,7 @@ class XRT_CL(object):
         self.cl_is_blocking = True
 
     def set_cl(self, targetOpenCL=raycing.targetOpenCL,
-               precisionOpenCL='auto'):
+               precisionOpenCL=raycing.precisionOpenCL):
         if (targetOpenCL == self.lastTargetOpenCL) and\
                 (precisionOpenCL == self.lastPrecisionOpenCL):
             return
@@ -173,9 +173,11 @@ class XRT_CL(object):
                 self.cl_precisionF = np.float64
                 self.cl_precisionC = np.complex128
                 kernelsource = kernelsource.replace('float', 'double')
-            else:
+            elif precisionOpenCL == 'float32':
                 self.cl_precisionF = np.float32
                 self.cl_precisionC = np.complex64
+            else:
+                raise ValueError("Unknown precision")
             self.cl_queue = []
             self.cl_ctx = []
             self.cl_program = []
@@ -257,14 +259,14 @@ class XRT_CL(object):
                     iSlice = slice(ndstart[ictx]*secondDim,
                                    (ndstart[ictx]+ndsize[ictx])*secondDim)
                     kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
+                        self.cl_ctx[ictx], self.cl_mf.WRITE_ONLY |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
                 global_size.extend([(np.int(ndsize[ictx]),)])
 #                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
             if nonSlicedRWArgs is not None:
                 for iarg, arg in enumerate(nonSlicedRWArgs):
                     kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
+                        self.cl_ctx[ictx], self.cl_mf.WRITE_ONLY |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
                 global_size.extend([np.array([1]).shape])
 

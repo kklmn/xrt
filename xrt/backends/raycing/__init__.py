@@ -160,6 +160,7 @@ hueMin = 0.
 hueMax = 10.
 
 targetOpenCL = 'auto'
+precisionOpenCL = 'auto'
 
 
 def is_sequence(arg):
