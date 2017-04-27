@@ -39,37 +39,54 @@ class XRT_CL(object):
         if not isOpenCL:
             raise EnvironmentError("pyopencl is not available!")
         else:
+            try:
+                cl_platforms = cl.get_platforms()
+            except:
+                targetOpenCL = None
+                raise EnvironmentError("Unknown error. OpenCL disabled")
             if isinstance(targetOpenCL, (tuple, list)):
                 iDevice = []
                 targetOpenCL = list(targetOpenCL)
                 if isinstance(targetOpenCL[0], int):
                     nPlatform, nDevice = targetOpenCL
-                    platform = cl.get_platforms()[nPlatform]
-                    dev = platform.get_devices()[nDevice]
-                    iDevice.extend([dev])
+                    platform = cl_platforms[nPlatform]
+                    try:
+                        dev = platform.get_devices()[nDevice]
+                        iDevice.extend([dev])
+                    except:
+                        pass
                 else:
                     for target in targetOpenCL:
                         if isinstance(target, (tuple, list)):
                             target = list(target)
                             if len(target) > 1:
                                 nPlatform, nDevice = target
-                                platform = cl.get_platforms()[nPlatform]
-                                iDevice.extend(
-                                    [platform.get_devices()[nDevice]])
+                                platform = cl_platforms[nPlatform]
+                                try:
+                                    iDevice.extend(
+                                        [platform.get_devices()[nDevice]])
+                                except:
+                                    pass
                             else:
                                 nPlatform = target[0]
-                                platform = cl.get_platforms()[nPlatform]
-                                iDevice.extend(platform.get_devices())
+                                platform = cl_platforms[nPlatform]
+                                try:
+                                    iDevice.extend(platform.get_devices())
+                                except:
+                                    pass
             elif isinstance(targetOpenCL, int):
                 nPlatform = targetOpenCL
-                platform = cl.get_platforms()[nPlatform]
-                iDevice = platform.get_devices()
+                platform = cl_platforms[nPlatform]
+                try:
+                    iDevice = platform.get_devices()
+                except:
+                    pass
             elif isinstance(targetOpenCL, str):
                 iDeviceCPU = []
                 iDeviceGPU = []
                 iDeviceAcc = []
                 iDevice = []
-                for platform in cl.get_platforms():
+                for platform in cl_platforms:
                     if 'mesa' in platform.vendor.lower():
                         continue  # for new Linuxes Mesa provides OpenCL 1.1
                     CPUdevices = []
@@ -202,7 +219,6 @@ class XRT_CL(object):
         rw_pos = ka_offset + ro_offset + ns_offset
         nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
 
-        nctx = len(self.cl_ctx)
         kernel_bufs = []
         global_size = []
         ev_h2d = []
@@ -213,13 +229,14 @@ class XRT_CL(object):
         ndsize = []
 
         for ictx, ctx in enumerate(self.cl_ctx):
-            # nCUw = 0.25 if self.cl_ctx[ictx].devices[0].type == \
-            #    cl.device_type.CPU else 1.0
-            nCUw = 1.0
-            nCU.extend([self.cl_ctx[ictx].devices[0].max_compute_units*nCUw])
+            nCUw = 1
+            nCU.extend([ctx.devices[0].max_compute_units*nCUw])
 
         totalCUs = sum(nCU)
-        for ictx, ctx in enumerate(self.cl_ctx):
+        work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
+        nctx = len(work_cl_ctx)
+
+        for ictx, ctx in enumerate(work_cl_ctx):
             ev_h2d.extend([[]])
             kernel_bufs.extend([[]])
             if scalarArgs is not None:
@@ -235,7 +252,6 @@ class XRT_CL(object):
                                       ndstart[ictx]+ndsize[ictx])])
             else:
                 ndslice.extend([0])
-
 # In case each photon has an array of input/output data we define a second
 # dimension
             if slicedROArgs is not None and dimension > 1:
@@ -259,20 +275,20 @@ class XRT_CL(object):
                     iSlice = slice(ndstart[ictx]*secondDim,
                                    (ndstart[ictx]+ndsize[ictx])*secondDim)
                     kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.WRITE_ONLY |
+                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
                 global_size.extend([(np.int(ndsize[ictx]),)])
 #                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
             if nonSlicedRWArgs is not None:
                 for iarg, arg in enumerate(nonSlicedRWArgs):
                     kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.WRITE_ONLY |
+                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
                 global_size.extend([np.array([1]).shape])
 
         local_size = None
 
-        for ictx, ctx in enumerate(self.cl_ctx):
+        for ictx, ctx in enumerate(work_cl_ctx):
             kernel = getattr(self.cl_program[ictx], kernelName)
             ev_run.extend([kernel(
                 self.cl_queue[ictx],
@@ -289,7 +305,7 @@ class XRT_CL(object):
         ret = ()
 
         if slicedRWArgs is not None:
-            for ictx, ctx in enumerate(self.cl_ctx):
+            for ictx, ctx in enumerate(work_cl_ctx):
                 for iarg, arg in enumerate(slicedRWArgs):
                     secondDim = np.int(len(arg) / dimension)
                     iSlice = slice(ndstart[ictx]*secondDim,
@@ -301,7 +317,7 @@ class XRT_CL(object):
             ret += tuple(slicedRWArgs)
 
         if nonSlicedRWArgs is not None:
-            for ictx, ctx in enumerate(self.cl_ctx):
+            for ictx, ctx in enumerate(work_cl_ctx):
                 for iarg, arg in enumerate(nonSlicedRWArgs):
                     cl.enqueue_copy(self.cl_queue[ictx],
                                     nonSlicedRWArgs[iarg],
