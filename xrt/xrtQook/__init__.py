@@ -90,8 +90,9 @@ from functools import partial
 
 try:
     import pyopencl as cl
+    cl_platforms = cl.get_platforms()
     isOpenCL = True
-except ImportError:
+except:
     isOpenCL = False
 
 #  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
@@ -663,7 +664,7 @@ class XrtQook(QWidget):
             iDeviceGPU = []
             CPUdevices = []
             GPUdevices = []
-            for platform in cl.get_platforms():
+            for platform in cl_platforms:
                 try:  # at old pyopencl versions:
                     CPUdevices =\
                         platform.get_devices(
@@ -692,7 +693,7 @@ class XrtQook(QWidget):
                                                              "GPU")
             iDeviceCPU.extend(iDeviceGPU)
 
-            for iplatform, platform in enumerate(cl.get_platforms()):
+            for iplatform, platform in enumerate(cl_platforms):
                 for idevice, device in enumerate(platform.get_devices()):
                     if device in iDeviceCPU:
                         oclDev = '({0}, {1})'.format(iplatform, idevice)
@@ -1052,7 +1053,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def showOCLinfo(self):
         argDocStr = u""
-        for iplatform, platform in enumerate(cl.get_platforms()):
+        for iplatform, platform in enumerate(cl_platforms):
             argDocStr += '=' * 25 + '\n'
             argDocStr += 'Platform {0}: {1}\n'.format(iplatform, platform.name)
             argDocStr += '=' * 25 + '\n'
