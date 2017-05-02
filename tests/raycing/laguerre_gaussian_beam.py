@@ -185,7 +185,7 @@ ps[0:10] /= 10.
 #print(ps)
 
 bins, ppb = 256, 1
-wantKirchhoff = False
+wantKirchhoff = True
 
 
 def build_beamline():

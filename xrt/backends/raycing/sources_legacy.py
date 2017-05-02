@@ -11,11 +11,6 @@ import pickle
 import time
 from multiprocessing import Pool, cpu_count
 
-if sys.version_info < (3, 1):
-    from string import maketrans
-else:
-    pass
-#    import string
 import gzip
 from .. import raycing
 from .sources_beams import Beam
@@ -71,12 +66,6 @@ def gzip_output(tmpwd, outName, msg=None):
     os.remove(fname)
 
 
-if sys.version_info < (3, 1):
-    transFortranD = maketrans('dD', 'ee')
-else:
-    transFortranD = ''.maketrans('dD', 'ee')
-
-
 def read_output(tmpwd, outName, skiprows, usecols, comments, useZip, msg=None):
     if _DEBUG:
         if msg is not None:
@@ -90,7 +79,8 @@ def read_output(tmpwd, outName, skiprows, usecols, comments, useZip, msg=None):
         return np.loadtxt(
             os.path.join(tmpwd, outName+('.gz' if useZip else '')),
             skiprows=skiprows, unpack=True, usecols=usecols, comments=comments,
-            converters={2: lambda s: float(s.translate(transFortranD))})
+            converters={2: lambda s: s.replace(b'D', b'e').replace(b'd', b'e')}
+            )
     except:
         pass
 
@@ -468,8 +458,8 @@ class UndulatorUrgent(object):
                         It, l1t, l2t, l3t = res
                     else:
                         pass
-#                        raise ValueError('Error in the calculation at ' +\
-#                          'i={0}, E={1}'.format(iE, E))
+#                        raise ValueError('Error in the calculation at ' +
+#                                         'i={0}, E={1}'.format(iE, E))
                     if res is not None:
                         try:
                             I[iE, :, :] = \
@@ -541,8 +531,12 @@ class UndulatorUrgent(object):
 
     def restore_spline_arrays(
             self, pickleName, findNewImax=True, IminCutOff=1e-50):
+        if sys.version_info < (3, 1):
+            kw = {}
+        else:
+            kw = dict(encoding='latin1')
         with open(pickleName, 'rb') as f:
-            Imax, savedSplines = pickle.load(f)
+            Imax, savedSplines = pickle.load(f, **kw)
         try:
             if findNewImax:
                 ind = [i for i in range(self.Es.shape[0]) if

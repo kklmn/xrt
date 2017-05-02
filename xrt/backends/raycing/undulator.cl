@@ -1,4 +1,4 @@
-﻿//__author__ = "Konstantin Klementiev, Roman Chernikov"
+//__author__ = "Konstantin Klementiev, Roman Chernikov"
 //__date__ = "03 Jul 2016"
 
 #ifdef cl_khr_fp64
@@ -12,6 +12,7 @@ __constant float HALF = 0.5;
 __constant float TWO = 2.;
 __constant float SIX = 6.;
 __constant bool isHiPrecision = sizeof(TWO) == 8;
+//__constant bool isHiPrecision = false;
 __constant float2 zero2 = (float2)(0, 0);
 
 __kernel void undulator(const float alpha,
@@ -203,7 +204,7 @@ __kernel void undulator_nf(const float R0,
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
-    //n.z = sqrt(1. - n.x*n.x - n.y*n.y);
+//    n.z = sqrt(1. - n.x*n.x - n.y*n.y);
     n.z = 1 - 0.5*(n.x*n.x + n.y*n.y);
 
     for (j=0; j<jend; j++) {
@@ -223,7 +224,7 @@ __kernel void undulator_nf(const float R0,
 
         beta.x = Ky / gamma[ii] * costg;
         beta.y = -Kx / gamma[ii] * costgph;
-        //beta.z = sqrt(1. - 1./gamma2 - beta.x*beta.x - beta.y*beta.y);
+//        beta.z = sqrt(1. - 1./gamma2 - beta.x*beta.x - beta.y*beta.y);
         beta.z = 1 - 0.5*(1./gamma2 + beta.x*beta.x + beta.y*beta.y);
 
         betaP.x = -Ky * wu[ii] / gamma[ii] * sintg;

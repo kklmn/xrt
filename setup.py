@@ -145,7 +145,7 @@ The code can run in both Python branches without any modification.
 
 setup(
     name='xrt',
-    version='1.2.1',
+    version='1.2.4',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI tool for creating scripts.',

@@ -4,13 +4,14 @@ wave propagation in x-ray regime. It is primarily meant for modeling
 synchrotron sources, beamlines and beamline elements. Includes a GUI tool for
 creating scripts.
 
-+-------------------+---------------+-----------+
-|      |IpPol|      |   |vcmSi-P|   | |VortexB| |
-+-------------------+---------------+-----------+
++----------------+---------------+-----------+
+|     |Itot|     |   |vcmSi-P|   | |VortexB| |
++----------------+---------------+-----------+
 
-.. |IpPol| animation:: _images/IpPol
-   :alt: &ensp;Intensity of vertically polarized undulator radiation on a
-         transverse flat screen. The long axis is energy.
+.. |Itot| animation:: _images/Itot
+   :alt: &ensp;Intensity of undulator radiation on a transverse flat screen.
+       The long axis is energy. One can observe two harmonics crossing the
+       central line: the former is odd and the latter is even.
 .. |vcmSi-P| animation:: _images/vcmSi-FootprintP
    :alt: &ensp;Absorbed power and power density on a mirror at varying pitch
          angle.
@@ -205,7 +206,7 @@ __author__ = \
 __email__ = "first dot last at gmail dot com"
 __versioninfo__ = (1, 2, 4)
 __version__ = '.'.join(map(str, __versioninfo__))
-__date__ = "10 Apr 2017"
+__date__ = "2 May 2017"
 __license__ = "MIT license"
 
 #__all__ = ['plotter', 'runner', 'multipro']

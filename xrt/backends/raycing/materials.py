@@ -29,6 +29,10 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
    :members: __init__, dl_l, get_a, get_Bragg_offset
 .. autoclass:: CrystalFromCell(Crystal)
    :members: __init__
+.. autoclass:: Powder(CrystalFromCell)
+   :members: __init__
+.. autoclass:: CrystalHarmonics(CrystalFromCell)
+   :members: __init__
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Mar 2017"
@@ -1629,27 +1633,21 @@ class CrystalFromCell(Crystal):
 class Powder(CrystalFromCell):
     r"""
     A derivative class from :class:`CrystalFromCell` with randomly distributed
-    atomic planes orientations similar to the real polycrystalline powders. The
+    atomic plane orientations similar to the real polycrystalline powders. The
     distribution is uniform in the spherical coordinates, so that the angles of
-    longitudinal and transversal deflection (:math:`\theta`, :math:`\chi`) are
-    both functions of uniformly sampled along :math:`[0,1]` variables
-    :math:`\mu` and :math:`\nu`:
+    longitudinal and transverse deflection (θ and χ) are both functions of
+    uniformly sampled over [0, 1) variables μ and ν: θ = arccos(μ), χ = 2πν.
 
-    .. math::
-
-        \theta &= arccos(\mu)\\
-        \chi &= 2\pi\nu
-
-    For this class parameter *hkl* defines the highest reflex,
-    so that reflectivities are calculated for all possible combinations of
-    indexes :math:`[mnp]`, where :math:`0 \leqslant m \leqslant h`,
-    :math:`0 \leqslant n \leqslant k`, :math:`0 \leqslant p \leqslant k`. Only
-    one reflection with the highest amplitude is picked for each incident ray.
+    The class parameter *hkl* defines the highest reflex, so that
+    reflectivities are calculated for all possible combinations of indices
+    [mnp], where 0 ≤ m ≤ h, 0 ≤ n ≤ k, 0 ≤ p ≤ l. Only one reflection with the
+    highest amplitude is picked for each incident ray.
 
     .. warning::
         Heavy computational load. Requires OpenCL.
 
     """
+
     def __init__(self, *args, **kwargs):
         u"""
         *chi*: 2-list of floats [min, max]
@@ -1669,17 +1667,16 @@ class Powder(CrystalFromCell):
 
 
 class CrystalHarmonics(CrystalFromCell):
-    r"""
+    u"""
     A derivative class from :class:`CrystalFromCell`, used to calculate
-    multiple orders of the given reflex in one run: :math:`n*[hkl]`, where
-    :math:`1 \leqslant n \leqslant N_{max}` i.e.
-    :math:`[111], [222], [333]` or :math:`[220], [440], [660]`.
-    Only one harmonic with highest reflectivity is picked for
-    each incident ray. Use this class to estimate the efficiency of higher
-    harmonic rejection schemes.
+    multiple orders of the given reflex in one run: n*[hkl], where 1 ≤ n ≤ Nmax
+    i.e. [111], [222], [333] or [220], [440], [660]. Only one harmonic with
+    highest reflectivity is picked for each incident ray. Use this class to
+    estimate the efficiency of higher harmonic rejection schemes.
 
     .. warning::
         Heavy computational load. Requires OpenCL.
+
     """
 
     def __init__(self, *args, **kwargs):

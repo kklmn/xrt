@@ -393,9 +393,9 @@ def iterate_rk():
             dzgrid.append(dz)
 
         betaZav /= betaZpath
-        print("betaZav", betaZav, ", betam", betam)
+#        print("betaZav", betaZav, ", betam", betam)
         wuAv = 2. * np.pi * SIC * betaZav / Lu / E2W
-        print("wuAv", wuAv, ", wu", wu)
+#        print("wuAv", wuAv, ", wu", wu)
 
         # test of the integration: taking arbitrary direction
         norm_ref = np.array(

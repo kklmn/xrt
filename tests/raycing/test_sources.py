@@ -8,26 +8,52 @@ __date__ = "12 Mar 2014"
 
 #import cmath
 import time
+import copy
 import numpy as np
 #import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 #import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 
+vmin = 2.5e-3
+
+dpi = 82
+xOrigin2d = 84  # all sizes are in pixels
+yOrigin2d = 48
+space2dto1d = 8
+height1d = 100
+xSpaceExtra = 20
+ySpaceExtra = 28
+
 
 def visualize(source, data, title, saveName=None, sign=1):
     def one_fig(what, ts, tChar, otherChar):
-        fig = plt.figure(figsize=(10, 5))
-        rect_2D = [0.1, 0.1, 0.77, 0.6]
-        rect_1DE = [0.1, 0.72, 0.77, 0.2]
-        rect_1Dx = [0.88, 0.1, 0.1, 0.6]
+        sh = what.shape
+        xFigSize = float(xOrigin2d + sh[0] + space2dto1d +
+                         height1d + xSpaceExtra)
+        yFigSize = float(yOrigin2d + sh[1] + space2dto1d +
+                         height1d + ySpaceExtra)
+        fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi)
+        rect_2D = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
+                   (sh[0]-1) / xFigSize, (sh[1]-1) / yFigSize]
+        rect_1DE = copy.deepcopy(rect_2D)
+        rect_1DE[1] = rect_2D[1] + rect_2D[3] + space2dto1d/yFigSize
+        rect_1DE[3] = height1d / yFigSize
+        rect_1Dx = copy.deepcopy(rect_2D)
+        rect_1Dx[0] = rect_2D[0] + rect_2D[2] + space2dto1d/xFigSize
+        rect_1Dx[2] = height1d / xFigSize
+
         extent = [source.eMin, source.eMax, ts[0], ts[-1]]
         ax2D = plt.axes(rect_2D)
+        dataMax = what.max()
         ax2D.imshow(
             what.T, aspect='auto', cmap='hot', extent=extent,
-            interpolation='nearest', origin='lower', figure=fig)
+#            interpolation='nearest', origin='lower', figure=fig,
+            interpolation=None, origin='lower', figure=fig,
+            norm=LogNorm(vmin=dataMax*vmin, vmax=dataMax))
         ax2D.set_xlabel('energy (eV)')
         ax2D.set_ylabel(r"${0}'$ (mrad)".format(tChar))
 
@@ -35,32 +61,36 @@ def visualize(source, data, title, saveName=None, sign=1):
         ax1Dt = plt.axes(rect_1Dx, sharey=ax2D)
         plt.setp(ax1DE.get_xticklabels() + ax1Dt.get_yticklabels(),
                  visible=False)
-        ax1DE.plot(source.energies, np.sum(what, axis=1), 'r')
+        dE = source.energies[1] - source.energies[0]
+        dt = ts[1] - ts[0]
+        ax1DE.plot(
+            source.energies, np.sum(what, axis=1)*dt, 'r')
 #            ax1DE.set_yscale('log')
-        ax1Dt.plot(np.sum(what, axis=0), ts, 'r')
+        ax1Dt.plot(np.sum(what/source.energies[:, None]*dE, axis=0), ts, 'r')
 #            ax1Dt.set_xscale('log')
         ax1DE.set_ylim(bottom=0)
+        ax1DE.set_yticks(np.array([0, 2, 4, 6, 8])*1e16)
 
         ax2D.set_xlim(extent[0], extent[1])
         ax2D.set_ylim(extent[2], extent[3])
 
         ax1DE.text(
-            0.5, 1.0, r"angular flux density {0} at ".format(title) +
+            0.65, 1.0, r"Angular flux density {0} at ".format(title) +
             r"${0}'=0$".format(otherChar) +
             r" (ph/s/mrad$^2$/0.1%bw)", transform=ax1DE.transAxes,
-            size=14, color='r', ha='center', va='bottom')
+            size=12, color='r', ha='center', va='bottom')
         ax1DE.text(
-            0.95, 0.95, r"integrated over " + r"${0}'$".format(tChar),
-            transform=ax1DE.transAxes, size=12, color='k', ha='right',
+            0.7, 0.95, "integrated\nover " + r"$d{0}'$".format(tChar),
+            transform=ax1DE.transAxes, size=12, color='k', ha='center',
             va='top')
         ax1Dt.text(
-            0.05, 0.5, r"integrated over energy", rotation=-90,
-            transform=ax1Dt.transAxes, size=12, color='k', ha='left',
+            0.25, 0.5, "integrated\nover " + r"$d$ln(energy)", rotation=-90,
+            transform=ax1Dt.transAxes, size=12, color='k', ha='center',
             va='center')
         return fig, ax2D, ax1DE, ax1Dt
 
-    xs = source.xs
-    zs = source.zs
+    xs = source.xs * 1e3  # from rad to mrad
+    zs = source.zs * 1e3  # from rad to mrad
     xSlice = 0
     zSlice = 0
     if 'xrt' in source.prefix_save_name() or\
@@ -69,17 +99,20 @@ def visualize(source, data, title, saveName=None, sign=1):
     else:
         data = np.concatenate((data[:, :0:-1, :], data), axis=1)
         data = np.concatenate((data[:, :, :0:-1], sign*data), axis=2)
-        xs = np.concatenate((-source.xs[:0:-1], source.xs), axis=1)
-        zs = np.concatenate((-source.zs[:0:-1], source.zs), axis=1)
+        xs = np.concatenate((-xs[:0:-1], xs), axis=1)
+        zs = np.concatenate((-zs[:0:-1], zs), axis=1)
     xSlice = (data.shape[1]-1) / 2
     zSlice = (data.shape[2]-1) / 2
 
     figX, ax2EX, ax1EX, ax1XX = one_fig(data[:, :, zSlice], xs, 'x', 'z')
     figZ, ax2EZ, ax1EZ, ax1ZZ = one_fig(data[:, xSlice, :], zs, 'z', 'x')
-    integralEvsX = np.sum(data[:, :, zSlice], axis=0)
-    integralEvsZ = np.sum(data[:, xSlice, :], axis=0)
+    dE = source.energies[1] - source.energies[0]
+    integralEvsX = \
+        np.sum(data[:, :, zSlice]/source.energies[:, None], axis=0)*dE
+    integralEvsZ = \
+        np.sum(data[:, xSlice, :]/source.energies[:, None], axis=0)*dE
 
-    maxIntegral = max(np.max(integralEvsX), np.max(integralEvsZ))*1.1
+    maxIntegral = max(np.max(integralEvsX), np.max(integralEvsZ))
     ax1XX.set_xlim(maxIntegral*(sign-1)*0.5, maxIntegral)
     ax1ZZ.set_xlim(maxIntegral*(sign-1)*0.5, maxIntegral)
 
@@ -119,14 +152,14 @@ def visualize3D(source, data, isZplane=True, saveName=None):
 #                lutM.show_scalar_bar = True
 #                lutM.number_of_labels = 9
             lutM.lut.scale = 'log10'
-            lutM.lut.range = [dataMax/100, dataMax]
+            lutM.lut.range = [dataMax*vmin, dataMax]
             lutM.lut_mode = 'hot'
 
         @animate()
         def anim(data, ipwX):
             scene.scene.off_screen_rendering = True
             scene.scene.anti_aliasing_frames = 0
-            for i in range(0, data.shape[0], 50):
+            for i in range(0, data.shape[0], 1):
                 ipwX.ipw.slice_index = i
                 move_view(None, None)
                 if saveName is not None:
@@ -207,7 +240,7 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         labelE.text = set_labelE(0)
 
         view(45, 70, 200)
-        wantToAnimate = False
+        wantToAnimate = True
         if wantToAnimate:
             anim(data, ipwX)
         else:
@@ -230,7 +263,9 @@ def test_synchrotron_source(SourceClass, **kwargs):
 #        with open(pickleName, 'rb') as f:
 #            I0, l1, l2, l3 = pickle.load(f)[0:4]
 
+    print('started')
     I0, l1, l2, l3 = source.intensities_on_mesh()
+    I0 *= 1e-6  # from /sr to /mrad²
     print('finished')
     tstop = time.time()
     print('calculations took {0:.1f} s'.format(tstop - tstart))
@@ -243,7 +278,7 @@ def test_synchrotron_source(SourceClass, **kwargs):
 #            pickle.dump((I0, l1, l2, l3, tstop-tstart), f, protocol=2)
 
 ##visualize in 2D:
-#    visualize(source, I0, r'$I_0$', 'I0')
+    visualize(source, I0, r'$I_0$', 'I0')
 #    visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
 #    visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
 #    visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
@@ -254,7 +289,7 @@ def test_synchrotron_source(SourceClass, **kwargs):
 #    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
 ##select only one visualize3D at a time:
-    visualize3D(source, I0, isZplane=False, saveName='Itot')
+#    visualize3D(source, I0, isZplane=False, saveName='Itot')
 #    visualize3D(source, I0*(1+l1)/2., isZplane=False, saveName='IsPol')
 #    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
 #    visualize3D(source, I0*l2/2., saveName='IspRe')
@@ -275,8 +310,8 @@ if __name__ == '__main__':
 ##*********** Wiggler ***************
 #    kwargs = dict(period=80., K=13., n=12, eE=3., xPrimeMax=2.5,
 #                  zPrimeMax=0.3, eMin=1500, eMax=31500, eN=3000, nx=20, nz=20)
-###by WS:
-##    Source = rs.WigglerWS
+##by WS:
+#    Source = rs.WigglerWS
 ##by xrt:
 #    kwargs['distE'] = 'BW'
 #    Source = rs.Wiggler
@@ -296,10 +331,9 @@ if __name__ == '__main__':
     kwargs = dict(
         period=31.4, K=2.7, n=63, eE=6.08, eI=0.5, xPrimeMax=0.3, zPrimeMax=0.15,
         eSigmaX=134.2, eSigmaZ=6.325, eEpsilonX=1., eEpsilonZ=0.01,
-#        eMin=1500, eMax=31500, eN=3000, nx=40, nz=20)
-        eMin=1500, eMax=4500, eN=300, nx=40*4, nz=20*4)
+        eMin=1500, eMax=5000, eN=350, nx=40*4, nz=20*4)
 ##by Urgent:
-##    kwargs['icalc'] = 3  # 0 emittance
+#    kwargs['icalc'] = 3  # 0 emittance
 #    Source = rs.UndulatorUrgent
 ###by SRW:
 #    import srw.xrtSRW as xrtSRW
@@ -317,15 +351,16 @@ if __name__ == '__main__':
 #    Source = xrtSRW.UndulatorSRW
 #by xrt:
     kwargs['R0'] = 50000
-    kwargs['eSigmaX'] = 0
-    kwargs['eSigmaZ'] = 0
-    kwargs['eEpsilonX'] = 0
-    kwargs['eEpsilonZ'] = 0
-#    kwargs['eEspread'] = 1e-3
+#    kwargs['eSigmaX'] = 0
+#    kwargs['eSigmaZ'] = 0
+#    kwargs['eEpsilonX'] = 0
+#    kwargs['eEpsilonZ'] = 0
+    kwargs['eEspread'] = 1e-3*0
     kwargs['distE'] = 'BW'
     kwargs['xPrimeMaxAutoReduce'] = False
     kwargs['zPrimeMaxAutoReduce'] = False
-#    kwargs['filamentBeam'] = True
+#    kwargs['targetOpenCL'] = "CPU"
+    kwargs['filamentBeam'] = True
     Source = rs.Undulator
 
 ##*** helical undulator **************

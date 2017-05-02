@@ -58,7 +58,8 @@ import numpy as np
 
 import xrt.backends.raycing as raycing
 #raycing.targetOpenCL = (0, 0)
-raycing.targetOpenCL = "GPU"
+#raycing.targetOpenCL = "GPU"
+#raycing.precisionOpenCL = 'float32'
 
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.apertures as ra

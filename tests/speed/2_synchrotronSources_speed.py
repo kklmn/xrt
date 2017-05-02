@@ -83,9 +83,10 @@ import time
 #import matplotlib
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
-raycing.targetOpenCL = "GPU"
+#raycing.targetOpenCL = "CPU"
 #raycing.targetOpenCL = (0, 1)
 #raycing.targetOpenCL = None
+#raycing.precisionOpenCL = 'float32'
 
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
@@ -101,7 +102,6 @@ ppb = 1  # Number of pixels per histogram bin
 
 pprefix = '1_xrt'
 Source = rs.Undulator
-Kmax = 1.92
 kwargs = dict(
     eE=3., eI=0.5,  # Parameters of the synchrotron ring [GeV], [Ampere]
     period=30., n=40,  # Parameters of the undulator, period in [mm]

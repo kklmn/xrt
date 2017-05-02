@@ -577,9 +577,15 @@ class Wiggler(BendingMagnet):
         name = kwargs.pop('name', 'wiggler')
         kwargs['name'] = name
         super(Wiggler, self).__init__(*args, **kwargs)
+        self.reset()
 
     def prefix_save_name(self):
         return '2-Wiggler-xrt'
+
+    def reset(self):
+        self.B = K2B * self.K / self.L0
+        self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
+        self.X0 = 0.5 * self.K * self.L0 / self.gamma / PI
 
     def power_vs_K(self, energy, theta, psi, Ks):
         u"""
@@ -600,11 +606,12 @@ class Wiggler(BendingMagnet):
             if _DEBUG > 10:
                 print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
             self.K = K
+            self.reset()
             I0 = self.intensities_on_mesh(energy, theta, psi)[0]
             if self.distE == 'BW':
                 I0 *= 1e3
             else:  # 'eV'
-                I0 *= energy[:, np.newaxis, np.newaxis, np.newaxis]
+                I0 *= energy[:, np.newaxis, np.newaxis]
             power = I0.sum() * dtheta * dpsi * dE * EV2ERG * 1e-7  # [W]
             powers.append(power)
         self.K = tmpK
@@ -626,7 +633,8 @@ class Undulator(object):
                  xPrimeMaxAutoReduce=True, zPrimeMaxAutoReduce=True,
                  gp=1e-2, gIntervals=1, nRK=30,
                  uniformRayDensity=False, filamentBeam=False,
-                 targetOpenCL=raycing.targetOpenCL, precisionOpenCL='auto',
+                 targetOpenCL=raycing.targetOpenCL,
+                 precisionOpenCL=raycing.precisionOpenCL,
                  pitch=0, yaw=0):
         u"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
@@ -1067,9 +1075,9 @@ class Undulator(object):
             self.quadm = int(1.5**m)
             if self.cl_ctx is not None:
                 #sE = np.linspace(self.E_min, self.E_max, self.eN)
-                sE = self.E_max * np.ones(3)
-                sTheta_max = self.Theta_max * np.ones(3)
-                sPsi_max = self.Psi_max * np.ones(3)
+                sE = self.E_max * np.ones(1)
+                sTheta_max = self.Theta_max * np.ones(1)
+                sPsi_max = self.Psi_max * np.ones(1)
                 In = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
             else:
                 In = self.build_I_map(
@@ -1353,7 +1361,7 @@ class Undulator(object):
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=0):
         useCL = False
         if isinstance(w, np.ndarray):
-            if w.shape[0] > 2:
+            if w.shape[0] > 32:
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic, dg)
@@ -1678,7 +1686,7 @@ class Undulator(object):
 
         Is_local, Ip_local = self.ucl.run_parallel(
             clKernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
-            slicedRWArgs, None, NRAYS)
+            slicedRWArgs, dimension=NRAYS)
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0

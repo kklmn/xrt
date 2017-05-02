@@ -115,20 +115,18 @@ The module :mod:`~tests.raycing.test_sources` has functions for
 visualization of the angular and energy distributions of the implemented
 sources in 2D and 3D. This is especially useful for undulators because they
 have sharp peaks, which requires a proper selection of angular and energy
-meshes (not important in the new versions of xrt (>0.9), where there are no
-angular and energy meshes and the intensity is calculated *for each* ray).
+meshes.
 
-| |I0_x'E|
-| |I0_z'E|
-| |IpPol|
+|I0_x'E|  |I0_z'E|  |IpPol|
 
-.. |I0_x'E| imagezoom:: _images/I0_x'E_mode4-1-und-urgent.png
-.. |I0_z'E| imagezoom:: _images/I0_z'E_mode4-1-und-urgent.png
-.. |IpPol| imagezoom:: _images/IpPol
+.. |I0_x'E| imagezoom:: _images/I0_x'E-1-und-xrt.png
+.. |I0_z'E| imagezoom:: _images/I0_z'E-1-und-xrt.png
+.. |IpPol| imagezoom:: _images/Itot
 
-The ray traced images of an undulator source are feature-rich. The polarization
-is primarily horizontal. The off-plane radiation has non-zero projection to the
-vertical polarization plane.
+The ray traced images of an undulator source (produced by
+``\examples\withRaycing\01_SynchrotronSources\synchrotronSources.py``)
+are feature-rich. The polarization is primarily horizontal. The off-plane
+radiation has non-zero projection to the vertical polarization plane.
 
 +---------+----------------+----------------+----------------+----------------+
 | source  |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
