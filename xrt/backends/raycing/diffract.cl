@@ -1,4 +1,4 @@
-﻿//__author__ = "Konstantin Klementiev, Roman Chernikov"
+//__author__ = "Konstantin Klementiev, Roman Chernikov"
 //__date__ = "10 Apr 2015"
 
 #ifdef cl_khr_fp64

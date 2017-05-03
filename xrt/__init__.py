@@ -206,7 +206,7 @@ __author__ = \
 __email__ = "first dot last at gmail dot com"
 __versioninfo__ = (1, 2, 4)
 __version__ = '.'.join(map(str, __versioninfo__))
-__date__ = "2 May 2017"
+__date__ = "3 May 2017"
 __license__ = "MIT license"
 
 #__all__ = ['plotter', 'runner', 'multipro']

@@ -583,6 +583,7 @@ class Wiggler(BendingMagnet):
         return '2-Wiggler-xrt'
 
     def reset(self):
+        """Needed for changing *K* after instantiation."""
         self.B = K2B * self.K / self.L0
         self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
         self.X0 = 0.5 * self.K * self.L0 / self.gamma / PI
