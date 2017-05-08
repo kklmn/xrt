@@ -1369,6 +1369,8 @@ class OE(object):
                 beamInDotNormal = lb.a[goodN]*oeNormal[0] +\
                     lb.b[goodN]*oeNormal[1] + lb.c[goodN]*oeNormal[2]
                 lb.theta = np.zeros_like(lb.x)
+                beamInDotNormal[beamInDotNormal < -1] = -1
+                beamInDotNormal[beamInDotNormal > 1] = 1
                 lb.theta[goodN] = np.arccos(beamInDotNormal) - np.pi/2
 
                 if material is not None:

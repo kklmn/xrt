@@ -464,12 +464,12 @@ class Material(object):
             n1 = n
             n2 = 1.
         cosAlpha = abs(beamInDotNormal)
-        sinAlpha = np.sqrt(1 - beamInDotNormal**2)
-        if isinstance(sinAlpha, np.ndarray):
-            sinAlpha[np.isnan(sinAlpha)] = 0.
+        sinAlpha2 = 1 - beamInDotNormal**2
+        if isinstance(sinAlpha2, np.ndarray):
+            sinAlpha2[sinAlpha2 < 0] = 0
         n1cosAlpha = n1 * cosAlpha
 #        cosBeta = np.sqrt(1 - (n1.real/n2.real*sinAlpha)**2)
-        cosBeta = np.sqrt(1 - (n1/n2*sinAlpha)**2)
+        cosBeta = np.sqrt(1 - (n1/n2)**2*sinAlpha2)
         n2cosBeta = n2 * cosBeta
         if self.kind in ('mirror', 'thin mirror', 'grating'):  # reflectivity
             rs = (n1cosAlpha - n2cosBeta) / (n1cosAlpha + n2cosBeta)
