@@ -195,12 +195,14 @@ class Element(object):
 #                pickle.load(f)
 #        return res[self.Z]
 
-        pname = os.path.join(dataDir, 'data', table+'.npz')
+        table_fn = table.split()[0]
+        pname = os.path.join(dataDir, 'data', table_fn+'.npz')
+        f2key = '_f2tot' if 'total' in table else '_f2'
         with open(pname, 'rb') as f:
             res = np.load(f)
             ef1f2 = (np.array(res[self.name+'_E']),
                      np.array(res[self.name+'_f1']),
-                     np.array(res[self.name+'_f2']))
+                     np.array(res[self.name+f2key]))
         return ef1f2
 
 #        pname = os.path.join(dataDir, 'data', table+'.Ef')
@@ -267,6 +269,11 @@ class Material(object):
             value and energy. *table* can be 'Henke' (10 eV < *E* < 30 keV)
             [Henke]_, 'Chantler' (11 eV < *E* < 405 keV) [Chantler]_ or 'BrCo'
             (30 eV < *E* < 509 keV) [BrCo]_.
+
+            The tables of f2 factors consider only photoelectric
+            cross-sections. The tabulation by Chantler can optionally have
+            *total* absorption cross-sections. This option is enabled by
+            *table*='Chantler total'.
 
         .. [Henke] http://henke.lbl.gov/optical_constants/asf.html
            B.L. Henke, E.M. Gullikson, and J.C. Davis, *X-ray interactions:
