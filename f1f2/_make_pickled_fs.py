@@ -32,21 +32,26 @@ def read_f1f2_vs_E(elZ, table):
         fname = 'BrCo.dat'
     pname = os.path.join(dataDir, 'raw', fname)
 
+    f2tot = None
     if table == 'Henke':
         E, f1, f2 = np.loadtxt(pname, skiprows=1, unpack=True, dtype=outType)
         f1 -= elZ
     elif table == 'Chantler':
         with open(pname, "r") as f:
             for ili, li in enumerate(f):
+                if "f2(e atom-1)" in li:
+                    signa2tof2 = float(li.split()[-1])
+                    print(pname, signa2tof2)
                 if "Photoelectric" in li:
                     break
-        E, f1, f2 = np.loadtxt(pname, skiprows=ili+2, unpack=True,
-                               usecols=[0, 1, 2], dtype=outType)
+        E, f1, f2, tot = np.loadtxt(pname, skiprows=ili+2, unpack=True,
+                                    usecols=[0, 1, 2, 5], dtype=outType)
         E = E[f1 > -9999]
-        f2 = f2[f1 > -9999]
+        E *= 1000
         f1 = f1[f1 > -9999]
         f1 -= elZ
-        E *= 1000
+        f2 = f2[f1 > -9999]
+        f2tot = tot / signa2tof2 * E
     elif table == 'BrCo':
         with open(pname, "r") as f:
             for li in f:
@@ -69,12 +74,12 @@ def read_f1f2_vs_E(elZ, table):
             f1 = np.array(f1, dtype=outType)
             f2 = np.array(f2, dtype=outType)
 
-    return E, f1, f2
+    return E, f1, f2, f2tot
 
 
 def main():
-    table = 'Henke'
-#    table = 'Chantler'
+#    table = 'Henke'
+    table = 'Chantler'
 #    table = 'BrCo'
 
     fig = plt.figure(figsize=(7, 6))
@@ -93,11 +98,13 @@ def main():
         elZ = elementsList.index(element)
         print(elZ, element)
         maxZ = max(maxZ, elZ)
-        E, f1, f2 = read_f1f2_vs_E(elZ, table)
+        E, f1, f2, f2tot = read_f1f2_vs_E(elZ, table)
         out[elZ] = E, f1, f2
         outnp[element+'_E'] = E
         outnp[element+'_f1'] = f1
         outnp[element+'_f2'] = f2
+        if f2tot is not None:
+            outnp[element+'_f2tot'] = f2tot
         ax.plot(E*1e-3, f1+elZ, '-')
         ax.plot(E*1e-3, f2, '.')
     ax.set_ylim(0, maxZ*1.1)
