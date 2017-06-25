@@ -75,8 +75,8 @@ Using xrtQook for script generation
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "16 Mar 2017"
-__version__ = "1.2"
+__date__ = "25 Jun 2017"
+__version__ = "1.3"
 
 import os
 import sys
@@ -274,6 +274,7 @@ class XrtQook(QWidget):
         super(XrtQook, self).__init__()
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
+        self.prepareViewer = False
         iconsDir = os.path.join(self.xrtQookDir, '_icons')
 
         self.setWindowIcon(QIcon(os.path.join(iconsDir, 'xrQt1.ico')))
@@ -2340,6 +2341,11 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
 
         codeRunProcess = '\ndef run_process({}):\n'.format(BLName)
         codeAlignBL = ""
+        if self.prepareViewer:
+            codeAlignBL += "\n{0}rayPath = []".format(myTab)
+            codeAlignBL += "\n{0}oeDict = OrderedDict()".format(myTab)
+            codeAlignBL += "\n{0}beamDict = dict()\n".format(myTab)
+
         codeMain = "\ndef main():\n"
         codeMain += '{0}{1} = build_beamline()\n'.format(myTab, BLName)
 
@@ -2371,7 +2377,7 @@ if __name__ == '__main__':
                                         paraname, paravalue, myTab)
                 codeDeclarations += '{0} = {1})\n\n'.format(
                     matItem.text(), str.rstrip(ieinit, ","))
-
+        outputBeamMatch = dict()
         for ie in range(self.rootBLItem.rowCount()):
             if self.rootBLItem.child(ie, 0).text() != "properties" and\
                     self.rootBLItem.child(ie, 0).text() != "_object":
@@ -2466,8 +2472,10 @@ if __name__ == '__main__':
                             elif pItem.child(imet, 0).text() == 'output':
                                 mItem = pItem.child(imet, 0)
                                 paraOutput = ""
+                                paraOutBeams = []
                                 for iep in range(mItem.rowCount()):
                                     paravalue = mItem.child(iep, 1).text()
+                                    paraOutBeams.append(str(paravalue))
                                     paraOutput += str(paravalue)+", "
                                     if len(re.findall('sources', elstr)) > 0\
                                             and tmpSourceName == "":
@@ -2484,13 +2492,29 @@ if __name__ == '__main__':
                             paraOutput.rstrip(', '), BLName, tItem.text(),
                             str(pItem.text()).strip('()'),
                             ierun.rstrip(','), myTab)
+                        if self.prepareViewer:
+                            outputBeamMatch[paraOutBeams[0]] = str(tItem.text())
                         if len(re.findall('sources', elstr)) > 0:
-                            codeAlignBL += '{3}{0} = {1}.{2}\n'.format(
-                                tmpSourceName,
-                                rsources.__name__,
-                                'Beam(nrays=2)', myTab)
-                            codeAlignBL += '{1}{0}.a[:] = 0\n{1}{0}.b[:] = 1\n{1}{0}.c[:] = 0\n\
-{1}{0}.x[:] = 0\n{1}{0}.y[:] = 0\n{1}{0}.z[:] = 0\n{1}{0}.state[:] = 1\n{1}{0}.E[:] = energy\n\n'.format(tmpSourceName, myTab) # analysis:ignore
+                            if self.prepareViewer:
+                                codeAlignBL += '{5}{0} = {1}.{2}.{3}({4})\n\n'.format( # analysis:ignore
+                                    paraOutput.rstrip(', '),
+                                    BLName, tItem.text(),
+                                    str(pItem.text()).strip('()'),
+                                    ierun.rstrip(','), myTab)
+                                nullRay = '0'
+                            else:
+                                codeAlignBL += '{3}{0} = {1}.{2}\n'.format(
+                                    tmpSourceName,
+                                    rsources.__name__,
+                                    'Beam(nrays=2)', myTab)
+                                nullRay = ':'
+
+                            codeAlignBL += '{1}{0}.a[{2}] = 0\n{1}{0}.b[{2}] = 1\n{1}{0}.c[{2}] = 0\n\
+{1}{0}.x[{2}] = 0\n{1}{0}.y[{2}] = 0\n{1}{0}.z[{2}] = 0\n{1}{0}.state[:] = 1\n{1}{0}.E[0] = energy\n\n'.format(tmpSourceName, myTab, nullRay) # analysis:ignore
+                            if self.prepareViewer:
+                                codeAlignBL += '{2}oeDict[\'{1}\'] = {0}.{1}\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
+                                codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
+
                         else:
                             codeAlignBL += '{2}tmpy = {0}.{1}.center[1]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
                             if autoX:
@@ -2503,6 +2527,8 @@ if __name__ == '__main__':
                                 codeAlignBL += '{2}newz = {0}.{1}.center[2]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
                             codeAlignBL += '{2}{0}.{1}.center = (newx, tmpy, newz)\n'.format( # analysis:ignore
                                 BLName, tItem.text(), myTab)
+                            if self.prepareViewer:
+                                codeAlignBL += '{2}oeDict[\'{1}\'] = {0}.{1}\n'.format(BLName, tItem.text(), myTab)
                             codeAlignBL += '{2}print(\"{1}.center:\", {0}.{1}.center)\n\n'.format( # analysis:ignore
                                 BLName, tItem.text(), myTab)
                             if autoPitch or autoBragg:
@@ -2546,11 +2572,46 @@ if __name__ == '__main__':
                                         strPitch, addPitch)
                                     codeAlignBL += '{2}print(\"{1}.{3}:\", np.degrees({0}.{1}.{3}), \"degrees\")\n\n'.format( # analysis:ignore
                                         BLName, tItem.text(), myTab, strPitch)
+                            oeFunction = str(pItem.text()).strip('()')
+                            expGlobal = '_global' if len(re.findall(('expose'), oeFunction)) > 0 else ''
                             codeAlignBL += '{5}{0} = {1}.{2}.{3}({4})\n'.format( # analysis:ignore
-                                paraOutput.rstrip(', '),
+                                '{0}{1}'.format(paraOutput.rstrip(', '), expGlobal),
                                 BLName, tItem.text(),
-                                str(pItem.text()).strip('()'),
+                                '{0}{1}'.format(oeFunction, expGlobal),
                                 ierun.rstrip(','), myTab)
+                            if self.prepareViewer:
+                                if len(re.findall(('double'), str(pItem.text()))) + len(re.findall(('multiple'), str(pItem.text()))) > 0:
+                                    codeAlignBL += '{0}{1}toGlobal = rsources.Beam(copyFrom={1})\n'.format(myTab, paraOutBeams[1])
+                                    codeAlignBL += '{0}{1}.{2}.local_to_global({3}toGlobal)\n'.format(
+                                        myTab, BLName, tItem.text(), paraOutBeams[1])
+                                    paraOutBeams[1] += 'toGlobal'
+                                    codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
+                                    codeAlignBL += '{0}rayPath.append(\n{0}{0}[\'{1}\', \'{2}\',\n{0}{0} \'{3}\', \'{4}\'])\n'.format(
+                                        myTab, tItem.text(),
+                                        paraOutBeams[1],
+                                        tItem.text(),
+                                        paraOutBeams[0])
+                                    paraOutBeams[0] = paraOutBeams[1]
+                                if len(re.findall(('propagate'), str(pItem.text()))) > 0:
+                                    codeAlignBL += '{0}{1}toGlobal = rsources.Beam(copyFrom={1})\n'.format(myTab, paraOutBeams[0])
+                                    codeAlignBL += '{0}{1}.{2}.local_to_global({3}toGlobal)\n'.format(
+                                        myTab, BLName, tItem.text(), paraOutBeams[0])
+                                    paraOutBeams[0] += 'toGlobal'
+                                    codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
+                                    codeAlignBL += '{0}rayPath.append(\n{0}{0}[\'{1}\', \'{2}\',\n{0}{0} \'{3}\', \'{4}\'])\n'.format(
+                                        myTab, outputBeamMatch[tmpBeamName],
+                                        tmpBeamName,
+                                        tItem.text(),
+                                        paraOutBeams[0])
+                                else:
+                                    paraOutBeams[0] += expGlobal
+                                    codeAlignBL += '{0}rayPath.append(\n{0}{0}[\'{1}\', \'{2}\',\n{0}{0} \'{3}\', \'{4}\'])\n'.format(
+                                        myTab, outputBeamMatch[tmpBeamName],
+                                        tmpBeamName,
+                                        tItem.text(),
+                                        paraOutBeams[0])
+                                    codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
+
                 codeBuildBeamline += '{3}{0}.{1} = {2})\n\n'.format(
                     BLName, str(tItem.text()), ieinit.rstrip(','), myTab)
         codeBuildBeamline += "{0}return {1}\n\n".format(myTab, BLName)
@@ -2558,7 +2619,14 @@ if __name__ == '__main__':
         codeAlignBL = 'def align_beamline({0}, energy):\n'.format(BLName) +\
             codeAlignBL + "{}\n".format(
                 myTab + "pass" if codeAlignBL == '' else '')
-
+        if self.prepareViewer:
+            codeAlignBL += '{}plot_layout([rayPath, beamDict, oeDict])\n'.format(myTab)
+            codeAlignBL = """def plot_layout(rayPath):\n\
+{0}app = QtGui.QApplication(sys.argv)\n\
+{0}blViewer = xrtglow.xrtGlow(rayPath)\n\
+{0}blViewer.setWindowTitle("xrtGlow")\n\
+{0}blViewer.show()\n\
+{0}app.exec_()\n\n\n""".format(myTab) + codeAlignBL
         for ibm in range(self.beamModel.rowCount()):
             beamName = str(self.beamModel.item(ibm, 0).text())
             if beamName != "None":
@@ -2724,6 +2792,9 @@ if __name__ == '__main__':
             fullModName = (eval(xrtAlias)).__name__
             fullCode = fullCode.replace(fullModName, xrtAlias)
             codeHeader += 'import {0} as {1}\n'.format(fullModName, xrtAlias)
+        if self.prepareViewer:
+            codeHeader += """import xrt.xrtglow as xrtglow\n\
+from collections import OrderedDict\nfrom {} import QtGui\n""".format(QtName)
         fullCode = codeHeader + fullCode
         if isSpyderlib:
             self.codeEdit.set_text(fullCode)

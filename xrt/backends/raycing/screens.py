@@ -84,6 +84,17 @@ class Screen(object):
         zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
         return xglo, yglo, zglo
 
+    def expose_global(self, beam=None):
+        glo = rs.Beam(copyFrom=beam)  # global
+        glo.path = ((self.center[0]-beam.x) * self.y[0] +
+                    (self.center[1]-beam.y) * self.y[1] +
+                    (self.center[2]-beam.z) * self.y[2]) /\
+                   (beam.a*self.y[0] + beam.b*self.y[1] + beam.c*self.y[2])
+        glo.x[:] = beam.x + glo.path*beam.a
+        glo.y[:] = beam.y + glo.path*beam.b
+        glo.z[:] = beam.z + glo.path*beam.c
+        return glo
+
     def expose(self, beam=None):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
