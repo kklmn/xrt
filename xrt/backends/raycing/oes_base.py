@@ -231,6 +231,7 @@ class OE(object):
         self.get_surface_limits()
         self.cl_ctx = None
         self.ucl = None
+        self.footprint = []
         if targetOpenCL is not None:
             if not isOpenCL:
                 print("pyopencl is not available!")
@@ -783,6 +784,7 @@ class OE(object):
 
         .. .. Returned values: beamGlobal, beamLocal
         """
+        self.footprint = []
         self.get_orientation()
         # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
@@ -831,6 +833,7 @@ class OE(object):
 
         .. Returned values: beamGlobal, beamLocal
         """
+        self.footprint = []
         self.get_orientation()
 # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
@@ -1644,7 +1647,11 @@ class OE(object):
         raycing.rotate_beam(vlb, good,
                             rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw)
-
+        self.footprint.extend([np.hstack((np.min(np.vstack((
+            lb.x[good], lb.y[good], lb.z[good])), axis=1),
+            np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])), 
+                        axis=1))).reshape(2,3)])
+#        print len(self.footprint)
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, vlb)
 
@@ -1748,6 +1755,7 @@ class DCM(OE):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
+        self.footprint = []
         self.get_orientation()
         gb = rs.Beam(copyFrom=beam)  # output beam in global coordinates
         if needLocal:

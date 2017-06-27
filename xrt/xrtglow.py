@@ -19,17 +19,22 @@ import matplotlib as mpl
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import inspect
 import backends.raycing as raycing
+import backends.raycing.sources as rsources
+
 
 class xrtGlow(QtGui.QWidget):
     def __init__(self, arrayOfRays):
         super(xrtGlow, self).__init__()
         self.segmentsModel = QtGui.QStandardItemModel()
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
-        self.segmentsModel.setHorizontalHeaderLabels(['Beam start', 'Beam end'])
+        self.segmentsModel.setHorizontalHeaderLabels(['Beam start',
+                                                      'Beam end'])
         self.oesList = arrayOfRays[2]
         for segOE in self.oesList.keys():
             child = QtGui.QStandardItem(str(segOE))
             child.setEditable(False)
+            child.setCheckable(True)
+            child.setCheckState(0)
             self.segmentsModelRoot.appendRow([child])
             for segment in arrayOfRays[0]:
                 if str(segment[0]) == str(segOE):
@@ -37,8 +42,10 @@ class xrtGlow(QtGui.QWidget):
                     child2 = QtGui.QStandardItem(str(segment[3]))
                     child1.setCheckable(True)
                     child1.setCheckState(2)
+                    child1.setEditable(False)
                     child2.setCheckable(True)
                     child2.setCheckState(2)
+                    child2.setEditable(False)
                     child.appendRow([child1, child2])
 
         self.fluxDataModel = QtGui.QStandardItemModel()
@@ -49,8 +56,7 @@ class xrtGlow(QtGui.QWidget):
                 flItem = QtGui.QStandardItem(rfName.replace("get_", ''))
                 self.fluxDataModel.appendRow(flItem)
 
-
-        self.customGlWidget = xrtGlWidget(self,arrayOfRays,
+        self.customGlWidget = xrtGlWidget(self, arrayOfRays,
                                           self.segmentsModelRoot)
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
@@ -260,6 +266,30 @@ class xrtGlow(QtGui.QWidget):
         projectionLayout.addWidget(self.projLinePanel, 1, 0)
         self.projectionPanel.setLayout(projectionLayout)
 
+        self.scenePanel = QtGui.QGroupBox(self)
+        self.scenePanel.setFlat(False)
+#        self.zoomPanel.setTitle("Scale")
+        sceneLayout = QtGui.QGridLayout()
+        sceneValidator = QtGui.QDoubleValidator()
+        sceneValidator.setRange(0, 10, 3)
+        for iaxis, axis in enumerate(['x', 'y', 'z']):
+            axLabel = QtGui.QLabel()
+            axLabel.setText(axis)
+            axLabel.objectName = "sceneLabel_" + axis
+            axEdit = QtGui.QLineEdit("0.9")
+            axEdit.setValidator(scaleValidator)
+            axSlider = Qwt.QwtSlider(
+                self, QtCore.Qt.Horizontal, Qwt.QwtSlider.TopScale)
+            axSlider.setRange(0, 10, 0.01)
+            axSlider.setValue(0.9)
+            axEdit.editingFinished.connect(self.updateSceneFromQLE)
+            axSlider.objectName = "sceneSlider_" + axis
+            axSlider.valueChanged.connect(self.updateScene)
+            sceneLayout.addWidget(axLabel, iaxis*2, 0)
+            sceneLayout.addWidget(axEdit, iaxis*2, 1)
+            sceneLayout.addWidget(axSlider, iaxis*2+1, 0, 1, 2)
+        self.scenePanel.setLayout(sceneLayout)
+
 #  Navigation panel
         self.navigationPanel = QtGui.QGroupBox(self)
         self.navigationPanel.setFlat(False)
@@ -281,6 +311,7 @@ class xrtGlow(QtGui.QWidget):
         tabs.addTab(self.opacityPanel, "Opacity")
         tabs.addTab(self.colorPanel, "Color")
         tabs.addTab(self.projectionPanel, "Projections")
+        tabs.addTab(self.scenePanel, "Scene")
         sideLayout.addWidget(tabs)
         canvasSplitter = QtGui.QSplitter()
         canvasSplitter.setChildrenCollapsible(False)
@@ -296,6 +327,8 @@ class xrtGlow(QtGui.QWidget):
 #        mainLayout.addLayout(sideLayout)
         self.setLayout(mainLayout)
 #        self.changeColorAxis('path')
+
+        self.customGlWidget.oesList = self.oesList
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, 1, 200),
@@ -412,6 +445,20 @@ class xrtGlow(QtGui.QWidget):
             pass
 
         menu.exec_(self.oeTree.viewport().mapToGlobal(position))
+
+    def updateScene(self, position):
+        cPan = self.sender()
+        cIndex = cPan.parent().layout().indexOf(cPan)
+        cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
+        aIndex = int(((cIndex + 1) / 3) - 1)
+        self.customGlWidget.aPos[aIndex] = np.float32(position)
+        self.customGlWidget.glDraw()
+
+    def updateSceneFromQLE(self):
+        cPan = self.sender()
+        cIndex = cPan.parent().layout().indexOf(cPan)
+        value = float(str(cPan.text()))
+        cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
 
     def glMenu(self, position):
         menu = QtGui.QMenu()
@@ -539,6 +586,9 @@ class xrtGlWidget(QGLWidget):
         self.aspect = 1.
         self.cameraAngle = 60
         self.setMouseTracking(True)
+        self.surfCPOrder = 4
+        self.oesToPlot = []
+        self.tiles = [10, 1]
 #        self.eMin = arrayOfRays[2][0].eMin
 #        self.eMax = arrayOfRays[2][0].eMax
         self.arrayOfRays = arrayOfRays
@@ -582,6 +632,8 @@ class xrtGlWidget(QGLWidget):
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
+        self.oesList = None
+
         self.glDraw()
 
     def setPointSize(self, pSize):
@@ -594,6 +646,8 @@ class xrtGlWidget(QGLWidget):
 
     def populateVerticesArray(self, segmentsModelRoot):
         self.verticesArray = None
+        self.oesToPlot = []
+        self.footprints = dict()
         colors = None
         alpha = None
         if self.newColorAxis:
@@ -601,6 +655,9 @@ class xrtGlWidget(QGLWidget):
             self.colorMin = 1e20
         for ioe in range(segmentsModelRoot.rowCount()):
             ioeItem = segmentsModelRoot.child(ioe, 0)
+            if ioeItem.checkState() == 2:
+                self.oesToPlot.append(str(ioeItem.text()))
+                self.footprints[str(ioeItem.text())] = None
             if ioeItem.hasChildren():
                 for isegment in range(ioeItem.rowCount()):
                     segmentItem0 = ioeItem.child(isegment, 0)
@@ -880,6 +937,89 @@ class xrtGlWidget(QGLWidget):
         vertexArray.bind()
         glVertexPointerf(vertexArray)
 
+        if self.oesList is not None:
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            glEnable(GL_DEPTH_TEST)
+            glShadeModel(GL_SMOOTH)
+            glEnable(GL_LIGHTING)
+            glEnable(GL_LIGHT0)
+            glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+            glLightfv(GL_LIGHT0, GL_POSITION, [2, 0, 10, 1])
+            lA = 0.8
+            glLightfv(GL_LIGHT0, GL_AMBIENT, [lA, lA, lA, 1])
+            lD = 1.0
+            glLightfv(GL_LIGHT0, GL_DIFFUSE, [lD, lD, lD, 1])
+            lS = 1.0
+            glLightfv(GL_LIGHT0, GL_SPECULAR, [lS, lS, lS, 1])
+            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.5, 0.5, 0.5, 0.8])
+            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [0.7, 0.7, 0.7, 0.8])
+            glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.8, 0.8, 0.8, 0.8])
+            glMaterialf(GL_FRONT, GL_SHININESS, 80)
+            glEnable(GL_MAP2_VERTEX_3)
+            glEnable(GL_AUTO_NORMAL)
+#            print self.surfCP.shape
+#            print len(self.oesToPlot)
+            for oeString in self.oesToPlot:
+                oeToPlot = self.oesList[oeString]
+                if hasattr(oeToPlot, 'limOptX'):  # OE
+                    xLimits = list(oeToPlot.limOptX) if\
+                        oeToPlot.limOptX is not None else oeToPlot.limPhysX
+                    if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+                        if oeToPlot.footprint is not None:
+                            xLimits = oeToPlot.footprint[0][:, 0]
+                    yLimits = list(oeToPlot.limOptY) if\
+                        oeToPlot.limOptY is not None else oeToPlot.limPhysY
+                    if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+                        if oeToPlot.footprint is not None:
+                            yLimits = oeToPlot.footprint[0][:, 1]
+#                elif hasattr(oeToPlot, 'opening'):  # aperture
+#                    pass
+                
+                    for i in range(self.tiles[0]):
+                        deltaX = (xLimits[1] - xLimits[0]) /\
+                            float(self.tiles[0])
+                        xGridOe = np.linspace(xLimits[0] + i*deltaX,
+                                              xLimits[0] + (i+1)*deltaX,
+                                              self.surfCPOrder)
+                        for k in range(self.tiles[1]):
+                            deltaY = (yLimits[1] - yLimits[0]) /\
+                                float(self.tiles[1])
+                            yGridOe = np.linspace(yLimits[0] + k*deltaY,
+                                                  yLimits[0] + (k+1)*deltaY,
+                                                  self.surfCPOrder)
+                            xv, yv = np.meshgrid(xGridOe, yGridOe)
+                            xv = xv.flatten()
+                            yv = yv.flatten()
+                            
+                            zv = oeToPlot.local_z(xv, yv)
+
+                            gbp = rsources.Beam(nrays=len(xv))
+                            gbp.x = xv
+                            gbp.y = yv
+                            gbp.z = zv
+                            oeToPlot.local_to_global(gbp)
+                            surfCP = np.vstack((gbp.x, gbp.y, gbp.z)).T -\
+                                self.coordOffset
+                            glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                                    self.modelToWorld(surfCP.reshape(
+                                        self.surfCPOrder,
+                                        self.surfCPOrder, 3)))
+                            glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                                        self.surfCPOrder, 0.0, 1.0)
+                            glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
+                                        0, self.surfCPOrder)
+#                except:
+#                    pass
+
+            glDisable(GL_MAP2_VERTEX_3)
+            glDisable(GL_AUTO_NORMAL)
+            glDisable(GL_DEPTH_TEST)
+#            glShadeModel( GL_SMOOTH )
+            glDisable(GL_LIGHTING)
+            glDisable(GL_LIGHT0)
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+
         if self.lineWidth > 0:
             self.allColor[:, 3] = np.float32(self.lineOpacity)
             colorArray = vbo.VBO(self.allColor)
@@ -904,7 +1044,8 @@ class xrtGlWidget(QGLWidget):
 
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_COLOR_ARRAY)
-        glDisable(GL_BLEND)
+#        glDisable(GL_BLEND)
+
         glFlush()
 
     def initializeGL(self):

@@ -95,6 +95,14 @@ try:
 except:
     isOpenCL = False
 
+try:
+    from OpenGL import GL
+    from OpenGL import GLU
+    from OpenGL import GLUT
+    from OpenGL.arrays import vbo
+    isOpenGL = True
+except:
+    isOpenGL = False
 #  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
 #  It's definitely not the optimal solution, but it works.
 try:
@@ -336,6 +344,14 @@ class XrtQook(QWidget):
         runScriptAction.setShortcut('Ctrl+R')
         runScriptAction.triggered.connect(self.execCode)
 
+        glowAction = QAction(
+            QIcon(os.path.join(iconsDir, 'light_bulb.png')),
+            'View beamline in xrtGlow',
+            self)
+        if isOpenGL:
+            glowAction.setShortcut('Alt+W')
+            glowAction.triggered.connect(self.runGlow)
+
         OCLAction = QAction(
             QIcon(os.path.join(iconsDir, 'GPU4.png')),
             'OpenCL Info',
@@ -374,6 +390,8 @@ class XrtQook(QWidget):
         self.toolBar.addAction(saveScriptAsAction)
         self.toolBar.addAction(runScriptAction)
         self.toolBar.addSeparator()
+        if isOpenGL:
+            self.toolBar.addAction(glowAction)
         self.toolBar.addSeparator()
         if isOpenCL:
             self.toolBar.addAction(OCLAction)
@@ -2639,8 +2657,9 @@ if __name__ == '__main__':
 
         codeMain += e0str
         codeMain += '{1}align_beamline({0}, E0)\n'.format(BLName, myTab)
-        codeMain += '{0}{1} = define_plots()\n'.format(
-            myTab, self.rootPlotItem.text())
+        if not self.glowOnly:
+            codeMain += '{0}{1} = define_plots()\n'.format(
+                myTab, self.rootPlotItem.text())
         codePlots = '\ndef define_plots():\n{0}{1} = []\n'.format(
             myTab, self.rootPlotItem.text())
 
@@ -2761,30 +2780,29 @@ if __name__ == '__main__':
                 myTab, tItem.text(), self.rootPlotItem.text())
         codePlots += "{0}return {1}\n\n".format(
             myTab, self.rootPlotItem.text())
-
-        for ie in range(self.rootRunItem.rowCount()):
-            if self.rootRunItem.child(ie, 0).text() == '_object':
-                elstr = str(self.rootRunItem.child(ie, 1).text())
-                codeMain += "{0}{1}(\n".format(myTab, elstr)
-                objrr = eval(elstr)
-                break
-
-        ieinit = ""
-        for iem, argVal in zip(range(self.rootRunItem.rowCount()-1),
-                               inspect.getargspec(objrr)[3]):
-            ie = iem + 1
-            if self.rootRunItem.child(ie, 0).text() != '_object':
-                paraname = self.rootRunItem.child(ie, 0).text()
-                paravalue = self.rootRunItem.child(ie, 1).text()
-                if paraname == "plots":
-                    paravalue = self.rootPlotItem.text()
-                if paraname == "backend":
-                    paravalue = 'r\"{0}\"'.format(paravalue)
-                if str(paravalue) != str(argVal):
-                    ieinit += "{0}{1}={2},\n".format(
-                        myTab*2, paraname, paravalue)
-
-        codeMain += ieinit.rstrip(",\n") + ")\n"
+        if not self.glowOnly:
+            for ie in range(self.rootRunItem.rowCount()):
+                if self.rootRunItem.child(ie, 0).text() == '_object':
+                    elstr = str(self.rootRunItem.child(ie, 1).text())
+                    codeMain += "{0}{1}(\n".format(myTab, elstr)
+                    objrr = eval(elstr)
+                    break
+    
+            ieinit = ""
+            for iem, argVal in zip(range(self.rootRunItem.rowCount()-1),
+                                   inspect.getargspec(objrr)[3]):
+                ie = iem + 1
+                if self.rootRunItem.child(ie, 0).text() != '_object':
+                    paraname = self.rootRunItem.child(ie, 0).text()
+                    paravalue = self.rootRunItem.child(ie, 1).text()
+                    if paraname == "plots":
+                        paravalue = self.rootPlotItem.text()
+                    if paraname == "backend":
+                        paravalue = 'r\"{0}\"'.format(paravalue)
+                    if str(paravalue) != str(argVal):
+                        ieinit += "{0}{1}={2},\n".format(
+                            myTab*2, paraname, paravalue)
+                codeMain += ieinit.rstrip(",\n") + ")\n"
 
         fullCode = codeDeclarations + codeBuildBeamline +\
             codeRunProcess + codeAlignBL + codePlots + codeMain + codeFooter
@@ -2796,12 +2814,16 @@ if __name__ == '__main__':
             codeHeader += """import xrt.xrtglow as xrtglow\n\
 from collections import OrderedDict\nfrom {} import QtGui\n""".format(QtName)
         fullCode = codeHeader + fullCode
-        if isSpyderlib:
-            self.codeEdit.set_text(fullCode)
+        if self.glowOnly:
+            self.glowCode = fullCode
         else:
-            self.codeEdit.setText(fullCode)
-        self.tabs.setCurrentWidget(self.codeEdit)
-        self.statusBar.showMessage('Python code successfully generated', 5000)
+            if isSpyderlib:
+                self.codeEdit.set_text(fullCode)
+            else:
+                self.codeEdit.setText(fullCode)
+                self.tabs.setCurrentWidget(self.codeEdit)
+                self.statusBar.showMessage(
+                    'Python code successfully generated', 5000)
 
     def saveCode(self):
         saveStatus = False
@@ -2843,6 +2865,34 @@ from collections import OrderedDict\nfrom {} import QtGui\n""".format(QtName)
                 'Failed saving code to {}'.format(
                     os.path.basename(str(self.saveFileName))), 5000)
             self.saveFileName = tmpName
+
+    def runGlow(self):
+        tmpV = self.prepareViewer
+        self.glowOnly = True
+        self.prepareViewer = True
+        try:
+            self.generateCode()
+        except:
+            self.glowOnly = False
+        if self.glowOnly:
+            try:
+                fileObject = open('_glowTmpXrt_.py', 'w')
+                fileObject.write(self.glowCode)
+                fileObject.close
+                if isSpyderConsole:
+                    self.codeConsole.fname = '_glowTmpXrt_.py'
+                    self.codeConsole.create_process()
+                else:
+                    self.codeConsole.clear()
+                    self.codeConsole.append('Starting {}\n\n'.format(
+                            os.path.basename(str(self.saveFileName))))
+                    self.codeConsole.append(
+                        'Press Ctrl+X to terminate process\n\n')
+                    self.qprocess.start("python", ['-u', '_glowTmpXrt_.py'])
+            except:
+                pass
+        self.glowOnly = False
+        self.prepareViewer = tmpV
 
     def execCode(self):
         self.saveCode()
