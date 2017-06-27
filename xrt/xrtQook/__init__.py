@@ -2789,7 +2789,7 @@ if __name__ == '__main__':
                     codeMain += "{0}{1}(\n".format(myTab, elstr)
                     objrr = eval(elstr)
                     break
-    
+
             ieinit = ""
             for iem, argVal in zip(range(self.rootRunItem.rowCount()-1),
                                    inspect.getargspec(objrr)[3]):
@@ -2880,14 +2880,17 @@ from collections import OrderedDict\nfrom {} import QtGui\n""".format(QtName)
             try:
                 fileObject = open('_glowTmpXrt_.py', 'w')
                 fileObject.write(self.glowCode)
+                dirName = os.path.dirname(fileObject.name)
                 fileObject.close
                 if isSpyderConsole:
+                    self.codeConsole.wdir = dirName
                     self.codeConsole.fname = '_glowTmpXrt_.py'
                     self.codeConsole.create_process()
                 else:
+                    self.qprocess.setWorkingDirectory(dirName)
                     self.codeConsole.clear()
                     self.codeConsole.append('Starting {}\n\n'.format(
-                            os.path.basename(str(self.saveFileName))))
+                            os.path.basename('_glowTmpXrt_.py')))
                     self.codeConsole.append(
                         'Press Ctrl+X to terminate process\n\n')
                     self.qprocess.start("python", ['-u', '_glowTmpXrt_.py'])
