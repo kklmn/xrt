@@ -820,6 +820,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.cpChLevel = 0
         self.saveFileName = ""
         self.layoutFileName = ""
+        self.glowOnly = False
         self.writeCodeBox("")
         self.setWindowTitle("xrtQook")
         self.isEmpty = True
@@ -2780,6 +2781,7 @@ if __name__ == '__main__':
                 myTab, tItem.text(), self.rootPlotItem.text())
         codePlots += "{0}return {1}\n\n".format(
             myTab, self.rootPlotItem.text())
+
         if not self.glowOnly:
             for ie in range(self.rootRunItem.rowCount()):
                 if self.rootRunItem.child(ie, 0).text() == '_object':
@@ -2802,7 +2804,7 @@ if __name__ == '__main__':
                     if str(paravalue) != str(argVal):
                         ieinit += "{0}{1}={2},\n".format(
                             myTab*2, paraname, paravalue)
-                codeMain += ieinit.rstrip(",\n") + ")\n"
+            codeMain += ieinit.rstrip(",\n") + ")\n"
 
         fullCode = codeDeclarations + codeBuildBeamline +\
             codeRunProcess + codeAlignBL + codePlots + codeMain + codeFooter
