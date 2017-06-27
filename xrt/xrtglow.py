@@ -153,7 +153,7 @@ class xrtGlow(QtGui.QWidget):
         self.colorPanel.setFlat(False)
 #        self.colorPanel.setTitle("Color")
         colorLayout = QtGui.QGridLayout()
-        self.mplFig = mpl.pyplot.figure(figsize=(4, 4))
+        self.mplFig = mpl.figure.Figure(figsize=(4, 4))
         self.mplAx = self.mplFig.add_subplot(111)
 
         self.drawColorMap('energy')
@@ -323,12 +323,15 @@ class xrtGlow(QtGui.QWidget):
         canvasSplitter.addWidget(sideWidget)
 
         sideLayout.addWidget(self.navigationPanel)
-#        mainLayout.addWidget(self.customGlWidget)
-#        mainLayout.addLayout(sideLayout)
         self.setLayout(mainLayout)
-#        self.changeColorAxis('path')
-
+        self.resize(1200, 900)
         self.customGlWidget.oesList = self.oesList
+        fastSave = QtGui.QShortcut(self)
+        fastSave.setKey(QtCore.Qt.Key_F5)
+        fastSave.activated.connect(partial(self.saveScene, '_xrtScnTmp_.npy'))
+        fastLoad = QtGui.QShortcut(self)
+        fastLoad.setKey(QtCore.Qt.Key_F6)
+        fastLoad.activated.connect(partial(self.loadScene, '_xrtScnTmp_.npy'))
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, 1, 200),
@@ -462,27 +465,14 @@ class xrtGlow(QtGui.QWidget):
 
     def glMenu(self, position):
         menu = QtGui.QMenu()
-        mAction = QtGui.QAction(self)
-        mAction.setText('Export to image')
-        mAction.triggered.connect(self.exportToImage)
-        menu.addAction(mAction)
-
-#        pMenu = menu.addMenu(self.tr("Point size"))
-#        for pSize in range(11):
-#            pAction = QtGui.QAction(self)
-#            pAction.setText(str(pSize) if pSize > 0 else 'None')
-#            pAction.triggered.connect(partial(
-#                self.customGlWidget.setPointSize, pSize))
-#            pMenu.addAction(pAction)
-#
-#        lineMenu = menu.addMenu(self.tr("Line width"))
-#        for lineWidth in range(11):
-#            lineAction = QtGui.QAction(self)
-#            lineAction.setText(str(lineWidth) if lineWidth > 0 else 'None')
-#            lineAction.triggered.connect(partial(
-#                self.customGlWidget.setLineWidth, lineWidth))
-#            lineMenu.addAction(lineAction)
-
+        for actText, actFunc in zip(['Export to image', 'Save scene geometry',
+                                     'Load scene geometry'],
+                                    [self.exportToImage, self.saveSceneDialog,
+                                     self.loadSceneDialog]):
+            mAction = QtGui.QAction(self)
+            mAction.setText(actText)
+            mAction.triggered.connect(actFunc)
+            menu.addAction(mAction)
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
     def exportToImage(self):
@@ -497,8 +487,114 @@ class xrtGlow(QtGui.QWidget):
             extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
-            print filename
+#            print filename
             image.save(filename)
+
+    def saveSceneDialog(self):
+        saveDialog = QtGui.QFileDialog()
+        saveDialog.setFileMode(QtGui.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(QtGui.QFileDialog.AcceptSave)
+        saveDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
+        if (saveDialog.exec_()):
+            filename = saveDialog.selectedFiles()[0]
+            extension = 'npy'
+            if not filename.endswith(extension):
+                filename = "{0}.{1}".format(filename, extension)
+            self.saveScene(filename)
+
+    def loadSceneDialog(self):
+        loadDialog = QtGui.QFileDialog()
+        loadDialog.setFileMode(QtGui.QFileDialog.AnyFile)
+        loadDialog.setAcceptMode(QtGui.QFileDialog.AcceptOpen)
+        loadDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
+        if (loadDialog.exec_()):
+            filename = loadDialog.selectedFiles()[0]
+            extension = 'npy'
+            if not filename.endswith(extension):
+                filename = "{0}.{1}".format(filename, extension)
+            self.loadScene(filename)
+
+    def saveScene(self, filename):
+        params = dict()
+        for param in ['aspect', 'cameraAngle', 'projectionsVisibility',
+                      'lineOpacity', 'lineWidth', 'pointOpacity', 'pointSize',
+                      'lineProjectionOpacity', 'lineProjectionWidth',
+                      'pointProjectionOpacity', 'pointProjectionSize',
+                      'coordOffset', 'cutoffI', 'drawGrid', 'aPos', 'scaleVec',
+                      'tVec', 'cameraPos', 'rotVecX', 'rotVecY', 'rotVecZ',
+                      'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
+                      'colorMin', 'colorMax']:
+            params[param] = getattr(self.customGlWidget, param)
+        params['size'] = self.geometry()
+        try:
+            np.save(filename, params)
+        except:
+            print('Error saving file')
+            return
+        print('Saved scene to {}'.format(filename))
+
+    def loadScene(self, filename):
+        try:
+            params = np.load(filename).item()
+        except:
+            print('Error loading file')
+            return
+
+        for param in ['aspect', 'cameraAngle', 'projectionsVisibility',
+                      'lineOpacity', 'lineWidth', 'pointOpacity', 'pointSize',
+                      'lineProjectionOpacity', 'lineProjectionWidth',
+                      'pointProjectionOpacity', 'pointProjectionSize',
+                      'coordOffset', 'cutoffI', 'drawGrid', 'aPos', 'scaleVec',
+                      'tVec', 'cameraPos', 'rotVecX', 'rotVecY', 'rotVecZ',
+                      'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
+                      'colorMin', 'colorMax']:
+            setattr(self.customGlWidget, param, params[param])
+        self.setGeometry(params['size'])
+
+        for axis in range(3):
+            self.zoomPanel.layout().itemAt((axis+1)*3-1).widget().setValue(
+                np.log10(self.customGlWidget.scaleVec[axis]))
+
+        self.rotationPanel.layout().itemAt(2).widget().setValue(
+            self.customGlWidget.rotVecX[0])
+        self.rotationPanel.layout().itemAt(5).widget().setValue(
+            self.customGlWidget.rotVecY[0])
+        self.rotationPanel.layout().itemAt(8).widget().setValue(
+            self.customGlWidget.rotVecZ[0])
+
+        self.opacityPanel.layout().itemAt(2).widget().setValue(
+            self.customGlWidget.lineOpacity)
+        self.opacityPanel.layout().itemAt(5).widget().setValue(
+            self.customGlWidget.lineWidth)
+        self.opacityPanel.layout().itemAt(8).widget().setValue(
+            self.customGlWidget.pointOpacity)
+        self.opacityPanel.layout().itemAt(11).widget().setValue(
+            self.customGlWidget.pointSize)
+
+        for axis in range(3):
+            self.projVisPanel.layout().itemAt(axis*2).widget().setCheckState(
+                int(self.customGlWidget.projectionsVisibility[axis]))
+
+        self.projVisPanel.layout().itemAt(6).widget().setCheckState(
+                        int(self.customGlWidget.drawGrid)*2)
+
+        self.projLinePanel.layout().itemAt(2).widget().setValue(
+            self.customGlWidget.lineProjectionOpacity)
+        self.projLinePanel.layout().itemAt(5).widget().setValue(
+            self.customGlWidget.lineProjectionWidth)
+        self.projLinePanel.layout().itemAt(8).widget().setValue(
+            self.customGlWidget.pointProjectionOpacity)
+        self.projLinePanel.layout().itemAt(11).widget().setValue(
+            self.customGlWidget.pointProjectionSize)
+
+        for axis in range(3):
+            self.scenePanel.layout().itemAt((axis+1)*3-1).widget(
+                ).setValue(self.customGlWidget.aPos[axis])
+
+        self.customGlWidget.newColorAxis = False
+        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.glDraw()
+        print('Loaded scene from {}'.format(filename))
 
     def centerEl(self, oeName):
         self.customGlWidget.coordOffset = list(self.oesList[oeName].center)
@@ -633,7 +729,6 @@ class xrtGlWidget(QGLWidget):
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
         self.oesList = None
-
         self.glDraw()
 
     def setPointSize(self, pSize):
@@ -974,7 +1069,7 @@ class xrtGlWidget(QGLWidget):
                             yLimits = oeToPlot.footprint[0][:, 1]
 #                elif hasattr(oeToPlot, 'opening'):  # aperture
 #                    pass
-                
+
                     for i in range(self.tiles[0]):
                         deltaX = (xLimits[1] - xLimits[0]) /\
                             float(self.tiles[0])
@@ -990,7 +1085,7 @@ class xrtGlWidget(QGLWidget):
                             xv, yv = np.meshgrid(xGridOe, yGridOe)
                             xv = xv.flatten()
                             yv = yv.flatten()
-                            
+
                             zv = oeToPlot.local_z(xv, yv)
 
                             gbp = rsources.Beam(nrays=len(xv))
