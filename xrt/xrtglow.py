@@ -5,14 +5,24 @@ Created on Tue Jun 20 15:07:53 2017
 @author: Roman Chernikov
 """
 
+import sys
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-import PyQt4.Qwt5 as Qwt
-from PyQt4.QtOpenGL import *
+try:
+    from PyQt4 import QtGui
+    from PyQt4 import QtCore
+    import PyQt4.Qwt5 as Qwt
+    from PyQt4.QtOpenGL import *
+except:
+    try:
+        from PyQt5 import QtGui
+        from PyQt5 import QtCore
+        import PyQt5.Qwt5 as Qwt
+        from PyQt5.QtOpenGL import *
+    except:
+        sys.exit()
 import numpy as np
 from functools import partial
 import matplotlib as mpl
@@ -20,6 +30,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import inspect
 import backends.raycing as raycing
 import backends.raycing.sources as rsources
+import re
 
 
 class xrtGlow(QtGui.QWidget):
@@ -86,6 +97,7 @@ class xrtGlow(QtGui.QWidget):
             zoomLayout.addWidget(axLabel, iaxis*2, 0)
             zoomLayout.addWidget(axEdit, iaxis*2, 1)
             zoomLayout.addWidget(axSlider, iaxis*2+1, 0, 1, 2)
+
         self.zoomPanel.setLayout(zoomLayout)
 
 #  Rotation panel
@@ -268,7 +280,7 @@ class xrtGlow(QtGui.QWidget):
 
         self.scenePanel = QtGui.QGroupBox(self)
         self.scenePanel.setFlat(False)
-#        self.zoomPanel.setTitle("Scale")
+        self.scenePanel.setTitle("Scale coordinate grid")
         sceneLayout = QtGui.QGridLayout()
         sceneValidator = QtGui.QDoubleValidator()
         sceneValidator.setRange(0, 10, 3)
@@ -288,6 +300,21 @@ class xrtGlow(QtGui.QWidget):
             sceneLayout.addWidget(axLabel, iaxis*2, 0)
             sceneLayout.addWidget(axEdit, iaxis*2, 1)
             sceneLayout.addWidget(axSlider, iaxis*2+1, 0, 1, 2)
+
+        for (iCB, cbText), cbFunc in zip(enumerate(['Enable antialiasing',
+                                                    'Enable blending']),
+                                         [self.checkAA,
+                                          self.checkBlending]):
+            aaCheckBox = QtGui.QCheckBox()
+            aaCheckBox.objectName = "aaChb" + str(iCB)
+            aaCheckBox.setCheckState(2) if iCB > 0 else\
+                aaCheckBox.setCheckState(0)
+            aaCheckBox.stateChanged.connect(cbFunc)
+            aaLabel = QtGui.QLabel()
+            aaLabel.setText(cbText)
+            sceneLayout.addWidget(aaCheckBox, 6+iCB, 0, 1, 1)
+            sceneLayout.addWidget(aaLabel, 6+iCB, 1, 1, 1)
+
         self.scenePanel.setLayout(sceneLayout)
 
 #  Navigation panel
@@ -355,6 +382,14 @@ class xrtGlow(QtGui.QWidget):
 
     def checkDrawGrid(self, state):
         self.customGlWidget.drawGrid = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkAA(self, state):
+        self.customGlWidget.enableAA = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkBlending(self, state):
+        self.customGlWidget.enableBlending = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
@@ -702,7 +737,8 @@ class xrtGlWidget(QGLWidget):
         self.pointProjectionSize = 1
 
         self.coordOffset = [0., 0., 0.]
-        self.aaEnabled = False
+        self.enableAA = False
+        self.enableBlending = True
         self.cutoffI = 0.01
         self.getColor = raycing.get_energy
 #        self.selColorMax = 1e20
@@ -830,6 +866,7 @@ class xrtGlWidget(QGLWidget):
                               self.scaleVec[dimension]) / self.maxLen)
 
     def paintGL(self):
+
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         gluPerspective(self.cameraAngle, self.aspect, 0.001, 1000)
@@ -840,13 +877,16 @@ class xrtGlWidget(QGLWidget):
                   0.0, 0.0, 1.0)
         glMatrixMode(GL_MODELVIEW)
 
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable(GL_POINT_SMOOTH)
-
-        if self.aaEnabled:
+        if self.enableAA:
             glEnable(GL_LINE_SMOOTH)
             glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+
+        if self.enableBlending:
+            glEnable(GL_MULTISAMPLE)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glEnable(GL_POINT_SMOOTH)
+
         glEnableClientState(GL_VERTEX_ARRAY)
         glEnableClientState(GL_COLOR_ARRAY)
 # Coordinate box
@@ -857,6 +897,11 @@ class xrtGlWidget(QGLWidget):
         glRotatef(*self.rotVecY)
         glRotatef(*self.rotVecZ)
         axPosModifier = np.ones(3)
+
+#        glPushMatrix();
+#        glTranslatef(0.0,-1.2,-6);
+#        glutWireCone(1,2, 16, 16);
+#        glPopMatrix();
 
         for dim in range(3):
             for iAx in range(3):
@@ -993,6 +1038,12 @@ class xrtGlWidget(QGLWidget):
             axGrid = np.vstack((xLines, yLines, zLines))
 
             for tick, tText, pcs in zip(axTicks, gridLabels, precisionLabels):
+#                glPushMatrix()
+#                glTranslatef(*tick)
+#                glScalef(1./2000., 1./2000., 1./2000.)
+#                for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
+#                    glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
+#                glPopMatrix()
                 glRasterPos3f(*tick)
                 for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
                     glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
@@ -1028,10 +1079,6 @@ class xrtGlWidget(QGLWidget):
         glRotatef(*self.rotVecY)
         glRotatef(*self.rotVecZ)
 
-        vertexArray = vbo.VBO(self.modelToWorld(self.verticesArray))
-        vertexArray.bind()
-        glVertexPointerf(vertexArray)
-
         if self.oesList is not None:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glEnable(GL_DEPTH_TEST)
@@ -1040,23 +1087,20 @@ class xrtGlWidget(QGLWidget):
             glEnable(GL_LIGHT0)
             glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
             glLightfv(GL_LIGHT0, GL_POSITION, [2, 0, 10, 1])
-            lA = 0.8
-            glLightfv(GL_LIGHT0, GL_AMBIENT, [lA, lA, lA, 1])
-            lD = 1.0
-            glLightfv(GL_LIGHT0, GL_DIFFUSE, [lD, lD, lD, 1])
-            lS = 1.0
-            glLightfv(GL_LIGHT0, GL_SPECULAR, [lS, lS, lS, 1])
+            glLightfv(GL_LIGHT0, GL_AMBIENT, [0.8, 0.8, 0.8, 1])
+            glLightfv(GL_LIGHT0, GL_DIFFUSE, [1.0, 1.0, 1.0, 1])
+            glLightfv(GL_LIGHT0, GL_SPECULAR, [1.0, 1.0, 1.0, 1])
             glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.5, 0.5, 0.5, 0.8])
             glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [0.7, 0.7, 0.7, 0.8])
             glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.8, 0.8, 0.8, 0.8])
             glMaterialf(GL_FRONT, GL_SHININESS, 80)
             glEnable(GL_MAP2_VERTEX_3)
-            glEnable(GL_AUTO_NORMAL)
-#            print self.surfCP.shape
-#            print len(self.oesToPlot)
+#            glEnable(GL_AUTO_NORMAL)
+
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString]
-                if hasattr(oeToPlot, 'limOptX'):  # OE
+                elType = str(type(oeToPlot))
+                if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
                     xLimits = list(oeToPlot.limOptX) if\
                         oeToPlot.limOptX is not None else oeToPlot.limPhysX
                     if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
@@ -1067,8 +1111,6 @@ class xrtGlWidget(QGLWidget):
                     if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                         if oeToPlot.footprint is not None:
                             yLimits = oeToPlot.footprint[0][:, 1]
-#                elif hasattr(oeToPlot, 'opening'):  # aperture
-#                    pass
 
                     for i in range(self.tiles[0]):
                         deltaX = (xLimits[1] - xLimits[0]) /\
@@ -1103,8 +1145,13 @@ class xrtGlWidget(QGLWidget):
                                         self.surfCPOrder, 0.0, 1.0)
                             glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
                                         0, self.surfCPOrder)
-#                except:
-#                    pass
+
+                elif len(re.findall('raycing.apert', elType)) > 0:  # aperture
+                    continue
+                elif len(re.findall('raycing.screen', elType)) > 0:  # screen
+                    continue
+                else:
+                    continue
 
             glDisable(GL_MAP2_VERTEX_3)
             glDisable(GL_AUTO_NORMAL)
@@ -1114,6 +1161,9 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_LIGHT0)
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        vertexArray = vbo.VBO(self.modelToWorld(self.verticesArray))
+        vertexArray.bind()
+        glVertexPointerf(vertexArray)
 
         if self.lineWidth > 0:
             self.allColor[:, 3] = np.float32(self.lineOpacity)
@@ -1122,7 +1172,6 @@ class xrtGlWidget(QGLWidget):
             glColorPointerf(colorArray)
             glLineWidth(self.lineWidth)
             glDrawArrays(GL_LINES, 0, len(self.verticesArray))
-#            vertexArray.unbind()
             colorArray.unbind()
 
         if self.pointSize > 0:
@@ -1135,19 +1184,114 @@ class xrtGlWidget(QGLWidget):
             colorArray.unbind()
 
         vertexArray.unbind()
-#        print self.verticesArray.shape
-
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_COLOR_ARRAY)
-#        glDisable(GL_BLEND)
-
         glFlush()
+        self.drawAxes()
+
+        if self.enableAA:
+            glDisable(GL_LINE_SMOOTH)
+
+        if self.enableBlending:
+            glDisable(GL_MULTISAMPLE)
+            glDisable(GL_BLEND)
+            glDisable(GL_POINT_SMOOTH)
+
+    def drawAxes(self):
+        arrowSize = 0.05
+        axisLen = 0.1
+
+        def drawCone(z, r, nFacets, color):
+            phi = np.linspace(0, 2*np.pi, nFacets)
+            xp = r * np.cos(phi)
+            yp = r * np.sin(phi)
+            base = np.vstack((xp, yp, np.zeros_like(xp)))
+            coneVertices = np.hstack((np.array([0, 0, z]).reshape(3, 1),
+                                      base)).T
+            gridColor = np.zeros((len(coneVertices), 4))
+            gridColor[:, color] = 1
+            gridColor[:, 3] = 0.75
+            gridArray = vbo.VBO(np.float32(coneVertices))
+            gridArray.bind()
+            glVertexPointerf(gridArray)
+            gridColorArray = vbo.VBO(np.float32(gridColor))
+            gridColorArray.bind()
+            glColorPointerf(gridColorArray)
+            glDrawArrays(GL_TRIANGLE_FAN, 0, len(gridArray))
+            gridArray.unbind()
+            gridColorArray.unbind()
+        pView = glGetIntegerv(GL_VIEWPORT)
+        glViewport(0, 0, int(150*self.aspect), 150)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(60, self.aspect, 0.001, 10)
+
+        gluLookAt(.5, 0.0, 0.0,
+                  0.0, 0.0, 0.0,
+                  0.0, 0.0, 1.0)
+        glMatrixMode(GL_MODELVIEW)
+
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glEnableClientState(GL_COLOR_ARRAY)
+
+        glLoadIdentity()
+        glRotatef(*self.rotVecX)
+        glRotatef(*self.rotVecY)
+        glRotatef(*self.rotVecZ)
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        glPushMatrix()
+        glTranslatef(0, 0, axisLen)
+        drawCone(arrowSize, 0.02, 20, 0)
+        glPopMatrix()
+        glPushMatrix()
+        glTranslatef(0, axisLen, 0)
+        glRotatef(-90, 1.0, 0.0, 0.0)
+        drawCone(arrowSize, 0.02, 20, 1)
+        glPopMatrix()
+        glPushMatrix()
+        glTranslatef(axisLen, 0, 0)
+        glRotatef(90, 0.0, 1.0, 0.0)
+        drawCone(arrowSize, 0.02, 20, 2)
+        glPopMatrix()
+        glDisableClientState(GL_VERTEX_ARRAY)
+        glDisableClientState(GL_COLOR_ARRAY)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        glBegin(GL_LINES)
+        glColor4f(1, 0, 0, 0.75)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 0, axisLen)
+        glColor4f(0, 1, 0, 0.75)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, axisLen, 0)
+        glColor4f(0, 0, 1, 0.75)
+        glVertex3f(0, 0, 0)
+        glVertex3f(axisLen, 0, 0)
+        glEnd()
+
+        glColor4f(1, 0, 0, 1)
+        glRasterPos3f(0, 0, axisLen*1.5)
+        for symbol in "  {}".format('Z'):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(symbol))
+
+        glColor4f(0, 1, 0, 1)
+        glRasterPos3f(0, axisLen*1.5, 0)
+        for symbol in "  {}".format('Y'):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(symbol))
+
+        glColor4f(0, 0, 1, 1)
+        glRasterPos3f(axisLen*1.5, 0, 0)
+        for symbol in "  {}".format('X'):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(symbol))
+        glFlush()
+        glViewport(*pView)
+        glColor4f(1, 1, 1, 1)
 
     def initializeGL(self):
-        glEnable(GL_MULTISAMPLE)
+        glutInit()
+        glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glViewport(0, 0, 900, 900)
-        glutInit()
 
     def resizeGL(self, widthInPixels, heightInPixels):
         glViewport(0, 0, widthInPixels, heightInPixels)

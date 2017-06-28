@@ -901,10 +901,22 @@ class OE(object):
                 lb, rotationSequence='-'+self.extraRotationSequence,
                 pitch=self.extraPitch, roll=self.extraRoll,
                 yaw=self.extraYaw, **kwargs)
+        dx, dy, dz = 0, 0, 0
         if isinstance(self, DCM):
-            pitch = self.pitch + self.bragg
-            roll = self.roll + self.positionRoll + self.cryst1roll
-            yaw = self.yaw
+            is2ndXtal = kwargs.get('is2ndXtal', False)
+            if not is2ndXtal:
+                pitch = self.pitch + self.bragg
+                roll = self.roll + self.positionRoll + self.cryst1roll
+                yaw = self.yaw
+                dx = self.dx
+            else:
+                pitch = -self.pitch - self.bragg + self.cryst2pitch +\
+                    self.cryst2finePitch
+                roll = self.roll + self.cryst2roll - np.pi + self.positionRoll
+                yaw = -self.yaw
+                dx = -self.dx
+                dy = self.cryst2longTransl
+                dz = -self.cryst2perpTransl
         else:
             pitch = self.pitch
             roll = self.roll + self.positionRoll
@@ -925,6 +937,12 @@ class OE(object):
             cosY, sinY = np.cos(roll), np.sin(roll)
             lb.Es[:], lb.Ep[:] = raycing.rotate_y(lb.Es, lb.Ep, cosY, -sinY)
 
+        if dx:
+            lb.x[:] -= dx
+        if dy:
+            lb.y[:] -= dy
+        if dz:
+            lb.z[:] -= dz
         raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, shape='auto', area='auto'):
