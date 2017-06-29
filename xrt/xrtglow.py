@@ -26,11 +26,39 @@ except:
 import numpy as np
 from functools import partial
 import matplotlib as mpl
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigCanvas
 import inspect
 import backends.raycing as raycing
 import backends.raycing.sources as rsources
 import re
+
+
+class myTabWidget(QtGui.QWidget):
+    def __init__(self):
+        super(myTabWidget, self).__init__()
+        layout = QtGui.QVBoxLayout()
+        self.tabBars = [QtGui.QTabBar(), QtGui.QTabBar()]
+        self.tabPanel = QtGui.QStackedWidget()
+        for i in range(2):
+            self.tabBars[i].objectName = 'myTabBar_{}'.format(i)
+            self.tabBars[i].currentChanged.connect(self._showTab)
+        layout.addWidget(self.tabBars[0])
+        layout.addWidget(self.tabBars[1])
+        layout.addWidget(self.tabPanel)
+        self.setLayout(layout)
+        self.tabList = [[], []]
+
+    def addTab(self, widget, name, level):
+        self.tabBars[level].addTab(name)
+        tabIndex = self.tabPanel.addWidget(widget)
+        self.tabList[level].append(tabIndex)
+#        print name, level, tabIndex, self.tabList
+
+    def _showTab(self, position):
+        cTab = self.sender()
+        tabIndex = int(cTab.objectName[-1])
+        if position < len(self.tabList[tabIndex]):
+            self.tabPanel.setCurrentIndex(self.tabList[tabIndex][position])
 
 
 class xrtGlow(QtGui.QWidget):
@@ -169,7 +197,7 @@ class xrtGlow(QtGui.QWidget):
         self.mplAx = self.mplFig.add_subplot(111)
 
         self.drawColorMap('energy')
-        self.paletteWidget = FigureCanvas(self.mplFig)
+        self.paletteWidget = FigCanvas(self.mplFig)
         self.paletteWidget.setSizePolicy(QtGui.QSizePolicy.Expanding,
                                          QtGui.QSizePolicy.Expanding)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
@@ -333,26 +361,28 @@ class xrtGlow(QtGui.QWidget):
         sideLayout = QtGui.QVBoxLayout()
 
         tabs = QtGui.QTabWidget()
+#        tabs = myTabWidget()
         tabs.addTab(self.zoomPanel, "Scaling")
         tabs.addTab(self.rotationPanel, "Rotation")
         tabs.addTab(self.opacityPanel, "Opacity")
         tabs.addTab(self.colorPanel, "Color")
         tabs.addTab(self.projectionPanel, "Projections")
         tabs.addTab(self.scenePanel, "Scene")
-#        sideLayout.addWidget(tabs)
+        tabs.addTab(self.navigationPanel, "Navigation")
+        sideLayout.addWidget(tabs)
         canvasSplitter = QtGui.QSplitter()
         canvasSplitter.setChildrenCollapsible(False)
         canvasSplitter.setOrientation(QtCore.Qt.Horizontal)
         mainLayout.addWidget(canvasSplitter)
-        sideSplitter = QtGui.QSplitter()
-        sideSplitter.setChildrenCollapsible(False)
-        sideSplitter.setOrientation(QtCore.Qt.Vertical)
+#        sideSplitter = QtGui.QSplitter()
+#        sideSplitter.setChildrenCollapsible(False)
+#        sideSplitter.setOrientation(QtCore.Qt.Vertical)
         sideWidget = QtGui.QWidget()
 #        self.setMinimumSize(750, 500)
         sideWidget.setLayout(sideLayout)
-        sideSplitter.addWidget(tabs)
-        sideSplitter.addWidget(self.navigationPanel)
-        sideLayout.addWidget(sideSplitter)
+#        sideSplitter.addWidget(tabs)
+#        sideSplitter.addWidget(self.navigationPanel)
+#        sideLayout.addWidget(sideSplitter)
         canvasSplitter.addWidget(self.customGlWidget)
         canvasSplitter.addWidget(sideWidget)
 
@@ -726,7 +756,7 @@ class xrtGlWidget(QGLWidget):
         self.setMouseTracking(True)
         self.surfCPOrder = 4
         self.oesToPlot = []
-        self.tiles = [10, 1]
+        self.tiles = [5, 5]
 #        self.eMin = arrayOfRays[2][0].eMin
 #        self.eMax = arrayOfRays[2][0].eMax
         self.arrayOfRays = arrayOfRays
@@ -1091,67 +1121,26 @@ class xrtGlWidget(QGLWidget):
             glEnable(GL_DEPTH_TEST)
             glShadeModel(GL_SMOOTH)
             glEnable(GL_LIGHTING)
-            glEnable(GL_LIGHT0)
-            glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-            glLightfv(GL_LIGHT0, GL_POSITION, [2, 0, 10, 1])
-            glLightfv(GL_LIGHT0, GL_AMBIENT, [0.8, 0.8, 0.8, 1])
-            glLightfv(GL_LIGHT0, GL_DIFFUSE, [1.0, 1.0, 1.0, 1])
-            glLightfv(GL_LIGHT0, GL_SPECULAR, [1.0, 1.0, 1.0, 1])
-            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.5, 0.5, 0.5, 0.8])
-            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [0.7, 0.7, 0.7, 0.8])
-            glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.8, 0.8, 0.8, 0.8])
-            glMaterialf(GL_FRONT, GL_SHININESS, 80)
+            self.addLighting(3.)
+
+            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.1, 0.1, 0.1, 1])
+            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [0.3, 0.3, 0.3, 1])
+            glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [1., 0.9, 0.8, 1])
+            glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, [0.1, 0.1, 0.1, 1])
+            glMaterialf(GL_FRONT, GL_SHININESS, 100)
             glEnable(GL_MAP2_VERTEX_3)
+            glEnable(GL_MAP2_NORMAL)
 #            glEnable(GL_AUTO_NORMAL)
 
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString]
                 elType = str(type(oeToPlot))
                 if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
-                    xLimits = list(oeToPlot.limOptX) if\
-                        oeToPlot.limOptX is not None else oeToPlot.limPhysX
-                    if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-                        if oeToPlot.footprint is not None:
-                            xLimits = oeToPlot.footprint[0][:, 0]
-                    yLimits = list(oeToPlot.limOptY) if\
-                        oeToPlot.limOptY is not None else oeToPlot.limPhysY
-                    if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-                        if oeToPlot.footprint is not None:
-                            yLimits = oeToPlot.footprint[0][:, 1]
-
-                    for i in range(self.tiles[0]):
-                        deltaX = (xLimits[1] - xLimits[0]) /\
-                            float(self.tiles[0])
-                        xGridOe = np.linspace(xLimits[0] + i*deltaX,
-                                              xLimits[0] + (i+1)*deltaX,
-                                              self.surfCPOrder)
-                        for k in range(self.tiles[1]):
-                            deltaY = (yLimits[1] - yLimits[0]) /\
-                                float(self.tiles[1])
-                            yGridOe = np.linspace(yLimits[0] + k*deltaY,
-                                                  yLimits[0] + (k+1)*deltaY,
-                                                  self.surfCPOrder)
-                            xv, yv = np.meshgrid(xGridOe, yGridOe)
-                            xv = xv.flatten()
-                            yv = yv.flatten()
-
-                            zv = oeToPlot.local_z(xv, yv)
-
-                            gbp = rsources.Beam(nrays=len(xv))
-                            gbp.x = xv
-                            gbp.y = yv
-                            gbp.z = zv
-                            oeToPlot.local_to_global(gbp)
-                            surfCP = np.vstack((gbp.x, gbp.y, gbp.z)).T -\
-                                self.coordOffset
-                            glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                                    self.modelToWorld(surfCP.reshape(
-                                        self.surfCPOrder,
-                                        self.surfCPOrder, 3)))
-                            glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                                        self.surfCPOrder, 0.0, 1.0)
-                            glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
-                                        0, self.surfCPOrder)
+                    if hasattr(oeToPlot, 'local_z2'):  # DCM
+                        for surf in [1, 2]:
+                            self.plotSurface(oeToPlot, surf)
+                    else:
+                        self.plotSurface(oeToPlot)
 
                 elif len(re.findall('raycing.apert', elType)) > 0:  # aperture
                     continue
@@ -1161,11 +1150,12 @@ class xrtGlWidget(QGLWidget):
                     continue
 
             glDisable(GL_MAP2_VERTEX_3)
-            glDisable(GL_AUTO_NORMAL)
+            glDisable(GL_MAP2_NORMAL)
+#            glDisable(GL_AUTO_NORMAL)
             glDisable(GL_DEPTH_TEST)
 #            glShadeModel( GL_SMOOTH )
             glDisable(GL_LIGHTING)
-            glDisable(GL_LIGHT0)
+#            glDisable(GL_LIGHT0)
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         vertexArray = vbo.VBO(self.modelToWorld(self.verticesArray))
@@ -1203,6 +1193,143 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_MULTISAMPLE)
             glDisable(GL_BLEND)
             glDisable(GL_POINT_SMOOTH)
+
+    def plotSurface(self, oe, nSurf=0):
+        nsIndex = nSurf - 1 if nSurf > 0 else nSurf
+        xLimits = list(oe.limOptX) if\
+            oe.limOptX is not None else oe.limPhysX
+        if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+            if oe.footprint is not None:
+                xLimits = oe.footprint[nsIndex][:, 0]
+        yLimits = list(oe.limOptY) if\
+            oe.limOptY is not None else oe.limPhysY
+        if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+            if oe.footprint is not None:
+                yLimits = oe.footprint[nsIndex][:, 1]
+
+        for i in range(self.tiles[0]):
+            deltaX = (xLimits[1] - xLimits[0]) /\
+                float(self.tiles[0])
+            xGridOe = np.linspace(xLimits[0] + i*deltaX,
+                                  xLimits[0] + (i+1)*deltaX,
+                                  self.surfCPOrder)
+            for k in range(self.tiles[1]):
+                deltaY = (yLimits[1] - yLimits[0]) /\
+                    float(self.tiles[1])
+                yGridOe = np.linspace(yLimits[0] + k*deltaY,
+                                      yLimits[0] + (k+1)*deltaY,
+                                      self.surfCPOrder)
+                xv, yv = np.meshgrid(xGridOe, yGridOe)
+                xv = xv.flatten()
+                yv = yv.flatten()
+
+                local_z = getattr(oe, 'local_z') if nSurf == 0 else\
+                    getattr(oe, 'local_z{}'.format(nSurf))
+                local_n = getattr(oe, 'local_n') if nSurf == 0 else\
+                    getattr(oe, 'local_n{}'.format(nSurf))
+                zv = local_z(xv, yv)
+                nv = local_n(xv, yv)
+
+                gbp = rsources.Beam(nrays=len(xv))
+                gbp.x = xv
+                gbp.y = yv
+                gbp.z = zv
+                gbp.a = nv[0] * np.ones_like(zv)
+                gbp.b = nv[1] * np.ones_like(zv)
+                gbp.c = nv[2] * np.ones_like(zv)
+
+                if nSurf == 2:
+                    oe.local_to_global(gbp, is2ndXtal=True)
+                else:
+                    oe.local_to_global(gbp)
+                surfCP = np.vstack((gbp.x, gbp.y, gbp.z)).T -\
+                    self.coordOffset
+
+                glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                        self.modelToWorld(surfCP.reshape(
+                            self.surfCPOrder,
+                            self.surfCPOrder, 3)))
+
+                surfNorm = np.vstack((gbp.a, gbp.b, gbp.c)).T
+
+                glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
+                        surfNorm.reshape(
+                            self.surfCPOrder,
+                            self.surfCPOrder, 3))
+
+                glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                            self.surfCPOrder, 0.0, 1.0)
+
+                glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
+                            0, self.surfCPOrder)
+
+
+    def addLighting(self, pos):
+        spot = 60
+        exp = 10
+        ambient = [0.2, 0.2, 0.2, 1]
+        diffuse = [0.3, 0.3, 0.3, 1]
+        specular = [1.0, 1.0, 1.0, 1]
+        glEnable(GL_LIGHT0)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        glLightfv(GL_LIGHT0, GL_POSITION, [0, 0, pos, 1])
+        glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, [0, 0, -pos, 1])
+        glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, spot)
+        glLightfv(GL_LIGHT0, GL_SPOT_EXPONENT, exp)
+        glLightfv(GL_LIGHT0, GL_AMBIENT, ambient)
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse)
+        glLightfv(GL_LIGHT0, GL_SPECULAR, specular)
+
+        glEnable(GL_LIGHT1)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        glLightfv(GL_LIGHT1, GL_POSITION, [0, 0, -pos, 1])
+        glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, [0, 0, pos, 1])
+        glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, spot)
+        glLightfv(GL_LIGHT1, GL_SPOT_EXPONENT, exp)
+        glLightfv(GL_LIGHT1, GL_AMBIENT, ambient)
+        glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuse)
+        glLightfv(GL_LIGHT1, GL_SPECULAR, specular)
+
+        glEnable(GL_LIGHT2)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        glLightfv(GL_LIGHT2, GL_POSITION, [0, pos, 0, 1])
+        glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, [0, -pos, 0, 1])
+        glLightfv(GL_LIGHT2, GL_SPOT_CUTOFF, spot)
+        glLightfv(GL_LIGHT2, GL_SPOT_EXPONENT, exp)
+        glLightfv(GL_LIGHT2, GL_AMBIENT, ambient)
+        glLightfv(GL_LIGHT2, GL_DIFFUSE, diffuse)
+        glLightfv(GL_LIGHT2, GL_SPECULAR, specular)
+
+        glEnable(GL_LIGHT3)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        glLightfv(GL_LIGHT3, GL_POSITION, [0, -pos, 0, 1])
+        glLightfv(GL_LIGHT3, GL_SPOT_DIRECTION, [0, pos, 0, 1])
+        glLightfv(GL_LIGHT3, GL_SPOT_CUTOFF, spot)
+        glLightfv(GL_LIGHT3, GL_SPOT_EXPONENT, exp)
+        glLightfv(GL_LIGHT3, GL_AMBIENT, ambient)
+        glLightfv(GL_LIGHT3, GL_DIFFUSE, diffuse)
+        glLightfv(GL_LIGHT3, GL_SPECULAR, specular)
+
+        glEnable(GL_LIGHT4)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        glLightfv(GL_LIGHT4, GL_POSITION, [pos, 0, 0, 1])
+        glLightfv(GL_LIGHT4, GL_SPOT_DIRECTION, [-pos, 0, 0, 1])
+        glLightfv(GL_LIGHT4, GL_SPOT_CUTOFF, spot)
+        glLightfv(GL_LIGHT4, GL_SPOT_EXPONENT, exp)
+        glLightfv(GL_LIGHT4, GL_AMBIENT, ambient)
+        glLightfv(GL_LIGHT4, GL_DIFFUSE, diffuse)
+        glLightfv(GL_LIGHT4, GL_SPECULAR, specular)
+
+        glEnable(GL_LIGHT5)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        glLightfv(GL_LIGHT5, GL_POSITION, [-pos, 0, 0, 1])
+        glLightfv(GL_LIGHT5, GL_SPOT_DIRECTION, [pos, 0, 0, 1])
+        glLightfv(GL_LIGHT5, GL_SPOT_CUTOFF, spot)
+        glLightfv(GL_LIGHT5, GL_SPOT_EXPONENT, exp)
+        glLightfv(GL_LIGHT5, GL_AMBIENT, ambient)
+        glLightfv(GL_LIGHT5, GL_DIFFUSE, diffuse)
+        glLightfv(GL_LIGHT5, GL_SPECULAR, specular)
+
 
     def drawAxes(self):
         arrowSize = 0.05
@@ -1297,7 +1424,7 @@ class xrtGlWidget(QGLWidget):
     def initializeGL(self):
         glutInit()
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glClearColor(0.0, 0.0, 0.0, 1.0)
+        glClearColor(0.0, 0.0, 0.0, 1.)
         glViewport(0, 0, 900, 900)
 
     def resizeGL(self, widthInPixels, heightInPixels):

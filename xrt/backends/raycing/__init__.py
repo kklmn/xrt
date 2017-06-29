@@ -208,7 +208,8 @@ def rotate_z(x, y, cosangle, sinangle):
 
 
 def rotate_beam(beam, indarr=None, rotationSequence='RzRyRx',
-                pitch=0, roll=0, yaw=0, skip_xyz=False, skip_abc=False):
+                pitch=0, roll=0, yaw=0, skip_xyz=False, skip_abc=False,
+                is2ndXtal=False):
     """Rotates the *beam* indexed by *indarr* by the angles *yaw, roll, pitch*
     in the sequence given by *rotationSequence*. A leading '-' symbol of
     *rotationSequence* reverses the sequences.
@@ -318,7 +319,7 @@ def global_to_virgin_local(bl, beam, lo, center=None, part=None):
 
 
 def virgin_local_to_global(bl, vlb, center=None, part=None,
-                           skip_xyz=False, skip_abc=False):
+                           skip_xyz=False, skip_abc=False, is2ndXtal=False):
     """Transforms *vlb* from the virgin (i.e. with pitch, roll and yaw all
     zeros) local to the global system and overwrites the result to *vlb*. If
     *center* is provided, the rotation Rz is about it, otherwise is about the
