@@ -10,6 +10,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
+from collections import OrderedDict
 try:
     from PyQt4 import QtGui
     from PyQt4 import QtCore
@@ -64,31 +65,86 @@ class myTabWidget(QtGui.QWidget):
 class xrtGlow(QtGui.QWidget):
     def __init__(self, arrayOfRays):
         super(xrtGlow, self).__init__()
+
+        self.oesList = OrderedDict()
         self.segmentsModel = QtGui.QStandardItemModel()
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
-        self.segmentsModel.setHorizontalHeaderLabels(['Beam start',
-                                                      'Beam end'])
-        self.oesList = arrayOfRays[2]
-        for segOE in self.oesList.keys():
-            child = QtGui.QStandardItem(str(segOE))
+        self.segmentsModel.setHorizontalHeaderLabels(['Rays',
+                                                      'Footprint',
+                                                      'Surface'])
+        self.beamsToElements = dict()
+        oesList = arrayOfRays[2]
+        for segment in arrayOfRays[0]:
+            if segment[0] == segment[2]:
+                oesList[segment[0]].append(segment[1])
+                oesList[segment[0]].append(segment[3])
+
+        for segOE, oeRecord in oesList.iteritems():
+            if len(oeRecord) > 2:  # DCM
+                elNames = [segOE+'_Entrance', segOE+'_Exit']
+            else:
+                elNames = [segOE]
+
+            for elName in elNames:
+                self.oesList[elName] = [oeRecord[0]]  # pointer to object
+                if len(oeRecord) < 3 or elName.endswith('_Entrance'):
+                    center = list(oeRecord[0].center)
+                    is2ndXtal = False
+                else:
+                    center = [arrayOfRays[1][oeRecord[3]].x[0],
+                              arrayOfRays[1][oeRecord[3]].y[0],
+                              arrayOfRays[1][oeRecord[3]].z[0]]
+                    is2ndXtal = True
+
+                for segment in arrayOfRays[0]:
+                    ind = oeRecord[1]*2
+                    if str(segment[ind]) == str(segOE):
+                        if len(oeRecord) < 3 or\
+                            (elName.endswith('Entrance') and
+                                str(segment[3]) == str(oeRecord[2])) or\
+                            (elName.endswith('Exit') and
+                                str(segment[3]) == str(oeRecord[3])):
+                            if len(self.oesList[elName]) < 2:
+                                self.oesList[elName].append(
+                                    str(segment[ind+1]))
+                                self.beamsToElements[segment[ind+1]] =\
+                                    elName
+                self.oesList[elName].append(center)
+                self.oesList[elName].append(is2ndXtal)
+
+        headerRow = []
+        for i in range(3):
+            child = QtGui.QStandardItem("")
             child.setEditable(False)
             child.setCheckable(True)
             child.setCheckState(0)
-            self.segmentsModelRoot.appendRow([child])
+            headerRow.append(child)
+        self.segmentsModelRoot.appendRow(headerRow)
+
+        for element, elRecord in self.oesList.iteritems():
+            child0 = QtGui.QStandardItem(str(element))
+            child0.setEditable(False)
+            child0.setCheckable(False)
+            child1 = QtGui.QStandardItem("")
+            child1.setEditable(False)
+            child1.setCheckable(True)
+            child1.setCheckState(2)
+            child2 = QtGui.QStandardItem("")
+            child2.setEditable(False)
+            child2.setCheckable(True)
+            child2.setCheckState(0)
+            self.segmentsModelRoot.appendRow([child0, child1, child2])
             for segment in arrayOfRays[0]:
-                if str(segment[0]) == str(segOE):
-                    child1 = QtGui.QStandardItem(str(segment[1]))
-                    child2 = QtGui.QStandardItem(str(segment[3]))
-                    child1.setCheckable(True)
-                    child1.setCheckState(2)
-                    child1.setEditable(False)
-                    child2.setCheckable(True)
-                    child2.setCheckState(2)
-                    child2.setEditable(False)
-                    child.appendRow([child1, child2])
+                if str(segment[1]) == str(elRecord[1]):
+                    child3 = QtGui.QStandardItem(
+                        "to {}".format(self.beamsToElements[segment[3]]))
+                    child3.setCheckable(True)
+                    child3.setCheckState(2)
+                    child3.setEditable(False)
+                    child0.appendRow([child3, None, None])
 
         self.fluxDataModel = QtGui.QStandardItemModel()
-#        self.fluxDataModel.appendRow(QtGui.QStandardItem("auto"))
+
         for rfName, rfObj in inspect.getmembers(raycing):
             if rfName.startswith('get_') and\
                     rfName != "get_output":
@@ -96,7 +152,9 @@ class xrtGlow(QtGui.QWidget):
                 self.fluxDataModel.appendRow(flItem)
 
         self.customGlWidget = xrtGlWidget(self, arrayOfRays,
-                                          self.segmentsModelRoot)
+                                          self.segmentsModelRoot,
+                                          self.oesList,
+                                          self.beamsToElements)
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -330,9 +388,13 @@ class xrtGlow(QtGui.QWidget):
             sceneLayout.addWidget(axSlider, iaxis*2+1, 0, 1, 2)
 
         for (iCB, cbText), cbFunc in zip(enumerate(['Enable antialiasing',
-                                                    'Enable blending']),
+                                                    'Enable blending',
+                                                    'Depth test for Lines',
+                                                    'Depth test for Points']),
                                          [self.checkAA,
-                                          self.checkBlending]):
+                                          self.checkBlending,
+                                          self.checkLineDepthTest,
+                                          self.checkPointDepthTest]):
             aaCheckBox = QtGui.QCheckBox()
             aaCheckBox.objectName = "aaChb" + str(iCB)
             aaCheckBox.setCheckState(2) if iCB > 0 else\
@@ -427,6 +489,14 @@ class xrtGlow(QtGui.QWidget):
 
     def checkBlending(self, state):
         self.customGlWidget.enableBlending = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkLineDepthTest(self, state):
+        self.customGlWidget.linesDepthTest = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkPointDepthTest(self, state):
+        self.customGlWidget.pointsDepthTest = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
@@ -669,7 +739,7 @@ class xrtGlow(QtGui.QWidget):
         print('Loaded scene from {}'.format(filename))
 
     def centerEl(self, oeName):
-        self.customGlWidget.coordOffset = list(self.oesList[oeName].center)
+        self.customGlWidget.coordOffset = list(self.oesList[oeName][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
@@ -748,7 +818,7 @@ class xrtGlWidget(QGLWidget):
     rotationUpdated = QtCore.pyqtSignal(np.float32, np.float32)
     scaleUpdated = QtCore.pyqtSignal(np.ndarray)
 
-    def __init__(self, parent, arrayOfRays, modelRoot):
+    def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els):
         QGLWidget.__init__(self, parent)
         self.setMinimumSize(500, 500)
         self.aspect = 1.
@@ -761,12 +831,16 @@ class xrtGlWidget(QGLWidget):
 #        self.eMax = arrayOfRays[2][0].eMax
         self.arrayOfRays = arrayOfRays
         self.beamsDict = arrayOfRays[1]
+        self.oesList = oesList
+        self.beamsToElements = b2els
 
         self.projectionsVisibility = [0, 0, 0]
         self.lineOpacity = 0.1
         self.lineWidth = 1
         self.pointOpacity = 0.1
         self.pointSize = 1
+        self.linesDepthTest = True
+        self.pointsDepthTest = False
 
         self.lineProjectionOpacity = 0.1
         self.lineProjectionWidth = 1
@@ -801,7 +875,6 @@ class xrtGlWidget(QGLWidget):
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
-        self.oesList = None
         self.glDraw()
 
     def setPointSize(self, pSize):
@@ -814,56 +887,61 @@ class xrtGlWidget(QGLWidget):
 
     def populateVerticesArray(self, segmentsModelRoot):
         self.verticesArray = None
+        self.footprintsArray = None
         self.oesToPlot = []
         self.footprints = dict()
-        colors = None
-        alpha = None
+        colorsRays = None
+        alphaRays = None
+        colorsDots = None
+        alphaDots = None
         if self.newColorAxis:
             self.colorMax = -1e20
             self.colorMin = 1e20
-        for ioe in range(segmentsModelRoot.rowCount()):
-            ioeItem = segmentsModelRoot.child(ioe, 0)
-            if ioeItem.checkState() == 2:
+        for ioe in range(segmentsModelRoot.rowCount() - 1):
+            ioeItem = segmentsModelRoot.child(ioe + 1, 0)
+            if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
                 self.oesToPlot.append(str(ioeItem.text()))
                 self.footprints[str(ioeItem.text())] = None
+
+            startBeam = self.beamsDict[
+                self.oesList[str(ioeItem.text())][1]]
+            good = startBeam.state > 0
+
+            self.colorMax = max(np.max(
+                self.getColor(startBeam)[good]),
+                self.colorMax)
+            self.colorMin = min(np.min(
+                self.getColor(startBeam)[good]),
+                self.colorMin)
+            if self.newColorAxis:
+                self.selColorMin = self.colorMin
+                self.selColorMax = self.colorMax
+
             if ioeItem.hasChildren():
                 for isegment in range(ioeItem.rowCount()):
                     segmentItem0 = ioeItem.child(isegment, 0)
-                    segmentItem1 = ioeItem.child(isegment, 1)
-#                    beams = str(segmentItem.text())
-                    startBeam = self.beamsDict[str(segmentItem0.text())]
-                    good = startBeam.state > 0
-
-                    self.colorMax = max(np.max(self.getColor(startBeam)[good]),
-                                        self.colorMax)
-                    self.colorMin = min(np.min(self.getColor(startBeam)[good]),
-                                        self.colorMin)
-                    if self.newColorAxis:
-                        self.selColorMin = self.colorMin
-                        self.selColorMax = self.colorMax
-
-                    if segmentItem0.checkState() == 2 and\
-                            segmentItem1.checkState() == 2:
-
-                        endBeam = self.beamsDict[str(segmentItem1.text())]
+                    if segmentItem0.checkState() == 2:
+                        endBeam = self.beamsDict[
+                            self.oesList[str(segmentItem0.text())[3:]][1]]
                         intensity = np.abs(startBeam.Jss**2+startBeam.Jpp**2)
                         intensity /= np.max(intensity)
 
                         good = np.logical_and(startBeam.state > 0,
                                               intensity >= self.cutoffI)
-                        goodC = np.logical_and(startBeam.E <= self.selColorMax,
-                                               startBeam.E >= self.selColorMin)
+                        goodC = np.logical_and(
+                            self.getColor(startBeam) <= self.selColorMax,
+                            self.getColor(startBeam) >= self.selColorMin)
 
                         good = np.logical_and(good, goodC)
 
-                        alpha = np.repeat(intensity[good], 2).T if\
-                            alpha is None else np.concatenate(
-                                (alpha.T, np.repeat(intensity[good], 2).T))
+                        alphaRays = np.repeat(intensity[good], 2).T if\
+                            alphaRays is None else np.concatenate(
+                                (alphaRays.T, np.repeat(intensity[good], 2).T))
 
-                        colors = np.repeat(np.array(self.getColor(
+                        colorsRays = np.repeat(np.array(self.getColor(
                             startBeam)[good]), 2).T if\
-                            colors is None else np.concatenate(
-                                (colors.T,
+                            colorsRays is None else np.concatenate(
+                                (colorsRays.T,
                                  np.repeat(np.array(self.getColor(
                                      startBeam)[good]), 2).T))
 
@@ -884,14 +962,56 @@ class xrtGlWidget(QGLWidget):
                             self.verticesArray is None else\
                             np.vstack((self.verticesArray, vertices.T))
 
-        colors = (colors - self.colorMin) / (self.colorMax - self.colorMin)
-        colors = np.dstack((colors,
-                            np.ones_like(alpha)*0.85,
-                            alpha))
+            if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
+                intensity = np.abs(startBeam.Jss**2+startBeam.Jpp**2)
+                intensity /= np.max(intensity)
 
-        colorsRGB = np.squeeze(mpl.colors.hsv_to_rgb(colors))
-        alphaColor = np.array([alpha]).T * self.lineOpacity
-        self.allColor = np.float32(np.hstack([colorsRGB, alphaColor]))
+                good = np.logical_and(startBeam.state > 0,
+                                      intensity >= self.cutoffI)
+                goodC = np.logical_and(
+                    self.getColor(startBeam) <= self.selColorMax,
+                    self.getColor(startBeam) >= self.selColorMin)
+
+                good = np.logical_and(good, goodC)
+
+                alphaDots = intensity[good].T if\
+                    alphaDots is None else np.concatenate(
+                        (alphaDots.T, intensity[good].T))
+
+                colorsDots = np.array(self.getColor(
+                    startBeam)[good]).T if\
+                    colorsDots is None else np.concatenate(
+                        (colorsDots.T, np.array(self.getColor(
+                             startBeam)[good]).T))
+
+                vertices = np.array(startBeam.x[good] - self.coordOffset[0])
+                vertices = np.vstack((vertices, np.array(
+                    startBeam.y[good] - self.coordOffset[1])))
+                vertices = np.vstack((vertices, np.array(
+                    startBeam.z[good] - self.coordOffset[2])))
+                self.footprintsArray = vertices.T if\
+                    self.footprintsArray is None else\
+                    np.vstack((self.footprintsArray, vertices.T))
+
+#        print self.verticesArray.shape, self.footprintsArray.shape
+
+        colorsRays = (colorsRays-self.colorMin) / (self.colorMax-self.colorMin)
+        colorsRays = np.dstack((colorsRays,
+                                np.ones_like(alphaRays)*0.85,
+                                alphaRays))
+        colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
+        alphaColorRays = np.array([alphaRays]).T * self.lineOpacity
+        self.raysColor = np.float32(np.hstack([colorsRGBRays, alphaColorRays]))
+
+        colorsDots = (colorsDots-self.colorMin) / (self.colorMax-self.colorMin)
+        colorsDots = np.dstack((colorsDots,
+                                np.ones_like(alphaDots)*0.85,
+                                alphaDots))
+
+        colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+        alphaColorDots = np.array([alphaDots]).T * self.pointOpacity
+        self.dotsColor = np.float32(np.hstack([colorsRGBDots, alphaColorDots]))
+
         self.newColorAxis = False
 
     def modelToWorld(self, coords, dimension=None):
@@ -945,32 +1065,29 @@ class xrtGlWidget(QGLWidget):
                 axPosModifier[iAx] = (self.signs[0][iAx] if
                                       self.signs[0][iAx] != 0 else 1)
             if self.projectionsVisibility[dim] > 0:
-                projection = self.modelToWorld(np.copy(self.verticesArray))
-                projection[:, dim] = -self.aPos[dim] * axPosModifier[dim]
-                vertexArray = vbo.VBO(projection)
-                vertexArray.bind()
-                glVertexPointerf(vertexArray)
+                if self.lineProjectionWidth > 0 and\
+                        self.lineProjectionOpacity > 0 and\
+                        self.verticesArray is not None:
+                    projectionRays = self.modelToWorld(
+                        np.copy(self.verticesArray))
+                    projectionRays[:, dim] =\
+                        -self.aPos[dim] * axPosModifier[dim]
+                    self.drawArrays(
+                        0, GL_LINES, projectionRays, self.raysColor,
+                        self.lineProjectionOpacity, self.lineProjectionWidth)
 
-                if self.lineProjectionWidth > 0:
-                    self.allColor[:, 3] = np.float32(
-                        self.lineProjectionOpacity)
-                    colorArray = vbo.VBO(self.allColor)
-                    colorArray.bind()
-                    glColorPointerf(colorArray)
-                    glLineWidth(self.lineProjectionWidth)
-                    glDrawArrays(GL_LINES, 0, len(self.verticesArray))
-                    colorArray.unbind()
+                if self.pointProjectionSize > 0 and\
+                        self.pointProjectionOpacity > 0 and\
+                        self.footprintsArray is not None:
+                    projectionDots = self.modelToWorld(
+                        np.copy(self.footprintsArray))
+                    projectionDots[:, dim] =\
+                        -self.aPos[dim] * axPosModifier[dim]
+                    self.drawArrays(
+                        0, GL_POINTS, projectionDots, self.dotsColor,
+                        self.pointProjectionOpacity, self.pointProjectionSize)
 
-                if self.pointProjectionSize > 0:
-                    self.allColor[:, 3] = np.float32(
-                        self.pointProjectionOpacity)
-                    colorArray = vbo.VBO(self.allColor)
-                    colorArray.bind()
-                    glColorPointerf(colorArray)
-                    glPointSize(self.pointProjectionSize)
-                    glDrawArrays(GL_POINTS, 0, len(self.verticesArray))
-
-                vertexArray.unbind()
+        glEnable(GL_DEPTH_TEST)
 
         if self.drawGrid:
             glLoadIdentity()
@@ -1075,15 +1192,15 @@ class xrtGlWidget(QGLWidget):
             axGrid = np.vstack((xLines, yLines, zLines))
 
             for tick, tText, pcs in zip(axTicks, gridLabels, precisionLabels):
+                glRasterPos3f(*tick)
+                for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
+                    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
 #                glPushMatrix()
 #                glTranslatef(*tick)
 #                glScalef(1./2000., 1./2000., 1./2000.)
 #                for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
 #                    glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
 #                glPopMatrix()
-                glRasterPos3f(*tick)
-                for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
-                    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
 
             gridColor = np.ones((len(axGrid), 4)) * 0.25
             gridArray = vbo.VBO(np.float32(axGrid))
@@ -1115,10 +1232,10 @@ class xrtGlWidget(QGLWidget):
         glRotatef(*self.rotVecX)
         glRotatef(*self.rotVecY)
         glRotatef(*self.rotVecZ)
-
-        if self.oesList is not None:
+#        print self.oesToPlot
+        if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-            glEnable(GL_DEPTH_TEST)
+
             glShadeModel(GL_SMOOTH)
             glEnable(GL_LIGHTING)
             self.addLighting(3.)
@@ -1130,18 +1247,15 @@ class xrtGlWidget(QGLWidget):
             glMaterialf(GL_FRONT, GL_SHININESS, 100)
             glEnable(GL_MAP2_VERTEX_3)
             glEnable(GL_MAP2_NORMAL)
+            glShadeModel( GL_SMOOTH )
 #            glEnable(GL_AUTO_NORMAL)
 
             for oeString in self.oesToPlot:
-                oeToPlot = self.oesList[oeString]
+                oeToPlot = self.oesList[oeString][0]
+                is2ndXtal = self.oesList[oeString][3]
                 elType = str(type(oeToPlot))
                 if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
-                    if hasattr(oeToPlot, 'local_z2'):  # DCM
-                        for surf in [1, 2]:
-                            self.plotSurface(oeToPlot, surf)
-                    else:
-                        self.plotSurface(oeToPlot)
-
+                        self.plotSurface(oeToPlot, is2ndXtal)
                 elif len(re.findall('raycing.apert', elType)) > 0:  # aperture
                     continue
                 elif len(re.findall('raycing.screen', elType)) > 0:  # screen
@@ -1152,39 +1266,41 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_MAP2_VERTEX_3)
             glDisable(GL_MAP2_NORMAL)
 #            glDisable(GL_AUTO_NORMAL)
-            glDisable(GL_DEPTH_TEST)
-#            glShadeModel( GL_SMOOTH )
+
             glDisable(GL_LIGHTING)
 #            glDisable(GL_LIGHT0)
-
+        glDisable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        vertexArray = vbo.VBO(self.modelToWorld(self.verticesArray))
-        vertexArray.bind()
-        glVertexPointerf(vertexArray)
 
-        if self.lineWidth > 0:
-            self.allColor[:, 3] = np.float32(self.lineOpacity)
-            colorArray = vbo.VBO(self.allColor)
-            colorArray.bind()
-            glColorPointerf(colorArray)
-            glLineWidth(self.lineWidth)
-            glDrawArrays(GL_LINES, 0, len(self.verticesArray))
-            colorArray.unbind()
+        if self.linesDepthTest:
+            glEnable(GL_DEPTH_TEST)
 
-        if self.pointSize > 0:
-            self.allColor[:, 3] = np.float32(self.pointOpacity)
-            colorArray = vbo.VBO(self.allColor)
-            colorArray.bind()
-            glColorPointerf(colorArray)
-            glPointSize(self.pointSize)
-            glDrawArrays(GL_POINTS, 0, len(self.verticesArray))
-            colorArray.unbind()
+        if self.lineWidth > 0 and self.lineOpacity > 0 and\
+                self.verticesArray is not None:
+            self.drawArrays(1, GL_LINES, self.verticesArray, self.raysColor,
+                            self.lineOpacity, self.lineWidth)
+        if self.linesDepthTest:
+            glDisable(GL_DEPTH_TEST)
 
-        vertexArray.unbind()
+        if self.pointsDepthTest:
+            glEnable(GL_DEPTH_TEST)
+
+        if self.pointSize > 0 and self.pointOpacity > 0 and\
+                self.footprintsArray is not None:
+            self.drawArrays(1, GL_POINTS, self.footprintsArray, self.dotsColor,
+                            self.pointOpacity, self.pointSize)
+
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_COLOR_ARRAY)
+
+
+        if self.pointsDepthTest:
+            glDisable(GL_DEPTH_TEST)
+
         glFlush()
+
         self.drawAxes()
+#        glDisable(GL_DEPTH_TEST)
 
         if self.enableAA:
             glDisable(GL_LINE_SMOOTH)
@@ -1194,18 +1310,49 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_BLEND)
             glDisable(GL_POINT_SMOOTH)
 
-    def plotSurface(self, oe, nSurf=0):
-        nsIndex = nSurf - 1 if nSurf > 0 else nSurf
-        xLimits = list(oe.limOptX) if\
-            oe.limOptX is not None else oe.limPhysX
-        if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-            if oe.footprint is not None:
-                xLimits = oe.footprint[nsIndex][:, 0]
-        yLimits = list(oe.limOptY) if\
-            oe.limOptY is not None else oe.limPhysY
-        if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-            if oe.footprint is not None:
-                yLimits = oe.footprint[nsIndex][:, 1]
+    def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
+        if bool(tr):
+            vertexArray = vbo.VBO(self.modelToWorld(vertices))
+        else:
+            vertexArray = vbo.VBO(vertices)
+        vertexArray.bind()
+        glVertexPointerf(vertexArray)
+        colors[:, 3] = np.float32(lineOpacity)
+        colorArray = vbo.VBO(colors)
+        colorArray.bind()
+        glColorPointerf(colorArray)
+        if geom == GL_LINES:
+            glLineWidth(lineWidth)
+        else:
+            glPointSize(lineWidth)
+        glDrawArrays(geom, 0, len(vertices))
+        colorArray.unbind()
+        vertexArray.unbind()
+
+    def plotSurface(self, oe, is2ndXtal):
+        nsIndex = int(is2ndXtal)
+        if is2ndXtal:
+            xLimits = list(oe.limOptX2) if\
+                oe.limOptX2 is not None else oe.limPhysX2
+            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+                if oe.footprint is not None:
+                    xLimits = oe.footprint[nsIndex][:, 0]
+            yLimits = list(oe.limOptY2) if\
+                oe.limOptY2 is not None else oe.limPhysY2
+            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+                if oe.footprint is not None:
+                    yLimits = oe.footprint[nsIndex][:, 1]
+        else:
+            xLimits = list(oe.limOptX) if\
+                oe.limOptX is not None else oe.limPhysX
+            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+                if oe.footprint is not None:
+                    xLimits = oe.footprint[nsIndex][:, 0]
+            yLimits = list(oe.limOptY) if\
+                oe.limOptY is not None else oe.limPhysY
+            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+                if oe.footprint is not None:
+                    yLimits = oe.footprint[nsIndex][:, 1]
 
         for i in range(self.tiles[0]):
             deltaX = (xLimits[1] - xLimits[0]) /\
@@ -1223,10 +1370,13 @@ class xrtGlWidget(QGLWidget):
                 xv = xv.flatten()
                 yv = yv.flatten()
 
-                local_z = getattr(oe, 'local_z') if nSurf == 0 else\
-                    getattr(oe, 'local_z{}'.format(nSurf))
-                local_n = getattr(oe, 'local_n') if nSurf == 0 else\
-                    getattr(oe, 'local_n{}'.format(nSurf))
+                if is2ndXtal:
+                    zExt = '2'
+                else:
+                    zExt = '1' if hasattr(oe, 'local_z1') else ''
+                local_z = getattr(oe, 'local_z{}'.format(zExt))
+                local_n = getattr(oe, 'local_n{}'.format(zExt))
+
                 zv = local_z(xv, yv)
                 nv = local_n(xv, yv)
 
@@ -1238,10 +1388,7 @@ class xrtGlWidget(QGLWidget):
                 gbp.b = nv[1] * np.ones_like(zv)
                 gbp.c = nv[2] * np.ones_like(zv)
 
-                if nSurf == 2:
-                    oe.local_to_global(gbp, is2ndXtal=True)
-                else:
-                    oe.local_to_global(gbp)
+                oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
                 surfCP = np.vstack((gbp.x, gbp.y, gbp.z)).T -\
                     self.coordOffset
 
@@ -1262,7 +1409,6 @@ class xrtGlWidget(QGLWidget):
 
                 glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
                             0, self.surfCPOrder)
-
 
     def addLighting(self, pos):
         spot = 60
@@ -1329,7 +1475,6 @@ class xrtGlWidget(QGLWidget):
         glLightfv(GL_LIGHT5, GL_AMBIENT, ambient)
         glLightfv(GL_LIGHT5, GL_DIFFUSE, diffuse)
         glLightfv(GL_LIGHT5, GL_SPECULAR, specular)
-
 
     def drawAxes(self):
         arrowSize = 0.05
