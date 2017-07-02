@@ -896,11 +896,6 @@ class OE(object):
         return gb, lbN
 
     def local_to_global(self, lb, **kwargs):
-        if self.extraPitch or self.extraRoll or self.extraYaw:
-            raycing.rotate_beam(
-                lb, rotationSequence='-'+self.extraRotationSequence,
-                pitch=self.extraPitch, roll=self.extraRoll,
-                yaw=self.extraYaw, **kwargs)
         dx, dy, dz = 0, 0, 0
         if isinstance(self, DCM):
             is2ndXtal = kwargs.get('is2ndXtal', False)
@@ -921,6 +916,20 @@ class OE(object):
             pitch = self.pitch
             roll = self.roll + self.positionRoll
             yaw = self.yaw
+
+        if dx:
+            lb.x[:] += dx
+        if dy:
+            lb.y[:] += dy
+        if dz:
+            lb.z[:] += dz
+
+        if self.extraPitch or self.extraRoll or self.extraYaw:
+            raycing.rotate_beam(
+                lb, rotationSequence='-'+self.extraRotationSequence,
+                pitch=self.extraPitch, roll=self.extraRoll,
+                yaw=self.extraYaw, **kwargs)
+
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw, **kwargs)
 
@@ -937,12 +946,6 @@ class OE(object):
             cosY, sinY = np.cos(roll), np.sin(roll)
             lb.Es[:], lb.Ep[:] = raycing.rotate_y(lb.Es, lb.Ep, cosY, -sinY)
 
-        if dx:
-            lb.x[:] -= dx
-        if dy:
-            lb.y[:] -= dy
-        if dz:
-            lb.z[:] -= dz
         raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, shape='auto', area='auto'):
@@ -1667,8 +1670,8 @@ class OE(object):
                             pitch=pitch, roll=roll, yaw=yaw)
         self.footprint.extend([np.hstack((np.min(np.vstack((
             lb.x[good], lb.y[good], lb.z[good])), axis=1),
-            np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])), 
-                        axis=1))).reshape(2,3)])
+            np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
+                   axis=1))).reshape(2, 3)])
 #        print len(self.footprint)
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, vlb)
