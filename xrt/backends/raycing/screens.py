@@ -242,32 +242,38 @@ class HemisphericScreen(Screen):
         xglo, yglo, zglo = Screen.local_to_global(self, x, y, z)
         return x, y, z, xglo, yglo, zglo
 
-    def expose(self, beam=None):
-            """Exposes the screen to the beam. *beam* is in global system, the
-            returned beam is in local system of the screen and represents the
-            desired image.
+    def expose_global(self, beam=None):
+        glo = self.expose(beam)
+        _, _, _, glo.x[:], glo.y[:], glo.z[:] = \
+            self.local_to_global(glo.phi, glo.theta)
+        return glo
 
-            .. Returned values: beamLocal
-            """
-            blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
-            sqb_2 = (beam.a * (beam.x-self.center[0]) +
-                     beam.b * (beam.y-self.center[1]) +
-                     beam.c * (beam.z-self.center[2]))
-            sqc = ((beam.x-self.center[0])**2 +
-                   (beam.y-self.center[1])**2 +
-                   (beam.z-self.center[2])**2 - self.R**2)
-            path = -sqb_2 + (sqb_2**2 - sqc)**0.5
-            blo.path += path
-            rx = beam.x + beam.a*path - self.center[0]
-            ry = beam.y + beam.b*path - self.center[1]
-            rz = beam.z + beam.c*path - self.center[2]
-            blo.z = rx*self.z[0] + ry*self.z[1] + rz*self.z[2]
-            blo.y = rx*self.y[0] + ry*self.y[1] + rz*self.y[2]
-            blo.x = rx*self.x[0] + ry*self.x[1] + rz*self.x[2]
-            blo.theta = np.arcsin(blo.z / self.R) - self.thetaOffset
-            blo.phi = np.arctan2(blo.y, blo.x) - self.phiOffset
-            if hasattr(blo, 'Es'):
-                propPhase = np.exp(1e7j * (blo.E / CHBAR) * path)
-                blo.Es *= propPhase
-                blo.Ep *= propPhase
-            return blo
+    def expose(self, beam=None):
+        """Exposes the screen to the beam. *beam* is in global system, the
+        returned beam is in local system of the screen and represents the
+        desired image.
+
+        .. Returned values: beamLocal
+        """
+        blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
+        sqb_2 = (beam.a * (beam.x-self.center[0]) +
+                 beam.b * (beam.y-self.center[1]) +
+                 beam.c * (beam.z-self.center[2]))
+        sqc = ((beam.x-self.center[0])**2 +
+               (beam.y-self.center[1])**2 +
+               (beam.z-self.center[2])**2 - self.R**2)
+        path = -sqb_2 + (sqb_2**2 - sqc)**0.5
+        blo.path += path
+        rx = beam.x + beam.a*path - self.center[0]
+        ry = beam.y + beam.b*path - self.center[1]
+        rz = beam.z + beam.c*path - self.center[2]
+        blo.z = rx*self.z[0] + ry*self.z[1] + rz*self.z[2]
+        blo.y = rx*self.y[0] + ry*self.y[1] + rz*self.y[2]
+        blo.x = rx*self.x[0] + ry*self.x[1] + rz*self.x[2]
+        blo.theta = np.arcsin(blo.z / self.R) - self.thetaOffset
+        blo.phi = np.arctan2(blo.y, blo.x) - self.phiOffset
+        if hasattr(blo, 'Es'):
+            propPhase = np.exp(1e7j * (blo.E / CHBAR) * path)
+            blo.Es *= propPhase
+            blo.Ep *= propPhase
+        return blo
