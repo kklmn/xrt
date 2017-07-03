@@ -490,6 +490,9 @@ class Material(object):
                 (n2cosBeta * n1.conjugate()).real / cosAlpha) / abs(n1)
             rs = 2 * n1cosAlpha / (n1cosAlpha + n2cosBeta) * tf
             rp = 2 * n1cosAlpha / (n2*cosAlpha + n1*cosBeta) * tf
+        else:
+            raise ValueError('Unknown kind of material for {0}'.format(
+                    self.name))
 #        return rs, rp, abs(n.imag) * E / CHBAR * 2e8  # 1/cm
         return (rs, rp,
                 abs(n.imag) * E / CHBAR * 2e8,  # 1/cm

@@ -215,7 +215,7 @@ class DicedOE(OE):
 
 
 class JohannCylinder(OE):
-    """Simply bent reflective optical element."""
+    """Simply bent reflective crystal."""
 
     cl_plist = ("crossSectionInt", "Rm", "alpha")
     cl_local_z = """
@@ -290,7 +290,7 @@ class JohannCylinder(OE):
 
 
 class JohanssonCylinder(JohannCylinder):
-    """Ground-bent (Johansson) reflective optical element."""
+    """Ground-bent (Johansson) reflective crystal."""
     def local_n(self, x, y):
         """Determines the normal vectors of OE at (*x*, *y*) position: of the
         atomic planes and of the surface."""
@@ -310,7 +310,7 @@ class JohanssonCylinder(JohannCylinder):
 
 
 class JohannToroid(OE):
-    """2D bent reflective optical element."""
+    """2D bent reflective crystal."""
 
     cl_plist = ("Rm", "Rs")
     cl_local_z = """
@@ -1328,6 +1328,9 @@ class Plate(DCM):
         kwargs = self.__pop_kwargs(**kwargs)
         DCM.__init__(self, *args, **kwargs)
         self.cryst2perpTransl = -self.t
+        if not self.material.kind.startswith("plate"):
+            print('Warning: the material of {0} is not of kind "plate"!'.
+                  format(self.name))
 
     def __pop_kwargs(self, **kwargs):
         self.t = kwargs.pop('t', 0)  # difference of z zeros in mm
