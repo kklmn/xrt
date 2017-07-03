@@ -766,7 +766,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.matKindModel.appendRow(mtItem)
 
         self.matTableModel = QStandardItemModel()
-        for mtTable in ['Chantler', 'Henke', 'BrCo']:
+        for mtTable in ['Chantler', 'Chantler total', 'Henke', 'BrCo']:
             mtTItem = QStandardItem(mtTable)
             self.matTableModel.appendRow(mtTItem)
 
