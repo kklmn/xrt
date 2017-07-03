@@ -34,34 +34,6 @@ import backends.raycing.sources as rsources
 import re
 
 
-class myTabWidget(QtGui.QWidget):
-    def __init__(self):
-        super(myTabWidget, self).__init__()
-        layout = QtGui.QVBoxLayout()
-        self.tabBars = [QtGui.QTabBar(), QtGui.QTabBar()]
-        self.tabPanel = QtGui.QStackedWidget()
-        for i in range(2):
-            self.tabBars[i].objectName = 'myTabBar_{}'.format(i)
-            self.tabBars[i].currentChanged.connect(self._showTab)
-        layout.addWidget(self.tabBars[0])
-        layout.addWidget(self.tabBars[1])
-        layout.addWidget(self.tabPanel)
-        self.setLayout(layout)
-        self.tabList = [[], []]
-
-    def addTab(self, widget, name, level):
-        self.tabBars[level].addTab(name)
-        tabIndex = self.tabPanel.addWidget(widget)
-        self.tabList[level].append(tabIndex)
-#        print name, level, tabIndex, self.tabList
-
-    def _showTab(self, position):
-        cTab = self.sender()
-        tabIndex = int(cTab.objectName[-1])
-        if position < len(self.tabList[tabIndex]):
-            self.tabPanel.setCurrentIndex(self.tabList[tabIndex][position])
-
-
 class xrtGlow(QtGui.QWidget):
     def __init__(self, arrayOfRays):
         super(xrtGlow, self).__init__()
@@ -110,6 +82,7 @@ class xrtGlow(QtGui.QWidget):
                                 self.beamsToElements[segment[ind+1]] =\
                                     elName
                 self.oesList[elName].append(center)
+                print elName, center
                 self.oesList[elName].append(is2ndXtal)
 
         headerRow = []
@@ -171,12 +144,18 @@ class xrtGlow(QtGui.QWidget):
             axLabel = QtGui.QLabel()
             axLabel.setText(axis+' (log)')
             axLabel.objectName = "scaleLabel_" + axis
-            axEdit = QtGui.QLineEdit("0.")
+            if iaxis == 1:
+                axEdit = QtGui.QLineEdit("1")
+            else:
+                axEdit = QtGui.QLineEdit("3")
             axEdit.setValidator(scaleValidator)
             axSlider = Qwt.QwtSlider(
                 self, QtCore.Qt.Horizontal, Qwt.QwtSlider.TopScale)
             axSlider.setRange(-7, 7, 0.01)
-            axSlider.setValue(0)
+            if iaxis == 1:
+                axSlider.setValue(1)
+            else:
+                axSlider.setValue(3)
             axEdit.editingFinished.connect(self.updateScaleFromQLE)
             axSlider.objectName = "scaleSlider_" + axis
             axSlider.valueChanged.connect(self.updateScale)
@@ -390,20 +369,41 @@ class xrtGlow(QtGui.QWidget):
         for (iCB, cbText), cbFunc in zip(enumerate(['Enable antialiasing',
                                                     'Enable blending',
                                                     'Depth test for Lines',
-                                                    'Depth test for Points']),
+                                                    'Depth test for Points',
+                                                    'Invert scene color']),
                                          [self.checkAA,
                                           self.checkBlending,
                                           self.checkLineDepthTest,
-                                          self.checkPointDepthTest]):
+                                          self.checkPointDepthTest,
+                                          self.invertSceneColor]):
             aaCheckBox = QtGui.QCheckBox()
             aaCheckBox.objectName = "aaChb" + str(iCB)
-            aaCheckBox.setCheckState(2) if iCB > 0 else\
+            aaCheckBox.setCheckState(2) if iCB in [1, 2] else\
                 aaCheckBox.setCheckState(0)
             aaCheckBox.stateChanged.connect(cbFunc)
             aaLabel = QtGui.QLabel()
             aaLabel.setText(cbText)
             sceneLayout.addWidget(aaCheckBox, 6+iCB, 0, 1, 1)
             sceneLayout.addWidget(aaLabel, 6+iCB, 1, 1, 1)
+
+        oeTileValidator = QtGui.QIntValidator()
+        sceneValidator.setRange(1, 20)
+        for iaxis, axis in enumerate(['local x', 'local y']):
+            axLabel = QtGui.QLabel()
+            axLabel.setText(axis)
+            axLabel.objectName = "oeTileLabel_" + axis
+            axEdit = QtGui.QLineEdit("2")
+            axEdit.setValidator(oeTileValidator)
+            axSlider = Qwt.QwtSlider(
+                self, QtCore.Qt.Horizontal, Qwt.QwtSlider.TopScale)
+            axSlider.setRange(1, 20, 1)
+            axSlider.setValue(2)
+            axEdit.editingFinished.connect(self.updateTileFromQLE)
+            axSlider.objectName = "oeTileSlider_" + axis
+            axSlider.valueChanged.connect(self.updateTile)
+            sceneLayout.addWidget(axLabel, 11+iaxis*2, 0)
+            sceneLayout.addWidget(axEdit, 11+iaxis*2, 1)
+            sceneLayout.addWidget(axSlider, 11+iaxis*2+1, 0, 1, 2)
 
         self.scenePanel.setLayout(sceneLayout)
 
@@ -436,21 +436,12 @@ class xrtGlow(QtGui.QWidget):
         canvasSplitter.setChildrenCollapsible(False)
         canvasSplitter.setOrientation(QtCore.Qt.Horizontal)
         mainLayout.addWidget(canvasSplitter)
-#        sideSplitter = QtGui.QSplitter()
-#        sideSplitter.setChildrenCollapsible(False)
-#        sideSplitter.setOrientation(QtCore.Qt.Vertical)
         sideWidget = QtGui.QWidget()
-#        self.setMinimumSize(750, 500)
         sideWidget.setLayout(sideLayout)
-#        sideSplitter.addWidget(tabs)
-#        sideSplitter.addWidget(self.navigationPanel)
-#        sideLayout.addWidget(sideSplitter)
         canvasSplitter.addWidget(self.customGlWidget)
         canvasSplitter.addWidget(sideWidget)
 
-#        sideLayout.addWidget(self.navigationPanel)
         self.setLayout(mainLayout)
-#        self.resize(1200, 900)
         self.customGlWidget.oesList = self.oesList
         fastSave = QtGui.QShortcut(self)
         fastSave.setKey(QtCore.Qt.Key_F5)
@@ -497,6 +488,10 @@ class xrtGlow(QtGui.QWidget):
 
     def checkPointDepthTest(self, state):
         self.customGlWidget.pointsDepthTest = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def invertSceneColor(self, state):
+        self.customGlWidget.invertColors = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
@@ -766,10 +761,7 @@ class xrtGlow(QtGui.QWidget):
     def updateOpacityFromQLE(self):
         cPan = self.sender()
         cIndex = cPan.parent().layout().indexOf(cPan)
-        if cPan.objectName[-1] == '0':
-            value = float(str(cPan.text()))
-        else:
-            value = int(str(cPan.text()))
+        value = float(str(cPan.text()))
         cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
         self.customGlWidget.glDraw()
 
@@ -791,10 +783,25 @@ class xrtGlow(QtGui.QWidget):
     def updateProjectionOpacityFromQLE(self):
         cPan = self.sender()
         cIndex = cPan.parent().layout().indexOf(cPan)
-        if cPan.objectName[-1] == '0':
-            value = float(str(cPan.text()))
-        else:
-            value = int(str(cPan.text()))
+        value = float(str(cPan.text()))
+        cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
+        self.customGlWidget.glDraw()
+
+    def updateTile(self, position):
+        cPan = self.sender()
+        cIndex = cPan.parent().layout().indexOf(cPan)
+        cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
+        objNameType = cPan.objectName[-1]
+        if objNameType == 'x':
+            self.customGlWidget.tiles[0] = np.int(position)
+        elif objNameType == 'y':
+            self.customGlWidget.tiles[1] = np.int(position)
+        self.customGlWidget.glDraw()
+
+    def updateTileFromQLE(self):
+        cPan = self.sender()
+        cIndex = cPan.parent().layout().indexOf(cPan)
+        value = int(str(cPan.text()))
         cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
         self.customGlWidget.glDraw()
 
@@ -826,9 +833,7 @@ class xrtGlWidget(QGLWidget):
         self.setMouseTracking(True)
         self.surfCPOrder = 4
         self.oesToPlot = []
-        self.tiles = [5, 5]
-#        self.eMin = arrayOfRays[2][0].eMin
-#        self.eMax = arrayOfRays[2][0].eMax
+        self.tiles = [2, 2]
         self.arrayOfRays = arrayOfRays
         self.beamsDict = arrayOfRays[1]
         self.oesList = oesList
@@ -855,6 +860,7 @@ class xrtGlWidget(QGLWidget):
 #        self.selColorMax = 1e20
 #        self.selColorMin = -1e20
         self.newColorAxis = True
+        self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.populateVerticesArray(modelRoot)
 
         maxC = np.max(self.verticesArray, axis=0)
@@ -865,7 +871,7 @@ class xrtGlWidget(QGLWidget):
         self.aPos = [0.9, 0.9, 0.9]
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
-        self.scaleVec = np.array([1., 1., 1.])
+
         self.tVec = np.array([0., 0., 0.])
         self.cameraTarget = [0., 0., 0.]
         self.cameraPos = np.float32([3.5, 0., 0.])
@@ -875,6 +881,7 @@ class xrtGlWidget(QGLWidget):
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
+        self.invertColors = False
         self.glDraw()
 
     def setPointSize(self, pSize):
@@ -1023,7 +1030,32 @@ class xrtGlWidget(QGLWidget):
                               self.scaleVec[dimension]) / self.maxLen)
 
     def paintGL(self):
+        def setMaterial(mat):
+            if mat == 'Cu':
+                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,
+                             [0.3, 0.15, 0.15, 1])
+                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,
+                             [0.4, 0.25, 0.15, 1])
+                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,
+                             [1., 0.7, 0.3, 1])
+                glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,
+                             [0.1, 0.1, 0.1, 1])
+                glMaterialf(GL_FRONT, GL_SHININESS, 100)
+            else:
+                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,
+                             [0.1, 0.1, 0.1, 1])
+                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,
+                             [0.3, 0.3, 0.3, 1])
+                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,
+                             [1., 0.9, 0.8, 1])
+                glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,
+                             [0.1, 0.1, 0.1, 1])
+                glMaterialf(GL_FRONT, GL_SHININESS, 100)
 
+        if self.invertColors:
+            glClearColor(1.0, 1.0, 1.0, 1.)
+        else:
+            glClearColor(0.0, 0.0, 0.0, 1.)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         gluPerspective(self.cameraAngle, self.aspect, 0.001, 1000)
@@ -1045,6 +1077,7 @@ class xrtGlWidget(QGLWidget):
             glEnable(GL_POINT_SMOOTH)
 
         glEnableClientState(GL_VERTEX_ARRAY)
+
         glEnableClientState(GL_COLOR_ARRAY)
 # Coordinate box
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -1090,6 +1123,7 @@ class xrtGlWidget(QGLWidget):
         glEnable(GL_DEPTH_TEST)
 
         if self.drawGrid:
+
             glLoadIdentity()
             glRotatef(*self.rotVecX)
             glRotatef(*self.rotVecY)
@@ -1191,6 +1225,11 @@ class xrtGlWidget(QGLWidget):
             axTicks = np.vstack((xAxis.T, yAxis.T, zAxisC.T))
             axGrid = np.vstack((xLines, yLines, zLines))
 
+            if self.invertColors:
+                glColor4f(0.0, 0.0, 0.0, 1.)
+            else:
+                glColor4f(1.0, 1.0, 1.0, 1.)
+
             for tick, tText, pcs in zip(axTicks, gridLabels, precisionLabels):
                 glRasterPos3f(*tick)
                 for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
@@ -1235,40 +1274,30 @@ class xrtGlWidget(QGLWidget):
 #        print self.oesToPlot
         if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-
+            glEnableClientState(GL_NORMAL_ARRAY)
+            glEnable(GL_NORMALIZE)
             glShadeModel(GL_SMOOTH)
-            glEnable(GL_LIGHTING)
+
             self.addLighting(3.)
-
-            glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.1, 0.1, 0.1, 1])
-            glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [0.3, 0.3, 0.3, 1])
-            glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [1., 0.9, 0.8, 1])
-            glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, [0.1, 0.1, 0.1, 1])
-            glMaterialf(GL_FRONT, GL_SHININESS, 100)
-            glEnable(GL_MAP2_VERTEX_3)
-            glEnable(GL_MAP2_NORMAL)
-            glShadeModel( GL_SMOOTH )
-#            glEnable(GL_AUTO_NORMAL)
-
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
                 is2ndXtal = self.oesList[oeString][3]
                 elType = str(type(oeToPlot))
                 if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
-                        self.plotSurface(oeToPlot, is2ndXtal)
+                    setMaterial('Si')
+
+                    self.plotOeSurface(oeToPlot, is2ndXtal)
                 elif len(re.findall('raycing.apert', elType)) > 0:  # aperture
-                    continue
+                    setMaterial('Cu')
+                    self.plotAperture(oeToPlot)
                 elif len(re.findall('raycing.screen', elType)) > 0:  # screen
                     continue
                 else:
                     continue
 
-            glDisable(GL_MAP2_VERTEX_3)
-            glDisable(GL_MAP2_NORMAL)
-#            glDisable(GL_AUTO_NORMAL)
-
             glDisable(GL_LIGHTING)
-#            glDisable(GL_LIGHT0)
+            glDisable(GL_NORMALIZE)
+            glDisableClientState(GL_NORMAL_ARRAY)
         glDisable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
@@ -1293,14 +1322,12 @@ class xrtGlWidget(QGLWidget):
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_COLOR_ARRAY)
 
-
         if self.pointsDepthTest:
             glDisable(GL_DEPTH_TEST)
 
         glFlush()
 
         self.drawAxes()
-#        glDisable(GL_DEPTH_TEST)
 
         if self.enableAA:
             glDisable(GL_LINE_SMOOTH)
@@ -1311,6 +1338,7 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_POINT_SMOOTH)
 
     def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
+
         if bool(tr):
             vertexArray = vbo.VBO(self.modelToWorld(vertices))
         else:
@@ -1329,7 +1357,9 @@ class xrtGlWidget(QGLWidget):
         colorArray.unbind()
         vertexArray.unbind()
 
-    def plotSurface(self, oe, is2ndXtal):
+    def plotOeSurface(self, oe, is2ndXtal):
+        glEnable(GL_MAP2_VERTEX_3)
+        glEnable(GL_MAP2_NORMAL)
         nsIndex = int(is2ndXtal)
         if is2ndXtal:
             xLimits = list(oe.limOptX2) if\
@@ -1353,7 +1383,6 @@ class xrtGlWidget(QGLWidget):
             if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
-
         for i in range(self.tiles[0]):
             deltaX = (xLimits[1] - xLimits[0]) /\
                 float(self.tiles[0])
@@ -1384,97 +1413,158 @@ class xrtGlWidget(QGLWidget):
                 gbp.x = xv
                 gbp.y = yv
                 gbp.z = zv
+
                 gbp.a = nv[0] * np.ones_like(zv)
                 gbp.b = nv[1] * np.ones_like(zv)
                 gbp.c = nv[2] * np.ones_like(zv)
 
                 oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
-                surfCP = np.vstack((gbp.x, gbp.y, gbp.z)).T -\
-                    self.coordOffset
+                surfCP = np.vstack((gbp.x - self.coordOffset[0],
+                                    gbp.y - self.coordOffset[1],
+                                    gbp.z - self.coordOffset[2])).T
 
                 glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
                         self.modelToWorld(surfCP.reshape(
                             self.surfCPOrder,
                             self.surfCPOrder, 3)))
 
-                surfNorm = np.vstack((gbp.a, gbp.b, gbp.c)).T
+                surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
+                                      np.ones_like(gbp.a))).T
 
                 glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
                         surfNorm.reshape(
                             self.surfCPOrder,
-                            self.surfCPOrder, 3))
+                            self.surfCPOrder, 4))
 
                 glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
                             self.surfCPOrder, 0.0, 1.0)
 
                 glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
                             0, self.surfCPOrder)
+        glDisable(GL_MAP2_VERTEX_3)
+        glDisable(GL_MAP2_NORMAL)
+
+    def plotAperture(self, oe):
+        surfCPOrder = self.surfCPOrder
+        glEnable(GL_MAP2_VERTEX_3)
+        glEnable(GL_MAP2_NORMAL)
+        if oe.shape == 'round':
+            r = oe.r
+            w = r
+            h = r
+            cX = 0
+            cY = 0
+            wf = r
+        else:
+            opening = oe.opening
+            w = np.abs(opening[1]-opening[0]) * 0.5
+            h = np.abs(opening[3]-opening[2]) * 0.5
+            cX = 0.5 * (opening[1]+opening[0])
+            cY = 0.5 * (opening[3]+opening[2])
+            wf = min(w, h)
+        isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
+        if isBeamStop:  # BeamStop
+            limits = zip([0], [w], [0], [h])
+        else:
+            limits = zip([0, w], [w+wf, w+wf], [h, 0], [h+wf, h])
+        for ix in [1, -1]:
+            for iy in [1, -1]:
+                for xMin, xMax, yMin, yMax in limits:
+                    if oe.shape == 'round':
+                        xMin = 0
+                        tiles = 10
+                    else:
+                        tiles = 1
+                    xGridOe = np.linspace(xMin, xMax, surfCPOrder)
+
+                    for k in range(tiles):
+                        deltaY = (yMax - yMin) / float(tiles)
+                        yGridOe = np.linspace(yMin + k*deltaY,
+                                              yMin + (k+1)*deltaY,
+                                              surfCPOrder)
+                        xv, yv = np.meshgrid(xGridOe, yGridOe)
+                        if oe.shape == 'round' and yMin == 0:
+                            phi = np.arcsin(yGridOe/r)
+                            if isBeamStop:
+                                xv = xv * (r * np.cos(phi) /
+                                           (w + wf))[:, np.newaxis]
+                            else:
+                                xv = xv * (1 - r * np.cos(phi) /
+                                           (w + wf))[:, np.newaxis] +\
+                                    (r * np.cos(phi))[:, np.newaxis]
+                        xv *= ix
+                        yv *= iy
+                        xv = xv.flatten() + cX
+                        yv = yv.flatten() + cY
+
+                        gbp = rsources.Beam(nrays=len(xv))
+                        gbp.x = xv
+                        gbp.y = np.zeros_like(xv)
+                        gbp.z = yv
+
+                        gbp.a = np.zeros_like(xv)
+                        gbp.b = np.ones_like(xv)
+                        gbp.c = np.zeros_like(xv)
+
+                        oe.local_to_global(gbp)
+                        surfCP = np.vstack((gbp.x - self.coordOffset[0],
+                                            gbp.y - self.coordOffset[1],
+                                            gbp.z - self.coordOffset[2])).T
+
+                        glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                                self.modelToWorld(surfCP.reshape(
+                                    surfCPOrder,
+                                    surfCPOrder, 3)))
+
+                        surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
+                                              np.ones_like(gbp.a))).T
+
+                        glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
+                                surfNorm.reshape(
+                                    surfCPOrder,
+                                    surfCPOrder, 4))
+
+                        glMapGrid2f(surfCPOrder*4, 0.0, 1.0,
+                                    surfCPOrder*4, 0.0, 1.0)
+
+                        glEvalMesh2(GL_FILL, 0, surfCPOrder*4,
+                                    0, surfCPOrder*4)
+        glDisable(GL_MAP2_VERTEX_3)
+        glDisable(GL_MAP2_NORMAL)
 
     def addLighting(self, pos):
         spot = 60
-        exp = 10
+        exp = 30
         ambient = [0.2, 0.2, 0.2, 1]
-        diffuse = [0.3, 0.3, 0.3, 1]
+        diffuse = [0.5, 0.5, 0.5, 1]
         specular = [1.0, 1.0, 1.0, 1]
-        glEnable(GL_LIGHT0)
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-        glLightfv(GL_LIGHT0, GL_POSITION, [0, 0, pos, 1])
-        glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, [0, 0, -pos, 1])
-        glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF, spot)
-        glLightfv(GL_LIGHT0, GL_SPOT_EXPONENT, exp)
-        glLightfv(GL_LIGHT0, GL_AMBIENT, ambient)
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse)
-        glLightfv(GL_LIGHT0, GL_SPECULAR, specular)
+        glEnable(GL_LIGHTING)
 
-        glEnable(GL_LIGHT1)
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-        glLightfv(GL_LIGHT1, GL_POSITION, [0, 0, -pos, 1])
-        glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, [0, 0, pos, 1])
-        glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, spot)
-        glLightfv(GL_LIGHT1, GL_SPOT_EXPONENT, exp)
-        glLightfv(GL_LIGHT1, GL_AMBIENT, ambient)
-        glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuse)
-        glLightfv(GL_LIGHT1, GL_SPECULAR, specular)
+#        corners = [[-pos, pos, pos, 1], [-pos, -pos, -pos, 1],
+#                   [-pos, pos, -pos, 1], [-pos, -pos, pos, 1],
+#                   [pos, pos, -pos, 1], [pos, -pos, pos, 1],
+#                   [pos, pos, pos, 1], [pos, -pos, -pos, 1]]
 
-        glEnable(GL_LIGHT2)
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-        glLightfv(GL_LIGHT2, GL_POSITION, [0, pos, 0, 1])
-        glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, [0, -pos, 0, 1])
-        glLightfv(GL_LIGHT2, GL_SPOT_CUTOFF, spot)
-        glLightfv(GL_LIGHT2, GL_SPOT_EXPONENT, exp)
-        glLightfv(GL_LIGHT2, GL_AMBIENT, ambient)
-        glLightfv(GL_LIGHT2, GL_DIFFUSE, diffuse)
-        glLightfv(GL_LIGHT2, GL_SPECULAR, specular)
+        corners = [[0, 0, pos, 1], [0, pos, 0, 1],
+                   [pos, 0, 0, 1], [-pos, 0, 0, 1],
+                   [0, -pos, 0, 1], [0, 0, -pos, 1]]
 
-        glEnable(GL_LIGHT3)
         glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-        glLightfv(GL_LIGHT3, GL_POSITION, [0, -pos, 0, 1])
-        glLightfv(GL_LIGHT3, GL_SPOT_DIRECTION, [0, pos, 0, 1])
-        glLightfv(GL_LIGHT3, GL_SPOT_CUTOFF, spot)
-        glLightfv(GL_LIGHT3, GL_SPOT_EXPONENT, exp)
-        glLightfv(GL_LIGHT3, GL_AMBIENT, ambient)
-        glLightfv(GL_LIGHT3, GL_DIFFUSE, diffuse)
-        glLightfv(GL_LIGHT3, GL_SPECULAR, specular)
-
-        glEnable(GL_LIGHT4)
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-        glLightfv(GL_LIGHT4, GL_POSITION, [pos, 0, 0, 1])
-        glLightfv(GL_LIGHT4, GL_SPOT_DIRECTION, [-pos, 0, 0, 1])
-        glLightfv(GL_LIGHT4, GL_SPOT_CUTOFF, spot)
-        glLightfv(GL_LIGHT4, GL_SPOT_EXPONENT, exp)
-        glLightfv(GL_LIGHT4, GL_AMBIENT, ambient)
-        glLightfv(GL_LIGHT4, GL_DIFFUSE, diffuse)
-        glLightfv(GL_LIGHT4, GL_SPECULAR, specular)
-
-        glEnable(GL_LIGHT5)
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
-        glLightfv(GL_LIGHT5, GL_POSITION, [-pos, 0, 0, 1])
-        glLightfv(GL_LIGHT5, GL_SPOT_DIRECTION, [pos, 0, 0, 1])
-        glLightfv(GL_LIGHT5, GL_SPOT_CUTOFF, spot)
-        glLightfv(GL_LIGHT5, GL_SPOT_EXPONENT, exp)
-        glLightfv(GL_LIGHT5, GL_AMBIENT, ambient)
-        glLightfv(GL_LIGHT5, GL_DIFFUSE, diffuse)
-        glLightfv(GL_LIGHT5, GL_SPECULAR, specular)
+        for iLight in range(len(corners)):
+            light = GL_LIGHT0 + iLight
+            glEnable(light)
+            glLightfv(light, GL_POSITION, corners[iLight])
+            glLightfv(light, GL_SPOT_DIRECTION,
+                      np.array(corners[len(corners)-iLight-1])/pos)
+            glLightfv(light, GL_SPOT_CUTOFF, spot)
+            glLightfv(light, GL_SPOT_EXPONENT, exp)
+            glLightfv(light, GL_AMBIENT, ambient)
+            glLightfv(light, GL_DIFFUSE, diffuse)
+            glLightfv(light, GL_SPECULAR, specular)
+#            glBegin(GL_LINES)
+#            glVertex4f(*corners[iLight])
+#            glVertex4f(*corners[len(corners)-iLight-1])
+#            glEnd()
 
     def drawAxes(self):
         arrowSize = 0.05
@@ -1569,7 +1659,6 @@ class xrtGlWidget(QGLWidget):
     def initializeGL(self):
         glutInit()
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glClearColor(0.0, 0.0, 0.0, 1.)
         glViewport(0, 0, 900, 900)
 
     def resizeGL(self, widthInPixels, heightInPixels):
