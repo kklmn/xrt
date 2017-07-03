@@ -1472,9 +1472,9 @@ class xrtGlWidget(QGLWidget):
                 for xMin, xMax, yMin, yMax in limits:
                     if oe.shape == 'round':
                         xMin = 0
-                        tiles = 10
+                        tiles = self.tiles[1] * 5
                     else:
-                        tiles = 1
+                        tiles = self.tiles[1]
                     xGridOe = np.linspace(xMin, xMax, surfCPOrder)
 
                     for k in range(tiles):
