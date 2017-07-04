@@ -238,9 +238,9 @@ class xrtGlow(QtGui.QWidget):
         self.paletteWidget.setSizePolicy(QtGui.QSizePolicy.Expanding,
                                          QtGui.QSizePolicy.Expanding)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
-            self.mplAx, self.onselect, drawtype='box', useblit=True,
-            rectprops=dict(alpha=0.4, facecolor='white'), button=1,
-            interactive=True)
+            self.mplAx, self.updateColorSelFromMPL, drawtype='box',
+            useblit=True, rectprops=dict(alpha=0.4, facecolor='white'),
+            button=1, interactive=True)
 
         colorLayout.addWidget(self.paletteWidget, 0, 0, 1, 2)
 
@@ -253,6 +253,32 @@ class xrtGlow(QtGui.QWidget):
         colorCB.currentIndexChanged['QString'].connect(self.changeColorAxis)
         colorLayout.addWidget(colorCBLabel, 1, 0)
         colorLayout.addWidget(colorCB, 1, 1)
+        for icSel, cSelText in enumerate(['Selection<sub>min</sub>',
+                                          'Selection<sub>max</sub>']):
+            selLabel = QtGui.QLabel()
+            selLabel.setText(cSelText)
+            selValidator = QtGui.QDoubleValidator()
+            selValidator.setRange(self.customGlWidget.colorMin,
+                                  self.customGlWidget.colorMax, 3)
+            selQLE = QtGui.QLineEdit()
+            selQLE.setValidator(selValidator)
+            selQLE.setText('{0:.3f}'.format(
+                self.customGlWidget.colorMin if icSel == 0 else
+                self.customGlWidget.colorMax))
+            selQLE.editingFinished.connect(self.updateColorSelFromQLE)
+            colorLayout.addWidget(selLabel, 2, icSel)
+            colorLayout.addWidget(selQLE, 3, icSel)
+        selSlider = Qwt.QwtSlider(
+            self, QtCore.Qt.Horizontal, Qwt.QwtSlider.TopScale)
+        rStep = (self.customGlWidget.colorMax -
+                 self.customGlWidget.colorMin) / 100.
+        rValue = (self.customGlWidget.colorMax +
+                  self.customGlWidget.colorMin) * 0.5
+        selSlider.setRange(self.customGlWidget.colorMin,
+                           self.customGlWidget.colorMax, rStep)
+        selSlider.setValue(rValue)
+        selSlider.sliderMoved.connect(self.updateColorSel)
+        colorLayout.addWidget(selSlider, 4, 0, 1, 2)
 
         axLabel = QtGui.QLabel()
         axLabel.setText("Intensity cut-off")
@@ -268,10 +294,19 @@ class xrtGlow(QtGui.QWidget):
         axEdit.editingFinished.connect(self.updateCutoffFromQLE)
         axSlider.objectName = "cutSlider_I"
         axSlider.valueChanged.connect(self.updateCutoff)
-#        globalNormCB = QtGui.QCheckBox()
-        colorLayout.addWidget(axLabel, 2, 0)
-        colorLayout.addWidget(axEdit, 2, 1)
-        colorLayout.addWidget(axSlider, 3, 0, 1, 2)
+
+        glNormCB = QtGui.QCheckBox()
+        glNormCB.objectName = "gNormChb_" + str(iaxis)
+        glNormCB.setCheckState(2)
+        glNormCB.stateChanged.connect(self.checkGNorm)
+        glNormLabel = QtGui.QLabel()
+        glNormLabel.setText('Global Normalization')
+
+        colorLayout.addWidget(axLabel, 2+3, 0)
+        colorLayout.addWidget(axEdit, 2+3, 1)
+        colorLayout.addWidget(axSlider, 3+3, 0, 1, 2)
+        colorLayout.addWidget(glNormCB, 4+3, 0, 1, 1)
+        colorLayout.addWidget(glNormLabel, 4+3, 1, 1, 1)
         self.colorPanel.setLayout(colorLayout)
 
 #  Projection panel
@@ -463,10 +498,8 @@ class xrtGlow(QtGui.QWidget):
         self.mplAx.set_xlabel(axis)
         self.mplAx.set_ylabel('Intensity')
 
-    def onselect(self, eclick, erelease):
-        extents = list(self.paletteWidget.span.extents)
-        self.customGlWidget.selColorMin = np.min([extents[0], extents[1]])
-        self.customGlWidget.selColorMax = np.max([extents[0], extents[1]])
+    def checkGNorm(self, state):
+        self.customGlWidget.globalNorm = True if state > 0 else False
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
@@ -502,12 +535,110 @@ class xrtGlow(QtGui.QWidget):
         self.customGlWidget.selColorMin = self.customGlWidget.colorMin
         self.customGlWidget.selColorMin = self.customGlWidget.colorMax
         self.mplAx.set_xlabel(selAxis)
-        self.im.set_extent((self.customGlWidget.colorMin,
-                            self.customGlWidget.colorMax,
-                            0, 1))
+        extents = (self.customGlWidget.colorMin,
+                   self.customGlWidget.colorMax, 0, 1)
+        self.im.set_extent(extents)
+        extents = list(extents)
+        self.colorPanel.layout().itemAt(4).widget().setText(str(extents[0]))
+        self.colorPanel.layout().itemAt(6).widget().validator().setBottom(
+            extents[0])
+        self.colorPanel.layout().itemAt(6).widget().setText(str(extents[1]))
+        self.colorPanel.layout().itemAt(4).widget().validator().setTop(
+            extents[1])
+        slider = self.colorPanel.layout().itemAt(7).widget()
+        center = 0.5 * (extents[0] + extents[1])
+        newMin = self.customGlWidget.colorMin
+        newMax = self.customGlWidget.colorMax
+        newRange = (newMax - newMin) * 0.01
+        slider.setRange(newMin, newMax, newRange)
+        slider.setValue(center)
         self.mplFig.canvas.draw()
         self.paletteWidget.span.active_handle = None
         self.paletteWidget.span.to_draw.set_visible(False)
+
+    def updateColorSelFromMPL(self, eclick, erelease):
+        try:
+            extents = list(self.paletteWidget.span.extents)
+            self.customGlWidget.selColorMin = np.min([extents[0], extents[1]])
+            self.customGlWidget.selColorMax = np.max([extents[0], extents[1]])
+            self.colorPanel.layout().itemAt(4).widget().setText(str(
+                extents[0]))
+            self.colorPanel.layout().itemAt(6).widget().validator().setBottom(
+                extents[0])
+            self.colorPanel.layout().itemAt(6).widget().setText(str(
+                extents[1]))
+            self.colorPanel.layout().itemAt(4).widget().validator().setTop(
+                extents[1])
+            slider = self.colorPanel.layout().itemAt(7).widget()
+            center = 0.5 * (extents[0] + extents[1])
+            halfWidth = (extents[1] - extents[0]) * 0.5
+            slider.setValue(center)
+            newMin = self.customGlWidget.colorMin + halfWidth
+            newMax = self.customGlWidget.colorMax - halfWidth
+            newRange = (newMax - newMin) * 0.01
+            slider.setRange(newMin, newMax, newRange)
+            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+            self.customGlWidget.glDraw()
+        except:
+            pass
+
+    def updateColorSel(self, position):
+        try:
+            extents = list(self.paletteWidget.span.extents)
+            width = extents[1] - extents[0]
+            self.customGlWidget.selColorMin = position - 0.5 * width
+            self.customGlWidget.selColorMax = position + 0.5 * width
+            self.colorPanel.layout().itemAt(4).widget().setText(
+                '{0:.3f}'.format(position - 0.5 * width))
+            self.colorPanel.layout().itemAt(6).widget().validator().setBottom(
+                position - 0.5 * width)
+            self.colorPanel.layout().itemAt(6).widget().setText(
+                '{0:.3f}'.format(position + 0.5 * width))
+            self.colorPanel.layout().itemAt(4).widget().validator().setTop(
+                position + 0.5 * width)
+            newExtents = (position - 0.5 * width, position + 0.5 * width,
+                          extents[2], extents[3])
+            self.paletteWidget.span.extents = newExtents
+            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+            self.customGlWidget.glDraw()
+        except:
+            pass
+
+    def updateColorSelFromQLE(self):
+        try:
+            cPan = self.sender()
+            cIndex = cPan.parent().layout().indexOf(cPan)
+            value = float(str(cPan.text()))
+            extents = list(self.paletteWidget.span.extents)
+            slider = self.colorPanel.layout().itemAt(7).widget()
+            if cIndex == 4:
+                self.customGlWidget.selColorMin = value
+                newExtents = (value, extents[1],
+                              extents[2], extents[3])
+                self.colorPanel.layout().itemAt(6).widget().validator(
+                    ).setBottom(value)
+                center = (value + float(str(self.colorPanel.layout().itemAt(
+                    6).widget().text()))) * 0.5
+                newMin = -center + value + self.customGlWidget.colorMin
+                newRange = (slider.maxValue() - newMin) * 0.01
+                slider.setRange(newMin, slider.maxValue(), newRange)
+            else:
+                self.customGlWidget.selColorMax = value
+                newExtents = (extents[0], value,
+                              extents[2], extents[3])
+                self.colorPanel.layout().itemAt(4).widget().validator().setTop(
+                    value)
+                center = (value + float(str(self.colorPanel.layout().itemAt(
+                    4).widget().text()))) * 0.5
+                newMax = center - value + self.customGlWidget.colorMax
+                newRange = (newMax - slider.minValue()) * 0.01
+                slider.setRange(slider.minValue(), newMax, newRange)
+            self.colorPanel.layout().itemAt(7).widget().setValue(center)
+            self.paletteWidget.span.extents = newExtents
+            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+            self.customGlWidget.glDraw()
+        except:
+            pass
 
     def projSelection(self, state):
         cPan = self.sender()
@@ -740,23 +871,30 @@ class xrtGlow(QtGui.QWidget):
         self.customGlWidget.glDraw()
 
     def updateCutoff(self, position):
-        cPan = self.sender()
-        cIndex = cPan.parent().layout().indexOf(cPan)
-        cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
-        extents = list(self.paletteWidget.span.extents)
-        self.customGlWidget.cutoffI = np.float32(position)
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
-        newExtents = (extents[0], extents[1],
-                      self.customGlWidget.cutoffI, extents[3])
-        self.paletteWidget.span.extents = newExtents
-        self.customGlWidget.glDraw()
+        try:
+            cPan = self.sender()
+            cIndex = cPan.parent().layout().indexOf(cPan)
+            cPan.parent().layout().itemAt(cIndex-1).widget().setText(
+                str(position))
+            extents = list(self.paletteWidget.span.extents)
+            self.customGlWidget.cutoffI = np.float32(position)
+            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+            newExtents = (extents[0], extents[1],
+                          self.customGlWidget.cutoffI, extents[3])
+            self.paletteWidget.span.extents = newExtents
+            self.customGlWidget.glDraw()
+        except:
+            pass
 
     def updateCutoffFromQLE(self):
-        cPan = self.sender()
-        cIndex = cPan.parent().layout().indexOf(cPan)
-        value = float(str(cPan.text()))
-        cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
-        self.customGlWidget.glDraw()
+        try:
+            cPan = self.sender()
+            cIndex = cPan.parent().layout().indexOf(cPan)
+            value = float(str(cPan.text()))
+            cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
+            self.customGlWidget.glDraw()
+        except:
+            pass
 
     def updateOpacityFromQLE(self):
         cPan = self.sender()
@@ -857,8 +995,7 @@ class xrtGlWidget(QGLWidget):
         self.enableBlending = True
         self.cutoffI = 0.01
         self.getColor = raycing.get_energy
-#        self.selColorMax = 1e20
-#        self.selColorMin = -1e20
+        self.globalNorm = True
         self.newColorAxis = True
         self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.populateVerticesArray(modelRoot)
@@ -909,20 +1046,22 @@ class xrtGlWidget(QGLWidget):
             if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
                 self.oesToPlot.append(str(ioeItem.text()))
                 self.footprints[str(ioeItem.text())] = None
+            try:
+                startBeam = self.beamsDict[
+                    self.oesList[str(ioeItem.text())][1]]
+                good = startBeam.state > 0
 
-            startBeam = self.beamsDict[
-                self.oesList[str(ioeItem.text())][1]]
-            good = startBeam.state > 0
-
-            self.colorMax = max(np.max(
-                self.getColor(startBeam)[good]),
-                self.colorMax)
-            self.colorMin = min(np.min(
-                self.getColor(startBeam)[good]),
-                self.colorMin)
-            if self.newColorAxis:
-                self.selColorMin = self.colorMin
-                self.selColorMax = self.colorMax
+                self.colorMax = max(np.max(
+                    self.getColor(startBeam)[good]),
+                    self.colorMax)
+                self.colorMin = min(np.min(
+                    self.getColor(startBeam)[good]),
+                    self.colorMin)
+                if self.newColorAxis:
+                    self.selColorMin = self.colorMin
+                    self.selColorMax = self.colorMax
+            except:
+                continue
 
             if ioeItem.hasChildren():
                 for isegment in range(ioeItem.rowCount()):
@@ -930,20 +1069,31 @@ class xrtGlWidget(QGLWidget):
                     if segmentItem0.checkState() == 2:
                         endBeam = self.beamsDict[
                             self.oesList[str(segmentItem0.text())[3:]][1]]
-                        intensity = np.abs(startBeam.Jss**2+startBeam.Jpp**2)
-                        intensity /= np.max(intensity)
+                        good = startBeam.state > 0
+                        intensity = np.sqrt(np.abs(
+                            startBeam.Jss**2 + startBeam.Jpp**2))
+                        intensityAll = intensity / np.max(intensity[good])
 
-                        good = np.logical_and(startBeam.state > 0,
-                                              intensity >= self.cutoffI)
+                        good = np.logical_and(good,
+                                              intensityAll >= self.cutoffI)
                         goodC = np.logical_and(
                             self.getColor(startBeam) <= self.selColorMax,
                             self.getColor(startBeam) >= self.selColorMin)
 
                         good = np.logical_and(good, goodC)
 
-                        alphaRays = np.repeat(intensity[good], 2).T if\
-                            alphaRays is None else np.concatenate(
-                                (alphaRays.T, np.repeat(intensity[good], 2).T))
+                        if self.globalNorm:
+                            alphaMax = 1.
+                        else:
+                            if len(intensity[good]) > 0:
+                                alphaMax = np.max(intensity[good])
+                            else:
+                                alphaMax = 1.
+
+                        alphaRays = np.repeat(intensity[good] / alphaMax, 2).T\
+                            if alphaRays is None else np.concatenate(
+                                (alphaRays.T,
+                                 np.repeat(intensity[good] / alphaMax, 2).T))
 
                         colorsRays = np.repeat(np.array(self.getColor(
                             startBeam)[good]), 2).T if\
@@ -970,20 +1120,31 @@ class xrtGlWidget(QGLWidget):
                             np.vstack((self.verticesArray, vertices.T))
 
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
-                intensity = np.abs(startBeam.Jss**2+startBeam.Jpp**2)
-                intensity /= np.max(intensity)
+                good = startBeam.state > 0
+                intensity = np.sqrt(np.abs(
+                    startBeam.Jss**2 + startBeam.Jpp**2))
+                try:
+                    intensityAll = intensity / np.max(intensity[good])
+                    good = np.logical_and(good, intensityAll >= self.cutoffI)
+                    goodC = np.logical_and(
+                        self.getColor(startBeam) <= self.selColorMax,
+                        self.getColor(startBeam) >= self.selColorMin)
 
-                good = np.logical_and(startBeam.state > 0,
-                                      intensity >= self.cutoffI)
-                goodC = np.logical_and(
-                    self.getColor(startBeam) <= self.selColorMax,
-                    self.getColor(startBeam) >= self.selColorMin)
+                    good = np.logical_and(good, goodC)
+                except:
+                    continue
 
-                good = np.logical_and(good, goodC)
+                if self.globalNorm:
+                    alphaMax = 1.
+                else:
+                    if len(intensity[good]) > 0:
+                        alphaMax = np.max(intensity[good])
+                    else:
+                        alphaMax = 1.
 
-                alphaDots = intensity[good].T if\
+                alphaDots = intensity[good].T / alphaMax if\
                     alphaDots is None else np.concatenate(
-                        (alphaDots.T, intensity[good].T))
+                        (alphaDots.T, intensity[good].T / alphaMax))
 
                 colorsDots = np.array(self.getColor(
                     startBeam)[good]).T if\
@@ -1000,26 +1161,40 @@ class xrtGlWidget(QGLWidget):
                     self.footprintsArray is None else\
                     np.vstack((self.footprintsArray, vertices.T))
 
-#        print self.verticesArray.shape, self.footprintsArray.shape
+        try:
+            colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
+                                                       self.colorMin)
+            colorsRays = np.dstack((colorsRays,
+                                    np.ones_like(alphaRays)*0.85,
+                                    alphaRays))
+            colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
+            if self.globalNorm:
+                alphaMax = np.max(alphaRays)
+            else:
+                alphaMax = 1.
+            alphaColorRays = np.array([alphaRays / alphaMax]).T *\
+                self.lineOpacity
+            self.raysColor = np.float32(np.hstack([colorsRGBRays,
+                                                   alphaColorRays]))
 
-        colorsRays = (colorsRays-self.colorMin) / (self.colorMax-self.colorMin)
-        colorsRays = np.dstack((colorsRays,
-                                np.ones_like(alphaRays)*0.85,
-                                alphaRays))
-        colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
-        alphaColorRays = np.array([alphaRays]).T * self.lineOpacity
-        self.raysColor = np.float32(np.hstack([colorsRGBRays, alphaColorRays]))
+            colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
+                                                       self.colorMin)
+            colorsDots = np.dstack((colorsDots,
+                                    np.ones_like(alphaDots)*0.85,
+                                    alphaDots))
 
-        colorsDots = (colorsDots-self.colorMin) / (self.colorMax-self.colorMin)
-        colorsDots = np.dstack((colorsDots,
-                                np.ones_like(alphaDots)*0.85,
-                                alphaDots))
-
-        colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-        alphaColorDots = np.array([alphaDots]).T * self.pointOpacity
-        self.dotsColor = np.float32(np.hstack([colorsRGBDots, alphaColorDots]))
-
-        self.newColorAxis = False
+            colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+            if self.globalNorm:
+                alphaMax = np.max(alphaDots)
+            else:
+                alphaMax = 1.
+            alphaColorDots = np.array([alphaDots / alphaMax]).T *\
+                self.pointOpacity
+            self.dotsColor = np.float32(np.hstack([colorsRGBDots,
+                                                   alphaColorDots]))
+            self.newColorAxis = False
+        except:
+            pass
 
     def modelToWorld(self, coords, dimension=None):
         if dimension is None:
