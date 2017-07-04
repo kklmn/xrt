@@ -651,17 +651,16 @@ class xrtGlow(QtGui.QWidget):
         cIndex = cPan.parent().layout().indexOf(cPan)
         cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
         if cPan.objectName[-1] == 'x':
-            self.customGlWidget.rotations[0][0] = np.float32(position)
+            self.customGlWidget.rotVecX[0] = np.float32(position)
         elif cPan.objectName[-1] == 'y':
-            self.customGlWidget.rotations[1][0] = np.float32(position)
+            self.customGlWidget.rotVecY[0] = np.float32(position)
         elif cPan.objectName[-1] == 'z':
-            self.customGlWidget.rotations[2][0] = np.float32(position)
+            self.customGlWidget.rotVecZ[0] = np.float32(position)
         self.customGlWidget.glDraw()
 
-    def updateRotationFromGL(self, actPos):
-        self.rotationPanel.layout().itemAt(2).widget().setValue(actPos[0][0])
-        self.rotationPanel.layout().itemAt(5).widget().setValue(actPos[1][0])
-        self.rotationPanel.layout().itemAt(8).widget().setValue(actPos[2][0])
+    def updateRotationFromGL(self, rotY, rotZ):
+        self.rotationPanel.layout().itemAt(5).widget().setValue(rotY)
+        self.rotationPanel.layout().itemAt(8).widget().setValue(rotZ)
 
     def updateRotationFromQLE(self):
         cPan = self.sender()
@@ -790,7 +789,7 @@ class xrtGlow(QtGui.QWidget):
                       'lineProjectionOpacity', 'lineProjectionWidth',
                       'pointProjectionOpacity', 'pointProjectionSize',
                       'coordOffset', 'cutoffI', 'drawGrid', 'aPos', 'scaleVec',
-                      'tVec', 'cameraPos', 'rotations',
+                      'tVec', 'cameraPos', 'rotVecX', 'rotVecY', 'rotVecZ',
                       'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
                       'colorMin', 'colorMax']:
             params[param] = getattr(self.customGlWidget, param)
@@ -814,7 +813,7 @@ class xrtGlow(QtGui.QWidget):
                       'lineProjectionOpacity', 'lineProjectionWidth',
                       'pointProjectionOpacity', 'pointProjectionSize',
                       'coordOffset', 'cutoffI', 'drawGrid', 'aPos', 'scaleVec',
-                      'tVec', 'cameraPos', 'rotations',
+                      'tVec', 'cameraPos', 'rotVecX', 'rotVecY', 'rotVecZ',
                       'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
                       'colorMin', 'colorMax']:
             setattr(self.customGlWidget, param, params[param])
@@ -825,11 +824,11 @@ class xrtGlow(QtGui.QWidget):
                 np.log10(self.customGlWidget.scaleVec[axis]))
 
         self.rotationPanel.layout().itemAt(2).widget().setValue(
-            self.customGlWidget.rotations[0][0])
+            self.customGlWidget.rotVecX[0])
         self.rotationPanel.layout().itemAt(5).widget().setValue(
-            self.customGlWidget.rotations[1][0])
+            self.customGlWidget.rotVecY[0])
         self.rotationPanel.layout().itemAt(8).widget().setValue(
-            self.customGlWidget.rotations[2][0])
+            self.customGlWidget.rotVecZ[0])
 
         self.opacityPanel.layout().itemAt(2).widget().setValue(
             self.customGlWidget.lineOpacity)
@@ -961,7 +960,7 @@ class xrtGlow(QtGui.QWidget):
 
 
 class xrtGlWidget(QGLWidget):
-    rotationUpdated = QtCore.pyqtSignal(np.ndarray)
+    rotationUpdated = QtCore.pyqtSignal(np.float32, np.float32)
     scaleUpdated = QtCore.pyqtSignal(np.ndarray)
 
     def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els):
@@ -1013,40 +1012,14 @@ class xrtGlWidget(QGLWidget):
         self.tVec = np.array([0., 0., 0.])
         self.cameraTarget = [0., 0., 0.]
         self.cameraPos = np.float32([3.5, 0., 0.])
-        self.rotations = np.float32([[0., 1., 0., 0.],
-                                     [0., 0., 1., 0.],
-                                     [0., 0., 0., 1.]])
+        self.rotVecX = np.float32([0., 1., 0., 0.])
+        self.rotVecY = np.float32([0., 0., 1., 0.])
+        self.rotVecZ = np.float32([0., 0., 0., 1.])
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
         self.invertColors = False
         self.glDraw()
-
-    def rotateZYX(self):
-        hRoll = np.radians(self.rotations[0][0]) * 0.5
-        hPitch = np.radians(self.rotations[1][0]) * 0.5
-        hYaw = np.radians(self.rotations[2][0]) * 0.5
-        t0 = np.cos(hYaw)
-        t1 = np.sin(hYaw)
-        t2 = np.cos(hRoll)
-        t3 = np.sin(hRoll)
-        t4 = np.cos(hPitch)
-        t5 = np.sin(hPitch)
-
-        qForward = [t0 * t2 * t4 + t1 * t3 * t5,
-                    (t0 * t3 * t4 - t1 * t2 * t5),
-                    (t0 * t2 * t5 + t1 * t3 * t4),
-                    (t1 * t2 * t4 - t0 * t3 * t5)]
-
-        angle = 2 * np.arccos(qForward[0])
-        q2v = np.sin(angle * 0.5)
-        qbt1 = qForward[1] / q2v if q2v != 0\
-            else 0
-        qbt2 = qForward[2] / q2v if q2v != 0\
-            else 0
-        qbt3 = qForward[3] / q2v if q2v != 0\
-            else 0
-        glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
 
     def setPointSize(self, pSize):
         self.pointSize = pSize
@@ -1232,12 +1205,6 @@ class xrtGlWidget(QGLWidget):
                               self.scaleVec[dimension]) / self.maxLen)
 
     def paintGL(self):
-        def quatMult(qf, qt):
-            return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
-                    qf[0]*qt[1]+qf[1]*qt[0]+qf[2]*qt[3]-qf[3]*qt[2],
-                    qf[0]*qt[2]-qf[1]*qt[3]+qf[2]*qt[0]+qf[3]*qt[1],
-                    qf[0]*qt[3]+qf[1]*qt[2]-qf[2]*qt[1]+qf[3]*qt[0]]
-
         def setMaterial(mat):
             if mat == 'Cu':
                 glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,
@@ -1277,8 +1244,7 @@ class xrtGlWidget(QGLWidget):
         if self.enableAA:
             glEnable(GL_LINE_SMOOTH)
             glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+
         if self.enableBlending:
             glEnable(GL_MULTISAMPLE)
             glEnable(GL_BLEND)
@@ -1292,8 +1258,15 @@ class xrtGlWidget(QGLWidget):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         glLoadIdentity()
-        self.rotateZYX()
+        glRotatef(*self.rotVecX)
+        glRotatef(*self.rotVecY)
+        glRotatef(*self.rotVecZ)
         axPosModifier = np.ones(3)
+
+#        glPushMatrix();
+#        glTranslatef(0.0,-1.2,-6);
+#        glutWireCone(1,2, 16, 16);
+#        glPopMatrix();
 
         for dim in range(3):
             for iAx in range(3):
@@ -1327,8 +1300,9 @@ class xrtGlWidget(QGLWidget):
         if self.drawGrid:
 
             glLoadIdentity()
-            self.rotateZYX()
-
+            glRotatef(*self.rotVecX)
+            glRotatef(*self.rotVecY)
+            glRotatef(*self.rotVecZ)
             back = np.array([[-self.aPos[0], self.aPos[1], -self.aPos[2]],
                              [-self.aPos[0], self.aPos[1], self.aPos[2]],
                              [-self.aPos[0], -self.aPos[1], self.aPos[2]],
@@ -1346,52 +1320,42 @@ class xrtGlWidget(QGLWidget):
 
 #  Calculating regular grids in world coordinates
             limits = np.array([-1, 1])[:, np.newaxis] * np.array(self.aPos)
-            allLimits = limits * self.maxLen / self.scaleVec - self.tVec\
-                + self.coordOffset
+            allLimits = limits * self.maxLen / self.scaleVec - self.tVec
             axGrids = []
-            gridLabels = []
-            precisionLabels = []
+
+            gridLabels = None
+            precisionLabels = None
 
             for iAx in range(3):
-                m2 = self.aPos[iAx] / 0.9
-                dx1 = np.abs(allLimits[:, iAx][0] - allLimits[:, iAx][1]) / m2
-                order = np.floor(np.log10(dx1))
-                m1 = dx1 * 10**-order
-
-                if (m1 >= 1) and (m1 < 2):
-                    step = 0.2 * 10**order
-                elif (m1 >= 2) and (m1 < 4):
-                    step = 0.5 * 10**order
-                else:
-                    step = 10**order
-                if step < 1:
-                    decimalX = int(np.abs(order)) + 1 if m1 < 4 else\
-                        int(np.abs(order))
-                else:
-                    decimalX = 0
-
-                gridX = np.arange(np.int(allLimits[:, iAx][0]/step)*step,
-                                  allLimits[:, iAx][1], step)
+                dx = np.abs(allLimits[:, iAx][0] - allLimits[:, iAx][1])*0.15
+                decimalX = int(np.abs(np.modf(np.log10(dx))[1])) + 1 if\
+                    dx < 10 else 0
+                dx = np.round(dx, decimalX)
+                gridX = np.arange(np.round(allLimits[:, iAx][0], decimalX),
+                                  allLimits[:, iAx][1], dx)
                 gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
                     gridX[1:]
-                gridLabels.extend([gridX])
-                precisionLabels.extend([np.ones_like(gridX)*decimalX])
-                axGrids.extend([gridX - self.coordOffset[iAx]])
+                gridLabels = np.concatenate((
+                    gridLabels, gridX + self.coordOffset[iAx])) if gridLabels\
+                    is not None else gridX + self.coordOffset[iAx]
+                precisionLabels = np.concatenate((
+                    precisionLabels,
+                    np.ones_like(gridX)*decimalX)) if precisionLabels\
+                    is not None else np.ones_like(gridX)*decimalX
+                axGrids.extend([gridX])
 
             back[:, 0] *= axPosModifier[0]
             side[:, 1] *= axPosModifier[1]
             bottom[:, 2] *= axPosModifier[2]
 
-            axisL = []
-
-            axisL.extend([np.vstack(
+            xAxis = np.vstack(
                 (self.modelToWorld(axGrids, 0),
                  np.ones(len(axGrids[0]))*self.aPos[1]*axPosModifier[1],
-                 np.ones(len(axGrids[0]))*-self.aPos[2]*axPosModifier[2]))])
-            axisL.extend([np.vstack(
+                 np.ones(len(axGrids[0]))*-self.aPos[2]*axPosModifier[2]))
+            yAxis = np.vstack(
                 (np.ones(len(axGrids[1]))*self.aPos[0]*axPosModifier[0],
                  self.modelToWorld(axGrids, 1),
-                 np.ones(len(axGrids[1]))*-self.aPos[2]*axPosModifier[2]))])
+                 np.ones(len(axGrids[1]))*-self.aPos[2]*axPosModifier[2]))
             zAxis = np.vstack(
                 (np.ones(len(axGrids[2]))*-self.aPos[0]*axPosModifier[0],
                  np.ones(len(axGrids[2]))*self.aPos[1]*axPosModifier[1],
@@ -1418,75 +1382,39 @@ class xrtGlWidget(QGLWidget):
                 (np.ones(len(axGrids[1]))*-self.aPos[0]*axPosModifier[0],
                  self.modelToWorld(axGrids, 1),
                  np.ones(len(axGrids[1]))*self.aPos[2]*axPosModifier[2]))
-            axisL.extend([np.vstack(
+            zAxisC = np.vstack(
                 (np.ones(len(axGrids[2]))*self.aPos[0]*axPosModifier[0],
                  np.ones(len(axGrids[2]))*-self.aPos[1]*axPosModifier[1],
-                 self.modelToWorld(axGrids, 2)))])
+                 self.modelToWorld(axGrids, 2)))
 
             xLines = np.vstack(
-                (axisL[0], xAxisB, xAxisB, xAxisC)).T.flatten().reshape(
-                4*xAxisB.shape[1], 3)
+                (xAxis, xAxisB, xAxisB, xAxisC)).T.flatten().reshape(
+                4*xAxis.shape[1], 3)
             yLines = np.vstack(
-                (axisL[1], yAxisB, yAxisB, yAxisC)).T.flatten().reshape(
-                4*yAxisB.shape[1], 3)
+                (yAxis, yAxisB, yAxisB, yAxisC)).T.flatten().reshape(
+                4*yAxis.shape[1], 3)
             zLines = np.vstack(
-                (zAxis, zAxisB, zAxisB, axisL[2])).T.flatten().reshape(
-                4*zAxisB.shape[1], 3)
+                (zAxis, zAxisB, zAxisB, zAxisC)).T.flatten().reshape(
+                4*zAxis.shape[1], 3)
 
-#            axTicks = np.vstack((xAxis.T, yAxis.T, zAxisC.T))
+            axTicks = np.vstack((xAxis.T, yAxis.T, zAxisC.T))
             axGrid = np.vstack((xLines, yLines, zLines))
 
             if self.invertColors:
                 glColor4f(0.0, 0.0, 0.0, 1.)
             else:
                 glColor4f(1.0, 1.0, 1.0, 1.)
-#            for tick, tText, pcs in zip(axTicks, gridLabels, precisionLabels):
-#                glRasterPos3f(*tick)
+
+            for tick, tText, pcs in zip(axTicks, gridLabels, precisionLabels):
+                glRasterPos3f(*tick)
+                for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
+                    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
+#                glPushMatrix()
+#                glTranslatef(*tick)
+#                glScalef(1./2000., 1./2000., 1./2000.)
 #                for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
-#                    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
-#            if not self.enableAA:
-#                glEnable(GL_LINE_SMOOTH)
-#                glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-#                glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-            for iAx in range(3):
-                for tick, tText, pcs in zip(axisL[iAx].T, gridLabels[iAx],
-                                            precisionLabels[iAx]):
-                    glPushMatrix()
-                    glTranslatef(*tick)
-                    hRoll = np.radians(self.rotations[0][0]) * 0.5
-                    hPitch = np.radians(self.rotations[1][0]) * 0.5
-                    hYaw = np.radians(self.rotations[2][0]) * 0.5
-                    t0 = np.cos(hYaw)
-                    t1 = np.sin(hYaw)
-                    t2 = np.cos(hRoll)
-                    t3 = np.sin(hRoll)
-                    t4 = np.cos(hPitch)
-                    t5 = np.sin(hPitch)
-                    qBack = [t0 * t2 * t4 + t1 * t3 * t5,
-                             -(t0 * t3 * t4 - t1 * t2 * t5),
-                             -(t0 * t2 * t5 + t1 * t3 * t4),
-                             -(t1 * t2 * t4 - t0 * t3 * t5)]
-
-                    qText = [0.5, 0.5, 0.5, 0.5]
-
-                    qb = quatMult(qBack, qText)
-                    angle = 2 * np.arccos(qb[0])
-                    q2v = np.sin(angle * 0.5)
-                    qbt1 = qb[1] / q2v if q2v != 0\
-                        else 0
-                    qbt2 = qb[2] / q2v if q2v != 0\
-                        else 0
-                    qbt3 = qb[3] / q2v if q2v != 0\
-                        else 0
-                    glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
-
-                    glScalef(1./2500., 1./2500., 1./2500.)
-
-                    for symbol in " {0:.{1}f}".format(tText, int(pcs)):
-                        glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
-                    glPopMatrix()
-#            if not self.enableAA:
-#                glDisable(GL_LINE_SMOOTH)
+#                    glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
+#                glPopMatrix()
 
             gridColor = np.ones((len(axGrid), 4)) * 0.25
             gridArray = vbo.VBO(np.float32(axGrid))
@@ -1515,7 +1443,10 @@ class xrtGlWidget(QGLWidget):
             gridColorArray.unbind()
 
         glLoadIdentity()
-        self.rotateZYX()
+        glRotatef(*self.rotVecX)
+        glRotatef(*self.rotVecY)
+        glRotatef(*self.rotVecZ)
+#        print self.oesToPlot
         if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glEnableClientState(GL_NORMAL_ARRAY)
@@ -1813,7 +1744,6 @@ class xrtGlWidget(QGLWidget):
     def drawAxes(self):
         arrowSize = 0.05
         axisLen = 0.1
-        glLineWidth(1.)
 
         def drawCone(z, r, nFacets, color):
             phi = np.linspace(0, 2*np.pi, nFacets)
@@ -1849,7 +1779,9 @@ class xrtGlWidget(QGLWidget):
         glEnableClientState(GL_COLOR_ARRAY)
 
         glLoadIdentity()
-        self.rotateZYX()
+        glRotatef(*self.rotVecX)
+        glRotatef(*self.rotVecY)
+        glRotatef(*self.rotVecZ)
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glPushMatrix()
@@ -1911,23 +1843,19 @@ class xrtGlWidget(QGLWidget):
     def mouseMoveEvent(self, mouseEvent):
         if mouseEvent.buttons() == QtCore.Qt.LeftButton:
             glLoadIdentity()
-            self.rotateZYX()
+            glRotatef(*self.rotVecX)
+            glRotatef(*self.rotVecY)
+            glRotatef(*self.rotVecZ)
             pModelT = np.array(glGetDoublev(GL_TRANSPOSE_MODELVIEW_MATRIX))
             self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
             self.signs = np.sign(pModelT)
 
             if mouseEvent.modifiers() == QtCore.Qt.NoModifier:
-                self.rotations[1][0] += np.float32(
-                    (mouseEvent.y() - self.prevMPos[1]) * 36. / 90. *
-                    self.signs[1][1])
-                self.rotations[2][0] += np.float32(
-                    (mouseEvent.x() - self.prevMPos[0]) * 36. / 90.)
-                for ax in range(2):
-                    if self.rotations[self.visibleAxes[ax+1]][0] > 180:
-                        self.rotations[self.visibleAxes[ax+1]][0] -= 360
-                    if self.rotations[self.visibleAxes[ax+1]][0] < -180:
-                        self.rotations[self.visibleAxes[ax+1]][0] += 360
-                self.rotationUpdated.emit(self.rotations)
+                self.rotVecY[0] += np.float32(
+                    (mouseEvent.y() - self.prevMPos[1])*36./90.)
+                self.rotVecZ[0] += np.float32(
+                    (mouseEvent.x() - self.prevMPos[0])*36./90.)
+                self.rotationUpdated.emit(self.rotVecY[0], self.rotVecZ[0])
             elif mouseEvent.modifiers() == QtCore.Qt.ShiftModifier:
                 pProjectionT = glGetDoublev(GL_TRANSPOSE_PROJECTION_MATRIX)
                 pView = glGetIntegerv(GL_VIEWPORT)
