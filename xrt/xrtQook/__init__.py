@@ -345,7 +345,7 @@ class XrtQook(QWidget):
         runScriptAction.triggered.connect(self.execCode)
 
         glowAction = QAction(
-            QIcon(os.path.join(iconsDir, 'light_bulb.png')),
+            QIcon(os.path.join(iconsDir, 'icons8-3D Glasses-48_2.png')), #'light_bulb.png')),
             'View beamline in xrtGlow',
             self)
         if isOpenGL:
