@@ -257,8 +257,8 @@ class XRT_CL(object):
             if slicedROArgs is not None and dimension > 1:
                 for iarg, arg in enumerate(slicedROArgs):
                     secondDim = np.int(len(arg) / dimension)
-                    iSlice = slice(ndstart[ictx]*secondDim,
-                                   (ndstart[ictx]+ndsize[ictx])*secondDim)
+                    iSlice = slice(int(ndstart[ictx]*secondDim),
+                                   int((ndstart[ictx]+ndsize[ictx])*secondDim))
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
@@ -272,8 +272,8 @@ class XRT_CL(object):
             if slicedRWArgs is not None:
                 for iarg, arg in enumerate(slicedRWArgs):
                     secondDim = np.int(len(arg) / dimension)
-                    iSlice = slice(ndstart[ictx]*secondDim,
-                                   (ndstart[ictx]+ndsize[ictx])*secondDim)
+                    iSlice = slice(int(ndstart[ictx]*secondDim),
+                                   int((ndstart[ictx]+ndsize[ictx])*secondDim))
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                         self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
@@ -308,8 +308,8 @@ class XRT_CL(object):
             for ictx, ctx in enumerate(work_cl_ctx):
                 for iarg, arg in enumerate(slicedRWArgs):
                     secondDim = np.int(len(arg) / dimension)
-                    iSlice = slice(ndstart[ictx]*secondDim,
-                                   (ndstart[ictx]+ndsize[ictx])*secondDim)
+                    iSlice = slice(int(ndstart[ictx]*secondDim),
+                                   int((ndstart[ictx]+ndsize[ictx])*secondDim))
                     cl.enqueue_copy(self.cl_queue[ictx],
                                     slicedRWArgs[iarg][iSlice],
                                     kernel_bufs[ictx][iarg + rw_pos],
