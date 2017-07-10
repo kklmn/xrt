@@ -82,7 +82,7 @@ class xrtGlow(QtGui.QWidget):
                                 self.beamsToElements[segment[ind+1]] =\
                                     elName
                 self.oesList[elName].append(center)
-                print elName, center
+#                print elName, center
                 self.oesList[elName].append(is2ndXtal)
 
         headerRow = []
@@ -405,12 +405,14 @@ class xrtGlow(QtGui.QWidget):
                                                     'Enable blending',
                                                     'Depth test for Lines',
                                                     'Depth test for Points',
-                                                    'Invert scene color']),
+                                                    'Invert scene color',
+                                                    'Show OE Labels']),
                                          [self.checkAA,
                                           self.checkBlending,
                                           self.checkLineDepthTest,
                                           self.checkPointDepthTest,
-                                          self.invertSceneColor]):
+                                          self.invertSceneColor,
+                                          self.checkShowLabels]):
             aaCheckBox = QtGui.QCheckBox()
             aaCheckBox.objectName = "aaChb" + str(iCB)
             aaCheckBox.setCheckState(2) if iCB in [1, 2] else\
@@ -436,9 +438,9 @@ class xrtGlow(QtGui.QWidget):
             axEdit.editingFinished.connect(self.updateTileFromQLE)
             axSlider.objectName = "oeTileSlider_" + axis
             axSlider.valueChanged.connect(self.updateTile)
-            sceneLayout.addWidget(axLabel, 11+iaxis*2, 0)
-            sceneLayout.addWidget(axEdit, 11+iaxis*2, 1)
-            sceneLayout.addWidget(axSlider, 11+iaxis*2+1, 0, 1, 2)
+            sceneLayout.addWidget(axLabel, 12+iaxis*2, 0)
+            sceneLayout.addWidget(axEdit, 12+iaxis*2, 1)
+            sceneLayout.addWidget(axSlider, 12+iaxis*2+1, 0, 1, 2)
 
         self.scenePanel.setLayout(sceneLayout)
 
@@ -525,6 +527,10 @@ class xrtGlow(QtGui.QWidget):
 
     def invertSceneColor(self, state):
         self.customGlWidget.invertColors = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkShowLabels(self, state):
+        self.customGlWidget.showOeLabels = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
@@ -1006,6 +1012,7 @@ class xrtGlWidget(QGLWidget):
         self.maxLen = np.max(maxC - minC)
 
         self.drawGrid = True
+        self.showOeLabels = False
         self.aPos = [0.9, 0.9, 0.9]
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
@@ -1023,6 +1030,9 @@ class xrtGlWidget(QGLWidget):
         self.glDraw()
 
     def rotateZYX(self):
+        glRotate(*self.rotations[0])
+        glRotate(*self.rotations[1])
+        glRotate(*self.rotations[2])
 #        hRoll = np.radians(self.rotations[0][0]) * 0.5
 #        hPitch = np.radians(self.rotations[1][0]) * 0.5
 #        hYaw = np.radians(self.rotations[2][0]) * 0.5
@@ -1047,9 +1057,6 @@ class xrtGlWidget(QGLWidget):
 #        qbt3 = qForward[3] / q2v if q2v != 0\
 #            else 0
 #        glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
-        glRotate(*self.rotations[0])
-        glRotate(*self.rotations[1])
-        glRotate(*self.rotations[2])
 
     def setPointSize(self, pSize):
         self.pointSize = pSize
@@ -1456,7 +1463,7 @@ class xrtGlWidget(QGLWidget):
                                             precisionLabels[iAx]):
                     glRasterPos3f(*tick)
                     for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
-                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, 
+                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
                                             ord(symbol))
 
 #                    glPushMatrix()
@@ -1524,6 +1531,7 @@ class xrtGlWidget(QGLWidget):
 
         glLoadIdentity()
         self.rotateZYX()
+
         if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glEnableClientState(GL_NORMAL_ARRAY)
@@ -1576,6 +1584,20 @@ class xrtGlWidget(QGLWidget):
 
         if self.pointsDepthTest:
             glDisable(GL_DEPTH_TEST)
+
+        if self.showOeLabels:
+            pcs = 3
+            for oeKey, oeValue in self.oesList.iteritems():
+                oeLabelPos = self.modelToWorld(np.array(oeValue[2]) -
+                                               self.coordOffset)
+                oeCenterStr = '    {} ('.format(oeKey)
+                for dim in oeValue[2]:
+                    oeCenterStr += '{0:.{1}f},'.format(dim, pcs)
+                oeCenterStr = oeCenterStr[:-1] + ')'
+                glRasterPos3f(*oeLabelPos)
+                for symbol in oeCenterStr:
+                    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
+                                        ord(symbol))
 
         glFlush()
 
