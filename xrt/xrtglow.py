@@ -420,12 +420,23 @@ class xrtGlow(QtGui.QWidget):
             aaCheckBox.stateChanged.connect(cbFunc)
             aaLabel = QtGui.QLabel()
             aaLabel.setText(cbText)
-            sceneLayout.addWidget(aaCheckBox, 6+iCB, 0, 1, 1)
-            sceneLayout.addWidget(aaLabel, 6+iCB, 1, 1, 1)
+            sceneLayout.addWidget(aaCheckBox, 6+iCB, 0)
+            sceneLayout.addWidget(aaLabel, 6+iCB, 1)
+
+        labelPrec = QtGui.QSpinBox()
+        labelPrec.setRange(0, 4)
+        labelPrec.setValue(1)
+        labelPrec.setSuffix('mm')
+        labelPrec.valueChanged.connect(self.setLabelPrec)
+        aaLabel = QtGui.QLabel()
+        aaLabel.setText('Label Precision')
+        sceneLayout.addWidget(aaLabel, 7+iCB, 0)
+        sceneLayout.addWidget(labelPrec, 7+iCB, 1)
 
         oeTileValidator = QtGui.QIntValidator()
         sceneValidator.setRange(1, 20)
-        for iaxis, axis in enumerate(['local x', 'local y']):
+        for iaxis, axis in enumerate(['OE tessellation X',
+                                      'OE tessellation Y']):
             axLabel = QtGui.QLabel()
             axLabel.setText(axis)
             axLabel.objectName = "oeTileLabel_" + axis
@@ -438,9 +449,9 @@ class xrtGlow(QtGui.QWidget):
             axEdit.editingFinished.connect(self.updateTileFromQLE)
             axSlider.objectName = "oeTileSlider_" + axis
             axSlider.valueChanged.connect(self.updateTile)
-            sceneLayout.addWidget(axLabel, 12+iaxis*2, 0)
-            sceneLayout.addWidget(axEdit, 12+iaxis*2, 1)
-            sceneLayout.addWidget(axSlider, 12+iaxis*2+1, 0, 1, 2)
+            sceneLayout.addWidget(axLabel, 13+iaxis*2, 0)
+            sceneLayout.addWidget(axEdit, 13+iaxis*2, 1)
+            sceneLayout.addWidget(axSlider, 13+iaxis*2+1, 0, 1, 2)
 
         self.scenePanel.setLayout(sceneLayout)
 
@@ -531,6 +542,10 @@ class xrtGlow(QtGui.QWidget):
 
     def checkShowLabels(self, state):
         self.customGlWidget.showOeLabels = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def setLabelPrec(self, prec):
+        self.customGlWidget.labelCoordPrec = prec
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
@@ -991,6 +1006,7 @@ class xrtGlWidget(QGLWidget):
         self.pointSize = 1
         self.linesDepthTest = True
         self.pointsDepthTest = False
+        self.labelCoordPrec = 1
 
         self.lineProjectionOpacity = 0.1
         self.lineProjectionWidth = 1
@@ -1586,14 +1602,36 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_DEPTH_TEST)
 
         if self.showOeLabels:
-            pcs = 3
+            def makeCenterStr(centerList, prec):
+                retStr = '('
+                for dim in centerList:
+                    retStr += '{0:.{1}f}, '.format(dim, prec)
+                return retStr[:-2] + ')'
+
+            oeLabels = dict()
             for oeKey, oeValue in self.oesList.iteritems():
-                oeLabelPos = self.modelToWorld(np.array(oeValue[2]) -
-                                               self.coordOffset)
-                oeCenterStr = '    {} ('.format(oeKey)
-                for dim in oeValue[2]:
-                    oeCenterStr += '{0:.{1}f},'.format(dim, pcs)
-                oeCenterStr = oeCenterStr[:-1] + ')'
+                oeCenterStr = makeCenterStr(oeValue[2], self.labelCoordPrec)
+                addStr = True
+                for oeLabelKey, oeLabelValue in oeLabels.iteritems():
+                    if np.all(np.round(
+                            oeLabelValue[0], self.labelCoordPrec) ==
+                            np.round(oeValue[2], self.labelCoordPrec)):
+                        oeLabelValue.append(oeKey)
+                        addStr = False
+                if addStr:
+                    oeLabels[oeCenterStr] = [oeValue[2], oeKey]
+
+            for oeKey, oeValue in oeLabels.iteritems():
+                outCenterStr = ''
+                for oeIndex, oeLabel in enumerate(oeValue):
+                    if oeIndex > 0:
+                        outCenterStr += '{}, '.format(oeLabel)
+                    else:
+                        oeCoord = np.array(oeLabel)
+                oeCenterStr = '    {0}: {1}mm'.format(
+                    outCenterStr[:-2], oeKey)
+
+                oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
                 glRasterPos3f(*oeLabelPos)
                 for symbol in oeCenterStr:
                     glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
