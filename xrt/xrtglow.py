@@ -82,7 +82,7 @@ class xrtGlow(QtGui.QWidget):
                                 self.beamsToElements[segment[ind+1]] =\
                                     elName
                 self.oesList[elName].append(center)
-                print elName, center
+#                print elName, center
                 self.oesList[elName].append(is2ndXtal)
 
         headerRow = []
@@ -405,12 +405,14 @@ class xrtGlow(QtGui.QWidget):
                                                     'Enable blending',
                                                     'Depth test for Lines',
                                                     'Depth test for Points',
-                                                    'Invert scene color']),
+                                                    'Invert scene color',
+                                                    'Show OE Labels']),
                                          [self.checkAA,
                                           self.checkBlending,
                                           self.checkLineDepthTest,
                                           self.checkPointDepthTest,
-                                          self.invertSceneColor]):
+                                          self.invertSceneColor,
+                                          self.checkShowLabels]):
             aaCheckBox = QtGui.QCheckBox()
             aaCheckBox.objectName = "aaChb" + str(iCB)
             aaCheckBox.setCheckState(2) if iCB in [1, 2] else\
@@ -418,12 +420,23 @@ class xrtGlow(QtGui.QWidget):
             aaCheckBox.stateChanged.connect(cbFunc)
             aaLabel = QtGui.QLabel()
             aaLabel.setText(cbText)
-            sceneLayout.addWidget(aaCheckBox, 6+iCB, 0, 1, 1)
-            sceneLayout.addWidget(aaLabel, 6+iCB, 1, 1, 1)
+            sceneLayout.addWidget(aaCheckBox, 6+iCB, 0)
+            sceneLayout.addWidget(aaLabel, 6+iCB, 1)
+
+        labelPrec = QtGui.QSpinBox()
+        labelPrec.setRange(0, 4)
+        labelPrec.setValue(1)
+        labelPrec.setSuffix('mm')
+        labelPrec.valueChanged.connect(self.setLabelPrec)
+        aaLabel = QtGui.QLabel()
+        aaLabel.setText('Label Precision')
+        sceneLayout.addWidget(aaLabel, 7+iCB, 0)
+        sceneLayout.addWidget(labelPrec, 7+iCB, 1)
 
         oeTileValidator = QtGui.QIntValidator()
         sceneValidator.setRange(1, 20)
-        for iaxis, axis in enumerate(['local x', 'local y']):
+        for iaxis, axis in enumerate(['OE tessellation X',
+                                      'OE tessellation Y']):
             axLabel = QtGui.QLabel()
             axLabel.setText(axis)
             axLabel.objectName = "oeTileLabel_" + axis
@@ -436,9 +449,9 @@ class xrtGlow(QtGui.QWidget):
             axEdit.editingFinished.connect(self.updateTileFromQLE)
             axSlider.objectName = "oeTileSlider_" + axis
             axSlider.valueChanged.connect(self.updateTile)
-            sceneLayout.addWidget(axLabel, 11+iaxis*2, 0)
-            sceneLayout.addWidget(axEdit, 11+iaxis*2, 1)
-            sceneLayout.addWidget(axSlider, 11+iaxis*2+1, 0, 1, 2)
+            sceneLayout.addWidget(axLabel, 13+iaxis*2, 0)
+            sceneLayout.addWidget(axEdit, 13+iaxis*2, 1)
+            sceneLayout.addWidget(axSlider, 13+iaxis*2+1, 0, 1, 2)
 
         self.scenePanel.setLayout(sceneLayout)
 
@@ -525,6 +538,14 @@ class xrtGlow(QtGui.QWidget):
 
     def invertSceneColor(self, state):
         self.customGlWidget.invertColors = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkShowLabels(self, state):
+        self.customGlWidget.showOeLabels = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def setLabelPrec(self, prec):
+        self.customGlWidget.labelCoordPrec = prec
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
@@ -985,6 +1006,7 @@ class xrtGlWidget(QGLWidget):
         self.pointSize = 1
         self.linesDepthTest = True
         self.pointsDepthTest = False
+        self.labelCoordPrec = 1
 
         self.lineProjectionOpacity = 0.1
         self.lineProjectionWidth = 1
@@ -1006,6 +1028,7 @@ class xrtGlWidget(QGLWidget):
         self.maxLen = np.max(maxC - minC)
 
         self.drawGrid = True
+        self.showOeLabels = False
         self.aPos = [0.9, 0.9, 0.9]
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
@@ -1023,30 +1046,33 @@ class xrtGlWidget(QGLWidget):
         self.glDraw()
 
     def rotateZYX(self):
-        hRoll = np.radians(self.rotations[0][0]) * 0.5
-        hPitch = np.radians(self.rotations[1][0]) * 0.5
-        hYaw = np.radians(self.rotations[2][0]) * 0.5
-        t0 = np.cos(hYaw)
-        t1 = np.sin(hYaw)
-        t2 = np.cos(hRoll)
-        t3 = np.sin(hRoll)
-        t4 = np.cos(hPitch)
-        t5 = np.sin(hPitch)
-
-        qForward = [t0 * t2 * t4 + t1 * t3 * t5,
-                    (t0 * t3 * t4 - t1 * t2 * t5),
-                    (t0 * t2 * t5 + t1 * t3 * t4),
-                    (t1 * t2 * t4 - t0 * t3 * t5)]
-
-        angle = 2 * np.arccos(qForward[0])
-        q2v = np.sin(angle * 0.5)
-        qbt1 = qForward[1] / q2v if q2v != 0\
-            else 0
-        qbt2 = qForward[2] / q2v if q2v != 0\
-            else 0
-        qbt3 = qForward[3] / q2v if q2v != 0\
-            else 0
-        glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
+        glRotate(*self.rotations[0])
+        glRotate(*self.rotations[1])
+        glRotate(*self.rotations[2])
+#        hRoll = np.radians(self.rotations[0][0]) * 0.5
+#        hPitch = np.radians(self.rotations[1][0]) * 0.5
+#        hYaw = np.radians(self.rotations[2][0]) * 0.5
+#        t0 = np.cos(hYaw)
+#        t1 = np.sin(hYaw)
+#        t2 = np.cos(hRoll)
+#        t3 = np.sin(hRoll)
+#        t4 = np.cos(hPitch)
+#        t5 = np.sin(hPitch)
+#
+#        qForward = [t0 * t2 * t4 + t1 * t3 * t5,
+#                    (t0 * t3 * t4 - t1 * t2 * t5),
+#                    (t0 * t2 * t5 + t1 * t3 * t4),
+#                    (t1 * t2 * t4 - t0 * t3 * t5)]
+#
+#        angle = 2 * np.arccos(qForward[0])
+#        q2v = np.sin(angle * 0.5)
+#        qbt1 = qForward[1] / q2v if q2v != 0\
+#            else 0
+#        qbt2 = qForward[2] / q2v if q2v != 0\
+#            else 0
+#        qbt3 = qForward[3] / q2v if q2v != 0\
+#            else 0
+#        glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
 
     def setPointSize(self, pSize):
         self.pointSize = pSize
@@ -1451,40 +1477,45 @@ class xrtGlWidget(QGLWidget):
             for iAx in range(3):
                 for tick, tText, pcs in zip(axisL[iAx].T, gridLabels[iAx],
                                             precisionLabels[iAx]):
-                    glPushMatrix()
-                    glTranslatef(*tick)
-                    hRoll = np.radians(self.rotations[0][0]) * 0.5
-                    hPitch = np.radians(self.rotations[1][0]) * 0.5
-                    hYaw = np.radians(self.rotations[2][0]) * 0.5
-                    t0 = np.cos(hYaw)
-                    t1 = np.sin(hYaw)
-                    t2 = np.cos(hRoll)
-                    t3 = np.sin(hRoll)
-                    t4 = np.cos(hPitch)
-                    t5 = np.sin(hPitch)
-                    qBack = [t0 * t2 * t4 + t1 * t3 * t5,
-                             -(t0 * t3 * t4 - t1 * t2 * t5),
-                             -(t0 * t2 * t5 + t1 * t3 * t4),
-                             -(t1 * t2 * t4 - t0 * t3 * t5)]
+                    glRasterPos3f(*tick)
+                    for symbol in "   {0:.{1}f}".format(tText, int(pcs)):
+                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
+                                            ord(symbol))
 
-                    qText = [0.5, 0.5, 0.5, 0.5]
-
-                    qb = quatMult(qBack, qText)
-                    angle = 2 * np.arccos(qb[0])
-                    q2v = np.sin(angle * 0.5)
-                    qbt1 = qb[1] / q2v if q2v != 0\
-                        else 0
-                    qbt2 = qb[2] / q2v if q2v != 0\
-                        else 0
-                    qbt3 = qb[3] / q2v if q2v != 0\
-                        else 0
-                    glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
-
-                    glScalef(1./2500., 1./2500., 1./2500.)
-
-                    for symbol in " {0:.{1}f}".format(tText, int(pcs)):
-                        glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
-                    glPopMatrix()
+#                    glPushMatrix()
+#                    glTranslatef(*tick)
+#                    hRoll = np.radians(self.rotations[0][0]) * 0.5
+#                    hPitch = np.radians(self.rotations[1][0]) * 0.5
+#                    hYaw = np.radians(self.rotations[2][0]) * 0.5
+#                    t0 = np.cos(hYaw)
+#                    t1 = np.sin(hYaw)
+#                    t2 = np.cos(hRoll)
+#                    t3 = np.sin(hRoll)
+#                    t4 = np.cos(hPitch)
+#                    t5 = np.sin(hPitch)
+#                    qBack = [t0 * t2 * t4 + t1 * t3 * t5,
+#                             -(t0 * t3 * t4 - t1 * t2 * t5),
+#                             -(t0 * t2 * t5 + t1 * t3 * t4),
+#                             -(t1 * t2 * t4 - t0 * t3 * t5)]
+#
+#                    qText = [0.5, 0.5, 0.5, 0.5]
+#
+#                    qb = quatMult(qBack, qText)
+#                    angle = 2 * np.arccos(qb[0])
+#                    q2v = np.sin(angle * 0.5)
+#                    qbt1 = qb[1] / q2v if q2v != 0\
+#                        else 0
+#                    qbt2 = qb[2] / q2v if q2v != 0\
+#                        else 0
+#                    qbt3 = qb[3] / q2v if q2v != 0\
+#                        else 0
+#                    glRotatef(np.degrees(angle), qbt1, qbt2, qbt3)
+#
+#                    glScalef(1./2500., 1./2500., 1./2500.)
+#
+#                    for symbol in " {0:.{1}f}".format(tText, int(pcs)):
+#                        glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
+#                    glPopMatrix()
 #            if not self.enableAA:
 #                glDisable(GL_LINE_SMOOTH)
 
@@ -1516,6 +1547,7 @@ class xrtGlWidget(QGLWidget):
 
         glLoadIdentity()
         self.rotateZYX()
+
         if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glEnableClientState(GL_NORMAL_ARRAY)
@@ -1568,6 +1600,42 @@ class xrtGlWidget(QGLWidget):
 
         if self.pointsDepthTest:
             glDisable(GL_DEPTH_TEST)
+
+        if self.showOeLabels:
+            def makeCenterStr(centerList, prec):
+                retStr = '('
+                for dim in centerList:
+                    retStr += '{0:.{1}f}, '.format(dim, prec)
+                return retStr[:-2] + ')'
+
+            oeLabels = dict()
+            for oeKey, oeValue in self.oesList.iteritems():
+                oeCenterStr = makeCenterStr(oeValue[2], self.labelCoordPrec)
+                addStr = True
+                for oeLabelKey, oeLabelValue in oeLabels.iteritems():
+                    if np.all(np.round(
+                            oeLabelValue[0], self.labelCoordPrec) ==
+                            np.round(oeValue[2], self.labelCoordPrec)):
+                        oeLabelValue.append(oeKey)
+                        addStr = False
+                if addStr:
+                    oeLabels[oeCenterStr] = [oeValue[2], oeKey]
+
+            for oeKey, oeValue in oeLabels.iteritems():
+                outCenterStr = ''
+                for oeIndex, oeLabel in enumerate(oeValue):
+                    if oeIndex > 0:
+                        outCenterStr += '{}, '.format(oeLabel)
+                    else:
+                        oeCoord = np.array(oeLabel)
+                oeCenterStr = '    {0}: {1}mm'.format(
+                    outCenterStr[:-2], oeKey)
+
+                oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
+                glRasterPos3f(*oeLabelPos)
+                for symbol in oeCenterStr:
+                    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
+                                        ord(symbol))
 
         glFlush()
 
@@ -1883,18 +1951,18 @@ class xrtGlWidget(QGLWidget):
 
         glColor4f(1, 0, 0, 1)
         glRasterPos3f(0, 0, axisLen*1.5)
-        for symbol in "  {}".format('Z'):
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(symbol))
+        for symbol in "  {}, mm".format('Z'):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
 
-        glColor4f(0, 1, 0, 1)
+        glColor4f(0, 0.75, 0, 1)
         glRasterPos3f(0, axisLen*1.5, 0)
-        for symbol in "  {}".format('Y'):
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(symbol))
+        for symbol in "  {}, mm".format('Y'):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
 
-        glColor4f(0, 0, 1, 1)
+        glColor4f(0, 0.5, 1, 1)
         glRasterPos3f(axisLen*1.5, 0, 0)
-        for symbol in "  {}".format('X'):
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(symbol))
+        for symbol in "  {}, mm".format('X'):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
         glFlush()
         glViewport(*pView)
         glColor4f(1, 1, 1, 1)
@@ -1918,8 +1986,7 @@ class xrtGlWidget(QGLWidget):
 
             if mouseEvent.modifiers() == QtCore.Qt.NoModifier:
                 self.rotations[1][0] += np.float32(
-                    (mouseEvent.y() - self.prevMPos[1]) * 36. / 90. *
-                    self.signs[1][1])
+                    (mouseEvent.y() - self.prevMPos[1]) * 36. / 90.)
                 self.rotations[2][0] += np.float32(
                     (mouseEvent.x() - self.prevMPos[0]) * 36. / 90.)
                 for ax in range(2):
