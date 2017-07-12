@@ -1406,8 +1406,12 @@ class OE(object):
                 local_g = self.local_g
             if toWhere in [3, 4]:  # grating, FZP
                 if gNormal is None:
-                    gNormal = np.asarray(local_g(lb.x[goodN], lb.y[goodN]),
-                                         order='F')
+                    if self.isParametric:
+                        tXN, tYN = self.param_to_xyz(
+                            lb.x[goodN], lb.y[goodN], lb.z[goodN])[0:2]
+                    else:
+                        tXN, tYN = lb.x[goodN], lb.y[goodN]
+                    gNormal = np.asarray(local_g(tXN, tYN), order='F')
                 giveSign = 1 if toWhere == 4 else -1
                 lb.a[goodN], lb.b[goodN], lb.c[goodN] =\
                     self._grating_deflection(goodN, lb, gNormal, oeNormal,
