@@ -170,6 +170,8 @@ except ImportError:
 #    import PySide.QtWebKit as myQtWeb
 forceTryQt5 = False
 QtName = None
+print(qt_compat.QT_API.lower())
+raise
 if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     try:
         from PyQt4 import QtGui, QtCore
