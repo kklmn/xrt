@@ -1,6 +1,4 @@
 numpy
 scipy
-urllib2
-tkinter
 matplotlib
 PyQt5
