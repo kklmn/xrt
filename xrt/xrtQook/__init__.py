@@ -1,5 +1,5 @@
-﻿# -*- coding: utf-8 -*-
-r"""
+# -*- coding: utf-8 -*-
+u"""
 Using xrtQook for script generation
 -----------------------------------
 
@@ -22,13 +22,13 @@ Using xrtQook for script generation
      :scale: 60 %
 
 - In Materials tab create a crystalline material:
-  right click → Add Material → CrystalSi. This will create a Si111 crystal at
+  right click -> Add Material -> CrystalSi. This will create a Si111 crystal at
   room temperature.
 
   .. imagezoom:: _images/qookTutor3.png
      :scale: 60 %
 
-- In Beamline tab right click → Add OE → OE. This will add an optical element
+- In Beamline tab right click -> Add OE -> OE. This will add an optical element
   with a flat surface.
 
   .. note::
@@ -39,9 +39,9 @@ Using xrtQook for script generation
      :scale: 60 %
 
 - In its properties select the created crystal as 'material', put [0, 20000, 0]
-  as 'center' (i.e. 20 m from source) and “auto” (with or without quotes) as
+  as 'center' (i.e. 20 m from source) and "auto" (with or without quotes) as
   'pitch'.
-- Add a screen to the beamline. Give it [0, 21000, “auto”] as 'center'. Its
+- Add a screen to the beamline. Give it [0, 21000, "auto"] as 'center'. Its
   height -- the last coordinate -- will be automatically calculated from the
   previous elements.
 
