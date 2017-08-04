@@ -830,15 +830,17 @@ def compare_dTheta():
 
 def compare_absorption_coeff():
     """A comparison subroutine used in the module test suit."""
-    def for_one_material(mat, ref1, title):
+    def for_one_material(m):
+        rf = os.path.join(dataDir, "{0}_absCoeff.xcrosssec.gz".format(m.name))
+        title = u'Absorption in {0}'.format(mat.name)
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel(r'$\mu_0$ (cm$^{-1}$)')
         fig.suptitle(title, fontsize=16)
-        x, mu0 = np.loadtxt(ref1, unpack=True)
+        x, mu0 = np.loadtxt(rf, unpack=True)
         p1, = ax.loglog(x, mu0, '-k', lw=2, label='XCrossSec')
-        calcmu0 = mat.get_absorption_coefficient(E)
+        calcmu0 = m.get_absorption_coefficient(E)
         p3, = ax.loglog(E, calcmu0, '-r', label='xrt')
         ax.legend(loc=1)
         ax.set_xlim(E[0], E[-1])
@@ -846,10 +848,26 @@ def compare_absorption_coeff():
         fig.savefig(fname + '.png')
 
     dataDir = os.path.join('', 'XOP-Reflectivities')
-    E = np.logspace(1, 4.+math.log10(3.), 500)
-    mat = rm.Material('Be', rho=1.848)
-    for_one_material(mat, os.path.join(dataDir, "Be_absCoeff.xcrosssec.gz"),
-                     u'Absorption in Be')
+    E = np.logspace(1+math.log10(2.), 4.+math.log10(3.), 500)
+
+#    mat = rm.Material('Be', rho=1.848)
+#    for_one_material(mat)
+#    mat = rm.Material('Ag', rho=10.50)
+#    mat = rm.Material('Ag', rho=10.50, table='Henke')
+#    for_one_material(mat)
+    mat = rm.Material('Al', rho=2.6989)
+    for_one_material(mat)
+#    mat = rm.Material('Au', rho=19.3)
+#    for_one_material(mat)
+#    mat = rm.Material('Ni', rho=8.902)
+#    for_one_material(mat)
+    E = 30000
+    print("abs coeff at {0} keV = {1} 1/cm".format(
+        E*1e-3, mat.get_absorption_coefficient(E)))
+    print("refr index at {0} keV = {1}".format(
+        E*1e-3, mat.get_refractive_index(E)))
+#    el = rm.Element('Ag')
+#    print("f1, f2", el.get_f1f2(30000))
 
 
 def compare_transmittivity():
@@ -883,7 +901,7 @@ def run_tests():
 
 #Compare the calculated rocking curves of Si crystals with those calculated by
 #XCrystal and XInpro (parts of XOP):
-    compare_rocking_curves('111')
+#    compare_rocking_curves('111')
 #    compare_rocking_curves('333')
 #    compare_rocking_curves('111', t=0.007)  # t is thickness in mm
 #    compare_rocking_curves('333', t=0.007)
@@ -932,13 +950,13 @@ def run_tests():
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
-    compare_reflectivity_multilayer()
+#    compare_reflectivity_multilayer()
 
 #    compare_dTheta()
 
 #Compare the calculated absorption coefficient with that by XCrossSec
 #(part of XOP):
-#    compare_absorption_coeff()
+    compare_absorption_coeff()
 
 #Compare the calculated transmittivity with that by XPower
 #(part of XOP):

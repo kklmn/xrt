@@ -12,8 +12,11 @@ for platform in cl.get_platforms():  # Print each platform on this computer
         print('    ' + '-' * 56)
         print('    Device - Name:  ' + device.name)
         print('    Device - Vendor:  ' + device.vendor)
-        print('    Device - Type:  ' +
-              cl.device_type.to_string(device.type))
+        try:
+            print('    Device - Type:  ' +
+                  cl.device_type.to_string(device.type))
+        except ValueError:
+            pass
         print('    Device - Max Clock Speed:  {0} Mhz'.format(
             device.max_clock_frequency))
         print('    Device - Compute Units:  {0}'.format(

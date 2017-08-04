@@ -273,7 +273,7 @@ class Material(object):
             The tables of f2 factors consider only photoelectric
             cross-sections. The tabulation by Chantler can optionally have
             *total* absorption cross-sections. This option is enabled by
-            *table*='Chantler total'.
+            *table* = 'Chantler total'.
 
         .. [Henke] http://henke.lbl.gov/optical_constants/asf.html
            B.L. Henke, E.M. Gullikson, and J.C. Davis, *X-ray interactions:

@@ -535,7 +535,7 @@ class BendingMagnet(object):
             bo.seeded = seeded
             bo.seededI = seededI
         if length > self.nrays and not self.filamentBeam:
-            bo.filter_by_index(slice(0, self.nrays))
+            bo.filter_by_index(slice(0, np.long(self.nrays)))
         if self.filamentBeam:
             bo.filamentDtheta = dtheta
             bo.filamentDpsi = dpsi
