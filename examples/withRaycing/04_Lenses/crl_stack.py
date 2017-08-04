@@ -7,8 +7,8 @@ Files in ``\examples\withRaycing\04_Lenses``
 
 This example demonstrates refraction in x-ray regime. Locus that refracts a
 collimated beam into a point focus is a paraboloid. The focal distance of such
-a vacuum-to-solid interface is, as in the usual optics, 2*p*/*δ* where *p* is
-the focal parameter of the lens paraboloid and *δ* = 1 - Re(*n*), *n* is the
+a vacuum-to-solid interface is, as in the usual optics, 2\ *p*/*δ* where *p*
+is the focal parameter of the lens paraboloid and *δ* = 1 - Re(*n*), *n* is the
 refractive index [snigirev]_. As for the usual lenses, the diopters of several
 consecutive lenses are summed up to give the total diopter:
 :math:`\frac{1}{f} = \frac{1}{f_1} + \frac{1}{f_2} + \ldots`.
@@ -29,7 +29,7 @@ deviates from the nominal one, where d\ *q* = 0, due to the rounding of
 +------------+------------+
 
 .. |CRL_Be| animation:: _images/CRL-Be
-.. |CRL_Al| animation:: _images/CRL-AL
+.. |CRL_Al| animation:: _images/CRL-Al
 
 This graph shows the relative flux in the focused beam at 9 keV after the given
 number of double-sided lenses which give approximately equal focal distance of
