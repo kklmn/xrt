@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-u"""
+﻿# -*- coding: utf-8 -*-
+r"""
 Using xrtQook for script generation
 -----------------------------------
 
