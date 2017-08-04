@@ -16,7 +16,7 @@ import os
 sys.path.append('..')
 #sys.path.append(os.path.join('..', 'xrtQook'))
 sys.path.append(os.path.abspath('exts'))
-autodoc_mock_imports = ["_tkinter"]
+autodoc_mock_imports = ["_tkinter", "PyQt4"]
 
 # -- General configuration ----------------------------------------------------
 
