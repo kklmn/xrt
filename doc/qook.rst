@@ -1,3 +1,4 @@
 .. _qook:
 
-.. automodule:: xrt.xrtQook
+.. automodule:: xrt.xrtQook.__init__
+
