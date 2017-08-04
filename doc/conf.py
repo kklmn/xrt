@@ -16,8 +16,7 @@ import os
 sys.path.append('..')
 #sys.path.append(os.path.join('..', 'xrtQook'))
 sys.path.append(os.path.abspath('exts'))
-autodoc_mock_imports = ["PyQt4", "PyQt5", "matplotlib.ticker",
-                        "matplotlib.pyplot"]
+autodoc_mock_imports = ["PyQt4", "PyQt5"]
 
 # -- General configuration ----------------------------------------------------
 
