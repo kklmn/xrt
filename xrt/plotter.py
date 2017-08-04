@@ -38,7 +38,6 @@ import pickle
 import numpy as np
 import scipy as sp
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from . import runner
 # from runner import runCardVals, runCardProcs
@@ -61,10 +60,11 @@ mpl.rcParams['axes.unicode_minus'] = False
 #mpl.rcParams['font.family'] = 'serif'
 #mpl.rcParams['font.serif'] = 'cm'
 mpl.rcParams['axes.linewidth'] = 0.75
-mpl.rcParams['backend'] = 'Qt4Agg'
-# mpl.rcParams['backend'] = 'Agg'
+#mpl.rcParams['backend'] = 'Qt4Agg'
+#mpl.rcParams['backend'] = 'Agg'
 #mpl.rcParams['xtick.major.pad'] = '5'
 #mpl.rcParams['ytick.major.pad'] = '5'
+import matplotlib.pyplot as plt
 
 # [Sizes and positions of plots]
 dpi = 100
