@@ -168,20 +168,25 @@ except ImportError:
 #    from PySide import QtGui, QtCore
 #    import PySide.QtGui as myQtGUI
 #    import PySide.QtWebKit as myQtWeb
+forceTryQt5 = False
+QtName = None
 if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    QtName = "PyQt4"
-    from PyQt4 import QtGui, QtCore
-    import PyQt4.QtGui as myQtGUI
-    import PyQt4.QtWebKit as myQtWeb
-elif 'pyqt5' in qt_compat.QT_API.lower():
-    QtName = "PyQt5"
+    try:
+        from PyQt4 import QtGui, QtCore
+        import PyQt4.QtGui as myQtGUI
+        import PyQt4.QtWebKit as myQtWeb
+        QtName = "PyQt4"
+    except ImportError:
+        forceTryQt5 = True  # this is a wirkaround for build in rtfd.org
+if ('pyqt5' in qt_compat.QT_API.lower()) or forceTryQt5:
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
+    QtName = "PyQt5"
     try:
         import PyQt5.QtWebKitWidgets as myQtWeb
     except ImportError:
         import PyQt5.QtWebEngineWidgets as myQtWeb
-else:
+if QtName is None:
     raise ImportError("Cannot import any Python Qt package!")
 
 QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
