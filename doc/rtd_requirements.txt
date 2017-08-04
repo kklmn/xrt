@@ -1,5 +1,4 @@
 numpy
 scipy
-tkinter
 matplotlib
 PyQt5
