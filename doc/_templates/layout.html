@@ -1,0 +1,22 @@
+{% extends "!layout.html" %}
+
+{% set css_files = css_files + ['_static/thumbnail.css'] %}
+
+{% set script_files = script_files + ["_static/animation.js"] %}
+
+{% block rootrellink %}
+       <li><a href="{{ pathto('index') }}">home</a>&nbsp|&nbsp;</li>
+       <li><a href="{{ pathto('search') }}">search</a>&nbsp|&nbsp;</li>
+       <li><a href="{{ pathto('raycing') }}">raycing</a>&nbsp&raquo;</li>
+       <li><a href="{{ pathto('gallery1') }}">gallery synchrotron sources</a>&nbsp&raquo;</li>
+       <li><a href="{{ pathto('gallery2') }}">gallery x-ray optics</a>&nbsp&raquo;</li>
+       <li><a href="{{ pathto('gallery3') }}">gallery wave propagation</a>&nbsp&raquo;</li>
+{% endblock %}
+
+
+{% block sidebarlogo %}
+<a href="{{ pathto('index') }}"><img src="{{
+pathto("_images/logo-xrt.png", 1) }}" border="0" width=100% alt="xrt logo"/></a>
+{% endblock %}
+
+
