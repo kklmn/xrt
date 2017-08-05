@@ -14,7 +14,7 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.append('..')
-#sys.path.append(os.path.join('..', 'xrtQook'))
+sys.path.append(os.path.join('..', 'tests', 'raycing'))
 sys.path.append(os.path.abspath('exts'))
 #autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
 import matplotlib as mpl
