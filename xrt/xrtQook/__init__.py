@@ -172,9 +172,9 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
     try:
-        import PyQt5.QtWebKitWidgets as myQtWeb
-    except ImportError:
         import PyQt5.QtWebEngineWidgets as myQtWeb
+    except ImportError:
+        import PyQt5.QtWebKitWidgets as myQtWeb
 else:
     raise ImportError("Cannot import any Python Qt package!")
 
