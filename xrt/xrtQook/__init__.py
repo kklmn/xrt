@@ -277,120 +277,9 @@ class XrtQook(QWidget):
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
         self.prepareViewer = False
-        iconsDir = os.path.join(self.xrtQookDir, '_icons')
-
-        self.setWindowIcon(QIcon(os.path.join(iconsDir, 'xrQt1.ico')))
-
-        newBLAction = QAction(
-            QIcon(os.path.join(iconsDir, 'filenew.png')),
-            'New Beamline Layout',
-            self)
-        newBLAction.setShortcut('Ctrl+N')
-        newBLAction.setIconText('New Beamline Layout')
-        newBLAction.triggered.connect(self.newBL)
-
-        loadBLAction = QAction(
-            QIcon(os.path.join(iconsDir, 'fileopen.png')),
-            'Load Beamline Layout',
-            self)
-        loadBLAction.setShortcut('Ctrl+L')
-        loadBLAction.triggered.connect(self.importLayout)
-
-        saveBLAction = QAction(
-            QIcon(os.path.join(iconsDir, 'filesave.png')),
-            'Save Beamline Layout',
-            self)
-        saveBLAction.setShortcut('Ctrl+S')
-        saveBLAction.triggered.connect(self.exportLayout)
-
-        saveBLAsAction = QAction(
-            QIcon(os.path.join(iconsDir, 'filesaveas.png')),
-            'Save Beamline Layout As ...',
-            self)
-        saveBLAsAction.setShortcut('Ctrl+A')
-        saveBLAsAction.triggered.connect(self.exportLayoutAs)
-
-        generateCodeAction = QAction(
-            QIcon(os.path.join(iconsDir, 'pythonscript.png')),
-            'Generate Python Script',
-            self)
-        generateCodeAction.setShortcut('Ctrl+G')
-        generateCodeAction.triggered.connect(self.generateCode)
-
-        saveScriptAction = QAction(
-            QIcon(os.path.join(iconsDir, 'pythonscriptsave.png')),
-            'Save Python Script',
-            self)
-        saveScriptAction.setShortcut('Alt+S')
-        saveScriptAction.triggered.connect(self.saveCode)
-
-        saveScriptAsAction = QAction(
-            QIcon(os.path.join(iconsDir, 'pythonscriptsaveas.png')),
-            'Save Python Script As ...',
-            self)
-        saveScriptAsAction.setShortcut('Alt+A')
-        saveScriptAsAction.triggered.connect(self.saveCodeAs)
-
-        runScriptAction = QAction(
-            QIcon(os.path.join(iconsDir, 'run.png')),
-            'Save Python Script And Run',
-            self)
-        runScriptAction.setShortcut('Ctrl+R')
-        runScriptAction.triggered.connect(self.execCode)
-
-        glowAction = QAction(
-            QIcon(os.path.join(iconsDir, 'eyeglasses7_128.png')),
-            'View beamline in xrtGlow',
-            self)
-        if isOpenGL:
-            glowAction.setShortcut('Alt+W')
-            glowAction.triggered.connect(self.runGlow)
-
-        OCLAction = QAction(
-            QIcon(os.path.join(iconsDir, 'GPU4.png')),
-            'OpenCL Info',
-            self)
-        if isOpenCL:
-            OCLAction.setShortcut('Alt+I')
-            OCLAction.triggered.connect(self.showOCLinfo)
-
-        tutorAction = QAction(
-            QIcon(os.path.join(iconsDir, 'home.png')),
-            'Show Welcome Screen',
-            self)
-        tutorAction.setShortcut('Ctrl+H')
-        tutorAction.triggered.connect(self.showWelcomeScreen)
-
-        aboutAction = QAction(
-            QIcon(os.path.join(iconsDir, 'readme.png')),
-            'About xrtQook',
-            self)
-        aboutAction.setShortcut('Ctrl+I')
-        aboutAction.triggered.connect(self.aboutCode)
-
-        self.tabs = QTabWidget()
-        self.toolBar = QToolBar('File')
-        self.statusBar = QStatusBar()
-        self.statusBar.setSizeGripEnabled(False)
-
-        self.toolBar.addAction(newBLAction)
-        self.toolBar.addAction(loadBLAction)
-        self.toolBar.addAction(saveBLAction)
-        self.toolBar.addAction(saveBLAsAction)
-        self.toolBar.addSeparator()
-        self.toolBar.addSeparator()
-        self.toolBar.addAction(generateCodeAction)
-        self.toolBar.addAction(saveScriptAction)
-        self.toolBar.addAction(saveScriptAsAction)
-        self.toolBar.addAction(runScriptAction)
-        self.toolBar.addSeparator()
-        if isOpenGL:
-            self.toolBar.addAction(glowAction)
-        self.toolBar.addSeparator()
-        if isOpenCL:
-            self.toolBar.addAction(OCLAction)
-        self.toolBar.addAction(tutorAction)
-        self.toolBar.addAction(aboutAction)
+        self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
+        self.setWindowIcon(QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
+        self.init_tool_bar()
 
         self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
@@ -405,6 +294,149 @@ class XrtQook(QWidget):
                                              QtCore.Qt.ItemIsUserCheckable |
                                              QtCore.Qt.ItemIsSelectable)
 
+        self.init_tabs()
+
+        canvasBox = QHBoxLayout()
+        canvasSplitter = QSplitter()
+        canvasSplitter.setChildrenCollapsible(False)
+
+        mainWidget = QWidget()
+        mainWidget.setMinimumWidth(486)
+        docWidget = QWidget()
+        docWidget.setMinimumWidth(580)
+        mainBox = QVBoxLayout()
+        docBox = QVBoxLayout()
+
+        mainBox.addWidget(self.toolBar)
+        mainBox.addWidget(self.tabs)
+        mainBox.addWidget(self.statusBar)
+        docBox.addWidget(self.webHelp)
+
+        mainWidget.setLayout(mainBox)
+        docWidget.setLayout(docBox)
+        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
+
+        canvasBox.addWidget(canvasSplitter)
+
+        canvasSplitter.addWidget(mainWidget)
+        canvasSplitter.addWidget(docWidget)
+        self.setLayout(canvasBox)
+
+        self.initAllModels()
+        self.initAllTrees()
+
+    def init_tool_bar(self):
+        newBLAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'filenew.png')),
+            'New Beamline Layout',
+            self)
+        newBLAction.setShortcut('Ctrl+N')
+        newBLAction.setIconText('New Beamline Layout')
+        newBLAction.triggered.connect(self.newBL)
+
+        loadBLAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'fileopen.png')),
+            'Load Beamline Layout',
+            self)
+        loadBLAction.setShortcut('Ctrl+L')
+        loadBLAction.triggered.connect(self.importLayout)
+
+        saveBLAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'filesave.png')),
+            'Save Beamline Layout',
+            self)
+        saveBLAction.setShortcut('Ctrl+S')
+        saveBLAction.triggered.connect(self.exportLayout)
+
+        saveBLAsAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'filesaveas.png')),
+            'Save Beamline Layout As ...',
+            self)
+        saveBLAsAction.setShortcut('Ctrl+A')
+        saveBLAsAction.triggered.connect(self.exportLayoutAs)
+
+        generateCodeAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'pythonscript.png')),
+            'Generate Python Script',
+            self)
+        generateCodeAction.setShortcut('Ctrl+G')
+        generateCodeAction.triggered.connect(self.generateCode)
+
+        saveScriptAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'pythonscriptsave.png')),
+            'Save Python Script',
+            self)
+        saveScriptAction.setShortcut('Alt+S')
+        saveScriptAction.triggered.connect(self.saveCode)
+
+        saveScriptAsAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'pythonscriptsaveas.png')),
+            'Save Python Script As ...',
+            self)
+        saveScriptAsAction.setShortcut('Alt+A')
+        saveScriptAsAction.triggered.connect(self.saveCodeAs)
+
+        runScriptAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'run.png')),
+            'Save Python Script And Run',
+            self)
+        runScriptAction.setShortcut('Ctrl+R')
+        runScriptAction.triggered.connect(self.execCode)
+
+        glowAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'eyeglasses7_128.png')),
+            'View beamline in xrtGlow',
+            self)
+        if isOpenGL:
+            glowAction.setShortcut('Alt+W')
+            glowAction.triggered.connect(self.runGlow)
+
+        OCLAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
+            'OpenCL Info',
+            self)
+        if isOpenCL:
+            OCLAction.setShortcut('Alt+I')
+            OCLAction.triggered.connect(self.showOCLinfo)
+
+        tutorAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'home.png')),
+            'Show Welcome Screen',
+            self)
+        tutorAction.setShortcut('Ctrl+H')
+        tutorAction.triggered.connect(self.showWelcomeScreen)
+
+        aboutAction = QAction(
+            QIcon(os.path.join(self.iconsDir, 'readme.png')),
+            'About xrtQook',
+            self)
+        aboutAction.setShortcut('Ctrl+I')
+        aboutAction.triggered.connect(self.aboutCode)
+
+        self.tabs = QTabWidget()
+        self.toolBar = QToolBar('Action buttons')
+        self.statusBar = QStatusBar()
+        self.statusBar.setSizeGripEnabled(False)
+
+        self.toolBar.addAction(newBLAction)
+        self.toolBar.addAction(loadBLAction)
+        self.toolBar.addAction(saveBLAction)
+        self.toolBar.addAction(saveBLAsAction)
+        self.toolBar.addSeparator()
+        self.toolBar.addAction(generateCodeAction)
+        self.toolBar.addAction(saveScriptAction)
+        self.toolBar.addAction(saveScriptAsAction)
+        self.toolBar.addAction(runScriptAction)
+        self.toolBar.addSeparator()
+        if isOpenGL:
+            self.toolBar.addAction(glowAction)
+#        self.toolBar.addSeparator()
+        if isOpenCL:
+            self.toolBar.addAction(OCLAction)
+        self.toolBar.addAction(tutorAction)
+        self.toolBar.addAction(aboutAction)
+
+    def init_tabs(self):
         self.tree = QTreeView()
         self.matTree = QTreeView()
         self.plotTree = QTreeView()
@@ -484,35 +516,6 @@ class XrtQook(QWidget):
         self.tabs.addTab(self.codeEdit, "Code")
         self.tabs.addTab(self.codeConsole, "Console")
         self.tabs.currentChanged.connect(self.showDescrByTab)
-
-        canvasBox = QHBoxLayout()
-        canvasSplitter = QSplitter()
-        canvasSplitter.setChildrenCollapsible(False)
-
-        mainWidget = QWidget()
-        mainWidget.setMinimumWidth(480)
-        docWidget = QWidget()
-        docWidget.setMinimumWidth(300)
-        mainBox = QVBoxLayout()
-        docBox = QVBoxLayout()
-
-        mainBox.addWidget(self.toolBar)
-        mainBox.addWidget(self.tabs)
-        mainBox.addWidget(self.statusBar)
-        docBox.addWidget(self.webHelp)
-
-        mainWidget.setLayout(mainBox)
-        docWidget.setLayout(docBox)
-        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
-
-        canvasBox.addWidget(canvasSplitter)
-
-        canvasSplitter.addWidget(mainWidget)
-        canvasSplitter.addWidget(docWidget)
-        self.setLayout(canvasBox)
-
-        self.initAllModels()
-        self.initAllTrees()
 
     def readStdOutput(self):
         output = self.qprocess.readAllStandardOutput()
@@ -2956,13 +2959,16 @@ from collections import OrderedDict\n"""
         ret = QMessageBox.question(
             self, 'Exit',
             "Do you want to save Beamline Layout before exit?",
-            QMessageBox.Yes, QMessageBox.No)
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            QMessageBox.Cancel)
 
         if ret == QMessageBox.Yes:
             if self.exportLayout():
                 event.accept()
             else:
                 event.ignore()
+        elif ret == QMessageBox.Cancel:
+            event.ignore()
         else:
             event.accept()
 
