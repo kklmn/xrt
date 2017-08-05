@@ -16,7 +16,7 @@ import os
 sys.path.append('..')
 #sys.path.append(os.path.join('..', 'xrtQook'))
 sys.path.append(os.path.abspath('exts'))
-autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
+#autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
 import matplotlib as mpl
 mpl.use('agg')
 
