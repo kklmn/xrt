@@ -19,7 +19,7 @@ Script examples\\withRaycing\\01_SynchrotronSources\\synchrotronSources.py,
 +------------------+-----------------------------------+
 | openCL with CPU  | 163, with highly loaded system    |
 +------------------+-----------------------------------+
-| openCL with GPU  | 132, with amost idle CPU          |
+| openCL with GPU  | 132, with almost idle CPU         |
 +------------------+-----------------------------------+
 
 You will need AMD/NVIDIA drivers (if you have a GPU, however this is not a must),

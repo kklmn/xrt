@@ -22,10 +22,10 @@ supplied examples and the present documentation.
 See a short :ref:`tutorial for xrtQook <qook>`.
 
 .. imagezoom:: _images/xrtQook.png
-   :width: 661
-   :height: 383
-   :widthzoom: 1102
-   :heightzoom: 639
+   :width: 562
+   :height: 302
+   :widthzoom: 1124
+   :heightzoom: 604
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
