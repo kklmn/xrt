@@ -163,32 +163,21 @@ except ImportError:
     qt_compat = qt4_compat
 #use_pyside = 'pyside' in qt_compat.QT_API.lower()  # also 'PySide2'
 #if use_pyside:
-#    QtName = "PySide"
-#    import PySide
-#    from PySide import QtGui, QtCore
-#    import PySide.QtGui as myQtGUI
-#    import PySide.QtWebKit as myQtWeb
-forceTryQt5 = False
-QtName = None
-print(qt_compat.QT_API.lower())
-raise
+
 if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    try:
-        from PyQt4 import QtGui, QtCore
-        import PyQt4.QtGui as myQtGUI
-        import PyQt4.QtWebKit as myQtWeb
-        QtName = "PyQt4"
-    except ImportError:
-        forceTryQt5 = True  # this is a wirkaround for build in rtfd.org
-if ('pyqt5' in qt_compat.QT_API.lower()) or forceTryQt5:
+    QtName = "PyQt4"
+    from PyQt4 import QtGui, QtCore
+    import PyQt4.QtGui as myQtGUI
+    import PyQt4.QtWebKit as myQtWeb
+elif 'pyqt5' in qt_compat.QT_API.lower():
+    QtName = "PyQt5"
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
-    QtName = "PyQt5"
     try:
         import PyQt5.QtWebKitWidgets as myQtWeb
     except ImportError:
         import PyQt5.QtWebEngineWidgets as myQtWeb
-if QtName is None:
+else:
     raise ImportError("Cannot import any Python Qt package!")
 
 QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
@@ -352,7 +341,7 @@ class XrtQook(QWidget):
         runScriptAction.triggered.connect(self.execCode)
 
         glowAction = QAction(
-            QIcon(os.path.join(iconsDir, 'light_bulb.png')),
+            QIcon(os.path.join(iconsDir, 'eyeglasses7_128.png')),
             'View beamline in xrtGlow',
             self)
         if isOpenGL:
@@ -2825,8 +2814,11 @@ if __name__ == '__main__':
             fullCode = fullCode.replace(fullModName, xrtAlias)
             codeHeader += 'import {0} as {1}\n'.format(fullModName, xrtAlias)
         if self.prepareViewer:
-            codeHeader += """import xrt.xrtglow as xrtglow\n\
-from collections import OrderedDict\nfrom {} import QtGui\n""".format(QtName)
+            codeHeader += """import xrt.xrtGlow as xrtglow\n\
+from collections import OrderedDict\n"""
+            codeHeader += """{} QtGui\n""".format(
+                'from PyQt4 import' if QtName == 'PyQt4' else
+                'import PyQt5.QtWidgets as')
         fullCode = codeHeader + fullCode
         if self.glowOnly:
             self.glowCode = fullCode
