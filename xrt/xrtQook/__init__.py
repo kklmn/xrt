@@ -161,8 +161,6 @@ try:
 except ImportError:
     from matplotlib.backends import qt4_compat
     qt_compat = qt4_compat
-#use_pyside = 'pyside' in qt_compat.QT_API.lower()  # also 'PySide2'
-#if use_pyside:
 
 if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     QtName = "PyQt4"
