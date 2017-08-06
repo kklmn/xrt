@@ -355,7 +355,7 @@ class xrtGlow(QWidget):
             selLabel.setText(cSelText)
             selValidator = QDoubleValidator()
             selValidator.setRange(self.customGlWidget.colorMin,
-                                  self.customGlWidget.colorMax, 3)
+                                  self.customGlWidget.colorMax, 5)
             selQLE = QLineEdit()
             selQLE.setValidator(selValidator)
             selQLE.setText('{0:.3f}'.format(
@@ -609,14 +609,14 @@ class xrtGlow(QWidget):
         tabs.addTab(self.projectionPanel, "Projections")
         tabs.addTab(self.scenePanel, "Scene")
         sideLayout.addWidget(tabs)
-        canvasSplitter = QSplitter()
-        canvasSplitter.setChildrenCollapsible(False)
-        canvasSplitter.setOrientation(QtCore.Qt.Horizontal)
-        mainLayout.addWidget(canvasSplitter)
+        self.canvasSplitter = QSplitter()
+        self.canvasSplitter.setChildrenCollapsible(False)
+        self.canvasSplitter.setOrientation(QtCore.Qt.Horizontal)
+        mainLayout.addWidget(self.canvasSplitter)
         sideWidget = QWidget()
         sideWidget.setLayout(sideLayout)
-        canvasSplitter.addWidget(self.customGlWidget)
-        canvasSplitter.addWidget(sideWidget)
+        self.canvasSplitter.addWidget(self.customGlWidget)
+        self.canvasSplitter.addWidget(sideWidget)
 
         self.setLayout(mainLayout)
         self.customGlWidget.oesList = self.oesList
@@ -696,18 +696,20 @@ class xrtGlow(QWidget):
         self.customGlWidget.newColorAxis = True
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.selColorMin = self.customGlWidget.colorMin
-        self.customGlWidget.selColorMin = self.customGlWidget.colorMax
+        self.customGlWidget.selColorMax = self.customGlWidget.colorMax
         self.mplAx.set_xlabel(selAxis)
         extents = (self.customGlWidget.colorMin,
                    self.customGlWidget.colorMax, 0, 1)
         self.im.set_extent(extents)
         extents = list(extents)
-        self.colorPanel.layout().itemAt(4).widget().setText(str(extents[0]))
-        self.colorPanel.layout().itemAt(6).widget().validator().setBottom(
-            extents[0])
-        self.colorPanel.layout().itemAt(6).widget().setText(str(extents[1]))
-        self.colorPanel.layout().itemAt(4).widget().validator().setTop(
-            extents[1])
+        self.colorPanel.layout().itemAt(4).widget().setText(
+            str(self.customGlWidget.colorMin))
+        self.colorPanel.layout().itemAt(6).widget().validator().setRange(
+            self.customGlWidget.colorMin, self.customGlWidget.colorMax, 5)
+        self.colorPanel.layout().itemAt(6).widget().setText(
+            str(self.customGlWidget.colorMax))
+        self.colorPanel.layout().itemAt(4).widget().validator().setRange(
+            self.customGlWidget.colorMin, self.customGlWidget.colorMax, 5)
         slider = self.colorPanel.layout().itemAt(7).widget()
         center = 0.5 * (extents[0] + extents[1])
         newMin = self.customGlWidget.colorMin
@@ -718,6 +720,7 @@ class xrtGlow(QWidget):
         self.mplFig.canvas.draw()
         self.paletteWidget.span.active_handle = None
         self.paletteWidget.span.to_draw.set_visible(False)
+        self.customGlWidget.glDraw()
 
     def updateColorSelFromMPL(self, eclick, erelease):
         try:
@@ -725,13 +728,13 @@ class xrtGlow(QWidget):
             self.customGlWidget.selColorMin = np.min([extents[0], extents[1]])
             self.customGlWidget.selColorMax = np.max([extents[0], extents[1]])
             self.colorPanel.layout().itemAt(4).widget().setText(str(
-                extents[0]))
+                self.customGlWidget.selColorMin))
             self.colorPanel.layout().itemAt(6).widget().validator().setBottom(
-                extents[0])
+                self.customGlWidget.selColorMin)
             self.colorPanel.layout().itemAt(6).widget().setText(str(
-                extents[1]))
+                self.customGlWidget.selColorMax))
             self.colorPanel.layout().itemAt(4).widget().validator().setTop(
-                extents[1])
+                self.customGlWidget.selColorMax)
             slider = self.colorPanel.layout().itemAt(7).widget()
             center = 0.5 * (extents[0] + extents[1])
             halfWidth = (extents[1] - extents[0]) * 0.5
@@ -754,7 +757,7 @@ class xrtGlow(QWidget):
                 pass
         try:
             extents = list(self.paletteWidget.span.extents)
-            width = extents[1] - extents[0]
+            width = np.abs(extents[1] - extents[0])
             self.customGlWidget.selColorMin = position - 0.5 * width
             self.customGlWidget.selColorMax = position + 0.5 * width
             self.colorPanel.layout().itemAt(4).widget().setText(
@@ -974,8 +977,9 @@ class xrtGlow(QWidget):
         cIndex = cPan.parent().layout().indexOf(cPan)
         cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
         aIndex = int(((cIndex + 1) / 3) - 1)
-        self.customGlWidget.aPos[aIndex] = np.float32(position)
-        self.customGlWidget.glDraw()
+        if position != 0:
+            self.customGlWidget.aPos[aIndex] = np.float32(position)
+            self.customGlWidget.glDraw()
 
     def updateSceneFromQLE(self):
         cPan = self.sender()
@@ -1045,9 +1049,12 @@ class xrtGlow(QWidget):
                       'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
                       'colorMin', 'colorMax', 'fineGridEnabled',
                       'useScalableFont', 'invertColors', 'perspectiveEnabled',
-                      'globalNorm']:
+                      'globalNorm', 'viewPortGL']:
             params[param] = getattr(self.customGlWidget, param)
         params['size'] = self.geometry()
+        params['sizeGL'] = self.canvasSplitter.sizes()
+        params['colorAxis'] = str(self.colorPanel.layout().itemAt(2).widget(
+            ).currentText())
         try:
             np.save(filename, params)
         except:
@@ -1071,14 +1078,14 @@ class xrtGlow(QWidget):
                       'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
                       'colorMin', 'colorMax', 'fineGridEnabled',
                       'useScalableFont', 'invertColors', 'perspectiveEnabled',
-                      'globalNorm']:
+                      'globalNorm', 'viewPortGL']:
             setattr(self.customGlWidget, param, params[param])
         self.setGeometry(params['size'])
-
+        self.canvasSplitter.setSizes(params['sizeGL'])
         for axis in range(3):
             self.zoomPanel.layout().itemAt((axis+1)*3-1).widget().setValue(
                 np.log10(self.customGlWidget.scaleVec[axis]))
-
+        self.blockSignals(True)
         self.rotationPanel.layout().itemAt(2).widget().setValue(
             self.customGlWidget.rotations[0][0])
         self.rotationPanel.layout().itemAt(5).widget().setValue(
@@ -1127,10 +1134,15 @@ class xrtGlow(QWidget):
 
         self.colorPanel.layout().itemAt(11).widget(
             ).setCheckState(int(self.customGlWidget.globalNorm)*2)
+        self.blockSignals(False)
+        colorCB = self.colorPanel.layout().itemAt(2).widget()
+        colorCB.setCurrentIndex(colorCB.findText(params['colorAxis']))
+        newExtents = list(self.paletteWidget.span.extents)
+        newExtents[0] = params['selColorMin']
+        newExtents[1] = params['selColorMax']
+        self.paletteWidget.span.extents = newExtents
+        self.updateColorSelFromMPL(0, 0)
 
-        self.customGlWidget.newColorAxis = False
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
-        self.customGlWidget.glDraw()
         print('Loaded scene from {}'.format(filename))
 
     def centerEl(self, oeName):
@@ -1251,6 +1263,7 @@ class xrtGlWidget(QGLWidget):
         QGLWidget.__init__(self, parent)
         self.setMinimumSize(500, 500)
         self.aspect = 1.
+        self.viewPortGL = [0, 0, 700, 700]
         self.perspectiveEnabled = True
         self.cameraAngle = 60
         self.setMouseTracking(True)
@@ -1427,7 +1440,7 @@ class xrtGlWidget(QGLWidget):
                                 alphaMax = np.max(intensity[good])
                             else:
                                 alphaMax = 1.
-
+                        alphaMax = alphaMax if alphaMax != 0 else 1.
                         alphaRays = np.repeat(intensity[good] / alphaMax, 2).T\
                             if alphaRays is None else np.concatenate(
                                 (alphaRays.T,
@@ -1479,7 +1492,7 @@ class xrtGlWidget(QGLWidget):
                         alphaMax = np.max(intensity[good])
                     else:
                         alphaMax = 1.
-
+                alphaMax = alphaMax if alphaMax != 0 else 1.
                 alphaDots = intensity[good].T / alphaMax if\
                     alphaDots is None else np.concatenate(
                         (alphaDots.T, intensity[good].T / alphaMax))
@@ -1500,6 +1513,9 @@ class xrtGlWidget(QGLWidget):
                     np.vstack((self.footprintsArray, vertices.T))
 
         try:
+            if self.colorMin == self.colorMax:
+                self.colorMin = self.colorMax * 0.99
+                self.colorMax *= 1.01
             colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
                                                        self.colorMin)
             colorsRays = np.dstack((colorsRays,
@@ -1517,6 +1533,9 @@ class xrtGlWidget(QGLWidget):
         except:
             pass
         try:
+            if self.colorMin == self.colorMax:
+                self.colorMin = self.colorMax * 0.99
+                self.colorMax *= 1.01
             colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
                                                        self.colorMin)
             colorsDots = np.dstack((colorsDots,
@@ -1537,6 +1556,7 @@ class xrtGlWidget(QGLWidget):
         self.newColorAxis = False
 
     def modelToWorld(self, coords, dimension=None):
+        self.maxLen = self.maxLen if self.maxLen != 0 else 1.
         if dimension is None:
             return np.float32(((coords + self.tVec) * self.scaleVec) /
                               self.maxLen)
@@ -1593,7 +1613,7 @@ class xrtGlWidget(QGLWidget):
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             glEnable(GL_POINT_SMOOTH)
             glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
-            
+
         glEnableClientState(GL_VERTEX_ARRAY)
 
         glEnableClientState(GL_COLOR_ARRAY)
@@ -2291,10 +2311,11 @@ class xrtGlWidget(QGLWidget):
     def initializeGL(self):
         glutInit()
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glViewport(0, 0, 900, 900)
+        glViewport(*self.viewPortGL)
 
     def resizeGL(self, widthInPixels, heightInPixels):
-        glViewport(0, 0, widthInPixels, heightInPixels)
+        self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
+        glViewport(*self.viewPortGL)
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
 
     def mouseMoveEvent(self, mouseEvent):
