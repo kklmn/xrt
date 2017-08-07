@@ -303,7 +303,7 @@ class XrtQook(QWidget):
         mainWidget = QWidget()
         mainWidget.setMinimumWidth(486)
         docWidget = QWidget()
-        docWidget.setMinimumWidth(580)
+        docWidget.setMinimumWidth(600)
         mainBox = QVBoxLayout()
         docBox = QVBoxLayout()
 
@@ -1005,7 +1005,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def showWelcomeScreen(self):
         argDescr = u"""
 
-        .. image:: _images/qookSplashSmall_ani.gif
+        .. image:: _images/qookSplash2.gif
+           :scale: 75 %
 
         xrtQook is a qt-based GUI for using xrt without having to write python
         scripts. See a short startup `tutorial <tutorial>`_.
