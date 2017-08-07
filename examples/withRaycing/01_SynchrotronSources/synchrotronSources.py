@@ -259,14 +259,16 @@ spectrum *or* a transverse image while xrt can combine both by using colors and
 brightness. Notice also that on the following pictures the p-polarized flux is
 only ~3% of the total flux.
 
-+------------+------------+
-|  SPECTRA   |    xrt     |
-+============+============+
-|  |CFspeT|  |  |CFxrtT|  |
-+------------+------------+
-|  |CFspeP|  |  |CFxrtP|  |
-+------------+------------+
++------+------------+------------+
+|      |  SPECTRA   |    xrt     |
++======+============+============+
+| |tf| |  |CFspeT|  |  |CFxrtT|  |
++------+------------+------------+
+| |pf| |  |CFspeP|  |  |CFxrtP|  |
++------+------------+------------+
 
+.. |tf| replace:: total flux
+.. |pf| replace:: p-pol flux
 .. |CFspeT| imagezoom:: _images/spectra-custom.png
 .. |CFspeP| imagezoom:: _images/spectra-custom_p.png
    :loc: lower-left-corner
