@@ -63,6 +63,9 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: BlazedGrating(OE)
    :members: __init__
+.. autoclass:: PlaneGrating(OE)
+.. autoclass:: VLSGrating(OE)
+   :members: __init__
 
 .. _distorted:
 
@@ -677,6 +680,7 @@ class BentFlatMirror(OE):
         norm = (b**2 + 1)**0.5
         return [a/norm, b/norm, c/norm]
 
+
 SimpleVCM = BentFlatMirror
 
 
@@ -751,6 +755,7 @@ class ToroidMirror(OE):
         c = 1.
         norm = (a**2 + b**2 + 1)**0.5
         return [a/norm, b/norm, c/norm]
+
 
 SimpleVFM = ToroidMirror
 
@@ -1415,7 +1420,7 @@ class ParaboloidFlatLens(Plate):
             then defined by the equation:
 
             .. math::
-                z = (x^2 + y^2) / (4 * focus)
+                z = (x^2 + y^2) / (4 * \mathit{focus})
 
             .. note::
 
@@ -2063,14 +2068,19 @@ class VLSGrating(OE):
     """
 
     def __init__(self, *args, **kwargs):
-        """*coeffs*: list
+        r"""
+        *coeffs*: list
             Contains the coefficients in the formula defining the period:
 
             .. math::
-                \rho = \rho_0 * (coeffs_0 + 2*coeffs_1*y + 3*coeffs_2*y^2).
 
-            *rho*: float
-            The initial line density :math:`\rho_0` in inverse mm."""
+                \rho_y = \rho * (\mathit{coeffs}_0 +
+                2 * \mathit{coeffs}_1 * y + 3 * \mathit{coeffs}_2 * y^2).
+
+        *rho*: float
+            Initial line density :math:`\rho` in inverse mm.
+
+        """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.ticks = []
@@ -2081,8 +2091,8 @@ class VLSGrating(OE):
         self.ticks = np.array(self.ticks)
 
     def __get_period(self, coord):
-        return 1. / self.rho0 / (self.coeffs[0] + 2. * self.coeffs[1] * -coord +
-                                 3. * self.coeffs[2] * coord**2)
+        return 1. / self.rho0 / (self.coeffs[0] + 2. * self.coeffs[1] * -coord
+                                 + 3. * self.coeffs[2] * coord**2)
 
     def __pop_kwargs(self, **kwargs):
         self.rho0 = kwargs.pop('rho')

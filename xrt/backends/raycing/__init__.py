@@ -95,11 +95,10 @@ Scripting in python
 The user of :mod:`~xrt.backends.raycing` must do the following:
 
 1) Instantiate class :class:`~xrt.backends.raycing.BeamLine` and fill it with
-   optical elements -- descendants of class
-   :class:`~xrt.backends.raycing.oes.OE`.
+   sources, optical elements, screens etc.
 2) Create a module-level function that returns a dictionary of beams -- the
    instances of :class:`~xrt.backends.raycing.sources.Beam`. Assign this
-   function to the variable `xrt.backends.raycing.run.run_process`.
+   function to the module variable `xrt.backends.raycing.run.run_process`.
    The beams should be obtained by the methods shine() of a source, expose() of
    a screen, reflect() or multiple_reflect() of an optical element, propagate()
    of an aperture.
