@@ -2054,3 +2054,112 @@ class PlaneGrating(OE):
         (along *y*) dimension that is illuminated.
         """
         return self.aspect
+
+
+class VLSGrating(OE):
+    """
+    Implements a grating of rectangular shape with variable period.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """*coeffs*: list
+            Contains the coefficients in the formula defining the period:
+
+            .. math::
+                \rho = \rho_0 * (coeffs_0 + 2*coeffs_1*y + 3*coeffs_2*y^2).
+
+            *rho*: float
+            The initial line density :math:`\rho_0` in inverse mm."""
+        kwargs = self.__pop_kwargs(**kwargs)
+        OE.__init__(self, *args, **kwargs)
+        self.ticks = []
+        p0 = self.limOptY[0]
+        while p0 < self.limOptY[1]:
+            self.ticks.append(p0)
+            p0 += self.__get_period(p0)
+        self.ticks = np.array(self.ticks)
+
+    def __get_period(self, coord):
+        return 1. / self.rho0 / (self.coeffs[0] + 2. * self.coeffs[1] * -coord +
+                                 3. * self.coeffs[2] * coord**2)
+
+    def __pop_kwargs(self, **kwargs):
+        self.rho0 = kwargs.pop('rho')
+        self.aspect = kwargs.pop('aspect', 0.5)
+        self.coeffs = kwargs.pop('coeffs', [1, 0, 0])
+        self.depth = kwargs.pop('depth')
+        return kwargs
+
+    def local_z(self, x, y):
+        z = np.zeros_like(y)
+        y0ind = np.searchsorted(self.ticks, y)
+        periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
+        groove_index = np.where(y - self.ticks[list(y0ind - 1)] < periods *
+                                (1. - self.aspect))
+        z[groove_index] = -self.depth
+        return z
+
+    def local_n(self, x, y):
+        y0ind = np.searchsorted(self.ticks[:-1], y)
+        periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
+        yL = y - self.ticks[list(y0ind - 1)]
+        groove = periods * (1. - self.aspect)
+        norm_x = np.zeros_like(y)
+        norm_y = np.zeros_like(y)
+        norm_z = np.ones_like(y)
+        rindex = (yL == 0)
+        norm_y[rindex] = 1
+        norm_z[rindex] = 0
+        rindex = (yL == groove)
+        norm_y[rindex] = -1
+        norm_z[rindex] = 0
+        return [norm_x, norm_y, norm_z]
+
+    def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
+                          invertNormal, derivOrder=0):
+        b_c = b / c
+        a_c = a / c
+        x2 = np.array(np.zeros_like(y))
+        y2 = np.array(np.zeros_like(y))
+        z2 = np.array(np.zeros_like(y))
+        dy = np.array(np.zeros_like(y))
+        dyRel = np.array(np.zeros_like(y))
+        y2 = y - z * b_c
+        y0ind = np.searchsorted(self.ticks, y2)
+        periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
+        yL = y2 - self.ticks[list(y0ind - 1)]
+        groove = periods * (1. - self.aspect)
+        x2 = x + z * a_c
+
+        gr = (yL < groove)
+        dyRel[gr] = b_c[gr] * self.depth
+        dy[gr] = yL[gr] - dyRel[gr]
+        bottom = (dy > abs(dyRel)) & (dy < groove-abs(dyRel))
+        # bottom = (dy>0) & (dy<groove)
+        z2[bottom] = -self.depth
+        y2[bottom] += dy[bottom] - yL[bottom]
+        x2[bottom] += a_c[bottom] * self.depth
+
+        leftwall = (dy < abs(dyRel))
+        # leftwall = (dy < 0)
+        z2[leftwall] = (yL[leftwall] / b_c[leftwall])
+        y2[leftwall] -= (yL[leftwall])
+        x2[leftwall] += (z2[leftwall] * a_c[leftwall])
+
+        rightwall = (dy > groove-abs(dyRel))
+        # rightwall = (dy > groove)
+        y2[rightwall] += (groove[rightwall] - yL[rightwall])
+        z2[rightwall] = (groove[rightwall] - yL[rightwall]) / b_c[rightwall]
+        x2[rightwall] += (z2[rightwall] * a_c[rightwall])
+        t2 = np.sqrt((x-x2)**2+(y-y2)**2+(z-z2)**2)
+        # print "find intersection for", len(y), "rays takes", time.time()-t0
+        return t2, x2, y2, z2
+
+    def get_grating_area_fraction(self):
+        """
+        This method is used in wave propagation for the calculation of the
+        illuminated surface area. It returns the fraction of the longitudinal
+        (along *y*) dimension that is illuminated.
+        """
+        return self.aspect
