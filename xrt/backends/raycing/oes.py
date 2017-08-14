@@ -2103,7 +2103,7 @@ class VLSGrating(OE):
 
     def local_z(self, x, y):
         z = np.zeros_like(y)
-        y0ind = np.searchsorted(self.ticks, y)
+        y0ind = np.searchsorted(self.ticks[:-1], y)
         periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
         groove_index = np.where(y - self.ticks[list(y0ind - 1)] < periods *
                                 (1. - self.aspect))
