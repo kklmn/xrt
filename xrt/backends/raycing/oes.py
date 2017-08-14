@@ -1496,6 +1496,16 @@ class ParaboloidFlatLens(Plate):
             (1 - self.material.get_refractive_index(E).real) * nFactor
 
     def multiple_refract(self, beam, needLocal=False):
+        """
+        Sequentially applies the :meth:`double_refract` method to the stack of 
+        lenses, center of each of *nCRL* lens is shifted by *zmax* mm 
+        relative to the previous one along the beam propagation direction. 
+        Returned global beam emerges from the exit surface of the last lens, 
+        returned local beams correspond to the entrance and exit surfaces of
+        the first lens.
+
+        .. Returned values: beamGlobal, beamLocal1, beamLocal2
+        """
         if isinstance(self.nCRL, (int, float)):
             nCRL = self.nCRL
         elif isinstance(self.nCRL, (list, tuple)):
