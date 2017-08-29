@@ -643,7 +643,7 @@ class XYCPlot(object):
             self.backend = 'shadow'
         elif ('dummy' in beam) or (beam == ''):
             self.backend = 'dummy'
-        elif isinstance(rayFlag, tuple):
+        elif isinstance(rayFlag, (tuple, list)):
             self.backend = 'raycing'
         else:
             self.backend = 'dummy'
