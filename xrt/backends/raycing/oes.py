@@ -1496,6 +1496,16 @@ class ParaboloidFlatLens(Plate):
             (1 - self.material.get_refractive_index(E).real) * nFactor
 
     def multiple_refract(self, beam, needLocal=False):
+        """
+        Sequentially applies the :meth:`double_refract` method to the stack of 
+        lenses, center of each of *nCRL* lens is shifted by *zmax* mm 
+        relative to the previous one along the beam propagation direction. 
+        Returned global beam emerges from the exit surface of the last lens, 
+        returned local beams correspond to the entrance and exit surfaces of
+        the first lens.
+
+        .. Returned values: beamGlobal, beamLocal1, beamLocal2
+        """
         if isinstance(self.nCRL, (int, float)):
             nCRL = self.nCRL
         elif isinstance(self.nCRL, (list, tuple)):
@@ -2103,7 +2113,7 @@ class VLSGrating(OE):
 
     def local_z(self, x, y):
         z = np.zeros_like(y)
-        y0ind = np.searchsorted(self.ticks, y)
+        y0ind = np.searchsorted(self.ticks[:-1], y)
         periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
         groove_index = np.where(y - self.ticks[list(y0ind - 1)] < periods *
                                 (1. - self.aspect))
