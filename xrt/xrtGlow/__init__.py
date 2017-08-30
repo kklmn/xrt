@@ -290,7 +290,7 @@ class xrtGlow(QWidget):
 #  Opacity panel
         self.opacityPanel = QGroupBox(self)
         self.opacityPanel.setFlat(False)
-#        self.opacityPanel.setTitle("Opacity")
+        self.opacityPanel.setTitle("Opacity")
         opacityLayout = QGridLayout()
         for iaxis, axis in enumerate(
                 ['Line opacity', 'Line width', 'Point opacity', 'Point size']):
@@ -325,7 +325,7 @@ class xrtGlow(QWidget):
 #  Color panel
         self.colorPanel = QGroupBox(self)
         self.colorPanel.setFlat(False)
-#        self.colorPanel.setTitle("Color")
+        self.colorPanel.setTitle("Color")
         colorLayout = QGridLayout()
         self.mplFig = mpl.figure.Figure(figsize=(3, 3))
         self.mplAx = self.mplFig.add_subplot(111)
@@ -419,11 +419,11 @@ class xrtGlow(QWidget):
         projectionLayout = QGridLayout()
         self.projVisPanel = QGroupBox(self)
         self.projVisPanel.setFlat(False)
-        self.projVisPanel.setTitle("Projection visibility")
+        self.projVisPanel.setTitle("Projections visibility")
         projVisLayout = QGridLayout()
         self.projLinePanel = QGroupBox(self)
         self.projLinePanel.setFlat(False)
-        self.projLinePanel.setTitle("Line properties")
+        self.projLinePanel.setTitle("Projections opacity")
         projLineLayout = QGridLayout()
 
         for iaxis, axis in enumerate(['Show Side (YZ)', 'Show Front (XZ)',
@@ -576,7 +576,7 @@ class xrtGlow(QWidget):
 #  Navigation panel
         self.navigationPanel = QGroupBox(self)
         self.navigationPanel.setFlat(False)
-        self.navigationPanel.setTitle("Navigation")
+#        self.navigationPanel.setTitle("Navigation")
         self.navigationLayout = QGridLayout()
 
         centerCBLabel = QLabel()
@@ -1705,37 +1705,10 @@ class xrtGlWidget(QGLWidget):
             glEnable(GL_LINE_SMOOTH)
             glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
             glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-            vScrHW = vScrHH = self.vScreenSize
-            vScreenBody = np.zeros((4, 3))
-            vScreenBody[0, :] = vScreenBody[1, :] =\
-                self.virtScreen.center - vScrHW * np.array(self.virtScreen.x)
-            vScreenBody[2, :] = vScreenBody[3, :] =\
-                self.virtScreen.center + vScrHW * np.array(self.virtScreen.x)
-            vScreenBody[0, :] -=\
-                vScrHH * np.array(self.virtScreen.z)
-            vScreenBody[3, :] -=\
-                vScrHH * np.array(self.virtScreen.z)
-            vScreenBody[1, :] +=\
-                vScrHH * np.array(self.virtScreen.z)
-            vScreenBody[2, :] +=\
-                vScrHH * np.array(self.virtScreen.z)
 
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-            glBegin(GL_QUADS)
-            glColor4f(1, 1, 1, 0.2)
-            for i in range(4):
-                glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
-                                              self.coordOffset))
-            glEnd()
+            self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
+                            [1, 0, 0, 1])
 
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            glLineWidth(2)
-            glBegin(GL_QUADS)
-            glColor4f(1, 0, 0, 1)
-            for i in range(4):
-                glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
-                                              self.coordOffset))
-            glEnd()
             if not self.enableAA:
                 glDisable(GL_LINE_SMOOTH)
 
@@ -1752,19 +1725,27 @@ class xrtGlWidget(QGLWidget):
                 elType = str(type(oeToPlot))
                 if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
                     setMaterial('Si')
-
                     self.plotOeSurface(oeToPlot, is2ndXtal)
                 elif len(re.findall('raycing.apert', elType)) > 0:  # aperture
                     setMaterial('Cu')
                     self.plotAperture(oeToPlot)
-                elif len(re.findall('raycing.screen', elType)) > 0:  # screen
-                    continue
                 else:
                     continue
 
             glDisable(GL_LIGHTING)
             glDisable(GL_NORMALIZE)
             glDisableClientState(GL_NORMAL_ARRAY)
+
+        if len(self.oesToPlot) > 0:
+            for oeString in self.oesToPlot:
+                oeToPlot = self.oesList[oeString][0]
+                is2ndXtal = self.oesList[oeString][3]
+                elType = str(type(oeToPlot))
+                if len(re.findall('raycing.screen', elType)) > 0:  # screen
+                    self.plotScreen(oeToPlot)
+                else:
+                    continue
+
         glDisable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
@@ -2020,8 +2001,8 @@ class xrtGlWidget(QGLWidget):
                 if iAx == self.visibleAxes[2]:
                     axisL[iAx][self.visibleAxes[1], :] *= 1.05
                     axisL[iAx][self.visibleAxes[0], :] *= 1.05
-                for tick, tText, pcs in zip(axisL[iAx].T, gridLabels[iAx],
-                                            precisionLabels[iAx]):
+                for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
+                                            precisionLabels[iAx])):
                     if not self.useScalableFont:
                         glRasterPos3f(*tick)
                         for symbol in "{0:.{1}f}".format(tText, int(pcs)):
@@ -2175,9 +2156,9 @@ class xrtGlWidget(QGLWidget):
             wf = min(w, h)
         isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
         if isBeamStop:  # BeamStop
-            limits = zip([0], [w], [0], [h])
+            limits = list(zip([0], [w], [0], [h]))
         else:
-            limits = zip([0, w], [w+wf, w+wf], [h, 0], [h+wf, h])
+            limits = list(zip([0, w], [w+wf, w+wf], [h, 0], [h+wf, h]))
         for ix in [1, -1]:
             for iy in [1, -1]:
                 for xMin, xMax, yMin, yMax in limits:
@@ -2242,6 +2223,47 @@ class xrtGlWidget(QGLWidget):
                                     0, surfCPOrder*4)
         glDisable(GL_MAP2_VERTEX_3)
         glDisable(GL_MAP2_NORMAL)
+
+    def plotScreen(self, oe, dimensions=None, frameColor=None):
+        if dimensions is not None:
+            vScrHW = dimensions[0]
+            vScrHH = dimensions[1]
+        else:
+            vScrHW = self.vScreenSize
+            vScrHH = self.vScreenSize
+
+        vScreenBody = np.zeros((4, 3))
+        vScreenBody[0, :] = vScreenBody[1, :] =\
+            oe.center - vScrHW * np.array(oe.x)
+        vScreenBody[2, :] = vScreenBody[3, :] =\
+            oe.center + vScrHW * np.array(oe.x)
+        vScreenBody[0, :] -=\
+            vScrHH * np.array(oe.z)
+        vScreenBody[3, :] -=\
+            vScrHH * np.array(oe.z)
+        vScreenBody[1, :] +=\
+            vScrHH * np.array(oe.z)
+        vScreenBody[2, :] +=\
+            vScrHH * np.array(oe.z)
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        glBegin(GL_QUADS)
+        glColor4f(1, 1, 1, 0.2)
+        for i in range(4):
+            glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
+                                          self.coordOffset))
+        glEnd()
+
+        if frameColor is not None:
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            glLineWidth(2)
+            glBegin(GL_QUADS)
+            glColor4f(*frameColor)
+            for i in range(4):
+                glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
+                                              self.coordOffset))
+            glEnd()
+
 
     def addLighting(self, pos):
         spot = 60
@@ -2642,6 +2664,7 @@ class xrtGlWidget(QGLWidget):
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
+
         if deltaA > 0:
             if altOn:
                 self.vScreenSize *= 1.1
