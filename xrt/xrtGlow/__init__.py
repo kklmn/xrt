@@ -222,7 +222,7 @@ class xrtGlow(QWidget):
         zoomLayout = QGridLayout()
 
         scaleValidator = QDoubleValidator()
-        scaleValidator.setRange(-7, 7, 7)
+        scaleValidator.setRange(0, 7, 7)
         for iaxis, axis in enumerate(['x', 'y', 'z']):
             axLabel = QLabel()
             axLabel.setText(axis+' (log)')
@@ -234,7 +234,7 @@ class xrtGlow(QWidget):
             axEdit.setValidator(scaleValidator)
             axSlider = glowSlider(
                 self, QtCore.Qt.Horizontal, glowTopScale)
-            axSlider.setRange(-7, 7, 0.01)
+            axSlider.setRange(0, 7, 0.01)
             if iaxis == 1:
                 axSlider.setValue(1)
             else:
