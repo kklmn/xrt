@@ -14,7 +14,7 @@ from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     glPopMatrix, glFlush, glVertexPointerf, glColorPointerf, glLineWidth,\
     glDrawArrays, glMap2f, glMapGrid2f, glEvalMesh2, glLightModeli, glLightfv,\
     glGetIntegerv, glColor4f, glVertex3f, glBegin, glEnd, glViewport,\
-    glMaterialf, glHint, glPointSize,\
+    glMaterialf, glHint, glPointSize, glReadPixels,\
     GL_FRONT_AND_BACK, GL_AMBIENT, GL_DIFFUSE, GL_SPECULAR, GL_EMISSION,\
     GL_FRONT, GL_SHININESS, GL_PROJECTION, GL_MODELVIEW, GL_COLOR_BUFFER_BIT,\
     GL_DEPTH_BUFFER_BIT, GL_MULTISAMPLE, GL_BLEND, GL_SRC_ALPHA,\
@@ -25,8 +25,9 @@ from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     GL_QUADS, GL_MAP2_VERTEX_3, GL_MAP2_NORMAL, GL_LIGHTING, GL_POINTS,\
     GL_LIGHT_MODEL_TWO_SIDE, GL_LIGHT0, GL_POSITION, GL_SPOT_DIRECTION,\
     GL_SPOT_CUTOFF, GL_SPOT_EXPONENT, GL_TRIANGLE_FAN, GL_VIEWPORT, GL_LINES,\
-    GL_TRANSPOSE_PROJECTION_MATRIX
-from OpenGL.GLU import gluPerspective, gluLookAt
+    GL_TRANSPOSE_PROJECTION_MATRIX, GL_MODELVIEW_MATRIX, GL_DEPTH_COMPONENT,\
+    GL_FLOAT, GL_PROJECTION_MATRIX, GL_TRANSPOSE_MODELVIEW_MATRIX
+from OpenGL.GLU import gluPerspective, gluLookAt, gluProject, gluUnProject
 from OpenGL.GLUT import glutBitmapCharacter, glutStrokeCharacter, glutInit,\
     glutInitDisplayMode, GLUT_BITMAP_HELVETICA_12, GLUT_STROKE_ROMAN,\
     GLUT_RGBA, GLUT_DOUBLE, GLUT_DEPTH
@@ -89,7 +90,7 @@ import re
 sys.path.append(os.path.join('..', '..'))
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rsources
-
+import xrt.backends.raycing.screens as rscreens
 
 class mySlider(QSlider):
     def __init__(self, parent, scaleDirection, scalePosition):
@@ -626,6 +627,15 @@ class xrtGlow(QWidget):
         fastLoad = QShortcut(self)
         fastLoad.setKey(QtCore.Qt.Key_F6)
         fastLoad.activated.connect(partial(self.loadScene, '_xrtScnTmp_.npy'))
+        createScreen = QShortcut(self)
+        createScreen.setKey(QtCore.Qt.Key_F3)
+        createScreen.activated.connect(self.customGlWidget.createVScreen)
+        killScreen = QShortcut(self)
+        killScreen.setKey(QtCore.Qt.Key_F4)
+        killScreen.activated.connect(self.customGlWidget.clearVScreen)
+        tiltScreen = QShortcut(self)
+        tiltScreen.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_T)
+        tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, 1, 200),
@@ -1261,6 +1271,12 @@ class xrtGlWidget(QGLWidget):
 
     def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els):
         QGLWidget.__init__(self, parent)
+        self.virtScreen = None
+        self.virtBeam = None
+        self.virtDotsArray = None
+        self.virtDotsColor = None
+        self.isVirtScreenNormal = False
+        self.vScreenSize = 5.
         self.setMinimumSize(500, 500)
         self.aspect = 1.
         self.viewPortGL = [0, 0, 700, 700]
@@ -1554,6 +1570,7 @@ class xrtGlWidget(QGLWidget):
         except:
             pass
         self.newColorAxis = False
+        self.populateVScreen()
 
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
@@ -1563,6 +1580,9 @@ class xrtGlWidget(QGLWidget):
         else:
             return np.float32(((coords[dimension] + self.tVec[dimension]) *
                               self.scaleVec[dimension]) / self.maxLen)
+
+    def worldToModel(self, coords):
+            return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
 
     def paintGL(self):
         def setMaterial(mat):
@@ -1591,6 +1611,9 @@ class xrtGlWidget(QGLWidget):
             glClearColor(1.0, 1.0, 1.0, 1.)
         else:
             glClearColor(0.0, 0.0, 0.0, 1.)
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if self.perspectiveEnabled:
@@ -1599,13 +1622,13 @@ class xrtGlWidget(QGLWidget):
             orthoView = self.cameraPos[0]*0.45
             glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
                     -orthoView, orthoView, -100, 100)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
         gluLookAt(self.cameraPos[0], self.cameraPos[1], self.cameraPos[2],
                   self.cameraTarget[0], self.cameraTarget[1],
                   self.cameraTarget[2],
                   0.0, 0.0, 1.0)
-
-        glMatrixMode(GL_MODELVIEW)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         if self.enableBlending:
             glEnable(GL_MULTISAMPLE)
@@ -1620,11 +1643,11 @@ class xrtGlWidget(QGLWidget):
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
-        glLoadIdentity()
         self.rotateZYX()
-        pModelT = np.array(glGetDoublev(GL_TRANSPOSE_MODELVIEW_MATRIX))
-        self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
-        self.signs = np.sign(pModelT)
+
+        pModel = np.array(glGetDoublev(GL_MODELVIEW_MATRIX))[:-1, :-1]
+        self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
+        self.signs = np.sign(pModel)
         self.axPosModifier = np.ones(3)
 
         if self.enableAA:
@@ -1634,8 +1657,8 @@ class xrtGlWidget(QGLWidget):
 
         for dim in range(3):
             for iAx in range(3):
-                self.axPosModifier[iAx] = (self.signs[0][iAx] if
-                                           self.signs[0][iAx] != 0 else 1)
+                self.axPosModifier[iAx] = (self.signs[iAx][2] if
+                                           self.signs[iAx][2] != 0 else 1)
             if self.projectionsVisibility[dim] > 0:
                 if self.lineProjectionWidth > 0 and\
                         self.lineProjectionOpacity > 0 and\
@@ -1649,15 +1672,26 @@ class xrtGlWidget(QGLWidget):
                         self.lineProjectionOpacity, self.lineProjectionWidth)
 
                 if self.pointProjectionSize > 0 and\
-                        self.pointProjectionOpacity > 0 and\
-                        self.footprintsArray is not None:
-                    projectionDots = self.modelToWorld(
-                        np.copy(self.footprintsArray))
-                    projectionDots[:, dim] =\
-                        -self.aPos[dim] * self.axPosModifier[dim]
-                    self.drawArrays(
-                        0, GL_POINTS, projectionDots, self.dotsColor,
-                        self.pointProjectionOpacity, self.pointProjectionSize)
+                        self.pointProjectionOpacity > 0:
+                    if self.footprintsArray is not None:
+                        projectionDots = self.modelToWorld(
+                            np.copy(self.footprintsArray))
+                        projectionDots[:, dim] =\
+                            -self.aPos[dim] * self.axPosModifier[dim]
+                        self.drawArrays(
+                            0, GL_POINTS, projectionDots, self.dotsColor,
+                            self.pointProjectionOpacity,
+                            self.pointProjectionSize)
+
+                    if self.virtDotsArray is not None:
+                        projectionDots = self.modelToWorld(
+                            np.copy(self.virtDotsArray))
+                        projectionDots[:, dim] =\
+                            -self.aPos[dim] * self.axPosModifier[dim]
+                        self.drawArrays(
+                            0, GL_POINTS, projectionDots, self.virtDotsColor,
+                            self.pointProjectionOpacity,
+                            self.pointProjectionSize)
 
         if self.enableAA:
             glDisable(GL_LINE_SMOOTH)
@@ -1665,13 +1699,45 @@ class xrtGlWidget(QGLWidget):
         glEnable(GL_DEPTH_TEST)
 # Coordinate box
         if self.drawGrid:
-
-            glLoadIdentity()
-            self.rotateZYX()
             self.drawCoordinateGrid()
 
-        glLoadIdentity()
-        self.rotateZYX()
+        if self.virtScreen is not None:
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+            vScrHW = vScrHH = self.vScreenSize
+            vScreenBody = np.zeros((4, 3))
+            vScreenBody[0, :] = vScreenBody[1, :] =\
+                self.virtScreen.center - vScrHW * np.array(self.virtScreen.x)
+            vScreenBody[2, :] = vScreenBody[3, :] =\
+                self.virtScreen.center + vScrHW * np.array(self.virtScreen.x)
+            vScreenBody[0, :] -=\
+                vScrHH * np.array(self.virtScreen.z)
+            vScreenBody[3, :] -=\
+                vScrHH * np.array(self.virtScreen.z)
+            vScreenBody[1, :] +=\
+                vScrHH * np.array(self.virtScreen.z)
+            vScreenBody[2, :] +=\
+                vScrHH * np.array(self.virtScreen.z)
+
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            glBegin(GL_QUADS)
+            glColor4f(1, 1, 1, 0.2)
+            for i in range(4):
+                glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
+                                              self.coordOffset))
+            glEnd()
+
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            glLineWidth(2)
+            glBegin(GL_QUADS)
+            glColor4f(1, 0, 0, 1)
+            for i in range(4):
+                glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
+                                              self.coordOffset))
+            glEnd()
+            if not self.enableAA:
+                glDisable(GL_LINE_SMOOTH)
 
         if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -1720,10 +1786,16 @@ class xrtGlWidget(QGLWidget):
         if self.pointsDepthTest:
             glEnable(GL_DEPTH_TEST)
 
-        if self.pointSize > 0 and self.pointOpacity > 0 and\
-                self.footprintsArray is not None:
-            self.drawArrays(1, GL_POINTS, self.footprintsArray, self.dotsColor,
-                            self.pointOpacity, self.pointSize)
+        if self.pointSize > 0 and self.pointOpacity > 0:
+            if self.footprintsArray is not None:
+                self.drawArrays(1, GL_POINTS, self.footprintsArray,
+                                self.dotsColor, self.pointOpacity,
+                                self.pointSize)
+
+            if self.virtDotsArray is not None:
+                self.drawArrays(1, GL_POINTS, self.virtDotsArray,
+                                self.virtDotsColor, self.pointOpacity,
+                                self.pointSize)
 
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_COLOR_ARRAY)
@@ -1780,7 +1852,6 @@ class xrtGlWidget(QGLWidget):
                     for symbol in oeCenterStr:
                         glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
                     glPopMatrix()
-
         glFlush()
 
         self.drawAxes()
@@ -2233,17 +2304,19 @@ class xrtGlWidget(QGLWidget):
             gridColorArray.unbind()
         pView = glGetIntegerv(GL_VIEWPORT)
         glViewport(0, 0, int(150*self.aspect), 150)
+
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if self.perspectiveEnabled:
             gluPerspective(60, self.aspect, 0.001, 10)
         else:
             glOrtho(-tLen*self.aspect, tLen*self.aspect, -tLen, tLen, -1, 1)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
         gluLookAt(.5, 0.0, 0.0,
                   0.0, 0.0, 0.0,
                   0.0, 0.0, 1.0)
-
-        glMatrixMode(GL_MODELVIEW)
 
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
@@ -2253,7 +2326,6 @@ class xrtGlWidget(QGLWidget):
         glEnableClientState(GL_VERTEX_ARRAY)
         glEnableClientState(GL_COLOR_ARRAY)
 
-        glLoadIdentity()
         self.rotateZYX()
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -2318,13 +2390,172 @@ class xrtGlWidget(QGLWidget):
         glViewport(*self.viewPortGL)
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
 
+    def populateVScreen(self):
+        if self.virtBeam is not None:
+            startBeam = self.virtBeam
+            good = startBeam.state > 0
+            intensity = np.sqrt(np.abs(
+                startBeam.Jss**2 + startBeam.Jpp**2))
+            intensityAll = intensity / np.max(intensity[good])
+
+            good = np.logical_and(good,
+                                  intensityAll >= self.cutoffI)
+            goodC = np.logical_and(
+                self.getColor(startBeam) <= self.selColorMax,
+                self.getColor(startBeam) >= self.selColorMin)
+
+            good = np.logical_and(good, goodC)
+
+            if self.globalNorm:
+                alphaMax = 1.
+            else:
+                if len(intensity[good]) > 0:
+                    alphaMax = np.max(intensity[good])
+                else:
+                    alphaMax = 1.
+            alphaMax = alphaMax if alphaMax != 0 else 1.
+            alphaDots = intensity[good].T / alphaMax
+            colorsDots = np.array(self.getColor(startBeam)[good]).T
+
+            vertices = np.array(startBeam.x[good] - self.coordOffset[0])
+            vertices = np.vstack((vertices, np.array(
+                startBeam.y[good] - self.coordOffset[1])))
+            vertices = np.vstack((vertices, np.array(
+                startBeam.z[good] - self.coordOffset[2])))
+            self.virtDotsArray = vertices.T
+            if self.colorMin == self.colorMax:
+                self.colorMin = self.colorMax * 0.99
+                self.colorMax *= 1.01
+            colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
+                                                       self.colorMin)
+            colorsDots = np.dstack((colorsDots,
+                                    np.ones_like(alphaDots)*0.85,
+                                    alphaDots))
+
+            colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+            if self.globalNorm:
+                alphaMax = np.max(alphaDots)
+            else:
+                alphaMax = 1.
+            alphaColorDots = np.array([alphaDots / alphaMax]).T *\
+                self.pointOpacity
+            self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
+                                                       alphaColorDots]))
+
+    def createVScreen(self):
+        self.virtScreen = rscreens.Screen(
+            bl=self.oesList.values()[0][0].bl)
+        self.virtScreen.center = self.worldToModel(np.array([0, 0, 0])) +\
+            self.coordOffset
+        self.positionVScreen()
+        self.glDraw()
+
+    def positionVScreen(self):
+        if self.virtScreen is not None:
+            cntr = self.virtScreen.center
+            tmpDist = 1e12
+            totalDist = 1e12
+            cProj = None
+            for segment in self.arrayOfRays[0]:
+                beamStartTmp = self.beamsDict[segment[1]]
+                beamEndTmp = self.beamsDict[segment[3]]
+                bStart0 = np.array([beamStartTmp.x[0], beamStartTmp.y[0],
+                                    beamStartTmp.z[0]])
+                bEnd0 = np.array([beamEndTmp.x[0], beamEndTmp.y[0],
+                                  beamEndTmp.z[0]])
+                beam0 = bEnd0 - bStart0
+                # Finding the projection of the VScreen.center on segments
+                cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
+                    np.dot(beam0, beam0) * beam0
+                s = 0
+                for iDim in range(3):
+                    s += np.floor(np.abs(np.sign(cProjTmp[iDim] -
+                                                 bStart0[iDim]) +
+                                         np.sign(cProjTmp[iDim] -
+                                                 bEnd0[iDim]))*0.6)
+
+                dist = np.linalg.norm(cProjTmp-cntr)
+                if dist < tmpDist:
+                    if s == 0:
+                        tmpDist = dist
+                        beamStart0 = beamStartTmp
+                        bStartC = bStart0
+                        bEndC = bEnd0
+                        cProj = cProjTmp
+                    else:
+                        if np.linalg.norm(bStart0-cntr) < totalDist:
+                            totalDist = np.linalg.norm(bStart0-cntr)
+                            self.virtScreen.center = cProjTmp
+                            self.virtScreen.beamStart = bStart0
+                            self.virtScreen.beamEnd = bEnd0
+                            self.virtScreen.beamToExpose = beamStartTmp
+
+            if cProj is not None:
+                self.virtScreen.center = cProj
+                self.virtScreen.beamStart = bStartC
+                self.virtScreen.beamEnd = bEndC
+                self.virtScreen.beamToExpose = beamStart0
+
+            if self.isVirtScreenNormal:
+                vsX = [self.virtScreen.beamToExpose.b[0],
+                       -self.virtScreen.beamToExpose.a[0], 0]
+                vsY = [self.virtScreen.beamToExpose.a[0],
+                       self.virtScreen.beamToExpose.b[0],
+                       self.virtScreen.beamToExpose.c[0]]
+                vsZ = np.cross(vsX/np.linalg.norm(vsX),
+                               vsY/np.linalg.norm(vsY))
+            else:
+                vsX = 'auto'
+                vsZ = 'auto'
+            self.virtScreen.set_orientation(vsX, vsZ)
+
+            self.virtBeam = self.virtScreen.expose_global(
+                self.virtScreen.beamToExpose)
+            self.populateVScreen()
+
+    def clearVScreen(self):
+        self.virtScreen = None
+        self.virtBeam = None
+        self.virtDotsArray = None
+        self.virtDotsColor = None
+        self.glDraw()
+
+    def switchVScreenTilt(self):
+        self.isVirtScreenNormal = not self.isVirtScreenNormal
+        self.positionVScreen()
+        self.glDraw()
+
     def mouseMoveEvent(self, mouseEvent):
+        pView = glGetIntegerv(GL_VIEWPORT)
+        mouseX = mouseEvent.x()
+        mouseY = pView[3] - mouseEvent.y()
         if mouseEvent.buttons() == QtCore.Qt.LeftButton:
+            glMatrixMode(GL_MODELVIEW)
+            glLoadIdentity()
+            gluLookAt(self.cameraPos[0], self.cameraPos[1],
+                      self.cameraPos[2],
+                      self.cameraTarget[0], self.cameraTarget[1],
+                      self.cameraTarget[2],
+                      0.0, 0.0, 1.0)
+            self.rotateZYX()
+            pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
+            glMatrixMode(GL_PROJECTION)
+            glLoadIdentity()
+
+            if self.perspectiveEnabled:
+                gluPerspective(self.cameraAngle, self.aspect, 0.01, 100)
+            else:
+                orthoView = self.cameraPos[0]*0.45
+                glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
+                        -orthoView, orthoView, -100, 100)
+            pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
+
             if mouseEvent.modifiers() == QtCore.Qt.NoModifier:
-                self.rotations[1][0] += np.float32(
-                    (mouseEvent.y() - self.prevMPos[1]) * 36. / 90.)
                 self.rotations[2][0] += np.float32(
-                    (mouseEvent.x() - self.prevMPos[0]) * 36. / 90.)
+                    self.signs[2][1] *
+                    (mouseX - self.prevMPos[0]) * 36. / 90.)
+                self.rotations[1][0] -= np.float32(
+                    (mouseY - self.prevMPos[1]) * 36. / 90.)
                 for ax in range(2):
                     if self.rotations[self.visibleAxes[ax+1]][0] > 180:
                         self.rotations[self.visibleAxes[ax+1]][0] -= 360
@@ -2333,56 +2564,95 @@ class xrtGlWidget(QGLWidget):
                 self.updateQuats()
                 self.rotationUpdated.emit(self.rotations)
             elif mouseEvent.modifiers() == QtCore.Qt.ShiftModifier:
-                pProjectionT = glGetDoublev(GL_TRANSPOSE_PROJECTION_MATRIX)
-                pView = glGetIntegerv(GL_VIEWPORT)
-                pScale = np.float32(pProjectionT[2][3]*1.25)
-                self.tVec[self.visibleAxes[1]] +=\
-                    self.signs[1][self.visibleAxes[1]] * pScale *\
-                    (mouseEvent.x() - self.prevMPos[0]) / pView[2] /\
-                    self.scaleVec[self.visibleAxes[1]] * self.maxLen
-                self.tVec[self.visibleAxes[2]] -=\
-                    self.signs[2][self.visibleAxes[2]] * pScale *\
-                    (mouseEvent.y() - self.prevMPos[1]) / pView[3] /\
-                    self.scaleVec[self.visibleAxes[2]] * self.maxLen
-#                self.verticesArray[:, self.visibleAxes[1]] += \
-#                    self.signs[1][self.visibleAxes[1]] * pScale *\
-#                    (mouseEvent.x() - self.prevMPos[0]) / pView[2] /\
-#                    self.scaleVec[self.visibleAxes[1]] * self.maxLen
-#                self.verticesArray[:, self.visibleAxes[2]] -= \
-#                    self.signs[2][self.visibleAxes[2]] * pScale *\
-#                    (mouseEvent.y() - self.prevMPos[1]) / pView[3] /\
-#                    self.scaleVec[self.visibleAxes[2]] * self.maxLen
+                for iDim in range(2):
+                    mStart = np.zeros(3)
+                    mEnd = np.zeros(3)
+                    mEnd[self.visibleAxes[iDim]] = 1.
+#                    mEnd = -1 * mStart
+                    pStart = np.array(gluProject(
+                        *mStart, model=pModel, proj=pProjection,
+                        view=pView)[:-1])
+                    pEnd = np.array(gluProject(
+                        *mEnd, model=pModel, proj=pProjection,
+                        view=pView)[:-1])
+                    pScr = np.array([mouseX, mouseY])
+                    prevPScr = np.array(self.prevMPos)
+                    bDir = pEnd - pStart
+                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
+                        np.dot(bDir, bDir) * bDir
+                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
+                        np.dot(bDir, bDir) * bDir
+                    self.tVec[self.visibleAxes[iDim]] += np.dot(
+                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+                        self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
 
             elif mouseEvent.modifiers() == QtCore.Qt.AltModifier:
-                pProjectionT = glGetDoublev(GL_TRANSPOSE_PROJECTION_MATRIX)
-                pView = glGetIntegerv(GL_VIEWPORT)
-                pScale = np.float32(pProjectionT[2][3]*1.25)
-#                self.verticesArray[:, self.visibleAxes[0]] -= \
-#                    self.signs[2][self.visibleAxes[0]] * pScale *\
-#                    (mouseEvent.y() - self.prevMPos[1]) / pView[3] /\
-#                    self.scaleVec[self.visibleAxes[0]] * self.maxLen
-                self.tVec[self.visibleAxes[0]] +=\
-                    self.signs[0][self.visibleAxes[0]] * pScale *\
-                    (mouseEvent.y() - self.prevMPos[1]) / pView[3] /\
-                    self.scaleVec[self.visibleAxes[0]] * self.maxLen
+                mStart = np.zeros(3)
+                mEnd = np.zeros(3)
+                mEnd[self.visibleAxes[2]] = 1.
+#                    mEnd = -1 * mStart
+                pStart = np.array(gluProject(
+                    *mStart, model=pModel, proj=pProjection,
+                    view=pView)[:-1])
+                pEnd = np.array(gluProject(
+                    *mEnd, model=pModel, proj=pProjection,
+                    view=pView)[:-1])
+                pScr = np.array([mouseX, mouseY])
+                prevPScr = np.array(self.prevMPos)
+                bDir = pEnd - pStart
+                pProj = pStart + np.dot(pScr - pStart, bDir) /\
+                    np.dot(bDir, bDir) * bDir
+                pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
+                    np.dot(bDir, bDir) * bDir
+                self.tVec[self.visibleAxes[2]] += np.dot(
+                    pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+                    self.maxLen / self.scaleVec[self.visibleAxes[2]]
 
-        self.glDraw()
-        self.prevMPos[0] = mouseEvent.x()
-        self.prevMPos[1] = mouseEvent.y()
+            elif mouseEvent.modifiers() == QtCore.Qt.ControlModifier:
+                if self.virtScreen is not None:
+                    pStart = np.array(gluProject(*self.modelToWorld(
+                        self.virtScreen.beamStart - self.coordOffset),
+                        model=pModel, proj=pProjection,
+                        view=pView)[:-1])
+                    pEnd = np.array(gluProject(*self.modelToWorld(
+                        self.virtScreen.beamEnd - self.coordOffset),
+                        model=pModel, proj=pProjection,
+                        view=pView)[:-1])
+                    pScr = np.array([mouseX, mouseY])
+                    prevPScr = np.array(self.prevMPos)
+                    bDir = pEnd - pStart
+                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
+                        np.dot(bDir, bDir) * bDir
+                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
+                        np.dot(bDir, bDir) * bDir
+                    self.virtScreen.center += np.dot(
+                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+                        (self.virtScreen.beamEnd - self.virtScreen.beamStart)
+                    self.positionVScreen()
+
+            self.glDraw()
+
+        self.prevMPos[0] = mouseX
+        self.prevMPos[1] = mouseY
 
     def wheelEvent(self, wEvent):
         ctrlOn = (wEvent.modifiers() == QtCore.Qt.ControlModifier)
+        altOn = (wEvent.modifiers() == QtCore.Qt.AltModifier)
         if QtName == "PyQt4":
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y()
         if deltaA > 0:
-            if ctrlOn:
+            if altOn:
+                self.vScreenSize *= 1.1
+            elif ctrlOn:
                 self.cameraPos *= 0.9
             else:
                 self.scaleVec *= 1.1
         else:
-            if ctrlOn:
+            if altOn:
+                self.vScreenSize *= 0.9
+            elif ctrlOn:
                 self.cameraPos *= 1.1
             else:
                 self.scaleVec *= 0.9
