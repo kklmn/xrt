@@ -2444,7 +2444,7 @@ class xrtGlWidget(QGLWidget):
 
     def createVScreen(self):
         self.virtScreen = rscreens.Screen(
-            bl=self.oesList.values()[0][0].bl)
+            bl=list(self.oesList.values())[0][0].bl)
         self.virtScreen.center = self.worldToModel(np.array([0, 0, 0])) +\
             self.coordOffset
         self.positionVScreen()
@@ -2641,7 +2641,7 @@ class xrtGlWidget(QGLWidget):
         if QtName == "PyQt4":
             deltaA = wEvent.delta()
         else:
-            deltaA = wEvent.angleDelta().y()
+            deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
         if deltaA > 0:
             if altOn:
                 self.vScreenSize *= 1.1
