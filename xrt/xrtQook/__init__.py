@@ -757,7 +757,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.polarizationsModel.appendRow(polItem)
 
         self.matKindModel = QStandardItemModel()
-        for mtKind in ['mirror', 'thin mirror',
+        for mtKind in ['auto', 'mirror', 'thin mirror',
                        'plate', 'lens', 'grating', 'FZP']:
             mtItem = QStandardItem(mtKind)
             self.matKindModel.appendRow(mtItem)
