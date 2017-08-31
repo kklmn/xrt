@@ -675,6 +675,9 @@ class OE(object):
             except IndexError:
                 pass
 
+    def assign_auto_material_kind(self, material):
+        material.kind = 'mirror'
+
     def rays_good(self, x, y, is2ndXtal=False):
         """Returns *state* value for a ray with the given intersection point
         (*x*, *y*) with the surface of OE:
@@ -1339,6 +1342,8 @@ class OE(object):
                     matSur = material[self.curSurface]
                 else:
                     matSur = material
+                if matSur.kind == 'auto':
+                    self.assign_auto_material_kind(matSur)
                 if matSur.kind in ('plate', 'lens'):
                     toWhere = 1
                 elif matSur.kind in ('crystal', 'multilayer'):

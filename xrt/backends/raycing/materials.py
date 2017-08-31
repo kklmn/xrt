@@ -243,7 +243,7 @@ class Material(object):
     :class:`Material` serves for getting reflectivity, transmittivity,
     refractive index and absorption coefficient of a material specified by its
     chemical formula and density."""
-    def __init__(self, elements=None, quantities=None, kind='mirror', rho=0,
+    def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
                  t=None, table='Chantler', efficiency=None,
                  efficiencyFile=None, name=''):
         r"""
@@ -256,6 +256,8 @@ class Material(object):
 
         *kind*: str
             One of 'mirror', 'thin mirror', 'plate', 'lens', 'grating', 'FZP'.
+            If 'auto', the optical element will decide which material kind to
+            use via its method :meth:`assign_auto_material_kind`.
 
         *rho*: float
             Density in g/cm\ :sup:`3`.

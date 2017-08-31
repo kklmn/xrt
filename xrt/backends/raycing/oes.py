@@ -1341,6 +1341,9 @@ class Plate(DCM):
         self.t = kwargs.pop('t', 0)  # difference of z zeros in mm
         return kwargs
 
+    def assign_auto_material_kind(self, material):
+        material.kind = 'plate'
+
     def double_refract(self, beam=None, needLocal=True):
         """
         Returns the refracted beam in global and two local (if *needLocal*
@@ -1453,6 +1456,9 @@ class ParaboloidFlatLens(Plate):
         self.nCRL = kwargs.pop('nCRL', 1)
         kwargs['pitch'] = kwargs.get('pitch', np.pi/2)
         return kwargs
+
+    def assign_auto_material_kind(self, material):
+        material.kind = 'lens'
 
     def local_z1(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
@@ -1706,6 +1712,9 @@ class NormalFZP(OE):
         kwargs['limPhysY'] = [-self.rn[-1], self.rn[-1]]
         return kwargs
 
+    def assign_auto_material_kind(self, material):
+        material.kind = 'FZP'
+
     def reset(self):
         lambdaE = CH / self.E * 1e-7
         if self.thinnestZone is not None:
@@ -1796,6 +1805,9 @@ class GeneralFZPin0YZ(OE):
         self.grazingAngle = kwargs.pop('grazingAngle', None)
         return kwargs
 
+    def assign_auto_material_kind(self, material):
+        material.kind = 'FZP'
+
     def reset(self):
         self.lambdaE = CH / self.E * 1e-7
         self.minHalfLambda = None
@@ -1847,7 +1859,6 @@ class GeneralFZPin0YZ(OE):
                 continue
             a[i] = max(abs(x[zone == i]))
             b[i] = max(abs(y[zone == i]))
-#        print("a", np.diff(a[a > 0]))
 
         gz = np.zeros_like(x[goodN])
         r = np.sqrt(x[goodN]**2 + y[goodN]**2)
@@ -1855,9 +1866,9 @@ class GeneralFZPin0YZ(OE):
         diva[diva == 0] = 1e20
         divb = b[zone[goodN]+1] - b[zone[goodN]-1]
         divb[divb == 0] = 1e20
-        l = (x[goodN]**2/diva + y[goodN]**2/divb) / r**2
-        gx = -x[goodN] * l / r
-        gy = -y[goodN] * l / r
+        xy = (x[goodN]**2/diva + y[goodN]**2/divb) / r**2
+        gx = -x[goodN] * xy / r
+        gy = -y[goodN] * xy / r
 
         gn = gx, gy, gz
         return locState, gn
@@ -1928,6 +1939,9 @@ class BlazedGrating(OE):
         self.antiblaze = kwargs.pop('antiblaze', np.pi*0.4999)
         self.rho = kwargs.pop('rho')
         return kwargs
+
+    def assign_auto_material_kind(self, material):
+        material.kind = 'mirror'  # to be used with wave propagation
 
     def local_z(self, x, y):
         crossingY = self.rho_1 / (1 + self.tanAntiblaze/self.tanBlaze)
@@ -2000,6 +2014,9 @@ class PlaneGrating(OE):
         self.aspect = kwargs.pop('aspect', 0.5)
         self.depth = kwargs.pop('depth', 0.5e-3)
         return kwargs
+
+    def assign_auto_material_kind(self, material):
+        material.kind = 'mirror'  # to be used with wave propagation
 
     def local_z(self, x, y):
         yL = y % self.rho_1
@@ -2110,6 +2127,9 @@ class VLSGrating(OE):
         self.coeffs = kwargs.pop('coeffs', [1, 0, 0])
         self.depth = kwargs.pop('depth')
         return kwargs
+
+    def assign_auto_material_kind(self, material):
+        material.kind = 'mirror'  # to be used with wave propagation
 
     def local_z(self, x, y):
         z = np.zeros_like(y)
