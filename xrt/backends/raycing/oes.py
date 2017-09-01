@@ -1532,7 +1532,8 @@ class ParaboloidFlatLens(Plate):
                     self.roll = -np.pi/4 if ilens % 2 == 0 else np.pi/4
                 lglobal, tlocal1, tlocal2 = self.double_refract(
                     beamIn, needLocal=needLocal)
-                self.center[1] += self.zmax
+                if self.zmax is not None:
+                    self.center[1] += self.zmax
                 beamIn = lglobal
                 if ilens == 0:
                     llocal1, llocal2 = tlocal1, tlocal2
