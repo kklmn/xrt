@@ -7,6 +7,12 @@ Created on Tue Jun 20 15:07:53 2017
 
 import sys
 import os
+import numpy as np
+from functools import partial
+import matplotlib as mpl
+import inspect
+import re
+
 from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc,\
     glEnableClientState, glPolygonMode, glGetDoublev, glDisable, glShadeModel,\
@@ -14,24 +20,27 @@ from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     glPopMatrix, glFlush, glVertexPointerf, glColorPointerf, glLineWidth,\
     glDrawArrays, glMap2f, glMapGrid2f, glEvalMesh2, glLightModeli, glLightfv,\
     glGetIntegerv, glColor4f, glVertex3f, glBegin, glEnd, glViewport,\
-    glMaterialf, glHint, glPointSize, glReadPixels,\
+    glMaterialf, glHint, glPointSize,\
     GL_FRONT_AND_BACK, GL_AMBIENT, GL_DIFFUSE, GL_SPECULAR, GL_EMISSION,\
     GL_FRONT, GL_SHININESS, GL_PROJECTION, GL_MODELVIEW, GL_COLOR_BUFFER_BIT,\
     GL_DEPTH_BUFFER_BIT, GL_MULTISAMPLE, GL_BLEND, GL_SRC_ALPHA,\
     GL_ONE_MINUS_SRC_ALPHA, GL_POINT_SMOOTH, GL_COLOR_ARRAY, GL_LINE,\
-    GL_TRANSPOSE_MODELVIEW_MATRIX, GL_LINE_SMOOTH, GL_LINE_SMOOTH_HINT,\
+    GL_LINE_SMOOTH, GL_LINE_SMOOTH_HINT,\
     GL_NICEST, GL_POLYGON_SMOOTH_HINT, GL_POINT_SMOOTH_HINT, GL_DEPTH_TEST,\
     GL_FILL, GL_NORMAL_ARRAY, GL_NORMALIZE, GL_SMOOTH, GL_VERTEX_ARRAY,\
     GL_QUADS, GL_MAP2_VERTEX_3, GL_MAP2_NORMAL, GL_LIGHTING, GL_POINTS,\
     GL_LIGHT_MODEL_TWO_SIDE, GL_LIGHT0, GL_POSITION, GL_SPOT_DIRECTION,\
     GL_SPOT_CUTOFF, GL_SPOT_EXPONENT, GL_TRIANGLE_FAN, GL_VIEWPORT, GL_LINES,\
-    GL_TRANSPOSE_PROJECTION_MATRIX, GL_MODELVIEW_MATRIX, GL_DEPTH_COMPONENT,\
-    GL_FLOAT, GL_PROJECTION_MATRIX, GL_TRANSPOSE_MODELVIEW_MATRIX
-from OpenGL.GLU import gluPerspective, gluLookAt, gluProject, gluUnProject
+    GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX
+
+from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
+
 from OpenGL.GLUT import glutBitmapCharacter, glutStrokeCharacter, glutInit,\
     glutInitDisplayMode, GLUT_BITMAP_HELVETICA_12, GLUT_STROKE_ROMAN,\
     GLUT_RGBA, GLUT_DOUBLE, GLUT_DEPTH
+
 from OpenGL.arrays import vbo
+
 from collections import OrderedDict
 try:
     from matplotlib.backends import qt_compat
@@ -81,16 +90,11 @@ QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
      QtGui.QStandardItem, QtGui.QPixmap,
      QtGui.QDoubleValidator, QtGui.QIntValidator)
 
-import numpy as np
-from functools import partial
-import matplotlib as mpl
-
-import inspect
-import re
 sys.path.append(os.path.join('..', '..'))
-import xrt.backends.raycing as raycing
-import xrt.backends.raycing.sources as rsources
-import xrt.backends.raycing.screens as rscreens
+import xrt.backends.raycing as raycing  # analysis:ignore
+import xrt.backends.raycing.sources as rsources  # analysis:ignore
+import xrt.backends.raycing.screens as rscreens  # analysis:ignore
+
 
 class mySlider(QSlider):
     def __init__(self, parent, scaleDirection, scalePosition):
@@ -112,6 +116,7 @@ except:
     glowSlider = mySlider
     glowTopScale = QSlider.TicksAbove
 
+
 class xrtGlow(QWidget):
     def __init__(self, arrayOfRays):
         super(xrtGlow, self).__init__()
@@ -119,7 +124,7 @@ class xrtGlow(QWidget):
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
         self.setWindowIcon(QIcon(os.path.join(iconsDir,
-                                                    'icon-GLow.ico')))
+                                              'icon-GLow.ico')))
         self.oesList = OrderedDict()
         self.segmentsModel = QStandardItemModel()
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
@@ -1701,17 +1706,6 @@ class xrtGlWidget(QGLWidget):
         if self.drawGrid:
             self.drawCoordinateGrid()
 
-        if self.virtScreen is not None:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-
-            self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
-                            [1, 0, 0, 1])
-
-            if not self.enableAA:
-                glDisable(GL_LINE_SMOOTH)
-
         if len(self.oesToPlot) > 0:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glEnableClientState(GL_NORMAL_ARRAY)
@@ -1739,12 +1733,22 @@ class xrtGlWidget(QGLWidget):
         if len(self.oesToPlot) > 0:
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
-                is2ndXtal = self.oesList[oeString][3]
                 elType = str(type(oeToPlot))
                 if len(re.findall('raycing.screen', elType)) > 0:  # screen
                     self.plotScreen(oeToPlot)
                 else:
                     continue
+
+        if self.virtScreen is not None:
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+
+            self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
+                            [1, 0, 0, 1])
+
+            if not self.enableAA:
+                glDisable(GL_LINE_SMOOTH)
 
         glDisable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -1808,6 +1812,11 @@ class xrtGlWidget(QGLWidget):
                             addStr = False
                     if addStr:
                         oeLabels[oeCenterStr] = [oeValue[2], oeKey]
+            if self.invertColors:
+                glColor4f(0.0, 0.0, 0.0, 1.)
+            else:
+                glColor4f(1.0, 1.0, 1.0, 1.)
+            glLineWidth(1)
             for oeKey, oeValue in oeLabels.items():
                 outCenterStr = ''
                 for oeIndex, oeLabel in enumerate(oeValue):
@@ -1988,10 +1997,10 @@ class xrtGlWidget(QGLWidget):
             glColor4f(0.0, 0.0, 0.0, 1.)
         else:
             glColor4f(1.0, 1.0, 1.0, 1.)
-
+        glLineWidth(1)
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
-                    iAx == self.visibleAxes[0]):
+                    iAx == self.visibleAxes[2]):
                 if iAx == self.visibleAxes[1]:
                     axisL[iAx][self.visibleAxes[2], :] *= 1.05
                     axisL[iAx][self.visibleAxes[0], :] *= 1.05
@@ -2002,7 +2011,7 @@ class xrtGlWidget(QGLWidget):
                     axisL[iAx][self.visibleAxes[1], :] *= 1.05
                     axisL[iAx][self.visibleAxes[0], :] *= 1.05
                 for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
-                                            precisionLabels[iAx])):
+                                                 precisionLabels[iAx])):
                     if not self.useScalableFont:
                         glRasterPos3f(*tick)
                         for symbol in "{0:.{1}f}".format(tText, int(pcs)):
@@ -2248,7 +2257,12 @@ class xrtGlWidget(QGLWidget):
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glBegin(GL_QUADS)
-        glColor4f(1, 1, 1, 0.2)
+
+        if self.invertColors:
+            glColor4f(0.0, 0.0, 0.0, 0.2)
+        else:
+            glColor4f(1.0, 1.0, 1.0, 0.2)
+
         for i in range(4):
             glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
                                           self.coordOffset))
@@ -2263,7 +2277,6 @@ class xrtGlWidget(QGLWidget):
                 glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
                                               self.coordOffset))
             glEnd()
-
 
     def addLighting(self, pos):
         spot = 60
@@ -2353,7 +2366,7 @@ class xrtGlWidget(QGLWidget):
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
-                    2-iAx == self.visibleAxes[0]):
+                    2-iAx == self.visibleAxes[2]):
                 glPushMatrix()
                 trVec = np.zeros(3, dtype=np.float32)
                 trVec[2-iAx] = axisLen
@@ -2371,7 +2384,7 @@ class xrtGlWidget(QGLWidget):
         glBegin(GL_LINES)
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
-                    2-iAx == self.visibleAxes[0]):
+                    2-iAx == self.visibleAxes[2]):
                 colorVec = [0, 0, 0, 0.75]
                 colorVec[iAx] = 1
                 glColor4f(*colorVec)
@@ -2382,17 +2395,17 @@ class xrtGlWidget(QGLWidget):
                 glColor4f(*colorVec)
         glEnd()
 
-        if not (not self.perspectiveEnabled and self.visibleAxes[0] == 2):
+        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 2):
             glColor4f(1, 0, 0, 1)
             glRasterPos3f(0, 0, axisLen*1.5)
             for symbol in "  {}, mm".format('Z'):
                 glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
-        if not (not self.perspectiveEnabled and self.visibleAxes[0] == 1):
+        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
             glColor4f(0, 0.75, 0, 1)
             glRasterPos3f(0, axisLen*1.5, 0)
             for symbol in "  {}, mm".format('Y'):
                 glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
-        if not (not self.perspectiveEnabled and self.visibleAxes[0] == 0):
+        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
             glColor4f(0, 0.5, 1, 1)
             glRasterPos3f(axisLen*1.5, 0, 0)
             for symbol in "  {}, mm".format('X'):
@@ -2475,9 +2488,14 @@ class xrtGlWidget(QGLWidget):
     def positionVScreen(self):
         if self.virtScreen is not None:
             cntr = self.virtScreen.center
+            print "Vpos start", self.virtScreen.center
             tmpDist = 1e12
             totalDist = 1e12
             cProj = None
+            try:
+                print "b0", self.virtScreen.beamStart, self.virtScreen.beamEnd
+            except:
+                pass
             for segment in self.arrayOfRays[0]:
                 beamStartTmp = self.beamsDict[segment[1]]
                 beamEndTmp = self.beamsDict[segment[3]]
@@ -2517,6 +2535,7 @@ class xrtGlWidget(QGLWidget):
                 self.virtScreen.beamStart = bStartC
                 self.virtScreen.beamEnd = bEndC
                 self.virtScreen.beamToExpose = beamStart0
+            print "b1", self.virtScreen.beamStart, self.virtScreen.beamEnd
 
             if self.isVirtScreenNormal:
                 vsX = [self.virtScreen.beamToExpose.b[0],
@@ -2632,13 +2651,34 @@ class xrtGlWidget(QGLWidget):
 
             elif mouseEvent.modifiers() == QtCore.Qt.ControlModifier:
                 if self.virtScreen is not None:
-                    pStart = np.array(gluProject(*self.modelToWorld(
-                        self.virtScreen.beamStart - self.coordOffset),
-                        model=pModel, proj=pProjection,
+
+                    worldPStart = self.modelToWorld(
+                        self.virtScreen.beamStart - self.coordOffset)
+                    worldPEnd = self.modelToWorld(
+                        self.virtScreen.beamEnd - self.coordOffset)
+
+                    worldBDir = worldPEnd - worldPStart
+
+                    normPEnd = worldPStart + np.dot(
+                        np.ones(3) - worldPStart, worldBDir) /\
+                        np.dot(worldBDir, worldBDir) * worldBDir
+
+                    normPStart = worldPStart + np.dot(
+                        -1. * np.ones(3) - worldPStart, worldBDir) /\
+                        np.dot(worldBDir, worldBDir) * worldBDir
+
+                    normBDir = normPEnd - normPStart
+                    normScale = np.sqrt(np.dot(normBDir, normBDir) /
+                                        np.dot(worldBDir, worldBDir))
+
+                    if np.dot(normBDir, worldBDir) < 0:
+                        normPStart, normPEnd = normPEnd, normPStart
+
+                    pStart = np.array(gluProject(
+                        *normPStart, model=pModel, proj=pProjection,
                         view=pView)[:-1])
-                    pEnd = np.array(gluProject(*self.modelToWorld(
-                        self.virtScreen.beamEnd - self.coordOffset),
-                        model=pModel, proj=pProjection,
+                    pEnd = np.array(gluProject(
+                        *normPEnd, model=pModel, proj=pProjection,
                         view=pView)[:-1])
                     pScr = np.array([mouseX, mouseY])
                     prevPScr = np.array(self.prevMPos)
@@ -2647,7 +2687,7 @@ class xrtGlWidget(QGLWidget):
                         np.dot(bDir, bDir) * bDir
                     pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
                         np.dot(bDir, bDir) * bDir
-                    self.virtScreen.center += np.dot(
+                    self.virtScreen.center += normScale * np.dot(
                         pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
                         (self.virtScreen.beamEnd - self.virtScreen.beamStart)
                     self.positionVScreen()
