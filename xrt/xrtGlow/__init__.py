@@ -1589,6 +1589,22 @@ class xrtGlWidget(QGLWidget):
     def worldToModel(self, coords):
             return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
 
+    def drawText(self, coord, text):
+        if not self.useScalableFont:
+            glRasterPos3f(*coord)
+            for symbol in text:
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
+                                    ord(symbol))
+        else:
+            glPushMatrix()
+            glTranslatef(*coord)
+            glRotatef(*self.qText)
+            fontScale = self.fontSize / 12500.
+            glScalef(fontScale, fontScale, fontScale)
+            for symbol in text:
+                glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
+            glPopMatrix()
+
     def paintGL(self):
         def setMaterial(mat):
             if mat == 'Cu':
@@ -1611,6 +1627,12 @@ class xrtGlWidget(QGLWidget):
                 glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,
                              [0.1, 0.1, 0.1, 1])
                 glMaterialf(GL_FRONT, GL_SHININESS, 100)
+
+        def makeCenterStr(centerList, prec):
+            retStr = '('
+            for dim in centerList:
+                retStr += '{0:.{1}f}, '.format(dim, prec)
+            return retStr[:-2] + ')'
 
         if self.invertColors:
             glClearColor(1.0, 1.0, 1.0, 1.)
@@ -1792,12 +1814,6 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_DEPTH_TEST)
 
         if self.showOeLabels:
-            def makeCenterStr(centerList, prec):
-                retStr = '('
-                for dim in centerList:
-                    retStr += '{0:.{1}f}, '.format(dim, prec)
-                return retStr[:-2] + ')'
-
             oeLabels = dict()
             for oeKey, oeValue in self.oesList.items():
                 if oeKey in self.labelsToPlot:
@@ -1826,22 +1842,16 @@ class xrtGlWidget(QGLWidget):
                         oeCoord = np.array(oeLabel)
                 oeCenterStr = '    {0}: {1}mm'.format(
                     outCenterStr[:-2], oeKey)
-
                 oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
-                if not self.useScalableFont:
-                    glRasterPos3f(*oeLabelPos)
-                    for symbol in oeCenterStr:
-                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
-                                            ord(symbol))
-                else:
-                    glPushMatrix()
-                    glTranslatef(*oeLabelPos)
-                    glRotatef(*self.qText)
-                    fontScale = self.fontSize / 12500.
-                    glScalef(fontScale, fontScale, fontScale)
-                    for symbol in oeCenterStr:
-                        glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
-                    glPopMatrix()
+                self.drawText(oeLabelPos, oeCenterStr)
+
+            if self.virtScreen is not None:
+                vsCenterStr = '    {0}: {1}mm'.format(
+                    'Virtual Screen', makeCenterStr(self.virtScreen.center,
+                                                    self.labelCoordPrec))
+                vsLabelPos = self.modelToWorld(self.virtScreen.center -
+                                               self.coordOffset)
+                self.drawText(vsLabelPos, vsCenterStr)
         glFlush()
 
         self.drawAxes()
@@ -2012,20 +2022,8 @@ class xrtGlWidget(QGLWidget):
                     axisL[iAx][self.visibleAxes[0], :] *= 1.05
                 for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
                                                  precisionLabels[iAx])):
-                    if not self.useScalableFont:
-                        glRasterPos3f(*tick)
-                        for symbol in "{0:.{1}f}".format(tText, int(pcs)):
-                            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
-                                                ord(symbol))
-                    else:
-                        glPushMatrix()
-                        glTranslatef(*tick)
-                        glRotatef(*self.qText)
-                        fontScale = self.fontSize / 12500.
-                        glScalef(fontScale, fontScale, fontScale)
-                        for symbol in "{0:.{1}f}".format(tText, int(pcs)):
-                            glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
-                        glPopMatrix()
+                    valueStr = "{0:.{1}f}".format(tText, int(pcs))
+                    self.drawText(tick, valueStr)
 #            if not self.enableAA:
 #                glDisable(GL_LINE_SMOOTH)
         glEnable(GL_LINE_SMOOTH)
@@ -2488,14 +2486,10 @@ class xrtGlWidget(QGLWidget):
     def positionVScreen(self):
         if self.virtScreen is not None:
             cntr = self.virtScreen.center
-            print "Vpos start", self.virtScreen.center
             tmpDist = 1e12
             totalDist = 1e12
             cProj = None
-            try:
-                print "b0", self.virtScreen.beamStart, self.virtScreen.beamEnd
-            except:
-                pass
+
             for segment in self.arrayOfRays[0]:
                 beamStartTmp = self.beamsDict[segment[1]]
                 beamEndTmp = self.beamsDict[segment[3]]
@@ -2535,7 +2529,6 @@ class xrtGlWidget(QGLWidget):
                 self.virtScreen.beamStart = bStartC
                 self.virtScreen.beamEnd = bEndC
                 self.virtScreen.beamToExpose = beamStart0
-            print "b1", self.virtScreen.beamStart, self.virtScreen.beamEnd
 
             if self.isVirtScreenNormal:
                 vsX = [self.virtScreen.beamToExpose.b[0],
@@ -2566,11 +2559,15 @@ class xrtGlWidget(QGLWidget):
         self.positionVScreen()
         self.glDraw()
 
-    def mouseMoveEvent(self, mouseEvent):
+    def mouseMoveEvent(self, mEvent):
         pView = glGetIntegerv(GL_VIEWPORT)
-        mouseX = mouseEvent.x()
-        mouseY = pView[3] - mouseEvent.y()
-        if mouseEvent.buttons() == QtCore.Qt.LeftButton:
+        mouseX = mEvent.x()
+        mouseY = pView[3] - mEvent.y()
+        ctrlOn = bool(int(mEvent.modifiers()) & int(QtCore.Qt.ControlModifier))
+        altOn = bool(int(mEvent.modifiers()) & int(QtCore.Qt.AltModifier))
+        shiftOn = bool(int(mEvent.modifiers()) & int(QtCore.Qt.ShiftModifier))
+
+        if mEvent.buttons() == QtCore.Qt.LeftButton:
             glMatrixMode(GL_MODELVIEW)
             glLoadIdentity()
             gluLookAt(self.cameraPos[0], self.cameraPos[1],
@@ -2591,7 +2588,7 @@ class xrtGlWidget(QGLWidget):
                         -orthoView, orthoView, -100, 100)
             pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
 
-            if mouseEvent.modifiers() == QtCore.Qt.NoModifier:
+            if mEvent.modifiers() == QtCore.Qt.NoModifier:
                 self.rotations[2][0] += np.float32(
                     self.signs[2][1] *
                     (mouseX - self.prevMPos[0]) * 36. / 90.)
@@ -2604,7 +2601,8 @@ class xrtGlWidget(QGLWidget):
                         self.rotations[self.visibleAxes[ax+1]][0] += 360
                 self.updateQuats()
                 self.rotationUpdated.emit(self.rotations)
-            elif mouseEvent.modifiers() == QtCore.Qt.ShiftModifier:
+
+            elif shiftOn:
                 for iDim in range(2):
                     mStart = np.zeros(3)
                     mEnd = np.zeros(3)
@@ -2626,8 +2624,17 @@ class xrtGlWidget(QGLWidget):
                     self.tVec[self.visibleAxes[iDim]] += np.dot(
                         pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
                         self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
+                    if ctrlOn and self.virtScreen is not None:
+                        self.virtScreen.center[self.visibleAxes[iDim]] -=\
+                            np.dot(
+                            pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+                            self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
+                if ctrlOn and self.virtScreen is not None:
+                    v0 = self.virtScreen.center
+                    self.positionVScreen()
+                    self.tVec -= self.virtScreen.center - v0
 
-            elif mouseEvent.modifiers() == QtCore.Qt.AltModifier:
+            elif altOn:
                 mStart = np.zeros(3)
                 mEnd = np.zeros(3)
                 mEnd[self.visibleAxes[2]] = 1.
@@ -2648,8 +2655,15 @@ class xrtGlWidget(QGLWidget):
                 self.tVec[self.visibleAxes[2]] += np.dot(
                     pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
                     self.maxLen / self.scaleVec[self.visibleAxes[2]]
+                if ctrlOn and self.virtScreen is not None:
+                    self.virtScreen.center[self.visibleAxes[2]] -=\
+                        np.dot(pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+                        self.maxLen / self.scaleVec[self.visibleAxes[2]]
+                    v0 = self.virtScreen.center
+                    self.positionVScreen()
+                    self.tVec -= self.virtScreen.center - v0
 
-            elif mouseEvent.modifiers() == QtCore.Qt.ControlModifier:
+            elif ctrlOn:
                 if self.virtScreen is not None:
 
                     worldPStart = self.modelToWorld(
@@ -2698,8 +2712,8 @@ class xrtGlWidget(QGLWidget):
         self.prevMPos[1] = mouseY
 
     def wheelEvent(self, wEvent):
-        ctrlOn = (wEvent.modifiers() == QtCore.Qt.ControlModifier)
-        altOn = (wEvent.modifiers() == QtCore.Qt.AltModifier)
+        ctrlOn = bool(int(wEvent.modifiers()) & int(QtCore.Qt.ControlModifier))
+        altOn = bool(int(wEvent.modifiers()) & int(QtCore.Qt.AltModifier))
         if QtName == "PyQt4":
             deltaA = wEvent.delta()
         else:
