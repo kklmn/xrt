@@ -355,8 +355,8 @@ class xrtGlow(QWidget):
         colorCB.currentIndexChanged['QString'].connect(self.changeColorAxis)
         colorLayout.addWidget(colorCBLabel, 1, 0)
         colorLayout.addWidget(colorCB, 1, 1)
-        for icSel, cSelText in enumerate(['Selection<sub>min</sub>',
-                                          'Selection<sub>max</sub>']):
+        for icSel, cSelText in enumerate(['Selection min',
+                                          'Selection max']):
             selLabel = QLabel()
             selLabel.setText(cSelText)
             selValidator = QDoubleValidator()
@@ -626,6 +626,9 @@ class xrtGlow(QWidget):
 
         self.setLayout(mainLayout)
         self.customGlWidget.oesList = self.oesList
+        toggleHelp = QShortcut(self)
+        toggleHelp.setKey(QtCore.Qt.Key_F1)
+        toggleHelp.activated.connect(self.customGlWidget.toggleHelp)
         fastSave = QShortcut(self)
         fastSave.setKey(QtCore.Qt.Key_F5)
         fastSave.activated.connect(partial(self.saveScene, '_xrtScnTmp_.npy'))
@@ -1346,6 +1349,7 @@ class xrtGlWidget(QGLWidget):
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
         self.invertColors = False
+        self.showHelp = False
         self.glDraw()
 
     def eulerToQ(self, rotMatrXYZ):
@@ -1589,8 +1593,9 @@ class xrtGlWidget(QGLWidget):
     def worldToModel(self, coords):
             return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
 
-    def drawText(self, coord, text):
-        if not self.useScalableFont:
+    def drawText(self, coord, text, noScalable=False):
+        useScalableFont = False if noScalable else self.useScalableFont
+        if not useScalableFont:
             glRasterPos3f(*coord)
             for symbol in text:
                 glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
@@ -1723,6 +1728,21 @@ class xrtGlWidget(QGLWidget):
         if self.enableAA:
             glDisable(GL_LINE_SMOOTH)
 
+        if self.linesDepthTest:
+            glEnable(GL_DEPTH_TEST)
+
+        if self.enableAA:
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+
+        if self.lineWidth > 0 and self.lineOpacity > 0 and\
+                self.verticesArray is not None:
+            self.drawArrays(1, GL_LINES, self.verticesArray, self.raysColor,
+                            self.lineOpacity, self.lineWidth)
+#        if self.linesDepthTest:
+#            glDisable(GL_DEPTH_TEST)
+
         glEnable(GL_DEPTH_TEST)
 # Coordinate box
         if self.drawGrid:
@@ -1774,21 +1794,6 @@ class xrtGlWidget(QGLWidget):
 
         glDisable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-
-        if self.linesDepthTest:
-            glEnable(GL_DEPTH_TEST)
-
-        if self.enableAA:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-
-        if self.lineWidth > 0 and self.lineOpacity > 0 and\
-                self.verticesArray is not None:
-            self.drawArrays(1, GL_LINES, self.verticesArray, self.raysColor,
-                            self.lineOpacity, self.lineWidth)
-        if self.linesDepthTest:
-            glDisable(GL_DEPTH_TEST)
 
         if self.pointsDepthTest:
             glEnable(GL_DEPTH_TEST)
@@ -1855,7 +1860,8 @@ class xrtGlWidget(QGLWidget):
         glFlush()
 
         self.drawAxes()
-
+        if self.showHelp:
+            self.drawHelp()
         if self.enableBlending:
             glDisable(GL_MULTISAMPLE)
             glDisable(GL_BLEND)
@@ -2309,6 +2315,71 @@ class xrtGlWidget(QGLWidget):
 #            glVertex4f(*corners[iLight])
 #            glVertex4f(*corners[len(corners)-iLight-1])
 #            glEnd()
+
+    def toggleHelp(self):
+        self.showHelp = not self.showHelp
+        self.glDraw()
+
+    def drawHelp(self):
+        hHeight = 300
+        hWidth = 500
+        pView = glGetIntegerv(GL_VIEWPORT)
+        glViewport(0, self.viewPortGL[3]-hHeight,
+                   hWidth, hHeight)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(-1, 1, -1, 1, -1, 1)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        glBegin(GL_QUADS)
+
+        if self.invertColors:
+            glColor4f(1.0, 1.0, 1.0, 0.9)
+        else:
+            glColor4f(0.0, 0.0, 0.0, 0.9)
+        backScreen = [[1, 1], [1, -1],
+                      [-1, -1], [-1, 1]]
+        for corner in backScreen:
+                glVertex3f(corner[0], corner[1], 0)
+
+        glEnd()
+
+        if self.invertColors:
+            glColor4f(0.0, 0.0, 0.0, 1.0)
+        else:
+            glColor4f(1.0, 1.0, 1.0, 1.0)
+        glLineWidth(3)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        glBegin(GL_QUADS)
+        backScreen = [[1, 1], [1, -1],
+                      [-1, -1], [-1, 1]]
+        for corner in backScreen:
+                glVertex3f(corner[0], corner[1], 0)
+        glEnd()
+
+        helpList = ['F1: Open/Close this help window',
+                    'F3/F4: Add/Remove Virtual Screen (Slicer)',
+                    'F5/F6: Quick Save/Load Scene',
+                    'LeftMouse: Rotate the Scene',
+                    'SHIFT+LeftMouse: Translate the Beamline in transverse plane',  # analysis:ignore
+                    'ALT+LeftMouse: Translate the Beamline in longitudinal direction',  # analysis:ignore
+                    'CTRL+LeftMouse: Drag the Slicer',
+                    'ALT+LeftMouse: Scale the Slicer',
+                    'CTRL+SHIFT+LeftMouse: Translate the Beamline around Slicer (transverse)',  # analysis:ignore
+                    'CTRL+ALT+LeftMouse: Translate the Beamline around Slicer (longitudinal)',  # analysis:ignore
+                    'CTRL+T: Toggle the Slicer orientation (vertical/normal to the beam)',  # analysis:ignore
+                    'WheelMouse: Zoom the Beamline',
+                    'CTRL+WheelMouse: Zoom the Scene'
+                    ]
+        for iLine, text in enumerate(helpList):
+            self.drawText([-1. + 0.05,
+                           1. - 2. * (iLine + 1) / float(len(helpList)+1), 0],
+                          text, True)
+
+        glFlush()
+        glViewport(*pView)
 
     def drawAxes(self):
         arrowSize = 0.05
