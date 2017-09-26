@@ -17,6 +17,8 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 __all__ = 'Screen', 'HemisphericScreen'
 import numpy as np
+from .. import raycing
+import inspect
 
 from . import sources as rs
 from .physconsts import CHBAR
@@ -54,12 +56,20 @@ class Screen(object):
 
 
         """
-        self.name = name
         self.bl = bl
         if bl is not None:
             bl.screens.append(self)
             self.set_orientation(x, z)
         self.ordinalNum = len(bl.screens)
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 1]
+
         self.center = center
         self.compressX = compressX
         self.compressZ = compressZ
@@ -139,6 +149,8 @@ class Screen(object):
             blo.x[:] *= self.compressX
         if self.compressZ:
             blo.z[:] *= self.compressZ
+        raycing.append_to_flow(self.expose, [blo],
+                               inspect.currentframe())
         return blo
 
     def prepare_wave(self, prevOE, dim1, dim2, dy=0):
@@ -209,12 +221,20 @@ class HemisphericScreen(Screen):
 
 
         """
-        self.name = name
         self.bl = bl
         if bl is not None:
             bl.screens.append(self)
             self.ordinalNum = len(bl.screens)
             self.set_orientation(x, z)
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 1]
+
         self.center = center
         self.R = R
         self.phiOffset = phiOffset
@@ -276,4 +296,6 @@ class HemisphericScreen(Screen):
             propPhase = np.exp(1e7j * (blo.E / CHBAR) * path)
             blo.Es *= propPhase
             blo.Ep *= propPhase
+        raycing.append_to_flow(self.expose, [blo],
+                               inspect.currentframe())
         return blo

@@ -20,6 +20,7 @@ __all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
 # import copy
 # import math
 import numpy as np
+import inspect
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
@@ -63,7 +64,15 @@ class RectangularAperture(object):
             bl.slits.append(self)
             self.ordinalNum = len(bl.slits)
             self.lostNum = -self.ordinalNum - 1000
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 1]
+
         self.center = center
         if isinstance(kind, str):
             self.kind = (kind,)
@@ -161,6 +170,8 @@ class RectangularAperture(object):
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
             return glo, lo
         else:
+            raycing.append_to_flow(self.propagate, [lo],
+                                   inspect.currentframe())
             return lo
 
     def touch_beam(self, beam):
@@ -245,7 +256,15 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         bl.slits.append(self)
         self.ordinalNum = len(bl.slits)
         self.lostNum = -self.ordinalNum - 1000
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 1]
+
         self.center = center
         self.zActuator = center[2]
         self.z0 = center[2]
@@ -318,7 +337,15 @@ class RoundAperture(object):
             bl.slits.append(self)
             self.ordinalNum = len(bl.slits)
             self.lostNum = -self.ordinalNum - 1000
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 1]
+
         self.center = center
         self.r = r
         self.alarmLevel = alarmLevel
@@ -370,6 +397,8 @@ class RoundAperture(object):
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
             return glo, lo
         else:
+            raycing.append_to_flow(self.propagate, [lo],
+                                   inspect.currentframe())
             return lo
 
     def local_to_global(self, glo, **kwargs):
@@ -451,6 +480,8 @@ class RoundBeamStop(RoundAperture):
             glo.path[good] += beam.path[good]
             return glo, lo
         else:
+            raycing.append_to_flow(self.propagate, [lo],
+                                   inspect.currentframe())
             return lo
 
 
@@ -513,4 +544,6 @@ class DoubleSlit(RectangularAperture):
             glo.path[good] += beam.path[good]
             return glo, lo
         else:
+            raycing.append_to_flow(self.propagate, [lo],
+                                   inspect.currentframe())
             return lo

@@ -4,6 +4,7 @@ __date__ = "16 Mar 2017"
 import os
 import time
 import numpy as np
+import inspect
 
 import matplotlib as mpl
 from .. import raycing
@@ -197,7 +198,16 @@ class OE(object):
             bl.oes.append(self)
             self.ordinalNum = len(bl.oes)
         self.lostNum = -self.ordinalNum
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 1]
+
+        self.shouldCheckCenter = shouldCheckCenter
         self.center = center
         if (bl is not None) and shouldCheckCenter:
             self.checkCenter()
@@ -817,7 +827,7 @@ class OE(object):
         notGood = ~goodAfter
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
-
+        raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -896,6 +906,8 @@ class OE(object):
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
 # in global(gb) and local(lbN) coordinates. lbN holds all the reflection spots.
+        raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
+                               inspect.currentframe())
         return gb, lbN
 
     def local_to_global(self, lb, **kwargs):
@@ -1731,7 +1743,7 @@ class DCM(OE):
         self.limOptX2 = kwargs.pop('limOptX2', None)
         self.limOptY2 = kwargs.pop('limOptY2', None)
         self.material = kwargs.get('material', None)
-        self.material2 = kwargs.pop('material2', self.material)
+        self.material2 = kwargs.pop('material2', None)
         self.fixedOffset = kwargs.pop('fixedOffset', None)
         return kwargs
 
@@ -1834,4 +1846,6 @@ class DCM(OE):
             gb2.state[notGood] = self.lostNum
         if notGood.sum() > 0:
             rs.copy_beam(gb2, beam, notGood)
+        raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
+                               inspect.currentframe())
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates

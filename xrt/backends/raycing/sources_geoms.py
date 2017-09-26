@@ -3,6 +3,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "03 Jul 2016"
 import numpy as np
 import scipy as sp
+import inspect
 
 from . import run as rr
 from .. import raycing
@@ -195,7 +196,15 @@ class GeometricSource(object):
         self.bl = bl
         bl.sources.append(self)
         self.ordinalNum = len(bl.sources)
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 0]
+
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
 
@@ -333,6 +342,8 @@ class GeometricSource(object):
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
+        raycing.append_to_flow(self.shine, [bo],
+                               inspect.currentframe())
         return bo
 
 
@@ -376,7 +387,15 @@ class GaussianBeam(object):
         self.bl = bl
         bl.sources.append(self)
         self.ordinalNum = len(bl.sources)
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 0]
+
         self.center = center  # 3D point in global system
         self.w0 = w0
         self.distE = distE
@@ -460,6 +479,8 @@ class GaussianBeam(object):
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
+        raycing.append_to_flow(self.shine, [bo],
+                               inspect.currentframe())
         return bo
 
 
@@ -531,7 +552,15 @@ class MeshSource(object):
             bl.sources.append(self)
             self.ordinalNum = len(bl.sources)
         self.withCentralRay = withCentralRay
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 0]
+
         self.center = center  # 3D point in global system
         self.minxprime = minxprime
         self.maxxprime = maxxprime
@@ -575,6 +604,8 @@ class MeshSource(object):
         make_polarization(self.polarization, bo, self.nrays)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
+        raycing.append_to_flow(self.shine, [bo],
+                               inspect.currentframe())
         return bo
 
 
@@ -610,6 +641,8 @@ class NESWSource(MeshSource):
 
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
+        raycing.append_to_flow(self.shine, [bo],
+                               inspect.currentframe())
         return bo
 
 
@@ -626,7 +659,15 @@ class CollimatedMeshSource(object):
             bl.sources.append(self)
             self.ordinalNum = len(bl.sources)
         self.withCentralRay = withCentralRay
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 0]
+
         self.center = center  # 3D point in global system
         self.dx = dx
         self.dz = dz
@@ -661,6 +702,8 @@ class CollimatedMeshSource(object):
         make_polarization(self.polarization, bo, self.nrays)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
+        raycing.append_to_flow(self.shine, [bo],
+                               inspect.currentframe())
         return bo
 
 

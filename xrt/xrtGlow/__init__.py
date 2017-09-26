@@ -12,6 +12,7 @@ from functools import partial
 import matplotlib as mpl
 import inspect
 import re
+#import time
 
 from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc,\
@@ -31,7 +32,8 @@ from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     GL_QUADS, GL_MAP2_VERTEX_3, GL_MAP2_NORMAL, GL_LIGHTING, GL_POINTS,\
     GL_LIGHT_MODEL_TWO_SIDE, GL_LIGHT0, GL_POSITION, GL_SPOT_DIRECTION,\
     GL_SPOT_CUTOFF, GL_SPOT_EXPONENT, GL_TRIANGLE_FAN, GL_VIEWPORT, GL_LINES,\
-    GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX
+    GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX, GL_POLYGON_SMOOTH,\
+    GL_SRC_ALPHA_SATURATE, GL_ONE
 
 from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
 
@@ -125,83 +127,12 @@ class xrtGlow(QWidget):
                                 '_icons')
         self.setWindowIcon(QIcon(os.path.join(iconsDir,
                                               'icon-GLow.ico')))
-        self.oesList = OrderedDict()
-        self.segmentsModel = QStandardItemModel()
+        self.populate_oes_list(arrayOfRays)
+
+        self.segmentsModel = self.init_segments_model()
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
-        self.segmentsModel.setHorizontalHeaderLabels(['Rays',
-                                                      'Footprint',
-                                                      'Surface'])
-        self.beamsToElements = dict()
-        oesList = arrayOfRays[2]
-        for segment in arrayOfRays[0]:
-            if segment[0] == segment[2]:
-                oesList[segment[0]].append(segment[1])
-                oesList[segment[0]].append(segment[3])
 
-        for segOE, oeRecord in oesList.items():
-            if len(oeRecord) > 2:  # DCM
-                elNames = [segOE+'_Entrance', segOE+'_Exit']
-            else:
-                elNames = [segOE]
-
-            for elName in elNames:
-                self.oesList[elName] = [oeRecord[0]]  # pointer to object
-                if len(oeRecord) < 3 or elName.endswith('_Entrance'):
-                    center = list(oeRecord[0].center)
-                    is2ndXtal = False
-                else:
-                    center = [arrayOfRays[1][oeRecord[3]].x[0],
-                              arrayOfRays[1][oeRecord[3]].y[0],
-                              arrayOfRays[1][oeRecord[3]].z[0]]
-                    is2ndXtal = True
-
-                for segment in arrayOfRays[0]:
-                    ind = oeRecord[1]*2
-                    if str(segment[ind]) == str(segOE):
-                        if len(oeRecord) < 3 or\
-                            (elName.endswith('Entrance') and
-                                str(segment[3]) == str(oeRecord[2])) or\
-                            (elName.endswith('Exit') and
-                                str(segment[3]) == str(oeRecord[3])):
-                            if len(self.oesList[elName]) < 2:
-                                self.oesList[elName].append(
-                                    str(segment[ind+1]))
-                                self.beamsToElements[segment[ind+1]] =\
-                                    elName
-                self.oesList[elName].append(center)
-#                print elName, center
-                self.oesList[elName].append(is2ndXtal)
-
-        headerRow = []
-        for i in range(3):
-            child = QStandardItem("")
-            child.setEditable(False)
-            child.setCheckable(True)
-            child.setCheckState(0 if i > 1 else 2)
-            headerRow.append(child)
-        self.segmentsModelRoot.appendRow(headerRow)
-
-        for element, elRecord in self.oesList.items():
-            child0 = QStandardItem(str(element))
-            child0.setEditable(False)
-            child0.setCheckable(False)
-            child1 = QStandardItem("")
-            child1.setEditable(False)
-            child1.setCheckable(True)
-            child1.setCheckState(2)
-            child2 = QStandardItem("")
-            child2.setEditable(False)
-            child2.setCheckable(True)
-            child2.setCheckState(0)
-            self.segmentsModelRoot.appendRow([child0, child1, child2])
-            for segment in arrayOfRays[0]:
-                if str(segment[1]) == str(elRecord[1]):
-                    child3 = QStandardItem(
-                        "to {}".format(self.beamsToElements[segment[3]]))
-                    child3.setCheckable(True)
-                    child3.setCheckState(2)
-                    child3.setEditable(False)
-                    child0.appendRow([child3, None, None])
+        self.populate_segments_model(arrayOfRays)
 
         self.fluxDataModel = QStandardItemModel()
 
@@ -219,7 +150,7 @@ class xrtGlow(QWidget):
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
-        self.segmentsModel.itemChanged.connect(self.updateRaysList)
+#        self.segmentsModel.itemChanged.connect(self.updateRaysList)
 #  Zoom panel
         self.zoomPanel = QGroupBox(self)
         self.zoomPanel.setFlat(False)
@@ -430,7 +361,7 @@ class xrtGlow(QWidget):
         self.projLinePanel.setFlat(False)
         self.projLinePanel.setTitle("Projections opacity")
         projLineLayout = QGridLayout()
-
+        self.projectionControls = []
         for iaxis, axis in enumerate(['Show Side (YZ)', 'Show Front (XZ)',
                                       'Show Top (XY)']):
             checkBox = QCheckBox()
@@ -439,6 +370,7 @@ class xrtGlow(QWidget):
             checkBox.stateChanged.connect(self.projSelection)
             visLabel = QLabel()
             visLabel.setText(axis)
+            self.projectionControls.append([visLabel, checkBox])
             projVisLayout.addWidget(checkBox, iaxis*2, 0, 1, 1)
             projVisLayout.addWidget(visLabel, iaxis*2, 1, 1, 1)
 
@@ -451,6 +383,7 @@ class xrtGlow(QWidget):
             checkBox.stateChanged.connect(cbFunction)
             visLabel = QLabel()
             visLabel.setText(cbCaption)
+            self.projectionControls.append([visLabel, checkBox])
             projVisLayout.addWidget(checkBox, (3+iCB)*2, 0, 1, 1)
             projVisLayout.addWidget(visLabel, (3+iCB)*2, 1, 1, 1)
 
@@ -511,7 +444,7 @@ class xrtGlow(QWidget):
             sceneLayout.addWidget(axLabel, iaxis*2, 0)
             sceneLayout.addWidget(axEdit, iaxis*2, 1)
             sceneLayout.addWidget(axSlider, iaxis*2+1, 0, 1, 2)
-
+        self.sceneControls = []
         for (iCB, cbText), cbFunc in zip(enumerate(['Enable antialiasing',
                                                     'Enable blending',
                                                     'Depth test for Lines',
@@ -533,6 +466,7 @@ class xrtGlow(QWidget):
             aaCheckBox.stateChanged.connect(cbFunc)
             aaLabel = QLabel()
             aaLabel.setText(cbText)
+            self.sceneControls.append([aaLabel, aaCheckBox])
             sceneLayout.addWidget(aaCheckBox, 6+iCB, 0)
             sceneLayout.addWidget(aaLabel, 6+iCB, 1)
 
@@ -586,15 +520,15 @@ class xrtGlow(QWidget):
 
         centerCBLabel = QLabel()
         centerCBLabel.setText('Center at:')
-        centerCB = QComboBox()
+        self.centerCB = QComboBox()
         for key in self.oesList.keys():
-            centerCB.addItem(str(key))
+            self.centerCB.addItem(str(key))
 #        centerCB.addItem('customXYZ')
-        centerCB.currentIndexChanged['QString'].connect(self.centerEl)
-        centerCB.setCurrentIndex(0)
+        self.centerCB.currentIndexChanged['QString'].connect(self.centerEl)
+        self.centerCB.setCurrentIndex(0)
 
         self.navigationLayout.addWidget(centerCBLabel, 0, 0)
-        self.navigationLayout.addWidget(centerCB, 0, 1)
+        self.navigationLayout.addWidget(self.centerCB, 0, 1)
         self.oeTree = QTreeView()
         self.oeTree.setModel(self.segmentsModel)
         self.oeTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -644,6 +578,168 @@ class xrtGlow(QWidget):
         tiltScreen = QShortcut(self)
         tiltScreen.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_T)
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
+
+    def init_segments_model(self):
+        newModel = QStandardItemModel()
+        newModel.setHorizontalHeaderLabels(['Rays',
+                                            'Footprint',
+                                            'Surface'])
+        headerRow = []
+        for i in range(3):
+            child = QStandardItem("")
+            child.setEditable(False)
+            child.setCheckable(True)
+            child.setCheckState(0 if i > 1 else 2)
+            headerRow.append(child)
+        newModel.invisibleRootItem().appendRow(headerRow)
+        newModel.itemChanged.connect(self.updateRaysList)
+        return newModel
+
+    def update_oes_list(self, arrayOfRays):
+        self.oesList = None
+        self.beamsToElements = None
+        self.populate_oes_list(arrayOfRays)
+        self.update_segments_model(arrayOfRays)
+        self.centerCB.blockSignals(True)
+        tmpIndex = self.centerCB.currentIndex()
+        for i in range(self.centerCB.count()):
+            self.centerCB.removeItem(0)
+        for key in self.oesList.keys():
+            self.centerCB.addItem(str(key))
+#        self.segmentsModel.layoutChanged.emit()
+        try:
+            self.centerCB.setCurrentIndex(tmpIndex)
+        except:
+            pass
+        self.centerCB.blockSignals(False)
+        self.customGlWidget.arrayOfRays = arrayOfRays
+        self.customGlWidget.beamsDict = arrayOfRays[1]
+        self.customGlWidget.oesList = self.oesList
+        self.customGlWidget.beamsToElements = self.beamsToElements
+        self.customGlWidget.newColorAxis = True
+        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.positionVScreen()
+        self.customGlWidget.glDraw()
+
+    def populate_oes_list(self, arrayOfRays):
+        self.oesList = OrderedDict()
+        self.beamsToElements = dict()
+        oesList = arrayOfRays[2]
+        for segment in arrayOfRays[0]:
+            if segment[0] == segment[2]:
+                oesList[segment[0]].append(segment[1])
+                oesList[segment[0]].append(segment[3])
+
+        for segOE, oeRecord in oesList.items():
+            if len(oeRecord) > 2:  # DCM
+                elNames = [segOE+'_Entrance', segOE+'_Exit']
+            else:
+                elNames = [segOE]
+
+            for elName in elNames:
+                self.oesList[elName] = [oeRecord[0]]  # pointer to object
+                if len(oeRecord) < 3 or elName.endswith('_Entrance'):
+                    center = list(oeRecord[0].center)
+                    is2ndXtal = False
+                else:
+                    center = [arrayOfRays[1][oeRecord[3]].x[0],
+                              arrayOfRays[1][oeRecord[3]].y[0],
+                              arrayOfRays[1][oeRecord[3]].z[0]]
+                    is2ndXtal = True
+
+                for segment in arrayOfRays[0]:
+                    ind = oeRecord[1]*2
+                    if str(segment[ind]) == str(segOE):
+                        if len(oeRecord) < 3 or\
+                            (elName.endswith('Entrance') and
+                                str(segment[3]) == str(oeRecord[2])) or\
+                            (elName.endswith('Exit') and
+                                str(segment[3]) == str(oeRecord[3])):
+                            if len(self.oesList[elName]) < 2:
+                                self.oesList[elName].append(
+                                    str(segment[ind+1]))
+                                self.beamsToElements[segment[ind+1]] =\
+                                    elName
+                self.oesList[elName].append(center)
+                self.oesList[elName].append(is2ndXtal)
+
+#    def clear_segments_model(self):
+#        while self.segmentsModelRoot.child(1, 0)
+    def create_row(self, text, segMode):
+        newRow = []
+        for iCol in range(3):
+            newItem = QStandardItem(str(text) if iCol == 0 else "")
+            newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
+                                 (segMode == 1 and iCol > 0) else False)
+            if newItem.isCheckable():
+                newItem.setCheckState(2 if iCol < 2 else 0)
+            newItem.setEditable(False)
+            newRow.append(newItem)
+        return newRow
+
+    def update_segments_model(self, arrayOfRays):
+        def copy_row(item, row):
+            newRow = []
+            for iCol in range(3):
+                oldItem = item.child(row, iCol)
+                newItem = QStandardItem(str(oldItem.text()))
+                newItem.setCheckable(oldItem.isCheckable())
+                if newItem.isCheckable():
+                    newItem.setCheckState(oldItem.checkState())
+                newItem.setEditable(oldItem.isEditable())
+                newRow.append(newItem)
+            return newRow
+
+#        t0 = time.time()
+        newSegmentsModel = self.init_segments_model()
+        for element, elRecord in self.oesList.items():
+            for iel in range(self.segmentsModelRoot.rowCount()):
+                elItem = self.segmentsModelRoot.child(iel, 0)
+                elName = str(elItem.text())
+                if str(element) == elName:
+                    elRow = copy_row(self.segmentsModelRoot, iel)
+                    for segment in arrayOfRays[0]:
+                        endBeamText = "to {}".format(
+                            self.beamsToElements[segment[3]])
+                        if str(segment[1]) == str(elRecord[1]):
+                            if elItem.hasChildren():
+                                for ich in range(elItem.rowCount()):
+                                    if str(elItem.child(ich, 0).text()) ==\
+                                            endBeamText:
+                                        elRow[0].appendRow(
+                                            copy_row(elItem, ich))
+                                        break
+                                else:
+                                    elRow[0].appendRow(self.create_row(
+                                        endBeamText, 3))
+                            else:
+                                elRow[0].appendRow(self.create_row(
+                                    endBeamText, 3))
+                    newSegmentsModel.invisibleRootItem().appendRow(elRow)
+                    break
+            else:
+                elRow = self.create_row(str(element), 1)
+                for segment in arrayOfRays[0]:
+                    if str(segment[1]) == str(elRecord[1]):
+                        endBeamText = "to {}".format(
+                            self.beamsToElements[segment[3]])
+                        elRow[0].appendRow(self.create_row(endBeamText, 3))
+                newSegmentsModel.invisibleRootItem().appendRow(elRow)
+        self.segmentsModel = newSegmentsModel
+        self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
+        self.oeTree.setModel(self.segmentsModel)
+#        self.segmentsModel.itemChanged.connect(self.updateRaysList)
+#        print("Model update takes", time.time()-t0, "s")
+
+    def populate_segments_model(self, arrayOfRays):
+        for element, elRecord in self.oesList.items():
+            newRow = self.create_row(element, 1)
+            for segment in arrayOfRays[0]:
+                if str(segment[1]) == str(elRecord[1]):
+                    endBeamText = "to {}".format(
+                        self.beamsToElements[segment[3]])
+                    newRow[0].appendRow(self.create_row(endBeamText, 3))
+            self.segmentsModelRoot.appendRow(newRow)
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, 1, 200),
@@ -703,6 +799,12 @@ class xrtGlow(QWidget):
     def checkShowLabels(self, state):
         self.customGlWidget.showOeLabels = True if state > 0 else False
         self.customGlWidget.glDraw()
+
+    def setSceneParam(self, iAction, state):
+        self.sceneControls[iAction][1].setCheckState(int(state)*2)
+
+    def setProjectionParam(self, iAction, state):
+        self.projectionControls[iAction][1].setCheckState(int(state)*2)
 
     def setLabelPrec(self, prec):
         self.customGlWidget.labelCoordPrec = prec
@@ -980,10 +1082,9 @@ class xrtGlow(QWidget):
             menu = QMenu()
             menu.addAction('Center here',
                            partial(self.centerEl, str(selectedItem.text())))
+            menu.exec_(self.oeTree.viewport().mapToGlobal(position))
         else:
             pass
-
-        menu.exec_(self.oeTree.viewport().mapToGlobal(position))
 
     def updateScene(self, position):
         cPan = self.sender()
@@ -1014,6 +1115,23 @@ class xrtGlow(QWidget):
             mAction = QAction(self)
             mAction.setText(actText)
             mAction.triggered.connect(actFunc)
+            menu.addAction(mAction)
+        menu.addSeparator()
+        for iAction, actCnt in enumerate(self.sceneControls):
+            mAction = QAction(self)
+            mAction.setText(actCnt[0].text())
+            mAction.setCheckable(True)
+            mAction.setChecked(bool(actCnt[1].checkState()))
+            mAction.triggered.connect(partial(self.setSceneParam, iAction))
+            menu.addAction(mAction)
+        menu.addSeparator()
+        for iAction, actCnt in enumerate(self.projectionControls):
+            mAction = QAction(self)
+            mAction.setText(actCnt[0].text())
+            mAction.setCheckable(True)
+            mAction.setChecked(bool(actCnt[1].checkState()))
+            mAction.triggered.connect(partial(self.setProjectionParam,
+                                              iAction))
             menu.addAction(mAction)
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
@@ -1158,7 +1276,10 @@ class xrtGlow(QWidget):
         newExtents = list(self.paletteWidget.span.extents)
         newExtents[0] = params['selColorMin']
         newExtents[1] = params['selColorMax']
-        self.paletteWidget.span.extents = newExtents
+        try:
+            self.paletteWidget.span.extents = newExtents
+        except:
+            pass
         self.updateColorSelFromMPL(0, 0)
 
         print('Loaded scene from {}'.format(filename))
@@ -1322,11 +1443,15 @@ class xrtGlWidget(QGLWidget):
         self.globalNorm = True
         self.newColorAxis = True
         self.scaleVec = np.array([1e3, 1e1, 1e3])
+        self.maxLen = 1.
         self.populateVerticesArray(modelRoot)
 
-        maxC = np.max(self.verticesArray, axis=0)
-        minC = np.min(self.verticesArray, axis=0)
-        self.maxLen = np.max(maxC - minC)
+        try:
+            maxC = np.max(self.verticesArray, axis=0)
+            minC = np.min(self.verticesArray, axis=0)
+            self.maxLen = np.max(maxC - minC)
+        except:
+            self.maxLen = 1.
 
         self.drawGrid = True
         self.fineGridEnabled = False
@@ -1411,6 +1536,9 @@ class xrtGlWidget(QGLWidget):
         alphaRays = None
         colorsDots = None
         alphaDots = None
+        maxLen = 1.
+        tmpMax = -1.e12 * np.ones(3)
+        tmpMin = -1. * tmpMax
         if self.newColorAxis:
             self.colorMax = -1e20
             self.colorMin = 1e20
@@ -1426,6 +1554,14 @@ class xrtGlWidget(QGLWidget):
                 startBeam = self.beamsDict[
                     self.oesList[str(ioeItem.text())][1]]
                 good = startBeam.state > 0
+
+                for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
+                    axMin = np.min(getattr(startBeam, tAxis)[good])
+                    axMax = np.max(getattr(startBeam, tAxis)[good])
+                    if axMin < tmpMin[tmpCoord]:
+                        tmpMin[tmpCoord] = axMin
+                    if axMax > tmpMax[tmpCoord]:
+                        tmpMax[tmpCoord] = axMax
 
                 self.colorMax = max(np.max(
                     self.getColor(startBeam)[good]),
@@ -1546,6 +1682,7 @@ class xrtGlWidget(QGLWidget):
             colorsRays = np.dstack((colorsRays,
                                     np.ones_like(alphaRays)*0.85,
                                     alphaRays))
+#                                    np.ones_like(alphaRays)))
             colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
             if self.globalNorm:
                 alphaMax = np.max(alphaRays)
@@ -1566,7 +1703,7 @@ class xrtGlWidget(QGLWidget):
             colorsDots = np.dstack((colorsDots,
                                     np.ones_like(alphaDots)*0.85,
                                     alphaDots))
-
+#                                    np.ones_like(alphaDots)))
             colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
             if self.globalNorm:
                 alphaMax = np.max(alphaDots)
@@ -1578,6 +1715,12 @@ class xrtGlWidget(QGLWidget):
                                                    alphaColorDots]))
         except:
             pass
+
+        tmpMaxLen = np.max(tmpMax - tmpMin)
+
+        if tmpMaxLen > maxLen:
+            maxLen = tmpMaxLen
+        self.maxLen = maxLen
         self.newColorAxis = False
         self.populateVScreen()
 
@@ -1666,6 +1809,7 @@ class xrtGlWidget(QGLWidget):
             glEnable(GL_MULTISAMPLE)
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+#            glBlendFunc(GL_SRC_ALPHA, GL_ONE)
             glEnable(GL_POINT_SMOOTH)
             glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
 
@@ -1686,6 +1830,7 @@ class xrtGlWidget(QGLWidget):
             glEnable(GL_LINE_SMOOTH)
             glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
             glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+#            glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
 
         for dim in range(3):
             for iAx in range(3):
@@ -1728,31 +1873,14 @@ class xrtGlWidget(QGLWidget):
         if self.enableAA:
             glDisable(GL_LINE_SMOOTH)
 
-        if self.linesDepthTest:
-            glEnable(GL_DEPTH_TEST)
-
-        if self.enableAA:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-
-        if self.lineWidth > 0 and self.lineOpacity > 0 and\
-                self.verticesArray is not None:
-            self.drawArrays(1, GL_LINES, self.verticesArray, self.raysColor,
-                            self.lineOpacity, self.lineWidth)
-#        if self.linesDepthTest:
-#            glDisable(GL_DEPTH_TEST)
-
         glEnable(GL_DEPTH_TEST)
-# Coordinate box
-        if self.drawGrid:
+        if self.drawGrid:  # Coordinate grid box
             self.drawCoordinateGrid()
 
-        if len(self.oesToPlot) > 0:
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        if len(self.oesToPlot) > 0:  # Surfaces of optical elements
             glEnableClientState(GL_NORMAL_ARRAY)
             glEnable(GL_NORMALIZE)
-            glShadeModel(GL_SMOOTH)
 
             self.addLighting(3.)
             for oeString in self.oesToPlot:
@@ -1771,7 +1899,31 @@ class xrtGlWidget(QGLWidget):
             glDisable(GL_LIGHTING)
             glDisable(GL_NORMALIZE)
             glDisableClientState(GL_NORMAL_ARRAY)
+        glDisable(GL_DEPTH_TEST)
 
+        if self.linesDepthTest:
+            glEnable(GL_DEPTH_TEST)
+
+        if self.enableAA:
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+
+        if self.lineWidth > 0 and self.lineOpacity > 0 and\
+                self.verticesArray is not None:
+            self.drawArrays(1, GL_LINES, self.verticesArray, self.raysColor,
+                            self.lineOpacity, self.lineWidth)
+        if self.linesDepthTest:
+            glDisable(GL_DEPTH_TEST)
+
+        if self.enableAA:
+            glDisable(GL_LINE_SMOOTH)
+
+        if self.enableAA:
+            glEnable(GL_LINE_SMOOTH)
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+
+        glEnable(GL_DEPTH_TEST)
         if len(self.oesToPlot) > 0:
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
@@ -1789,8 +1941,8 @@ class xrtGlWidget(QGLWidget):
             self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
                             [1, 0, 0, 1])
 
-            if not self.enableAA:
-                glDisable(GL_LINE_SMOOTH)
+#            if not self.enableAA:
+#                glDisable(GL_LINE_SMOOTH)
 
         glDisable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -2034,7 +2186,6 @@ class xrtGlWidget(QGLWidget):
 #                glDisable(GL_LINE_SMOOTH)
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-        glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
         glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
         drawGridLines(np.vstack((back, side, bottom)), 2., 0.75, GL_QUADS)
         drawGridLines(axGrid, 1., 0.5, GL_LINES)
@@ -2146,6 +2297,7 @@ class xrtGlWidget(QGLWidget):
 
                 glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
                             0, self.surfCPOrder)
+
         glDisable(GL_MAP2_VERTEX_3)
         glDisable(GL_MAP2_NORMAL)
 
@@ -2153,6 +2305,7 @@ class xrtGlWidget(QGLWidget):
         surfCPOrder = self.surfCPOrder
         glEnable(GL_MAP2_VERTEX_3)
         glEnable(GL_MAP2_NORMAL)
+
         if oe.shape == 'round':
             r = oe.r
             w = r
@@ -2232,8 +2385,13 @@ class xrtGlWidget(QGLWidget):
                         glMapGrid2f(surfCPOrder*4, 0.0, 1.0,
                                     surfCPOrder*4, 0.0, 1.0)
 
+#                        glEnable(GL_POLYGON_SMOOTH)
+#                        glLineWidth(3)
+#                        glEvalMesh2(GL_LINE, 0, surfCPOrder*4,
+#                                    0, surfCPOrder*4)
                         glEvalMesh2(GL_FILL, 0, surfCPOrder*4,
                                     0, surfCPOrder*4)
+
         glDisable(GL_MAP2_VERTEX_3)
         glDisable(GL_MAP2_NORMAL)
 
@@ -2534,7 +2692,8 @@ class xrtGlWidget(QGLWidget):
                                                        self.colorMin)
             colorsDots = np.dstack((colorsDots,
                                     np.ones_like(alphaDots)*0.85,
-                                    alphaDots))
+                                    np.ones_like(alphaDots)))
+#                                    alphaDots))
 
             colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
             if self.globalNorm:

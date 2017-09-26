@@ -7,6 +7,7 @@ import sys
 import numpy as np
 from scipy import optimize
 from scipy import special
+import inspect
 
 from .. import raycing
 from . import myopencl as mcl
@@ -126,7 +127,15 @@ class BendingMagnet(object):
         if bl is not None:
             bl.sources.append(self)
             self.ordinalNum = len(bl.sources)
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 0]
+
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
         self.dx = eSigmaX * 1e-3 if eSigmaX else None
@@ -547,7 +556,8 @@ class BendingMagnet(object):
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
-
+        raycing.append_to_flow(self.shine, [bo],
+                               inspect.currentframe())
         return bo
 
 
@@ -811,7 +821,15 @@ class Undulator(object):
         if bl is not None:
             bl.sources.append(self)
             self.ordinalNum = len(bl.sources)
-        self.name = name
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            bl.oesDict[self.name] = [self, 0]
+
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
         self.gp = gp
@@ -1978,5 +1996,6 @@ class Undulator(object):
 
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
-
+        raycing.append_to_flow(self.shine, [bor],
+                               inspect.currentframe())
         return bor

@@ -74,6 +74,7 @@ Using xrtQook for script generation
      :scale: 60 %
 
 """
+from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "25 Jun 2017"
 __version__ = "1.3"
@@ -81,13 +82,14 @@ __version__ = "1.3"
 import os
 import sys
 import textwrap
+import numpy as np
 
 from datetime import date
 import inspect
 import re
 import xml.etree.ElementTree as ET
 from functools import partial
-
+from collections import OrderedDict
 try:
     import pyopencl as cl
     cl_platforms = cl.get_platforms()
@@ -167,9 +169,11 @@ if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     from PyQt4 import QtGui, QtCore
     import PyQt4.QtGui as myQtGUI
     import PyQt4.QtWebKit as myQtWeb
+    from PyQt4.QtGui import QSortFilterProxyModel
 elif 'pyqt5' in qt_compat.QT_API.lower():
     QtName = "PyQt5"
     from PyQt5 import QtGui, QtCore
+    from  PyQt5.QtCore import QSortFilterProxyModel
     import PyQt5.QtWidgets as myQtGUI
     try:
         import PyQt5.QtWebEngineWidgets as myQtWeb
@@ -255,16 +259,17 @@ except AttributeError:
 
 sys.path.append(os.path.join('..', '..'))
 
-import xrt
-import xrt.backends.raycing as raycing
-import xrt.backends.raycing.sources as rsources
-import xrt.backends.raycing.screens as rscreens
-import xrt.backends.raycing.materials as rmats
-import xrt.backends.raycing.oes as roes
-import xrt.backends.raycing.apertures as rapts
-import xrt.backends.raycing.run as rrun
-import xrt.plotter as xrtplot
-import xrt.runner as xrtrun
+import xrt  #analysis:ignore
+import xrt.backends.raycing as raycing  #analysis:ignore
+import xrt.backends.raycing.sources as rsources  #analysis:ignore
+import xrt.backends.raycing.screens as rscreens  #analysis:ignore
+import xrt.backends.raycing.materials as rmats  #analysis:ignore
+import xrt.backends.raycing.oes as roes  #analysis:ignore
+import xrt.backends.raycing.apertures as rapts  #analysis:ignore
+import xrt.backends.raycing.run as rrun  #analysis:ignore
+import xrt.plotter as xrtplot  #analysis:ignore
+import xrt.runner as xrtrun  #analysis:ignore
+import xrt.xrtGlow as xrtglow  #analysis:ignore
 
 path_to_xrt = os.path.dirname(os.path.dirname(
     os.path.abspath(xrt.__file__)))
@@ -295,7 +300,7 @@ class XrtQook(QWidget):
                                              QtCore.Qt.ItemIsSelectable)
 
         self.init_tabs()
-
+        self.blViewer = None
         canvasBox = QHBoxLayout()
         canvasSplitter = QSplitter()
         canvasSplitter.setChildrenCollapsible(False)
@@ -388,8 +393,8 @@ class XrtQook(QWidget):
             'View beamline in xrtGlow',
             self)
         if isOpenGL:
-            glowAction.setShortcut('Alt+W')
-            glowAction.triggered.connect(self.runGlow)
+            glowAction.setShortcut('CTRL+F1')
+            glowAction.triggered.connect(self.populate_beamline)
 
         OCLAction = QAction(
             QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
@@ -435,6 +440,14 @@ class XrtQook(QWidget):
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
         self.toolBar.addAction(aboutAction)
+
+#        bbl = QShortcut(self)
+#        bbl.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_F1)
+#        bbl.activated.connect(self.populate_beamline)
+#
+#        bbl2 = QShortcut(self)
+#        bbl2.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_F2)
+#        bbl2.activated.connect(self.bl_run_glow)
 
     def init_tabs(self):
         self.tree = QTreeView()
@@ -647,9 +660,11 @@ class XrtQook(QWidget):
         self.tabs.tabBar().setTabTextColor(2, QtCore.Qt.black)
 
     def initAllModels(self):
+        self.blUpdateLatchOpen = False
         self.beamLineModel = QStandardItemModel()
         self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
-        self.beamLineModel.itemChanged.connect(self.colorizeChangedParam)
+#        self.beamLineModel.itemChanged.connect(self.colorizeChangedParam)
+        self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
         self.rootBLItem = self.beamLineModel.item(0, 0)
 
         self.boolModel = QStandardItemModel()
@@ -728,13 +743,17 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.materialsModel = QStandardItemModel()
         self.rootMatItem = self.materialsModel.invisibleRootItem()
         self.rootMatItem.setText("Materials")
-        self.materialsModel.itemChanged.connect(self.colorizeChangedParam)
+        self.materialsModel.itemChanged.connect(self.beamLineItemChanged)
         self.addProp(self.materialsModel.invisibleRootItem(), "None")
 
         self.beamModel = QStandardItemModel()
-        self.beamModel.appendRow(QStandardItem("None"))
+        self.beamModel.appendRow([QStandardItem("None"),
+                                  QStandardItem("Global"),
+                                  QStandardItem("None"),
+                                  QStandardItem(str(0))])
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
+        self.beamModel.itemChanged.connect(self.update_beamline_beams)
 
         self.fluxDataModel = QStandardItemModel()
         self.fluxDataModel.appendRow(QStandardItem("auto"))
@@ -757,8 +776,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.polarizationsModel.appendRow(polItem)
 
         self.matKindModel = QStandardItemModel()
-        for mtKind in ['auto', 'mirror', 'thin mirror',
-                       'plate', 'lens', 'grating', 'FZP']:
+        for mtKind in ['mirror', 'thin mirror',
+                       'plate', 'lens', 'grating', 'FZP', 'auto']:
             mtItem = QStandardItem(mtKind)
             self.matKindModel.appendRow(mtItem)
 
@@ -828,6 +847,12 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.descrEdit.setText("")
         self.currHtml = ""
         self.showWelcomeScreen()
+        self.beamLine = raycing.BeamLine()
+        self.beamLine.flowSource = 'Qook'
+        self.update_beamline_beams(text=None)
+        self.update_beamline_materials(item=None)
+        self.update_beamline(item=None)
+        self.blUpdateLatchOpen = True
 
     def newBL(self):
         if not self.isEmpty:
@@ -984,8 +1009,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 new_html = re.sub('<body>', spyder_crutch, html_text, 1)
             self.webHelp.setHtml(new_html, QtCore.QUrl(CSS_PATH))
             self.currHtml = new_html
-            #self.webHelp.page().showHelp.connect(partial(
-            #    self.showObjHelp, self.curObj))
             self.webHelp.page().showHelp.connect(partial(
                 self.webHelp.setHtml, self.currHtml, QtCore.QUrl(CSS_PATH)))
         else:
@@ -1223,7 +1246,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     dupl = True
             if not dupl:
                 break
-
+        self.blUpdateLatchOpen = False
         elementItem, elementClass = self.addParam(self.rootBLItem,
                                                   elementName,
                                                   self.objToInstance(obj),
@@ -1243,6 +1266,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.addCombo(self.tree, elementItem)
         self.tree.expand(self.rootBLItem.index())
         self.capitalize(self.tree, elementItem)
+        self.blUpdateLatchOpen = True
+        self.update_beamline(elementItem, newElement=True)
         self.isEmpty = False
 
     def getParams(self, obj):
@@ -1253,11 +1278,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             for parent in (inspect.getmro(objRef))[:-1]:
                 for namef, objf in inspect.getmembers(parent):
                     if inspect.ismethod(objf) or inspect.isfunction(objf):
-                        if namef == "__init__" and\
-                                inspect.getargspec(objf)[3] is not None:
-                            for arg, argVal in zip(
-                                    inspect.getargspec(objf)[0][1:],
-                                    inspect.getargspec(objf)[3]):
+                        argSpec = inspect.getargspec(objf)
+                        if namef == "__init__" and argSpec[3] is not None:
+                            for arg, argVal in zip(argSpec[0][1:],
+                                                   argSpec[3]):
                                 if arg == 'bl':
                                     argVal = self.rootBLItem.text()
                                 if arg not in args:
@@ -1280,16 +1304,13 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     if arg not in args:
                                         args.append(arg)
                                         argVals.append(argVal)
-#        elif inspect.ismethod(objRef):
-#            argList = inspect.getargspec(objRef)
-#            if argList[3] is not None:
-#                args = argList[0][1:]
-#                argVals = argList[3]
-#        else:
-#            argList = inspect.getargspec(objRef)
-#            if argList[3] is not None:
-#                args = argList[0]
-#                argVals = argList[3]
+                        if namef == "__init__" and\
+                                str(argSpec.varargs) == 'None' and\
+                                str(argSpec.keywords) == 'None':
+                            break  # To prevent the parent class __init__
+                else:
+                    continue
+                break
         elif inspect.ismethod(objRef) or inspect.isfunction(objRef):
             argList = inspect.getargspec(objRef)
             if argList[3] is not None:
@@ -1301,11 +1322,20 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     argVals = argList[3]
         return zip(args, argVals)
 
+    def beamLineItemChanged(self, item):
+        self.colorizeChangedParam(item)
+        if self.blUpdateLatchOpen:
+            if item.model() == self.beamLineModel:
+                self.update_beamline(item)
+            elif item.model() == self.materialsModel:
+                self.update_beamline_materials(item)
+
     def colorizeChangedParam(self, item):
         parent = item.parent()
         if parent is not None and\
                 item.column() == 1 and\
                 item.isEnabled():
+            item.model().blockSignals(True)
             itemRow = item.row()
             obj = None
             for i in range(parent.rowCount()):
@@ -1350,6 +1380,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 color = QtCore.Qt.black
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
+            item.model().blockSignals(False)
 
     def colorizeTabText(self, item):
         if item.model() == self.beamLineModel:
@@ -1364,7 +1395,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def addMethod(self, name, parentItem, fdoc):
         elstr = str(parentItem.text())
         fdoc = fdoc[0].replace("Returned values: ", '').split(',')
-
+        self.blUpdateLatchOpen = False
         methodItem = self.addProp(parentItem, name.split('.')[-1] + '()')
         self.setIItalic(methodItem)
         methodProps = self.addProp(methodItem, 'parameters')
@@ -1390,7 +1421,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     break
 
             child0, child1 = self.addParam(methodOut, outval, beamName)
-            self.beamModel.appendRow(QStandardItem(beamName))
+            self.beamModel.appendRow([QStandardItem(beamName),
+                                      QStandardItem(outval),
+                                      QStandardItem(elstr),
+                                      QStandardItem(str(self.name_to_bl_pos(
+                                          elstr)))])
+            try:
+                self.beamLine.beamsDict[beamName] = None
+            except:
+                pass
 
         self.showDoc(methodItem.index())
         self.addCombo(self.tree, methodItem)
@@ -1399,7 +1438,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.expand(methodProps.index())
         self.tree.setCurrentIndex(methodProps.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
+        self.blUpdateLatchOpen = True
+        self.update_beamline(methodItem, newElement=True)
         self.isEmpty = False
+        print(str(self.name_to_bl_pos(elstr)))
 
     def addPlot(self, copyFrom=None):
         for i in range(99):
@@ -1532,7 +1574,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     dupl = True
             if not dupl:
                 break
-
+        self.blUpdateLatchOpen = False
         matItem, matClass = self.addParam(self.rootMatItem,
                                           matName,
                                           self.objToInstance(obj))
@@ -1546,17 +1588,22 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.showDoc(matItem.index())
         self.addCombo(self.matTree, matItem)
         self.capitalize(self.matTree, matItem)
+        self.blUpdateLatchOpen = True
+        self.update_beamline_materials(matItem, newMat=True)
         self.isEmpty = False
 
     def moveItem(self, mvDir, view, item):
         oldRowNumber = item.index().row()
         statusExpanded = view.isExpanded(item.index())
         parent = item.parent()
+        item.model().blockSignals(True)
         self.flattenElement(view, item)
+        item.model().blockSignals(False)
         newItem = parent.takeRow(oldRowNumber)
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
+        self.update_beamline(newItem[0], newOrder=True)
 
     def copyChildren(self, itemTo, itemFrom):
         if itemFrom.hasChildren():
@@ -1585,6 +1632,13 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             pass
 
     def deleteElement(self, view, item):
+        if item.model() == self.materialsModel and\
+                item.parent() is None:
+            del self.beamLine.materialsDict[str(item.text())]
+#            print("Deleted", str(item.text()), "from",
+#                  self.beamLine.materialsDict)
+        if item.parent() == self.rootBLItem:
+            self.blUpdateLatchOpen = False
         while item.hasChildren():
             iItem = item.child(0, 0)
             if item.child(0, 1) is not None:
@@ -1599,9 +1653,19 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     if item.text() == "output" and\
                             iWidget.model() == self.beamModel:
                         self.beamModel.takeRow(iWidget.currentIndex())
+                        try:
+                            del self.beamLine.beamsDict[str(
+                                iWidget.currentText())]
+                        except:
+                            pass
             self.deleteElement(view, iItem)
         else:
             self.colorizeTabText(item)
+            if item.parent() == self.rootBLItem:
+                del self.beamLine.oesDict[str(item.text())]
+                del self.beamLine.unalignedOesDict[str(item.text())]
+                self.blUpdateLatchOpen = True
+                self.update_beamline(item, newElement=False)
             if item.parent() is not None:
                 item.parent().removeRow(item.index().row())
             else:
@@ -1629,7 +1693,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                    self.tree,
                                    self.plotTree,
                                    self.runTree]):
+                item.model().blockSignals(True)
                 self.flattenElement(view, item)
+                item.model().blockSignals(False)
                 if item == self.rootPlotItem and\
                         self.rootPlotItem.rowCount() == 0:
                     item = self.plotModel.invisibleRootItem()
@@ -1681,7 +1747,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 child0 = item.child(ii, 0)
                 self.exportModel(child0)
                 child1 = item.child(ii, 1)
-                if child1 is not None:
+                if child1 is not None and item.model() not in [self.beamModel]:
                     if child1.flags() != self.paramFlag:
                         if child1.isEnabled():
                             itemType = "param"
@@ -1736,6 +1802,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 except (IOError, OSError, ET.ParseError) as errStr:
                     ldMsg = str(errStr)
                 if parseOK:
+                    self.blUpdateLatchOpen = False
                     root = treeImport.getroot()
                     self.ntab = 0
                     for (i, rootModel), tree in zip(enumerate(
@@ -1758,6 +1825,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         if rootModel in [self.rootBLItem, self.rootPlotItem]:
                             rootModel.setText(root[i].tag)
                         self.iterateImport(tree, rootModel, root[i])
+                        if rootModel == self.rootBLItem:
+                            self.updateBeamImport()
                         if tree is not None:
                             self.checkDefaults(None, rootModel)
                             tmpBlColor = self.blColorCounter
@@ -1787,6 +1856,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         'Loaded layout from {}'.format(
                             os.path.basename(str(self.layoutFileName))), 3000)
                     self.isEmpty = False
+                    try:
+                        self.beamLine = raycing.BeamLine()
+                        self.beamLine.flowSource = 'Qook'
+                        self.update_beamline_beams(text=None)
+                        self.update_beamline_materials(item=None)
+                        self.update_beamline(item=None)
+                    except:
+                        pass
+                    self.blUpdateLatchOpen = True
                 else:
                     self.statusBar.showMessage(ldMsg)
 
@@ -1799,7 +1877,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 itemText = str(childImport.text)
                 child0 = QStandardItem(itemTag)
                 if itemType == "flat":
-                    child0 = rootModel.appendRow(QStandardItem(itemTag))
+                    if rootModel.model() != self.beamModel:
+                        child0 = rootModel.appendRow(child0)
+                    else:
+                        rootModel.appendRow([child0, None, None, None])
                 elif itemType == "value":
                     child0 = self.addValue(rootModel, itemTag)
                     if self.ntab == 1:
@@ -1904,7 +1985,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if item.hasChildren():
             for ii in range(item.rowCount()):
                 iItem = item.child(ii, 0)
-                if item.child(ii, 1) is not None:
+                if item.child(ii, 1) is not None and view is not None:
                     iWidget = view.indexWidget(item.child(ii, 1).index())
                     if iWidget is not None:
                         if iWidget.staticMetaObject.className() == 'QComboBox':
@@ -1913,6 +1994,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                             iWidget.currentIndex(), 1).text()
                             else:
                                 chItemText = iWidget.currentText()
+                            if str(item.child(ii, 1).text()) !=\
+                                    str(chItemText):
+                                item.child(ii, 1).setText(chItemText)
                         elif iWidget.staticMetaObject.className() ==\
                                 'QListWidget':
                             chItemText = "("
@@ -1921,12 +2005,63 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     chItemText += str(rState+1) + ","
                             else:
                                 chItemText += ")"
-                        item.child(ii, 1).setText(chItemText)
+                            item.child(ii, 1).setText(chItemText)
                 self.flattenElement(view, iItem)
         else:
             pass
 
+    def updateBeamImport(self):
+        self.rootBeamItem.setChild(
+            0, 1,
+            QStandardItem("Global"))
+        self.rootBeamItem.setChild(
+            0, 2,
+            QStandardItem("None"))
+        self.rootBeamItem.setChild(
+            0, 3,
+            QStandardItem(str(0)))
+        for ibl in range(self.rootBLItem.rowCount()):
+            elItem = self.rootBLItem.child(ibl, 0)
+            elNameStr = str(elItem.text())
+            if elNameStr not in ['properties', '_object']:
+                for iel in range(elItem.rowCount()):
+                    if elItem.child(iel, 0) not in ['properties', '_object']:
+                        for imet in range(elItem.child(iel, 0).rowCount()):
+                            metChItem = elItem.child(iel, 0).child(imet, 0)
+                            itemTxt = str(metChItem.text())
+                            if itemTxt == 'output':
+                                for ii in range(metChItem.rowCount()):
+                                    child0 = metChItem.child(ii, 0)
+                                    child1 = metChItem.child(ii, 1)
+                                    for irow in range(
+                                            self.rootBeamItem.rowCount()):
+                                        if str(child1.text()) ==\
+                                                str(self.rootBeamItem.child(
+                                                irow, 0).text()):
+                                            self.rootBeamItem.setChild(
+                                                irow, 1,
+                                                QStandardItem(child0.text()))
+                                            self.rootBeamItem.setChild(
+                                                irow, 2,
+                                                QStandardItem(elNameStr))
+                                            self.rootBeamItem.setChild(
+                                                irow, 3,
+                                                QStandardItem(str(
+                                                    self.name_to_bl_pos(
+                                                        elNameStr))))
+
+    def int_to_regexp(self, intStr):
+        a = list(str(intStr))
+        if int(intStr) < 11:
+            return '^([0-{}])$'.format(int(intStr)-1)
+        else:
+            return '^([0-9]|[0-{0}][0-9]{1}$'.format(
+                int(a[0])-1, '|{0}[0-{1}])'.format(
+                    int(a[0]), int(a[1])-1) if int(a[1]) > 0 else ")")
+
+
     def addCombo(self, view, item):
+
         if item.hasChildren():
             itemTxt = str(item.text())
             for ii in range(item.rowCount()):
@@ -1947,8 +2082,35 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         if len(re.findall("beam", paramName.lower())) > 0\
                                 and paramName.lower() != 'beamline'\
                                 and paramName.lower() != 'filamentbeam':
-                            combo = self.addStandardCombo(
-                                self.beamModel, value)
+                            if item.text() == 'parameters':  # input beam
+                                combo = QComboBox()
+                                fModel0 = QSortFilterProxyModel()
+                                fModel0.setSourceModel(self.beamModel)
+                                fModel0.setFilterKeyColumn(1)
+                                fModel0.setFilterRegExp('Global')
+                                fModel = QSortFilterProxyModel()
+                                fModel.setSourceModel(fModel0)
+                                fModel.setFilterKeyColumn(3)
+                                regexp = self.int_to_regexp(
+                                    self.name_to_bl_pos(str(item.parent(
+                                    ).parent().text())))
+                                fModel.setFilterRegExp(regexp)
+                            elif item.text() == 'output':  # output beam
+                                fModel0 = QSortFilterProxyModel()
+                                fModel0.setSourceModel(self.beamModel)
+                                fModel0.setFilterKeyColumn(1)
+                                fModel0.setFilterRegExp(paramName)
+                                fModel = QSortFilterProxyModel()
+                                fModel.setSourceModel(fModel0)
+                                fModel.setFilterKeyColumn(2)
+                                fModel.setFilterRegExp(str(
+                                    item.parent().parent().text()))
+                            else:
+                                fModel = self.beamModel
+                            combo = self.addStandardCombo(fModel, value)
+                            if combo.currentIndex() == -1:
+                                combo.setCurrentIndex(0)
+                                child1.setText(combo.currentText())
                             view.setIndexWidget(child1.index(), combo)
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
@@ -2302,6 +2464,21 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def quotizeAll(self, value):
         return str('r\"{}\"'.format(value))
 
+    def parametrize(self, value):
+        try:
+            dummy = unicode  # test for Python3 compatibility analysis:ignore
+        except NameError:
+            unicode = str  # analysis:ignore
+
+        if str(value) == 'round':
+            return str(value)
+        if str(value) == 'None':
+            return None
+        value = self.getVal(value)
+        if isinstance(value, tuple):
+            value = list(value)
+        return value
+
     def whichCrystal(self, matName):
         material = self.materialsModel.findItems(matName)[0]
         rtype = "None"
@@ -2320,11 +2497,446 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     break
         return rtype
 
+    def get_class_name(self, itemObject):
+        for iel in range(itemObject.rowCount()):
+            if itemObject.child(iel, 0).text() == '_object':
+                return str(itemObject.child(iel, 1).text())
+        return None
+
+    def update_beamline_beams(self, text):
+        sender = self.sender()
+        if sender is not None:
+            if sender.staticMetaObject.className() == 'QComboBox':
+                currentIndex = int(sender.currentIndex())
+                beamValues = list(self.beamLine.beamsDict.values())
+                beamKeys = list(self.beamLine.beamsDict.keys())
+                beamKeys[currentIndex] = text
+                self.beamLine.beamsDict = dict(zip(beamKeys, beamValues))
+        elif text is None:
+            beamsDict = dict()
+            for ib in range(self.rootBeamItem.rowCount()):
+                beamsDict[str(self.rootBeamItem.child(ib, 0).text())] = None
+            self.beamLine.beamsDict = beamsDict
+
+    def update_beamline_materials(self, item, newMat=False):
+        def create_param_dict(parentItem, elementString):
+            kwargs = dict()
+            for iep, arg_def in zip(range(parentItem.rowCount()), list(zip(
+                    *self.getParams(elementString)))[1]):
+                paraname = str(parentItem.child(iep, 0).text())
+                paravalue = str(parentItem.child(iep, 1).text())
+                if paravalue != str(arg_def) or\
+                        paravalue == 'bl':
+                    kwargs[paraname] =\
+                        self.parametrize(paravalue)
+            return kwargs
+
+        if item is None:
+            blMats = OrderedDict({'None': None})
+            for ie in range(self.rootMatItem.rowCount()):
+                matItem = self.rootMatItem.child(ie, 0)
+                matName = str(matItem.text())
+                if matName != "None":
+                    matClassStr = self.get_class_name(matItem)
+                    for ieph in range(matItem.rowCount()):
+                        if matItem.child(ieph, 0).text() == 'properties':
+                            kwArgs = create_param_dict(
+                                matItem.child(ieph, 0), matClassStr)
+                            break
+                    try:
+                        blMats[matName] = eval(matClassStr)(**kwArgs)
+                        print("Class", matName, "successfully initialized.")
+                    except:
+                        blMats[matName] = None
+                        print("Incorrect parameters. Class", matName,
+                              "not initialized.")
+            self.beamLine.materialsDict = blMats
+        else:
+            if item.index().column() == 0 and not newMat:  # Rename material
+                matValues = list(self.beamLine.materialsDict.values())
+                matKeys = list(self.beamLine.materialsDict.keys())
+                blMats = OrderedDict({'None': None})
+                counter = 0
+                for ie in range(self.rootMatItem.rowCount()):
+                    matItemStr = str(self.rootMatItem.child(
+                        ie, 0).text())
+                    if matItemStr != 'None':
+                        blMats[matItemStr] = matValues[counter]
+                        if matItemStr != matKeys[counter]:
+                            print("Material", matKeys[counter], "renamed to",
+                                  matItemStr)
+                    counter += 1
+                self.beamLine.materialsDict = blMats
+            else:  # New material or property changed, init one material
+                if newMat:
+                    matItem = item
+                    for ie in range(item.rowCount()):
+                        if item.child(ie, 0).text() == 'properties':
+                            propItem = item.child(ie, 0)
+                            break
+                else:
+                    matItem = item.parent().parent()
+                    propItem = item.parent()
+                matClassStr = self.get_class_name(matItem)
+                kwArgs = create_param_dict(propItem, matClassStr)
+                matName = str(matItem.text())
+                try:
+                    if newMat:
+                        self.beamLine.materialsDict[matName] = eval(
+                            matClassStr)(**kwArgs)
+                    elif self.beamLine.materialsDict[matName] is None:
+                        self.beamLine.materialsDict[matName] = eval(
+                            matClassStr)(**kwArgs)
+                    else:
+                        self.beamLine.materialsDict[matName].__init__(**kwArgs)
+                    print("Class", matName, "successfully initialized.")
+                except:
+                    self.beamLine.materialsDict[matName] = None
+                    print("Incorrect parameters. Class", matName,
+                          "not initialized.")
+
+    def name_to_bl_pos(self, elname):
+        for iel in range(self.rootBLItem.rowCount()):
+            if str(self.rootBLItem.child(iel, 0).text()) == elname:
+                return iel
+        else:
+            return 0
+
+    def update_beamline(self, item=None, newElement=False, newOrder=False):
+        def create_param_dict(parentItem, elementString):
+            kwargs = dict()
+            for iep, arg_def in zip(range(
+                    parentItem.rowCount()),
+                    list(zip(*self.getParams(elementString)))[1]):
+                paraname = str(parentItem.child(iep, 0).text())
+                paravalue = str(parentItem.child(iep, 1).text())
+                if paravalue != str(arg_def) or\
+                        paraname == 'bl':
+                    if paraname == 'center':
+                        paravalue = paravalue.strip('[]() ')
+                        paravalue =\
+                            [self.getVal(c.strip())
+                             for c in str.split(
+                             paravalue, ',')]
+                    elif paraname.startswith('material'):
+                        paravalue =\
+                            self.beamLine.materialsDict[paravalue]
+                    elif paraname == 'bl':
+                        paravalue = self.beamLine
+                    else:
+                        paravalue = self.parametrize(paravalue)
+                    kwargs[paraname] = paravalue
+            return kwargs
+
+        def create_method_dict(elementItem, elementString):
+            methodObj = None
+            for ieph in range(elementItem.rowCount()):
+                pItem = elementItem.child(ieph, 0)
+                methodObj = None
+                if str(pItem.text()) not in ['_object', 'properties']:
+                    for namef, objf in inspect.getmembers(eval(elementString)):
+                        if (inspect.ismethod(objf) or
+                                inspect.isfunction(objf)) and\
+                                namef == str(pItem.text()).strip('()'):
+                            methodObj = objf
+                    inkwargs = {}
+                    outkwargs = OrderedDict()
+                    for imet in range(pItem.rowCount()):
+                        mItem = pItem.child(imet, 0)
+                        if str(mItem.text()) == 'parameters':
+                            for iep, arg_def in\
+                                zip(range(mItem.rowCount()),
+                                    inspect.getargspec(methodObj)[3]):
+                                paraname = str(mItem.child(
+                                    iep, 0).text())
+                                paravalue = self.parametrize(str(mItem.child(
+                                    iep, 1).text()))
+                                if len(re.findall('beam', paraname)) > 0 and\
+                                    self.beamLine.oesDict[str(elementItem.text(
+                                        ))][1] and paravalue is None:
+                                    return None, None, None
+                                inkwargs[paraname] = paravalue
+                        elif str(mItem.text()) == 'output':
+                            for iep in range(mItem.rowCount()):
+                                paraname = str(mItem.child(
+                                    iep, 0).text())
+                                paravalue = str(mItem.child(iep, 1).text())
+                                outkwargs[paraname] = paravalue
+            if methodObj is not None:
+                return methodObj, inkwargs, outkwargs
+            else:
+                return None, None, None
+
+        def build_flow(startFrom=0):
+            blFlow = []
+            for ie in range(self.rootBLItem.rowCount()):
+                elItem = self.rootBLItem.child(ie, 0)
+                elName = str(elItem.text())
+                if elName not in ["properties", "_object"]:
+                    elStr = self.get_class_name(elItem)
+                    methodObj, inkwArgs, outkwArgs = create_method_dict(
+                        elItem, elStr)
+                    if methodObj is not None:
+                        blFlow.append([elName, methodObj,
+                                       inkwArgs, outkwArgs])
+            return blFlow
+
+        def name_to_flow_pos(elementNameStr):
+            try:
+                for isegment, segment in enumerate(self.beamLine.flow):
+                    if segment[0] == elementNameStr:
+                        return isegment
+            except:
+                return None
+
+        def update_regexp():
+            for iElement in range(self.rootBLItem.rowCount()):
+                elItem = self.rootBLItem.child(iElement, 0)
+                if str(elItem.text()) not in ['properties', '_object']:
+                    for iProp in range(elItem.rowCount()):
+                        propItem = elItem.child(iProp, 0)
+                        if str(propItem.text()) not in ['properties',
+                                                        '_object']:
+                            for iMeth in range(propItem.rowCount()):
+                                methItem = propItem.child(iMeth, 0)
+                                if str(methItem.text()) == 'parameters':
+                                    for iBeam in range(methItem.rowCount()):
+                                        bItem = methItem.child(iBeam, 0)
+                                        if len(re.findall(
+                                                'beam', str(
+                                                bItem.text()))) > 0:
+                                            vItem = methItem.child(iBeam, 1)
+                                            iWidget = self.tree.indexWidget(
+                                                vItem.index())
+                                            if iWidget is not None:
+                                                try:
+                                                    regexp =\
+                                                        self.int_to_regexp(
+                                                            iElement)
+                                                    iWidget.model(
+                                                        ).setFilterRegExp(
+                                                            regexp)
+                                                except:
+                                                    continue
+
+        self.rootBLItem.model().blockSignals(True)
+        self.flattenElement(self.tree,
+                            self.rootBLItem if item is None else item)
+        self.rootBLItem.model().blockSignals(False)
+
+#        try:
+#            print(item.text())
+#        except:
+#            pass
+#        print("BEAMS in QOOK", self.beamLine.beamsDict)
+        if item is not None:
+            if item.index().parent().isValid():  # not the Beamline root
+                iCol = item.index().column()
+                pText = str(item.parent().text())
+                if pText == str(self.rootBLItem.text()):
+                    if newElement:  # New element added
+                        elNameStr = str(item.text())
+                        elClassStr = self.get_class_name(item)
+                        for iep in range(item.rowCount()):
+                            if item.child(iep, 0).text() == 'properties':
+                                propItem = item.child(iep, 0)
+                                break
+                        oeType = 0 if len(re.findall(
+                            'raycing.sou', elClassStr)) > 0 else 1
+                        try:
+                            kwArgs = create_param_dict(propItem, elClassStr)
+                            self.beamLine.oesDict[elNameStr] =\
+                                [eval(elClassStr)(**kwArgs), oeType]
+                            self.beamLine.unalignedOesDict[elNameStr] =\
+                                [eval(elClassStr)(**kwArgs), oeType]
+                            print("Class", elNameStr,
+                                  "successfully initialized.")
+                        except:
+                            self.beamLine.oesDict[elNameStr] =\
+                                [None, oeType]
+                            self.beamLine.unalignedOesDict[elNameStr] =\
+                                [None, oeType]
+                            print("Incorrect parameters. Class", elNameStr,
+                                  "not initialized.")
+                        self.beamLine.flow = build_flow(startFrom=elNameStr)
+                        startFrom = name_to_flow_pos(elNameStr)
+                    else:  # Element renamed or moved
+                        oesValues = list(self.beamLine.oesDict.values())
+                        oesUAValues = list(
+                            self.beamLine.unalignedOesDict.values())
+                        oesKeys = list(self.beamLine.oesDict.keys())
+                        wasDeleted = True if\
+                            len(oesKeys) + 2 < self.rootBLItem.rowCount()\
+                            else False
+                        if not wasDeleted:
+                            newDict = OrderedDict()
+                            newUADict = OrderedDict()
+                            counter = 0
+                            startElement = None
+                            rbi = self.rootBeamItem
+                            for ie in range(self.rootBLItem.rowCount()):
+                                elNameStr =\
+                                    str(self.rootBLItem.child(ie, 0).text())
+                                if elNameStr not in ["properties", "_object"]:
+                                    if newOrder:
+                                        newDict[elNameStr] =\
+                                            self.beamLine.oesDict[elNameStr]
+                                        newUADict[elNameStr] =\
+                                            self.beamLine.unalignedOesDict[elNameStr]  # analysis:ignore
+                                        if elNameStr != oesKeys[counter] and\
+                                                startElement is None:
+                                            startElement = elNameStr
+                                    else:
+                                        newDict[elNameStr] = oesValues[counter]
+                                        newUADict[elNameStr] =\
+                                            oesUAValues[counter]
+                                        if elNameStr != oesKeys[counter]:
+                                            startElement = oesKeys[counter]
+                                            for ibeam in range(
+                                                    rbi.rowCount()):
+                                                if rbi.child(ibeam, 2) ==\
+                                                        startElement:
+                                                    rbi.child(
+                                                        ibeam, 2).setText(
+                                                            elNameStr)
+                                            print("Element", startElement,
+                                                  "renamed to", elNameStr)
+                                    counter += 1
+                            self.beamLine.oesDict = newDict
+                            self.beamLine.unalignedOesDict = newUADict
+                        if newOrder:
+                            print("Element", item.text(),
+                                  "moved to new position")
+                            for ibeam in range(rbi.rowCount()):
+                                rbi.child(ibeam, 3).setText(str(
+                                    self.name_to_bl_pos(str(rbi.child(
+                                        ibeam, 2).text()))))
+                            update_regexp()
+                        elif wasDeleted:
+                            print("Element", item.text(),
+                                  "was removed")
+                            startElement = str(item.text())
+                            self.beamLine.flow =\
+                                build_flow(startFrom=startElement)
+                        else:
+                            for iel in range(len(self.beamLine.flow)):
+                                if self.beamLine.flow[iel][0] == startElement:
+                                    self.beamLine.flow[iel][0] =\
+                                        str(item.text())
+                        startFrom = name_to_flow_pos(startElement)
+                elif pText in ['properties'] and iCol > 0:
+                    elItem = item.parent().parent()
+                    elNameStr = str(elItem.text())
+                    elClassStr = self.get_class_name(elItem)
+                    if len(re.findall('.BeamLine', elClassStr)) > 0:  # BL
+                        paramName = str(item.parent().child(item.index().row(),
+                                                            0).text())
+                        paramValue = self.parametrize(str(item.text()))
+                        setattr(self.beamLine, paramName, paramValue)
+                        startFrom = 0
+                    else:  # Setters and getters not implemented yet for OE
+                        oeType = 0 if len(re.findall(
+                            'raycing.sou', elClassStr)) > 0 else 1
+                        try:
+                            kwargs = create_param_dict(item.parent(),
+                                                       elClassStr)
+                            if self.beamLine.oesDict[elNameStr][0] is None:
+                                self.beamLine.oesDict[elNameStr] =\
+                                    [eval(elClassStr)(**kwargs), oeType]
+                                self.beamLine.unalignedOesDict[elNameStr] =\
+                                    [eval(elClassStr)(**kwargs), oeType]
+                                print("Class", elNameStr,
+                                      "successfully initialized.")
+                            else:
+                                self.beamLine.oesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
+                                self.beamLine.unalignedOesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
+                                print("Class", elNameStr,
+                                      "successfully re-initialized.")
+                        except:
+                            self.beamLine.oesDict[elNameStr] =\
+                                [None, oeType]
+                            self.beamLine.unalignedOesDict[elNameStr] =\
+                                [None, oeType]
+                            print("Incorrect parameters. Class", elNameStr,
+                                  "not initialized.")
+                        startFrom = name_to_flow_pos(elNameStr)
+                elif pText in ['parameters', 'output'] and iCol > 0:
+                    elItem = item.parent().parent().parent()
+                    elNameStr = str(elItem.text())
+                    print("Method of", elNameStr, "was modified")
+                    self.beamLine.flow = build_flow(startFrom=elNameStr)
+                    startFrom = name_to_flow_pos(elNameStr)
+                elif item.parent().parent() == self.rootBLItem and newElement:
+                    elItem = item.parent()
+                    elNameStr = str(elItem.text())
+                    print("Method", item.text(), "was added to", elNameStr)
+                    self.beamLine.flow = build_flow(startFrom=elNameStr)
+                    startFrom = name_to_flow_pos(elNameStr)
+        else:  # Rebuild beamline
+            for ie in range(self.rootBLItem.rowCount()):
+                elItem = self.rootBLItem.child(ie, 0)
+                elNameStr = str(elItem.text())
+                if elNameStr == 'properties':  # Beamline properties
+                    for iprop in range(elItem.rowCount()):
+                        paramName = str(elItem.child(iprop, 0).text())
+                        paramValue = self.parametrize(str(elItem.child(
+                            iprop, 1).text()))
+                        setattr(self.beamLine, paramName, paramValue)
+                elif elNameStr != '_object':  # Beamline element
+                    for iprop in range(elItem.rowCount()):
+                        pItem = elItem.child(iprop, 0)
+                        pText = str(pItem.text())
+                        if pText == 'properties':  # OE properties
+                            elClassStr = self.get_class_name(elItem)
+                            oeType = 0 if len(re.findall(
+                                'raycing.sou', elClassStr)) > 0 else 1
+                            try:
+                                kwArgs = create_param_dict(pItem, elClassStr)
+                                self.beamLine.oesDict[elNameStr] =\
+                                    [eval(elClassStr)(**kwArgs), oeType]
+                                self.beamLine.unalignedOesDict[elNameStr] =\
+                                    [eval(elClassStr)(**kwArgs), oeType]
+                                print("Class", elNameStr,
+                                      "successfully initialized.")
+                            except:
+                                self.beamLine.oesDict[elNameStr] =\
+                                    [None, oeType]
+                                self.beamLine.unalignedOesDict[elNameStr] =\
+                                    [None, oeType]
+                                print("Incorrect parameters. Class", elNameStr,
+                                      "not initialized.")
+            self.beamLine.flow = build_flow()
+            startFrom = 0
+
+        if self.blViewer is not None:
+            if startFrom is not None:
+                self.beamLine.propagate_flow(startFrom, align=True)
+            self.rayPath = self.beamLine.export_to_glow()
+            self.blViewer.update_oes_list(self.rayPath)
+
+    def populate_beamline(self, item=None):
+        self.beamLine.propagate_flow(startFrom=0, align=True)
+        self.rayPath = self.beamLine.export_to_glow()
+        self.bl_run_glow()
+
+    def bl_run_glow(self):
+        if self.blViewer is None:
+            self.blViewer = xrtglow.xrtGlow(self.rayPath)
+            self.blViewer.setWindowTitle("xrtGlow")
+            self.blViewer.show()
+        else:
+            self.blViewer.update_oes_list(self.rayPath)
+            if self.blViewer.isHidden():
+                self.blViewer.show()
+
     def generateCode(self):
-        self.flattenElement(self.tree, self.rootBLItem)
-        self.flattenElement(self.matTree, self.rootMatItem)
-        self.flattenElement(self.plotTree, self.rootPlotItem)
-        self.flattenElement(self.runTree, self.rootRunItem)
+        for tree, item in zip([self.tree, self.matTree,
+                               self.plotTree, self.runTree],
+                              [self.rootBLItem, self.rootMatItem,
+                               self.rootPlotItem, self.rootRunItem]):
+            item.model().blockSignals(True)
+            self.flattenElement(tree, item)
+            item.model().blockSignals(False)
 
         BLName = str(self.rootBLItem.text())
         e0str = "{}E0 = 5000\n".format(myTab)
@@ -2510,7 +3122,8 @@ if __name__ == '__main__':
                             str(pItem.text()).strip('()'),
                             ierun.rstrip(','), myTab)
                         if self.prepareViewer:
-                            outputBeamMatch[paraOutBeams[0]] = str(tItem.text())
+                            outputBeamMatch[paraOutBeams[0]] =\
+                                str(tItem.text())
                         if len(re.findall('sources', elstr)) > 0:
                             if self.prepareViewer:
                                 codeAlignBL += '{5}{0} = {1}.{2}.{3}({4})\n\n'.format( # analysis:ignore
@@ -2545,7 +3158,7 @@ if __name__ == '__main__':
                             codeAlignBL += '{2}{0}.{1}.center = (newx, tmpy, newz)\n'.format( # analysis:ignore
                                 BLName, tItem.text(), myTab)
                             if self.prepareViewer:
-                                codeAlignBL += '{2}oeDict[\'{1}\'] = [{0}.{1}, 1]\n'.format(BLName, tItem.text(), myTab)
+                                codeAlignBL += '{2}oeDict[\'{1}\'] = [{0}.{1}, 1]\n'.format(BLName, tItem.text(), myTab)  # analysis:ignore
                             codeAlignBL += '{2}print(\"{1}.center:\", {0}.{1}.center)\n\n'.format( # analysis:ignore
                                 BLName, tItem.text(), myTab)
                             if autoPitch or autoBragg:
@@ -2874,36 +3487,36 @@ from collections import OrderedDict\n"""
                     os.path.basename(str(self.saveFileName))), 5000)
             self.saveFileName = tmpName
 
-    def runGlow(self):
-        tmpV = self.prepareViewer
-        self.glowOnly = True
-        self.prepareViewer = True
-        try:
-            self.generateCode()
-        except:
-            self.glowOnly = False
-        if self.glowOnly:
-            try:
-                fileObject = open('_glowTmpXrt_.py', 'w')
-                fileObject.write(self.glowCode)
-                dirName = os.path.dirname(fileObject.name)
-                fileObject.close
-                if isSpyderConsole:
-                    self.codeConsole.wdir = dirName
-                    self.codeConsole.fname = '_glowTmpXrt_.py'
-                    self.codeConsole.create_process()
-                else:
-                    self.qprocess.setWorkingDirectory(dirName)
-                    self.codeConsole.clear()
-                    self.codeConsole.append('Starting {}\n\n'.format(
-                            os.path.basename('_glowTmpXrt_.py')))
-                    self.codeConsole.append(
-                        'Press Ctrl+X to terminate process\n\n')
-                    self.qprocess.start("python", ['-u', '_glowTmpXrt_.py'])
-            except:
-                pass
-        self.glowOnly = False
-        self.prepareViewer = tmpV
+#    def runGlow(self):
+#        tmpV = self.prepareViewer
+#        self.glowOnly = True
+#        self.prepareViewer = True
+#        try:
+#            self.generateCode()
+#        except:
+#            self.glowOnly = False
+#        if self.glowOnly:
+#            try:
+#                fileObject = open('_glowTmpXrt_.py', 'w')
+#                fileObject.write(self.glowCode)
+#                dirName = os.path.dirname(fileObject.name)
+#                fileObject.close
+#                if isSpyderConsole:
+#                    self.codeConsole.wdir = dirName
+#                    self.codeConsole.fname = '_glowTmpXrt_.py'
+#                    self.codeConsole.create_process()
+#                else:
+#                    self.qprocess.setWorkingDirectory(dirName)
+#                    self.codeConsole.clear()
+#                    self.codeConsole.append('Starting {}\n\n'.format(
+#                            os.path.basename('_glowTmpXrt_.py')))
+#                    self.codeConsole.append(
+#                        'Press Ctrl+X to terminate process\n\n')
+#                    self.qprocess.start("python", ['-u', '_glowTmpXrt_.py'])
+#            except:
+#                pass
+#        self.glowOnly = False
+#        self.prepareViewer = tmpV
 
     def execCode(self):
         self.saveCode()
