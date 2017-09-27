@@ -711,7 +711,7 @@ class BeamLine(object):
         self.flow = []
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
-        self.flowSource = 'Qook'
+        self.flowSource = 'legacy'
         self.beamsRevDict = dict()
         self.blViewer = None
 
@@ -1017,7 +1017,6 @@ class BeamLine(object):
             outputBeamMatch = {}
             oesDict = OrderedDict()
             for segment in self.flow:
-                print(segment)
                 try:
                     methStr = str(segment[1])
                     oeStr = segment[0]
@@ -1033,6 +1032,7 @@ class BeamLine(object):
                                       str(type(segOE)).lower())):
                         gBeamName = segment[3]['beamGlobal']
                         beamDict[gBeamName] = self.beamsDict[gBeamName]
+                        rayPath.append([oeStr, gBeamName, None, None])
                     elif len(re.findall(('expose'), methStr)) > 0 and\
                             len(re.findall(('expose_global'), methStr)) == 0:
                         gBeam = self.oesDict[oeStr][0].expose_global(

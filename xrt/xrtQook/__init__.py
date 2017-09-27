@@ -1441,7 +1441,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.blUpdateLatchOpen = True
         self.update_beamline(methodItem, newElement=True)
         self.isEmpty = False
-        print(str(self.name_to_bl_pos(elstr)))
 
     def addPlot(self, copyFrom=None):
         for i in range(99):
@@ -2059,9 +2058,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 int(a[0])-1, '|{0}[0-{1}])'.format(
                     int(a[0]), int(a[1])-1) if int(a[1]) > 0 else ")")
 
-
     def addCombo(self, view, item):
-
         if item.hasChildren():
             itemTxt = str(item.text())
             for ii in range(item.rowCount()):
@@ -3486,37 +3483,6 @@ from collections import OrderedDict\n"""
                 'Failed saving code to {}'.format(
                     os.path.basename(str(self.saveFileName))), 5000)
             self.saveFileName = tmpName
-
-#    def runGlow(self):
-#        tmpV = self.prepareViewer
-#        self.glowOnly = True
-#        self.prepareViewer = True
-#        try:
-#            self.generateCode()
-#        except:
-#            self.glowOnly = False
-#        if self.glowOnly:
-#            try:
-#                fileObject = open('_glowTmpXrt_.py', 'w')
-#                fileObject.write(self.glowCode)
-#                dirName = os.path.dirname(fileObject.name)
-#                fileObject.close
-#                if isSpyderConsole:
-#                    self.codeConsole.wdir = dirName
-#                    self.codeConsole.fname = '_glowTmpXrt_.py'
-#                    self.codeConsole.create_process()
-#                else:
-#                    self.qprocess.setWorkingDirectory(dirName)
-#                    self.codeConsole.clear()
-#                    self.codeConsole.append('Starting {}\n\n'.format(
-#                            os.path.basename('_glowTmpXrt_.py')))
-#                    self.codeConsole.append(
-#                        'Press Ctrl+X to terminate process\n\n')
-#                    self.qprocess.start("python", ['-u', '_glowTmpXrt_.py'])
-#            except:
-#                pass
-#        self.glowOnly = False
-#        self.prepareViewer = tmpV
 
     def execCode(self):
         self.saveCode()

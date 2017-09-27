@@ -150,7 +150,6 @@ class xrtGlow(QWidget):
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
-#        self.segmentsModel.itemChanged.connect(self.updateRaysList)
 #  Zoom panel
         self.zoomPanel = QGroupBox(self)
         self.zoomPanel.setFlat(False)
@@ -542,9 +541,6 @@ class xrtGlow(QWidget):
         tabs = QTabWidget()
         tabs.addTab(self.navigationPanel, "Navigation")
         tabs.addTab(self.transformationPanel, "Transformation")
-#        tabs.addTab(self.zoomPanel, "Scaling")
-#        tabs.addTab(self.rotationPanel, "Rotation")
-#        tabs.addTab(self.opacityPanel, "Opacity")
         tabs.addTab(self.colorOpacityPanel, "Color")
         tabs.addTab(self.projectionPanel, "Projections")
         tabs.addTab(self.scenePanel, "Scene")
@@ -616,8 +612,9 @@ class xrtGlow(QWidget):
         self.customGlWidget.beamsDict = arrayOfRays[1]
         self.customGlWidget.oesList = self.oesList
         self.customGlWidget.beamsToElements = self.beamsToElements
-        self.customGlWidget.newColorAxis = True
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+#        self.customGlWidget.newColorAxis = True
+#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.changeColorAxis(None)
         self.customGlWidget.positionVScreen()
         self.customGlWidget.glDraw()
 
@@ -663,8 +660,6 @@ class xrtGlow(QWidget):
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
 
-#    def clear_segments_model(self):
-#        while self.segmentsModelRoot.child(1, 0)
     def create_row(self, text, segMode):
         newRow = []
         for iCol in range(3):
@@ -690,7 +685,6 @@ class xrtGlow(QWidget):
                 newRow.append(newItem)
             return newRow
 
-#        t0 = time.time()
         newSegmentsModel = self.init_segments_model()
         for element, elRecord in self.oesList.items():
             for iel in range(self.segmentsModelRoot.rowCount()):
@@ -699,28 +693,30 @@ class xrtGlow(QWidget):
                 if str(element) == elName:
                     elRow = copy_row(self.segmentsModelRoot, iel)
                     for segment in arrayOfRays[0]:
-                        endBeamText = "to {}".format(
-                            self.beamsToElements[segment[3]])
-                        if str(segment[1]) == str(elRecord[1]):
-                            if elItem.hasChildren():
-                                for ich in range(elItem.rowCount()):
-                                    if str(elItem.child(ich, 0).text()) ==\
-                                            endBeamText:
-                                        elRow[0].appendRow(
-                                            copy_row(elItem, ich))
-                                        break
+                        if segment[3] is not None:
+                            endBeamText = "to {}".format(
+                                self.beamsToElements[segment[3]])
+                            if str(segment[1]) == str(elRecord[1]):
+                                if elItem.hasChildren():
+                                    for ich in range(elItem.rowCount()):
+                                        if str(elItem.child(ich, 0).text()) ==\
+                                                endBeamText:
+                                            elRow[0].appendRow(
+                                                copy_row(elItem, ich))
+                                            break
+                                    else:
+                                        elRow[0].appendRow(self.create_row(
+                                            endBeamText, 3))
                                 else:
                                     elRow[0].appendRow(self.create_row(
                                         endBeamText, 3))
-                            else:
-                                elRow[0].appendRow(self.create_row(
-                                    endBeamText, 3))
                     newSegmentsModel.invisibleRootItem().appendRow(elRow)
                     break
             else:
                 elRow = self.create_row(str(element), 1)
                 for segment in arrayOfRays[0]:
-                    if str(segment[1]) == str(elRecord[1]):
+                    if str(segment[1]) == str(elRecord[1]) and\
+                            segment[3] is not None:
                         endBeamText = "to {}".format(
                             self.beamsToElements[segment[3]])
                         elRow[0].appendRow(self.create_row(endBeamText, 3))
@@ -728,17 +724,16 @@ class xrtGlow(QWidget):
         self.segmentsModel = newSegmentsModel
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
         self.oeTree.setModel(self.segmentsModel)
-#        self.segmentsModel.itemChanged.connect(self.updateRaysList)
-#        print("Model update takes", time.time()-t0, "s")
 
     def populate_segments_model(self, arrayOfRays):
         for element, elRecord in self.oesList.items():
             newRow = self.create_row(element, 1)
             for segment in arrayOfRays[0]:
                 if str(segment[1]) == str(elRecord[1]):
-                    endBeamText = "to {}".format(
-                        self.beamsToElements[segment[3]])
-                    newRow[0].appendRow(self.create_row(endBeamText, 3))
+                    if segment[3] is not None:
+                        endBeamText = "to {}".format(
+                            self.beamsToElements[segment[3]])
+                        newRow[0].appendRow(self.create_row(endBeamText, 3))
             self.segmentsModelRoot.appendRow(newRow)
 
     def drawColorMap(self, axis):
@@ -811,13 +806,21 @@ class xrtGlow(QWidget):
         self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis):
-        self.customGlWidget.getColor = getattr(
-            raycing, 'get_{}'.format(selAxis))
+        if selAxis is None:
+            selAxis = self.colorPanel.layout().itemAt(2).widget().currentText()
+        else:
+            self.customGlWidget.getColor = getattr(
+                raycing, 'get_{}'.format(selAxis))
+        oldColorMin = self.customGlWidget.colorMin
+        oldColorMax = self.customGlWidget.colorMax
         self.customGlWidget.newColorAxis = True
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.mplAx.set_xlabel(selAxis)
+        if oldColorMin == self.customGlWidget.colorMin and\
+                oldColorMax == self.customGlWidget.colorMax:
+            return
         self.customGlWidget.selColorMin = self.customGlWidget.colorMin
         self.customGlWidget.selColorMax = self.customGlWidget.colorMax
-        self.mplAx.set_xlabel(selAxis)
         extents = (self.customGlWidget.colorMin,
                    self.customGlWidget.colorMax, 0, 1)
         self.im.set_extent(extents)
@@ -1442,16 +1445,11 @@ class xrtGlWidget(QGLWidget):
         self.getColor = raycing.get_energy
         self.globalNorm = True
         self.newColorAxis = True
+        self.colorMax = -1e20
+        self.colorMin = 1e20
         self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.maxLen = 1.
         self.populateVerticesArray(modelRoot)
-
-        try:
-            maxC = np.max(self.verticesArray, axis=0)
-            minC = np.min(self.verticesArray, axis=0)
-            self.maxLen = np.max(maxC - minC)
-        except:
-            self.maxLen = 1.
 
         self.drawGrid = True
         self.fineGridEnabled = False
@@ -1539,9 +1537,14 @@ class xrtGlWidget(QGLWidget):
         maxLen = 1.
         tmpMax = -1.e12 * np.ones(3)
         tmpMin = -1. * tmpMax
+
         if self.newColorAxis:
-            self.colorMax = -1e20
-            self.colorMin = 1e20
+            newColorMax = -1e20
+            newColorMin = 1e20
+        else:
+            newColorMax = self.colorMax
+            newColorMin = self.colorMin
+
         for ioe in range(segmentsModelRoot.rowCount() - 1):
             ioeItem = segmentsModelRoot.child(ioe + 1, 0)
             if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
@@ -1553,8 +1556,8 @@ class xrtGlWidget(QGLWidget):
             try:
                 startBeam = self.beamsDict[
                     self.oesList[str(ioeItem.text())][1]]
+#                lostNum = self.oesList[str(ioeItem.text())][0].lostNum
                 good = startBeam.state > 0
-
                 for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
                     axMin = np.min(getattr(startBeam, tAxis)[good])
                     axMax = np.max(getattr(startBeam, tAxis)[good])
@@ -1563,17 +1566,22 @@ class xrtGlWidget(QGLWidget):
                     if axMax > tmpMax[tmpCoord]:
                         tmpMax[tmpCoord] = axMax
 
-                self.colorMax = max(np.max(
+                newColorMax = max(np.max(
                     self.getColor(startBeam)[good]),
-                    self.colorMax)
-                self.colorMin = min(np.min(
+                    newColorMax)
+                newColorMin = min(np.min(
                     self.getColor(startBeam)[good]),
-                    self.colorMin)
-                if self.newColorAxis:
-                    self.selColorMin = self.colorMin
-                    self.selColorMax = self.colorMax
+                    newColorMin)
             except:
                 continue
+
+            if self.newColorAxis:
+                if newColorMax != self.colorMax and\
+                        newColorMin != self.colorMin:
+                    self.colorMax = newColorMax
+                    self.colorMin = newColorMin
+                    self.selColorMin = self.colorMin
+                    self.selColorMax = self.colorMax
 
             if ioeItem.hasChildren():
                 for isegment in range(ioeItem.rowCount()):
@@ -1581,6 +1589,8 @@ class xrtGlWidget(QGLWidget):
                     if segmentItem0.checkState() == 2:
                         endBeam = self.beamsDict[
                             self.oesList[str(segmentItem0.text())[3:]][1]]
+#                        lostNum = self.oesList[str(
+#                            segmentItem0.text())[3:]][0].lostNum
                         good = startBeam.state > 0
                         intensity = np.sqrt(np.abs(
                             startBeam.Jss**2 + startBeam.Jpp**2))
@@ -1630,8 +1640,8 @@ class xrtGlWidget(QGLWidget):
                         self.verticesArray = vertices.T if\
                             self.verticesArray is None else\
                             np.vstack((self.verticesArray, vertices.T))
-
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
+                # lostNum = self.oesList[str(ioeItem.text())][0].lostNum
                 good = startBeam.state > 0
                 intensity = np.sqrt(np.abs(
                     startBeam.Jss**2 + startBeam.Jpp**2))
@@ -1663,7 +1673,6 @@ class xrtGlWidget(QGLWidget):
                     colorsDots is None else np.concatenate(
                         (colorsDots.T, np.array(self.getColor(
                              startBeam)[good]).T))
-
                 vertices = np.array(startBeam.x[good] - self.coordOffset[0])
                 vertices = np.vstack((vertices, np.array(
                     startBeam.y[good] - self.coordOffset[1])))
@@ -1677,47 +1686,48 @@ class xrtGlWidget(QGLWidget):
             if self.colorMin == self.colorMax:
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
-            colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
-                                                       self.colorMin)
-            colorsRays = np.dstack((colorsRays,
-                                    np.ones_like(alphaRays)*0.85,
-                                    alphaRays))
-#                                    np.ones_like(alphaRays)))
-            colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
-            if self.globalNorm:
-                alphaMax = np.max(alphaRays)
-            else:
-                alphaMax = 1.
-            alphaColorRays = np.array([alphaRays / alphaMax]).T *\
-                self.lineOpacity
-            self.raysColor = np.float32(np.hstack([colorsRGBRays,
-                                                   alphaColorRays]))
+            if colorsRays is not None:
+                colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
+                                                           self.colorMin)
+                colorsRays = np.dstack((colorsRays,
+                                        np.ones_like(alphaRays)*0.85,
+                                        alphaRays))
+    #                                    np.ones_like(alphaRays)))
+                colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
+                if self.globalNorm:
+                    alphaMax = np.max(alphaRays)
+                else:
+                    alphaMax = 1.
+                alphaColorRays = np.array([alphaRays / alphaMax]).T *\
+                    self.lineOpacity
+                self.raysColor = np.float32(np.hstack([colorsRGBRays,
+                                                       alphaColorRays]))
         except:
             pass
         try:
             if self.colorMin == self.colorMax:
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
-            colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
-                                                       self.colorMin)
-            colorsDots = np.dstack((colorsDots,
-                                    np.ones_like(alphaDots)*0.85,
-                                    alphaDots))
-#                                    np.ones_like(alphaDots)))
-            colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-            if self.globalNorm:
-                alphaMax = np.max(alphaDots)
-            else:
-                alphaMax = 1.
-            alphaColorDots = np.array([alphaDots / alphaMax]).T *\
-                self.pointOpacity
-            self.dotsColor = np.float32(np.hstack([colorsRGBDots,
-                                                   alphaColorDots]))
+            if colorsDots is not None:
+                colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
+                                                           self.colorMin)
+                colorsDots = np.dstack((colorsDots,
+                                        np.ones_like(alphaDots)*0.85,
+                                        alphaDots))
+    #                                    np.ones_like(alphaDots)))
+                colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+                if self.globalNorm:
+                    alphaMax = np.max(alphaDots)
+                else:
+                    alphaMax = 1.
+                alphaColorDots = np.array([alphaDots / alphaMax]).T *\
+                    self.pointOpacity
+                self.dotsColor = np.float32(np.hstack([colorsRGBDots,
+                                                       alphaColorDots]))
         except:
             pass
 
         tmpMaxLen = np.max(tmpMax - tmpMin)
-
         if tmpMaxLen > maxLen:
             maxLen = tmpMaxLen
         self.maxLen = maxLen
@@ -2721,6 +2731,8 @@ class xrtGlWidget(QGLWidget):
             cProj = None
 
             for segment in self.arrayOfRays[0]:
+                if segment[3] is None:
+                    continue
                 beamStartTmp = self.beamsDict[segment[1]]
                 beamEndTmp = self.beamsDict[segment[3]]
                 bStart0 = np.array([beamStartTmp.x[0], beamStartTmp.y[0],
