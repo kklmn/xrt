@@ -84,6 +84,13 @@ elif Lens == roe.ParaboloidFlatLens:
 else:
     lensName = '3-'
 
+mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
+#mDiamond = rm.Material('C', rho=3.52, kind='lens')
+mAluminum = rm.Material('Al', rho=2.7, kind='lens')
+#mSilicon = rm.Material('Si', rho=2.33, kind='lens')
+#mNickel = rm.Material('Ni', rho=8.9, kind='lens')
+#mLead = rm.Material('Pb', rho=11.35, kind='lens')
+
 
 def build_beamline(nrays=1e4):
     beamLine = raycing.BeamLine(height=0)
@@ -96,7 +103,7 @@ def build_beamline(nrays=1e4):
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     beamLine.lens = Lens(
-        beamLine, 'CRL', pitch=np.pi/2, t=0,
+        beamLine, 'CRL', [0, p, 0], pitch=np.pi/2, t=0, material=mBeryllium,
         focus=parabolaParam, zmax=zmax, nCRL=(q, E0), alarmLevel=0.1)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
@@ -115,6 +122,7 @@ def run_process(beamLine):
         beamLine.fsm2.center[1] = p + q + dq
         outDict['beamFSM2_{0:02d}'.format(i)] = beamLine.fsm2.expose(lglobal)
     return outDict
+    beamLine.prepare_flow()
 rr.run_process = run_process
 
 
@@ -210,13 +218,6 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, plotsFSM2, beamLine):
-    mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
-#    mDiamond = rm.Material('C', rho=3.52, kind='lens')
-    mAluminum = rm.Material('Al', rho=2.7, kind='lens')
-#    mSilicon = rm.Material('Si', rho=2.33, kind='lens')
-#    mNickel = rm.Material('Ni', rho=8.9, kind='lens')
-#    mLead = rm.Material('Pb', rho=11.35, kind='lens')
-
 #    materials = mBeryllium, mDiamond, mAluminum, mSilicon, mNickel, mLead
     materials = mBeryllium, mAluminum
 
@@ -301,11 +302,13 @@ def plot_generator(plots, plotsFSM2, beamLine):
 
 def main():
     beamLine = build_beamline()
-    plots, plotsFSM2 = define_plots(beamLine)
-    xrtr.run_ray_tracing(
-        plots, repeats=16, generator=plot_generator,
-        generatorArgs=[plots, plotsFSM2, beamLine],
-        updateEvery=1, beamLine=beamLine, processes='half')
+#    plots, plotsFSM2 = define_plots(beamLine)
+#    xrtr.run_ray_tracing(
+#        plots, repeats=16, generator=plot_generator,
+#        generatorArgs=[plots, plotsFSM2, beamLine],
+#        updateEvery=1, beamLine=beamLine, processes='half')
+
+    beamLine.glow()
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:
