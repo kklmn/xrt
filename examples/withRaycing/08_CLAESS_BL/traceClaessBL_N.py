@@ -8,6 +8,8 @@ from ClaessBL_N import build_beamline, align_beamline
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+stripe = 'Rh'
+
 
 def add_plot(plots, plot, prefix, suffix):
     plots.append(plot)
@@ -18,11 +20,6 @@ def add_plot(plots, plot, prefix, suffix):
 
 
 def define_plots(beamLine, prefix, suffix, limEMono):
-    stripe = 'Rh'
-    align_beamline(
-        beamLine, hDiv=1.5e-3, vDiv=2.5e-4, nameVCMstripe=stripe,
-        nameDCMcrystal='Si111', energy=9000., fixedExit=25.,
-        nameDiagnFoil=u'Cu5µm', nameVFMcylinder=stripe)
     prefix += stripe + '-'
 
     fwhmFormatStrEMono = '%.2f'
@@ -247,9 +244,15 @@ def main():
     suffix = '-monoE'
     eMinRays, eMaxRays = limEMono
     myClaess = build_beamline(1e5, eMinRays, eMaxRays)
+    align_beamline(
+        myClaess, hDiv=1.5e-3, vDiv=2.5e-4, nameVCMstripe=stripe,
+        nameDCMcrystal='Si111', energy=9000., fixedExit=25.,
+        nameDiagnFoil=u'Cu5µm', nameVFMcylinder=stripe)
+
     plots = define_plots(myClaess, prefix, suffix, limEMono)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=myClaess,
                          afterScript=close_all, processes=1)
+#    myClaess.glow()
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

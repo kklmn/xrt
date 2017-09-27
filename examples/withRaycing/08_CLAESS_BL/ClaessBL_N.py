@@ -233,6 +233,7 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamFSMSample': beamFSMSample
                }
     beamLine.beams = outDict
+#    beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
