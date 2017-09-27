@@ -6,7 +6,7 @@ import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:igno
 #import math
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
-from BalderBL import build_beamline, align_beamline
+import BalderBL
 
 
 def add_plot(plots, plot, prefix, suffix):
@@ -233,17 +233,19 @@ def define_plots(beamLine, prefix, suffix):
 
 def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
          prefix):
-    myBalder = build_beamline(100000, hkl, stripe, eMinRays, eMaxRays)
-    align_beamline(myBalder, pitch=pitch, energy=eTune, fixedExit=fixedExit,
-                   vfmR=vfmR)
+    myBalder = BalderBL.build_beamline(100000, hkl, stripe, eMinRays, eMaxRays)
+    BalderBL.align_beamline(
+        myBalder, pitch=pitch, energy=eTune, fixedExit=fixedExit, vfmR=vfmR)
     suffix = ''
 #= touch the beam with the EH slit: ===========================================
 # note that for using `touch_beam` the beams must exist, therefore you should
 # run the source shrinkage above or `run_process` below this line.
 #    BalderBL.run_process(myBalder)
 #    myBalder.slitEH.touch_beam(myBalder.beams['beamVFMglobal'])
-    plots = define_plots(myBalder, prefix, suffix)
-    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes='half')
+
+#    plots = define_plots(myBalder, prefix, suffix)
+#    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes='half')
+    myBalder.glow()
 
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python

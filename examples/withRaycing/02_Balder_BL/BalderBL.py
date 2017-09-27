@@ -193,6 +193,8 @@ def run_process(beamLine, shineOnly1stSource=False):
         outDict['beamFilter2local1'] = beamFilter2local1
         outDict['beamFilter2local2'] = beamFilter2local2
     beamLine.beams = outDict
+
+    beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
