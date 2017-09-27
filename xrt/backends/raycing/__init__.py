@@ -133,24 +133,6 @@ import re
 import copy
 import inspect
 
-try:
-    from matplotlib.backends import qt_compat
-except ImportError:
-    from matplotlib.backends import qt4_compat
-    qt_compat = qt4_compat
-
-if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    QtName = "PyQt4"
-    import PyQt4.QtGui as myQtGUI
-elif 'pyqt5' in qt_compat.QT_API.lower():
-    QtName = "PyQt5"
-    import PyQt5.QtWidgets as myQtGUI
-else:
-    QtName = None
-
-if QtName is not None:
-    QApplication = myQtGUI.QApplication
-
 try:  # for Python 3 compatibility:
     unicode = unicode
 except NameError:
@@ -162,7 +144,7 @@ else:
     unicode = unicode
     basestring = basestring
 
-from .physconsts import SIE0
+from .physconsts import SIE0  # analysis:ignore
 zEps = 1e-12  # mm: target accuracy in z while searching for intersection
 misalignmentTolerated = 0.1  # for automatic checking of oe center position
 accuracyInPosition = 0.1  # accuracy for positioning of oe
@@ -485,10 +467,10 @@ def get_Ep_phase(beam):
 
 def get_polarization_degree(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    I = (beam.Jss + beam.Jpp)
-    I[I <= 0] = 1.
-    pd = np.sqrt((beam.Jss-beam.Jpp)**2 + 4.*abs(beam.Jsp)**2) / I
-    pd[I <= 0] = 0.
+    II = (beam.Jss + beam.Jpp)
+    II[II <= 0] = 1.
+    pd = np.sqrt((beam.Jss-beam.Jpp)**2 + 4.*abs(beam.Jsp)**2) / II
+    pd[II <= 0] = 0.
     return pd
 
 
@@ -501,10 +483,10 @@ def get_ratio_ellipse_axes(beam):
 
 def get_circular_polarization_rate(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    I = (beam.Jss + beam.Jpp)
-    I[I <= 0] = 1.
-    cpr = 2. * beam.Jsp.imag / I
-    cpr[I <= 0] = 0.
+    II = (beam.Jss + beam.Jpp)
+    II[II <= 0] = 1.
+    cpr = 2. * beam.Jsp.imag / II
+    cpr[II <= 0] = 0.
     return cpr
 
 
@@ -534,6 +516,7 @@ def get_a(beam):
 def get_b(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     return beam.b
+
 
 get_theta = get_incidence_angle
 
@@ -750,11 +733,11 @@ class BeamLine(object):
                 try:
                     if inBeam is None:
                         continue
-                except:
+                except NameError:
                     pass
                 try:
                     print(segment[0], segOE.center, segment[2]['beam'])
-                except:
+                except:  # analysis:ignore
                     pass
                 autoCenter = [x == 'auto' for x in usegOE.center]
 
@@ -895,7 +878,7 @@ class BeamLine(object):
                 try:
                     if inBeam is None:
                         continue
-                except:
+                except NameError:
                     pass
 
                 if align:
@@ -998,17 +981,22 @@ class BeamLine(object):
                     self.beamsDict[str(list(segment[3].values())[0])] =\
                         outBeams
 
-    def glow(self, xrtglowModule):
-        if QtName is not None:
-            if self.blViewer is None:
-                app = QApplication(sys.argv)
-                rayPath = self.export_to_glow()
-                self.blViewer = xrtglowModule.xrtGlow(rayPath)
-                self.blViewer.setWindowTitle("xrtGlow")
-                self.blViewer.show()
-                sys.exit(app.exec_())
-        else:
-            raise ImportError("PyQt not installed!")
+    def glow(self):
+        try:
+            from ... import xrtGlow as xrtglow
+        except ImportError:
+            print("cannot import xrtGlow")
+            return
+
+        from .run import run_process
+        run_process(self)
+        if self.blViewer is None:
+            app = xrtglow.QApplication(sys.argv)
+            rayPath = self.export_to_glow()
+            self.blViewer = xrtglow.xrtGlow(rayPath)
+            self.blViewer.setWindowTitle("xrtGlow")
+            self.blViewer.show()
+            sys.exit(app.exec_())
 
     def export_to_glow(self):
         if self.flow is not None:
