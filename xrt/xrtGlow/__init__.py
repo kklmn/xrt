@@ -500,12 +500,13 @@ class xrtGlow(QWidget):
             axLabel.objectName = "oeTileLabel_" + axis
             axEdit = QLineEdit("2")
             axEdit.setValidator(oeTileValidator)
+            axEdit.objectName = "oeTileEditor_" + axis
 #            axSlider = glowSlider(
 #                self, QtCore.Qt.Horizontal, glowTopScale)
 #            axSlider.setRange(1, 20, 1)
 #            axSlider.setValue(2)
             axEdit.editingFinished.connect(self.updateTileFromQLE)
-            axSlider.objectName = "oeTileSlider_" + axis
+#            axSlider.objectName = "oeTileSlider_" + axis
 #            axSlider.valueChanged.connect(self.updateTile)
             sceneLayout.addWidget(axLabel, 17+iaxis*2, 0)
             sceneLayout.addWidget(axEdit, 17+iaxis*2, 1)
