@@ -1333,9 +1333,15 @@ class Plate(DCM):
         kwargs = self.__pop_kwargs(**kwargs)
         DCM.__init__(self, *args, **kwargs)
         self.cryst2perpTransl = -self.t
-        if not self.material.kind.startswith("plate"):
-            print('Warning: the material of {0} is not of kind "plate"!'.
-                  format(self.name))
+        if self.material is not None:
+            if raycing.is_sequence(self.material):
+                materials = self.material
+            else:
+                materials = self.material,
+        for material in materials:
+            if not material.kind.startswith("plate"):
+                print('Warning: the material of {0} is not of kind "plate"!'.
+                      format(self.name))
 
     def __pop_kwargs(self, **kwargs):
         self.t = kwargs.pop('t', 0)  # difference of z zeros in mm
