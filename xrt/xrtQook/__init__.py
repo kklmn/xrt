@@ -82,7 +82,7 @@ __version__ = "1.3"
 import os
 import sys
 import textwrap
-import numpy as np
+import numpy as np  # analysis:ignore , really needed
 
 from datetime import date
 import inspect
@@ -94,16 +94,16 @@ try:
     import pyopencl as cl
     cl_platforms = cl.get_platforms()
     isOpenCL = True
-except:
+except ImportError:
     isOpenCL = False
 
 try:
-    from OpenGL import GL
-    from OpenGL import GLU
-    from OpenGL import GLUT
-    from OpenGL.arrays import vbo
+    from OpenGL import GL  # analysis:ignore
+    from OpenGL import GLU  # analysis:ignore
+    from OpenGL import GLUT  # analysis:ignore
+    from OpenGL.arrays import vbo  # analysis:ignore
     isOpenGL = True
-except:
+except ImportError:
     isOpenGL = False
 #  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
 #  It's definitely not the optimal solution, but it works.
@@ -114,7 +114,7 @@ except ImportError:
     try:
         from spyder.widgets.sourcecode import codeeditor
         isSpyderlib = True
-    except:
+    except ImportError:
         isSpyderlib = False
 
 try:
@@ -124,7 +124,7 @@ except ImportError:
     try:
         from spyder.widgets.externalshell import pythonshell
         isSpyderConsole = True
-    except:
+    except ImportError:
         isSpyderConsole = False
 
 try:
@@ -136,7 +136,7 @@ except (ImportError, TypeError):
         from spyder.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
                                                       generate_context)
         isSphinx = True
-    except:
+    except ImportError:
         CSS_PATH = None
         sphinxify = None
         isSphinx = False
@@ -151,7 +151,7 @@ if not isSphinx:
             from spyder.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
                                                         generate_context)  # analysis:ignore
             isSphinx = True
-        except:
+        except ImportError:
             pass
 
 if isSphinx:
@@ -173,7 +173,7 @@ if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
 elif 'pyqt5' in qt_compat.QT_API.lower():
     QtName = "PyQt5"
     from PyQt5 import QtGui, QtCore
-    from  PyQt5.QtCore import QSortFilterProxyModel
+    from PyQt5.QtCore import QSortFilterProxyModel
     import PyQt5.QtWidgets as myQtGUI
     try:
         import PyQt5.QtWebEngineWidgets as myQtWeb
@@ -258,21 +258,21 @@ except AttributeError:
             self.setPage(web_page)
 
 sys.path.append(os.path.join('..', '..'))
-
 import xrt  #analysis:ignore
-import xrt.backends.raycing as raycing  #analysis:ignore
-import xrt.backends.raycing.sources as rsources  #analysis:ignore
-import xrt.backends.raycing.screens as rscreens  #analysis:ignore
-import xrt.backends.raycing.materials as rmats  #analysis:ignore
-import xrt.backends.raycing.oes as roes  #analysis:ignore
-import xrt.backends.raycing.apertures as rapts  #analysis:ignore
-import xrt.backends.raycing.run as rrun  #analysis:ignore
-import xrt.plotter as xrtplot  #analysis:ignore
-import xrt.runner as xrtrun  #analysis:ignore
-import xrt.xrtGlow as xrtglow  #analysis:ignore
 
-path_to_xrt = os.path.dirname(os.path.dirname(
-    os.path.abspath(xrt.__file__)))
+from ..backends import raycing  # analysis:ignore
+from ..backends.raycing import sources as rsources  # analysis:ignore
+from ..backends.raycing import screens as rscreens  # analysis:ignore
+from ..backends.raycing import materials as rmats  # analysis:ignore
+from ..backends.raycing import oes as roes  # analysis:ignore
+from ..backends.raycing import apertures as rapts  # analysis:ignore
+from ..backends.raycing import oes as roes  # analysis:ignore
+from ..backends.raycing import run as rrun  # analysis:ignore
+from .. import plotter as xrtplot  # analysis:ignore
+from .. import runner as xrtrun  # analysis:ignore
+from .. import xrtGlow as xrtglow  # analysis:ignore
+
+path_to_xrt = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 myTab = 4*" "
 
 
@@ -1428,7 +1428,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                           elstr)))])
             try:
                 self.beamLine.beamsDict[beamName] = None
-            except:
+            except KeyError:
                 pass
 
         self.showDoc(methodItem.index())
@@ -1655,7 +1655,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         try:
                             del self.beamLine.beamsDict[str(
                                 iWidget.currentText())]
-                        except:
+                        except:  # analysis:ignore
                             pass
             self.deleteElement(view, iItem)
         else:
@@ -1861,7 +1861,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.update_beamline_beams(text=None)
                         self.update_beamline_materials(item=None)
                         self.update_beamline(item=None)
-                    except:
+                    except:  # analysis:ignore
                         pass
                     self.blUpdateLatchOpen = True
                 else:
@@ -2440,7 +2440,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def getVal(self, value):
         try:
             return eval(str(value))
-        except:
+        except:  # analysis:ignore
             return str(value)
 
     def quotize(self, value):
@@ -2543,7 +2543,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     try:
                         blMats[matName] = eval(matClassStr)(**kwArgs)
                         print("Class", matName, "successfully initialized.")
-                    except:
+                    except:  # analysis:ignore
                         blMats[matName] = None
                         print("Incorrect parameters. Class", matName,
                               "not initialized.")
@@ -2587,7 +2587,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     else:
                         self.beamLine.materialsDict[matName].__init__(**kwArgs)
                     print("Class", matName, "successfully initialized.")
-                except:
+                except:  # analysis:ignore
                     self.beamLine.materialsDict[matName] = None
                     print("Incorrect parameters. Class", matName,
                           "not initialized.")
@@ -2683,7 +2683,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 for isegment, segment in enumerate(self.beamLine.flow):
                     if segment[0] == elementNameStr:
                         return isegment
-            except:
+            except:  # analysis:ignore
                 return None
 
         def update_regexp():
@@ -2713,7 +2713,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                     iWidget.model(
                                                         ).setFilterRegExp(
                                                             regexp)
-                                                except:
+                                                except:  # analysis:ignore
                                                     continue
 
         self.rootBLItem.model().blockSignals(True)
@@ -2748,7 +2748,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 [eval(elClassStr)(**kwArgs), oeType]
                             print("Class", elNameStr,
                                   "successfully initialized.")
-                        except:
+                        except:  # analysis:ignore
                             self.beamLine.oesDict[elNameStr] =\
                                 [None, oeType]
                             self.beamLine.unalignedOesDict[elNameStr] =\
@@ -2849,7 +2849,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 self.beamLine.unalignedOesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
                                 print("Class", elNameStr,
                                       "successfully re-initialized.")
-                        except:
+                        except:  # analysis:ignore
                             self.beamLine.oesDict[elNameStr] =\
                                 [None, oeType]
                             self.beamLine.unalignedOesDict[elNameStr] =\
@@ -2895,7 +2895,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     [eval(elClassStr)(**kwArgs), oeType]
                                 print("Class", elNameStr,
                                       "successfully initialized.")
-                            except:
+                            except:  # analysis:ignore
                                 self.beamLine.oesDict[elNameStr] =\
                                     [None, oeType]
                                 self.beamLine.unalignedOesDict[elNameStr] =\
@@ -3499,6 +3499,7 @@ from collections import OrderedDict\n"""
 
     def aboutCode(self):
         import platform
+        from ..version import __version__ as xrtversion
 #        if use_pyside:
 #            Qt_version = QtCore.__version__
 #            PyQt_version = PySide.__version__
@@ -3529,8 +3530,7 @@ from collections import OrderedDict\n"""
                 Qt_version, QtName, PyQt_version)
         infText += '\npyopencl {}'.format(
             cl.VERSION if isOpenCL else 'not found')
-        infText += '\nxrt {0} in {1}'.format(
-            xrt.__version__, path_to_xrt)
+        infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
         msgBox.setInformativeText(infText)
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.exec_()

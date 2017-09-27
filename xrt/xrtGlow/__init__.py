@@ -92,10 +92,9 @@ QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
      QtGui.QStandardItem, QtGui.QPixmap,
      QtGui.QDoubleValidator, QtGui.QIntValidator)
 
-sys.path.append(os.path.join('..', '..'))
-import xrt.backends.raycing as raycing  # analysis:ignore
-import xrt.backends.raycing.sources as rsources  # analysis:ignore
-import xrt.backends.raycing.screens as rscreens  # analysis:ignore
+from ..backends import raycing  # analysis:ignore
+from ..backends.raycing import sources as rsources  # analysis:ignore
+from ..backends.raycing import screens as rscreens  # analysis:ignore
 
 
 class mySlider(QSlider):
