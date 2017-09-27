@@ -98,6 +98,7 @@ import os
 # import gc
 import numpy as np
 from scipy import interpolate
+import inspect
 
 from .. import raycing
 from . import stages as rst
@@ -1359,8 +1360,18 @@ class Plate(DCM):
         """
         self.material2 = self.material
         self.cryst2perpTransl = -self.t
-        return self.double_reflect(beam, needLocal, fromVacuum1=True,
-                                   fromVacuum2=False)
+        if self.bl is not None:
+            tmpFlowSource = self.bl.flowSource
+            if self.bl.flowSource != 'multiple_refract':
+                self.bl.flowSource = 'double_refract'
+        gb, lb1, lb2 = self.double_reflect(beam, needLocal, fromVacuum1=True,
+                                           fromVacuum2=False)
+        if self.bl is not None:
+            if self.bl.flowSource == 'double_refract':
+                self.bl.flowSource = tmpFlowSource
+        raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
+                               inspect.currentframe())
+        return gb, lb1, lb2
 
 
 class ParaboloidFlatLens(Plate):
@@ -1507,12 +1518,12 @@ class ParaboloidFlatLens(Plate):
         return 2 * self.focus / f /\
             (1 - self.material.get_refractive_index(E).real) * nFactor
 
-    def multiple_refract(self, beam, needLocal=False):
+    def multiple_refract(self, beam, needLocal=True):
         """
-        Sequentially applies the :meth:`double_refract` method to the stack of 
-        lenses, center of each of *nCRL* lens is shifted by *zmax* mm 
-        relative to the previous one along the beam propagation direction. 
-        Returned global beam emerges from the exit surface of the last lens, 
+        Sequentially applies the :meth:`double_refract` method to the stack of
+        lenses, center of each of *nCRL* lens is shifted by *zmax* mm
+        relative to the previous one along the beam propagation direction.
+        Returned global beam emerges from the exit surface of the last lens,
         returned local beams correspond to the entrance and exit surfaces of
         the first lens.
 
@@ -1531,6 +1542,8 @@ class ParaboloidFlatLens(Plate):
         if nCRL == 1:
             return self.double_refract(beam, needLocal=needLocal)
         else:
+            tmpFlowSource = self.bl.flowSource
+            self.bl.flowSource = 'multiple_refract'
             tempPos = self.center[1]
             beamIn = beam
             for ilens in range(nCRL):
@@ -1544,6 +1557,10 @@ class ParaboloidFlatLens(Plate):
                 if ilens == 0:
                     llocal1, llocal2 = tlocal1, tlocal2
             self.center[1] = tempPos
+            self.bl.flowSource = tmpFlowSource
+            raycing.append_to_flow(self.multiple_refract,
+                                   [lglobal, llocal1, llocal2],
+                                   inspect.currentframe())
             return lglobal, llocal1, llocal2
 
 

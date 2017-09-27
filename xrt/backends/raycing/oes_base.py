@@ -1846,6 +1846,8 @@ class DCM(OE):
             gb2.state[notGood] = self.lostNum
         if notGood.sum() > 0:
             rs.copy_beam(gb2, beam, notGood)
+
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
+
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates

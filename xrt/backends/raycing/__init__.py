@@ -624,7 +624,7 @@ def get_output(plot, beamsReturnedBy_run_process):
 def append_to_flow(meth, bOut, frame):
     oe = meth.__self__
     if oe.bl is not None:
-        if oe.bl.flowSource != 'Qook':
+        if oe.bl.flowSource == 'legacy':
             fdoc = re.findall(r"Returned values:.*", meth.__doc__)
             fdoc = fdoc[0].replace("Returned values: ", '').split(',')
             kwArgsIn = dict()
@@ -844,7 +844,10 @@ class BeamLine(object):
             if len(re.findall('sources_beams.Beam', str(type(memObject)))) > 0:
                 self.beamsDict[objectName] = memObject
                 self.beamsRevDict[id(memObject)] = objectName
-
+            if objectName == 'outDict':
+                for odObjectName, odMemObject in memObject.items():
+                    self.beamsDict[odObjectName] = odMemObject
+                    self.beamsRevDict[id(odMemObject)] = odObjectName
         if self.flow is not None and len(self.beamsRevDict) > 0:
             for segment in self.flow:
                 for iseg in [2, 3]:
@@ -990,9 +993,11 @@ class BeamLine(object):
 
         from .run import run_process
         run_process(self)
+#        print(self.flow)
         if self.blViewer is None:
             app = xrtglow.QApplication(sys.argv)
             rayPath = self.export_to_glow()
+#            print(rayPath)
             self.blViewer = xrtglow.xrtGlow(rayPath)
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.show()
@@ -1058,5 +1063,4 @@ class BeamLine(object):
                                         tmpBeamName, oeStr, gBeamName])
                 except:
                     continue
-
         return [rayPath, beamDict, oesDict]

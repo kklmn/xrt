@@ -661,6 +661,8 @@ class xrtGlow(QWidget):
                                     elName
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
+        print(self.oesList)
+        print(self.beamsToElements)
 
     def create_row(self, text, segMode):
         newRow = []
@@ -732,10 +734,12 @@ class xrtGlow(QWidget):
             newRow = self.create_row(element, 1)
             for segment in arrayOfRays[0]:
                 if str(segment[1]) == str(elRecord[1]):
-                    if segment[3] is not None:
+                    try:  # if segment[3] is not None:
                         endBeamText = "to {}".format(
                             self.beamsToElements[segment[3]])
                         newRow[0].appendRow(self.create_row(endBeamText, 3))
+                    except:
+                        continue
             self.segmentsModelRoot.appendRow(newRow)
 
     def drawColorMap(self, axis):
