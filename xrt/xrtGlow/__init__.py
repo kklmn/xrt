@@ -450,14 +450,16 @@ class xrtGlow(QWidget):
                                                     'Depth test for Points',
                                                     'Invert scene color',
                                                     'Use scalable font',
-                                                    'Show OE Labels']),
+                                                    'Show OE Labels',
+                                                    'Show lost rays']),
                                          [self.checkAA,
                                           self.checkBlending,
                                           self.checkLineDepthTest,
                                           self.checkPointDepthTest,
                                           self.invertSceneColor,
                                           self.checkScalableFont,
-                                          self.checkShowLabels]):
+                                          self.checkShowLabels,
+                                          self.checkShowLost]):
             aaCheckBox = QCheckBox()
             aaCheckBox.objectName = "aaChb" + str(iCB)
             aaCheckBox.setCheckState(2) if iCB in [1, 2] else\
@@ -476,8 +478,8 @@ class xrtGlow(QWidget):
         axSlider.setRange(1, 20, 0.5)
         axSlider.setValue(5)
         axSlider.valueChanged.connect(self.updateFontSize)
-        sceneLayout.addWidget(axLabel, 7+iCB, 0)
-        sceneLayout.addWidget(axSlider, 7+iCB, 1, 1, 2)
+        sceneLayout.addWidget(axLabel, 8+iCB, 0)
+        sceneLayout.addWidget(axSlider, 8+iCB, 1, 1, 2)
 
         labelPrec = QSpinBox()
         labelPrec.setRange(0, 4)
@@ -486,8 +488,8 @@ class xrtGlow(QWidget):
         labelPrec.valueChanged.connect(self.setLabelPrec)
         aaLabel = QLabel()
         aaLabel.setText('Label Precision')
-        sceneLayout.addWidget(aaLabel, 8+iCB, 0)
-        sceneLayout.addWidget(labelPrec, 8+iCB, 1)
+        sceneLayout.addWidget(aaLabel, 9+iCB, 0)
+        sceneLayout.addWidget(labelPrec, 9+iCB, 1)
 
         oeTileValidator = QIntValidator()
         oeTileValidator.setRange(1, 20)
@@ -498,16 +500,16 @@ class xrtGlow(QWidget):
             axLabel.objectName = "oeTileLabel_" + axis
             axEdit = QLineEdit("2")
             axEdit.setValidator(oeTileValidator)
-            axSlider = glowSlider(
-                self, QtCore.Qt.Horizontal, glowTopScale)
-            axSlider.setRange(1, 20, 1)
-            axSlider.setValue(2)
+#            axSlider = glowSlider(
+#                self, QtCore.Qt.Horizontal, glowTopScale)
+#            axSlider.setRange(1, 20, 1)
+#            axSlider.setValue(2)
             axEdit.editingFinished.connect(self.updateTileFromQLE)
             axSlider.objectName = "oeTileSlider_" + axis
-            axSlider.valueChanged.connect(self.updateTile)
-            sceneLayout.addWidget(axLabel, 15+iaxis*2, 0)
-            sceneLayout.addWidget(axEdit, 15+iaxis*2, 1)
-            sceneLayout.addWidget(axSlider, 15+iaxis*2+1, 0, 1, 2)
+#            axSlider.valueChanged.connect(self.updateTile)
+            sceneLayout.addWidget(axLabel, 17+iaxis*2, 0)
+            sceneLayout.addWidget(axEdit, 17+iaxis*2, 1)
+#            sceneLayout.addWidget(axSlider, 17+iaxis*2+1, 0, 1, 2)
 
         self.scenePanel.setLayout(sceneLayout)
 
@@ -793,6 +795,11 @@ class xrtGlow(QWidget):
 
     def checkShowLabels(self, state):
         self.customGlWidget.showOeLabels = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkShowLost(self, state):
+        self.customGlWidget.showLostRays = True if state > 0 else False
+        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
     def setSceneParam(self, iAction, state):
@@ -1358,22 +1365,27 @@ class xrtGlow(QWidget):
         cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
         self.customGlWidget.glDraw()
 
-    def updateTile(self, position):
-        cPan = self.sender()
-        cIndex = cPan.parent().layout().indexOf(cPan)
-        cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
-        objNameType = cPan.objectName[-1]
-        if objNameType == 'X':
-            self.customGlWidget.tiles[0] = np.int(position)
-        elif objNameType == 'Y':
-            self.customGlWidget.tiles[1] = np.int(position)
-        self.customGlWidget.glDraw()
+#    def updateTile(self, position):
+#        cPan = self.sender()
+#        cIndex = cPan.parent().layout().indexOf(cPan)
+#        cPan.parent().layout().itemAt(cIndex-1).widget().setText(str(position))
+#        objNameType = cPan.objectName[-1]
+#        if objNameType == 'X':
+#            self.customGlWidget.tiles[0] = np.int(position)
+#        elif objNameType == 'Y':
+#            self.customGlWidget.tiles[1] = np.int(position)
+#        self.customGlWidget.glDraw()
 
     def updateTileFromQLE(self):
         cPan = self.sender()
-        cIndex = cPan.parent().layout().indexOf(cPan)
+#        cIndex = cPan.parent().layout().indexOf(cPan)
         value = int(str(cPan.text()))
-        cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
+#        cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
+        objNameType = cPan.objectName[-1]
+        if objNameType == 'X':
+            self.customGlWidget.tiles[0] = np.int(value)
+        elif objNameType == 'Y':
+            self.customGlWidget.tiles[1] = np.int(value)
         self.customGlWidget.glDraw()
 
     def updateProjectionOpacity(self, position):
@@ -1449,6 +1461,7 @@ class xrtGlWidget(QGLWidget):
         self.colorMin = 1e20
         self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.maxLen = 1.
+        self.showLostRays = False
         self.populateVerticesArray(modelRoot)
 
         self.drawGrid = True
@@ -1534,6 +1547,11 @@ class xrtGlWidget(QGLWidget):
         alphaRays = None
         colorsDots = None
         alphaDots = None
+
+        verticesArrayLost = None
+        colorsRaysLost = None
+        footprintsArrayLost = None
+        colorsDotsLost = None
         maxLen = 1.
         tmpMax = -1.e12 * np.ones(3)
         tmpMin = -1. * tmpMax
@@ -1589,9 +1607,8 @@ class xrtGlWidget(QGLWidget):
                     if segmentItem0.checkState() == 2:
                         endBeam = self.beamsDict[
                             self.oesList[str(segmentItem0.text())[3:]][1]]
-#                        lostNum = self.oesList[str(
-#                            segmentItem0.text())[3:]][0].lostNum
                         good = startBeam.state > 0
+
                         intensity = np.sqrt(np.abs(
                             startBeam.Jss**2 + startBeam.Jpp**2))
                         intensityAll = intensity / np.max(intensity[good])
@@ -1640,8 +1657,37 @@ class xrtGlWidget(QGLWidget):
                         self.verticesArray = vertices.T if\
                             self.verticesArray is None else\
                             np.vstack((self.verticesArray, vertices.T))
+
+                        if self.showLostRays:
+                            try:
+                                lostNum = self.oesList[str(
+                                    segmentItem0.text())[3:]][0].lostNum
+                            except:
+                                lostNum = 'None'
+                            lost = startBeam.state == lostNum
+                            try:
+                                lostOnes = len(startBeam.x[lost]) * 2
+                            except:
+                                lostOnes = 0
+                            colorsRaysLost = lostOnes if colorsRaysLost is\
+                                None else colorsRaysLost + lostOnes
+                            verticesLost = np.array(
+                                [startBeam.x[lost] - self.coordOffset[0],
+                                 endBeam.x[lost] -
+                                 self.coordOffset[0]]).flatten('F')
+                            verticesLost = np.vstack((verticesLost, np.array(
+                                [startBeam.y[lost] - self.coordOffset[1],
+                                 endBeam.y[lost] -
+                                 self.coordOffset[1]]).flatten('F')))
+                            verticesLost = np.vstack((verticesLost, np.array(
+                                [startBeam.z[lost] - self.coordOffset[2],
+                                 endBeam.z[lost] -
+                                 self.coordOffset[2]]).flatten('F')))
+                            verticesArrayLost = verticesLost.T if\
+                                verticesArrayLost is None else\
+                                np.vstack((verticesArrayLost, verticesLost.T))
+
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
-                # lostNum = self.oesList[str(ioeItem.text())][0].lostNum
                 good = startBeam.state > 0
                 intensity = np.sqrt(np.abs(
                     startBeam.Jss**2 + startBeam.Jpp**2))
@@ -1673,6 +1719,7 @@ class xrtGlWidget(QGLWidget):
                     colorsDots is None else np.concatenate(
                         (colorsDots.T, np.array(self.getColor(
                              startBeam)[good]).T))
+
                 vertices = np.array(startBeam.x[good] - self.coordOffset[0])
                 vertices = np.vstack((vertices, np.array(
                     startBeam.y[good] - self.coordOffset[1])))
@@ -1681,7 +1728,28 @@ class xrtGlWidget(QGLWidget):
                 self.footprintsArray = vertices.T if\
                     self.footprintsArray is None else\
                     np.vstack((self.footprintsArray, vertices.T))
-
+                if self.showLostRays:
+                    try:
+                        lostNum = self.oesList[str(ioeItem.text())][0].lostNum
+                    except:
+                        lostNum = 'None'
+                    lost = startBeam.state == lostNum
+                    try:
+                        lostOnes = len(startBeam.x[lost])
+                    except:
+                        lostOnes = 0
+                    colorsDotsLost = lostOnes if\
+                        colorsDotsLost is None else\
+                        colorsDotsLost + lostOnes
+                    verticesLost = np.array(startBeam.x[lost] -
+                                            self.coordOffset[0])
+                    verticesLost = np.vstack((verticesLost, np.array(
+                        startBeam.y[lost] - self.coordOffset[1])))
+                    verticesLost = np.vstack((verticesLost, np.array(
+                        startBeam.z[lost] - self.coordOffset[2])))
+                    footprintsArrayLost = verticesLost.T if\
+                        footprintsArrayLost is None else\
+                        np.vstack((footprintsArrayLost, verticesLost.T))
         try:
             if self.colorMin == self.colorMax:
                 self.colorMin = self.colorMax * 0.99
@@ -1702,8 +1770,18 @@ class xrtGlWidget(QGLWidget):
                     self.lineOpacity
                 self.raysColor = np.float32(np.hstack([colorsRGBRays,
                                                        alphaColorRays]))
+            if self.showLostRays:
+                if colorsRaysLost is not None:
+                    lostColor = np.zeros((colorsRaysLost, 4))
+                    lostColor[:, 0] = 0.5
+                    lostColor[:, 3] = 0.25
+                    self.raysColor = np.float32(np.vstack((self.raysColor,
+                                                           lostColor)))
+                if verticesArrayLost is not None:
+                    self.verticesArray = np.float32(np.vstack((
+                        self.verticesArray, verticesArrayLost)))
         except:
-            pass
+            raise
         try:
             if self.colorMin == self.colorMax:
                 self.colorMin = self.colorMax * 0.99
@@ -1724,6 +1802,16 @@ class xrtGlWidget(QGLWidget):
                     self.pointOpacity
                 self.dotsColor = np.float32(np.hstack([colorsRGBDots,
                                                        alphaColorDots]))
+            if self.showLostRays:
+                if colorsDotsLost is not None:
+                    lostColor = np.zeros((colorsDotsLost, 4))
+                    lostColor[:, 0] = 0.5
+                    lostColor[:, 3] = 0.25
+                    self.dotsColor = np.float32(np.vstack((self.dotsColor,
+                                                           lostColor)))
+                if footprintsArrayLost is not None:
+                    self.footprintsArray = np.float32(np.vstack((
+                        self.footprintsArray, footprintsArrayLost)))
         except:
             pass
 
