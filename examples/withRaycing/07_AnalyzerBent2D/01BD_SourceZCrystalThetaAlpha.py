@@ -226,6 +226,7 @@ def run_process(beamLine):
                'beamAnalyzerLocal': beamAnalyzerLocal,
                'beamDetector': beamDetector
                }
+    beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -607,13 +608,16 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
 
 def main():
     beamLine = build_beamline()
-    plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
-        define_plots(beamLine)
-    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE,
-            beamLine]
-    xrtr.run_ray_tracing(
-        plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes='half')
+#    plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
+#        define_plots(beamLine)
+#    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE,
+#            beamLine]
+#    xrtr.run_ray_tracing(
+#        plots, generator=plot_generator, generatorArgs=args,
+#        beamLine=beamLine, processes='half')
+
+    plot_generator([], [], [], [], [], [], beamLine)
+    beamLine.glow()
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:
