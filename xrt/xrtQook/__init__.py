@@ -2831,7 +2831,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         paramValue = self.parametrize(str(item.text()))
                         setattr(self.beamLine, paramName, paramValue)
                         startFrom = 0
-                    else:  # Setters and getters not implemented yet for OE
+                    else:  # Setters and getters not implemented yet for OEs
                         oeType = 0 if len(re.findall(
                             'raycing.sou', elClassStr)) > 0 else 1
                         try:
@@ -2856,7 +2856,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 [None, oeType]
                             print("Incorrect parameters. Class", elNameStr,
                                   "not initialized.")
-                        startFrom = name_to_flow_pos(elNameStr)
+                        if len(re.findall('raycing.aper', elClassStr)) > 0:
+                            if self.rayPath is not None:
+                                for segment in self.rayPath[0]:
+                                    if segment[2] == elNameStr:
+                                        startFrom =\
+                                            name_to_flow_pos(segment[0])
+                                        break
+                        else:
+                            startFrom = name_to_flow_pos(elNameStr)
                 elif pText in ['parameters', 'output'] and iCol > 0:
                     elItem = item.parent().parent().parent()
                     elNameStr = str(elItem.text())
