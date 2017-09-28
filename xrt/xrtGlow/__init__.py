@@ -12,6 +12,7 @@ from functools import partial
 import matplotlib as mpl
 import inspect
 import re
+import copy
 #import time
 
 from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
@@ -316,15 +317,27 @@ class xrtGlow(QWidget):
         axLabel.objectName = "cutLabel_I"
         axEdit = QLineEdit("0.01")
         cutValidator = QDoubleValidator()
-        cutValidator.setRange(0, 1, 9)
+        cutValidator.setRange(0, 1, 3)
         axEdit.setValidator(cutValidator)
-        axSlider = glowSlider(
-            self, QtCore.Qt.Horizontal, glowTopScale)
-        axSlider.setRange(0, 1, 0.001)
-        axSlider.setValue(0.01)
         axEdit.editingFinished.connect(self.updateCutoffFromQLE)
-        axSlider.objectName = "cutSlider_I"
-        axSlider.valueChanged.connect(self.updateCutoff)
+
+        explLabel = QLabel()
+        explLabel.setText("Color axis bump, mm")
+        explLabel.objectName = "explodeLabel"
+        explEdit = QLineEdit("0.0")
+        explValidator = QDoubleValidator()
+        explValidator.setRange(-100, 100, 3)
+        explEdit.setValidator(explValidator)
+        explEdit.editingFinished.connect(self.updateExplosionDepth)
+
+#        axSlider = glowSlider(
+#            self, QtCore.Qt.Horizontal, glowTopScale)
+#        axSlider.setRange(0, 1, 0.001)
+#        axSlider.setValue(0.01)
+#        axSlider.objectName = "cutSlider_I"
+#        axSlider.valueChanged.connect(self.updateCutoff)
+        
+        
 
         glNormCB = QCheckBox()
         glNormCB.objectName = "gNormChb_" + str(iaxis)
@@ -335,7 +348,9 @@ class xrtGlow(QWidget):
 
         colorLayout.addWidget(axLabel, 2+3, 0)
         colorLayout.addWidget(axEdit, 2+3, 1)
-        colorLayout.addWidget(axSlider, 3+3, 0, 1, 2)
+        colorLayout.addWidget(explLabel, 3+3, 0)
+        colorLayout.addWidget(explEdit, 3+3, 1)
+#        colorLayout.addWidget(axSlider, 3+3, 0, 1, 2)
         colorLayout.addWidget(glNormCB, 4+3, 0, 1, 1)
         colorLayout.addWidget(glNormLabel, 4+3, 1, 1, 1)
         self.colorPanel.setLayout(colorLayout)
@@ -661,8 +676,8 @@ class xrtGlow(QWidget):
                                     elName
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
-        print(self.oesList)
-        print(self.beamsToElements)
+#        print(self.oesList)
+#        print(self.beamsToElements)
 
     def create_row(self, text, segMode):
         newRow = []
@@ -1304,19 +1319,35 @@ class xrtGlow(QWidget):
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
-    def updateCutoff(self, position):
+#    def updateCutoff(self, position):
+#        try:
+#            cPan = self.sender()
+#            if isinstance(position, int):
+#                try:
+#                    position /= cPan.scale
+#                except:
+#                    pass
+#            cIndex = cPan.parent().layout().indexOf(cPan)
+#            cPan.parent().layout().itemAt(cIndex-1).widget().setText(
+#                str(position))
+#            extents = list(self.paletteWidget.span.extents)
+#            self.customGlWidget.cutoffI = np.float32(position)
+#            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+#            newExtents = (extents[0], extents[1],
+#                          self.customGlWidget.cutoffI, extents[3])
+#            self.paletteWidget.span.extents = newExtents
+#            self.customGlWidget.glDraw()
+#        except:
+#            pass
+
+    def updateCutoffFromQLE(self):
         try:
             cPan = self.sender()
-            if isinstance(position, int):
-                try:
-                    position /= cPan.scale
-                except:
-                    pass
-            cIndex = cPan.parent().layout().indexOf(cPan)
-            cPan.parent().layout().itemAt(cIndex-1).widget().setText(
-                str(position))
+#            cIndex = cPan.parent().layout().indexOf(cPan)
+            value = float(str(cPan.text()))
+#            cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
             extents = list(self.paletteWidget.span.extents)
-            self.customGlWidget.cutoffI = np.float32(position)
+            self.customGlWidget.cutoffI = np.float32(value)
             self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
             newExtents = (extents[0], extents[1],
                           self.customGlWidget.cutoffI, extents[3])
@@ -1325,13 +1356,16 @@ class xrtGlow(QWidget):
         except:
             pass
 
-    def updateCutoffFromQLE(self):
+    def updateExplosionDepth(self):
         try:
             cPan = self.sender()
             cIndex = cPan.parent().layout().indexOf(cPan)
             value = float(str(cPan.text()))
-            cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
-            self.customGlWidget.glDraw()
+#            cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
+            self.customGlWidget.depthScaler = np.float32(value)
+            if self.customGlWidget.virtScreen is not None:
+                self.customGlWidget.populateVScreen()
+                self.customGlWidget.glDraw()
         except:
             pass
 
@@ -1427,6 +1461,7 @@ class xrtGlWidget(QGLWidget):
         self.vScreenSize = 5.
         self.setMinimumSize(500, 500)
         self.aspect = 1.
+        self.depthScaler = 0.
         self.viewPortGL = [0, 0, 700, 700]
         self.perspectiveEnabled = True
         self.cameraAngle = 60
@@ -2781,21 +2816,27 @@ class xrtGlWidget(QGLWidget):
             alphaDots = intensity[good].T / alphaMax
             colorsDots = np.array(self.getColor(startBeam)[good]).T
 
-            vertices = np.array(startBeam.x[good] - self.coordOffset[0])
-            vertices = np.vstack((vertices, np.array(
-                startBeam.y[good] - self.coordOffset[1])))
-            vertices = np.vstack((vertices, np.array(
-                startBeam.z[good] - self.coordOffset[2])))
-            self.virtDotsArray = vertices.T
             if self.colorMin == self.colorMax:
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
             colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
                                                        self.colorMin)
+            depthDots = copy.deepcopy(colorsDots) * self.depthScaler
+
             colorsDots = np.dstack((colorsDots,
                                     np.ones_like(alphaDots)*0.85,
-                                    np.ones_like(alphaDots)))
-#                                    alphaDots))
+#                                    np.ones_like(alphaDots)))
+                                    alphaDots))
+
+            deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
+
+            vertices = np.array(
+                startBeam.x[good] - deltaY[:, 0] - self.coordOffset[0])
+            vertices = np.vstack((vertices, np.array(
+                startBeam.y[good] - deltaY[:, 1] - self.coordOffset[1])))
+            vertices = np.vstack((vertices, np.array(
+                startBeam.z[good] - deltaY[:, 2] - self.coordOffset[2])))
+            self.virtDotsArray = vertices.T
 
             colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
             if self.globalNorm:
