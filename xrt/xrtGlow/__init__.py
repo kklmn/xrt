@@ -5,7 +5,6 @@ Created on Tue Jun 20 15:07:53 2017
 @author: Roman Chernikov
 """
 
-import sys
 import os
 import numpy as np
 from functools import partial
@@ -13,11 +12,10 @@ import matplotlib as mpl
 import inspect
 import re
 import copy
-#import time
 
 from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc,\
-    glEnableClientState, glPolygonMode, glGetDoublev, glDisable, glShadeModel,\
+    glEnableClientState, glPolygonMode, glGetDoublev, glDisable,\
     glDisableClientState, glRasterPos3f, glPushMatrix, glTranslatef, glScalef,\
     glPopMatrix, glFlush, glVertexPointerf, glColorPointerf, glLineWidth,\
     glDrawArrays, glMap2f, glMapGrid2f, glEvalMesh2, glLightModeli, glLightfv,\
@@ -29,12 +27,11 @@ from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     GL_ONE_MINUS_SRC_ALPHA, GL_POINT_SMOOTH, GL_COLOR_ARRAY, GL_LINE,\
     GL_LINE_SMOOTH, GL_LINE_SMOOTH_HINT,\
     GL_NICEST, GL_POLYGON_SMOOTH_HINT, GL_POINT_SMOOTH_HINT, GL_DEPTH_TEST,\
-    GL_FILL, GL_NORMAL_ARRAY, GL_NORMALIZE, GL_SMOOTH, GL_VERTEX_ARRAY,\
+    GL_FILL, GL_NORMAL_ARRAY, GL_NORMALIZE, GL_VERTEX_ARRAY,\
     GL_QUADS, GL_MAP2_VERTEX_3, GL_MAP2_NORMAL, GL_LIGHTING, GL_POINTS,\
     GL_LIGHT_MODEL_TWO_SIDE, GL_LIGHT0, GL_POSITION, GL_SPOT_DIRECTION,\
     GL_SPOT_CUTOFF, GL_SPOT_EXPONENT, GL_TRIANGLE_FAN, GL_VIEWPORT, GL_LINES,\
-    GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX, GL_POLYGON_SMOOTH,\
-    GL_SRC_ALPHA_SATURATE, GL_ONE
+    GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX
 
 from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
 
@@ -322,7 +319,7 @@ class xrtGlow(QWidget):
         axEdit.editingFinished.connect(self.updateCutoffFromQLE)
 
         explLabel = QLabel()
-        explLabel.setText("Color axis bump, mm")
+        explLabel.setText("Color bump height, mm")
         explLabel.objectName = "explodeLabel"
         explEdit = QLineEdit("0.0")
         explValidator = QDoubleValidator()
@@ -336,8 +333,6 @@ class xrtGlow(QWidget):
 #        axSlider.setValue(0.01)
 #        axSlider.objectName = "cutSlider_I"
 #        axSlider.valueChanged.connect(self.updateCutoff)
-        
-        
 
         glNormCB = QCheckBox()
         glNormCB.objectName = "gNormChb_" + str(iaxis)
@@ -1359,7 +1354,7 @@ class xrtGlow(QWidget):
     def updateExplosionDepth(self):
         try:
             cPan = self.sender()
-            cIndex = cPan.parent().layout().indexOf(cPan)
+#            cIndex = cPan.parent().layout().indexOf(cPan)
             value = float(str(cPan.text()))
 #            cPan.parent().layout().itemAt(cIndex+1).widget().setValue(value)
             self.customGlWidget.depthScaler = np.float32(value)
@@ -2065,8 +2060,10 @@ class xrtGlWidget(QGLWidget):
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
                 elType = str(type(oeToPlot))
-                if len(re.findall('raycing.screen', elType)) > 0:  # screen
+                if len(re.findall('raycing.screens.Sc', elType)) > 0:  # screen
                     self.plotScreen(oeToPlot)
+                elif len(re.findall('raycing.screens.Hemispher', elType)) > 0:
+                    self.plotHemiScreen(oeToPlot)
                 else:
                     continue
 
@@ -2577,6 +2574,82 @@ class xrtGlWidget(QGLWidget):
                                               self.coordOffset))
             glEnd()
 
+    def plotHemiScreen(self, oe, dimensions=None):
+        try:
+            rMajor = oe.R
+        except:
+            rMajor = 1000.
+
+        if dimensions is not None:
+            rMinor = dimensions
+        else:
+            rMinor = self.vScreenSize
+
+        if rMinor > rMajor:
+            rMinor = rMajor
+
+        yVec = np.array(oe.x)
+
+        sphereCenter = np.array(oe.center)
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+        if self.invertColors:
+            glColor4f(0.0, 0.0, 0.0, 0.2)
+        else:
+            glColor4f(1.0, 1.0, 1.0, 0.2)
+
+        glEnable(GL_MAP2_VERTEX_3)
+
+        dAngle = np.arctan2(rMinor, rMajor)
+
+        xLimits = [-dAngle + yVec[0], dAngle + yVec[0]]
+        yLimits = [-dAngle + yVec[2], dAngle + yVec[2]]
+
+        for i in range(self.tiles[0]):
+            deltaX = (xLimits[1] - xLimits[0]) /\
+                float(self.tiles[0])
+            xGridOe = np.linspace(xLimits[0] + i*deltaX,
+                                  xLimits[0] + (i+1)*deltaX,
+                                  self.surfCPOrder)
+            for k in range(self.tiles[1]):
+                deltaY = (yLimits[1] - yLimits[0]) /\
+                    float(self.tiles[1])
+                yGridOe = np.linspace(yLimits[0] + k*deltaY,
+                                      yLimits[0] + (k+1)*deltaY,
+                                      self.surfCPOrder)
+                xv, yv = np.meshgrid(xGridOe, yGridOe)
+                xv = xv.flatten()
+                yv = yv.flatten()
+
+                ibp = rsources.Beam(nrays=len(xv))
+                ibp.x[:] = sphereCenter[0]
+                ibp.y[:] = sphereCenter[1]
+                ibp.z[:] = sphereCenter[2]
+                ibp.b[:] = yVec[1]
+                ibp.a = xv
+                ibp.c = yv
+                ibp.state[:] = 1
+
+                gbp = oe.expose_global(beam=ibp)
+
+                surfCP = np.vstack((gbp.x - self.coordOffset[0],
+                                    gbp.y - self.coordOffset[1],
+                                    gbp.z - self.coordOffset[2])).T
+
+                glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                        self.modelToWorld(surfCP.reshape(
+                            self.surfCPOrder,
+                            self.surfCPOrder, 3)))
+
+                glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                            self.surfCPOrder, 0.0, 1.0)
+
+                glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
+                            0, self.surfCPOrder)
+
+        glDisable(GL_MAP2_VERTEX_3)
+
     def addLighting(self, pos):
         spot = 60
         exp = 30
@@ -2774,7 +2847,7 @@ class xrtGlWidget(QGLWidget):
             glRasterPos3f(axisLen*1.5, 0, 0)
             for symbol in "  {}, mm".format('X'):
                 glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
-        glFlush()
+#        glFlush()
         glViewport(*pView)
         glColor4f(1, 1, 1, 1)
         glDisable(GL_LINE_SMOOTH)
@@ -2825,8 +2898,8 @@ class xrtGlWidget(QGLWidget):
 
             colorsDots = np.dstack((colorsDots,
                                     np.ones_like(alphaDots)*0.85,
-#                                    np.ones_like(alphaDots)))
                                     alphaDots))
+#                                    np.ones_like(alphaDots)))
 
             deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
 
