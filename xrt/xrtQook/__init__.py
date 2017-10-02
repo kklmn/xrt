@@ -947,7 +947,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.webHelp.page().setLinkDelegationPolicy(0)
         argSpecStr = '('
         for arg, argVal in self.getParams(obj):
-            argSpecStr += '{0}={1}, '.format(arg, argVal)
+            showVal = self.quotize(argVal)
+            try:
+                showVal = showVal.strip('r') if showVal.startswith('r"') else\
+                    showVal
+                showVal = showVal.strip('"') if\
+                    (arg == 'bl' and showVal is not None) else showVal
+            except:
+                pass
+            argSpecStr += '{0}={1}, '.format(arg, showVal)
         argSpecStr = argSpecStr.rstrip(', ') + ')'
         objP = self.getVal(obj)
         nameStr = objP.__name__
@@ -967,7 +975,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if len(dNames) > 0:
             argDocStr += '{0}Properties\n{0}{1}\n\n'.format(myTab, 10*'-')
         for dName, dVal in zip(dNames, dVals):
-            argDocStr += u'{2}{0}*: {1}\n\n'.format(dName, dVal, myTab)
+            argDocStr += u'{2}*{0}*: {1}\n\n'.format(dName, dVal, myTab)
 
         if isSphinx:
             self.webHelp.history().clear()
@@ -1533,8 +1541,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 break
 
     def getArgDescr(self, obj):
-        argDescName = []
-        argDescValue = []
+        argDesc = dict()
+#        argDescValue = []
         objRef = eval(obj)
 
         def parseDescr(obji):
@@ -1547,11 +1555,26 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         fdc.rstrip("\n")) for fdc in fdocRec]
                     for desc in descs:
                         if len(desc) == 2:
-                            descName = desc[0]
+                            descName = desc[0].strip("\*")
                             descBody = desc[1].strip("\* ")
-                            if descName not in argDescName:
-                                argDescName.append(descName)
-                                argDescValue.append(descBody)
+                            if descName not in argDesc.keys():
+                                argDesc[descName] = descBody
+#                                argDescName.append(descName)
+#                                argDescValue.append(descBody)
+
+        def sortDescr():
+            retArgDescs = []
+            retArgDescVals = []
+            argKeys = argDesc.keys()
+            for arg in argZip:
+                for argKey in argKeys:
+                    if len(re.findall(arg, argKey)) > 0:
+                        retArgDescs.append(argKey)
+                        retArgDescVals.append(argDesc[argKey])
+                        break
+            return retArgDescs, retArgDescVals
+
+        argZip = OrderedDict(self.getParams(obj)).keys()
 
         if inspect.isclass(objRef):
             for parent in inspect.getmro(objRef)[:-1]:
@@ -1562,7 +1585,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         else:
             parseDescr(objRef)
 
-        return argDescName, argDescValue
+        return sortDescr()
 
     def addMaterial(self, name, obj):
         for i in range(99):

@@ -459,7 +459,7 @@ class xrtGlow(QWidget):
                                                     'Depth test for Points',
                                                     'Invert scene color',
                                                     'Use scalable font',
-                                                    'Show OE Labels',
+                                                    'Show VScreen Label',
                                                     'Show lost rays']),
                                          [self.checkAA,
                                           self.checkBlending,
@@ -591,9 +591,10 @@ class xrtGlow(QWidget):
         newModel = QStandardItemModel()
         newModel.setHorizontalHeaderLabels(['Rays',
                                             'Footprint',
-                                            'Surface'])
+                                            'Surface',
+                                            'Label'])
         headerRow = []
-        for i in range(3):
+        for i in range(4):
             child = QStandardItem("")
             child.setEditable(False)
             child.setCheckable(True)
@@ -676,7 +677,7 @@ class xrtGlow(QWidget):
 
     def create_row(self, text, segMode):
         newRow = []
-        for iCol in range(3):
+        for iCol in range(4):
             newItem = QStandardItem(str(text) if iCol == 0 else "")
             newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
                                  (segMode == 1 and iCol > 0) else False)
@@ -689,7 +690,7 @@ class xrtGlow(QWidget):
     def update_segments_model(self, arrayOfRays):
         def copy_row(item, row):
             newRow = []
-            for iCol in range(3):
+            for iCol in range(4):
                 oldItem = item.child(row, iCol)
                 newItem = QStandardItem(str(oldItem.text()))
                 newItem.setCheckable(oldItem.isCheckable())
@@ -1089,7 +1090,14 @@ class xrtGlow(QWidget):
             model.blockSignals(False)
             model.layoutChanged.emit()
 
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        if item.column() == 3:
+            self.customGlWidget.labelsToPlot = []
+            for ioe in range(self.segmentsModelRoot.rowCount() - 1):
+                if self.segmentsModelRoot.child(ioe + 1, 3).checkState() == 2:
+                    self.customGlWidget.labelsToPlot.append(str(
+                        self.segmentsModelRoot.child(ioe + 1, 0).text()))
+        else:
+            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
     def oeTreeMenu(self, position):
@@ -1602,7 +1610,7 @@ class xrtGlWidget(QGLWidget):
             if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
                 self.oesToPlot.append(str(ioeItem.text()))
                 self.footprints[str(ioeItem.text())] = None
-            if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
+            if segmentsModelRoot.child(ioe + 1, 3).checkState() == 2:
                 self.labelsToPlot.append(str(ioeItem.text()))
 
             try:
@@ -2104,44 +2112,61 @@ class xrtGlWidget(QGLWidget):
         if self.pointsDepthTest:
             glDisable(GL_DEPTH_TEST)
 
-        if self.showOeLabels:
-            oeLabels = dict()
-            for oeKey, oeValue in self.oesList.items():
-                if oeKey in self.labelsToPlot:
-                    oeCenterStr = makeCenterStr(oeValue[2],
-                                                self.labelCoordPrec)
-                    addStr = True
-                    for oeLabelKey, oeLabelValue in oeLabels.items():
-                        if np.all(np.round(
-                                oeLabelValue[0], self.labelCoordPrec) ==
-                                np.round(oeValue[2], self.labelCoordPrec)):
-                            oeLabelValue.append(oeKey)
-                            addStr = False
-                    if addStr:
-                        oeLabels[oeCenterStr] = [oeValue[2], oeKey]
-            if self.invertColors:
-                glColor4f(0.0, 0.0, 0.0, 1.)
-            else:
-                glColor4f(1.0, 1.0, 1.0, 1.)
-            glLineWidth(1)
-            for oeKey, oeValue in oeLabels.items():
-                outCenterStr = ''
-                for oeIndex, oeLabel in enumerate(oeValue):
-                    if oeIndex > 0:
-                        outCenterStr += '{}, '.format(oeLabel)
-                    else:
-                        oeCoord = np.array(oeLabel)
-                oeCenterStr = '    {0}: {1}mm'.format(
-                    outCenterStr[:-2], oeKey)
-                oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
-                self.drawText(oeLabelPos, oeCenterStr)
 
+        oeLabels = dict()
+        for oeKey, oeValue in self.oesList.items():
+            if oeKey in self.labelsToPlot:
+                oeCenterStr = makeCenterStr(oeValue[2],
+                                            self.labelCoordPrec)
+                addStr = True
+                for oeLabelKey, oeLabelValue in oeLabels.items():
+                    if np.all(np.round(
+                            oeLabelValue[0], self.labelCoordPrec) ==
+                            np.round(oeValue[2], self.labelCoordPrec)):
+                        oeLabelValue.append(oeKey)
+                        addStr = False
+                if addStr:
+                    oeLabels[oeCenterStr] = [oeValue[2], oeKey]
+        if self.invertColors:
+            glColor4f(0.0, 0.0, 0.0, 1.)
+        else:
+            glColor4f(1.0, 1.0, 1.0, 1.)
+        glLineWidth(1)
+        for oeKey, oeValue in oeLabels.items():
+            outCenterStr = ''
+            for oeIndex, oeLabel in enumerate(oeValue):
+                if oeIndex > 0:
+                    outCenterStr += '{}, '.format(oeLabel)
+                else:
+                    oeCoord = np.array(oeLabel)
+            oeCenterStr = '    {0}: {1}mm'.format(
+                outCenterStr[:-2], oeKey)
+            oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
+            self.drawText(oeLabelPos, oeCenterStr)
+        if self.showOeLabels:
             if self.virtScreen is not None:
                 vsCenterStr = '    {0}: {1}mm'.format(
                     'Virtual Screen', makeCenterStr(self.virtScreen.center,
                                                     self.labelCoordPrec))
-                vsLabelPos = self.modelToWorld(self.virtScreen.center -
-                                               self.coordOffset)
+                try:
+                    pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
+                    pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
+                    pView = glGetIntegerv(GL_VIEWPORT)
+                    m1 = self.modelToWorld(
+                        self.virtScreen.frame[1] - self.coordOffset)
+                    m2 = self.modelToWorld(
+                        self.virtScreen.frame[2] - self.coordOffset)
+                    scr1 = gluProject(
+                        *m1, model=pModel,
+                        proj=pProjection, view=pView)[0]
+                    scr2 = gluProject(
+                        *m2, model=pModel,
+                        proj=pProjection, view=pView)[0]
+                    lblCenter = self.virtScreen.frame[1] if scr1 > scr2 else\
+                        self.virtScreen.frame[2]
+                except:
+                    lblCenter = self.virtScreen.center
+                vsLabelPos = self.modelToWorld(lblCenter - self.coordOffset)
                 self.drawText(vsLabelPos, vsCenterStr)
         glFlush()
 
@@ -2565,6 +2590,7 @@ class xrtGlWidget(QGLWidget):
         glEnd()
 
         if frameColor is not None:
+            self.virtScreen.frame = vScreenBody
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             glLineWidth(2)
             glBegin(GL_QUADS)
@@ -2864,62 +2890,65 @@ class xrtGlWidget(QGLWidget):
 
     def populateVScreen(self):
         if self.virtBeam is not None:
-            startBeam = self.virtBeam
-            good = startBeam.state > 0
-            intensity = np.sqrt(np.abs(
-                startBeam.Jss**2 + startBeam.Jpp**2))
-            intensityAll = intensity / np.max(intensity[good])
+            try:
+                startBeam = self.virtBeam
+                good = startBeam.state > 0
+                intensity = np.sqrt(np.abs(
+                    startBeam.Jss**2 + startBeam.Jpp**2))
+                intensityAll = intensity / np.max(intensity[good])
 
-            good = np.logical_and(good,
-                                  intensityAll >= self.cutoffI)
-            goodC = np.logical_and(
-                self.getColor(startBeam) <= self.selColorMax,
-                self.getColor(startBeam) >= self.selColorMin)
+                good = np.logical_and(good,
+                                      intensityAll >= self.cutoffI)
+                goodC = np.logical_and(
+                    self.getColor(startBeam) <= self.selColorMax,
+                    self.getColor(startBeam) >= self.selColorMin)
 
-            good = np.logical_and(good, goodC)
+                good = np.logical_and(good, goodC)
 
-            if self.globalNorm:
-                alphaMax = 1.
-            else:
-                if len(intensity[good]) > 0:
-                    alphaMax = np.max(intensity[good])
+                if self.globalNorm:
+                    alphaMax = 1.
+                else:
+                    if len(intensity[good]) > 0:
+                        alphaMax = np.max(intensity[good])
+                    else:
+                        alphaMax = 1.
+                alphaMax = alphaMax if alphaMax != 0 else 1.
+                alphaDots = intensity[good].T / alphaMax
+                colorsDots = np.array(self.getColor(startBeam)[good]).T
+
+                if self.colorMin == self.colorMax:
+                    self.colorMin = self.colorMax * 0.99
+                    self.colorMax *= 1.01
+                colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
+                                                           self.colorMin)
+                depthDots = copy.deepcopy(colorsDots) * self.depthScaler
+
+                colorsDots = np.dstack((colorsDots,
+                                        np.ones_like(alphaDots)*0.85,
+                                        alphaDots))
+    #                                    np.ones_like(alphaDots)))
+
+                deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
+
+                vertices = np.array(
+                    startBeam.x[good] - deltaY[:, 0] - self.coordOffset[0])
+                vertices = np.vstack((vertices, np.array(
+                    startBeam.y[good] - deltaY[:, 1] - self.coordOffset[1])))
+                vertices = np.vstack((vertices, np.array(
+                    startBeam.z[good] - deltaY[:, 2] - self.coordOffset[2])))
+                self.virtDotsArray = vertices.T
+
+                colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+                if self.globalNorm:
+                    alphaMax = np.max(alphaDots)
                 else:
                     alphaMax = 1.
-            alphaMax = alphaMax if alphaMax != 0 else 1.
-            alphaDots = intensity[good].T / alphaMax
-            colorsDots = np.array(self.getColor(startBeam)[good]).T
-
-            if self.colorMin == self.colorMax:
-                self.colorMin = self.colorMax * 0.99
-                self.colorMax *= 1.01
-            colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
-                                                       self.colorMin)
-            depthDots = copy.deepcopy(colorsDots) * self.depthScaler
-
-            colorsDots = np.dstack((colorsDots,
-                                    np.ones_like(alphaDots)*0.85,
-                                    alphaDots))
-#                                    np.ones_like(alphaDots)))
-
-            deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
-
-            vertices = np.array(
-                startBeam.x[good] - deltaY[:, 0] - self.coordOffset[0])
-            vertices = np.vstack((vertices, np.array(
-                startBeam.y[good] - deltaY[:, 1] - self.coordOffset[1])))
-            vertices = np.vstack((vertices, np.array(
-                startBeam.z[good] - deltaY[:, 2] - self.coordOffset[2])))
-            self.virtDotsArray = vertices.T
-
-            colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-            if self.globalNorm:
-                alphaMax = np.max(alphaDots)
-            else:
-                alphaMax = 1.
-            alphaColorDots = np.array([alphaDots / alphaMax]).T *\
-                self.pointOpacity
-            self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
-                                                       alphaColorDots]))
+                alphaColorDots = np.array([alphaDots / alphaMax]).T *\
+                    self.pointOpacity
+                self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
+                                                           alphaColorDots]))
+            except:
+                self.virtDotsArray = None
 
     def createVScreen(self):
         self.virtScreen = rscreens.Screen(
