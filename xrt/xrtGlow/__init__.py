@@ -12,6 +12,7 @@ import matplotlib as mpl
 import inspect
 import re
 import copy
+#import time
 
 from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
     glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc,\
@@ -145,6 +146,7 @@ class xrtGlow(QWidget):
                                           self.beamsToElements)
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
+        self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
         self.customGlWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
 #  Zoom panel
@@ -261,6 +263,7 @@ class xrtGlow(QWidget):
         colorLayout = QGridLayout()
         self.mplFig = mpl.figure.Figure(figsize=(3, 3))
         self.mplAx = self.mplFig.add_subplot(111)
+        self.mplFig.suptitle("")
 
         self.drawColorMap('energy')
         self.paletteWidget = FigCanvas(self.mplFig)
@@ -587,20 +590,21 @@ class xrtGlow(QWidget):
         tiltScreen.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_T)
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
-    def init_segments_model(self):
+    def init_segments_model(self, isNewModel=True):
         newModel = QStandardItemModel()
         newModel.setHorizontalHeaderLabels(['Rays',
                                             'Footprint',
                                             'Surface',
                                             'Label'])
-        headerRow = []
-        for i in range(4):
-            child = QStandardItem("")
-            child.setEditable(False)
-            child.setCheckable(True)
-            child.setCheckState(0 if i > 1 else 2)
-            headerRow.append(child)
-        newModel.invisibleRootItem().appendRow(headerRow)
+        if isNewModel:
+            headerRow = []
+            for i in range(4):
+                child = QStandardItem("")
+                child.setEditable(False)
+                child.setCheckable(True)
+                child.setCheckState(0 if i > 1 else 2)
+                headerRow.append(child)
+            newModel.invisibleRootItem().appendRow(headerRow)
         newModel.itemChanged.connect(self.updateRaysList)
         return newModel
 
@@ -700,7 +704,9 @@ class xrtGlow(QWidget):
                 newRow.append(newItem)
             return newRow
 
-        newSegmentsModel = self.init_segments_model()
+        newSegmentsModel = self.init_segments_model(isNewModel=False)
+        newSegmentsModel.invisibleRootItem().appendRow(
+            copy_row(self.segmentsModelRoot, 0))
         for element, elRecord in self.oesList.items():
             for iel in range(self.segmentsModelRoot.rowCount()):
                 elItem = self.segmentsModelRoot.child(iel, 0)
@@ -761,11 +767,56 @@ class xrtGlow(QWidget):
         self.im = self.mplAx.imshow(mpl.colors.hsv_to_rgb(np.vstack((
             xv, np.ones_like(xv)*0.85, yv)).T).reshape((200, 200, 3)),
             aspect='auto', origin='lower',
-            extent=(self.customGlWidget.colorMin, self.customGlWidget.colorMax,
+            extent=(self.customGlWidget.colorMin,
+                    self.customGlWidget.colorMax,
                     0, 1))
         self.mplAx.set_xlabel(axis)
         self.mplAx.set_ylabel('Intensity')
         self.mplFig.tight_layout()
+
+    def updateColorMap(self, histArray):
+        if histArray[0] is not None:
+            size = len(histArray[0])
+            histImage = np.zeros((size, size, 3))
+            colorMin = self.customGlWidget.colorMin
+            colorMax = self.customGlWidget.colorMax
+            hMax = np.float(np.max(histArray[0]))
+            intensity = np.float64(np.array(histArray[0]) / hMax)
+            histVals = np.int32(intensity * (size-1))
+            for col in range(size):
+                histImage[0:histVals[col], col, :] = mpl.colors.hsv_to_rgb(
+                    ((histArray[1][col] - colorMin) / (colorMax - colorMin),
+                     0.85, intensity[col]))
+            self.im.set_data(histImage)
+            try:
+                topEl = np.where(intensity >= 0.5)[0]
+                hwhm = (np.abs(histArray[1][topEl[0]] -
+                               histArray[1][topEl[-1]])) * 0.5
+                cntr = (histArray[1][topEl[0]] + histArray[1][topEl[-1]]) * 0.5
+                newLabel = u"FWHM: {0:.3f}\u00b1{1:.3f}".format(
+                    cntr, hwhm)
+                self.mplAx.set_title(newLabel)
+            except:
+                pass
+            self.mplFig.canvas.draw()
+            self.mplFig.canvas.blit()
+            self.paletteWidget.span.extents = self.paletteWidget.span.extents
+        else:
+            xv, yv = np.meshgrid(np.linspace(0, 1, 200),
+                                 np.linspace(0, 1, 200))
+            xv = xv.flatten()
+            yv = yv.flatten()
+            self.im.set_data(mpl.colors.hsv_to_rgb(np.vstack((
+                xv, np.ones_like(xv)*0.85, yv)).T).reshape((200, 200, 3)))
+#            colorCB = self.colorPanel.layout().itemAt(2).widget()
+#            self.mplAx.set_xlabel(colorCB.currentText())
+            self.mplAx.set_title("")
+            self.mplFig.canvas.draw()
+            self.mplFig.canvas.blit()
+            if self.paletteWidget.span.visible:
+                self.paletteWidget.span.extents =\
+                    self.paletteWidget.span.extents
+        self.mplFig.canvas.blit()
 
     def checkGNorm(self, state):
         self.customGlWidget.globalNorm = True if state > 0 else False
@@ -1149,6 +1200,17 @@ class xrtGlow(QWidget):
             mAction.triggered.connect(actFunc)
             menu.addAction(mAction)
         menu.addSeparator()
+        mAction = QAction(self)
+        mAction.setText("Show Virtual Screen")
+        mAction.setCheckable(True)
+        isVScreen = True if self.customGlWidget.virtScreen is not None\
+            else False
+        mAction.setChecked(isVScreen)
+        mAction.triggered.connect(
+            self.customGlWidget.clearVScreen if isVScreen else
+            self.customGlWidget.createVScreen)
+        menu.addAction(mAction)
+        menu.addSeparator()
         for iAction, actCnt in enumerate(self.sceneControls):
             mAction = QAction(self)
             mAction.setText(actCnt[0].text())
@@ -1303,6 +1365,7 @@ class xrtGlow(QWidget):
         self.colorPanel.layout().itemAt(11).widget(
             ).setCheckState(int(self.customGlWidget.globalNorm)*2)
         self.blockSignals(False)
+        self.mplFig.canvas.draw()
         colorCB = self.colorPanel.layout().itemAt(2).widget()
         colorCB.setCurrentIndex(colorCB.findText(params['colorAxis']))
         newExtents = list(self.paletteWidget.span.extents)
@@ -1453,6 +1516,7 @@ class xrtGlow(QWidget):
 class xrtGlWidget(QGLWidget):
     rotationUpdated = QtCore.pyqtSignal(np.ndarray)
     scaleUpdated = QtCore.pyqtSignal(np.ndarray)
+    histogramUpdated = QtCore.pyqtSignal(tuple)
 
     def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els):
         QGLWidget.__init__(self, parent)
@@ -2024,16 +2088,19 @@ class xrtGlWidget(QGLWidget):
 
             self.addLighting(3.)
             for oeString in self.oesToPlot:
-                oeToPlot = self.oesList[oeString][0]
-                is2ndXtal = self.oesList[oeString][3]
-                elType = str(type(oeToPlot))
-                if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
-                    setMaterial('Si')
-                    self.plotOeSurface(oeToPlot, is2ndXtal)
-                elif len(re.findall('raycing.apert', elType)) > 0:  # aperture
-                    setMaterial('Cu')
-                    self.plotAperture(oeToPlot)
-                else:
+                try:
+                    oeToPlot = self.oesList[oeString][0]
+                    is2ndXtal = self.oesList[oeString][3]
+                    elType = str(type(oeToPlot))
+                    if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
+                        setMaterial('Si')
+                        self.plotOeSurface(oeToPlot, is2ndXtal)
+                    elif len(re.findall('raycing.apert', elType)) > 0:
+                        setMaterial('Cu')
+                        self.plotAperture(oeToPlot)
+                    else:
+                        continue
+                except:
                     continue
 
             glDisable(GL_LIGHTING)
@@ -2112,62 +2179,67 @@ class xrtGlWidget(QGLWidget):
         if self.pointsDepthTest:
             glDisable(GL_DEPTH_TEST)
 
-
         oeLabels = dict()
-        for oeKey, oeValue in self.oesList.items():
-            if oeKey in self.labelsToPlot:
-                oeCenterStr = makeCenterStr(oeValue[2],
-                                            self.labelCoordPrec)
-                addStr = True
-                for oeLabelKey, oeLabelValue in oeLabels.items():
-                    if np.all(np.round(
-                            oeLabelValue[0], self.labelCoordPrec) ==
-                            np.round(oeValue[2], self.labelCoordPrec)):
-                        oeLabelValue.append(oeKey)
-                        addStr = False
-                if addStr:
-                    oeLabels[oeCenterStr] = [oeValue[2], oeKey]
-        if self.invertColors:
-            glColor4f(0.0, 0.0, 0.0, 1.)
-        else:
-            glColor4f(1.0, 1.0, 1.0, 1.)
-        glLineWidth(1)
-        for oeKey, oeValue in oeLabels.items():
-            outCenterStr = ''
-            for oeIndex, oeLabel in enumerate(oeValue):
-                if oeIndex > 0:
-                    outCenterStr += '{}, '.format(oeLabel)
-                else:
-                    oeCoord = np.array(oeLabel)
-            oeCenterStr = '    {0}: {1}mm'.format(
-                outCenterStr[:-2], oeKey)
-            oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
-            self.drawText(oeLabelPos, oeCenterStr)
-        if self.showOeLabels:
-            if self.virtScreen is not None:
-                vsCenterStr = '    {0}: {1}mm'.format(
-                    'Virtual Screen', makeCenterStr(self.virtScreen.center,
-                                                    self.labelCoordPrec))
-                try:
-                    pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
-                    pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
-                    pView = glGetIntegerv(GL_VIEWPORT)
-                    m1 = self.modelToWorld(
-                        self.virtScreen.frame[1] - self.coordOffset)
-                    m2 = self.modelToWorld(
-                        self.virtScreen.frame[2] - self.coordOffset)
-                    scr1 = gluProject(
-                        *m1, model=pModel,
-                        proj=pProjection, view=pView)[0]
-                    scr2 = gluProject(
-                        *m2, model=pModel,
-                        proj=pProjection, view=pView)[0]
-                    lblCenter = self.virtScreen.frame[1] if scr1 > scr2 else\
-                        self.virtScreen.frame[2]
-                except:
-                    lblCenter = self.virtScreen.center
-                vsLabelPos = self.modelToWorld(lblCenter - self.coordOffset)
-                self.drawText(vsLabelPos, vsCenterStr)
+        if len(self.labelsToPlot) > 0:
+            for oeKey, oeValue in self.oesList.items():
+                if oeKey in self.labelsToPlot:
+                    oeCenterStr = makeCenterStr(oeValue[2],
+                                                self.labelCoordPrec)
+                    addStr = True
+                    for oeLabelKey, oeLabelValue in oeLabels.items():
+                        if np.all(np.round(
+                                oeLabelValue[0], self.labelCoordPrec) ==
+                                np.round(oeValue[2], self.labelCoordPrec)):
+                            oeLabelValue.append(oeKey)
+                            addStr = False
+                    if addStr:
+                        oeLabels[oeCenterStr] = [oeValue[2], oeKey]
+            if self.invertColors:
+                glColor4f(0.0, 0.0, 0.0, 1.)
+            else:
+                glColor4f(1.0, 1.0, 1.0, 1.)
+            glLineWidth(1)
+            for oeKey, oeValue in oeLabels.items():
+                outCenterStr = ''
+                for oeIndex, oeLabel in enumerate(oeValue):
+                    if oeIndex > 0:
+                        outCenterStr += '{}, '.format(oeLabel)
+                    else:
+                        oeCoord = np.array(oeLabel)
+                oeCenterStr = '    {0}: {1}mm'.format(
+                    outCenterStr[:-2], oeKey)
+                oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
+                self.drawText(oeLabelPos, oeCenterStr)
+
+        if self.showOeLabels and self.virtScreen is not None:
+            vsCenterStr = '    {0}: {1}mm'.format(
+                'Virtual Screen', makeCenterStr(self.virtScreen.center,
+                                                self.labelCoordPrec))
+            try:
+                pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
+                pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
+                pView = glGetIntegerv(GL_VIEWPORT)
+                m1 = self.modelToWorld(
+                    self.virtScreen.frame[1] - self.coordOffset)
+                m2 = self.modelToWorld(
+                    self.virtScreen.frame[2] - self.coordOffset)
+                scr1 = gluProject(
+                    *m1, model=pModel,
+                    proj=pProjection, view=pView)[0]
+                scr2 = gluProject(
+                    *m2, model=pModel,
+                    proj=pProjection, view=pView)[0]
+                lblCenter = self.virtScreen.frame[1] if scr1 > scr2 else\
+                    self.virtScreen.frame[2]
+            except:
+                lblCenter = self.virtScreen.center
+            vsLabelPos = self.modelToWorld(lblCenter - self.coordOffset)
+            if self.invertColors:
+                glColor4f(0.0, 0.0, 0.0, 1.)
+            else:
+                glColor4f(1.0, 1.0, 1.0, 1.)
+            glLineWidth(1)
+            self.drawText(vsLabelPos, vsCenterStr)
         glFlush()
 
         self.drawAxes()
@@ -2947,6 +3019,12 @@ class xrtGlWidget(QGLWidget):
                     self.pointOpacity
                 self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
                                                            alphaColorDots]))
+                histogram = np.histogram(np.array(
+                    self.getColor(startBeam)[good]),
+                    range=(self.colorMin, self.colorMax),
+                    weights=intensity[good],
+                    bins=100)
+                self.histogramUpdated.emit(histogram)
             except:
                 self.virtDotsArray = None
 
@@ -3029,6 +3107,7 @@ class xrtGlWidget(QGLWidget):
         self.virtBeam = None
         self.virtDotsArray = None
         self.virtDotsColor = None
+        self.histogramUpdated.emit((None, None))
         self.glDraw()
 
     def switchVScreenTilt(self):

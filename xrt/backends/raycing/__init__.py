@@ -945,8 +945,10 @@ class BeamLine(object):
                             if segOE.nrays != nrays:
                                 tmpNrays = segOE.nrays
                                 segOE.nrays = nrays
-
-                outBeams = segment[1](segOE, **fArgs)
+                try:  # protection againt incorrect propagation parameters
+                    outBeams = segment[1](segOE, **fArgs)
+                except:
+                    continue
                 if align and self.alignMode == 0:
                     if tmpNrays is not None:
                         segOE.nrays = tmpNrays
@@ -993,11 +995,9 @@ class BeamLine(object):
 
         from .run import run_process
         run_process(self)
-#        print(self.flow)
         if self.blViewer is None:
             app = xrtglow.QApplication(sys.argv)
             rayPath = self.export_to_glow()
-#            print(rayPath)
             self.blViewer = xrtglow.xrtGlow(rayPath)
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.show()
