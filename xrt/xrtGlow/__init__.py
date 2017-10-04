@@ -38,7 +38,7 @@ from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
 
 from OpenGL.GLUT import glutBitmapCharacter, glutStrokeCharacter, glutInit,\
     glutInitDisplayMode, GLUT_BITMAP_HELVETICA_12, GLUT_STROKE_ROMAN,\
-    GLUT_RGBA, GLUT_DOUBLE, GLUT_DEPTH
+    GLUT_RGBA, GLUT_DOUBLE, GLUT_DEPTH, GLUT_STROKE_MONO_ROMAN
 
 from OpenGL.arrays import vbo
 
@@ -2173,7 +2173,7 @@ class xrtGlWidget(QGLWidget):
             glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
 
             self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
-                            [1, 0, 0, 1])
+                            [1, 0, 0, 1], plotFWHM=True)
 
 #            if not self.enableAA:
 #                glDisable(GL_LINE_SMOOTH)
@@ -2651,7 +2651,7 @@ class xrtGlWidget(QGLWidget):
         glDisable(GL_MAP2_VERTEX_3)
         glDisable(GL_MAP2_NORMAL)
 
-    def plotScreen(self, oe, dimensions=None, frameColor=None):
+    def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
         if dimensions is not None:
             vScrHW = dimensions[0]
             vScrHH = dimensions[1]
@@ -2696,6 +2696,31 @@ class xrtGlWidget(QGLWidget):
                 glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
                                               self.coordOffset))
             glEnd()
+
+        if plotFWHM:
+            glLineWidth(1)
+            glDisable(GL_LINE_SMOOTH)
+            if self.invertColors:
+                glColor4f(0.0, 0.0, 0.0, 1.)
+            else:
+                glColor4f(1.0, 1.0, 1.0, 1.)
+            for iAx, text in enumerate(oe.FWHMstr):
+                fontScale = self.fontSize / 12500.
+                coord = self.modelToWorld(
+                    (vScreenBody[iAx + 1] + vScreenBody[iAx + 2]) * 0.5 -
+                    self.coordOffset)
+                coord[2-iAx*2] += fontScale * (125. + iAx * 100.)
+                coord[iAx*2] -= fontScale * len(text) * 104.76 * 0.5
+                glPushMatrix()
+                glTranslatef(*coord)
+                if iAx > 0:
+                    glRotatef(-90, 0, 1, 0)
+                glRotatef(90, 1, 0, 0)
+                glScalef(fontScale, fontScale, fontScale)
+                for symbol in text:
+                    glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, ord(symbol))
+                glPopMatrix()
+            glEnable(GL_LINE_SMOOTH)
 
     def plotHemiScreen(self, oe, dimensions=None):
         try:
@@ -3050,6 +3075,37 @@ class xrtGlWidget(QGLWidget):
                     weights=intensity[good],
                     bins=100)
                 self.histogramUpdated.emit(histogram)
+                locBeam = self.virtScreen.expose(self.virtScreen.beamToExpose)
+                lbi = intensity[good]
+                self.virtScreen.FWHMstr = []
+                for axis in ['x', 'z']:
+                    goodlb = getattr(locBeam, axis)[good]
+                    histAxis = np.histogram(goodlb, weights=lbi, bins=100)
+                    hMax = np.max(histAxis[0])
+                    hNorm = histAxis[0] / hMax
+                    topEl = np.where(hNorm >= 0.5)[0]
+                    hwhm = np.abs(histAxis[1][topEl[0]] -
+                                  histAxis[1][topEl[-1]]) * 0.5
+#                    cntr = (histAxis[1][topEl[0]] +
+#                                   histAxis[1][topEl[-1]]) * 0.5
+                    order = np.floor(np.log10(hwhm))
+
+                    if order >= 2:
+                        units = "m"
+                        mplier = 1e-3
+                    if order >= -1:
+                        units = "mm"
+                        mplier = 1.
+                    elif order >= -4:
+                        units = "um"
+                        mplier = 1e3
+                    else:  # order >= -7:
+                        units = "nm"
+                        mplier = 1e6
+
+                    self.virtScreen.FWHMstr.append(
+                        "FWHM({0}) = {1:.3f}{2}".format(
+                            str(axis).upper(), hwhm*mplier*2, units))
             except:
                 self.virtDotsArray = None
 
