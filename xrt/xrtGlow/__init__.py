@@ -118,8 +118,9 @@ except:
 
 
 class xrtGlow(QWidget):
-    def __init__(self, arrayOfRays):
+    def __init__(self, arrayOfRays, parent=None):
         super(xrtGlow, self).__init__()
+        self.parent = parent
         self.setWindowTitle('xrtGlow')
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
@@ -338,11 +339,18 @@ class xrtGlow(QWidget):
 #        axSlider.valueChanged.connect(self.updateCutoff)
 
         glNormCB = QCheckBox()
-        glNormCB.objectName = "gNormChb_" + str(iaxis)
+        glNormCB.objectName = "gNormChb"
         glNormCB.setCheckState(2)
         glNormCB.stateChanged.connect(self.checkGNorm)
         glNormLabel = QLabel()
         glNormLabel.setText('Global Normalization')
+
+        iHSVCB = QCheckBox()
+        iHSVCB.objectName = "iHSVChb"
+        iHSVCB.setCheckState(0)
+        iHSVCB.stateChanged.connect(self.check_iHSV)
+        iHSVLabel = QLabel()
+        iHSVLabel.setText('Intensity as HSV Value')
 
         colorLayout.addWidget(axLabel, 2+3, 0)
         colorLayout.addWidget(axEdit, 2+3, 1)
@@ -351,6 +359,8 @@ class xrtGlow(QWidget):
 #        colorLayout.addWidget(axSlider, 3+3, 0, 1, 2)
         colorLayout.addWidget(glNormCB, 4+3, 0, 1, 1)
         colorLayout.addWidget(glNormLabel, 4+3, 1, 1, 1)
+        colorLayout.addWidget(iHSVCB, 5+3, 0, 1, 1)
+        colorLayout.addWidget(iHSVLabel, 5+3, 1, 1, 1)
         self.colorPanel.setLayout(colorLayout)
 
         self.colorOpacityPanel = QWidget(self)
@@ -580,15 +590,24 @@ class xrtGlow(QWidget):
         fastLoad = QShortcut(self)
         fastLoad.setKey(QtCore.Qt.Key_F6)
         fastLoad.activated.connect(partial(self.loadScene, '_xrtScnTmp_.npy'))
-        createScreen = QShortcut(self)
-        createScreen.setKey(QtCore.Qt.Key_F3)
-        createScreen.activated.connect(self.customGlWidget.createVScreen)
-        killScreen = QShortcut(self)
-        killScreen.setKey(QtCore.Qt.Key_F4)
-        killScreen.activated.connect(self.customGlWidget.clearVScreen)
+        toggleScreen = QShortcut(self)
+        toggleScreen.setKey(QtCore.Qt.Key_F3)
+        toggleScreen.activated.connect(self.customGlWidget.toggleVScreen)
+        dockToQook = QShortcut(self)
+        dockToQook.setKey(QtCore.Qt.Key_F4)
+        dockToQook.activated.connect(self.toggleDock)
+#        alphaToggle = QShortcut(self)
+#        alphaToggle.setKey(QtCore.Qt.Key_F7)
+#        alphaToggle.activated.connect(self.customGlWidget.clearVScreen)
         tiltScreen = QShortcut(self)
         tiltScreen.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_T)
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
+
+    def toggleDock(self):
+        try:
+            print(self.parent)
+        except:
+            print("Can't find parent")
 
     def init_segments_model(self, isNewModel=True):
         newModel = QStandardItemModel()
@@ -820,6 +839,11 @@ class xrtGlow(QWidget):
 
     def checkGNorm(self, state):
         self.customGlWidget.globalNorm = True if state > 0 else False
+        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.glDraw()
+
+    def check_iHSV(self, state):
+        self.customGlWidget.iHSV = True if state > 0 else False
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
@@ -1203,12 +1227,9 @@ class xrtGlow(QWidget):
         mAction = QAction(self)
         mAction.setText("Show Virtual Screen")
         mAction.setCheckable(True)
-        isVScreen = True if self.customGlWidget.virtScreen is not None\
-            else False
-        mAction.setChecked(isVScreen)
-        mAction.triggered.connect(
-            self.customGlWidget.clearVScreen if isVScreen else
-            self.customGlWidget.createVScreen)
+        mAction.setChecked(False if self.customGlWidget.virtScreen is None
+                           else True)
+        mAction.triggered.connect(self.customGlWidget.toggleVScreen)
         menu.addAction(mAction)
         menu.addSeparator()
         for iAction, actCnt in enumerate(self.sceneControls):
@@ -1279,9 +1300,10 @@ class xrtGlow(QWidget):
                       'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
                       'colorMin', 'colorMax', 'fineGridEnabled',
                       'useScalableFont', 'invertColors', 'perspectiveEnabled',
-                      'globalNorm', 'viewPortGL']:
+                      'globalNorm', 'viewPortGL', 'iHSV']:
             params[param] = getattr(self.customGlWidget, param)
         params['size'] = self.geometry()
+        print(self.geometry())
         params['sizeGL'] = self.canvasSplitter.sizes()
         params['colorAxis'] = str(self.colorPanel.layout().itemAt(2).widget(
             ).currentText())
@@ -1308,7 +1330,7 @@ class xrtGlow(QWidget):
                       'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
                       'colorMin', 'colorMax', 'fineGridEnabled',
                       'useScalableFont', 'invertColors', 'perspectiveEnabled',
-                      'globalNorm', 'viewPortGL']:
+                      'globalNorm', 'viewPortGL', 'iHSV']:
             setattr(self.customGlWidget, param, params[param])
         self.setGeometry(params['size'])
         self.canvasSplitter.setSizes(params['sizeGL'])
@@ -1362,8 +1384,10 @@ class xrtGlow(QWidget):
         self.scenePanel.layout().itemAt(19).widget(
             ).setCheckState(int(self.customGlWidget.useScalableFont)*2)
 
-        self.colorPanel.layout().itemAt(11).widget(
+        self.colorPanel.layout().itemAt(12).widget(
             ).setCheckState(int(self.customGlWidget.globalNorm)*2)
+        self.colorPanel.layout().itemAt(14).widget(
+            ).setCheckState(int(self.customGlWidget.iHSV)*2)
         self.blockSignals(False)
         self.mplFig.canvas.draw()
         colorCB = self.colorPanel.layout().itemAt(2).widget()
@@ -1526,10 +1550,10 @@ class xrtGlWidget(QGLWidget):
         self.virtDotsColor = None
         self.isVirtScreenNormal = False
         self.vScreenSize = 5.
-        self.setMinimumSize(500, 500)
+        self.setMinimumSize(400, 400)
         self.aspect = 1.
         self.depthScaler = 0.
-        self.viewPortGL = [0, 0, 700, 700]
+        self.viewPortGL = [0, 0, 500, 500]
         self.perspectiveEnabled = True
         self.cameraAngle = 60
         self.setMouseTracking(True)
@@ -1562,6 +1586,7 @@ class xrtGlWidget(QGLWidget):
         self.cutoffI = 0.01
         self.getColor = raycing.get_energy
         self.globalNorm = True
+        self.iHSV = False
         self.newColorAxis = True
         self.colorMax = -1e20
         self.colorMin = 1e20
@@ -1865,8 +1890,8 @@ class xrtGlWidget(QGLWidget):
                                                            self.colorMin)
                 colorsRays = np.dstack((colorsRays,
                                         np.ones_like(alphaRays)*0.85,
-                                        alphaRays))
-    #                                    np.ones_like(alphaRays)))
+                                        alphaRays if self.iHSV else
+                                        np.ones_like(alphaRays)))
                 colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
                 if self.globalNorm:
                     alphaMax = np.max(alphaRays)
@@ -1897,8 +1922,8 @@ class xrtGlWidget(QGLWidget):
                                                            self.colorMin)
                 colorsDots = np.dstack((colorsDots,
                                         np.ones_like(alphaDots)*0.85,
-                                        alphaDots))
-    #                                    np.ones_like(alphaDots)))
+                                        alphaDots if self.iHSV else
+                                        np.ones_like(alphaDots)))
                 colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
                 if self.globalNorm:
                     alphaMax = np.max(alphaDots)
@@ -2826,7 +2851,7 @@ class xrtGlWidget(QGLWidget):
         glEnd()
 
         helpList = ['F1: Open/Close this help window',
-                    'F3/F4: Add/Remove Virtual Screen (Slicer)',
+                    'F3: Add/Remove Virtual Screen (Slicer)',
                     'F5/F6: Quick Save/Load Scene',
                     'LeftMouse: Rotate the Scene',
                     'SHIFT+LeftMouse: Translate the Beamline in transverse plane',  # analysis:ignore
@@ -2997,8 +3022,8 @@ class xrtGlWidget(QGLWidget):
 
                 colorsDots = np.dstack((colorsDots,
                                         np.ones_like(alphaDots)*0.85,
-                                        alphaDots))
-    #                                    np.ones_like(alphaDots)))
+                                        alphaDots if self.iHSV else
+                                        np.ones_like(alphaDots)))
 
                 deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
 
@@ -3029,12 +3054,15 @@ class xrtGlWidget(QGLWidget):
                 self.virtDotsArray = None
 
     def createVScreen(self):
-        self.virtScreen = rscreens.Screen(
-            bl=list(self.oesList.values())[0][0].bl)
-        self.virtScreen.center = self.worldToModel(np.array([0, 0, 0])) +\
-            self.coordOffset
-        self.positionVScreen()
-        self.glDraw()
+        try:
+            self.virtScreen = rscreens.Screen(
+                bl=list(self.oesList.values())[0][0].bl)
+            self.virtScreen.center = self.worldToModel(np.array([0, 0, 0])) +\
+                self.coordOffset
+            self.positionVScreen()
+            self.glDraw()
+        except:
+            self.clearVScreen()
 
     def positionVScreen(self):
         if self.virtScreen is not None:
@@ -3097,10 +3125,18 @@ class xrtGlWidget(QGLWidget):
                 vsX = 'auto'
                 vsZ = 'auto'
             self.virtScreen.set_orientation(vsX, vsZ)
+            try:
+                self.virtBeam = self.virtScreen.expose_global(
+                    self.virtScreen.beamToExpose)
+                self.populateVScreen()
+            except:
+                self.clearVScreen()
 
-            self.virtBeam = self.virtScreen.expose_global(
-                self.virtScreen.beamToExpose)
-            self.populateVScreen()
+    def toggleVScreen(self):
+        if self.virtScreen is None:
+            self.createVScreen()
+        else:
+            self.clearVScreen()
 
     def clearVScreen(self):
         self.virtScreen = None

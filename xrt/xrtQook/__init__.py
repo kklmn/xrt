@@ -185,14 +185,14 @@ else:
 QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
     QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
     QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-    QListWidgetItem = (
+    QListWidgetItem, QDockWidget = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
         myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
         myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
         myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
-        myQtGUI.QListWidgetItem)
+        myQtGUI.QListWidgetItem, myQtGUI.QDockWidget)
 QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
      QtGui.QStandardItem, QtGui.QPixmap)
@@ -282,6 +282,7 @@ class XrtQook(QWidget):
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
         self.prepareViewer = False
+        self.isGlowAutoUpdate = False
         self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
         self.setWindowIcon(QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
         self.init_tool_bar()
@@ -307,24 +308,40 @@ class XrtQook(QWidget):
 
         mainWidget = QWidget()
         mainWidget.setMinimumWidth(486)
-        docWidget = QWidget()
-        docWidget.setMinimumWidth(600)
+#        docWidget = QWidget()
+        self.docWidget = QTabWidget()
+        self.docWidget.setMinimumWidth(600)
         mainBox = QVBoxLayout()
         docBox = QVBoxLayout()
 
         mainBox.addWidget(self.toolBar)
         mainBox.addWidget(self.tabs)
         mainBox.addWidget(self.statusBar)
+#        self.webHelpDock = QDockWidget()
+#        self.webHelpDock.setWidget(self.webHelp)
+#        self.webHelpDock.setFloating(True)
+#        self.webHelpDock.topLevelChanged.connect(self.adjustUndockedPos)
         docBox.addWidget(self.webHelp)
 
         mainWidget.setLayout(mainBox)
-        docWidget.setLayout(docBox)
-        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
+        self.docWidget.setLayout(docBox)
+#        self.docWidget.addTab(self.webHelpDock, "Live Help")
+
+#        if isOpenGL:
+#            self.glowDock = QDockWidget()
+#            self.rayPath = [list(), dict(), dict()]
+#            self.bl_run_glow()
+#            self.glowDock.setFloating(True)
+#            self.glowDock.setGeometry(100, 100, 700, 700)
+#            self.docWidget.addTab(self.glowDock, "xrtGlow")
+#            self.glowDock.setWindowTitle('xrtGlow')
+#            self.glowDock.topLevelChanged.connect(self.adjustUndockedPos)
+        self.docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
 
         canvasBox.addWidget(canvasSplitter)
 
         canvasSplitter.addWidget(mainWidget)
-        canvasSplitter.addWidget(docWidget)
+        canvasSplitter.addWidget(self.docWidget)
         self.setLayout(canvasBox)
 
         self.initAllModels()
@@ -390,11 +407,13 @@ class XrtQook(QWidget):
 
         glowAction = QAction(
             QIcon(os.path.join(self.iconsDir, 'eyeglasses7_128.png')),
-            'View beamline in xrtGlow',
+            'Enable xrtGlow Live Update',
             self)
         if isOpenGL:
             glowAction.setShortcut('CTRL+F1')
-            glowAction.triggered.connect(self.populate_beamline)
+            glowAction.setCheckable(True)
+            glowAction.setChecked(False)
+            glowAction.toggled.connect(self.toggle_glow)
 
         OCLAction = QAction(
             QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
@@ -529,6 +548,11 @@ class XrtQook(QWidget):
         self.tabs.addTab(self.codeEdit, "Code")
         self.tabs.addTab(self.codeConsole, "Console")
         self.tabs.currentChanged.connect(self.showDescrByTab)
+
+    def adjustUndockedPos(self, isFloating):
+        if isFloating:
+            self.sender().move(100, 100)
+            self.sender().updateGeometry()
 
     def readStdOutput(self):
         output = self.qprocess.readAllStandardOutput()
@@ -1275,7 +1299,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.expand(self.rootBLItem.index())
         self.capitalize(self.tree, elementItem)
         self.blUpdateLatchOpen = True
-        self.update_beamline(elementItem, newElement=True)
+        if self.isGlowAutoUpdate:
+            self.update_beamline(elementItem, newElement=True)
         self.isEmpty = False
 
     def getParams(self, obj):
@@ -1332,7 +1357,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def beamLineItemChanged(self, item):
         self.colorizeChangedParam(item)
-        if self.blUpdateLatchOpen:
+        if self.isGlowAutoUpdate and self.blUpdateLatchOpen:
             if item.model() == self.beamLineModel:
                 self.update_beamline(item)
             elif item.model() == self.materialsModel:
@@ -1447,7 +1472,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.setCurrentIndex(methodProps.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.blUpdateLatchOpen = True
-        self.update_beamline(methodItem, newElement=True)
+        if self.isGlowAutoUpdate:
+            self.update_beamline(methodItem, newElement=True)
         self.isEmpty = False
 
     def addPlot(self, copyFrom=None):
@@ -1542,7 +1568,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def getArgDescr(self, obj):
         argDesc = dict()
-#        argDescValue = []
         objRef = eval(obj)
 
         def parseDescr(obji):
@@ -1559,8 +1584,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             descBody = desc[1].strip("\* ")
                             if descName not in argDesc.keys():
                                 argDesc[descName] = descBody
-#                                argDescName.append(descName)
-#                                argDescValue.append(descBody)
 
         def sortDescr():
             retArgDescs = []
@@ -1568,7 +1591,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             argKeys = argDesc.keys()
             for arg in argZip:
                 for argKey in argKeys:
-                    if len(re.findall(arg, argKey)) > 0:
+                    if len(re.findall(arg, argKey)) > 0 and\
+                            argKey not in retArgDescs:
                         retArgDescs.append(argKey)
                         retArgDescVals.append(argDesc[argKey])
                         break
@@ -1611,7 +1635,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.addCombo(self.matTree, matItem)
         self.capitalize(self.matTree, matItem)
         self.blUpdateLatchOpen = True
-        self.update_beamline_materials(matItem, newMat=True)
+        if self.isGlowAutoUpdate:
+            self.update_beamline_materials(matItem, newMat=True)
         self.isEmpty = False
 
     def moveItem(self, mvDir, view, item):
@@ -1625,7 +1650,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
-        self.update_beamline(newItem[0], newOrder=True)
+        if self.isGlowAutoUpdate:
+            self.update_beamline(newItem[0], newOrder=True)
 
     def copyChildren(self, itemTo, itemFrom):
         if itemFrom.hasChildren():
@@ -1657,8 +1683,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if item.model() == self.materialsModel and\
                 item.parent() is None:
             del self.beamLine.materialsDict[str(item.text())]
-#            print("Deleted", str(item.text()), "from",
-#                  self.beamLine.materialsDict)
+
         if item.parent() == self.rootBLItem:
             self.blUpdateLatchOpen = False
         while item.hasChildren():
@@ -1687,7 +1712,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 del self.beamLine.oesDict[str(item.text())]
                 del self.beamLine.unalignedOesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
-                self.update_beamline(item, newElement=False)
+                if self.isGlowAutoUpdate:
+                    self.update_beamline(item, newElement=False)
             if item.parent() is not None:
                 item.parent().removeRow(item.index().row())
             else:
@@ -1881,9 +1907,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     try:
                         self.beamLine = raycing.BeamLine()
                         self.beamLine.flowSource = 'Qook'
-                        self.update_beamline_beams(text=None)
-                        self.update_beamline_materials(item=None)
-                        self.update_beamline(item=None)
+                        if self.isGlowAutoUpdate:
+                            self.update_beamline_beams(text=None)
+                            self.update_beamline_materials(item=None)
+                            self.update_beamline(item=None)
                     except:  # analysis:ignore
                         pass
                     self.blUpdateLatchOpen = True
@@ -2943,14 +2970,30 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.blViewer.update_oes_list(self.rayPath)
 
     def populate_beamline(self, item=None):
+        self.blUpdateLatchOpen = False
+        try:
+            self.beamLine = raycing.BeamLine()
+            self.beamLine.flowSource = 'Qook'
+            self.update_beamline_beams(text=None)
+            self.update_beamline_materials(item=None)
+            self.update_beamline(item=None)
+        except:  # analysis:ignore
+            pass
+        self.blUpdateLatchOpen = True
         self.beamLine.propagate_flow(startFrom=0, align=True)
         self.rayPath = self.beamLine.export_to_glow()
         self.bl_run_glow()
 
+    def toggle_glow(self, status):
+        self.isGlowAutoUpdate = status
+        if self.isGlowAutoUpdate:
+            self.populate_beamline()
+
     def bl_run_glow(self):
         if self.blViewer is None:
-            self.blViewer = xrtglow.xrtGlow(self.rayPath)
+            self.blViewer = xrtglow.xrtGlow(self.rayPath, self)
             self.blViewer.setWindowTitle("xrtGlow")
+#            self.glowDock.setWidget(self.blViewer)
             self.blViewer.show()
         else:
             self.blViewer.update_oes_list(self.rayPath)
