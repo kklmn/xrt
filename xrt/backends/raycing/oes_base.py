@@ -758,7 +758,8 @@ class OE(object):
             raise ValueError('Unknown shape of OE {0}!'.format(self.name))
         return locState
 
-    def reflect(self, beam=None, needLocal=True, noIntersectionSearch=False):
+    def reflect(self, beam=None, needLocal=True, noIntersectionSearch=False,
+                returnLocalAbsorbed=None):
         r"""
         Returns the reflected or transmitted beam in global and local
         (if *needLocal* is true) systems. The new beam direction is calculated
@@ -795,6 +796,9 @@ class OE(object):
 
         .. [wikiSnell] http://en.wikipedia.org/wiki/Snell%27s_law .
 
+        *returnLocalAbsorbed*: None or int
+            If not None, returns the absorbed intensity in local beam.
+
         .. .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
@@ -827,11 +831,16 @@ class OE(object):
         notGood = ~goodAfter
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
+        if returnLocalAbsorbed is not None:
+            absorbedLb = rs.Beam(copyFrom=lb)
+            absorbedLb.absorb_intensity(beam)
+            lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
-            self, beam=None, maxReflections=1000, needElevationMap=False):
+            self, beam=None, maxReflections=1000, needElevationMap=False,
+            returnLocalAbsorbed=None):
         """
         Does the same as :meth:`reflect` but with up to *maxReflections*
         reflection on the same surface. *way* gives the sequence of rotations
@@ -843,6 +852,9 @@ class OE(object):
         travels between the impact
         points, *elevationX*, *elevationY*, *elevationZ* for the coordinates
         of the maximum elevation points.
+
+        *returnLocalAbsorbed*: None or int
+            If not None, returns the absorbed intensity in local beam.
 
         .. Returned values: beamGlobal, beamLocal
         """
@@ -906,6 +918,10 @@ class OE(object):
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
 # in global(gb) and local(lbN) coordinates. lbN holds all the reflection spots.
+        if returnLocalAbsorbed is not None:
+            absorbedLb = rs.Beam(copyFrom=lb)
+            absorbedLb.absorb_intensity(beam)
+            lbN = absorbedLb
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())
         return gb, lbN
@@ -1790,10 +1806,17 @@ class DCM(OE):
             self.cryst2perpTransl = self.fixedOffset/2./np.cos(self.bragg)
 
     def double_reflect(self, beam=None, needLocal=True,
-                       fromVacuum1=True, fromVacuum2=True):
+                       fromVacuum1=True, fromVacuum2=True,
+                       returnLocalAbsorbed=None):
         """
         Returns the reflected beam in global and two local (if *needLocal*
         is true) systems.
+
+        *returnLocalAbsorbed*: None or int
+            If not None, returns the absorbed intensity in local beam. If
+            equals zero, total absorbed intensity is return in the last local
+            beam, otherwise the N-th local beam returns the
+            absorbed intensity on N-th surface of the optical element.
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
@@ -1846,6 +1869,20 @@ class DCM(OE):
             gb2.state[notGood] = self.lostNum
         if notGood.sum() > 0:
             rs.copy_beam(gb2, beam, notGood)
+
+        if returnLocalAbsorbed is not None:
+            if returnLocalAbsorbed == 0:
+                absorbedLb = rs.Beam(copyFrom=lo2)
+                absorbedLb.absorb_intensity(beam)
+                lo2 = absorbedLb
+            elif returnLocalAbsorbed == 1:
+                absorbedLb = rs.Beam(copyFrom=lo1)
+                absorbedLb.absorb_intensity(beam)
+                lo1 = absorbedLb
+            elif returnLocalAbsorbed == 1:
+                absorbedLb = rs.Beam(copyFrom=lo2)
+                absorbedLb.absorb_intensity(lo1)
+                lo2 = absorbedLb
 
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
