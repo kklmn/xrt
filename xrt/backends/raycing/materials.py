@@ -42,7 +42,7 @@ __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'Crystal', 'CrystalFcc',
 import sys
 import os
 import time
-#import struct
+# import struct
 import pickle
 import numpy as np
 from scipy.special import jn as besselJn
@@ -603,8 +603,8 @@ class Multilayer(object):
         where :math:`\overline\delta` is the period-averaged real part of the
         refractive index.
         """
-        nt = self.tLayer.get_refractive_index(E).real
-        nb = self.bLayer.get_refractive_index(E).real
+        nt = self.tLayer.get_refractive_index(E).real if self.tLayer else 1.
+        nb = self.bLayer.get_refractive_index(E).real if self.bLayer else 1.
         tThickness = self.tThicknessHigh
         bThickness = self.bThicknessHigh
         d_ = abs((nt-1) * tThickness + (nb-1) * bThickness) / self.d
@@ -677,9 +677,9 @@ class Multilayer(object):
         chain.
         """
         k = E / CHBAR
-        nt = self.tLayer.get_refractive_index(E).conjugate()
-        nb = self.bLayer.get_refractive_index(E).conjugate()
-        ns = self.substrate.get_refractive_index(E).conjugate()
+        nt = self.tLayer.get_refractive_index(E).conjugate() if self.tLayer else 1.  # analysis:ignore
+        nb = self.bLayer.get_refractive_index(E).conjugate() if self.bLayer else 1.  # analysis:ignore
+        ns = self.substrate.get_refractive_index(E).conjugate() if self.substrate else 1.  # analysis:ignore
 
         Q = 2 * k * abs(beamInDotNormal)
         Q2 = Q**2
@@ -745,6 +745,7 @@ class Multilayer(object):
             t2 = time.time()
             print('ML reflection calculated with OCL in {} s'.format(t2-t0))
         return ri_s, ri_p
+
 
 GradedMultilayer = Multilayer
 
