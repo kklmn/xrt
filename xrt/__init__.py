@@ -199,13 +199,14 @@ field.
 #   * functions and methods underscore_separated _or_ lower
 # =============================================================================
 
+from .version import __versioninfo__, __version__
 __module__ = "xrt"
 __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory), " +\
     "Roman Chernikov (Canadian Light Source)"
 __email__ = "first dot last at gmail dot com"
-__versioninfo__ = (1, 2, 4)
-__version__ = '.'.join(map(str, __versioninfo__))
+__versioninfo__ = __versioninfo__
+__version__ = __version__
 __date__ = "3 May 2017"
 __license__ = "MIT license"
 
