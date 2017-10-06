@@ -1459,8 +1459,11 @@ class ParaboloidFlatLens(Plate):
         *nCRL*: int or tuple (*focalDistance*, *E*)
             If used as CRL (a stack of several lenslets), the number of the
             lenslets nCRL is either given by the user directly or calculated
-            for *focalDistance* at energy *E* and then rounded. For
-            propagation with *nCRL* > 1 use :meth:`multiple_refract`.
+            for *focalDistance* at energy *E* and then rounded. The lenses are
+            stacked along the local [0, 0, -1] direction with the step equal to
+            *zmax* + *t* for curved-flat lenses or 2\ *\ *zmax* + *t* for
+            double curved lenses. For propagation with *nCRL* > 1 please use
+            :meth:`multiple_refract`.
 
 
         """
@@ -1544,19 +1547,26 @@ class ParaboloidFlatLens(Plate):
         else:
             tmpFlowSource = self.bl.flowSource
             self.bl.flowSource = 'multiple_refract'
-            tempPos = self.center[1]
+            tempCenter = [c for c in self.center]
             beamIn = beam
+            step = 2*self.zmax + self.t\
+                if isinstance(self, DoubleParaboloidLens) else self.zmax+self.t
             for ilens in range(nCRL):
                 if isinstance(self, ParabolicCylinderFlatLens):
                     self.roll = -np.pi/4 if ilens % 2 == 0 else np.pi/4
                 lglobal, tlocal1, tlocal2 = self.double_refract(
                     beamIn, needLocal=needLocal)
                 if self.zmax is not None:
-                    self.center[1] += self.zmax
+                    toward = raycing.rotate_point(
+                        [0, 0, 1], self.rotationSequence, self.pitch,
+                        self.roll+self.positionRoll, self.yaw)
+                    self.center[0] -= step * toward[0]
+                    self.center[1] -= step * toward[1]
+                    self.center[2] -= step * toward[2]
                 beamIn = lglobal
                 if ilens == 0:
                     llocal1, llocal2 = tlocal1, tlocal2
-            self.center[1] = tempPos
+            self.center = tempCenter
             self.bl.flowSource = tmpFlowSource
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],
