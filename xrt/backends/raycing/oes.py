@@ -102,6 +102,7 @@ import inspect
 
 from .. import raycing
 from . import stages as rst
+from . import sources as rs
 from .physconsts import CH
 from .oes_base import OE, DCM
 try:
@@ -1351,10 +1352,17 @@ class Plate(DCM):
     def assign_auto_material_kind(self, material):
         material.kind = 'plate'
 
-    def double_refract(self, beam=None, needLocal=True):
+    def double_refract(self, beam=None, needLocal=True,
+                       returnLocalAbsorbed=None):
         """
         Returns the refracted beam in global and two local (if *needLocal*
         is true) systems.
+
+        *returnLocalAbsorbed*: None, int
+            If not None, returns the absorbed intensity in local beam. If
+            equals zero, total absorbed intensity is return in the last local
+            beam, otherwise the N-th local beam returns the
+            absorbed intensity on N-th surface of the optical element.
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
@@ -1369,6 +1377,21 @@ class Plate(DCM):
         if self.bl is not None:
             if self.bl.flowSource == 'double_refract':
                 self.bl.flowSource = tmpFlowSource
+
+        if returnLocalAbsorbed is not None:
+            if returnLocalAbsorbed == 0:
+                absorbedLb = rs.Beam(copyFrom=lb2)
+                absorbedLb.absorb_intensity(beam)
+                lb2 = absorbedLb
+            elif returnLocalAbsorbed == 1:
+                absorbedLb = rs.Beam(copyFrom=lb1)
+                absorbedLb.absorb_intensity(beam)
+                lb1 = absorbedLb
+            elif returnLocalAbsorbed == 1:
+                absorbedLb = rs.Beam(copyFrom=lb2)
+                absorbedLb.absorb_intensity(lb1)
+                lb2 = absorbedLb
+
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())
         return gb, lb1, lb2
@@ -1521,7 +1544,7 @@ class ParaboloidFlatLens(Plate):
         return 2 * self.focus / f /\
             (1 - self.material.get_refractive_index(E).real) * nFactor
 
-    def multiple_refract(self, beam, needLocal=True):
+    def multiple_refract(self, beam, needLocal=True, returnLocalAbsorbed=None):
         """
         Sequentially applies the :meth:`double_refract` method to the stack of
         lenses, center of each of *nCRL* lens is shifted by *zmax* mm
@@ -1529,6 +1552,11 @@ class ParaboloidFlatLens(Plate):
         Returned global beam emerges from the exit surface of the last lens,
         returned local beams correspond to the entrance and exit surfaces of
         the first lens.
+
+        *returnLocalAbsorbed*: None, 0 or 1
+            If not None, returns the absorbed intensity in local beam. If
+            equals zero, the last local beam returns total absorbed intensity,
+            otherwise the absorbed intensity on single element of the stack.
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
@@ -1543,7 +1571,8 @@ class ParaboloidFlatLens(Plate):
             raise ValueError("wrong nCRL value!")
 
         if nCRL == 1:
-            return self.double_refract(beam, needLocal=needLocal)
+            return self.double_refract(beam, needLocal=needLocal,
+                                       returnLocalAbsorbed=returnLocalAbsorbed)
         else:
             tmpFlowSource = self.bl.flowSource
             self.bl.flowSource = 'multiple_refract'
@@ -1568,6 +1597,21 @@ class ParaboloidFlatLens(Plate):
                     llocal1, llocal2 = tlocal1, tlocal2
             self.center = tempCenter
             self.bl.flowSource = tmpFlowSource
+
+            if returnLocalAbsorbed is not None:
+                if returnLocalAbsorbed == 0:
+                    absorbedLb = rs.Beam(copyFrom=llocal2)
+                    absorbedLb.absorb_intensity(beam)
+                    llocal2 = absorbedLb
+                elif returnLocalAbsorbed == 1:
+                    absorbedLb = rs.Beam(copyFrom=llocal1)
+                    absorbedLb.absorb_intensity(beam)
+                    llocal1 = absorbedLb
+                elif returnLocalAbsorbed == 2:
+                    absorbedLb = rs.Beam(copyFrom=llocal2)
+                    absorbedLb.absorb_intensity(llocal1)
+                    llocal2 = absorbedLb
+
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],
                                    inspect.currentframe())
