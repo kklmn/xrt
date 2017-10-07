@@ -14,16 +14,16 @@ for setting divergence (calculating the aperture size given the divergence) and
 for touching the beam with the aperture, i.e. calculating the minimum aperture
 size that lets the whole beam through.
 """
-__author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
-__all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
-# import copy
-# import math
+
 import numpy as np
 import inspect
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
+
+__author__ = "Konstantin Klementiev, Roman Chernikov"
+__date__ = "26 Mar 2016"
+__all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
 
 
 class RectangularAperture(object):
@@ -74,6 +74,8 @@ class RectangularAperture(object):
             bl.oesDict[self.name] = [self, 1]
 
         self.center = center
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
         if isinstance(kind, str):
             self.kind = (kind,)
             self.opening = [opening, ]
@@ -135,6 +137,9 @@ class RectangularAperture(object):
 
         .. Returned values: beamLocal
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -266,6 +271,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
             bl.oesDict[self.name] = [self, 1]
 
         self.center = center
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
         self.zActuator = center[2]
         self.z0 = center[2]
         self.apertures = apertures
@@ -347,6 +354,8 @@ class RoundAperture(object):
             bl.oesDict[self.name] = [self, 1]
 
         self.center = center
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
         self.r = r
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
@@ -369,6 +378,9 @@ class RoundAperture(object):
 
         .. Returned values: beamLocal
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -446,6 +458,9 @@ class RoundBeamStop(RoundAperture):
 
         .. Returned values: beamLocal
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -499,6 +514,9 @@ class DoubleSlit(RectangularAperture):
 
         .. Returned values: beamLocal
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         shadeMin = (1 - self.shadeFraction) * 0.5
         shadeMax = shadeMin + self.shadeFraction
         good = beam.state > 0

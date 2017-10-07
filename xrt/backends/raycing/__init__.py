@@ -119,11 +119,6 @@ as a parameter.
 
 See the supplied examples."""
 from __future__ import print_function
-__module__ = "raycing"
-__author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
-
-# import copy
 import types
 import sys
 import numpy as np
@@ -132,6 +127,10 @@ from collections import OrderedDict
 import re
 import copy
 import inspect
+
+__module__ = "raycing"
+__author__ = "Konstantin Klementiev, Roman Chernikov"
+__date__ = "26 Mar 2016"
 
 try:  # for Python 3 compatibility:
     unicode = unicode
@@ -145,6 +144,7 @@ else:
     basestring = basestring
 
 from .physconsts import SIE0  # analysis:ignore
+
 zEps = 1e-12  # mm: target accuracy in z while searching for intersection
 misalignmentTolerated = 0.1  # for automatic checking of oe center position
 accuracyInPosition = 0.1  # accuracy for positioning of oe
@@ -647,7 +647,7 @@ class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
     direction and height."""
-    def __init__(self, azimuth=0., height=0., alignE=9000., alignMode=1):
+    def __init__(self, azimuth=0., height=0., alignE=9000., alignMode=False):
         u"""
         *azimuth*: float
             Is counted in cw direction from the global Y axis. At
@@ -661,19 +661,10 @@ class BeamLine(object):
             or *bragg* parameters of the energy dispersive optical elements
             were set to 'auto'.
 
-        *alignMode*: int
-            Takes values in the range [0-2]. In mode 0 the single alignment ray
-            is propagated along the optical axis in order to calculate the
-            positions of the optical elements, if one or two coordinates of the
-            element were set to 'auto'. This mode is convenient for
-            quick alignment. In Mode 1 the full beam propagates together with
-            the alignment ray and allow to combine alignment with ray tracing.
-            This mode is convenient for the scans where the positions of
-            optical element is assumed to change. Mode 2 is similar to
-            mode 1 but the alignment ray origin and direction are
-            intensity-weighted average for all good rays. Useful in
-            asymmetric geometries when the optical axis is blocked by
-            apertures.
+        *alignMode*: bool
+            Toggles the automatic position and Bragg angle calculation
+            procedure for the elements of the beamline containing 'auto' in
+            corresponding fields.
 
 
         """
@@ -690,7 +681,6 @@ class BeamLine(object):
         self.alarms = []
         self.name = ''
         self.oesDict = OrderedDict()
-        self.unalignedOesDict = OrderedDict()
         self.flow = []
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
@@ -707,130 +697,6 @@ class BeamLine(object):
         self._azimuth = value
         self.sinAzimuth = np.sin(value)
         self.cosAzimuth = np.cos(value)
-
-    def align(self, startFrom=0):
-        if self.alignMode == 0:
-            nrays = 2  # Not 1 to keep the array type
-        else:
-            nrays = 1e4
-        if self.oesDict is not None and self.flow is not None:
-            for segment in self.flow[startFrom:]:
-                tmpNrays = None
-                autoBragg = False
-                autoPitch = False
-                segOE = self.oesDict[segment[0]][0]
-                usegOE = self.unalignedOesDict[segment[0]][0]
-                fArgs = {}
-                for inArg in segment[2].items():
-                    if inArg[0].startswith('beam'):
-                        if inArg[1] is None:
-                            inBeam = None
-                            break
-                        fArgs[inArg[0]] = self.beamsDict[inArg[1]]
-                        inBeam = fArgs['beam']
-                    else:
-                        fArgs[inArg[0]] = inArg[1]
-                try:
-                    if inBeam is None:
-                        continue
-                except NameError:
-                    pass
-                try:
-                    print(segment[0], segOE.center, segment[2]['beam'])
-                except:  # analysis:ignore
-                    pass
-                autoCenter = [x == 'auto' for x in usegOE.center]
-
-                if any(autoCenter):
-                    bStart = inBeam
-                    bStartC = np.array([bStart.x[0], bStart.y[0], bStart.z[0]])
-                    bStartDir = np.array([bStart.a[0], bStart.b[0],
-                                          bStart.c[0]])
-
-                    fixedCoord = np.invert(np.array(autoCenter))
-
-                    vLen = np.linalg.norm(np.array(list(compress(
-                        bStartC, fixedCoord))) -
-                        np.array(list(compress(segOE.center, fixedCoord))))
-                    segOE.center = bStartC + vLen * bStartDir
-
-                if hasattr(usegOE, 'pitch'):
-                    if usegOE.pitch == 'auto':
-                        autoPitch = True
-
-                if hasattr(usegOE, 'bragg'):
-                    if usegOE.bragg == 'auto':
-                        autoBragg = True
-
-                if autoBragg or autoPitch:
-                        braggT = segOE.material.get_Bragg_angle(self.alignE)
-                        alphaT = 0 if segOE.alpha is None else segOE.alpha
-                        lauePitch = 0
-
-                        braggT += -segOE.material.get_dtheta(self.alignE,
-                                                             alphaT)
-                        if segOE.material.geom.startswith('Laue'):
-                            lauePitch = 0.5 * np.pi
-
-                        loBeam = copy.deepcopy(inBeam)
-                        global_to_virgin_local(
-                            self, inBeam, loBeam,
-                            center=segOE.center)
-                        rotate_beam(
-                            loBeam,
-                            roll=-(segOE.positionRoll + segOE.roll),
-                            yaw=-segOE.yaw,
-                            pitch=0)
-                        theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
-                        th2pitch = np.sqrt(1. - loBeam.a[0]**2)
-                        targetPitch = np.arcsin(np.sin(braggT) / th2pitch) -\
-                            theta0
-                        targetPitch += alphaT + lauePitch
-                        if autoBragg:
-                            segOE.bragg = targetPitch-segOE.pitch
-                        else:  # autoPitch
-                            segOE.pitch = targetPitch
-
-                if len(re.findall('raycing.sou', str(type(segOE)).lower())):
-                    if hasattr(segOE, 'nrays'):
-                        if segOE.nrays != nrays:
-                            tmpNrays = segOE.nrays
-                            segOE.nrays = nrays
-
-                outBeams = segment[1](segOE, **fArgs)
-                if tmpNrays is not None:
-                    segOE.nrays = tmpNrays
-
-                if isinstance(outBeams, tuple):
-                    for outBeam, beamName in zip(list(outBeams),
-                                                 list(segment[3].values())):
-                        self.beamsDict[beamName] = outBeam
-                else:
-                    if self.alignMode == 0:
-                        if len(re.findall('raycing.sou',
-                                          str(type(segOE)).lower())):
-                            outBeams.x[0] = 0
-                            outBeams.y[0] = 0
-                            outBeams.z[0] = 0
-                            outBeams.a[0] = 0
-                            outBeams.b[0] = 1
-                            outBeams.c[0] = 0
-                            outBeams.state[:] = 1
-                            outBeams.E[0] = self.alignE
-                    else:
-                        good = outBeams.state[1:] > 0
-                        intensity = np.sqrt(np.abs(outBeams.Jss[good])**2 +
-                                            np.abs(outBeams.Jpp[good])**2)
-                        totalI = np.sum(intensity)
-                        for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
-                            field = getattr(outBeams, fieldName)
-                            field[0] = np.sum(field[good]*intensity) / totalI
-                            setattr(outBeams, fieldName, field)
-                        outBeams.state[0] = 1
-                        outBeams.E[0] = self.alignE
-
-                    self.beamsDict[str(list(segment[3].values())[0])] =\
-                        outBeams
 
     def prepare_flow(self):
         frame = inspect.currentframe()
@@ -855,19 +721,108 @@ class BeamLine(object):
                         if len(re.findall('beam', str(argName))) > 0:
                             segment[iseg][argName] =\
                                 self.beamsRevDict[argVal]
+        self.flowSource = 'prepared_to_run'
 
-    def propagate_flow(self, startFrom=0, align=False):
-        if align and self.alignMode == 0:
-                nrays = 2  # Not 1 to keep the array type
+    def auto_align(self, oe, beam):
+        autoCenter = [False] * 3
+        autoPitch = autoBragg = False
+        alignE = self.alignE
+
+        if hasattr(oe, '_center'):
+            autoCenter = [x == 'auto' for x in oe._center]
+
+        if hasattr(oe, '_pitch'):
+            try:
+                if isinstance(oe._pitch, (list, tuple)):
+                    alignE = float(oe._pitch[-1])
+                autoPitch = True
+            except:
+                raise("Automatic Bragg angle calculation failed.")
+
+        if hasattr(oe, '_bragg'):
+            try:
+                if isinstance(oe._bragg, (list, tuple)):
+                    alignE = float(oe._bragg[-1])
+                autoBragg = True
+            except:
+                raise("Automatic Bragg angle calculation failed.")
+
+        if any(autoCenter) or autoPitch or autoBragg:
+            good = (beam.state == 1) | (beam.state == 2)
+            if self.flowSource == 'Qook':
+                beam.E[0] = alignE
+                beam.state[0] = 1
+            intensity = np.sqrt(np.abs(beam.Jss[good])**2 +
+                                np.abs(beam.Jpp[good])**2)
+            totalI = np.sum(intensity)
+            inBeam = copy.deepcopy(beam)  # Beam(nrays=2)
+            for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
+                field = getattr(beam, fieldName)
+                fNorm = np.sum(field[good] * intensity) / totalI
+                try:
+                    setattr(inBeam, fieldName,
+                            np.ones(2) * fNorm)
+                    if self.flowSource == 'Qook':
+                        field[0] = fNorm
+                        setattr(inBeam, fieldName, field)
+                except:
+                    print("Cannot find direction for automatic alignment.")
+                    raise
+            dirNorm = np.sqrt(inBeam.a[0]**2 + inBeam.b[0]**2 + inBeam.c[0]**2)
+            inBeam.a[0] /= dirNorm
+            inBeam.b[0] /= dirNorm
+            inBeam.c[0] /= dirNorm
+            if self.flowSource == 'Qook':
+                beam.a[0] /= dirNorm
+                beam.b[0] /= dirNorm
+                beam.c[0] /= dirNorm
+
+        if any(autoCenter):
+            bStartC = np.array([inBeam.x[0], inBeam.y[0],
+                                inBeam.z[0]])
+            bStartDir = np.array([inBeam.a[0], inBeam.b[0],
+                                  inBeam.c[0]])
+
+            fixedCoord = np.invert(np.array(autoCenter))
+
+            vLen = np.linalg.norm(np.array(list(compress(
+                bStartC, fixedCoord))) -
+                np.array(list(compress(oe.center, fixedCoord))))
+            oe.center = bStartC + vLen * bStartDir
+
+        if autoBragg or autoPitch:
+            if self.flowSource == 'Qook':
+                inBeam.E[0] = alignE
+            try:
+                braggT =\
+                    oe.material.get_Bragg_angle(alignE)
+                alphaT = 0 if oe.alpha is None else oe.alpha
+                lauePitch = 0
+
+                braggT += -oe.material.get_dtheta(alignE, alphaT)
+                if oe.material.geom.startswith('Laue'):
+                    lauePitch = 0.5 * np.pi
+                loBeam = copy.deepcopy(inBeam)  # Beam(copyFrom=inBeam)
+                global_to_virgin_local(self, inBeam, loBeam, center=oe.center)
+                rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),
+                            yaw=-oe.yaw, pitch=0)
+                theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
+                th2pitch = np.sqrt(1. - loBeam.a[0]**2)
+                targetPitch = np.arcsin(np.sin(braggT) / th2pitch) - theta0
+                targetPitch += alphaT + lauePitch
+                if autoBragg:
+                    if autoPitch:
+                        oe.pitch = 0
+                    oe.bragg = targetPitch - oe.pitch
+                else:  # autoPitch
+                    oe.pitch = targetPitch
+            except:
+                raise
+
+    def propagate_flow(self, startFrom=0):
         if self.oesDict is not None and self.flow is not None:
             for segment in self.flow[startFrom:]:
-                if align:
-                    tmpNrays = None
-                    autoBragg = False
-                    autoPitch = False
-                    usegOE = self.unalignedOesDict[segment[0]][0]
                 segOE = self.oesDict[segment[0]][0]
-
                 fArgs = {}
                 for inArg in segment[2].items():
                     if inArg[0].startswith('beam'):
@@ -884,105 +839,16 @@ class BeamLine(object):
                 except NameError:
                     pass
 
-                if align:
-                    autoCenter = [x == 'auto' for x in usegOE.center]
-
-                    if any(autoCenter):
-                        bStart = inBeam
-                        bStartC = np.array([bStart.x[0], bStart.y[0],
-                                            bStart.z[0]])
-                        bStartDir = np.array([bStart.a[0], bStart.b[0],
-                                              bStart.c[0]])
-
-                        fixedCoord = np.invert(np.array(autoCenter))
-
-                        vLen = np.linalg.norm(np.array(list(compress(
-                            bStartC, fixedCoord))) -
-                            np.array(list(compress(segOE.center, fixedCoord))))
-                        segOE.center = bStartC + vLen * bStartDir
-
-                    if hasattr(usegOE, 'pitch'):
-                        if usegOE.pitch == 'auto':
-                            autoPitch = True
-
-                    if hasattr(usegOE, 'bragg'):
-                        if usegOE.bragg == 'auto':
-                            autoBragg = True
-
-                    if autoBragg or autoPitch:
-                            braggT =\
-                                segOE.material.get_Bragg_angle(self.alignE)
-                            alphaT = 0 if segOE.alpha is None else segOE.alpha
-                            lauePitch = 0
-
-                            braggT += -segOE.material.get_dtheta(self.alignE,
-                                                                 alphaT)
-                            if segOE.material.geom.startswith('Laue'):
-                                lauePitch = 0.5 * np.pi
-
-                            loBeam = copy.deepcopy(inBeam)
-                            global_to_virgin_local(
-                                self, inBeam, loBeam,
-                                center=segOE.center)
-                            rotate_beam(
-                                loBeam,
-                                roll=-(segOE.positionRoll + segOE.roll),
-                                yaw=-segOE.yaw,
-                                pitch=0)
-                            theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
-                            th2pitch = np.sqrt(1. - loBeam.a[0]**2)
-                            targetPitch =\
-                                np.arcsin(np.sin(braggT) / th2pitch) - theta0
-                            targetPitch += alphaT + lauePitch
-                            if autoBragg:
-                                segOE.bragg = targetPitch-segOE.pitch
-                            else:  # autoPitch
-                                segOE.pitch = targetPitch
-
-                    if len(re.findall('raycing.sou', str(type(segOE)).lower(
-                            ))) and self.alignMode == 0:
-                        if hasattr(segOE, 'nrays'):
-                            if segOE.nrays != nrays:
-                                tmpNrays = segOE.nrays
-                                segOE.nrays = nrays
                 try:  # protection againt incorrect propagation parameters
                     outBeams = segment[1](segOE, **fArgs)
                 except:
                     continue
-                if align and self.alignMode == 0:
-                    if tmpNrays is not None:
-                        segOE.nrays = tmpNrays
 
                 if isinstance(outBeams, tuple):
                     for outBeam, beamName in zip(list(outBeams),
                                                  list(segment[3].values())):
                         self.beamsDict[beamName] = outBeam
                 else:
-                    if align:
-                        if self.alignMode in [0, 1]:
-                            if len(re.findall('raycing.sou',
-                                              str(type(segOE)).lower())):
-                                outBeams.x[0] = 0
-                                outBeams.y[0] = 0
-                                outBeams.z[0] = 0
-                                outBeams.a[0] = 0
-                                outBeams.b[0] = 1
-                                outBeams.c[0] = 0
-                                outBeams.state[:] = 1
-                                outBeams.E[0] = self.alignE
-                        else:
-                            good = outBeams.state[1:] > 0
-                            intensity = np.sqrt(np.abs(outBeams.Jss[good])**2 +
-                                                np.abs(outBeams.Jpp[good])**2)
-                            totalI = np.sum(intensity)
-                            for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
-                                field = getattr(outBeams, fieldName)
-                                field[0] =\
-                                    np.sum(field[good] * intensity) / totalI
-                                setattr(outBeams, fieldName, field)
-                            outBeams.state[0] = 1
-                            outBeams.E[0] = self.alignE
-
                     self.beamsDict[str(list(segment[3].values())[0])] =\
                         outBeams
 

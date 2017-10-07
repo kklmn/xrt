@@ -1366,6 +1366,9 @@ class Plate(DCM):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         self.material2 = self.material
         self.cryst2perpTransl = -self.t
         if self.bl is not None:
@@ -1560,6 +1563,9 @@ class ParaboloidFlatLens(Plate):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         if isinstance(self.nCRL, (int, float)):
             nCRL = self.nCRL
         elif isinstance(self.nCRL, (list, tuple)):

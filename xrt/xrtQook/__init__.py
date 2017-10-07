@@ -272,7 +272,8 @@ from .. import plotter as xrtplot  # analysis:ignore
 from .. import runner as xrtrun  # analysis:ignore
 from .. import xrtGlow as xrtglow  # analysis:ignore
 
-path_to_xrt = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))))
 myTab = 4*" "
 
 
@@ -308,7 +309,6 @@ class XrtQook(QWidget):
 
         mainWidget = QWidget()
         mainWidget.setMinimumWidth(486)
-#        docWidget = QWidget()
         self.docWidget = QTabWidget()
         self.docWidget.setMinimumWidth(600)
         mainBox = QVBoxLayout()
@@ -317,25 +317,10 @@ class XrtQook(QWidget):
         mainBox.addWidget(self.toolBar)
         mainBox.addWidget(self.tabs)
         mainBox.addWidget(self.statusBar)
-#        self.webHelpDock = QDockWidget()
-#        self.webHelpDock.setWidget(self.webHelp)
-#        self.webHelpDock.setFloating(True)
-#        self.webHelpDock.topLevelChanged.connect(self.adjustUndockedPos)
         docBox.addWidget(self.webHelp)
 
         mainWidget.setLayout(mainBox)
         self.docWidget.setLayout(docBox)
-#        self.docWidget.addTab(self.webHelpDock, "Live Help")
-
-#        if isOpenGL:
-#            self.glowDock = QDockWidget()
-#            self.rayPath = [list(), dict(), dict()]
-#            self.bl_run_glow()
-#            self.glowDock.setFloating(True)
-#            self.glowDock.setGeometry(100, 100, 700, 700)
-#            self.docWidget.addTab(self.glowDock, "xrtGlow")
-#            self.glowDock.setWindowTitle('xrtGlow')
-#            self.glowDock.topLevelChanged.connect(self.adjustUndockedPos)
         self.docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
 
         canvasBox.addWidget(canvasSplitter)
@@ -454,19 +439,10 @@ class XrtQook(QWidget):
         self.toolBar.addSeparator()
         if isOpenGL:
             self.toolBar.addAction(glowAction)
-#        self.toolBar.addSeparator()
         if isOpenCL:
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
         self.toolBar.addAction(aboutAction)
-
-#        bbl = QShortcut(self)
-#        bbl.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_F1)
-#        bbl.activated.connect(self.populate_beamline)
-#
-#        bbl2 = QShortcut(self)
-#        bbl2.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_F2)
-#        bbl2.activated.connect(self.bl_run_glow)
 
     def init_tabs(self):
         self.tree = QTreeView()
@@ -647,6 +623,7 @@ class XrtQook(QWidget):
         self.plotTree.setHeaderHidden(False)
         self.plotTree.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.plotTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+
         # materialsTree view
         self.matTree.setModel(self.materialsModel)
         self.matTree.setAlternatingRowColors(True)
@@ -654,6 +631,7 @@ class XrtQook(QWidget):
         self.matTree.setHeaderHidden(False)
         self.matTree.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.matTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+
         # BLTree view
         self.tree.setModel(self.beamLineModel)
         self.tree.setAlternatingRowColors(True)
@@ -687,7 +665,6 @@ class XrtQook(QWidget):
         self.blUpdateLatchOpen = False
         self.beamLineModel = QStandardItemModel()
         self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
-#        self.beamLineModel.itemChanged.connect(self.colorizeChangedParam)
         self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
         self.rootBLItem = self.beamLineModel.item(0, 0)
 
@@ -1710,7 +1687,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.colorizeTabText(item)
             if item.parent() == self.rootBLItem:
                 del self.beamLine.oesDict[str(item.text())]
-                del self.beamLine.unalignedOesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
                 if self.isGlowAutoUpdate:
                     self.update_beamline(item, newElement=False)
@@ -1749,7 +1725,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     item = self.plotModel.invisibleRootItem()
                     item.setEditable(True)
                 self.exportModel(item)
-            self.confText += '<description>\n{0}\n</description>\n'.format(
+            self.confText += '<description>{0}</description>\n'.format(
                 self.fileDescription)
             self.confText += "</Project>\n"
             if not str(self.layoutFileName).endswith('.xml'):
@@ -2771,11 +2747,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             self.rootBLItem if item is None else item)
         self.rootBLItem.model().blockSignals(False)
 
-#        try:
-#            print(item.text())
-#        except:
-#            pass
-#        print("BEAMS in QOOK", self.beamLine.beamsDict)
         if item is not None:
             if item.index().parent().isValid():  # not the Beamline root
                 iCol = item.index().column()
@@ -2794,14 +2765,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             kwArgs = create_param_dict(propItem, elClassStr)
                             self.beamLine.oesDict[elNameStr] =\
                                 [eval(elClassStr)(**kwArgs), oeType]
-                            self.beamLine.unalignedOesDict[elNameStr] =\
-                                [eval(elClassStr)(**kwArgs), oeType]
                             print("Class", elNameStr,
                                   "successfully initialized.")
                         except:  # analysis:ignore
                             self.beamLine.oesDict[elNameStr] =\
-                                [None, oeType]
-                            self.beamLine.unalignedOesDict[elNameStr] =\
                                 [None, oeType]
                             print("Incorrect parameters. Class", elNameStr,
                                   "not initialized.")
@@ -2809,15 +2776,12 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         startFrom = name_to_flow_pos(elNameStr)
                     else:  # Element renamed or moved
                         oesValues = list(self.beamLine.oesDict.values())
-                        oesUAValues = list(
-                            self.beamLine.unalignedOesDict.values())
                         oesKeys = list(self.beamLine.oesDict.keys())
                         wasDeleted = True if\
                             len(oesKeys) + 2 < self.rootBLItem.rowCount()\
                             else False
                         if not wasDeleted:
                             newDict = OrderedDict()
-                            newUADict = OrderedDict()
                             counter = 0
                             startElement = None
                             rbi = self.rootBeamItem
@@ -2828,15 +2792,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     if newOrder:
                                         newDict[elNameStr] =\
                                             self.beamLine.oesDict[elNameStr]
-                                        newUADict[elNameStr] =\
-                                            self.beamLine.unalignedOesDict[elNameStr]  # analysis:ignore
                                         if elNameStr != oesKeys[counter] and\
                                                 startElement is None:
                                             startElement = elNameStr
                                     else:
                                         newDict[elNameStr] = oesValues[counter]
-                                        newUADict[elNameStr] =\
-                                            oesUAValues[counter]
                                         if elNameStr != oesKeys[counter]:
                                             startElement = oesKeys[counter]
                                             for ibeam in range(
@@ -2850,7 +2810,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                   "renamed to", elNameStr)
                                     counter += 1
                             self.beamLine.oesDict = newDict
-                            self.beamLine.unalignedOesDict = newUADict
                         if newOrder:
                             print("Element", item.text(),
                                   "moved to new position")
@@ -2890,19 +2849,14 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             if self.beamLine.oesDict[elNameStr][0] is None:
                                 self.beamLine.oesDict[elNameStr] =\
                                     [eval(elClassStr)(**kwargs), oeType]
-                                self.beamLine.unalignedOesDict[elNameStr] =\
-                                    [eval(elClassStr)(**kwargs), oeType]
                                 print("Class", elNameStr,
                                       "successfully initialized.")
                             else:
                                 self.beamLine.oesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
-                                self.beamLine.unalignedOesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
                                 print("Class", elNameStr,
                                       "successfully re-initialized.")
                         except:  # analysis:ignore
                             self.beamLine.oesDict[elNameStr] =\
-                                [None, oeType]
-                            self.beamLine.unalignedOesDict[elNameStr] =\
                                 [None, oeType]
                             print("Incorrect parameters. Class", elNameStr,
                                   "not initialized.")
@@ -2949,14 +2903,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 kwArgs = create_param_dict(pItem, elClassStr)
                                 self.beamLine.oesDict[elNameStr] =\
                                     [eval(elClassStr)(**kwArgs), oeType]
-                                self.beamLine.unalignedOesDict[elNameStr] =\
-                                    [eval(elClassStr)(**kwArgs), oeType]
                                 print("Class", elNameStr,
                                       "successfully initialized.")
                             except:  # analysis:ignore
                                 self.beamLine.oesDict[elNameStr] =\
-                                    [None, oeType]
-                                self.beamLine.unalignedOesDict[elNameStr] =\
                                     [None, oeType]
                                 print("Incorrect parameters. Class", elNameStr,
                                       "not initialized.")
@@ -2965,7 +2915,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
         if self.blViewer is not None:
             if startFrom is not None:
-                self.beamLine.propagate_flow(startFrom, align=True)
+                self.beamLine.propagate_flow(startFrom=startFrom)
             self.rayPath = self.beamLine.export_to_glow()
             self.blViewer.update_oes_list(self.rayPath)
 
@@ -2980,7 +2930,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         except:  # analysis:ignore
             pass
         self.blUpdateLatchOpen = True
-        self.beamLine.propagate_flow(startFrom=0, align=True)
+        self.beamLine.propagate_flow(startFrom=0)
         self.rayPath = self.beamLine.export_to_glow()
         self.bl_run_glow()
 
@@ -2993,7 +2943,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if self.blViewer is None:
             self.blViewer = xrtglow.xrtGlow(self.rayPath, self)
             self.blViewer.setWindowTitle("xrtGlow")
-#            self.glowDock.setWidget(self.blViewer)
             self.blViewer.show()
         else:
             self.blViewer.update_oes_list(self.rayPath)
@@ -3040,11 +2989,6 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
         codeBuildBeamline = codeBuildBeamline.rstrip(',') + ')\n\n'
 
         codeRunProcess = '\ndef run_process({}):\n'.format(BLName)
-        codeAlignBL = ""
-        if self.prepareViewer:
-            codeAlignBL += "\n{0}rayPath = []".format(myTab)
-            codeAlignBL += "\n{0}oeDict = OrderedDict()".format(myTab)
-            codeAlignBL += "\n{0}beamDict = dict()\n".format(myTab)
 
         codeMain = "\ndef main():\n"
         codeMain += '{0}{1} = build_beamline()\n'.format(myTab, BLName)
@@ -3077,18 +3021,12 @@ if __name__ == '__main__':
                                         paraname, paravalue, myTab)
                 codeDeclarations += '{0} = {1})\n\n'.format(
                     matItem.text(), str.rstrip(ieinit, ","))
-        outputBeamMatch = dict()
         for ie in range(self.rootBLItem.rowCount()):
             if self.rootBLItem.child(ie, 0).text() != "properties" and\
                     self.rootBLItem.child(ie, 0).text() != "_object":
                 tItem = self.rootBLItem.child(ie, 0)
                 ieinit = ""
                 ierun = ""
-                autoX = False
-                autoZ = False
-                autoPitch = False
-                autoBragg = False
-                matType = 'None'
                 for ieph in range(tItem.rowCount()):
                     if tItem.child(ieph, 0).text() == '_object':
                         elstr = str(tItem.child(ieph, 1).text())
@@ -3111,33 +3049,11 @@ if __name__ == '__main__':
                                                            paravalue)[0]
                                 cCoord = [self.getVal(c.strip()) for c in
                                           str.split(paravalue, ',')]
-                                if 'auto' in str(cCoord[0]):
-                                    autoX = True
-                                    cCoord[0] = '0.0'
-                                if 'auto' in str(cCoord[2]):
-                                    autoZ = True
-                                    cCoord[2] = '0.0'
                                 paravalue = re.sub('\'', '', str(
-                                    [self.getVal(c) for c in cCoord]))
-                            # if paraname == "yaw" and paravalue == "auto":
-                            #    autoYaw = True
-                            #    paravalue = '0.0'
-                            if paraname == "pitch" and ('auto' in paravalue):
-                                autoPitch = True
-                                paravalue = '0.0'
-                            if paraname == "bragg" and ('auto' in paravalue):
-                                autoBragg = True
-                                paravalue = '0.0'
-                            if paraname == "material":
-                                matType = self.whichCrystal(paravalue)
-                                matName = paravalue
-                            if BLName in paravalue and paraname != 'bl':
-                                codeAlignBL += '{0}{1}.{2}.{3}={4}\n'.format(
-                                    myTab, BLName, tItem.text(), paraname,
-                                    paravalue)
+                                    [self.quotize(c) for c in cCoord]))
                             if paravalue != str(arg_def) or\
                                     paraname == 'bl':
-                                if paraname not in ['bl',
+                                if paraname not in ['bl', 'center',
                                                     'material',
                                                     'material2']:
                                     paravalue = self.quotize(paravalue)
@@ -3147,7 +3063,6 @@ if __name__ == '__main__':
                     if tItem.child(ieph, 0).text() != '_object' and\
                             tItem.child(ieph, 0).text() != 'properties':
                         pItem = tItem.child(ieph, 0)
-                        tmpBeamName = ""
                         tmpSourceName = ""
                         for namef, objf in inspect.getmembers(eval(elstr)):
                             if (inspect.ismethod(objf) or
@@ -3166,9 +3081,6 @@ if __name__ == '__main__':
                                     if paravalue != str(arg_def):
                                         ierun += '\n{2}{0}={1},'.format(
                                             paraname, paravalue, myTab*2)
-                                    if len(re.findall(
-                                            "beam", paraname.lower())) > 0:
-                                        tmpBeamName = paravalue
                             elif pItem.child(imet, 0).text() == 'output':
                                 mItem = pItem.child(imet, 0)
                                 paraOutput = ""
@@ -3192,147 +3104,12 @@ if __name__ == '__main__':
                             paraOutput.rstrip(', '), BLName, tItem.text(),
                             str(pItem.text()).strip('()'),
                             ierun.rstrip(','), myTab)
-                        if self.prepareViewer:
-                            outputBeamMatch[paraOutBeams[0]] =\
-                                str(tItem.text())
-                        if len(re.findall('sources', elstr)) > 0:
-                            if self.prepareViewer:
-                                codeAlignBL += '{5}{0} = {1}.{2}.{3}({4})\n\n'.format( # analysis:ignore
-                                    paraOutput.rstrip(', '),
-                                    BLName, tItem.text(),
-                                    str(pItem.text()).strip('()'),
-                                    ierun.rstrip(','), myTab)
-                                nullRay = '0'
-                            else:
-                                codeAlignBL += '{3}{0} = {1}.{2}\n'.format(
-                                    tmpSourceName,
-                                    rsources.__name__,
-                                    'Beam(nrays=2)', myTab)
-                                nullRay = ':'
-
-                            codeAlignBL += '{1}{0}.a[{2}] = 0\n{1}{0}.b[{2}] = 1\n{1}{0}.c[{2}] = 0\n\
-{1}{0}.x[{2}] = 0\n{1}{0}.y[{2}] = 0\n{1}{0}.z[{2}] = 0\n{1}{0}.state[:] = 1\n{1}{0}.E[0] = energy\n\n'.format(tmpSourceName, myTab, nullRay) # analysis:ignore
-                            if self.prepareViewer:
-                                codeAlignBL += '{2}oeDict[\'{1}\'] = [{0}.{1}, 0]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
-                                codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
-
-                        else:
-                            codeAlignBL += '{2}tmpy = {0}.{1}.center[1]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
-                            if autoX:
-                                codeAlignBL += '{1}newx = {0}.x[0] +\\\n{1}{1}{0}.a[0] * (tmpy - {0}.y[0]) /\\\n{1}{1}{0}.b[0]\n'.format(tmpBeamName, myTab) # analysis:ignore
-                            else:
-                                codeAlignBL += '{2}newx = {0}.{1}.center[0]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
-                            if autoZ:
-                                codeAlignBL += '{1}newz = {0}.z[0] +\\\n{1}{1}{0}.c[0] * (tmpy - {0}.y[0]) /\\\n{1}{1}{0}.b[0]\n'.format(tmpBeamName, myTab) # analysis:ignore
-                            else:
-                                codeAlignBL += '{2}newz = {0}.{1}.center[2]\n'.format(BLName, tItem.text(), myTab) # analysis:ignore
-                            codeAlignBL += '{2}{0}.{1}.center = (newx, tmpy, newz)\n'.format( # analysis:ignore
-                                BLName, tItem.text(), myTab)
-                            if self.prepareViewer:
-                                codeAlignBL += '{2}oeDict[\'{1}\'] = [{0}.{1}, 1]\n'.format(BLName, tItem.text(), myTab)  # analysis:ignore
-                            codeAlignBL += '{2}print(\"{1}.center:\", {0}.{1}.center)\n\n'.format( # analysis:ignore
-                                BLName, tItem.text(), myTab)
-                            if autoPitch or autoBragg:
-                                if matType != 'None':
-                                    codeAlignBL += '{1}braggT = {0}.get_Bragg_angle(energy)\n'.format( # analysis:ignore
-                                        matName, myTab)
-                                    codeAlignBL += '{2}alphaT = 0 if {0}.{1}.alpha is None else {0}.{1}.alpha\n'.format( # analysis:ignore
-                                        BLName, tItem.text(), myTab)
-                                    codeAlignBL += '{0}lauePitch = 0\n'.format( # analysis:ignore
-                                        myTab)
-                                    codeAlignBL += '{2}print(\"bragg, alpha:\", np.degrees(braggT), np.degrees(alphaT), \"degrees\")\n\n'.format( # analysis:ignore
-                                        BLName, tItem.text(), myTab)
-                                if matType == 'crystal':
-                                    codeAlignBL += '{1}braggT += -{0}.get_dtheta(energy, alphaT)\n'.format( # analysis:ignore
-                                        matName, myTab)
-                                    codeAlignBL += '{1}if {0}.geom.startswith(\'Laue\'):\n{1}{1}lauePitch = 0.5 * np.pi\n'.format( # analysis:ignore
-                                        matName, myTab)
-                                    codeAlignBL += '{2}print(\"braggT:\", np.degrees(braggT), \"degrees\")\n\n'.format( # analysis:ignore
-                                        BLName, tItem.text(), myTab)
-                                if matType != 'None':
-                                    codeAlignBL += '{1}loBeam = rsources.Beam(copyFrom={0})\n'.format( # analysis:ignore
-                                        tmpBeamName, myTab)
-                                    codeAlignBL += '{3}raycing.global_to_virgin_local(\n{3}{3}{0},\n{3}{3}{1},\n{3}{3}loBeam,\n{3}{3}center={0}.{2}.center)\n'.format( # analysis:ignore
-                                        BLName, tmpBeamName,
-                                        tItem.text(), myTab)
-                                    codeAlignBL += '{2}raycing.rotate_beam(\n{2}{2}loBeam,\n{2}{2}roll=-({0}.{1}.positionRoll + {0}.{1}.roll),\n{2}{2}yaw=-{0}.{1}.yaw,\n{2}{2}pitch=0)\n'.format( # analysis:ignore
-                                        BLName, tItem.text(), myTab)
-                                    codeAlignBL += '{0}theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])\n'.format(myTab) # analysis:ignore
-                                    codeAlignBL += '{0}th2pitch = np.sqrt(1. - loBeam.a[0]**2)\n'.format(myTab) # analysis:ignore
-                                    codeAlignBL += '{0}targetPitch = np.arcsin(np.sin(braggT) / th2pitch) -\\\n{0}{0}theta0\n'.format(myTab) # analysis:ignore
-                                    codeAlignBL += '{0}targetPitch += alphaT + lauePitch\n'.format(myTab) # analysis:ignore
-                                    if autoBragg:
-                                        strPitch = 'bragg'
-                                        addPitch = '-{0}.{1}.pitch'.format(
-                                            BLName, tItem.text())
-                                    else:
-                                        strPitch = 'pitch'
-                                        addPitch = ''
-                                    codeAlignBL += '{2}{0}.{1}.{3} = targetPitch{4}\n'.format( # analysis:ignore
-                                        BLName, tItem.text(), myTab,
-                                        strPitch, addPitch)
-                                    codeAlignBL += '{2}print(\"{1}.{3}:\", np.degrees({0}.{1}.{3}), \"degrees\")\n\n'.format( # analysis:ignore
-                                        BLName, tItem.text(), myTab, strPitch)
-                            oeFunction = str(pItem.text()).strip('()')
-                            expGlobal = '_global' if len(re.findall(
-                                ('expose'), oeFunction)) > 0 else ''
-                            codeAlignBL += '{5}{0} = {1}.{2}.{3}({4})\n'.format( # analysis:ignore
-                                '{0}{1}'.format(paraOutput.rstrip(', '),
-                                                expGlobal),
-                                BLName, tItem.text(),
-                                '{0}{1}'.format(oeFunction, expGlobal),
-                                ierun.rstrip(','), myTab)
-                            if self.prepareViewer:
-                                if len(re.findall(('double'), str(pItem.text()))) + len(re.findall(('multiple'), str(pItem.text()))) > 0: # analysis:ignore
-                                    codeAlignBL += '{0}{1}toGlobal = rsources.Beam(copyFrom={1})\n'.format(myTab, paraOutBeams[1]) # analysis:ignore
-                                    codeAlignBL += '{0}{1}.{2}.local_to_global({3}toGlobal)\n'.format( # analysis:ignore
-                                        myTab, BLName, tItem.text(),
-                                        paraOutBeams[1])
-                                    paraOutBeams[1] += 'toGlobal'
-                                    codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
-                                    codeAlignBL += '{0}rayPath.append(\n{0}{0}[\'{1}\', \'{2}\',\n{0}{0} \'{3}\', \'{4}\'])\n'.format( # analysis:ignore
-                                        myTab, tItem.text(),
-                                        paraOutBeams[1],
-                                        tItem.text(),
-                                        paraOutBeams[0])
-                                    paraOutBeams[0] = paraOutBeams[1]
-                                if len(re.findall(('propagate'), str(pItem.text()))) > 0: # analysis:ignore
-                                    codeAlignBL += '{0}{1}toGlobal = rsources.Beam(copyFrom={1})\n'.format(myTab, paraOutBeams[0]) # analysis:ignore
-                                    codeAlignBL += '{0}{1}.{2}.local_to_global({3}toGlobal)\n'.format( # analysis:ignore
-                                        myTab, BLName, tItem.text(),
-                                        paraOutBeams[0])
-                                    paraOutBeams[0] += 'toGlobal'
-                                    codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format(paraOutBeams[0], myTab) # analysis:ignore
-                                    codeAlignBL += '{0}rayPath.append(\n{0}{0}[\'{1}\', \'{2}\',\n{0}{0} \'{3}\', \'{4}\'])\n'.format( # analysis:ignore
-                                        myTab, outputBeamMatch[tmpBeamName],
-                                        tmpBeamName,
-                                        tItem.text(),
-                                        paraOutBeams[0])
-                                else:
-                                    paraOutBeams[0] += expGlobal
-                                    codeAlignBL += '{0}rayPath.append(\n{0}{0}[\'{1}\', \'{2}\',\n{0}{0} \'{3}\', \'{4}\'])\n'.format( # analysis:ignore
-                                        myTab, outputBeamMatch[tmpBeamName],
-                                        tmpBeamName,
-                                        tItem.text(),
-                                        paraOutBeams[0])
-                                    codeAlignBL += '{1}beamDict[\'{0}\'] = {0}\n'.format( # analysis:ignore
-                                        paraOutBeams[0], myTab)
 
                 codeBuildBeamline += '{3}{0}.{1} = {2})\n\n'.format(
                     BLName, str(tItem.text()), ieinit.rstrip(','), myTab)
         codeBuildBeamline += "{0}return {1}\n\n".format(myTab, BLName)
         codeRunProcess += r"{0}outDict = ".format(myTab) + "{"
-        codeAlignBL = 'def align_beamline({0}, energy):\n'.format(BLName) +\
-            codeAlignBL + "{}\n".format(
-                myTab + "pass" if codeAlignBL == '' else '')
-        if self.prepareViewer:
-            codeAlignBL += '{}plot_layout([rayPath, beamDict, oeDict])\n'.format(myTab) # analysis:ignore
-            codeAlignBL = """def plot_layout(rayPath):\n\
-{0}app = QtGui.QApplication(sys.argv)\n\
-{0}blViewer = xrtglow.xrtGlow(rayPath)\n\
-{0}blViewer.setWindowTitle("xrtGlow")\n\
-{0}blViewer.show()\n\
-{0}app.exec_()\n\n\n""".format(myTab) + codeAlignBL
+
         for ibm in range(self.beamModel.rowCount()):
             beamName = str(self.beamModel.item(ibm, 0).text())
             if beamName != "None":
@@ -3344,7 +3121,7 @@ if __name__ == '__main__':
             '{}.run_process = run_process\n\n\n'.format(rrun.__name__)
 
         codeMain += e0str
-        codeMain += '{1}align_beamline({0}, E0)\n'.format(BLName, myTab)
+        codeMain += '{1}{0}.alignE=E0\n'.format(BLName, myTab)
         if not self.glowOnly:
             codeMain += '{0}{1} = define_plots()\n'.format(
                 myTab, self.rootPlotItem.text())
@@ -3494,17 +3271,11 @@ if __name__ == '__main__':
             codeMain += ieinit.rstrip(",\n") + ")\n"
 
         fullCode = codeDeclarations + codeBuildBeamline +\
-            codeRunProcess + codeAlignBL + codePlots + codeMain + codeFooter
+            codeRunProcess + codePlots + codeMain + codeFooter
         for xrtAlias in self.xrtModules:
             fullModName = (eval(xrtAlias)).__name__
             fullCode = fullCode.replace(fullModName, xrtAlias)
             codeHeader += 'import {0} as {1}\n'.format(fullModName, xrtAlias)
-        if self.prepareViewer:
-            codeHeader += """import xrt.xrtGlow as xrtglow\n\
-from collections import OrderedDict\n"""
-            codeHeader += """{} QtGui\n""".format(
-                'from PyQt4 import' if QtName == 'PyQt4' else
-                'import PyQt5.QtWidgets as')
         fullCode = codeHeader + fullCode
         if self.glowOnly:
             self.glowCode = fullCode

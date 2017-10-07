@@ -1,6 +1,4 @@
 ﻿# -*- coding: utf-8 -*-
-__author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "16 Mar 2017"
 import os
 import time
 import numpy as np
@@ -16,6 +14,9 @@ try:
     isOpenCL = True
 except ImportError:
     isOpenCL = False
+
+__author__ = "Konstantin Klementiev, Roman Chernikov"
+__date__ = "06 Oct 2017"
 
 __dir__ = os.path.dirname(__file__)
 _DEBUG = False
@@ -78,12 +79,15 @@ class OE(object):
             User-specified name, occasionally used for diagnostics output.
 
         *center*: 3-sequence of floats
-            3D point in global system. In the GUI, the transverse coordinates,
-            i.e center[0] and center[2] can be 'auto'.
+            3D point in global system. Any two coordinates
+            can be 'auto' for automatic alignment.
 
         *pitch, roll, yaw*: floats
             Rotations Rx, Ry, Rz, correspondingly, defined in the local system.
-            In the GUI, can be 'auto'.
+            If the material belongs to `Crystal`, *pitch* can be
+            calculated automatically if alignment energy is given as a single
+            element list [energy]. If 'auto',
+            the alignment energy will be taken from beamLine.alignE.
 
         *positionRoll*: float
             A global roll used for putting the OE upside down (=np.pi) or
@@ -208,11 +212,16 @@ class OE(object):
             bl.oesDict[self.name] = [self, 1]
 
         self.shouldCheckCenter = shouldCheckCenter
+
         self.center = center
-        if (bl is not None) and shouldCheckCenter:
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
+        if (bl is not None) and self.shouldCheckCenter:
             self.checkCenter()
 
         self.pitch = pitch
+        if isinstance(self.pitch, (basestring, list, tuple)):
+            self._pitch = self.pitch
         self.roll = roll
         self.yaw = yaw
         self.rotationSequence = rotationSequence
@@ -802,6 +811,9 @@ class OE(object):
         .. .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         self.get_orientation()
         # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
@@ -859,6 +871,9 @@ class OE(object):
         .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         self.get_orientation()
 # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
@@ -1581,12 +1596,12 @@ class OE(object):
                     self._reflect_crystal_cl(goodN, lb, matSur, oeNormal)
                 print('Reflect_crystal completed in {0} s'.format(
                     time.time() - trc0))
-                #lb.concatenate(lb)
+#                lb.concatenate(lb)
                 lb.a[goodN] = aP
                 lb.b[goodN] = bP
                 lb.c[goodN] = cP
                 goodN = (lb.state == 1) | (lb.state == 2)
-                #good = np.append(good, good)
+#                good = np.append(good, good)
             else:  # pass straight, do nothing
                 pass
 # flux:
@@ -1718,8 +1733,10 @@ class DCM(OE):
     """Implements a Double Crystal Monochromator with flat crystals."""
     def __init__(self, *args, **kwargs):
         u"""
-        *bragg*: float
-            Bragg angle in rad.
+        *bragg*: float, str, list
+            Bragg angle in rad. Can be calculated automatically if alignment
+            energy is given as a single element list [energy]. If 'auto',
+            the alignment energy will be taken from beamLine.alignE.
 
         *cryst1roll*, *cryst2roll*, *cryst2pitch*, *cryst2finePitch*: float
             Misalignment angles in rad.
@@ -1746,6 +1763,8 @@ class DCM(OE):
 
     def __pop_kwargs(self, **kwargs):
         self.bragg = kwargs.pop('bragg', 0)
+        if isinstance(self.bragg, (basestring, list, tuple)):
+            self._bragg = self.bragg
         self.cryst1roll = kwargs.pop('cryst1roll', 0)
         self.cryst2roll = kwargs.pop('cryst2roll', 0)
         self.cryst2pitch = kwargs.pop('cryst2pitch', 0)
@@ -1821,6 +1840,9 @@ class DCM(OE):
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
         self.footprint = []
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         self.get_orientation()
         gb = rs.Beam(copyFrom=beam)  # output beam in global coordinates
         if needLocal:

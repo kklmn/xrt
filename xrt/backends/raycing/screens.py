@@ -71,6 +71,8 @@ class Screen(object):
             bl.oesDict[self.name] = [self, 1]
 
         self.center = center
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
         self.compressX = compressX
         self.compressZ = compressZ
 
@@ -95,6 +97,9 @@ class Screen(object):
         return xglo, yglo, zglo
 
     def expose_global(self, beam=None):
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         glo = rs.Beam(copyFrom=beam)  # global
         glo.path = ((self.center[0]-beam.x) * self.y[0] +
                     (self.center[1]-beam.y) * self.y[1] +
@@ -112,6 +117,9 @@ class Screen(object):
 
         .. .. Returned values: beamLocal
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         # Converting the beam to the screen local coordinates
         blo.x[:] = beam.x[:] - self.center[0]
@@ -236,6 +244,8 @@ class HemisphericScreen(Screen):
             bl.oesDict[self.name] = [self, 1]
 
         self.center = center
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
         self.R = R
         self.phiOffset = phiOffset
         self.thetaOffset = thetaOffset
@@ -263,6 +273,9 @@ class HemisphericScreen(Screen):
         return x, y, z, xglo, yglo, zglo
 
     def expose_global(self, beam=None):
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         glo = self.expose(beam)
         _, _, _, glo.x[:], glo.y[:], glo.z[:] = \
             self.local_to_global(glo.phi, glo.theta)
@@ -275,6 +288,9 @@ class HemisphericScreen(Screen):
 
         .. Returned values: beamLocal
         """
+        if self.bl is not None:
+            if self.bl.alignMode:
+                self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         sqb_2 = (beam.a * (beam.x-self.center[0]) +
                  beam.b * (beam.y-self.center[1]) +
