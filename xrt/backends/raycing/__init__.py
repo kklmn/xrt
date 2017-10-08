@@ -870,6 +870,17 @@ class BeamLine(object):
             sys.exit(app.exec_())
 
     def export_to_glow(self):
+        def calc_weighted_center(beam):
+            good = (beam.state == 1) | (beam.state == 2)
+            intensity = np.sqrt(
+                np.abs(beam.Jss[good])**2 + np.abs(beam.Jpp[good])**2)
+            totalI = np.sum(intensity)
+            beam.wCenter = np.array(
+                [np.sum(beam.x[good] * intensity),
+                 np.sum(beam.y[good] * intensity),
+                 np.sum(beam.z[good] * intensity)]) /\
+                totalI
+
         if self.flow is not None:
             beamDict = {}
             rayPath = []
@@ -929,4 +940,6 @@ class BeamLine(object):
                                         tmpBeamName, oeStr, gBeamName])
                 except:
                     continue
+        for tBeam in beamDict.values():
+            calc_weighted_center(tBeam)
         return [rayPath, beamDict, oesDict]

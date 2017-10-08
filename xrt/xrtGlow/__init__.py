@@ -1549,7 +1549,7 @@ class xrtGlWidget(QGLWidget):
         self.virtDotsArray = None
         self.virtDotsColor = None
         self.isVirtScreenNormal = False
-        self.vScreenSize = 5.
+        self.vScreenSize = 0.5
         self.setMinimumSize(400, 400)
         self.aspect = 1.
         self.depthScaler = 0.
@@ -2653,11 +2653,11 @@ class xrtGlWidget(QGLWidget):
 
     def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
         if dimensions is not None:
-            vScrHW = dimensions[0]
-            vScrHH = dimensions[1]
+            vScrHW = dimensions[0] / self.scaleVec[0] * self.maxLen
+            vScrHH = dimensions[1] / self.scaleVec[2] * self.maxLen
         else:
-            vScrHW = self.vScreenSize
-            vScrHH = self.vScreenSize
+            vScrHW = self.vScreenSize / self.scaleVec[0] * self.maxLen
+            vScrHH = self.vScreenSize / self.scaleVec[2] * self.maxLen
 
         vScreenBody = np.zeros((4, 3))
         vScreenBody[0, :] = vScreenBody[1, :] =\
@@ -3118,6 +3118,7 @@ class xrtGlWidget(QGLWidget):
             self.positionVScreen()
             self.glDraw()
         except:
+            raise
             self.clearVScreen()
 
     def positionVScreen(self):
@@ -3132,10 +3133,13 @@ class xrtGlWidget(QGLWidget):
                     continue
                 beamStartTmp = self.beamsDict[segment[1]]
                 beamEndTmp = self.beamsDict[segment[3]]
-                bStart0 = np.array([beamStartTmp.x[0], beamStartTmp.y[0],
-                                    beamStartTmp.z[0]])
-                bEnd0 = np.array([beamEndTmp.x[0], beamEndTmp.y[0],
-                                  beamEndTmp.z[0]])
+#                bStart00 = np.array([beamStartTmp.x[0], beamStartTmp.y[0],
+#                                    beamStartTmp.z[0]])
+#                bEnd00 = np.array([beamEndTmp.x[0], beamEndTmp.y[0],
+#                                  beamEndTmp.z[0]])
+                bStart0 = beamStartTmp.wCenter
+                bEnd0 = beamEndTmp.wCenter
+
                 beam0 = bEnd0 - bStart0
                 # Finding the projection of the VScreen.center on segments
                 cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
