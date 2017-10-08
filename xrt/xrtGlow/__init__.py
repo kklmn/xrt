@@ -2652,26 +2652,28 @@ class xrtGlWidget(QGLWidget):
         glDisable(GL_MAP2_NORMAL)
 
     def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
+        scAbsZ = np.linalg.norm(oe.z * self.scaleVec)
+        scAbsX = np.linalg.norm(oe.x * self.scaleVec)
         if dimensions is not None:
-            vScrHW = dimensions[0] / self.scaleVec[0] * self.maxLen
-            vScrHH = dimensions[1] / self.scaleVec[2] * self.maxLen
+            vScrHW = dimensions[0]
+            vScrHH = dimensions[1]
         else:
-            vScrHW = self.vScreenSize / self.scaleVec[0] * self.maxLen
-            vScrHH = self.vScreenSize / self.scaleVec[2] * self.maxLen
+            vScrHW = self.vScreenSize
+            vScrHH = self.vScreenSize
 
         vScreenBody = np.zeros((4, 3))
         vScreenBody[0, :] = vScreenBody[1, :] =\
-            oe.center - vScrHW * np.array(oe.x)
+            oe.center - vScrHW * np.array(oe.x) * self.maxLen / scAbsX
         vScreenBody[2, :] = vScreenBody[3, :] =\
-            oe.center + vScrHW * np.array(oe.x)
+            oe.center + vScrHW * np.array(oe.x) * self.maxLen / scAbsX
         vScreenBody[0, :] -=\
-            vScrHH * np.array(oe.z)
+            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
         vScreenBody[3, :] -=\
-            vScrHH * np.array(oe.z)
+            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
         vScreenBody[1, :] +=\
-            vScrHH * np.array(oe.z)
+            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
         vScreenBody[2, :] +=\
-            vScrHH * np.array(oe.z)
+            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glBegin(GL_QUADS)
