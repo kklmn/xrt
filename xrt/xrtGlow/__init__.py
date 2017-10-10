@@ -2706,17 +2706,53 @@ class xrtGlWidget(QGLWidget):
                 glColor4f(0.0, 0.0, 0.0, 1.)
             else:
                 glColor4f(1.0, 1.0, 1.0, 1.)
+            startVec = np.array([0, 1, 0])
+            destVec = np.array(oe.y / self.scaleVec)
+            rotVec = np.cross(startVec, destVec)
+            rotAngle = np.degrees(np.arccos(
+                np.dot(startVec, destVec) /
+                np.linalg.norm(startVec) / np.linalg.norm(destVec)))
+            rotVecGL = np.float32(np.hstack((rotAngle, rotVec)))
+
+            pView = glGetIntegerv(GL_VIEWPORT)
+            pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
+            pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
+            scr = np.zeros((3, 3))
+            for iAx in range(3):
+                scr[iAx] = np.array(gluProject(
+                    *(self.modelToWorld(vScreenBody[iAx])),
+                    model=pModel, proj=pProjection, view=pView))
+
+            vFlip = 2. if scr[0, 1] > scr[1, 1] else 0.
+            hFlip = 2. if scr[1, 0] > scr[2, 0] else 0.
+
             for iAx, text in enumerate(oe.FWHMstr):
                 fontScale = self.fontSize / 12500.
                 coord = self.modelToWorld(
                     (vScreenBody[iAx + 1] + vScreenBody[iAx + 2]) * 0.5 -
                     self.coordOffset)
-                coord[2-iAx*2] += fontScale * (125. + iAx * 100.)
-                coord[iAx*2] -= fontScale * len(text) * 104.76 * 0.5
+                coordShift = np.zeros(3, dtype=np.float32)
+                if iAx == 0:  # Horizontal Label
+                    coordShift[0] = (hFlip - 1.) * fontScale *\
+                        len(text) * 104.76 * 0.5
+                    coordShift[2] = fontScale * 200.
+                else:  # Vertical Label
+                    coordShift[0] = fontScale * 200.
+                    coordShift[2] = (vFlip - 1.) * fontScale *\
+                        len(text) * 104.76 * 0.5
+
                 glPushMatrix()
                 glTranslatef(*coord)
+                glRotatef(*rotVecGL)
+                glTranslatef(*coordShift)
+                glRotatef(180.*(vFlip*0.5), 1, 0, 0)
+                glRotatef(180.*(hFlip*0.5), 0, 0, 1)
                 if iAx > 0:
                     glRotatef(-90, 0, 1, 0)
+                if iAx == 0:  # Horizontal Label to half height
+                    glTranslatef(0, 0, -50. * fontScale)
+                else:  # Vertical Label to half height
+                    glTranslatef(-50. * fontScale, 0, 0)
                 glRotatef(90, 1, 0, 0)
                 glScalef(fontScale, fontScale, fontScale)
                 for symbol in text:
@@ -3089,7 +3125,7 @@ class xrtGlWidget(QGLWidget):
                     hwhm = np.abs(histAxis[1][topEl[0]] -
                                   histAxis[1][topEl[-1]]) * 0.5
 #                    cntr = (histAxis[1][topEl[0]] +
-#                                   histAxis[1][topEl[-1]]) * 0.5
+#                            histAxis[1][topEl[-1]]) * 0.5
                     order = np.floor(np.log10(hwhm))
 
                     if order >= 2:
