@@ -853,6 +853,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.update_beamline_beams(text=None)
         self.update_beamline_materials(item=None)
         self.update_beamline(item=None)
+        self.rayPath = None
         self.blUpdateLatchOpen = True
 
     def newBL(self):
@@ -1276,8 +1277,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.expand(self.rootBLItem.index())
         self.capitalize(self.tree, elementItem)
         self.blUpdateLatchOpen = True
-        if self.isGlowAutoUpdate:
-            self.update_beamline(elementItem, newElement=True)
+        self.update_beamline(elementItem, newElement=True)
         self.isEmpty = False
 
     def getParams(self, obj):
@@ -1334,7 +1334,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def beamLineItemChanged(self, item):
         self.colorizeChangedParam(item)
-        if self.isGlowAutoUpdate and self.blUpdateLatchOpen:
+        if self.blUpdateLatchOpen:
             if item.model() == self.beamLineModel:
                 self.update_beamline(item)
             elif item.model() == self.materialsModel:
@@ -1449,8 +1449,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.setCurrentIndex(methodProps.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.blUpdateLatchOpen = True
-        if self.isGlowAutoUpdate:
-            self.update_beamline(methodItem, newElement=True)
+        self.update_beamline(methodItem, newElement=True)
         self.isEmpty = False
 
     def addPlot(self, copyFrom=None):
@@ -1612,8 +1611,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.addCombo(self.matTree, matItem)
         self.capitalize(self.matTree, matItem)
         self.blUpdateLatchOpen = True
-        if self.isGlowAutoUpdate:
-            self.update_beamline_materials(matItem, newMat=True)
+        self.update_beamline_materials(matItem, newMat=True)
         self.isEmpty = False
 
     def moveItem(self, mvDir, view, item):
@@ -1627,8 +1625,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
-        if self.isGlowAutoUpdate:
-            self.update_beamline(newItem[0], newOrder=True)
+        self.update_beamline(newItem[0], newOrder=True)
 
     def copyChildren(self, itemTo, itemFrom):
         if itemFrom.hasChildren():
@@ -1660,9 +1657,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if item.model() == self.materialsModel and\
                 item.parent() is None:
             del self.beamLine.materialsDict[str(item.text())]
-
         if item.parent() == self.rootBLItem:
             self.blUpdateLatchOpen = False
+
         while item.hasChildren():
             iItem = item.child(0, 0)
             if item.child(0, 1) is not None:
@@ -1674,12 +1671,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.pltColorCounter -= 1
                 iWidget = view.indexWidget(item.child(0, 1).index())
                 if iWidget is not None:
-                    if item.text() == "output" and\
-                            iWidget.model() == self.beamModel:
-                        self.beamModel.takeRow(iWidget.currentIndex())
+                    if item.text() == "output":
                         try:
+                            print("Trying to delete", str(
+                                iWidget.currentText()))
                             del self.beamLine.beamsDict[str(
                                 iWidget.currentText())]
+                            beamInModel = self.beamModel.findItems(
+                                iWidget.currentText())
+                            if len(beamInModel) > 0:
+                                self.beamModel.takeRow(beamInModel[0].row())
                         except:  # analysis:ignore
                             pass
             self.deleteElement(view, iItem)
@@ -1688,8 +1689,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             if item.parent() == self.rootBLItem:
                 del self.beamLine.oesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
-                if self.isGlowAutoUpdate:
-                    self.update_beamline(item, newElement=False)
+                self.update_beamline(item, newElement=False)
             if item.parent() is not None:
                 item.parent().removeRow(item.index().row())
             else:
@@ -1883,10 +1883,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     try:
                         self.beamLine = raycing.BeamLine()
                         self.beamLine.flowSource = 'Qook'
-                        if self.isGlowAutoUpdate:
-                            self.update_beamline_beams(text=None)
-                            self.update_beamline_materials(item=None)
-                            self.update_beamline(item=None)
+                        self.update_beamline_beams(text=None)
+                        self.update_beamline_materials(item=None)
+                        self.update_beamline(item=None)
                     except:  # analysis:ignore
                         pass
                     self.blUpdateLatchOpen = True
@@ -2705,12 +2704,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             return blFlow
 
         def name_to_flow_pos(elementNameStr):
+            retVal = 0
             try:
                 for isegment, segment in enumerate(self.beamLine.flow):
                     if segment[0] == elementNameStr:
-                        return isegment
+                        retVal = isegment
+                        break
             except:  # analysis:ignore
-                return None
+                pass
+            return retVal
 
         def update_regexp():
             for iElement in range(self.rootBLItem.rowCount()):
@@ -2780,6 +2782,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         wasDeleted = True if\
                             len(oesKeys) + 2 < self.rootBLItem.rowCount()\
                             else False
+                        print(oesKeys)
                         if not wasDeleted:
                             newDict = OrderedDict()
                             counter = 0
@@ -2867,6 +2870,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                         startFrom =\
                                             name_to_flow_pos(segment[0])
                                         break
+                                else:
+                                    startFrom = name_to_flow_pos(elNameStr)
+                            else:
+                                startFrom = name_to_flow_pos(elNameStr)
                         else:
                             startFrom = name_to_flow_pos(elNameStr)
                 elif pText in ['parameters', 'output'] and iCol > 0:
@@ -2913,7 +2920,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.beamLine.flow = build_flow()
             startFrom = 0
 
-        if self.blViewer is not None:
+        if self.isGlowAutoUpdate and self.blViewer is not None:
             if startFrom is not None:
                 self.beamLine.propagate_flow(startFrom=startFrom)
             self.rayPath = self.beamLine.export_to_glow()

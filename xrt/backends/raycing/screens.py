@@ -68,10 +68,11 @@ class Screen(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 1]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
+        if any([coord == 'auto' for coord in self.center]):
             self._center = self.center
         self.compressX = compressX
         self.compressZ = compressZ
@@ -241,10 +242,11 @@ class HemisphericScreen(Screen):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 1]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
+        if any([coord == 'auto' for coord in self.center]):
             self._center = self.center
         self.R = R
         self.phiOffset = phiOffset

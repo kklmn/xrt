@@ -693,10 +693,12 @@ class xrtGlow(QWidget):
                                     str(segment[ind+1]))
                                 self.beamsToElements[segment[ind+1]] =\
                                     elName
+                                break
+                else:
+                    self.oesList[elName].append(
+                        None)
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
-#        print(self.oesList)
-#        print(self.beamsToElements)
 
     def create_row(self, text, segMode):
         newRow = []
@@ -2720,7 +2722,7 @@ class xrtGlWidget(QGLWidget):
             scr = np.zeros((3, 3))
             for iAx in range(3):
                 scr[iAx] = np.array(gluProject(
-                    *(self.modelToWorld(vScreenBody[iAx])),
+                    *(self.modelToWorld(vScreenBody[iAx] - self.coordOffset)),
                     model=pModel, proj=pProjection, view=pView))
 
             vFlip = 2. if scr[0, 1] > scr[1, 1] else 0.
@@ -3169,41 +3171,41 @@ class xrtGlWidget(QGLWidget):
             for segment in self.arrayOfRays[0]:
                 if segment[3] is None:
                     continue
-                beamStartTmp = self.beamsDict[segment[1]]
-                beamEndTmp = self.beamsDict[segment[3]]
-#                bStart00 = np.array([beamStartTmp.x[0], beamStartTmp.y[0],
-#                                    beamStartTmp.z[0]])
-#                bEnd00 = np.array([beamEndTmp.x[0], beamEndTmp.y[0],
-#                                  beamEndTmp.z[0]])
-                bStart0 = beamStartTmp.wCenter
-                bEnd0 = beamEndTmp.wCenter
+                try:
+                    beamStartTmp = self.beamsDict[segment[1]]
+                    beamEndTmp = self.beamsDict[segment[3]]
 
-                beam0 = bEnd0 - bStart0
-                # Finding the projection of the VScreen.center on segments
-                cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
-                    np.dot(beam0, beam0) * beam0
-                s = 0
-                for iDim in range(3):
-                    s += np.floor(np.abs(np.sign(cProjTmp[iDim] -
-                                                 bStart0[iDim]) +
-                                         np.sign(cProjTmp[iDim] -
-                                                 bEnd0[iDim]))*0.6)
+                    bStart0 = beamStartTmp.wCenter
+                    bEnd0 = beamEndTmp.wCenter
 
-                dist = np.linalg.norm(cProjTmp-cntr)
-                if dist < tmpDist:
-                    if s == 0:
-                        tmpDist = dist
-                        beamStart0 = beamStartTmp
-                        bStartC = bStart0
-                        bEndC = bEnd0
-                        cProj = cProjTmp
-                    else:
-                        if np.linalg.norm(bStart0-cntr) < totalDist:
-                            totalDist = np.linalg.norm(bStart0-cntr)
-                            self.virtScreen.center = cProjTmp
-                            self.virtScreen.beamStart = bStart0
-                            self.virtScreen.beamEnd = bEnd0
-                            self.virtScreen.beamToExpose = beamStartTmp
+                    beam0 = bEnd0 - bStart0
+                    # Finding the projection of the VScreen.center on segments
+                    cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
+                        np.dot(beam0, beam0) * beam0
+                    s = 0
+                    for iDim in range(3):
+                        s += np.floor(np.abs(np.sign(cProjTmp[iDim] -
+                                                     bStart0[iDim]) +
+                                             np.sign(cProjTmp[iDim] -
+                                                     bEnd0[iDim]))*0.6)
+
+                    dist = np.linalg.norm(cProjTmp-cntr)
+                    if dist < tmpDist:
+                        if s == 0:
+                            tmpDist = dist
+                            beamStart0 = beamStartTmp
+                            bStartC = bStart0
+                            bEndC = bEnd0
+                            cProj = cProjTmp
+                        else:
+                            if np.linalg.norm(bStart0-cntr) < totalDist:
+                                totalDist = np.linalg.norm(bStart0-cntr)
+                                self.virtScreen.center = cProjTmp
+                                self.virtScreen.beamStart = bStart0
+                                self.virtScreen.beamEnd = bEnd0
+                                self.virtScreen.beamToExpose = beamStartTmp
+                except:
+                    continue
 
             if cProj is not None:
                 self.virtScreen.center = cProj
@@ -3211,18 +3213,21 @@ class xrtGlWidget(QGLWidget):
                 self.virtScreen.beamEnd = bEndC
                 self.virtScreen.beamToExpose = beamStart0
 
-            if self.isVirtScreenNormal:
-                vsX = [self.virtScreen.beamToExpose.b[0],
-                       -self.virtScreen.beamToExpose.a[0], 0]
-                vsY = [self.virtScreen.beamToExpose.a[0],
-                       self.virtScreen.beamToExpose.b[0],
-                       self.virtScreen.beamToExpose.c[0]]
-                vsZ = np.cross(vsX/np.linalg.norm(vsX),
-                               vsY/np.linalg.norm(vsY))
-            else:
-                vsX = 'auto'
-                vsZ = 'auto'
-            self.virtScreen.set_orientation(vsX, vsZ)
+            try:
+                if self.isVirtScreenNormal:
+                    vsX = [self.virtScreen.beamToExpose.b[0],
+                           -self.virtScreen.beamToExpose.a[0], 0]
+                    vsY = [self.virtScreen.beamToExpose.a[0],
+                           self.virtScreen.beamToExpose.b[0],
+                           self.virtScreen.beamToExpose.c[0]]
+                    vsZ = np.cross(vsX/np.linalg.norm(vsX),
+                                   vsY/np.linalg.norm(vsY))
+                else:
+                    vsX = 'auto'
+                    vsZ = 'auto'
+                self.virtScreen.set_orientation(vsX, vsZ)
+            except:
+                pass
             try:
                 self.virtBeam = self.virtScreen.expose_global(
                     self.virtScreen.beamToExpose)

@@ -209,7 +209,8 @@ class OE(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 1]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
 
         self.shouldCheckCenter = shouldCheckCenter
 

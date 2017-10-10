@@ -71,7 +71,8 @@ class RectangularAperture(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 1]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
 
         self.center = center
         if any([x == 'auto' for x in self.center]):
@@ -268,7 +269,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 1]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
 
         self.center = center
         if any([x == 'auto' for x in self.center]):
@@ -351,7 +353,8 @@ class RoundAperture(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 1]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
 
         self.center = center
         if any([x == 'auto' for x in self.center]):

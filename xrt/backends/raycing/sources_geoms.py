@@ -203,7 +203,8 @@ class GeometricSource(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 0]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
 
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
@@ -394,7 +395,8 @@ class GaussianBeam(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 0]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
 
         self.center = center  # 3D point in global system
         self.w0 = w0
@@ -559,7 +561,8 @@ class MeshSource(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 0]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
 
         self.center = center  # 3D point in global system
         self.minxprime = minxprime
@@ -666,7 +669,8 @@ class CollimatedMeshSource(object):
             self.name = name
 
         if bl is not None:
-            bl.oesDict[self.name] = [self, 0]
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
 
         self.center = center  # 3D point in global system
         self.dx = dx
