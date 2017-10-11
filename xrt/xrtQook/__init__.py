@@ -2937,8 +2937,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         except:  # analysis:ignore
             pass
         self.blUpdateLatchOpen = True
-        self.beamLine.propagate_flow(startFrom=0)
-        self.rayPath = self.beamLine.export_to_glow()
+        if self.blViewer is None:
+            self.beamLine.propagate_flow(startFrom=0)
+            self.rayPath = self.beamLine.export_to_glow()
         self.bl_run_glow()
 
     def toggle_glow(self, status):

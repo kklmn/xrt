@@ -215,8 +215,8 @@ class GeometricSource(object):
         self.dy = dy
         self.distz = distz
         self.dz = dz
-        self.distxprime = distxprime
-        self.dxprime = dxprime
+        self.distxprime = raycing.auto_units_angle(distxprime)
+        self.dxprime = raycing.auto_units_angle(dxprime)
         self.distzprime = distzprime
         self.dzprime = dzprime
         self.distE = distE
@@ -227,8 +227,8 @@ class GeometricSource(object):
         self.polarization = polarization
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
-        self.pitch = pitch
-        self.yaw = yaw
+        self.pitch = raycing.auto_units_angle(pitch)
+        self.yaw = raycing.auto_units_angle(yaw)
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
@@ -407,8 +407,8 @@ class GaussianBeam(object):
             self.energies = energies
         self.polarization = polarization
         self.vortex = None
-        self.pitch = pitch
-        self.yaw = yaw
+        self.pitch = raycing.auto_units_angle(pitch)
+        self.yaw = raycing.auto_units_angle(yaw)
 
     def w(self, y, E=None, yR=None):
         if yR is None:
@@ -565,10 +565,10 @@ class MeshSource(object):
                 bl.oesDict[self.name] = [self, 0]
 
         self.center = center  # 3D point in global system
-        self.minxprime = minxprime
-        self.maxxprime = maxxprime
-        self.minzprime = minzprime
-        self.maxzprime = maxzprime
+        self.minxprime = raycing.auto_units_angle(minxprime)
+        self.maxxprime = raycing.auto_units_angle(maxxprime)
+        self.minzprime = raycing.auto_units_angle(minzprime)
+        self.maxzprime = raycing.auto_units_angle(maxzprime)
         self.nx = nx
         self.nz = nz
         self.nrays = self.nx * self.nz + int(withCentralRay)

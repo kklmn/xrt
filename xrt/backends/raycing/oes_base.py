@@ -220,27 +220,31 @@ class OE(object):
         if (bl is not None) and self.shouldCheckCenter:
             self.checkCenter()
 
-        self.pitch = pitch
+        self.pitch = raycing.auto_units_angle(pitch)
         if isinstance(self.pitch, (basestring, list, tuple)):
             self._pitch = self.pitch
-        self.roll = roll
-        self.yaw = yaw
+        self.roll = raycing.auto_units_angle(roll)
+        self.yaw = raycing.auto_units_angle(yaw)
         self.rotationSequence = rotationSequence
         self.positionRoll = positionRoll
 
-        self.extraPitch = extraPitch
-        self.extraRoll = extraRoll
-        self.extraYaw = extraYaw
+        self.extraPitch = raycing.auto_units_angle(extraPitch)
+        self.extraRoll = raycing.auto_units_angle(extraRoll)
+        self.extraYaw = raycing.auto_units_angle(extraYaw)
         self.extraRotationSequence = extraRotationSequence
         self.alarmLevel = alarmLevel
 
         self.surface = surface
         self.material = material
-        self.set_alpha(alpha)
+        self.set_alpha(raycing.auto_units_angle(alpha))
         self.curSurface = 0
         self.dx = 0
         self.limPhysX = limPhysX
         self.limPhysY = limPhysY
+        if self.limPhysX is None:
+            self.limPhysX = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
+        if self.limPhysY is None:
+            self.limPhysY = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
         self.limOptX = limOptX
         self.limOptY = limOptY
         self.isParametric = isParametric
@@ -1763,19 +1767,26 @@ class DCM(OE):
         self.energyMax = rs.defaultEnergy + 5.
 
     def __pop_kwargs(self, **kwargs):
-        self.bragg = kwargs.pop('bragg', 0)
+        self.bragg = raycing.auto_units_angle(kwargs.pop('bragg', 0))
         if isinstance(self.bragg, (basestring, list, tuple)):
             self._bragg = self.bragg
-        self.cryst1roll = kwargs.pop('cryst1roll', 0)
-        self.cryst2roll = kwargs.pop('cryst2roll', 0)
-        self.cryst2pitch = kwargs.pop('cryst2pitch', 0)
-        self.cryst2finePitch = kwargs.pop('cryst2finePitch', 0)
+        self.cryst1roll = raycing.auto_units_angle(kwargs.pop('cryst1roll', 0))
+        self.cryst2roll = raycing.auto_units_angle(kwargs.pop('cryst2roll', 0))
+        self.cryst2pitch = raycing.auto_units_angle(kwargs.pop('cryst2pitch', 0))
+        self.cryst2finePitch = raycing.auto_units_angle(
+            kwargs.pop('cryst2finePitch', 0))
         self.cryst2perpTransl = kwargs.pop('cryst2perpTransl', 0)
         self.cryst2longTransl = kwargs.pop('cryst2longTransl', 0)
         self.limPhysX2 = kwargs.pop(
             'limPhysX2', [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE])
+        if self.limPhysX2 is None:
+            self.limPhysX2 = [-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE]
         self.limPhysY2 = kwargs.pop(
             'limPhysY2', [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE])
+        if self.limPhysY2 is None:
+            self.limPhysY2 = [-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE]
         self.limOptX2 = kwargs.pop('limOptX2', None)
         self.limOptY2 = kwargs.pop('limOptY2', None)
         self.material = kwargs.get('material', None)

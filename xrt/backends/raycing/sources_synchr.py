@@ -147,6 +147,10 @@ class BendingMagnet(object):
         self.eEspread = eEspread
         self.eMin = eMin
         self.eMax = eMax
+        xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
+            isinstance(xPrimeMax, basestring) else xPrimeMax
+        zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
+            isinstance(zPrimeMax, basestring) else zPrimeMax            
         self.xPrimeMax = xPrimeMax * 1e-3 if xPrimeMax else None
         self.zPrimeMax = zPrimeMax * 1e-3 if zPrimeMax else None
         self.betaX = betaX
@@ -161,8 +165,8 @@ class BendingMagnet(object):
         self.mode = 1
         self.uniformRayDensity = uniformRayDensity
         self.filamentBeam = filamentBeam
-        self.pitch = pitch
-        self.yaw = yaw
+        self.pitch = raycing.auto_units_angle(pitch)
+        self.yaw = raycing.auto_units_angle(yaw)
 
         if (self.dx is None) and (self.betaX is not None):
             self.dx = np.sqrt(self.eEpsilonX * self.betaX * 0.001)
@@ -844,6 +848,10 @@ class Undulator(object):
         self.I0 = float(eI)
         self.eMin = float(eMin)
         self.eMax = float(eMax)
+        xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
+            isinstance(xPrimeMax, basestring) else xPrimeMax
+        zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
+            isinstance(zPrimeMax, basestring) else zPrimeMax
         self.xPrimeMax = xPrimeMax * 1e-3  # if xPrimeMax else None
         self.zPrimeMax = zPrimeMax * 1e-3  # if zPrimeMax else None
         self.betaX = betaX * 1e3
@@ -857,8 +865,8 @@ class Undulator(object):
         self.distE = distE
         self.uniformRayDensity = uniformRayDensity
         self.filamentBeam = filamentBeam
-        self.pitch = pitch
-        self.yaw = yaw
+        self.pitch = raycing.auto_units_angle(pitch)
+        self.yaw = raycing.auto_units_angle(yaw)
         self.gIntervals = gIntervals
         self.L0 = period
         self.R0 = R0 if R0 is None else R0 + self.L0*0.25
@@ -936,6 +944,8 @@ class Undulator(object):
         self.Kx = Kx
         self.Ky = Ky
         self.K = K
+        phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
+            isinstance(phaseDeg, basestring) else phaseDeg
         self.phase = np.radians(phaseDeg)
 
         self.Np = n

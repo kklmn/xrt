@@ -620,6 +620,26 @@ def get_output(plot, beamsReturnedBy_run_process):
         locGood, locOut, locOver, locDead, locAccepted, locAcceptedE,\
         locSeeded, locSeededI
 
+def auto_units_angle(angle):
+    if isinstance(angle, basestring):
+        if len(re.findall("auto", angle)) > 0:
+            return angle
+        elif len(re.findall("mrad", angle)) > 0:
+            return eval(angle.split("m")[0].strip())*1e-3
+        elif len(re.findall("urad", angle)) > 0:
+            return eval(angle.split("u")[0].strip())*1e-6
+        elif len(re.findall("nrad", angle)) > 0:
+            return eval(angle.split("n")[0].strip())*1e-9
+        elif len(re.findall("rad", angle)) > 0:
+            return eval(angle.split("r")[0].strip())
+        elif len(re.findall("deg", angle)) > 0:
+            return np.radians(eval(angle.split("d")[0].strip()))
+        else:
+            print("Could not identify the units")
+            return angle
+    else:
+        return angle
+
 
 def append_to_flow(meth, bOut, frame):
     oe = meth.__self__
@@ -789,6 +809,7 @@ class BeamLine(object):
                 bStartC, fixedCoord))) -
                 np.array(list(compress(oe.center, fixedCoord))))
             oe.center = bStartC + vLen * bStartDir
+            print(oe.name, "center:", oe.center)
 
         if autoBragg or autoPitch:
             if self.flowSource == 'Qook':
@@ -814,14 +835,17 @@ class BeamLine(object):
                     if autoPitch:
                         oe.pitch = 0
                     oe.bragg = targetPitch - oe.pitch
+                    print(oe.name, "Bragg:", oe.bragg)
                 else:  # autoPitch
                     oe.pitch = targetPitch
+                    print(oe.name, "pitch:", oe.pitch)
             except:
                 raise
 
     def propagate_flow(self, startFrom=0):
         if self.oesDict is not None and self.flow is not None:
-            for segment in self.flow[startFrom:]:
+            for iseg, segment in enumerate(self.flow[startFrom:]):
+                # print("Stage", iseg+1, "of",  len(self.flow[startFrom:]))
                 segOE = self.oesDict[segment[0]][0]
                 fArgs = {}
                 for inArg in segment[2].items():

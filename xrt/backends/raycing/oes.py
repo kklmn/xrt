@@ -92,7 +92,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
-           'GeneralFZPin0YZ', 'BlazedGrating')
+           'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating', 'VLSGrating')
 import os
 # import copy
 # import gc
@@ -1886,7 +1886,8 @@ class GeneralFZPin0YZ(OE):
         self.N = kwargs.pop('N', 1000)
         self.phaseShift = kwargs.pop('phaseShift', 0)
         self.vorticity = kwargs.pop('vorticity', 0)
-        self.grazingAngle = kwargs.pop('grazingAngle', None)
+        self.grazingAngle = raycing.auto_units_angle(
+            kwargs.pop('grazingAngle', None))
         return kwargs
 
     def assign_auto_material_kind(self, material):
@@ -2019,8 +2020,9 @@ class BlazedGrating(OE):
             np.tan(self.antiblaze)
 
     def __pop_kwargs(self, **kwargs):
-        self.blaze = kwargs.pop('blaze')
-        self.antiblaze = kwargs.pop('antiblaze', np.pi*0.4999)
+        self.blaze = raycing.auto_units_angle(kwargs.pop('blaze'))
+        self.antiblaze = raycing.auto_units_angle(
+            kwargs.pop('antiblaze', np.pi*0.4999))
         self.rho = kwargs.pop('rho')
         return kwargs
 
@@ -2094,7 +2096,8 @@ class PlaneGrating(OE):
 
     def __pop_kwargs(self, **kwargs):
         self.rho = kwargs.pop('rho')
-        self.blaze = kwargs.pop('blaze', np.pi*0.4999)
+        self.blaze = raycing.auto_units_angle(
+            kwargs.pop('blaze', np.pi*0.4999))
         self.aspect = kwargs.pop('aspect', 0.5)
         self.depth = kwargs.pop('depth', 0.5e-3)
         return kwargs

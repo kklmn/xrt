@@ -2937,31 +2937,32 @@ class xrtGlWidget(QGLWidget):
         glFlush()
         glViewport(*pView)
 
+    def drawCone(self, z, r, nFacets, color):
+        phi = np.linspace(0, 2*np.pi, nFacets)
+        xp = r * np.cos(phi)
+        yp = r * np.sin(phi)
+        base = np.vstack((xp, yp, np.zeros_like(xp)))
+        coneVertices = np.hstack((np.array([0, 0, z]).reshape(3, 1),
+                                  base)).T
+        gridColor = np.zeros((len(coneVertices), 4))
+        gridColor[:, color] = 1
+        gridColor[:, 3] = 0.75
+        gridArray = vbo.VBO(np.float32(coneVertices))
+        gridArray.bind()
+        glVertexPointerf(gridArray)
+        gridColorArray = vbo.VBO(np.float32(gridColor))
+        gridColorArray.bind()
+        glColorPointerf(gridColorArray)
+        glDrawArrays(GL_TRIANGLE_FAN, 0, len(gridArray))
+        gridArray.unbind()
+        gridColorArray.unbind()
+
     def drawAxes(self):
         arrowSize = 0.05
         axisLen = 0.1
         tLen = (arrowSize + axisLen) * 2
         glLineWidth(1.)
 
-        def drawCone(z, r, nFacets, color):
-            phi = np.linspace(0, 2*np.pi, nFacets)
-            xp = r * np.cos(phi)
-            yp = r * np.sin(phi)
-            base = np.vstack((xp, yp, np.zeros_like(xp)))
-            coneVertices = np.hstack((np.array([0, 0, z]).reshape(3, 1),
-                                      base)).T
-            gridColor = np.zeros((len(coneVertices), 4))
-            gridColor[:, color] = 1
-            gridColor[:, 3] = 0.75
-            gridArray = vbo.VBO(np.float32(coneVertices))
-            gridArray.bind()
-            glVertexPointerf(gridArray)
-            gridColorArray = vbo.VBO(np.float32(gridColor))
-            gridColorArray.bind()
-            glColorPointerf(gridColorArray)
-            glDrawArrays(GL_TRIANGLE_FAN, 0, len(gridArray))
-            gridArray.unbind()
-            gridColorArray.unbind()
         pView = glGetIntegerv(GL_VIEWPORT)
         glViewport(0, 0, int(150*self.aspect), 150)
 
@@ -3000,7 +3001,7 @@ class xrtGlWidget(QGLWidget):
                     glRotatef(-90, 1.0, 0.0, 0.0)
                 elif iAx == 2:
                     glRotatef(90, 0.0, 1.0, 0.0)
-                drawCone(arrowSize, 0.02, 20, iAx)
+                self.drawCone(arrowSize, 0.02, 20, iAx)
                 glPopMatrix()
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_COLOR_ARRAY)
