@@ -120,7 +120,7 @@ except:
 class xrtGlow(QWidget):
     def __init__(self, arrayOfRays, parent=None):
         super(xrtGlow, self).__init__()
-        self.parent = parent
+        self.parentRef = parent
         self.setWindowTitle('xrtGlow')
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
@@ -593,21 +593,17 @@ class xrtGlow(QWidget):
         toggleScreen = QShortcut(self)
         toggleScreen.setKey(QtCore.Qt.Key_F3)
         toggleScreen.activated.connect(self.customGlWidget.toggleVScreen)
-        dockToQook = QShortcut(self)
-        dockToQook.setKey(QtCore.Qt.Key_F4)
-        dockToQook.activated.connect(self.toggleDock)
-#        alphaToggle = QShortcut(self)
-#        alphaToggle.setKey(QtCore.Qt.Key_F7)
-#        alphaToggle.activated.connect(self.customGlWidget.clearVScreen)
+        self.dockToQook = QShortcut(self)
+        self.dockToQook.setKey(QtCore.Qt.Key_F4)
+        self.dockToQook.activated.connect(self.toggleDock)
         tiltScreen = QShortcut(self)
         tiltScreen.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_T)
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
     def toggleDock(self):
-        try:
-            print(self.parent)
-        except:
-            print("Can't find parent")
+        if self.parentRef is not None:
+            self.parentRef.catch_viewer()
+            self.parentRef = None
 
     def init_segments_model(self, isNewModel=True):
         newModel = QStandardItemModel()
@@ -2917,6 +2913,7 @@ class xrtGlWidget(QGLWidget):
 
         helpList = ['F1: Open/Close this help window',
                     'F3: Add/Remove Virtual Screen (Slicer)',
+                    'F4: Dock/Undock xrtGlow if launched from xrtQook',
                     'F5/F6: Quick Save/Load Scene',
                     'LeftMouse: Rotate the Scene',
                     'SHIFT+LeftMouse: Translate the Beamline in transverse plane',  # analysis:ignore

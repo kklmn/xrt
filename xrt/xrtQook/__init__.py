@@ -185,14 +185,14 @@ else:
 QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
     QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
     QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-    QListWidgetItem, QDockWidget = (
+    QListWidgetItem, QDockWidget, QProgressBar = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
         myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
         myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
         myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
-        myQtGUI.QListWidgetItem, myQtGUI.QDockWidget)
+        myQtGUI.QListWidgetItem, myQtGUI.QDockWidget, myQtGUI.QProgressBar)
 QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
      QtGui.QStandardItem, QtGui.QPixmap)
@@ -309,24 +309,30 @@ class XrtQook(QWidget):
 
         mainWidget = QWidget()
         mainWidget.setMinimumWidth(486)
-        self.docWidget = QTabWidget()
-        self.docWidget.setMinimumWidth(600)
         mainBox = QVBoxLayout()
         docBox = QVBoxLayout()
 
+        self.helptab = QTabWidget()
+        docWidget = QWidget()
+        docWidget.setMinimumWidth(600)
+
         mainBox.addWidget(self.toolBar)
         mainBox.addWidget(self.tabs)
-        mainBox.addWidget(self.statusBar)
+#        mainBox.addWidget(self.statusBar)
+        mainBox.addWidget(self.progressBar)
         docBox.addWidget(self.webHelp)
 
         mainWidget.setLayout(mainBox)
-        self.docWidget.setLayout(docBox)
-        self.docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
+        docWidget.setLayout(docBox)
+        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
+        self.helptab.addTab(docWidget, "Live Doc")
+#        self.helptab.setTabsClosable(True)
+#        self.helptab.setWidget(docWidget)
 
         canvasBox.addWidget(canvasSplitter)
 
         canvasSplitter.addWidget(mainWidget)
-        canvasSplitter.addWidget(self.docWidget)
+        canvasSplitter.addWidget(self.helptab)
         self.setLayout(canvasBox)
 
         self.initAllModels()
@@ -424,9 +430,12 @@ class XrtQook(QWidget):
 
         self.tabs = QTabWidget()
         self.toolBar = QToolBar('Action buttons')
-        self.statusBar = QStatusBar()
-        self.statusBar.setSizeGripEnabled(False)
-
+#        self.statusBar = QStatusBar()
+#        self.statusBar.setSizeGripEnabled(False)
+        self.progressBar = QProgressBar()
+        self.progressBar.setTextVisible(True)
+        self.progressBar.setRange(0, 100)
+        self.progressBar.setAlignment(QtCore.Qt.AlignCenter)
         self.toolBar.addAction(newBLAction)
         self.toolBar.addAction(loadBLAction)
         self.toolBar.addAction(saveBLAction)
@@ -443,6 +452,28 @@ class XrtQook(QWidget):
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
         self.toolBar.addAction(aboutAction)
+        bbl = QShortcut(self)
+        bbl.setKey(QtCore.Qt.Key_F4)
+        bbl.activated.connect(self.catch_viewer)
+
+    def catch_viewer(self):
+        if self.blViewer is not None:
+            if self.helptab.count() < 2:
+                self.blViewer.oldPos = [self.blViewer.x(), self.blViewer.y()]
+                self.blViewer.dockToQook.setEnabled(False)
+                self.helptab.addTab(self.blViewer, "Glow")
+                self.blViewer.parentRef = None
+                self.helptab.setCurrentIndex(1)
+            else:
+                self.blViewer.setParent(None)
+                self.blViewer.show()
+                self.blViewer.dockToQook.setEnabled(True)
+                try:
+                    self.blViewer.move(self.blViewer.oldPos[0],
+                                       self.blViewer.oldPos[1])
+                except:
+                    self.blViewer.move(100, 100)
+                self.blViewer.parentRef = self
 
     def init_tabs(self):
         self.tree = QTreeView()
@@ -660,6 +691,8 @@ class XrtQook(QWidget):
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.tabs.tabBar().setTabTextColor(0, QtCore.Qt.black)
         self.tabs.tabBar().setTabTextColor(2, QtCore.Qt.black)
+        self.progressBar.setValue(0)
+        self.progressBar.setFormat("New beamline")
 
     def initAllModels(self):
         self.blUpdateLatchOpen = False
@@ -1567,11 +1600,17 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             argKeys = argDesc.keys()
             for arg in argZip:
                 for argKey in argKeys:
-                    if len(re.findall(arg, argKey)) > 0 and\
-                            argKey not in retArgDescs:
+                    if argKey not in retArgDescs and str(arg) == str(argKey):
                         retArgDescs.append(argKey)
                         retArgDescVals.append(argDesc[argKey])
                         break
+                else:
+                    for argKey in argKeys:
+                        if argKey not in retArgDescs and\
+                                len(re.findall(arg, argKey)) > 0:
+                            retArgDescs.append(argKey)
+                            retArgDescVals.append(argDesc[argKey])
+                            break
             return retArgDescs, retArgDescVals
 
         argZip = OrderedDict(self.getParams(obj)).keys()
@@ -1741,7 +1780,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             except (IOError, OSError) as errs:
                 messageStr = 'Failed to save layout to {0}, {1}'.format(
                     os.path.basename(str(self.layoutFileName)), str(errs))
-            self.statusBar.showMessage(messageStr, 3000)
+                self.progressBar.setValue(0)
+                self.progressBar.setFormat(messageStr)
+#            self.statusBar.showMessage(messageStr, 3000)
         return saveStatus
 
     def exportLayoutAs(self):
@@ -1859,8 +1900,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             self.blColorCounter = tmpBlColor
                             self.pltColorCounter = tmpPltColor
                         self.colorizeTabText(rootModel)
-                        msgStr = " {0:d} percent done.".format(int(i*100/5))
-                        self.statusBar.showMessage(ldMsg + msgStr)
+#                        msgStr = " {0:d} percent done.".format(int(i*100/5))
+                        self.progressBar.setFormat("Loading... %p%")
+                        self.progressBar.setValue(int(i*100/10))
+#                        self.statusBar.showMessage(ldMsg + msgStr)
                     self.layoutFileName = openFileName
                     self.fileDescription = root[5].text if\
                         len(root) > 5 else ""
@@ -1876,21 +1919,36 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     self.plotTree.setColumnWidth(
                         0, int(self.plotTree.width()/3))
                     self.tabs.setCurrentWidget(self.tree)
-                    self.statusBar.showMessage(
-                        'Loaded layout from {}'.format(
-                            os.path.basename(str(self.layoutFileName))), 3000)
+#                    self.statusBar.showMessage(
+#                        'Loaded layout from {}'.format(
+#                            os.path.basename(str(self.layoutFileName))), 3000)
                     self.isEmpty = False
                     try:
                         self.beamLine = raycing.BeamLine()
                         self.beamLine.flowSource = 'Qook'
+                        self.progressBar.setFormat(
+                            "Populating the beams... %p%")
                         self.update_beamline_beams(text=None)
+                        self.progressBar.setValue(60)
+                        self.progressBar.setFormat(
+                            "Populating the materials... %p%")
                         self.update_beamline_materials(item=None)
+                        self.progressBar.setValue(70)
+                        self.prbStart = 70
+                        self.prbRange = 30
+                        self.progressBar.setFormat(
+                            "Initializing optical elements... %p%")
                         self.update_beamline(item=None)
                     except:  # analysis:ignore
                         pass
+                    self.progressBar.setValue(100)
+                    self.progressBar.setFormat('Loaded layout from {}'.format(
+                            os.path.basename(str(self.layoutFileName))))
                     self.blUpdateLatchOpen = True
                 else:
-                    self.statusBar.showMessage(ldMsg)
+                    self.progressBar.setValue(0)
+                    self.progressBar.setFormat(ldMsg)
+#                    self.statusBar.showMessage(ldMsg)
 
     def iterateImport(self, view, rootModel, rootImport):
         if ET.iselement(rootImport):
@@ -2534,11 +2592,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 beamKeys = list(self.beamLine.beamsDict.keys())
                 beamKeys[currentIndex] = text
                 self.beamLine.beamsDict = dict(zip(beamKeys, beamValues))
-        elif text is None:
-            beamsDict = dict()
-            for ib in range(self.rootBeamItem.rowCount()):
-                beamsDict[str(self.rootBeamItem.child(ib, 0).text())] = None
-            self.beamLine.beamsDict = beamsDict
+            elif text is None:
+                beamsDict = dict()
+                for ib in range(self.rootBeamItem.rowCount()):
+                    beamsDict[str(self.rootBeamItem.child(ib, 0).text())] = None
+                self.beamLine.beamsDict = beamsDict
 
     def update_beamline_materials(self, item, newMat=False):
         def create_param_dict(parentItem, elementString):
@@ -2920,14 +2978,26 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.beamLine.flow = build_flow()
             startFrom = 0
 
-        if self.isGlowAutoUpdate and self.blViewer is not None:
+        if self.isGlowAutoUpdate:
             if startFrom is not None:
-                self.beamLine.propagate_flow(startFrom=startFrom)
-            self.rayPath = self.beamLine.export_to_glow()
-            self.blViewer.update_oes_list(self.rayPath)
+                self.bl_propagate_flow(startFrom)
+
+    def bl_propagate_flow(self, startFrom):
+        objThread = QtCore.QThread(self)
+        obj = PropagationConnect()
+        obj.finished.connect(objThread.quit)
+        obj.rayPathReady.connect(self.bl_run_glow)
+        obj.propagationProceed.connect(self.updateProgressBar)
+        obj.moveToThread(objThread)
+        propagateFlowInThread = partial(
+            obj.propagate_flow_thread, self.beamLine, startFrom)
+        objThread.started.connect(propagateFlowInThread)
+        objThread.start()
 
     def populate_beamline(self, item=None):
         self.blUpdateLatchOpen = False
+        self.prbStart = 0
+        self.prbRange = 100
         try:
             self.beamLine = raycing.BeamLine()
             self.beamLine.flowSource = 'Qook'
@@ -2937,27 +3007,32 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         except:  # analysis:ignore
             pass
         self.blUpdateLatchOpen = True
-        if self.blViewer is None:
-            self.beamLine.propagate_flow(startFrom=0)
-            self.rayPath = self.beamLine.export_to_glow()
-        self.bl_run_glow()
 
     def toggle_glow(self, status):
         self.isGlowAutoUpdate = status
         if self.isGlowAutoUpdate:
             self.populate_beamline()
 
-    def bl_run_glow(self):
+    def bl_run_glow(self, rayPath):
+        self.rayPath = rayPath
         if self.blViewer is None:
             self.blViewer = xrtglow.xrtGlow(self.rayPath, self)
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.show()
+            self.blViewer.parentRef = self
         else:
             self.blViewer.update_oes_list(self.rayPath)
             if self.blViewer.isHidden():
                 self.blViewer.show()
 
+    def updateProgressBar(self, dataTuple):
+        self.progressBar.setValue(self.prbStart +
+                                  int(dataTuple[0] * self.prbRange))
+        self.progressBar.setFormat(dataTuple[1])
+
     def generateCode(self):
+        self.progressBar.setValue(0)
+        self.progressBar.setFormat("Flattening structure.")
         for tree, item in zip([self.tree, self.matTree,
                                self.plotTree, self.runTree],
                               [self.rootBLItem, self.rootMatItem,
@@ -2965,7 +3040,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             item.model().blockSignals(True)
             self.flattenElement(tree, item)
             item.model().blockSignals(False)
-
+        self.progressBar.setValue(10)
         BLName = str(self.rootBLItem.text())
         e0str = "{}E0 = 5000\n".format(myTab)
         fullCode = ""
@@ -2978,6 +3053,7 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
         codeBuildBeamline = "\ndef build_beamline():\n"
         codeBuildBeamline += '{2}{0} = {1}.BeamLine('.format(
             BLName, raycing.__name__, myTab)
+        self.progressBar.setFormat("Defining the beamline.")
         for ib in range(self.rootBLItem.rowCount()):
             if self.rootBLItem.child(ib, 0).text() == '_object':
                 blstr = str(self.rootBLItem.child(ib, 1).text())
@@ -3004,6 +3080,8 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
         codeFooter = """\n
 if __name__ == '__main__':
     main()\n"""
+        self.progressBar.setValue(20)
+        self.progressBar.setFormat("Defining materials.")
         for ie in range(self.rootMatItem.rowCount()):
             if str(self.rootMatItem.child(ie, 0).text()) != "None":
                 matItem = self.rootMatItem.child(ie, 0)
@@ -3029,6 +3107,8 @@ if __name__ == '__main__':
                                         paraname, paravalue, myTab)
                 codeDeclarations += '{0} = {1})\n\n'.format(
                     matItem.text(), str.rstrip(ieinit, ","))
+        self.progressBar.setValue(30)
+        self.progressBar.setFormat("Adding optical elements.")
         for ie in range(self.rootBLItem.rowCount()):
             if self.rootBLItem.child(ie, 0).text() != "properties" and\
                     self.rootBLItem.child(ie, 0).text() != "_object":
@@ -3117,7 +3197,8 @@ if __name__ == '__main__':
                     BLName, str(tItem.text()), ieinit.rstrip(','), myTab)
         codeBuildBeamline += "{0}return {1}\n\n".format(myTab, BLName)
         codeRunProcess += r"{0}outDict = ".format(myTab) + "{"
-
+        self.progressBar.setValue(60)
+        self.progressBar.setFormat("Defining the propagation.")
         for ibm in range(self.beamModel.rowCount()):
             beamName = str(self.beamModel.item(ibm, 0).text())
             if beamName != "None":
@@ -3135,7 +3216,8 @@ if __name__ == '__main__':
                 myTab, self.rootPlotItem.text())
         codePlots = '\ndef define_plots():\n{0}{1} = []\n'.format(
             myTab, self.rootPlotItem.text())
-
+        self.progressBar.setValue(70)
+        self.progressBar.setFormat("Adding plots.")
         plotNames = []
         for ie in range(self.rootPlotItem.rowCount()):
             tItem = self.rootPlotItem.child(ie, 0)
@@ -3253,7 +3335,8 @@ if __name__ == '__main__':
                 myTab, tItem.text(), self.rootPlotItem.text())
         codePlots += "{0}return {1}\n\n".format(
             myTab, self.rootPlotItem.text())
-
+        self.progressBar.setValue(90)
+        self.progressBar.setFormat("Preparing the main() function.")
         if not self.glowOnly:
             for ie in range(self.rootRunItem.rowCount()):
                 if self.rootRunItem.child(ie, 0).text() == '_object':
@@ -3293,8 +3376,11 @@ if __name__ == '__main__':
             else:
                 self.codeEdit.setText(fullCode)
                 self.tabs.setCurrentWidget(self.codeEdit)
-                self.statusBar.showMessage(
-                    'Python code successfully generated', 5000)
+            self.progressBar.setValue(100)
+            self.progressBar.setFormat(
+                'Python code successfully generated')
+#                self.statusBar.showMessage(
+#                    'Python code successfully generated', 5000)
 
     def saveCode(self):
         saveStatus = False
@@ -3325,16 +3411,20 @@ if __name__ == '__main__':
                         os.path.dirname(str(self.saveFileName)))
             except (OSError, IOError) as errStr:
                 saveMsg = str(errStr)
-            self.statusBar.showMessage(saveMsg, 5000)
+                self.progressBar.setFormat(saveMsg)
+#            self.statusBar.showMessage(saveMsg, 5000)
         return saveStatus
 
     def saveCodeAs(self):
         tmpName = self.saveFileName
         self.saveFileName = ""
         if not self.saveCode():
-            self.statusBar.showMessage(
-                'Failed saving code to {}'.format(
-                    os.path.basename(str(self.saveFileName))), 5000)
+            self.progressBar.setValue(0)
+            self.progressBar.setFormat()
+            self.statusBar.showMessage('Failed saving code to {}'.format(
+                    os.path.basename(str(self.saveFileName))))
+#                'Failed saving code to {}'.format(
+#                    os.path.basename(str(self.saveFileName))), 5000)
             self.saveFileName = tmpName
 
     def execCode(self):
@@ -3405,6 +3495,21 @@ if __name__ == '__main__':
         else:
             event.accept()
 
+class PropagationConnect(QtCore.QObject):
+    propagationProceed = QtCore.pyqtSignal(tuple)
+    rayPathReady = QtCore.pyqtSignal(list)
+    finished = QtCore.pyqtSignal()
+
+    def propagate_flow_thread(self, blRef, startFrom):
+        self.propagationProceed.emit((0.5, "Starting propagation"))
+        blRef.propagate_flow(
+            startFrom=startFrom,
+            signal=self.propagationProceed)
+        self.propagationProceed.emit((1, "Preparing data for Glow"))
+        rayPath = blRef.export_to_glow()
+        self.propagationProceed.emit((1, "Done"))
+        self.rayPathReady.emit(rayPath)
+        self.finished.emit()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

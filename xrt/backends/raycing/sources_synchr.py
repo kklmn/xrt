@@ -148,9 +148,9 @@ class BendingMagnet(object):
         self.eMin = eMin
         self.eMax = eMax
         xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
-            isinstance(xPrimeMax, basestring) else xPrimeMax
+            isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
         zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
-            isinstance(zPrimeMax, basestring) else zPrimeMax            
+            isinstance(zPrimeMax, raycing.basestring) else zPrimeMax            
         self.xPrimeMax = xPrimeMax * 1e-3 if xPrimeMax else None
         self.zPrimeMax = zPrimeMax * 1e-3 if zPrimeMax else None
         self.betaX = betaX
@@ -531,8 +531,19 @@ class BendingMagnet(object):
             else:
                 bo.concatenate(bot)
             length = len(bo.a)
-            if _DEBUG > 20:
+            if _DEBUG > 10:
                 print("{0} rays of {1}".format(length, self.nrays))
+                try:
+                    if self.bl is not None:
+                        if self.bl.flowSource == 'Qook' and\
+                                self.bl.statusSignal is not None:
+                            ptg = (self.bl.statusSignal[1] + 
+                                   float(length) / float(self.nrays))/\
+                                      self.bl.statusSignal[2]  
+                            self.bl.statusSignal[0].emit(
+                                (ptg, self.bl.statusSignal[3]))
+                except:
+                    pass
             if self.filamentBeam:
                 nrep += 1
                 rep_condition = nrep < self.nrepmax
@@ -849,9 +860,9 @@ class Undulator(object):
         self.eMin = float(eMin)
         self.eMax = float(eMax)
         xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
-            isinstance(xPrimeMax, basestring) else xPrimeMax
+            isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
         zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
-            isinstance(zPrimeMax, basestring) else zPrimeMax
+            isinstance(zPrimeMax, raycing.basestring) else zPrimeMax
         self.xPrimeMax = xPrimeMax * 1e-3  # if xPrimeMax else None
         self.zPrimeMax = zPrimeMax * 1e-3  # if zPrimeMax else None
         self.betaX = betaX * 1e3
@@ -945,7 +956,7 @@ class Undulator(object):
         self.Ky = Ky
         self.K = K
         phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
-            isinstance(phaseDeg, basestring) else phaseDeg
+            isinstance(phaseDeg, raycing.basestring) else phaseDeg
         self.phase = np.radians(phaseDeg)
 
         self.Np = n
@@ -1955,6 +1966,17 @@ class Undulator(object):
             if not self.uniformRayDensity:
                 if _DEBUG > 10:
                     print("{0} rays of {1}".format(length, self.nrays))
+                    try:
+                        if self.bl is not None:
+                            if self.bl.flowSource == 'Qook' and\
+                                    self.bl.statusSignal is not None:
+                                ptg = (self.bl.statusSignal[1] + 
+                                       float(length) / float(self.nrays))/\
+                                          self.bl.statusSignal[2]  
+                                self.bl.statusSignal[0].emit(
+                                    (ptg, self.bl.statusSignal[3]))
+                    except:
+                        pass
             if self.filamentBeam:
                 nrep += 1
                 rep_condition = nrep < self.nrepmax

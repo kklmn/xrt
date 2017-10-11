@@ -707,6 +707,7 @@ class BeamLine(object):
         self.flowSource = 'legacy'
         self.beamsRevDict = dict()
         self.blViewer = None
+        self.statusSignal = None
 
     @property
     def azimuth(self):
@@ -842,10 +843,10 @@ class BeamLine(object):
             except:
                 raise
 
-    def propagate_flow(self, startFrom=0):
+    def propagate_flow(self, startFrom=0, signal=None):
         if self.oesDict is not None and self.flow is not None:
+            totalStages = len(self.flow[startFrom:]) - 1
             for iseg, segment in enumerate(self.flow[startFrom:]):
-                # print("Stage", iseg+1, "of",  len(self.flow[startFrom:]))
                 segOE = self.oesDict[segment[0]][0]
                 fArgs = {}
                 for inArg in segment[2].items():
@@ -862,8 +863,17 @@ class BeamLine(object):
                         continue
                 except NameError:
                     pass
-
                 try:  # protection againt incorrect propagation parameters
+                    if signal is not None:
+                        signalStr = "{0} {1}(), %p% done.".format(
+                            segment[0], str(segment[1]).split(".")[-1])
+                        signal.emit((float(iseg) / float(totalStages), 
+                                     signalStr))
+                        self.statusSignal = [signal, iseg, totalStages,
+                                             signalStr]
+                except:
+                    pass
+                try:
                     outBeams = segment[1](segOE, **fArgs)
                 except:
                     continue

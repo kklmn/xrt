@@ -221,7 +221,7 @@ class OE(object):
             self.checkCenter()
 
         self.pitch = raycing.auto_units_angle(pitch)
-        if isinstance(self.pitch, (basestring, list, tuple)):
+        if isinstance(self.pitch, (raycing.basestring, list, tuple)):
             self._pitch = self.pitch
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
@@ -1768,7 +1768,7 @@ class DCM(OE):
 
     def __pop_kwargs(self, **kwargs):
         self.bragg = raycing.auto_units_angle(kwargs.pop('bragg', 0))
-        if isinstance(self.bragg, (basestring, list, tuple)):
+        if isinstance(self.bragg, (raycing.basestring, list, tuple)):
             self._bragg = self.bragg
         self.cryst1roll = raycing.auto_units_angle(kwargs.pop('cryst1roll', 0))
         self.cryst2roll = raycing.auto_units_angle(kwargs.pop('cryst2roll', 0))
