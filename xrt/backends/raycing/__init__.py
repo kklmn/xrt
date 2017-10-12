@@ -868,7 +868,9 @@ class BeamLine(object):
                     if signal is not None:
                         signalStr = "Propagation: {0} {1}(), %p% done.".format(
                             str(segment[0]),
-                            str(segment[1]).split(".")[-1].strip(">"))
+                            str(segment[1]).split(".")[-1].strip(">").split(
+                                    " ")[0])
+                        print(signalStr)
                         signal.emit((float(iseg) / float(totalStages),
                                      signalStr))
                         self.statusSignal = [signal, iseg, totalStages,

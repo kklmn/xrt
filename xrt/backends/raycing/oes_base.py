@@ -514,7 +514,7 @@ class OE(object):
         the z-difference (=0) or its derivative (=1)."""
 
         NRAYS = len(x)
-        cl_plist = flatten([getattr(self, p) for p in self.cl_plist])
+        cl_plist = np.squeeze([getattr(self, p) for p in self.cl_plist])
         ext_param = np.zeros(8, dtype=self.cl_precisionF)
         ext_param[:len(cl_plist)] = self.cl_precisionF(cl_plist)
 
