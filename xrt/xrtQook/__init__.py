@@ -278,12 +278,15 @@ myTab = 4*" "
 
 
 class XrtQook(QWidget):
+    statusUpdate = QtCore.pyqtSignal(tuple)
+
     def __init__(self):
         super(XrtQook, self).__init__()
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
         self.prepareViewer = False
         self.isGlowAutoUpdate = False
+        self.statusUpdate.connect(self.updateProgressBar)
         self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
         self.setWindowIcon(QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
         self.init_tool_bar()
@@ -326,6 +329,7 @@ class XrtQook(QWidget):
         docWidget.setLayout(docBox)
         docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
         self.helptab.addTab(docWidget, "Live Doc")
+        self.helptab.tabBar().setVisible(False)
 #        self.helptab.setTabsClosable(True)
 #        self.helptab.setWidget(docWidget)
 
@@ -459,6 +463,7 @@ class XrtQook(QWidget):
     def catch_viewer(self):
         if self.blViewer is not None:
             if self.helptab.count() < 2:
+                self.helptab.tabBar().setVisible(True)
                 self.blViewer.oldPos = [self.blViewer.x(), self.blViewer.y()]
                 self.blViewer.dockToQook.setEnabled(False)
                 self.helptab.addTab(self.blViewer, "Glow")
@@ -466,6 +471,7 @@ class XrtQook(QWidget):
                 self.helptab.setCurrentIndex(1)
             else:
                 self.blViewer.setParent(None)
+                self.helptab.tabBar().setVisible(False)
                 self.blViewer.show()
                 self.blViewer.dockToQook.setEnabled(True)
                 try:
@@ -2595,7 +2601,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             elif text is None:
                 beamsDict = dict()
                 for ib in range(self.rootBeamItem.rowCount()):
-                    beamsDict[str(self.rootBeamItem.child(ib, 0).text())] = None
+                    beamsDict[str(
+                        self.rootBeamItem.child(ib, 0).text())] = None
                 self.beamLine.beamsDict = beamsDict
 
     def update_beamline_materials(self, item, newMat=False):
@@ -3020,6 +3027,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.show()
             self.blViewer.parentRef = self
+            self.blViewer.parentSignal = self.statusUpdate
         else:
             self.blViewer.update_oes_list(self.rayPath)
             if self.blViewer.isHidden():
@@ -3495,6 +3503,7 @@ if __name__ == '__main__':
         else:
             event.accept()
 
+
 class PropagationConnect(QtCore.QObject):
     propagationProceed = QtCore.pyqtSignal(tuple)
     rayPathReady = QtCore.pyqtSignal(list)
@@ -3506,7 +3515,7 @@ class PropagationConnect(QtCore.QObject):
             startFrom=startFrom,
             signal=self.propagationProceed)
         self.propagationProceed.emit((1, "Preparing data for Glow"))
-        rayPath = blRef.export_to_glow()
+        rayPath = blRef.export_to_glow(signal=self.propagationProceed)
         self.propagationProceed.emit((1, "Done"))
         self.rayPathReady.emit(rayPath)
         self.finished.emit()

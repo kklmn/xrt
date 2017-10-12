@@ -620,6 +620,7 @@ def get_output(plot, beamsReturnedBy_run_process):
         locGood, locOut, locOver, locDead, locAccepted, locAcceptedE,\
         locSeeded, locSeededI
 
+
 def auto_units_angle(angle):
     if isinstance(angle, basestring):
         if len(re.findall("auto", angle)) > 0:
@@ -865,9 +866,10 @@ class BeamLine(object):
                     pass
                 try:  # protection againt incorrect propagation parameters
                     if signal is not None:
-                        signalStr = "{0} {1}(), %p% done.".format(
-                            segment[0], str(segment[1]).split(".")[-1])
-                        signal.emit((float(iseg) / float(totalStages), 
+                        signalStr = "Propagation: {0} {1}(), %p% done.".format(
+                            str(segment[0]),
+                            str(segment[1]).split(".")[-1].strip(">"))
+                        signal.emit((float(iseg) / float(totalStages),
                                      signalStr))
                         self.statusSignal = [signal, iseg, totalStages,
                                              signalStr]
@@ -903,7 +905,7 @@ class BeamLine(object):
             self.blViewer.show()
             sys.exit(app.exec_())
 
-    def export_to_glow(self):
+    def export_to_glow(self, signal=None):
         def calc_weighted_center(beam):
             good = (beam.state == 1) | (beam.state == 2)
             intensity = np.sqrt(
@@ -920,7 +922,16 @@ class BeamLine(object):
             rayPath = []
             outputBeamMatch = {}
             oesDict = OrderedDict()
-            for segment in self.flow:
+            totalStages = len(self.flow) - 1
+            for iseg, segment in enumerate(self.flow):
+                try:
+                    if signal is not None:
+                        signalStr = "Processing {0} beams, %p% done.".format(
+                            str(segment[0]))
+                        signal.emit((float(iseg) / float(totalStages),
+                                     signalStr))
+                except:
+                    pass
                 try:
                     methStr = str(segment[1])
                     oeStr = segment[0]
@@ -974,6 +985,14 @@ class BeamLine(object):
                                         tmpBeamName, oeStr, gBeamName])
                 except:
                     continue
-        for tBeam in beamDict.values():
+        totalBeams = len(beamDict) - 1
+        for itBeam, tBeam in enumerate(beamDict.values()):
+            try:
+                if signal is not None:
+                    signalStr = "Calculating trajectory, %p% done."
+                    signal.emit((float(itBeam) / float(totalBeams),
+                                 signalStr))
+            except:
+                pass
             calc_weighted_center(tBeam)
         return [rayPath, beamDict, oesDict]

@@ -118,7 +118,7 @@ except:
 
 
 class xrtGlow(QWidget):
-    def __init__(self, arrayOfRays, parent=None):
+    def __init__(self, arrayOfRays, parent=None, progressSignal=None):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
         self.setWindowTitle('xrtGlow')
@@ -144,7 +144,8 @@ class xrtGlow(QWidget):
         self.customGlWidget = xrtGlWidget(self, arrayOfRays,
                                           self.segmentsModelRoot,
                                           self.oesList,
-                                          self.beamsToElements)
+                                          self.beamsToElements,
+                                          progressSignal)
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
@@ -1540,8 +1541,9 @@ class xrtGlWidget(QGLWidget):
     scaleUpdated = QtCore.pyqtSignal(np.ndarray)
     histogramUpdated = QtCore.pyqtSignal(tuple)
 
-    def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els):
+    def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els, signal):
         QGLWidget.__init__(self, parent)
+        self.QookSignal = signal
         self.virtScreen = None
         self.virtBeam = None
         self.virtDotsArray = None
@@ -1667,6 +1669,7 @@ class xrtGlWidget(QGLWidget):
         self.glDraw()
 
     def populateVerticesArray(self, segmentsModelRoot):
+        # signal = self.QookSignal
         self.verticesArray = None
         self.footprintsArray = None
         self.oesToPlot = []
@@ -1692,8 +1695,17 @@ class xrtGlWidget(QGLWidget):
             newColorMax = self.colorMax
             newColorMin = self.colorMin
 
+#        totalOEs = range(segmentsModelRoot.rowCount() - 2)
         for ioe in range(segmentsModelRoot.rowCount() - 1):
             ioeItem = segmentsModelRoot.child(ioe + 1, 0)
+#            try:
+#                if signal is not None:
+#                    signalStr = "Plotting beams for {}, %p% done.".format(
+#                        str(ioeItem.text()))
+#                    signal.emit((float(ioe) / float(totalOEs),
+#                                 signalStr))
+#            except:
+#                pass
             if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
                 self.oesToPlot.append(str(ioeItem.text()))
                 self.footprints[str(ioeItem.text())] = None
