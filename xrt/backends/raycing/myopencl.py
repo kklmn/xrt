@@ -7,6 +7,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "19 Mar 2017"
 import numpy as np
 import os
+#import time
 from .. import raycing
 try:
     import pyopencl as cl
@@ -212,6 +213,7 @@ class XRT_CL(object):
                      slicedROArgs=None, nonSlicedROArgs=None,
                      slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0):
 
+#        t0 = time.time()
         ka_offset = len(scalarArgs) if scalarArgs is not None else 0
         ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
         ns_offset = len(nonSlicedROArgs) if nonSlicedROArgs is not None else 0
@@ -227,12 +229,28 @@ class XRT_CL(object):
         ndstart = []
         ndslice = []
         ndsize = []
+        minWGS = 1e20
 
         for ictx, ctx in enumerate(self.cl_ctx):
             nCUw = 1
-            nCU.extend([ctx.devices[0].max_compute_units*nCUw])
+            nCU.extend([nCUw])
+            tmpWGS = ctx.devices[0].max_work_group_size
+            if tmpWGS  < minWGS:
+                minWGS = tmpWGS
+            #nCU.extend([ctx.devices[0].max_compute_units*nCUw])
 
-        totalCUs = sum(nCU)
+        totalCUs = np.sum(nCU)
+        minWGS = 256
+        divider = minWGS * totalCUs
+        n2f = np.remainder(dimension, divider)
+        needResize = False
+        # odd dimension performance fix
+        if n2f != 0:
+            oldSize = dimension
+            dimension = (np.trunc(dimension/divider) + 1) * divider
+            nDiff = dimension - oldSize
+            needResize = True
+            
         work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
         nctx = len(work_cl_ctx)
 
@@ -256,12 +274,14 @@ class XRT_CL(object):
 # dimension
             if slicedROArgs is not None and dimension > 1:
                 for iarg, arg in enumerate(slicedROArgs):
-                    secondDim = np.int(len(arg) / dimension)
+                    newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                        else arg
+                    secondDim = np.int(len(newArg) / dimension)
                     iSlice = slice(int(ndstart[ictx]*secondDim),
                                    int((ndstart[ictx]+ndsize[ictx])*secondDim))
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
 
             if nonSlicedROArgs is not None:
                 for iarg, arg in enumerate(nonSlicedROArgs):
@@ -271,14 +291,15 @@ class XRT_CL(object):
 
             if slicedRWArgs is not None:
                 for iarg, arg in enumerate(slicedRWArgs):
-                    secondDim = np.int(len(arg) / dimension)
+                    newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                        else arg
+                    secondDim = np.int(len(newArg) / dimension)
                     iSlice = slice(int(ndstart[ictx]*secondDim),
                                    int((ndstart[ictx]+ndsize[ictx])*secondDim))
                     kernel_bufs[ictx].extend([cl.Buffer(
                         self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg[iSlice])])
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
                 global_size.extend([(np.int(ndsize[ictx]),)])
-#                global_size.extend([slicedRWArgs[0][ndslice[ictx]].shape])
             if nonSlicedRWArgs is not None:
                 for iarg, arg in enumerate(nonSlicedRWArgs):
                     kernel_bufs[ictx].extend([cl.Buffer(
@@ -287,7 +308,6 @@ class XRT_CL(object):
                 global_size.extend([np.array([1]).shape])
 
         local_size = None
-
         for ictx, ctx in enumerate(work_cl_ctx):
             kernel = getattr(self.cl_program[ictx], kernelName)
             ev_run.extend([kernel(
@@ -307,13 +327,18 @@ class XRT_CL(object):
         if slicedRWArgs is not None:
             for ictx, ctx in enumerate(work_cl_ctx):
                 for iarg, arg in enumerate(slicedRWArgs):
-                    secondDim = np.int(len(arg) / dimension)
+                    newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                        else arg
+                    secondDim = np.int(len(newArg) / dimension)
                     iSlice = slice(int(ndstart[ictx]*secondDim),
                                    int((ndstart[ictx]+ndsize[ictx])*secondDim))
                     cl.enqueue_copy(self.cl_queue[ictx],
                                     slicedRWArgs[iarg][iSlice],
                                     kernel_bufs[ictx][iarg + rw_pos],
                                     is_blocking=self.cl_is_blocking)
+            if needResize:
+                for arg in slicedRWArgs:
+                    arg = arg[:oldSize]
             ret += tuple(slicedRWArgs)
 
         if nonSlicedRWArgs is not None:
@@ -323,6 +348,9 @@ class XRT_CL(object):
                                     nonSlicedRWArgs[iarg],
                                     kernel_bufs[ictx][iarg + nsrw_pos],
                                     is_blocking=self.cl_is_blocking)
+            if needResize:
+                for arg in nonSlicedRWArgs:
+                    arg = arg[:oldSize]
             ret += tuple(nonSlicedRWArgs)
-
+#        print("Total CL execution time:", time.time() - t0, "s")
         return ret
