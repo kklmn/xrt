@@ -879,7 +879,6 @@ class BeamLine(object):
                 try:
                     outBeams = segment[1](segOE, **fArgs)
                 except:
-                    raise
                     continue
 
                 if isinstance(outBeams, tuple):

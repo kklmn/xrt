@@ -2,6 +2,7 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Apr 2016"
 import numpy as np
+import pickle
 from .. import raycing
 
 defaultEnergy = 9.0e3
@@ -26,7 +27,37 @@ class Beam(object):
     def __init__(self, nrays=raycing.nrays, copyFrom=None, forceState=False,
                  withNumberOfReflections=False, withAmplitudes=False,
                  xyzOnly=False):
-        if copyFrom is None:
+#        listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
+#                       'filamentDX', 'filamentDZ', 'filamentDtheta',
+#                       'filamentDpsi', 'state', 'a', 'b', 'c', 'path', 'E',
+#                       'Jss', 'Jpp', 'Jsp', 'elevationD', 'elevationX',
+#                       'elevationY', 'elevationZ', 's', 'phi', 'r', 'theta',
+#                       'order', 'accepted', 'acceptedE', 'seeded', 'seededI',
+#                       'Es', 'Ep', 'area', 'nRefl']
+        if type(copyFrom) == type(self):
+            try:
+                self.__dict__.update(copyFrom.__dict__)
+                if not withNumberOfReflections and hasattr(self, 'nRefl'):
+                    del self['nRefl']
+            except:
+                print("Can't copy beam from", copyFrom)
+                copyFrom = None
+        elif isinstance(copyFrom, raycing.basestring):
+            try:
+                if copyFrom.endswith('mat'):
+                    import scipy.io as io
+                    self.__dict__.update(io.loadmat(copyFrom))
+                elif copyFrom.endswith('npy'):
+                    self.__dict__.update(np.load(copyFrom).item())
+                else:
+                    pickleFile = open(copyFrom, 'rb')
+                    self.__dict__.update(pickle.load(pickleFile))
+                    pickleFile.close()
+            except:
+                raise
+                print("Can't load beam object from", copyFrom)
+                copyFrom = None
+        elif copyFrom is None:
             # coordinates of starting points
             nrays = np.long(nrays)
             self.x = np.zeros(nrays)
@@ -55,55 +86,38 @@ class Beam(object):
                 if withAmplitudes:
                     self.Es = np.zeros(nrays, dtype=complex)
                     self.Ep = np.zeros(nrays, dtype=complex)
-        else:
-            self.x = np.copy(copyFrom.x)
-            self.y = np.copy(copyFrom.y)
-            self.z = np.copy(copyFrom.z)
-            self.sourceSIGMAx = copyFrom.sourceSIGMAx
-            self.sourceSIGMAz = copyFrom.sourceSIGMAz
-            self.filamentDX = copyFrom.filamentDX
-            self.filamentDZ = copyFrom.filamentDZ
-            self.filamentDtheta = copyFrom.filamentDtheta
-            self.filamentDpsi = copyFrom.filamentDpsi
-            self.state = np.copy(copyFrom.state)
-            self.a = np.copy(copyFrom.a)
-            self.b = np.copy(copyFrom.b)
-            self.c = np.copy(copyFrom.c)
-            self.path = np.copy(copyFrom.path)
-            self.E = np.copy(copyFrom.E)
-            self.Jss = np.copy(copyFrom.Jss)
-            self.Jpp = np.copy(copyFrom.Jpp)
-            self.Jsp = np.copy(copyFrom.Jsp)
-            if withNumberOfReflections and hasattr(copyFrom, 'nRefl'):
-                self.nRefl = np.copy(copyFrom.nRefl)
-            if hasattr(copyFrom, 'elevationD'):
-                self.elevationD = np.copy(copyFrom.elevationD)
-                self.elevationX = np.copy(copyFrom.elevationX)
-                self.elevationY = np.copy(copyFrom.elevationY)
-                self.elevationZ = np.copy(copyFrom.elevationZ)
-            if hasattr(copyFrom, 's'):
-                self.s = np.copy(copyFrom.s)
-            if hasattr(copyFrom, 'phi'):
-                self.phi = np.copy(copyFrom.phi)
-            if hasattr(copyFrom, 'r'):
-                self.r = np.copy(copyFrom.r)
-            if hasattr(copyFrom, 'theta'):
-                self.theta = np.copy(copyFrom.theta)
-            if hasattr(copyFrom, 'order'):
-                self.order = np.copy(copyFrom.order)
-            if hasattr(copyFrom, 'accepted'):  # for calculating flux
-                self.accepted = copyFrom.accepted
-                self.acceptedE = copyFrom.acceptedE
-                self.seeded = copyFrom.seeded
-                self.seededI = copyFrom.seededI
-            if hasattr(copyFrom, 'Es'):
-                self.Es = np.copy(copyFrom.Es)
-                self.Ep = np.copy(copyFrom.Ep)
-            if hasattr(copyFrom, 'area'):
-                self.area = copyFrom.area
-
         if type(forceState) == int:
             self.state[:] = forceState
+
+    def export_beam(self, fileName, fformat='npy'):
+        """Saves the *beam* to a binary file. File format can be Numpy 'npy',
+        Matlab 'mat' or python 'pickle'. Matlab format should not be used for
+        future imports in xrt as it does not allow correct load."""
+
+        if str(fformat).lower() in ['npy', 'np', 'numpy']:  # numpy compress
+            try:
+                if not fileName.endswith('npy'):
+                    fileName += '.npy'
+                np.save(fileName, self.__dict__)
+            except:
+                print("Can't save the beam to", str(fileName))
+        if str(fformat).lower()in ['mat', 'matlab']:  # Matlab *.mat
+            try:
+                import scipy.io as io
+                if not fileName.endswith('mat'):
+                    fileName += '.mat'
+                io.savemat(fileName, self.__dict__)
+            except:
+                print("Can't save the beam to", str(fileName))
+        else:  # pickle
+            try:
+                if not fileName.endswith('pickle'):
+                    fileName += '.pickle'
+                f = open(fileName, 'wb')
+                pickle.dump(self.__dict__, f, protocol=2)
+                f.close()
+            except:
+                print("Can't save the beam to", str(fileName))
 
     def concatenate(self, beam):
         """Adds *beam* to *self*. Useful when more than one source is
