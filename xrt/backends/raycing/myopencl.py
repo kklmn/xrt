@@ -248,7 +248,7 @@ class XRT_CL(object):
         if n2f != 0:
             oldSize = dimension
             dimension = (np.trunc(dimension/divider) + 1) * divider
-            nDiff = dimension - oldSize
+            nDiff = int(dimension - oldSize)
             needResize = True
             
         work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
