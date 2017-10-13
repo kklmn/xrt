@@ -870,7 +870,6 @@ class BeamLine(object):
                             str(segment[0]),
                             str(segment[1]).split(".")[-1].strip(">").split(
                                     " ")[0])
-                        print(signalStr)
                         signal.emit((float(iseg) / float(totalStages),
                                      signalStr))
                         self.statusSignal = [signal, iseg, totalStages,
@@ -880,6 +879,7 @@ class BeamLine(object):
                 try:
                     outBeams = segment[1](segOE, **fArgs)
                 except:
+                    raise
                     continue
 
                 if isinstance(outBeams, tuple):

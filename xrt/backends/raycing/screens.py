@@ -99,7 +99,20 @@ class Screen(object):
 
     def expose_global(self, beam=None):
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         glo = rs.Beam(copyFrom=beam)  # global
         glo.path = ((self.center[0]-beam.x) * self.y[0] +
@@ -119,7 +132,20 @@ class Screen(object):
         .. .. Returned values: beamLocal
         """
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         # Converting the beam to the screen local coordinates
@@ -276,7 +302,20 @@ class HemisphericScreen(Screen):
 
     def expose_global(self, beam=None):
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         glo = self.expose(beam)
         _, _, _, glo.x[:], glo.y[:], glo.z[:] = \
@@ -291,7 +330,20 @@ class HemisphericScreen(Screen):
         .. Returned values: beamLocal
         """
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         sqb_2 = (beam.a * (beam.x-self.center[0]) +

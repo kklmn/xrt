@@ -817,7 +817,20 @@ class OE(object):
         """
         self.footprint = []
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         self.get_orientation()
         # output beam in global coordinates
@@ -877,7 +890,20 @@ class OE(object):
         """
         self.footprint = []
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         self.get_orientation()
 # output beam in global coordinates
@@ -1853,7 +1879,20 @@ class DCM(OE):
         """
         self.footprint = []
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         self.get_orientation()
         gb = rs.Beam(copyFrom=beam)  # output beam in global coordinates

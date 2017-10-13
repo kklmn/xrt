@@ -1367,7 +1367,20 @@ class Plate(DCM):
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         self.material2 = self.material
         self.cryst2perpTransl = -self.t
@@ -1564,7 +1577,20 @@ class ParaboloidFlatLens(Plate):
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
         if self.bl is not None:
-            if self.bl.alignMode:
+            needAutoAlign = False
+            try:
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    naParam = autoParam.strip("_")
+                    if hasattr(self, autoParam) and\
+                            hasattr(self, naParam):
+                        if str(getattr(self, autoParam)) ==\
+                                str(getattr(self, naParam)):
+                            needAutoAlign = True
+                            print("{0}.{1} requires auto-calculation".format(
+                                self.name, naParam))
+            except:
+                pass
+            if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         if isinstance(self.nCRL, (int, float)):
             nCRL = self.nCRL
