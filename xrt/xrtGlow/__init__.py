@@ -1253,8 +1253,8 @@ class xrtGlow(QWidget):
         saveDialog = QFileDialog()
         saveDialog.setFileMode(QFileDialog.AnyFile)
         saveDialog.setAcceptMode(QFileDialog.AcceptSave)
-        saveDialog.setNameFilter("BMP files (*.bmp);;JPG files (*.jpg);;JPG files (*.jpg);;JPEG files (*.jpeg);;PNG files (*.png);;TIFF files (*.tif)")  # analysis:ignore
-        saveDialog.selectNameFilter("PNG files (*.png)")
+        saveDialog.setNameFilter("BMP files (*.bmp);;JPG files (*.jpg);;JPEG files (*.jpeg);;PNG files (*.png);;TIFF files (*.tif)")  # analysis:ignore
+        saveDialog.selectNameFilter("JPG files (*.jpg)")
         if (saveDialog.exec_()):
             image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
             filename = saveDialog.selectedFiles()[0]
