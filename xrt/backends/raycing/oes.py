@@ -1599,10 +1599,12 @@ class ParaboloidFlatLens(Plate):
         else:
             raise ValueError("wrong nCRL value!")
         nCRL = int(round(nCRL))
+        self._nCRL = nCRL
         if nCRL < 1:
             raise ValueError("wrong nCRL value!")
 
         if nCRL == 1:
+            self.centerShift = np.zeros(3)
             return self.double_refract(beam, needLocal=needLocal,
                                        returnLocalAbsorbed=returnLocalAbsorbed)
         else:
@@ -1627,6 +1629,7 @@ class ParaboloidFlatLens(Plate):
                 beamIn = lglobal
                 if ilens == 0:
                     llocal1, llocal2 = tlocal1, tlocal2
+            self.centerShift = step * np.array(toward)
             self.center = tempCenter
             self.bl.flowSource = tmpFlowSource
 

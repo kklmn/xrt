@@ -2523,28 +2523,38 @@ class xrtGlWidget(QGLWidget):
                 gbp.c = nv[2] * np.ones_like(zv)
 
                 oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
-                surfCP = np.vstack((gbp.x - self.coordOffset[0],
-                                    gbp.y - self.coordOffset[1],
-                                    gbp.z - self.coordOffset[2])).T
 
-                glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                        self.modelToWorld(surfCP.reshape(
-                            self.surfCPOrder,
-                            self.surfCPOrder, 3)))
+                if hasattr(oe, '_nCRL'):
+                    cShift = oe.centerShift
+                    nSurf = oe._nCRL
+                else:
+                    cShift = np.zeros(3)
+                    nSurf = 1
 
-                surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
-                                      np.ones_like(gbp.a))).T
-
-                glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
-                        surfNorm.reshape(
-                            self.surfCPOrder,
-                            self.surfCPOrder, 4))
-
-                glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                            self.surfCPOrder, 0.0, 1.0)
-
-                glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
-                            0, self.surfCPOrder)
+                for iSurf in range(nSurf):
+                    dC = cShift * iSurf
+                    surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
+                                        gbp.y - self.coordOffset[1] - dC[1],
+                                        gbp.z - self.coordOffset[2] - dC[2])).T
+    
+                    glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                            self.modelToWorld(surfCP.reshape(
+                                self.surfCPOrder,
+                                self.surfCPOrder, 3)))
+    
+                    surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
+                                          np.ones_like(gbp.a))).T
+    
+                    glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
+                            surfNorm.reshape(
+                                self.surfCPOrder,
+                                self.surfCPOrder, 4))
+    
+                    glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                                self.surfCPOrder, 0.0, 1.0)
+    
+                    glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
+                                0, self.surfCPOrder)
 
         glDisable(GL_MAP2_VERTEX_3)
         glDisable(GL_MAP2_NORMAL)

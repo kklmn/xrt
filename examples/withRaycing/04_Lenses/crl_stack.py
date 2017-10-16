@@ -103,8 +103,12 @@ def build_beamline(nrays=1e4):
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     beamLine.lens = Lens(
-        beamLine, 'CRL', [0, p, 0], pitch=np.pi/2, t=0, material=mBeryllium,
-        focus=parabolaParam, zmax=zmax, nCRL=(q, E0), alarmLevel=0.1)
+        beamLine, 'CRL', [0, p, 0], pitch=np.pi/2, t=0, 
+        material=mBeryllium,
+        focus=parabolaParam,
+        zmax=zmax, 
+        nCRL=(q, E0), 
+        alarmLevel=0.1)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
     beamLine.fsm2.dqs = np.linspace(-140, 140, 71)
@@ -121,8 +125,9 @@ def run_process(beamLine):
     for i, dq in enumerate(beamLine.fsm2.dqs):
         beamLine.fsm2.center[1] = p + q + dq
         outDict['beamFSM2_{0:02d}'.format(i)] = beamLine.fsm2.expose(lglobal)
-    return outDict
     beamLine.prepare_flow()
+    return outDict
+
 rr.run_process = run_process
 
 

@@ -721,6 +721,8 @@ class BeamLine(object):
         self.cosAzimuth = np.cos(value)
 
     def prepare_flow(self):
+        if self.flowSource != 'legacy':
+            return
         frame = inspect.currentframe()
         localsDict = frame.f_back.f_locals
         globalsDict = frame.f_back.f_globals
