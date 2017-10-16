@@ -27,16 +27,18 @@ class Beam(object):
     def __init__(self, nrays=raycing.nrays, copyFrom=None, forceState=False,
                  withNumberOfReflections=False, withAmplitudes=False,
                  xyzOnly=False):
-#        listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
-#                       'filamentDX', 'filamentDZ', 'filamentDtheta',
-#                       'filamentDpsi', 'state', 'a', 'b', 'c', 'path', 'E',
-#                       'Jss', 'Jpp', 'Jsp', 'elevationD', 'elevationX',
-#                       'elevationY', 'elevationZ', 's', 'phi', 'r', 'theta',
-#                       'order', 'accepted', 'acceptedE', 'seeded', 'seededI',
-#                       'Es', 'Ep', 'area', 'nRefl']
+        listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
+                       'filamentDX', 'filamentDZ', 'filamentDtheta',
+                       'filamentDpsi', 'state', 'a', 'b', 'c', 'path', 'E',
+                       'Jss', 'Jpp', 'Jsp', 'elevationD', 'elevationX',
+                       'elevationY', 'elevationZ', 's', 'phi', 'r', 'theta',
+                       'order', 'accepted', 'acceptedE', 'seeded', 'seededI',
+                       'Es', 'Ep', 'area', 'nRefl']
         if type(copyFrom) == type(self):
             try:
-                self.__dict__.update(copyFrom.__dict__)
+                for attr in listOfAttrs:
+                    if hasattr(copyFrom, attr):
+                        setattr(self, attr, np.copy(getattr(copyFrom, attr)))
                 if not withNumberOfReflections and hasattr(self, 'nRefl'):
                     del self['nRefl']
             except:
