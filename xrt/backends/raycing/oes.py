@@ -1600,11 +1600,8 @@ class ParaboloidFlatLens(Plate):
             print(nCRL)
         else:
             raise ValueError("wrong nCRL value!")
-        nCRL = int(round(nCRL))
+        nCRL = max(int(round(nCRL)), 1)
         self._nCRL = nCRL
-        if nCRL < 1:
-            nCRL = 1
-#            raise ValueError("wrong nCRL value!")
 
         if nCRL == 1:
             self.centerShift = np.zeros(3)
