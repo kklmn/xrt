@@ -1557,8 +1557,8 @@ class ParaboloidFlatLens(Plate):
             nFactor = 2.
         else:
             nFactor = 1.
-        return 2 * self.focus / f /\
-            (1 - self.material.get_refractive_index(E).real) * nFactor
+        return 2 * self.focus / float(f) /\
+            (1. - self.material.get_refractive_index(E).real) * nFactor
 
     def multiple_refract(self, beam=None, needLocal=True,
                          returnLocalAbsorbed=None):
@@ -1597,12 +1597,14 @@ class ParaboloidFlatLens(Plate):
             nCRL = self.nCRL
         elif isinstance(self.nCRL, (list, tuple)):
             nCRL = self.get_nCRL(self.nCRL[0], self.nCRL[1])
+            print(nCRL)
         else:
             raise ValueError("wrong nCRL value!")
         nCRL = int(round(nCRL))
         self._nCRL = nCRL
         if nCRL < 1:
-            raise ValueError("wrong nCRL value!")
+            nCRL = 1
+#            raise ValueError("wrong nCRL value!")
 
         if nCRL == 1:
             self.centerShift = np.zeros(3)
@@ -1613,7 +1615,7 @@ class ParaboloidFlatLens(Plate):
             self.bl.flowSource = 'multiple_refract'
             tempCenter = [c for c in self.center]
             beamIn = beam
-            step = 2*self.zmax + self.t\
+            step = 2.*self.zmax + self.t\
                 if isinstance(self, DoubleParaboloidLens) else self.zmax+self.t
             for ilens in range(nCRL):
                 if isinstance(self, ParabolicCylinderFlatLens):
