@@ -1560,7 +1560,8 @@ class ParaboloidFlatLens(Plate):
         return 2 * self.focus / f /\
             (1 - self.material.get_refractive_index(E).real) * nFactor
 
-    def multiple_refract(self, beam, needLocal=True, returnLocalAbsorbed=None):
+    def multiple_refract(self, beam=None, needLocal=True,
+                         returnLocalAbsorbed=None):
         """
         Sequentially applies the :meth:`double_refract` method to the stack of
         lenses, center of each of *nCRL* lens is shifted by *zmax* mm
