@@ -270,7 +270,8 @@ from ..backends.raycing import oes as roes  # analysis:ignore
 from ..backends.raycing import run as rrun  # analysis:ignore
 from .. import plotter as xrtplot  # analysis:ignore
 from .. import runner as xrtrun  # analysis:ignore
-from .. import xrtGlow as xrtglow  # analysis:ignore
+if isOpenGL:
+    from .. import xrtGlow as xrtglow  # analysis:ignore
 
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))

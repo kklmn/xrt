@@ -255,7 +255,7 @@ class xrtGlow(QWidget):
             layout = QHBoxLayout()
             axLabel.setMinimumWidth(12)
             layout.addWidget(axLabel)
-            axEdit.setMaximumWidth(36)
+            axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             zoomLayout.addLayout(layout)
@@ -293,7 +293,7 @@ class xrtGlow(QWidget):
             layout = QHBoxLayout()
             axLabel.setMinimumWidth(64)
             layout.addWidget(axLabel)
-            axEdit.setMaximumWidth(36)
+            axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             rotationLayout.addLayout(layout)
@@ -342,7 +342,7 @@ class xrtGlow(QWidget):
             layout = QHBoxLayout()
             axLabel.setMinimumWidth(80)
             layout.addWidget(axLabel)
-            axEdit.setMaximumWidth(32)
+            axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             opacityLayout.addLayout(layout)
@@ -472,7 +472,7 @@ class xrtGlow(QWidget):
         self.gridPanel.setFlat(False)
         self.gridPanel.setTitle("Coordinate grid")
         self.gridPanel.setCheckable(True)
-        self.gridPanel.clicked.connect(self.checkDrawGrid)
+        self.gridPanel.toggled.connect(self.checkDrawGrid)
 
         scaleValidator = QDoubleValidator()
         scaleValidator.setRange(0, 7, 7)
@@ -496,7 +496,7 @@ class xrtGlow(QWidget):
             layout = QHBoxLayout()
             axLabel.setMinimumWidth(20)
             layout.addWidget(axLabel)
-            axEdit.setMaximumWidth(32)
+            axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             xyzGridLayout.addLayout(layout)
@@ -506,6 +506,18 @@ class xrtGlow(QWidget):
         checkBox.stateChanged.connect(self.checkFineGrid)
         xyzGridLayout.addWidget(checkBox)
         self.checkBoxFineGrid = checkBox
+        self.gridControls = []
+
+        projectionLayout = QVBoxLayout()
+        checkBox = QCheckBox('Perspective')
+        checkBox.setChecked(True)
+        checkBox.stateChanged.connect(self.checkPerspect)
+        self.checkBoxPerspective = checkBox
+        projectionLayout.addWidget(self.checkBoxPerspective)
+
+        self.gridControls.append(self.checkBoxPerspective)
+        self.gridControls.append(self.gridPanel)
+        self.gridControls.append(self.checkBoxFineGrid)
 
         self.gridPanel.setLayout(xyzGridLayout)
 
@@ -560,19 +572,13 @@ class xrtGlow(QWidget):
             layout = QHBoxLayout()
             axLabel.setMinimumWidth(80)
             layout.addWidget(axLabel)
-            axEdit.setMaximumWidth(32)
+            axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             projLineLayout.addLayout(layout)
         self.projLinePanel.setLayout(projLineLayout)
 
-        projectionLayout = QVBoxLayout()
-        checkBox = QCheckBox('Perspective')
-        checkBox.setChecked(True)
-        checkBox.stateChanged.connect(self.checkPerspect)
-        projectionLayout.addWidget(checkBox)
-        self.checkBoxPerspective = checkBox
-
+       
         self.projectionPanel = QWidget(self)
         projectionLayout.addWidget(self.gridPanel)
         projectionLayout.addWidget(self.projVisPanel)
@@ -618,16 +624,16 @@ class xrtGlow(QWidget):
         layout.addWidget(axSlider)
         sceneLayout.addLayout(layout)
 
-        labelPrec = QSpinBox()
-        labelPrec.setRange(0, 4)
-        labelPrec.setValue(1)
-        labelPrec.setSuffix('mm')
-        labelPrec.valueChanged.connect(self.setLabelPrec)
+        labelPrec = QComboBox()
+        for order in range(5):
+            labelPrec.addItem("{}mm".format(10**-order))
+        labelPrec.setCurrentIndex(1)
+        labelPrec.currentIndexChanged['int'].connect(self.setLabelPrec)
         aaLabel = QLabel('Label Precision')
         layout = QHBoxLayout()
         aaLabel.setMinimumWidth(100)
         layout.addWidget(aaLabel)
-        labelPrec.setMaximumWidth(64)
+        labelPrec.setMaximumWidth(120)
         layout.addWidget(labelPrec)
         layout.addStretch()
         sceneLayout.addLayout(layout)
@@ -643,7 +649,7 @@ class xrtGlow(QWidget):
             layout = QHBoxLayout()
             axLabel.setMinimumWidth(100)
             layout.addWidget(axLabel)
-            axEdit.setMaximumWidth(64)
+            axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addStretch()
             sceneLayout.addLayout(layout)
@@ -945,6 +951,9 @@ class xrtGlow(QWidget):
 
     def setProjectionParam(self, iAction, state):
         self.projectionControls[iAction].setChecked(state)
+
+    def setGridParam(self, iAction, state):
+        self.gridControls[iAction].setChecked(state)
 
     def setLabelPrec(self, prec):
         self.customGlWidget.labelCoordPrec = prec
@@ -1273,14 +1282,19 @@ class xrtGlow(QWidget):
             mAction.triggered.connect(partial(self.setSceneParam, iAction))
             menu.addAction(mAction)
         menu.addSeparator()
-        for iAction, actCnt in enumerate(self.sceneControls):
-            if 'Virtual Screen' in actCnt.text():
-                continue
+        for iAction, actCnt in enumerate(self.gridControls):
             mAction = QAction(self)
-            mAction.setText(actCnt.text())
+            if actCnt.staticMetaObject.className() == 'QCheckBox':
+                actText = actCnt.text()
+                actCheck = bool(actCnt.checkState())
+            else:
+                actText = actCnt.title()
+                actCheck = actCnt.isChecked()                
+            mAction.setText(actText)
             mAction.setCheckable(True)
-            mAction.setChecked(bool(actCnt.checkState()))
-            mAction.triggered.connect(partial(self.setSceneParam, iAction))
+            mAction.setChecked(actCheck)
+            mAction.triggered.connect(
+                partial(self.setGridParam, iAction))
             menu.addAction(mAction)
         menu.addSeparator()
         for iAction, actCnt in enumerate(self.projectionControls):
@@ -1291,6 +1305,18 @@ class xrtGlow(QWidget):
             mAction.triggered.connect(
                 partial(self.setProjectionParam, iAction))
             menu.addAction(mAction)
+        menu.addSeparator()
+        for iAction, actCnt in enumerate(self.sceneControls):
+            if 'Virtual Screen' in actCnt.text():
+                continue
+            mAction = QAction(self)
+            mAction.setText(actCnt.text())
+            mAction.setCheckable(True)
+            mAction.setChecked(bool(actCnt.checkState()))
+            mAction.triggered.connect(partial(self.setSceneParam, iAction))
+            menu.addAction(mAction)
+        menu.addSeparator()
+
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
     def exportToImage(self):
