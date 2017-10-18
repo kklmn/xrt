@@ -17,7 +17,7 @@ if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     import PyQt4
     locals().update(vars(PyQt4.QtCore.Qt))
     from PyQt4.QtOpenGL import QGLWidget
-    import PyQt4.QtWebKit as myQtWeb
+    import PyQt4.QtWebKit as QtWeb
     try:
         import PyQt4.Qwt5 as Qwt
     except:  # analysis:ignore
@@ -36,9 +36,9 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
     from PyQt5.QtWidgets import *
     from PyQt5.QtOpenGL import QGLWidget
     try:
-        import PyQt5.QtWebEngineWidgets as myQtWeb
+        import PyQt5.QtWebEngineWidgets as QtWeb
     except ImportError:
-        import PyQt5.QtWebKitWidgets as myQtWeb
+        import PyQt5.QtWebKitWidgets as QtWeb
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as\
         FigCanvas
 else:
@@ -86,64 +86,3 @@ try:
 except:  # analysis:ignore
     glowSlider = mySlider
     glowTopScale = QSlider.TicksAbove
-
-
-try:
-    class WebPage(myQtWeb.QWebPage):
-        """
-        Web page subclass to manage hyperlinks like in WebEngine
-        """
-        showHelp = Signal()
-
-    class QWebView(myQtWeb.QWebView):
-        """Web view"""
-        def __init__(self):
-            myQtWeb.QWebView.__init__(self)
-            web_page = WebPage(self)
-            self.setPage(web_page)
-
-except AttributeError:
-    # QWebKit deprecated in Qt 5.7
-    # The idea and partly the code of the compatibility fix is borrowed from
-    # spyderlib.widgets.browser
-    class WebPage(myQtWeb.QWebEnginePage):
-        """
-        Web page subclass to manage hyperlinks for WebEngine
-
-        Note: This can't be used for WebKit because the
-        acceptNavigationRequest method has a different
-        functionality for it.
-        """
-        linkClicked = Signal(QUrl)
-        showHelp = Signal()
-        linkDelegationPolicy = 0
-
-        def setLinkDelegationPolicy(self, policy):
-            self.linkDelegationPolicy = policy
-
-        def acceptNavigationRequest(self, url, navigation_type, isMainFrame):
-            """
-            Overloaded method to handle links ourselves
-            """
-            if navigation_type in\
-                    [myQtWeb.QWebEnginePage.NavigationTypeLinkClicked] and\
-                    str(url.toString()).startswith('file:'):
-                if self.linkDelegationPolicy == 1 and\
-                        '.png' not in url.toString():
-                    self.linkClicked.emit(url)
-                return False
-            elif navigation_type in\
-                    [myQtWeb.QWebEnginePage.NavigationTypeBackForward] and\
-                    self.linkDelegationPolicy == 0:
-                if str(QUrl(spyder.CSS_PATH).toString()).lower() in\
-                        str(url.toString()).lower():
-                    self.showHelp.emit()
-                    return False
-            return True
-
-    class QWebView(myQtWeb.QWebEngineView):
-        """Web view"""
-        def __init__(self):
-            myQtWeb.QWebEngineView.__init__(self)
-            web_page = WebPage(self)
-            self.setPage(web_page)

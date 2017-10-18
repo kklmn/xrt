@@ -120,6 +120,66 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 myTab = 4*" "
 
+try:
+    class WebPage(qt.QtWeb.QWebPage):
+        """
+        Web page subclass to manage hyperlinks like in WebEngine
+        """
+        showHelp = qt.Signal()
+
+    class QWebView(qt.QtWeb.QWebView):
+        """Web view"""
+        def __init__(self):
+            qt.QtWeb.QWebView.__init__(self)
+            web_page = WebPage(self)
+            self.setPage(web_page)
+
+except AttributeError:
+    # QWebKit deprecated in Qt 5.7
+    # The idea and partly the code of the compatibility fix is borrowed from
+    # spyderlib.widgets.browser
+    class WebPage(qt.QtWeb.QWebEnginePage):
+        """
+        Web page subclass to manage hyperlinks for WebEngine
+
+        Note: This can't be used for WebKit because the
+        acceptNavigationRequest method has a different
+        functionality for it.
+        """
+        linkClicked = qt.Signal(qt.QUrl)
+        showHelp = qt.Signal()
+        linkDelegationPolicy = 0
+
+        def setLinkDelegationPolicy(self, policy):
+            self.linkDelegationPolicy = policy
+
+        def acceptNavigationRequest(self, url, navigation_type, isMainFrame):
+            """
+            Overloaded method to handle links ourselves
+            """
+            if navigation_type in\
+                    [qt.QtWeb.QWebEnginePage.NavigationTypeLinkClicked] and\
+                    str(url.toString()).startswith('file:'):
+                if self.linkDelegationPolicy == 1 and\
+                        '.png' not in url.toString():
+                    self.linkClicked.emit(url)
+                return False
+            elif navigation_type in\
+                    [qt.QtWeb.QWebEnginePage.NavigationTypeBackForward] and\
+                    self.linkDelegationPolicy == 0:
+                if str(qt.QUrl(spyder.CSS_PATH).toString()).lower() in\
+                        str(url.toString()).lower():
+                    self.showHelp.emit()
+                    return False
+            return True
+
+    class QWebView(qt.QtWeb.QWebEngineView):
+        """Web view"""
+        def __init__(self):
+            qt.QtWeb.QWebEngineView.__init__(self)
+            web_page = WebPage(self)
+            self.setPage(web_page)
+
 
 class XrtQook(qt.QWidget):
     statusUpdate = qt.pyqtSignal(tuple)
@@ -332,7 +392,7 @@ class XrtQook(qt.QWidget):
 
         self.defaultFont = qt.QFont("Courier New", 9)
         if spyder.isSphinx:
-            self.webHelp = qt.QWebView()
+            self.webHelp = QWebView()
             self.webHelp.setContextMenuPolicy(qt.CustomContextMenu)
             self.webHelp.customContextMenuRequested.connect(self.docMenu)
         else:
