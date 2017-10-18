@@ -33,12 +33,12 @@ __date__ = "08 Mar 2016"
 
 import sys
 import os
-sys.path.append(os.path.join('..', '..'))
-import xrt.xrtQook as xQ
+sys.path.append(os.path.join('..', '..', '..'))
+import xrt.gui.xrtQook as xQ
 
 
 if __name__ == '__main__':
-    app = xQ.QApplication(sys.argv)
+    app = xQ.qt.QApplication(sys.argv)
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")
     ex.show()

@@ -14,89 +14,17 @@ import re
 import copy
 # import time
 
-from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
-    glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc,\
-    glEnableClientState, glPolygonMode, glGetDoublev, glDisable,\
-    glDisableClientState, glRasterPos3f, glPushMatrix, glTranslatef, glScalef,\
-    glPopMatrix, glFlush, glVertexPointerf, glColorPointerf, glLineWidth,\
-    glDrawArrays, glMap2f, glMapGrid2f, glEvalMesh2, glLightModeli, glLightfv,\
-    glGetIntegerv, glColor4f, glVertex3f, glBegin, glEnd, glViewport,\
-    glMaterialf, glHint, glPointSize,\
-    GL_FRONT_AND_BACK, GL_AMBIENT, GL_DIFFUSE, GL_SPECULAR, GL_EMISSION,\
-    GL_FRONT, GL_SHININESS, GL_PROJECTION, GL_MODELVIEW, GL_COLOR_BUFFER_BIT,\
-    GL_DEPTH_BUFFER_BIT, GL_MULTISAMPLE, GL_BLEND, GL_SRC_ALPHA,\
-    GL_ONE_MINUS_SRC_ALPHA, GL_POINT_SMOOTH, GL_COLOR_ARRAY, GL_LINE,\
-    GL_LINE_SMOOTH, GL_LINE_SMOOTH_HINT,\
-    GL_NICEST, GL_POLYGON_SMOOTH_HINT, GL_POINT_SMOOTH_HINT, GL_DEPTH_TEST,\
-    GL_FILL, GL_NORMAL_ARRAY, GL_NORMALIZE, GL_VERTEX_ARRAY,\
-    GL_QUADS, GL_MAP2_VERTEX_3, GL_MAP2_NORMAL, GL_LIGHTING, GL_POINTS,\
-    GL_LIGHT_MODEL_TWO_SIDE, GL_LIGHT0, GL_POSITION, GL_SPOT_DIRECTION,\
-    GL_SPOT_CUTOFF, GL_SPOT_EXPONENT, GL_TRIANGLE_FAN, GL_VIEWPORT, GL_LINES,\
-    GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX
-
-from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
-
-from OpenGL.GLUT import glutBitmapCharacter, glutStrokeCharacter, glutInit,\
-    glutInitDisplayMode, GLUT_BITMAP_HELVETICA_12, GLUT_STROKE_ROMAN,\
-    GLUT_RGBA, GLUT_DOUBLE, GLUT_DEPTH, GLUT_STROKE_MONO_ROMAN
-
-from OpenGL.arrays import vbo
-
 from collections import OrderedDict
-try:
-    from matplotlib.backends import qt_compat
-except ImportError:
-    from matplotlib.backends import qt4_compat
-    qt_compat = qt4_compat
 
-if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    QtName = "PyQt4"
-    from PyQt4 import QtGui, QtCore
-    import PyQt4.QtGui as myQtGUI
-    import PyQt4.QtOpenGL as myQtGL
-    try:
-        import PyQt4.Qwt5 as Qwt
-    except:  # analysis:ignore
-        pass
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as\
-        FigCanvas
-elif 'pyqt5' in qt_compat.QT_API.lower():
-    QtName = "PyQt5"
-    from PyQt5 import QtGui, QtCore
-    import PyQt5.QtWidgets as myQtGUI
-    import PyQt5.QtOpenGL as myQtGL
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as\
-        FigCanvas
-else:
-    raise ImportError("Cannot import any Python Qt package!")
-
-QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
-    QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
-    QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-    QListWidgetItem, QGLWidget, QGroupBox,\
-    QLabel, QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider = (
-        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
-        myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
-        myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
-        myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
-        myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
-        myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
-        myQtGUI.QListWidgetItem, myQtGL.QGLWidget, myQtGUI.QGroupBox,
-        myQtGUI.QLabel, myQtGUI.QSizePolicy,
-        myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
-        myQtGUI.QSlider)
-QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
-    QDoubleValidator, QIntValidator =\
-    (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
-     QtGui.QStandardItem, QtGui.QPixmap,
-     QtGui.QDoubleValidator, QtGui.QIntValidator)
-
-from ..backends import raycing  # analysis:ignore
-from ..backends.raycing import sources as rsources  # analysis:ignore
-from ..backends.raycing import screens as rscreens  # analysis:ignore
+from ...backends import raycing
+from ...backends.raycing import sources as rsources
+from ...backends.raycing import screens as rscreens
+from ...backends.raycing import screens as rscreens  # analysis:ignore
+from .. import qt
+from .. import gl
 
 
-class mySlider(QSlider):
+class mySlider(qt.QSlider):
     def __init__(self, parent, scaleDirection, scalePosition):
         super(mySlider, self).__init__(scaleDirection)
         self.setTickPosition(scalePosition)
@@ -104,29 +32,20 @@ class mySlider(QSlider):
 
     def setRange(self, start, end, step):
         self.scale = 1. / step
-        QSlider.setRange(self, start / step, end / step)
+        qt.QSlider.setRange(self, start / step, end / step)
 
     def setValue(self, value):
-        QSlider.setValue(self, int(value*self.scale))
+        qt.QSlider.setValue(self, int(value*self.scale))
 
 
-try:
-    glowSlider = Qwt.QwtSlider
-    glowTopScale = Qwt.QwtSlider.TopScale
-except:  # analysis:ignore
-    glowSlider = mySlider
-    glowTopScale = QSlider.TicksAbove
-
-
-class xrtGlow(QWidget):
+class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
         self.setWindowTitle('xrtGlow')
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
-        self.setWindowIcon(QIcon(os.path.join(iconsDir,
-                                              'icon-GLow.ico')))
+        self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
         self.populate_oes_list(arrayOfRays)
 
         self.segmentsModel = self.init_segments_model()
@@ -134,12 +53,12 @@ class xrtGlow(QWidget):
 
         self.populate_segments_model(arrayOfRays)
 
-        self.fluxDataModel = QStandardItemModel()
+        self.fluxDataModel = qt.QStandardItemModel()
 
         for rfName, rfObj in inspect.getmembers(raycing):
             if rfName.startswith('get_') and\
                     rfName != "get_output":
-                flItem = QStandardItem(rfName.replace("get_", ''))
+                flItem = qt.QStandardItem(rfName.replace("get_", ''))
                 self.fluxDataModel.appendRow(flItem)
 
         self.customGlWidget = xrtGlWidget(self, arrayOfRays,
@@ -150,7 +69,7 @@ class xrtGlow(QWidget):
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
-        self.customGlWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customGlWidget.setContextMenuPolicy(qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
 
         self.makeNavigationPanel()
@@ -159,51 +78,51 @@ class xrtGlow(QWidget):
         self.makeGridAndProjectionsPanel()
         self.makeScenePanel()
 
-        mainLayout = QHBoxLayout()
-        sideLayout = QVBoxLayout()
+        mainLayout = qt.QHBoxLayout()
+        sideLayout = qt.QVBoxLayout()
 
-        tabs = QTabWidget()
+        tabs = qt.QTabWidget()
         tabs.addTab(self.navigationPanel, "Navigation")
         tabs.addTab(self.transformationPanel, "Transformations")
         tabs.addTab(self.colorOpacityPanel, "Colors")
         tabs.addTab(self.projectionPanel, "Grid/Projections")
         tabs.addTab(self.scenePanel, "Scene")
         sideLayout.addWidget(tabs)
-        self.canvasSplitter = QSplitter()
+        self.canvasSplitter = qt.QSplitter()
         self.canvasSplitter.setChildrenCollapsible(False)
-        self.canvasSplitter.setOrientation(QtCore.Qt.Horizontal)
+        self.canvasSplitter.setOrientation(qt.Horizontal)
         mainLayout.addWidget(self.canvasSplitter)
-        sideWidget = QWidget()
+        sideWidget = qt.QWidget()
         sideWidget.setLayout(sideLayout)
         self.canvasSplitter.addWidget(self.customGlWidget)
         self.canvasSplitter.addWidget(sideWidget)
 
         self.setLayout(mainLayout)
         self.customGlWidget.oesList = self.oesList
-        toggleHelp = QShortcut(self)
-        toggleHelp.setKey(QtCore.Qt.Key_F1)
+        toggleHelp = qt.QShortcut(self)
+        toggleHelp.setKey(qt.Key_F1)
         toggleHelp.activated.connect(self.customGlWidget.toggleHelp)
-        fastSave = QShortcut(self)
-        fastSave.setKey(QtCore.Qt.Key_F5)
+        fastSave = qt.QShortcut(self)
+        fastSave.setKey(qt.Key_F5)
         fastSave.activated.connect(partial(self.saveScene, '_xrtScnTmp_.npy'))
-        fastLoad = QShortcut(self)
-        fastLoad.setKey(QtCore.Qt.Key_F6)
+        fastLoad = qt.QShortcut(self)
+        fastLoad.setKey(qt.Key_F6)
         fastLoad.activated.connect(partial(self.loadScene, '_xrtScnTmp_.npy'))
-        toggleScreen = QShortcut(self)
-        toggleScreen.setKey(QtCore.Qt.Key_F3)
+        toggleScreen = qt.QShortcut(self)
+        toggleScreen.setKey(qt.Key_F3)
         toggleScreen.activated.connect(self.customGlWidget.toggleVScreen)
-        self.dockToQook = QShortcut(self)
-        self.dockToQook.setKey(QtCore.Qt.Key_F4)
+        self.dockToQook = qt.QShortcut(self)
+        self.dockToQook.setKey(qt.Key_F4)
         self.dockToQook.activated.connect(self.toggleDock)
-        tiltScreen = QShortcut(self)
-        tiltScreen.setKey(QtCore.Qt.CTRL + QtCore.Qt.Key_T)
+        tiltScreen = qt.QShortcut(self)
+        tiltScreen.setKey(qt.CTRL + qt.Key_T)
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
     def makeNavigationPanel(self):
-        self.navigationLayout = QVBoxLayout()
+        self.navigationLayout = qt.QVBoxLayout()
 
-        centerCBLabel = QLabel('Center view at:')
-        self.centerCB = QComboBox()
+        centerCBLabel = qt.QLabel('Center view at:')
+        self.centerCB = qt.QComboBox()
         self.centerCB.setMaxVisibleItems(48)
         for key in self.oesList.keys():
             self.centerCB.addItem(str(key))
@@ -211,35 +130,34 @@ class xrtGlow(QWidget):
         self.centerCB.currentIndexChanged['QString'].connect(self.centerEl)
         self.centerCB.setCurrentIndex(0)
 
-        layout = QHBoxLayout()
+        layout = qt.QHBoxLayout()
         layout.addWidget(centerCBLabel)
         layout.addWidget(self.centerCB)
         layout.addStretch()
         self.navigationLayout.addLayout(layout)
-        self.oeTree = QTreeView()
+        self.oeTree = qt.QTreeView()
         self.oeTree.setModel(self.segmentsModel)
-        self.oeTree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.oeTree.setContextMenuPolicy(qt.CustomContextMenu)
         self.oeTree.customContextMenuRequested.connect(self.oeTreeMenu)
         self.oeTree.resizeColumnToContents(0)
         self.navigationLayout.addWidget(self.oeTree)
-        self.navigationPanel = QWidget(self)
+        self.navigationPanel = qt.QWidget(self)
         self.navigationPanel.setLayout(self.navigationLayout)
 
     def makeTransformationPanel(self):
-        self.zoomPanel = QGroupBox(self)
+        self.zoomPanel = qt.QGroupBox(self)
         self.zoomPanel.setFlat(False)
         self.zoomPanel.setTitle("Log scale")
-        zoomLayout = QVBoxLayout()
+        zoomLayout = qt.QVBoxLayout()
 
-        scaleValidator = QDoubleValidator()
+        scaleValidator = qt.QDoubleValidator()
         scaleValidator.setRange(0, 7, 7)
         self.zoomSliders = []
         self.zoomEditors = []
         for iaxis, axis in enumerate(['x', 'y', 'z']):
-            axLabel = QLabel(axis)
-            axEdit = QLineEdit()
-            axSlider = glowSlider(
-                self, QtCore.Qt.Horizontal, glowTopScale)
+            axLabel = qt.QLabel(axis)
+            axEdit = qt.QLineEdit()
+            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
             axSlider.setRange(0, 7, 0.01)
             value = 1 if iaxis == 1 else 3
             axSlider.setValue(value)
@@ -252,7 +170,7 @@ class xrtGlow(QWidget):
             self.zoomSliders.append(axSlider)
             self.zoomEditors.append(axEdit)
 
-            layout = QHBoxLayout()
+            layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(12)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
@@ -261,26 +179,25 @@ class xrtGlow(QWidget):
             zoomLayout.addLayout(layout)
         self.zoomPanel.setLayout(zoomLayout)
 
-        self.rotationPanel = QGroupBox(self)
+        self.rotationPanel = qt.QGroupBox(self)
         self.rotationPanel.setFlat(False)
         self.rotationPanel.setTitle("Rotation (deg)")
-        rotationLayout = QVBoxLayout()
+        rotationLayout = qt.QVBoxLayout()
 
-#        rotModeCB = QCheckBox('Use Eulerian rotation')
+#        rotModeCB = qt.QCheckBox('Use Eulerian rotation')
 #        rotModeCB.setCheckState(2)
 #        rotModeCB.stateChanged.connect(self.checkEulerian)
 #        rotationLayout.addWidget(rotModeCB, 0, 0)
 
-        rotValidator = QDoubleValidator()
+        rotValidator = qt.QDoubleValidator()
         rotValidator.setRange(-180, 180, 9)
         self.rotationSliders = []
         self.rotationEditors = []
         for iaxis, axis in enumerate(['pitch (Rx)', 'roll (Ry)', 'yaw (Rz)']):
-            axLabel = QLabel(axis)
-            axEdit = QLineEdit("0.")
+            axLabel = qt.QLabel(axis)
+            axEdit = qt.QLineEdit("0.")
             axEdit.setValidator(rotValidator)
-            axSlider = glowSlider(
-                self, QtCore.Qt.Horizontal, glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
             axSlider.setRange(-180, 180, 0.01)
             axSlider.setValue(0)
             axEdit.editingFinished.connect(
@@ -290,7 +207,7 @@ class xrtGlow(QWidget):
             self.rotationSliders.append(axSlider)
             self.rotationEditors.append(axEdit)
 
-            layout = QHBoxLayout()
+            layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(64)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
@@ -299,36 +216,36 @@ class xrtGlow(QWidget):
             rotationLayout.addLayout(layout)
         self.rotationPanel.setLayout(rotationLayout)
 
-        self.transformationPanel = QWidget(self)
-        transformationLayout = QVBoxLayout()
+        self.transformationPanel = qt.QWidget(self)
+        transformationLayout = qt.QVBoxLayout()
         transformationLayout.addWidget(self.zoomPanel)
         transformationLayout.addWidget(self.rotationPanel)
         transformationLayout.addStretch()
         self.transformationPanel.setLayout(transformationLayout)
 
     def makeColorsPanel(self):
-        self.opacityPanel = QGroupBox(self)
+        self.opacityPanel = qt.QGroupBox(self)
         self.opacityPanel.setFlat(False)
         self.opacityPanel.setTitle("Opacity")
 
-        opacityLayout = QVBoxLayout()
+        opacityLayout = qt.QVBoxLayout()
         self.opacitySliders = []
         self.opacityEditors = []
         for iaxis, axis in enumerate(
                 ['Line opacity', 'Line width', 'Point opacity', 'Point size']):
-            axLabel = QLabel(axis)
-            opacityValidator = QDoubleValidator()
-            axSlider = glowSlider(self, QtCore.Qt.Horizontal, glowTopScale)
+            axLabel = qt.QLabel(axis)
+            opacityValidator = qt.QDoubleValidator()
+            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
 
             if iaxis in [0, 2]:
                 axSlider.setRange(0, 1., 0.001)
                 axSlider.setValue(0.1)
-                axEdit = QLineEdit("0.1")
+                axEdit = qt.QLineEdit("0.1")
                 opacityValidator.setRange(0, 1., 5)
             else:
                 axSlider.setRange(0, 20, 0.01)
                 axSlider.setValue(1.)
-                axEdit = QLineEdit("1")
+                axEdit = qt.QLineEdit("1")
                 opacityValidator.setRange(0, 20., 5)
 
             axEdit.setValidator(opacityValidator)
@@ -339,7 +256,7 @@ class xrtGlow(QWidget):
             self.opacitySliders.append(axSlider)
             self.opacityEditors.append(axEdit)
 
-            layout = QHBoxLayout()
+            layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(80)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
@@ -348,27 +265,27 @@ class xrtGlow(QWidget):
             opacityLayout.addLayout(layout)
         self.opacityPanel.setLayout(opacityLayout)
 
-        self.colorPanel = QGroupBox(self)
+        self.colorPanel = qt.QGroupBox(self)
         self.colorPanel.setFlat(False)
         self.colorPanel.setTitle("Color")
-        colorLayout = QVBoxLayout()
+        colorLayout = qt.QVBoxLayout()
         self.mplFig = mpl.figure.Figure(figsize=(3, 3))
         self.mplAx = self.mplFig.add_subplot(111)
         self.mplFig.suptitle("")
 
         self.drawColorMap('energy')
-        self.paletteWidget = FigCanvas(self.mplFig)
-        self.paletteWidget.setSizePolicy(QSizePolicy.Expanding,
-                                         QSizePolicy.Expanding)
+        self.paletteWidget = qt.FigCanvas(self.mplFig)
+        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
+                                         qt.QSizePolicy.Expanding)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL, drawtype='box',
             useblit=True, rectprops=dict(alpha=0.4, facecolor='white'),
             button=1, interactive=True)
 
-        layout = QHBoxLayout()
+        layout = qt.QHBoxLayout()
         self.colorControls = []
-        colorCBLabel = QLabel('Color Axis:')
-        colorCB = QComboBox()
+        colorCBLabel = qt.QLabel('Color Axis:')
+        colorCB = qt.QComboBox()
         colorCB.setMaxVisibleItems(48)
         colorCB.setModel(self.fluxDataModel)
         colorCB.setCurrentIndex(colorCB.findText('energy'))
@@ -380,13 +297,13 @@ class xrtGlow(QWidget):
         colorLayout.addLayout(layout)
         colorLayout.addWidget(self.paletteWidget)
 
-        layout = QHBoxLayout()
+        layout = qt.QHBoxLayout()
         for icSel, cSelText in enumerate(['Selection min', 'Selection max']):
-            selLabel = QLabel(cSelText)
-            selValidator = QDoubleValidator()
+            selLabel = qt.QLabel(cSelText)
+            selValidator = qt.QDoubleValidator()
             selValidator.setRange(self.customGlWidget.colorMin,
                                   self.customGlWidget.colorMax, 5)
-            selQLE = QLineEdit()
+            selQLE = qt.QLineEdit()
             selQLE.setValidator(selValidator)
             selQLE.setText('{0:.3f}'.format(
                 self.customGlWidget.colorMin if icSel == 0 else
@@ -399,8 +316,7 @@ class xrtGlow(QWidget):
             layout.addWidget(selQLE)
         colorLayout.addLayout(layout)
 
-        selSlider = glowSlider(
-            self, QtCore.Qt.Horizontal, glowTopScale)
+        selSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
         rStep = (self.customGlWidget.colorMax -
                  self.customGlWidget.colorMin) / 100.
         rValue = (self.customGlWidget.colorMax +
@@ -412,10 +328,10 @@ class xrtGlow(QWidget):
         self.colorControls.append(selSlider)
         colorLayout.addWidget(selSlider)
 
-        layout = QHBoxLayout()
-        axLabel = QLabel("Intensity cut-off")
-        axEdit = QLineEdit("0.01")
-        cutValidator = QDoubleValidator()
+        layout = qt.QHBoxLayout()
+        axLabel = qt.QLabel("Intensity cut-off")
+        axEdit = qt.QLineEdit("0.01")
+        cutValidator = qt.QDoubleValidator()
         cutValidator.setRange(0, 1, 3)
         axEdit.setValidator(cutValidator)
         axEdit.editingFinished.connect(self.updateCutoffFromQLE)
@@ -426,10 +342,10 @@ class xrtGlow(QWidget):
         layout.addStretch()
         colorLayout.addLayout(layout)
 
-        layout = QHBoxLayout()
-        explLabel = QLabel("Color bump height, mm")
-        explEdit = QLineEdit("0.0")
-        explValidator = QDoubleValidator()
+        layout = qt.QHBoxLayout()
+        explLabel = qt.QLabel("Color bump height, mm")
+        explEdit = qt.QLineEdit("0.0")
+        explValidator = qt.QDoubleValidator()
         explValidator.setRange(-100, 100, 3)
         explEdit.setValidator(explValidator)
         explEdit.editingFinished.connect(self.updateExplosionDepth)
@@ -440,20 +356,20 @@ class xrtGlow(QWidget):
         layout.addStretch()
         colorLayout.addLayout(layout)
 
-#        axSlider = glowSlider(
-#            self, QtCore.Qt.Horizontal, glowTopScale)
+#        axSlider = qt.glowSlider(
+#            self, qt.Horizontal, qt.glowTopScale)
 #        axSlider.setRange(0, 1, 0.001)
 #        axSlider.setValue(0.01)
 #        axSlider.valueChanged.connect(self.updateCutoff)
 #        colorLayout.addWidget(axSlider, 3+3, 0, 1, 2)
 
-        glNormCB = QCheckBox('Global Normalization')
+        glNormCB = qt.QCheckBox('Global Normalization')
         glNormCB.setChecked(True)
         glNormCB.stateChanged.connect(self.checkGNorm)
         colorLayout.addWidget(glNormCB)
         self.glNormCB = glNormCB
 
-        iHSVCB = QCheckBox('Intensity as HSV Value')
+        iHSVCB = qt.QCheckBox('Intensity as HSV Value')
         iHSVCB.setChecked(False)
         iHSVCB.stateChanged.connect(self.check_iHSV)
         colorLayout.addWidget(iHSVCB)
@@ -461,29 +377,29 @@ class xrtGlow(QWidget):
 
         self.colorPanel.setLayout(colorLayout)
 
-        self.colorOpacityPanel = QWidget(self)
-        colorOpacityLayout = QVBoxLayout()
+        self.colorOpacityPanel = qt.QWidget(self)
+        colorOpacityLayout = qt.QVBoxLayout()
         colorOpacityLayout.addWidget(self.colorPanel)
         colorOpacityLayout.addWidget(self.opacityPanel)
         self.colorOpacityPanel.setLayout(colorOpacityLayout)
 
     def makeGridAndProjectionsPanel(self):
-        self.gridPanel = QGroupBox(self)
+        self.gridPanel = qt.QGroupBox(self)
         self.gridPanel.setFlat(False)
         self.gridPanel.setTitle("Coordinate grid")
         self.gridPanel.setCheckable(True)
         self.gridPanel.toggled.connect(self.checkDrawGrid)
 
-        scaleValidator = QDoubleValidator()
+        scaleValidator = qt.QDoubleValidator()
         scaleValidator.setRange(0, 7, 7)
-        xyzGridLayout = QVBoxLayout()
+        xyzGridLayout = qt.QVBoxLayout()
         self.gridSliders = []
         self.gridEditors = []
         for iaxis, axis in enumerate(['x', 'y', 'z']):
-            axLabel = QLabel(axis)
-            axEdit = QLineEdit("0.9")
+            axLabel = qt.QLabel(axis)
+            axEdit = qt.QLineEdit("0.9")
             axEdit.setValidator(scaleValidator)
-            axSlider = glowSlider(self, QtCore.Qt.Horizontal, glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
             axSlider.setRange(0, 10, 0.01)
             axSlider.setValue(0.9)
             axEdit.editingFinished.connect(
@@ -493,7 +409,7 @@ class xrtGlow(QWidget):
             self.gridSliders.append(axSlider)
             self.gridEditors.append(axEdit)
 
-            layout = QHBoxLayout()
+            layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(20)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
@@ -501,15 +417,15 @@ class xrtGlow(QWidget):
             layout.addWidget(axSlider)
             xyzGridLayout.addLayout(layout)
 
-        checkBox = QCheckBox('Fine grid')
+        checkBox = qt.QCheckBox('Fine grid')
         checkBox.setChecked(False)
         checkBox.stateChanged.connect(self.checkFineGrid)
         xyzGridLayout.addWidget(checkBox)
         self.checkBoxFineGrid = checkBox
         self.gridControls = []
 
-        projectionLayout = QVBoxLayout()
-        checkBox = QCheckBox('Perspective')
+        projectionLayout = qt.QVBoxLayout()
+        checkBox = qt.QCheckBox('Perspective')
         checkBox.setChecked(True)
         checkBox.stateChanged.connect(self.checkPerspect)
         self.checkBoxPerspective = checkBox
@@ -521,16 +437,16 @@ class xrtGlow(QWidget):
 
         self.gridPanel.setLayout(xyzGridLayout)
 
-        self.projVisPanel = QGroupBox(self)
+        self.projVisPanel = qt.QGroupBox(self)
         self.projVisPanel.setFlat(False)
         self.projVisPanel.setTitle("Projections visibility")
-        projVisLayout = QVBoxLayout()
-        self.projLinePanel = QGroupBox(self)
+        projVisLayout = qt.QVBoxLayout()
+        self.projLinePanel = qt.QGroupBox(self)
         self.projLinePanel.setFlat(False)
         self.projLinePanel.setTitle("Projections opacity")
         self.projectionControls = []
         for iaxis, axis in enumerate(['Side (YZ)', 'Front (XZ)', 'Top (XY)']):
-            checkBox = QCheckBox(axis)
+            checkBox = qt.QCheckBox(axis)
             checkBox.setChecked(False)
             checkBox.stateChanged.connect(partial(self.projSelection, iaxis))
             self.projectionControls.append(checkBox)
@@ -539,26 +455,25 @@ class xrtGlow(QWidget):
 
         self.projVisPanel.setLayout(projVisLayout)
 
-        projLineLayout = QVBoxLayout()
+        projLineLayout = qt.QVBoxLayout()
         self.projectionOpacitySliders = []
         self.projectionOpacityEditors = []
         for iaxis, axis in enumerate(
                 ['Line opacity', 'Line width', 'Point opacity', 'Point size']):
-            axLabel = QLabel(axis)
-            projectionValidator = QDoubleValidator()
-            axSlider = glowSlider(
-                self, QtCore.Qt.Horizontal, glowTopScale)
+            axLabel = qt.QLabel(axis)
+            projectionValidator = qt.QDoubleValidator()
+            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
 
             if iaxis in [0, 2]:
                 axSlider.setRange(0, 1., 0.001)
                 axSlider.setValue(0.1)
-                axEdit = QLineEdit("0.1")
+                axEdit = qt.QLineEdit("0.1")
                 projectionValidator.setRange(0, 1., 5)
 
             else:
                 axSlider.setRange(0, 20, 0.01)
                 axSlider.setValue(1.)
-                axEdit = QLineEdit("1")
+                axEdit = qt.QLineEdit("1")
                 projectionValidator.setRange(0, 20., 5)
 
             axEdit.setValidator(projectionValidator)
@@ -569,7 +484,7 @@ class xrtGlow(QWidget):
             self.projectionOpacitySliders.append(axSlider)
             self.projectionOpacityEditors.append(axEdit)
 
-            layout = QHBoxLayout()
+            layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(80)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
@@ -578,8 +493,7 @@ class xrtGlow(QWidget):
             projLineLayout.addLayout(layout)
         self.projLinePanel.setLayout(projLineLayout)
 
-       
-        self.projectionPanel = QWidget(self)
+        self.projectionPanel = qt.QWidget(self)
         projectionLayout.addWidget(self.gridPanel)
         projectionLayout.addWidget(self.projVisPanel)
         projectionLayout.addWidget(self.projLinePanel)
@@ -587,7 +501,7 @@ class xrtGlow(QWidget):
         self.projectionPanel.setLayout(projectionLayout)
 
     def makeScenePanel(self):
-        sceneLayout = QVBoxLayout()
+        sceneLayout = qt.QVBoxLayout()
 
         self.sceneControls = []
         for iCB, (cbText, cbFunc) in enumerate(zip(
@@ -607,30 +521,30 @@ class xrtGlow(QWidget):
                  self.checkScalableFont,
                  self.checkShowLabels,
                  self.checkShowLost])):
-            aaCheckBox = QCheckBox(cbText)
+            aaCheckBox = qt.QCheckBox(cbText)
             aaCheckBox.setChecked(iCB in [1, 2])
             aaCheckBox.stateChanged.connect(cbFunc)
             self.sceneControls.append(aaCheckBox)
             sceneLayout.addWidget(aaCheckBox)
 
-        axLabel = QLabel('Font Size')
-        axSlider = glowSlider(self, QtCore.Qt.Horizontal, glowTopScale)
+        axLabel = qt.QLabel('Font Size')
+        axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
         axSlider.setRange(1, 20, 0.5)
         axSlider.setValue(5)
         axSlider.valueChanged.connect(self.updateFontSize)
 
-        layout = QHBoxLayout()
+        layout = qt.QHBoxLayout()
         layout.addWidget(axLabel)
         layout.addWidget(axSlider)
         sceneLayout.addLayout(layout)
 
-        labelPrec = QComboBox()
+        labelPrec = qt.QComboBox()
         for order in range(5):
             labelPrec.addItem("{}mm".format(10**-order))
         labelPrec.setCurrentIndex(1)
         labelPrec.currentIndexChanged['int'].connect(self.setLabelPrec)
-        aaLabel = QLabel('Label Precision')
-        layout = QHBoxLayout()
+        aaLabel = qt.QLabel('Label Precision')
+        layout = qt.QHBoxLayout()
         aaLabel.setMinimumWidth(100)
         layout.addWidget(aaLabel)
         labelPrec.setMaximumWidth(120)
@@ -638,15 +552,15 @@ class xrtGlow(QWidget):
         layout.addStretch()
         sceneLayout.addLayout(layout)
 
-        oeTileValidator = QIntValidator()
+        oeTileValidator = qt.QIntValidator()
         oeTileValidator.setRange(1, 20)
         for ia, axis in enumerate(['OE tessellation X', 'OE tessellation Y']):
-            axLabel = QLabel(axis)
-            axEdit = QLineEdit("2")
+            axLabel = qt.QLabel(axis)
+            axEdit = qt.QLineEdit("2")
             axEdit.setValidator(oeTileValidator)
             axEdit.editingFinished.connect(partial(self.updateTileFromQLE, ia))
 
-            layout = QHBoxLayout()
+            layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(100)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
@@ -654,7 +568,7 @@ class xrtGlow(QWidget):
             layout.addStretch()
             sceneLayout.addLayout(layout)
 
-        self.scenePanel = QWidget(self)
+        self.scenePanel = qt.QWidget(self)
         sceneLayout.addStretch()
         self.scenePanel.setLayout(sceneLayout)
 
@@ -664,7 +578,7 @@ class xrtGlow(QWidget):
             self.parentRef = None
 
     def init_segments_model(self, isNewModel=True):
-        newModel = QStandardItemModel()
+        newModel = qt.QStandardItemModel()
         newModel.setHorizontalHeaderLabels(['Rays',
                                             'Footprint',
                                             'Surface',
@@ -672,7 +586,7 @@ class xrtGlow(QWidget):
         if isNewModel:
             headerRow = []
             for i in range(4):
-                child = QStandardItem("")
+                child = qt.QStandardItem("")
                 child.setEditable(False)
                 child.setCheckable(True)
                 child.setCheckState(2 if i < 2 else 0)
@@ -757,7 +671,7 @@ class xrtGlow(QWidget):
     def create_row(self, text, segMode):
         newRow = []
         for iCol in range(4):
-            newItem = QStandardItem(str(text) if iCol == 0 else "")
+            newItem = qt.QStandardItem(str(text) if iCol == 0 else "")
             newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
                                  (segMode == 1 and iCol > 0) else False)
             if newItem.isCheckable():
@@ -771,7 +685,7 @@ class xrtGlow(QWidget):
             newRow = []
             for iCol in range(4):
                 oldItem = item.child(row, iCol)
-                newItem = QStandardItem(str(oldItem.text()))
+                newItem = qt.QStandardItem(str(oldItem.text()))
                 newItem.setCheckable(oldItem.isCheckable())
                 if newItem.isCheckable():
                     newItem.setCheckState(oldItem.checkState())
@@ -1223,7 +1137,7 @@ class xrtGlow(QWidget):
                 index = index.parent()
                 level += 1
         if level == 0:
-            menu = QMenu()
+            menu = qt.QMenu()
             menu.addAction('Center here',
                            partial(self.centerEl, str(selectedItem.text())))
             menu.exec_(self.oeTree.viewport().mapToGlobal(position))
@@ -1255,17 +1169,17 @@ class xrtGlow(QWidget):
             editor.setText("{0:.2f}".format(value))
 
     def glMenu(self, position):
-        menu = QMenu()
+        menu = qt.QMenu()
         for actText, actFunc in zip(['Export to image', 'Save scene geometry',
                                      'Load scene geometry'],
                                     [self.exportToImage, self.saveSceneDialog,
                                      self.loadSceneDialog]):
-            mAction = QAction(self)
+            mAction = qt.QAction(self)
             mAction.setText(actText)
             mAction.triggered.connect(actFunc)
             menu.addAction(mAction)
         menu.addSeparator()
-        mAction = QAction(self)
+        mAction = qt.QAction(self)
         mAction.setText("Show Virtual Screen")
         mAction.setCheckable(True)
         mAction.setChecked(False if self.customGlWidget.virtScreen is None
@@ -1275,7 +1189,7 @@ class xrtGlow(QWidget):
         for iAction, actCnt in enumerate(self.sceneControls):
             if 'Virtual Screen' not in actCnt.text():
                 continue
-            mAction = QAction(self)
+            mAction = qt.QAction(self)
             mAction.setText(actCnt.text())
             mAction.setCheckable(True)
             mAction.setChecked(bool(actCnt.checkState()))
@@ -1283,13 +1197,13 @@ class xrtGlow(QWidget):
             menu.addAction(mAction)
         menu.addSeparator()
         for iAction, actCnt in enumerate(self.gridControls):
-            mAction = QAction(self)
+            mAction = qt.QAction(self)
             if actCnt.staticMetaObject.className() == 'QCheckBox':
                 actText = actCnt.text()
                 actCheck = bool(actCnt.checkState())
             else:
                 actText = actCnt.title()
-                actCheck = actCnt.isChecked()                
+                actCheck = actCnt.isChecked()
             mAction.setText(actText)
             mAction.setCheckable(True)
             mAction.setChecked(actCheck)
@@ -1298,7 +1212,7 @@ class xrtGlow(QWidget):
             menu.addAction(mAction)
         menu.addSeparator()
         for iAction, actCnt in enumerate(self.projectionControls):
-            mAction = QAction(self)
+            mAction = qt.QAction(self)
             mAction.setText(actCnt.text())
             mAction.setCheckable(True)
             mAction.setChecked(bool(actCnt.checkState()))
@@ -1309,7 +1223,7 @@ class xrtGlow(QWidget):
         for iAction, actCnt in enumerate(self.sceneControls):
             if 'Virtual Screen' in actCnt.text():
                 continue
-            mAction = QAction(self)
+            mAction = qt.QAction(self)
             mAction.setText(actCnt.text())
             mAction.setCheckable(True)
             mAction.setChecked(bool(actCnt.checkState()))
@@ -1320,9 +1234,9 @@ class xrtGlow(QWidget):
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
     def exportToImage(self):
-        saveDialog = QFileDialog()
-        saveDialog.setFileMode(QFileDialog.AnyFile)
-        saveDialog.setAcceptMode(QFileDialog.AcceptSave)
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
         saveDialog.setNameFilter("BMP files (*.bmp);;JPG files (*.jpg);;JPEG files (*.jpeg);;PNG files (*.png);;TIFF files (*.tif)")  # analysis:ignore
         saveDialog.selectNameFilter("JPG files (*.jpg)")
         if (saveDialog.exec_()):
@@ -1335,9 +1249,9 @@ class xrtGlow(QWidget):
             image.save(filename)
 
     def saveSceneDialog(self):
-        saveDialog = QFileDialog()
-        saveDialog.setFileMode(QFileDialog.AnyFile)
-        saveDialog.setAcceptMode(QFileDialog.AcceptSave)
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
         saveDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
@@ -1347,9 +1261,9 @@ class xrtGlow(QWidget):
             self.saveScene(filename)
 
     def loadSceneDialog(self):
-        loadDialog = QFileDialog()
-        loadDialog.setFileMode(QFileDialog.AnyFile)
-        loadDialog.setAcceptMode(QFileDialog.AcceptOpen)
+        loadDialog = qt.QFileDialog()
+        loadDialog.setFileMode(qt.QFileDialog.AnyFile)
+        loadDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
         loadDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
         if (loadDialog.exec_()):
             filename = loadDialog.selectedFiles()[0]
@@ -1542,13 +1456,13 @@ class xrtGlow(QWidget):
             editor.setText("{0:.0f}".format(op))
 
 
-class xrtGlWidget(QGLWidget):
-    rotationUpdated = QtCore.pyqtSignal(np.ndarray)
-    scaleUpdated = QtCore.pyqtSignal(np.ndarray)
-    histogramUpdated = QtCore.pyqtSignal(tuple)
+class xrtGlWidget(qt.QGLWidget):
+    rotationUpdated = qt.pyqtSignal(np.ndarray)
+    scaleUpdated = qt.pyqtSignal(np.ndarray)
+    histogramUpdated = qt.pyqtSignal(tuple)
 
     def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els, signal):
-        QGLWidget.__init__(self, parent)
+        qt.QGLWidget.__init__(self, parent)
         self.QookSignal = signal
         self.virtScreen = None
         self.virtBeam = None
@@ -1652,11 +1566,11 @@ class xrtGlWidget(QGLWidget):
 
     def rotateZYX(self):
         if self.isEulerian:
-            glRotatef(*self.rotations[0])
-            glRotatef(*self.rotations[1])
-            glRotatef(*self.rotations[2])
+            gl.glRotatef(*self.rotations[0])
+            gl.glRotatef(*self.rotations[1])
+            gl.glRotatef(*self.rotations[2])
         else:
-            glRotatef(*self.rotationVec)
+            gl.glRotatef(*self.rotationVec)
 
     def updateQuats(self):
         self.qRot = self.eulerToQ(self.rotations)
@@ -1986,42 +1900,42 @@ class xrtGlWidget(QGLWidget):
     def drawText(self, coord, text, noScalable=False):
         useScalableFont = False if noScalable else self.useScalableFont
         if not useScalableFont:
-            glRasterPos3f(*coord)
+            gl.glRasterPos3f(*coord)
             for symbol in text:
-                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,
-                                    ord(symbol))
+                gl.glutBitmapCharacter(
+                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
         else:
-            glPushMatrix()
-            glTranslatef(*coord)
-            glRotatef(*self.qText)
+            gl.glPushMatrix()
+            gl.glTranslatef(*coord)
+            gl.glRotatef(*self.qText)
             fontScale = self.fontSize / 12500.
-            glScalef(fontScale, fontScale, fontScale)
+            gl.glScalef(fontScale, fontScale, fontScale)
             for symbol in text:
-                glutStrokeCharacter(GLUT_STROKE_ROMAN, ord(symbol))
-            glPopMatrix()
+                gl.glutStrokeCharacter(gl.GLUT_STROKE_ROMAN, ord(symbol))
+            gl.glPopMatrix()
 
     def paintGL(self):
         def setMaterial(mat):
             if mat == 'Cu':
-                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,
-                             [0.3, 0.15, 0.15, 1])
-                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,
-                             [0.4, 0.25, 0.15, 1])
-                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,
-                             [1., 0.7, 0.3, 1])
-                glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,
-                             [0.1, 0.1, 0.1, 1])
-                glMaterialf(GL_FRONT, GL_SHININESS, 100)
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                                [0.3, 0.15, 0.15, 1])
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                                [0.4, 0.25, 0.15, 1])
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                                [1., 0.7, 0.3, 1])
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                                [0.1, 0.1, 0.1, 1])
+                gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
             else:
-                glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,
-                             [0.1, 0.1, 0.1, 1])
-                glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,
-                             [0.3, 0.3, 0.3, 1])
-                glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,
-                             [1., 0.9, 0.8, 1])
-                glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,
-                             [0.1, 0.1, 0.1, 1])
-                glMaterialf(GL_FRONT, GL_SHININESS, 100)
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                                [0.1, 0.1, 0.1, 1])
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                                [0.3, 0.3, 0.3, 1])
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                                [1., 0.9, 0.8, 1])
+                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                                [0.1, 0.1, 0.1, 1])
+                gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
         def makeCenterStr(centerList, prec):
             retStr = '('
@@ -2030,54 +1944,54 @@ class xrtGlWidget(QGLWidget):
             return retStr[:-2] + ')'
 
         if self.invertColors:
-            glClearColor(1.0, 1.0, 1.0, 1.)
+            gl.glClearColor(1.0, 1.0, 1.0, 1.)
         else:
-            glClearColor(0.0, 0.0, 0.0, 1.)
+            gl.glClearColor(0.0, 0.0, 0.0, 1.)
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
         if self.perspectiveEnabled:
-            gluPerspective(self.cameraAngle, self.aspect, 0.001, 10000)
+            gl.gluPerspective(self.cameraAngle, self.aspect, 0.001, 10000)
         else:
             orthoView = self.cameraPos[0]*0.45
-            glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
-                    -orthoView, orthoView, -100, 100)
+            gl.glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
+                       -orthoView, orthoView, -100, 100)
 
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        gluLookAt(self.cameraPos[0], self.cameraPos[1], self.cameraPos[2],
-                  self.cameraTarget[0], self.cameraTarget[1],
-                  self.cameraTarget[2],
-                  0.0, 0.0, 1.0)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        gl.gluLookAt(self.cameraPos[0], self.cameraPos[1], self.cameraPos[2],
+                     self.cameraTarget[0], self.cameraTarget[1],
+                     self.cameraTarget[2],
+                     0.0, 0.0, 1.0)
 
         if self.enableBlending:
-            glEnable(GL_MULTISAMPLE)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-#            glBlendFunc(GL_SRC_ALPHA, GL_ONE)
-            glEnable(GL_POINT_SMOOTH)
-            glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+            gl.glEnable(gl.GL_MULTISAMPLE)
+            gl.glEnable(gl.GL_BLEND)
+            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+#            gl.glBlendFunc(gl.GL_SRC_ALPHA, GL_ONE)
+            gl.glEnable(gl.GL_POINT_SMOOTH)
+            gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
-        glEnableClientState(GL_VERTEX_ARRAY)
+        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
 
-        glEnableClientState(GL_COLOR_ARRAY)
+        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
         self.rotateZYX()
 
-        pModel = np.array(glGetDoublev(GL_MODELVIEW_MATRIX))[:-1, :-1]
+        pModel = np.array(gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX))[:-1, :-1]
         self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
         self.signs = np.sign(pModel)
         self.axPosModifier = np.ones(3)
 
         if self.enableAA:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-#            glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+#            gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, gl.GL_NICEST)
 
         for dim in range(3):
             for iAx in range(3):
@@ -2092,7 +2006,7 @@ class xrtGlWidget(QGLWidget):
                     projectionRays[:, dim] =\
                         -self.aPos[dim] * self.axPosModifier[dim]
                     self.drawArrays(
-                        0, GL_LINES, projectionRays, self.raysColor,
+                        0, gl.GL_LINES, projectionRays, self.raysColor,
                         self.lineProjectionOpacity, self.lineProjectionWidth)
 
                 if self.pointProjectionSize > 0 and\
@@ -2103,7 +2017,7 @@ class xrtGlWidget(QGLWidget):
                         projectionDots[:, dim] =\
                             -self.aPos[dim] * self.axPosModifier[dim]
                         self.drawArrays(
-                            0, GL_POINTS, projectionDots, self.dotsColor,
+                            0, gl.GL_POINTS, projectionDots, self.dotsColor,
                             self.pointProjectionOpacity,
                             self.pointProjectionSize)
 
@@ -2113,21 +2027,22 @@ class xrtGlWidget(QGLWidget):
                         projectionDots[:, dim] =\
                             -self.aPos[dim] * self.axPosModifier[dim]
                         self.drawArrays(
-                            0, GL_POINTS, projectionDots, self.virtDotsColor,
+                            0, gl.GL_POINTS, projectionDots,
+                            self.virtDotsColor,
                             self.pointProjectionOpacity,
                             self.pointProjectionSize)
 
         if self.enableAA:
-            glDisable(GL_LINE_SMOOTH)
+            gl.glDisable(gl.GL_LINE_SMOOTH)
 
-        glEnable(GL_DEPTH_TEST)
+        gl.glEnable(gl.GL_DEPTH_TEST)
         if self.drawGrid:  # Coordinate grid box
             self.drawCoordinateGrid()
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         if len(self.oesToPlot) > 0:  # Surfaces of optical elements
-            glEnableClientState(GL_NORMAL_ARRAY)
-            glEnable(GL_NORMALIZE)
+            gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
+            gl.glEnable(gl.GL_NORMALIZE)
 
             self.addLighting(3.)
             for oeString in self.oesToPlot:
@@ -2146,34 +2061,34 @@ class xrtGlWidget(QGLWidget):
                 except:  # analysis:ignore
                     continue
 
-            glDisable(GL_LIGHTING)
-            glDisable(GL_NORMALIZE)
-            glDisableClientState(GL_NORMAL_ARRAY)
-        glDisable(GL_DEPTH_TEST)
+            gl.glDisable(gl.GL_LIGHTING)
+            gl.glDisable(gl.GL_NORMALIZE)
+            gl.glDisableClientState(gl.GL_NORMAL_ARRAY)
+        gl.glDisable(gl.GL_DEPTH_TEST)
 
         if self.linesDepthTest:
-            glEnable(GL_DEPTH_TEST)
+            gl.glEnable(gl.GL_DEPTH_TEST)
 
         if self.enableAA:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
         if self.lineWidth > 0 and self.lineOpacity > 0 and\
                 self.verticesArray is not None:
-            self.drawArrays(1, GL_LINES, self.verticesArray, self.raysColor,
+            self.drawArrays(1, gl.GL_LINES, self.verticesArray, self.raysColor,
                             self.lineOpacity, self.lineWidth)
         if self.linesDepthTest:
-            glDisable(GL_DEPTH_TEST)
+            gl.glDisable(gl.GL_DEPTH_TEST)
 
         if self.enableAA:
-            glDisable(GL_LINE_SMOOTH)
+            gl.glDisable(gl.GL_LINE_SMOOTH)
 
         if self.enableAA:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
 
-        glEnable(GL_DEPTH_TEST)
+        gl.glEnable(gl.GL_DEPTH_TEST)
         if len(self.oesToPlot) > 0:
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
@@ -2186,41 +2101,41 @@ class xrtGlWidget(QGLWidget):
                     continue
 
         if self.virtScreen is not None:
-            glEnable(GL_LINE_SMOOTH)
-            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-            glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
             self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
                             [1, 0, 0, 1], plotFWHM=True)
 
 #            if not self.enableAA:
-#                glDisable(GL_LINE_SMOOTH)
+#                gl.glDisable(gl.GL_LINE_SMOOTH)
 
-        glDisable(GL_DEPTH_TEST)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        gl.glDisable(gl.GL_DEPTH_TEST)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
         if self.pointsDepthTest:
-            glEnable(GL_DEPTH_TEST)
+            gl.glEnable(gl.GL_DEPTH_TEST)
 
         if self.pointSize > 0 and self.pointOpacity > 0:
             if self.footprintsArray is not None:
-                self.drawArrays(1, GL_POINTS, self.footprintsArray,
+                self.drawArrays(1, gl.GL_POINTS, self.footprintsArray,
                                 self.dotsColor, self.pointOpacity,
                                 self.pointSize)
 
             if self.virtDotsArray is not None:
-                self.drawArrays(1, GL_POINTS, self.virtDotsArray,
+                self.drawArrays(1, gl.GL_POINTS, self.virtDotsArray,
                                 self.virtDotsColor, self.pointOpacity,
                                 self.pointSize)
 
-        glDisableClientState(GL_VERTEX_ARRAY)
-        glDisableClientState(GL_COLOR_ARRAY)
+        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
         if self.enableAA:
-            glDisable(GL_LINE_SMOOTH)
+            gl.glDisable(gl.GL_LINE_SMOOTH)
 
         if self.pointsDepthTest:
-            glDisable(GL_DEPTH_TEST)
+            gl.glDisable(gl.GL_DEPTH_TEST)
 
         oeLabels = dict()
         if len(self.labelsToPlot) > 0:
@@ -2238,10 +2153,10 @@ class xrtGlWidget(QGLWidget):
                     if addStr:
                         oeLabels[oeCenterStr] = [oeValue[2], oeKey]
             if self.invertColors:
-                glColor4f(0.0, 0.0, 0.0, 1.)
+                gl.glColor4f(0.0, 0.0, 0.0, 1.)
             else:
-                glColor4f(1.0, 1.0, 1.0, 1.)
-            glLineWidth(1)
+                gl.glColor4f(1.0, 1.0, 1.0, 1.)
+            gl.glLineWidth(1)
             for oeKey, oeValue in oeLabels.items():
                 outCenterStr = ''
                 for oeIndex, oeLabel in enumerate(oeValue):
@@ -2259,17 +2174,17 @@ class xrtGlWidget(QGLWidget):
                 'Virtual Screen', makeCenterStr(self.virtScreen.center,
                                                 self.labelCoordPrec))
             try:
-                pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
-                pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
-                pView = glGetIntegerv(GL_VIEWPORT)
+                pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+                pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
+                pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
                 m1 = self.modelToWorld(
                     self.virtScreen.frame[1] - self.coordOffset)
                 m2 = self.modelToWorld(
                     self.virtScreen.frame[2] - self.coordOffset)
-                scr1 = gluProject(
+                scr1 = gl.gluProject(
                     *m1, model=pModel,
                     proj=pProjection, view=pView)[0]
-                scr2 = gluProject(
+                scr2 = gl.gluProject(
                     *m2, model=pModel,
                     proj=pProjection, view=pView)[0]
                 lblCenter = self.virtScreen.frame[1] if scr1 > scr2 else\
@@ -2278,20 +2193,20 @@ class xrtGlWidget(QGLWidget):
                 lblCenter = self.virtScreen.center
             vsLabelPos = self.modelToWorld(lblCenter - self.coordOffset)
             if self.invertColors:
-                glColor4f(0.0, 0.0, 0.0, 1.)
+                gl.glColor4f(0.0, 0.0, 0.0, 1.)
             else:
-                glColor4f(1.0, 1.0, 1.0, 1.)
-            glLineWidth(1)
+                gl.glColor4f(1.0, 1.0, 1.0, 1.)
+            gl.glLineWidth(1)
             self.drawText(vsLabelPos, vsCenterStr)
-        glFlush()
+        gl.glFlush()
 
         self.drawAxes()
         if self.showHelp:
             self.drawHelp()
         if self.enableBlending:
-            glDisable(GL_MULTISAMPLE)
-            glDisable(GL_BLEND)
-            glDisable(GL_POINT_SMOOTH)
+            gl.glDisable(gl.GL_MULTISAMPLE)
+            gl.glDisable(gl.GL_BLEND)
+            gl.glDisable(gl.GL_POINT_SMOOTH)
 
     def quatMult(self, qf, qt):
         return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
@@ -2357,14 +2272,14 @@ class xrtGlWidget(QGLWidget):
 
         def drawGridLines(gridArray, lineWidth, lineOpacity, figType):
             gridColor = np.ones((len(gridArray), 4)) * lineOpacity
-            gridArrayVBO = vbo.VBO(np.float32(gridArray))
+            gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
             gridArrayVBO.bind()
-            glVertexPointerf(gridArrayVBO)
-            gridColorArray = vbo.VBO(np.float32(gridColor))
+            gl.glVertexPointerf(gridArrayVBO)
+            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
             gridColorArray.bind()
-            glColorPointerf(gridColorArray)
-            glLineWidth(lineWidth)
-            glDrawArrays(figType, 0, len(gridArrayVBO))
+            gl.glColorPointerf(gridColorArray)
+            gl.glLineWidth(lineWidth)
+            gl.glDrawArrays(figType, 0, len(gridArrayVBO))
             gridArrayVBO.unbind()
             gridColorArray.unbind()
 
@@ -2436,10 +2351,10 @@ class xrtGlWidget(QGLWidget):
             tmp, fineAxGrid = populateGrid(fineGridArray)
 
         if self.invertColors:
-            glColor4f(0.0, 0.0, 0.0, 1.)
+            gl.glColor4f(0.0, 0.0, 0.0, 1.)
         else:
-            glColor4f(1.0, 1.0, 1.0, 1.)
-        glLineWidth(1)
+            gl.glColor4f(1.0, 1.0, 1.0, 1.)
+        gl.glLineWidth(1)
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
                     iAx == self.visibleAxes[2]):
@@ -2457,39 +2372,39 @@ class xrtGlWidget(QGLWidget):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
                     self.drawText(tick, valueStr)
 #            if not self.enableAA:
-#                glDisable(GL_LINE_SMOOTH)
-        glEnable(GL_LINE_SMOOTH)
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
-        drawGridLines(np.vstack((back, side, bottom)), 2., 0.75, GL_QUADS)
-        drawGridLines(axGrid, 1., 0.5, GL_LINES)
+#                gl.glDisable(gl.GL_LINE_SMOOTH)
+        gl.glEnable(gl.GL_LINE_SMOOTH)
+        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
+        drawGridLines(np.vstack((back, side, bottom)), 2., 0.75, gl.GL_QUADS)
+        drawGridLines(axGrid, 1., 0.5, gl.GL_LINES)
         if self.fineGridEnabled:
-            drawGridLines(fineAxGrid, 1., 0.25, GL_LINES)
-        glDisable(GL_LINE_SMOOTH)
+            drawGridLines(fineAxGrid, 1., 0.25, gl.GL_LINES)
+        gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
 
         if bool(tr):
-            vertexArray = vbo.VBO(self.modelToWorld(vertices))
+            vertexArray = gl.vbo.VBO(self.modelToWorld(vertices))
         else:
-            vertexArray = vbo.VBO(vertices)
+            vertexArray = gl.vbo.VBO(vertices)
         vertexArray.bind()
-        glVertexPointerf(vertexArray)
+        gl.glVertexPointerf(vertexArray)
         colors[:, 3] = np.float32(lineOpacity)
-        colorArray = vbo.VBO(colors)
+        colorArray = gl.vbo.VBO(colors)
         colorArray.bind()
-        glColorPointerf(colorArray)
-        if geom == GL_LINES:
-            glLineWidth(lineWidth)
+        gl.glColorPointerf(colorArray)
+        if geom == gl.GL_LINES:
+            gl.glLineWidth(lineWidth)
         else:
-            glPointSize(lineWidth)
-        glDrawArrays(geom, 0, len(vertices))
+            gl.glPointSize(lineWidth)
+        gl.glDrawArrays(geom, 0, len(vertices))
         colorArray.unbind()
         vertexArray.unbind()
 
     def plotOeSurface(self, oe, is2ndXtal):
-        glEnable(GL_MAP2_VERTEX_3)
-        glEnable(GL_MAP2_NORMAL)
+        gl.glEnable(gl.GL_MAP2_VERTEX_3)
+        gl.glEnable(gl.GL_MAP2_NORMAL)
         nsIndex = int(is2ndXtal)
         if is2ndXtal:
             xLimits = list(oe.limOptX2) if\
@@ -2562,33 +2477,33 @@ class xrtGlWidget(QGLWidget):
                     surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
                                         gbp.y - self.coordOffset[1] - dC[1],
                                         gbp.z - self.coordOffset[2] - dC[2])).T
-    
-                    glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                            self.modelToWorld(surfCP.reshape(
-                                self.surfCPOrder,
-                                self.surfCPOrder, 3)))
-    
+
+                    gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                               self.modelToWorld(surfCP.reshape(
+                                   self.surfCPOrder,
+                                   self.surfCPOrder, 3)))
+
                     surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
                                           np.ones_like(gbp.a))).T
-    
-                    glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
-                            surfNorm.reshape(
-                                self.surfCPOrder,
-                                self.surfCPOrder, 4))
-    
-                    glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                                self.surfCPOrder, 0.0, 1.0)
-    
-                    glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
-                                0, self.surfCPOrder)
 
-        glDisable(GL_MAP2_VERTEX_3)
-        glDisable(GL_MAP2_NORMAL)
+                    gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                               surfNorm.reshape(
+                                   self.surfCPOrder,
+                                   self.surfCPOrder, 4))
+
+                    gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                                   self.surfCPOrder, 0.0, 1.0)
+
+                    gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+                                   0, self.surfCPOrder)
+
+        gl.glDisable(gl.GL_MAP2_VERTEX_3)
+        gl.glDisable(gl.GL_MAP2_NORMAL)
 
     def plotAperture(self, oe):
         surfCPOrder = self.surfCPOrder
-        glEnable(GL_MAP2_VERTEX_3)
-        glEnable(GL_MAP2_NORMAL)
+        gl.glEnable(gl.GL_MAP2_VERTEX_3)
+        gl.glEnable(gl.GL_MAP2_NORMAL)
 
         if oe.shape == 'round':
             r = oe.r
@@ -2653,31 +2568,31 @@ class xrtGlWidget(QGLWidget):
                                             gbp.y - self.coordOffset[1],
                                             gbp.z - self.coordOffset[2])).T
 
-                        glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                                self.modelToWorld(surfCP.reshape(
-                                    surfCPOrder,
-                                    surfCPOrder, 3)))
+                        gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                                   self.modelToWorld(surfCP.reshape(
+                                       surfCPOrder,
+                                       surfCPOrder, 3)))
 
                         surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
                                               np.ones_like(gbp.a))).T
 
-                        glMap2f(GL_MAP2_NORMAL, 0, 1, 0, 1,
-                                surfNorm.reshape(
-                                    surfCPOrder,
-                                    surfCPOrder, 4))
+                        gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                                   surfNorm.reshape(
+                                       surfCPOrder,
+                                       surfCPOrder, 4))
 
-                        glMapGrid2f(surfCPOrder*4, 0.0, 1.0,
-                                    surfCPOrder*4, 0.0, 1.0)
+                        gl.glMapGrid2f(surfCPOrder*4, 0.0, 1.0,
+                                       surfCPOrder*4, 0.0, 1.0)
 
-#                        glEnable(GL_POLYGON_SMOOTH)
-#                        glLineWidth(3)
-#                        glEvalMesh2(GL_LINE, 0, surfCPOrder*4,
+#                        gl.glEnable(GL_POLYGON_SMOOTH)
+#                        gl.glLineWidth(3)
+#                        gl.glEvalMesh2(gl.GL_LINE, 0, surfCPOrder*4,
 #                                    0, surfCPOrder*4)
-                        glEvalMesh2(GL_FILL, 0, surfCPOrder*4,
-                                    0, surfCPOrder*4)
+                        gl.glEvalMesh2(gl.GL_FILL, 0, surfCPOrder*4,
+                                       0, surfCPOrder*4)
 
-        glDisable(GL_MAP2_VERTEX_3)
-        glDisable(GL_MAP2_NORMAL)
+        gl.glDisable(gl.GL_MAP2_VERTEX_3)
+        gl.glDisable(gl.GL_MAP2_NORMAL)
 
     def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
         scAbsZ = np.linalg.norm(oe.z * self.scaleVec)
@@ -2703,37 +2618,37 @@ class xrtGlWidget(QGLWidget):
         vScreenBody[2, :] +=\
             vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glBegin(GL_QUADS)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        gl.glBegin(gl.GL_QUADS)
 
         if self.invertColors:
-            glColor4f(0.0, 0.0, 0.0, 0.2)
+            gl.glColor4f(0.0, 0.0, 0.0, 0.2)
         else:
-            glColor4f(1.0, 1.0, 1.0, 0.2)
+            gl.glColor4f(1.0, 1.0, 1.0, 0.2)
 
         for i in range(4):
-            glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
-                                          self.coordOffset))
-        glEnd()
+            gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
+                                             self.coordOffset))
+        gl.glEnd()
 
         if frameColor is not None:
             self.virtScreen.frame = vScreenBody
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            glLineWidth(2)
-            glBegin(GL_QUADS)
-            glColor4f(*frameColor)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+            gl.glLineWidth(2)
+            gl.glBegin(gl.GL_QUADS)
+            gl.glColor4f(*frameColor)
             for i in range(4):
-                glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
-                                              self.coordOffset))
-            glEnd()
+                gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
+                                                 self.coordOffset))
+            gl.glEnd()
 
         if plotFWHM:
-            glLineWidth(1)
-            glDisable(GL_LINE_SMOOTH)
+            gl.glLineWidth(1)
+            gl.glDisable(gl.GL_LINE_SMOOTH)
             if self.invertColors:
-                glColor4f(0.0, 0.0, 0.0, 1.)
+                gl.glColor4f(0.0, 0.0, 0.0, 1.)
             else:
-                glColor4f(1.0, 1.0, 1.0, 1.)
+                gl.glColor4f(1.0, 1.0, 1.0, 1.)
             startVec = np.array([0, 1, 0])
             destVec = np.array(oe.y / self.scaleVec)
             rotVec = np.cross(startVec, destVec)
@@ -2742,12 +2657,12 @@ class xrtGlWidget(QGLWidget):
                 np.linalg.norm(startVec) / np.linalg.norm(destVec)))
             rotVecGL = np.float32(np.hstack((rotAngle, rotVec)))
 
-            pView = glGetIntegerv(GL_VIEWPORT)
-            pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
-            pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
+            pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
             scr = np.zeros((3, 3))
             for iAx in range(3):
-                scr[iAx] = np.array(gluProject(
+                scr[iAx] = np.array(gl.gluProject(
                     *(self.modelToWorld(vScreenBody[iAx] - self.coordOffset)),
                     model=pModel, proj=pProjection, view=pView))
 
@@ -2769,24 +2684,25 @@ class xrtGlWidget(QGLWidget):
                     coordShift[2] = (vFlip - 1.) * fontScale *\
                         len(text) * 104.76 * 0.5
 
-                glPushMatrix()
-                glTranslatef(*coord)
-                glRotatef(*rotVecGL)
-                glTranslatef(*coordShift)
-                glRotatef(180.*(vFlip*0.5), 1, 0, 0)
-                glRotatef(180.*(hFlip*0.5), 0, 0, 1)
+                gl.glPushMatrix()
+                gl.glTranslatef(*coord)
+                gl.glRotatef(*rotVecGL)
+                gl.glTranslatef(*coordShift)
+                gl.glRotatef(180.*(vFlip*0.5), 1, 0, 0)
+                gl.glRotatef(180.*(hFlip*0.5), 0, 0, 1)
                 if iAx > 0:
-                    glRotatef(-90, 0, 1, 0)
+                    gl.glRotatef(-90, 0, 1, 0)
                 if iAx == 0:  # Horizontal Label to half height
-                    glTranslatef(0, 0, -50. * fontScale)
+                    gl.glTranslatef(0, 0, -50. * fontScale)
                 else:  # Vertical Label to half height
-                    glTranslatef(-50. * fontScale, 0, 0)
-                glRotatef(90, 1, 0, 0)
-                glScalef(fontScale, fontScale, fontScale)
+                    gl.glTranslatef(-50. * fontScale, 0, 0)
+                gl.glRotatef(90, 1, 0, 0)
+                gl.glScalef(fontScale, fontScale, fontScale)
                 for symbol in text:
-                    glutStrokeCharacter(GLUT_STROKE_MONO_ROMAN, ord(symbol))
-                glPopMatrix()
-            glEnable(GL_LINE_SMOOTH)
+                    gl.glutStrokeCharacter(
+                        gl.GLUT_STROKE_MONO_ROMAN, ord(symbol))
+                gl.glPopMatrix()
+            gl.glEnable(gl.GL_LINE_SMOOTH)
 
     def plotHemiScreen(self, oe, dimensions=None):
         try:
@@ -2806,14 +2722,14 @@ class xrtGlWidget(QGLWidget):
 
         sphereCenter = np.array(oe.center)
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
         if self.invertColors:
-            glColor4f(0.0, 0.0, 0.0, 0.2)
+            gl.glColor4f(0.0, 0.0, 0.0, 0.2)
         else:
-            glColor4f(1.0, 1.0, 1.0, 0.2)
+            gl.glColor4f(1.0, 1.0, 1.0, 0.2)
 
-        glEnable(GL_MAP2_VERTEX_3)
+        gl.glEnable(gl.GL_MAP2_VERTEX_3)
 
         dAngle = np.arctan2(rMinor, rMajor)
 
@@ -2851,18 +2767,18 @@ class xrtGlWidget(QGLWidget):
                                     gbp.y - self.coordOffset[1],
                                     gbp.z - self.coordOffset[2])).T
 
-                glMap2f(GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                        self.modelToWorld(surfCP.reshape(
-                            self.surfCPOrder,
-                            self.surfCPOrder, 3)))
+                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                           self.modelToWorld(surfCP.reshape(
+                               self.surfCPOrder,
+                               self.surfCPOrder, 3)))
 
-                glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                            self.surfCPOrder, 0.0, 1.0)
+                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                               self.surfCPOrder, 0.0, 1.0)
 
-                glEvalMesh2(GL_FILL, 0, self.surfCPOrder,
-                            0, self.surfCPOrder)
+                gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+                               0, self.surfCPOrder)
 
-        glDisable(GL_MAP2_VERTEX_3)
+        gl.glDisable(gl.GL_MAP2_VERTEX_3)
 
     def addLighting(self, pos):
         spot = 60
@@ -2870,7 +2786,7 @@ class xrtGlWidget(QGLWidget):
         ambient = [0.2, 0.2, 0.2, 1]
         diffuse = [0.5, 0.5, 0.5, 1]
         specular = [1.0, 1.0, 1.0, 1]
-        glEnable(GL_LIGHTING)
+        gl.glEnable(gl.GL_LIGHTING)
 
 #        corners = [[-pos, pos, pos, 1], [-pos, -pos, -pos, 1],
 #                   [-pos, pos, -pos, 1], [-pos, -pos, pos, 1],
@@ -2881,22 +2797,22 @@ class xrtGlWidget(QGLWidget):
                    [pos, 0, 0, 1], [-pos, 0, 0, 1],
                    [0, -pos, 0, 1], [0, 0, -pos, 1]]
 
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0)
+        gl.glLightModeli(gl.GL_LIGHT_MODEL_TWO_SIDE, 0)
         for iLight in range(len(corners)):
-            light = GL_LIGHT0 + iLight
-            glEnable(light)
-            glLightfv(light, GL_POSITION, corners[iLight])
-            glLightfv(light, GL_SPOT_DIRECTION,
-                      np.array(corners[len(corners)-iLight-1])/pos)
-            glLightfv(light, GL_SPOT_CUTOFF, spot)
-            glLightfv(light, GL_SPOT_EXPONENT, exp)
-            glLightfv(light, GL_AMBIENT, ambient)
-            glLightfv(light, GL_DIFFUSE, diffuse)
-            glLightfv(light, GL_SPECULAR, specular)
-#            glBegin(GL_LINES)
+            light = gl.GL_LIGHT0 + iLight
+            gl.glEnable(light)
+            gl.glLightfv(light, gl.GL_POSITION, corners[iLight])
+            gl.glLightfv(light, gl.GL_SPOT_DIRECTION,
+                         np.array(corners[len(corners)-iLight-1])/pos)
+            gl.glLightfv(light, gl.GL_SPOT_CUTOFF, spot)
+            gl.glLightfv(light, gl.GL_SPOT_EXPONENT, exp)
+            gl.glLightfv(light, gl.GL_AMBIENT, ambient)
+            gl.glLightfv(light, gl.GL_DIFFUSE, diffuse)
+            gl.glLightfv(light, gl.GL_SPECULAR, specular)
+#            gl.glBegin(gl.GL_LINES)
 #            glVertex4f(*corners[iLight])
 #            glVertex4f(*corners[len(corners)-iLight-1])
-#            glEnd()
+#            gl.glEnd()
 
     def toggleHelp(self):
         self.showHelp = not self.showHelp
@@ -2905,41 +2821,40 @@ class xrtGlWidget(QGLWidget):
     def drawHelp(self):
         hHeight = 300
         hWidth = 500
-        pView = glGetIntegerv(GL_VIEWPORT)
-        glViewport(0, self.viewPortGL[3]-hHeight,
-                   hWidth, hHeight)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        glOrtho(-1, 1, -1, 1, -1, 1)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
+        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+        gl.glViewport(0, self.viewPortGL[3]-hHeight, hWidth, hHeight)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        gl.glOrtho(-1, 1, -1, 1, -1, 1)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glBegin(GL_QUADS)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        gl.glBegin(gl.GL_QUADS)
 
         if self.invertColors:
-            glColor4f(1.0, 1.0, 1.0, 0.9)
+            gl.glColor4f(1.0, 1.0, 1.0, 0.9)
         else:
-            glColor4f(0.0, 0.0, 0.0, 0.9)
+            gl.glColor4f(0.0, 0.0, 0.0, 0.9)
         backScreen = [[1, 1], [1, -1],
                       [-1, -1], [-1, 1]]
         for corner in backScreen:
-                glVertex3f(corner[0], corner[1], 0)
+                gl.glVertex3f(corner[0], corner[1], 0)
 
-        glEnd()
+        gl.glEnd()
 
         if self.invertColors:
-            glColor4f(0.0, 0.0, 0.0, 1.0)
+            gl.glColor4f(0.0, 0.0, 0.0, 1.0)
         else:
-            glColor4f(1.0, 1.0, 1.0, 1.0)
-        glLineWidth(3)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        glBegin(GL_QUADS)
+            gl.glColor4f(1.0, 1.0, 1.0, 1.0)
+        gl.glLineWidth(3)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+        gl.glBegin(gl.GL_QUADS)
         backScreen = [[1, 1], [1, -1],
                       [-1, -1], [-1, 1]]
         for corner in backScreen:
-                glVertex3f(corner[0], corner[1], 0)
-        glEnd()
+                gl.glVertex3f(corner[0], corner[1], 0)
+        gl.glEnd()
 
         helpList = ['F1: Open/Close this help window',
                     'F3: Add/Remove Virtual Screen (Slicer)',
@@ -2961,8 +2876,8 @@ class xrtGlWidget(QGLWidget):
                            1. - 2. * (iLine + 1) / float(len(helpList)+1), 0],
                           text, True)
 
-        glFlush()
-        glViewport(*pView)
+        gl.glFlush()
+        gl.glViewport(*pView)
 
     def drawCone(self, z, r, nFacets, color):
         phi = np.linspace(0, 2*np.pi, nFacets)
@@ -2974,13 +2889,13 @@ class xrtGlWidget(QGLWidget):
         gridColor = np.zeros((len(coneVertices), 4))
         gridColor[:, color] = 1
         gridColor[:, 3] = 0.75
-        gridArray = vbo.VBO(np.float32(coneVertices))
+        gridArray = gl.vbo.VBO(np.float32(coneVertices))
         gridArray.bind()
-        glVertexPointerf(gridArray)
-        gridColorArray = vbo.VBO(np.float32(gridColor))
+        gl.glVertexPointerf(gridArray)
+        gridColorArray = gl.vbo.VBO(np.float32(gridColor))
         gridColorArray.bind()
-        glColorPointerf(gridColorArray)
-        glDrawArrays(GL_TRIANGLE_FAN, 0, len(gridArray))
+        gl.glColorPointerf(gridColorArray)
+        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
         gridArray.unbind()
         gridColorArray.unbind()
 
@@ -2988,94 +2903,97 @@ class xrtGlWidget(QGLWidget):
         arrowSize = 0.05
         axisLen = 0.1
         tLen = (arrowSize + axisLen) * 2
-        glLineWidth(1.)
+        gl.glLineWidth(1.)
 
-        pView = glGetIntegerv(GL_VIEWPORT)
-        glViewport(0, 0, int(150*self.aspect), 150)
+        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+        gl.glViewport(0, 0, int(150*self.aspect), 150)
 
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
         if self.perspectiveEnabled:
-            gluPerspective(60, self.aspect, 0.001, 10)
+            gl.gluPerspective(60, self.aspect, 0.001, 10)
         else:
-            glOrtho(-tLen*self.aspect, tLen*self.aspect, -tLen, tLen, -1, 1)
+            gl.glOrtho(-tLen*self.aspect, tLen*self.aspect, -tLen, tLen, -1, 1)
 
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        gluLookAt(.5, 0.0, 0.0,
-                  0.0, 0.0, 0.0,
-                  0.0, 0.0, 1.0)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        gl.gluLookAt(.5, 0.0, 0.0,
+                     0.0, 0.0, 0.0,
+                     0.0, 0.0, 1.0)
 
-        glEnable(GL_LINE_SMOOTH)
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-        glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST)
+        gl.glEnable(gl.GL_LINE_SMOOTH)
+        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glEnableClientState(GL_COLOR_ARRAY)
+        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
 
         self.rotateZYX()
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
                     2-iAx == self.visibleAxes[2]):
-                glPushMatrix()
+                gl.glPushMatrix()
                 trVec = np.zeros(3, dtype=np.float32)
                 trVec[2-iAx] = axisLen
-                glTranslatef(*trVec)
+                gl.glTranslatef(*trVec)
                 if iAx == 1:
-                    glRotatef(-90, 1.0, 0.0, 0.0)
+                    gl.glRotatef(-90, 1.0, 0.0, 0.0)
                 elif iAx == 2:
-                    glRotatef(90, 0.0, 1.0, 0.0)
+                    gl.glRotatef(90, 0.0, 1.0, 0.0)
                 self.drawCone(arrowSize, 0.02, 20, iAx)
-                glPopMatrix()
-        glDisableClientState(GL_VERTEX_ARRAY)
-        glDisableClientState(GL_COLOR_ARRAY)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+                gl.glPopMatrix()
+        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
-        glBegin(GL_LINES)
+        gl.glBegin(gl.GL_LINES)
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
                     2-iAx == self.visibleAxes[2]):
                 colorVec = [0, 0, 0, 0.75]
                 colorVec[iAx] = 1
-                glColor4f(*colorVec)
-                glVertex3f(0, 0, 0)
+                gl.glColor4f(*colorVec)
+                gl.glVertex3f(0, 0, 0)
                 trVec = np.zeros(3, dtype=np.float32)
                 trVec[2-iAx] = axisLen
-                glVertex3f(*trVec)
-                glColor4f(*colorVec)
-        glEnd()
+                gl.glVertex3f(*trVec)
+                gl.glColor4f(*colorVec)
+        gl.glEnd()
 
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 2):
-            glColor4f(1, 0, 0, 1)
-            glRasterPos3f(0, 0, axisLen*1.5)
+            gl.glColor4f(1, 0, 0, 1)
+            gl.glRasterPos3f(0, 0, axisLen*1.5)
             for symbol in "  {}, mm".format('Z'):
-                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(
+                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
-            glColor4f(0, 0.75, 0, 1)
-            glRasterPos3f(0, axisLen*1.5, 0)
+            gl.glColor4f(0, 0.75, 0, 1)
+            gl.glRasterPos3f(0, axisLen*1.5, 0)
             for symbol in "  {}, mm".format('Y'):
-                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(
+                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
-            glColor4f(0, 0.5, 1, 1)
-            glRasterPos3f(axisLen*1.5, 0, 0)
+            gl.glColor4f(0, 0.5, 1, 1)
+            gl.glRasterPos3f(axisLen*1.5, 0, 0)
             for symbol in "  {}, mm".format('X'):
-                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, ord(symbol))
-#        glFlush()
-        glViewport(*pView)
-        glColor4f(1, 1, 1, 1)
-        glDisable(GL_LINE_SMOOTH)
+                gl.glutBitmapCharacter(
+                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+#        gl.glFlush()
+        gl.glViewport(*pView)
+        gl.glColor4f(1, 1, 1, 1)
+        gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def initializeGL(self):
-        glutInit()
-        glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glViewport(*self.viewPortGL)
+        gl.glutInit()
+        gl.glutInitDisplayMode(gl.GLUT_RGBA | gl.GLUT_DOUBLE | gl.GLUT_DEPTH)
+        gl.glViewport(*self.viewPortGL)
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
-        glViewport(*self.viewPortGL)
+        gl.glViewport(*self.viewPortGL)
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
 
     def populateVScreen(self):
@@ -3283,35 +3201,35 @@ class xrtGlWidget(QGLWidget):
         self.glDraw()
 
     def mouseMoveEvent(self, mEvent):
-        pView = glGetIntegerv(GL_VIEWPORT)
+        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
         mouseX = mEvent.x()
         mouseY = pView[3] - mEvent.y()
-        ctrlOn = bool(int(mEvent.modifiers()) & int(QtCore.Qt.ControlModifier))
-        altOn = bool(int(mEvent.modifiers()) & int(QtCore.Qt.AltModifier))
-        shiftOn = bool(int(mEvent.modifiers()) & int(QtCore.Qt.ShiftModifier))
+        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
+        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
+        shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
 
-        if mEvent.buttons() == QtCore.Qt.LeftButton:
-            glMatrixMode(GL_MODELVIEW)
-            glLoadIdentity()
-            gluLookAt(self.cameraPos[0], self.cameraPos[1],
-                      self.cameraPos[2],
-                      self.cameraTarget[0], self.cameraTarget[1],
-                      self.cameraTarget[2],
-                      0.0, 0.0, 1.0)
+        if mEvent.buttons() == qt.LeftButton:
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glLoadIdentity()
+            gl.gluLookAt(self.cameraPos[0], self.cameraPos[1],
+                         self.cameraPos[2],
+                         self.cameraTarget[0], self.cameraTarget[1],
+                         self.cameraTarget[2],
+                         0.0, 0.0, 1.0)
             self.rotateZYX()
-            pModel = glGetDoublev(GL_MODELVIEW_MATRIX)
-            glMatrixMode(GL_PROJECTION)
-            glLoadIdentity()
+            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
 
             if self.perspectiveEnabled:
-                gluPerspective(self.cameraAngle, self.aspect, 0.01, 100)
+                gl.gluPerspective(self.cameraAngle, self.aspect, 0.01, 100)
             else:
                 orthoView = self.cameraPos[0]*0.45
-                glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
-                        -orthoView, orthoView, -100, 100)
-            pProjection = glGetDoublev(GL_PROJECTION_MATRIX)
+                gl.glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
+                           -orthoView, orthoView, -100, 100)
+            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
 
-            if mEvent.modifiers() == QtCore.Qt.NoModifier:
+            if mEvent.modifiers() == qt.NoModifier:
                 self.rotations[2][0] += np.float32(
                     self.signs[2][1] *
                     (mouseX - self.prevMPos[0]) * 36. / 90.)
@@ -3331,10 +3249,10 @@ class xrtGlWidget(QGLWidget):
                     mEnd = np.zeros(3)
                     mEnd[self.visibleAxes[iDim]] = 1.
 #                    mEnd = -1 * mStart
-                    pStart = np.array(gluProject(
+                    pStart = np.array(gl.gluProject(
                         *mStart, model=pModel, proj=pProjection,
                         view=pView)[:-1])
-                    pEnd = np.array(gluProject(
+                    pEnd = np.array(gl.gluProject(
                         *mEnd, model=pModel, proj=pProjection,
                         view=pView)[:-1])
                     pScr = np.array([mouseX, mouseY])
@@ -3362,10 +3280,10 @@ class xrtGlWidget(QGLWidget):
                 mEnd = np.zeros(3)
                 mEnd[self.visibleAxes[2]] = 1.
 #                    mEnd = -1 * mStart
-                pStart = np.array(gluProject(
+                pStart = np.array(gl.gluProject(
                     *mStart, model=pModel, proj=pProjection,
                     view=pView)[:-1])
-                pEnd = np.array(gluProject(
+                pEnd = np.array(gl.gluProject(
                     *mEnd, model=pModel, proj=pProjection,
                     view=pView)[:-1])
                 pScr = np.array([mouseX, mouseY])
@@ -3411,10 +3329,10 @@ class xrtGlWidget(QGLWidget):
                     if np.dot(normBDir, worldBDir) < 0:
                         normPStart, normPEnd = normPEnd, normPStart
 
-                    pStart = np.array(gluProject(
+                    pStart = np.array(gl.gluProject(
                         *normPStart, model=pModel, proj=pProjection,
                         view=pView)[:-1])
-                    pEnd = np.array(gluProject(
+                    pEnd = np.array(gl.gluProject(
                         *normPEnd, model=pModel, proj=pProjection,
                         view=pView)[:-1])
                     pScr = np.array([mouseX, mouseY])
@@ -3435,9 +3353,9 @@ class xrtGlWidget(QGLWidget):
         self.prevMPos[1] = mouseY
 
     def wheelEvent(self, wEvent):
-        ctrlOn = bool(int(wEvent.modifiers()) & int(QtCore.Qt.ControlModifier))
-        altOn = bool(int(wEvent.modifiers()) & int(QtCore.Qt.AltModifier))
-        if QtName == "PyQt4":
+        ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
+        altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
+        if qt.QtName == "PyQt4":
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()

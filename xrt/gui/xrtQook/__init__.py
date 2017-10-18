@@ -97,180 +97,23 @@ try:
 except ImportError:
     isOpenCL = False
 
-try:
-    from OpenGL import GL  # analysis:ignore
-    from OpenGL import GLU  # analysis:ignore
-    from OpenGL import GLUT  # analysis:ignore
-    from OpenGL.arrays import vbo  # analysis:ignore
-    isOpenGL = True
-except ImportError:
-    isOpenGL = False
-#  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
-#  It's definitely not the optimal solution, but it works.
-try:
-    from spyderlib.widgets.sourcecode import codeeditor
-    isSpyderlib = True
-except ImportError:
-    try:
-        from spyder.widgets.sourcecode import codeeditor
-        isSpyderlib = True
-    except ImportError:
-        isSpyderlib = False
+from .. import myspyder as spyder  # analysis:ignore
 
-try:
-    from spyderlib.widgets.externalshell import pythonshell
-    isSpyderConsole = True
-except ImportError:
-    try:
-        from spyder.widgets.externalshell import pythonshell
-        isSpyderConsole = True
-    except ImportError:
-        isSpyderConsole = False
-
-try:
-    from spyderlib.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
-                                                     generate_context)
-    isSphinx = True
-except (ImportError, TypeError):
-    try:
-        from spyder.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
-                                                      generate_context)
-        isSphinx = True
-    except ImportError:
-        CSS_PATH = None
-        sphinxify = None
-        isSphinx = False
-
-if not isSphinx:
-    try:
-        from spyderlib.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
-                                                    generate_context)  # analysis:ignore
-        isSphinx = True
-    except (ImportError, TypeError):
-        try:
-            from spyder.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
-                                                        generate_context)  # analysis:ignore
-            isSphinx = True
-        except ImportError:
-            pass
-
-if isSphinx:
-    if CSS_PATH is not None:
-        CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
-
-try:
-    from matplotlib.backends import qt_compat
-except ImportError:
-    from matplotlib.backends import qt4_compat
-    qt_compat = qt4_compat
-
-if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    QtName = "PyQt4"
-    from PyQt4 import QtGui, QtCore
-    import PyQt4.QtGui as myQtGUI
-    import PyQt4.QtWebKit as myQtWeb
-    from PyQt4.QtGui import QSortFilterProxyModel
-elif 'pyqt5' in qt_compat.QT_API.lower():
-    QtName = "PyQt5"
-    from PyQt5 import QtGui, QtCore
-    from PyQt5.QtCore import QSortFilterProxyModel
-    import PyQt5.QtWidgets as myQtGUI
-    try:
-        import PyQt5.QtWebEngineWidgets as myQtWeb
-    except ImportError:
-        import PyQt5.QtWebKitWidgets as myQtWeb
-else:
-    raise ImportError("Cannot import any Python Qt package!")
-
-QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
-    QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
-    QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-    QListWidgetItem, QDockWidget, QProgressBar = (
-        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
-        myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
-        myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
-        myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
-        myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
-        myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
-        myQtGUI.QListWidgetItem, myQtGUI.QDockWidget, myQtGUI.QProgressBar)
-QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap =\
-    (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
-     QtGui.QStandardItem, QtGui.QPixmap)
-
-try:
-    class WebPage(myQtWeb.QWebPage):
-        """
-        Web page subclass to manage hyperlinks like in WebEngine
-        """
-        showHelp = QtCore.Signal()
-
-    class QWebView(myQtWeb.QWebView):
-        """Web view"""
-        def __init__(self):
-            myQtWeb.QWebView.__init__(self)
-            web_page = WebPage(self)
-            self.setPage(web_page)
-
-except AttributeError:
-    # QWebKit deprecated in Qt 5.7
-    # The idea and partly the code of the compatibility fix is borrowed from
-    # spyderlib.widgets.browser
-    class WebPage(myQtWeb.QWebEnginePage):
-        """
-        Web page subclass to manage hyperlinks for WebEngine
-
-        Note: This can't be used for WebKit because the
-        acceptNavigationRequest method has a different
-        functionality for it.
-        """
-        linkClicked = QtCore.Signal(QtCore.QUrl)
-        showHelp = QtCore.Signal()
-        linkDelegationPolicy = 0
-
-        def setLinkDelegationPolicy(self, policy):
-            self.linkDelegationPolicy = policy
-
-        def acceptNavigationRequest(self, url, navigation_type, isMainFrame):
-            """
-            Overloaded method to handle links ourselves
-            """
-            if navigation_type in\
-                    [myQtWeb.QWebEnginePage.NavigationTypeLinkClicked] and\
-                    str(url.toString()).startswith('file:'):
-                if self.linkDelegationPolicy == 1 and\
-                        '.png' not in url.toString():
-                    self.linkClicked.emit(url)
-                return False
-            elif navigation_type in\
-                    [myQtWeb.QWebEnginePage.NavigationTypeBackForward] and\
-                    self.linkDelegationPolicy == 0:
-                if str(QtCore.QUrl(CSS_PATH).toString()).lower() in\
-                        str(url.toString()).lower():
-                    self.showHelp.emit()
-                    return False
-            return True
-
-    class QWebView(myQtWeb.QWebEngineView):
-        """Web view"""
-        def __init__(self):
-            myQtWeb.QWebEngineView.__init__(self)
-            web_page = WebPage(self)
-            self.setPage(web_page)
-
-sys.path.append(os.path.join('..', '..'))
+sys.path.append(os.path.join('..', '..', '..'))
 import xrt  #analysis:ignore
-
-from ..backends import raycing  # analysis:ignore
-from ..backends.raycing import sources as rsources  # analysis:ignore
-from ..backends.raycing import screens as rscreens  # analysis:ignore
-from ..backends.raycing import materials as rmats  # analysis:ignore
-from ..backends.raycing import oes as roes  # analysis:ignore
-from ..backends.raycing import apertures as rapts  # analysis:ignore
-from ..backends.raycing import oes as roes  # analysis:ignore
-from ..backends.raycing import run as rrun  # analysis:ignore
-from .. import plotter as xrtplot  # analysis:ignore
-from .. import runner as xrtrun  # analysis:ignore
-if isOpenGL:
+from ...backends import raycing  # analysis:ignore
+from ...backends.raycing import sources as rsources  # analysis:ignore
+from ...backends.raycing import screens as rscreens  # analysis:ignore
+from ...backends.raycing import materials as rmats  # analysis:ignore
+from ...backends.raycing import oes as roes  # analysis:ignore
+from ...backends.raycing import apertures as rapts  # analysis:ignore
+from ...backends.raycing import oes as roes  # analysis:ignore
+from ...backends.raycing import run as rrun  # analysis:ignore
+from ... import plotter as xrtplot  # analysis:ignore
+from ... import runner as xrtrun  # analysis:ignore
+from .. import qt  # analysis:ignore
+from .. import gl  # analysis:ignore
+if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
 
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
@@ -278,8 +121,8 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
 myTab = 4*" "
 
 
-class XrtQook(QWidget):
-    statusUpdate = QtCore.pyqtSignal(tuple)
+class XrtQook(qt.QWidget):
+    statusUpdate = qt.pyqtSignal(tuple)
 
     def __init__(self):
         super(XrtQook, self).__init__()
@@ -289,35 +132,34 @@ class XrtQook(QWidget):
         self.isGlowAutoUpdate = False
         self.statusUpdate.connect(self.updateProgressBar)
         self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
-        self.setWindowIcon(QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
+        self.setWindowIcon(qt.QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
         self.init_tool_bar()
 
         self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
-        self.objectFlag = QtCore.Qt.ItemFlags(0)
-        self.paramFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                             QtCore.Qt.ItemIsSelectable)
-        self.valueFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                             QtCore.Qt.ItemIsEditable |
-                                             QtCore.Qt.ItemIsSelectable)
-        self.checkFlag = QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                             QtCore.Qt.ItemIsUserCheckable |
-                                             QtCore.Qt.ItemIsSelectable)
+        self.objectFlag = qt.ItemFlags(0)
+        self.paramFlag = qt.ItemFlags(qt.ItemIsEnabled | qt.ItemIsSelectable)
+        self.valueFlag = qt.ItemFlags(
+            qt.ItemIsEnabled | qt.ItemIsEditable | qt.ItemIsSelectable)
+        self.checkFlag = qt.ItemFlags(
+            qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
 
         self.init_tabs()
         self.blViewer = None
-        canvasBox = QHBoxLayout()
-        canvasSplitter = QSplitter()
+        canvasBox = qt.QHBoxLayout()
+        canvasSplitter = qt.QSplitter()
         canvasSplitter.setChildrenCollapsible(False)
 
-        mainWidget = QWidget()
+        mainWidget = qt.QWidget()
         mainWidget.setMinimumWidth(486)
-        mainBox = QVBoxLayout()
-        docBox = QVBoxLayout()
+        mainBox = qt.QVBoxLayout()
+        mainBox.setContentsMargins(0, 0, 0, 0)
+        docBox = qt.QVBoxLayout()
+        docBox.setContentsMargins(0, 0, 0, 0)
 
-        self.helptab = QTabWidget()
-        docWidget = QWidget()
+        self.helptab = qt.QTabWidget()
+        docWidget = qt.QWidget()
         docWidget.setMinimumWidth(600)
 
         mainBox.addWidget(self.toolBar)
@@ -344,103 +186,103 @@ class XrtQook(QWidget):
         self.initAllTrees()
 
     def init_tool_bar(self):
-        newBLAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'filenew.png')),
+        newBLAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'filenew.png')),
             'New Beamline Layout',
             self)
         newBLAction.setShortcut('Ctrl+N')
         newBLAction.setIconText('New Beamline Layout')
         newBLAction.triggered.connect(self.newBL)
 
-        loadBLAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'fileopen.png')),
+        loadBLAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'fileopen.png')),
             'Load Beamline Layout',
             self)
         loadBLAction.setShortcut('Ctrl+L')
         loadBLAction.triggered.connect(self.importLayout)
 
-        saveBLAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'filesave.png')),
+        saveBLAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'filesave.png')),
             'Save Beamline Layout',
             self)
         saveBLAction.setShortcut('Ctrl+S')
         saveBLAction.triggered.connect(self.exportLayout)
 
-        saveBLAsAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'filesaveas.png')),
+        saveBLAsAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'filesaveas.png')),
             'Save Beamline Layout As ...',
             self)
         saveBLAsAction.setShortcut('Ctrl+A')
         saveBLAsAction.triggered.connect(self.exportLayoutAs)
 
-        generateCodeAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'pythonscript.png')),
+        generateCodeAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'pythonscript.png')),
             'Generate Python Script',
             self)
         generateCodeAction.setShortcut('Ctrl+G')
         generateCodeAction.triggered.connect(self.generateCode)
 
-        saveScriptAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'pythonscriptsave.png')),
+        saveScriptAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'pythonscriptsave.png')),
             'Save Python Script',
             self)
         saveScriptAction.setShortcut('Alt+S')
         saveScriptAction.triggered.connect(self.saveCode)
 
-        saveScriptAsAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'pythonscriptsaveas.png')),
+        saveScriptAsAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'pythonscriptsaveas.png')),
             'Save Python Script As ...',
             self)
         saveScriptAsAction.setShortcut('Alt+A')
         saveScriptAsAction.triggered.connect(self.saveCodeAs)
 
-        runScriptAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'run.png')),
+        runScriptAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'run.png')),
             'Save Python Script And Run',
             self)
         runScriptAction.setShortcut('Ctrl+R')
         runScriptAction.triggered.connect(self.execCode)
 
-        glowAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'eyeglasses7_128.png')),
+        glowAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'eyeglasses7_128.png')),
             'Enable xrtGlow Live Update',
             self)
-        if isOpenGL:
+        if gl.isOpenGL:
             glowAction.setShortcut('CTRL+F1')
             glowAction.setCheckable(True)
             glowAction.setChecked(False)
             glowAction.toggled.connect(self.toggle_glow)
 
-        OCLAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
+        OCLAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
             'OpenCL Info',
             self)
         if isOpenCL:
             OCLAction.setShortcut('Alt+I')
             OCLAction.triggered.connect(self.showOCLinfo)
 
-        tutorAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'home.png')),
+        tutorAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'home.png')),
             'Show Welcome Screen',
             self)
         tutorAction.setShortcut('Ctrl+H')
         tutorAction.triggered.connect(self.showWelcomeScreen)
 
-        aboutAction = QAction(
-            QIcon(os.path.join(self.iconsDir, 'readme.png')),
+        aboutAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, 'readme.png')),
             'About xrtQook',
             self)
         aboutAction.setShortcut('Ctrl+I')
         aboutAction.triggered.connect(self.aboutCode)
 
-        self.tabs = QTabWidget()
-        self.toolBar = QToolBar('Action buttons')
-#        self.statusBar = QStatusBar()
+        self.tabs = qt.QTabWidget()
+        self.toolBar = qt.QToolBar('Action buttons')
+#        self.statusBar = qt.QStatusBar()
 #        self.statusBar.setSizeGripEnabled(False)
-        self.progressBar = QProgressBar()
+        self.progressBar = qt.QProgressBar()
         self.progressBar.setTextVisible(True)
         self.progressBar.setRange(0, 100)
-        self.progressBar.setAlignment(QtCore.Qt.AlignCenter)
+        self.progressBar.setAlignment(qt.AlignCenter)
         self.toolBar.addAction(newBLAction)
         self.toolBar.addAction(loadBLAction)
         self.toolBar.addAction(saveBLAction)
@@ -451,14 +293,14 @@ class XrtQook(QWidget):
         self.toolBar.addAction(saveScriptAsAction)
         self.toolBar.addAction(runScriptAction)
         self.toolBar.addSeparator()
-        if isOpenGL:
+        if gl.isOpenGL:
             self.toolBar.addAction(glowAction)
         if isOpenCL:
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
         self.toolBar.addAction(aboutAction)
-        bbl = QShortcut(self)
-        bbl.setKey(QtCore.Qt.Key_F4)
+        bbl = qt.QShortcut(self)
+        bbl.setKey(qt.Key_F4)
         bbl.activated.connect(self.catch_viewer)
 
     def catch_viewer(self):
@@ -478,79 +320,79 @@ class XrtQook(QWidget):
                 try:
                     self.blViewer.move(self.blViewer.oldPos[0],
                                        self.blViewer.oldPos[1])
-                except:
+                except:  # analysis:ignore
                     self.blViewer.move(100, 100)
                 self.blViewer.parentRef = self
 
     def init_tabs(self):
-        self.tree = QTreeView()
-        self.matTree = QTreeView()
-        self.plotTree = QTreeView()
-        self.runTree = QTreeView()
+        self.tree = qt.QTreeView()
+        self.matTree = qt.QTreeView()
+        self.plotTree = qt.QTreeView()
+        self.runTree = qt.QTreeView()
 
-        self.defaultFont = QFont("Courier New", 9)
-        if isSphinx:
-            self.webHelp = QWebView()
-            self.webHelp.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.defaultFont = qt.QFont("Courier New", 9)
+        if spyder.isSphinx:
+            self.webHelp = qt.QWebView()
+            self.webHelp.setContextMenuPolicy(qt.CustomContextMenu)
             self.webHelp.customContextMenuRequested.connect(self.docMenu)
         else:
-            self.webHelp = QTextEdit()
+            self.webHelp = qt.QTextEdit()
             self.webHelp.setFont(self.defaultFont)
             self.webHelp.setReadOnly(True)
 
         for itree in [self.tree, self.matTree, self.plotTree, self.runTree]:
-            itree.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            itree.setContextMenuPolicy(qt.CustomContextMenu)
             itree.clicked.connect(self.showDoc)
 
         self.plotTree.customContextMenuRequested.connect(self.plotMenu)
         self.matTree.customContextMenuRequested.connect(self.matMenu)
         self.tree.customContextMenuRequested.connect(self.openMenu)
 
-        if isSpyderlib:
-            self.codeEdit = codeeditor.CodeEditor(self)
+        if spyder.isSpyderlib:
+            self.codeEdit = spyder.codeeditor.CodeEditor(self)
             self.codeEdit.setup_editor(linenumbers=True, markers=True,
                                        tab_mode=False, language='py',
                                        font=self.defaultFont,
                                        color_scheme='Pydev')
-            if QtName == "PyQt5":
+            if qt.QtName == "PyQt5":
                 self.codeEdit.zoom_in.connect(lambda: self.zoom(1))
                 self.codeEdit.zoom_out.connect(lambda: self.zoom(-1))
                 self.codeEdit.zoom_reset.connect(lambda: self.zoom(0))
             else:
                 self.connect(self.codeEdit,
-                             QtCore.SIGNAL('zoom_in()'),
+                             qt.SIGNAL('zoom_in()'),
                              lambda: self.zoom(1))
                 self.connect(self.codeEdit,
-                             QtCore.SIGNAL('zoom_out()'),
+                             qt.SIGNAL('zoom_out()'),
                              lambda: self.zoom(-1))
                 self.connect(self.codeEdit,
-                             QtCore.SIGNAL('zoom_reset()'),
+                             qt.SIGNAL('zoom_reset()'),
                              lambda: self.zoom(0))
-            QShortcut(QKeySequence.ZoomIn, self, lambda: self.zoom(1))
-            QShortcut(QKeySequence.ZoomOut, self, lambda: self.zoom(-1))
-            QShortcut("Ctrl+0", self, lambda: self.zoom(0))
+            qt.QShortcut(qt.QKeySequence.ZoomIn, self, lambda: self.zoom(1))
+            qt.QShortcut(qt.QKeySequence.ZoomOut, self, lambda: self.zoom(-1))
+            qt.QShortcut("Ctrl+0", self, lambda: self.zoom(0))
             for action in self.codeEdit.menu.actions()[-3:]:
                 self.codeEdit.menu.removeAction(action)
         else:
-            self.codeEdit = QTextEdit()
+            self.codeEdit = qt.QTextEdit()
             self.codeEdit.setFont(self.defaultFont)
 
-        self.descrEdit = QTextEdit()
+        self.descrEdit = qt.QTextEdit()
         self.descrEdit.setFont(self.defaultFont)
         self.descrEdit.textChanged.connect(self.updateDescription)
 
         self.setGeometry(100, 100, 1200, 600)
 
-        if isSpyderConsole:
-            self.codeConsole = pythonshell.ExternalPythonShell(
+        if spyder.isSpyderConsole:
+            self.codeConsole = spyder.pythonshell.ExternalPythonShell(
                 wdir=os.path.dirname(__file__))
 
         else:
-            self.qprocess = QtCore.QProcess()
-            self.qprocess.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+            self.qprocess = qt.QProcess()
+            self.qprocess.setProcessChannelMode(qt.QProcess.MergedChannels)
             self.qprocess.readyReadStandardOutput.connect(self.readStdOutput)
-            QShortcut("Ctrl+X", self, self.qprocess.kill)
-            self.codeConsole = QTextEdit()
+            qt.QShortcut("Ctrl+X", self, self.qprocess.kill)
+            self.codeConsole = qt.QTextEdit()
             self.codeConsole.setFont(self.defaultFont)
             self.codeConsole.setReadOnly(True)
 
@@ -584,7 +426,7 @@ class XrtQook(QWidget):
                 self.codeEdit.set_font(font)
 
     def docMenu(self, position):
-        menu = QMenu()
+        menu = qt.QMenu()
         menu.addAction("Zoom In",
                        lambda: self.zoomDoc(1))
         menu.addAction("Zoom Out", lambda: self.zoomDoc(-1))
@@ -634,7 +476,7 @@ class XrtQook(QWidget):
         self.runTree.setSortingEnabled(False)
         self.runTree.setHeaderHidden(False)
         self.runTree.setAnimated(True)
-        self.runTree.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.runTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.runTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         for name, obj in inspect.getmembers(xrtrun):
             if inspect.isfunction(obj) and name == "run_ray_tracing":
@@ -659,7 +501,7 @@ class XrtQook(QWidget):
         self.plotTree.setAlternatingRowColors(True)
         self.plotTree.setSortingEnabled(False)
         self.plotTree.setHeaderHidden(False)
-        self.plotTree.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.plotTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.plotTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
 
         # materialsTree view
@@ -667,7 +509,7 @@ class XrtQook(QWidget):
         self.matTree.setAlternatingRowColors(True)
         self.matTree.setSortingEnabled(False)
         self.matTree.setHeaderHidden(False)
-        self.matTree.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.matTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.matTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
 
         # BLTree view
@@ -675,7 +517,7 @@ class XrtQook(QWidget):
         self.tree.setAlternatingRowColors(True)
         self.tree.setSortingEnabled(False)
         self.tree.setHeaderHidden(False)
-        self.tree.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.tree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         elprops = self.addProp(self.rootBLItem, 'properties')
         for name, obj in inspect.getmembers(raycing):
@@ -696,35 +538,35 @@ class XrtQook(QWidget):
         # self.showDoc(self.rootBLItem.index())
         self.tree.expand(self.rootBLItem.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
-        self.tabs.tabBar().setTabTextColor(0, QtCore.Qt.black)
-        self.tabs.tabBar().setTabTextColor(2, QtCore.Qt.black)
+        self.tabs.tabBar().setTabTextColor(0, qt.black)
+        self.tabs.tabBar().setTabTextColor(2, qt.black)
         self.progressBar.setValue(0)
         self.progressBar.setFormat("New beamline")
 
     def initAllModels(self):
         self.blUpdateLatchOpen = False
-        self.beamLineModel = QStandardItemModel()
+        self.beamLineModel = qt.QStandardItemModel()
         self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
         self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
         self.rootBLItem = self.beamLineModel.item(0, 0)
 
-        self.boolModel = QStandardItemModel()
-        self.boolModel.appendRow(QStandardItem('False'))
-        self.boolModel.appendRow(QStandardItem('True'))
+        self.boolModel = qt.QStandardItemModel()
+        self.boolModel.appendRow(qt.QStandardItem('False'))
+        self.boolModel.appendRow(qt.QStandardItem('True'))
 
-        self.densityModel = QStandardItemModel()
-        self.densityModel.appendRow(QStandardItem('histogram'))
-        self.densityModel.appendRow(QStandardItem('kde'))
+        self.densityModel = qt.QStandardItemModel()
+        self.densityModel.appendRow(qt.QStandardItem('histogram'))
+        self.densityModel.appendRow(qt.QStandardItem('kde'))
 
-        self.oclPrecnModel = QStandardItemModel()
+        self.oclPrecnModel = qt.QStandardItemModel()
         for opm in ['auto', 'float32', 'float64']:
-            self.oclPrecnModel.appendRow(QStandardItem(opm))
+            self.oclPrecnModel.appendRow(qt.QStandardItem(opm))
 
-        self.plotAxisModel = QStandardItemModel()
+        self.plotAxisModel = qt.QStandardItemModel()
         for ax in ['x', 'y', 'z', 'x\'', 'z\'', 'energy']:
             self.addValue(self.plotAxisModel, ax)
 
-        self.OCLModel = QStandardItemModel()
+        self.OCLModel = qt.QStandardItemModel()
         oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
                                                      "None",
                                                      "None")
@@ -781,93 +623,93 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                             oclDev)
                         oclItem.setToolTip(oclToolTip)
 
-        self.materialsModel = QStandardItemModel()
+        self.materialsModel = qt.QStandardItemModel()
         self.rootMatItem = self.materialsModel.invisibleRootItem()
         self.rootMatItem.setText("Materials")
         self.materialsModel.itemChanged.connect(self.beamLineItemChanged)
         self.addProp(self.materialsModel.invisibleRootItem(), "None")
 
-        self.beamModel = QStandardItemModel()
-        self.beamModel.appendRow([QStandardItem("None"),
-                                  QStandardItem("Global"),
-                                  QStandardItem("None"),
-                                  QStandardItem(str(0))])
+        self.beamModel = qt.QStandardItemModel()
+        self.beamModel.appendRow([qt.QStandardItem("None"),
+                                  qt.QStandardItem("Global"),
+                                  qt.QStandardItem("None"),
+                                  qt.QStandardItem(str(0))])
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
         self.beamModel.itemChanged.connect(self.update_beamline_beams)
 
-        self.fluxDataModel = QStandardItemModel()
-        self.fluxDataModel.appendRow(QStandardItem("auto"))
+        self.fluxDataModel = qt.QStandardItemModel()
+        self.fluxDataModel.appendRow(qt.QStandardItem("auto"))
         for rfName, rfObj in inspect.getmembers(raycing):
             if rfName.startswith('get_') and\
                     rfName != "get_output":
-                flItem = QStandardItem(rfName.replace("get_", ''))
+                flItem = qt.QStandardItem(rfName.replace("get_", ''))
                 self.fluxDataModel.appendRow(flItem)
 
-        self.fluxKindModel = QStandardItemModel()
+        self.fluxKindModel = qt.QStandardItemModel()
         for flKind in ['total', 'power', 's', 'p',
                        '+45', '-45', 'left', 'right']:
-            flItem = QStandardItem(flKind)
+            flItem = qt.QStandardItem(flKind)
             self.fluxKindModel.appendRow(flItem)
 
-        self.polarizationsModel = QStandardItemModel()
+        self.polarizationsModel = qt.QStandardItemModel()
         for pol in ['horizontal', 'vertical',
                     '+45', '-45', 'left', 'right', 'None']:
-            polItem = QStandardItem(pol)
+            polItem = qt.QStandardItem(pol)
             self.polarizationsModel.appendRow(polItem)
 
-        self.matKindModel = QStandardItemModel()
+        self.matKindModel = qt.QStandardItemModel()
         for mtKind in ['mirror', 'thin mirror',
                        'plate', 'lens', 'grating', 'FZP', 'auto']:
-            mtItem = QStandardItem(mtKind)
+            mtItem = qt.QStandardItem(mtKind)
             self.matKindModel.appendRow(mtItem)
 
-        self.matTableModel = QStandardItemModel()
+        self.matTableModel = qt.QStandardItemModel()
         for mtTable in ['Chantler', 'Chantler total', 'Henke', 'BrCo']:
-            mtTItem = QStandardItem(mtTable)
+            mtTItem = qt.QStandardItem(mtTable)
             self.matTableModel.appendRow(mtTItem)
 
-        self.shapeModel = QStandardItemModel()
+        self.shapeModel = qt.QStandardItemModel()
         for shpEl in ['rect', 'round']:
-            shpItem = QStandardItem(shpEl)
+            shpItem = qt.QStandardItem(shpEl)
             self.shapeModel.appendRow(shpItem)
 
-        self.matGeomModel = QStandardItemModel()
+        self.matGeomModel = qt.QStandardItemModel()
         for mtGeom in ['Bragg reflected', 'Bragg transmitted',
                        'Laue reflected', 'Laue transmitted',
                        'Fresnel']:
-            mtGItem = QStandardItem(mtGeom)
+            mtGItem = qt.QStandardItem(mtGeom)
             self.matGeomModel.appendRow(mtGItem)
 
-        self.aspectModel = QStandardItemModel()
+        self.aspectModel = qt.QStandardItemModel()
         for aspect in ['equal', 'auto']:
-            aspItem = QStandardItem(aspect)
+            aspItem = qt.QStandardItem(aspect)
             self.aspectModel.appendRow(aspItem)
 
-        self.distEModelG = QStandardItemModel()
+        self.distEModelG = qt.QStandardItemModel()
         for distEMod in ['None', 'normal', 'flat', 'lines']:
-            dEItem = QStandardItem(distEMod)
+            dEItem = qt.QStandardItem(distEMod)
             self.distEModelG.appendRow(dEItem)
 
-        self.distEModelS = QStandardItemModel()
+        self.distEModelS = qt.QStandardItemModel()
         for distEMod in ['eV', 'BW']:
-            dEItem = QStandardItem(distEMod)
+            dEItem = qt.QStandardItem(distEMod)
             self.distEModelS.appendRow(dEItem)
 
-        self.rayModel = QStandardItemModel()
+        self.rayModel = qt.QStandardItemModel()
         for iray, ray in enumerate(['Good', 'Out', 'Over', 'Alive']):
             rayItem, rItemStr = self.addParam(self.rayModel, ray, iray+1)
             rayItem.setCheckable(True)
-            rayItem.setCheckState(QtCore.Qt.Checked)
+            rayItem.setCheckState(qt.Checked)
 
-        self.plotModel = QStandardItemModel()
+        self.plotModel = qt.QStandardItemModel()
         self.addValue(self.plotModel.invisibleRootItem(), "plots")
-        # self.plotModel.appendRow(QStandardItem("plots"))
+        # self.plotModel.appendRow(qt.QStandardItem("plots"))
         self.rootPlotItem = self.plotModel.item(0, 0)
         self.plotModel.itemChanged.connect(self.colorizeChangedParam)
         self.plotModel.invisibleRootItem().setText("plots")
 
-        self.runModel = QStandardItemModel()
+        self.runModel = qt.QStandardItemModel()
         self.addProp(self.runModel.invisibleRootItem(), "run_ray_tracing()")
         self.runModel.itemChanged.connect(self.colorizeChangedParam)
         self.rootRunItem = self.runModel.item(0, 0)
@@ -898,20 +740,20 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def newBL(self):
         if not self.isEmpty:
-            msgBox = QMessageBox()
+            msgBox = qt.QMessageBox()
             if msgBox.warning(self,
                               'Warning',
                               'Current layout will be purged. Continue?',
-                              buttons=QMessageBox.Yes |
-                              QMessageBox.No,
-                              defaultButton=QMessageBox.No)\
-                    == QMessageBox.Yes:
+                              buttons=qt.QMessageBox.Yes |
+                              qt.QMessageBox.No,
+                              defaultButton=qt.QMessageBox.No)\
+                    == qt.QMessageBox.Yes:
                 self.initAllModels()
                 self.initAllTrees()
                 self.tabs.setCurrentWidget(self.tree)
 
     def writeCodeBox(self, text):
-        if isSpyderlib:
+        if spyder.isSpyderlib:
             self.codeEdit.set_text(text)
         else:
             self.codeEdit.setText(text)
@@ -985,7 +827,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def showObjHelp(self, obj):
         self.curObj = obj
-        if isSphinx:
+        if spyder.isSphinx:
             self.webHelp.page().setLinkDelegationPolicy(0)
         argSpecStr = '('
         for arg, argVal in self.getParams(obj):
@@ -995,7 +837,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     showVal
                 showVal = showVal.strip('"') if\
                     (arg == 'bl' and showVal is not None) else showVal
-            except:
+            except:  # analysis:ignore
                 pass
             argSpecStr += '{0}={1}, '.format(arg, showVal)
         argSpecStr = argSpecStr.rstrip(', ') + ')'
@@ -1019,26 +861,26 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         for dName, dVal in zip(dNames, dVals):
             argDocStr += u'{2}*{0}*: {1}\n\n'.format(dName, dVal, myTab)
 
-        if isSphinx:
+        if spyder.isSphinx:
             self.webHelp.history().clear()
             self.webHelp.page().history().clear()
             err = None
             try:
-                cntx = generate_context(
+                cntx = spyder.generate_context(
                     name=nameStr,
                     argspec=argSpecStr,
                     note=noteStr,
                     img_path=self.xrtQookDir,
                     math=True)
             except TypeError as err:
-                cntx = generate_context(
+                cntx = spyder.generate_context(
                     name=nameStr,
                     argspec=argSpecStr,
                     note=noteStr,
                     math=True)
 
             argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = sphinxify(textwrap.dedent(argDocStr), cntx)
+            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
             if err is None:
                 html2 = re.findall(' {4}return.*', html_text)[0]
                 sbsPath = re.sub('img_name',
@@ -1057,10 +899,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                      'xrtQook')))
                 spyder_crutch += "    });\n});\n</script>\n<body>"
                 new_html = re.sub('<body>', spyder_crutch, html_text, 1)
-            self.webHelp.setHtml(new_html, QtCore.QUrl(CSS_PATH))
+            self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
             self.currHtml = new_html
             self.webHelp.page().showHelp.connect(partial(
-                self.webHelp.setHtml, self.currHtml, QtCore.QUrl(CSS_PATH)))
+                self.webHelp.setHtml, self.currHtml, qt.QUrl(spyder.CSS_PATH)))
         else:
             argDocStr = u'{0}\nDefiniiton: {1}\n\nType: {2}\n\n\n'.format(
                 nameStr.upper(), argSpecStr, noteStr) + argDocStr
@@ -1095,23 +937,23 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.updateDescription()
 
     def showTutorial(self, argDocStr, name, img_path, delegateLink=False):
-        if isSphinx:
+        if spyder.isSphinx:
             err = None
             try:
-                cntx = generate_context(
+                cntx = spyder.generate_context(
                     name=name,
                     argspec="",
                     note="",
                     img_path=img_path,
                     math=True)
             except TypeError as err:
-                cntx = generate_context(
+                cntx = spyder.generate_context(
                     name=name,
                     argspec="",
                     note="",
                     math=True)
             argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = sphinxify(textwrap.dedent(argDocStr), cntx)
+            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
             if err is None:
                 html2 = re.findall(' {4}return.*', html_text)[0]
                 sbsPath = re.sub('img_name',
@@ -1130,7 +972,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                      'xrtQook')))
                 spyder_crutch += "    });\n});\n</script>\n<body>"
                 new_html = re.sub('<body>', spyder_crutch, html_text, 1)
-            self.webHelp.setHtml(new_html, QtCore.QUrl(CSS_PATH))
+            self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
             if delegateLink:
                 self.webHelp.page().setLinkDelegationPolicy(1)
                 self.webHelp.page().linkClicked.connect(partial(
@@ -1188,24 +1030,24 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         fVal + (maxFVLen - len(fVal)) * ' ')
                     argDocStr += spacerH
         argDocStr += '\n'
-        if isSphinx:
+        if spyder.isSphinx:
             self.webHelp.page().setLinkDelegationPolicy(0)
-            cntx = generate_context(
+            cntx = spyder.generate_context(
                 name="OpenCL Platforms and Devices",
                 argspec="",
                 note="",
                 math=True)
             argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = sphinxify(textwrap.dedent(argDocStr), cntx)
-            self.webHelp.setHtml(html_text, QtCore.QUrl(CSS_PATH))
+            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
+            self.webHelp.setHtml(html_text, qt.QUrl(spyder.CSS_PATH))
         else:
             argDocStr = "OpenCL Platforms and Devices\n\n" + argDocStr
             self.webHelp.setText(textwrap.dedent(argDocStr))
             self.webHelp.setReadOnly(True)
 
     def addObject(self, view, parent, obj):
-        child0 = QStandardItem('_object')
-        child1 = QStandardItem(str(obj))
+        child0 = qt.QStandardItem('_object')
+        child1 = qt.QStandardItem(str(obj))
         child0.setFlags(self.objectFlag)
         child1.setFlags(self.objectFlag)
         child0.setDropEnabled(False)
@@ -1219,9 +1061,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def addParam(self, parent, paramName, value, source=None):
         """Add a pair of Parameter-Value Items"""
         toolTip = None
-        child0 = QStandardItem(str(paramName))
+        child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child1 = QStandardItem(str(value))
+        child1 = qt.QStandardItem(str(value))
         child1.setFlags(self.valueFlag)
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\
@@ -1242,9 +1084,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def addProp(self, parent, propName):
         """Add non-editable Item"""
-        child0 = QStandardItem(str(propName))
+        child0 = qt.QStandardItem(str(propName))
         child0.setFlags(self.paramFlag)
-        child1 = QStandardItem()
+        child1 = qt.QStandardItem()
         child1.setFlags(self.paramFlag)
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
@@ -1253,9 +1095,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def addValue(self, parent, value, source=None):
         """Add editable Item"""
-        child0 = QStandardItem(str(value))
+        child0 = qt.QStandardItem(str(value))
         child0.setFlags(self.valueFlag)
-        child1 = QStandardItem()
+        child1 = qt.QStandardItem()
         child1.setFlags(self.paramFlag)
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
@@ -1403,11 +1245,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if str(parent.child(itemRow, 0).text()) == 'beam':
                     color = None
                     if str(item.text()) == 'None':
-                        color = QtCore.Qt.red
+                        color = qt.red
                         counter = 1
                     elif parent.child(itemRow, 0).foreground().color() ==\
-                            QtCore.Qt.red:
-                        color = QtCore.Qt.black
+                            qt.red:
+                        color = qt.black
                         counter = -1
                     else:
                         counter = 0
@@ -1421,25 +1263,25 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         if parent.parent() != self.rootPlotItem:
                             self.setIFontColor(parent.parent(), color)
                 if parent.child(itemRow, 0).foreground().color() !=\
-                        QtCore.Qt.red:
+                        qt.red:
                     for defArg, defArgVal in self.getParams(obj):
                         if str(defArg) == str(parent.child(itemRow, 0).text()):
                             if str(defArgVal) != str(item.text()):
-                                color = QtCore.Qt.blue
+                                color = qt.blue
                             else:
-                                color = QtCore.Qt.black
+                                color = qt.black
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
             item.model().blockSignals(False)
 
     def colorizeTabText(self, item):
         if item.model() == self.beamLineModel:
-            color = QtCore.Qt.red if self.blColorCounter > 0 else\
-                QtCore.Qt.black
+            color = qt.red if self.blColorCounter > 0 else\
+                qt.black
             self.tabs.tabBar().setTabTextColor(0, color)
         elif item.model() == self.plotModel:
-            color = QtCore.Qt.red if self.pltColorCounter > 0 else\
-                QtCore.Qt.black
+            color = qt.red if self.pltColorCounter > 0 else\
+                qt.black
             self.tabs.tabBar().setTabTextColor(2, color)
 
     def addMethod(self, name, parentItem, fdoc):
@@ -1471,10 +1313,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     break
 
             child0, child1 = self.addParam(methodOut, outval, beamName)
-            self.beamModel.appendRow([QStandardItem(beamName),
-                                      QStandardItem(outval),
-                                      QStandardItem(elstr),
-                                      QStandardItem(str(self.name_to_bl_pos(
+            self.beamModel.appendRow([qt.QStandardItem(beamName),
+                                      qt.QStandardItem(outval),
+                                      qt.QStandardItem(elstr),
+                                      qt.QStandardItem(str(self.name_to_bl_pos(
                                           elstr)))])
             try:
                 self.beamLine.beamsDict[beamName] = None
@@ -1520,7 +1362,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 for arg, arg_def in zip(
                                         inspect.getargspec(objf)[0][1:],
                                         inspect.getargspec(objf)[3]):
-                                    # child0 = QStandardItem(str(arg))
+                                    # child0 = qt.QStandardItem(str(arg))
                                     # child0.setFlags(self.paramFlag)
                                     if len(re.findall("axis",
                                                       arg.lower())) > 0:
@@ -1685,11 +1527,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     pass
                 else:
                     child1 = itemFrom.child(ii, 1)
-                    child0n = QStandardItem(child0.text())
+                    child0n = qt.QStandardItem(child0.text())
                     child0n.setFlags(child0.flags())
                     child0n.setForeground(child0.foreground())
                     if child1 is not None:
-                        child1n = QStandardItem(child1.text())
+                        child1n = qt.QStandardItem(child1.text())
                         child1n.setFlags(child1.flags())
                         itemTo.appendRow([child0n, child1n])
                     else:
@@ -1744,9 +1586,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def exportLayout(self):
         saveStatus = False
         if self.layoutFileName == "":
-            saveDialog = QFileDialog()
-            saveDialog.setFileMode(QFileDialog.AnyFile)
-            saveDialog.setAcceptMode(QFileDialog.AcceptSave)
+            saveDialog = qt.QFileDialog()
+            saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+            saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
             saveDialog.setNameFilter("XML files (*.xml)")
             if (saveDialog.exec_()):
                 self.layoutFileName = saveDialog.selectedFiles()[0]
@@ -1846,22 +1688,22 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def importLayout(self):
         if not self.isEmpty:
-            msgBox = QMessageBox()
+            msgBox = qt.QMessageBox()
             if msgBox.warning(self,
                               'Warning',
                               'Current layout will be overwritten. Continue?',
-                              buttons=QMessageBox.Yes |
-                              QMessageBox.No,
-                              defaultButton=QMessageBox.No)\
-                    == QMessageBox.Yes:
+                              buttons=qt.QMessageBox.Yes |
+                              qt.QMessageBox.No,
+                              defaultButton=qt.QMessageBox.No)\
+                    == qt.QMessageBox.Yes:
                 self.isEmpty = True
         if self.isEmpty:
             self.initAllModels()
             self.initAllTrees()
             openFileName = ""
-            openDialog = QFileDialog()
-            openDialog.setFileMode(QFileDialog.ExistingFile)
-            openDialog.setAcceptMode(QFileDialog.AcceptOpen)
+            openDialog = qt.QFileDialog()
+            openDialog.setFileMode(qt.QFileDialog.ExistingFile)
+            openDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
             openDialog.setNameFilter("XML files (*.xml)")
             if (openDialog.exec_()):
                 openFileName = openDialog.selectedFiles()[0]
@@ -1964,7 +1806,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 itemType = str(childImport.attrib['type'])
                 itemTag = str(childImport.tag)
                 itemText = str(childImport.text)
-                child0 = QStandardItem(itemTag)
+                child0 = qt.QStandardItem(itemTag)
                 if itemType == "flat":
                     if rootModel.model() != self.beamModel:
                         child0 = rootModel.appendRow(child0)
@@ -2034,7 +1876,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                         loadedParams[counter][1]) and\
                                         not loadedParams[counter][2]:
                                     self.setIFontColor(child0,
-                                                       QtCore.Qt.blue)
+                                                       qt.blue)
                             else:
                                 for ix in range(len(loadedParams)):
                                     if str(argName) == str(
@@ -2045,7 +1887,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                             argVal = loadedParams[ix][1]
                                             self.setIFontColor(
                                                 child0,
-                                                QtCore.Qt.blue)
+                                                qt.blue)
                                         break
                                 child0.setText(str(argName))
                                 child0.setFlags(self.paramFlag)
@@ -2077,7 +1919,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if item.child(ii, 1) is not None and view is not None:
                     iWidget = view.indexWidget(item.child(ii, 1).index())
                     if iWidget is not None:
-                        if iWidget.staticMetaObject.className() == 'QComboBox':
+                        if iWidget.staticMetaObject.className() == 'qt.QComboBox':  # analysis:ignore
                             if str(iItem.text()) == "targetOpenCL":
                                 chItemText = self.OCLModel.item(
                                             iWidget.currentIndex(), 1).text()
@@ -2087,7 +1929,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     str(chItemText):
                                 item.child(ii, 1).setText(chItemText)
                         elif iWidget.staticMetaObject.className() ==\
-                                'QListWidget':
+                                'qt.QListWidget':
                             chItemText = "("
                             for rState in range(iWidget.count()):
                                 if int(iWidget.item(rState).checkState()) == 2:
@@ -2102,13 +1944,13 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def updateBeamImport(self):
         self.rootBeamItem.setChild(
             0, 1,
-            QStandardItem("Global"))
+            qt.QStandardItem("Global"))
         self.rootBeamItem.setChild(
             0, 2,
-            QStandardItem("None"))
+            qt.QStandardItem("None"))
         self.rootBeamItem.setChild(
             0, 3,
-            QStandardItem(str(0)))
+            qt.QStandardItem(str(0)))
         for ibl in range(self.rootBLItem.rowCount()):
             elItem = self.rootBLItem.child(ibl, 0)
             elNameStr = str(elItem.text())
@@ -2129,13 +1971,13 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                 irow, 0).text()):
                                             self.rootBeamItem.setChild(
                                                 irow, 1,
-                                                QStandardItem(child0.text()))
+                                                qt.QStandardItem(child0.text()))  # analysis:ignore
                                             self.rootBeamItem.setChild(
                                                 irow, 2,
-                                                QStandardItem(elNameStr))
+                                                qt.QStandardItem(elNameStr))
                                             self.rootBeamItem.setChild(
                                                 irow, 3,
-                                                QStandardItem(str(
+                                                qt.QStandardItem(str(
                                                     self.name_to_bl_pos(
                                                         elNameStr))))
 
@@ -2170,12 +2012,12 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 and paramName.lower() != 'beamline'\
                                 and paramName.lower() != 'filamentbeam':
                             if item.text() == 'parameters':  # input beam
-                                combo = QComboBox()
-                                fModel0 = QSortFilterProxyModel()
+                                combo = qt.QComboBox()
+                                fModel0 = qt.QSortFilterProxyModel()
                                 fModel0.setSourceModel(self.beamModel)
                                 fModel0.setFilterKeyColumn(1)
                                 fModel0.setFilterRegExp('Global')
-                                fModel = QSortFilterProxyModel()
+                                fModel = qt.QSortFilterProxyModel()
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(3)
                                 regexp = self.int_to_regexp(
@@ -2183,11 +2025,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
                             elif item.text() == 'output':  # output beam
-                                fModel0 = QSortFilterProxyModel()
+                                fModel0 = qt.QSortFilterProxyModel()
                                 fModel0.setSourceModel(self.beamModel)
                                 fModel0.setFilterKeyColumn(1)
                                 fModel0.setFilterRegExp(paramName)
-                                fModel = QSortFilterProxyModel()
+                                fModel = qt.QSortFilterProxyModel()
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(2)
                                 fModel.setFilterRegExp(str(
@@ -2273,7 +2115,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             view.setIndexWidget(child1.index(), combo)
                         elif len(re.findall("distE",
                                             paramName)) > 0:
-                            combo = QComboBox()
+                            combo = qt.QComboBox()
                             for icd in range(item.parent().rowCount()):
                                 if item.parent().child(icd,
                                                        0).text() == '_object':
@@ -2296,17 +2138,17 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             view.setIndexWidget(child1.index(), combo)
                         elif len(re.findall("rayflag",
                                             paramName.lower())) > 0:
-                            combo = QListWidget()
+                            combo = qt.QListWidget()
                             for iray, ray in enumerate(['Good',
                                                         'Out',
                                                         'Over',
                                                         'Alive']):
-                                rayItem = QListWidgetItem(str(ray))
+                                rayItem = qt.QListWidgetItem(str(ray))
                                 if len(re.findall(str(iray + 1),
                                                   str(value))) > 0:
-                                    rayItem.setCheckState(QtCore.Qt.Checked)
+                                    rayItem.setCheckState(qt.Checked)
                                 else:
-                                    rayItem.setCheckState(QtCore.Qt.Unchecked)
+                                    rayItem.setCheckState(qt.Unchecked)
                                 combo.addItem(rayItem)
                             combo.setMaximumHeight((
                                 combo.sizeHintForRow(1) + 1) *
@@ -2314,10 +2156,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             view.setIndexWidget(child1.index(), combo)
                         elif len(re.findall("targetopencl",
                                             paramName.lower())) > 0:
-                            combo = QComboBox()
+                            combo = qt.QComboBox()
                             combo.setModel(self.OCLModel)
                             oclInd = self.OCLModel.findItems(
-                                value, flags=QtCore.Qt.MatchExactly, column=1)
+                                value, flags=qt.MatchExactly, column=1)
                             if len(oclInd) > 0:
                                 oclInd = oclInd[0].row()
                             else:
@@ -2331,11 +2173,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             view.setIndexWidget(child1.index(), combo)
                         if combo is not None:
                             if combo.staticMetaObject.className() ==\
-                                    'QListWidget':
+                                    'qt.QListWidget':
                                 combo.clicked.connect(
                                     partial(self.processListWidget, child1))
                             elif combo.staticMetaObject.className() ==\
-                                    'QComboBox':
+                                    'qt.QComboBox':
                                 combo.currentIndexChanged['QString'].connect(
                                     child1.setText)
                 self.addCombo(view, child0)
@@ -2353,10 +2195,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         item.setText(chItemText)
 
     def addEditableCombo(self, model, value):
-        combo = QComboBox()
+        combo = qt.QComboBox()
         combo.setModel(model)
         if combo.findText(value) < 0:
-            newItem = QStandardItem(value)
+            newItem = qt.QStandardItem(value)
             model.appendRow(newItem)
         combo.setCurrentIndex(combo.findText(value))
         combo.setEditable(True)
@@ -2364,7 +2206,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         return combo
 
     def addStandardCombo(self, model, value):
-        combo = QComboBox()
+        combo = qt.QComboBox()
         combo.setModel(model)
         combo.setCurrentIndex(combo.findText(value))
         return combo
@@ -2384,7 +2226,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 index = index.parent()
                 level += 1
 
-        menu = QMenu()
+        menu = qt.QMenu()
         if level == 0 or level == 100:
             menu.addAction("Load Layout", self.importLayout)
             menu.addAction("Save Layout", self.exportLayout)
@@ -2397,7 +2239,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                          [rsources, roes, rapts, rscreens]):
                 for elname in tmodule.__all__:
                     objName = '{0}.{1}'.format(tmodule.__name__, elname)
-                    elAction = QAction(self)
+                    elAction = qt.QAction(self)
                     elAction.setText(elname)
                     elAction.hovered.connect(partial(self.showObjHelp,
                                                      objName))
@@ -2438,7 +2280,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                   objf.__name__)
                         fdoc = re.findall(r"Returned values:.*", fdoc)
                         if len(fdoc) > 0:
-                            methAction = QAction(self)
+                            methAction = qt.QAction(self)
                             methAction.setText(namef + '()')
                             methAction.hovered.connect(
                                 partial(self.showObjHelp, objfNm))
@@ -2476,7 +2318,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 index = index.parent()
                 level += 1
 
-        menu = QMenu()
+        menu = qt.QMenu()
 
         if level == 0 or level == 100:
             menu.addAction(self.tr("Add Plot"), self.addPlot)
@@ -2504,12 +2346,12 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 index = index.parent()
                 level += 1
 
-        menu = QMenu()
+        menu = qt.QMenu()
 
         matMenu = menu.addMenu(self.tr("Add Material"))
         for mName in rmats.__all__:
             objName = '{0}.{1}'.format(rmats.__name__, mName)
-            matAction = QAction(self)
+            matAction = qt.QAction(self)
             matAction.setText(mName)
             matAction.hovered.connect(partial(self.showObjHelp, objName))
             matAction.triggered.connect(partial(self.addMaterial, mName,
@@ -2593,7 +2435,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def update_beamline_beams(self, text):
         sender = self.sender()
         if sender is not None:
-            if sender.staticMetaObject.className() == 'QComboBox':
+            if sender.staticMetaObject.className() == 'qt.QComboBox':
                 currentIndex = int(sender.currentIndex())
                 beamValues = list(self.beamLine.beamsDict.values())
                 beamKeys = list(self.beamLine.beamsDict.keys())
@@ -2991,7 +2833,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 self.bl_propagate_flow(startFrom)
 
     def bl_propagate_flow(self, startFrom):
-        objThread = QtCore.QThread(self)
+        objThread = qt.QThread(self)
         obj = PropagationConnect()
         obj.finished.connect(objThread.quit)
         obj.rayPathReady.connect(self.bl_run_glow)
@@ -3380,7 +3222,7 @@ if __name__ == '__main__':
         if self.glowOnly:
             self.glowCode = fullCode
         else:
-            if isSpyderlib:
+            if spyder.isSpyderlib:
                 self.codeEdit.set_text(fullCode)
             else:
                 self.codeEdit.setText(fullCode)
@@ -3394,9 +3236,9 @@ if __name__ == '__main__':
     def saveCode(self):
         saveStatus = False
         if self.saveFileName == "":
-            saveDialog = QFileDialog()
-            saveDialog.setFileMode(QFileDialog.AnyFile)
-            saveDialog.setAcceptMode(QFileDialog.AcceptSave)
+            saveDialog = qt.QFileDialog()
+            saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+            saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
             saveDialog.setNameFilter("Python files (*.py)")
             if (saveDialog.exec_()):
                 self.saveFileName = saveDialog.selectedFiles()[0]
@@ -3412,7 +3254,7 @@ if __name__ == '__main__':
                     os.path.basename(str(self.saveFileName)))
                 self.tabs.setTabText(
                     5, os.path.basename(str(self.saveFileName)))
-                if isSpyderConsole:
+                if spyder.isSpyderConsole:
                     self.codeConsole.wdir = os.path.dirname(
                         str(self.saveFileName))
                 else:
@@ -3439,7 +3281,7 @@ if __name__ == '__main__':
     def execCode(self):
         self.saveCode()
         self.tabs.setCurrentWidget(self.codeConsole)
-        if isSpyderConsole:
+        if spyder.isSpyderConsole:
             self.codeConsole.fname = str(self.saveFileName)
             self.codeConsole.create_process()
         else:
@@ -3451,21 +3293,21 @@ if __name__ == '__main__':
 
     def aboutCode(self):
         import platform
-        from ..version import __version__ as xrtversion
+        from ...version import __version__ as xrtversion
 #        if use_pyside:
-#            Qt_version = QtCore.__version__
+#            Qt_version = qt.__version__
 #            PyQt_version = PySide.__version__
 #        else:
-        Qt_version = QtCore.QT_VERSION_STR
-        PyQt_version = QtCore.PYQT_VERSION_STR
+        Qt_version = qt.QT_VERSION_STR
+        PyQt_version = qt.PYQT_VERSION_STR
 
-        msgBox = QMessageBox()
-        msgBox.setWindowIcon(QIcon(
+        msgBox = qt.QMessageBox()
+        msgBox.setWindowIcon(qt.QIcon(
             os.path.join(self.xrtQookDir, '_icons', 'xrQt1.ico')))
         msgBox.setWindowTitle("About xrtQook")
-        msgBox.setIconPixmap(QPixmap(
+        msgBox.setIconPixmap(qt.QPixmap(
             os.path.join(self.xrtQookDir, '_icons', 'logo-xrtQt.png')))
-        msgBox.setTextFormat(QtCore.Qt.RichText)
+        msgBox.setTextFormat(qt.RichText)
         msgBox.setText("Beamline layout manipulation and automated code\
  generation tool for the <a href='http://pythonhosted.org/xrt'>xrt ray tracing\
  package</a>.\nFor a quick start see this short \
@@ -3479,36 +3321,36 @@ if __name__ == '__main__':
 \nLicensed under the terms of the MIT License\nMarch 2016\
 \n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(
                 locos, platform.python_version(),
-                Qt_version, QtName, PyQt_version)
+                Qt_version, qt.QtName, PyQt_version)
         infText += '\npyopencl {}'.format(
             cl.VERSION if isOpenCL else 'not found')
         infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
         msgBox.setInformativeText(infText)
-        msgBox.setStandardButtons(QMessageBox.Ok)
+        msgBox.setStandardButtons(qt.QMessageBox.Ok)
         msgBox.exec_()
 
     def closeEvent(self, event):
-        ret = QMessageBox.question(
+        ret = qt.QMessageBox.question(
             self, 'Exit',
             "Do you want to save Beamline Layout before exit?",
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-            QMessageBox.Cancel)
+            qt.QMessageBox.Yes | qt.QMessageBox.No | qt.QMessageBox.Cancel,
+            qt.QMessageBox.Cancel)
 
-        if ret == QMessageBox.Yes:
+        if ret == qt.QMessageBox.Yes:
             if self.exportLayout():
                 event.accept()
             else:
                 event.ignore()
-        elif ret == QMessageBox.Cancel:
+        elif ret == qt.QMessageBox.Cancel:
             event.ignore()
         else:
             event.accept()
 
 
-class PropagationConnect(QtCore.QObject):
-    propagationProceed = QtCore.pyqtSignal(tuple)
-    rayPathReady = QtCore.pyqtSignal(list)
-    finished = QtCore.pyqtSignal()
+class PropagationConnect(qt.QObject):
+    propagationProceed = qt.pyqtSignal(tuple)
+    rayPathReady = qt.pyqtSignal(list)
+    finished = qt.pyqtSignal()
 
     def propagate_flow_thread(self, blRef, startFrom):
         self.propagationProceed.emit((0.5, "Starting propagation"))
@@ -3521,8 +3363,9 @@ class PropagationConnect(QtCore.QObject):
         self.rayPathReady.emit(rayPath)
         self.finished.emit()
 
+
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    app = qt.QApplication(sys.argv)
     ex = XrtQook()
     ex.setWindowTitle("xrtQook")
     ex.show()
