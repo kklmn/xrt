@@ -33,13 +33,14 @@ __date__ = "08 Mar 2016"
 
 import sys
 import os
-sys.path.append(os.path.join('..', '..', '..'))
-if str(sys.executable).endswith('pythonw.exe'):
-    sys.stdout = open("output.log", "w")
+sys.path.append(os.path.join('..', '..'))
 import xrt.gui.xrtQook as xQ
 
 
 if __name__ == '__main__':
+    if str(sys.executable).endswith('pythonw.exe'):
+        sys.stdout = open("output.log", "w")
+
     app = xQ.qt.QApplication(sys.argv)
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")

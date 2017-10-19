@@ -97,7 +97,7 @@ try:
 except ImportError:
     isOpenCL = False
 
-from .. import myspyder as spyder  # analysis:ignore
+from ..commons import myspyder as spyder  # analysis:ignore
 
 sys.path.append(os.path.join('..', '..', '..'))
 import xrt  #analysis:ignore
@@ -111,14 +111,15 @@ from ...backends.raycing import oes as roes  # analysis:ignore
 from ...backends.raycing import run as rrun  # analysis:ignore
 from ... import plotter as xrtplot  # analysis:ignore
 from ... import runner as xrtrun  # analysis:ignore
-from .. import qt  # analysis:ignore
-from .. import gl  # analysis:ignore
+from ..commons import qt  # analysis:ignore
+from ..commons import gl  # analysis:ignore
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
 
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 myTab = 4*" "
+
 
 try:
     class WebPage(qt.QtWeb.QWebPage):

@@ -20,8 +20,8 @@ from ...backends import raycing
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
 from ...backends.raycing import screens as rscreens  # analysis:ignore
-from .. import qt
-from .. import gl
+from ..commons import qt
+from ..commons import gl
 
 
 class mySlider(qt.QSlider):
