@@ -225,7 +225,7 @@ class RectangularAperture(object):
     def local_to_global(self, glo, **kwargs):
         raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays):
+    def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -233,7 +233,8 @@ class RectangularAperture(object):
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
         *nrays* of samples are randomly distributed over the slit area.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         nrays = int(nrays)
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
@@ -250,6 +251,29 @@ class RectangularAperture(object):
         self.local_to_global(glo)
         rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
         return wave
+
+    def diffract(self, wave=None, nrays='auto'):
+        """
+        Propagates the incoming *wave* through an aperture using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+            
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+        .. Returned values: beamLocal
+        """
+        from . import waves as rw
+        waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+        waveOnSelf = self.prepare_wave(wave.parent, waveSize, rw)
+        rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return waveOnSelf
 
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
@@ -445,7 +469,7 @@ class RoundAperture(object):
     def local_to_global(self, glo, **kwargs):
         raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays):
+    def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -453,7 +477,8 @@ class RoundAperture(object):
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
         *nrays* of samples are randomly distributed over the slit area.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         nrays = int(nrays)
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
@@ -470,6 +495,29 @@ class RoundAperture(object):
         self.local_to_global(glo)
         rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
         return wave
+
+    def diffract(self, wave=None, nrays='auto'):
+        """
+        Propagates the incoming *wave* through an aperture using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+            
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+        .. Returned values: beamLocal
+        """
+        from . import waves as rw
+        waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+        waveOnSelf = self.prepare_wave(wave.parent, waveSize, rw)
+        rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return waveOnSelf
 
 
 class RoundBeamStop(RoundAperture):

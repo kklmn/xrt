@@ -866,6 +866,7 @@ class OE(object):
             absorbedLb.absorb_intensity(beam)
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
+        lb.parent = self
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -1025,7 +1026,7 @@ class OE(object):
 
         raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays, shape='auto', area='auto'):
+    def prepare_wave(self, prevOE, nrays, shape='auto', area='auto', rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -1034,7 +1035,8 @@ class OE(object):
         *nrays* of samples are randomly distributed over the surface within
         self.limPhysX limits.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         nrays = int(nrays)
         lb = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
@@ -1092,6 +1094,30 @@ class OE(object):
         rw.prepare_wave(
             prevOE, waveLocal, waveGlobal.x, waveGlobal.y, waveGlobal.z)
         return waveLocal
+
+    def diffract(self, wave=None, nrays='auto'):
+        """
+        Propagates the incoming *wave* through an optical element using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+            
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+        .. Returned values: beamGlobal, beamLocal
+        """
+        from . import waves as rw
+        waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+        waveOnSelf = self.prepare_wave(wave.parent, waveSize, rw)
+        beamToSelf = rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return (self.reflect(beamToSelf, noIntersectionSearch=True)[0],
+                waveOnSelf)
 
     def _set_t(self, xyz=None, abc=None, surfPhys=None,
                defSize=raycing.maxHalfSizeOfOE):

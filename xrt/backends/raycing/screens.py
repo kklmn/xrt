@@ -188,7 +188,7 @@ class Screen(object):
                                inspect.currentframe())
         return blo
 
-    def prepare_wave(self, prevOE, dim1, dim2, dy=0):
+    def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -199,7 +199,8 @@ class Screen(object):
         generally of different 1D shapes. They are used to create a 2D mesh by
         ``meshgrid``.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         d1s, d2s = np.meshgrid(dim1, dim2)
         d1s = d1s.flatten()
@@ -235,6 +236,39 @@ class Screen(object):
         wave.toOE = self
         wave.area = (np.ones_like(d1s) * dS).sum()
         return rw.prepare_wave(prevOE, wave, xglo, yglo+dy, zglo)
+
+    def expose_wave(self, wave=None, dim1=0, dim2=0):
+        """
+        Propagates the incoming *wave* through an aperture using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+            
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+        .. Returned values: beamLocal
+        """
+        from . import waves as rw
+        if isinstance(dim1, int) or isinstance(dim2, int):
+            prevOE = wave.parent
+            if isinstance(prevOE, raycing.oes.DCM):
+                locBeam = self.expose(prevOE.local_to_global(wave),
+                                      is2ndXtal=True)                
+            else:
+                locBeam = self.expose(prevOE.local_to_global(wave))
+            if isinstance(dim1, int):
+                dim1 = np.linspace(np.min(locBeam.x), np.max(locBeam.x), dim1)
+            if isinstance(dim2, int):
+                dim2 = np.linspace(np.min(locBeam.z), np.max(locBeam.z), dim2)
+        waveOnSelf = self.prepare_wave(wave.parent, dim1, dim2, rw=rw)
+        rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return waveOnSelf
 
 
 class HemisphericScreen(Screen):
