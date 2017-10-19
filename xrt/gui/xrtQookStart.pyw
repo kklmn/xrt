@@ -38,8 +38,11 @@ import xrt.gui.xrtQook as xQ
 
 
 if __name__ == '__main__':
-    if str(sys.executable).endswith('pythonw.exe'):
-        sys.stdout = open("output.log", "w")
+    if any('spyder' in name.lower() for name in os.environ):
+        pass  # spyder is present
+    else:
+        if str(sys.executable).endswith('pythonw.exe'):
+            sys.stdout = open("output.log", "w")
 
     app = xQ.qt.QApplication(sys.argv)
     ex = xQ.XrtQook()
