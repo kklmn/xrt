@@ -116,8 +116,8 @@ from ..commons import gl  # analysis:ignore
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
 
-path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))))
+path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
 myTab = 4*" "
 
 
