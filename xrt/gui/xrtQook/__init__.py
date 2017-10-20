@@ -1980,7 +1980,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if item.child(ii, 1) is not None and view is not None:
                     iWidget = view.indexWidget(item.child(ii, 1).index())
                     if iWidget is not None:
-                        if iWidget.staticMetaObject.className() == 'qt.QComboBox':  # analysis:ignore
+                        if iWidget.staticMetaObject.className() == 'QComboBox':  # analysis:ignore
                             if str(iItem.text()) == "targetOpenCL":
                                 chItemText = self.OCLModel.item(
                                             iWidget.currentIndex(), 1).text()
@@ -1990,7 +1990,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     str(chItemText):
                                 item.child(ii, 1).setText(chItemText)
                         elif iWidget.staticMetaObject.className() ==\
-                                'qt.QListWidget':
+                                'QListWidget':
                             chItemText = "("
                             for rState in range(iWidget.count()):
                                 if int(iWidget.item(rState).checkState()) == 2:
@@ -2234,11 +2234,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             view.setIndexWidget(child1.index(), combo)
                         if combo is not None:
                             if combo.staticMetaObject.className() ==\
-                                    'qt.QListWidget':
+                                    'QListWidget':
                                 combo.clicked.connect(
                                     partial(self.processListWidget, child1))
                             elif combo.staticMetaObject.className() ==\
-                                    'qt.QComboBox':
+                                    'QComboBox':
                                 combo.currentIndexChanged['QString'].connect(
                                     child1.setText)
                 self.addCombo(view, child0)
@@ -2496,7 +2496,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def update_beamline_beams(self, text):
         sender = self.sender()
         if sender is not None:
-            if sender.staticMetaObject.className() == 'qt.QComboBox':
+            if sender.staticMetaObject.className() == 'QComboBox':
                 currentIndex = int(sender.currentIndex())
                 beamValues = list(self.beamLine.beamsDict.values())
                 beamKeys = list(self.beamLine.beamsDict.keys())
