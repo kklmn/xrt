@@ -237,7 +237,7 @@ class Screen(object):
         wave.area = (np.ones_like(d1s) * dS).sum()
         return rw.prepare_wave(prevOE, wave, xglo, yglo+dy, zglo)
 
-    def expose_wave(self, wave=None, dim1=0, dim2=0):
+    def expose_wave(self, wave=None, beam=None, dim1=0, dim2=0):
         """
         Propagates the incoming *wave* through an aperture using the
         Kirchhoff diffraction theorem. Returned global and local beams can be
@@ -246,7 +246,10 @@ class Screen(object):
 
         *wave*: Beam object
             Local beam on the surface of the previous optical element.
-            
+
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
         *nrays*: 'auto' or int
             Dimension of the created wave. If 'auto' - the same as the incoming
             wave.
@@ -254,19 +257,37 @@ class Screen(object):
         .. Returned values: beamLocal
         """
         from . import waves as rw
+        prevOE = wave.parent
+        if self.bl is not None:
+            if raycing.is_auto_align_required(self):
+                if beam is not None:
+                    self.bl.auto_align(self, beam)
+                elif 'source' in str(type(prevOE)):
+                    self.bl.auto_align(self, wave)
+                else:
+                    self.bl.auto_align(self, prevOE.local_to_global(
+                        wave, returnBeam=True))
+
         if isinstance(dim1, int) or isinstance(dim2, int):
             prevOE = wave.parent
-            if isinstance(prevOE, raycing.oes.DCM):
-                locBeam = self.expose(prevOE.local_to_global(wave),
-                                      is2ndXtal=True)                
+            if beam is None:
+                if isinstance(prevOE, raycing.oes.DCM):
+                    locBeam = self.expose(prevOE.local_to_global(
+                        wave, returnBeam=True, is2ndXtal=True))
+                else:
+                    locBeam = self.expose(prevOE.local_to_global
+                        (wave, returnBeam=True))
             else:
-                locBeam = self.expose(prevOE.local_to_global(wave))
+                locBeam = self.expose(beam)
             if isinstance(dim1, int):
                 dim1 = np.linspace(np.min(locBeam.x), np.max(locBeam.x), dim1)
             if isinstance(dim2, int):
                 dim2 = np.linspace(np.min(locBeam.z), np.max(locBeam.z), dim2)
         waveOnSelf = self.prepare_wave(wave.parent, dim1, dim2, rw=rw)
-        rw.diffract(wave, waveOnSelf)
+        if 'source' in str(type(prevOE)):
+            prevOE.shine(wave=waveOnSelf)
+        else:
+            rw.diffract(wave, waveOnSelf)
         waveOnSelf.parent = self
         return waveOnSelf
 

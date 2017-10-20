@@ -663,6 +663,19 @@ def append_to_flow(meth, bOut, frame):
             oe.bl.flow.append([oe.name, meth.__func__,
                                kwArgsIn, kwArgsOut])
 
+def is_auto_align_required(oe):
+    needAutoAlign = False
+    for autoParam in ["_center", "_pitch", "_bragg"]:
+        naParam = autoParam.strip("_")
+        if hasattr(oe, autoParam) and\
+                hasattr(oe, naParam):
+            if str(getattr(oe, autoParam)) ==\
+                    str(getattr(oe, naParam)):
+                needAutoAlign = True
+#                print("{0}.{1} requires auto-calculation".format(
+#                    self.name, naParam))
+    return needAutoAlign
+   
 
 class BeamLine(object):
     u"""

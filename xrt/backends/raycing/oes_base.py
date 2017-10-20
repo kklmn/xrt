@@ -973,7 +973,7 @@ class OE(object):
                                inspect.currentframe())
         return gb, lbN
 
-    def local_to_global(self, lb, **kwargs):
+    def local_to_global(self, lb, returnBeam=False, **kwargs):
         dx, dy, dz = 0, 0, 0
         if isinstance(self, DCM):
             is2ndXtal = kwargs.get('is2ndXtal', False)
@@ -1024,7 +1024,13 @@ class OE(object):
             cosY, sinY = np.cos(roll), np.sin(roll)
             lb.Es[:], lb.Ep[:] = raycing.rotate_y(lb.Es, lb.Ep, cosY, -sinY)
 
-        raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
+        if returnBeam:
+            retGlo = rs.Beam(copyFrom=lb)
+            raycing.virgin_local_to_global(self.bl, retGlo,
+                                           self.center, **kwargs)
+            return retGlo
+        else:
+            raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, shape='auto', area='auto', rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
@@ -1095,7 +1101,7 @@ class OE(object):
             prevOE, waveLocal, waveGlobal.x, waveGlobal.y, waveGlobal.z)
         return waveLocal
 
-    def diffract(self, wave=None, nrays='auto'):
+    def diffract(self, wave=None, beam=None, nrays='auto'):
         """
         Propagates the incoming *wave* through an optical element using the
         Kirchhoff diffraction theorem. Returned global and local beams can be
@@ -1104,6 +1110,9 @@ class OE(object):
 
         *wave*: Beam object
             Local beam on the surface of the previous optical element.
+
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
             
         *nrays*: 'auto' or int
             Dimension of the created wave. If 'auto' - the same as the incoming
@@ -1113,8 +1122,21 @@ class OE(object):
         """
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
-        waveOnSelf = self.prepare_wave(wave.parent, waveSize, rw)
-        beamToSelf = rw.diffract(wave, waveOnSelf)
+        prevOE = wave.parent
+        if self.bl is not None:
+            if raycing.is_auto_align_required(self):
+                if beam is not None:
+                    self.bl.auto_align(self, beam)
+                elif 'source' in str(type(prevOE)):
+                    self.bl.auto_align(self, wave)
+                else:
+                    self.bl.auto_align(self, prevOE.local_to_global(
+                        wave, returnBeam=True))
+        waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
+        if 'source' in str(type(prevOE)):
+            beamToSelf = prevOE.shine(wave=waveOnSelf)
+        else:
+            beamToSelf = rw.diffract(wave, waveOnSelf)
         waveOnSelf.parent = self
         return (self.reflect(beamToSelf, noIntersectionSearch=True)[0],
                 waveOnSelf)
