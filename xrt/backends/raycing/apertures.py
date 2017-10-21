@@ -265,10 +265,7 @@ class RectangularAperture(object):
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
         prevOE = wave.parent
-<<<<<<< HEAD
         print "Diffract", self.name, " Prev OE:", prevOE.name
-=======
->>>>>>> origin/testing
         if self.bl is not None:
             if raycing.is_auto_align_required(self):
                 if beam is not None:
@@ -280,19 +277,11 @@ class RectangularAperture(object):
                         wave, returnBeam=True))
         waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
         if 'source' in str(type(prevOE)):
-<<<<<<< HEAD
             retGlo = prevOE.shine(wave=waveOnSelf)
         else:
             retGlo = rw.diffract(wave, waveOnSelf)
         waveOnSelf.parent = self
         return retGlo, waveOnSelf
-=======
-            prevOE.shine(wave=waveOnSelf)
-        else:
-            rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parent = self
-        return self.local_to_global(waveOnSelf, returnBeam=True), waveOnSelf
->>>>>>> origin/testing
 
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
