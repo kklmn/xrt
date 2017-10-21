@@ -3214,7 +3214,7 @@ if __name__ == '__main__':
                         ieinit = ieinit.rstrip(",") + "),"
                     else:
                         paraname = str(tItem.child(iep, 0).text())
-                        paravalue = tItem.child(iep, 1).text()
+                        paravalue = str(tItem.child(iep, 1).text())
                         if str(paravalue) != str(arg_def):
                             if paraname == "fluxKind":
                                 ieinit += '\n{2}{0}={1},'.format(
