@@ -1124,7 +1124,10 @@ class OE(object):
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
         prevOE = wave.parent
+<<<<<<< HEAD
         print "Diffract on", self.name, " Prev OE:", prevOE.name
+=======
+>>>>>>> origin/testing
         if self.bl is not None:
             if raycing.is_auto_align_required(self):
                 if beam is not None:
@@ -1137,6 +1140,7 @@ class OE(object):
         waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
         if 'source' in str(type(prevOE)):
             beamToSelf = prevOE.shine(wave=waveOnSelf)
+<<<<<<< HEAD
             nIS = False
         else:
             beamToSelf = rw.diffract(wave, waveOnSelf)
@@ -1144,6 +1148,13 @@ class OE(object):
         retGlo, retLoc = self.reflect(beamToSelf, noIntersectionSearch=nIS)
         retLoc.parent = self
         return retGlo, retLoc
+=======
+        else:
+            beamToSelf = rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return (self.reflect(beamToSelf, noIntersectionSearch=True)[0],
+                waveOnSelf)
+>>>>>>> origin/testing
 
     def _set_t(self, xyz=None, abc=None, surfPhys=None,
                defSize=raycing.maxHalfSizeOfOE):

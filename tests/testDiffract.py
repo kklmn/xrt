@@ -15,7 +15,11 @@ Created with xrtQook
 
 import numpy as np
 import sys
+<<<<<<< HEAD
 sys.path.append(r"/home/roman/xrt")
+=======
+sys.path.append(r"D:\xrt")
+>>>>>>> origin/testing
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats
@@ -49,6 +53,7 @@ CVDmirror = rmats.Material(
     rho=3.5,
     name=None)
 
+<<<<<<< HEAD
 nrays=2e6
 apSize = 0.25
 def build_beamline():
@@ -80,25 +85,58 @@ def build_beamline():
         xPrimeMaxAutoReduce=False,
         zPrimeMaxAutoReduce=False,
         targetOpenCL=r"GPU")
+=======
+
+def build_beamline():
+    beamLine = raycing.BeamLine(
+        alignE=9001,
+        alignMode=True)
+
+    beamLine.Wiggler = rsources.Wiggler(
+        K=35,
+        period=150,
+        n=11,
+        bl=beamLine,
+        center=[0, 0, 0],
+        eE=2.9,
+        eI=0.25,
+        eEpsilonX=18.1,
+        eEpsilonZ=0.0362,
+        betaX=9.1,
+        betaZ=2.8,
+        B0=2.5,
+        eMin=8995,
+        eMax=9005,
+        xPrimeMax=1.,
+        zPrimeMax=0.375)
+>>>>>>> origin/testing
 
     beamLine.FEMask = rapts.RectangularAperture(
         bl=beamLine,
         name=r"FEMask",
         center=[0, 12000, 0],
+<<<<<<< HEAD
         opening=[-apSize, apSize, -apSize, apSize])
+=======
+        opening=[-16, 16, -1.75, 1.75])
+>>>>>>> origin/testing
 
     beamLine.C_Filter = roes.Plate(
         t=0.02,
         bl=beamLine,
         name=r"C Filter",
+<<<<<<< HEAD
         limPhysX=[-apSize, apSize],
         limPhysY=[-apSize, apSize],
         limPhysX2=[-apSize, apSize],
         limPhysY2=[-apSize, apSize],
+=======
+>>>>>>> origin/testing
         center=[0, 13600, 0],
         pitch=np.pi/2.,
         material=CVD)
 
+<<<<<<< HEAD
 #    beamLine.WhiteBeamSlits = rapts.RectangularAperture(
 #        bl=beamLine,
 #        name=r"White Beam Slits",
@@ -116,10 +154,29 @@ def build_beamline():
         material=Rh,
         limPhysX=[-apSize*2, apSize*2],
         limPhysY=[-100, 100])
+=======
+    beamLine.WhiteBeamSlits = rapts.RectangularAperture(
+        bl=beamLine,
+        name=r"White Beam Slits",
+        center=[0, 14000, 0],
+        opening=[-15, 15, -15, 15])
+
+    beamLine.M1 = roes.ToroidMirror(
+        R=7e6,
+        r=69.81,
+        bl=beamLine,
+        name=r"M1",
+        center=[0, 14600, 0],
+        pitch=np.radians(0.15),
+        material=Rh,
+        limOptX=[-12, 12],
+        limOptY=[-495, 495])
+>>>>>>> origin/testing
 
     beamLine.CM_Slits = rapts.RectangularAperture(
         bl=beamLine,
         name=r"CM Slits",
+<<<<<<< HEAD
         center=[0, 16600, r"auto"],
         opening=[-apSize*2, apSize*2, -apSize*2, apSize*2])
 
@@ -130,6 +187,18 @@ def build_beamline():
         limPhysY2=[-1.1951, 5],
         limOptX2=[-1, 1],
         limOptY2=[-1.1951, 5],
+=======
+        center=[0, 15600, r"auto"],
+        opening=[-5, 5, -1, 2])
+
+    beamLine.SSRL_DCM = roes.DCM(
+        bragg=[8998],
+        cryst2perpTransl=6.5023,
+        limPhysX2=[-20, 20],
+        limPhysY2=[-1.1951, 94.0549],
+        limOptX2=[-20, 20],
+        limOptY2=[-1.1951, 94.0549],
+>>>>>>> origin/testing
         material2=Si220,
         bl=beamLine,
         name=r"SSRL DCM",
@@ -200,6 +269,7 @@ def build_beamline():
 
 
 def run_process(beamLine):
+<<<<<<< HEAD
     WigglerbeamGlobal01 = beamLine.undulator01.shine()
 
 #    FEMaskbeamGlobal, FEMaskWave = beamLine.FEMask.diffract(
@@ -219,11 +289,30 @@ def run_process(beamLine):
 
     CMSlitsbeamGlobal, CMSlitsWave = beamLine.CM_Slits.diffract(
         beam=M1beamGlobal01, wave=M1wave, nrays=nrays)
+=======
+    WigglerbeamGlobal01 = beamLine.Wiggler.shine()
+
+    FEMaskbeamGlobal, FEMaskWave = beamLine.FEMask.diffract(
+        beam=WigglerbeamGlobal01)
+
+    C_FilterbeamGlobal01, C_FilterbeamLocal101, C_FilterbeamLocal201 = beamLine.C_Filter.double_refract(
+        beam=FEMaskbeamGlobal)
+
+    WBSbeamGlobal, WBSWave = beamLine.WhiteBeamSlits.diffract(
+        beam=C_FilterbeamGlobal01, wave=C_FilterbeamLocal201)
+
+    M1beamGlobal01, M1wave = beamLine.M1.diffract(
+        beam=WBSbeamGlobal, wave=WBSWave)
+
+    CMSlitsbeamGlobal, CMSlitsWave = beamLine.CM_Slits.diffract(
+        beam=M1beamGlobal01)
+>>>>>>> origin/testing
 
     SSRL_DCMbeamGlobal01, SSRL_DCMbeamLocal101, SSRL_DCMbeamLocal201 =\
         beamLine.SSRL_DCM.double_reflect(beam=CMSlitsbeamGlobal)
 
     screen01beamLocal01 = beamLine.M2Paddle.expose_wave(
+<<<<<<< HEAD
         beam=SSRL_DCMbeamGlobal01, wave=SSRL_DCMbeamLocal201, dim1=127, dim2=127)
 #
 #    M2beamGlobal01, M2wave = beamLine.M2.diffract(
@@ -249,10 +338,38 @@ def run_process(beamLine):
 #        'C_FilterbeamGlobal01': C_FilterbeamGlobal01,
 #        'C_FilterbeamLocal101': C_FilterbeamLocal101,
 #        'C_FilterbeamLocal201': C_FilterbeamLocal201,
+=======
+        beam=SSRL_DCMbeamGlobal01, wave=SSRL_DCMbeamLocal201)
+
+    M2beamGlobal01, M2wave = beamLine.M2.diffract(
+        beam=SSRL_DCMbeamGlobal01, wave=SSRL_DCMbeamLocal201)
+
+    PSbeamGlobal, PSWave  = beamLine.PhotonShutter.diffract(
+        beam=M2beamGlobal01, wave=M2wave)
+
+    DBHR1beamGlobal01, DBHR1beamLocal01 = beamLine.DBHR1.reflect(
+        beam=PSbeamGlobal)
+
+    DBHR2beamGlobal01, DBHR2beamLocal01 = beamLine.DBHR2.reflect(
+        beam=DBHR1beamGlobal01)
+
+    JJslitsbeamLocal01 = beamLine.JJslits.propagate(
+        beam=DBHR2beamGlobal01)
+
+    SampleScreenbeamLocal01 = beamLine.SampleScreen.expose_wave(
+        beam=DBHR2beamGlobal01, wave=JJslitsbeamLocal01)
+
+    outDict = {
+        'WigglerbeamGlobal01': WigglerbeamGlobal01,
+        'C_FilterbeamGlobal01': C_FilterbeamGlobal01,
+        'C_FilterbeamLocal101': C_FilterbeamLocal101,
+        'C_FilterbeamLocal201': C_FilterbeamLocal201,
+>>>>>>> origin/testing
         'M1beamGlobal01': M1beamGlobal01,
         'SSRL_DCMbeamGlobal01': SSRL_DCMbeamGlobal01,
         'SSRL_DCMbeamLocal101': SSRL_DCMbeamLocal101,
         'SSRL_DCMbeamLocal201': SSRL_DCMbeamLocal201,
+<<<<<<< HEAD
 #        'M2beamGlobal01': M2beamGlobal01,
 #        'SampleScreenbeamLocal01': SampleScreenbeamLocal01,
         'screen01beamGlobal': screen01beamLocal01,
@@ -272,6 +389,26 @@ def run_process(beamLine):
 #        'PSbeamGlobal': PSbeamGlobal, 
 #        'PSWave': PSWave
         }
+=======
+        'M2beamGlobal01': M2beamGlobal01,
+        'SampleScreenbeamLocal01': SampleScreenbeamLocal01,
+        'screen01beamLocal01': screen01beamLocal01,
+        'DBHR1beamGlobal01': DBHR1beamGlobal01,
+        'DBHR1beamLocal01': DBHR1beamLocal01,
+        'DBHR2beamGlobal01': DBHR2beamGlobal01,
+        'DBHR2beamLocal01': DBHR2beamLocal01,
+        'JJslitsbeamLocal01': JJslitsbeamLocal01,
+        'FEMaskbeamGlobal': FEMaskbeamGlobal, 
+        'FEMaskWave': FEMaskWave,
+        'WBSbeamGlobal': WBSbeamGlobal, 
+        'WBSWave': WBSWave,
+        'M1wave': M1wave, 
+        'CMSlitsbeamGlobal': CMSlitsbeamGlobal, 
+        'CMSlitsWave': CMSlitsWave,
+        'M2wave': M2wave,
+        'PSbeamGlobal': PSbeamGlobal, 
+        'PSWave': PSWave}
+>>>>>>> origin/testing
     return outDict
 
 
@@ -283,13 +420,20 @@ def define_plots():
     plots = []
     outBeams = [
         'WigglerbeamGlobal01',
+<<<<<<< HEAD
 #        'C_FilterbeamGlobal01',
 #        'C_FilterbeamLocal101',
 #        'C_FilterbeamLocal201',
+=======
+        'C_FilterbeamGlobal01',
+        'C_FilterbeamLocal101',
+        'C_FilterbeamLocal201',
+>>>>>>> origin/testing
         'M1beamGlobal01',
         'SSRL_DCMbeamGlobal01',
         'SSRL_DCMbeamLocal101',
         'SSRL_DCMbeamLocal201',
+<<<<<<< HEAD
 #        'M2beamGlobal01',
 #        'SampleScreenbeamLocal01',
         'screen01beamGlobal',
@@ -309,28 +453,61 @@ def define_plots():
 #        'PSbeamGlobal', 
 #        'PSWave'
         ]    
+=======
+        'M2beamGlobal01',
+        'SampleScreenbeamLocal01',
+        'screen01beamLocal01',
+        'DBHR1beamGlobal01',
+        'DBHR1beamLocal01',
+        'DBHR2beamGlobal01',
+        'DBHR2beamLocal01',
+        'JJslitsbeamLocal01',
+        'FEMaskbeamGlobal', 
+        'FEMaskWave',
+        'WBSbeamGlobal', 
+        'WBSWave',
+        'M1wave', 
+        'CMSlitsbeamGlobal', 
+        'CMSlitsWave',
+        'M2wave',
+        'PSbeamGlobal', 
+        'PSWave']    
+>>>>>>> origin/testing
     for beam in outBeams:
         plot = xrtplot.XYCPlot(
             beam=beam,
             xaxis=xrtplot.XYCAxis(
                 label=r"x"),
             yaxis=xrtplot.XYCAxis(
+<<<<<<< HEAD
                 label=r"z" if 'obal' in beam else r"y"),
+=======
+                label=r"z" if 'lobal' in beam else r"y"),
+>>>>>>> origin/testing
             caxis=xrtplot.XYCAxis(
                 label=r"energy",
                 unit=r"eV",
                 bins=256,
                 ppb=1),
             aspect=r"auto",
+<<<<<<< HEAD
             title=beam)
+=======
+            title=r"Sample")
+>>>>>>> origin/testing
         plots.append(plot)
     return plots
 
 
 def main():
     beamLine = build_beamline()
+<<<<<<< HEAD
     E0 = 0.5 * (beamLine.undulator01.eMin +
                 beamLine.undulator01.eMax)
+=======
+    E0 = 0.5 * (beamLine.Wiggler.eMin +
+                beamLine.Wiggler.eMax)
+>>>>>>> origin/testing
     beamLine.alignE=E0
     plots = define_plots()
     xrtrun.run_ray_tracing(

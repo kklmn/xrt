@@ -269,6 +269,10 @@ class Screen(object):
                         wave, returnBeam=True))
 
         if isinstance(dim1, int) or isinstance(dim2, int):
+<<<<<<< HEAD
+=======
+            prevOE = wave.parent
+>>>>>>> origin/testing
             if beam is None:
                 if isinstance(prevOE, raycing.oes.DCM):
                     locBeam = self.expose(prevOE.local_to_global(
@@ -282,8 +286,12 @@ class Screen(object):
                 dim1 = np.linspace(np.min(locBeam.x), np.max(locBeam.x), dim1)
             if isinstance(dim2, int):
                 dim2 = np.linspace(np.min(locBeam.z), np.max(locBeam.z), dim2)
+<<<<<<< HEAD
         print (dim1, dim2)
         waveOnSelf = self.prepare_wave(prevOE, dim1, dim2, rw=rw)
+=======
+        waveOnSelf = self.prepare_wave(wave.parent, dim1, dim2, rw=rw)
+>>>>>>> origin/testing
         if 'source' in str(type(prevOE)):
             prevOE.shine(wave=waveOnSelf)
         else:
