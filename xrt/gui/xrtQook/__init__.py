@@ -692,7 +692,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
         self.beamModel = qt.QStandardItemModel()
         self.beamModel.appendRow([qt.QStandardItem("None"),
-                                  qt.QStandardItem("Global"),
+                                  qt.QStandardItem("GlobalLocal"),
                                   qt.QStandardItem("None"),
                                   qt.QStandardItem(str(0))])
         self.rootBeamItem = self.beamModel.invisibleRootItem()
@@ -1228,6 +1228,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         args = []
         argVals = []
         objRef = eval(str(obj))
+        isMethod = False
         if hasattr(objRef, 'hiddenParams'):
             hpList = objRef.hiddenParams
         else:
@@ -1279,11 +1280,13 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 #                    args = argList[0]
 #                    argVals = argList[3]
                 else:
+                    isMethod = True
                     uArgs = dict(zip(argList[0][1:], argList[3]))
 #                    args = argList[0][1:]
 #                    argVals = argList[3]
+            print(uArgs)
         moduleObj = eval(objRef.__module__)
-        if hasattr(moduleObj, 'allArguments'):
+        if hasattr(moduleObj, 'allArguments') and not isMethod:
             for argName in moduleObj.allArguments:
                 if str(argName) in uArgs.keys():
                     args.append(argName)
@@ -1392,6 +1395,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     break
 
             child0, child1 = self.addParam(methodOut, outval, beamName)
+            if 'shine' in name:
+                outval += 'Local'
             self.beamModel.appendRow([qt.QStandardItem(beamName),
                                       qt.QStandardItem(outval),
                                       qt.QStandardItem(elstr),
@@ -1999,7 +2004,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if item.child(ii, 1) is not None and view is not None:
                     iWidget = view.indexWidget(item.child(ii, 1).index())
                     if iWidget is not None:
-                        if iWidget.staticMetaObject.className() == 'qt.QComboBox':  # analysis:ignore
+                        if iWidget.staticMetaObject.className() == 'QComboBox':  # analysis:ignore
                             if str(iItem.text()) == "targetOpenCL":
                                 chItemText = self.OCLModel.item(
                                             iWidget.currentIndex(), 1).text()
@@ -2009,7 +2014,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     str(chItemText):
                                 item.child(ii, 1).setText(chItemText)
                         elif iWidget.staticMetaObject.className() ==\
-                                'qt.QListWidget':
+                                'QListWidget':
                             chItemText = "("
                             for rState in range(iWidget.count()):
                                 if int(iWidget.item(rState).checkState()) == 2:
@@ -2125,6 +2130,32 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             if itemTxt.lower() == "output":
                                 combo.setEditable(True)
                                 combo.setInsertPolicy(2)
+                        elif len(re.findall("wave", paramName.lower())) > 0:
+                            if item.text() == 'parameters':  # input beam
+                                combo = qt.QComboBox()
+                                fModel0 = qt.QSortFilterProxyModel()
+                                fModel0.setSourceModel(self.beamModel)
+                                fModel0.setFilterKeyColumn(1)
+                                fModel0.setFilterRegExp('Local')
+                                fModel = qt.QSortFilterProxyModel()
+                                fModel.setSourceModel(fModel0)
+                                fModel.setFilterKeyColumn(3)
+                                regexp = self.int_to_regexp(
+                                    self.name_to_bl_pos(str(item.parent(
+                                    ).parent().text())))
+                                fModel.setFilterRegExp(regexp)
+                            else:
+                                fModel = self.beamModel
+                            combo = self.addStandardCombo(fModel, value)
+                            if combo.currentIndex() == -1:
+                                combo.setCurrentIndex(0)
+                                child1.setText(combo.currentText())
+                            view.setIndexWidget(child1.index(), combo)
+                            self.colorizeChangedParam(child1)
+                            if itemTxt.lower() == "output":
+                                combo.setEditable(True)
+                                combo.setInsertPolicy(2)
+
                         elif paramName == "bl" or\
                                 paramName == "beamLine":
                             combo = self.addEditableCombo(
@@ -2253,11 +2284,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             view.setIndexWidget(child1.index(), combo)
                         if combo is not None:
                             if combo.staticMetaObject.className() ==\
-                                    'qt.QListWidget':
+                                    'QListWidget':
                                 combo.clicked.connect(
                                     partial(self.processListWidget, child1))
                             elif combo.staticMetaObject.className() ==\
-                                    'qt.QComboBox':
+                                    'QComboBox':
                                 combo.currentIndexChanged['QString'].connect(
                                     child1.setText)
                 self.addCombo(view, child0)
@@ -2720,8 +2751,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 if str(methItem.text()) == 'parameters':
                                     for iBeam in range(methItem.rowCount()):
                                         bItem = methItem.child(iBeam, 0)
-                                        if len(re.findall(
-                                                'beam', str(
+                                        if len(re.findall('beam', str(
+                                                bItem.text()))) + len(
+                                                re.findall('wave', str(
                                                 bItem.text()))) > 0:
                                             vItem = methItem.child(iBeam, 1)
                                             iWidget = self.tree.indexWidget(

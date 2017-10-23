@@ -1142,6 +1142,8 @@ class OE(object):
         """
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+#        if wave is None and beam is not None:
+#            wave = beam
         prevOE = wave.parent
         print "Diffract on", self.name, " Prev OE:", prevOE.name
         if self.bl is not None:
