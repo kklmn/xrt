@@ -72,9 +72,15 @@ from tempfile import mkdtemp
 from xml.sax.saxutils import escape
 from docutils.utils import SystemMessage
 from sphinx.application import Sphinx
-from spyder.config.base import get_module_source_path
+try:
+    from spyder.config.base import get_module_source_path
+except:
+    from spyderlib.config.base import get_module_source_path
 import codecs
-from spyder.utils import encoding
+try:
+    from spyder.utils import encoding
+except:
+     from spyderlib.utils import encoding   
 
 
 def sphinxify(docstring, context, buildername='html'):
