@@ -1224,7 +1224,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.isEmpty = False
 
     def getParams(self, obj):
-        uArgs = {}
+        uArgs = OrderedDict()
         args = []
         argVals = []
         objRef = eval(str(obj))
@@ -1288,7 +1288,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if str(argName) in uArgs.keys():
                     args.append(argName)
                     argVals.append(uArgs[argName])
-
+        else:
+            args = list(uArgs.keys())
+            argVals = list(uArgs.values())
         return zip(args, argVals)
 
     def beamLineItemChanged(self, item):
