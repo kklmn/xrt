@@ -256,9 +256,13 @@ class RectangularAperture(object):
         *wave*: Beam object
             Local beam on the surface of the previous optical element.
 
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
         *nrays*: 'auto' or int
             Dimension of the created wave. If 'auto' - the same as the incoming
             wave.
+
 
         .. Returned values: beamGlobal, beamLocal
         """
@@ -514,9 +518,13 @@ class RoundAperture(object):
         *wave*: Beam object
             Local beam on the surface of the previous optical element.
 
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
         *nrays*: 'auto' or int
             Dimension of the created wave. If 'auto' - the same as the incoming
             wave.
+
 
         .. Returned values: beamLocal
         """

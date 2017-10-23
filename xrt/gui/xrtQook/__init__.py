@@ -1224,9 +1224,14 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.isEmpty = False
 
     def getParams(self, obj):
+        uArgs = {}
         args = []
         argVals = []
         objRef = eval(str(obj))
+        if hasattr(objRef, 'hiddenParams'):
+            hpList = objRef.hiddenParams
+        else:
+            hpList = []
         if inspect.isclass(objRef):
             for parent in (inspect.getmro(objRef))[:-1]:
                 for namef, objf in inspect.getmembers(parent):
@@ -1237,9 +1242,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                    argSpec[3]):
                                 if arg == 'bl':
                                     argVal = self.rootBLItem.text()
-                                if arg not in args:
-                                    args.append(arg)
-                                    argVals.append(argVal)
+                                if arg not in args and arg not in hpList:
+                                    uArgs[arg] = argVal
+#                                    args.append(arg)
+#                                    argVals.append(argVal)
                         if namef == "__init__" or namef.endswith("pop_kwargs"):
                             kwa = re.findall("(?<=kwargs\.pop).*?\)",
                                              inspect.getsource(objf),
@@ -1254,9 +1260,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                         argVal = kwline[1].strip("\' ")
                                     else:
                                         argVal = "None"
-                                    if arg not in args:
-                                        args.append(arg)
-                                        argVals.append(argVal)
+                                    if arg not in args and arg not in hpList:
+                                        uArgs[arg] = argVal
+#                                        args.append(arg)
+#                                        argVals.append(argVal)
                         if namef == "__init__" and\
                                 str(argSpec.varargs) == 'None' and\
                                 str(argSpec.keywords) == 'None':
@@ -1268,11 +1275,20 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             argList = inspect.getargspec(objRef)
             if argList[3] is not None:
                 if objRef.__name__ == 'run_ray_tracing':
-                    args = argList[0]
-                    argVals = argList[3]
+                    uArgs = dict(zip(argList[0], argList[3]))
+#                    args = argList[0]
+#                    argVals = argList[3]
                 else:
-                    args = argList[0][1:]
-                    argVals = argList[3]
+                    uArgs = dict(zip(argList[0][1:], argList[3]))
+#                    args = argList[0][1:]
+#                    argVals = argList[3]
+        moduleObj = eval(objRef.__module__)
+        if hasattr(moduleObj, 'allArguments'):
+            for argName in moduleObj.allArguments:
+                if str(argName) in uArgs.keys():
+                    args.append(argName)
+                    argVals.append(uArgs[argName])
+
         return zip(args, argVals)
 
     def beamLineItemChanged(self, item):
@@ -1517,7 +1533,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 else:
                     for argKey in argKeys:
                         if argKey not in retArgDescs and\
-                                len(re.findall(arg, argKey)) > 0:
+                                len(re.findall("{0}(?=[\,\s\*])".format(arg),
+                                               argKey)) > 0:
                             retArgDescs.append(argKey)
                             retArgDescVals.append(argDesc[argKey])
                             break
@@ -2332,9 +2349,14 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     elstr = str(selectedItem.child(ic, 1).text())
                     break
             elcls = eval(elstr)
+            if hasattr(elcls, 'hiddenMethods'):
+                hmList = elcls.hiddenMethods
+            else:
+                hmList = []
             for namef, objf in inspect.getmembers(elcls):
                 if (inspect.ismethod(objf) or inspect.isfunction(objf)) and\
-                        not str(namef).startswith("_"):
+                        not str(namef).startswith("_") and\
+                        not str(namef) in hmList:
                     fdoc = objf.__doc__
                     if fdoc is not None:
                         objfNm = '{0}.{1}'.format(elstr,

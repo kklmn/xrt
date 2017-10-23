@@ -20,7 +20,23 @@ __date__ = "06 Oct 2017"
 
 __dir__ = os.path.dirname(__file__)
 _DEBUG = False
-
+allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
+                'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
+                'rotationSequence', 'extraRotationSequence',
+                'surface', 'material', 'material2', 'alpha',
+                'limPhysX', 'limOptX', 'limPhysY', 'limOptY',
+                'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2',
+                'isParametric', 'shape', 'order',
+                'shouldCheckCenter', 'targetOpenCL', 'precisionOpenCL',
+                'dxFacet', 'dyFacet', 'dxGap', 'dyGap', 'Rm',
+                'crossSection', 'Rs', 'R', 'r', 'p', 'q',
+                'isCylindrical',
+                'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alarmLevel',
+                'cryst2finePitch', 'cryst2perpTransl', 'cryst2longTransl',
+                'fixedOffset', 't', 'focus', 'zmax', 'nCRL', 'f', 'E', 'N',
+                'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2',
+                'phaseShift', 'vorticity', 'grazingAngle',
+                'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs')
 
 def flatten(x):
     if x is None:
@@ -813,6 +829,7 @@ class OE(object):
         *returnLocalAbsorbed*: None or int
             If not None, returns the absorbed intensity in local beam.
 
+
         .. .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
@@ -886,6 +903,7 @@ class OE(object):
 
         *returnLocalAbsorbed*: None or int
             If not None, returns the absorbed intensity in local beam.
+
 
         .. Returned values: beamGlobal, beamLocal
         """
@@ -1114,10 +1132,11 @@ class OE(object):
 
         *beam*: Beam object
             Incident global beam, only used for alignment purpose.
-            
+
         *nrays*: 'auto' or int
             Dimension of the created wave. If 'auto' - the same as the incoming
             wave.
+
 
         .. Returned values: beamGlobal, beamLocal
         """
@@ -1814,6 +1833,9 @@ class OE(object):
 
 class DCM(OE):
     """Implements a Double Crystal Monochromator with flat crystals."""
+
+    hiddenMethods = ['reflect', 'multiple_reflect', 'diffract']
+
     def __init__(self, *args, **kwargs):
         u"""
         *bragg*: float, str, list
@@ -1926,6 +1948,7 @@ class DCM(OE):
             equals zero, total absorbed intensity is return in the last local
             beam, otherwise the N-th local beam returns the
             absorbed intensity on N-th surface of the optical element.
+
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """

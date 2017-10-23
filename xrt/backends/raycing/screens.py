@@ -254,6 +254,7 @@ class Screen(object):
             Dimension of the created wave. If 'auto' - the same as the incoming
             wave.
 
+
         .. Returned values: beamLocal
         """
         from . import waves as rw
