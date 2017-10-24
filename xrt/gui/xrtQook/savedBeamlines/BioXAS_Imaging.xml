@@ -161,11 +161,11 @@
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
 			<parameters type="prop">
-				<toGlobal type="param">True</toGlobal>
 				<withAmplitudes type="param">True</withAmplitudes>
-				<fixedEnergy type="param">False</fixedEnergy>
-				<wave type="param">None</wave>
 				<accuBeam type="param">None</accuBeam>
+				<fixedEnergy type="param">False</fixedEnergy>
+				<toGlobal type="param">True</toGlobal>
+				<wave type="param">None</wave>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.sources.Undulator.shine</_object>
 			<output type="prop">
@@ -196,20 +196,6 @@
 	</FEMask>
 	<C_Filter type="value">
 		<properties type="prop">
-			<bragg type="param">0</bragg>
-			<cryst1roll type="param">0</cryst1roll>
-			<cryst2roll type="param">0</cryst2roll>
-			<cryst2pitch type="param">0</cryst2pitch>
-			<cryst2finePitch type="param">0</cryst2finePitch>
-			<cryst2perpTransl type="param">0</cryst2perpTransl>
-			<cryst2longTransl type="param">0</cryst2longTransl>
-			<limPhysX2 type="param">[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]</limPhysX2>
-			<limPhysY2 type="param">[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]</limPhysY2>
-			<limOptX2 type="param">None</limOptX2>
-			<limOptY2 type="param">None</limOptY2>
-			<material2 type="param">None</material2>
-			<fixedOffset type="param">None</fixedOffset>
-			<t type="param">0.15</t>
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">[0, 15531.954, 0]</center>
@@ -217,13 +203,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
-			<surface type="param">None</surface>
 			<material type="param">CVD</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-1000.0, 1000.0]</limPhysX>
@@ -232,17 +216,18 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
-			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
+			<alarmLevel type="param">None</alarmLevel>
+			<t type="param">0.15</t>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.Plate</_object>
 		<double_refract type="prop">
 			<parameters type="prop">
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">undulator01beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.Plate.double_refract</_object>
 			<output type="prop">
@@ -254,8 +239,6 @@
 	</C_Filter>
 	<M1 type="value">
 		<properties type="prop">
-			<R type="param">5.0e7</R>
-			<r type="param">5.0e6</r>
 			<bl type="param">beamLine</bl>
 			<name type="param">M1 Rh stripe</name>
 			<center type="param">[0, 21425, 0]</center>
@@ -263,12 +246,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">Rh</material>
 			<alpha type="param">None</alpha>
@@ -282,14 +264,17 @@
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
+			<R type="param">5.0e7</R>
+			<r type="param">5.0e6</r>
+			<alarmLevel type="param">None</alarmLevel>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<beam type="param">C_FilterbeamGlobal01</beam>
-				<needLocal type="param">True</needLocal>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
+				<beam type="param">C_FilterbeamGlobal01</beam>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<needLocal type="param">True</needLocal>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 			<output type="prop">
@@ -321,54 +306,54 @@
 	</CM_Slits>
 	<Kohzu_DCM type="value">
 		<properties type="prop">
-			<bragg type="param">auto</bragg>
-			<cryst1roll type="param">0</cryst1roll>
-			<cryst2roll type="param">0</cryst2roll>
-			<cryst2pitch type="param">0</cryst2pitch>
-			<cryst2finePitch type="param">0</cryst2finePitch>
-			<cryst2perpTransl type="param">0</cryst2perpTransl>
-			<cryst2longTransl type="param">0</cryst2longTransl>
-			<limPhysX2 type="param">None</limPhysX2>
-			<limPhysY2 type="param">None</limPhysY2>
-			<limOptX2 type="param">None</limOptX2>
-			<limOptY2 type="param">None</limOptY2>
-			<material2 type="param">Si111</material2>
-			<fixedOffset type="param">25</fixedOffset>
 			<bl type="param">beamLine</bl>
 			<name type="param">Kohzu</name>
 			<center type="param">[0, 24898.6, auto]</center>
+			<bragg type="param">auto</bragg>
 			<pitch type="param">0</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">Si111</material>
+			<material2 type="param">Si111</material2>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">None</limPhysX>
 			<limOptX type="param">None</limOptX>
 			<limPhysY type="param">None</limPhysY>
 			<limOptY type="param">None</limOptY>
+			<limPhysX2 type="param">None</limPhysX2>
+			<limPhysY2 type="param">None</limPhysY2>
+			<limOptX2 type="param">None</limOptX2>
+			<limOptY2 type="param">None</limOptY2>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
+			<cryst1roll type="param">0</cryst1roll>
+			<cryst2roll type="param">0</cryst2roll>
+			<cryst2pitch type="param">0</cryst2pitch>
+			<alarmLevel type="param">None</alarmLevel>
+			<cryst2finePitch type="param">0</cryst2finePitch>
+			<cryst2perpTransl type="param">0</cryst2perpTransl>
+			<cryst2longTransl type="param">0</cryst2longTransl>
+			<fixedOffset type="param">25</fixedOffset>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.DCM</_object>
 		<double_reflect type="prop">
 			<parameters type="prop">
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M1beamGlobal01</beam>
+				<fromVacuum2 type="param">True</fromVacuum2>
 				<needLocal type="param">True</needLocal>
 				<fromVacuum1 type="param">True</fromVacuum1>
-				<fromVacuum2 type="param">True</fromVacuum2>
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.DCM.double_reflect</_object>
 			<output type="prop">
@@ -401,8 +386,6 @@
 	</M2paddle>
 	<M2 type="value">
 		<properties type="prop">
-			<R type="param">1.0e7</R>
-			<r type="param">36.7</r>
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">[0, 26424.75, auto]</center>
@@ -410,12 +393,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">None</material>
 			<alpha type="param">None</alpha>
@@ -429,14 +411,17 @@
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
+			<R type="param">1.0e7</R>
+			<r type="param">36.7</r>
+			<alarmLevel type="param">None</alarmLevel>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<beam type="param">Kohzu_DCMbeamGlobal01</beam>
-				<needLocal type="param">True</needLocal>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
+				<beam type="param">Kohzu_DCMbeamGlobal01</beam>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<needLocal type="param">True</needLocal>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 			<output type="prop">
@@ -447,20 +432,6 @@
 	</M2>
 	<Be_window type="value">
 		<properties type="prop">
-			<bragg type="param">0</bragg>
-			<cryst1roll type="param">0</cryst1roll>
-			<cryst2roll type="param">0</cryst2roll>
-			<cryst2pitch type="param">0</cryst2pitch>
-			<cryst2finePitch type="param">0</cryst2finePitch>
-			<cryst2perpTransl type="param">0</cryst2perpTransl>
-			<cryst2longTransl type="param">0</cryst2longTransl>
-			<limPhysX2 type="param">[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]</limPhysX2>
-			<limPhysY2 type="param">[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]</limPhysY2>
-			<limOptX2 type="param">None</limOptX2>
-			<limOptY2 type="param">None</limOptY2>
-			<material2 type="param">Be</material2>
-			<fixedOffset type="param">None</fixedOffset>
-			<t type="param">0.1</t>
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">[auto, 34182.3, auto]</center>
@@ -468,13 +439,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
-			<surface type="param">None</surface>
 			<material type="param">Be</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-1000.0, 1000.0]</limPhysX>
@@ -483,17 +452,18 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
-			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
+			<alarmLevel type="param">None</alarmLevel>
+			<t type="param">0.1</t>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.Plate</_object>
 		<double_refract type="prop">
 			<parameters type="prop">
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M2beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.Plate.double_refract</_object>
 			<output type="prop">
@@ -669,22 +639,22 @@
 </plots>
 <run_ray_tracing type="prop">
 	<_object type="object">xrt.runner.run_ray_tracing</_object>
+	<afterScript type="param">None</afterScript>
+	<processes type="param">1</processes>
+	<afterScriptKWargs type="param">{}</afterScriptKWargs>
+	<pickleEvery type="param">None</pickleEvery>
+	<generator type="param">None</generator>
+	<generatorKWargs type="param">auto</generatorKWargs>
+	<updateEvery type="param">1</updateEvery>
+	<globalNorm type="param">0</globalNorm>
+	<afterScriptArgs type="param">[]</afterScriptArgs>
+	<generatorArgs type="param">[]</generatorArgs>
+	<threads type="param">1</threads>
+	<beamLine type="param">beamLine</beamLine>
+	<energyRange type="param">None</energyRange>
 	<plots type="param">plots</plots>
 	<repeats type="param">10</repeats>
-	<updateEvery type="param">1</updateEvery>
-	<pickleEvery type="param">None</pickleEvery>
-	<energyRange type="param">None</energyRange>
 	<backend type="param">raycing</backend>
-	<beamLine type="param">beamLine</beamLine>
-	<threads type="param">1</threads>
-	<processes type="param">1</processes>
-	<generator type="param">None</generator>
-	<generatorArgs type="param">[]</generatorArgs>
-	<generatorKWargs type="param">auto</generatorKWargs>
-	<globalNorm type="param">0</globalNorm>
-	<afterScript type="param">None</afterScript>
-	<afterScriptArgs type="param">[]</afterScriptArgs>
-	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
 <description>
 

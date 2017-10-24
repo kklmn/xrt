@@ -1284,7 +1284,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     uArgs = dict(zip(argList[0][1:], argList[3]))
 #                    args = argList[0][1:]
 #                    argVals = argList[3]
-            print(uArgs)
         moduleObj = eval(objRef.__module__)
         if hasattr(moduleObj, 'allArguments') and not isMethod:
             for argName in moduleObj.allArguments:
@@ -2029,7 +2028,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def updateBeamImport(self):
         self.rootBeamItem.setChild(
             0, 1,
-            qt.QStandardItem("Global"))
+            qt.QStandardItem("beamGlobalLocal"))
         self.rootBeamItem.setChild(
             0, 2,
             qt.QStandardItem("None"))
@@ -2068,7 +2067,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def int_to_regexp(self, intStr):
         a = list(str(intStr))
-        if int(intStr) < 11:
+        oeClassStr = str(self.get_class_name(
+            self.rootBLItem.child(int(intStr), 0)))
+        if 'source' in oeClassStr:
+            return '^(\d+)$'
+        elif int(intStr) < 11:
             return '^([0-{}])$'.format(int(intStr)-1)
         else:
             return '^([0-9]|[0-{0}][0-9]{1}$'.format(
