@@ -441,6 +441,9 @@ class XrtQook(qt.QWidget):
         self.descrEdit = qt.QTextEdit()
         self.descrEdit.setFont(self.defaultFont)
         self.descrEdit.textChanged.connect(self.updateDescription)
+        self.typingTimer = qt.QTimer(self)
+        self.typingTimer.setSingleShot(True)
+        self.typingTimer.timeout.connect(self.updateDescriptionDelayed)
 
         self.setGeometry(100, 100, 1200, 600)
 
@@ -971,12 +974,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.webHelp.setReadOnly(True)
 
     def updateDescription(self):
+        self.typingTimer.start(500)
+
+    def updateDescriptionDelayed(self):
         self.fileDescription = self.descrEdit.toPlainText()
         img_path = __file__ if self.layoutFileName == "" else\
             self.layoutFileName
         self.showTutorial(self.fileDescription,
                           "Description",
                           os.path.dirname(os.path.abspath(str(img_path))))
+        self.descrEdit.setFocus()
 
     def showWelcomeScreen(self):
         argDescr = u"""
