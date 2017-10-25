@@ -403,7 +403,7 @@ import os
 from .. import raycing
 from . import myopencl as mcl
 from . import sources as rs
-from .physconsts import CHBAR
+from .physconsts import CHBAR, CH
 try:
     import pyopencl as cl  # analysis:ignore
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
@@ -488,6 +488,17 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     return wave
 
 
+def qualify_sampling(wave, E, goodlen):
+    a = wave.xDiffr / wave.rDiffr  # a and c of wave change in diffract
+    c = wave.zDiffr / wave.rDiffr
+    NAx = (a.max() - a.min()) * 0.5
+    NAz = (c.max() - c.min()) * 0.5
+    invLambda = E / CH * 1e7
+    fn = (NAx**2 + NAz**2) * wave.rDiffr.mean() * invLambda  # Fresnel number
+    samplesPerZone = goodlen / fn
+    return fn, samplesPerZone
+
+
 def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
              precisionOpenCL=raycing.precisionOpenCL):
     r"""
@@ -510,6 +521,11 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 #        goodIn = beam.state == 1
 #        self.beamInRays += goodIn.sum()
 #        self.beamInSumJ += (beam.Jss[goodIn] + beam.Jpp[goodIn]).sum()
+
+    # this would be better in prepare_wave but energy is unknown there yet
+    nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
+    print("Effective Fresnel number = {0:.3g}, samples per zone = {1:.0f}".
+          format(nf, spz))
 
     shouldCalculateArea = False
     if not hasattr(oeLocal, 'area'):
