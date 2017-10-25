@@ -402,6 +402,11 @@ def get_zprime(beam):
     return beam.c / beam.b
 
 
+def get_xzprime(beam):
+    """Used for retrieving data for x-, y- or c-axis of a plot."""
+    return (beam.a**2 + beam.c**2)**0.5 / beam.b
+
+
 def get_path(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     return beam.path

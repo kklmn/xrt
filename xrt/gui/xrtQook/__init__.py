@@ -1005,52 +1005,55 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.updateDescription()
 
     def showTutorial(self, argDocStr, name, img_path, delegateLink=False):
-        if spyder.isSphinx:
-            err = None
-            try:
-                cntx = spyder.generate_context(
-                    name=name,
-                    argspec="",
-                    note="",
-                    img_path=img_path,
-                    math=True)
-            except TypeError as err:
-                cntx = spyder.generate_context(
-                    name=name,
-                    argspec="",
-                    note="",
-                    math=True)
-            argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
-            if err is None:
-                html2 = re.findall(' {4}return.*', html_text)[0]
-                sbsPath = re.sub('img_name',
-                                 'attr',
-                                 re.sub('\\\\', '/', html2))
-                if 'file://' not in sbsPath:
-                    sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
-                new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
-            else:
-                spyder_crutch = "<script>\n$(document).ready(\
+        if argDocStr is None:
+            return
+        if not spyder.isSphinx:
+            return
+        err = None
+        try:
+            cntx = spyder.generate_context(
+                name=name,
+                argspec="",
+                note="",
+                img_path=img_path,
+                math=True)
+        except TypeError as err:
+            cntx = spyder.generate_context(
+                name=name,
+                argspec="",
+                note="",
+                math=True)
+        argDocStr = argDocStr.replace('imagezoom::', 'image::')
+        html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
+        if err is None:
+            html2 = re.findall(' {4}return.*', html_text)[0]
+            sbsPath = re.sub('img_name',
+                             'attr',
+                             re.sub('\\\\', '/', html2))
+            if 'file://' not in sbsPath:
+                sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
+            new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
+        else:
+            spyder_crutch = "<script>\n$(document).ready(\
     function () {\n    $('img').attr\
     ('src', function(index, attr){\n     return \'file:///"
-                spyder_crutch += "{0}\' + \'/\' + attr\n".format(
-                    re.sub('\\\\', '/', os.path.join(path_to_xrt,
-                                                     'xrt',
-                                                     'xrtQook')))
-                spyder_crutch += "    });\n});\n</script>\n<body>"
-                new_html = re.sub('<body>', spyder_crutch, html_text, 1)
-            self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
-            if delegateLink:
-                self.webHelp.page().setLinkDelegationPolicy(1)
-                self.webHelp.page().linkClicked.connect(partial(
-                    self.showTutorial,
-                    __doc__[229:],
-                    "Using xrtQook for script generation",
-                    self.xrtQookDir))
-            else:
-                self.webHelp.page().setLinkDelegationPolicy(0)
-            self.curObj = None
+            spyder_crutch += "{0}\' + \'/\' + attr\n".format(
+                re.sub('\\\\', '/', os.path.join(path_to_xrt,
+                                                 'xrt',
+                                                 'xrtQook')))
+            spyder_crutch += "    });\n});\n</script>\n<body>"
+            new_html = re.sub('<body>', spyder_crutch, html_text, 1)
+        self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
+        if delegateLink:
+            self.webHelp.page().setLinkDelegationPolicy(1)
+            self.webHelp.page().linkClicked.connect(partial(
+                self.showTutorial,
+                __doc__[229:],
+                "Using xrtQook for script generation",
+                self.xrtQookDir))
+        else:
+            self.webHelp.page().setLinkDelegationPolicy(0)
+        self.curObj = None
 
     def showOCLinfo(self):
         argDocStr = u""
