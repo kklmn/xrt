@@ -3395,6 +3395,8 @@ if __name__ == '__main__':
                 Qt_version, qt.QtName, PyQt_version)
         infText += '\npyopencl {}'.format(
             cl.VERSION if isOpenCL else 'not found')
+        if gl.isOpenGL:
+            infText += '\n{0} {1}'.format(gl.__name__, gl.__version__)
         infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
         msgBox.setInformativeText(infText)
         msgBox.setStandardButtons(qt.QMessageBox.Ok)
