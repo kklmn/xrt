@@ -371,7 +371,8 @@ class XrtQook(qt.QWidget):
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
         self.toolBar.addAction(aboutAction)
-        self.toolBar.addAction(tourAction)
+        if spyder.haveATour:
+            self.toolBar.addAction(tourAction)
         bbl = qt.QShortcut(self)
         bbl.setKey(qt.Key_F4)
         bbl.activated.connect(self.catch_viewer)
