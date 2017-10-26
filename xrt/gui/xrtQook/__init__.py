@@ -2140,8 +2140,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 self.plotModel, value)
                             combo.setInsertPolicy(2)
                             view.setIndexWidget(child1.index(), combo)
-                        elif len(re.findall("material",
-                                            paramName.lower())) > 0:
+                        elif any(paraStr in paramName.lower() for paraStr in
+                                ['material', 'tlayer', 'blayer']):
                             combo = self.addStandardCombo(
                                 self.materialsModel, value)
                             view.setIndexWidget(child1.index(), combo)
@@ -3037,7 +3037,9 @@ if __name__ == '__main__':
                                 paravalue = str(pItem.child(iep, 1).text())
                                 if paravalue != str(arg_def) or\
                                         paravalue == 'bl':
-                                    paravalue = self.quotize(paravalue)
+                                    if paraname.lower() not in\
+                                            ['tlayer', 'blayer']:
+                                        paravalue = self.quotize(paravalue)
                                     ieinit += '\n{2}{0}={1},'.format(
                                         paraname, paravalue, myTab)
                 codeDeclarations += '{0} = {1})\n\n'.format(
@@ -3076,9 +3078,9 @@ if __name__ == '__main__':
                                     [self.quotize(c) for c in cCoord]))
                             if paravalue != str(arg_def) or\
                                     paraname == 'bl':
-                                if paraname not in ['bl', 'center',
-                                                    'material',
-                                                    'material2']:
+                                if paraname.lower() not in\
+                                        ['bl', 'center', 'material', 
+                                         'material2']:
                                     paravalue = self.quotize(paravalue)
                                 ieinit += '\n{2}{0}={1},'.format(
                                     paraname, paravalue, myTab*2)
