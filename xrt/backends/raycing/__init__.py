@@ -908,7 +908,7 @@ class BeamLine(object):
 
     def glow(self):
         try:
-            from ... import xrtGlow as xrtglow
+            from ...gui import xrtGlow as xrtglow
         except ImportError:
             print("cannot import xrtGlow")
             return
@@ -916,7 +916,7 @@ class BeamLine(object):
         from .run import run_process
         run_process(self)
         if self.blViewer is None:
-            app = xrtglow.QApplication(sys.argv)
+            app = xrtglow.qt.QApplication(sys.argv)
             rayPath = self.export_to_glow()
             self.blViewer = xrtglow.xrtGlow(rayPath)
             self.blViewer.setWindowTitle("xrtGlow")

@@ -11,7 +11,7 @@ import inspect
 
 from .. import raycing
 from . import myopencl as mcl
-from .sources_beams import Beam
+from .sources_beams import Beam, allArguments
 from .physconsts import E0, C, M0, EV2ERG, K2B, SIE0,\
     SIM0, FINE_STR, PI, PI2, SQ3, E2W, CHeVcm, CHBAR
 
@@ -150,7 +150,7 @@ class BendingMagnet(object):
         xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
             isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
         zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
-            isinstance(zPrimeMax, raycing.basestring) else zPrimeMax            
+            isinstance(zPrimeMax, raycing.basestring) else zPrimeMax
         self.xPrimeMax = xPrimeMax * 1e-3 if xPrimeMax else None
         self.zPrimeMax = zPrimeMax * 1e-3 if zPrimeMax else None
         self.betaX = betaX
@@ -537,9 +537,9 @@ class BendingMagnet(object):
                     if self.bl is not None:
                         if self.bl.flowSource == 'Qook' and\
                                 self.bl.statusSignal is not None:
-                            ptg = (self.bl.statusSignal[1] + 
+                            ptg = (self.bl.statusSignal[1] +
                                    float(length) / float(self.nrays))/\
-                                      self.bl.statusSignal[2]  
+                                      self.bl.statusSignal[2]
                             self.bl.statusSignal[0].emit(
                                 (ptg, self.bl.statusSignal[3]))
                 except:
@@ -582,6 +582,9 @@ class Wiggler(BendingMagnet):
     Wiggler source. The computation is reasonably fast and thus a GPU
     is not required and is not implemented.
     """
+
+    hiddenParams = ['B0', 'rho']
+
     def __init__(self, *args, **kwargs):
         u"""Parameters are the same as in BendingMagnet except *B0* and *rho*
         which are not required and additionally:
@@ -1970,9 +1973,9 @@ class Undulator(object):
                         if self.bl is not None:
                             if self.bl.flowSource == 'Qook' and\
                                     self.bl.statusSignal is not None:
-                                ptg = (self.bl.statusSignal[1] + 
+                                ptg = (self.bl.statusSignal[1] +
                                        float(length) / float(self.nrays))/\
-                                          self.bl.statusSignal[2]  
+                                          self.bl.statusSignal[2]
                                 self.bl.statusSignal[0].emit(
                                     (ptg, self.bl.statusSignal[3]))
                     except:

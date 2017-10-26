@@ -7,7 +7,7 @@ import inspect
 
 from . import run as rr
 from .. import raycing
-from .sources_beams import Beam, defaultEnergy
+from .sources_beams import Beam, defaultEnergy, allArguments
 from .physconsts import PI2, CHBAR
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out
@@ -215,10 +215,10 @@ class GeometricSource(object):
         self.dy = dy
         self.distz = distz
         self.dz = dz
-        self.distxprime = raycing.auto_units_angle(distxprime)
+        self.distxprime = distxprime
         self.dxprime = raycing.auto_units_angle(dxprime)
         self.distzprime = distzprime
-        self.dzprime = dzprime
+        self.dzprime = raycing.auto_units_angle(dzprime)
         self.distE = distE
         if self.distE == 'lines':
             self.energies = np.array(energies)

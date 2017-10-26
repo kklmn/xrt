@@ -191,6 +191,9 @@ class XrtQook(qt.QWidget):
         self.setAcceptDrops(True)
         self.prepareViewer = False
         self.isGlowAutoUpdate = False
+        self.experimentalMode = False
+        self.experimentalModeFilter = ['propagate_wave',
+                                       'diffract', 'expose_wave']
         self.statusUpdate.connect(self.updateProgressBar)
         self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
@@ -363,6 +366,9 @@ class XrtQook(qt.QWidget):
         bbl = qt.QShortcut(self)
         bbl.setKey(qt.Key_F4)
         bbl.activated.connect(self.catch_viewer)
+        amt = qt.QShortcut(self)
+        amt.setKey(qt.CTRL + qt.Key_E)
+        amt.activated.connect(self.toggle_experimental_mode)
 
     def catch_viewer(self):
         if self.blViewer is not None:
@@ -2398,7 +2404,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         objfNm = '{0}.{1}'.format(elstr,
                                                   objf.__name__)
                         fdoc = re.findall(r"Returned values:.*", fdoc)
-                        if len(fdoc) > 0:
+                        if len(fdoc) > 0 and (
+                                str(objf.__name__) not in
+                                self.experimentalModeFilter or
+                                self.experimentalMode):
                             methAction = qt.QAction(self)
                             methAction.setText(namef + '()')
                             methAction.hovered.connect(
@@ -3391,8 +3400,7 @@ if __name__ == '__main__':
         self.saveFileName = ""
         if not self.saveCode():
             self.progressBar.setValue(0)
-            self.progressBar.setFormat()
-            self.statusBar.showMessage('Failed saving code to {}'.format(
+            self.progressBar.setFormat('Failed saving code to {}'.format(
                     os.path.basename(str(self.saveFileName))))
 #                'Failed saving code to {}'.format(
 #                    os.path.basename(str(self.saveFileName))), 5000)
@@ -3410,6 +3418,11 @@ if __name__ == '__main__':
                     os.path.basename(str(self.saveFileName))))
             self.codeConsole.append('Press Ctrl+X to terminate process\n\n')
             self.qprocess.start("python", ['-u', str(self.saveFileName)])
+
+    def toggle_experimental_mode(self):
+        self.experimentalMode = not self.experimentalMode
+        self.progressBar.setFormat("Experimental Mode {}abled".format(
+            "en" if self.experimentalMode else "dis"))
 
     def aboutCode(self):
         import platform

@@ -27,7 +27,7 @@ allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'limPhysX', 'limOptX', 'limPhysY', 'limOptY',
                 'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2',
                 'isParametric', 'shape', 'order',
-                'shouldCheckCenter', 'targetOpenCL', 'precisionOpenCL',
+                'shouldCheckCenter',
                 'dxFacet', 'dyFacet', 'dxGap', 'dyGap', 'Rm',
                 'crossSection', 'Rs', 'R', 'r', 'p', 'q',
                 'isCylindrical',
@@ -36,7 +36,8 @@ allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'fixedOffset', 't', 'focus', 'zmax', 'nCRL', 'f', 'E', 'N',
                 'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2',
                 'phaseShift', 'vorticity', 'grazingAngle',
-                'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs')
+                'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
+                'targetOpenCL', 'precisionOpenCL')
 
 def flatten(x):
     if x is None:
@@ -905,7 +906,6 @@ class OE(object):
             If not None, returns the absorbed intensity in local beam.
 
 
-        .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
         if self.bl is not None:
@@ -1120,10 +1120,11 @@ class OE(object):
             prevOE, waveLocal, waveGlobal.x, waveGlobal.y, waveGlobal.z)
         return waveLocal
 
-    def diffract(self, wave=None, beam=None, nrays='auto'):
+    def propagate_wave(self, wave=None, beam=None, nrays='auto'):
         """
         Propagates the incoming *wave* through an optical element using the
-        Kirchhoff diffraction theorem. Returned global and local beams can be
+        Kirchhoff diffraction theorem. Returnes two Beam objects, one in global
+        and one in local coordinate systems, which can be
         used correspondingly for the consequent ray and wave propagation
         calculations.
 
@@ -1145,7 +1146,7 @@ class OE(object):
 #        if wave is None and beam is not None:
 #            wave = beam
         prevOE = wave.parent
-        print "Diffract on", self.name, " Prev OE:", prevOE.name
+        print("Diffract on", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
             if raycing.is_auto_align_required(self):
                 if beam is not None:

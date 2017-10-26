@@ -25,6 +25,8 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 __all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
 
+allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'alarmLevel', 'r',
+                'shadeFraction')
 
 class RectangularAperture(object):
     """Implements an aperture or an obstacle with a combination of horizontal
@@ -269,7 +271,7 @@ class RectangularAperture(object):
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
         prevOE = wave.parent
-        print "Diffract", self.name, " Prev OE:", prevOE.name
+        print("Diffract", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
             if raycing.is_auto_align_required(self):
                 if beam is not None:

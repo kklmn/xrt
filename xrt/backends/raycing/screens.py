@@ -23,6 +23,9 @@ import inspect
 from . import sources as rs
 from .physconsts import CHBAR
 
+allArguments = ('bl', 'name', 'center', 'x', 'z', 'compressX',
+                'compressZ', 'R', 'phiOffset', 'thetaOffset')
+
 _DEBUG = 20
 
 
