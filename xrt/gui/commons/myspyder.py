@@ -74,12 +74,12 @@ from docutils.utils import SystemMessage
 from sphinx.application import Sphinx
 try:
     from spyder.config.base import get_module_source_path
-except:
+except ImportError:
     from spyderlib.config.base import get_module_source_path
 import codecs
 try:
     from spyder.utils import encoding
-except:
+except ImportError:
      from spyderlib.utils import encoding   
 
 
@@ -149,3 +149,11 @@ def sphinxify(docstring, context, buildername='html'):
     shutil.rmtree(srcdir, ignore_errors=True)
 
     return output
+
+
+haveATour = False
+try:
+    from spyder.app.tour import AnimatedTour
+    haveATour = True
+except ImportError:
+    pass
