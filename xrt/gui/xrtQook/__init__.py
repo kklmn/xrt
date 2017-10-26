@@ -2176,8 +2176,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 self.plotModel, value)
                             combo.setInsertPolicy(2)
                             view.setIndexWidget(child1.index(), combo)
-                        elif len(re.findall("material",
-                                            paramName.lower())) > 0:
+                        elif any(paraStr in paramName.lower() for paraStr in
+                                ['material', 'tlayer', 'blayer']):
                             combo = self.addStandardCombo(
                                 self.materialsModel, value)
                             view.setIndexWidget(child1.index(), combo)
@@ -2603,11 +2603,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             break
                     try:
                         blMats[matName] = eval(matClassStr)(**kwArgs)
-                        print("Class", matName, "successfully initialized.")
+                        self.progressBar.setFormat(
+                            "Class {} successfully initialized.".format(matName))
+#                        print("Class", matName, "successfully initialized.")
                     except:  # analysis:ignore
                         blMats[matName] = None
-                        print("Incorrect parameters. Class", matName,
-                              "not initialized.")
+                        self.progressBar.setFormat(
+                            "Incorrect parameters. Class {} not initialized.".format(
+                                matName))
+#                        print("Incorrect parameters. Class", matName,
+#                              "not initialized.")
             self.beamLine.materialsDict = blMats
         else:
             if item.index().column() == 0 and not newMat:  # Rename material
@@ -2647,11 +2652,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             matClassStr)(**kwArgs)
                     else:
                         self.beamLine.materialsDict[matName].__init__(**kwArgs)
-                    print("Class", matName, "successfully initialized.")
+                    self.progressBar.setFormat(
+                        "Class {} successfully initialized.".format(matName))
+#                    print("Class", matName, "successfully initialized.")
                 except:  # analysis:ignore
                     self.beamLine.materialsDict[matName] = None
-                    print("Incorrect parameters. Class", matName,
-                          "not initialized.")
+                    self.progressBar.setFormat(
+                        "Incorrect parameters. Class {} not initialized.".format(
+                            matName))
+#                    print("Incorrect parameters. Class", matName,
+#                          "not initialized.")
 
     def name_to_bl_pos(self, elname):
         for iel in range(self.rootBLItem.rowCount()):
@@ -2763,9 +2773,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 if str(methItem.text()) == 'parameters':
                                     for iBeam in range(methItem.rowCount()):
                                         bItem = methItem.child(iBeam, 0)
-                                        if len(re.findall('beam', str(
-                                                bItem.text()))) + len(
-                                                re.findall('wave', str(
+                                        if len(re.findall(
+                                                'beam', str(
                                                 bItem.text()))) > 0:
                                             vItem = methItem.child(iBeam, 1)
                                             iWidget = self.tree.indexWidget(
@@ -2804,13 +2813,19 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             kwArgs = create_param_dict(propItem, elClassStr)
                             self.beamLine.oesDict[elNameStr] =\
                                 [eval(elClassStr)(**kwArgs), oeType]
-                            print("Class", elNameStr,
-                                  "successfully initialized.")
+                            self.progressBar.setFormat(
+                                "Class {} successfully initialized.".format(
+                                    elNameStr))
+#                            print("Class", elNameStr,
+#                                  "successfully initialized.")
                         except:  # analysis:ignore
                             self.beamLine.oesDict[elNameStr] =\
                                 [None, oeType]
-                            print("Incorrect parameters. Class", elNameStr,
-                                  "not initialized.")
+                            self.progressBar.setFormat(
+                                "Incorrect parameters. Class {} not initialized.".format(
+                                    elNameStr))
+#                            print("Incorrect parameters. Class", elNameStr,
+#                                  "not initialized.")
                         self.beamLine.flow = build_flow(startFrom=elNameStr)
                         startFrom = name_to_flow_pos(elNameStr)
                     else:  # Element renamed or moved
@@ -2819,7 +2834,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         wasDeleted = True if\
                             len(oesKeys) + 2 < self.rootBLItem.rowCount()\
                             else False
-                        print(oesKeys)
                         if not wasDeleted:
                             newDict = OrderedDict()
                             counter = 0
@@ -2846,21 +2860,29 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                     rbi.child(
                                                         ibeam, 2).setText(
                                                             elNameStr)
-                                            print("Element", startElement,
-                                                  "renamed to", elNameStr)
+                                            self.progressBar.setFormat(
+                                                "Element {0} renamed to {1}".format(
+                                                    startElement, elNameStr))
+#                                            print("Element", startElement,
+#                                                  "renamed to", elNameStr)
                                     counter += 1
                             self.beamLine.oesDict = newDict
                         if newOrder:
-                            print("Element", item.text(),
-                                  "moved to new position")
+                            self.progressBar.setFormat(
+                                "Element {} moved to new position".format(
+                                    item.text()))
+#                            print("Element", item.text(),
+#                                  "moved to new position")
                             for ibeam in range(rbi.rowCount()):
                                 rbi.child(ibeam, 3).setText(str(
                                     self.name_to_bl_pos(str(rbi.child(
                                         ibeam, 2).text()))))
                             update_regexp()
                         elif wasDeleted:
-                            print("Element", item.text(),
-                                  "was removed")
+                            self.progressBar.setFormat(
+                                "Element {} was removed".format(item.text()))
+#                            print("Element", item.text(),
+#                                  "was removed")
                             startElement = str(item.text())
                             self.beamLine.flow =\
                                 build_flow(startFrom=startElement)
@@ -2889,17 +2911,25 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             if self.beamLine.oesDict[elNameStr][0] is None:
                                 self.beamLine.oesDict[elNameStr] =\
                                     [eval(elClassStr)(**kwargs), oeType]
-                                print("Class", elNameStr,
-                                      "successfully initialized.")
+                                self.progressBar.setFormat(
+                                    "Class {} successfully initialized.".format(
+                                        elNameStr))
+#                                print("Class", elNameStr,
+#                                      "successfully initialized.")
                             else:
                                 self.beamLine.oesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
-                                print("Class", elNameStr,
-                                      "successfully re-initialized.")
+                                self.progressBar.setFormat(
+                                    "Class {} successfully re-initialized.".format(
+                                        elNameStr))
+#                                print("Class", elNameStr,
+#                                      "successfully re-initialized.")
                         except:  # analysis:ignore
                             self.beamLine.oesDict[elNameStr] =\
                                 [None, oeType]
-                            print("Incorrect parameters. Class", elNameStr,
-                                  "not initialized.")
+                            self.progressBar.setFormat(
+                                "Incorrect parameters. Class {} not initialized.".format(elNameStr))
+#                            print("Incorrect parameters. Class", elNameStr,
+#                                  "not initialized.")
                         if len(re.findall('raycing.aper', elClassStr)) > 0:
                             if self.rayPath is not None:
                                 for segment in self.rayPath[0]:
@@ -2916,13 +2946,18 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 elif pText in ['parameters', 'output'] and iCol > 0:
                     elItem = item.parent().parent().parent()
                     elNameStr = str(elItem.text())
-                    print("Method of", elNameStr, "was modified")
+                    self.progressBar.setFormat(
+                        "Method of {} was modified".format(elNameStr))
+#                    print("Method of", elNameStr, "was modified")
                     self.beamLine.flow = build_flow(startFrom=elNameStr)
                     startFrom = name_to_flow_pos(elNameStr)
                 elif item.parent().parent() == self.rootBLItem and newElement:
                     elItem = item.parent()
                     elNameStr = str(elItem.text())
-                    print("Method", item.text(), "was added to", elNameStr)
+                    self.progressBar.setFormat(
+                        "Method {0} was added to {1}".format(
+                            item.text(), elNameStr))
+#                    print("Method", item.text(), "was added to", elNameStr)
                     self.beamLine.flow = build_flow(startFrom=elNameStr)
                     startFrom = name_to_flow_pos(elNameStr)
         else:  # Rebuild beamline
@@ -2947,13 +2982,18 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 kwArgs = create_param_dict(pItem, elClassStr)
                                 self.beamLine.oesDict[elNameStr] =\
                                     [eval(elClassStr)(**kwArgs), oeType]
-                                print("Class", elNameStr,
-                                      "successfully initialized.")
+                                self.progressBar.setFormat(
+                                    "Class {} successfully initialized.".format(
+                                        elNameStr))
+#                                print("Class", elNameStr,
+#                                      "successfully initialized.")
                             except:  # analysis:ignore
                                 self.beamLine.oesDict[elNameStr] =\
                                     [None, oeType]
-                                print("Incorrect parameters. Class", elNameStr,
-                                      "not initialized.")
+                                self.progressBar.setFormat(
+                                    "Incorrect parameters. Class {} not initialized.".format(elNameStr))
+#                                print("Incorrect parameters. Class", elNameStr,
+#                                      "not initialized.")
             self.beamLine.flow = build_flow()
             startFrom = 0
 
@@ -3082,7 +3122,9 @@ if __name__ == '__main__':
                                 paravalue = str(pItem.child(iep, 1).text())
                                 if paravalue != str(arg_def) or\
                                         paravalue == 'bl':
-                                    paravalue = self.quotize(paravalue)
+                                    if paraname.lower() not in\
+                                            ['tlayer', 'blayer']:
+                                        paravalue = self.quotize(paravalue)
                                     ieinit += '\n{2}{0}={1},'.format(
                                         paraname, paravalue, myTab)
                 codeDeclarations += '{0} = {1})\n\n'.format(
@@ -3121,9 +3163,9 @@ if __name__ == '__main__':
                                     [self.quotize(c) for c in cCoord]))
                             if paravalue != str(arg_def) or\
                                     paraname == 'bl':
-                                if paraname not in ['bl', 'center',
-                                                    'material',
-                                                    'material2']:
+                                if paraname.lower() not in\
+                                        ['bl', 'center', 'material',
+                                         'material2']:
                                     paravalue = self.quotize(paravalue)
                                 ieinit += '\n{2}{0}={1},'.format(
                                     paraname, paravalue, myTab*2)
