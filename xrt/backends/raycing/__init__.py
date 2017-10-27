@@ -781,8 +781,7 @@ class BeamLine(object):
             if self.flowSource == 'Qook':
                 beam.E[0] = alignE
                 beam.state[0] = 1
-            intensity = np.sqrt(np.abs(beam.Jss[good])**2 +
-                                np.abs(beam.Jpp[good])**2)
+            intensity = beam.Jss[good] + beam.Jpp[good]
             totalI = np.sum(intensity)
             inBeam = copy.deepcopy(beam)  # Beam(nrays=2)
             for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
@@ -916,8 +915,7 @@ class BeamLine(object):
     def export_to_glow(self, signal=None):
         def calc_weighted_center(beam):
             good = (beam.state == 1) | (beam.state == 2)
-            intensity = np.sqrt(
-                np.abs(beam.Jss[good])**2 + np.abs(beam.Jpp[good])**2)
+            intensity = beam.Jss[good] + beam.Jpp[good]
             totalI = np.sum(intensity)
             beam.wCenter = np.array(
                 [np.sum(beam.x[good] * intensity),
