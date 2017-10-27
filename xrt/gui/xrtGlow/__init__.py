@@ -269,14 +269,15 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setFlat(False)
         self.colorPanel.setTitle("Color")
         colorLayout = qt.QVBoxLayout()
-        self.mplFig = mpl.figure.Figure(figsize=(3, 3))
+        self.mplFig = mpl.figure.Figure(dpi=self.logicalDpiX()*0.8)
+        self.mplFig.subplots_adjust(left=0.15, bottom=0.15, top=0.92)
         self.mplAx = self.mplFig.add_subplot(111)
         self.mplFig.suptitle("")
 
         self.drawColorMap('energy')
         self.paletteWidget = qt.FigCanvas(self.mplFig)
-        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
-                                         qt.QSizePolicy.Expanding)
+        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Maximum,
+                                         qt.QSizePolicy.Maximum)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL, drawtype='box',
             useblit=True, rectprops=dict(alpha=0.4, facecolor='white'),
@@ -761,7 +762,6 @@ class xrtGlow(qt.QWidget):
                     0, 1))
         self.mplAx.set_xlabel(axis)
         self.mplAx.set_ylabel('Intensity')
-        self.mplFig.tight_layout()
 
     def updateColorMap(self, histArray):
         if histArray[0] is not None:
@@ -782,9 +782,8 @@ class xrtGlow(qt.QWidget):
                 hwhm = (np.abs(histArray[1][topEl[0]] -
                                histArray[1][topEl[-1]])) * 0.5
                 cntr = (histArray[1][topEl[0]] + histArray[1][topEl[-1]]) * 0.5
-                newLabel = u"FWHM: {0:.3f}\u00b1{1:.3f}".format(
-                    cntr, hwhm)
-                self.mplAx.set_title(newLabel)
+                newLabel = u"{0:.3f}\u00b1{1:.3f}".format(cntr, hwhm)
+                self.mplAx.set_title(newLabel, fontsize=10)
             except:  # analysis:ignore
                 pass
             self.mplFig.canvas.draw()
