@@ -79,14 +79,16 @@ class Screen(object):
 
     def set_orientation(self, x=None, z=None):
         """Determines the local x, y and z in the global system."""
-        if x == 'auto':
-            self.x = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
-        elif x is not None:
-            self.x = x
-        if z == 'auto':
-            self.z = 0., 0., 1.
-        elif z is not None:
-            self.z = z
+        if x is not None:
+            if isinstance(x, (list, tuple, np.ndarray)):
+                self.x = x
+            else:
+                self.x = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
+        if z is not None:
+            if isinstance(z, (list, tuple, np.ndarray)):
+                self.z = z
+            else:
+                self.z = 0., 0., 1.
         xdotz = np.dot(self.x, self.z)
         assert abs(xdotz) < 1e-14, 'x and z must be orthogonal!'
         self.y = np.cross(self.z, self.x)
@@ -280,14 +282,16 @@ class HemisphericScreen(Screen):
 
     def set_orientation(self, x=None, z=None):
         """Determines the local x, y and z in the global system."""
-        if x == 'auto':
-            self.x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
-        elif x is not None:
-            self.x = x
-        if z == 'auto':
-            self.z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
-        elif z is not None:
-            self.z = z
+        if x is not None:
+            if isinstance(x, (list, tuple, np.ndarray)):
+                self.x = x
+            else:
+                self.x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
+        if z is not None:
+            if isinstance(z, (list, tuple, np.ndarray)):
+                self.z = z
+            else:
+                self.z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
         assert np.dot(self.x, self.z) == 0, 'x and z must be orthogonal!'
         self.y = np.cross(self.z, self.x)
 
