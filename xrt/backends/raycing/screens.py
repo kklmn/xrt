@@ -81,12 +81,14 @@ class Screen(object):
         """Determines the local x, y and z in the global system."""
         if x is not None:
             if isinstance(x, (list, tuple, np.ndarray)):
-                self.x = x
+                norm = sum([xc**2 for xc in x])**0.5
+                self.x = [xc/norm for xc in x]
             else:
                 self.x = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
         if z is not None:
             if isinstance(z, (list, tuple, np.ndarray)):
-                self.z = z
+                norm = sum([zc**2 for zc in z])**0.5
+                self.z = [zc/norm for zc in z]
             else:
                 self.z = 0., 0., 1.
         xdotz = np.dot(self.x, self.z)
@@ -284,12 +286,14 @@ class HemisphericScreen(Screen):
         """Determines the local x, y and z in the global system."""
         if x is not None:
             if isinstance(x, (list, tuple, np.ndarray)):
-                self.x = x
+                norm = sum([xc**2 for xc in x])**0.5
+                self.x = [xc/norm for xc in x]
             else:
                 self.x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
         if z is not None:
             if isinstance(z, (list, tuple, np.ndarray)):
-                self.z = z
+                norm = sum([zc**2 for zc in z])**0.5
+                self.z = [zc/norm for zc in z]
             else:
                 self.z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
         assert np.dot(self.x, self.z) == 0, 'x and z must be orthogonal!'
