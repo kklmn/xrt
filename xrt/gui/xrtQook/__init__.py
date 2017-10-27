@@ -120,6 +120,9 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 myTab = 4*" "
 
+useSlidersInTree = False
+withSlidersInTree = ['pitch', 'roll', 'yaw', 'bragg']
+slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
 try:
     class WebPage(qt.QtWeb.QWebPage):
@@ -584,7 +587,12 @@ class XrtQook(qt.QWidget):
         self.tree.setSortingEnabled(False)
         self.tree.setHeaderHidden(False)
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
-        self.tree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+        headers = ['Parameter', 'Value']
+        if useSlidersInTree:
+            headers.append('Slider')
+        self.runTree.model().setHorizontalHeaderLabels(headers)
+        self.tree.model().setHorizontalHeaderLabels(headers)
+
         elprops = self.addProp(self.rootBLItem, 'properties')
         for name, obj in inspect.getmembers(raycing):
             if inspect.isclass(obj) and name == "BeamLine":
@@ -1149,10 +1157,25 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if toolTip is not None:
             child1.setToolTip(toolTip)
             # self.setIItalic(child0)
+        row = [child0, child1]
+        if useSlidersInTree:
+            child2 = qt.QStandardItem()
+            row.append(child2)
         if source is None:
-            parent.appendRow([child0, child1])
+            parent.appendRow(row)
         else:
-            parent.insertRow(source.row() + 1, [child0, child1])
+            parent.insertRow(source.row() + 1, row)
+
+        if useSlidersInTree:
+            if paramName in withSlidersInTree:
+                ind = child0.index().sibling(child0.index().row(), 2)
+                slider = qt.QSlider(qt.Horizontal)
+                slider.setRange(-10, 10)
+                slider.setValue(0)
+                slider.valueChanged.connect(
+                    partial(self.updateSlider, child1, paramName))
+                self.tree.setIndexWidget(ind, slider)
+
         return child0, child1
 
     def addProp(self, parent, propName):
@@ -1179,6 +1202,24 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         else:
             parent.insertRow(source.row() + 1, [child0, child1])
         return child0
+
+# useSlidersInTree
+    def updateSlider(self, editItem, paramName, position):
+        s = editItem.model().data(editItem.index(), qt.DisplayRole)
+        withBrackets = False
+        if paramName.lower() == 'bragg' and s[0] == '[' and s[-1] == ']':
+            withBrackets = True
+            s = s[1:-1]
+        for pos in [s.rfind(" *"), s.rfind(" /")]:
+            if pos > 0:
+                s = s[:pos]
+        if position:
+            factor = 1. + abs(position)/10.*slidersInTreeScale[paramName]
+            s += ' {0} {1:.8g}'.format("*" if position > 0 else "/", factor)
+        if withBrackets:
+            s = '[' + s + ']'
+        editItem.model().setData(editItem.index(), s, qt.EditRole)
+        editItem.model().dataChanged.emit(editItem.index(), editItem.index())
 
     def objToInstance(self, obj):
         instanceStr = ''
@@ -2130,7 +2171,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             combo.setInsertPolicy(2)
                             view.setIndexWidget(child1.index(), combo)
                         elif any(paraStr in paramName.lower() for paraStr in
-                                ['material', 'tlayer', 'blayer']):
+                                 ['material', 'tlayer', 'blayer']):
                             combo = self.addStandardCombo(
                                 self.materialsModel, value)
                             view.setIndexWidget(child1.index(), combo)
@@ -3068,7 +3109,7 @@ if __name__ == '__main__':
                             if paravalue != str(arg_def) or\
                                     paraname == 'bl':
                                 if paraname.lower() not in\
-                                        ['bl', 'center', 'material', 
+                                        ['bl', 'center', 'material',
                                          'material2']:
                                     paravalue = self.quotize(paravalue)
                                 ieinit += '\n{2}{0}={1},'.format(
