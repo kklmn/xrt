@@ -338,15 +338,6 @@ class XrtQook(qt.QWidget):
         aboutAction.setShortcut('Ctrl+I')
         aboutAction.triggered.connect(self.aboutCode)
 
-        if spyder.haveATour:
-            tourAction = qt.QAction(
-                qt.QIcon(os.path.join(self.iconsDir, 'dialog-question.png')),
-                'Tour xrtQook',
-                self)
-            tourAction.setShortcut('F1')
-            tourAction.triggered.connect(self.tour)
-        self.tour = None
-
         self.tabs = qt.QTabWidget()
         self.toolBar = qt.QToolBar('Action buttons')
 #        self.statusBar = qt.QStatusBar()
@@ -371,8 +362,6 @@ class XrtQook(qt.QWidget):
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
         self.toolBar.addAction(aboutAction)
-        if spyder.haveATour:
-            self.toolBar.addAction(tourAction)
         bbl = qt.QShortcut(self)
         bbl.setKey(qt.Key_F4)
         bbl.activated.connect(self.catch_viewer)
@@ -3438,57 +3427,6 @@ if __name__ == '__main__':
             event.ignore()
         else:
             event.accept()
-
-    def tour(self):
-        if not spyder.haveATour:
-            return
-        if self.tour is None:
-            self.tour = spyder.AnimatedTour(self)
-        # patch to have a correct width of the highlighted area:
-        for itab in reversed(range(self.tabs.count())):
-            self.tabs.setCurrentIndex(itab)
-        frames = self.get_tour()
-        index = 0
-        dic = {'last': 0, 'tour': frames}
-        self.tour.set_tour(index, dic, self)
-        self.tour.start_tour()
-
-    def get_tour(self):
-        return [{'title': "Welcome to Spyder introduction tour",
-                 'content': "<b>Bla</b> bla ",
-                 'image': os.path.join(self.iconsDir, 'xrQt1.ico')},
-
-                {'title': "Actions",
-                 'content': ("buttons"),
-                 'widgets': ["toolBar"],
-                 'interact': True},
-
-                {'title': "Widget display 1",
-                 'content': ("AAAA  BBBB"),
-                 'widgets': ['tree'],
-                 'decoration': ['progressBar'],
-                 'interact': True},
-
-                {'title': "Widget display 2",
-                 'content': ("CCCC  DDDD"),
-                 'widgets': ['matTree'],
-                 'interact': True},
-
-                {'title': "Widget display 3",
-                 'content': ("<b>CCCC</b>      DDDD"),
-                 'widgets': ['plotTree'],
-                 'interact': True},
-
-                {'title': "Widget display 4",
-                 'content': ("EEEE     FFFF"),
-                 'widgets': ['codeEdit'],
-                 'interact': True},
-
-                {'title': "progressBar",
-                 'content': ("%%%%% "),
-                 'widgets': ['progressBar'],
-                 'interact': True},
-                ]
 
 
 class PropagationConnect(qt.QObject):
