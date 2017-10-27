@@ -564,6 +564,7 @@ def run_ray_tracing(
     runCardVals.cwd = os.getcwd()
     if backend.startswith('shadow'):
         from .backends import shadow
+        cpuCount = max(processes, threads)
         shadow.check_shadow_dirs(cpuCount, runCardVals.cwd)
         runCardVals.fWiggler, runCardVals.fPolar, runCardVals.blockNRays = \
             shadow.init_shadow(cpuCount, runCardVals.cwd, energyRange)
