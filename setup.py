@@ -2,6 +2,7 @@
 import os
 from distutils.core import setup
 
+raise BaseException("Don't use this setup until the new release is ready")
 #import importLongDescription
 #long_description = importLongDescription.output()
 long_description = u"""
