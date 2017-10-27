@@ -149,11 +149,3 @@ def sphinxify(docstring, context, buildername='html'):
     shutil.rmtree(srcdir, ignore_errors=True)
 
     return output
-
-
-haveATour = False
-try:
-    from spyder.app.tour import AnimatedTour
-    haveATour = True
-except ImportError:
-    pass
