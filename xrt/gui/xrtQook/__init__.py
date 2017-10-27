@@ -2662,6 +2662,40 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             matName))
 #                    print("Incorrect parameters. Class", matName,
 #                          "not initialized.")
+                if matName is not None:
+                    for iel in range(self.rootBLItem.rowCount()): 
+                        eItem = self.rootBLItem.child(iel, 0)
+                        elNameStr = str(eItem.text())
+                        for ich1 in range(eItem.rowCount()):
+                            if str(eItem.child(ich1, 0).text()) ==\
+                                    'properties':
+                                pItem = eItem.child(ich1, 0)
+                                for ich2 in range(pItem.rowCount()):
+                                    if str(pItem.child(ich2, 1).text()) ==\
+                                            matName:
+                                        startFrom =\
+                                            self.name_to_flow_pos(
+                                                elNameStr)
+                                        break
+                                else:
+                                    continue
+                                break
+                        else:
+                            continue
+                        break
+                    if startFrom is not None:
+                        self.bl_propagate_flow(startFrom)
+
+    def name_to_flow_pos(self, elementNameStr):
+        retVal = 0
+        try:
+            for isegment, segment in enumerate(self.beamLine.flow):
+                if segment[0] == elementNameStr:
+                    retVal = isegment
+                    break
+        except:  # analysis:ignore
+            pass
+        return retVal
 
     def name_to_bl_pos(self, elname):
         for iel in range(self.rootBLItem.rowCount()):
@@ -2749,17 +2783,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                        inkwArgs, outkwArgs])
             return blFlow
 
-        def name_to_flow_pos(elementNameStr):
-            retVal = 0
-            try:
-                for isegment, segment in enumerate(self.beamLine.flow):
-                    if segment[0] == elementNameStr:
-                        retVal = isegment
-                        break
-            except:  # analysis:ignore
-                pass
-            return retVal
-
         def update_regexp():
             for iElement in range(self.rootBLItem.rowCount()):
                 elItem = self.rootBLItem.child(iElement, 0)
@@ -2827,7 +2850,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 #                            print("Incorrect parameters. Class", elNameStr,
 #                                  "not initialized.")
                         self.beamLine.flow = build_flow(startFrom=elNameStr)
-                        startFrom = name_to_flow_pos(elNameStr)
+                        startFrom = self.name_to_flow_pos(elNameStr)
                     else:  # Element renamed or moved
                         oesValues = list(self.beamLine.oesDict.values())
                         oesKeys = list(self.beamLine.oesDict.keys())
@@ -2891,7 +2914,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 if self.beamLine.flow[iel][0] == startElement:
                                     self.beamLine.flow[iel][0] =\
                                         str(item.text())
-                        startFrom = name_to_flow_pos(startElement)
+                        startFrom = self.name_to_flow_pos(startElement)
                 elif pText in ['properties'] and iCol > 0:
                     elItem = item.parent().parent()
                     elNameStr = str(elItem.text())
@@ -2935,14 +2958,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 for segment in self.rayPath[0]:
                                     if segment[2] == elNameStr:
                                         startFrom =\
-                                            name_to_flow_pos(segment[0])
+                                            self.name_to_flow_pos(segment[0])
                                         break
                                 else:
-                                    startFrom = name_to_flow_pos(elNameStr)
+                                    startFrom =\
+                                        self.name_to_flow_pos(elNameStr)
                             else:
-                                startFrom = name_to_flow_pos(elNameStr)
+                                startFrom = self.name_to_flow_pos(elNameStr)
                         else:
-                            startFrom = name_to_flow_pos(elNameStr)
+                            startFrom = self.name_to_flow_pos(elNameStr)
                 elif pText in ['parameters', 'output'] and iCol > 0:
                     elItem = item.parent().parent().parent()
                     elNameStr = str(elItem.text())
@@ -2950,7 +2974,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         "Method of {} was modified".format(elNameStr))
 #                    print("Method of", elNameStr, "was modified")
                     self.beamLine.flow = build_flow(startFrom=elNameStr)
-                    startFrom = name_to_flow_pos(elNameStr)
+                    startFrom = self.name_to_flow_pos(elNameStr)
                 elif item.parent().parent() == self.rootBLItem and newElement:
                     elItem = item.parent()
                     elNameStr = str(elItem.text())
@@ -2959,7 +2983,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             item.text(), elNameStr))
 #                    print("Method", item.text(), "was added to", elNameStr)
                     self.beamLine.flow = build_flow(startFrom=elNameStr)
-                    startFrom = name_to_flow_pos(elNameStr)
+                    startFrom = self.name_to_flow_pos(elNameStr)
         else:  # Rebuild beamline
             for ie in range(self.rootBLItem.rowCount()):
                 elItem = self.rootBLItem.child(ie, 0)

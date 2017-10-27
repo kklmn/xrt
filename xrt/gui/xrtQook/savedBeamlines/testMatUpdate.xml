@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<Project>
+<Beams type="prop">
+	<None type="flat"></None>
+	<wiggler01beamGlobal01 type="flat"></wiggler01beamGlobal01>
+	<oe01beamGlobal01 type="flat"></oe01beamGlobal01>
+	<oe01beamLocal01 type="flat"></oe01beamLocal01>
+	<screen01beamLocal01 type="flat"></screen01beamLocal01>
+</Beams>
+<Materials type="prop">
+	<crystalSi01 type="value">
+		<properties type="prop">
+			<tK type="param">297.15</tK>
+			<hkl type="param">[2, 2, 0]</hkl>
+			<d type="param">0</d>
+			<V type="param">None</V>
+			<elements type="param">Si</elements>
+			<quantities type="param">None</quantities>
+			<rho type="param">0</rho>
+			<t type="param">None</t>
+			<factDW type="param">1.0</factDW>
+			<geom type="param">Bragg reflected</geom>
+			<table type="param">Chantler</table>
+			<name type="param"></name>
+			<nuPoisson type="param">0.0</nuPoisson>
+			<calcBorrmann type="param">None</calcBorrmann>
+			<useTT type="param">False</useTT>
+		</properties>
+		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
+	</crystalSi01>
+</Materials>
+<beamLine type="value">
+	<properties type="prop">
+		<azimuth type="param">0.0</azimuth>
+		<height type="param">0.0</height>
+		<alignE type="param">9000.0</alignE>
+		<alignMode type="param">False</alignMode>
+	</properties>
+	<_object type="object">xrt.backends.raycing.BeamLine</_object>
+	<wiggler01 type="value">
+		<properties type="prop">
+			<bl type="param">beamLine</bl>
+			<name type="param">BM</name>
+			<center type="param">(0, 0, 0)</center>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
+			<nrays type="param">100000</nrays>
+			<eE type="param">3.0</eE>
+			<eI type="param">0.5</eI>
+			<eEspread type="param">0.0</eEspread>
+			<eSigmaX type="param">None</eSigmaX>
+			<eSigmaZ type="param">None</eSigmaZ>
+			<eEpsilonX type="param">1.0</eEpsilonX>
+			<eEpsilonZ type="param">0.01</eEpsilonZ>
+			<betaX type="param">9.0</betaX>
+			<betaZ type="param">2.0</betaZ>
+			<xPrimeMax type="param">0.5</xPrimeMax>
+			<zPrimeMax type="param">0.5</zPrimeMax>
+			<distE type="param">eV</distE>
+			<eMin type="param">5000.0</eMin>
+			<eMax type="param">15000.0</eMax>
+			<eN type="param">51</eN>
+			<K type="param">8.446</K>
+			<period type="param">50</period>
+			<n type="param">40</n>
+			<filamentBeam type="param">False</filamentBeam>
+			<uniformRayDensity type="param">False</uniformRayDensity>
+			<nx type="param">25</nx>
+			<nz type="param">25</nz>
+		</properties>
+		<_object type="object">xrt.backends.raycing.sources.Wiggler</_object>
+		<shine type="prop">
+			<parameters type="prop">
+				<withAmplitudes type="param">True</withAmplitudes>
+				<accuBeam type="param">None</accuBeam>
+				<fixedEnergy type="param">False</fixedEnergy>
+				<toGlobal type="param">True</toGlobal>
+			</parameters>
+			<_object type="object">xrt.backends.raycing.sources.Wiggler.shine</_object>
+			<output type="prop">
+				<beamGlobal type="param">wiggler01beamGlobal01</beamGlobal>
+			</output>
+		</shine>
+	</wiggler01>
+	<oe01 type="value">
+		<properties type="prop">
+			<bl type="param">beamLine</bl>
+			<name type="param">None</name>
+			<center type="param">[0, 3000, 0]</center>
+			<pitch type="param">auto</pitch>
+			<roll type="param">0</roll>
+			<yaw type="param">0</yaw>
+			<positionRoll type="param">0</positionRoll>
+			<extraPitch type="param">0</extraPitch>
+			<extraRoll type="param">0</extraRoll>
+			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
+			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+			<surface type="param">None</surface>
+			<material type="param">crystalSi01</material>
+			<alpha type="param">None</alpha>
+			<limPhysX type="param">[-1000.0, 1000.0]</limPhysX>
+			<limOptX type="param">None</limOptX>
+			<limPhysY type="param">[-1000.0, 1000.0]</limPhysY>
+			<limOptY type="param">None</limOptY>
+			<isParametric type="param">False</isParametric>
+			<shape type="param">rect</shape>
+			<order type="param">None</order>
+			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
+		</properties>
+		<_object type="object">xrt.backends.raycing.oes.OE</_object>
+		<reflect type="prop">
+			<parameters type="prop">
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
+				<beam type="param">wiggler01beamGlobal01</beam>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<needLocal type="param">True</needLocal>
+			</parameters>
+			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
+			<output type="prop">
+				<beamGlobal type="param">oe01beamGlobal01</beamGlobal>
+				<beamLocal type="param">oe01beamLocal01</beamLocal>
+			</output>
+		</reflect>
+	</oe01>
+	<screen01 type="value">
+		<properties type="prop">
+			<bl type="param">beamLine</bl>
+			<name type="param">None</name>
+			<center type="param">[0, 4000, 0]</center>
+			<x type="param">auto</x>
+			<z type="param">auto</z>
+			<compressX type="param">None</compressX>
+			<compressZ type="param">None</compressZ>
+		</properties>
+		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
+		<expose type="prop">
+			<parameters type="prop">
+				<beam type="param">oe01beamGlobal01</beam>
+			</parameters>
+			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
+			<output type="prop">
+				<beamLocal type="param">screen01beamLocal01</beamLocal>
+			</output>
+		</expose>
+	</screen01>
+</beamLine>
+<plots type="value">
+</plots>
+<run_ray_tracing type="prop">
+	<_object type="object">xrt.runner.run_ray_tracing</_object>
+	<afterScript type="param">None</afterScript>
+	<processes type="param">1</processes>
+	<afterScriptKWargs type="param">{}</afterScriptKWargs>
+	<pickleEvery type="param">None</pickleEvery>
+	<generator type="param">None</generator>
+	<generatorKWargs type="param">auto</generatorKWargs>
+	<updateEvery type="param">1</updateEvery>
+	<globalNorm type="param">0</globalNorm>
+	<afterScriptArgs type="param">[]</afterScriptArgs>
+	<generatorArgs type="param">[]</generatorArgs>
+	<threads type="param">1</threads>
+	<beamLine type="param">beamLine</beamLine>
+	<energyRange type="param">None</energyRange>
+	<plots type="param">plots</plots>
+	<repeats type="param">1</repeats>
+	<backend type="param">raycing</backend>
+</run_ray_tracing>
+<description></description>
+</Project>

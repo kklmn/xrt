@@ -366,8 +366,23 @@ class OE(object):
         """For a grating, gives the local reciprocal groove vector (without
         2pi!) in 1/mm at (*x*, *y*) position. The vector must lie on the
         surface, i.e. be orthogonal to the normal. Typically is overridden in
-        the derived classes. Returns a 3-tuple of floats or of arrays of the
-        length of *x* and *y*."""
+        the derived classes or defined in Material class. Returns a 3-tuple of
+        floats or of arrays of the length of *x* and *y*."""
+        
+        try:
+            if self.material is not None:
+                rhoList = self.material.gratingDensity
+                if rhoList is not None:
+                    if rhoList[0] == 'x':
+                        N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*x + 
+                                          3*rhoList[4]*x**2)
+                        return N, np.zeros_like(N), np.zeros_like(N)
+                    elif rhoList[0] == 'y':
+                        N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*y + 
+                                          3*rhoList[4]*y**2)
+                        return np.zeros_like(N), N, np.zeros_like(N)
+        except:
+            pass               
         return 0, rho, 0  # constant line spacing along y
 
     def local_n(self, x, y):  # or as (self, s, phi)

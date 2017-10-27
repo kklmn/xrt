@@ -245,7 +245,7 @@ class Material(object):
     chemical formula and density."""
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
                  t=None, table='Chantler', efficiency=None,
-                 efficiencyFile=None, name=''):
+                 efficiencyFile=None, gratingDensity=None, name=''):
         r"""
         *elements*: str or sequence of str
             Contains all the constituent elements (symbols)
@@ -315,6 +315,20 @@ class Material(object):
         *efficiencyFile*: str
             See the definition of *efficiency*.
 
+        *gratingDensity*: None or list
+            If material *kind* = 'grating', its density can be defined as list
+            [direction, :math:`\rho_G`, P0, P1, P2], where :math:`\rho_G` is
+            line density in inverse mm, P0-P2 are polynom coefficients, definig
+            the line density variation, so that for given axis
+
+            .. math::
+
+                \rho_{vls} = \rho_G * (\mathit{P}_0 +
+                2 * \mathit{P}_1 * y + 3 * \mathit{P}_2 * y^2).
+                
+            Example: ['y', 800, 1, 0, 0] for the grating with constant
+            spacing; ['y', 1200, 1, 1e-6, 3.1e-7] for VLS.
+
         *name*: str
             Material name. Not used by xrt. Can be used by the user for
             annotations of graphs or other output purposes. If empty, the name
@@ -355,6 +369,7 @@ class Material(object):
         self.efficiencyFile = efficiencyFile
         if efficiencyFile is not None:
             self.read_efficiency_file()
+        self.gratingDensity = gratingDensity
 
     def read_efficiency_file(self):
         cols = [c[1] for c in self.efficiency]
