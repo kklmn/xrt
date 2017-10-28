@@ -33,7 +33,6 @@ __dir__ = os.path.abspath(os.path.dirname(__file__))
 runCardVals = None
 runCardProcs = None
 _plots = []
-needLimits = False
 
 
 def retry_on_eintr(function, *args, **kw):
@@ -192,7 +191,6 @@ def dispatch_jobs():
 
 def one_iteration():
     """The body of :func:`dispatch_jobs`."""
-    global needLimits
     plots2Pickle = [plot.card_copy() for plot in _plots]
     outPlotQueues = [runCardVals.Queue() for plot in _plots]
     alarmQueue = runCardVals.Queue()
@@ -201,6 +199,7 @@ def one_iteration():
 # calculated and thus this case is special:
     cpus = max(runCardVals.threads, runCardVals.processes)
     if runCardVals.iteration == 0:
+        runCardVals.needLimits = False
         for plot in _plots:
             xLimitsDefined = (plot.xaxis.limits is not None) and\
                 (not isinstance(plot.xaxis.limits, str))
@@ -209,12 +208,12 @@ def one_iteration():
             cLimitsDefined = (plot.caxis.limits is not None) and\
                 (not isinstance(plot.caxis.limits, str)) or plot.ePos == 0
             if not (xLimitsDefined and yLimitsDefined and cLimitsDefined):
-                needLimits = True
+                runCardVals.needLimits = True
                 break
-        if needLimits:
+        if runCardVals.needLimits:
             cpus = 1
     elif runCardVals.iteration == 1:  # balances the 1st one
-        if needLimits:
+        if runCardVals.needLimits:
             cpus -= 1
     if cpus < 1:
         cpus = 1
@@ -531,6 +530,10 @@ def run_ray_tracing(
     frm = inspect.stack()[1]
     mod = inspect.getmodule(frm[0])
     runfile = mod.__file__
+    # patch for starting a script with processes>1 from Spyder console
+    if not hasattr(mod, "__spec__"):
+        mod.__spec__ = None
+
     if isinstance(plots, (list, tuple)):
         _plots = plots
     else:
