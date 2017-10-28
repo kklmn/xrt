@@ -2662,6 +2662,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             matName))
 #                    print("Incorrect parameters. Class", matName,
 #                          "not initialized.")
+                startFrom = None
                 if matName is not None:
                     for iel in range(self.rootBLItem.rowCount()): 
                         eItem = self.rootBLItem.child(iel, 0)

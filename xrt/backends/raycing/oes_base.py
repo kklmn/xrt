@@ -9,6 +9,7 @@ from .. import raycing
 from . import sources as rs
 from . import myopencl as mcl
 from .physconsts import CH, CHBAR
+from .materials import EmptyMaterial
 try:
     import pyopencl as cl  # analysis:ignore
     isOpenCL = True
@@ -26,7 +27,7 @@ allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'surface', 'material', 'material2', 'alpha',
                 'limPhysX', 'limOptX', 'limPhysY', 'limOptY',
                 'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2',
-                'isParametric', 'shape', 'order',
+                'isParametric', 'shape', 'gratingDensity', 'order',
                 'shouldCheckCenter',
                 'dxFacet', 'dyFacet', 'dxGap', 'dyGap', 'Rm',
                 'crossSection', 'Rs', 'R', 'r', 'p', 'q',
@@ -84,10 +85,10 @@ class OE(object):
         limPhysX=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptX=None,
         limPhysY=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
-        limOptY=None, isParametric=False, shape='rect', order=None,
-        shouldCheckCenter=False,
+        limOptY=None, isParametric=False, shape='rect',
+        gratingDensity=None, order=None, shouldCheckCenter=False,
             targetOpenCL=None, precisionOpenCL='float64'):
-        u"""
+        r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
             `oes` list.
@@ -173,21 +174,33 @@ class OE(object):
             Class :class:`SurfaceOfRevolution` gives an example of the
             transformation functions and represents a useful kind of parametric
             surface.
-
             The methods :meth:`local_n` (surface normal) and :meth:`local_g`
             (grating vector, if used for this OE) return 3D vectors in local
-            xyz space but now the two input coordinate parameters are *s* and
-            *phi*.
-
+            xyz space but now the two input coordinate parameters
+            are *s* and *phi*.
             The limits [*limPhysX*, *limOptX*] and [*limPhysY*, *limOptY*]
             still define, correspondingly, the limits in local *x* and *y*.
-
             The local beams (footprints) will additionally contain *s*, *phi*
             and *r* arrays.
 
         *shape*: str or list of [x, y] pairs
             The shape of OE. Supported: 'rect', 'round' or a list of [x, y]
             pairs for an arbitrary shape.
+
+        *gratingDensity*: None or list
+            If material *kind* = 'grating', its density can be defined as
+            list [direction, :math:`\rho_G`, P0, P1, P2],
+            where :math:`\rho_G` is line density in inverse mm,
+            P0-P2 are polynom coefficients, defining the line density
+            variation, so that for given axis
+
+            .. math::
+
+                \rho_{vls} = \rho_G * (\mathit{P}_0 +
+                2 * \mathit{P}_1 * y + 3 * \mathit{P}_2 * y^2).
+
+            Example: ['y', 800, 1, 0, 0] for the grating with constant
+            spacing; ['y', 1200, 1, 1e-6, 3.1e-7] for VLS.
 
         *order*: int or sequence of ints
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
@@ -268,6 +281,9 @@ class OE(object):
         self.use_rays_good_gn = False  # use rays_good_gn instead of rays_good
 
         self.shape = shape
+        self.gratingDensity = gratingDensity
+        if self.gratingDensity is not None:
+            self.material = EmptyMaterial()
         self.order = 1 if order is None else order
         self.get_surface_limits()
         self.cl_ctx = None
@@ -368,21 +384,20 @@ class OE(object):
         surface, i.e. be orthogonal to the normal. Typically is overridden in
         the derived classes or defined in Material class. Returns a 3-tuple of
         floats or of arrays of the length of *x* and *y*."""
-        
+
         try:
-            if self.material is not None:
-                rhoList = self.material.gratingDensity
-                if rhoList is not None:
-                    if rhoList[0] == 'x':
-                        N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*x + 
-                                          3*rhoList[4]*x**2)
-                        return N, np.zeros_like(N), np.zeros_like(N)
-                    elif rhoList[0] == 'y':
-                        N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*y + 
-                                          3*rhoList[4]*y**2)
-                        return np.zeros_like(N), N, np.zeros_like(N)
+            rhoList = self.gratingDensity
+            if rhoList is not None:
+                if rhoList[0] == 'x':
+                    N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*x +
+                                      3*rhoList[4]*x**2)
+                    return N, np.zeros_like(N), np.zeros_like(N)
+                elif rhoList[0] == 'y':
+                    N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*y +
+                                      3*rhoList[4]*y**2)
+                    return np.zeros_like(N), N, np.zeros_like(N)
         except:
-            pass               
+            pass
         return 0, rho, 0  # constant line spacing along y
 
     def local_n(self, x, y):  # or as (self, s, phi)
@@ -732,7 +747,10 @@ class OE(object):
                 pass
 
     def assign_auto_material_kind(self, material):
-        material.kind = 'mirror'
+        if self.gratingDensity is not None:
+            material.kind = 'grating'
+        else:
+            material.kind = 'mirror'
 
     def rays_good(self, x, y, is2ndXtal=False):
         """Returns *state* value for a ray with the given intersection point
