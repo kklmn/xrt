@@ -362,6 +362,11 @@ def check_alarm(self, incoming, beam):
         self.bl.alarms.append('no incident rays to {0}!'.format(self.name))
 
 
+def get_energy(beam):
+    """Used for retrieving data for x-, y- or c-axis of a plot."""
+    return beam.E
+
+
 def get_x(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     return beam.x
@@ -392,6 +397,16 @@ def get_r(beam):
     return beam.r
 
 
+def get_a(beam):
+    """Used for retrieving data for x-, y- or c-axis of a plot."""
+    return beam.a
+
+
+def get_b(beam):
+    """Used for retrieving data for x-, y- or c-axis of a plot."""
+    return beam.b
+
+
 def get_xprime(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     return beam.a / beam.b
@@ -410,11 +425,6 @@ def get_path(beam):
 def get_order(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     return beam.order if hasattr(beam, 'order') else np.ones_like(beam.state)
-
-
-def get_energy(beam):
-    """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.E
 
 
 def get_reflection_number(beam):
@@ -506,16 +516,6 @@ def get_phase_shift(beam):  # in units of pi!
 def get_incidence_angle(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     return beam.theta if hasattr(beam, 'theta') else np.zeros_like(beam.x)
-
-
-def get_a(beam):
-    """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.a
-
-
-def get_b(beam):
-    """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.b
 
 
 get_theta = get_incidence_angle
@@ -792,8 +792,6 @@ class BeamLine(object):
             intensity = np.sqrt(np.abs(beam.Jss[good])**2 +
                                 np.abs(beam.Jpp[good])**2)
             totalI = np.sum(intensity)
-            print("totalI", totalI)
-            print("good", len(beam.E[good]))
             inBeam = copy.deepcopy(beam)  # Beam(nrays=2)
             for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
                 field = getattr(beam, fieldName)
