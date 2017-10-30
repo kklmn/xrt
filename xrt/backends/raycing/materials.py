@@ -519,7 +519,7 @@ class Multilayer(object):
     """
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
-                 power=2.):
+                 thicknessError = 0., power=2.):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
@@ -558,6 +558,7 @@ class Multilayer(object):
         #self.dLow = float(tThicknessLow + bThicknessLow)
         self.kind = 'multilayer'
         self.geom = 'Bragg reflected'
+        self.tError = thicknessError
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:
@@ -612,10 +613,12 @@ class Multilayer(object):
             ((order * CH / E)**2 + self.d**2 * 8*d_)**0.5 / (2*self.d))
 
     def get_t_thickness(self, x, y, iPair):
-        return self.dti[iPair]
+        return self.dti[iPair] * (np.random.normal(size=len(x)) *
+                                  self.tError + 1.)
 
     def get_b_thickness(self, x, y, iPair):
-        return self.dbi[iPair]
+        return self.dbi[iPair] * (np.random.normal(size=len(x)) *
+                                  self.tError + 1.)
 
     def get_amplitude(self, E, beamInDotNormal, x=None, y=None, ucl=None):
         r"""
