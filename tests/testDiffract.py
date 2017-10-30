@@ -202,22 +202,22 @@ def build_beamline():
 def run_process(beamLine):
     WigglerbeamGlobal01 = beamLine.undulator01.shine()
 
-#    FEMaskbeamGlobal, FEMaskWave = beamLine.FEMask.diffract(
+#    FEMaskbeamGlobal, FEMaskWave = beamLine.FEMask.propagate_wave(
 #        wave=WigglerbeamGlobal01, nrays=nrays)
 #
 #    C_FilterbeamGlobal01, C_FilterbeamLocal101, C_FilterbeamLocal201 =\
 #        beamLine.C_Filter.double_refract(
 #            beam=FEMaskbeamGlobal)
 
-#    WBSbeamGlobal, WBSWave = beamLine.WhiteBeamSlits.diffract(
+#    WBSbeamGlobal, WBSWave = beamLine.WhiteBeamSlits.propagate_wave(
 #        beam=C_FilterbeamGlobal01, wave=C_FilterbeamLocal201, nrays=nrays)
 
-    M1beamGlobal01, M1wave = beamLine.M1.diffract(
+    M1beamGlobal01, M1wave = beamLine.M1.propagate_wave(
         wave=WigglerbeamGlobal01, nrays=nrays)
-#    M1beamGlobal01, M1wave = beamLine.M1.diffract(
+#    M1beamGlobal01, M1wave = beamLine.M1.propagate_wave(
 #        beam=C_FilterbeamGlobal01, wave=C_FilterbeamLocal201, nrays=nrays)
 
-    CMSlitsbeamGlobal, CMSlitsWave = beamLine.CM_Slits.diffract(
+    CMSlitsbeamGlobal, CMSlitsWave = beamLine.CM_Slits.propagate_wave(
         beam=M1beamGlobal01, wave=M1wave, nrays=nrays)
 
     SSRL_DCMbeamGlobal01, SSRL_DCMbeamLocal101, SSRL_DCMbeamLocal201 =\
@@ -226,10 +226,10 @@ def run_process(beamLine):
     screen01beamLocal01 = beamLine.M2Paddle.expose_wave(
         beam=SSRL_DCMbeamGlobal01, wave=SSRL_DCMbeamLocal201, dim1=127, dim2=127)
 #
-#    M2beamGlobal01, M2wave = beamLine.M2.diffract(
+#    M2beamGlobal01, M2wave = beamLine.M2.propagate_wave(
 #        beam=SSRL_DCMbeamGlobal01, wave=SSRL_DCMbeamLocal201)
 #
-#    PSbeamGlobal, PSWave  = beamLine.PhotonShutter.diffract(
+#    PSbeamGlobal, PSWave  = beamLine.PhotonShutter.propagate_wave(
 #        beam=M2beamGlobal01, wave=M2wave)
 #
 #    DBHR1beamGlobal01, DBHR1beamLocal01 = beamLine.DBHR1.reflect(
