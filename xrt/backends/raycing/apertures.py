@@ -25,6 +25,8 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 __all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
 
+allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'alarmLevel', 'r',
+                'shadeFraction')
 
 class RectangularAperture(object):
     """Implements an aperture or an obstacle with a combination of horizontal
@@ -139,20 +141,7 @@ class RectangularAperture(object):
         .. Returned values: beamLocal
         """
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
+            if self.bl.alignMode or raycing.is_auto_align_required(self):
                 self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
@@ -222,10 +211,17 @@ class RectangularAperture(object):
         self.opening = locOpening
         self.set_optical_limits()
 
-    def local_to_global(self, glo, **kwargs):
-        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+    def local_to_global(self, glo, returnBeam=False, **kwargs):
+        if returnBeam:
+            retGlo = rs.Beam(copyFrom=glo)
+            raycing.virgin_local_to_global(self.bl, retGlo,
+                                           self.center, **kwargs)
+            return retGlo
+        else:
+            raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays):
+
+    def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -233,7 +229,8 @@ class RectangularAperture(object):
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
         *nrays* of samples are randomly distributed over the slit area.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         nrays = int(nrays)
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
@@ -250,6 +247,47 @@ class RectangularAperture(object):
         self.local_to_global(glo)
         rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
         return wave
+
+    def propagate_wave(self, wave=None, beam=None, nrays='auto'):
+        """
+        Propagates the incoming *wave* through an aperture using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+
+        .. Returned values: beamGlobal, beamLocal
+        """
+        from . import waves as rw
+        waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+        prevOE = wave.parent
+        print("Diffract", self.name, " Prev OE:", prevOE.name)
+        if self.bl is not None:
+            if raycing.is_auto_align_required(self):
+                if beam is not None:
+                    self.bl.auto_align(self, beam)
+                elif 'source' in str(type(prevOE)):
+                    self.bl.auto_align(self, wave)
+                else:
+                    self.bl.auto_align(self, prevOE.local_to_global(
+                        wave, returnBeam=True))
+        waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
+        if 'source' in str(type(prevOE)):
+            retGlo = prevOE.shine(wave=waveOnSelf)
+        else:
+            retGlo = rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return retGlo, waveOnSelf
 
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
@@ -445,7 +483,7 @@ class RoundAperture(object):
     def local_to_global(self, glo, **kwargs):
         raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays):
+    def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -453,7 +491,8 @@ class RoundAperture(object):
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
         *nrays* of samples are randomly distributed over the slit area.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         nrays = int(nrays)
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
@@ -470,6 +509,46 @@ class RoundAperture(object):
         self.local_to_global(glo)
         rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
         return wave
+
+    def diffract(self, wave=None, beam=None, nrays='auto'):
+        """
+        Propagates the incoming *wave* through an aperture using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+
+        .. Returned values: beamLocal
+        """
+        from . import waves as rw
+        waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+        prevOE = wave.parent
+        if self.bl is not None:
+            if raycing.is_auto_align_required(self):
+                if beam is not None:
+                    self.bl.auto_align(self, beam)
+                elif 'source' in str(type(prevOE)):
+                    self.bl.auto_align(self, wave)
+                else:
+                    self.bl.auto_align(self, prevOE.local_to_global(
+                        wave, returnBeam=True))
+        waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
+        if 'source' in str(type(prevOE)):
+            prevOE.shine(wave=waveOnSelf)
+        else:
+            rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return self.local_to_global(waveOnSelf, returnBeam=True), waveOnSelf
 
 
 class RoundBeamStop(RoundAperture):

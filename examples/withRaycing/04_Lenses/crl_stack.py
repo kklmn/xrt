@@ -307,13 +307,14 @@ def plot_generator(plots, plotsFSM2, beamLine):
 
 def main():
     beamLine = build_beamline()
+    beamLine.glow()
 #    plots, plotsFSM2 = define_plots(beamLine)
 #    xrtr.run_ray_tracing(
 #        plots, repeats=16, generator=plot_generator,
 #        generatorArgs=[plots, plotsFSM2, beamLine],
 #        updateEvery=1, beamLine=beamLine, processes='half')
 
-    beamLine.glow()
+#    beamLine.glow()
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

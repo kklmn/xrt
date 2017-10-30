@@ -9,6 +9,7 @@ from .. import raycing
 from . import sources as rs
 from . import myopencl as mcl
 from .physconsts import CH, CHBAR
+from .materials import EmptyMaterial
 try:
     import pyopencl as cl  # analysis:ignore
     isOpenCL = True
@@ -20,7 +21,24 @@ __date__ = "06 Oct 2017"
 
 __dir__ = os.path.dirname(__file__)
 _DEBUG = False
-
+allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
+                'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
+                'rotationSequence', 'extraRotationSequence',
+                'surface', 'material', 'material2', 'alpha',
+                'limPhysX', 'limOptX', 'limPhysY', 'limOptY',
+                'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2',
+                'isParametric', 'shape', 'gratingDensity', 'order',
+                'shouldCheckCenter',
+                'dxFacet', 'dyFacet', 'dxGap', 'dyGap', 'Rm',
+                'crossSection', 'Rs', 'R', 'r', 'p', 'q',
+                'isCylindrical',
+                'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alarmLevel',
+                'cryst2finePitch', 'cryst2perpTransl', 'cryst2longTransl',
+                'fixedOffset', 't', 'focus', 'zmax', 'nCRL', 'f', 'E', 'N',
+                'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2',
+                'phaseShift', 'vorticity', 'grazingAngle',
+                'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
+                'targetOpenCL', 'precisionOpenCL')
 
 def flatten(x):
     if x is None:
@@ -67,10 +85,10 @@ class OE(object):
         limPhysX=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptX=None,
         limPhysY=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
-        limOptY=None, isParametric=False, shape='rect', order=None,
-        shouldCheckCenter=False,
+        limOptY=None, isParametric=False, shape='rect',
+        gratingDensity=None, order=None, shouldCheckCenter=False,
             targetOpenCL=None, precisionOpenCL='float64'):
-        u"""
+        r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
             `oes` list.
@@ -156,21 +174,33 @@ class OE(object):
             Class :class:`SurfaceOfRevolution` gives an example of the
             transformation functions and represents a useful kind of parametric
             surface.
-
             The methods :meth:`local_n` (surface normal) and :meth:`local_g`
             (grating vector, if used for this OE) return 3D vectors in local
-            xyz space but now the two input coordinate parameters are *s* and
-            *phi*.
-
+            xyz space but now the two input coordinate parameters
+            are *s* and *phi*.
             The limits [*limPhysX*, *limOptX*] and [*limPhysY*, *limOptY*]
             still define, correspondingly, the limits in local *x* and *y*.
-
             The local beams (footprints) will additionally contain *s*, *phi*
             and *r* arrays.
 
         *shape*: str or list of [x, y] pairs
             The shape of OE. Supported: 'rect', 'round' or a list of [x, y]
             pairs for an arbitrary shape.
+
+        *gratingDensity*: None or list
+            If material *kind* = 'grating', its density can be defined as
+            list [direction, :math:`\rho_G`, P0, P1, P2],
+            where :math:`\rho_G` is line density in inverse mm,
+            P0-P2 are polynom coefficients, defining the line density
+            variation, so that for given axis
+
+            .. math::
+
+                \rho_{vls} = \rho_G * (\mathit{P}_0 +
+                2 * \mathit{P}_1 * y + 3 * \mathit{P}_2 * y^2).
+
+            Example: ['y', 800, 1, 0, 0] for the grating with constant
+            spacing; ['y', 1200, 1, 1e-6, 3.1e-7] for VLS.
 
         *order*: int or sequence of ints
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
@@ -251,6 +281,9 @@ class OE(object):
         self.use_rays_good_gn = False  # use rays_good_gn instead of rays_good
 
         self.shape = shape
+        self.gratingDensity = gratingDensity
+        if self.gratingDensity is not None:
+            self.material = EmptyMaterial()
         self.order = 1 if order is None else order
         self.get_surface_limits()
         self.cl_ctx = None
@@ -349,8 +382,22 @@ class OE(object):
         """For a grating, gives the local reciprocal groove vector (without
         2pi!) in 1/mm at (*x*, *y*) position. The vector must lie on the
         surface, i.e. be orthogonal to the normal. Typically is overridden in
-        the derived classes. Returns a 3-tuple of floats or of arrays of the
-        length of *x* and *y*."""
+        the derived classes or defined in Material class. Returns a 3-tuple of
+        floats or of arrays of the length of *x* and *y*."""
+
+        try:
+            rhoList = self.gratingDensity
+            if rhoList is not None:
+                if rhoList[0] == 'x':
+                    N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*x +
+                                      3*rhoList[4]*x**2)
+                    return N, np.zeros_like(N), np.zeros_like(N)
+                elif rhoList[0] == 'y':
+                    N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*y +
+                                      3*rhoList[4]*y**2)
+                    return np.zeros_like(N), N, np.zeros_like(N)
+        except:
+            pass
         return 0, rho, 0  # constant line spacing along y
 
     def local_n(self, x, y):  # or as (self, s, phi)
@@ -700,7 +747,10 @@ class OE(object):
                 pass
 
     def assign_auto_material_kind(self, material):
-        material.kind = 'mirror'
+        if self.gratingDensity is not None:
+            material.kind = 'grating'
+        else:
+            material.kind = 'mirror'
 
     def rays_good(self, x, y, is2ndXtal=False):
         """Returns *state* value for a ray with the given intersection point
@@ -813,6 +863,7 @@ class OE(object):
         *returnLocalAbsorbed*: None or int
             If not None, returns the absorbed intensity in local beam.
 
+
         .. .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
@@ -866,6 +917,7 @@ class OE(object):
             absorbedLb.absorb_intensity(beam)
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
+        lb.parent = self
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -886,7 +938,7 @@ class OE(object):
         *returnLocalAbsorbed*: None or int
             If not None, returns the absorbed intensity in local beam.
 
-        .. Returned values: beamGlobal, beamLocal
+
         """
         self.footprint = []
         if self.bl is not None:
@@ -968,11 +1020,12 @@ class OE(object):
             absorbedLb = rs.Beam(copyFrom=lb)
             absorbedLb.absorb_intensity(beam)
             lbN = absorbedLb
+        lbN.parent = self
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())
         return gb, lbN
 
-    def local_to_global(self, lb, **kwargs):
+    def local_to_global(self, lb, returnBeam=False, **kwargs):
         dx, dy, dz = 0, 0, 0
         if isinstance(self, DCM):
             is2ndXtal = kwargs.get('is2ndXtal', False)
@@ -1023,9 +1076,15 @@ class OE(object):
             cosY, sinY = np.cos(roll), np.sin(roll)
             lb.Es[:], lb.Ep[:] = raycing.rotate_y(lb.Es, lb.Ep, cosY, -sinY)
 
-        raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
+        if returnBeam:
+            retGlo = rs.Beam(copyFrom=lb)
+            raycing.virgin_local_to_global(self.bl, retGlo,
+                                           self.center, **kwargs)
+            return retGlo
+        else:
+            raycing.virgin_local_to_global(self.bl, lb, self.center, **kwargs)
 
-    def prepare_wave(self, prevOE, nrays, shape='auto', area='auto'):
+    def prepare_wave(self, prevOE, nrays, shape='auto', area='auto', rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -1034,7 +1093,8 @@ class OE(object):
         *nrays* of samples are randomly distributed over the surface within
         self.limPhysX limits.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         nrays = int(nrays)
         lb = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
@@ -1092,6 +1152,53 @@ class OE(object):
         rw.prepare_wave(
             prevOE, waveLocal, waveGlobal.x, waveGlobal.y, waveGlobal.z)
         return waveLocal
+
+    def propagate_wave(self, wave=None, beam=None, nrays='auto'):
+        """
+        Propagates the incoming *wave* through an optical element using the
+        Kirchhoff diffraction theorem. Returnes two Beam objects, one in global
+        and one in local coordinate systems, which can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+
+        .. Returned values: beamGlobal, beamLocal
+        """
+        from . import waves as rw
+        waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
+#        if wave is None and beam is not None:
+#            wave = beam
+        prevOE = wave.parent
+        print("Diffract on", self.name, " Prev OE:", prevOE.name)
+        if self.bl is not None:
+            if raycing.is_auto_align_required(self):
+                if beam is not None:
+                    self.bl.auto_align(self, beam)
+                elif 'source' in str(type(prevOE)):
+                    self.bl.auto_align(self, wave)
+                else:
+                    self.bl.auto_align(self, prevOE.local_to_global(
+                        wave, returnBeam=True))
+        waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
+        if 'source' in str(type(prevOE)):
+            beamToSelf = prevOE.shine(wave=waveOnSelf)
+            nIS = False
+        else:
+            beamToSelf = rw.diffract(wave, waveOnSelf)
+            nIS = True
+        retGlo, retLoc = self.reflect(beamToSelf, noIntersectionSearch=nIS)
+        retLoc.parent = self
+        return retGlo, retLoc
 
     def _set_t(self, xyz=None, abc=None, surfPhys=None,
                defSize=raycing.maxHalfSizeOfOE):
@@ -1762,6 +1869,9 @@ class OE(object):
 
 class DCM(OE):
     """Implements a Double Crystal Monochromator with flat crystals."""
+
+    hiddenMethods = ['reflect', 'multiple_reflect', 'diffract']
+
     def __init__(self, *args, **kwargs):
         u"""
         *bragg*: float, str, list
@@ -1875,6 +1985,7 @@ class DCM(OE):
             beam, otherwise the N-th local beam returns the
             absorbed intensity on N-th surface of the optical element.
 
+
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
         self.footprint = []
@@ -1956,7 +2067,7 @@ class DCM(OE):
                 absorbedLb = rs.Beam(copyFrom=lo2)
                 absorbedLb.absorb_intensity(lo1)
                 lo2 = absorbedLb
-
+        lo2.parent = self
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
 

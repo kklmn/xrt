@@ -23,6 +23,9 @@ import inspect
 from . import sources as rs
 from .physconsts import CHBAR
 
+allArguments = ('bl', 'name', 'center', 'x', 'z', 'compressX',
+                'compressZ', 'R', 'phiOffset', 'thetaOffset')
+
 _DEBUG = 20
 
 
@@ -192,7 +195,7 @@ class Screen(object):
                                inspect.currentframe())
         return blo
 
-    def prepare_wave(self, prevOE, dim1, dim2, dy=0):
+    def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -203,7 +206,8 @@ class Screen(object):
         generally of different 1D shapes. They are used to create a 2D mesh by
         ``meshgrid``.
         """
-        from . import waves as rw
+        if rw is None:
+            from . import waves as rw
 
         d1s, d2s = np.meshgrid(dim1, dim2)
         d1s = d1s.flatten()
@@ -239,6 +243,61 @@ class Screen(object):
         wave.toOE = self
         wave.area = (np.ones_like(d1s) * dS).sum()
         return rw.prepare_wave(prevOE, wave, xglo, yglo+dy, zglo)
+
+    def expose_wave(self, wave=None, beam=None, dim1=0, dim2=0):
+        """
+        Propagates the incoming *wave* through an aperture using the
+        Kirchhoff diffraction theorem. Returned global and local beams can be
+        used correspondingly for the consequent ray and wave propagation
+        calculations.
+
+        *wave*: Beam object
+            Local beam on the surface of the previous optical element.
+
+        *beam*: Beam object
+            Incident global beam, only used for alignment purpose.
+
+        *nrays*: 'auto' or int
+            Dimension of the created wave. If 'auto' - the same as the incoming
+            wave.
+
+
+        .. Returned values: beamLocal
+        """
+        from . import waves as rw
+        prevOE = wave.parent
+        if self.bl is not None:
+            if raycing.is_auto_align_required(self):
+                if beam is not None:
+                    self.bl.auto_align(self, beam)
+                elif 'source' in str(type(prevOE)):
+                    self.bl.auto_align(self, wave)
+                else:
+                    self.bl.auto_align(self, prevOE.local_to_global(
+                        wave, returnBeam=True))
+
+        if isinstance(dim1, int) or isinstance(dim2, int):
+            if beam is None:
+                if isinstance(prevOE, raycing.oes.DCM):
+                    locBeam = self.expose(prevOE.local_to_global(
+                        wave, returnBeam=True, is2ndXtal=True))
+                else:
+                    locBeam = self.expose(prevOE.local_to_global
+                        (wave, returnBeam=True))
+            else:
+                locBeam = self.expose(beam)
+            if isinstance(dim1, int):
+                dim1 = np.linspace(np.min(locBeam.x), np.max(locBeam.x), dim1)
+            if isinstance(dim2, int):
+                dim2 = np.linspace(np.min(locBeam.z), np.max(locBeam.z), dim2)
+        print (dim1, dim2)
+        waveOnSelf = self.prepare_wave(prevOE, dim1, dim2, rw=rw)
+        if 'source' in str(type(prevOE)):
+            prevOE.shine(wave=waveOnSelf)
+        else:
+            rw.diffract(wave, waveOnSelf)
+        waveOnSelf.parent = self
+        return waveOnSelf
 
 
 class HemisphericScreen(Screen):

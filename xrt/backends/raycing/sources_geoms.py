@@ -7,7 +7,7 @@ import inspect
 
 from . import run as rr
 from .. import raycing
-from .sources_beams import Beam, defaultEnergy
+from .sources_beams import Beam, defaultEnergy, allArguments
 from .physconsts import PI2, CHBAR
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out

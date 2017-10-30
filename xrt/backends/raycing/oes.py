@@ -93,8 +93,9 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating', 'VLSGrating')
+
 import os
-# import copy
+import copy
 # import gc
 import numpy as np
 from scipy import interpolate
@@ -104,7 +105,7 @@ from .. import raycing
 from . import stages as rst
 from . import sources as rs
 from .physconsts import CH
-from .oes_base import OE, DCM
+from .oes_base import OE, DCM, allArguments
 try:
     import pyopencl as cl  # analysis:ignore
     isOpenCL = True
@@ -114,6 +115,7 @@ except ImportError:
 __dir__ = os.path.dirname(__file__)
 _DEBUG = False
 
+allParamsSorted = []
 
 def flatten(x):
     if x is None:
@@ -1325,6 +1327,13 @@ class Plate(DCM):
     """Implements a body with two surfaces. Is derived from :class:`DCM`
     because it also has two interfaces but the parameters referring to the 2nd
     crystal should be ignored."""
+
+    hiddenMethods = DCM.hiddenMethods + ['double_reflect']
+    hiddenParams = ['order', 'bragg', 'cryst1roll', 'cryst2roll',
+                    'cryst2pitch', 'cryst2finePitch', 'cryst2perpTransl',
+                    'cryst2longTransl', 'limPhysX2', 'limPhysY2', 'limOptX2',
+                    'limOptY2', 'surface', 'material2', 'fixedOffset']
+
     def __init__(self, *args, **kwargs):
         """
         *t*: float
@@ -1363,6 +1372,7 @@ class Plate(DCM):
             equals zero, total absorbed intensity is return in the last local
             beam, otherwise the N-th local beam returns the
             absorbed intensity on N-th surface of the optical element.
+
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
@@ -1407,7 +1417,7 @@ class Plate(DCM):
                 absorbedLb = rs.Beam(copyFrom=lb2)
                 absorbedLb.absorb_intensity(lb1)
                 lb2 = absorbedLb
-
+        lb2.parent = self
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())
         return gb, lb1, lb2
@@ -1417,6 +1427,7 @@ class ParaboloidFlatLens(Plate):
     """Implements a refractive lens or a stack of lenses (CRL) with one side
     as paraboloid and the other one flat."""
 
+    hiddenMethods = Plate.hiddenMethods + ['double_refract']
     cl_plist = ("zmax", "focus")
     cl_local_z = """
     float local_z1(float8 cl_plist, float x, float y)
@@ -1575,6 +1586,7 @@ class ParaboloidFlatLens(Plate):
             equals zero, the last local beam returns total absorbed intensity,
             otherwise the absorbed intensity on single element of the stack.
 
+
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
         if self.bl is not None:
@@ -1646,7 +1658,7 @@ class ParaboloidFlatLens(Plate):
                     absorbedLb = rs.Beam(copyFrom=llocal2)
                     absorbedLb.absorb_intensity(llocal1)
                     llocal2 = absorbedLb
-
+            llocal2.parent = self
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],
                                    inspect.currentframe())

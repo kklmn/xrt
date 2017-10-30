@@ -23,6 +23,14 @@ from ...backends.raycing import screens as rscreens  # analysis:ignore
 from ..commons import qt
 from ..commons import gl
 
+allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'a', 'b',
+                 'path', 'phase_shift', 'reflection_number', 'order',
+                 'circular_polarization_rate', 'polarization_degree',
+                 'polarization_psi',  'ratio_ellipse_axes', 's', 'r',
+                 'theta', 'phi', 'incidence_angle',
+                 'elevation_d', 'elevation_x', 'elevation_y', 'elevation_z',
+                 'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
+
 
 class mySlider(qt.QSlider):
     def __init__(self, parent, scaleDirection, scalePosition):
@@ -55,11 +63,8 @@ class xrtGlow(qt.QWidget):
 
         self.fluxDataModel = qt.QStandardItemModel()
 
-        for rfName, rfObj in inspect.getmembers(raycing):
-            if rfName.startswith('get_') and\
-                    rfName != "get_output":
-                flItem = qt.QStandardItem(rfName.replace("get_", ''))
-                self.fluxDataModel.appendRow(flItem)
+        for colorField in allBeamFields:
+            self.fluxDataModel.appendRow(qt.QStandardItem(colorField))
 
         self.customGlWidget = xrtGlWidget(self, arrayOfRays,
                                           self.segmentsModelRoot,

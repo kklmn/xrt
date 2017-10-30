@@ -6,6 +6,7 @@ import re
 
 #  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
 #  It's definitely not the optimal solution, but it works.
+
 try:
     from spyderlib.widgets.sourcecode import codeeditor  # analysis:ignore
     isSpyderlib = True
@@ -80,7 +81,7 @@ import codecs
 try:
     from spyder.utils import encoding
 except ImportError:
-     from spyderlib.utils import encoding   
+    from spyderlib.utils import encoding   
 
 
 def sphinxify(docstring, context, buildername='html'):

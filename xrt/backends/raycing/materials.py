@@ -244,7 +244,7 @@ class Material(object):
     refractive index and absorption coefficient of a material specified by its
     chemical formula and density."""
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
-                 t=None, table='Chantler', efficiency=None,
+                 t=None, table='Chantler total', efficiency=None,
                  efficiencyFile=None, name=''):
         r"""
         *elements*: str or sequence of str
