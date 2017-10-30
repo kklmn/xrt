@@ -1888,6 +1888,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             "Initializing optical elements... %p%")
                         self.update_beamline(item=None)
                     except:  # analysis:ignore
+                        raise
                         pass
                     self.progressBar.setValue(100)
                     self.progressBar.setFormat('Loaded layout from {}'.format(
@@ -2543,25 +2544,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         value = self.getVal(value)
         if isinstance(value, tuple):
             value = list(value)
+#        elif value in self.beamLine.materialsDict.keys():
+#            value = self.beamLine.materialsDict[value]
         return value
-
-    def whichCrystal(self, matName):
-        material = self.materialsModel.findItems(matName)[0]
-        rtype = "None"
-        if material.text() != "None":
-            for i in range(material.rowCount()):
-                if material.child(i, 0).text() == '_object':
-                    mstr = str(material.child(i, 1).text())
-                    break
-            for parent in (inspect.getmro(eval(mstr)))[:-1]:
-                pname = str(parent.__name__)
-                if len(re.findall("crystal", str.lower(pname))) > 0:
-                    rtype = "crystal"
-                    break
-                elif len(re.findall("multilayer", str.lower(pname))) > 0:
-                    rtype = "mlayer"
-                    break
-        return rtype
 
     def get_class_name(self, itemObject):
         for iel in range(itemObject.rowCount()):
@@ -2594,12 +2579,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 paravalue = str(parentItem.child(iep, 1).text())
                 if paravalue != str(arg_def) or\
                         paravalue == 'bl':
-                    kwargs[paraname] =\
-                        self.parametrize(paravalue)
+                    if paraname.lower() in ['tlayer', 'blayer']:
+                        paravalue =\
+                            self.beamLine.materialsDict[paravalue]
+                    else:
+                        paravalue = self.parametrize(paravalue)
+                    kwargs[paraname] = paravalue
             return kwargs
 
         if item is None:
-            blMats = OrderedDict({'None': None})
+            self.beamLine.materialsDict = OrderedDict({'None': None})
             for ie in range(self.rootMatItem.rowCount()):
                 matItem = self.rootMatItem.child(ie, 0)
                 matName = str(matItem.text())
@@ -2611,18 +2600,19 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 matItem.child(ieph, 0), matClassStr)
                             break
                     try:
-                        blMats[matName] = eval(matClassStr)(**kwArgs)
+                        self.beamLine.materialsDict[matName] =\
+                            eval(matClassStr)(**kwArgs)
                         self.progressBar.setFormat(
-                            "Class {} successfully initialized.".format(matName))
+                            "Class {} successfully initialized.".format(
+                                matName))
 #                        print("Class", matName, "successfully initialized.")
                     except:  # analysis:ignore
-                        blMats[matName] = None
+                        self.beamLine.materialsDict[matName] = None
                         self.progressBar.setFormat(
                             "Incorrect parameters. Class {} not initialized.".format(
                                 matName))
 #                        print("Incorrect parameters. Class", matName,
 #                              "not initialized.")
-            self.beamLine.materialsDict = blMats
         else:
             if item.index().column() == 0 and not newMat:  # Rename material
                 matValues = list(self.beamLine.materialsDict.values())
@@ -2663,14 +2653,14 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.beamLine.materialsDict[matName].__init__(**kwArgs)
                     self.progressBar.setFormat(
                         "Class {} successfully initialized.".format(matName))
-#                    print("Class", matName, "successfully initialized.")
+                    print("Class", matName, "successfully initialized.")
                 except:  # analysis:ignore
                     self.beamLine.materialsDict[matName] = None
                     self.progressBar.setFormat(
                         "Incorrect parameters. Class {} not initialized.".format(
                             matName))
-#                    print("Incorrect parameters. Class", matName,
-#                          "not initialized.")
+                    print("Incorrect parameters. Class", matName,
+                          "not initialized.")
                 startFrom = None
                 if matName is not None:
                     for iel in range(self.rootBLItem.rowCount()): 
