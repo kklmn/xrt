@@ -3,6 +3,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "03 Jul 2016"
 import os
 import sys
+import inspect
 # import copy
 # import math
 import numpy as np
@@ -193,6 +194,15 @@ class UndulatorUrgent(object):
 
 
         """
+        # patch for starting a script with processes>1 from Spyder console:
+        try:
+            frm = inspect.stack()[2]
+            mod = inspect.getmodule(frm[0])
+            if not hasattr(mod, "__spec__"):
+                mod.__spec__ = None
+        except:
+            pass
+
         self.bl = bl
         if bl is not None:
             bl.sources.append(self)

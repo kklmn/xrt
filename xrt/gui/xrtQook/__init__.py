@@ -1,79 +1,34 @@
 # -*- coding: utf-8 -*-
 u"""
-Using xrtQook for script generation
------------------------------------
+The main interface to xrt is through a python script. Many examples of such
+scripts can be found in the supplied folder ‘examples’. The script imports the
+modules of xrt, instantiates beamline parts, such as synchrotron or geometric
+sources, various optical elements, apertures and screens, specifies required
+materials for reflection, refraction or diffraction, defines plots and sets job
+parameters.
 
-- Start xrtQook: type ``python xrtQook.pyw`` from xrt/xrtQook or, if you have
-  installed xrt by running setup.py, type ``xrtQook.pyw`` from any location.
-- Rename beamLine to myTestBeamline by double clicking on it (you do not have
-  to, only for demonstration).
-- Right-click on myTestBeamline and Add Source → BendingMagnet.
+The Qt tool :mod:`xrtQook` takes these ingredients and prepares a ready to use
+script that can be run within the tool itself or in an external Python context.
+:mod:`xrtQook` features a parallelly updated help panel that, unlike the main
+documentation, provides a complete list of parameters for the used classes,
+also including those from the parental classes. :mod:`xrtQook` writes/reads the
+recipes of beamlines into/from xml files.
 
-  .. imagezoom:: _images/qookTutor1.png
-     :scale: 60 %
+In the present version, :mod:`xrtQook` does not provide automated generation of
+*scans* and does not create *wave propagation* sequences. For these two tasks,
+the corresponding script parts have to be written manually based on the
+supplied examples and the present documentation.
 
-- In its properties change eMin to 10000-1 and eMax to 10000+1. The middle of
-  this range will be used to automatically align crystals (one crystal in this
-  example). Blue color indicates non-default values. These will be necessarily
-  included into the generated script. All the default-valued parameters do not
-  propagate into the script.
+See a short :ref:`tutorial for xrtQook <qook>`.
 
-  .. imagezoom:: _images/qookTutor2.png
-     :scale: 60 %
-
-- In Materials tab create a crystalline material:
-  right click -> Add Material -> CrystalSi. This will create a Si111 crystal at
-  room temperature.
-
-  .. imagezoom:: _images/qookTutor3.png
-     :scale: 60 %
-
-- In Beamline tab right click -> Add OE -> OE. This will add an optical element
-  with a flat surface.
-
-  .. note::
-     The sequence of the inserted optical elements does matter! This sequence
-     determines the order of beam propagation.
-
-  .. imagezoom:: _images/qookTutor4.png
-     :scale: 60 %
-
-- In its properties select the created crystal as 'material', put [0, 20000, 0]
-  as 'center' (i.e. 20 m from source) and "auto" (with or without quotes) as
-  'pitch'.
-- Add a screen to the beamline. Give it [0, 21000, "auto"] as 'center'. Its
-  height -- the last coordinate -- will be automatically calculated from the
-  previous elements.
-
-  .. imagezoom:: _images/qookTutor5.png
-     :scale: 60 %
-
-- Add methods to the beamline elements (with right click):
-
-  a) shine() to the source,
-  b) reflect() to the optical element and select a proper beam for it – the
-     global beam from the source, it has a default name but you may rename it
-     in the shine();
-  c) expose() to the screen and select a proper beam for it – the global beam
-     from the OE, it has a default name but you may rename it in the reflect();
-
-  Red colored words indicate None as a selected beam. If you continue with the
-  script generation, the script will result in a run time error.
-
-  .. imagezoom:: _images/qookTutor6.png
-     :scale: 60 %
-
-- Add a plot in Plots tab and select the local screen beam.
-- Save the beamline layout as xml.
-- Generate python script (the button with a code page and the python logo),
-  save the script and run it.
-- In the console output you can read the actual pitch (Bragg angle) for the
-  crystal and the screen position.
-
-  .. imagezoom:: _images/qookTutor7.png
-     :scale: 60 %
+.. imagezoom:: _images/xrtQook.png
+   :width: 562
+   :height: 302
+   :widthzoom: 1124
+   :heightzoom: 604
 
 """
+
 from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "25 Jun 2017"
@@ -120,6 +75,9 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 myTab = 4*" "
 
+useSlidersInTree = False
+withSlidersInTree = ['pitch', 'roll', 'yaw', 'bragg']
+slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
 try:
     class WebPage(qt.QtWeb.QWebPage):
@@ -184,6 +142,8 @@ except AttributeError:
 
 class XrtQook(qt.QWidget):
     statusUpdate = qt.pyqtSignal(tuple)
+    sig_resized = qt.Signal("QResizeEvent")
+    sig_moved = qt.Signal("QMoveEvent")
 
     def __init__(self):
         super(XrtQook, self).__init__()
@@ -333,7 +293,7 @@ class XrtQook(qt.QWidget):
         tutorAction.triggered.connect(self.showWelcomeScreen)
 
         aboutAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, 'readme.png')),
+            qt.QIcon(os.path.join(self.iconsDir, 'dialog-information.png')),
             'About xrtQook',
             self)
         aboutAction.setShortcut('Ctrl+I')
@@ -447,6 +407,9 @@ class XrtQook(qt.QWidget):
         self.descrEdit = qt.QTextEdit()
         self.descrEdit.setFont(self.defaultFont)
         self.descrEdit.textChanged.connect(self.updateDescription)
+        self.typingTimer = qt.QTimer(self)
+        self.typingTimer.setSingleShot(True)
+        self.typingTimer.timeout.connect(self.updateDescriptionDelayed)
 
         self.setGeometry(100, 100, 1200, 600)
 
@@ -585,7 +548,12 @@ class XrtQook(qt.QWidget):
         self.tree.setSortingEnabled(False)
         self.tree.setHeaderHidden(False)
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
-        self.tree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+        headers = ['Parameter', 'Value']
+        if useSlidersInTree:
+            headers.append('Slider')
+        self.runTree.model().setHorizontalHeaderLabels(headers)
+        self.tree.model().setHorizontalHeaderLabels(headers)
+
         elprops = self.addProp(self.rootBLItem, 'properties')
         for name, obj in inspect.getmembers(raycing):
             if inspect.isclass(obj) and name == "BeamLine":
@@ -794,7 +762,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.blColorCounter = 0
         self.pltColorCounter = 0
         self.fileDescription = ""
-        self.descrEdit.setText("")
+#        self.descrEdit.setText("")
         self.currHtml = ""
         self.showWelcomeScreen()
         self.beamLine = raycing.BeamLine()
@@ -977,12 +945,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.webHelp.setReadOnly(True)
 
     def updateDescription(self):
+        self.typingTimer.start(500)
+
+    def updateDescriptionDelayed(self):
         self.fileDescription = self.descrEdit.toPlainText()
         img_path = __file__ if self.layoutFileName == "" else\
             self.layoutFileName
         self.showTutorial(self.fileDescription,
                           "Description",
                           os.path.dirname(os.path.abspath(str(img_path))))
+        self.descrEdit.setFocus()
 
     def showWelcomeScreen(self):
         argDescr = u"""
@@ -1001,55 +973,59 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def showDescrByTab(self, tab):
         if tab == 4:
-            self.updateDescription()
+            self.updateDescriptionDelayed()
 
     def showTutorial(self, argDocStr, name, img_path, delegateLink=False):
-        if spyder.isSphinx:
-            err = None
-            try:
-                cntx = spyder.generate_context(
-                    name=name,
-                    argspec="",
-                    note="",
-                    img_path=img_path,
-                    math=True)
-            except TypeError as err:
-                cntx = spyder.generate_context(
-                    name=name,
-                    argspec="",
-                    note="",
-                    math=True)
-            argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
-            if err is None:
-                html2 = re.findall(' {4}return.*', html_text)[0]
-                sbsPath = re.sub('img_name',
-                                 'attr',
-                                 re.sub('\\\\', '/', html2))
-                if 'file://' not in sbsPath:
-                    sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
-                new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
-            else:
-                spyder_crutch = "<script>\n$(document).ready(\
+        if argDocStr is None:
+            return
+        if not spyder.isSphinx:
+            return
+        err = None
+        try:
+            cntx = spyder.generate_context(
+                name=name,
+                argspec="",
+                note="",
+                img_path=img_path,
+                math=True)
+        except TypeError as err:
+            cntx = spyder.generate_context(
+                name=name,
+                argspec="",
+                note="",
+                math=True)
+        argDocStr = argDocStr.replace('imagezoom::', 'image::')
+        html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
+        if err is None:
+            html2 = re.findall(' {4}return.*', html_text)[0]
+            sbsPath = re.sub('img_name',
+                             'attr',
+                             re.sub('\\\\', '/', html2))
+            if 'file://' not in sbsPath:
+                sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
+            new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
+        else:
+            spyder_crutch = "<script>\n$(document).ready(\
     function () {\n    $('img').attr\
     ('src', function(index, attr){\n     return \'file:///"
-                spyder_crutch += "{0}\' + \'/\' + attr\n".format(
-                    re.sub('\\\\', '/', os.path.join(path_to_xrt,
-                                                     'xrt',
-                                                     'xrtQook')))
-                spyder_crutch += "    });\n});\n</script>\n<body>"
-                new_html = re.sub('<body>', spyder_crutch, html_text, 1)
-            self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
-            if delegateLink:
-                self.webHelp.page().setLinkDelegationPolicy(1)
-                self.webHelp.page().linkClicked.connect(partial(
-                    self.showTutorial,
-                    __doc__[229:],
-                    "Using xrtQook for script generation",
-                    self.xrtQookDir))
-            else:
-                self.webHelp.page().setLinkDelegationPolicy(0)
-            self.curObj = None
+            spyder_crutch += "{0}\' + \'/\' + attr\n".format(
+                re.sub('\\\\', '/', os.path.join(path_to_xrt,
+                                                 'xrt',
+                                                 'xrtQook')))
+            spyder_crutch += "    });\n});\n</script>\n<body>"
+            new_html = re.sub('<body>', spyder_crutch, html_text, 1)
+        self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
+        if delegateLink:
+            from . import tutorial
+            self.webHelp.page().setLinkDelegationPolicy(1)
+            self.webHelp.page().linkClicked.connect(partial(
+                self.showTutorial,
+                tutorial.__doc__[229:],
+                "Using xrtQook for script generation",
+                self.xrtQookDir))
+        else:
+            self.webHelp.page().setLinkDelegationPolicy(0)
+        self.curObj = None
 
     def showOCLinfo(self):
         argDocStr = u""
@@ -1143,10 +1119,25 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if toolTip is not None:
             child1.setToolTip(toolTip)
             # self.setIItalic(child0)
+        row = [child0, child1]
+        if useSlidersInTree:
+            child2 = qt.QStandardItem()
+            row.append(child2)
         if source is None:
-            parent.appendRow([child0, child1])
+            parent.appendRow(row)
         else:
-            parent.insertRow(source.row() + 1, [child0, child1])
+            parent.insertRow(source.row() + 1, row)
+
+        if useSlidersInTree:
+            if paramName in withSlidersInTree:
+                ind = child0.index().sibling(child0.index().row(), 2)
+                slider = qt.QSlider(qt.Horizontal)
+                slider.setRange(-10, 10)
+                slider.setValue(0)
+                slider.valueChanged.connect(
+                    partial(self.updateSlider, child1, paramName))
+                self.tree.setIndexWidget(ind, slider)
+
         return child0, child1
 
     def addProp(self, parent, propName):
@@ -1173,6 +1164,24 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         else:
             parent.insertRow(source.row() + 1, [child0, child1])
         return child0
+
+# useSlidersInTree
+    def updateSlider(self, editItem, paramName, position):
+        s = editItem.model().data(editItem.index(), qt.DisplayRole)
+        withBrackets = False
+        if paramName.lower() == 'bragg' and s[0] == '[' and s[-1] == ']':
+            withBrackets = True
+            s = s[1:-1]
+        for pos in [s.rfind(" *"), s.rfind(" /")]:
+            if pos > 0:
+                s = s[:pos]
+        if position:
+            factor = 1. + abs(position)/10.*slidersInTreeScale[paramName]
+            s += ' {0} {1:.8g}'.format("*" if position > 0 else "/", factor)
+        if withBrackets:
+            s = '[' + s + ']'
+        editItem.model().setData(editItem.index(), s, qt.EditRole)
+        editItem.model().dataChanged.emit(editItem.index(), editItem.index())
 
     def objToInstance(self, obj):
         instanceStr = ''
@@ -2563,7 +2572,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def update_beamline_beams(self, text):
         sender = self.sender()
         if sender is not None:
-            if sender.staticMetaObject.className() == 'qt.QComboBox':
+            if sender.staticMetaObject.className() == 'QComboBox':
                 currentIndex = int(sender.currentIndex())
                 beamValues = list(self.beamLine.beamsDict.values())
                 beamKeys = list(self.beamLine.beamsDict.keys())
@@ -3522,8 +3531,15 @@ if __name__ == '__main__':
 \n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(
                 locos, platform.python_version(),
                 Qt_version, qt.QtName, PyQt_version)
-        infText += '\npyopencl {}'.format(
-            cl.VERSION if isOpenCL else 'not found')
+        if isOpenCL:
+            vercl = cl.VERSION
+            if isinstance(vercl, (list, tuple)):
+                vercl = '.'.join(map(str, vercl))
+        else:
+            vercl = 'not found'
+        infText += '\npyopencl {}'.format(vercl)
+        if gl.isOpenGL:
+            infText += '\n{0} {1}'.format(gl.__name__, gl.__version__)
         infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
         msgBox.setInformativeText(infText)
         msgBox.setStandardButtons(qt.QMessageBox.Ok)

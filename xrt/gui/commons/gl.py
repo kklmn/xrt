@@ -3,7 +3,7 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "18 Oct 2017"
 
 try:
-    from OpenGL import GL  # analysis:ignore
+    from OpenGL import GL, __version__, __name__  # analysis:ignore
     isOpenGL = True
 except ImportError:
     isOpenGL = False

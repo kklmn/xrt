@@ -274,14 +274,15 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setFlat(False)
         self.colorPanel.setTitle("Color")
         colorLayout = qt.QVBoxLayout()
-        self.mplFig = mpl.figure.Figure(figsize=(3, 3))
+        self.mplFig = mpl.figure.Figure(dpi=self.logicalDpiX()*0.8)
+        self.mplFig.subplots_adjust(left=0.15, bottom=0.15, top=0.92)
         self.mplAx = self.mplFig.add_subplot(111)
         self.mplFig.suptitle("")
 
         self.drawColorMap('energy')
         self.paletteWidget = qt.FigCanvas(self.mplFig)
-        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
-                                         qt.QSizePolicy.Expanding)
+        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Maximum,
+                                         qt.QSizePolicy.Maximum)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL, drawtype='box',
             useblit=True, rectprops=dict(alpha=0.4, facecolor='white'),
@@ -766,7 +767,6 @@ class xrtGlow(qt.QWidget):
                     0, 1))
         self.mplAx.set_xlabel(axis)
         self.mplAx.set_ylabel('Intensity')
-        self.mplFig.tight_layout()
 
     def updateColorMap(self, histArray):
         if histArray[0] is not None:
@@ -787,9 +787,8 @@ class xrtGlow(qt.QWidget):
                 hwhm = (np.abs(histArray[1][topEl[0]] -
                                histArray[1][topEl[-1]])) * 0.5
                 cntr = (histArray[1][topEl[0]] + histArray[1][topEl[-1]]) * 0.5
-                newLabel = u"FWHM: {0:.3f}\u00b1{1:.3f}".format(
-                    cntr, hwhm)
-                self.mplAx.set_title(newLabel)
+                newLabel = u"{0:.3f}\u00b1{1:.3f}".format(cntr, hwhm)
+                self.mplAx.set_title(newLabel, fontsize=10)
             except:  # analysis:ignore
                 pass
             self.mplFig.canvas.draw()
@@ -1660,11 +1659,11 @@ class xrtGlWidget(qt.QGLWidget):
                 continue
 
             if self.newColorAxis:
-                if newColorMax != self.colorMax and\
-                        newColorMin != self.colorMin:
-                    self.colorMax = newColorMax
+                if newColorMin != self.colorMin:
                     self.colorMin = newColorMin
                     self.selColorMin = self.colorMin
+                if newColorMax != self.colorMax:
+                    self.colorMax = newColorMax
                     self.selColorMax = self.colorMax
 
             if ioeItem.hasChildren():
@@ -1675,8 +1674,7 @@ class xrtGlWidget(qt.QGLWidget):
                             self.oesList[str(segmentItem0.text())[3:]][1]]
                         good = startBeam.state > 0
 
-                        intensity = np.sqrt(np.abs(
-                            startBeam.Jss**2 + startBeam.Jpp**2))
+                        intensity = startBeam.Jss + startBeam.Jpp
                         intensityAll = intensity / np.max(intensity[good])
 
                         good = np.logical_and(good,
@@ -1756,8 +1754,7 @@ class xrtGlWidget(qt.QGLWidget):
 
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
                 good = startBeam.state > 0
-                intensity = np.sqrt(np.abs(
-                    startBeam.Jss**2 + startBeam.Jpp**2))
+                intensity = startBeam.Jss + startBeam.Jpp
                 try:
                     intensityAll = intensity / np.max(intensity[good])
                     good = np.logical_and(good, intensityAll >= self.cutoffI)
@@ -3002,103 +2999,99 @@ class xrtGlWidget(qt.QGLWidget):
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
 
     def populateVScreen(self):
-        if self.virtBeam is not None:
-            try:
-                startBeam = self.virtBeam
-                good = startBeam.state > 0
-                intensity = np.sqrt(np.abs(
-                    startBeam.Jss**2 + startBeam.Jpp**2))
-                intensityAll = intensity / np.max(intensity[good])
+        if self.virtBeam is None:
+            return
+        startBeam = self.virtBeam
+        good = startBeam.state > 0
+        intensity = startBeam.Jss + startBeam.Jpp
+        intensityAll = intensity / np.max(intensity[good])
 
-                good = np.logical_and(good,
-                                      intensityAll >= self.cutoffI)
-                goodC = np.logical_and(
-                    self.getColor(startBeam) <= self.selColorMax,
-                    self.getColor(startBeam) >= self.selColorMin)
+        good = np.logical_and(good,
+                              intensityAll >= self.cutoffI)
+        goodC = np.logical_and(
+            self.getColor(startBeam) <= self.selColorMax,
+            self.getColor(startBeam) >= self.selColorMin)
 
-                good = np.logical_and(good, goodC)
+        good = np.logical_and(good, goodC)
 
-                if self.globalNorm:
-                    alphaMax = 1.
-                else:
-                    if len(intensity[good]) > 0:
-                        alphaMax = np.max(intensity[good])
-                    else:
-                        alphaMax = 1.
-                alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaDots = intensity[good].T / alphaMax
-                colorsDots = np.array(self.getColor(startBeam)[good]).T
+        if self.globalNorm:
+            alphaMax = 1.
+        else:
+            if len(intensity[good]) > 0:
+                alphaMax = np.max(intensity[good])
+            else:
+                alphaMax = 1.
+        alphaMax = alphaMax if alphaMax != 0 else 1.
+        alphaDots = intensity[good].T / alphaMax
+        colorsDots = np.array(self.getColor(startBeam)[good]).T
 
-                if self.colorMin == self.colorMax:
-                    self.colorMin = self.colorMax * 0.99
-                    self.colorMax *= 1.01
-                colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
-                                                           self.colorMin)
-                depthDots = copy.deepcopy(colorsDots) * self.depthScaler
+        if self.colorMin == self.colorMax:
+            self.colorMin = self.colorMax * 0.99
+            self.colorMax *= 1.01
+        colorsDots = (colorsDots-self.colorMin) / (self.colorMax-self.colorMin)
+        depthDots = copy.deepcopy(colorsDots) * self.depthScaler
 
-                colorsDots = np.dstack((colorsDots,
-                                        np.ones_like(alphaDots)*0.85,
-                                        alphaDots if self.iHSV else
-                                        np.ones_like(alphaDots)))
+        colorsDots = np.dstack((colorsDots,
+                                np.ones_like(alphaDots)*0.85,
+                                alphaDots if self.iHSV else
+                                np.ones_like(alphaDots)))
 
-                deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
+        deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
 
-                vertices = np.array(
-                    startBeam.x[good] - deltaY[:, 0] - self.coordOffset[0])
-                vertices = np.vstack((vertices, np.array(
-                    startBeam.y[good] - deltaY[:, 1] - self.coordOffset[1])))
-                vertices = np.vstack((vertices, np.array(
-                    startBeam.z[good] - deltaY[:, 2] - self.coordOffset[2])))
-                self.virtDotsArray = vertices.T
+        vertices = np.array(
+            startBeam.x[good] - deltaY[:, 0] - self.coordOffset[0])
+        vertices = np.vstack((vertices, np.array(
+            startBeam.y[good] - deltaY[:, 1] - self.coordOffset[1])))
+        vertices = np.vstack((vertices, np.array(
+            startBeam.z[good] - deltaY[:, 2] - self.coordOffset[2])))
+        self.virtDotsArray = vertices.T
 
-                colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-                if self.globalNorm:
-                    alphaMax = np.max(alphaDots)
-                else:
-                    alphaMax = 1.
-                alphaColorDots = np.array([alphaDots / alphaMax]).T *\
-                    self.pointOpacity
-                self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
-                                                           alphaColorDots]))
-                histogram = np.histogram(np.array(
-                    self.getColor(startBeam)[good]),
-                    range=(self.colorMin, self.colorMax),
-                    weights=intensity[good],
-                    bins=100)
-                self.histogramUpdated.emit(histogram)
-                locBeam = self.virtScreen.expose(self.virtScreen.beamToExpose)
-                lbi = intensity[good]
-                self.virtScreen.FWHMstr = []
-                for axis in ['x', 'z']:
-                    goodlb = getattr(locBeam, axis)[good]
-                    histAxis = np.histogram(goodlb, weights=lbi, bins=100)
-                    hMax = np.max(histAxis[0])
-                    hNorm = histAxis[0] / hMax
-                    topEl = np.where(hNorm >= 0.5)[0]
-                    hwhm = np.abs(histAxis[1][topEl[0]] -
-                                  histAxis[1][topEl[-1]]) * 0.5
+        colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+        if self.globalNorm:
+            alphaMax = np.max(alphaDots)
+        else:
+            alphaMax = 1.
+        alphaColorDots = np.array([alphaDots / alphaMax]).T *\
+            self.pointOpacity
+        self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
+                                                   alphaColorDots]))
+        histogram = np.histogram(np.array(
+            self.getColor(startBeam)[good]),
+            range=(self.colorMin, self.colorMax),
+            weights=intensity[good],
+            bins=100)
+        self.histogramUpdated.emit(histogram)
+        locBeam = self.virtScreen.expose(self.virtScreen.beamToExpose)
+        lbi = intensity[good]
+        self.virtScreen.FWHMstr = []
+        for axis in ['x', 'z']:
+            goodlb = getattr(locBeam, axis)[good]
+            histAxis = np.histogram(goodlb, weights=lbi, bins=100)
+            hMax = np.max(histAxis[0])
+            hNorm = histAxis[0] / hMax
+            topEl = np.where(hNorm >= 0.5)[0]
+            hwhm = np.abs(histAxis[1][topEl[0]] -
+                          histAxis[1][topEl[-1]]) * 0.5
 #                    cntr = (histAxis[1][topEl[0]] +
 #                            histAxis[1][topEl[-1]]) * 0.5
-                    order = np.floor(np.log10(hwhm))
+            order = np.floor(np.log10(hwhm))
 
-                    if order >= 2:
-                        units = "m"
-                        mplier = 1e-3
-                    if order >= -1:
-                        units = "mm"
-                        mplier = 1.
-                    elif order >= -4:
-                        units = "um"
-                        mplier = 1e3
-                    else:  # order >= -7:
-                        units = "nm"
-                        mplier = 1e6
+            if order >= 2:
+                units = "m"
+                mplier = 1e-3
+            if order >= -1:
+                units = "mm"
+                mplier = 1.
+            elif order >= -4:
+                units = "um"
+                mplier = 1e3
+            else:  # order >= -7:
+                units = "nm"
+                mplier = 1e6
 
-                    self.virtScreen.FWHMstr.append(
-                        "FWHM({0}) = {1:.3f}{2}".format(
-                            str(axis).upper(), hwhm*mplier*2, units))
-            except:  # analysis:ignore
-                self.virtDotsArray = None
+            self.virtScreen.FWHMstr.append(
+                "FWHM({0}) = {1:.3f}{2}".format(
+                    str(axis).upper(), hwhm*mplier*2, units))
 
     def createVScreen(self):
         try:
@@ -3113,78 +3106,76 @@ class xrtGlWidget(qt.QGLWidget):
             self.clearVScreen()
 
     def positionVScreen(self):
-        if self.virtScreen is not None:
-            cntr = self.virtScreen.center
-            tmpDist = 1e12
-            totalDist = 1e12
-            cProj = None
+        if self.virtScreen is None:
+            return
+        cntr = self.virtScreen.center
+        tmpDist = 1e12
+        totalDist = 1e12
+        cProj = None
 
-            for segment in self.arrayOfRays[0]:
-                if segment[3] is None:
-                    continue
-                try:
-                    beamStartTmp = self.beamsDict[segment[1]]
-                    beamEndTmp = self.beamsDict[segment[3]]
-
-                    bStart0 = beamStartTmp.wCenter
-                    bEnd0 = beamEndTmp.wCenter
-
-                    beam0 = bEnd0 - bStart0
-                    # Finding the projection of the VScreen.center on segments
-                    cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
-                        np.dot(beam0, beam0) * beam0
-                    s = 0
-                    for iDim in range(3):
-                        s += np.floor(np.abs(np.sign(cProjTmp[iDim] -
-                                                     bStart0[iDim]) +
-                                             np.sign(cProjTmp[iDim] -
-                                                     bEnd0[iDim]))*0.6)
-
-                    dist = np.linalg.norm(cProjTmp-cntr)
-                    if dist < tmpDist:
-                        if s == 0:
-                            tmpDist = dist
-                            beamStart0 = beamStartTmp
-                            bStartC = bStart0
-                            bEndC = bEnd0
-                            cProj = cProjTmp
-                        else:
-                            if np.linalg.norm(bStart0-cntr) < totalDist:
-                                totalDist = np.linalg.norm(bStart0-cntr)
-                                self.virtScreen.center = cProjTmp
-                                self.virtScreen.beamStart = bStart0
-                                self.virtScreen.beamEnd = bEnd0
-                                self.virtScreen.beamToExpose = beamStartTmp
-                except:  # analysis:ignore
-                    continue
-
-            if cProj is not None:
-                self.virtScreen.center = cProj
-                self.virtScreen.beamStart = bStartC
-                self.virtScreen.beamEnd = bEndC
-                self.virtScreen.beamToExpose = beamStart0
-
+        for segment in self.arrayOfRays[0]:
+            if segment[3] is None:
+                continue
             try:
-                if self.isVirtScreenNormal:
-                    vsX = [self.virtScreen.beamToExpose.b[0],
-                           -self.virtScreen.beamToExpose.a[0], 0]
-                    vsY = [self.virtScreen.beamToExpose.a[0],
-                           self.virtScreen.beamToExpose.b[0],
-                           self.virtScreen.beamToExpose.c[0]]
-                    vsZ = np.cross(vsX/np.linalg.norm(vsX),
-                                   vsY/np.linalg.norm(vsY))
-                else:
-                    vsX = 'auto'
-                    vsZ = 'auto'
-                self.virtScreen.set_orientation(vsX, vsZ)
+                beamStartTmp = self.beamsDict[segment[1]]
+                beamEndTmp = self.beamsDict[segment[3]]
+
+                bStart0 = beamStartTmp.wCenter
+                bEnd0 = beamEndTmp.wCenter
+
+                beam0 = bEnd0 - bStart0
+                # Finding the projection of the VScreen.center on segments
+                cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
+                    np.dot(beam0, beam0) * beam0
+                s = 0
+                for iDim in range(3):
+                    s += np.floor(np.abs(np.sign(cProjTmp[iDim] -
+                                                 bStart0[iDim]) +
+                                         np.sign(cProjTmp[iDim] -
+                                                 bEnd0[iDim]))*0.6)
+
+                dist = np.linalg.norm(cProjTmp-cntr)
+                if dist < tmpDist:
+                    if s == 0:
+                        tmpDist = dist
+                        beamStart0 = beamStartTmp
+                        bStartC = bStart0
+                        bEndC = bEnd0
+                        cProj = cProjTmp
+                    else:
+                        if np.linalg.norm(bStart0-cntr) < totalDist:
+                            totalDist = np.linalg.norm(bStart0-cntr)
+                            self.virtScreen.center = cProjTmp
+                            self.virtScreen.beamStart = bStart0
+                            self.virtScreen.beamEnd = bEnd0
+                            self.virtScreen.beamToExpose = beamStartTmp
             except:  # analysis:ignore
-                pass
-            try:
-                self.virtBeam = self.virtScreen.expose_global(
-                    self.virtScreen.beamToExpose)
-                self.populateVScreen()
-            except:  # analysis:ignore
-                self.clearVScreen()
+                continue
+
+        if cProj is not None:
+            self.virtScreen.center = cProj
+            self.virtScreen.beamStart = bStartC
+            self.virtScreen.beamEnd = bEndC
+            self.virtScreen.beamToExpose = beamStart0
+
+        if self.isVirtScreenNormal:
+            vsX = [self.virtScreen.beamToExpose.b[0],
+                   -self.virtScreen.beamToExpose.a[0], 0]
+            vsY = [self.virtScreen.beamToExpose.a[0],
+                   self.virtScreen.beamToExpose.b[0],
+                   self.virtScreen.beamToExpose.c[0]]
+            vsZ = np.cross(vsX/np.linalg.norm(vsX),
+                           vsY/np.linalg.norm(vsY))
+        else:
+            vsX = 'auto'
+            vsZ = 'auto'
+        self.virtScreen.set_orientation(vsX, vsZ)
+        try:
+            self.virtBeam = self.virtScreen.expose_global(
+                self.virtScreen.beamToExpose)
+            self.populateVScreen()
+        except:  # analysis:ignore
+            self.clearVScreen()
 
     def toggleVScreen(self):
         if self.virtScreen is None:
