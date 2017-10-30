@@ -88,7 +88,7 @@ class OE(object):
         limOptY=None, isParametric=False, shape='rect',
         gratingDensity=None, order=None, shouldCheckCenter=False,
             targetOpenCL=None, precisionOpenCL='float64'):
-        r"""
+        u"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
             `oes` list.
@@ -189,18 +189,16 @@ class OE(object):
 
         *gratingDensity*: None or list
             If material *kind* = 'grating', its density can be defined as
-            list [direction, :math:`\rho_G`, P0, P1, P2],
-            where :math:`\rho_G` is line density in inverse mm,
+            list [axis, \u03C1\u2080, P\u2080, P\u2081, P\u2082],
+            where \u03C1\u2080 is the constant line density in inverse mm,
             P0-P2 are polynom coefficients, defining the line density
             variation, so that for given axis
-
-            .. math::
-
-                \rho_{vls} = \rho_G * (\mathit{P}_0 +
-                2 * \mathit{P}_1 * y + 3 * \mathit{P}_2 * y^2).
+                \u03C1\u2093 = \u03C1\u2080 * (P\u2080 +
+                2 * P\u2081 * x + 3 * P\u2082 * x\u00b2).
 
             Example: ['y', 800, 1, 0, 0] for the grating with constant
-            spacing; ['y', 1200, 1, 1e-6, 3.1e-7] for VLS.
+            spacing along the 'y' direction; ['y', 1200, 1, 1e-6, 3.1e-7] for
+            the VLS grating.
 
         *order*: int or sequence of ints
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
