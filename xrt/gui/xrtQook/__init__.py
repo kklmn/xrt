@@ -1,5 +1,10 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 u"""
+.. _qook:
+
+xrtQook -- a GUI for creating a beamline
+----------------------------------------
+
 The main interface to xrt is through a python script. Many examples of such
 scripts can be found in the supplied folder ‘examples’. The script imports the
 modules of xrt, instantiates beamline parts, such as synchrotron or geometric
@@ -9,23 +14,21 @@ parameters.
 
 The Qt tool :mod:`xrtQook` takes these ingredients and prepares a ready to use
 script that can be run within the tool itself or in an external Python context.
-:mod:`xrtQook` features a parallelly updated help panel that, unlike the main
-documentation, provides a complete list of parameters for the used classes,
-also including those from the parental classes. :mod:`xrtQook` writes/reads the
-recipes of beamlines into/from xml files.
+:mod:`xrtQook` features a parallelly updated help panel that provides a
+complete list of parameters for the used classes, also including those from the
+parental classes. :mod:`xrtQook` writes/reads the recipes of beamlines
+into/from xml files.
 
 In the present version, :mod:`xrtQook` does not provide automated generation of
 *scans* and does not create *wave propagation* sequences. For these two tasks,
 the corresponding script parts have to be written manually based on the
 supplied examples and the present documentation.
 
-See a short :ref:`tutorial for xrtQook <qook>`.
+See a short :ref:`tutorial for xrtQook <qook_tutorial>`.
 
 .. imagezoom:: _images/xrtQook.png
-   :width: 562
-   :height: 302
-   :widthzoom: 1124
-   :heightzoom: 604
+   :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
+       help panel on the right.
 
 """
 
@@ -3515,7 +3518,7 @@ if __name__ == '__main__':
         if 'Linux' in locos:
             locos = " ".join(platform.linux_distribution())
         infText = """Created by:\
-\nRoman Chernikov (DESY Photon Science)\
+\nRoman Chernikov (Canadian Light Source)\
 \nKonstantin Klementiev (MAX IV Laboratory)\
 \nLicensed under the terms of the MIT License\nMarch 2016\
 \n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(

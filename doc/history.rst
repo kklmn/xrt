@@ -3,12 +3,30 @@
 Version history
 ---------------
 
+1.3.0 (Nov 2017):
+    - :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
+
+    - The old examples can now be viewed in xrtGlow as well, just select a
+      proper value for the switch `showIn3D`.
+
+    - Added 'Chantler total' (see
+      :class:`~xrt.backends.raycing.materials.Material`) to the list of
+      absorption tables. This table also adds inelastic scattering channels to
+      the photoelectric absorption cross-section (thanks to B. Kozioziemski for
+      discovering the need).
+
+    - The documentation has moved to
+      `Read the Docs <http://xrt.readthedocs.io>`_.
+      It loads much faster and builds automatically from GitHub xrt sources.
+
+    - Numerous updates.
+
 1.2.4 (3 May 2017):
     - Reworked and extended :ref:`Speed tests <tests>`.
-    - minor bug fixes and updates.
+    - Minor bug fixes and updates.
 
 1.2.3 (19 Mar 2017):
-    - minor bug fixes.
+    - Minor bug fixes.
 
 1.2.2 (17 Mar 2017):
     - Numerous minor bug fixes and updates.

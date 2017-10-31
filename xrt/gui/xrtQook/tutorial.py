@@ -1,5 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 u"""
+.. _qook_tutorial:
+
 Using xrtQook for script generation
 -----------------------------------
 

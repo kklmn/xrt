@@ -1,9 +1,43 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Jun 20 15:07:53 2017
+u"""
+.. _glow:
 
-@author: Roman Chernikov
+xrtGlow -- an interactive 3D beamline viewer
+--------------------------------------------
+
+The beamline created in xrtQook can be interactively viewed in an OpenGL based
+widget xrtGlow. It visualizes beams, footprints, surfaces, apertures and
+screens. The brightness represents intensity and the color represents an
+auxiliary user-selected distribution, typically energy. A virtual screen can be
+put at any position and dragged by mouse with simultaneous observation of the
+beam distribution on it. See two example screenshots below (click to expand and
+read the captions).
+
+The primary purpose of xrtGlow is to demonstrate the alignment correctness
+given the fact that xrtQook can automatically calculate several positional and
+angular parameters.
+
+See aslo :ref:`Notes one using xrtGlow <glow_notes>`.
+
++-------------+-------------+
+|   |glow1|   |   |glow2|   |
++-------------+-------------+
+
+.. |glow1| imagezoom:: _images/xrtGlow1.png
+   :alt: &ensp;A view of xrtQook with embedded xrtGlow. Visible is a virtual
+       screen draggable by mouse, a curved mirror surface with a footprint on
+       it and the color (energy) distribution on the virtual screen. The scale
+       along the beamline is compressed by a factor of 100.
+
+.. |glow2| imagezoom:: _images/xrtGlow2.png
+   :loc: upper-right-corner
+   :alt: &ensp; xrtGlow with three double-paraboloid lenses. The scaling on
+       this image is isotropic. The source (on the left) is a parallel
+       geometric source. The coloring is by axial divergence (red=0), showing
+       the effect of refractive focusing.
+
 """
+__author__ = "Roman Chernikov, Konstantin Klementiev"
 
 import os
 import numpy as np
@@ -2865,17 +2899,19 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnd()
 
         helpList = ['F1: Open/Close this help window',
-                    'F3: Add/Remove Virtual Screen (Slicer)',
+                    'F3: Add/Remove Virtual Screen',
                     'F4: Dock/Undock xrtGlow if launched from xrtQook',
                     'F5/F6: Quick Save/Load Scene',
                     'LeftMouse: Rotate the Scene',
-                    'SHIFT+LeftMouse: Translate the Beamline in transverse plane',  # analysis:ignore
-                    'ALT+LeftMouse: Translate the Beamline in longitudinal direction',  # analysis:ignore
-                    'CTRL+LeftMouse: Drag the Slicer',
-                    'ALT+LeftMouse: Scale the Slicer',
-                    'CTRL+SHIFT+LeftMouse: Translate the Beamline around Slicer (transverse)',  # analysis:ignore
-                    'CTRL+ALT+LeftMouse: Translate the Beamline around Slicer (longitudinal)',  # analysis:ignore
-                    'CTRL+T: Toggle the Slicer orientation (vertical/normal to the beam)',  # analysis:ignore
+                    'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
+                    'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
+                    'CTRL+LeftMouse: Drag Virtual Screen',
+                    'ALT+LeftMouse: Scale Virtual Screen',
+                    'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
+                    '                      (with Beamline along the longest view axis)',  # analysis:ignore
+                    'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
+                    '                      (with Beamline along the shortest view axis)',  # analysis:ignore
+                    'CTRL+T: Toggle Virtual Screen orientation (vertical/normal to the beam)',  # analysis:ignore
                     'WheelMouse: Zoom the Beamline',
                     'CTRL+WheelMouse: Zoom the Scene'
                     ]

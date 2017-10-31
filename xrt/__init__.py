@@ -20,10 +20,8 @@ creating scripts.
    :alt: &ensp;Vortex beam with <i>l</i>=1 and <i>p</i>=1. Colored by phase.
    :loc: upper-right-corner
 
-xrtQook -- a GUI for creating scripts
--------------------------------------
-
-.. automodule:: xrt.xrtQook.xrtQook
+.. automodule:: xrt.gui.xrtQook
+.. automodule:: xrt.gui.xrtGlow
 
 Features of xrt
 ---------------
@@ -189,7 +187,9 @@ discussion, testing and comparing with external codes. Hasan Yavaş, Jozef
 Bednarčik, Dmitri Novikov and Alexey Zozulya (DESY Photon Science) are
 acknowledged for supplied cases. Hamed Tarawneh (MAX IV Laboratory) has
 initiated the custom field undulator project and supplied tables of magnetic
-field.
+field. Bernard Kozioziemski (LLNL) has pointed to the importance of considering
+the *total* absorption cross-section (not just photoelectric absorption) in the
+cases of light materials at high energy.
 """
 
 # ========Convention: note the difference from PEP8 for variables!=============
@@ -207,7 +207,7 @@ __author__ = \
 __email__ = "first dot last at gmail dot com"
 __versioninfo__ = __versioninfo__
 __version__ = __version__
-__date__ = "3 May 2017"
+__date__ = "1 Nov 2017"
 __license__ = "MIT license"
 
 #__all__ = ['plotter', 'runner', 'multipro']

@@ -20,7 +20,8 @@ User's Guide
    :maxdepth: 3
 
    using.rst
-   qook.rst
+   qook_tutorial.rst
+   glow_notes.rst
    calculator.rst
    raycing.rst
    shadow.rst

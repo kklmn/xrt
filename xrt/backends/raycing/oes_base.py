@@ -193,6 +193,9 @@ class OE(object):
             where \u03C1\u2080 is the constant line density in inverse mm,
             P0-P2 are polynom coefficients, defining the line density
             variation, so that for given axis
+
+            .. math::
+
                 \u03C1\u2093 = \u03C1\u2080 * (P\u2080 +
                 2 * P\u2081 * x + 3 * P\u2082 * x\u00b2).
 
