@@ -23,7 +23,7 @@ Notes one using xrtGlow
 - From xrtGlow, press F1 to see the available keyboard shortcuts. Also observe
   the available pop-up menu by right mouse click.
 
-- The color histogram without Virtual Screen shows the color map – the
+- The color histogram without Virtual Screen shows the color map -- the
   correspondence between the selected physical parameter (e.g. energy) and the
   colors. With Virtual Screen active (by F3), the plot shows a histogram of the
   selected parameter on the screen. In both cases the user may select a
