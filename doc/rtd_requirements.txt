@@ -2,5 +2,5 @@ numpy
 scipy
 spyder
 matplotlib
-PyQt4
-PyQt4.QtGui
+PyQt5
+PyQt5.QtGui
