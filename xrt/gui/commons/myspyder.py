@@ -31,7 +31,7 @@ try:
     from spyder.utils.inspector.sphinxify import CSS_PATH, generate_context
     spyderHelpPath = "spyder.utils.inspector"
     isSphinx = True
-except (ImportError, TypeError):
+except ImportError:
     try:
         from spyderlib.utils.inspector.sphinxify import (CSS_PATH,
                                                          generate_context)
@@ -44,10 +44,10 @@ except (ImportError, TypeError):
 
 if not isSphinx:
     try:
-        from spyderl.utils.help.sphinxify import CSS_PATH, generate_context  # analysis:ignore
+        from spyder.utils.help.sphinxify import CSS_PATH, generate_context  # analysis:ignore
         spyderHelpPath = "spyder.utils.help"
         isSphinx = True
-    except (ImportError, TypeError):
+    except ImportError:
         try:
             from spyderlib.utils.help.sphinxify import (CSS_PATH,  # analysis:ignore
                                                         generate_context)
