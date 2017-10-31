@@ -188,16 +188,15 @@ class OE(object):
             pairs for an arbitrary shape.
 
         *gratingDensity*: None or list
-            If material *kind* = 'grating', its density can be defined as
-            list [axis, \u03C1\u2080, P\u2080, P\u2081, P\u2082],
-            where \u03C1\u2080 is the constant line density in inverse mm,
-            P0-P2 are polynom coefficients, defining the line density
-            variation, so that for given axis
+            If material *kind* = 'grating', its density can be defined as list
+            [axis, ρ\ :sub:`0`, *P*\ :sub:`0`, *P*\ :sub:`1`, *P*\ :sub:`2`],
+            where ρ\ :sub:`0` is the constant line density in inverse mm,
+            *P*\ :sub:`0` -- *P*\ :sub:`2` are polynom coefficients defining
+            the line density variation, so that for a given axis
 
             .. math::
 
-                \u03C1\u2093 = \u03C1\u2080 * (P\u2080 +
-                2 * P\u2081 * x + 3 * P\u2082 * x\u00b2).
+                \\rho_x = \\rho_0\\cdot(P_0 + 2 P_1 x + 3 P_2 x^2).
 
             Example: ['y', 800, 1, 0, 0] for the grating with constant
             spacing along the 'y' direction; ['y', 1200, 1, 1e-6, 3.1e-7] for
