@@ -1049,7 +1049,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                           '*Constant Memory*',
                           '*Global Memory*',
                           '*FP64 Support*']
-                fVals = [cl.device_type.to_string(device.type),
+                fVals = [cl.device_type.to_string(device.type, "%d"),
                          str(device.max_clock_frequency) + ' MHz',
                          str(device.max_compute_units),
                          str(int(device.local_mem_size/1024)) + ' kB',
