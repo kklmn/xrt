@@ -9,7 +9,7 @@ import os
 import numpy as np
 from functools import partial
 import matplotlib as mpl
-import inspect
+# import inspect
 import re
 import copy
 # import time
@@ -169,7 +169,7 @@ class xrtGlow(qt.QWidget):
             axSlider.setRange(0, 7, 0.01)
             value = 1 if iaxis == 1 else 3
             axSlider.setValue(value)
-            axEdit.setText(str(value))
+            axEdit.setText("{0:.2f}".format(value))
             axEdit.setValidator(scaleValidator)
             axEdit.editingFinished.connect(
                 partial(self.updateScaleFromQLE, axSlider))
@@ -390,6 +390,7 @@ class xrtGlow(qt.QWidget):
         colorOpacityLayout = qt.QVBoxLayout()
         colorOpacityLayout.addWidget(self.colorPanel)
         colorOpacityLayout.addWidget(self.opacityPanel)
+        colorOpacityLayout.addStretch()
         self.colorOpacityPanel.setLayout(colorOpacityLayout)
 
     def makeGridAndProjectionsPanel(self):
@@ -900,8 +901,10 @@ class xrtGlow(qt.QWidget):
                    self.customGlWidget.colorMax, 0, 1)
         self.im.set_extent(extents)
         extents = list(extents)
-        self.colorControls[1].setText(str(self.customGlWidget.colorMin))
-        self.colorControls[2].setText(str(self.customGlWidget.colorMax))
+        self.colorControls[1].setText(
+            '{0:.3f}'.format(self.customGlWidget.colorMin))
+        self.colorControls[2].setText(
+            '{0:.3f}'.format(self.customGlWidget.colorMax))
         self.colorControls[1].validator().setRange(
             self.customGlWidget.colorMin, self.customGlWidget.colorMax, 5)
         self.colorControls[2].validator().setRange(
@@ -1423,7 +1426,7 @@ class xrtGlow(qt.QWidget):
         for iaxis, (slider, editor, op) in\
                 enumerate(zip(self.opacitySliders, self.opacityEditors, ops)):
             slider.setValue(op)
-            editor.setText("{0:.0f}".format(op))
+            editor.setText("{0:.2f}".format(op))
 
     def updateTileFromQLE(self, ia):
         editor = self.sender()
@@ -1460,7 +1463,7 @@ class xrtGlow(qt.QWidget):
                 enumerate(zip(self.projectionOpacitySliders,
                               self.projectionOpacityEditors, ops)):
             slider.setValue(op)
-            editor.setText("{0:.0f}".format(op))
+            editor.setText("{0:.2f}".format(op))
 
 
 class xrtGlWidget(qt.QGLWidget):
@@ -1515,8 +1518,8 @@ class xrtGlWidget(qt.QGLWidget):
         self.globalNorm = True
         self.iHSV = False
         self.newColorAxis = True
-        self.colorMax = -1e20
-        self.colorMin = 1e20
+        self.colorMin = -1e20
+        self.colorMax = 1e20
         self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.maxLen = 1.
         self.showLostRays = False
