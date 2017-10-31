@@ -8,37 +8,34 @@ import re
 #  It's definitely not the optimal solution, but it works.
 
 try:
-    from spyderlib.widgets.sourcecode import codeeditor  # analysis:ignore
+    from spyder.widgets.sourcecode import codeeditor  # analysis:ignore
     isSpyderlib = True
 except ImportError:
     try:
-        from spyder.widgets.sourcecode import codeeditor  # analysis:ignore
+        from spyderlib.widgets.sourcecode import codeeditor  # analysis:ignore
         isSpyderlib = True
     except ImportError:
         isSpyderlib = False
 
 try:
-    from spyderlib.widgets.externalshell import pythonshell
+    from spyder.widgets.externalshell import pythonshell
     isSpyderConsole = True
 except ImportError:
     try:
-        from spyder.widgets.externalshell import pythonshell  # analysis:ignore
+        from spyderlib.widgets.externalshell import pythonshell  # analysis:ignore
         isSpyderConsole = True
     except ImportError:
         isSpyderConsole = False
 
 try:
-#    from spyderlib.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
-#                                                     generate_context)
-    from spyderlib.utils.inspector.sphinxify import CSS_PATH, generate_context
-    spyderHelpPath = "spyderlib.utils.inspector"
+    from spyder.utils.inspector.sphinxify import CSS_PATH, generate_context
+    spyderHelpPath = "spyder.utils.inspector"
     isSphinx = True
 except (ImportError, TypeError):
     try:
-#        from spyder.utils.inspector.sphinxify import (CSS_PATH, sphinxify,
-#                                                      generate_context)
-        from spyder.utils.inspector.sphinxify import CSS_PATH, generate_context
-        spyderHelpPath = "spyder.utils.inspector"
+        from spyderlib.utils.inspector.sphinxify import (CSS_PATH,
+                                                         generate_context)
+        spyderHelpPath = "spyderlib.utils.inspector"
         isSphinx = True
     except ImportError:
         CSS_PATH = None
@@ -47,17 +44,14 @@ except (ImportError, TypeError):
 
 if not isSphinx:
     try:
-#        from spyderlib.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
-#                                                    generate_context)  # analysis:ignore
-        from spyderlib.utils.help.sphinxify import CSS_PATH, generate_context  # analysis:ignore
-        spyderHelpPath = "spyderlib.utils.help"
+        from spyderl.utils.help.sphinxify import CSS_PATH, generate_context  # analysis:ignore
+        spyderHelpPath = "spyder.utils.help"
         isSphinx = True
     except (ImportError, TypeError):
         try:
-#            from spyder.utils.help.sphinxify import (CSS_PATH, sphinxify,  # analysis:ignore
-#                                                        generate_context)  # analysis:ignore
-            from spyder.utils.help.sphinxify import CSS_PATH, generate_context  # analysis:ignore
-            spyderHelpPath = "spyder.utils.help"
+            from spyderlib.utils.help.sphinxify import (CSS_PATH,  # analysis:ignore
+                                                        generate_context)
+            spyderHelpPath = "spyderlib.utils.help"
             isSphinx = True
         except ImportError:
             pass
