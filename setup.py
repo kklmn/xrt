@@ -2,14 +2,13 @@
 import os
 from distutils.core import setup
 
-raise BaseException("Don't use this setup until the new release is ready")
 #import importLongDescription
 #long_description = importLongDescription.output()
 long_description = u"""
 Package xrt (XRayTracer) is a python software library for ray tracing and wave
 propagation in x-ray regime. It is primarily meant for modeling synchrotron
-sources, beamlines and beamline elements. Includes a GUI tool for creating
-scripts.
+sources, beamlines and beamline elements. Includes a GUI for creating a
+beamline and interactively viewing it in 3D.
 
 Features of xrt
 ---------------
@@ -118,6 +117,7 @@ Features of xrt
 
 xrtQook -- a GUI for creating scripts
 -------------------------------------
+
 The main interface to xrt is through a python script. Many examples of such
 scripts can be found in the supplied folder 'examples'. The script imports the
 modules of xrt, instantiates beamline parts, such as synchrotron or geometric
@@ -132,12 +132,28 @@ documentation, provides a complete list of parameters for the used classes,
 also including those from the parental classes. xrtQook writes/reads the
 recipes of beamlines into/from xml files.
 
+xrtGlow -- an interactive 3D beamline viewer
+--------------------------------------------
+
+The beamline created in xrtQook can be interactively viewed in an OpenGL based
+widget xrtGlow. It visualizes beams, footprints, surfaces, apertures and
+screens. The brightness represents intensity and the color represents an
+auxiliary user-selected distribution, typically energy. A virtual screen can be
+put at any position and dragged by mouse with simultaneous observation of the
+beam distribution on it.
+
+The primary purpose of xrtGlow is to demonstrate the alignment correctness
+given the fact that xrtQook can automatically calculate several positional and
+angular parameters.
+
 Dependencies
 ------------
-numpy, scipy matplotlib are required. If you use OpenCL for calculations on GPU
-or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime`` (these
-are search key words), pytools and pyopencl. Spyderlib (the foundation of
-Spyder IDE) is highly recommended for nicer view of xrtQook.
+
+numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
+GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
+(these are search key words), pytools and pyopencl. PyQt4 or PyQt5 are needed
+for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
+view of xrtQook. OpenGl is required for xrtGlow.
 
 Python 2 and 3
 --------------
@@ -146,25 +162,28 @@ The code can run in both Python branches without any modification.
 
 setup(
     name='xrt',
-    version='1.2.4',
+    version='1.3.0alpha',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
-                'beamline elements. Includes a GUI tool for creating scripts.',
+                'beamline elements. Includes a GUI for creating a beamline '
+                'and viewing it in 3D.',
     long_description=long_description,
     author='Konstantin Klementiev, Roman Chernikov',
     author_email='konstantin DOT klementiev AT gmail DOT com, '
                  'rchernikov AT gmail DOT com',
-    url='http://pythonhosted.org/xrt',
+    url='http://xrt.readthedocs.io',
     platforms='OS Independent',
     license='MIT License',
-    packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.xrtQook'],
+    packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.gui',
+              'xrt.gui.commons', 'xrt.gui.xrtGlow', 'xrt.gui.xrtQook'],
     package_data={
         'xrt.backends.raycing': [os.path.join('data', '*.*'), '*.cl'],
         'xrt': ['*.cl, *.ico'],
-        'xrt.xrtQook': [os.path.join('_icons', '*.*'),
-                        os.path.join('_images', '*.*'),
-                        os.path.join('xmls', '*.*')]},
-    scripts=[os.path.join('xrt', 'xrtQook', 'xrtQook.pyw')],
+        'xrt.gui.xrtQook': [os.path.join('_icons', '*.*'),
+                            os.path.join('_images', '*.*'),
+                            os.path.join('savedBeamlines', '*.*')],
+        'xrt.gui.xrtGlow': [os.path.join('_icons', '*.*')]},
+    scripts=[os.path.join('xrt', 'gui', 'xrtQookStart.pyw')],
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',
