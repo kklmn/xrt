@@ -50,6 +50,9 @@ class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
+        self.cAxisLabelSize = 10
+        mplFont = {'size': self.cAxisLabelSize}
+        mpl.rc('font', **mplFont)
         self.setWindowTitle('xrtGlow')
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
@@ -788,7 +791,7 @@ class xrtGlow(qt.QWidget):
                                histArray[1][topEl[-1]])) * 0.5
                 cntr = (histArray[1][topEl[0]] + histArray[1][topEl[-1]]) * 0.5
                 newLabel = u"{0:.3f}\u00b1{1:.3f}".format(cntr, hwhm)
-                self.mplAx.set_title(newLabel, fontsize=10)
+                self.mplAx.set_title(newLabel)
             except:  # analysis:ignore
                 pass
             self.mplFig.canvas.draw()
