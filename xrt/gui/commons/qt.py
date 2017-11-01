@@ -31,9 +31,13 @@ if QtName == "PyQt4":
         from PyQt4.QtCore import *
     else:
         from PyQt4.QtCore import (
-            pyqtSignal, Signal, SIGNAL, QUrl, QObject, QTimer, QProcess,
+            pyqtSignal, SIGNAL, QUrl, QObject, QTimer, QProcess,
             QThread, QT_VERSION_STR, PYQT_VERSION_STR)
         from PyQt4.QtGui import QSortFilterProxyModel
+        try:
+            from PyQt4.QtCore import Signal
+        except ImportError:
+            from PyQt4.QtCore import pyqtSignal as Signal
     locals().update(vars(PyQt4.QtCore.Qt))
 
     from PyQt4.QtOpenGL import QGLWidget
@@ -53,11 +57,15 @@ elif QtName == "PyQt5":
         from PyQt5.QtGui import *
         from PyQt5.QtCore import *
         from PyQt5.QtWidgets import *
+        Signal = pyqtSignal
     else:
         from PyQt5.QtCore import (
-            pyqtSignal, Signal, QUrl, QObject, QTimer, QProcess, QThread,
-            QT_VERSION_STR, PYQT_VERSION_STR)
-        from PyQt5.QtCore import QSortFilterProxyModel
+            pyqtSignal, QUrl, QObject, QTimer, QProcess, QThread,
+            QT_VERSION_STR, PYQT_VERSION_STR, QSortFilterProxyModel)
+        try:
+            from PyQt5.QtCore import Signal
+        except ImportError:
+            from PyQt5.QtCore import pyqtSignal as Signal
     locals().update(vars(PyQt5.QtCore.Qt))
 
     from PyQt5.QtOpenGL import QGLWidget
