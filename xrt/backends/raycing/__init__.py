@@ -167,8 +167,8 @@ hueMax = 10.
 targetOpenCL = 'auto'
 precisionOpenCL = 'auto'
 
-allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'a', 'b',
-                 'path', 'phase_shift', 'reflection_number', 'order',
+allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
+                 'a', 'b', 'path', 'phase_shift', 'reflection_number', 'order',
                  'circular_polarization_rate', 'polarization_degree',
                  'polarization_psi',  'ratio_ellipse_axes', 's', 'r',
                  'theta', 'phi', 'incidence_angle',

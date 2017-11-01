@@ -43,6 +43,8 @@
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">(0, 0, 0)</center>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
 			<nrays type="param">100000</nrays>
 			<distx type="param">normal</distx>
 			<dx type="param">0.1</dx>
@@ -59,8 +61,6 @@
 			<polarization type="param">horizontal</polarization>
 			<filamentBeam type="param">False</filamentBeam>
 			<uniformRayDensity type="param">False</uniformRayDensity>
-			<pitch type="param">0</pitch>
-			<yaw type="param">0</yaw>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.GeometricSource</_object>
 		<shine type="prop">
@@ -77,23 +77,6 @@
 	</geometricSource01>
 	<doubleParaboloidLens01 type="value">
 		<properties type="prop">
-			<bragg type="param">0</bragg>
-			<cryst1roll type="param">0</cryst1roll>
-			<cryst2roll type="param">0</cryst2roll>
-			<cryst2pitch type="param">0</cryst2pitch>
-			<cryst2finePitch type="param">0</cryst2finePitch>
-			<cryst2perpTransl type="param">0</cryst2perpTransl>
-			<cryst2longTransl type="param">0</cryst2longTransl>
-			<limPhysX2 type="param">[-0.65, 0.65]</limPhysX2>
-			<limPhysY2 type="param">[-0.65, 0.65]</limPhysY2>
-			<limOptX2 type="param">None</limOptX2>
-			<limOptY2 type="param">None</limOptY2>
-			<material2 type="param">None</material2>
-			<fixedOffset type="param">None</fixedOffset>
-			<focus type="param">0.1</focus>
-			<zmax type="param">0.5</zmax>
-			<nCRL type="param">1</nCRL>
-			<t type="param">0.1</t>
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">[0, 10000, 0]</center>
@@ -101,13 +84,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
-			<surface type="param">None</surface>
 			<material type="param">material01</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-0.65, 0.65]</limPhysX>
@@ -116,8 +97,13 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
-			<order type="param">None</order>
+			<gratingDensity type="param">None</gratingDensity>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
+			<t type="param">0.1</t>
+			<focus type="param">0.1</focus>
+			<zmax type="param">0.5</zmax>
+			<nCRL type="param">1</nCRL>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -138,23 +124,6 @@
 	</doubleParaboloidLens01>
 	<doubleParaboloidLens02 type="value">
 		<properties type="prop">
-			<bragg type="param">0</bragg>
-			<cryst1roll type="param">0</cryst1roll>
-			<cryst2roll type="param">0</cryst2roll>
-			<cryst2pitch type="param">0</cryst2pitch>
-			<cryst2finePitch type="param">0</cryst2finePitch>
-			<cryst2perpTransl type="param">0</cryst2perpTransl>
-			<cryst2longTransl type="param">0</cryst2longTransl>
-			<limPhysX2 type="param">[-0.65, 0.65]</limPhysX2>
-			<limPhysY2 type="param">[-0.65, 0.65]</limPhysY2>
-			<limOptX2 type="param">None</limOptX2>
-			<limOptY2 type="param">None</limOptY2>
-			<material2 type="param">material01</material2>
-			<fixedOffset type="param">None</fixedOffset>
-			<focus type="param">0.1</focus>
-			<zmax type="param">0.5</zmax>
-			<nCRL type="param">1</nCRL>
-			<t type="param">0.1</t>
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">[0, 10003, 0]</center>
@@ -162,13 +131,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
-			<surface type="param">None</surface>
 			<material type="param">material01</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-0.65, 0.65]</limPhysX>
@@ -177,8 +144,13 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
-			<order type="param">None</order>
+			<gratingDensity type="param">None</gratingDensity>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
+			<t type="param">0.1</t>
+			<focus type="param">0.1</focus>
+			<zmax type="param">0.5</zmax>
+			<nCRL type="param">1</nCRL>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -199,23 +171,6 @@
 	</doubleParaboloidLens02>
 	<doubleParaboloidLens03 type="value">
 		<properties type="prop">
-			<bragg type="param">0</bragg>
-			<cryst1roll type="param">0</cryst1roll>
-			<cryst2roll type="param">0</cryst2roll>
-			<cryst2pitch type="param">0</cryst2pitch>
-			<cryst2finePitch type="param">0</cryst2finePitch>
-			<cryst2perpTransl type="param">0</cryst2perpTransl>
-			<cryst2longTransl type="param">0</cryst2longTransl>
-			<limPhysX2 type="param">[-0.65, 0.65]</limPhysX2>
-			<limPhysY2 type="param">[-0.65, 0.65]</limPhysY2>
-			<limOptX2 type="param">None</limOptX2>
-			<limOptY2 type="param">None</limOptY2>
-			<material2 type="param">material01</material2>
-			<fixedOffset type="param">None</fixedOffset>
-			<focus type="param">0.1</focus>
-			<zmax type="param">0.5</zmax>
-			<nCRL type="param">1</nCRL>
-			<t type="param">0.1</t>
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
 			<center type="param">[0, 10006, 0]</center>
@@ -223,13 +178,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
-			<surface type="param">None</surface>
 			<material type="param">material01</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-0.65, 0.65]</limPhysX>
@@ -238,8 +191,13 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
-			<order type="param">None</order>
+			<gratingDensity type="param">None</gratingDensity>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
+			<t type="param">0.1</t>
+			<focus type="param">0.1</focus>
+			<zmax type="param">0.5</zmax>
+			<nCRL type="param">1</nCRL>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -303,11 +261,16 @@
 </run_ray_tracing>
 <description>This example has three double-parabolic CRLs. To visualize them nicely and to see that they do focus x-rays, start Glow, and:
 
-- in Navigation select all 6 lens surfaces and center the view at one of them, 
-- in Transformation set all 3 Log scales to 4, 
-- in Color / Color Axis select xzprime -- the axial divergence,	:math:`(xz)'=\sqrt{x'^2+ z'^2}`, 
-- rotate and zoom the view as convenient and 
-- observe that the footprint points deviate from the surface because the surfaces are too simplified. To make the surfaces more exact, put two equal larger numbers as tessellation parameters in Scene. This will result in better surfaces but also slower 3D manipulation of the scene.
+- In Navigation select all 6 lens surfaces in the column "Surface" (if hidden, enlarge the window) and center the view at one of them.
+
+- In Transformation set all 3 Log scales equal to 4. 
+
+- In Color / Color Axis select xzprime -- the axial divergence, :math:`(xz)'=\sqrt{x'^2+ z'^2}`.
+
+- Rotate and zoom the view as convenient.
+
+- Observe with a close zoom that the footprint points deviate from the surface because the surfaces are too simplified by OpenGL. To make the surfaces more precise, put two equal larger numbers as tessellation parameters in Scene. This will result in better surfaces but also slower 3D manipulation of the scene.
+
 
  </description>
 </Project>
