@@ -2,16 +2,27 @@
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "01 Nov 2017"
 
+#try:
+#    from matplotlib.backends import qt_compat
+#except ImportError:
+#    from matplotlib.backends import qt4_compat
+#    qt_compat = qt4_compat
+
+QtName = None
 try:
-    from matplotlib.backends import qt_compat
+    import PyQt5
+    QtName = "PyQt5"
 except ImportError:
-    from matplotlib.backends import qt4_compat
-    qt_compat = qt4_compat
+    try:
+        import PyQt4
+        QtName = "PyQt4"
+    except ImportError:
+        raise ImportError("Cannot import any PyQt package!")
 
 starImport = False
 
-if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
-    QtName = "PyQt4"
+#if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
+if QtName == "PyQt4":
     from PyQt4 import QtGui, QtCore
     import PyQt4.QtGui as myQtGUI
 
@@ -23,7 +34,6 @@ if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
             pyqtSignal, Signal, SIGNAL, QUrl, QObject, QTimer, QProcess,
             QThread, QT_VERSION_STR, PYQT_VERSION_STR)
         from PyQt4.QtGui import QSortFilterProxyModel
-    import PyQt4
     locals().update(vars(PyQt4.QtCore.Qt))
 
     from PyQt4.QtOpenGL import QGLWidget
@@ -34,8 +44,8 @@ if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
         pass
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as\
         FigCanvas
-elif 'pyqt5' in qt_compat.QT_API.lower():
-    QtName = "PyQt5"
+#elif 'pyqt5' in qt_compat.QT_API.lower():
+elif QtName == "PyQt5":
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
 
@@ -48,7 +58,6 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
             pyqtSignal, Signal, QUrl, QObject, QTimer, QProcess, QThread,
             QT_VERSION_STR, PYQT_VERSION_STR)
         from PyQt5.QtCore import QSortFilterProxyModel
-    import PyQt5
     locals().update(vars(PyQt5.QtCore.Qt))
 
     from PyQt5.QtOpenGL import QGLWidget
