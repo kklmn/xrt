@@ -2,8 +2,8 @@
 u"""
 .. _glow_notes:
 
-Notes one using xrtGlow
------------------------
+Notes on using xrtGlow
+----------------------
 
 .. imagezoom:: _images/xrtGlow1.png
 
