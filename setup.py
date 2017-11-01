@@ -153,7 +153,7 @@ numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
 GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
 (these are search key words), pytools and pyopencl. PyQt4 or PyQt5 are needed
 for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
-view of xrtQook. OpenGl is required for xrtGlow.
+view of xrtQook. OpenGL is required for xrtGlow.
 
 Python 2 and 3
 --------------
