@@ -17,7 +17,7 @@ The primary purpose of xrtGlow is to demonstrate the alignment correctness
 given the fact that xrtQook can automatically calculate several positional and
 angular parameters.
 
-See aslo :ref:`Notes one using xrtGlow <glow_notes>`.
+See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 
 +-------------+-------------+
 |   |glow1|   |   |glow2|   |
