@@ -137,14 +137,11 @@ Features of xrt
 
 Dependencies
 ------------
-:mod:`numpy`, :mod:`scipy` and :mod:`matplotlib` are required. If you use
-OpenCL for calculations on GPU or CPU, you need AMD/NVIDIA drivers,
-``Intel CPU only OpenCL runtime`` (these are search key words), :mod:`pytools`
-and :mod:`pyopencl`.
-
-The IDE Spyder is highly recommended for working with python scripts. Its
-foundation, the module :mod:`spyderlib` (recently renamed to :mod:`spyder`),
-is used for nicer view of the script generator xrtQook.
+numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
+GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
+(these are search key words), pytools and pyopencl. PyQt4 or PyQt5 are needed
+for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
+view of xrtQook. OpenGl is required for xrtGlow.
 
 Python 2 and 3
 --------------
@@ -155,8 +152,9 @@ Get xrt
 xrt is available as source distribution from `pypi.python.org
 <https://pypi.python.org/pypi/xrt>`_ and from `GitHub
 <https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
-examples and the script generator xrtQook. The complete documentation is
-available as zip file from `GitHub <https://github.com/kklmn/xrt>`_.
+and examples. The complete documentation is available as zip file from
+`GitHub <https://github.com/kklmn/xrt>`_ and
+`Read the Docs <http://xrt.readthedocs.io>`_.
 
 Installation
 ------------
@@ -210,4 +208,4 @@ __version__ = __version__
 __date__ = "1 Nov 2017"
 __license__ = "MIT license"
 
-#__all__ = ['plotter', 'runner', 'multipro']
+# __all__ = ['plotter', 'runner', 'multipro']
