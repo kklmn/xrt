@@ -16,7 +16,7 @@ class Mock(MagicMock):
             return MagicMock()
 
 MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
-                'OpenGL.arrays']
+                'OpenGL.arrays', 'pyopencl']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # import Cloud
