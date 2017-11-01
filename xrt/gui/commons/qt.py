@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "18 Oct 2017"
+__date__ = "01 Nov 2017"
 
 try:
     from matplotlib.backends import qt_compat
@@ -8,18 +8,24 @@ except ImportError:
     from matplotlib.backends import qt4_compat
     qt_compat = qt4_compat
 
+starImport = False
+
 if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     QtName = "PyQt4"
     from PyQt4 import QtGui, QtCore
     import PyQt4.QtGui as myQtGUI
-#    from PyQt4.QtGui import *
-#    from PyQt4.QtCore import *
+
+    if starImport:
+        from PyQt4.QtGui import *
+        from PyQt4.QtCore import *
+    else:
+        from PyQt4.QtCore import (
+            pyqtSignal, Signal, SIGNAL, QUrl, QObject, QTimer, QProcess,
+            QThread, QT_VERSION_STR, PYQT_VERSION_STR)
+        from PyQt4.QtGui import QSortFilterProxyModel
     import PyQt4
     locals().update(vars(PyQt4.QtCore.Qt))
-    from PyQt4.QtCore import (
-        pyqtSignal, Signal, SIGNAL, QUrl, QObject, QTimer, QProcess, QThread,
-        QT_VERSION_STR, PYQT_VERSION_STR)
-    from PyQt4.QtGui import QSortFilterProxyModel
+
     from PyQt4.QtOpenGL import QGLWidget
     import PyQt4.QtWebKit as QtWeb
     try:
@@ -32,15 +38,19 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
     QtName = "PyQt5"
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
-#    from PyQt5.QtGui import *
-#    from PyQt5.QtCore import *
+
+    if starImport:
+        from PyQt5.QtGui import *
+        from PyQt5.QtCore import *
+        from PyQt5.QtWidgets import *
+    else:
+        from PyQt5.QtCore import (
+            pyqtSignal, Signal, QUrl, QObject, QTimer, QProcess, QThread,
+            QT_VERSION_STR, PYQT_VERSION_STR)
+        from PyQt5.QtCore import QSortFilterProxyModel
     import PyQt5
     locals().update(vars(PyQt5.QtCore.Qt))
-    from PyQt5.QtCore import (
-        pyqtSignal, Signal, QUrl, QObject, QTimer, QProcess, QThread,
-        QT_VERSION_STR, PYQT_VERSION_STR)
-    from PyQt5.QtCore import QSortFilterProxyModel
-#    from PyQt5.QtWidgets import *
+
     from PyQt5.QtOpenGL import QGLWidget
     try:
         import PyQt5.QtWebEngineWidgets as QtWeb

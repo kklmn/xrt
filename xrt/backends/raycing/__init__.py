@@ -167,6 +167,14 @@ hueMax = 10.
 targetOpenCL = 'auto'
 precisionOpenCL = 'auto'
 
+allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'a', 'b',
+                 'path', 'phase_shift', 'reflection_number', 'order',
+                 'circular_polarization_rate', 'polarization_degree',
+                 'polarization_psi',  'ratio_ellipse_axes', 's', 'r',
+                 'theta', 'phi', 'incidence_angle',
+                 'elevation_d', 'elevation_x', 'elevation_y', 'elevation_z',
+                 'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
+
 
 def is_sequence(arg):
     """Checks whether *arg* is a sequence."""

@@ -57,14 +57,6 @@ from ...backends.raycing import screens as rscreens  # analysis:ignore
 from ..commons import qt
 from ..commons import gl
 
-allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'a', 'b',
-                 'path', 'phase_shift', 'reflection_number', 'order',
-                 'circular_polarization_rate', 'polarization_degree',
-                 'polarization_psi',  'ratio_ellipse_axes', 's', 'r',
-                 'theta', 'phi', 'incidence_angle',
-                 'elevation_d', 'elevation_x', 'elevation_y', 'elevation_z',
-                 'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
-
 
 class mySlider(qt.QSlider):
     def __init__(self, parent, scaleDirection, scalePosition):
@@ -100,7 +92,7 @@ class xrtGlow(qt.QWidget):
 
         self.fluxDataModel = qt.QStandardItemModel()
 
-        for colorField in allBeamFields:
+        for colorField in raycing.allBeamFields:
             self.fluxDataModel.appendRow(qt.QStandardItem(colorField))
 
         self.customGlWidget = xrtGlWidget(self, arrayOfRays,
@@ -644,6 +636,7 @@ class xrtGlow(qt.QWidget):
         self.beamsToElements = None
         self.populate_oes_list(arrayOfRays)
         self.update_segments_model(arrayOfRays)
+        self.oeTree.resizeColumnToContents(0)
         self.centerCB.blockSignals(True)
         tmpIndex = self.centerCB.currentIndex()
         for i in range(self.centerCB.count()):
@@ -2560,7 +2553,7 @@ class xrtGlWidget(qt.QGLWidget):
             h = np.abs(opening[3]-opening[2]) * 0.5
             cX = 0.5 * (opening[1]+opening[0])
             cY = 0.5 * (opening[3]+opening[2])
-            wf = min(w, h)
+            wf = max(min(w, h), 2) 
         isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
         if isBeamStop:  # BeamStop
             limits = list(zip([0], [w], [0], [h]))

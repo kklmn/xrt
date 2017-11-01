@@ -26,7 +26,7 @@ Notes one using xrtGlow
 - The color histogram without Virtual Screen shows the color map -- the
   correspondence between the selected physical parameter (e.g. energy) and the
   colors. With Virtual Screen active (by F3), the plot shows a histogram of the
-  selected parameter on the screen. In both cases the user may select a
+  selected parameter on Virtual Screen. In both cases the user may select a
   sub-band on the color plot by the mouse. The vertical extent in that
   selection is irrelevant.
 
