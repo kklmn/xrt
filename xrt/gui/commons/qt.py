@@ -10,12 +10,16 @@ except ImportError:
 
 if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
     QtName = "PyQt4"
-#    from PyQt4 import QtGui, QtCore
-#    import PyQt4.QtGui as myQtGUI
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
+    from PyQt4 import QtGui, QtCore
+    import PyQt4.QtGui as myQtGUI
+#    from PyQt4.QtGui import *
+#    from PyQt4.QtCore import *
     import PyQt4
     locals().update(vars(PyQt4.QtCore.Qt))
+    from PyQt4.QtCore import (
+        pyqtSignal, Signal, SIGNAL, QUrl, QObject, QTimer, QProcess, QThread,
+        QT_VERSION_STR, PYQT_VERSION_STR)
+    from PyQt4.QtGui import QSortFilterProxyModel
     from PyQt4.QtOpenGL import QGLWidget
     import PyQt4.QtWebKit as QtWeb
     try:
@@ -26,14 +30,17 @@ if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
         FigCanvas
 elif 'pyqt5' in qt_compat.QT_API.lower():
     QtName = "PyQt5"
-#    from PyQt5 import QtGui, QtCore
-#    import PyQt5.QtWidgets as myQtGUI
-#    import PyQt5.QtOpenGL as myQtGL
-    from PyQt5.QtGui import *
-    from PyQt5.QtCore import *
+    from PyQt5 import QtGui, QtCore
+    import PyQt5.QtWidgets as myQtGUI
+#    from PyQt5.QtGui import *
+#    from PyQt5.QtCore import *
     import PyQt5
     locals().update(vars(PyQt5.QtCore.Qt))
-    from PyQt5.QtWidgets import *
+    from PyQt5.QtCore import (
+        pyqtSignal, Signal, QUrl, QObject, QTimer, QProcess, QThread,
+        QT_VERSION_STR, PYQT_VERSION_STR)
+    from PyQt5.QtCore import QSortFilterProxyModel
+#    from PyQt5.QtWidgets import *
     from PyQt5.QtOpenGL import QGLWidget
     try:
         import PyQt5.QtWebEngineWidgets as QtWeb
@@ -44,26 +51,26 @@ elif 'pyqt5' in qt_compat.QT_API.lower():
 else:
     raise ImportError("Cannot import any Python Qt package!")
 
-#QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
-#    QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
-#    QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-#    QListWidgetItem, QGLWidget, QGroupBox,\
-#    QLabel, QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider = (
-#        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
-#        myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
-#        myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
-#        myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
-#        myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
-#        myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
-#        myQtGUI.QListWidgetItem, myQtGL.QGLWidget, myQtGUI.QGroupBox,
-#        myQtGUI.QLabel, myQtGUI.QSizePolicy,
-#        myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
-#        myQtGUI.QSlider)
-#QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
-#    QDoubleValidator, QIntValidator =\
-#    (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
-#     QtGui.QStandardItem, QtGui.QPixmap,
-#     QtGui.QDoubleValidator, QtGui.QIntValidator)
+QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
+    QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
+    QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
+    QListWidgetItem, QGroupBox, QProgressBar,\
+    QLabel, QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider = (
+        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
+        myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
+        myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
+        myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
+        myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
+        myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
+        myQtGUI.QListWidgetItem, myQtGUI.QGroupBox, myQtGUI.QProgressBar,
+        myQtGUI.QLabel, myQtGUI.QSizePolicy,
+        myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
+        myQtGUI.QSlider)
+QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
+    QDoubleValidator, QIntValidator =\
+    (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
+     QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
+     QtGui.QIntValidator)
 
 
 class mySlider(QSlider):
