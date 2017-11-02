@@ -1344,6 +1344,17 @@ class Plate(DCM):
         kwargs = self.__pop_kwargs(**kwargs)
         DCM.__init__(self, *args, **kwargs)
         self.cryst2perpTransl = -self.t
+        if isinstance(self.limPhysX, (list, tuple)):
+            self.limPhysX2 = [-x for x in reversed(self.limPhysX)]
+        else:
+            self.limPhysX2 = self.limPhysX
+        self.limPhysY2 = self.limPhysY
+        if isinstance(self.limOptX, (list, tuple)):
+            self.limOptX2 = [-x for x in reversed(self.limOptX)]
+        else:
+            self.limOptX2 = self.limOptX
+        self.limOptY2 = self.limOptY
+        self.material2 = self.material
 #        if self.material is not None:
 #            if raycing.is_sequence(self.material):
 #                materials = self.material
