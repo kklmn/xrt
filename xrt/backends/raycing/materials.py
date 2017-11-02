@@ -759,6 +759,9 @@ class Crystal(Material):
     u"""The parent class for crystals. The descendants must define
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
+
+    hiddenParams = ['nuPoisson', 'calcBorrmann', 'useTT']
+
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler', name='',
