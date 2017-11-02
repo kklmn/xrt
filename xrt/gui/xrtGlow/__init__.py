@@ -2442,24 +2442,28 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnable(gl.GL_MAP2_NORMAL)
         nsIndex = int(is2ndXtal)
         if is2ndXtal:
-            xLimits = list(oe.limOptX2) if\
-                oe.limOptX2 is not None else oe.limPhysX2
+            xLimits = list(oe.limPhysX2)
+#            xLimits = list(oe.limOptX2) if\
+#                oe.limOptX2 is not None else oe.limPhysX2
             if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     xLimits = oe.footprint[nsIndex][:, 0]
-            yLimits = list(oe.limOptY2) if\
-                oe.limOptY2 is not None else oe.limPhysY2
+            yLimits = list(oe.limPhysY2)
+#            yLimits = list(oe.limOptY2) if\
+#                oe.limOptY2 is not None else oe.limPhysY2
             if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
         else:
-            xLimits = list(oe.limOptX) if\
-                oe.limOptX is not None else oe.limPhysX
+            xLimits = list(oe.limPhysX)
+#            xLimits = list(oe.limOptX) if\
+#                oe.limOptX is not None else oe.limPhysX
             if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     xLimits = oe.footprint[nsIndex][:, 0]
-            yLimits = list(oe.limOptY) if\
-                oe.limOptY is not None else oe.limPhysY
+            yLimits = list(oe.limPhysY)
+#            yLimits = list(oe.limOptY) if\
+#                oe.limOptY is not None else oe.limPhysY
             if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
@@ -2553,7 +2557,7 @@ class xrtGlWidget(qt.QGLWidget):
             h = np.abs(opening[3]-opening[2]) * 0.5
             cX = 0.5 * (opening[1]+opening[0])
             cY = 0.5 * (opening[3]+opening[2])
-            wf = max(min(w, h), 2) 
+            wf = max(min(w, h), 2)
         isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
         if isBeamStop:  # BeamStop
             limits = list(zip([0], [w], [0], [h]))
