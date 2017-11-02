@@ -1677,7 +1677,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             pass
             self.deleteElement(view, iItem)
         else:
-            self.colorizeTabText(item)
+#            self.colorizeTabText(item)
             if item.parent() == self.rootBLItem:
                 del self.beamLine.oesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
@@ -1852,7 +1852,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             self.addCombo(tree, rootModel)
                             self.blColorCounter = tmpBlColor
                             self.pltColorCounter = tmpPltColor
-                        self.colorizeTabText(rootModel)
+#                        self.colorizeTabText(rootModel)
 #                        msgStr = " {0:d} percent done.".format(int(i*100/5))
                         self.progressBar.setFormat("Loading... %p%")
                         self.progressBar.setValue(int(i*100/10))
