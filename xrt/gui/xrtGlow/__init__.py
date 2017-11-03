@@ -408,7 +408,7 @@ class xrtGlow(qt.QWidget):
     def makeGridAndProjectionsPanel(self):
         self.gridPanel = qt.QGroupBox(self)
         self.gridPanel.setFlat(False)
-        self.gridPanel.setTitle("Coordinate grid")
+        self.gridPanel.setTitle("Show coordinate grid")
         self.gridPanel.setCheckable(True)
         self.gridPanel.toggled.connect(self.checkDrawGrid)
 
@@ -1193,6 +1193,7 @@ class xrtGlow(qt.QWidget):
 
     def glMenu(self, position):
         menu = qt.QMenu()
+        subMenuF = menu.addMenu('File')
         for actText, actFunc in zip(['Export to image', 'Save scene geometry',
                                      'Load scene geometry'],
                                     [self.exportToImage, self.saveSceneDialog,
@@ -1200,7 +1201,7 @@ class xrtGlow(qt.QWidget):
             mAction = qt.QAction(self)
             mAction.setText(actText)
             mAction.triggered.connect(actFunc)
-            menu.addAction(mAction)
+            subMenuF.addAction(mAction)
         menu.addSeparator()
         mAction = qt.QAction(self)
         mAction.setText("Show Virtual Screen")
@@ -1232,8 +1233,15 @@ class xrtGlow(qt.QWidget):
             mAction.setChecked(actCheck)
             mAction.triggered.connect(
                 partial(self.setGridParam, iAction))
-            menu.addAction(mAction)
+            if iAction == 0:  # perspective
+                menu.addAction(mAction)
+            elif iAction == 1:  # show grid
+                subMenuG = menu.addMenu('Coordinate grid')
+                subMenuG.addAction(mAction)
+            elif iAction == 2:  # fine grid
+                subMenuG.addAction(mAction)
         menu.addSeparator()
+        subMenuP = menu.addMenu('Projections')
         for iAction, actCnt in enumerate(self.projectionControls):
             mAction = qt.QAction(self)
             mAction.setText(actCnt.text())
@@ -1241,8 +1249,9 @@ class xrtGlow(qt.QWidget):
             mAction.setChecked(bool(actCnt.checkState()))
             mAction.triggered.connect(
                 partial(self.setProjectionParam, iAction))
-            menu.addAction(mAction)
+            subMenuP.addAction(mAction)
         menu.addSeparator()
+        subMenuS = menu.addMenu('Scene')
         for iAction, actCnt in enumerate(self.sceneControls):
             if 'Virtual Screen' in actCnt.text():
                 continue
@@ -1251,7 +1260,7 @@ class xrtGlow(qt.QWidget):
             mAction.setCheckable(True)
             mAction.setChecked(bool(actCnt.checkState()))
             mAction.triggered.connect(partial(self.setSceneParam, iAction))
-            menu.addAction(mAction)
+            subMenuS.addAction(mAction)
         menu.addSeparator()
 
         menu.exec_(self.customGlWidget.mapToGlobal(position))
@@ -3243,7 +3252,6 @@ class xrtGlWidget(qt.QGLWidget):
             self.positionVScreen()
             self.glDraw()
         except:  # analysis:ignore
-            raise
             self.clearVScreen()
 
     def positionVScreen(self):
