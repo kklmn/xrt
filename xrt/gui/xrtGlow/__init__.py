@@ -1949,29 +1949,49 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glutStrokeCharacter(gl.GLUT_STROKE_ROMAN, ord(symbol))
             gl.glPopMatrix()
 
-    def paintGL(self):
-        def setMaterial(mat):
-            if mat == 'Cu':
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                                [0.3, 0.15, 0.15, 1])
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                                [0.4, 0.25, 0.15, 1])
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                                [1., 0.7, 0.3, 1])
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                                [0.1, 0.1, 0.1, 1])
-                gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
-            else:
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                                [0.1, 0.1, 0.1, 1])
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                                [0.3, 0.3, 0.3, 1])
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                                [1., 0.9, 0.8, 1])
-                gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                                [0.1, 0.1, 0.1, 1])
-                gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
+    def setMaterial(self, mat):
+        if mat == 'Cu':
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                            [0.3, 0.15, 0.15, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                            [0.4, 0.25, 0.15, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                            [1., 0.7, 0.3, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                            [0.1, 0.1, 0.1, 1])
+            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
+        elif mat == 'magRed':
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                            [0.6, 0.1, 0.1, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                            [0.8, 0.1, 0.1, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                            [1., 0.1, 0.1, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                            [0.1, 0.1, 0.1, 1])
+            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
+        elif mat == 'magBlue':
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                            [0.1, 0.1, 0.6, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                            [0.1, 0.1, 0.8, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                            [0.1, 0.1, 1., 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                            [0.1, 0.1, 0.1, 1])
+            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
+        else:
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                            [0.1, 0.1, 0.1, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                            [0.3, 0.3, 0.3, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                            [1., 0.9, 0.8, 1])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                            [0.1, 0.1, 0.1, 1])
+            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
+    def paintGL(self):
         def makeCenterStr(centerList, prec):
             retStr = '('
             for dim in centerList:
@@ -2085,15 +2105,18 @@ class xrtGlWidget(qt.QGLWidget):
                     oeToPlot = self.oesList[oeString][0]
                     is2ndXtal = self.oesList[oeString][3]
                     elType = str(type(oeToPlot))
-                    if len(re.findall('raycing.oe', elType.lower())) > 0:  # OE
-                        setMaterial('Si')
+                    if len(re.findall('raycing.sour', elType.lower())) > 0:
+                        self.plotSource(oeToPlot)
+                    elif len(re.findall('raycing.oe', elType.lower())) > 0:
+                        self.setMaterial('Si')
                         self.plotOeSurface(oeToPlot, is2ndXtal)
                     elif len(re.findall('raycing.apert', elType)) > 0:
-                        setMaterial('Cu')
+                        self.setMaterial('Cu')
                         self.plotAperture(oeToPlot)
                     else:
                         continue
                 except:  # analysis:ignore
+                    raise
                     continue
 
             gl.glDisable(gl.GL_LIGHTING)
@@ -2436,6 +2459,87 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glDrawArrays(geom, 0, len(vertices))
         colorArray.unbind()
         vertexArray.unbind()
+
+    def plotSource(self, oe):
+        gl.glEnable(gl.GL_MAP2_VERTEX_3)
+        gl.glEnable(gl.GL_MAP2_NORMAL)
+        if hasattr(oe, 'Np'):
+            nPeriods = int(oe.Np)
+            lPeriod = oe.L0
+        else:
+            nPeriods = 0.5
+            lPeriod = 10.
+
+        maghH = 10 * 0.5
+        maghW = 10 * 0.5
+        maghL = 0.25 * lPeriod * 0.5
+
+        surfRot = [[0, 0, 0, 1], [180, 0, 1, 0],
+                   [-90, 0, 1, 0], [90, 0, 1, 0],
+                   [-90, 1, 0, 0], [90, 1, 0, 0]]
+        surfTrans = np.array([[0, 0, maghH], [0, 0, -maghH],
+                              [-maghW, 0, 0], [maghW, 0, 0],
+                              [0, maghL, 0], [0, -maghL, 0]])
+        surfScales = np.array([[maghW*2, maghL*2, 0], [maghW*2, maghL*2, 0],
+                               [0, maghL*2, maghH*2], [0, maghL*2, maghH*2],
+                               [maghW*2, 0, maghH*2], [maghW*2, 0, maghH*2]])
+        deltaX = 1. / 2.  # float(self.tiles[0])
+        deltaY = 1. / 2.  # float(self.tiles[1])
+        magToggle = True
+        for period in range(nPeriods):
+            for hp in [0, 0.5]:
+                pY = list(oe.center)[1] - lPeriod * (0.5 * nPeriods -
+                                                     period - hp)
+                magToggle = not magToggle
+                for gap in [maghL*0.5, -maghL*0.5]:
+                    cubeCenter = np.array([0, pY, gap])
+                    self.setMaterial('magRed' if magToggle else 'magBlue')
+                    magToggle = not magToggle
+                    for surf in range(6):
+                        gl.glPushMatrix()
+                        gl.glTranslatef(*(self.modelToWorld(
+                            cubeCenter + surfTrans[surf] - self.coordOffset)))
+                        gl.glScalef(*(self.modelToWorld(surfScales[surf] -
+                                                        self.tVec)))
+                        gl.glRotatef(*surfRot[surf])
+                        for i in range(2):
+                            xGridOe = np.linspace(-0.5 + i*deltaX,
+                                                  -0.5 + (i+1)*deltaX,
+                                                  self.surfCPOrder)
+                            for k in range(2):
+                                yGridOe = np.linspace(-0.5 + k*deltaY,
+                                                      -0.5 + (k+1)*deltaY,
+                                                      self.surfCPOrder)
+                                xv, yv = np.meshgrid(xGridOe, yGridOe)
+                                xv = xv.flatten()
+                                yv = yv.flatten()
+                                zv = np.zeros_like(xv)
+
+                                surfCP = np.vstack((xv, yv, zv)).T
+                                surfNorm = np.vstack((np.zeros_like(xv),
+                                                      np.zeros_like(xv),
+                                                      np.ones_like(zv),
+                                                      np.ones_like(zv))).T
+
+                                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                                           surfCP.reshape(
+                                               self.surfCPOrder,
+                                               self.surfCPOrder, 3))
+
+                                gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                                           surfNorm.reshape(
+                                               self.surfCPOrder,
+                                               self.surfCPOrder, 4))
+
+                                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                                               self.surfCPOrder, 0.0, 1.0)
+
+                                gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+                                               0, self.surfCPOrder)
+                        gl.glPopMatrix()
+
+        gl.glDisable(gl.GL_MAP2_VERTEX_3)
+        gl.glDisable(gl.GL_MAP2_NORMAL)
 
     def plotOeSurface(self, oe, is2ndXtal):
         gl.glEnable(gl.GL_MAP2_VERTEX_3)

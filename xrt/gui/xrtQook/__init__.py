@@ -2179,7 +2179,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 #                            if combo.currentIndex() == -1:
 #                                combo.setCurrentIndex(0)
 #                                child1.setText(combo.currentText())
-                            lastIndex = combo.model.rowCount() - 1
+                            lastIndex = combo.model().rowCount() - 1
                             if paramName.lower() == 'accubeam':
                                 lastIndex = 0
                             combo.setCurrentIndex(lastIndex)
