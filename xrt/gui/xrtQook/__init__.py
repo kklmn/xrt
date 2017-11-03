@@ -3565,9 +3565,9 @@ if __name__ == '__main__':
             os.path.join(self.xrtQookDir, '_icons', 'logo-xrtQt.png')))
         msgBox.setTextFormat(qt.RichText)
         msgBox.setText("Beamline layout manipulation and automated code\
- generation tool for the <a href='http://pythonhosted.org/xrt'>xrt ray tracing\
+ generation tool for the <a href='http://xrt.rtfd.io'>xrt ray tracing\
  package</a>.\nFor a quick start see this short \
- <a href='http://pythonhosted.org/xrt/qook.html'>tutorial</a>.")
+ <a href='http://xrt.rtfd.io/qook_tutorial.html'>tutorial</a>.")
         locos = platform.platform(terse=True)
         if 'Linux' in locos:
             locos = " ".join(platform.linux_distribution())
