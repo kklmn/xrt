@@ -2100,13 +2100,13 @@ class xrtGlWidget(qt.QGLWidget):
                     oeToPlot = self.oesList[oeString][0]
                     is2ndXtal = self.oesList[oeString][3]
                     elType = str(type(oeToPlot))
-                    if len(re.findall('raycing.sour', elType.lower())) > 0:
-                        # if hasattr(oeToPlot, 'Ee'): #  not 'eE'
-                        if isinstance(oeToPlot, (rsources.BendingMagnet,
-                                                 rsources.Wiggler,
-                                                 rsources.Undulator)):
-                            self.plotSource(oeToPlot)
-                    elif len(re.findall('raycing.oe', elType.lower())) > 0:
+#                    if len(re.findall('raycing.sour', elType.lower())) > 0:
+#                        # if hasattr(oeToPlot, 'Ee'): #  not 'eE'
+#                        if isinstance(oeToPlot, (rsources.BendingMagnet,
+#                                                 rsources.Wiggler,
+#                                                 rsources.Undulator)):
+#                            self.plotSource(oeToPlot)
+                    if len(re.findall('raycing.oe', elType.lower())) > 0:
                         self.setMaterial('Si')
                         self.plotOeSurface(oeToPlot, is2ndXtal)
                     elif len(re.findall('raycing.apert', elType)) > 0:
@@ -2115,7 +2115,6 @@ class xrtGlWidget(qt.QGLWidget):
                     else:
                         continue
                 except:  # analysis:ignore
-                    raise
                     continue
 
             gl.glDisable(gl.GL_LIGHTING)
@@ -2150,7 +2149,13 @@ class xrtGlWidget(qt.QGLWidget):
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
                 elType = str(type(oeToPlot))
-                if len(re.findall('raycing.screens.Sc', elType)) > 0:  # screen
+                if len(re.findall('raycing.sour', elType.lower())) > 0:
+                    # if hasattr(oeToPlot, 'Ee'): #  not 'eE'
+                    if isinstance(oeToPlot, (rsources.BendingMagnet,
+                                             rsources.Wiggler,
+                                             rsources.Undulator)):
+                        self.plotSource(oeToPlot)
+                elif len(re.findall('raycing.screens.Sc', elType)) > 0:  # screen
                     self.plotScreen(oeToPlot)
                 elif len(re.findall('raycing.screens.Hemispher', elType)) > 0:
                     self.plotHemiScreen(oeToPlot)
@@ -2460,8 +2465,8 @@ class xrtGlWidget(qt.QGLWidget):
         vertexArray.unbind()
 
     def plotSource(self, oe):
-        gl.glEnable(gl.GL_MAP2_VERTEX_3)
-        gl.glEnable(gl.GL_MAP2_NORMAL)
+#        gl.glEnable(gl.GL_MAP2_VERTEX_3)
+#        gl.glEnable(gl.GL_MAP2_NORMAL)
 
         nPeriods = int(oe.Np) if hasattr(oe, 'Np') else 0.5
         if hasattr(oe, 'L0'):
@@ -2486,9 +2491,10 @@ class xrtGlWidget(qt.QGLWidget):
         surfScales = np.array([[maghW*2, maghL*2, 0], [maghW*2, maghL*2, 0],
                                [0, maghL*2, maghH*2], [0, maghL*2, maghH*2],
                                [maghW*2, 0, maghH*2], [maghW*2, 0, maghH*2]])
-        deltaX = 1. / 2.  # float(self.tiles[0])
-        deltaY = 1. / 2.  # float(self.tiles[1])
+#        deltaX = 1. / 2.  # float(self.tiles[0])
+#        deltaY = 1. / 2.  # float(self.tiles[1])
         magToggle = True
+        gl.glLineWidth(1)
         for period in range(int(nPeriods) if nPeriods > 0.5 else 1):
             for hp in ([0, 0.5] if nPeriods > 0.5 else [0.25]):
                 pY = list(oe.center)[1] - lPeriod * (0.5 * nPeriods -
@@ -2496,7 +2502,9 @@ class xrtGlWidget(qt.QGLWidget):
                 magToggle = not magToggle
                 for gap in [maghH*1.25, -maghH*1.25]:
                     cubeCenter = np.array([0, pY, gap])
-                    self.setMaterial('magRed' if magToggle else 'magBlue')
+#                    self.setMaterial('magRed' if magToggle else 'magBlue')
+                    magColor = [0.7, 0.1, 0.1, 1.] if magToggle \
+                        else [0.1, 0.1, 0.7, 1.]
                     magToggle = not magToggle
                     for surf in range(6):
                         gl.glPushMatrix()
@@ -2505,44 +2513,60 @@ class xrtGlWidget(qt.QGLWidget):
                         gl.glScalef(*(self.modelToWorld(surfScales[surf] -
                                                         self.tVec)))
                         gl.glRotatef(*surfRot[surf])
-                        for i in range(2):
-                            xGridOe = np.linspace(-0.5 + i*deltaX,
-                                                  -0.5 + (i+1)*deltaX,
-                                                  self.surfCPOrder)
-                            for k in range(2):
-                                yGridOe = np.linspace(-0.5 + k*deltaY,
-                                                      -0.5 + (k+1)*deltaY,
-                                                      self.surfCPOrder)
-                                xv, yv = np.meshgrid(xGridOe, yGridOe)
-                                xv = xv.flatten()
-                                yv = yv.flatten()
-                                zv = np.zeros_like(xv)
-
-                                surfCP = np.vstack((xv, yv, zv)).T
-                                surfNorm = np.vstack((np.zeros_like(xv),
-                                                      np.zeros_like(xv),
-                                                      np.ones_like(zv),
-                                                      np.ones_like(zv))).T
-
-                                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                                           surfCP.reshape(
-                                               self.surfCPOrder,
-                                               self.surfCPOrder, 3))
-
-                                gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                                           surfNorm.reshape(
-                                               self.surfCPOrder,
-                                               self.surfCPOrder, 4))
-
-                                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                                               self.surfCPOrder, 0.0, 1.0)
-
-                                gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
-                                               0, self.surfCPOrder)
+                        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+                        gl.glBegin(gl.GL_QUADS)
+                        gl.glColor4f(*magColor)
+                        gl.glVertex3f(-0.5, -0.5, 0)
+                        gl.glVertex3f(-0.5, 0.5, 0)
+                        gl.glVertex3f(0.5, 0.5, 0)
+                        gl.glVertex3f(0.5, -0.5, 0)
+                        gl.glEnd()
+                        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+                        gl.glBegin(gl.GL_QUADS)
+                        gl.glColor4f(0, 0, 0, 1.)
+                        gl.glVertex3f(-0.5, -0.5, 0)
+                        gl.glVertex3f(-0.5, 0.5, 0)
+                        gl.glVertex3f(0.5, 0.5, 0)
+                        gl.glVertex3f(0.5, -0.5, 0)
+                        gl.glEnd()
+#                        for i in range(2):
+#                            xGridOe = np.linspace(-0.5 + i*deltaX,
+#                                                  -0.5 + (i+1)*deltaX,
+#                                                  self.surfCPOrder)
+#                            for k in range(2):
+#                                yGridOe = np.linspace(-0.5 + k*deltaY,
+#                                                      -0.5 + (k+1)*deltaY,
+#                                                      self.surfCPOrder)
+#                                xv, yv = np.meshgrid(xGridOe, yGridOe)
+#                                xv = xv.flatten()
+#                                yv = yv.flatten()
+#                                zv = np.zeros_like(xv)
+#
+#                                surfCP = np.vstack((xv, yv, zv)).T
+#                                surfNorm = np.vstack((np.zeros_like(xv),
+#                                                      np.zeros_like(xv),
+#                                                      np.ones_like(zv),
+#                                                      np.ones_like(zv))).T
+#
+#                                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+#                                           surfCP.reshape(
+#                                               self.surfCPOrder,
+#                                               self.surfCPOrder, 3))
+#
+#                                gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+#                                           surfNorm.reshape(
+#                                               self.surfCPOrder,
+#                                               self.surfCPOrder, 4))
+#
+#                                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+#                                               self.surfCPOrder, 0.0, 1.0)
+#
+#                                gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+#                                               0, self.surfCPOrder)
                         gl.glPopMatrix()
 
-        gl.glDisable(gl.GL_MAP2_VERTEX_3)
-        gl.glDisable(gl.GL_MAP2_NORMAL)
+#        gl.glDisable(gl.GL_MAP2_VERTEX_3)
+#        gl.glDisable(gl.GL_MAP2_NORMAL)
 
     def plotOeSurface(self, oe, is2ndXtal):
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
