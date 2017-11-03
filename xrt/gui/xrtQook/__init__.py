@@ -1632,7 +1632,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
-        self.beamModel.sort(3)
         self.update_beamline(newItem[0], newOrder=True)
 
     def copyChildren(self, itemTo, itemFrom):
@@ -1693,7 +1692,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             pass
             self.deleteElement(view, iItem)
         else:
-#            self.colorizeTabText(item)
             if item.parent() == self.rootBLItem:
                 del self.beamLine.oesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
@@ -2105,16 +2103,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                         elNameStr))))
 
     def int_to_regexp(self, intStr):
-        a = list(str(intStr))
+        a = list(str(int(intStr)))
         oeClassStr = str(self.get_class_name(
             self.rootBLItem.child(int(intStr), 0)))
         if 'source' in oeClassStr:
             return '^(\d+)$'
         elif int(intStr) < 11:
-            return '^([0-{}])$'.format(int(intStr)-1)
+            return '^([0][0][0-{}])$'.format(int(intStr)-1)
         else:
-            return '^([0-9]|[0-{0}][0-9]{1}$'.format(
-                int(a[0])-1, '|{0}[0-{1}])'.format(
+            return '^([0][0][0-9]|[0][0-{0}][0-9]{1}$'.format(
+                int(a[0])-1, '|[0]{0}[0-{1}])'.format(
                     int(a[0]), int(a[1])-1) if int(a[1]) > 0 else ")")
 
     def addCombo(self, view, item):
@@ -2757,9 +2755,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
     def name_to_bl_pos(self, elname):
         for iel in range(self.rootBLItem.rowCount()):
             if str(self.rootBLItem.child(iel, 0).text()) == elname:
-                return iel
+                return '{:03d}'.format(iel)
         else:
-            return 0
+            return '000'
 
     def update_beamline(self, item=None, newElement=False, newOrder=False):
         def create_param_dict(parentItem, elementString):
@@ -2933,9 +2931,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                         newDict[elNameStr] = oesValues[counter]
                                         if elNameStr != oesKeys[counter]:
                                             startElement = oesKeys[counter]
+                                            print(startElement, elNameStr)
                                             for ibeam in range(
                                                     rbi.rowCount()):
-                                                if rbi.child(ibeam, 2) ==\
+                                                if str(rbi.child(ibeam, 2).text()) ==\
                                                         startElement:
                                                     rbi.child(
                                                         ibeam, 2).setText(
@@ -2957,6 +2956,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 rbi.child(ibeam, 3).setText(str(
                                     self.name_to_bl_pos(str(rbi.child(
                                         ibeam, 2).text()))))
+                            self.beamModel.sort(3)
                             update_regexp()
                         elif wasDeleted:
                             self.progressBar.setFormat(
