@@ -1386,6 +1386,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 #            self.tabs.tabBar().setTabTextColor(2, color)
 
     def addMethod(self, name, parentItem, fdoc):
+        self.beamModel.sort(3)
         elstr = str(parentItem.text())
         fdoc = fdoc[0].replace("Returned values: ", '').split(',')
         self.blUpdateLatchOpen = False
@@ -1393,10 +1394,24 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.setIItalic(methodItem)
         methodProps = self.addProp(methodItem, 'parameters')
         self.addObject(self.tree, methodItem, name)
-
         for arg, argVal in self.getParams(name):
                 if arg == 'bl':
                     argVal = self.rootBLItem.text()
+                elif 'beam' in arg:
+                    fModel0 = qt.QSortFilterProxyModel()
+                    fModel0.setSourceModel(self.beamModel)
+                    fModel0.setFilterKeyColumn(1)
+                    fModel0.setFilterRegExp('Global')
+                    fModel = qt.QSortFilterProxyModel()
+                    fModel.setSourceModel(fModel0)
+                    fModel.setFilterKeyColumn(3)
+                    regexp = self.int_to_regexp(
+                        self.name_to_bl_pos(elstr))
+                    fModel.setFilterRegExp(regexp)
+                    lastIndex = fModel.rowCount() - 1
+                    if arg.lower() == 'accubeam':
+                        lastIndex = 0
+                    argVal = fModel.data(fModel.index(lastIndex, 0))
                 child0, child1 = self.addParam(methodProps, arg, argVal)
 
         methodOut = self.addProp(methodItem, 'output')
@@ -1617,6 +1632,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
+        self.beamModel.sort(3)
         self.update_beamline(newItem[0], newOrder=True)
 
     def copyChildren(self, itemTo, itemFrom):
@@ -1689,6 +1705,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
     def exportLayout(self):
         saveStatus = False
+        self.beamModel.sort(3)
         if self.layoutFileName == "":
             saveDialog = qt.QFileDialog()
             saveDialog.setFileMode(qt.QFileDialog.AnyFile)
@@ -1843,6 +1860,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         if rootModel in [self.rootBLItem, self.rootPlotItem]:
                             rootModel.setText(root[i].tag)
                         self.iterateImport(tree, rootModel, root[i])
+                        self.beamModel.sort(3)
                         if rootModel == self.rootBLItem:
                             self.updateBeamImport()
                         if tree is not None:
@@ -2100,6 +2118,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     int(a[0]), int(a[1])-1) if int(a[1]) > 0 else ")")
 
     def addCombo(self, view, item):
+        self.beamModel.sort(3)
         if item.hasChildren():
             itemTxt = str(item.text())
             for ii in range(item.rowCount()):
@@ -2146,14 +2165,14 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             else:
                                 fModel = self.beamModel
                             combo = self.addStandardCombo(fModel, value)
-#                            if combo.currentIndex() == -1:
-#                                combo.setCurrentIndex(0)
-#                                child1.setText(combo.currentText())
-                            lastIndex = combo.model().rowCount() - 1
-                            if paramName.lower() == 'accubeam':
-                                lastIndex = 0
-                            combo.setCurrentIndex(lastIndex)
-                            child1.setText(combo.currentText())
+                            if combo.currentIndex() == -1:
+                                combo.setCurrentIndex(0)
+                                child1.setText(combo.currentText())
+#                            lastIndex = combo.model().rowCount() - 1
+#                            if paramName.lower() == 'accubeam':
+#                                lastIndex = 0
+#                            combo.setCurrentIndex(lastIndex)
+#                            child1.setText(combo.currentText())
                             view.setIndexWidget(child1.index(), combo)
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
@@ -2179,11 +2198,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             if combo.currentIndex() == -1:
                                 combo.setCurrentIndex(0)
                                 child1.setText(combo.currentText())
-                            lastIndex = combo.model().rowCount() - 1
+#                            lastIndex = combo.model().rowCount() - 1
 #                            if paramName.lower() == 'accubeam':
 #                                lastIndex = 0
 #                            combo.setCurrentIndex(lastIndex)
-                            child1.setText(combo.currentText())
+#                            child1.setText(combo.currentText())
                             view.setIndexWidget(child1.index(), combo)
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
