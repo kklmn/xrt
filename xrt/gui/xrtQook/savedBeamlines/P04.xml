@@ -11,15 +11,13 @@
 	<S3beamLocal01 type="flat"></S3beamLocal01>
 	<M2beamGlobal01 type="flat"></M2beamGlobal01>
 	<M2beamLocal01 type="flat"></M2beamLocal01>
-	<S4beamLocal01 type="flat"></S4beamLocal01>
-	<GbeamGlobal01 type="flat"></GbeamGlobal01>
-	<GbeamLocal01 type="flat"></GbeamLocal01>
+	<GratingbeamGlobal01 type="flat"></GratingbeamGlobal01>
+	<GratingbeamLocal01 type="flat"></GratingbeamLocal01>
 	<S5beamLocal01 type="flat"></S5beamLocal01>
 	<BESbeamLocal01 type="flat"></BESbeamLocal01>
 	<S6beamLocal01 type="flat"></S6beamLocal01>
 	<M3beamGlobal01 type="flat"></M3beamGlobal01>
 	<M3beamLocal01 type="flat"></M3beamLocal01>
-	<S7beamLocal01 type="flat"></S7beamLocal01>
 	<M4beamGlobal01 type="flat"></M4beamGlobal01>
 	<M4beamLocal01 type="flat"></M4beamLocal01>
 	<S8beamLocal01 type="flat"></S8beamLocal01>
@@ -52,7 +50,7 @@
 			<kind type="param">grating</kind>
 			<rho type="param">19.3</rho>
 			<t type="param">None</t>
-			<table type="param">Henke</table>
+			<table type="param">Chantler total</table>
 			<efficiency type="param">None</efficiency>
 			<efficiencyFile type="param">None</efficiencyFile>
 			<name type="param">G_Au</name>
@@ -65,7 +63,7 @@
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
 		<alignE type="param">505</alignE>
-		<alignMode type="param">False</alignMode>
+		<alignMode type="param">True</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<PU4 type="value">
@@ -75,7 +73,7 @@
 			<center type="param">(0, 0, 0)</center>
 			<pitch type="param">0</pitch>
 			<yaw type="param">0</yaw>
-			<nrays type="param">5e5</nrays>
+			<nrays type="param">2e6</nrays>
 			<eE type="param">6.0</eE>
 			<eI type="param">0.1</eI>
 			<eEspread type="param">0.001</eEspread>
@@ -91,8 +89,8 @@
 			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
 			<distE type="param">eV</distE>
 			<targetE type="param">[505.0,1,True]</targetE>
-			<eMin type="param">505-0.5054</eMin>
-			<eMax type="param">505+0.5054</eMax>
+			<eMin type="param">500</eMin>
+			<eMax type="param">510</eMax>
 			<eN type="param">51</eN>
 			<K type="param">auto</K>
 			<Kx type="param">auto</Kx>
@@ -110,17 +108,17 @@
 			<gp type="param">0.01</gp>
 			<gIntervals type="param">1</gIntervals>
 			<nRK type="param">30</nRK>
-			<targetOpenCL type="param">auto</targetOpenCL>
+			<targetOpenCL type="param">CPU</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
 			<parameters type="prop">
-				<withAmplitudes type="param">True</withAmplitudes>
-				<accuBeam type="param">None</accuBeam>
-				<fixedEnergy type="param">False</fixedEnergy>
 				<toGlobal type="param">True</toGlobal>
+				<withAmplitudes type="param">True</withAmplitudes>
+				<fixedEnergy type="param">False</fixedEnergy>
 				<wave type="param">None</wave>
+				<accuBeam type="param">None</accuBeam>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.sources.Undulator.shine</_object>
 			<output type="prop">
@@ -224,10 +222,10 @@
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">PU4beamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -290,10 +288,10 @@
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M1beamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -302,35 +300,14 @@
 			</output>
 		</reflect>
 	</M2>
-	<S4 type="value">
+	<VLSGrating type="value">
 		<properties type="prop">
 			<bl type="param">P04</bl>
-			<name type="param">S4</name>
+			<name type="param">None</name>
 			<center type="param">[auto, 46000, auto]</center>
-			<x type="param">auto</x>
-			<z type="param">auto</z>
-			<compressX type="param">None</compressX>
-			<compressZ type="param">None</compressZ>
-		</properties>
-		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
-		<expose type="prop">
-			<parameters type="prop">
-				<beam type="param">M2beamGlobal01</beam>
-			</parameters>
-			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
-			<output type="prop">
-				<beamLocal type="param">S4beamLocal01</beamLocal>
-			</output>
-		</expose>
-	</S4>
-	<G type="value">
-		<properties type="prop">
-			<bl type="param">P04</bl>
-			<name type="param">G</name>
-			<center type="param">[auto, 46000, auto]</center>
-			<pitch type="param">-1.660/180*np.pi</pitch>
+			<pitch type="param">-1.6 deg</pitch>
 			<roll type="param">0</roll>
-			<yaw type="param">-1.6/180*np.pi</yaw>
+			<yaw type="param">- 1.6 deg</yaw>
 			<positionRoll type="param">0</positionRoll>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
@@ -346,31 +323,28 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
-			<gratingDensity type="param">None</gratingDensity>
-			<order type="param">None</order>
+			<gratingDensity type="param">['y', -1200, 1, -6.05e-6, 1.97e-9]</gratingDensity>
+			<order type="param">1</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<p type="param">46000</p>
-			<q type="param">25000</q>
-			<isCylindrical type="param">True</isCylindrical>
 			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
-		<_object type="object">xrt.backends.raycing.oes.EllipticalMirrorParam</_object>
+		<_object type="object">xrt.backends.raycing.oes.OE</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M2beamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
-			<_object type="object">xrt.backends.raycing.oes.EllipticalMirrorParam.reflect</_object>
+			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
-				<beamGlobal type="param">GbeamGlobal01</beamGlobal>
-				<beamLocal type="param">GbeamLocal01</beamLocal>
+				<beamGlobal type="param">GratingbeamGlobal01</beamGlobal>
+				<beamLocal type="param">GratingbeamLocal01</beamLocal>
 			</output>
 		</reflect>
-	</G>
+	</VLSGrating>
 	<S5 type="value">
 		<properties type="prop">
 			<bl type="param">P04</bl>
@@ -384,7 +358,7 @@
 		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
 		<expose type="prop">
 			<parameters type="prop">
-				<beam type="param">GbeamGlobal01</beam>
+				<beam type="param">GratingbeamGlobal01</beam>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -404,7 +378,7 @@
 		<_object type="object">xrt.backends.raycing.apertures.RectangularAperture</_object>
 		<propagate type="prop">
 			<parameters type="prop">
-				<beam type="param">GbeamGlobal01</beam>
+				<beam type="param">GratingbeamGlobal01</beam>
 				<needNewGlobal type="param">False</needNewGlobal>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
@@ -426,7 +400,7 @@
 		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
 		<expose type="prop">
 			<parameters type="prop">
-				<beam type="param">GbeamGlobal01</beam>
+				<beam type="param">GratingbeamGlobal01</beam>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -439,10 +413,10 @@
 			<bl type="param">P04</bl>
 			<name type="param">M3</name>
 			<center type="param">[auto, 78500, auto]</center>
-			<pitch type="param">-0.59795999/180*np.pi</pitch>
+			<pitch type="param">-0.598 deg</pitch>
 			<roll type="param">0</roll>
-			<yaw type="param">-1.6/180*np.pi</yaw>
-			<positionRoll type="param">np.pi</positionRoll>
+			<yaw type="param">-1.6 deg</yaw>
+			<positionRoll type="param">180deg</positionRoll>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
@@ -451,9 +425,9 @@
 			<surface type="param">None</surface>
 			<material type="param">Pt_mirror</material>
 			<alpha type="param">None</alpha>
-			<limPhysX type="param">[-1000.0, 1000.0]</limPhysX>
+			<limPhysX type="param">[-100.0, 100.0]</limPhysX>
 			<limOptX type="param">None</limOptX>
-			<limPhysY type="param">[-1000.0, 1000.0]</limPhysY>
+			<limPhysY type="param">[-100.0, 100.0]</limPhysY>
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
@@ -470,10 +444,10 @@
 		<_object type="object">xrt.backends.raycing.oes.EllipticalMirrorParam</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
-				<beam type="param">GbeamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<beam type="param">GratingbeamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.EllipticalMirrorParam.reflect</_object>
 			<output type="prop">
@@ -482,27 +456,6 @@
 			</output>
 		</reflect>
 	</M3>
-	<S7 type="value">
-		<properties type="prop">
-			<bl type="param">P04</bl>
-			<name type="param">S7</name>
-			<center type="param">[auto, 79100, auto]</center>
-			<x type="param">auto</x>
-			<z type="param">auto</z>
-			<compressX type="param">None</compressX>
-			<compressZ type="param">None</compressZ>
-		</properties>
-		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
-		<expose type="prop">
-			<parameters type="prop">
-				<beam type="param">M3beamGlobal01</beam>
-			</parameters>
-			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
-			<output type="prop">
-				<beamLocal type="param">S7beamLocal01</beamLocal>
-			</output>
-		</expose>
-	</S7>
 	<M4 type="value">
 		<properties type="prop">
 			<bl type="param">P04</bl>
@@ -539,10 +492,10 @@
 		<_object type="object">xrt.backends.raycing.oes.EllipticalMirrorParam</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M3beamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.EllipticalMirrorParam.reflect</_object>
 			<output type="prop">
@@ -786,7 +739,7 @@
 	</S3>
 	<S4 type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">S4beamLocal01</beam>
+		<beam type="param">GratingbeamGlobal01</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -926,7 +879,7 @@
 	</M2>
 	<G type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">GbeamLocal01</beam>
+		<beam type="param">GratingbeamGlobal01</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -1206,7 +1159,7 @@
 	</M3>
 	<S7 type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">S7beamLocal01</beam>
+		<beam type="param">M4beamGlobal01</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -1417,22 +1370,22 @@
 </plots>
 <run_ray_tracing type="prop">
 	<_object type="object">xrt.runner.run_ray_tracing</_object>
-	<afterScript type="param">None</afterScript>
-	<processes type="param">1</processes>
-	<afterScriptKWargs type="param">{}</afterScriptKWargs>
-	<pickleEvery type="param">None</pickleEvery>
-	<generator type="param">None</generator>
-	<generatorKWargs type="param">auto</generatorKWargs>
-	<updateEvery type="param">1</updateEvery>
-	<globalNorm type="param">0</globalNorm>
-	<afterScriptArgs type="param">[]</afterScriptArgs>
-	<generatorArgs type="param">[]</generatorArgs>
-	<threads type="param">1</threads>
-	<beamLine type="param">P04</beamLine>
-	<energyRange type="param">None</energyRange>
 	<plots type="param">plots</plots>
 	<repeats type="param">1</repeats>
+	<updateEvery type="param">1</updateEvery>
+	<pickleEvery type="param">None</pickleEvery>
+	<energyRange type="param">None</energyRange>
 	<backend type="param">raycing</backend>
+	<beamLine type="param">P04</beamLine>
+	<threads type="param">1</threads>
+	<processes type="param">1</processes>
+	<generator type="param">None</generator>
+	<generatorArgs type="param">[]</generatorArgs>
+	<generatorKWargs type="param">auto</generatorKWargs>
+	<globalNorm type="param">0</globalNorm>
+	<afterScript type="param">None</afterScript>
+	<afterScriptArgs type="param">[]</afterScriptArgs>
+	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
 <description>
 
