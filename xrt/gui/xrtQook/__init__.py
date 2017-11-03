@@ -514,11 +514,9 @@ class XrtQook(qt.QWidget):
         for name, obj in inspect.getmembers(xrtrun):
             if inspect.isfunction(obj) and name == "run_ray_tracing":
                 if inspect.getargspec(obj)[3] is not None:
-                    self.addObject(self.runTree,
-                                   self.rootRunItem,
-                                   '{0}.{1}'.format(xrtrun.__name__, name))
-                    for arg, argVal in zip(inspect.getargspec(obj)[0],
-                                           inspect.getargspec(obj)[3]):
+                    runStr = '{0}.{1}'.format(xrtrun.__name__, name)
+                    self.addObject(self.runTree, self.rootRunItem, runStr)
+                    for arg, argVal in self.getParams(runStr):
                         if arg.lower() == "plots":
                             argVal = self.rootPlotItem.text()
                         if arg.lower() == "beamline":
@@ -1296,14 +1294,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             argList = inspect.getargspec(objRef)
             if argList[3] is not None:
                 if objRef.__name__ == 'run_ray_tracing':
-                    uArgs = dict(zip(argList[0], argList[3]))
-#                    args = argList[0]
-#                    argVals = argList[3]
+                    uArgs = OrderedDict(zip(argList[0], argList[3]))
                 else:
                     isMethod = True
-                    uArgs = dict(zip(argList[0][1:], argList[3]))
-#                    args = argList[0][1:]
-#                    argVals = argList[3]
+                    uArgs = OrderedDict(zip(argList[0][1:], argList[3]))
         moduleObj = eval(objRef.__module__)
         if hasattr(moduleObj, 'allArguments') and not isMethod:
             for argName in moduleObj.allArguments:
@@ -2934,7 +2928,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                             print(startElement, elNameStr)
                                             for ibeam in range(
                                                     rbi.rowCount()):
-                                                if str(rbi.child(ibeam, 2).text()) ==\
+                                                if str(rbi.child(
+                                                        ibeam, 2).text()) ==\
                                                         startElement:
                                                     rbi.child(
                                                         ibeam, 2).setText(
@@ -3445,12 +3440,11 @@ if __name__ == '__main__':
                 if self.rootRunItem.child(ie, 0).text() == '_object':
                     elstr = str(self.rootRunItem.child(ie, 1).text())
                     codeMain += "{0}{1}(\n".format(myTab, elstr)
-                    objrr = eval(elstr)
                     break
 
             ieinit = ""
-            for iem, argVal in zip(range(self.rootRunItem.rowCount()-1),
-                                   inspect.getargspec(objrr)[3]):
+            for iem, (argNm, argVal) in zip(range(
+                    self.rootRunItem.rowCount() - 1), self.getParams(elstr)):
                 ie = iem + 1
                 if self.rootRunItem.child(ie, 0).text() != '_object':
                     paraname = self.rootRunItem.child(ie, 0).text()
@@ -3460,6 +3454,8 @@ if __name__ == '__main__':
                     if paraname == "backend":
                         paravalue = 'r\"{0}\"'.format(paravalue)
                     if str(paravalue) != str(argVal):
+                        if paravalue == 'auto':
+                            paravalue = self.quotize(paravalue)
                         ieinit += "{0}{1}={2},\n".format(
                             myTab*2, paraname, paravalue)
             codeMain += ieinit.rstrip(",\n") + ")\n"
