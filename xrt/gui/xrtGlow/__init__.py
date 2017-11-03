@@ -2106,7 +2106,8 @@ class xrtGlWidget(qt.QGLWidget):
                     is2ndXtal = self.oesList[oeString][3]
                     elType = str(type(oeToPlot))
                     if len(re.findall('raycing.sour', elType.lower())) > 0:
-                        self.plotSource(oeToPlot)
+                        if hasattr(oeToPlot, 'eE'): 
+                            self.plotSource(oeToPlot)
                     elif len(re.findall('raycing.oe', elType.lower())) > 0:
                         self.setMaterial('Si')
                         self.plotOeSurface(oeToPlot, is2ndXtal)
@@ -2463,16 +2464,20 @@ class xrtGlWidget(qt.QGLWidget):
     def plotSource(self, oe):
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
         gl.glEnable(gl.GL_MAP2_NORMAL)
-        if hasattr(oe, 'Np'):
-            nPeriods = int(oe.Np)
+
+        nPeriods = int(oe.Np) if hasattr(oe, 'Np') else 0.5
+        if hasattr(oe, 'L0'):
             lPeriod = oe.L0
+            maghL = 0.25 * lPeriod * 0.5
         else:
-            nPeriods = 0.5
-            lPeriod = 10.
+            try:
+                lPeriod = (oe.Theta_max - oe.Theta_min) * oe.ro * 1000
+            except:
+                lPeriod = 500.
+            maghL = lPeriod
 
         maghH = 10 * 0.5
         maghW = 10 * 0.5
-        maghL = 0.25 * lPeriod * 0.5
 
         surfRot = [[0, 0, 0, 1], [180, 0, 1, 0],
                    [-90, 0, 1, 0], [90, 0, 1, 0],
@@ -2486,12 +2491,12 @@ class xrtGlWidget(qt.QGLWidget):
         deltaX = 1. / 2.  # float(self.tiles[0])
         deltaY = 1. / 2.  # float(self.tiles[1])
         magToggle = True
-        for period in range(nPeriods):
-            for hp in [0, 0.5]:
+        for period in range(int(nPeriods) if nPeriods > 0.5 else 1):
+            for hp in ([0, 0.5] if nPeriods > 0.5 else [0.25]):
                 pY = list(oe.center)[1] - lPeriod * (0.5 * nPeriods -
                                                      period - hp)
                 magToggle = not magToggle
-                for gap in [maghL*0.5, -maghL*0.5]:
+                for gap in [maghH*1.25, -maghH*1.25]:
                     cubeCenter = np.array([0, pY, gap])
                     self.setMaterial('magRed' if magToggle else 'magBlue')
                     magToggle = not magToggle

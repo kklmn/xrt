@@ -2,6 +2,11 @@
 <Project>
 <Beams type="prop">
 	<None type="flat"></None>
+	<BewindowbeamGlobal01 type="flat"></BewindowbeamGlobal01>
+	<BewindowbeamLocal101 type="flat"></BewindowbeamLocal101>
+	<BewindowbeamLocal201 type="flat"></BewindowbeamLocal201>
+	<SampleScreenbeamLocal01 type="flat"></SampleScreenbeamLocal01>
+	<undulator01beamGlobal01 type="flat"></undulator01beamGlobal01>
 	<FEMaskbeamLocal01 type="flat"></FEMaskbeamLocal01>
 	<C_FilterbeamGlobal01 type="flat"></C_FilterbeamGlobal01>
 	<C_FilterbeamLocal101 type="flat"></C_FilterbeamLocal101>
@@ -12,14 +17,9 @@
 	<Kohzu_DCMbeamGlobal01 type="flat"></Kohzu_DCMbeamGlobal01>
 	<Kohzu_DCMbeamLocal101 type="flat"></Kohzu_DCMbeamLocal101>
 	<Kohzu_DCMbeamLocal201 type="flat"></Kohzu_DCMbeamLocal201>
+	<M2paddlebeamLocal01 type="flat"></M2paddlebeamLocal01>
 	<M2beamGlobal01 type="flat"></M2beamGlobal01>
 	<M2beamLocal01 type="flat"></M2beamLocal01>
-	<SampleScreenbeamLocal01 type="flat"></SampleScreenbeamLocal01>
-	<M2paddlebeamLocal01 type="flat"></M2paddlebeamLocal01>
-	<undulator01beamGlobal01 type="flat"></undulator01beamGlobal01>
-	<BewindowbeamGlobal01 type="flat"></BewindowbeamGlobal01>
-	<BewindowbeamLocal101 type="flat"></BewindowbeamLocal101>
-	<BewindowbeamLocal201 type="flat"></BewindowbeamLocal201>
 </Beams>
 <Materials type="prop">
 	<CVD type="value">
@@ -64,9 +64,6 @@
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
 			<name type="param">None</name>
-			<nuPoisson type="param">0.0</nuPoisson>
-			<calcBorrmann type="param">None</calcBorrmann>
-			<useTT type="param">False</useTT>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
 	</Si220>
@@ -84,9 +81,6 @@
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler total</table>
 			<name type="param">None</name>
-			<nuPoisson type="param">0.0</nuPoisson>
-			<calcBorrmann type="param">None</calcBorrmann>
-			<useTT type="param">False</useTT>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
 	</Si111>
@@ -118,6 +112,8 @@
 			<bl type="param">beamLine</bl>
 			<name type="param">und</name>
 			<center type="param">(0, 0, 0)</center>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
 			<nrays type="param">100000</nrays>
 			<eE type="param">2.9</eE>
 			<eI type="param">0.25</eI>
@@ -128,35 +124,33 @@
 			<eEpsilonZ type="param">0.1017</eEpsilonZ>
 			<betaX type="param">9.34</betaX>
 			<betaZ type="param">3.174</betaZ>
-			<period type="param">19.1</period>
-			<n type="param">82</n>
-			<K type="param">0</K>
-			<Kx type="param">0</Kx>
-			<Ky type="param">0.0</Ky>
-			<phaseDeg type="param">0</phaseDeg>
-			<taper type="param">None</taper>
-			<R0 type="param">None</R0>
+			<xPrimeMax type="param">2./14.</xPrimeMax>
+			<zPrimeMax type="param">2./14.</zPrimeMax>
+			<xPrimeMaxAutoReduce type="param">False</xPrimeMaxAutoReduce>
+			<zPrimeMaxAutoReduce type="param">False</zPrimeMaxAutoReduce>
+			<distE type="param">eV</distE>
 			<targetE type="param">10000, 5</targetE>
-			<customField type="param">None</customField>
 			<eMin type="param">9995</eMin>
 			<eMax type="param">10005</eMax>
 			<eN type="param">51</eN>
-			<distE type="param">eV</distE>
-			<xPrimeMax type="param">2./14.</xPrimeMax>
-			<zPrimeMax type="param">2./14.</zPrimeMax>
+			<K type="param">0</K>
+			<Kx type="param">0</Kx>
+			<Ky type="param">0.0</Ky>
+			<period type="param">19.1</period>
+			<n type="param">82</n>
+			<phaseDeg type="param">0</phaseDeg>
+			<taper type="param">None</taper>
+			<R0 type="param">None</R0>
+			<filamentBeam type="param">False</filamentBeam>
+			<uniformRayDensity type="param">False</uniformRayDensity>
 			<nx type="param">25</nx>
 			<nz type="param">25</nz>
-			<xPrimeMaxAutoReduce type="param">False</xPrimeMaxAutoReduce>
-			<zPrimeMaxAutoReduce type="param">False</zPrimeMaxAutoReduce>
+			<customField type="param">None</customField>
 			<gp type="param">0.01</gp>
 			<gIntervals type="param">1</gIntervals>
 			<nRK type="param">30</nRK>
-			<uniformRayDensity type="param">False</uniformRayDensity>
-			<filamentBeam type="param">False</filamentBeam>
 			<targetOpenCL type="param">CPU</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
-			<pitch type="param">0</pitch>
-			<yaw type="param">0</yaw>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
@@ -216,11 +210,12 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">None</targetOpenCL>
-			<precisionOpenCL type="param">auto</precisionOpenCL>
 			<alarmLevel type="param">None</alarmLevel>
 			<t type="param">0.15</t>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.Plate</_object>
 		<double_refract type="prop">
@@ -260,13 +255,14 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">None</targetOpenCL>
-			<precisionOpenCL type="param">auto</precisionOpenCL>
 			<R type="param">5.0e7</R>
 			<r type="param">5.0e6</r>
 			<alarmLevel type="param">None</alarmLevel>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 		<reflect type="prop">
@@ -333,10 +329,9 @@
 			<limOptY2 type="param">None</limOptY2>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">None</targetOpenCL>
-			<precisionOpenCL type="param">float64</precisionOpenCL>
 			<cryst1roll type="param">0</cryst1roll>
 			<cryst2roll type="param">0</cryst2roll>
 			<cryst2pitch type="param">0</cryst2pitch>
@@ -345,6 +340,8 @@
 			<cryst2perpTransl type="param">0</cryst2perpTransl>
 			<cryst2longTransl type="param">0</cryst2longTransl>
 			<fixedOffset type="param">25</fixedOffset>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.DCM</_object>
 		<double_reflect type="prop">
@@ -407,13 +404,14 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">None</targetOpenCL>
-			<precisionOpenCL type="param">auto</precisionOpenCL>
 			<R type="param">1.0e7</R>
 			<r type="param">36.7</r>
 			<alarmLevel type="param">None</alarmLevel>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 		<reflect type="prop">
@@ -452,11 +450,12 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">None</targetOpenCL>
-			<precisionOpenCL type="param">auto</precisionOpenCL>
 			<alarmLevel type="param">None</alarmLevel>
 			<t type="param">0.1</t>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.Plate</_object>
 		<double_refract type="prop">
@@ -486,7 +485,7 @@
 		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
 		<expose type="prop">
 			<parameters type="prop">
-				<beam type="param">BewindowbeamGlobal01</beam>
+				<beam type="param">M2beamGlobal01</beam>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -498,7 +497,7 @@
 <plots type="value">
 	<plot01 type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">SampleScreenbeamLocal01</beam>
+		<beam type="param">M2beamLocal01</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -563,12 +562,12 @@
 		<persistentName type="param">None</persistentName>
 		<oe type="param">None</oe>
 		<raycingParam type="param">0</raycingParam>
-		<beamState type="param">None</beamState>
-		<beamC type="param">None</beamC>
+		<beamState type="param">M2beamLocal01</beamState>
+		<beamC type="param">M2beamLocal01</beamC>
 	</plot01>
 	<plot02 type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">M2paddlebeamLocal01</beam>
+		<beam type="param">M2beamLocal01</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -633,8 +632,8 @@
 		<persistentName type="param">None</persistentName>
 		<oe type="param">None</oe>
 		<raycingParam type="param">0</raycingParam>
-		<beamState type="param">None</beamState>
-		<beamC type="param">None</beamC>
+		<beamState type="param">M2beamLocal01</beamState>
+		<beamC type="param">M2beamLocal01</beamC>
 	</plot02>
 </plots>
 <run_ray_tracing type="prop">
