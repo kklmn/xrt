@@ -485,18 +485,12 @@ class BendingMagnet(object):
                     bot.x[:] = rX
                     bot.y[:] = rY
                 else:
-                    yNp = 0.5 * self.L0 *\
-                        (np.arccos(Theta0 * self.gamma / self.K) / PI) +\
-                        0.5 * self.L0 *\
-                        np.random.random_integers(0,
-                                                  int(2*self.Np - 1),
-                                                  npassed)
-                    bot.y[:] = np.where(
-                        yNp - 0.25*self.L0 > 0,
-                        yNp, self.L0*self.Np + yNp) - 0.5*self.L0*self.Np
+                    bot.y[:] = ((np.arccos(Theta0*self.gamma/self.K) / PI) +
+                                np.random.randint(
+                                    -int(self.Np), int(self.Np), npassed) -
+                                0.5) * 0.5 * self.L0
                     bot.x[:] = self.X0 * np.sin(PI2 * bot.y / self.L0) +\
                         np.random.normal(0., bot.sourceSIGMAx, npassed)
-                    bot.y[:] -= 0.25 * self.L0
                     bot.z[:] = np.random.normal(0., bot.sourceSIGMAz, npassed)
                 bot.Jsp[:] = np.zeros(npassed)
             else:

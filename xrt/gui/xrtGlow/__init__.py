@@ -2106,7 +2106,10 @@ class xrtGlWidget(qt.QGLWidget):
                     is2ndXtal = self.oesList[oeString][3]
                     elType = str(type(oeToPlot))
                     if len(re.findall('raycing.sour', elType.lower())) > 0:
-                        if hasattr(oeToPlot, 'eE'): 
+                        # if hasattr(oeToPlot, 'Ee'): #  not 'eE'
+                        if isinstance(oeToPlot, (rsources.BendingMagnet,
+                                                 rsources.Wiggler,
+                                                 rsources.Undulator)):
                             self.plotSource(oeToPlot)
                     elif len(re.findall('raycing.oe', elType.lower())) > 0:
                         self.setMaterial('Si')
@@ -2472,7 +2475,7 @@ class xrtGlWidget(qt.QGLWidget):
         else:
             try:
                 lPeriod = (oe.Theta_max - oe.Theta_min) * oe.ro * 1000
-            except:
+            except AttributeError:
                 lPeriod = 500.
             maghL = lPeriod
 
