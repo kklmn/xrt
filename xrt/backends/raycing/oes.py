@@ -2305,7 +2305,7 @@ class VLSGrating(OE):
         dy = np.array(np.zeros_like(y))
         dyRel = np.array(np.zeros_like(y))
         y2 = y - z * b_c
-        y0ind = np.searchsorted(self.ticks, y2)
+        y0ind = np.searchsorted(self.ticks[:-1], y2)
         periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
         yL = y2 - self.ticks[list(y0ind - 1)]
         groove = periods * (1. - self.aspect)
