@@ -58,20 +58,6 @@ from ..commons import qt
 from ..commons import gl
 
 
-class mySlider(qt.QSlider):
-    def __init__(self, parent, scaleDirection, scalePosition):
-        super(mySlider, self).__init__(scaleDirection)
-        self.setTickPosition(scalePosition)
-        self.scale = 1.
-
-    def setRange(self, start, end, step):
-        self.scale = 1. / step
-        qt.QSlider.setRange(self, start / step, end / step)
-
-    def setValue(self, value):
-        qt.QSlider.setValue(self, int(value*self.scale))
-
-
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
         super(xrtGlow, self).__init__()
