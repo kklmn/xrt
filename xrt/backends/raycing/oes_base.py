@@ -256,7 +256,7 @@ class OE(object):
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
         self.rotationSequence = rotationSequence
-        self.positionRoll = positionRoll
+        self.positionRoll = raycing.auto_units_angle(positionRoll)
 
         self.extraPitch = raycing.auto_units_angle(extraPitch)
         self.extraRoll = raycing.auto_units_angle(extraRoll)
