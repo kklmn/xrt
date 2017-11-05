@@ -30,6 +30,7 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, '..')
+sys.path.insert(0, '.')
 #sys.path.append('..')
 sys.path.append(os.path.abspath('exts'))
 #autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]

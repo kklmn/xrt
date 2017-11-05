@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 """
-Tests for Materials
--------------------
+Tests of Materials
+------------------
 
 The module compares reflectivity, transmittivity, refraction index,
 absorption coefficient etc. with those calculated by XOP.

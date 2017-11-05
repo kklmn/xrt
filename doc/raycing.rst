@@ -18,7 +18,7 @@ Raycing backend
 
 .. automodule:: xrt.backends.raycing.materials
 
-.. automodule:: tests.raycing.test_materials
+.. automodule:: test_materials
 
 .. .. automodule:: xrt.backends.raycing.stages
 .. .. autoclass:: xrt.backends.raycing.stages.Tripod()
@@ -39,4 +39,4 @@ Raycing backend
 .. automodule:: xrt.backends.raycing.screens
 .. automodule:: xrt.backends.raycing.waves
 
-.. automodule:: tests.raycing.laguerre_gaussian_beam
+.. automodule:: test_waves
