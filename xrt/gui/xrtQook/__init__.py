@@ -216,6 +216,16 @@ class XrtQook(qt.QWidget):
         self.setLayout(canvasBox)
         self.initAllTrees()
 
+    def _addAction(self, module, elname, afunction, menu):
+        objName = '{0}.{1}'.format(module.__name__, elname)
+        elAction = qt.QAction(self)
+        elAction.setText(elname)
+        elAction.hovered.connect(
+            partial(self.showObjHelp, objName))
+        elAction.triggered.connect(
+            partial(afunction, elname, objName, None))
+        menu.addAction(elAction)
+
     def init_tool_bar(self):
         newBLAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'filenew.png')),
@@ -308,38 +318,41 @@ class XrtQook(qt.QWidget):
 
         self.vToolBar = qt.QToolBar('Add Elements buttons')
         self.vToolBar.setOrientation(qt.QtCore.Qt.Vertical)
+        self.vToolBar.setIconSize(qt.QtCore.QSize(48, 60))
 
         for menuName, amodule, afunction, aicon in zip(
                 ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
                  'Add Material', 'Add Plot'],
                 [rsources, roes, rapts, rscreens, rmats, None],
                 [self.addElement]*4 + [self.addMaterial, self.addPlot],
-                ['rectagle_blue', 'rectagle_green', 'rectagle_grey',
-                 'rectagle_red', 'rectagle_orange', 'rectagle_purple']):
-
+                ['add{0:1d}'.format(i+1) for i in range(6)]):
             amenuButton = qt.QToolButton()
             amenuButton.setIcon(qt.QIcon(os.path.join(
                 self.iconsDir, '{}.png'.format(aicon))))
+            amenuButton.setToolTip(menuName)
 
-            aamenu = qt.QMenu()
+            tmenu = qt.QMenu()
             if amodule is not None:
-                for elname in amodule.__all__:
-                    objName = '{0}.{1}'.format(amodule.__name__, elname)
-                    elAction = qt.QAction(self)
-                    elAction.setText(elname)
-                    elAction.hovered.connect(partial(self.showObjHelp,
-                                                     objName))
-                    elAction.triggered.connect(
-                        partial(afunction, elname, objName, None))
-                    aamenu.addAction(elAction)
+                if hasattr(amodule, '__allSectioned__'):
+                    for sec, elnames in list(amodule.__allSectioned__.items()):
+                        if isinstance(elnames, (tuple, list)):
+                            smenu = tmenu.addMenu(sec)
+                            for elname in elnames:
+                                self._addAction(
+                                    amodule, elname, afunction, smenu)
+                        else:  # as single entry itself
+                            self._addAction(amodule, sec, afunction, tmenu)
+                else:  # only with __all__
+                    for elname in amodule.__all__:
+                        self._addAction(amodule, elname, afunction, tmenu)
             else:
                 for beamType in ['Local Beams', 'Global Beams']:
                     subAction = qt.QAction(self)
                     subAction.setText(beamType)
                     subAction.hovered.connect(partial(
                         self.populate_beams_menu, beamType))
-                    aamenu.addAction(subAction)
-            amenuButton.setMenu(aamenu)
+                    tmenu.addAction(subAction)
+            amenuButton.setMenu(tmenu)
             amenuButton.setPopupMode(qt.QToolButton.InstantPopup)
             self.vToolBar.addWidget(amenuButton)
             if menuName in ['Add Screen', 'Add Material']:
@@ -1582,6 +1595,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.plotTree.expand(self.rootPlotItem.index())
         self.plotTree.setColumnWidth(0, int(self.plotTree.width()/3))
         self.isEmpty = False
+        self.tabs.setCurrentWidget(self.plotTree)
 
     def addPlotBeam(self, beamName):
         self.addPlot()
@@ -2477,15 +2491,20 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             menuscr = menu.addMenu(self.tr("Add Screen"))
             for tsubmenu, tmodule in zip([menusrc, menuoe, menuapt, menuscr],
                                          [rsources, roes, rapts, rscreens]):
-                for elname in tmodule.__all__:
-                    objName = '{0}.{1}'.format(tmodule.__name__, elname)
-                    elAction = qt.QAction(self)
-                    elAction.setText(elname)
-                    elAction.hovered.connect(partial(self.showObjHelp,
-                                                     objName))
-                    elAction.triggered.connect(
-                        partial(self.addElement, elname, objName, None))
-                    tsubmenu.addAction(elAction)
+                if hasattr(tmodule, '__allSectioned__'):
+                    for sec, elnames in list(tmodule.__allSectioned__.items()):
+                        if isinstance(elnames, (tuple, list)):
+                            smenu = tsubmenu.addMenu(sec)
+                            for elname in elnames:
+                                self._addAction(
+                                    tmodule, elname, self.addElement, smenu)
+                        else:  # as single entry itself
+                            self._addAction(
+                                tmodule, sec, self.addElement, tsubmenu)
+                else:  # only with __all__
+                    for elname in tmodule.__all__:
+                        self._addAction(
+                            tmodule, elname, self.addElement, tsubmenu)
         elif level == 1 and selText != "properties":
             tsubmenu = menu.addMenu(self.tr("Add method"))
             menu.addSeparator()
@@ -2597,14 +2616,17 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         menu = qt.QMenu()
 
         matMenu = menu.addMenu(self.tr("Add Material"))
-        for mName in rmats.__all__:
-            objName = '{0}.{1}'.format(rmats.__name__, mName)
-            matAction = qt.QAction(self)
-            matAction.setText(mName)
-            matAction.hovered.connect(partial(self.showObjHelp, objName))
-            matAction.triggered.connect(partial(self.addMaterial, mName,
-                                                objName))
-            matMenu.addAction(matAction)
+        if hasattr(rmats, '__allSectioned__'):
+            for sec, mNames in list(rmats.__allSectioned__.items()):
+                if isinstance(mNames, (tuple, list)):
+                    smenu = matMenu.addMenu(sec)
+                    for mName in mNames:
+                        self._addAction(rmats, mName, self.addMaterial, smenu)
+                else:  # as single entry itself
+                    self._addAction(rmats, sec, self.addMaterial, matMenu)
+        else:  # only with __all__
+            for mName in rmats.__all__:
+                self._addAction(rmats, mName, self.addMaterial, matMenu)
 
         if level == 0 and selectedItem.text() != "None":
             menu.addSeparator()

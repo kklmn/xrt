@@ -39,6 +39,13 @@ __date__ = "16 Mar 2017"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics')
+__allSectioned__ = {
+    'Material': None,
+    'Crystals': ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
+                 'CrystalFromCell'),  # don't include 'Crystal'
+    'Multilayer': None,
+    'Advanced': ('Powder', 'CrystalHarmonics', 'EmptyMaterial')
+    }
 import sys
 import os
 import time
@@ -1652,7 +1659,7 @@ class CrystalFromCell(Crystal):
 
 
 class Powder(CrystalFromCell):
-    r"""
+    u"""
     A derivative class from :class:`CrystalFromCell` with randomly distributed
     atomic plane orientations similar to the real polycrystalline powders. The
     distribution is uniform in the spherical coordinates, so that the angles of

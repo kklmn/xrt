@@ -93,9 +93,28 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating', 'VLSGrating')
+__allSectioned__ = {
+    'Generic':
+        ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution'),
+    'Curved mirrors':
+        ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
+         'ParabolicalMirrorParam'),
+    'Crystal optics':
+        ('JohannCylinder', 'JohanssonCylinder', 'JohannToroid',
+         'JohanssonToroid', 'GeneralBraggToroid', 'DicedJohannToroid',
+         'DicedJohanssonToroid', 'LauePlate', 'BentLaueCylinder',
+         'GroundBentLaueCylinder', 'BentLaueSphere',
+         'DCMwithSagittalFocusing'),
+    'Refractive optics':
+        ('ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
+         'DoubleParaboloidLens'),
+    'Gratings and zone plates':
+        ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating',
+         'VLSGrating')
+    }
 
 import os
-#import copy
+# import copy
 # import gc
 import numpy as np
 from scipy import interpolate
@@ -116,6 +135,7 @@ __dir__ = os.path.dirname(__file__)
 _DEBUG = False
 
 allParamsSorted = []
+
 
 def flatten(x):
     if x is None:
