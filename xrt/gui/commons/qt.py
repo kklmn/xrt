@@ -19,7 +19,7 @@ except ImportError:
     except ImportError:
         raise ImportError("Cannot import any PyQt package!")
 
-starImport = False
+starImport = False  # star import doesn't work with mock import needed for rtfd
 
 #if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
 if QtName == "PyQt4":
@@ -78,11 +78,12 @@ elif QtName == "PyQt5":
 else:
     raise ImportError("Cannot import any Python Qt package!")
 
-QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
-    QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
-    QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-    QListWidgetItem, QGroupBox, QProgressBar, QLabel, QSizePolicy,\
-    QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton = (
+if not starImport:
+    (QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar,
+     QTreeView, QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout,
+     QSplitter, QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
+     QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel,
+     QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -93,11 +94,11 @@ QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
         myQtGUI.QLabel, myQtGUI.QSizePolicy,
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton)
-QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
-    QDoubleValidator, QIntValidator =\
-    (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
-     QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
-     QtGui.QIntValidator)
+    (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
+     QDoubleValidator, QIntValidator) = (
+        QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
+        QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
+        QtGui.QIntValidator)
 
 
 class mySlider(QSlider):
