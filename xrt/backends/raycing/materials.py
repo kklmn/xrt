@@ -39,13 +39,14 @@ __date__ = "16 Mar 2017"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics')
-__allSectioned__ = {
-    'Material': None,
-    'Crystals': ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
-                 'CrystalFromCell'),  # don't include 'Crystal'
-    'Multilayer': None,
-    'Advanced': ('Powder', 'CrystalHarmonics', 'EmptyMaterial')
-    }
+import collections
+__allSectioned__ = collections.OrderedDict([
+    ('Material', None),
+    ('Crystals', ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
+                  'CrystalFromCell')),  # don't include 'Crystal'
+    ('Multilayer', None),
+    ('Advanced', ('Powder', 'CrystalHarmonics', 'EmptyMaterial'))
+    ])
 import sys
 import os
 import time

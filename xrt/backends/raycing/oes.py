@@ -93,25 +93,26 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating', 'VLSGrating')
-__allSectioned__ = {
-    'Generic':
-        ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution'),
-    'Curved mirrors':
+import collections
+__allSectioned__ = collections.OrderedDict([
+    ('Generic',
+        ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution')),
+    ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
-         'ParabolicalMirrorParam'),
-    'Crystal optics':
+         'ParabolicalMirrorParam')),
+    ('Crystal optics',
         ('JohannCylinder', 'JohanssonCylinder', 'JohannToroid',
          'JohanssonToroid', 'GeneralBraggToroid', 'DicedJohannToroid',
          'DicedJohanssonToroid', 'LauePlate', 'BentLaueCylinder',
          'GroundBentLaueCylinder', 'BentLaueSphere',
-         'DCMwithSagittalFocusing'),
-    'Refractive optics':
+         'DCMwithSagittalFocusing')),
+    ('Refractive optics',
         ('ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
-         'DoubleParaboloidLens'),
-    'Gratings and zone plates':
+         'DoubleParaboloidLens')),
+    ('Gratings and zone plates',
         ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating',
-         'VLSGrating')
-    }
+         'VLSGrating'))
+    ])
 
 import os
 # import copy
