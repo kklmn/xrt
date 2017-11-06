@@ -1641,7 +1641,7 @@ class ParaboloidFlatLens(Plate):
             nCRL = self.nCRL
         elif isinstance(self.nCRL, (list, tuple)):
             nCRL = self.get_nCRL(self.nCRL[0], self.nCRL[1])
-            print(nCRL)
+            print('nCRL={0}'.format(nCRL))
         else:
             raise ValueError("wrong nCRL value!")
         nCRL = max(int(round(nCRL)), 1)

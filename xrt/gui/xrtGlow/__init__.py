@@ -3248,8 +3248,8 @@ class xrtGlWidget(qt.QGLWidget):
                           histAxis[1][topEl[-1]]) * 0.5
 #                    cntr = (histAxis[1][topEl[0]] +
 #                            histAxis[1][topEl[-1]]) * 0.5
-            order = np.floor(np.log10(hwhm))
-
+            
+            order = np.floor(np.log10(hwhm)) if hwhm > 0 else -10
             if order >= 2:
                 units = "m"
                 mplier = 1e-3
