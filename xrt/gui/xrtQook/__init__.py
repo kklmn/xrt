@@ -160,7 +160,6 @@ class XrtQook(qt.QWidget):
         self.statusUpdate.connect(self.updateProgressBar)
         self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
-        self.init_tool_bar()
 
         self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
@@ -172,7 +171,10 @@ class XrtQook(qt.QWidget):
         self.checkFlag = qt.ItemFlags(
             qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
 
+        self.initAllModels()
+        self.init_tool_bar()
         self.init_tabs()
+
         self.blViewer = None
         canvasBox = qt.QHBoxLayout()
         canvasSplitter = qt.QSplitter()
@@ -190,7 +192,11 @@ class XrtQook(qt.QWidget):
         docWidget.setMinimumWidth(600)
 
         mainBox.addWidget(self.toolBar)
-        mainBox.addWidget(self.tabs)
+        tabsLayout = qt.QHBoxLayout()
+        tabsLayout.addWidget(self.vToolBar)
+        tabsLayout.addWidget(self.tabs)
+#        mainBox.addWidget(self.tabs)
+        mainBox.addItem(tabsLayout)
 #        mainBox.addWidget(self.statusBar)
         mainBox.addWidget(self.progressBar)
         docBox.addWidget(self.webHelp)
@@ -208,8 +214,6 @@ class XrtQook(qt.QWidget):
         canvasSplitter.addWidget(mainWidget)
         canvasSplitter.addWidget(self.helptab)
         self.setLayout(canvasBox)
-
-        self.initAllModels()
         self.initAllTrees()
 
     def init_tool_bar(self):
@@ -302,8 +306,48 @@ class XrtQook(qt.QWidget):
         aboutAction.setShortcut('Ctrl+I')
         aboutAction.triggered.connect(self.aboutCode)
 
+        self.vToolBar = qt.QToolBar('Add Elements buttons')
+        self.vToolBar.setOrientation(qt.QtCore.Qt.Vertical)
+
+        for menuName, amodule, afunction, aicon in zip(
+                ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
+                 'Add Material', 'Add Plot'],
+                [rsources, roes, rapts, rscreens, rmats, None],
+                [self.addElement]*4 + [self.addMaterial, self.addPlot],
+                ['rectagle_blue', 'rectagle_green', 'rectagle_grey',
+                 'rectagle_red', 'rectagle_orange', 'rectagle_purple']):
+
+            amenuButton = qt.QToolButton()
+            amenuButton.setIcon(qt.QIcon(os.path.join(
+                self.iconsDir, '{}.png'.format(aicon))))
+
+            aamenu = qt.QMenu()
+            if amodule is not None:
+                for elname in amodule.__all__:
+                    objName = '{0}.{1}'.format(amodule.__name__, elname)
+                    elAction = qt.QAction(self)
+                    elAction.setText(elname)
+                    elAction.hovered.connect(partial(self.showObjHelp,
+                                                     objName))
+                    elAction.triggered.connect(
+                        partial(afunction, elname, objName, None))
+                    aamenu.addAction(elAction)
+            else:
+                for beamType in ['Local Beams', 'Global Beams']:
+                    subAction = qt.QAction(self)
+                    subAction.setText(beamType)
+                    subAction.hovered.connect(partial(
+                        self.populate_beams_menu, beamType))
+                    aamenu.addAction(subAction)
+            amenuButton.setMenu(aamenu)
+            amenuButton.setPopupMode(qt.QToolButton.InstantPopup)
+            self.vToolBar.addWidget(amenuButton)
+            if menuName in ['Add Screen', 'Add Material']:
+                self.vToolBar.addSeparator()
+
         self.tabs = qt.QTabWidget()
         self.toolBar = qt.QToolBar('Action buttons')
+
 #        self.statusBar = qt.QStatusBar()
 #        self.statusBar.setSizeGripEnabled(False)
         self.progressBar = qt.QProgressBar()
@@ -353,6 +397,20 @@ class XrtQook(qt.QWidget):
                 except:  # analysis:ignore
                     self.blViewer.move(100, 100)
                 self.blViewer.parentRef = self
+
+    def populate_beams_menu(self, beamType):
+        sender = self.sender()
+        subMenu = qt.QMenu(self)
+        for ibeam in range(self.rootBeamItem.rowCount()):
+            if beamType[:5] in str(self.rootBeamItem.child(
+                    ibeam, 1).text()):
+                pAction = qt.QAction(self)
+                beamName = self.rootBeamItem.child(ibeam, 0).text()
+                pAction.setText(beamName)
+                pAction.triggered.connect(
+                    partial(self.addPlotBeam, beamName))
+                subMenu.addAction(pAction)
+        sender.setMenu(subMenu)
 
     def init_tabs(self):
         self.tree = qt.QTreeView()
@@ -503,6 +561,7 @@ class XrtQook(qt.QWidget):
             self.webHelp.setZoomFactor(textSize)
 
     def initAllTrees(self):
+        self.blUpdateLatchOpen = False
         # runTree view
         self.runTree.setModel(self.runModel)
         self.runTree.setAlternatingRowColors(True)
@@ -578,6 +637,29 @@ class XrtQook(qt.QWidget):
         self.tabs.tabBar().setTabTextColor(2, qt.black)
         self.progressBar.setValue(0)
         self.progressBar.setFormat("New beamline")
+        self.curObj = None
+        self.blColorCounter = 0
+        self.pltColorCounter = 0
+        self.fileDescription = ""
+#        self.descrEdit.setText("")
+        self.currHtml = ""
+        self.showWelcomeScreen()
+        self.writeCodeBox("")
+        self.setWindowTitle("xrtQook")
+        self.prefixtab = "\t"
+        self.ntab = 1
+        self.cpChLevel = 0
+        self.saveFileName = ""
+        self.layoutFileName = ""
+        self.glowOnly = False
+        self.isEmpty = True
+        self.beamLine = raycing.BeamLine()
+        self.beamLine.flowSource = 'Qook'
+        self.update_beamline_beams(text=None)
+        self.update_beamline_materials(item=None)
+        self.update_beamline(item=None)
+        self.rayPath = None
+        self.blUpdateLatchOpen = True
 
     def initAllModels(self):
         self.blUpdateLatchOpen = False
@@ -749,29 +831,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.addProp(self.runModel.invisibleRootItem(), "run_ray_tracing()")
         self.runModel.itemChanged.connect(self.colorizeChangedParam)
         self.rootRunItem = self.runModel.item(0, 0)
-
-        self.prefixtab = "\t"
-        self.ntab = 1
-        self.cpChLevel = 0
-        self.saveFileName = ""
-        self.layoutFileName = ""
-        self.glowOnly = False
-        self.writeCodeBox("")
-        self.setWindowTitle("xrtQook")
-        self.isEmpty = True
-        self.curObj = None
-        self.blColorCounter = 0
-        self.pltColorCounter = 0
-        self.fileDescription = ""
-#        self.descrEdit.setText("")
-        self.currHtml = ""
-        self.showWelcomeScreen()
-        self.beamLine = raycing.BeamLine()
-        self.beamLine.flowSource = 'Qook'
-        self.update_beamline_beams(text=None)
-        self.update_beamline_materials(item=None)
-        self.update_beamline(item=None)
-        self.rayPath = None
         self.blUpdateLatchOpen = True
 
     def newBL(self):
@@ -1240,6 +1299,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         if not self.experimentalMode:
             self.auto_assign_method(elementItem)
         self.isEmpty = False
+        self.tabs.setCurrentWidget(self.tree)
 
     def getParams(self, obj):
         uArgs = OrderedDict()
@@ -1588,7 +1648,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
         return sortDescr()
 
-    def addMaterial(self, name, obj):
+    def addMaterial(self, name, obj, *args):
         for i in range(99):
             matName = self.classNameToStr(name) + '{:02d}'.format(i+1)
             dupl = False
@@ -1614,6 +1674,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.blUpdateLatchOpen = True
         self.update_beamline_materials(matItem, newMat=True)
         self.isEmpty = False
+        self.tabs.setCurrentWidget(self.matTree)
 
     def moveItem(self, mvDir, view, item):
         oldRowNumber = item.index().row()

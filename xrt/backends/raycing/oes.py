@@ -87,15 +87,15 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DicedJohannToroid', 'DicedJohanssonToroid', 'LauePlate',
            'BentLaueCylinder', 'GroundBentLaueCylinder', 'BentLaueSphere',
            'BentFlatMirror', 'ToroidMirror',
-           'EllipticalMirror', 'EllipticalMirrorParam',
-           'ParabolicMirror', 'ParabolicalMirrorParam',
+           'EllipticalMirrorParam',
+           'ParabolicalMirrorParam',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating', 'VLSGrating')
 
 import os
-import copy
+#import copy
 # import gc
 import numpy as np
 from scipy import interpolate

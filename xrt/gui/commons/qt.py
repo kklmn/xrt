@@ -81,8 +81,8 @@ else:
 QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
     QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout, QSplitter,\
     QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox, QFileDialog,\
-    QListWidgetItem, QGroupBox, QProgressBar,\
-    QLabel, QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider = (
+    QListWidgetItem, QGroupBox, QProgressBar, QLabel, QSizePolicy,\
+    QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -92,7 +92,7 @@ QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar, QTreeView,\
         myQtGUI.QListWidgetItem, myQtGUI.QGroupBox, myQtGUI.QProgressBar,
         myQtGUI.QLabel, myQtGUI.QSizePolicy,
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
-        myQtGUI.QSlider)
+        myQtGUI.QSlider, myQtGUI.QToolButton)
 QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,\
     QDoubleValidator, QIntValidator =\
     (QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
