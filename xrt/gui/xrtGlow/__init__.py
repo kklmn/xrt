@@ -666,10 +666,12 @@ class xrtGlow(qt.QWidget):
                     center = list(oeRecord[0].center)
                     is2ndXtal = False
                 else:
-                    center = [arrayOfRays[1][oeRecord[3]].x[0],
-                              arrayOfRays[1][oeRecord[3]].y[0],
-                              arrayOfRays[1][oeRecord[3]].z[0]]
                     is2ndXtal = True
+#                    center = arrayOfRays[1][oeRecord[3]].wCenter
+                    gb = self.oesList[elName][0].local_to_global(
+                        rsources.Beam(nrays=2), returnBeam=True,
+                        is2ndXtal=is2ndXtal)
+                    center = [gb.x[0], gb.y[0], gb.z[0]]
 
                 for segment in arrayOfRays[0]:
                     ind = oeRecord[1]*2
