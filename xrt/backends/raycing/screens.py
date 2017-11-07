@@ -95,9 +95,8 @@ class Screen(object):
             else:
                 self.z = 0., 0., 1.
         xdotz = np.dot(self.x, self.z)
-#        assert abs(xdotz) < 1e-14, 'x and z must be orthogonal!'
-        if abs(xdotz) < 1e-8:
-            print(xdotz, 'x and z must be orthogonal!')
+        if abs(xdotz) > 1e-8:
+            print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
         self.y = np.cross(self.z, self.x)
 
     def local_to_global(self, x=0, y=0, z=0):
@@ -357,10 +356,9 @@ class HemisphericScreen(Screen):
                 self.z = [zc/norm for zc in z]
             else:
                 self.z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
-#        assert np.dot(self.x, self.z) == 0, 'x and z must be orthogonal!'
         xdotz = np.dot(self.x, self.z)
-        if abs(xdotz) < 1e-8:
-            print(xdotz, 'x and z must be orthogonal!')
+        if abs(xdotz) > 1e-8:
+            print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
         self.y = np.cross(self.z, self.x)
 
     def local_to_global(self, phi, theta):
