@@ -34,7 +34,7 @@ def run_one(path, tmpwd, infile, msg=None):
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K "+msg)
             else:
-#                sys.stdout.write("\r" + "    ")
+                # sys.stdout.write("\r" + "    ")
                 print(msg + ' ')
             sys.stdout.flush()
     with open(os.devnull, 'w') as fn:
@@ -48,7 +48,7 @@ def gzip_output(tmpwd, outName, msg=None):
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K "+msg)
             else:
-#                sys.stdout.write("\r" + "    ")
+                # sys.stdout.write("\r" + "    ")
                 print(msg + ' ')
             sys.stdout.flush()
     fname = os.path.join(tmpwd, outName)
@@ -73,7 +73,7 @@ def read_output(tmpwd, outName, skiprows, usecols, comments, useZip, msg=None):
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K "+msg)
             else:
-#                sys.stdout.write("\r" + "    ")
+                # sys.stdout.write("\r" + "    ")
                 print(msg + ' ')
             sys.stdout.flush()
     try:

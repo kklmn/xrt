@@ -28,6 +28,7 @@ __all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
 allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'alarmLevel', 'r',
                 'shadeFraction')
 
+
 class RectangularAperture(object):
     """Implements an aperture or an obstacle with a combination of horizontal
     and/or vertical edge(s)."""
@@ -219,7 +220,6 @@ class RectangularAperture(object):
             return retGlo
         else:
             raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
-
 
     def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.

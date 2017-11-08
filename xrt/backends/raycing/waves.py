@@ -453,7 +453,7 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     wave.Jpp[:] = 0
     wave.Jsp[:] = 0
 
-#global xglo, yglo, zglo are transformed into x, y, z which are fromOE-local:
+# global xglo, yglo, zglo are transformed into x, y, z which are fromOE-local:
     x, y, z = np.array(xglo), np.array(yglo), np.array(zglo)
     x -= fromOE.center[0]
     y -= fromOE.center[1]

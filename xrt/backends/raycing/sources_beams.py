@@ -6,14 +6,14 @@ import pickle
 from .. import raycing
 
 defaultEnergy = 9.0e3
-allArguments = ('bl', 'name', 'center', 'pitch', 'yaw', 'nrays', 
+allArguments = ('bl', 'name', 'center', 'pitch', 'yaw', 'nrays',
                 'eE', 'eI', 'eEspread', 'eSigmaX', 'eSigmaZ',
                 'eEpsilonX', 'eEpsilonZ', 'betaX', 'betaZ',
-                'distx', 'dx', 'disty', 'dy', 'distz', 'dz', 
-                'distxprime', 'dxprime', 'distzprime', 'dzprime', 
+                'distx', 'dx', 'disty', 'dy', 'distz', 'dz',
+                'distxprime', 'dxprime', 'distzprime', 'dzprime',
                 'xPrimeMax', 'zPrimeMax', 'minxprime', 'maxxprime',
                 'minzprime', 'maxzprime',
-                'xPrimeMaxAutoReduce', 'zPrimeMaxAutoReduce',               
+                'xPrimeMaxAutoReduce', 'zPrimeMaxAutoReduce',
                 'distE', 'energies', 'targetE', 'eMin', 'eMax', 'eN',
                 'B0', 'rho', 'K', 'Kx', 'Ky', 'period',
                 'n', 'phaseDeg', 'taper', 'R0',
@@ -21,6 +21,7 @@ allArguments = ('bl', 'name', 'center', 'pitch', 'yaw', 'nrays',
                 'uniformRayDensity', 'nx', 'nz', 'withCentralRay',
                 'autoAppendToBL', 'customField', 'gp', 'gIntervals', 'nRK',
                 'targetOpenCL', 'precisionOpenCL')
+
 
 class Beam(object):
     """Container for the beam arrays. *x, y, z* give the starting points.

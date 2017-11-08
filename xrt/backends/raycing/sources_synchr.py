@@ -532,7 +532,7 @@ class BendingMagnet(object):
                         if self.bl.flowSource == 'Qook' and\
                                 self.bl.statusSignal is not None:
                             ptg = (self.bl.statusSignal[1] +
-                                   float(length) / float(self.nrays))/\
+                                   float(length) / float(self.nrays)) /\
                                       self.bl.statusSignal[2]
                             self.bl.statusSignal[0].emit(
                                 (ptg, self.bl.statusSignal[3]))
@@ -883,7 +883,7 @@ class Undulator(object):
         fullLength = False  # NOTE maybe a future input parameter
         self.full = fullLength
         if fullLength:
-            #self.filamentBeam = True
+            # self.filamentBeam = True
             self.theta0 = 0
             self.psi0 = 0
 
@@ -1113,7 +1113,7 @@ class Undulator(object):
             m += 1
             self.quadm = int(1.5**m)
             if self.cl_ctx is not None:
-                #sE = np.linspace(self.E_min, self.E_max, self.eN)
+                # sE = np.linspace(self.E_min, self.E_max, self.eN)
                 sE = self.E_max * np.ones(1)
                 sTheta_max = self.Theta_max * np.ones(1)
                 sPsi_max = self.Psi_max * np.ones(1)
@@ -1292,7 +1292,7 @@ class Undulator(object):
             dxP = theta[1] - theta[0]
             dzP = psi[1] - psi[0]
             for ie, ee in enumerate(energy):
-                #sigma_rP2 = CHeVcm/ee*10 / (self.L0*self.Np)
+                # sigma_rP2 = CHeVcm/ee*10 / (self.L0*self.Np)
                 sigma_rP2 = 0.
                 Sx = ((self.dxprime**2 + sigma_rP2)**0.5) / dxP
                 Sz = ((self.dzprime**2 + sigma_rP2)**0.5) / dzP
@@ -1968,7 +1968,7 @@ class Undulator(object):
                             if self.bl.flowSource == 'Qook' and\
                                     self.bl.statusSignal is not None:
                                 ptg = (self.bl.statusSignal[1] +
-                                       float(length) / float(self.nrays))/\
+                                       float(length) / float(self.nrays)) /\
                                           self.bl.statusSignal[2]
                                 self.bl.statusSignal[0].emit(
                                     (ptg, self.bl.statusSignal[3]))

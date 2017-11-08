@@ -284,14 +284,14 @@ class Screen(object):
                         wave, returnBeam=True, is2ndXtal=True))
                 else:
                     locBeam = self.expose(prevOE.local_to_global
-                        (wave, returnBeam=True))
+                                          (wave, returnBeam=True))
             else:
                 locBeam = self.expose(beam)
             if isinstance(dim1, int):
                 dim1 = np.linspace(np.min(locBeam.x), np.max(locBeam.x), dim1)
             if isinstance(dim2, int):
                 dim2 = np.linspace(np.min(locBeam.z), np.max(locBeam.z), dim2)
-        print (dim1, dim2)
+#        print(dim1, dim2)
         waveOnSelf = self.prepare_wave(prevOE, dim1, dim2, rw=rw)
         if 'source' in str(type(prevOE)):
             prevOE.shine(wave=waveOnSelf)

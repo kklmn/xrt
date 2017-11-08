@@ -40,6 +40,7 @@ allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
                 'targetOpenCL', 'precisionOpenCL')
 
+
 def flatten(x):
     if x is None:
         x = [0, 0]
@@ -1816,7 +1817,7 @@ class OE(object):
                 lb.Jpp[goodN] *= att
                 lb.Jsp[goodN] *= att
                 if hasattr(lb, 'Es'):
-                    #refl[3] = n.real * k in 1/cm
+                    # refl[3] = n.real * k in 1/cm
                     mPh = att**0.5 * np.exp(0.1j * refl[3] * tMax[goodN])
                     lb.Es[goodN] *= mPh
                     lb.Ep[goodN] *= mPh
