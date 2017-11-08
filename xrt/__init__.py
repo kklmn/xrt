@@ -187,7 +187,8 @@ acknowledged for supplied cases. Hamed Tarawneh (MAX IV Laboratory) has
 initiated the custom field undulator project and supplied tables of magnetic
 field. Bernard Kozioziemski (LLNL) has pointed to the importance of considering
 the *total* absorption cross-section (not just photoelectric absorption) in the
-cases of light materials at high energy.
+cases of light materials at high energy. Emilio Heredia (CLS) is thanked for
+valuable suggestions on GUI.
 """
 
 # ========Convention: note the difference from PEP8 for variables!=============
