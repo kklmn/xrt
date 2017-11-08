@@ -172,8 +172,8 @@ class XrtQook(qt.QWidget):
             qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
 
         self.initAllModels()
-        self.init_tool_bar()
-        self.init_tabs()
+        self.initToolBar()
+        self.initTabs()
 
         self.blViewer = None
         canvasBox = qt.QHBoxLayout()
@@ -181,7 +181,7 @@ class XrtQook(qt.QWidget):
         canvasSplitter.setChildrenCollapsible(False)
 
         mainWidget = qt.QWidget()
-        mainWidget.setMinimumWidth(486)
+        mainWidget.setMinimumWidth(400)
         mainBox = qt.QVBoxLayout()
         mainBox.setContentsMargins(0, 0, 0, 0)
         docBox = qt.QVBoxLayout()
@@ -189,7 +189,7 @@ class XrtQook(qt.QWidget):
 
         self.helptab = qt.QTabWidget()
         docWidget = qt.QWidget()
-        docWidget.setMinimumWidth(600)
+        docWidget.setMinimumWidth(500)
 
         mainBox.addWidget(self.toolBar)
         tabsLayout = qt.QHBoxLayout()
@@ -226,7 +226,7 @@ class XrtQook(qt.QWidget):
             partial(afunction, elname, objName, None))
         menu.addAction(elAction)
 
-    def init_tool_bar(self):
+    def initToolBar(self):
         newBLAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'filenew.png')),
             'New Beamline Layout',
@@ -292,7 +292,7 @@ class XrtQook(qt.QWidget):
             glowAction.setShortcut('CTRL+F1')
             glowAction.setCheckable(True)
             glowAction.setChecked(False)
-            glowAction.toggled.connect(self.toggle_glow)
+            glowAction.toggled.connect(self.toggleGlow)
 
         OCLAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
@@ -318,7 +318,7 @@ class XrtQook(qt.QWidget):
 
         self.vToolBar = qt.QToolBar('Add Elements buttons')
         self.vToolBar.setOrientation(qt.QtCore.Qt.Vertical)
-        self.vToolBar.setIconSize(qt.QtCore.QSize(48, 60))
+        self.vToolBar.setIconSize(qt.QtCore.QSize(56, 56))
 
         for menuName, amodule, afunction, aicon in zip(
                 ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
@@ -350,7 +350,7 @@ class XrtQook(qt.QWidget):
                     subAction = qt.QAction(self)
                     subAction.setText(beamType)
                     subAction.hovered.connect(partial(
-                        self.populate_beams_menu, beamType))
+                        self.populateBeamsMenu, beamType))
                     tmenu.addAction(subAction)
             amenuButton.setMenu(tmenu)
             amenuButton.setPopupMode(qt.QToolButton.InstantPopup)
@@ -385,12 +385,12 @@ class XrtQook(qt.QWidget):
         self.toolBar.addAction(aboutAction)
         bbl = qt.QShortcut(self)
         bbl.setKey(qt.Key_F4)
-        bbl.activated.connect(self.catch_viewer)
+        bbl.activated.connect(self.catchViewer)
         amt = qt.QShortcut(self)
         amt.setKey(qt.CTRL + qt.Key_E)
-        amt.activated.connect(self.toggle_experimental_mode)
+        amt.activated.connect(self.toggleExperimentalMode)
 
-    def catch_viewer(self):
+    def catchViewer(self):
         if self.blViewer is not None:
             if self.helptab.count() < 2:
                 self.helptab.tabBar().setVisible(True)
@@ -411,7 +411,7 @@ class XrtQook(qt.QWidget):
                     self.blViewer.move(100, 100)
                 self.blViewer.parentRef = self
 
-    def populate_beams_menu(self, beamType):
+    def populateBeamsMenu(self, beamType):
         sender = self.sender()
         subMenu = qt.QMenu(self)
         for ibeam in range(self.rootBeamItem.rowCount()):
@@ -425,7 +425,7 @@ class XrtQook(qt.QWidget):
                 subMenu.addAction(pAction)
         sender.setMenu(subMenu)
 
-    def init_tabs(self):
+    def initTabs(self):
         self.tree = qt.QTreeView()
         self.matTree = qt.QTreeView()
         self.plotTree = qt.QTreeView()
@@ -668,8 +668,8 @@ class XrtQook(qt.QWidget):
         self.isEmpty = True
         self.beamLine = raycing.BeamLine()
         self.beamLine.flowSource = 'Qook'
-        self.update_beamline_beams(text=None)
-        self.update_beamline_materials(item=None)
+        self.updateBeamlineBeams(text=None)
+        self.updateBeamlineMaterials(item=None)
         self.update_beamline(item=None)
         self.rayPath = None
         self.blUpdateLatchOpen = True
@@ -767,7 +767,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                   qt.QStandardItem(str(0))])
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
-        self.beamModel.itemChanged.connect(self.update_beamline_beams)
+        self.beamModel.itemChanged.connect(self.updateBeamlineBeams)
 
         self.fluxDataModel = qt.QStandardItemModel()
         self.fluxDataModel.appendRow(qt.QStandardItem("auto"))
@@ -1310,7 +1310,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.blUpdateLatchOpen = True
         self.update_beamline(elementItem, newElement=True)
         if not self.experimentalMode:
-            self.auto_assign_method(elementItem)
+            self.autoAssignMethod(elementItem)
         self.isEmpty = False
         self.tabs.setCurrentWidget(self.tree)
 
@@ -1388,7 +1388,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             if item.model() == self.beamLineModel:
                 self.update_beamline(item)
             elif item.model() == self.materialsModel:
-                self.update_beamline_materials(item)
+                self.updateBeamlineMaterials(item)
 
     def colorizeChangedParam(self, item):
         parent = item.parent()
@@ -1472,8 +1472,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     fModel = qt.QSortFilterProxyModel()
                     fModel.setSourceModel(fModel0)
                     fModel.setFilterKeyColumn(3)
-                    regexp = self.int_to_regexp(
-                        self.name_to_bl_pos(elstr))
+                    regexp = self.intToRegexp(
+                        self.nameToBLPos(elstr))
                     fModel.setFilterRegExp(regexp)
                     lastIndex = fModel.rowCount() - 1
                     if arg.lower() == 'accubeam':
@@ -1501,7 +1501,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.beamModel.appendRow([qt.QStandardItem(beamName),
                                       qt.QStandardItem(outval),
                                       qt.QStandardItem(elstr),
-                                      qt.QStandardItem(str(self.name_to_bl_pos(
+                                      qt.QStandardItem(str(self.nameToBLPos(
                                           elstr)))])
             try:
                 self.beamLine.beamsDict[beamName] = None
@@ -1686,7 +1686,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.addCombo(self.matTree, matItem)
         self.capitalize(self.matTree, matItem)
         self.blUpdateLatchOpen = True
-        self.update_beamline_materials(matItem, newMat=True)
+        self.updateBeamlineMaterials(matItem, newMat=True)
         self.isEmpty = False
         self.tabs.setCurrentWidget(self.matTree)
 
@@ -1966,11 +1966,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.beamLine.flowSource = 'Qook'
                         self.progressBar.setFormat(
                             "Populating the beams... %p%")
-                        self.update_beamline_beams(text=None)
+                        self.updateBeamlineBeams(text=None)
                         self.progressBar.setValue(60)
                         self.progressBar.setFormat(
                             "Populating the materials... %p%")
-                        self.update_beamline_materials(item=None)
+                        self.updateBeamlineMaterials(item=None)
                         self.progressBar.setValue(70)
                         self.prbStart = 70
                         self.prbRange = 30
@@ -2168,12 +2168,12 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                             self.rootBeamItem.setChild(
                                                 irow, 3,
                                                 qt.QStandardItem(str(
-                                                    self.name_to_bl_pos(
+                                                    self.nameToBLPos(
                                                         elNameStr))))
 
-    def int_to_regexp(self, intStr):
+    def intToRegexp(self, intStr):
         a = list(str(int(intStr)))
-        oeClassStr = str(self.get_class_name(
+        oeClassStr = str(self.getClassName(
             self.rootBLItem.child(int(intStr), 0)))
         if 'source' in oeClassStr:
             return '^(\d+)$'
@@ -2215,8 +2215,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 fModel = qt.QSortFilterProxyModel()
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(3)
-                                regexp = self.int_to_regexp(
-                                    self.name_to_bl_pos(str(item.parent(
+                                regexp = self.intToRegexp(
+                                    self.nameToBLPos(str(item.parent(
                                     ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
                             elif item.text() == 'output':  # output beam
@@ -2255,8 +2255,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 fModel = qt.QSortFilterProxyModel()
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(3)
-                                regexp = self.int_to_regexp(
-                                    self.name_to_bl_pos(str(item.parent(
+                                regexp = self.intToRegexp(
+                                    self.nameToBLPos(str(item.parent(
                                     ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
                             else:
@@ -2442,8 +2442,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         combo.setCurrentIndex(combo.findText(value))
         return combo
 
-    def auto_assign_method(self, elItem):
-        elstr = self.get_class_name(elItem)
+    def autoAssignMethod(self, elItem):
+        elstr = self.getClassName(elItem)
         elcls = eval(elstr)
         if hasattr(elcls, 'hiddenMethods'):
             hmList = elcls.hiddenMethods
@@ -2680,13 +2680,13 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 #            value = self.beamLine.materialsDict[value]
         return value
 
-    def get_class_name(self, itemObject):
+    def getClassName(self, itemObject):
         for iel in range(itemObject.rowCount()):
             if itemObject.child(iel, 0).text() == '_object':
                 return str(itemObject.child(iel, 1).text())
         return None
 
-    def update_beamline_beams(self, text):
+    def updateBeamlineBeams(self, text):
         sender = self.sender()
         if sender is not None:
             if sender.staticMetaObject.className() == 'QComboBox':
@@ -2702,7 +2702,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.rootBeamItem.child(ib, 0).text())] = None
                 self.beamLine.beamsDict = beamsDict
 
-    def update_beamline_materials(self, item, newMat=False):
+    def updateBeamlineMaterials(self, item, newMat=False):
         def create_param_dict(parentItem, elementString):
             kwargs = dict()
             for iep, arg_def in zip(range(parentItem.rowCount()), list(zip(
@@ -2725,7 +2725,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 matItem = self.rootMatItem.child(ie, 0)
                 matName = str(matItem.text())
                 if matName != "None":
-                    matClassStr = self.get_class_name(matItem)
+                    matClassStr = self.getClassName(matItem)
                     for ieph in range(matItem.rowCount()):
                         if matItem.child(ieph, 0).text() == 'properties':
                             kwArgs = create_param_dict(
@@ -2771,7 +2771,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 else:
                     matItem = item.parent().parent()
                     propItem = item.parent()
-                matClassStr = self.get_class_name(matItem)
+                matClassStr = self.getClassName(matItem)
                 kwArgs = create_param_dict(propItem, matClassStr)
                 matName = str(matItem.text())
                 try:
@@ -2806,7 +2806,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     if str(pItem.child(ich2, 1).text()) ==\
                                             matName:
                                         startFrom =\
-                                            self.name_to_flow_pos(
+                                            self.nameToFlowPos(
                                                 elNameStr)
                                         break
                                 else:
@@ -2816,9 +2816,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             continue
                         break
                     if startFrom is not None:
-                        self.bl_propagate_flow(startFrom)
+                        self.blPropagateFlow(startFrom)
 
-    def name_to_flow_pos(self, elementNameStr):
+    def nameToFlowPos(self, elementNameStr):
         retVal = 0
         try:
             for isegment, segment in enumerate(self.beamLine.flow):
@@ -2829,7 +2829,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             pass
         return retVal
 
-    def name_to_bl_pos(self, elname):
+    def nameToBLPos(self, elname):
         for iel in range(self.rootBLItem.rowCount()):
             if str(self.rootBLItem.child(iel, 0).text()) == elname:
                 return '{:03d}'.format(iel)
@@ -2907,7 +2907,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 elItem = self.rootBLItem.child(ie, 0)
                 elName = str(elItem.text())
                 if elName not in ["properties", "_object"]:
-                    elStr = self.get_class_name(elItem)
+                    elStr = self.getClassName(elItem)
                     methodObj, inkwArgs, outkwArgs = create_method_dict(
                         elItem, elStr)
                     if methodObj is not None:
@@ -2937,7 +2937,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                             if iWidget is not None:
                                                 try:
                                                     regexp =\
-                                                        self.int_to_regexp(
+                                                        self.intToRegexp(
                                                             iElement)
                                                     iWidget.model(
                                                         ).setFilterRegExp(
@@ -2957,7 +2957,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if pText == str(self.rootBLItem.text()):
                     if newElement:  # New element added
                         elNameStr = str(item.text())
-                        elClassStr = self.get_class_name(item)
+                        elClassStr = self.getClassName(item)
                         for iep in range(item.rowCount()):
                             if item.child(iep, 0).text() == 'properties':
                                 propItem = item.child(iep, 0)
@@ -2982,7 +2982,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             print("Incorrect parameters. Class", elNameStr,
                                   "not initialized.")
                         self.beamLine.flow = build_flow(startFrom=elNameStr)
-                        startFrom = self.name_to_flow_pos(elNameStr)
+                        startFrom = self.nameToFlowPos(elNameStr)
                     else:  # Element renamed or moved
                         oesValues = list(self.beamLine.oesDict.values())
                         oesKeys = list(self.beamLine.oesDict.keys())
@@ -3032,7 +3032,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                   "moved to new position")
                             for ibeam in range(rbi.rowCount()):
                                 rbi.child(ibeam, 3).setText(str(
-                                    self.name_to_bl_pos(str(rbi.child(
+                                    self.nameToBLPos(str(rbi.child(
                                         ibeam, 2).text()))))
                             self.beamModel.sort(3)
                             update_regexp()
@@ -3049,11 +3049,11 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 if self.beamLine.flow[iel][0] == startElement:
                                     self.beamLine.flow[iel][0] =\
                                         str(item.text())
-                        startFrom = self.name_to_flow_pos(startElement)
+                        startFrom = self.nameToFlowPos(startElement)
                 elif pText in ['properties'] and iCol > 0:
                     elItem = item.parent().parent()
                     elNameStr = str(elItem.text())
-                    elClassStr = self.get_class_name(elItem)
+                    elClassStr = self.getClassName(elItem)
                     if len(re.findall('.BeamLine', elClassStr)) > 0:  # BL
                         paramName = str(item.parent().child(item.index().row(),
                                                             0).text())
@@ -3093,15 +3093,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 for segment in self.rayPath[0]:
                                     if segment[2] == elNameStr:
                                         startFrom =\
-                                            self.name_to_flow_pos(segment[0])
+                                            self.nameToFlowPos(segment[0])
                                         break
                                 else:
                                     startFrom =\
-                                        self.name_to_flow_pos(elNameStr)
+                                        self.nameToFlowPos(elNameStr)
                             else:
-                                startFrom = self.name_to_flow_pos(elNameStr)
+                                startFrom = self.nameToFlowPos(elNameStr)
                         else:
-                            startFrom = self.name_to_flow_pos(elNameStr)
+                            startFrom = self.nameToFlowPos(elNameStr)
                 elif pText in ['parameters', 'output'] and iCol > 0:
                     elItem = item.parent().parent().parent()
                     elNameStr = str(elItem.text())
@@ -3109,7 +3109,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         "Method of {} was modified".format(elNameStr))
                     print("Method of", elNameStr, "was modified")
                     self.beamLine.flow = build_flow(startFrom=elNameStr)
-                    startFrom = self.name_to_flow_pos(elNameStr)
+                    startFrom = self.nameToFlowPos(elNameStr)
                 elif item.parent().parent() == self.rootBLItem and newElement:
                     elItem = item.parent()
                     elNameStr = str(elItem.text())
@@ -3118,7 +3118,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             item.text(), elNameStr))
                     print("Method", item.text(), "was added to", elNameStr)
                     self.beamLine.flow = build_flow(startFrom=elNameStr)
-                    startFrom = self.name_to_flow_pos(elNameStr)
+                    startFrom = self.nameToFlowPos(elNameStr)
         else:  # Rebuild beamline
             for ie in range(self.rootBLItem.rowCount()):
                 elItem = self.rootBLItem.child(ie, 0)
@@ -3134,7 +3134,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         pItem = elItem.child(iprop, 0)
                         pText = str(pItem.text())
                         if pText == 'properties':  # OE properties
-                            elClassStr = self.get_class_name(elItem)
+                            elClassStr = self.getClassName(elItem)
                             oeType = 0 if len(re.findall(
                                 'raycing.sou', elClassStr)) > 0 else 1
                             try:
@@ -3158,40 +3158,40 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
 
         if self.isGlowAutoUpdate:
             if startFrom is not None:
-                self.bl_propagate_flow(startFrom)
+                self.blPropagateFlow(startFrom)
 
-    def bl_propagate_flow(self, startFrom):
+    def blPropagateFlow(self, startFrom):
         objThread = qt.QThread(self)
         obj = PropagationConnect()
         obj.finished.connect(objThread.quit)
-        obj.rayPathReady.connect(self.bl_run_glow)
+        obj.rayPathReady.connect(self.blRunGlow)
         obj.propagationProceed.connect(self.updateProgressBar)
         obj.moveToThread(objThread)
         propagateFlowInThread = partial(
-            obj.propagate_flow_thread, self.beamLine, startFrom)
+            obj.propagateFlowThread, self.beamLine, startFrom)
         objThread.started.connect(propagateFlowInThread)
         objThread.start()
 
-    def populate_beamline(self, item=None):
+    def populateBeamline(self, item=None):
         self.blUpdateLatchOpen = False
         self.prbStart = 0
         self.prbRange = 100
         try:
             self.beamLine = raycing.BeamLine()
             self.beamLine.flowSource = 'Qook'
-            self.update_beamline_beams(text=None)
-            self.update_beamline_materials(item=None)
+            self.updateBeamlineBeams(text=None)
+            self.updateBeamlineMaterials(item=None)
             self.update_beamline(item=None)
         except:  # analysis:ignore
             pass
         self.blUpdateLatchOpen = True
 
-    def toggle_glow(self, status):
+    def toggleGlow(self, status):
         self.isGlowAutoUpdate = status
         if self.isGlowAutoUpdate:
-            self.populate_beamline()
+            self.populateBeamline()
 
-    def bl_run_glow(self, rayPath):
+    def blRunGlow(self, rayPath):
         self.rayPath = rayPath
         if self.blViewer is None:
             self.blViewer = xrtglow.xrtGlow(self.rayPath, self)
@@ -3200,7 +3200,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.blViewer.parentRef = self
             self.blViewer.parentSignal = self.statusUpdate
         else:
-            self.blViewer.update_oes_list(self.rayPath)
+            self.blViewer.updateOEsList(self.rayPath)
             if self.blViewer.isHidden():
                 self.blViewer.show()
 
@@ -3621,7 +3621,7 @@ if __name__ == '__main__':
             self.codeConsole.append('Press Ctrl+X to terminate process\n\n')
             self.qprocess.start("python", ['-u', str(self.saveFileName)])
 
-    def toggle_experimental_mode(self):
+    def toggleExperimentalMode(self):
         self.experimentalMode = not self.experimentalMode
         self.progressBar.setFormat("Experimental Mode {}abled".format(
             "en" if self.experimentalMode else "dis"))
@@ -3694,7 +3694,7 @@ class PropagationConnect(qt.QObject):
     rayPathReady = qt.pyqtSignal(list)
     finished = qt.pyqtSignal()
 
-    def propagate_flow_thread(self, blRef, startFrom):
+    def propagateFlowThread(self, blRef, startFrom):
         self.propagationProceed.emit((0.5, "Starting propagation"))
         blRef.propagate_flow(
             startFrom=startFrom,

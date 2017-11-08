@@ -69,12 +69,12 @@ class xrtGlow(qt.QWidget):
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
-        self.populate_oes_list(arrayOfRays)
+        self.populateOEsList(arrayOfRays)
 
-        self.segmentsModel = self.init_segments_model()
+        self.segmentsModel = self.initSegmentsModel()
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
 
-        self.populate_segments_model(arrayOfRays)
+        self.populateSegmentsModel(arrayOfRays)
 
         self.fluxDataModel = qt.QStandardItemModel()
 
@@ -392,7 +392,7 @@ class xrtGlow(qt.QWidget):
 
         iHSVCB = qt.QCheckBox('Intensity as HSV Value')
         iHSVCB.setChecked(False)
-        iHSVCB.stateChanged.connect(self.check_iHSV)
+        iHSVCB.stateChanged.connect(self.checkHSV)
         colorLayout.addWidget(iHSVCB)
         self.iHSVCB = iHSVCB
 
@@ -599,7 +599,7 @@ class xrtGlow(qt.QWidget):
             self.parentRef.catch_viewer()
             self.parentRef = None
 
-    def init_segments_model(self, isNewModel=True):
+    def initSegmentsModel(self, isNewModel=True):
         newModel = qt.QStandardItemModel()
         newModel.setHorizontalHeaderLabels(['Rays',
                                             'Footprint',
@@ -617,11 +617,11 @@ class xrtGlow(qt.QWidget):
         newModel.itemChanged.connect(self.updateRaysList)
         return newModel
 
-    def update_oes_list(self, arrayOfRays):
+    def updateOEsList(self, arrayOfRays):
         self.oesList = None
         self.beamsToElements = None
-        self.populate_oes_list(arrayOfRays)
-        self.update_segments_model(arrayOfRays)
+        self.populateOEsList(arrayOfRays)
+        self.updateSegmentsModel(arrayOfRays)
         self.oeTree.resizeColumnToContents(0)
         self.centerCB.blockSignals(True)
         tmpIndex = self.centerCB.currentIndex()
@@ -645,7 +645,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.positionVScreen()
         self.customGlWidget.glDraw()
 
-    def populate_oes_list(self, arrayOfRays):
+    def populateOEsList(self, arrayOfRays):
         self.oesList = OrderedDict()
         self.beamsToElements = dict()
         oesList = arrayOfRays[2]
@@ -693,7 +693,7 @@ class xrtGlow(qt.QWidget):
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
 
-    def create_row(self, text, segMode):
+    def createRow(self, text, segMode):
         newRow = []
         for iCol in range(4):
             newItem = qt.QStandardItem(str(text) if iCol == 0 else "")
@@ -705,7 +705,7 @@ class xrtGlow(qt.QWidget):
             newRow.append(newItem)
         return newRow
 
-    def update_segments_model(self, arrayOfRays):
+    def updateSegmentsModel(self, arrayOfRays):
         def copy_row(item, row):
             newRow = []
             for iCol in range(4):
@@ -718,7 +718,7 @@ class xrtGlow(qt.QWidget):
                 newRow.append(newItem)
             return newRow
 
-        newSegmentsModel = self.init_segments_model(isNewModel=False)
+        newSegmentsModel = self.initSegmentsModel(isNewModel=False)
         newSegmentsModel.invisibleRootItem().appendRow(
             copy_row(self.segmentsModelRoot, 0))
         for element, elRecord in self.oesList.items():
@@ -740,35 +740,35 @@ class xrtGlow(qt.QWidget):
                                                 copy_row(elItem, ich))
                                             break
                                     else:
-                                        elRow[0].appendRow(self.create_row(
+                                        elRow[0].appendRow(self.createRow(
                                             endBeamText, 3))
                                 else:
-                                    elRow[0].appendRow(self.create_row(
+                                    elRow[0].appendRow(self.createRow(
                                         endBeamText, 3))
                     newSegmentsModel.invisibleRootItem().appendRow(elRow)
                     break
             else:
-                elRow = self.create_row(str(element), 1)
+                elRow = self.createRow(str(element), 1)
                 for segment in arrayOfRays[0]:
                     if str(segment[1]) == str(elRecord[1]) and\
                             segment[3] is not None:
                         endBeamText = "to {}".format(
                             self.beamsToElements[segment[3]])
-                        elRow[0].appendRow(self.create_row(endBeamText, 3))
+                        elRow[0].appendRow(self.createRow(endBeamText, 3))
                 newSegmentsModel.invisibleRootItem().appendRow(elRow)
         self.segmentsModel = newSegmentsModel
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
         self.oeTree.setModel(self.segmentsModel)
 
-    def populate_segments_model(self, arrayOfRays):
+    def populateSegmentsModel(self, arrayOfRays):
         for element, elRecord in self.oesList.items():
-            newRow = self.create_row(element, 1)
+            newRow = self.createRow(element, 1)
             for segment in arrayOfRays[0]:
                 if str(segment[1]) == str(elRecord[1]):
                     try:  # if segment[3] is not None:
                         endBeamText = "to {}".format(
                             self.beamsToElements[segment[3]])
-                        newRow[0].appendRow(self.create_row(endBeamText, 3))
+                        newRow[0].appendRow(self.createRow(endBeamText, 3))
                     except:  # analysis:ignore
                         continue
             self.segmentsModelRoot.appendRow(newRow)
@@ -833,7 +833,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
-    def check_iHSV(self, state):
+    def checkHSV(self, state):
         self.customGlWidget.iHSV = True if state > 0 else False
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
@@ -2157,7 +2157,7 @@ class xrtGlWidget(qt.QGLWidget):
                                              rsources.Wiggler,
                                              rsources.Undulator)):
                         self.plotSource(oeToPlot)
-                elif len(re.findall('raycing.screens.Sc', elType)) > 0:  # screen
+                elif len(re.findall('raycing.screens.Sc', elType)) > 0:
                     self.plotScreen(oeToPlot)
                 elif len(re.findall('raycing.screens.Hemispher', elType)) > 0:
                     self.plotHemiScreen(oeToPlot)
@@ -2467,8 +2467,8 @@ class xrtGlWidget(qt.QGLWidget):
         vertexArray.unbind()
 
     def plotSource(self, oe):
-#        gl.glEnable(gl.GL_MAP2_VERTEX_3)
-#        gl.glEnable(gl.GL_MAP2_NORMAL)
+        # gl.glEnable(gl.GL_MAP2_VERTEX_3)
+        # gl.glEnable(gl.GL_MAP2_NORMAL)
 
         nPeriods = int(oe.Np) if hasattr(oe, 'Np') else 0.5
         if hasattr(oe, 'L0'):
@@ -2563,7 +2563,8 @@ class xrtGlWidget(qt.QGLWidget):
 #                                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
 #                                               self.surfCPOrder, 0.0, 1.0)
 #
-#                                gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+#                                gl.glEvalMesh2(gl.GL_FILL, 0,
+#                                               self.surfCPOrder,
 #                                               0, self.surfCPOrder)
                         gl.glPopMatrix()
 
@@ -3250,7 +3251,7 @@ class xrtGlWidget(qt.QGLWidget):
                           histAxis[1][topEl[-1]]) * 0.5
 #                    cntr = (histAxis[1][topEl[0]] +
 #                            histAxis[1][topEl[-1]]) * 0.5
-            
+
             order = np.floor(np.log10(hwhm)) if hwhm > 0 else -10
             if order >= 2:
                 units = "m"
