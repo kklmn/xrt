@@ -2497,6 +2497,15 @@ class xrtGlWidget(qt.QGLWidget):
 #        deltaY = 1. / 2.  # float(self.tiles[1])
         magToggle = True
         gl.glLineWidth(1)
+        gl.glPushMatrix()
+        gl.glTranslatef(*(self.modelToWorld(np.array(oe.center) -
+                                            self.coordOffset)))
+        gl.glRotatef(np.degrees(oe.pitch * self.scaleVec[2] /
+                                self.scaleVec[1]), 1, 0, 0)
+        gl.glRotatef(np.degrees(oe.yaw * self.scaleVec[0] /
+                                self.scaleVec[1]), 0, 0, 1)
+        gl.glTranslatef(*(-1. * self.modelToWorld(np.array(oe.center) -
+                                                  self.coordOffset)))
         for period in range(int(nPeriods) if nPeriods > 0.5 else 1):
             for hp in ([0, 0.5] if nPeriods > 0.5 else [0.25]):
                 pY = list(oe.center)[1] - lPeriod * (0.5 * nPeriods -
@@ -2567,7 +2576,7 @@ class xrtGlWidget(qt.QGLWidget):
 #                                               self.surfCPOrder,
 #                                               0, self.surfCPOrder)
                         gl.glPopMatrix()
-
+        gl.glPopMatrix()
 #        gl.glDisable(gl.GL_MAP2_VERTEX_3)
 #        gl.glDisable(gl.GL_MAP2_NORMAL)
 
