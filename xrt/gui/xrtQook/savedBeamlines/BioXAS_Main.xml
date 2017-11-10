@@ -14,17 +14,16 @@
 	<SSRL_DCMbeamGlobal01 type="flat"></SSRL_DCMbeamGlobal01>
 	<SSRL_DCMbeamLocal101 type="flat"></SSRL_DCMbeamLocal101>
 	<SSRL_DCMbeamLocal201 type="flat"></SSRL_DCMbeamLocal201>
+	<screen01beamLocal01 type="flat"></screen01beamLocal01>
 	<M2beamGlobal01 type="flat"></M2beamGlobal01>
 	<M2beamLocal01 type="flat"></M2beamLocal01>
 	<PhotonShutterbeamLocal01 type="flat"></PhotonShutterbeamLocal01>
-	<SampleScreenbeamLocal01 type="flat"></SampleScreenbeamLocal01>
-	<screen01beamLocal01 type="flat"></screen01beamLocal01>
 	<DBHR1beamGlobal01 type="flat"></DBHR1beamGlobal01>
 	<DBHR1beamLocal01 type="flat"></DBHR1beamLocal01>
 	<DBHR2beamGlobal01 type="flat"></DBHR2beamGlobal01>
 	<DBHR2beamLocal01 type="flat"></DBHR2beamLocal01>
 	<JJslitsbeamLocal01 type="flat"></JJslitsbeamLocal01>
-	<hemisphericScreen01beamLocal01 type="flat"></hemisphericScreen01beamLocal01>
+	<SampleScreenbeamLocal01 type="flat"></SampleScreenbeamLocal01>
 </Beams>
 <Materials type="prop">
 	<CVD type="value">
@@ -69,9 +68,6 @@
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
 			<name type="param">None</name>
-			<nuPoisson type="param">0.0</nuPoisson>
-			<calcBorrmann type="param">None</calcBorrmann>
-			<useTT type="param">False</useTT>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
 	</Si220>
@@ -132,10 +128,10 @@
 		<_object type="object">xrt.backends.raycing.sources.Wiggler</_object>
 		<shine type="prop">
 			<parameters type="prop">
-				<withAmplitudes type="param">True</withAmplitudes>
-				<accuBeam type="param">None</accuBeam>
-				<fixedEnergy type="param">False</fixedEnergy>
 				<toGlobal type="param">True</toGlobal>
+				<withAmplitudes type="param">True</withAmplitudes>
+				<fixedEnergy type="param">False</fixedEnergy>
+				<accuBeam type="param">None</accuBeam>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.sources.Wiggler.shine</_object>
 			<output type="prop">
@@ -196,9 +192,9 @@
 		<_object type="object">xrt.backends.raycing.oes.Plate</_object>
 		<double_refract type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">0</returnLocalAbsorbed>
 				<beam type="param">WigglerbeamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
+				<returnLocalAbsorbed type="param">0</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.Plate.double_refract</_object>
 			<output type="prop">
@@ -264,10 +260,10 @@
 		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">C_FilterbeamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 			<output type="prop">
@@ -343,11 +339,11 @@
 		<_object type="object">xrt.backends.raycing.oes.DCM</_object>
 		<double_reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M1beamGlobal01</beam>
-				<fromVacuum2 type="param">True</fromVacuum2>
 				<needLocal type="param">True</needLocal>
 				<fromVacuum1 type="param">True</fromVacuum1>
+				<fromVacuum2 type="param">True</fromVacuum2>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.DCM.double_reflect</_object>
 			<output type="prop">
@@ -413,10 +409,10 @@
 		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">SSRL_DCMbeamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 			<output type="prop">
@@ -479,10 +475,10 @@
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">M2beamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -524,10 +520,10 @@
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				<beam type="param">DBHR1beamGlobal01</beam>
-				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -578,28 +574,6 @@
 			</output>
 		</expose>
 	</SampleScreen>
-	<hemisphericScreen01 type="value">
-		<properties type="prop">
-			<bl type="param">beamLine</bl>
-			<name type="param">None</name>
-			<center type="param">[0, 30400, auto]</center>
-			<x type="param">auto</x>
-			<z type="param">auto</z>
-			<R type="param">1000.0</R>
-			<phiOffset type="param">0</phiOffset>
-			<thetaOffset type="param">0</thetaOffset>
-		</properties>
-		<_object type="object">xrt.backends.raycing.screens.HemisphericScreen</_object>
-		<expose type="prop">
-			<parameters type="prop">
-				<beam type="param">DBHR2beamGlobal01</beam>
-			</parameters>
-			<_object type="object">xrt.backends.raycing.screens.HemisphericScreen.expose</_object>
-			<output type="prop">
-				<beamLocal type="param">hemisphericScreen01beamLocal01</beamLocal>
-			</output>
-		</expose>
-	</hemisphericScreen01>
 </beamLine>
 <plots type="value">
 	<plot01 type="value">
@@ -745,22 +719,22 @@
 </plots>
 <run_ray_tracing type="prop">
 	<_object type="object">xrt.runner.run_ray_tracing</_object>
-	<afterScript type="param">None</afterScript>
-	<processes type="param">1</processes>
-	<afterScriptKWargs type="param">{}</afterScriptKWargs>
-	<pickleEvery type="param">None</pickleEvery>
-	<generator type="param">None</generator>
-	<generatorKWargs type="param">auto</generatorKWargs>
-	<updateEvery type="param">1</updateEvery>
-	<globalNorm type="param">0</globalNorm>
-	<afterScriptArgs type="param">[]</afterScriptArgs>
-	<generatorArgs type="param">[]</generatorArgs>
-	<threads type="param">1</threads>
-	<beamLine type="param">beamLine</beamLine>
-	<energyRange type="param">None</energyRange>
 	<plots type="param">plots</plots>
 	<repeats type="param">10</repeats>
+	<updateEvery type="param">1</updateEvery>
+	<pickleEvery type="param">None</pickleEvery>
+	<energyRange type="param">None</energyRange>
 	<backend type="param">raycing</backend>
+	<beamLine type="param">beamLine</beamLine>
+	<threads type="param">1</threads>
+	<processes type="param">1</processes>
+	<generator type="param">None</generator>
+	<generatorArgs type="param">[]</generatorArgs>
+	<generatorKWargs type="param">auto</generatorKWargs>
+	<globalNorm type="param">0</globalNorm>
+	<afterScript type="param">None</afterScript>
+	<afterScriptArgs type="param">[]</afterScriptArgs>
+	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
 <description>
 
