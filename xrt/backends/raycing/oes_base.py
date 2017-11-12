@@ -1139,12 +1139,24 @@ class OE(object):
         lb.y[:] = prevOE.center[1]
         lb.z[:] = prevOE.center[2]
 
+        lbn = rs.Beam(nrays=1)
+        lbn.b[:] = 0.
+        lbn.c[:] = 1.
+        self.local_to_global(lbn)
+        a = lbn.x - prevOE.center[0]
+        b = lbn.y - prevOE.center[1]
+        c = lbn.z - prevOE.center[2]
+        norm = (a**2 + b**2 + c**2)**0.5
+        areaNormalFact = \
+            abs(float((a*lbn.a[0] + b*lbn.b[0] + c*lbn.c[0]) / norm))
+
         waveGlobal, waveLocal = self.reflect(lb)
         good = (waveLocal.state == 1) | (waveLocal.state == 2)
         waveGlobal.filter_by_index(good)
         waveLocal.filter_by_index(good)
         area *= good.sum() / float(len(good))
         waveLocal.area = area
+        waveLocal.areaNormal = area * areaNormalFact
         waveLocal.dS = area / float(len(good))
         waveLocal.toOE = self
 #        waveLocal.xGlobal = waveGlobal.x

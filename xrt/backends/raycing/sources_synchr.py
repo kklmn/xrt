@@ -734,7 +734,8 @@ class Undulator(object):
             None).
 
         *eMin*, *eMax*: float
-            Minimum and maximum photon energy (eV).
+            Minimum and maximum photon energy (eV). Used as band width for flux
+            calculation.
 
         *eN*: int
             Number of photon energy intervals, used only in the test suit, not
@@ -1755,7 +1756,9 @@ class Undulator(object):
         contains arrays Es and Ep with the *s* and *p* components of the
         electric field.
 
-        *fixedEnergy* is either None or a value in eV.
+        *fixedEnergy* is either None or a value in eV. If *fixedEnergy* is
+        specified, the energy band is not 0.1%BW relative to *fixedEnergy*, as
+        probably axpected but is given by (eMax - eMin) of the constructor.
 
         *wave* and *accuBeam* are used in wave diffraction. *wave* is a Beam
         object and determines the positions of the wave samples. It must be
@@ -1811,6 +1814,9 @@ class Undulator(object):
 
         if fixedEnergy:
             rsE = fixedEnergy
+            if (self.E_max-self.E_min) > fixedEnergy*1e-3:
+                print("Warning: the bandwidth seem to big. "
+                      "Specify it by giving eMin and eMax in the constructor.")
         nrep = 0
         rep_condition = True
 #        while length < self.nrays:
@@ -1936,7 +1942,9 @@ class Undulator(object):
             mJs = mJs[I_pass]
             mJp = mJp[I_pass]
             if wave is not None:
-                norm = wave.area**0.5 / wave.rDiffr
+                area = wave.areaNormal if hasattr(wave, 'areaNormal') else\
+                    wave.area
+                norm = area**0.5 / wave.rDiffr
                 mJs *= norm
                 mJp *= norm
             mJs2 = (mJs * np.conj(mJs)).real
