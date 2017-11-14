@@ -1847,8 +1847,11 @@ class xrtGlWidget(qt.QGLWidget):
                             np.vstack((footprintsArrayLost, verticesLost.T))
         try:
             if self.colorMin == self.colorMax:
-                self.colorMin = self.colorMax * 0.99
-                self.colorMax *= 1.01
+                if self.colorMax == 0:  # and self.colorMin == 0 too
+                    self.colorMin, self.colorMax = -0.1, 0.1
+                else:
+                    self.colorMin = self.colorMax * 0.99
+                    self.colorMax *= 1.01
             if colorsRays is not None:
                 colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
                                                            self.colorMin)
@@ -1879,8 +1882,11 @@ class xrtGlWidget(qt.QGLWidget):
             raise
         try:
             if self.colorMin == self.colorMax:
-                self.colorMin = self.colorMax * 0.99
-                self.colorMax *= 1.01
+                if self.colorMax == 0:  # and self.colorMin == 0 too
+                    self.colorMin, self.colorMax = -0.1, 0.1
+                else:
+                    self.colorMin = self.colorMax * 0.99
+                    self.colorMax *= 1.01
             if colorsDots is not None:
                 colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
                                                            self.colorMin)
@@ -3212,8 +3218,11 @@ class xrtGlWidget(qt.QGLWidget):
         colorsDots = np.array(colorArray[good]).T
 
         if self.colorMin == self.colorMax:
-            self.colorMin = self.colorMax * 0.99
-            self.colorMax *= 1.01
+            if self.colorMax == 0:  # and self.colorMin == 0 too
+                self.colorMin, self.colorMax = -0.1, 0.1
+            else:
+                self.colorMin = self.colorMax * 0.99
+                self.colorMax *= 1.01
         colorsDots = (colorsDots-self.colorMin) / (self.colorMax-self.colorMin)
         depthDots = copy.deepcopy(colorsDots) * self.depthScaler
 

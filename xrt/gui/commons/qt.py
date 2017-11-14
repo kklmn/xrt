@@ -108,6 +108,8 @@ class mySlider(QSlider):
         self.scale = 1.
 
     def setRange(self, start, end, step):
+        if step == 0:
+            return
         self.scale = 1. / step
         QSlider.setRange(self, start / step, end / step)
 
