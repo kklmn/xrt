@@ -670,7 +670,7 @@ class XrtQook(qt.QWidget):
         self.beamLine.flowSource = 'Qook'
         self.updateBeamlineBeams(text=None)
         self.updateBeamlineMaterials(item=None)
-        self.update_beamline(item=None)
+        self.updateBeamline(item=None)
         self.rayPath = None
         self.blUpdateLatchOpen = True
 
@@ -1308,7 +1308,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.expand(self.rootBLItem.index())
         self.capitalize(self.tree, elementItem)
         self.blUpdateLatchOpen = True
-        self.update_beamline(elementItem, newElement=True)
+        self.updateBeamline(elementItem, newElement=True)
         if not self.experimentalMode:
             self.autoAssignMethod(elementItem)
         self.isEmpty = False
@@ -1386,7 +1386,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.colorizeChangedParam(item)
         if self.blUpdateLatchOpen:
             if item.model() == self.beamLineModel:
-                self.update_beamline(item)
+                self.updateBeamline(item)
             elif item.model() == self.materialsModel:
                 self.updateBeamlineMaterials(item)
 
@@ -1516,7 +1516,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.tree.setCurrentIndex(methodProps.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.blUpdateLatchOpen = True
-        self.update_beamline(methodItem, newElement=True)
+        self.updateBeamline(methodItem, newElement=True)
         self.isEmpty = False
 
     def addPlot(self, copyFrom=None):
@@ -1701,7 +1701,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
-        self.update_beamline(newItem[0], newOrder=True)
+        self.updateBeamline(newItem[0], newOrder=True)
 
     def copyChildren(self, itemTo, itemFrom):
         if itemFrom.hasChildren():
@@ -1764,7 +1764,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             if item.parent() == self.rootBLItem:
                 del self.beamLine.oesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
-                self.update_beamline(item, newElement=False)
+                self.updateBeamline(item, newElement=False)
             if item.parent() is not None:
                 item.parent().removeRow(item.index().row())
             else:
@@ -1976,7 +1976,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.prbRange = 30
                         self.progressBar.setFormat(
                             "Initializing optical elements... %p%")
-                        self.update_beamline(item=None)
+                        self.updateBeamline(item=None)
                     except:  # analysis:ignore
                         raise
                         pass
@@ -2706,7 +2706,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 self.beamLine.beamsDict = beamsDict
 
     def updateBeamlineMaterials(self, item, newMat=False):
-        def create_param_dict(parentItem, elementString):
+        def createParamDict(parentItem, elementString):
             kwargs = dict()
             for iep, arg_def in zip(range(parentItem.rowCount()), list(zip(
                     *self.getParams(elementString)))[1]):
@@ -2731,7 +2731,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     matClassStr = self.getClassName(matItem)
                     for ieph in range(matItem.rowCount()):
                         if matItem.child(ieph, 0).text() == 'properties':
-                            kwArgs = create_param_dict(
+                            kwArgs = createParamDict(
                                 matItem.child(ieph, 0), matClassStr)
                             break
                     try:
@@ -2775,7 +2775,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     matItem = item.parent().parent()
                     propItem = item.parent()
                 matClassStr = self.getClassName(matItem)
-                kwArgs = create_param_dict(propItem, matClassStr)
+                kwArgs = createParamDict(propItem, matClassStr)
                 matName = str(matItem.text())
                 try:
                     if newMat:
@@ -2839,8 +2839,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         else:
             return '000'
 
-    def update_beamline(self, item=None, newElement=False, newOrder=False):
-        def create_param_dict(parentItem, elementString):
+    def updateBeamline(self, item=None, newElement=False, newOrder=False):
+        def createParamDict(parentItem, elementString):
             kwargs = dict()
             for iep, arg_def in zip(range(
                     parentItem.rowCount()),
@@ -2865,7 +2865,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     kwargs[paraname] = paravalue
             return kwargs
 
-        def create_method_dict(elementItem, elementString):
+        def createMethodDict(elementItem, elementString):
             methodObj = None
             for ieph in range(elementItem.rowCount()):
                 pItem = elementItem.child(ieph, 0)
@@ -2904,21 +2904,21 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             else:
                 return None, None, None
 
-        def build_flow(startFrom=0):
+        def buildFlow(startFrom=0):
             blFlow = []
             for ie in range(self.rootBLItem.rowCount()):
                 elItem = self.rootBLItem.child(ie, 0)
                 elName = str(elItem.text())
                 if elName not in ["properties", "_object"]:
                     elStr = self.getClassName(elItem)
-                    methodObj, inkwArgs, outkwArgs = create_method_dict(
+                    methodObj, inkwArgs, outkwArgs = createMethodDict(
                         elItem, elStr)
                     if methodObj is not None:
                         blFlow.append([elName, methodObj,
                                        inkwArgs, outkwArgs])
             return blFlow
 
-        def update_regexp():
+        def updateRegexp():
             for iElement in range(self.rootBLItem.rowCount()):
                 elItem = self.rootBLItem.child(iElement, 0)
                 if str(elItem.text()) not in ['properties', '_object']:
@@ -2985,7 +2985,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         oeType = 0 if len(re.findall(
                             'raycing.sou', elClassStr)) > 0 else 1
                         try:
-                            kwArgs = create_param_dict(propItem, elClassStr)
+                            kwArgs = createParamDict(propItem, elClassStr)
                             self.beamLine.oesDict[elNameStr] =\
                                 [eval(elClassStr)(**kwArgs), oeType]
                             self.progressBar.setFormat(
@@ -3001,7 +3001,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     elNameStr))
                             print("Incorrect parameters. Class", elNameStr,
                                   "not initialized.")
-                        self.beamLine.flow = build_flow(startFrom=elNameStr)
+                        self.beamLine.flow = buildFlow(startFrom=elNameStr)
                         startFrom = self.nameToFlowPos(elNameStr)
                     else:  # Element renamed or moved
                         oesValues = list(self.beamLine.oesDict.values())
@@ -3054,7 +3054,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     self.nameToBLPos(str(rbi.child(
                                         ibeam, 2).text()))))
                             self.beamModel.sort(3)
-                            update_regexp()
+                            updateRegexp()
                         elif wasDeleted:
                             self.progressBar.setFormat(
                                 "Element {} was removed".format(item.text()))
@@ -3062,7 +3062,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                   "was removed")
                             startElement = str(item.text())
                             self.beamLine.flow =\
-                                build_flow(startFrom=startElement)
+                                buildFlow(startFrom=startElement)
                         else:
                             for iel in range(len(self.beamLine.flow)):
                                 if self.beamLine.flow[iel][0] == startElement:
@@ -3083,8 +3083,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         oeType = 0 if len(re.findall(
                             'raycing.sou', elClassStr)) > 0 else 1
                         try:
-                            kwargs = create_param_dict(item.parent(),
-                                                       elClassStr)
+                            kwargs = createParamDict(item.parent(),
+                                                     elClassStr)
                             if self.beamLine.oesDict[elNameStr][0] is None:
                                 self.beamLine.oesDict[elNameStr] =\
                                     [eval(elClassStr)(**kwargs), oeType]
@@ -3127,7 +3127,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                     self.progressBar.setFormat(
                         "Method of {} was modified".format(elNameStr))
                     print("Method of", elNameStr, "was modified")
-                    self.beamLine.flow = build_flow(startFrom=elNameStr)
+                    self.beamLine.flow = buildFlow(startFrom=elNameStr)
                     startFrom = self.nameToFlowPos(elNameStr)
                 elif item.parent().parent() == self.rootBLItem and newElement:
                     elItem = item.parent()
@@ -3136,7 +3136,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         "Method {0} was added to {1}".format(
                             item.text(), elNameStr))
                     print("Method", item.text(), "was added to", elNameStr)
-                    self.beamLine.flow = build_flow(startFrom=elNameStr)
+                    self.beamLine.flow = buildFlow(startFrom=elNameStr)
                     startFrom = self.nameToFlowPos(elNameStr)
         else:  # Rebuild beamline
             for ie in range(self.rootBLItem.rowCount()):
@@ -3157,7 +3157,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             oeType = 0 if len(re.findall(
                                 'raycing.sou', elClassStr)) > 0 else 1
                             try:
-                                kwArgs = create_param_dict(pItem, elClassStr)
+                                kwArgs = createParamDict(pItem, elClassStr)
                                 self.beamLine.oesDict[elNameStr] =\
                                     [eval(elClassStr)(**kwArgs), oeType]
                                 self.progressBar.setFormat(
@@ -3172,7 +3172,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     "Incorrect parameters. Class {} not initialized.".format(elNameStr))  # analysis:ignore
                                 print("Incorrect parameters. Class", elNameStr,
                                       "not initialized.")
-            self.beamLine.flow = build_flow()
+            self.beamLine.flow = buildFlow()
             startFrom = 0
 
         if self.isGlowAutoUpdate:
@@ -3200,7 +3200,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.beamLine.flowSource = 'Qook'
             self.updateBeamlineBeams(text=None)
             self.updateBeamlineMaterials(item=None)
-            self.update_beamline(item=None)
+            self.updateBeamline(item=None)
         except:  # analysis:ignore
             pass
         self.blUpdateLatchOpen = True
