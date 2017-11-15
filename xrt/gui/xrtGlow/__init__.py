@@ -596,7 +596,7 @@ class xrtGlow(qt.QWidget):
 
     def toggleDock(self):
         if self.parentRef is not None:
-            self.parentRef.catch_viewer()
+            self.parentRef.catchViewer()
             self.parentRef = None
 
     def initSegmentsModel(self, isNewModel=True):
