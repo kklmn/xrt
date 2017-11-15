@@ -120,6 +120,11 @@ class RunCardProcs(object):
         self.generatorPlot = None
 
 
+def set_repeats(repeats=0):
+    if runCardVals is not None:
+        runCardVals.repeats = repeats
+
+
 def _simple_generator():
     """
     The simplest generator for running only one ray-tracing study. Search
