@@ -764,7 +764,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         self.beamModel.appendRow([qt.QStandardItem("None"),
                                   qt.QStandardItem("GlobalLocal"),
                                   qt.QStandardItem("None"),
-                                  qt.QStandardItem(str(0))])
+                                  qt.QStandardItem('000')])
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
         self.beamModel.itemChanged.connect(self.updateBeamlineBeams)
@@ -2140,7 +2140,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             qt.QStandardItem("None"))
         self.rootBeamItem.setChild(
             0, 3,
-            qt.QStandardItem(str(0)))
+            qt.QStandardItem('000'))
         for ibl in range(self.rootBLItem.rowCount()):
             elItem = self.rootBLItem.child(ibl, 0)
             elNameStr = str(elItem.text())
@@ -2219,6 +2219,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     self.nameToBLPos(str(item.parent(
                                     ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
+                                fModel.setDynamicSortFilter(True)
                             elif item.text() == 'output':  # output beam
                                 fModel0 = qt.QSortFilterProxyModel()
                                 fModel0.setSourceModel(self.beamModel)
@@ -2226,9 +2227,10 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                 fModel0.setFilterRegExp(paramName)
                                 fModel = qt.QSortFilterProxyModel()
                                 fModel.setSourceModel(fModel0)
-                                fModel.setFilterKeyColumn(2)
-                                fModel.setFilterRegExp(str(
-                                    item.parent().parent().text()))
+                                fModel.setFilterKeyColumn(3)
+                                fModel.setFilterRegExp(self.nameToBLPos(str(
+                                    item.parent().parent().text())))
+                                fModel.setDynamicSortFilter(True)
                             else:
                                 fModel = self.beamModel
                             combo = self.addStandardCombo(fModel, value)
@@ -2259,6 +2261,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                     self.nameToBLPos(str(item.parent(
                                     ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
+                                fModel.setDynamicSortFilter(True)
                             else:
                                 fModel = self.beamModel
                             combo = self.addStandardCombo(fModel, value)
@@ -2944,7 +2947,24 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                                             regexp)
                                                 except:  # analysis:ignore
                                                     continue
-
+                                elif str(methItem.text()) == 'output':
+                                    for iBeam in range(methItem.rowCount()):
+                                        bItem = methItem.child(iBeam, 0)
+                                        if len(re.findall(
+                                                'beam', str(
+                                                bItem.text()))) > 0:
+                                            vItem = methItem.child(iBeam, 1)
+                                            iWidget = self.tree.indexWidget(
+                                                vItem.index())
+                                            if iWidget is not None:
+                                                try:
+                                                    regexp = '{:03d}'.format(
+                                                        iElement)
+                                                    iWidget.model(
+                                                        ).setFilterRegExp(
+                                                            regexp)
+                                                except:  # analysis:ignore
+                                                    continue
         self.rootBLItem.model().blockSignals(True)
         self.flattenElement(self.tree,
                             self.rootBLItem if item is None else item)
@@ -3008,7 +3028,6 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                                         newDict[elNameStr] = oesValues[counter]
                                         if elNameStr != oesKeys[counter]:
                                             startElement = oesKeys[counter]
-                                            print(startElement, elNameStr)
                                             for ibeam in range(
                                                     rbi.rowCount()):
                                                 if str(rbi.child(
