@@ -145,6 +145,8 @@ else:
 
 from .physconsts import SIE0  # analysis:ignore
 
+stateGood, stateOut, stateOver = 1, 2, 3
+
 zEps = 1e-12  # mm: target accuracy in z while searching for intersection
 misalignmentTolerated = 0.1  # for automatic checking of oe center position
 accuracyInPosition = 0.1  # accuracy for positioning of oe
@@ -594,9 +596,9 @@ def get_output(plot, beamsReturnedBy_run_process):
         raise ValueError('cannot find data for y!')
     if plot.caxis.useCategory:
         cData = np.zeros_like(beamState)
-        cData[beamState == 1] = hueGood
-        cData[beamState == 2] = hueOut
-        cData[beamState == 3] = hueOver
+        cData[beamState == stateGood] = hueGood
+        cData[beamState == stateOut] = hueOut
+        cData[beamState == stateOver] = hueOver
         cData[beamState < 0] = hueDead
         flux = np.ones_like(x)
     else:
