@@ -62,8 +62,9 @@ class Screen(object):
         self.bl = bl
         if bl is not None:
             bl.screens.append(self)
-            self.set_orientation(x, z)
-        self.ordinalNum = len(bl.screens)
+            self.ordinalNum = len(bl.screens)
+            self.lostNum = -self.ordinalNum - 2000
+        self.set_orientation(x, z)
         if name in [None, 'None', '']:
             self.name = '{0}{1}'.format(self.__class__.__name__,
                                         self.ordinalNum)
@@ -123,13 +124,20 @@ class Screen(object):
             if self.bl.alignMode or needAutoAlign:
                 self.bl.auto_align(self, beam)
         glo = rs.Beam(copyFrom=beam)  # global
-        glo.path = ((self.center[0]-beam.x) * self.y[0] +
+        with np.errstate(divide='ignore'):
+            path = ((self.center[0]-beam.x) * self.y[0] +
                     (self.center[1]-beam.y) * self.y[1] +
                     (self.center[2]-beam.z) * self.y[2]) /\
                    (beam.a*self.y[0] + beam.b*self.y[1] + beam.c*self.y[2])
-        glo.x[:] = beam.x + glo.path*beam.a
-        glo.y[:] = beam.y + glo.path*beam.b
-        glo.z[:] = beam.z + glo.path*beam.c
+
+        indBad = np.where(np.isnan(path) | np.isinf(path) | (path < 0))
+        path[indBad] = 0.
+        glo.path += path
+        glo.state[indBad] = self.lostNum
+
+        glo.x[:] = beam.x + path*beam.a
+        glo.y[:] = beam.y + path*beam.b
+        glo.z[:] = beam.z + path*beam.c
         return glo
 
     def expose(self, beam=None):
@@ -174,10 +182,10 @@ class Screen(object):
 
         with np.errstate(divide='ignore'):
             path = -blo.y / blo.b
-        indBad = np.where(np.isnan(path))
+        indBad = np.where(np.isnan(path) | np.isinf(path) | (path < 0))
         path[indBad] = 0.
-        indBad = np.where(np.isinf(path))
-        path[indBad] = 0.
+        blo.state[indBad] = self.lostNum
+
         blo.path += path
         blo.x[:] += blo.a * path
         blo.z[:] += blo.c * path
@@ -324,7 +332,8 @@ class HemisphericScreen(Screen):
         if bl is not None:
             bl.screens.append(self)
             self.ordinalNum = len(bl.screens)
-            self.set_orientation(x, z)
+            self.lostNum = -self.ordinalNum - 2000
+        self.set_orientation(x, z)
         if name in [None, 'None', '']:
             self.name = '{0}{1}'.format(self.__class__.__name__,
                                         self.ordinalNum)
@@ -422,7 +431,13 @@ class HemisphericScreen(Screen):
         sqc = ((beam.x-self.center[0])**2 +
                (beam.y-self.center[1])**2 +
                (beam.z-self.center[2])**2 - self.R**2)
-        path = -sqb_2 + (sqb_2**2 - sqc)**0.5
+        with np.errstate(invalid='ignore'):
+            path = -sqb_2 + (sqb_2**2 - sqc)**0.5
+
+        indBad = np.where(np.isnan(path) | np.isinf(path) | (path < 0))
+        path[indBad] = 0.
+        blo.state[indBad] = self.lostNum
+
         blo.path += path
         rx = beam.x + beam.a*path - self.center[0]
         ry = beam.y + beam.b*path - self.center[1]
