@@ -706,7 +706,7 @@ class xrtGlow(qt.QWidget):
         return newRow
 
     def updateSegmentsModel(self, arrayOfRays):
-        def copy_row(item, row):
+        def copyRow(item, row):
             newRow = []
             for iCol in range(4):
                 oldItem = item.child(row, iCol)
@@ -720,13 +720,13 @@ class xrtGlow(qt.QWidget):
 
         newSegmentsModel = self.initSegmentsModel(isNewModel=False)
         newSegmentsModel.invisibleRootItem().appendRow(
-            copy_row(self.segmentsModelRoot, 0))
+            copyRow(self.segmentsModelRoot, 0))
         for element, elRecord in self.oesList.items():
             for iel in range(self.segmentsModelRoot.rowCount()):
                 elItem = self.segmentsModelRoot.child(iel, 0)
                 elName = str(elItem.text())
                 if str(element) == elName:
-                    elRow = copy_row(self.segmentsModelRoot, iel)
+                    elRow = copyRow(self.segmentsModelRoot, iel)
                     for segment in arrayOfRays[0]:
                         if segment[3] is not None:
                             endBeamText = "to {}".format(
@@ -737,7 +737,7 @@ class xrtGlow(qt.QWidget):
                                         if str(elItem.child(ich, 0).text()) ==\
                                                 endBeamText:
                                             elRow[0].appendRow(
-                                                copy_row(elItem, ich))
+                                                copyRow(elItem, ich))
                                             break
                                     else:
                                         elRow[0].appendRow(self.createRow(
