@@ -919,7 +919,7 @@ class BeamLine(object):
                     self.beamsDict[str(list(segment[3].values())[0])] =\
                         outBeams
 
-    def glow(self):
+    def glow(self, scale=[], centerAt=''):
         try:
             from ...gui import xrtGlow as xrtglow
         except ImportError:
@@ -933,6 +933,17 @@ class BeamLine(object):
             rayPath = self.export_to_glow()
             self.blViewer = xrtglow.xrtGlow(rayPath)
             self.blViewer.setWindowTitle("xrtGlow")
+            if scale:
+                try:
+                    self.blViewer.updateScaleFromGL(scale)
+                except:
+                    pass
+            if centerAt:
+                try:
+                    self.blViewer.centerEl(centerAt)
+                except:
+                    pass
+
             self.blViewer.show()
             sys.exit(app.exec_())
 
