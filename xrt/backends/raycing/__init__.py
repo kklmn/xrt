@@ -662,7 +662,8 @@ def append_to_flow(meth, bOut, frame):
     if oe.bl is not None:
         if oe.bl.flowSource == 'legacy':
             fdoc = re.findall(r"Returned values:.*", meth.__doc__)
-            fdoc = fdoc[0].replace("Returned values: ", '').split(',')
+            if fdoc:
+                fdoc = fdoc[0].replace("Returned values: ", '').split(',')
             kwArgsIn = dict()
             kwArgsOut = dict()
             argValues = inspect.getargvalues(frame)
@@ -675,8 +676,7 @@ def append_to_flow(meth, bOut, frame):
             for outstr, outbm in zip(list(fdoc), bOut):
                 kwArgsOut[outstr.strip()] = id(outbm)
 
-            oe.bl.flow.append([oe.name, meth.__func__,
-                               kwArgsIn, kwArgsOut])
+            oe.bl.flow.append([oe.name, meth.__func__, kwArgsIn, kwArgsOut])
 
 
 def is_auto_align_required(oe):

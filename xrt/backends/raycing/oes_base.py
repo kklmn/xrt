@@ -940,6 +940,7 @@ class OE(object):
             If not None, returns the absorbed intensity in local beam.
 
 
+        .. .. Returned values: beamGlobal, beamLocal
         """
         self.footprint = []
         if self.bl is not None:
