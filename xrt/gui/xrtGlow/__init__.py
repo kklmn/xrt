@@ -1059,6 +1059,8 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def updateScaleFromGL(self, scale):
+        if isinstance(scale, (int, float)):
+            scale = [scale, scale, scale]
         for iaxis, (slider, editor) in \
                 enumerate(zip(self.zoomSliders, self.zoomEditors)):
             value = np.log10(scale[iaxis])
@@ -3195,7 +3197,7 @@ class xrtGlWidget(qt.QGLWidget):
         except AttributeError:
             return
 
-        good = startBeam.state > 0
+        good = (startBeam.state == 1) | (startBeam.state == 2)
         intensity = startBeam.Jss + startBeam.Jpp
         intensityAll = intensity / np.max(intensity[good])
 
@@ -3265,16 +3267,13 @@ class xrtGlWidget(qt.QGLWidget):
             hMax = np.max(histAxis[0])
             hNorm = histAxis[0] / hMax
             topEl = np.where(hNorm >= 0.5)[0]
-            hwhm = np.abs(histAxis[1][topEl[0]] -
-                          histAxis[1][topEl[-1]]) * 0.5
-#                    cntr = (histAxis[1][topEl[0]] +
-#                            histAxis[1][topEl[-1]]) * 0.5
+            fwhm = np.abs(histAxis[1][topEl[0]] - histAxis[1][topEl[-1]])
 
-            order = np.floor(np.log10(hwhm)) if hwhm > 0 else -10
+            order = np.floor(np.log10(fwhm)) if fwhm > 0 else -10
             if order >= 2:
                 units = "m"
                 mplier = 1e-3
-            if order >= -1:
+            elif order >= -1:
                 units = "mm"
                 mplier = 1.
             elif order >= -4:
@@ -3286,7 +3285,7 @@ class xrtGlWidget(qt.QGLWidget):
 
             self.virtScreen.FWHMstr.append(
                 "FWHM({0}) = {1:.3f}{2}".format(
-                    str(axis).upper(), hwhm*mplier*2, units))
+                    str(axis).upper(), fwhm*mplier, units))
 
     def createVScreen(self):
         try:
