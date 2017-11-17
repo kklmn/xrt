@@ -16,6 +16,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = True
+
 E0 = 9000.
 eLimits = E0, E0+2.5
 prefix = '03_col_BT'
@@ -47,7 +49,7 @@ def build_beamline(nrays=raycing.nrays):
     beamLine.qwp = roe.OE(
         beamLine, 'QWP', (0, p, 0), material=(crystalDiamond,))
     beamLine.qwp.pitch = theta0
-    q = 50.
+    q = 100.
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', (0, p + q, 0))
 
@@ -73,8 +75,9 @@ def run_process(beamLine):
                'beamQWPlocal': beamQWPlocal,
                'beamFSM2': beamFSM2
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -218,11 +221,19 @@ def plot_generator(plots, beamLine):
                             format(suffix, thick, dTheta))
                     except AttributeError:
                         pass
+                if showIn3D:
+                    beamLine.glowFrameName = \
+                        '{0}_{1}_{2:04.0f}um_{3:02d}.jpg'.format(
+                            prefix, suffix, thick, iTheta)
                 yield
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=3e2, centerAt='QWP', startFrom=1,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=24, generator=plot_generator,

@@ -919,7 +919,18 @@ class BeamLine(object):
                     self.beamsDict[str(list(segment[3].values())[0])] =\
                         outBeams
 
-    def glow(self, scale=[], centerAt=''):
+    def glow(self, scale=[], centerAt='', startFrom=0, generator=None,
+             generatorArgs=[]):
+        if generator is not None:
+            gen = generator(*generatorArgs)
+            try:
+                if sys.version_info < (3, 1):
+                    gen.next()
+                else:
+                    next(gen)
+            except StopIteration:
+                return
+
         try:
             from ...gui import xrtGlow as xrtglow
         except ImportError:
@@ -932,7 +943,12 @@ class BeamLine(object):
             app = xrtglow.qt.QApplication(sys.argv)
             rayPath = self.export_to_glow()
             self.blViewer = xrtglow.xrtGlow(rayPath)
+            self.blViewer.generator = generator
+            self.blViewer.generatorArgs = generatorArgs
+            self.blViewer.customGlWidget.generator = generator
             self.blViewer.setWindowTitle("xrtGlow")
+            self.blViewer.startFrom = startFrom
+            self.blViewer.bl = self
             if scale:
                 try:
                     self.blViewer.updateScaleFromGL(scale)
@@ -943,9 +959,10 @@ class BeamLine(object):
                     self.blViewer.centerEl(centerAt)
                 except:
                     pass
-
             self.blViewer.show()
             sys.exit(app.exec_())
+        else:
+            self.blViewer.show()
 
     def export_to_glow(self, signal=None):
         def calc_weighted_center(beam):

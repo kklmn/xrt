@@ -39,6 +39,7 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 
+import sys
 import os
 import numpy as np
 from functools import partial
@@ -54,6 +55,7 @@ from ...backends import raycing
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
 from ...backends.raycing import screens as rscreens  # analysis:ignore
+#from ...backends.raycing import run as rrun
 from ..commons import qt
 from ..commons import gl
 
@@ -128,6 +130,9 @@ class xrtGlow(qt.QWidget):
         fastLoad = qt.QShortcut(self)
         fastLoad.setKey(qt.Key_F6)
         fastLoad.activated.connect(partial(self.loadScene, '_xrtScnTmp_.npy'))
+        startMovie = qt.QShortcut(self)
+        startMovie.setKey(qt.Key_F7)
+        startMovie.activated.connect(self.startRecordingMovie)
         toggleScreen = qt.QShortcut(self)
         toggleScreen.setKey(qt.Key_F3)
         toggleScreen.activated.connect(self.customGlWidget.toggleVScreen)
@@ -899,12 +904,13 @@ class xrtGlow(qt.QWidget):
     def changeColorAxis(self, selAxis):
         if selAxis is None:
             selAxis = self.colorControls[0].currentText()
+            self.customGlWidget.newColorAxis = False
         else:
             self.customGlWidget.getColor = getattr(
                 raycing, 'get_{}'.format(selAxis))
+            self.customGlWidget.newColorAxis = True
         oldColorMin = self.customGlWidget.colorMin
         oldColorMax = self.customGlWidget.colorMax
-        self.customGlWidget.newColorAxis = True
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.mplAx.set_xlabel(selAxis)
         if oldColorMin == self.customGlWidget.colorMin and\
@@ -1400,6 +1406,21 @@ class xrtGlow(qt.QWidget):
         self.updateColorSelFromMPL(0, 0)
 
         print('Loaded scene from {}'.format(filename))
+
+    def startRecordingMovie(self):  # by F7
+        if self.generator is None:
+            return
+        startFrom = self.startFrom if hasattr(self, 'startFrom') else 0
+        for it in self.generator(*self.generatorArgs):
+            self.bl.propagate_flow(startFrom=startFrom)
+            rayPath = self.bl.export_to_glow()
+            self.updateOEsList(rayPath)
+            if self.isHidden():
+                self.show()
+            image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
+            print(self.bl.glowFrameName)
+            image.save(self.bl.glowFrameName)
+        print("Finished with the movie.")
 
     def centerEl(self, oeName):
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
@@ -3054,23 +3075,26 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glVertex3f(corner[0], corner[1], 0)
         gl.glEnd()
 
-        helpList = ['F1: Open/Close this help window',
-                    'F3: Add/Remove Virtual Screen',
-                    'F4: Dock/Undock xrtGlow if launched from xrtQook',
-                    'F5/F6: Quick Save/Load Scene',
-                    'LeftMouse: Rotate the Scene',
-                    'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
-                    'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
-                    'CTRL+LeftMouse: Drag Virtual Screen',
-                    'ALT+LeftMouse: Scale Virtual Screen',
-                    'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
-                    '                      (with Beamline along the longest view axis)',  # analysis:ignore
-                    'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
-                    '                      (with Beamline along the shortest view axis)',  # analysis:ignore
-                    'CTRL+T: Toggle Virtual Screen orientation (vertical/normal to the beam)',  # analysis:ignore
-                    'WheelMouse: Zoom the Beamline',
-                    'CTRL+WheelMouse: Zoom the Scene'
-                    ]
+        helpList = [
+            'F1: Open/Close this help window',
+            'F3: Add/Remove Virtual Screen',
+            'F4: Dock/Undock xrtGlow if launched from xrtQook',
+            'F5/F6: Quick Save/Load Scene']
+        if hasattr(self, 'generator'):
+            helpList += ['F7: Start recording movie']
+        helpList += [
+            'LeftMouse: Rotate the Scene',
+            'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
+            'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
+            'CTRL+LeftMouse: Drag Virtual Screen',
+            'ALT+LeftMouse: Scale Virtual Screen',
+            'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
+            '                      (with Beamline along the longest view axis)',  # analysis:ignore
+            'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
+            '                      (with Beamline along the shortest view axis)',  # analysis:ignore
+            'CTRL+T: Toggle Virtual Screen orientation (vertical/normal to the beam)',  # analysis:ignore
+            'WheelMouse: Zoom the Beamline',
+            'CTRL+WheelMouse: Zoom the Scene']
         for iLine, text in enumerate(helpList):
             self.drawText([-1. + 0.05,
                            1. - 2. * (iLine + 1) / float(len(helpList)+1), 0],

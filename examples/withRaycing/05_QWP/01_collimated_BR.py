@@ -16,6 +16,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = True
+
 E0 = 9000.
 eLimits = E0, E0+2.5
 prefix = '01-collimated-BR'
@@ -45,7 +47,7 @@ def build_beamline(nrays=raycing.nrays):
         beamLine, 'QWP', (0, p, 0), material=(crystalDiamond,))
     theta0 = math.asin(rm.ch / (2 * crystalDiamond.d * (E0+0.4)))
     beamLine.qwp.pitch = theta0
-    q = 50.
+    q = 100.
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', (0, p + q, 0))
 
@@ -71,8 +73,9 @@ def run_process(beamLine):
                'beamQWPlocal': beamQWPlocal,
                'beamFSM2': beamFSM2
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -197,6 +200,14 @@ def plot_generator(plots, beamLine):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        gen = plot_generator([], beamLine)
+        if sys.version_info < (3, 1):
+            gen.next()
+        else:
+            next(gen)
+        beamLine.glow(scale=3e2, centerAt='QWP')
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=24, generator=plot_generator,
