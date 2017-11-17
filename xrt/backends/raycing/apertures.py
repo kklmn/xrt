@@ -510,7 +510,7 @@ class RoundAperture(object):
         rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
         return wave
 
-    def diffract(self, wave=None, beam=None, nrays='auto'):
+    def propagate_wave(self, wave=None, beam=None, nrays='auto'):
         """
         Propagates the incoming *wave* through an aperture using the
         Kirchhoff diffraction theorem. Returned global and local beams can be

@@ -41,17 +41,18 @@ class Beam(object):
     """
     def __init__(self, nrays=raycing.nrays, copyFrom=None, forceState=False,
                  withNumberOfReflections=False, withAmplitudes=False,
-                 xyzOnly=False):
-        listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
-                       'filamentDX', 'filamentDZ', 'filamentDtheta',
-                       'filamentDpsi', 'state', 'a', 'b', 'c', 'path', 'E',
-                       'Jss', 'Jpp', 'Jsp', 'elevationD', 'elevationX',
-                       'elevationY', 'elevationZ', 's', 'phi', 'r', 'theta',
-                       'order', 'accepted', 'acceptedE', 'seeded', 'seededI',
-                       'Es', 'Ep', 'area', 'nRefl']
+                 xyzOnly=False, bl=None):
+        self.listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
+                            'filamentDX', 'filamentDZ', 'filamentDtheta',
+                            'filamentDpsi', 'state', 'a', 'b', 'c', 'path',
+                            'E', 'Jss', 'Jpp', 'Jsp', 'elevationD',
+                            'elevationX', 'elevationY', 'elevationZ', 's',
+                            'phi', 'r', 'theta', 'order', 'accepted',
+                            'acceptedE', 'seeded', 'seededI', 'Es', 'Ep',
+                            'area', 'nRefl']
         if type(copyFrom) == type(self):
             try:
-                for attr in listOfAttrs:
+                for attr in self.listOfAttrs:
                     if hasattr(copyFrom, attr):
                         setattr(self, attr, np.copy(getattr(copyFrom, attr)))
                 if not withNumberOfReflections and hasattr(self, 'nRefl'):
@@ -70,10 +71,22 @@ class Beam(object):
                     pickleFile = open(copyFrom, 'rb')
                     self.__dict__.update(pickle.load(pickleFile))
                     pickleFile.close()
+                for key in ['fromOE', 'toOE', 'parent']:
+                    if hasattr(self, key):
+                        if bl is not None:
+                            try:
+                                setattr(self, key, bl.oesDict[getattr(
+                                    self, key)][0])
+                            except:
+                                print("OEs cannot be resolved. This can cause errors in wave propagation routine.")  # analysis:ignore
+                                continue
+                        else:
+                            print(getattr(self, key), "cannot be resolved. Please provide the beamLine instance.")  # analysis:ignore
+
             except:
-                raise
                 print("Can't load beam object from", copyFrom)
                 copyFrom = None
+                raise
         elif copyFrom is None:
             # coordinates of starting points
             nrays = np.long(nrays)
@@ -110,20 +123,28 @@ class Beam(object):
         """Saves the *beam* to a binary file. File format can be Numpy 'npy',
         Matlab 'mat' or python 'pickle'. Matlab format should not be used for
         future imports in xrt as it does not allow correct load."""
+        outputDict = dict()
+        outputDict.update(self.__dict__)
+        for key in ['fromOE', 'toOE', 'parent']:
+            if hasattr(self, key):
+                try:
+                    outputDict[key] = getattr(self, key).name
+                except:
+                    continue
 
         if str(fformat).lower() in ['npy', 'np', 'numpy']:  # numpy compress
             try:
                 if not fileName.endswith('npy'):
                     fileName += '.npy'
-                np.save(fileName, self.__dict__)
+                np.save(fileName, outputDict)
             except:
                 print("Can't save the beam to", str(fileName))
-        if str(fformat).lower()in ['mat', 'matlab']:  # Matlab *.mat
+        elif str(fformat).lower()in ['mat', 'matlab']:  # Matlab *.mat
             try:
                 import scipy.io as io
                 if not fileName.endswith('mat'):
                     fileName += '.mat'
-                io.savemat(fileName, self.__dict__)
+                io.savemat(fileName, outputDict)
             except:
                 print("Can't save the beam to", str(fileName))
         else:  # pickle
@@ -131,7 +152,7 @@ class Beam(object):
                 if not fileName.endswith('pickle'):
                     fileName += '.pickle'
                 f = open(fileName, 'wb')
-                pickle.dump(self.__dict__, f, protocol=2)
+                pickle.dump(outputDict, f, protocol=2)
                 f.close()
             except:
                 print("Can't save the beam to", str(fileName))
