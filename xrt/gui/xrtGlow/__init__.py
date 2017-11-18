@@ -652,7 +652,7 @@ class xrtGlow(qt.QWidget):
 
     def populateOEsList(self, arrayOfRays):
         self.oesList = OrderedDict()
-        self.beamsToElements = dict()
+        self.beamsToElements = OrderedDict()
         oesList = arrayOfRays[2]
         for segment in arrayOfRays[0]:
             if segment[0] == segment[2]:
@@ -1670,7 +1670,7 @@ class xrtGlWidget(qt.QGLWidget):
         footprintsArrayLost = None
         colorsDotsLost = None
         maxLen = 1.
-        tmpMax = -1.e12 * np.ones(3)
+        tmpMax = -1.0e12 * np.ones(3)
         tmpMin = -1. * tmpMax
 
         if self.newColorAxis:
@@ -1876,6 +1876,7 @@ class xrtGlWidget(qt.QGLWidget):
                         footprintsArrayLost = verticesLost.T if\
                             footprintsArrayLost is None else\
                             np.vstack((footprintsArrayLost, verticesLost.T))
+
         try:
             if self.colorMin == self.colorMax:
                 if self.colorMax == 0:  # and self.colorMin == 0 too
@@ -1895,6 +1896,7 @@ class xrtGlWidget(qt.QGLWidget):
                     alphaMax = np.max(alphaRays)
                 else:
                     alphaMax = 1.
+                alphaMax = alphaMax if alphaMax != 0 else 1.
                 alphaColorRays = np.array([alphaRays / alphaMax]).T *\
                     self.lineOpacity
                 self.raysColor = np.float32(np.hstack([colorsRGBRays,
@@ -1911,6 +1913,7 @@ class xrtGlWidget(qt.QGLWidget):
                         self.verticesArray, verticesArrayLost)))
         except:  # analysis:ignore
             raise
+
         try:
             if self.colorMin == self.colorMax:
                 if self.colorMax == 0:  # and self.colorMin == 0 too
@@ -1930,6 +1933,7 @@ class xrtGlWidget(qt.QGLWidget):
                     alphaMax = np.max(alphaDots)
                 else:
                     alphaMax = 1.
+                alphaMax = alphaMax if alphaMax != 0 else 1.
                 alphaColorDots = np.array([alphaDots / alphaMax]).T *\
                     self.pointOpacity
                 self.dotsColor = np.float32(np.hstack([colorsRGBDots,
@@ -2238,7 +2242,7 @@ class xrtGlWidget(qt.QGLWidget):
         if self.pointsDepthTest:
             gl.glDisable(gl.GL_DEPTH_TEST)
 
-        oeLabels = dict()
+        oeLabels = OrderedDict()
         if len(self.labelsToPlot) > 0:
             for oeKey, oeValue in self.oesList.items():
                 if oeKey in self.labelsToPlot:
@@ -3190,19 +3194,19 @@ class xrtGlWidget(qt.QGLWidget):
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 2):
             gl.glColor4f(1, 0, 0, 1)
             gl.glRasterPos3f(0, 0, axisLen*1.5)
-            for symbol in "  {}, mm".format('Z'):
+            for symbol in "  {} (mm)".format('Z'):
                 gl.glutBitmapCharacter(
                     gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
             gl.glColor4f(0, 0.75, 0, 1)
             gl.glRasterPos3f(0, axisLen*1.5, 0)
-            for symbol in "  {}, mm".format('Y'):
+            for symbol in "  {} (mm)".format('Y'):
                 gl.glutBitmapCharacter(
                     gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
             gl.glColor4f(0, 0.5, 1, 1)
             gl.glRasterPos3f(axisLen*1.5, 0, 0)
-            for symbol in "  {}, mm".format('X'):
+            for symbol in "  {} (mm)".format('X'):
                 gl.glutBitmapCharacter(
                     gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
 #        gl.glFlush()

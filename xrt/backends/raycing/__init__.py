@@ -659,24 +659,26 @@ def auto_units_angle(angle):
 
 def append_to_flow(meth, bOut, frame):
     oe = meth.__self__
-    if oe.bl is not None:
-        if oe.bl.flowSource == 'legacy':
-            fdoc = re.findall(r"Returned values:.*", meth.__doc__)
-            if fdoc:
-                fdoc = fdoc[0].replace("Returned values: ", '').split(',')
-            kwArgsIn = dict()
-            kwArgsOut = dict()
-            argValues = inspect.getargvalues(frame)
-            for arg in argValues.args[1:]:
-                if str(arg) == 'beam':
-                    kwArgsIn[arg] = id(argValues.locals[arg])
-                else:
-                    kwArgsIn[arg] = argValues.locals[arg]
+    if oe.bl is None:
+        return
+    if oe.bl.flowSource != 'legacy':
+        return
+    fdoc = re.findall(r"Returned values:.*", meth.__doc__)
+    if fdoc:
+        fdoc = fdoc[0].replace("Returned values: ", '').split(',')
+    kwArgsIn = OrderedDict()
+    kwArgsOut = OrderedDict()
+    argValues = inspect.getargvalues(frame)
+    for arg in argValues.args[1:]:
+        if str(arg) == 'beam':
+            kwArgsIn[arg] = id(argValues.locals[arg])
+        else:
+            kwArgsIn[arg] = argValues.locals[arg]
 
-            for outstr, outbm in zip(list(fdoc), bOut):
-                kwArgsOut[outstr.strip()] = id(outbm)
+    for outstr, outbm in zip(list(fdoc), bOut):
+        kwArgsOut[outstr.strip()] = id(outbm)
 
-            oe.bl.flow.append([oe.name, meth.__func__, kwArgsIn, kwArgsOut])
+    oe.bl.flow.append([oe.name, meth.__func__, kwArgsIn, kwArgsOut])
 
 
 def is_auto_align_required(oe):
@@ -772,8 +774,7 @@ class BeamLine(object):
                 for iseg in [2, 3]:
                     for argName, argVal in segment[iseg].items():
                         if len(re.findall('beam', str(argName))) > 0:
-                            segment[iseg][argName] =\
-                                self.beamsRevDict[argVal]
+                            segment[iseg][argName] = self.beamsRevDict[argVal]
         self.flowSource = 'prepared_to_run'
 
     def auto_align(self, oe, beam):
@@ -875,49 +876,51 @@ class BeamLine(object):
                 raise
 
     def propagate_flow(self, startFrom=0, signal=None):
-        if self.oesDict is not None and self.flow is not None:
-            totalStages = len(self.flow[startFrom:]) - 1
-            for iseg, segment in enumerate(self.flow[startFrom:]):
-                segOE = self.oesDict[segment[0]][0]
-                fArgs = {}
-                for inArg in segment[2].items():
-                    if inArg[0].startswith('beam'):
-                        if inArg[1] is None:
-                            inBeam = None
-                            break
-                        fArgs[inArg[0]] = self.beamsDict[inArg[1]]
-                        inBeam = fArgs['beam']
-                    else:
-                        fArgs[inArg[0]] = inArg[1]
-                try:
-                    if inBeam is None:
-                        continue
-                except NameError:
-                    pass
-                try:  # protection againt incorrect propagation parameters
-                    if signal is not None:
-                        signalStr = "Propagation: {0} {1}(), %p% done.".format(
-                            str(segment[0]),
-                            str(segment[1]).split(".")[-1].strip(">").split(
-                                    " ")[0])
-                        signal.emit((float(iseg) / float(totalStages),
-                                     signalStr))
-                        self.statusSignal = [signal, iseg, totalStages,
-                                             signalStr]
-                except:
-                    pass
-                try:
-                    outBeams = segment[1](segOE, **fArgs)
-                except:
-                    continue
-
-                if isinstance(outBeams, tuple):
-                    for outBeam, beamName in zip(list(outBeams),
-                                                 list(segment[3].values())):
-                        self.beamsDict[beamName] = outBeam
+        if self.oesDict is None or self.flow is None:
+            return
+        totalStages = len(self.flow[startFrom:])
+        for iseg, segment in enumerate(self.flow[startFrom:]):
+            segOE = self.oesDict[segment[0]][0]
+            fArgs = OrderedDict()
+            for inArg in segment[2].items():
+                if inArg[0].startswith('beam'):
+                    if inArg[1] is None:
+                        inBeam = None
+                        break
+                    fArgs[inArg[0]] = self.beamsDict[inArg[1]]
+                    inBeam = fArgs['beam']
                 else:
-                    self.beamsDict[str(list(segment[3].values())[0])] =\
-                        outBeams
+                    fArgs[inArg[0]] = inArg[1]
+            try:
+                if inBeam is None:
+                    continue
+            except NameError:
+                pass
+
+            try:  # protection againt incorrect propagation parameters
+                if signal is not None:
+                    signalStr = "Propagation: {0} {1}(), %p% done.".format(
+                        str(segment[0]),
+                        str(segment[1]).split(".")[-1].strip(">").split(
+                                " ")[0])
+                    signal.emit((float(iseg+1)/float(totalStages), signalStr))
+                    self.statusSignal =\
+                        [signal, iseg+1, totalStages, signalStr]
+            except:
+                pass
+            try:
+                outBeams = segment[1](segOE, **fArgs)
+            except:
+                raise
+                continue
+
+            if isinstance(outBeams, tuple):
+                for outBeam, beamName in zip(list(outBeams),
+                                             list(segment[3].values())):
+                    self.beamsDict[beamName] = outBeam
+            else:
+                self.beamsDict[str(list(segment[3].values())[0])] =\
+                    outBeams
 
     def glow(self, scale=[], centerAt='', startFrom=0, generator=None,
              generatorArgs=[]):
@@ -976,20 +979,21 @@ class BeamLine(object):
                 totalI
 
         if self.flow is not None:
-            beamDict = {}
+            beamDict = OrderedDict()
             rayPath = []
-            outputBeamMatch = {}
+            outputBeamMatch = OrderedDict()
             oesDict = OrderedDict()
-            totalStages = len(self.flow) - 1
+            totalStages = len(self.flow)
             for iseg, segment in enumerate(self.flow):
                 try:
                     if signal is not None:
                         signalStr = "Processing {0} beams, %p% done.".format(
                             str(segment[0]))
-                        signal.emit((float(iseg) / float(totalStages),
+                        signal.emit((float(iseg+1) / float(totalStages),
                                      signalStr))
                 except:
                     pass
+
                 try:
                     methStr = str(segment[1])
                     oeStr = segment[0]
@@ -1043,14 +1047,14 @@ class BeamLine(object):
                                         tmpBeamName, oeStr, gBeamName])
                 except:
                     continue
-        totalBeams = len(beamDict) - 1
+
+        totalBeams = len(beamDict)
         for itBeam, tBeam in enumerate(beamDict.values()):
-            try:
-                if signal is not None:
+            if signal is not None:
+                try:
                     signalStr = "Calculating trajectory, %p% done."
-                    signal.emit((float(itBeam) / float(totalBeams),
-                                 signalStr))
-            except:
-                pass
+                    signal.emit((float(itBeam+1)/float(totalBeams), signalStr))
+                except:
+                    pass
             calc_weighted_center(tBeam)
         return [rayPath, beamDict, oesDict]
