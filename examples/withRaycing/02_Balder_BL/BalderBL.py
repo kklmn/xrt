@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""This module describes the beamline CLÆSS to be imported by
+"""This module describes the beamline Balder to be imported by
 ``traceBalderBL.py`` script."""
 #__name__ = "BalderBL"
 
