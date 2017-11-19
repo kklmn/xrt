@@ -786,7 +786,11 @@ class BeamLine(object):
                                     _warning(self.beamsRevDictUsed[argVal],
                                              segment[0])
                                 self.beamsRevDictUsed[argVal] = segment[0]
-                            segment[iseg][argName] = self.beamsRevDict[argVal]
+                            try:
+                                segment[iseg][argName] =\
+                                    self.beamsRevDict[argVal]
+                            except KeyError:
+                                segment[iseg][argName] = 'beamTmp'
         self.flowSource = 'prepared_to_run'
 
     def auto_align(self, oe, beam):
