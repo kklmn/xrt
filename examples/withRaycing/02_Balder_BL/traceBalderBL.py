@@ -8,6 +8,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import BalderBL
 
+showIn3D = False
+BalderBL.showIn3D = showIn3D
 
 def add_plot(plots, plot, prefix, suffix):
     plots.append(plot)
@@ -243,9 +245,13 @@ def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
 #    BalderBL.run_process(myBalder)
 #    myBalder.slitEH.touch_beam(myBalder.beams['beamVFMglobal'])
 
-#    plots = define_plots(myBalder, prefix, suffix)
-#    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes='half')
-    myBalder.glow()
+    if showIn3D:
+        myBalder.glow(centerAt='VFM')
+        return
+
+    plots = define_plots(myBalder, prefix, suffix)
+    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes=4)
+#    myBalder.glow()
 
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python

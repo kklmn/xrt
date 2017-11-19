@@ -86,6 +86,7 @@ def run(case):
 
     plt.show()
 
+
 if __name__ == '__main__':
     run('white')
 #    run('monochromatic')

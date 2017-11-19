@@ -8,7 +8,10 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.run as rr
-from BalderBL import build_beamline, align_beamline
+import BalderBL
+
+showIn3D = False
+BalderBL.showIn3D = showIn3D
 
 stripe = 'Ir'
 
@@ -17,7 +20,7 @@ def run_process(beamLine, shineOnly1stSource=False):
     beamSource = beamLine.sources[0].shine()
 
     beamFSM0 = beamLine.fsm0.expose(beamSource)
-    beamLine.feFixedMask.propagate(beamSource)
+    beamTmp = beamLine.feFixedMask.propagate(beamSource)
     beamFSMFE = beamLine.fsmFE.expose(beamSource)
     beamFilter1global, beamFilter1local1, beamFilter1local2 =\
         beamLine.filter1.double_refract(beamSource)
@@ -39,6 +42,8 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamVCMglobal': beamVCMglobal, 'beamVCMlocal': beamVCMlocal,
                'beamFSMVCM': beamFSMVCM}
     beamLine.beams = outDict
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -99,12 +104,19 @@ def plot_generator(plots, beamLine):
             if hasattr(plot, 'textPanel'):
                 plot.textPanel.set_text(
                     '{0}\n$\\theta$ = {1:.1f} mrad'.format(stripe, pitch))
+        if showIn3D:
+            beamLine.glowFrameName =\
+                'vcm{0}-{1:.1f}mrad.jpg'.format(stripe, pitch)
         yield
 
 
 def main():
-    myBalder = build_beamline(stripe=stripe)
-    align_beamline(myBalder)
+    myBalder = BalderBL.build_beamline(stripe=stripe)
+    BalderBL.align_beamline(myBalder)
+    if showIn3D:
+        myBalder.glow(centerAt='VCM', startFrom=2,
+                      generator=plot_generator, generatorArgs=[[], myBalder])
+        return
     plots = define_plots(myBalder)
     xrtr.run_ray_tracing(
         plots, repeats=16, generator=plot_generator,

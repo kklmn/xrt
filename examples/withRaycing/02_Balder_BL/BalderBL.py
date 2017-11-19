@@ -14,6 +14,7 @@ import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = False
 
 stripeSi = rm.Material('Si', rho=2.33)
 stripeSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2)
@@ -129,7 +130,7 @@ def run_process(beamLine, shineOnly1stSource=False):
             break
 
     beamFSM0 = beamLine.fsm0.expose(beamSource)
-    beamLine.feFixedMask.propagate(beamSource)
+    beamTmp1 = beamLine.feFixedMask.propagate(beamSource)
     beamFSMFE = beamLine.fsmFE.expose(beamSource)
     beamFilter1global, beamFilter1local1, beamFilter1local2 = \
         beamLine.filter1.double_refract(beamSource)
@@ -194,9 +195,9 @@ def run_process(beamLine, shineOnly1stSource=False):
         outDict['beamFilter2local2'] = beamFilter2local2
     beamLine.beams = outDict
 
-    beamLine.prepare_flow()
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 aceptanceH = 4e-4

@@ -8,7 +8,10 @@ import numpy as np
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.materials as rm
-from BalderBL import build_beamline, align_beamline
+import BalderBL
+
+showIn3D = False
+BalderBL.showIn3D = showIn3D
 
 stripe = 'Si'
 E0 = 9000
@@ -55,27 +58,33 @@ def plot_generator(plots, beamLine):
             beamLine.dcm.material = si311_1,
             beamLine.dcm.material2 = si311_2,
         for energy in energies:
-            align_beamline(beamLine, energy=energy)
+            BalderBL.align_beamline(beamLine, energy=energy)
             thetaDeg = np.degrees(
                 beamLine.dcm.bragg - 2*beamLine.vcm.pitch)
+            baseName = '{0}_{1:.0f}.png'.format(crystal, thetaDeg*1e4)
             for plot in plots:
-                baseName = '{0}_{1:.0f}.png'.format(crystal, thetaDeg*1e4)
                 plot.saveName = baseName + '.png'
 #                plot.persistentName = baseName + '.pickle'
                 if hasattr(plot, 'textPanel'):
                     plot.textPanel.set_text(
                         '{0}\n$\\theta$ = {1:.3f}$^o$'.format(
                             crystal, thetaDeg))
+            if showIn3D:
+                beamLine.glowFrameName = baseName + '.jpg'
             yield
 
 
 def main():
-    myBalder = build_beamline(stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
+    myBalder = BalderBL.build_beamline(
+        stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
+    if showIn3D:
+        myBalder.glow(centerAt='VFM', startFrom=7,
+                      generator=plot_generator, generatorArgs=[[], myBalder])
+        return
     plots = define_plots()
     xrtr.run_ray_tracing(plots, repeats=16, generator=plot_generator,
                          beamLine=myBalder, globalNorm=True, processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()

@@ -10,7 +10,10 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 #import xrt.backends.raycing.sources as rs
 #import xrt.backends.raycing.run as rr
-from BalderBL import build_beamline, align_beamline
+import BalderBL
+
+showIn3D = False
+BalderBL.showIn3D = showIn3D
 
 stripe = 'Si'
 E0 = 9000
@@ -77,12 +80,19 @@ def plot_generator(plots, beamLine):
                 plot.textPanel.set_text(
                     '{0}\nmirror\n$R$ = {1:.1f} km'.format(
                         mirrorText, R*1e-6))
+        if showIn3D:
+            beamLine.glowFrameName = '{0}R-{1:.1f}km.jpg'.format(mirror, R*1e-6)
         yield
 
 
 def main():
-    myBalder = build_beamline(stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
-    align_beamline(myBalder, energy=E0)
+    myBalder = BalderBL.build_beamline(
+        stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
+    BalderBL.align_beamline(myBalder, energy=E0)
+    if showIn3D:
+        myBalder.glow(centerAt='VFM', startFrom=2,
+                      generator=plot_generator, generatorArgs=[[], myBalder])
+        return
     plots = define_plots()
     xrtr.run_ray_tracing(
         plots, repeats=16, generator=plot_generator,

@@ -8,13 +8,16 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.run as rr
-from BalderBL import build_beamline, align_beamline
+import BalderBL
+
+showIn3D = False
+BalderBL.showIn3D = showIn3D
 
 
 def run_process(beamLine):
     beamSource = beamLine.sources[0].shine()
 
-    beamLine.feFixedMask.propagate(beamSource)
+    beamTmp = beamLine.feFixedMask.propagate(beamSource)
     beamFilter1global, beamFilter1local1, beamFilter1local2 = \
         beamLine.filter1.double_refract(beamSource)
     beamFilter1local2A = rs.Beam(copyFrom=beamFilter1local2)
@@ -26,8 +29,9 @@ def run_process(beamLine):
                'beamFilter1local2': beamFilter1local2,
                'beamFilter1local2A': beamFilter1local2A}
     beamLine.beams = outDict
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -94,12 +98,18 @@ def plot_generator(plots, beamLine):
 #            plot.persistentName = baseName + '.pickle'
             if hasattr(plot, 'textPanel'):
                 plot.textPanel.set_text(u'$t$ = {0:.0f} µm'.format(t*1e3))
+        if showIn3D:
+            beamLine.glowFrameName = 'filter{0:03.0f}mum.jpg'.format(t*1e3)
         yield
 
 
 def main():
-    myBalder = build_beamline()
-    align_beamline(myBalder)
+    myBalder = BalderBL.build_beamline()
+    BalderBL.align_beamline(myBalder)
+    if showIn3D:
+        myBalder.glow(centerAt='Filter1_Entrance', startFrom=1,
+                      generator=plot_generator, generatorArgs=[[], myBalder])
+        return
     plots = define_plots(myBalder)
     xrtr.run_ray_tracing(
         plots, repeats=16, generator=plot_generator,
