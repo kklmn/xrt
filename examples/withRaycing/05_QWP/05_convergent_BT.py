@@ -49,6 +49,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 E0 = 9000.
 eLimits = E0, E0+2.5
 prefix = '05_conv_BT'
@@ -64,20 +66,16 @@ def build_beamline(nrays=raycing.nrays):
     beamLine = raycing.BeamLine(azimuth=0, height=0)
     hDiv = 1.5e-3
     vDiv = 2.5e-4
-    rs.GeometricSource(
+    beamLine.source = rs.GeometricSource(
         beamLine, 'GeometricSource', (0, 0, 0),
         nrays=nrays, dx=0.1, dy=0, dz=2., dxprime=hDiv/2, dzprime=0,
         distE='flat', energies=eLimits, polarization='horizontal')
 
-    beamLine.feMovableMaskLT = ra.RectangularAperture(
-        beamLine, 'FEMovableMaskLT', [0, 10000, 0], ('left', 'top'), [-10, 3.])
-    beamLine.feMovableMaskRB = ra.RectangularAperture(
-        beamLine, 'FEMovableMaskRB', [0, 10500, 0], ('right', 'bottom'),
-        [10, -3.])
-    beamLine.feMovableMaskLT.set_divergence(
-        beamLine.sources[0], [-hDiv/2, vDiv/2])
-    beamLine.feMovableMaskRB.set_divergence(
-        beamLine.sources[0], [hDiv/2, -vDiv/2])
+    beamLine.feMovableMask = ra.RectangularAperture(
+        beamLine, 'FEMovableMask', [0, 10000, 0],
+        ('left', 'top', 'right', 'bottom'), [-10, 3., 10, -3.])
+    beamLine.feMovableMask.set_divergence(
+        beamLine.source, [-hDiv/2, vDiv/2, hDiv/2, -vDiv/2])
 
     yDCM = 21000.
     si111 = rm.CrystalSi(hkl=(1, 1, 1), tK=-171+273.15)
@@ -111,9 +109,8 @@ def build_beamline(nrays=raycing.nrays):
 
 
 def run_process(beamLine):
-    beamSource = beamLine.sources[0].shine()
-    beamLine.feMovableMaskLT.propagate(beamSource)
-    beamLine.feMovableMaskRB.propagate(beamSource)
+    beamSource = beamLine.source.shine()
+    beamTmp = beamLine.feMovableMask.propagate(beamSource)
 
     beamDCMglobal, beamDCMlocal1, beamDCMlocal2 =\
         beamLine.dcm.double_reflect(beamSource)
@@ -138,8 +135,9 @@ def run_process(beamLine):
                'beamQWPlocal': beamQWPlocal,
                'beamFSM2': beamFSM2
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -293,11 +291,19 @@ def plot_generator(plots, beamLine):
                             format(suffix, thick, dTheta))
                     except AttributeError:
                         pass
+                if showIn3D:
+                    beamLine.glowFrameName = \
+                        '{0}_{1}_{2:04.0f}um_{3:02d}.jpg'.format(
+                            prefix, suffix, thick, iTheta)
                 yield
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-2,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=24, generator=plot_generator,

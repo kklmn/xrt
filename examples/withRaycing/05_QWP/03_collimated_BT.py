@@ -16,7 +16,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = True
+showIn3D = False
 
 E0 = 9000.
 eLimits = E0, E0+2.5
@@ -44,14 +44,14 @@ def build_beamline(nrays=raycing.nrays):
     beamLine.dcm.bragg = math.asin(rm.ch / (2 * si111.d * E0))
     beamLine.dcm.cryst2perpTransl = fixedExit/2./math.cos(beamLine.dcm.bragg)
 
-    beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 1000, 0))
+    beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', [0, p - 1000, 0])
 
     beamLine.qwp = roe.OE(
         beamLine, 'QWP', (0, p, 0), material=(crystalDiamond,))
     beamLine.qwp.pitch = theta0
     q = 100.
 
-    beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', (0, p + q, 0))
+    beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', [0, p + q, 0])
 
     return beamLine
 

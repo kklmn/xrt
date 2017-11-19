@@ -18,6 +18,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 E0 = 9000.
 eLimits = E0, E0+2.5
 prefix = '07_conv_LT_slit'
@@ -90,8 +92,8 @@ def build_beamline(nrays=raycing.nrays):
 
 def run_process(beamLine):
     beamSource = beamLine.sources[0].shine()
-    beamLine.feMovableMaskLT.propagate(beamSource)
-    beamLine.feMovableMaskRB.propagate(beamSource)
+    beamTmp1 = beamLine.feMovableMaskLT.propagate(beamSource)
+    beamTmp2 = beamLine.feMovableMaskRB.propagate(beamSource)
 
     beamDCMglobal, beamDCMlocal1, beamDCMlocal2 =\
         beamLine.dcm.double_reflect(beamSource)
@@ -100,7 +102,7 @@ def run_process(beamLine):
     beamVFMglobal, beamVFMlocal = beamLine.vfm.reflect(beamDCMglobal)
     beamVDMglobal, beamVDMlocal = beamLine.vdm.reflect(beamVFMglobal)
 
-    beamLine.qwpSlit.propagate(beamVDMglobal)
+    beamTmp3 = beamLine.qwpSlit.propagate(beamVDMglobal)
     beamQWPglobal, beamQWPlocal = beamLine.qwp.reflect(beamVDMglobal)
     beamFSM2 = beamLine.fsm2.expose(beamQWPglobal)
 
@@ -117,8 +119,9 @@ def run_process(beamLine):
                'beamQWPlocal': beamQWPlocal,
                'beamFSM2': beamFSM2
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -247,7 +250,7 @@ def plot_generator(plots, beamLine):
     crystalDiamond.t = 2.5  # in mm
     posTheta = np.logspace(0, 13, 14, base=2)
     departureTheta = np.hstack((-posTheta[::-1], 0, posTheta))
-    halfOpenings = np.arange(1, 10) * 0.5
+    halfOpenings = np.arange(1, 11) * 0.5
 
     for polar in polarization:
         beamLine.sources[0].polarization = polar
@@ -276,11 +279,19 @@ def plot_generator(plots, beamLine):
                             format(suffix, halfOpening*2, dTheta))
                     except AttributeError:
                         pass
+                if showIn3D:
+                    beamLine.glowFrameName = \
+                        '{0}_{1}_slit{2:02.0f}mm_{3:02d}.jpg'.\
+                        format(prefix, suffix, halfOpening*2, iTheta)
                 yield
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-4,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=24, generator=plot_generator,

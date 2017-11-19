@@ -18,6 +18,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 E0 = 9000.
 eLimits = E0, E0+2.5
 prefix = '09_conv_LT_bentSph'
@@ -86,8 +88,8 @@ def build_beamline(nrays=raycing.nrays):
 
 def run_process(beamLine):
     beamSource = beamLine.sources[0].shine()
-    beamLine.feMovableMaskLT.propagate(beamSource)
-    beamLine.feMovableMaskRB.propagate(beamSource)
+    plotTemp1 = beamLine.feMovableMaskLT.propagate(beamSource)
+    plotTemp2 = beamLine.feMovableMaskRB.propagate(beamSource)
 
     beamDCMglobal, beamDCMlocal1, beamDCMlocal2 = \
         beamLine.dcm.double_reflect(beamSource)
@@ -112,8 +114,9 @@ def run_process(beamLine):
                'beamQWPlocal': beamQWPlocal,
                'beamFSM2': beamFSM2
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -266,8 +269,8 @@ def plot_generator(plots, beamLine):
                             format(prefix, plot.title, suffix, radius,
                                    iTheta)
                     else:
-                        fileName = '{0}_{1}_{2}_R={3:05.0f}mm_{4:02d}.png'\
-                            .format(prefix, plot.title, suffix, radius,
+                        fileName = '{0}_{1}_{2}_R={3:05.0f}mm_{4:02d}.png'.\
+                            format(prefix, plot.title, suffix, radius,
                                     iTheta)
                     plot.saveName = fileName
 #                    plot.persistentName = fileName + '.pickle'
@@ -282,11 +285,23 @@ def plot_generator(plots, beamLine):
                                 format(suffix, radius, dTheta))
                     except AttributeError:
                         pass
+                if showIn3D:
+                    if radiusFactor is np.inf:
+                        beamLine.glowFrameName = '{0}_{1}_R=inf_{3:02d}.jpg'.\
+                            format(prefix, suffix, radius, iTheta)
+                    else:
+                        beamLine.glowFrameName = \
+                            '{0}_{1}_R={2:05.0f}mm_{3:02d}.jpg'.\
+                            format(prefix, suffix, radius, iTheta)
                 yield
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-2,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=24, generator=plot_generator,

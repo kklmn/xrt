@@ -16,7 +16,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = True
+showIn3D = False
 
 E0 = 9000.
 eLimits = E0, E0+2.5
@@ -195,18 +195,16 @@ def plot_generator(plots, beamLine):
                 plot.textPanel.set_text('{0}'.format(suffix))
             except AttributeError:
                 pass
+        if showIn3D:
+            beamLine.glowFrameName = '{0}_{1}.jpg'.format(prefix, suffix)
         yield
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        gen = plot_generator([], beamLine)
-        if sys.version_info < (3, 1):
-            gen.next()
-        else:
-            next(gen)
-        beamLine.glow(scale=3e2, centerAt='QWP')
+        beamLine.glow(scale=3e2, centerAt='QWP', startFrom=1,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
         return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
