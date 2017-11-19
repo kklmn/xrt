@@ -1418,8 +1418,11 @@ class xrtGlow(qt.QWidget):
             if self.isHidden():
                 self.show()
             image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
-            print(self.bl.glowFrameName)
-            image.save(self.bl.glowFrameName)
+            try:
+                print(self.bl.glowFrameName)
+                image.save(self.bl.glowFrameName)
+            except AttributeError:
+                print('no glowFrameName was given!')
         print("Finished with the movie.")
 
     def centerEl(self, oeName):
@@ -2736,12 +2739,20 @@ class xrtGlWidget(qt.QGLWidget):
             cY = 0
             wf = r
         else:
-            opening = oe.opening
-            w = np.abs(opening[1]-opening[0]) * 0.5
-            h = np.abs(opening[3]-opening[2]) * 0.5
-            cX = 0.5 * (opening[1]+opening[0])
-            cY = 0.5 * (opening[3]+opening[2])
-            wf = max(min(w, h), 2)
+            for akind, d in zip(oe.kind, oe.opening):
+                if akind.startswith('l'):
+                    left = d
+                elif akind.startswith('r'):
+                    right = d
+                elif akind.startswith('b'):
+                    bottom = d
+                elif akind.startswith('t'):
+                    top = d
+            w = np.abs(right-left) * 0.5
+            h = np.abs(top-bottom) * 0.5
+            cX = (right+left) * 0.5
+            cY = (top+bottom) * 0.5
+            wf = max(min(w, h), 2.5)
         isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
         if isBeamStop:  # BeamStop
             limits = list(zip([0], [w], [0], [h]))
