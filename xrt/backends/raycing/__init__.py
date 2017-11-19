@@ -753,11 +753,14 @@ class BeamLine(object):
         self.cosAzimuth = np.cos(value)
 
     def prepare_flow(self):
-        def _warning(v1, v2):
+        def _warning(v1=None, v2=None):
+            if v1 is None or v2 is None:
+                addw = ""
+            else:
+                addw = "\nThis beam has been used for {0} and is attempted"\
+                    " for {1}.".format(v1, v2)
             print("Warning: the flow seems corrupt. Make sure each propagation"
-                  " method assigns returned beams to local variables. \n"
-                  "This beam has been used for {0} and is attempted for {1}.".
-                  format(v1, v2))
+                  " method assigns returned beams to local variables." + addw)
 
         if self.flowSource != 'legacy':
             return
@@ -791,6 +794,7 @@ class BeamLine(object):
                                     self.beamsRevDict[argVal]
                             except KeyError:
                                 segment[iseg][argName] = 'beamTmp'
+                                _warning()
         self.flowSource = 'prepared_to_run'
 
     def auto_align(self, oe, beam):
