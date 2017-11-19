@@ -831,7 +831,10 @@ class BeamLine(object):
             inBeam = copy.deepcopy(beam)  # Beam(nrays=2)
             for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
                 field = getattr(beam, fieldName)
-                fNorm = np.sum(field[good] * intensity) / totalI
+                if totalI == 0:
+                    fNorm = 1.
+                else:
+                    fNorm = np.sum(field[good] * intensity) / totalI
                 try:
                     setattr(inBeam, fieldName,
                             np.ones(2) * fNorm)
@@ -991,11 +994,14 @@ class BeamLine(object):
             good = (beam.state == 1) | (beam.state == 2)
             intensity = beam.Jss[good] + beam.Jpp[good]
             totalI = np.sum(intensity)
-            beam.wCenter = np.array(
-                [np.sum(beam.x[good] * intensity),
-                 np.sum(beam.y[good] * intensity),
-                 np.sum(beam.z[good] * intensity)]) /\
-                totalI
+            if totalI == 0:
+                beam.wCenter = np.array([0., 0., 0.])
+            else:
+                beam.wCenter = np.array(
+                    [np.sum(beam.x[good] * intensity),
+                     np.sum(beam.y[good] * intensity),
+                     np.sum(beam.z[good] * intensity)]) /\
+                    totalI
 
         if self.flow is not None:
             beamDict = OrderedDict()
