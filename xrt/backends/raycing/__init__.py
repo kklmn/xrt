@@ -737,7 +737,8 @@ class BeamLine(object):
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
         self.flowSource = 'legacy'
-        self.beamsRevDict = dict()
+        self.beamsRevDict = OrderedDict()
+        self.beamsRevDictUsed = {}
         self.blViewer = None
         self.statusSignal = None
 
@@ -752,6 +753,12 @@ class BeamLine(object):
         self.cosAzimuth = np.cos(value)
 
     def prepare_flow(self):
+        def _warning(v1, v2):
+            print("Warning: the flow seems corrupt. Make sure each propagation"
+                  " method assigns returned beams to local variables. \n"
+                  "This beam has been used for {0} and is attempted for {1}.".
+                  format(v1, v2))
+
         if self.flowSource != 'legacy':
             return
         frame = inspect.currentframe()
@@ -774,6 +781,11 @@ class BeamLine(object):
                 for iseg in [2, 3]:
                     for argName, argVal in segment[iseg].items():
                         if len(re.findall('beam', str(argName))) > 0:
+                            if iseg == 3:
+                                if argVal in self.beamsRevDictUsed:
+                                    _warning(self.beamsRevDictUsed[argVal],
+                                             segment[0])
+                                self.beamsRevDictUsed[argVal] = segment[0]
                             segment[iseg][argName] = self.beamsRevDict[argVal]
         self.flowSource = 'prepared_to_run'
 
@@ -919,8 +931,7 @@ class BeamLine(object):
                                              list(segment[3].values())):
                     self.beamsDict[beamName] = outBeam
             else:
-                self.beamsDict[str(list(segment[3].values())[0])] =\
-                    outBeams
+                self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
     def glow(self, scale=[], centerAt='', startFrom=0, generator=None,
              generatorArgs=[]):
