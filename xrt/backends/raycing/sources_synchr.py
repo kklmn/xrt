@@ -1071,6 +1071,8 @@ class Undulator(object):
         return (Bx, By, Bz)
 
     def reset(self):
+        """This method must be invoked after any changes in the undulator
+        parameters."""
         self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
             (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         # wnu = 2 * PI * (0.01 * C) / self.L0 / 1e-3 / E2W
@@ -1095,6 +1097,8 @@ class Undulator(object):
         self.Theta_max = float(self.xPrimeMax)
         self.Psi_min = -float(self.zPrimeMax)
         self.Psi_max = float(self.zPrimeMax)
+
+        self.energies = np.linspace(self.eMin, self.eMax, self.eN)
         self.E_min = float(np.min(self.energies))
         self.E_max = float(np.max(self.energies))
 
