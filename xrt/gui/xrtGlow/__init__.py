@@ -54,8 +54,8 @@ from collections import OrderedDict
 from ...backends import raycing
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
-from ...backends.raycing import screens as rscreens  # analysis:ignore
-#from ...backends.raycing import run as rrun
+from ...backends.raycing import oes as roes
+from ...backends.raycing import apertures as rapertures
 from ..commons import qt
 from ..commons import gl
 
@@ -2145,17 +2145,11 @@ class xrtGlWidget(qt.QGLWidget):
                 try:
                     oeToPlot = self.oesList[oeString][0]
                     is2ndXtal = self.oesList[oeString][3]
-                    elType = str(type(oeToPlot))
-#                    if len(re.findall('raycing.sour', elType.lower())) > 0:
-#                        # if hasattr(oeToPlot, 'Ee'): #  not 'eE'
-#                        if isinstance(oeToPlot, (rsources.BendingMagnet,
-#                                                 rsources.Wiggler,
-#                                                 rsources.Undulator)):
-#                            self.plotSource(oeToPlot)
-                    if len(re.findall('raycing.oe', elType.lower())) > 0:
+                    if isinstance(oeToPlot, roes.OE):
                         self.setMaterial('Si')
                         self.plotOeSurface(oeToPlot, is2ndXtal)
-                    elif len(re.findall('raycing.apert', elType)) > 0:
+                    if isinstance(oeToPlot, (rapertures.RectangularAperture,
+                                             rapertures.RoundAperture)):
                         self.setMaterial('Cu')
                         self.plotAperture(oeToPlot)
                     else:
@@ -2194,17 +2188,14 @@ class xrtGlWidget(qt.QGLWidget):
         if len(self.oesToPlot) > 0:
             for oeString in self.oesToPlot:
                 oeToPlot = self.oesList[oeString][0]
-                elType = str(type(oeToPlot))
-                if len(re.findall('raycing.sour', elType.lower())) > 0:
-                    # if hasattr(oeToPlot, 'Ee'): #  not 'eE'
-                    if isinstance(oeToPlot, (rsources.BendingMagnet,
-                                             rsources.Wiggler,
-                                             rsources.Undulator)):
-                        self.plotSource(oeToPlot)
-                elif len(re.findall('raycing.screens.Sc', elType)) > 0:
-                    self.plotScreen(oeToPlot)
-                elif len(re.findall('raycing.screens.Hemispher', elType)) > 0:
+                if isinstance(oeToPlot, (rsources.BendingMagnet,
+                                         rsources.Wiggler,
+                                         rsources.Undulator)):
+                    self.plotSource(oeToPlot)
+                elif isinstance(oeToPlot, rscreens.HemisphericScreen):
                     self.plotHemiScreen(oeToPlot)
+                elif isinstance(oeToPlot, rscreens.Screen):
+                    self.plotScreen(oeToPlot)
                 else:
                     continue
 
