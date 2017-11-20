@@ -2166,13 +2166,14 @@ class PlaneGrating(OE):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.rho_1 = 1. / self.rho  # Period of the grating in [mm]
+        self.illuminatedGroove = 0
 
     def __pop_kwargs(self, **kwargs):
         self.rho = kwargs.pop('rho')
         self.blaze = raycing.auto_units_angle(
             kwargs.pop('blaze', np.pi*0.4999))
         self.aspect = kwargs.pop('aspect', 0.5)
-        self.depth = kwargs.pop('depth', 0.5e-3)
+        self.depth = kwargs.pop('depth', 1e-3)
         return kwargs
 
     def assign_auto_material_kind(self, material):
@@ -2219,7 +2220,12 @@ class PlaneGrating(OE):
         dyRel[gr] = b_c[gr] * self.depth
         dy[gr] = yL[gr] - dyRel[gr]
         bottom = (dy > abs(dyRel)) & (dy < groove-abs(dyRel))
-        # bottom = (dy>0) & (dy<groove)
+
+        if len(dy[bottom]) > 0:
+            ilG = (np.max(dy[bottom]) - np.min(dy[bottom])) / self.rho_1
+            if ilG > self.illuminatedGroove:
+                self.illuminatedGroove = ilG
+
         z2[bottom] = -self.depth
         y2[bottom] += dy[bottom] - yL[bottom]
         x2[bottom] += a_c[bottom] * self.depth
@@ -2245,7 +2251,7 @@ class PlaneGrating(OE):
         illuminated surface area. It returns the fraction of the longitudinal
         (along *y*) dimension that is illuminated.
         """
-        return self.aspect
+        return self.aspect + self.illuminatedGroove
 
 
 class VLSGrating(OE):
@@ -2276,16 +2282,18 @@ class VLSGrating(OE):
             self.ticks.append(p0)
             p0 += self.__get_period(p0)
         self.ticks = np.array(self.ticks)
+        self.illuminatedGroove = 0
+        self.rho_1 = 1. / self.rho0
 
     def __get_period(self, coord):
-        return 1. / self.rho0 / (self.coeffs[0] + 2. * self.coeffs[1] * -coord
-                                 + 3. * self.coeffs[2] * coord**2)
+        return 1. / self.rho0 / (self.coeffs[0] + 2. * self.coeffs[1] *
+                                 coord + 3. * self.coeffs[2] * coord**2)
 
     def __pop_kwargs(self, **kwargs):
         self.rho0 = kwargs.pop('rho')
         self.aspect = kwargs.pop('aspect', 0.5)
         self.coeffs = kwargs.pop('coeffs', [1, 0, 0])
-        self.depth = kwargs.pop('depth')
+        self.depth = kwargs.pop('depth', 1e-3)  # 1 micron depth
         return kwargs
 
     def assign_auto_material_kind(self, material):
@@ -2336,6 +2344,14 @@ class VLSGrating(OE):
         dyRel[gr] = b_c[gr] * self.depth
         dy[gr] = yL[gr] - dyRel[gr]
         bottom = (dy > abs(dyRel)) & (dy < groove-abs(dyRel))
+
+        if len(dy[bottom]) > 0:
+            ilG = np.max(dy[bottom] / periods[bottom]) -\
+                np.min(dy[bottom] / periods[bottom])
+
+            if ilG > self.illuminatedGroove:
+                self.illuminatedGroove = ilG
+            print("ilG", self.illuminatedGroove)
         # bottom = (dy>0) & (dy<groove)
         z2[bottom] = -self.depth
         y2[bottom] += dy[bottom] - yL[bottom]
