@@ -18,6 +18,8 @@ import xrt.backends.raycing.run as rr
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 suffix = ''
 R0 = 25000
 xPrimeMax = 0.6
@@ -160,6 +162,7 @@ kwargs = dict(
     period=84., n=36,
     xPrimeMax=xPrimeMax, zPrimeMax=zPrimeMax,
     xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
+#    targetOpenCL='CPU',
     filamentBeam=filamentBeam)
 xlimits = [-xPrimeMax*R0*1e-3, xPrimeMax*R0*1e-3]
 zlimits = [-zPrimeMax*R0*1e-3, zPrimeMax*R0*1e-3]
@@ -196,6 +199,8 @@ def run_process(beamLine):
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     outDict = {'beamSource': beamSource,
                'beamFSM1': beamFSM1}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -352,11 +357,16 @@ def afterScript(plots, complexPlotsPCA, beamLine):
 
 def main():
     beamLine = build_beamline()
-    plots, plotsE, complexPlotsPCA = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=repeats,
-                         afterScript=afterScript, afterScriptArgs=[
-                             plots, complexPlotsPCA, beamLine],
-                         beamLine=beamLine)
+    if showIn3D:
+        beamLine.fsmExpX = np.linspace(xlimits[0], xlimits[1], bins+1)
+        beamLine.fsmExpZ = np.linspace(zlimits[0], xlimits[1], bins+1)
+        beamLine.glow()
+    else:
+        plots, plotsE, complexPlotsPCA = define_plots(beamLine)
+        xrtr.run_ray_tracing(plots, repeats=repeats,
+                             afterScript=afterScript, afterScriptArgs=[
+                                 plots, complexPlotsPCA, beamLine],
+                             beamLine=beamLine)
 
 
 def plotPCA():

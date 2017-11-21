@@ -317,6 +317,8 @@ import xrt.backends.raycing.run as rr
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 # one of 'u', 'w', 'bm', 'eu', 'wu':
 sourceType = 'u'
 # one of 'mono', '1harmonic', 'smaller', 'wide'
@@ -357,6 +359,7 @@ if sourceType == 'u':
         # increased for the near field and custom magnetic field cases.
         # gp=1e-2,  # Precision of the integration.
 #        targetOpenCL=(0, 0),
+#        targetOpenCL='CPU',
 #        precisionOpenCL='float32',
         #taper = [0 ,10],
         #eEpsilonX=0.0, eEpsilonZ=0.0)  # Emittance [nmrad]
@@ -503,6 +506,8 @@ def run_process(beamLine):
                    'beamFSM0': beamFSM0,
                    'beamFSM1': beamFSM1, 'beamFSM1zoom': beamFSM1}
     print('shine time = {0}s'.format(time.time() - startTime))
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -728,12 +733,13 @@ def afterScript(*plots):
 
 def main():
     beamLine = build_beamline()
-    plots, plotsE = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=1,
-                         # afterScript=afterScript, afterScriptArgs=plots,
-                         beamLine=beamLine)
+    if showIn3D:
+        beamLine.glow()
+    else:
+        plots, plotsE = define_plots(beamLine)
+        xrtr.run_ray_tracing(plots, repeats=1,
+                             # afterScript=afterScript, afterScriptArgs=plots,
+                             beamLine=beamLine)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
 if __name__ == '__main__':
     main()

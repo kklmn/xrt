@@ -15,6 +15,8 @@ import xrt.backends.raycing.materials as rm
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 prefix = 'taper_'
 xlimits = [-0.9, 0.9]
 zlimits = [-0.9, 0.9]
@@ -29,6 +31,7 @@ def build_beamline(nrays=2e5):
         period=31.4, K=2.1392-0.002, n=63, eE=6.08, eI=0.1, xPrimeMax=1.5e-2,
         zPrimeMax=1.5e-2, eMin=eMin, eMax=eMax, distE='BW',
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
+#        targetOpenCL='CPU',
         taper=(1.09, 11.254))
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, 90000, 0))
     return beamLine
@@ -39,6 +42,8 @@ def run_process(beamLine):
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     outDict = {'beamSource': beamSource,
                'beamFSM1': beamFSM1}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -79,9 +84,12 @@ def afterScript(plots):
 
 def main():
     beamLine = build_beamline()
-    plots, plotsE = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=100, beamLine=beamLine,
-                         afterScript=afterScript, afterScriptArgs=[plots])
+    if showIn3D:
+        beamLine.glow()
+    else:
+        plots, plotsE = define_plots(beamLine)
+        xrtr.run_ray_tracing(plots, repeats=100, beamLine=beamLine,
+                             afterScript=afterScript, afterScriptArgs=[plots])
 
 
 def plot():

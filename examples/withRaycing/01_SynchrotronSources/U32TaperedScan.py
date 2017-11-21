@@ -15,6 +15,8 @@ import xrt.backends.raycing.run as rr
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 prefix = 'taper_'
 xlimits = [-5.0, 5.0]
 zlimits = [-2.5, 2.5]
@@ -34,6 +36,7 @@ def build_beamline(nrays=5e5):
         zPrimeMax=1.5e-2, eMin=eMin, eMax=eMax, distE='BW',
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
         uniformRayDensity=True,
+#        targetOpenCL='CPU',
         taper=(1.09, 11.254))
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, 75000, 0))
@@ -45,6 +48,8 @@ def run_process(beamLine):
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     outDict = {'beamSource': beamSource,
                'beamFSM1': beamFSM1}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -83,10 +88,13 @@ def plot_generator(plots, beamLine):
 
 def main():
     beamLine = build_beamline()
-    plots, plotsE = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=20, beamLine=beamLine,
-                         generator=plot_generator, threads=4,
-                         globalNorm=1)
+    if showIn3D:
+        beamLine.glow()
+    else:
+        plots, plotsE = define_plots(beamLine)
+        xrtr.run_ray_tracing(plots, repeats=20, beamLine=beamLine,
+                             generator=plot_generator, threads=4,
+                             globalNorm=1)
 
 
 if __name__ == '__main__':

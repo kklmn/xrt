@@ -14,12 +14,14 @@ import xrt.backends.raycing.run as rr
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 #E0 = 4850.
 E0 = 11350.
 K = 1.91988
 
-#what, repeats = '-rays', 100
-what, repeats = '-wave', 1000
+what, repeats = '-rays', 100
+#what, repeats = '-wave', 1000
 
 suffix = what
 
@@ -41,6 +43,7 @@ kwargs = dict(
     eE=3., eI=0.5, eEspread=0.001,
     eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9.539, betaZ=1.982,
     period=18.5, n=108, K=K,
+#    targetOpenCL='CPU',
     xPrimeMax=accMax, zPrimeMax=accMax,
     xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False)
 if 'near' in prefix:
@@ -78,6 +81,8 @@ def run_process(beamLine):
         beamFSM1 = beamLine.fsm1.expose(beamSource)
         outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1}
     print('shine time = {0}s'.format(time.time() - startTime))
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -128,10 +133,14 @@ def define_plots(beamLine):
 
 def main():
     beamLine = build_beamline()
-    plots = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine)
+    if showIn3D:
+        beamLine.fsmExpX = np.linspace(-lim, lim, bins+1)
+        beamLine.fsmExpZ = np.linspace(-lim, lim, bins+1)
+        beamLine.glow()
+    else:
+        plots = define_plots(beamLine)
+        xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()
