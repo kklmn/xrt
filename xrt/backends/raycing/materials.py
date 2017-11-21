@@ -527,7 +527,7 @@ class Multilayer(object):
     """
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
-                 thicknessError=0., power=2.):
+                 thicknessError=0., idThickness=0., power=2.):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
@@ -554,6 +554,15 @@ class Multilayer(object):
         *thicknessError*: float
             RMS relative error of layer thickness, applied to both layers.
 
+        *idThickness*: float
+            RMS thickness :math:`sigma_{j,j-1}` of the
+            interdiffusion/roughness in Å. According to the Nevot-Croce model
+            the reflectivity at each interface is attenuated by a factor
+            of :math:`exp(-2k_{j,z}k_{j-1,z}\sigma^{2}_{j,j-1}`,
+            where :math:`k_{j,z}` is longitudinal component of the wave vector
+            in j-th layer.
+
+
         """
         self.tLayer = tLayer
         self.tThicknessHigh = float(tThickness)  # in Å
@@ -569,6 +578,7 @@ class Multilayer(object):
         self.kind = 'multilayer'
         self.geom = 'Bragg reflected'
         self.tError = thicknessError
+        self.idThickness = idThickness
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:
@@ -700,15 +710,23 @@ class Multilayer(object):
         Qt = (Q2 + (nt-1)*k28)**0.5
         Qb = (Q2 + (nb-1)*k28)**0.5
         Qs = (Q2 + (ns-1)*k28)**0.5
+        id2 = self.idThickness**2
 
-        rvt_s = np.complex128((Q-Qt) / (Q+Qt))
-        rtb_s = np.complex128((Qt-Qb) / (Qt+Qb))
+        roughtb = np.exp(-0.5 * Qt * Qb * id2)
+        rtb_s = np.complex128((Qt-Qb) / (Qt+Qb) * roughtb)
+        rtb_p = np.complex128((Qt/nt*nb - Qb/nb*nt) / (Qt/nt*nb + Qb/nb*nt) *
+                              roughtb)
         rbt_s = -rtb_s
-        rbs_s = np.complex128((Qb-Qs) / (Qb+Qs))
-        rvt_p = np.complex128((Q*nt - Qt/nt) / (Q*nt + Qt/nt))
-        rtb_p = np.complex128((Qt/nt*nb - Qb/nb*nt) / (Qt/nt*nb + Qb/nb*nt))
         rbt_p = -rtb_p
-        rbs_p = np.complex128((Qb/nb*ns - Qs/ns*nb) / (Qb/nb*ns + Qs/ns*nb))
+
+        roughvt = np.exp(-0.5 * Q * Qt * id2)
+        rvt_s = np.complex128((Q-Qt) / (Q+Qt) * roughvt)
+        rvt_p = np.complex128((Q*nt - Qt/nt) / (Q*nt + Qt/nt) * roughvt)
+
+        roughbs = np.exp(-0.5 * Qb * Qs * id2)
+        rbs_s = np.complex128((Qb-Qs) / (Qb+Qs) * roughbs)
+        rbs_p = np.complex128((Qb/nb*ns - Qs/ns*nb) / (Qb/nb*ns + Qs/ns*nb) *
+                              roughbs)
         rj_s, rj_p = rbs_s, rbs_p  # bottom layer to substrate
         ri_s = np.zeros_like(rj_s)
         ri_p = np.zeros_like(rj_p)
