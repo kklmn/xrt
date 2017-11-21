@@ -687,8 +687,8 @@ def compare_reflectivity_coated():
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel('reflectivity')
-        ax.set_xlim(100, 3e4)
-        ax.set_ylim(1e-5, 2)
+        ax.set_xlim(100, 4e4)
+        ax.set_ylim(1e-7, 2)
         fig.suptitle(stripe.name + ' ' + reprAngle, fontsize=16)
         x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
         p1, = ax.semilogy(x, R2s, '-k', label='s CXRO')
@@ -718,7 +718,7 @@ def compare_reflectivity_coated():
         fig.savefig(fname + '.png')
 
     dataDir = os.path.join('', 'CXRO-Reflectivities')
-    E = np.logspace(2., 4.+math.log10(3.), 1000)
+    E = np.logspace(2., 4.+math.log10(4.), 1000)
     mSi = rm.Material('Si', rho=2.33)
     mSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.65)
 #    mB4C = rm.Material(('B', 'C'), quantities=(4, 1), rho=2.52)
@@ -726,10 +726,10 @@ def compare_reflectivity_coated():
     mC = rm.Material('C', rho=3.5, kind='mirror')
     cRhSi = rm.CoatedMirror(coating=mRh, cThickness=300,
                             substrate=mSi, surfaceRoughness=20,
-                            substRoughness=20, name='Rh on Si')
+                            substRoughness=20, name='30 nm Rh on Si')
     cCSiO2 = rm.CoatedMirror(coating=mC, cThickness=200,
                              substrate=mSiO2, surfaceRoughness=10,
-                             substRoughness=10, name='Diamond on Quartz')
+                             substRoughness=10, name='20 nm Diamond on Quartz')
     for_one_material(cRhSi, mRh,
                      os.path.join(dataDir, "RhSi_s_rough2.CXRO.gz"),
                      os.path.join(dataDir, "RhSi_p_rough2.CXRO.gz"),
