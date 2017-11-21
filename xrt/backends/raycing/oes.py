@@ -174,7 +174,7 @@ class DicedOE(OE):
 
     def facet_center_z(self, x, y):
         """Z of the facet centers at (*x*, *y*)."""
-        return 0  # just flat
+        return np.zeros_like(y)  # just flat
 
     def facet_center_n(self, x, y):
         """Surface normal or (Bragg normal and surface normal)."""
@@ -182,7 +182,7 @@ class DicedOE(OE):
 
     def facet_delta_z(self, u, v):
         """Local Z in the facet coordinates."""
-        return 0
+        return np.zeros_like(u)
 
     def facet_delta_n(self, u, v):
         """Local surface normal (always without Bragg normal!) in the facet
@@ -1571,7 +1571,7 @@ class ParaboloidFlatLens(Plate):
 
     def local_z2(self, x, y):
         """Determines the surface of OE at (x, y) position."""
-        return 0  # just flat
+        return self.local_z(x, y)
 
     def local_n1(self, x, y):
         """Determines the normal vector of OE at (x, y) position. If OE is an

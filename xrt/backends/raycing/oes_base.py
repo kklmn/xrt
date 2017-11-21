@@ -1050,11 +1050,11 @@ class OE(object):
             yaw = self.yaw
 
         if dx:
-            lb.x[:] += dx
+            lb.x += dx
         if dy:
-            lb.y[:] += dy
+            lb.y += dy
         if dz:
-            lb.z[:] += dz
+            lb.z += dz
 
         if self.extraPitch or self.extraRoll or self.extraYaw:
             raycing.rotate_beam(
