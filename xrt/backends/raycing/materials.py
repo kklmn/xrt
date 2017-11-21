@@ -556,11 +556,7 @@ class Multilayer(object):
 
         *idThickness*: float
             RMS thickness :math:`sigma_{j,j-1}` of the
-            interdiffusion/roughness in Å. According to the Nevot-Croce model
-            the reflectivity at each interface is attenuated by a factor
-            of :math:`exp(-2k_{j,z}k_{j-1,z}\sigma^{2}_{j,j-1}`,
-            where :math:`k_{j,z}` is longitudinal component of the wave vector
-            in j-th layer.
+            interdiffusion/roughness in Å.
 
 
         """
@@ -687,6 +683,13 @@ class Multilayer(object):
         until :math:`R_1` is reached, where the 0th layer is vacuum and
         :math:`Q_0 = Q`.
 
+        If the interdiffusion thickness is not zero,
+        the reflectivity at each interface is attenuated by a factor
+        of :math:`exp(-2k_{j,z}k_{j-1,z}\sigma^{2}_{j,j-1})`,
+        where :math:`k_{j,z}` is longitudinal component of the wave vector
+        in j-th layer [Nevot-Croce].
+
+
         The above formulas refer to *s* polarization. The *p* part differs at
         the interface:
 
@@ -698,6 +701,9 @@ class Multilayer(object):
 
         and thus the *p* polarization part requires a separate recursive
         chain.
+
+        .. [Nevot-Croce] L. Nevot and P. Croce, Rev. Phys. Appl. **15**,
+            (1980) 761
         """
         k = E / CHBAR
         nt = self.tLayer.get_refractive_index(E).conjugate() if self.tLayer else 1.  # analysis:ignore
