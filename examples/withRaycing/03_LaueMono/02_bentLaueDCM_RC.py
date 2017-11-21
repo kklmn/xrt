@@ -17,6 +17,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 prefix = '02_bentLaueDCM'
 
 energies = [9e3, 1.6e4, 2.5e4, 3.6e4]
@@ -66,8 +68,9 @@ def run_process(beamLine):
                'beamLaueDCMglobal2': beamLaueDCMglobal2,
                'beamLaueDCMlocal2': beamLaueDCMlocal2,
                'beamFSM2': beamFSM2}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -179,8 +182,19 @@ def plot_generator(plots, beamLine):
                                         repr(round(dtheta, 3))))
                             except:
                                 pass
+                        if showIn3D:
+                            beamLine.glowFrameName =\
+                                '{0}_{1}_R={2}_{3:02.0f}keV_{4}{5:.3f}'\
+                                'mrad.jpg'.format(prefix, suffix, radiusStr1,
+                                                  energy*1e-3, sourcename,
+                                                  dtheta)
                         yield
-                        rcIntensity.append(plots[-1].intensity)
+                        if not showIn3D:
+                            rcIntensity.append(plots[-1].intensity)
+
+                    if showIn3D:
+                        return
+
                     fig3 = plt.figure(figsize=(7, 5), dpi=72)
                     ax1 = plt.subplot(111)
                     ax1.set_title(r'Rocking curve @$E=${0}keV and $R=${1}'.
@@ -200,6 +214,10 @@ def plot_generator(plots, beamLine):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[30, 3, 30], centerAt='LaueDCM1', startFrom=1,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=36, generator=plot_generator,

@@ -15,6 +15,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 prefix = '01_BentLaueSCM'
 
 energies = [9e3, 1.6e4, 2.5e4, 3.6e4]
@@ -52,6 +54,8 @@ def run_process(beamLine):
                'beamLaueSCMglobal': beamLaueSCMglobal,
                'beamLaueSCMlocal': beamLaueSCMlocal,
                'beamFSM2': beamFSM2}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -114,8 +118,9 @@ def plot_generator(plots, beamLine):
                 eAxisMin = energy * (1 - dEE/2.)
                 eAxisMax = energy * (1 + dEE/2.)
                 fsm2z = qLaueSCM * np.tan(2 * theta0)
-                plots[-1].yaxis.limits = fsm2z + limitsFSM[0], \
-                    fsm2z + limitsFSM[1]
+                if plots:
+                    plots[-1].yaxis.limits = fsm2z + limitsFSM[0], \
+                        fsm2z + limitsFSM[1]
                 alpha = 0  # asymmetry angle:
                 pitch = np.pi/2 + theta0 + alpha
                 beamLine.laueSCM.pitch = pitch
@@ -141,17 +146,25 @@ def plot_generator(plots, beamLine):
                                 u'{0}\n$R=${1}\n'.format('', radiusStr2))
                         except:
                             pass
+                    if showIn3D:
+                        beamLine.glowFrameName =\
+                            '{0}_{1}_R={2}_{3:02.0f}keV_{4}.jpg'.format(
+                                prefix, suffix, radiusStr1, energy*1e-3,
+                                sourcename)
                     yield
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[30, 3, 30], centerAt='LaueSCM', startFrom=1,
+                      generator=plot_generator, generatorArgs=[[], beamLine])
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=360, generator=plot_generator,
         beamLine=beamLine, processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()
