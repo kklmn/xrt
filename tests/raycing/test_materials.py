@@ -679,6 +679,68 @@ def compare_reflectivity():
                      os.path.join(dataDir, "Rh2mrad_p.xf1f2.gz"),
                      2e-3, '@ 2 mrad')
 
+def compare_reflectivity_coated():
+    """A comparison subroutine used in the module test suit."""
+    def for_one_material(stripe, strOnly, refs, refp, theta, reprAngle):
+        fig = plt.figure()
+        fig.subplots_adjust(right=0.86)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('energy (eV)')
+        ax.set_ylabel('reflectivity')
+        ax.set_xlim(100, 3e4)
+        ax.set_ylim(1e-5, 2)
+        fig.suptitle(stripe.name + ' ' + reprAngle, fontsize=16)
+        x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
+        p1, = ax.semilogy(x, R2s, '-k', label='s CXRO')
+        x, R2s = np.loadtxt(refp, unpack=True, skiprows=2, usecols=(0, 1))
+        p2, = ax.semilogy(x, R2s, '--k', label='p CXRO')
+        refl = stripe.get_amplitude(E, math.sin(theta))
+        rs, rp = refl[0], refl[1]
+        rs0, rp0 = strOnly.get_amplitude(E, math.sin(theta))[0:2]
+        p3, = ax.semilogy(E, abs(rs)**2, '-r')
+        p4, = ax.semilogy(E, abs(rp)**2, '--r')
+        p5, = ax.semilogy(E, abs(rs0)**2, '-m')
+        p6, = ax.semilogy(E, abs(rp0)**2, '--c')
+        l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
+        ax.legend([p1, p3, p5], ['CXRO', 'xrt', 'bulk coating'], loc=1)
+        ax.add_artist(l1)
+# phases:
+        ax2 = ax.twinx()
+        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        phi = np.unwrap(np.angle(rs * rp.conj()))
+        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        ax2.yaxis.set_major_formatter(formatter)
+        for tl in ax2.get_yticklabels():
+            tl.set_color('c')
+
+        fname = 'MirrorRefl' + stripe.name + "".join(reprAngle.split())
+        fig.savefig(fname + '.png')
+
+    dataDir = os.path.join('', 'CXRO-Reflectivities')
+    E = np.logspace(2., 4.+math.log10(3.), 1000)
+    mSi = rm.Material('Si', rho=2.33)
+    mSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.65)
+#    mB4C = rm.Material(('B', 'C'), quantities=(4, 1), rho=2.52)
+    mRh = rm.Material('Rh', rho=12.41, kind='mirror')
+    mC = rm.Material('C', rho=3.5, kind='mirror')
+    cRhSi = rm.CoatedMirror(coating=mRh, cThickness=300,
+                            substrate=mSi, surfaceRoughness=20,
+                            substRoughness=20, name='Rh on Si')
+    cCSiO2 = rm.CoatedMirror(coating=mC, cThickness=200,
+                             substrate=mSiO2, surfaceRoughness=10,
+                             substRoughness=10, name='Diamond on Quartz')
+    for_one_material(cRhSi, mRh,
+                     os.path.join(dataDir, "RhSi_s_rough2.CXRO.gz"),
+                     os.path.join(dataDir, "RhSi_p_rough2.CXRO.gz"),
+                     4e-3, '@ 4 mrad,\nRMS roughness 2 nm')
+
+    for_one_material(cCSiO2, mC,
+                     os.path.join(dataDir, "CSiO2_s_rough1.CXRO.gz"),
+                     os.path.join(dataDir, "CSiO2_p_rough1.CXRO.gz"),
+                     np.radians(0.2), '@ 0.2 deg,\nRMS roughness 1 nm')
+
+
 
 def compare_reflectivity_slab():
     """A comparison subroutine used in the module test suit."""
@@ -1013,6 +1075,8 @@ def run_tests():
 #(part of XOP):
 #    compare_reflectivity()
 
+    compare_reflectivity_coated()
+
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
 #    compare_reflectivity_slab()
@@ -1020,7 +1084,7 @@ def run_tests():
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
 #    compare_reflectivity_multilayer()
-    compare_reflectivity_multilayer_interdiffusion()
+#    compare_reflectivity_multilayer_interdiffusion()
 #    compare_dTheta()
 
 #Compare the calculated absorption coefficient with that by XCrossSec

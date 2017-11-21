@@ -532,7 +532,7 @@ class Multilayer(object):
 
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
-                 idThickness=0., power=2., substRoughness=0):
+                 idThickness=0., power=2., substRoughness=0, name=''):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
@@ -577,6 +577,10 @@ class Multilayer(object):
         self.geom = 'Bragg reflected'
         self.idThickness = idThickness
         self.subRough = substRoughness
+        if name:
+            self.name = name
+        else:
+            self.name = ''
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:
