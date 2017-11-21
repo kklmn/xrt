@@ -2291,7 +2291,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                             combo.setInsertPolicy(2)
                             view.setIndexWidget(child1.index(), combo)
                         elif any(paraStr in paramName.lower() for paraStr in
-                                 ['material', 'tlayer', 'blayer']):
+                                 ['material', 'tlayer', 'blayer', 'coating',
+                                  'substrate']):
                             combo = self.addStandardCombo(
                                 self.materialsModel, value)
                             view.setIndexWidget(child1.index(), combo)
@@ -2714,7 +2715,8 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 paravalue = str(parentItem.child(iep, 1).text())
                 if paravalue != str(arg_def) or\
                         paravalue == 'bl':
-                    if paraname.lower() in ['tlayer', 'blayer']:
+                    if paraname.lower() in ['tlayer', 'blayer', 'coating',
+                                            'substrate']:
                         paravalue =\
                             self.beamLine.materialsDict[paravalue]
                     else:

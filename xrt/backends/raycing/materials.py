@@ -36,7 +36,8 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Mar 2017"
-__all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'Crystal', 'CrystalFcc',
+__all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'GradedMultilayer',
+           'CoatedMirror', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics')
 import collections
@@ -44,7 +45,7 @@ __allSectioned__ = collections.OrderedDict([
     ('Material', None),
     ('Crystals', ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
                   'CrystalFromCell')),  # don't include 'Crystal'
-    ('Multilayer', None),
+    ('Layered', ('CoatedMirror', 'Multilayer', 'GradedMultilayer')),
     ('Advanced', ('Powder', 'CrystalHarmonics', 'EmptyMaterial'))
     ])
 import sys
@@ -525,9 +526,13 @@ class Multilayer(object):
     multilayer may have variable thicknesses of the two alternating layers as
     functions of local *x* and *y* and/or as a function of the layer number.
     """
+
+    hiddenParams = ['power', 'substRoughness', 'tThicknessLow',
+                    'bThicknessLow']
+
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
-                 thicknessError=0., idThickness=0., power=2.):
+                 idThickness=0., power=2., substRoughness=0):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
@@ -551,9 +556,6 @@ class Multilayer(object):
         *nPairs*: int
             The number of layer pairs.
 
-        *thicknessError*: float
-            RMS relative error of layer thickness, applied to both layers.
-
         *idThickness*: float
             RMS thickness :math:`sigma_{j,j-1}` of the
             interdiffusion/roughness in Å.
@@ -573,8 +575,8 @@ class Multilayer(object):
         # self.dLow = float(tThicknessLow + bThicknessLow)
         self.kind = 'multilayer'
         self.geom = 'Bragg reflected'
-        self.tError = thicknessError
         self.idThickness = idThickness
+        self.subRough = substRoughness
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:
@@ -583,7 +585,7 @@ class Multilayer(object):
             tqA = self.tThicknessHigh * (tqB+1)**power
             self.dti = tqA * (tqB+layers)**(-power)
         else:
-            self.dti = np.array([float(tThickness)] * self.nPairs)
+            self.dti = np.array([float(tThickness)]) * self.nPairs
 
         if bThicknessLow:
             bqRoot = (self.bThicknessHigh/self.bThicknessLow)**(1./power)
@@ -591,7 +593,9 @@ class Multilayer(object):
             bqA = self.bThicknessHigh * (bqB+1)**power
             self.dbi = bqA * (bqB+layers)**(-power)
         else:
-            self.dbi = np.array([float(bThickness)] * self.nPairs)
+            self.dbi = np.array([float(bThickness)]) * self.nPairs
+
+        print(self.idThickness, self.subRough, self.nPairs)
 
     def get_Bragg_angle(self, E, order=1):
         a = order * CH / (2*self.d*E)
@@ -629,11 +633,13 @@ class Multilayer(object):
             ((order * CH / E)**2 + self.d**2 * 8*d_)**0.5 / (2*self.d))
 
     def get_t_thickness(self, x, y, iPair):
-        f = np.random.normal(size=len(x))*self.tError + 1 if self.tError else 1
+        f = 1.
+#       f = np.random.normal(size=len(x))*self.tError + 1 if self.tError else 1
         return self.dti[iPair] * f
 
     def get_b_thickness(self, x, y, iPair):
-        f = np.random.normal(size=len(x))*self.tError + 1 if self.tError else 1
+        f = 1.
+#       f = np.random.normal(size=len(x))*self.tError + 1 if self.tError else 1
         return self.dbi[iPair] * f
 
     def get_amplitude(self, E, beamInDotNormal, x=None, y=None, ucl=None):
@@ -729,7 +735,8 @@ class Multilayer(object):
         rvt_s = np.complex128((Q-Qt) / (Q+Qt) * roughvt)
         rvt_p = np.complex128((Q*nt - Qt/nt) / (Q*nt + Qt/nt) * roughvt)
 
-        roughbs = np.exp(-0.5 * Qb * Qs * id2)
+        rmsbs = id2 if self.tLayer else self.subRough**2
+        roughbs = np.exp(-0.5 * Qb * Qs * rmsbs)
         rbs_s = np.complex128((Qb-Qs) / (Qb+Qs) * roughbs)
         rbs_p = np.complex128((Qb/nb*ns - Qs/ns*nb) / (Qb/nb*ns + Qs/ns*nb) *
                               roughbs)
@@ -784,7 +791,49 @@ class Multilayer(object):
         return ri_s, ri_p
 
 
-GradedMultilayer = Multilayer
+class GradedMultilayer(Multilayer):
+    """
+    Derivative class from :class:`Mutilayer` with single reflective layer on
+    substrate.
+    """
+
+    hiddenParams = ['substRoughness']
+
+
+class CoatedMirror(Multilayer):
+    """
+    Derivative class from :class:`Mutilayer` with single reflective layer on
+    substrate.
+    """
+
+    hiddenParams = ['tLayer', 'tThickness', 'bLayer', 'bThickness', 'power',
+                    'tThicknessLow', 'bThicknessLow', 'idThickness',
+                    'thicknessError', 'nPairs']
+
+    def __init__(self, *args, **kwargs):
+        u"""
+        *coating*, *substrate*: instance of :class:`Material`
+            Material of the mirror coating layer, and the substrate
+            material.
+
+        *cThickness*: float
+            The thicknesses of mirror coating in Å.
+
+        *surfaceRoughness*: float
+            RMS rougness of the mirror surface in Å.
+
+        *substRoughness*: float
+            RMS rougness of the mirror substrate in Å.
+
+
+        """
+        coating = kwargs.pop('coating', None)
+        cThickness = kwargs.pop('cThickness', 0)
+        surfaceRoughness = kwargs.pop('surfaceRoughness', 0)
+        super(CoatedMirror, self).__init__(
+            bLayer=coating, bThickness=cThickness,
+            idThickness=surfaceRoughness, nPairs=1, *args, **kwargs)
+        self.kind = 'mirror'
 
 
 class Crystal(Material):
