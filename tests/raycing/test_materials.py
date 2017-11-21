@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 """
-Tests of Materials
-------------------
+Tests for Materials
+-------------------
 
 The module compares reflectivity, transmittivity, refraction index,
 absorption coefficient etc. with those calculated by XOP.
@@ -794,6 +794,75 @@ def compare_reflectivity_multilayer():
 #                     u' to [54 Å Si + 36 Å W] multilayer @ 8.05 keV',
 #                     '-antigraded')
 
+def compare_reflectivity_multilayer_interdiffusion():
+    """A comparison subroutine used in the module test suit."""
+#    cl_list = None
+    try:
+        import pyopencl as cl
+        os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+        isOpenCL = True
+    except ImportError:
+        isOpenCL = False
+
+    if isOpenCL:
+        import xrt.backends.raycing.myopencl as mcl
+        matCL = mcl.XRT_CL(r'materials.cl')
+#        cl_list = matCL.cl_ctx[0], matCL.cl_queue[0], matCL.cl_program[0]
+    else:
+        matCL = None
+
+    def for_one_material(ml, refs, E, label, flabel=''):
+        fig = plt.figure()
+        fig.subplots_adjust(right=0.86)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('grazing angle (deg)')
+        ax.set_ylabel('reflectivity')
+        ax.set_xlim(theta[0], theta[-1])
+        fig.suptitle(label, fontsize=14)
+
+        x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
+        refl = ml.get_amplitude(E, np.sin(np.deg2rad(theta)), ucl=matCL)
+        rs, rp = refl[0], refl[1]
+
+# phases:
+        ax2 = ax.twinx()
+        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        phi = np.unwrap(np.angle(rs * rp.conj()))
+        p9, = ax2.plot(theta, phi, 'c', lw=1, yunits=math.pi, zorder=0,)
+        ax2.set_ylim(-0.001, 0.001)
+        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        ax2.yaxis.set_major_formatter(formatter)
+        for tl in ax2.get_yticklabels():
+            tl.set_color('c')
+        ax2.set_xlim(theta[0], theta[-1])
+# amplitudes:
+        p1, = ax.plot(x, R2s, '-k', label='s CXRO')
+        p3, = ax.plot(theta, abs(rs)**2, '-r', lw=1)
+        p4, = ax.plot(theta, abs(rp)**2, '--r')
+        l1 = ax.legend([p3, p4], ['s', 'p'], loc=3)
+        ax.legend([p1, p3], ['CXRO-Multilayer', 'xrt'], loc=1)
+        ax.add_artist(l1)
+        ylim = ax.get_ylim()
+        ax.set_ylim([ylim[0], 1])
+
+        fname = 'Multilayer' + ml.tLayer.name + ml.bLayer.name
+        fig.savefig(fname + flabel)
+
+    dataDir = os.path.join('', 'CXRO-Reflectivities')
+    theta = np.linspace(0, 1.6, 1001)  # degrees
+    mSi = rm.Material('Si', rho=2.33)
+    mW = rm.Material('W', rho=19.3)
+
+    mL = rm.Multilayer(mSi, 17.82, mW, 11.88, 300, mSi, idThickness=0)
+    for_one_material(mL, os.path.join(dataDir, "WSi300id0.CXRO.gz"), 24210,
+                     u'300 × [17.82 Å Si + 11.88 Å W] multilayer @ 24.21 keV\nInterdiffusion RMS 0 Å',
+                     'CXRO_id0')
+
+    mL = rm.Multilayer(mSi, 17.82, mW, 11.88, 300, mSi, idThickness=6)
+    for_one_material(mL, os.path.join(dataDir, "WSi300id6.CXRO.gz"), 24210,
+                     u'300 × [17.82 Å Si + 11.88 Å W] multilayer @ 24.21 keV\nInterdiffusion RMS 6 Å',
+                     'CXRO_id6')
+
 
 def compare_dTheta():
     """A comparison subroutine used in the module test suit."""
@@ -951,12 +1020,12 @@ def run_tests():
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
 #    compare_reflectivity_multilayer()
-
+    compare_reflectivity_multilayer_interdiffusion()
 #    compare_dTheta()
 
 #Compare the calculated absorption coefficient with that by XCrossSec
 #(part of XOP):
-    compare_absorption_coeff()
+#    compare_absorption_coeff()
 
 #Compare the calculated transmittivity with that by XPower
 #(part of XOP):
