@@ -17,6 +17,9 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 
 .. autoclass:: Multilayer()
    :members: __init__, get_amplitude, get_dtheta_symmetric_Bragg
+.. autoclass:: Coated()
+   :members: __init__
+
 .. autoclass:: Crystal(Material)
    :members: __init__, get_Darwin_width, get_amplitude,
              get_dtheta_symmetric_Bragg, get_dtheta, get_dtheta_regular
@@ -37,7 +40,7 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Mar 2017"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'GradedMultilayer',
-           'CoatedMirror', 'Crystal', 'CrystalFcc',
+           'Coated', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics')
 import collections
@@ -45,7 +48,7 @@ __allSectioned__ = collections.OrderedDict([
     ('Material', None),
     ('Crystals', ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
                   'CrystalFromCell')),  # don't include 'Crystal'
-    ('Layered', ('CoatedMirror', 'Multilayer', 'GradedMultilayer')),
+    ('Layered', ('Coated', 'Multilayer', 'GradedMultilayer')),
     ('Advanced', ('Powder', 'CrystalHarmonics', 'EmptyMaterial'))
     ])
 import sys
@@ -699,7 +702,7 @@ class Multilayer(object):
         the reflectivity at each interface is attenuated by a factor
         of :math:`exp(-2k_{j,z}k_{j-1,z}\sigma^{2}_{j,j-1})`,
         where :math:`k_{j,z}` is longitudinal component of the wave vector
-        in j-th layer [Nevot-Croce].
+        in j-th layer [Nevot-Croce]_.
 
 
         The above formulas refer to *s* polarization. The *p* part differs at
@@ -799,17 +802,16 @@ class Multilayer(object):
 
 class GradedMultilayer(Multilayer):
     """
-    Derivative class from :class:`Mutilayer` with single reflective layer on
-    substrate.
+    Derivative class from :class:`Mutilayer` with graded layer thicknesses.
     """
 
     hiddenParams = ['substRoughness']
 
 
-class CoatedMirror(Multilayer):
+class Coated(Multilayer):
     """
-    Derivative class from :class:`Mutilayer` with single reflective layer on
-    substrate.
+    Derivative class from :class:`Mutilayer` with a single reflective layer on
+    a substrate.
     """
 
     hiddenParams = ['tLayer', 'tThickness', 'bLayer', 'bThickness', 'power',
@@ -819,8 +821,7 @@ class CoatedMirror(Multilayer):
     def __init__(self, *args, **kwargs):
         u"""
         *coating*, *substrate*: instance of :class:`Material`
-            Material of the mirror coating layer, and the substrate
-            material.
+            Material of the mirror coating layer, and the substrate material.
 
         *cThickness*: float
             The thicknesses of mirror coating in Å.
@@ -836,7 +837,7 @@ class CoatedMirror(Multilayer):
         coating = kwargs.pop('coating', None)
         cThickness = kwargs.pop('cThickness', 0)
         surfaceRoughness = kwargs.pop('surfaceRoughness', 0)
-        super(CoatedMirror, self).__init__(
+        super(Coated, self).__init__(
             bLayer=coating, bThickness=cThickness,
             idThickness=surfaceRoughness, nPairs=1, *args, **kwargs)
         self.kind = 'mirror'

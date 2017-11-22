@@ -184,8 +184,8 @@ therefore is given without comparison.
 
 .. _multilayer_reflectivity:
 
-Slab and multilayer reflectivity
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Slab, multilayer and coating reflectivity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The curves are basically equal. The small amplitude differences are due
 to slight differences in tabulated values of the atomic scattering factors.
@@ -195,6 +195,10 @@ comparison.
 .. imagezoom:: _images/SlabReflW.*
 .. imagezoom:: _images/MultilayerSiW.*
 .. imagezoom:: _images/MultilayerSiW-graded.*
+.. imagezoom:: _images/MultilayerSiWCXRO_id0.*
+.. imagezoom:: _images/MultilayerSiWCXRO_id6.*
+.. imagezoom:: _images/MirrorRefl30nmRhOnSi_4mrad_RMSroughness2nm.*
+.. imagezoom:: _images/MirrorRefl20nmDiamondOnQuartz_0.2deg_RMSroughness1nm.*
    :loc: upper-right-corner
 
 Transmittivity of materials
@@ -221,6 +225,7 @@ import math
 #import cmath
 import numpy as np
 import matplotlib as mpl
+mpl.rcParams['backend'] = 'Qt5Agg'
 import matplotlib.pyplot as plt
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
@@ -243,7 +248,7 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
         gammah = sum(i*j for i, j in zip(n, sh))
         hns0 = sum(i*j for i, j in zip(hn, s0))
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.88)
         ax = fig.add_subplot(111)
 
@@ -384,7 +389,7 @@ def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
         gammah = sum(i*j for i, j in zip(n, sh))
         hns0 = sum(i*j for i, j in zip(hn, s0))
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.88)
         ax = fig.add_subplot(111)
 
@@ -550,7 +555,7 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
         hns0 = sum(i*j for i, j in zip(hn, s0))
         laueS, laueP = siLaueCrystal.get_amplitude(E, gamma0, gammah, hns0)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
 
 # phases:
@@ -625,7 +630,7 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
 def compare_reflectivity():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, refs, refp, theta, reprAngle):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
@@ -682,25 +687,25 @@ def compare_reflectivity():
 def compare_reflectivity_coated():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, strOnly, refs, refp, theta, reprAngle):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
-        ax.set_xlabel('energy (eV)')
+        ax.set_xlabel('energy (keV)')
         ax.set_ylabel('reflectivity')
         ax.set_xlim(100, 4e4)
         ax.set_ylim(1e-7, 2)
         fig.suptitle(stripe.name + ' ' + reprAngle, fontsize=16)
         x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
-        p1, = ax.semilogy(x, R2s, '-k', label='s CXRO')
+        p1, = ax.semilogy(x*1e-3, R2s, '-k', label='s CXRO')
         x, R2s = np.loadtxt(refp, unpack=True, skiprows=2, usecols=(0, 1))
-        p2, = ax.semilogy(x, R2s, '--k', label='p CXRO')
+        p2, = ax.semilogy(x*1e-3, R2s, '--k', label='p CXRO')
         refl = stripe.get_amplitude(E, math.sin(theta))
         rs, rp = refl[0], refl[1]
         rs0, rp0 = strOnly.get_amplitude(E, math.sin(theta))[0:2]
-        p3, = ax.semilogy(E, abs(rs)**2, '-r')
-        p4, = ax.semilogy(E, abs(rp)**2, '--r')
-        p5, = ax.semilogy(E, abs(rs0)**2, '-m')
-        p6, = ax.semilogy(E, abs(rp0)**2, '--c')
+        p3, = ax.semilogy(E*1e-3, abs(rs)**2, '-r')
+        p4, = ax.semilogy(E*1e-3, abs(rp)**2, '--r')
+        p5, = ax.semilogy(E*1e-3, abs(rs0)**2, '-m')
+        p6, = ax.semilogy(E*1e-3, abs(rp0)**2, '--c')
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
         ax.legend([p1, p3, p5], ['CXRO', 'xrt', 'bulk coating'], loc=1)
         ax.add_artist(l1)
@@ -708,11 +713,14 @@ def compare_reflectivity_coated():
         ax2 = ax.twinx()
         ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
         phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+        p9, = ax2.plot(E*1e-3, phi, 'c', lw=2, yunits=math.pi, zorder=0)
         formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
         ax2.yaxis.set_major_formatter(formatter)
         for tl in ax2.get_yticklabels():
             tl.set_color('c')
+
+        ax2.set_zorder(-1)
+        ax.patch.set_visible(False)  # hide the 'canvas'
 
         fname = 'MirrorRefl' + stripe.name + "".join(reprAngle.split())
         fig.savefig(fname + '.png')
@@ -724,12 +732,12 @@ def compare_reflectivity_coated():
 #    mB4C = rm.Material(('B', 'C'), quantities=(4, 1), rho=2.52)
     mRh = rm.Material('Rh', rho=12.41, kind='mirror')
     mC = rm.Material('C', rho=3.5, kind='mirror')
-    cRhSi = rm.CoatedMirror(coating=mRh, cThickness=300,
-                            substrate=mSi, surfaceRoughness=20,
-                            substRoughness=20, name='30 nm Rh on Si')
-    cCSiO2 = rm.CoatedMirror(coating=mC, cThickness=200,
-                             substrate=mSiO2, surfaceRoughness=10,
-                             substRoughness=10, name='20 nm Diamond on Quartz')
+    cRhSi = rm.Coated(coating=mRh, cThickness=300,
+                      substrate=mSi, surfaceRoughness=20,
+                      substRoughness=20, name='30 nm Rh on Si')
+    cCSiO2 = rm.Coated(coating=mC, cThickness=200,
+                       substrate=mSiO2, surfaceRoughness=10,
+                       substRoughness=10, name='20 nm Diamond on Quartz')
     for_one_material(cRhSi, mRh,
                      os.path.join(dataDir, "RhSi_s_rough2.CXRO.gz"),
                      os.path.join(dataDir, "RhSi_p_rough2.CXRO.gz"),
@@ -745,7 +753,7 @@ def compare_reflectivity_coated():
 def compare_reflectivity_slab():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, refs, refp, E, reprEnergy):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
@@ -774,6 +782,10 @@ def compare_reflectivity_slab():
         ax2.yaxis.set_major_formatter(formatter)
         for tl in ax2.get_yticklabels():
             tl.set_color('c')
+
+        ax2.set_zorder(-1)
+        ax.patch.set_visible(False)  # hide the 'canvas'
+
         fname = 'SlabRefl' + stripe.name + ' ' + reprEnergy
         fig.savefig(fname + '.png')
 
@@ -804,7 +816,7 @@ def compare_reflectivity_multilayer():
         matCL = None
 
     def for_one_material(ml, refs, E, label, flabel=''):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
@@ -832,6 +844,9 @@ def compare_reflectivity_multilayer():
         for tl in ax2.get_yticklabels():
             tl.set_color('c')
         ax2.set_xlim(theta[0], theta[-1])
+
+        ax2.set_zorder(-1)
+        ax.patch.set_visible(False)  # hide the 'canvas'
 
         fname = 'Multilayer' + ml.tLayer.name + ml.bLayer.name
         fig.savefig(fname + flabel)
@@ -874,7 +889,7 @@ def compare_reflectivity_multilayer_interdiffusion():
         matCL = None
 
     def for_one_material(ml, refs, E, label, flabel=''):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
@@ -886,17 +901,6 @@ def compare_reflectivity_multilayer_interdiffusion():
         refl = ml.get_amplitude(E, np.sin(np.deg2rad(theta)), ucl=matCL)
         rs, rp = refl[0], refl[1]
 
-# phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(theta, phi, 'c', lw=1, yunits=math.pi, zorder=0,)
-        ax2.set_ylim(-0.001, 0.001)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
-        ax2.set_xlim(theta[0], theta[-1])
 # amplitudes:
         p1, = ax.plot(x, R2s, '-k', label='s CXRO')
         p3, = ax.plot(theta, abs(rs)**2, '-r', lw=1)
@@ -906,6 +910,21 @@ def compare_reflectivity_multilayer_interdiffusion():
         ax.add_artist(l1)
         ylim = ax.get_ylim()
         ax.set_ylim([ylim[0], 1])
+
+# phases:
+        ax2 = ax.twinx()
+        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        phi = np.unwrap(np.angle(rs * rp.conj()))
+        p9, = ax2.plot(theta, phi, 'c', lw=1, yunits=math.pi)
+        ax2.set_ylim(-0.001, 0.001)
+        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        ax2.yaxis.set_major_formatter(formatter)
+        for tl in ax2.get_yticklabels():
+            tl.set_color('c')
+        ax2.set_xlim(theta[0], theta[-1])
+
+        ax2.set_zorder(-1)
+        ax.patch.set_visible(False)  # hide the 'canvas'
 
         fname = 'Multilayer' + ml.tLayer.name + ml.bLayer.name
         fig.savefig(fname + flabel)
@@ -929,7 +948,7 @@ def compare_reflectivity_multilayer_interdiffusion():
 def compare_dTheta():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(mat, ref1, title):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         ax.set_xlabel(r'$\theta_{B}-\alpha$, deg')
         ax.set_ylabel(r'$\delta\theta$, deg')
@@ -964,7 +983,7 @@ def compare_absorption_coeff():
     def for_one_material(m):
         rf = os.path.join(dataDir, "{0}_absCoeff.xcrosssec.gz".format(m.name))
         title = u'Absorption in {0}'.format(mat.name)
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel(r'$\mu_0$ (cm$^{-1}$)')
@@ -1004,7 +1023,7 @@ def compare_absorption_coeff():
 def compare_transmittivity():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(mat, thickness, ref1, title, sname):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=100)
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel('transmittivity')
@@ -1075,7 +1094,7 @@ def run_tests():
 #(part of XOP):
 #    compare_reflectivity()
 
-    compare_reflectivity_coated()
+#    compare_reflectivity_coated()
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
@@ -1084,7 +1103,7 @@ def run_tests():
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
 #    compare_reflectivity_multilayer()
-#    compare_reflectivity_multilayer_interdiffusion()
+    compare_reflectivity_multilayer_interdiffusion()
 #    compare_dTheta()
 
 #Compare the calculated absorption coefficient with that by XCrossSec
