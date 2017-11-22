@@ -7,7 +7,7 @@ The scripts used for these tests can be found in ``\tests\speed\``
 
 The following computers have been used:
 
-.. [1] An office desktop with Intel Core i7-3930K @3.20 GHz×6(12), 16 GB
+.. [1] An workstation with Intel Core i7-3930K @3.20 GHz×6(12), 16 GB
        and with AMD FirePro W9100 GPU.
        Windows 7 with Python 2.7.10 64 bit and 3.6.1 64 bit,
        Ubuntu 16.04 with Python 2.7.12 64 bit and 3.5.2 64 bit.
@@ -17,6 +17,14 @@ The following computers have been used:
        Windows 10 with Python 2.7.10 64 bit and 3.6.1 64 bit,
        Ubuntu 16.10 with Python 2.7.12 64 bit and 3.5.2 64 bit.
 
+.. [3] A POWER8 GPU node with 4 Nvidia Tesla K80 GPUs, CentOS 7 -- run by Zdeněk Matěj (MAX IV)
+
+.. [4] A DELL GPU node with 4 Nvidia Tesla P100 GPUs, CentOS 7 -- run by Zdeněk Matěj (MAX IV)
+
+.. [5] A CPU node with Intel Xeon E5-2650 v3 @ 2.30GHz×20(40) -- run by Zdeněk Matěj (MAX IV)
+
+.. [6] A CPU node with Intel Xeon E5-2650 v4 @ 2.20GHz×24(48) -- run by Zdeněk Matěj (MAX IV)
+
 .. note::
 
     The tests here were reduced in the number of rays/samples as compared to
@@ -25,8 +33,8 @@ The following computers have been used:
     cases, as the overheads (job distribution, collecting of histograms and
     plotting) would become relatively less important.
 
-Each cell in the tables below has two execution times in seconds: in Python 2
-and in Python 3.
+The tables below show execution times in seconds. Some cells have two values:
+for Python 2 and for Python 3.
 
 .. automodule:: tests.speed.1_SourceZCrystalThetaAlpha_speed
 
