@@ -557,8 +557,8 @@ class Multilayer(object):
             The number of layer pairs.
 
         *idThickness*: float
-            RMS thickness :math:`sigma_{j,j-1}` of the
-            interdiffusion/roughness in Å.
+            RMS thickness :math:`\\sigma_{j,j-1}` of the
+            interdiffusion/roughness interface in Å.
 
 
         """
@@ -589,7 +589,8 @@ class Multilayer(object):
             tqA = self.tThicknessHigh * (tqB+1)**power
             self.dti = tqA * (tqB+layers)**(-power)
         else:
-            self.dti = np.array([float(tThickness)]) * self.nPairs
+            self.dti = np.ones(self.nPairs) * float(tThickness)
+#            self.dti = np.array([float(tThickness)] * self.nPairs)
 
         if bThicknessLow:
             bqRoot = (self.bThicknessHigh/self.bThicknessLow)**(1./power)
@@ -597,7 +598,8 @@ class Multilayer(object):
             bqA = self.bThicknessHigh * (bqB+1)**power
             self.dbi = bqA * (bqB+layers)**(-power)
         else:
-            self.dbi = np.array([float(bThickness)]) * self.nPairs
+            self.dbi = np.ones(self.nPairs) * float(bThickness)
+#            self.dbi = np.array([float(bThickness)] * self.nPairs)
 
         print(self.idThickness, self.subRough, self.nPairs)
 
