@@ -212,10 +212,12 @@ to slight differences in tabulated values of the atomic scattering factors.
 Absorption of materials
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The curves are basically equal. The small amplitude differences are due
-to slight differences in tabulated values of the atomic scattering factors.
+The curves are generally equal, deviating at low energies due to differences in
+tabulated values of the atomic scattering factors.
 
 .. imagezoom:: _images/AbsorptionBe.*
+.. imagezoom:: _images/AbsorptionNi.*
+.. imagezoom:: _images/AbsorptionAu.*
 
 """
 __author__ = "Konstantin Klementiev"
