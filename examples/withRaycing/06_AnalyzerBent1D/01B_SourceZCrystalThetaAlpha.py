@@ -32,6 +32,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
     d111 = 3.1354161  # Si
@@ -42,7 +44,7 @@ else:
 orders = (1, 4, 8, 12)
 crystals = [rm.CrystalDiamond((i, i, i), d111/i, elements=crystalMaterial)
             for i in orders]
-crystalsMask = (1, 0, 0, 0)
+crystalsMask = (0, 1, 0, 0)
 #numiters = [40, 2560, 1280, 5120]  # @crysals
 numiters = [40, 40, 80, 120]  # @crysals
 
@@ -82,13 +84,13 @@ else:  # Johansson
     yAxesLine = [0.1, 0.045, 0.007, 0.004]  # @crysals
 
 thetasDegree = 10., 30., 45., 60., 80.,  # degree
-thetaMask = 1, 1, 1, 1, 1
+thetaMask = 0, 0, 0, 0, 1
 alphasDegree = 0.,  # asymmetry angle, degree
 
 
 def build_beamline(nrays=raycing.nrays):
     beamLine = raycing.BeamLine(azimuth=0, height=0)
-    rs.GeometricSource(
+    beamLine.source = rs.GeometricSource(
         beamLine, 'GeometricSource', nrays=nrays, dx=beamH, dy=0,
         dz=0.05, distxprime='flat', distzprime='flat', polarization=None)
     beamLine.analyzer = Cylinder(
@@ -100,7 +102,7 @@ def build_beamline(nrays=raycing.nrays):
 
 
 def run_process(beamLine):
-    beamSource = beamLine.sources[0].shine()
+    beamSource = beamLine.source.shine()
     beamAnalyzerGlobal, beamAnalyzerLocal = \
         beamLine.analyzer.reflect(beamSource)
     beamDetector = beamLine.detector.expose(beamAnalyzerGlobal)
@@ -109,6 +111,8 @@ def run_process(beamLine):
                'beamAnalyzerLocal': beamAnalyzerLocal,
                'beamDetector': beamDetector
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -146,14 +150,17 @@ def define_plots(beamLine):
     plotsAnalyzer.append(plotAnE)
     plotsE.append(plotAnE)
 
-    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
-      xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
-      yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limYCrystal, bins=400, ppb=1),
-      caxis=xrtp.XYCAxis('degree of polarization', '', bins=100, ppb=4,
-      data=raycing.get_polarization_degree, limits=[-0.01, 1.01]),
-      title='xtal_DegOfPol', oe=beamLine.analyzer)
-    plot.textPanel = plot.fig.text(0.88, 0.85, '',
-      transform=plot.fig.transFigure, size=14, color='r', ha='center')
+    plot = xrtp.XYCPlot(
+        'beamAnalyzerLocal', (1,),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
+        yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limYCrystal, bins=400, ppb=1),
+        caxis=xrtp.XYCAxis('degree of polarization', '', bins=100, ppb=4,
+                           data=raycing.get_polarization_degree,
+                           limits=[-0.01, 1.01]),
+        title='xtal_DegOfPol', oe=beamLine.analyzer)
+    plot.textPanel = plot.fig.text(
+        0.88, 0.85, '', transform=plot.fig.transFigure, size=14, color='r',
+        ha='center')
     plotsAnalyzer.append(plot)
 #
 #    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
@@ -264,15 +271,16 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
-def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
-                   plotDetE, beamLine):
-    fOut1 = open(crystalMaterial + bentName + '_long.txt', 'w')
-    E0table = [[0 for ic in crystals] for it in thetasDegree]
-    dEtable = [[0 for ic in crystals] for it in thetasDegree]
-    rEtable = [[0 for ic in crystals] for it in thetasDegree]
+def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
+                   plotsE=[], plotAnE=[], plotDetE=[]):
+    if not showIn3D:
+        fOut1 = open(crystalMaterial + bentName + '_long.txt', 'w')
+        E0table = [[0 for ic in crystals] for it in thetasDegree]
+        dEtable = [[0 for ic in crystals] for it in thetasDegree]
+        rEtable = [[0 for ic in crystals] for it in thetasDegree]
 
     for bvs, yAxisLim in zip(beamV, yAxesLim):
-        beamLine.sources[0].dz = bvs
+        beamLine.source.dz = bvs
         bsname = 'h={0:03.0f}mum'.format(bvs*1e3)
         for icrystal, crystal in enumerate(crystals):
             if not crystalsMask[icrystal]:
@@ -286,7 +294,8 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
             crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
                 crystalMaterial, crystal.hkl, hklSeparator)
             beamLine.analyzer.surface = crystalLabel,
-            plotAnE.draw_footprint_area()
+            if plotAnE:
+                plotAnE.draw_footprint_area()
 #            plotAnC.draw_footprint_area()
             beamLine.analyzer.material = crystal
             for ithetaDegree, thetaDegree in enumerate(thetasDegree):
@@ -309,8 +318,8 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
                     yDet = p + q * cos2Theta
                     zDet = q * sin2Theta
                     pdp = 2. * R * math.sin(theta + alpha - dyCrystal/6/R)
-                    beamLine.sources[0].dxprime = dxCrystal / pdp
-                    beamLine.sources[0].dzprime = dyCrystal *\
+                    beamLine.source.dxprime = dxCrystal / pdp
+                    beamLine.source.dzprime = dyCrystal *\
                         math.sin(theta - alpha) / pdp
                     beamLine.analyzer.center = 0, p, 0
                     beamLine.analyzer.pitch = theta + alpha
@@ -319,23 +328,23 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
                         z=(0, -sin2Theta, cos2Theta))
 
                     dELine, dzLine, dEFlat, dzFlat = 0, 0, 0, 1
-                    for isource in np.arange(3):
+                    for isource in [0, 1, 2]:
 #                    for isource in [-1, ]:
 #                    for isource in [0, ]:
-                        xrtr.runCardVals.repeats = numiter
+                        xrtr.set_repeats(numiter)
                         for plot in plotsDetector:
                             plot.yaxis.limits = [-yAxisLim, yAxisLim]
                         if isource == 0 or isource == -1:  # flat or norm
-#                            xrtr.runCardVals.repeats = 0
+#                            xrtr.set_repeats(0)
                             if isource == -1:
                                 eAxisFlat = 8e-4 * E0
                                 eAxisMin = E0 - 3*eAxisFlat/2
                                 eAxisMax = E0 + 3*eAxisFlat/2
                             else:
-                                eAxisFlat =\
-                                    eAxesFlat[ithetaDegree][icrystal]
+                                eAxisFlat = eAxesFlat[ithetaDegree][icrystal]
                                 eAxisMin = E0 * (1. - eAxisFlat)
                                 eAxisMax = E0 * (1. + eAxisFlat)
+                                dELine = E0 * eAxisFlat/3.  # for showIn3D
                             for plot in plotsE:
                                 if plot is None:
                                     continue
@@ -347,36 +356,34 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
                                 if hasattr(plot, 'textPanel'):
                                     plot.textPanel.set_text(tt)
                             if isource == -1:
-                                beamLine.sources[0].distE = 'normal'
-                                beamLine.sources[0].energies =\
-                                    E0, eAxisFlat/2.355
+                                beamLine.source.distE = 'normal'
+                                beamLine.source.energies = E0, eAxisFlat/2.355
                                 sourcename = 'norm'
                             else:
-                                beamLine.sources[0].distE = 'flat'
-                                beamLine.sources[0].energies = \
-                                    eAxisMin, eAxisMax
+                                beamLine.source.distE = 'flat'
+                                beamLine.source.energies = eAxisMin, eAxisMax
                                 sourcename = 'flat'
                         elif isource == 1:  # line
-#                            xrtr.runCardVals.repeats = 0
-                            beamLine.sources[0].distE = 'lines'
-                            beamLine.sources[0].energies = E0,
+#                            xrtr.set_repeats(0)
+                            beamLine.source.distE = 'lines'
+                            beamLine.source.energies = E0,
                             sourcename = 'line'
                             for plot in plotsDetector:
                                 plot.yaxis.limits = [-yAxisLine, yAxisLine]
                         else:
-#                            xrtr.runCardVals.repeats = 0
+#                            xrtr.set_repeats(0)
                             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}' +
                                   r'$\delta E = ${3:.3f} eV').format(
                                 crystalLabel, '\n', thetaDegree, dELine)
                             for plot in plots:
                                 if hasattr(plot, 'textPanel'):
                                     plot.textPanel.set_text(tt)
-                            beamLine.sources[0].distE = 'lines'
+                            beamLine.source.distE = 'lines'
                             sourcename = '7lin'
                             for plot in plotsDetector:
                                 plot.yaxis.limits = [-dzLine*4, dzLine*4]
                             dEStep = dELine
-                            beamLine.sources[0].energies = \
+                            beamLine.source.energies = \
                                 [E0 + dEStep*i for i in range(-3, 4)]
                             eAxisMin = E0 - dEStep * 4
                             eAxisMax = E0 + dEStep * 4
@@ -391,60 +398,71 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
                                 plot.title, sourcename)
                             plot.saveName = filename + '.png'
 #                            plot.persistentName = filename + '.pickle'
+                        if showIn3D:
+                            beamLine.glowFrameName = \
+                                '{0}-{1}-{2:.0f}-{3}-{4}.jpg'.format(
+                                    bentName, crystalLabel, thetaDegree,
+                                    isource, sourcename)
                         yield
 
-                        if isource == 0:
-                            dzFlat = plotDetE.dy
-                            dEFlat = plotDetE.dE
-                            if (dzFlat == 0) or (dEFlat == 0)\
-                                    or np.isnan(dzFlat) \
-                                    or np.isnan(dEFlat):
-                                raise
-                        elif isource == 1:
-                            dzLine = plotDetE.dy
-                            try:
-                                dELine = dzLine * dEFlat / dzFlat
-                            except:
-                                print('dzFlat={0}'.format(dzFlat))
-                                dELine = 0
-                            outStr = ('{0}, {1}, {2}, {3}, {4}, {5}, ' +
-                                      '{6}, {7}, {8}, {9}\n').format(
-                                bsname, crystalLabel, thetaDegree,
-                                alpha, E0, dzFlat, dEFlat, dzLine,
-                                dELine, dELine/E0)
-                            print(outStr)
-                            E0table[ithetaDegree][icrystal] = E0
-                            dEtable[ithetaDegree][icrystal] = dELine
-                            rEtable[ithetaDegree][icrystal] = dELine/E0
-                            fOut1.write(outStr)
+                        if not showIn3D:
+                            if isource == 0:
+                                dzFlat = plotDetE.dy
+                                dEFlat = plotDetE.dE
+                                if (dzFlat == 0) or (dEFlat == 0)\
+                                        or np.isnan(dzFlat) \
+                                        or np.isnan(dEFlat):
+                                    raise
+                            elif isource == 1:
+                                dzLine = plotDetE.dy
+                                try:
+                                    dELine = dzLine * dEFlat / dzFlat
+                                except:
+                                    print('dzFlat={0}'.format(dzFlat))
+                                    dELine = 0
+                                outStr = ('{0}, {1}, {2}, {3}, {4}, {5}, ' +
+                                          '{6}, {7}, {8}, {9}\n').format(
+                                    bsname, crystalLabel, thetaDegree,
+                                    alpha, E0, dzFlat, dEFlat, dzLine,
+                                    dELine, dELine/E0)
+                                print(outStr)
+                                E0table[ithetaDegree][icrystal] = E0
+                                dEtable[ithetaDegree][icrystal] = dELine
+                                rEtable[ithetaDegree][icrystal] = dELine/E0
+                                fOut1.write(outStr)
 
-        fOut1.close()
-        fOut2 = open(crystalMaterial + bentName + '_table.txt', 'w')
-        for ithetaDegree, thetaDegree in enumerate(thetasDegree):
-            outStr = (r'| {0:2.0f} |  *E* = {1[0]:.0f} eV       |  *E* = ' +
-                      r'{1[1]:.0f} eV       |  *E* = {1[2]:.0f} eV       ' +
-                      r'|  *E* = {1[3]:.0f} eV      |{2}').format(
-                thetaDegree, E0table[ithetaDegree], '\n')
-            fOut2.write(outStr)
-            outStr = (r'|    | {0}={1[0]:.2f}eV={2[0]:.1e} *E* | {0}=' +
-                      r'{1[1]:.2f}eV={2[1]:.1e} *E* | {0}={1[2]:.2f}eV=' +
-                      r'{2[2]:.1e} *E* | {0}={1[3]:.2f}eV={2[3]:.1e} *E*' +
-                      r' |{3}').format(bentName, dEtable[ithetaDegree],
-                                       rEtable[ithetaDegree], '\n')
-            fOut2.write(outStr)
-        fOut2.close()
+    if showIn3D:
+        return
+    fOut1.close()
+    fOut2 = open(crystalMaterial + bentName + '_table.txt', 'w')
+    for ithetaDegree, thetaDegree in enumerate(thetasDegree):
+        outStr = (r'| {0:2.0f} |  *E* = {1[0]:.0f} eV       |  *E* = ' +
+                  r'{1[1]:.0f} eV       |  *E* = {1[2]:.0f} eV       ' +
+                  r'|  *E* = {1[3]:.0f} eV      |{2}').format(
+            thetaDegree, E0table[ithetaDegree], '\n')
+        fOut2.write(outStr)
+        outStr = (r'|    | {0}={1[0]:.2f}eV={2[0]:.1e} *E* | {0}=' +
+                  r'{1[1]:.2f}eV={2[1]:.1e} *E* | {0}={1[2]:.2f}eV=' +
+                  r'{2[2]:.1e} *E* | {0}={1[3]:.2f}eV={2[3]:.1e} *E*' +
+                  r' |{3}').format(bentName, dEtable[ithetaDegree],
+                                   rEtable[ithetaDegree], '\n')
+        fOut2.write(outStr)
+    fOut2.close()
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=4, centerAt=analyzerName,
+                      generator=plot_generator, generatorArgs=[beamLine])
+        return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)
-    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE,
-            beamLine]
+    args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
+            plotDetE]
     xrtr.run_ray_tracing(plots, generator=plot_generator, generatorArgs=args,
                          beamLine=beamLine, processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()

@@ -28,6 +28,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
     d111 = 3.1354161
@@ -124,6 +126,8 @@ def run_process(beamLine):
                'beamAnalyzerLocal': beamAnalyzerLocal,
                'beamDetector': beamDetector
                }
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -272,8 +276,8 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE
 
 
-def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE,
-                   beamLine):
+def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
+                   plotsE=[], plotDetE=[]):
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
         crystalMaterial, crystal.hkl, hklSeparator)
@@ -294,11 +298,12 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE,
     dzLine = 0
     for isource in np.arange(3):
 #    for isource in [-1, ]:
-        xrtr.runCardVals.repeats = numiter
+        xrtr.set_repeats(numiter)
         if isource == 0 or isource == -1:  # flat or norm
-#            xrtr.runCardVals.repeats = 0
+#            xrtr.set_repeats(0)
             eAxisMin = E0 * (1 - eAxisFlat)
             eAxisMax = E0 * (1 + eAxisFlat)
+            dELine = E0 * eAxisFlat/3.  # for showIn3D
             for plot in plotsE:
                 if plot is None:
                     continue
@@ -320,14 +325,14 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE,
                 beamLine.sources[0].energies = eAxisMin, eAxisMax
                 sourcename = 'flat'
         elif isource == 1:  # line
-#            xrtr.runCardVals.repeats = 0
+#            xrtr.set_repeats(0)
             beamLine.sources[0].distE = 'lines'
             beamLine.sources[0].energies = E0,
             sourcename = 'line'
             for plot in plotsDetector:
                 plot.yaxis.limits = [-yAxisLine, yAxisLine]
         else:
-#            xrtr.runCardVals.repeats = 2560*16L
+#            xrtr.set_repeats(2560*16L)
             for plot in plotsDetector:
                 plot.xaxis.limits = -6, 6
             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
@@ -357,25 +362,34 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE,
                 analyzerName, thetaDegree, plot.title, sourcename)
             plot.saveName = filename + '.png'
 #            plot.persistentName = filename + '.pickle'
+        if showIn3D:
+            beamLine.glowFrameName = \
+                '{0}{1}-{2}-{3}.jpg'.format(analyzerName, thetaDegree, isource,
+                                            sourcename)
         yield
 
-        if isource == 0:
-            dzFlat = plotDetE.dy
-            dEFlat = plotDetE.dE
-        elif isource == 1:
-            dzLine = plotDetE.dy
-            try:
-                dELine = dzLine * dEFlat / dzFlat
-            except:
-                print('dzFlat={0}'.format(dzFlat))
-                dELine = 0
+        if not showIn3D:
+            if isource == 0:
+                dzFlat = plotDetE.dy
+                dEFlat = plotDetE.dE
+            elif isource == 1:
+                dzLine = plotDetE.dy
+                try:
+                    dELine = dzLine * dEFlat / dzFlat
+                except:
+                    print('dzFlat={0}'.format(dzFlat))
+                    dELine = 0
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=4, centerAt=analyzerName,
+                      generator=plot_generator, generatorArgs=[beamLine])
+        return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE = \
         define_plots(beamLine)
-    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE, beamLine]
+    args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
         beamLine=beamLine, processes='half')

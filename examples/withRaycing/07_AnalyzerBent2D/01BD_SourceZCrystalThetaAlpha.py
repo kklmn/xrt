@@ -120,6 +120,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
     d111 = 3.1354161  # Si
@@ -226,9 +228,9 @@ def run_process(beamLine):
                'beamAnalyzerLocal': beamAnalyzerLocal,
                'beamDetector': beamDetector
                }
-    beamLine.prepare_flow()
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -449,12 +451,13 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
-def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
-                   plotAnE, plotDetE, beamLine):
-    fOut1 = open(crystalMaterial + bentName + '_long.txt', 'w')
-    E0table = [[0 for ic in crystals] for it in thetasDegree]
-    dEtable = [[0 for ic in crystals] for it in thetasDegree]
-    rEtable = [[0 for ic in crystals] for it in thetasDegree]
+def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
+                   plotsE=[], plotAnE=[], plotDetE=[]):
+    if not showIn3D:
+        fOut1 = open(crystalMaterial + bentName + '_long.txt', 'w')
+        E0table = [[0 for ic in crystals] for it in thetasDegree]
+        dEtable = [[0 for ic in crystals] for it in thetasDegree]
+        rEtable = [[0 for ic in crystals] for it in thetasDegree]
 
     for bvs, yAxisLim in zip(beamV, yAxesLim):
         beamLine.sources[0].dz = bvs
@@ -471,7 +474,8 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
             crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
                 crystalMaterial, crystal.hkl, hklSeparator)
             beamLine.analyzer.surface = crystalLabel,
-            plotAnE.draw_footprint_area()
+            if plotAnE:
+                plotAnE.draw_footprint_area()
             beamLine.analyzer.material = crystal
             for ithetaDegree, thetaDegree in enumerate(thetasDegree):
                 if not thetaMask[ithetaDegree]:
@@ -509,12 +513,13 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
                     for isource in np.arange(3):
                         for plot in plotsDetector:
                             plot.yaxis.limits = [-yAxisLim, yAxisLim]
-                        xrtr.runCardVals.repeats = numiter
+                        xrtr.set_repeats(numiter)
                         if isource == 0:  # flat
-#                            xrtr.runCardVals.repeats = 0
+#                            xrtr.set_repeats(0)
                             eAxisFlat = eAxesFlat[ithetaDegree][icrystal]
                             eAxisMin = E0 * (1. - eAxisFlat)
                             eAxisMax = E0 * (1. + eAxisFlat)
+                            dELine = E0 * eAxisFlat/3.  # for showIn3D
                             for plot in plotsE:
                                 if plot is None:
                                     continue
@@ -532,14 +537,14 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
                                 eAxisMin, eAxisMax
                             sourcename = 'flat'
                         elif isource == 1:  # line
-#                            xrtr.runCardVals.repeats = 0
+#                            xrtr.set_repeats(0)
                             beamLine.sources[0].distE = 'lines'
                             beamLine.sources[0].energies = E0,
                             sourcename = 'line'
                             for plot in plotsDetector:
                                 plot.yaxis.limits = [-yAxisLine, yAxisLine]
                         else:
-#                            xrtr.runCardVals.repeats = 0
+#                            xrtr.set_repeats(0)
                             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
                                   '\delta E = ${3:.3f} eV').format(
                                 crystalLabel, '\n', thetaDegree, dELine)
@@ -568,27 +573,35 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
                                 plot.title, sourcename)
                             plot.saveName = filename + '.png'
 #                            plot.persistentName = filename + '.pickle'
+                        if showIn3D:
+                            beamLine.glowFrameName = \
+                                '{0}-{1}-{2}-{3}-{4}.jpg'.format(
+                                    bentName, crystalLabel, thetaDegree,
+                                    isource, sourcename)
                         yield
 
-                        if isource == 0:
-                            dzFlat = plotDetE.dy
-                            dEFlat = plotDetE.dE
-                        elif isource == 1:
-                            dzLine = plotDetE.dy
-                            try:
-                                dELine = dzLine * dEFlat / dzFlat
-                            except:
-                                print('dzFlat={0}'.format(dzFlat))
-                                dELine = 0
-                            outStr = ('{0}, {1}, {2}, {3}, {4}, {5}, ' +
-                                      '{6}, {7}, {8}\n').format(
-                                bsname, crystalLabel, theta, alpha, E0,
-                                dzFlat, dEFlat, dzLine, dELine)
-                            print(outStr)
-                            E0table[ithetaDegree][icrystal] = E0
-                            dEtable[ithetaDegree][icrystal] = dELine
-                            rEtable[ithetaDegree][icrystal] = dELine/E0
-                            fOut1.write(outStr)
+                        if not showIn3D:
+                            if isource == 0:
+                                dzFlat = plotDetE.dy
+                                dEFlat = plotDetE.dE
+                            elif isource == 1:
+                                dzLine = plotDetE.dy
+                                try:
+                                    dELine = dzLine * dEFlat / dzFlat
+                                except:
+                                    print('dzFlat={0}'.format(dzFlat))
+                                    dELine = 0
+                                outStr = ('{0}, {1}, {2}, {3}, {4}, {5}, ' +
+                                          '{6}, {7}, {8}\n').format(
+                                    bsname, crystalLabel, theta, alpha, E0,
+                                    dzFlat, dEFlat, dzLine, dELine)
+                                print(outStr)
+                                E0table[ithetaDegree][icrystal] = E0
+                                dEtable[ithetaDegree][icrystal] = dELine
+                                rEtable[ithetaDegree][icrystal] = dELine/E0
+                                fOut1.write(outStr)
+    if showIn3D:
+        return
     fOut1.close()
     fOut2 = open(crystalMaterial + bentName + '_table.txt', 'w')
     for ithetaDegree, thetaDegree in enumerate(thetasDegree):
@@ -608,16 +621,18 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
 
 def main():
     beamLine = build_beamline()
-#    plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
-#        define_plots(beamLine)
-#    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE,
-#            beamLine]
-#    xrtr.run_ray_tracing(
-#        plots, generator=plot_generator, generatorArgs=args,
-#        beamLine=beamLine, processes='half')
+    if showIn3D:
+        beamLine.glow(scale=4, centerAt=analyzerName,
+                      generator=plot_generator, generatorArgs=[beamLine])
+        return
+    plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
+        define_plots(beamLine)
+    args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
+            plotDetE]
+    xrtr.run_ray_tracing(
+        plots, generator=plot_generator, generatorArgs=args,
+        beamLine=beamLine, processes='half')
 
-    plot_generator([], [], [], [], [], [], beamLine)
-    beamLine.glow()
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:
