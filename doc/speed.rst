@@ -7,10 +7,10 @@ The scripts used for these tests can be found in ``\tests\speed\``
 
 The following computers have been used:
 
-.. [1] An workstation with Intel Core i7-3930K @3.20 GHz×6(12), 16 GB
+.. [1] A workstation with Intel Core i7-7700K @4.20 GHz×4(8), 16 GB
        and with AMD FirePro W9100 GPU.
-       Windows 7 with Python 2.7.10 64 bit and 3.6.1 64 bit,
-       Ubuntu 16.04 with Python 2.7.12 64 bit and 3.5.2 64 bit.
+       Windows 10 with Python 2.7.10 64 bit and 3.6.1 64 bit,
+       Ubuntu 16.04 LTS with Python 2.7.12 64 bit and 3.5.2 64 bit.
 
 .. [2] An ASUS UX430UQ laptop with Intel Core i7-7500U CPU @ 2.70 GHz×2(4),
        16 GB and with NVIDIA GeForce 940MX GPU.
@@ -46,9 +46,9 @@ Summary
 -------
 
 - Except for the case of computing with OpenCL on GPU, calculations in Linux
-  are usually significantly faster than in Windows. Especially when using
+  are usually significantly faster than in Windows. *Especially when using
   multithreading or multiprocessing, the execution in Linux is dramatically
-  faster.
+  faster.*
 
 - There is no significant difference in speed between Python 2 and Python 3,
   except for multiprocessing in Windows, where Python 2 performs better.

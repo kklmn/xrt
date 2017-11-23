@@ -18,11 +18,11 @@ on a laptop. Notice also that for the real example a larger number of samples,
 +--------------------+---------------+---------------+
 |       system       | OpenCL on CPU | OpenCL on GPU |
 +====+===============+===============+===============+
-|[1]_|     |winW|    |     1956      |      80.3     |
-|    |               |     2012      |      79.4     |
+|[1]_|     |winW|    |      637      |      76.8     |
+|    |               |      635      |      76.4     |
 |    +---------------+---------------+---------------+
-|    |     |linW|    |     1944      |      80.0     |
-|    |               |     1963      |      80.4     |
+|    |     |linW|    |      602      |      71.1     |
+|    |               |      605      |      71.0     |
 +----+---------------+---------------+---------------+
 |[3]_|     1×K80     |               |      196      |
 |    +---------------+---------------+---------------+
@@ -39,6 +39,29 @@ on a laptop. Notice also that for the real example a larger number of samples,
 
 """
 r"""
+Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz:
+
+Python 2.7.10 64 bit on Windows 10:
+OpenCL on CPU: shine = 636.7 s (Intel/Intel)
+OpenCL on CPU: shine = 1966 s (AMD/Intel)
+OpenCL on AMD W9100 GPU: 76.8 s (total)
+
+Python 3.6.1 64 bit on Windows 10:
+OpenCL on CPU: shine = 634.9 s (Intel/Intel)
+OpenCL on CPU: shine = 1965 s (AMD/Intel)
+OpenCL on AMD W9100 GPU: 76.4 s (total)
+
+Python 2.7.12 64 bit on Ubuntu 16.04 LTS:
+OpenCL on CPU: shine = 601.5 (Intel/Intel)
+no (AMD/Intel)
+OpenCL on AMD W9100 GPU: 71.1 s (total)
+
+Python 3.5.2 64 bit on Ubuntu 16.04:
+OpenCL on CPU: shine = 605.0 (Intel/Intel)
+no (AMD/Intel)
+OpenCL on AMD W9100 GPU: 71.0 s (total)
+
+
 Intel(R) Core(TM) i7-3930K CPU @ 3.20GHz:
 no OpenCL, 1 core of CPU: not doable.
 
@@ -49,7 +72,6 @@ OpenCL on AMD W9100 GPU: 80.3 s (total)
 Python 3.6.1 64 bit on Windows 7:
 OpenCL on CPU: shine = 2012.2 s
 OpenCL on AMD W9100 GPU: 79.4 s (total)
-
 
 Python 2.7.12 64 bit on Ubuntu 16.04:
 OpenCL on CPU: shine = 1944 s

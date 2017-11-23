@@ -12,11 +12,11 @@ around one harmonic.
 +-----------------+---------------+---------------+---------------+
 |     system      |   no OpenCL   | OpenCL on CPU | OpenCL on GPU |
 +====+============+===============+===============+===============+
-|[1]_|   |winW|   |     1764      |     197.5     |      36.1     |
-|    |            |     1894      |     198.0     |      33.2     |
+|[1]_|   |winW|   |     1471      |      36.0     |      25.7     |
+|    |            |     1385      |      34.1     |      23.9     |
 |    +------------+---------------+---------------+---------------+
-|    |   |linW|   |     1869      |     153.7     |      37.1     |
-|    |            |     1893      |     153.1     |      35.5     |
+|    |   |linW|   |      950      |      34.6     |      20.6     |
+|    |            |      950      |      35.4     |      21.0     |
 +----+------------+---------------+---------------+---------------+
 |[2]_|   |winH|   |     1801      |      61.0     |      126      |
 |    |            |     1909      |      60.3     |      123      |
@@ -28,6 +28,33 @@ around one harmonic.
 """
 
 """
+Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz:
+
+Python 2.7.10 64 bit on Windows 10:
+no OpenCL, 1 core of CPU: 1471 s.
+OpenCL on CPU: shine =  36.0 s (Intel/Intel)
+OpenCL on CPU: shine = 166.3 s (AMD/Intel)
+OpenCL on AMD W9100 GPU: 25.7 s (total)
+
+Python 3.6.1 64 bit on Windows 10:
+no OpenCL, 1 core of CPU: 1385 s.
+OpenCL on CPU: shine =  34.1 s (Intel/Intel)
+OpenCL on CPU: shine =  159.7 s (AMD/Intel)
+OpenCL on AMD W9100 GPU: 23.9 s (total)
+
+Python 2.7.12 64 bit on Ubuntu 16.04:
+no OpenCL, 1 core of CPU: 950.0 s.
+OpenCL on CPU: shine = 34.6 s (Intel/Intel)
+no (AMD/Intel)
+OpenCL on AMD W9100 GPU: 20.6 s (total)
+
+Python 3.5.2 64 bit on Ubuntu 16.04:
+no OpenCL, 1 core of CPU: 950.4 s.
+OpenCL on CPU: shine = 35.4 s (Intel/Intel)
+no (AMD/Intel)
+OpenCL on AMD W9100 GPU: 21.0 s (total)
+
+
 Intel(R) Core(TM) i7-3930K CPU @ 3.20GHz:
 
 Python 2.7.10 64 bit on Windows 7:
@@ -84,8 +111,8 @@ import time
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
 #raycing.targetOpenCL = "CPU"
-#raycing.targetOpenCL = (0, 1)
-#raycing.targetOpenCL = None
+#raycing.targetOpenCL = (0, 0)
+raycing.targetOpenCL = None
 #raycing.precisionOpenCL = 'float32'
 
 import xrt.backends.raycing.sources as rs
