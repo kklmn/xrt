@@ -769,7 +769,9 @@ class xrtGlow(qt.QWidget):
         for element, elRecord in self.oesList.items():
             newRow = self.createRow(element, 1)
             for segment in arrayOfRays[0]:
-                if str(segment[1]) == str(elRecord[1]):
+                cond = str(segment[1]) == str(elRecord[1])  # or\
+#                    str(segment[0])+"_Entrance" == element
+                if cond:
                     try:  # if segment[3] is not None:
                         endBeamText = "to {}".format(
                             self.beamsToElements[segment[3]])
@@ -1415,12 +1417,15 @@ class xrtGlow(qt.QWidget):
             self.bl.propagate_flow(startFrom=startFrom)
             rayPath = self.bl.export_to_glow()
             self.updateOEsList(rayPath)
+            self.customGlWidget.glDraw()
             if self.isHidden():
                 self.show()
             image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
             try:
-                print(self.bl.glowFrameName)
                 image.save(self.bl.glowFrameName)
+                cNameSp = os.path.splitext(self.bl.glowFrameName)
+                cName = cNameSp[0] + "_color" + cNameSp[1]
+                self.mplFig.savefig(cName)
             except AttributeError:
                 print('no glowFrameName was given!')
         print("Finished with the movie.")
