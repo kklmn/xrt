@@ -439,12 +439,12 @@ def get_path(beam):
 
 def get_order(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.order if hasattr(beam, 'order') else np.ones_like(beam.state)
+    return beam.order if hasattr(beam, 'order') else beam.state
 
 
 def get_reflection_number(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.nRefl  # if hasattr(beam, 'nRefl') else beam.state
+    return beam.nRefl if hasattr(beam, 'nRefl') else beam.state
 
 
 def get_elevation_d(beam):
@@ -944,8 +944,8 @@ class BeamLine(object):
             else:
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
-    def glow(self, scale=[], centerAt='', startFrom=0, generator=None,
-             generatorArgs=[]):
+    def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
+             generator=None, generatorArgs=[]):
         if generator is not None:
             gen = generator(*generatorArgs)
             try:
@@ -984,6 +984,13 @@ class BeamLine(object):
                     self.blViewer.centerEl(centerAt)
                 except:
                     pass
+            if colorAxis:
+                try:
+                    colorCB = self.blViewer.colorControls[0]
+                    colorCB.setCurrentIndex(colorCB.findText(colorAxis))
+                except:
+                    pass
+
             self.blViewer.show()
             sys.exit(app.exec_())
         else:
