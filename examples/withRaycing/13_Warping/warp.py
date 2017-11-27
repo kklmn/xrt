@@ -97,6 +97,8 @@ import xrt.backends.raycing.waves as rw
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 source_dX = 25e-3
 source_dZ = 5e-3
 p = 25000.
@@ -105,7 +107,10 @@ pitch = 2.2e-3
 pitchr = 4e-3  # for which the sagittal curvature is calculated
 rdefocus = 2 * p*q/(p+q) * np.sin(pitchr)
 Rnom = 2 * p*q/(p+q) / np.sin(pitch)
-Rs = [Rnom*(1.5)**iRf for iRf in range(4)]
+if showIn3D:
+    Rs = []
+else:
+    Rs = [Rnom*(1.5)**iRf for iRf in range(4)]
 Rs.append(1e20)
 
 E0 = 12398  # 7th
@@ -118,8 +123,8 @@ eEpsilonZ = 0.008e-9
 betaX = 9.539
 betaZ = 1.982
 
-#what = 'rays'
-what = 'wave'
+what = 'rays'
+#what = 'wave'
 
 if what == 'rays':
     prefix = 'rays-'
@@ -307,6 +312,7 @@ def build_beamline():
         betaX=betaX, betaZ=betaZ,
         period=18.5, n=108, K=K,
         filamentBeam=(what != 'rays'),
+        targetOpenCL='CPU',
         xPrimeMax=dx/2/p*1e3, zPrimeMax=dy/2/p*np.sin(pitch)*1e3,
         xPrimeMaxAutoReduce=False,
         zPrimeMaxAutoReduce=False,
@@ -327,6 +333,8 @@ def run_process_rays(beamLine):
         beamFSMrefl = beamLine.fsm1.expose(oeGlobal)
         outDict['beamFSMrefl{0:02d}'.format(iR)] = beamFSMrefl
     outDict['oeLocal'] = oeLocal
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 
@@ -405,6 +413,9 @@ def define_plots(beamLine):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[500, 10, 500], centerAt='warped')
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine)
 

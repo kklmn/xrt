@@ -13,7 +13,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
-showIn3D = True
+showIn3D = False
 
 E0, dE = 9000., 2.,
 p = 20000.

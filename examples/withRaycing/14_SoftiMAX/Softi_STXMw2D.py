@@ -24,6 +24,8 @@ import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
+showIn3D = False
+
 mRhodium = rm.Material('Rh', rho=12.41)
 mGolden = rm.Material('Au', rho=19.32)
 mGoldenGrating = rm.Material('Au', rho=19.32, kind='grating')
@@ -84,8 +86,8 @@ print('N_ZP: = {0}'.format(Nzone))
 repeats = 5
 nrays = 1e5
 
-#what = 'rays'
-what = 'hybrid'
+what = 'rays'
+#what = 'hybrid'
 #what = 'wave'
 
 if what == 'rays':
@@ -341,6 +343,8 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
         beamFSMExp = beamLine.fsmExp.expose(beamFZPglobal)
         outDict['beamFSMExp{0:02d}'.format(ic)] = beamFSMExp
 
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 
@@ -667,6 +671,9 @@ def afterScript(complexPlotsIs, complexPlotsEs, complexPlotsPCAs):
 def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
+    if showIn3D:
+        beamLine.glow()
+        return
     plots, complexPlotsIs, complexPlotsEs, complexPlotsPCAs =\
         define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine,

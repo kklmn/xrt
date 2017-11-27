@@ -65,12 +65,18 @@ def plot_generator(plots, beamLine):
             if hasattr(plot, 'textPanel'):
                 plot.textPanel.set_text(
                     '$\\theta$ = {0:.3f}$^o$'.format(thetaDeg))
+        if BalderDMM.showIn3D:
+            beamLine.glowFrameName = 'DMM_{0:05.0f}.jpg'.format(thetaDeg*1e4)
         yield
 
 
 def main():
-    myBalder = BalderDMM.build_beamline(stripe=stripe,
-                                        eMinRays=E0-dE, eMaxRays=E0+dE)
+    myBalder = BalderDMM.build_beamline(
+        stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
+    if BalderDMM.showIn3D:
+        myBalder.glow(scale=[500, 10, 500], centerAt='VCM', startFrom=1,
+                      generator=plot_generator, generatorArgs=[[], myBalder])
+        return
     plots = define_plots(myBalder)
     xrtr.run_ray_tracing(plots, repeats=120, generator=plot_generator,
                          beamLine=myBalder,

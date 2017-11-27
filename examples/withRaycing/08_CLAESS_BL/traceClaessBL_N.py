@@ -251,10 +251,8 @@ def main():
 
     plots = define_plots(myClaess, prefix, suffix, limEMono)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=myClaess,
-                         afterScript=close_all, processes=1)
-#    myClaess.glow()
+                         afterScript=close_all, processes=4)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()

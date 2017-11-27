@@ -15,6 +15,7 @@ import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = False
 
 stripeSi = rm.Material('Si', rho=2.33)
 stripeSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2)
@@ -84,7 +85,8 @@ def build_beamline(nrays=1e4, hkl=(1, 1, 1), stripe='Si',
         limPhysX=(-12, 12), limPhysY=(-150, 150),
         cryst2perpTransl=20, cryst2longTransl=100,
         limPhysX2=(-12, 12), limPhysY2=(-200, 200),
-        targetOpenCL='auto',
+#        targetOpenCL='auto',
+        targetOpenCL='CPU',
         alarmLevel=0.05)
 
     beamLine.BSBlock = ra.RectangularAperture(
@@ -187,8 +189,9 @@ def run_process(beamLine, shineOnly1stSource=False):
         outDict['beamFilter2local1'] = beamFilter2local1
         outDict['beamFilter2local2'] = beamFilter2local2
     beamLine.beams = outDict
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 aceptanceH = 4e-4
@@ -304,6 +307,7 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
     beamLine.slitEH.opening[2] = heightVFM - beamLine.height - dz/2
     beamLine.slitEH.opening[3] = heightVFM - beamLine.height + dz/2
     beamLine.slitEH.set_optical_limits()
+
 
 if __name__ == '__main__':
     beamLine = build_beamline(nrays=25000)

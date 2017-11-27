@@ -71,7 +71,9 @@ def main():
     psi = np.linspace(-1, 1, 51) * 30e-6
     kwargs = dict(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
                   betaX=9.539, betaZ=1.982, period=18.5, n=108, K=0.52,
-                  xPrimeMax=theta[-1]*1e3, zPrimeMax=psi[-1]*1e3, distE='BW')
+                  xPrimeMax=theta[-1]*1e3, zPrimeMax=psi[-1]*1e3,
+#                  targetOpenCL='CPU',
+                  distE='BW')
 
 #    energy = [200000., 200000.]
 #    theta = np.linspace(-2./25000., 2./25000., 51)
