@@ -55,8 +55,8 @@ class Beam(object):
                 for attr in self.listOfAttrs:
                     if hasattr(copyFrom, attr):
                         setattr(self, attr, np.copy(getattr(copyFrom, attr)))
-                if not withNumberOfReflections and hasattr(self, 'nRefl'):
-                    del self['nRefl']
+#                if not withNumberOfReflections and hasattr(self, 'nRefl'):
+#                    delattr(self, 'nRefl')
             except:
                 print("Can't copy beam from", copyFrom)
                 copyFrom = None
