@@ -13,6 +13,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = True
+
 mGold = rm.Material('Au', rho=19.3)
 
 E0 = 9000.
@@ -67,8 +69,9 @@ def build_beamline(nrays=raycing.nrays):
     return beamLine
 
 
-def run_process(beamLine, shineOnly1stSource=False):
+def run_process(beamLine):
     beamSource = beamLine.sources[0].shine()
+    beamSource.nRefl = np.ones_like(beamSource.x)
     beamFSM1 = beamLine.fsmMontel.expose(beamSource)
 
     beamVFMGlobal1, beamVFMLocal = beamLine.VFM.reflect(beamSource)
@@ -97,7 +100,10 @@ def run_process(beamLine, shineOnly1stSource=False):
     outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1,
                'beamVFMLocal': beamVFMLocal,
                'beamHFMLocal': beamHFMLocal,
+               'beamMontelGlobal': beamMontelGlobal,
                'beamFSM2': beamFSM2}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -163,11 +169,13 @@ def define_plots(beamLine):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[300, 3, 300], centerAt='VFM')
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=40, beamLine=beamLine,
                          processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()

@@ -14,6 +14,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = True
+
 mGold = rm.Material('Au', rho=19.3, kind='FZP')
 E0, dE = 400, 5
 
@@ -55,6 +57,8 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamFZPglobal': beamFZPglobal,
                'beamFZPlocal': beamFZPlocal,
                'beamFSM2': beamFSM2}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -133,6 +137,10 @@ def plot_generator(plots, beamLine):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[100, 10, 100], centerAt='FZP',
+                      colorAxis='xzprime')
+        return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=360, generator=plot_generator,
                          beamLine=beamLine, processes='half')

@@ -3,6 +3,7 @@ __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
+import copy
 #import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -15,6 +16,8 @@ import xrt.backends.raycing.materials as rm
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
+
+showIn3D = True
 
 mGold = rm.Material('Au', rho=19.3)
 mGoldenGrating = rm.Material(
@@ -122,10 +125,13 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamFSM3hf': beamFSM3hf, 'beamFSM3vf': beamFSM3vf,
                }
     for iopening, s1 in enumerate(beamLine.s1s):
-        beamM3globalTemp = rs.Beam(copyFrom=beamM3global)
-        s1.propagate(beamM3globalTemp)
-        beamFSM3vs = beamLine.fsm3vf.expose(beamM3globalTemp)
-        beamM4global, beamM4local = beamLine.m4.reflect(beamM3globalTemp)
+        if showIn3D:
+            beamM3globalCopy = beamM3global
+        else:
+            beamM3globalCopy = copy.deepcopy(beamM3global)
+        beamTemp1 = s1.propagate(beamM3globalCopy)
+        beamFSM3vs = beamLine.fsm3vf.expose(beamM3globalCopy)
+        beamM4global, beamM4local = beamLine.m4.reflect(beamM3globalCopy)
         beamFSMExp1 = beamLine.fsmExp1.expose(beamM4global)
         beamFSMExp2 = beamLine.fsmExp2.expose(beamM4global)
         sti = '{0:02d}'.format(iopening)
@@ -134,6 +140,11 @@ def run_process(beamLine, shineOnly1stSource=False):
         outDict['beamM4localOp'+sti] = beamM4local
         outDict['beamFSMExp1Op'+sti] = beamFSMExp1
         outDict['beamFSMExp2Op'+sti] = beamFSMExp2
+        if showIn3D:
+            break
+
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -414,6 +425,9 @@ def plot_generator(plots, plotsMono, plotsFocus, beamLine):
 def main():
     beamLine = build_beamline(azimuth=-2*pitch, nrays=10000)
     align_beamline(beamLine)
+    if showIn3D:
+        beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
+        return
     plots, plotsMono, plotsFocus = define_plots(beamLine)
     args = [plots, plotsMono, plotsFocus, beamLine]
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine,

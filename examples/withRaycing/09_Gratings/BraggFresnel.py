@@ -13,6 +13,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = True
+
 E0, dE = 9000., 2.,
 p = 20000.
 
@@ -39,7 +41,10 @@ def build_beamline(nrays=1e5):
     beamLine.fzp.order = 1
     beamLine.fsm2 = rsc.Screen(beamLine, 'DiamondFSM2', [0, 0, 0],
                                z=(0, -np.sin(2*pitch), np.cos(2*pitch)))
-    beamLine.fsm2RelPos = np.linspace(0, p, 21)
+    if showIn3D:
+        beamLine.fsm2RelPos = [p]
+    else:
+        beamLine.fsm2RelPos = np.linspace(0, p, 21)
     return beamLine
 
 
@@ -58,6 +63,8 @@ def run_process(beamLine, shineOnly1stSource=False):
         beamFSM2 = beamLine.fsm2.expose(beamFZPglobal)
         outDict['beamFSM2-{0:02d}'.format(i+1)] = beamFSM2
 
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -195,6 +202,9 @@ def afterScript(plotPos):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(centerAt='FZP')
+        return
     plots, plotPos = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=60, beamLine=beamLine,
                          processes='half', afterScript=afterScript,

@@ -13,6 +13,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = True
+
 mGold = rm.Material('Au', rho=19.3, kind='grating')
 
 gratingKind = 'y-grating'
@@ -60,6 +62,8 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamGratingGlobal': beamGratingGlobal,
                'beamGratingLocal': beamGratingLocal,
                'beamFSM2': beamFSM2}
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
@@ -102,6 +106,8 @@ def define_plots(beamLine):
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow(scale=[300, 3, 10], centerAt='PlaneGrating')
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine)
 
