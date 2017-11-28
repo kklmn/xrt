@@ -25,6 +25,8 @@ import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
+showIn3D = False
+
 mRhodium = rm.Material('Rh', rho=12.41)
 mGolden = rm.Material('Au', rho=19.32)
 mGoldenGrating = rm.Material('Au', rho=19.32, kind='grating')
@@ -46,7 +48,7 @@ pFZP = qM3mer / 5
 E0 = 280.
 dE = 0.1
 targetHarmonic = 1
-dFocus = np.linspace(0.0005, 0.002, 16)
+dFocus = np.linspace(0.0005, 0.002, 16) if not showIn3D else [0]
 gratingMaterial = mGoldenGrating
 material = mGolden
 
@@ -83,8 +85,8 @@ print('N_ZP: = {0}'.format(Nzone))
 repeats = 1
 nrays = 1e5
 
-#what = 'rays'
-what = 'hybrid'
+what = 'rays'
+#what = 'hybrid'
 #what = 'wave'
 
 if what == 'rays':
@@ -171,9 +173,9 @@ def build_beamline(azimuth=0):
         xPrimeMax=acceptanceHor/2*1e3*hShrink,
         zPrimeMax=acceptanceVer/2*1e3*vShrink,
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
+        targetOpenCL='CPU',
         uniformRayDensity=True,
-        filamentBeam=(what != 'rays'),
-        targetOpenCL='auto')
+        filamentBeam=(what != 'rays'))
 
     opening = [-acceptanceHor*pFE/2*hShrink, acceptanceHor*pFE/2*hShrink,
                -acceptanceVer*pFE/2*vShrink, acceptanceVer*pFE/2*vShrink]
@@ -372,6 +374,8 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
         beamFSMExp = beamLine.fsmExp.expose(beamFZPglobal)
         outDict['beamFSMExp{0:02d}'.format(ic)] = beamFSMExp
 
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 
@@ -731,6 +735,9 @@ def afterScript(complexPlotsIs, complexPlotsDs):
 def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
+    if showIn3D:
+        beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
+        return
     plots, complexPlotsIs, complexPlotsDs = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine,
                          afterScript=afterScript,

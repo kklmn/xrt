@@ -24,6 +24,8 @@ import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
+showIn3D = False
+
 mAu = rm.Material('Au', rho=19.32)
 mRh = rm.Material('Rh', rho=12.41)
 mGolden = rm.Material('Au', rho=19.32)
@@ -38,7 +40,8 @@ targetHarmonic = 1
 acceptanceHor = 2.2e-4  # FE acceptance, full angle, mrad
 acceptanceVer = 4.2e-4  # FE acceptance
 
-dFocus = np.linspace(-100, 100, 9)
+dFocus = np.linspace(-100, 100, 9) if not showIn3D else [0]
+
 imageExtent = [-50, 50, -50, 50]
 
 pFE = 19250.
@@ -79,8 +82,8 @@ ESdZ = 0.1  # in mm EXIT SLIT RADIUS
 repeats = 1
 nrays = 1e5
 
-#what = 'rays'
-what = 'hybrid'
+what = 'rays'
+#what = 'hybrid'
 #what = 'wave'
 
 if what == 'rays':
@@ -138,9 +141,9 @@ def build_beamline(azimuth=0):
         xPrimeMax=acceptanceHor/2*1e3,
         zPrimeMax=acceptanceVer/2*1e3,
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
+        targetOpenCL='CPU',
         uniformRayDensity=True,
-        filamentBeam=(what != 'rays'),
-        targetOpenCL='auto')
+        filamentBeam=(what != 'rays'))
 
     opening = [-acceptanceHor*pFE/2, acceptanceHor*pFE/2,
                -acceptanceVer*pFE/2, acceptanceVer*pFE/2]
@@ -343,6 +346,8 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
         beamFSMExp = beamLine.fsmExp.expose(beamM5global)
         outDict['beamFSMExp{0:02d}'.format(ic)] = beamFSMExp
 
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 
@@ -689,6 +694,9 @@ def afterScript(complexPlotsIs, complexPlotsEs):
 def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
+    if showIn3D:
+        beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
+        return
     plots, complexPlotsIs, complexPlotsEs = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine,
                          afterScript=afterScript,
