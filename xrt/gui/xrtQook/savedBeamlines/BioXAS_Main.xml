@@ -6,15 +6,15 @@
 	<FEMaskbeamLocal01 type="flat"></FEMaskbeamLocal01>
 	<C_FilterbeamGlobal01 type="flat"></C_FilterbeamGlobal01>
 	<C_FilterbeamLocal101 type="flat"></C_FilterbeamLocal101>
-	<C_FilterbeamLocal201 type="flat"></C_FilterbeamLocal201>
+	<CVDFilterAbsorbedPower type="flat"></CVDFilterAbsorbedPower>
 	<WhiteBeamSlitsbeamLocal01 type="flat"></WhiteBeamSlitsbeamLocal01>
 	<M1beamGlobal01 type="flat"></M1beamGlobal01>
-	<M1beamLocal01 type="flat"></M1beamLocal01>
+	<M1AbsorbedPower type="flat"></M1AbsorbedPower>
 	<CM_SlitsbeamLocal01 type="flat"></CM_SlitsbeamLocal01>
 	<SSRL_DCMbeamGlobal01 type="flat"></SSRL_DCMbeamGlobal01>
 	<SSRL_DCMbeamLocal101 type="flat"></SSRL_DCMbeamLocal101>
 	<SSRL_DCMbeamLocal201 type="flat"></SSRL_DCMbeamLocal201>
-	<screen01beamLocal01 type="flat"></screen01beamLocal01>
+	<preM2ScreenFoorprint type="flat"></preM2ScreenFoorprint>
 	<M2beamGlobal01 type="flat"></M2beamGlobal01>
 	<M2beamLocal01 type="flat"></M2beamLocal01>
 	<PhotonShutterbeamLocal01 type="flat"></PhotonShutterbeamLocal01>
@@ -23,7 +23,7 @@
 	<DBHR2beamGlobal01 type="flat"></DBHR2beamGlobal01>
 	<DBHR2beamLocal01 type="flat"></DBHR2beamLocal01>
 	<JJslitsbeamLocal01 type="flat"></JJslitsbeamLocal01>
-	<SampleScreenbeamLocal01 type="flat"></SampleScreenbeamLocal01>
+	<SampleScreenFootprint type="flat"></SampleScreenFootprint>
 </Beams>
 <Materials type="prop">
 	<CVD type="value">
@@ -31,12 +31,12 @@
 			<elements type="param">C</elements>
 			<quantities type="param">None</quantities>
 			<kind type="param">plate</kind>
-			<rho type="param">2.3</rho>
+			<rho type="param">3.52</rho>
 			<t type="param">None</t>
 			<table type="param">Chantler total</table>
 			<efficiency type="param">None</efficiency>
 			<efficiencyFile type="param">None</efficiencyFile>
-			<name type="param">None</name>
+			<name type="param">Diamond plate</name>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.Material</_object>
 	</CVD>
@@ -47,10 +47,10 @@
 			<kind type="param">mirror</kind>
 			<rho type="param">12.41</rho>
 			<t type="param">None</t>
-			<table type="param">Chantler</table>
+			<table type="param">Chantler total</table>
 			<efficiency type="param">None</efficiency>
 			<efficiencyFile type="param">None</efficiencyFile>
-			<name type="param">None</name>
+			<name type="param">Rhodium bulk</name>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.Material</_object>
 	</Rh>
@@ -67,41 +67,99 @@
 			<factDW type="param">1.0</factDW>
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
-			<name type="param">None</name>
+			<name type="param">Si220</name>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
 	</Si220>
-	<CVDmirror type="value">
+	<CVDcoating type="value">
 		<properties type="prop">
 			<elements type="param">C</elements>
 			<quantities type="param">None</quantities>
 			<kind type="param">mirror</kind>
-			<rho type="param">3.5</rho>
+			<rho type="param">3.52</rho>
 			<t type="param">None</t>
-			<table type="param">Chantler</table>
+			<table type="param">Chantler total</table>
 			<efficiency type="param">None</efficiency>
 			<efficiencyFile type="param">None</efficiencyFile>
-			<name type="param">None</name>
+			<name type="param">CVD coating</name>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.Material</_object>
-	</CVDmirror>
+	</CVDcoating>
+	<Si type="value">
+		<properties type="prop">
+			<elements type="param">Si</elements>
+			<quantities type="param">None</quantities>
+			<kind type="param">mirror</kind>
+			<rho type="param">2.33</rho>
+			<t type="param">None</t>
+			<table type="param">Chantler total</table>
+			<efficiency type="param">None</efficiency>
+			<efficiencyFile type="param">None</efficiencyFile>
+			<name type="param">Si bulk</name>
+		</properties>
+		<_object type="object">xrt.backends.raycing.materials.Material</_object>
+	</Si>
+	<RhOnSi type="value">
+		<properties type="prop">
+			<coating type="param">Rh</coating>
+			<cThickness type="param">30</cThickness>
+			<surfaceRoughness type="param">2</surfaceRoughness>
+			<substrate type="param">Si</substrate>
+			<substRoughness type="param">2</substRoughness>
+			<name type="param">Rhodium on Silicon</name>
+		</properties>
+		<_object type="object">xrt.backends.raycing.materials.Coated</_object>
+	</RhOnSi>
+	<CVDonSi type="value">
+		<properties type="prop">
+			<coating type="param">CVDcoating</coating>
+			<cThickness type="param">20</cThickness>
+			<surfaceRoughness type="param">2</surfaceRoughness>
+			<substrate type="param">Si</substrate>
+			<substRoughness type="param">2</substRoughness>
+			<name type="param">CVD on Silicon</name>
+		</properties>
+		<_object type="object">xrt.backends.raycing.materials.Coated</_object>
+	</CVDonSi>
+	<Si220harm type="value">
+		<properties type="prop">
+			<Nmax type="param">2</Nmax>
+			<name type="param">Si220 with harmonics</name>
+			<hkl type="param">[2, 2, 0]</hkl>
+			<a type="param">5.41949</a>
+			<b type="param">None</b>
+			<c type="param">None</c>
+			<alpha type="param">90</alpha>
+			<beta type="param">90</beta>
+			<gamma type="param">90</gamma>
+			<atoms type="param">[14, 14, 14, 14, 14, 14, 14, 14]</atoms>
+			<atomsXYZ type="param">[[0.0, 0.0, 0.0], [0.0, 0.5, 0.5], [0.5, 0.5, 0.0], [0.5, 0.0, 0.5], [0.25, 0.25, 0.25], [0.25, 0.75, 0.75], [0.75, 0.25, 0.75], [0.75, 0.75, 0.25]]</atomsXYZ>
+			<atomsFraction type="param">None</atomsFraction>
+			<tK type="param">297.15</tK>
+			<t type="param">None</t>
+			<factDW type="param">1.0</factDW>
+			<geom type="param">Bragg reflected</geom>
+			<table type="param">Chantler total</table>
+		</properties>
+		<_object type="object">xrt.backends.raycing.materials.CrystalHarmonics</_object>
+	</Si220harm>
 </Materials>
-<beamLine type="value">
+<BioXAS_Main type="value">
 	<properties type="prop">
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
-		<alignE type="param">9001</alignE>
+		<alignE type="param">8000</alignE>
 		<alignMode type="param">True</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<Wiggler type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
-			<name type="param">wiggler</name>
+			<bl type="param">BioXAS_Main</bl>
+			<name type="param">Flat-Top Wiggler</name>
 			<center type="param">(0, 0, 0)</center>
 			<pitch type="param">0</pitch>
 			<yaw type="param">0</yaw>
-			<nrays type="param">100000</nrays>
+			<nrays type="param">200000</nrays>
 			<eE type="param">2.9</eE>
 			<eI type="param">0.25</eI>
 			<eEspread type="param">0.0</eEspread>
@@ -114,8 +172,8 @@
 			<xPrimeMax type="param">1.</xPrimeMax>
 			<zPrimeMax type="param">0.375</zPrimeMax>
 			<distE type="param">eV</distE>
-			<eMin type="param">8995</eMin>
-			<eMax type="param">9005</eMax>
+			<eMin type="param">7998.5</eMin>
+			<eMax type="param">8001.5</eMax>
 			<eN type="param">51</eN>
 			<K type="param">35</K>
 			<period type="param">150</period>
@@ -141,11 +199,11 @@
 	</Wiggler>
 	<FEMask type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
-			<name type="param">FEMask</name>
+			<bl type="param">BioXAS_Main</bl>
+			<name type="param">Frontend Mask</name>
 			<center type="param">[0, 12000, 0]</center>
 			<kind type="param">['left', 'right', 'bottom', 'top']</kind>
-			<opening type="param">[-16, 16, -1.75, 1.75]</opening>
+			<opening type="param">[-12, 12, -1.75, 1.75]</opening>
 			<alarmLevel type="param">None</alarmLevel>
 		</properties>
 		<_object type="object">xrt.backends.raycing.apertures.RectangularAperture</_object>
@@ -160,12 +218,12 @@
 			</output>
 		</propagate>
 	</FEMask>
-	<C_Filter type="value">
+	<DiamondFilter type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
-			<name type="param">C Filter</name>
+			<bl type="param">BioXAS_Main</bl>
+			<name type="param">Diamond Filter</name>
 			<center type="param">[0, 13600, 0]</center>
-			<pitch type="param">np.pi/2.</pitch>
+			<pitch type="param">np.pi/2</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
@@ -185,7 +243,7 @@
 			<gratingDensity type="param">None</gratingDensity>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
 			<alarmLevel type="param">None</alarmLevel>
-			<t type="param">0.02</t>
+			<t type="param">0.05</t>
 			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -200,17 +258,17 @@
 			<output type="prop">
 				<beamGlobal type="param">C_FilterbeamGlobal01</beamGlobal>
 				<beamLocal1 type="param">C_FilterbeamLocal101</beamLocal1>
-				<beamLocal2 type="param">C_FilterbeamLocal201</beamLocal2>
+				<beamLocal2 type="param">CVDFilterAbsorbedPower</beamLocal2>
 			</output>
 		</double_refract>
-	</C_Filter>
+	</DiamondFilter>
 	<WhiteBeamSlits type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">White Beam Slits</name>
 			<center type="param">[0, 14000, 0]</center>
 			<kind type="param">['left', 'right', 'bottom', 'top']</kind>
-			<opening type="param">[-5, 5, -5, 5]</opening>
+			<opening type="param">[-10, 10, -1, 1]</opening>
 			<alarmLevel type="param">None</alarmLevel>
 		</properties>
 		<_object type="object">xrt.backends.raycing.apertures.RectangularAperture</_object>
@@ -225,12 +283,12 @@
 			</output>
 		</propagate>
 	</WhiteBeamSlits>
-	<M1 type="value">
+	<Mirror1 type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">M1</name>
 			<center type="param">[0, 14600, 0]</center>
-			<pitch type="param">np.radians(0.2)</pitch>
+			<pitch type="param">0.15 deg</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
@@ -240,7 +298,7 @@
 			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
-			<material type="param">Rh</material>
+			<material type="param">RhOnSi</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">-12, 12</limPhysX>
 			<limOptX type="param">-12, 12</limOptX>
@@ -251,7 +309,7 @@
 			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<R type="param">7e6</R>
+			<R type="param">7.12e6</R>
 			<r type="param">69.81</r>
 			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">None</targetOpenCL>
@@ -263,18 +321,18 @@
 				<beam type="param">C_FilterbeamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
-				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
+				<returnLocalAbsorbed type="param">0</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 			<output type="prop">
 				<beamGlobal type="param">M1beamGlobal01</beamGlobal>
-				<beamLocal type="param">M1beamLocal01</beamLocal>
+				<beamLocal type="param">M1AbsorbedPower</beamLocal>
 			</output>
 		</reflect>
-	</M1>
+	</Mirror1>
 	<CM_Slits type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">CM Slits</name>
 			<center type="param">[0, 15600, auto]</center>
 			<kind type="param">['left', 'right', 'bottom', 'top']</kind>
@@ -295,10 +353,10 @@
 	</CM_Slits>
 	<SSRL_DCM type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
-			<name type="param">SSRL DCM</name>
+			<bl type="param">BioXAS_Main</bl>
+			<name type="param">SSRL channel cut DCM</name>
 			<center type="param">[0, 25300, auto]</center>
-			<bragg type="param">[8998]</bragg>
+			<bragg type="param">[8000]</bragg>
 			<pitch type="param">0</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
@@ -310,7 +368,7 @@
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
 			<material type="param">Si220</material>
-			<material2 type="param">Si220</material2>
+			<material2 type="param">None</material2>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">-20, 20</limPhysX>
 			<limOptX type="param">-20, 20</limOptX>
@@ -333,7 +391,7 @@
 			<cryst2perpTransl type="param">6.5023</cryst2perpTransl>
 			<cryst2longTransl type="param">0</cryst2longTransl>
 			<fixedOffset type="param">None</fixedOffset>
-			<targetOpenCL type="param">None</targetOpenCL>
+			<targetOpenCL type="param">CPU</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.DCM</_object>
@@ -353,9 +411,9 @@
 			</output>
 		</double_reflect>
 	</SSRL_DCM>
-	<M2Paddle type="value">
+	<PreM2Screen type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">M2 Paddle</name>
 			<center type="param">[0, 26000, auto]</center>
 			<x type="param">auto</x>
@@ -370,16 +428,16 @@
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
-				<beamLocal type="param">screen01beamLocal01</beamLocal>
+				<beamLocal type="param">preM2ScreenFoorprint</beamLocal>
 			</output>
 		</expose>
-	</M2Paddle>
-	<M2 type="value">
+	</PreM2Screen>
+	<Mirror2 type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">M2</name>
 			<center type="param">[0, 26900, auto]</center>
-			<pitch type="param">np.radians(-0.2)</pitch>
+			<pitch type="param">-0.15 degree</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi</positionRoll>
@@ -389,7 +447,7 @@
 			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
-			<material type="param">None</material>
+			<material type="param">RhOnSi</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-1000.0, 1000.0]</limPhysX>
 			<limOptX type="param">-12, 12</limOptX>
@@ -400,7 +458,7 @@
 			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<R type="param">3e6</R>
+			<R type="param">2.5e6</R>
 			<r type="param">35.9</r>
 			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">None</targetOpenCL>
@@ -420,14 +478,14 @@
 				<beamLocal type="param">M2beamLocal01</beamLocal>
 			</output>
 		</reflect>
-	</M2>
+	</Mirror2>
 	<PhotonShutter type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">PS1</name>
 			<center type="param">[0, 28300, auto]</center>
 			<kind type="param">['left', 'right', 'bottom', 'top']</kind>
-			<opening type="param">[-10, 10, -5, 5]</opening>
+			<opening type="param">[-5, 5, -2, 2]</opening>
 			<alarmLevel type="param">None</alarmLevel>
 		</properties>
 		<_object type="object">xrt.backends.raycing.apertures.RectangularAperture</_object>
@@ -444,10 +502,10 @@
 	</PhotonShutter>
 	<DBHR1 type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">DBHR1</name>
 			<center type="param">[0, 29900, auto]</center>
-			<pitch type="param">np.radians(0.18)</pitch>
+			<pitch type="param">0.2 deg</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
@@ -457,7 +515,7 @@
 			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
-			<material type="param">CVDmirror</material>
+			<material type="param">CVDcoating</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">-10, 10</limPhysX>
 			<limOptX type="param">-10, 10</limOptX>
@@ -489,10 +547,10 @@
 	</DBHR1>
 	<DBHR2 type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">DBHR2</name>
 			<center type="param">[0, 30075, auto]</center>
-			<pitch type="param">np.radians(-0.18)</pitch>
+			<pitch type="param">-0.2 deg</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi</positionRoll>
@@ -502,7 +560,7 @@
 			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
-			<material type="param">CVDmirror</material>
+			<material type="param">CVDcoating</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">-10, 10</limPhysX>
 			<limOptX type="param">-10, 10</limOptX>
@@ -534,11 +592,11 @@
 	</DBHR2>
 	<JJslits type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">JJ slits</name>
 			<center type="param">[0, 30350, auto]</center>
 			<kind type="param">['left', 'right', 'bottom', 'top']</kind>
-			<opening type="param">-5, 5, 0.1, 0.5</opening>
+			<opening type="param">-5, 5, -0.2, 0.2</opening>
 			<alarmLevel type="param">None</alarmLevel>
 		</properties>
 		<_object type="object">xrt.backends.raycing.apertures.RectangularAperture</_object>
@@ -555,9 +613,9 @@
 	</JJslits>
 	<SampleScreen type="value">
 		<properties type="prop">
-			<bl type="param">beamLine</bl>
+			<bl type="param">BioXAS_Main</bl>
 			<name type="param">Sample</name>
-			<center type="param">[0, 30400, auto]</center>
+			<center type="param">[0, 30650, auto]</center>
 			<x type="param">auto</x>
 			<z type="param">auto</z>
 			<compressX type="param">None</compressX>
@@ -570,15 +628,15 @@
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
-				<beamLocal type="param">SampleScreenbeamLocal01</beamLocal>
+				<beamLocal type="param">SampleScreenFootprint</beamLocal>
 			</output>
 		</expose>
 	</SampleScreen>
-</beamLine>
+</BioXAS_Main>
 <plots type="value">
 	<plot01 type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">SampleScreenbeamLocal01</beam>
+		<beam type="param">WigglerbeamGlobal01</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -618,8 +676,8 @@
 			<data type="param">auto</data>
 			<limits type="param">None</limits>
 			<offset type="param">0</offset>
-			<bins type="param">256</bins>
-			<ppb type="param">1</ppb>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
 			<density type="param">histogram</density>
 			<invertAxis type="param">False</invertAxis>
 			<outline type="param">0.5</outline>
@@ -629,7 +687,7 @@
 		<xPos type="param">1</xPos>
 		<yPos type="param">1</yPos>
 		<ePos type="param">1</ePos>
-		<title type="param">Sample</title>
+		<title type="param">01 - Wiggler Source</title>
 		<invertColorMap type="param">False</invertColorMap>
 		<negative type="param">False</negative>
 		<fluxKind type="param">total</fluxKind>
@@ -648,7 +706,7 @@
 	</plot01>
 	<plot02 type="value">
 		<_object type="object">xrt.plotter.XYCPlot</_object>
-		<beam type="param">C_FilterbeamLocal201</beam>
+		<beam type="param">CVDFilterAbsorbedPower</beam>
 		<rayFlag type="param">(1,)</rayFlag>
 		<xaxis type="prop">
 			<_object type="object">xrt.plotter.XYCAxis</_object>
@@ -699,7 +757,7 @@
 		<xPos type="param">1</xPos>
 		<yPos type="param">1</yPos>
 		<ePos type="param">1</ePos>
-		<title type="param">Beam after DCM</title>
+		<title type="param">02 - CVD Filter Absorbed Power</title>
 		<invertColorMap type="param">False</invertColorMap>
 		<negative type="param">False</negative>
 		<fluxKind type="param">power</fluxKind>
@@ -709,13 +767,223 @@
 		<contourColors type="param">None</contourColors>
 		<contourFmt type="param">%.1f</contourFmt>
 		<contourFactor type="param">1.0</contourFactor>
-		<saveName type="param">plot02.title.png</saveName>
+		<saveName type="param">None</saveName>
 		<persistentName type="param">None</persistentName>
 		<oe type="param">None</oe>
 		<raycingParam type="param">0</raycingParam>
 		<beamState type="param">None</beamState>
 		<beamC type="param">None</beamC>
 	</plot02>
+	<plot03 type="value">
+		<_object type="object">xrt.plotter.XYCPlot</_object>
+		<beam type="param">M1AbsorbedPower</beam>
+		<rayFlag type="param">(1,)</rayFlag>
+		<xaxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">x</label>
+			<unit type="param">mm</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</xaxis>
+		<yaxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">y</label>
+			<unit type="param">mm</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</yaxis>
+		<caxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">energy</label>
+			<unit type="param">eV</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</caxis>
+		<aspect type="param">auto</aspect>
+		<xPos type="param">1</xPos>
+		<yPos type="param">1</yPos>
+		<ePos type="param">1</ePos>
+		<title type="param">03 - Mirror1 Absorbed Power</title>
+		<invertColorMap type="param">False</invertColorMap>
+		<negative type="param">False</negative>
+		<fluxKind type="param">power</fluxKind>
+		<fluxUnit type="param">auto</fluxUnit>
+		<fluxFormatStr type="param">%g</fluxFormatStr>
+		<contourLevels type="param">None</contourLevels>
+		<contourColors type="param">None</contourColors>
+		<contourFmt type="param">%.1f</contourFmt>
+		<contourFactor type="param">1.0</contourFactor>
+		<saveName type="param">None</saveName>
+		<persistentName type="param">None</persistentName>
+		<oe type="param">None</oe>
+		<raycingParam type="param">0</raycingParam>
+		<beamState type="param">None</beamState>
+		<beamC type="param">None</beamC>
+	</plot03>
+	<plot04 type="value">
+		<_object type="object">xrt.plotter.XYCPlot</_object>
+		<beam type="param">preM2ScreenFoorprint</beam>
+		<rayFlag type="param">(1,)</rayFlag>
+		<xaxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">x</label>
+			<unit type="param">mm</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</xaxis>
+		<yaxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">z</label>
+			<unit type="param">mm</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</yaxis>
+		<caxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">energy</label>
+			<unit type="param">eV</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</caxis>
+		<aspect type="param">equal</aspect>
+		<xPos type="param">1</xPos>
+		<yPos type="param">1</yPos>
+		<ePos type="param">1</ePos>
+		<title type="param">04 - preM2 Screen Footprint</title>
+		<invertColorMap type="param">False</invertColorMap>
+		<negative type="param">False</negative>
+		<fluxKind type="param">total</fluxKind>
+		<fluxUnit type="param">auto</fluxUnit>
+		<fluxFormatStr type="param">%g</fluxFormatStr>
+		<contourLevels type="param">None</contourLevels>
+		<contourColors type="param">None</contourColors>
+		<contourFmt type="param">%.1f</contourFmt>
+		<contourFactor type="param">1.0</contourFactor>
+		<saveName type="param">None</saveName>
+		<persistentName type="param">None</persistentName>
+		<oe type="param">None</oe>
+		<raycingParam type="param">0</raycingParam>
+		<beamState type="param">None</beamState>
+		<beamC type="param">None</beamC>
+	</plot04>
+	<plot05 type="value">
+		<_object type="object">xrt.plotter.XYCPlot</_object>
+		<beam type="param">SampleScreenFootprint</beam>
+		<rayFlag type="param">(1,)</rayFlag>
+		<xaxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">x</label>
+			<unit type="param">mm</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</xaxis>
+		<yaxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">z</label>
+			<unit type="param">mm</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">None</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</yaxis>
+		<caxis type="prop">
+			<_object type="object">xrt.plotter.XYCAxis</_object>
+			<label type="param">energy</label>
+			<unit type="param">eV</unit>
+			<factor type="param">None</factor>
+			<data type="param">auto</data>
+			<limits type="param">[7998, 8002]</limits>
+			<offset type="param">0</offset>
+			<bins type="param">128</bins>
+			<ppb type="param">2</ppb>
+			<density type="param">histogram</density>
+			<invertAxis type="param">False</invertAxis>
+			<outline type="param">0.5</outline>
+			<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+		</caxis>
+		<aspect type="param">equal</aspect>
+		<xPos type="param">1</xPos>
+		<yPos type="param">1</yPos>
+		<ePos type="param">1</ePos>
+		<title type="param">05 - Sample</title>
+		<invertColorMap type="param">False</invertColorMap>
+		<negative type="param">False</negative>
+		<fluxKind type="param">total</fluxKind>
+		<fluxUnit type="param">auto</fluxUnit>
+		<fluxFormatStr type="param">%g</fluxFormatStr>
+		<contourLevels type="param">None</contourLevels>
+		<contourColors type="param">None</contourColors>
+		<contourFmt type="param">%.1f</contourFmt>
+		<contourFactor type="param">1.0</contourFactor>
+		<saveName type="param">None</saveName>
+		<persistentName type="param">None</persistentName>
+		<oe type="param">None</oe>
+		<raycingParam type="param">0</raycingParam>
+		<beamState type="param">None</beamState>
+		<beamC type="param">None</beamC>
+	</plot05>
 </plots>
 <run_ray_tracing type="prop">
 	<_object type="object">xrt.runner.run_ray_tracing</_object>
@@ -725,7 +993,7 @@
 	<pickleEvery type="param">None</pickleEvery>
 	<energyRange type="param">None</energyRange>
 	<backend type="param">raycing</backend>
-	<beamLine type="param">beamLine</beamLine>
+	<beamLine type="param">BioXAS_Main</beamLine>
 	<threads type="param">1</threads>
 	<processes type="param">1</processes>
 	<generator type="param">None</generator>
@@ -736,7 +1004,5 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
-<description>
-
-</description>
+<description></description>
 </Project>

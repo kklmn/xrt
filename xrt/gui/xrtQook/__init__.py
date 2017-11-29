@@ -3303,7 +3303,8 @@ if __name__ == '__main__':
                                 if paravalue != str(arg_def) or\
                                         paravalue == 'bl':
                                     if paraname.lower() not in\
-                                            ['tlayer', 'blayer']:
+                                            ['tlayer', 'blayer',
+                                             'coating', 'substrate']:
                                         paravalue = self.quotize(paravalue)
                                     ieinit += '\n{2}{0}={1},'.format(
                                         paraname, paravalue, myTab)
