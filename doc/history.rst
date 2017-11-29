@@ -4,10 +4,12 @@ Version history
 ---------------
 
 1.3.0 (Nov 2017):
-    - :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
+    - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
 
-    - The old examples can now be viewed in xrtGlow as well, just select a
-      proper value for the switch `showIn3D`.
+    - Almost all old examples can now be viewed in xrtGlow as well, just select
+      a proper value for the switch `showIn3D`. Those example scripts having a
+      generator for making scans can also save a movie -- a series of grabbed
+      3D views, as e.g. in :ref:`here <balder_pitch>`.
 
     - Added 'Chantler total' (see
       :class:`~xrt.backends.raycing.materials.Material`) to the list of
@@ -17,7 +19,13 @@ Version history
 
     - The documentation has moved to
       `Read the Docs <http://xrt.readthedocs.io>`_.
-      It loads much faster and builds automatically from GitHub xrt sources.
+      It loads much faster and builds automatically from GitHub xrt sources. It
+      also allows to download the complete documentation as a zip file.
+
+    - Added modelling of interdiffusion/roughness interface to
+      :class:`~xrt.backends.raycing.materials.Multilayer`.
+
+    - :ref:`Speed tests <tests>` include wave propagation on CPU and GPU nodes.
 
     - Numerous updates.
 

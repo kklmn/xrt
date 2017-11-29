@@ -11,10 +11,10 @@ from xrt.backends.raycing.physconsts import SIE0
 
 withUndulator = True
 #withUndulator = False
-withUrgentUndulator = True
-#withUrgentUndulator = False
-withSRWUndulator = True
-#withSRWUndulator = False
+#withUrgentUndulator = True
+withUrgentUndulator = False
+#withSRWUndulator = True
+withSRWUndulator = False
 
 
 def run(case):

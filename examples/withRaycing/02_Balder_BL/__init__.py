@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 r"""
 
 Beamline optics
@@ -61,11 +61,14 @@ Shown is the image at the sample position.
 
 .. animation:: _images/vfmR-Sample
 
+.. _balder_pitch:
+
 Both mirrors (collimating + focusing) at varying pitch angle
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The sagittal radius of the focusing toroid mirror is optimal at 2 mrad pitch
 angle.
 
+.. animation:: _images/pitch-Sample-3D
 .. animation:: _images/pitch-Sample
 
 .. _dmm:

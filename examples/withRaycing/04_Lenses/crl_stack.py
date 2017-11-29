@@ -24,6 +24,8 @@ the nominal focal position for Be and Al CRL's. The real focal position
 deviates from the nominal one, where d\ *q* = 0, due to the rounding of
 *p*/*qδ*:
 
+.. imagezoom:: _images/CRL-3D.*
+
 +------------+------------+
 |  |CRL_Be|  |  |CRL_Al|  |
 +------------+------------+

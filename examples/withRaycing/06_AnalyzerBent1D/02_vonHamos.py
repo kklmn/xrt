@@ -97,7 +97,7 @@ else:
     raise
 
 
-def build_beamline(nrays=1e5):
+def build_beamline(nrays=2e5):
     beamLine = raycing.BeamLine(azimuth=0, height=0)
     rs.GeometricSource(
         beamLine, 'GeometricSource', nrays=nrays, dx=beamH, dy=0,
@@ -105,7 +105,7 @@ def build_beamline(nrays=1e5):
     beamLine.analyzer = Toroid(
         beamLine, analyzerName, surface=('',),
         limPhysX=(-dxCrystal/2, dxCrystal/2),
-        limPhysY=(-dyCrystal/2, dyCrystal/2),
+        limPhysY=(-dyCrystal/2*3, dyCrystal/2*3),
         Rm=Rm, Rs=Rs, shape='rect',
         **facetKWargs)
     beamLine.detector = rsc.Screen(beamLine, 'Detector', z=(0, 0, 1))

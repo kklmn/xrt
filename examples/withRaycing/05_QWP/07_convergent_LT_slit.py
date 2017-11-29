@@ -290,7 +290,8 @@ def main():
     beamLine = build_beamline()
     if showIn3D:
         beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-4,
-                      generator=plot_generator, generatorArgs=[[], beamLine])
+                      generator=plot_generator, generatorArgs=[[], beamLine],
+                      colorAxis='circular_polarization_rate')
         return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(

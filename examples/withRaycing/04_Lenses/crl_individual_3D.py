@@ -24,8 +24,8 @@ E0 = 9000.  # eV
 p = 1000.  # source to 1st lens
 q = 5000.  # 1st lens to focus
 
-Lens = roe.ParaboloidFlatLens
-#Lens = roe.DoubleParaboloidLens
+#Lens = roe.ParaboloidFlatLens
+Lens = roe.DoubleParaboloidLens
 #Lens = roe.ParabolicCylinderFlatLens
 
 mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
@@ -52,7 +52,7 @@ def build_beamline(nrays=1e4):
         lens = Lens(
             beamLine, 'Lens{0:02d}'.format(ilens), center=[0, p + dz*ilens, 0],
             pitch=np.pi/2, roll=roll, t=0.1, material=material,
-            limPhysX=[-3, 3], limPhysY=[-3, 3],
+            limPhysX=[-2, 2], limPhysY=[-2, 2],
             focus=parabolaParam, zmax=zmax, alarmLevel=0.1)
         beamLine.lenses.append(lens)
         if ilens == 0:
@@ -87,7 +87,8 @@ rr.run_process = run_process
 
 def main():
     beamLine = build_beamline()
-    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1))
+    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1),
+                  colorAxis='xzprime')
 
 
 if __name__ == '__main__':
