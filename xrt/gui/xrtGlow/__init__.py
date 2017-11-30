@@ -693,8 +693,7 @@ class xrtGlow(qt.QWidget):
                                     elName
                                 break
                 else:
-                    self.oesList[elName].append(
-                        None)
+                    self.oesList[elName].append(None)
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
 

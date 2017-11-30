@@ -695,6 +695,12 @@ def is_auto_align_required(oe):
     return needAutoAlign
 
 
+class aBeam(object):
+    def __init__(self):
+        for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
+            setattr(self, prop, np.zeros(2))
+
+
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
@@ -824,11 +830,11 @@ class BeamLine(object):
         if any(autoCenter) or autoPitch or autoBragg:
             good = (beam.state == 1) | (beam.state == 2)
             if self.flowSource == 'Qook':
-                beam.E[0] = alignE
                 beam.state[0] = 1
+#                beam.E[0] = alignE
             intensity = beam.Jss[good] + beam.Jpp[good]
             totalI = np.sum(intensity)
-            inBeam = copy.deepcopy(beam)  # Beam(nrays=2)
+            inBeam = aBeam()
             for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
                 field = getattr(beam, fieldName)
                 if totalI == 0:
@@ -848,6 +854,7 @@ class BeamLine(object):
             inBeam.a[0] /= dirNorm
             inBeam.b[0] /= dirNorm
             inBeam.c[0] /= dirNorm
+
             if self.flowSource == 'Qook':
                 beam.a[0] /= dirNorm
                 beam.b[0] /= dirNorm
