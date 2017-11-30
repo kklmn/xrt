@@ -1321,7 +1321,7 @@ class OE(object):
 
     def _reflect_crystal_cl(self, goodN, lb, matcr, oeNormal):
         DW = self.cl_precisionF(matcr.factDW)
-        thickness = self.cl_precisionF(matcr.t)
+        thickness = self.cl_precisionF(0 if matcr.t is None else matcr.t)
         geometry = np.int32(matcr.geometry)
         if matcr.tK is not None:
             temperature = self.cl_precisionF(matcr.tK)
@@ -1395,7 +1395,6 @@ class OE(object):
         curveS, curveP, a_out, b_out, c_out = self.ucl.run_parallel(
             'reflect_crystal', scalarArgs, slicedROArgs, nonSlicedROArgs,
             slicedRWArgs, None, lenGood)
-
         return a_out, b_out, c_out, curveS, curveP
 
     def _reflect_local(
@@ -1554,7 +1553,6 @@ class OE(object):
                     toWhere = 6
                 elif matSur.kind == 'crystal harmonics':
                     toWhere = 7
-
             if toWhere == 5:
                 oeNormal = list(
                     self.local_n_random(len(lb.E[goodN]), matSur.chi))
@@ -1805,7 +1803,6 @@ class OE(object):
                             lb.E[goodN], beamInDotNormal, fromVacuum)
             else:
                 refl = 1., 1.
-
             ras, rap = refl[0], refl[1]
             nanSum = np.isnan(ras).sum()
             if nanSum > 0:

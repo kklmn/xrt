@@ -259,10 +259,9 @@ float2 for_one_polarization(float polFactor,
                              float k02, float k0s, float kHs,
                              float2 alpha, float b, float thickness, int2 geom)
   {
-            float2 im1 = (float2)(0,1);
-            float2 ra;
-            float2 rb;
-            float2 delta = sqrt_c(sqr_c(alpha) + pown(polFactor,2) / b *
+            float2 im1 = (float2)(0, 1);
+            float2 ra, rb;
+            float2 delta = sqrt_c(sqr_c(alpha) + polFactor * polFactor / b *
                                     prod_c(chih, chih_));
 
             float t = thickness * 1.e7;
@@ -281,10 +280,11 @@ float2 for_one_polarization(float polFactor,
                     if (thickness == 0 || thickness > 0.51) // is None:  # thick Bragg
                       {
                         //printf("am I here?, t=%d\n",thickness);
-                        ra = div_c(chih * polFactor,alpha + delta);
+                        ra = div_c(chih * polFactor, alpha + delta);
                         float2 ad = alpha - delta;
-                        if (abs_c(ad) == 0) ad = (float2)(1e-100,0);
+                        if (abs_c(ad) == 0) ad = (float2)(1e-100, 0);
                         rb = div_c(chih * polFactor, ad);
+
                         if (isnan(abs_c(ra)) || (abs_c(rb) < abs_c(ra))) ra = rb;
                         //return ra / sqrt(fabs(b));
                       }
@@ -533,7 +533,7 @@ float4 get_amplitude_internal_E(float E, float d, int4 hkl,
     float2 F0 = (F.lo).lo;
     float2 Fhkl = (F.lo).hi;
     float2 Fhkl_ = (F.hi).lo;
-    float lambdaSquare = pown(waveLength,2);
+    float lambdaSquare = waveLength * waveLength;
     float chiToFlambdaSquare = chiToF * lambdaSquare;
     float2 chi0 = conj_c(F0) * chiToFlambdaSquare;
     float2 chih = conj_c(Fhkl) * chiToFlambdaSquare;

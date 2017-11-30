@@ -396,10 +396,11 @@ float8 reflect_crystal_internal(const float factDW,
                       f0cfs, E_vector,
                       f1_vector, f2_vector,
                       0, geom);
-      mem_fence(CLK_LOCAL_MEM_FENCE);
+	  //if (ray == 0) printf("d=%2.8g\n", d);
+	  mem_fence(CLK_LOCAL_MEM_FENCE);
       if (isnan(dt)) dt = 0;
       //printf("dt %g\n", dt);
-      normalDotSurfNormal = dot(planeNormal,surfNormal);
+      normalDotSurfNormal = dot(planeNormal, surfNormal);
       gNormalCryst = (planeNormal - normalDotSurfNormal*surfNormal) *
                           dt / d / 1e-7 *
                           sqrt(fabs(1. - pown(normalDotSurfNormal,2)));
@@ -421,8 +422,8 @@ float8 reflect_crystal_internal(const float factDW,
                       E, beamInDotNormal, 1.,
                       false, ray);
       mem_fence(CLK_LOCAL_MEM_FENCE);
-      beamInDotSurfaceNormal = dot(abc,surfNormal);
-      beamOutDotSurfaceNormal = dot(abc_out,surfNormal);
+      beamInDotSurfaceNormal = dot(abc, surfNormal);
+      beamOutDotSurfaceNormal = dot(abc_out, surfNormal);
       //if the beam reflects through the crystal use Laue model
       //geom.lo = 1,0:Bragg,Laue
       //geom.hi = 1,0:transmitted,reflected

@@ -1267,7 +1267,7 @@ class Crystal(Material):
 #                    raise ValueError('reflectivity contains nan!')
                 return ra / np.sqrt(abs(b))
             t = self.t * 1e7
-            l = t * delta * k02 / 2 / kHs
+            l = t * delta * k02 / 2. / kHs
             if self.geom.startswith('Bragg'):
                 if self.geom.endswith('transmitted'):
                     ra = 1 / (np.cos(l) - 1j * alpha * np.sin(l) / delta) *\
@@ -1610,7 +1610,7 @@ class CrystalFromCell(Crystal):
 
     """
     def __init__(self, name='', hkl=[1, 1, 1],
-                 a=5.419490, b=None, c=None, alpha=90, beta=90, gamma=90,
+                 a=5.430710, b=None, c=None, alpha=90, beta=90, gamma=90,
                  atoms=[14]*8,
                  atomsXYZ=[[0., 0., 0.],
                            [0., 0.5, 0.5],
@@ -1620,9 +1620,9 @@ class CrystalFromCell(Crystal):
                            [0.25, 0.75, 0.75],
                            [0.75, 0.25, 0.75],
                            [0.75, 0.75, 0.25]],
-                 atomsFraction=None, tK=297.15,
+                 atomsFraction=None, tK=0,
                  t=None, factDW=1.,
-                 geom='Bragg reflected', table='Chantler',
+                 geom='Bragg reflected', table='Chantler total',
                  nuPoisson=0., calcBorrmann=None, useTT=False):
         u"""
         *name*: str
@@ -1674,7 +1674,7 @@ class CrystalFromCell(Crystal):
         self.name = name
         self.hkl = hkl
         h, k, l = hkl
-        self.tK = tK
+        self.tK = 0
         self.a = a
         self.b = a if b is None else b
         self.c = a if c is None else c
