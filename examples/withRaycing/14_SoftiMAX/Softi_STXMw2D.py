@@ -672,6 +672,7 @@ def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
     if showIn3D:
+#        beamLine.orient_along_global_Y()
         beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
         return
     plots, complexPlotsIs, complexPlotsEs, complexPlotsPCAs =\
