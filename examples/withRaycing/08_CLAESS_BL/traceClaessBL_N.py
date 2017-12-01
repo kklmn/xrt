@@ -4,9 +4,12 @@ __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
 
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
-from ClaessBL_N import build_beamline, align_beamline
+import ClaessBL_N
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
+
+showIn3D = False
+ClaessBL_N.showIn3D = showIn3D
 
 stripe = 'Rh'
 
@@ -243,11 +246,15 @@ def main():
 #    eMinRays, eMaxRays = None, None
     suffix = '-monoE'
     eMinRays, eMaxRays = limEMono
-    myClaess = build_beamline(1e5, eMinRays, eMaxRays)
-    align_beamline(
+    myClaess = ClaessBL_N.build_beamline(1e5, eMinRays, eMaxRays)
+    ClaessBL_N.align_beamline(
         myClaess, hDiv=1.5e-3, vDiv=2.5e-4, nameVCMstripe=stripe,
         nameDCMcrystal='Si111', energy=9000., fixedExit=25.,
         nameDiagnFoil=u'Cu5µm', nameVFMcylinder=stripe)
+    if showIn3D:
+        myClaess.orient_along_global_Y()
+        myClaess.glow(scale=[500, 3, 500], centerAt='VFM')
+        return
 
     plots = define_plots(myClaess, prefix, suffix, limEMono)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=myClaess,

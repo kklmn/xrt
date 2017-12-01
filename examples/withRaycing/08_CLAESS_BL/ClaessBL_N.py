@@ -14,6 +14,8 @@ import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = False
+
 #targetOpenCL = (0, 0)
 targetOpenCL = None
 
@@ -182,10 +184,10 @@ def run_process(beamLine, shineOnly1stSource=False):
         if shineOnly1stSource:
             break
 
-    beamLine.feFixedMask.propagate(beamSource)
-    beamLine.fePhotonShutter.propagate(beamSource)
-    beamLine.feMovableMaskLT.propagate(beamSource)
-    beamLine.feMovableMaskRB.propagate(beamSource)
+    beamTmp1 = beamLine.feFixedMask.propagate(beamSource)
+    beamTmp2 = beamLine.fePhotonShutter.propagate(beamSource)
+    beamTmp3 = beamLine.feMovableMaskLT.propagate(beamSource)
+    beamTmp4 = beamLine.feMovableMaskRB.propagate(beamSource)
 
     beamFilter1global, beamFilter1local1, beamFilter1local2 = \
         beamLine.filter1.double_refract(beamSource)
@@ -199,8 +201,8 @@ def run_process(beamLine, shineOnly1stSource=False):
         beamLine.dcm.double_reflect(beamVCMglobal)
 
     beamBSBlocklocal = beamLine.BSBlock.propagate(beamDCMglobal)
-    beamLine.slitAfterDCM_LR.propagate(beamDCMglobal)
-    beamLine.slitAfterDCM_BT.propagate(beamDCMglobal)
+    beamTmp5 = beamLine.slitAfterDCM_LR.propagate(beamDCMglobal)
+    beamTmp6 = beamLine.slitAfterDCM_BT.propagate(beamDCMglobal)
     beamXBPMlocal = beamLine.xbpm4foils.propagate(beamDCMglobal)
     beamFSM3 = beamLine.fsm3.expose(beamDCMglobal)
 
@@ -208,7 +210,7 @@ def run_process(beamLine, shineOnly1stSource=False):
     beamFSM4 = beamLine.fsm4.expose(beamVFMglobal)
 
     beamPSFrontLocal = beamLine.ohPSFront.propagate(beamVFMglobal)
-    beamLine.ohPSBack.propagate(beamVFMglobal)
+    beamTmp7 = beamLine.ohPSBack.propagate(beamVFMglobal)
 
     beam100To40FlangeLocal = beamLine.eh100To40Flange.propagate(beamVFMglobal)
     beamSlitEHLocal = beamLine.slitEH.propagate(beamVFMglobal)
@@ -233,6 +235,9 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamFSMSample': beamFSMSample
                }
     beamLine.beams = outDict
+
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -412,6 +417,7 @@ def print_beamline_positions(
 
     time_finish = time.time()
     print('finished in {0:.1f} seconds'.format(time_finish-time_start))
+
 
 if __name__ == '__main__':
     print_beamline_positions(

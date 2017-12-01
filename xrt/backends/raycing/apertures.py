@@ -361,6 +361,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.limPhysX = self.limOptX
         self.limPhysY = self.limOptY
         self.shape = 'rect'
+        self.spotLimits = []
 
     def select_aperture(self, apertureName, targetZ):
         """Updates self.curAperture index and finds dz offset corresponding to
@@ -435,6 +436,7 @@ class RoundAperture(object):
         self.limPhysX = self.limOptX
         self.limPhysY = self.limOptY
         self.shape = 'round'
+        self.spotLimits = []
 
     def get_divergence(self, source):
         """Gets the full divergence given the aperture radius."""

@@ -904,25 +904,37 @@ class DualVFM(MirrorOnTripodWithTwoXStages):
         """Determines the surface of OE at (x, y) position. Here: two circular
         sagittal cylinders, meridionally parabolically bent with fixed ends and
         a sag at the center."""
-        z = np.empty_like(x)
+        z = np.zeros_like(x)
         ind = x < 0
-        z[ind] = self.r2 - self.hCylinder2 -\
-            (self.r2**2 - (x[ind] - self.xCylinder2)**2)**0.5
-        z[~ind] = self.r1 - self.hCylinder1 -\
-            (self.r1**2 - (x[~ind] - self.xCylinder1)**2)**0.5
+
+        with np.errstate(invalid='ignore'):
+            tmp2 = self.r2**2 - (x[ind] - self.xCylinder2)**2
+            z[ind] = self.r2 - self.hCylinder2 - tmp2**0.5
+            z[ind][tmp2 <= 0] = 0
+            tmp1 = self.r1**2 - (x[~ind] - self.xCylinder1)**2
+            z[~ind] = self.r1 - self.hCylinder1 - tmp1**0.5
+            z[~ind][tmp1 <= 0] = 0
+
+        z[np.isnan(z)] = 0.
         z[z > 0] = 0.
         z += (y**2 - self.limPhysY[0]**2) / 2.0 / self.R
         return z
 
     def local_n(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
+        a = np.zeros_like(x)
         ind = x < 0
-        a = np.empty_like(x)
-        a[ind] = -(x[ind] - self.xCylinder2) * \
-            (self.r2**2 - (x[ind] - self.xCylinder2)**2)**(-0.5)  # -dz/dx
-        a[~ind] = -(x[~ind] - self.xCylinder1) * \
-            (self.r1**2 - (x[~ind] - self.xCylinder1)**2)**(-0.5)  # -dz/dx
+
+        with np.errstate(invalid='ignore'):
+            tmp2 = self.r2**2 - (x[ind] - self.xCylinder2)**2
+            a[ind] = -(x[ind] - self.xCylinder2) * tmp2**(-0.5)  # -dz/dx
+            a[ind][tmp2 <= 0] = 0
+            tmp1 = self.r1**2 - (x[~ind] - self.xCylinder1)**2
+            a[~ind] = -(x[~ind] - self.xCylinder1) * tmp1**(-0.5)  # -dz/dx
+            a[~ind][tmp1 <= 0] = 0
+
         z = self.local_z(x, y)
+        a[np.isnan(a)] = 0.
         a[z > 0] = 0.  # -dz/dx
         b = -y / self.R  # -dz/dy
         c = 1.

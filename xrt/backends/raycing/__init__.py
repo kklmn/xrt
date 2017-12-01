@@ -758,6 +758,29 @@ class BeamLine(object):
         self.sinAzimuth = np.sin(value)
         self.cosAzimuth = np.cos(value)
 
+    def orient_along_global_Y(self, center='auto'):
+        if center == 'auto':
+            center0 = self.sources[0].center
+        a0, b0 = self.sinAzimuth, self.cosAzimuth
+        for oe in self.sources + self.oes + self.slits + self.screens:
+            newC = [c-c0 for c, c0 in zip(oe.center, center0)]
+            newC[0], newC[1] = rotate_z(newC[0], newC[1], b0, a0)
+            oe.center = newC
+            if hasattr(oe, 'jack1'):
+                oe.jack1 = [c-c0 for c, c0 in zip(oe.jack1, center0)]
+                oe.jack1[0], oe.jack1[1] = \
+                    rotate_z(oe.jack1[0], oe.jack1[1], b0, a0)
+            if hasattr(oe, 'jack2'):
+                oe.jack2 = [c-c0 for c, c0 in zip(oe.jack2, center0)]
+                oe.jack2[0], oe.jack2[1] = \
+                    rotate_z(oe.jack2[0], oe.jack2[1], b0, a0)
+            if hasattr(oe, 'jack3'):
+                oe.jack3 = [c-c0 for c, c0 in zip(oe.jack3, center0)]
+                oe.jack3[0], oe.jack3[1] = \
+                    rotate_z(oe.jack3[0], oe.jack3[1], b0, a0)
+
+        self.azimuth = 0
+
     def prepare_flow(self):
         def _warning(v1=None, v2=None):
             if v1 is None or v2 is None:

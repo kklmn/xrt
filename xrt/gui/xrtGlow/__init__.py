@@ -2659,7 +2659,7 @@ class xrtGlWidget(qt.QGLWidget):
                 float(self.tiles[0])
             xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                   xLimits[0] + (i+1)*deltaX,
-                                  self.surfCPOrder)
+                                  self.surfCPOrder) + oe.dx
             for k in range(self.tiles[1]):
                 deltaY = (yLimits[1] - yLimits[0]) /\
                     float(self.tiles[1])
@@ -2733,11 +2733,11 @@ class xrtGlWidget(qt.QGLWidget):
 
         if oe.shape == 'round':
             r = oe.r
-            wf = 2.
             isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
             if isBeamStop:
                 limits = [[0, r, 0, 2*np.pi]]
             else:
+                wf = max(r*0.25, 2.5)
                 limits = [[r, r+wf, 0, 2*np.pi]]
             tiles = self.tiles[1] * 5
         else:
@@ -2757,7 +2757,7 @@ class xrtGlWidget(qt.QGLWidget):
 
             w = right - left
             h = top - bottom
-            wf = max(min(w, h), 2.5)
+            wf = max(min(w, h)*0.5, 2.5)
             limits = []
             for akind, d in zip(oe.kind, oe.opening):
                 if akind.startswith('l'):
