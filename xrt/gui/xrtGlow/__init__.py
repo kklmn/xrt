@@ -2728,12 +2728,18 @@ class xrtGlWidget(qt.QGLWidget):
 
         if oe.shape == 'round':
             r = oe.r
-            w = r
-            h = r
-            cX = 0
-            cY = 0
-            wf = r
+            wf = 2.
+            isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
+            if isBeamStop:
+                limits = [[0, r, 0, 2*np.pi]]
+            else:
+                limits = [[r, r+wf, 0, 2*np.pi]]
+            tiles = self.tiles[1] * 5
         else:
+            try:
+                left, right, bottom, top = oe.spotLimits
+            except:  # analysis:ignore
+                left, right, bottom, top = 0, 0, 0, 0
             for akind, d in zip(oe.kind, oe.opening):
                 if akind.startswith('l'):
                     left = d
@@ -2743,82 +2749,61 @@ class xrtGlWidget(qt.QGLWidget):
                     bottom = d
                 elif akind.startswith('t'):
                     top = d
-            w = np.abs(right-left) * 0.5
-            h = np.abs(top-bottom) * 0.5
-            cX = (right+left) * 0.5
-            cY = (top+bottom) * 0.5
+
+            w = right - left
+            h = top - bottom
             wf = max(min(w, h), 2.5)
-        isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
-        if isBeamStop:  # BeamStop
-            limits = list(zip([0], [w], [0], [h]))
-        else:
-            limits = list(zip([0, w], [w+wf, w+wf], [h, 0], [h+wf, h]))
-        for ix in [1, -1]:
-            for iy in [1, -1]:
-                for xMin, xMax, yMin, yMax in limits:
-                    if oe.shape == 'round':
-                        xMin = 0
-                        tiles = self.tiles[1] * 5
-                    else:
-                        tiles = self.tiles[1]
-                    xGridOe = np.linspace(xMin, xMax, surfCPOrder)
+            limits = []
+            for akind, d in zip(oe.kind, oe.opening):
+                if akind.startswith('l'):
+                    limits.append([left-wf, left, bottom-wf, top+wf])
+                elif akind.startswith('r'):
+                    limits.append([right, right+wf, bottom-wf, top+wf])
+                elif akind.startswith('b'):
+                    limits.append([left-wf, right+wf, bottom-wf, bottom])
+                elif akind.startswith('t'):
+                    limits.append([left-wf, right+wf, top, top+wf])
 
-                    for k in range(tiles):
-                        deltaY = (yMax - yMin) / float(tiles)
-                        yGridOe = np.linspace(yMin + k*deltaY,
-                                              yMin + (k+1)*deltaY,
-                                              surfCPOrder)
-                        xv, yv = np.meshgrid(xGridOe, yGridOe)
-                        if oe.shape == 'round' and yMin == 0:
-                            phi = np.arcsin(yGridOe/r)
-                            if isBeamStop:
-                                xv = xv * (r * np.cos(phi) /
-                                           (w + wf))[:, np.newaxis]
-                            else:
-                                xv = xv * (1 - r * np.cos(phi) /
-                                           (w + wf))[:, np.newaxis] +\
-                                    (r * np.cos(phi))[:, np.newaxis]
-                        xv *= ix
-                        yv *= iy
-                        xv = xv.flatten() + cX
-                        yv = yv.flatten() + cY
+            tiles = self.tiles[1]
 
-                        gbp = rsources.Beam(nrays=len(xv))
-                        gbp.x = xv
-                        gbp.y = np.zeros_like(xv)
-                        gbp.z = yv
+        for xMin, xMax, yMin, yMax in limits:
+            xGridOe = np.linspace(xMin, xMax, surfCPOrder)
+            deltaY = (yMax - yMin) / float(tiles)
+            for k in range(tiles):
+                yMinT = yMin + k*deltaY
+                yMaxT = yMinT + deltaY
+                yGridOe = np.linspace(yMinT, yMaxT, surfCPOrder)
+                xv, yv = np.meshgrid(xGridOe, yGridOe)
+                if oe.shape == 'round':
+                    xv, yv = xv*np.cos(yv), xv*np.sin(yv)
+                xv = xv.flatten()
+                yv = yv.flatten()
 
-                        gbp.a = np.zeros_like(xv)
-                        gbp.b = np.ones_like(xv)
-                        gbp.c = np.zeros_like(xv)
+                gbp = rsources.Beam(nrays=len(xv))
+                gbp.x = xv
+                gbp.y = np.zeros_like(xv)
+                gbp.z = yv
 
-                        oe.local_to_global(gbp)
-                        surfCP = np.vstack((gbp.x - self.coordOffset[0],
-                                            gbp.y - self.coordOffset[1],
-                                            gbp.z - self.coordOffset[2])).T
+                gbp.a = np.zeros_like(xv)
+                gbp.b = np.ones_like(xv)
+                gbp.c = np.zeros_like(xv)
 
-                        gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                                   self.modelToWorld(surfCP.reshape(
-                                       surfCPOrder,
-                                       surfCPOrder, 3)))
+                oe.local_to_global(gbp)
+                surfCP = np.vstack((gbp.x - self.coordOffset[0],
+                                    gbp.y - self.coordOffset[1],
+                                    gbp.z - self.coordOffset[2])).T
 
-                        surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
-                                              np.ones_like(gbp.a))).T
+                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                           self.modelToWorld(surfCP.reshape(
+                               surfCPOrder, surfCPOrder, 3)))
 
-                        gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                                   surfNorm.reshape(
-                                       surfCPOrder,
-                                       surfCPOrder, 4))
+                surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
+                                      np.ones_like(gbp.a))).T
 
-                        gl.glMapGrid2f(surfCPOrder*4, 0.0, 1.0,
-                                       surfCPOrder*4, 0.0, 1.0)
-
-#                        gl.glEnable(GL_POLYGON_SMOOTH)
-#                        gl.glLineWidth(3)
-#                        gl.glEvalMesh2(gl.GL_LINE, 0, surfCPOrder*4,
-#                                    0, surfCPOrder*4)
-                        gl.glEvalMesh2(gl.GL_FILL, 0, surfCPOrder*4,
-                                       0, surfCPOrder*4)
+                gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                           surfNorm.reshape(surfCPOrder, surfCPOrder, 4))
+                gl.glMapGrid2f(surfCPOrder*4, 0., 1., surfCPOrder*4, 0., 1.)
+                gl.glEvalMesh2(gl.GL_FILL, 0, surfCPOrder*4, 0, surfCPOrder*4)
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)

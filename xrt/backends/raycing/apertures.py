@@ -96,6 +96,7 @@ class RectangularAperture(object):
         if opening is not None:
             self.set_optical_limits()
         self.shape = 'rect'
+        self.spotLimits = []
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
@@ -114,7 +115,8 @@ class RectangularAperture(object):
     def get_divergence(self, source):
         """Gets divergences given the blade openings."""
         sourceToAperture = ((self.center[0]-source.center[0])**2 +
-                            (self.center[1]-source.center[1])**2)**0.5
+                            (self.center[1]-source.center[1])**2 +
+                            (self.center[2]-source.center[2])**2)**0.5
         divergence = []
         for d in self.opening:
             divergence.append(d / sourceToAperture)
@@ -124,7 +126,8 @@ class RectangularAperture(object):
         """Gets the blade openings given divergences.
         *divergence* is a sequence corresponding to *kind*"""
         sourceToAperture = ((self.center[0]-source.center[0])**2 +
-                            (self.center[1]-source.center[1])**2)**0.5
+                            (self.center[1]-source.center[1])**2 +
+                            (self.center[2]-source.center[2])**2)**0.5
         d = []
         for div in divergence:
             if div > 0:
@@ -164,13 +167,26 @@ class RectangularAperture(object):
                 badIndices[good] = badIndices[good] | (lo.z[good] > d)
         beam.state[badIndices] = self.lostNum
 
-        lo.state[good] = beam.state[good]
+        lo.state[:] = beam.state
         lo.y[good] = 0.
 
         if hasattr(lo, 'Es'):
             propPhase = np.exp(1e7j * (lo.E[good]/CHBAR) * path)
             lo.Es[good] *= propPhase
             lo.Ep[good] *= propPhase
+
+        goodN = lo.state > 0
+        if self.spotLimits:
+            self.spotLimits[0] = min(self.spotLimits[0], lo.x[goodN].min())
+            self.spotLimits[1] = max(self.spotLimits[1], lo.x[goodN].max())
+            self.spotLimits[2] = min(self.spotLimits[2], lo.z[goodN].min())
+            self.spotLimits[3] = max(self.spotLimits[3], lo.z[goodN].max())
+        else:
+            try:
+                self.spotLimits = [lo.x[goodN].min(), lo.x[goodN].max(),
+                                   lo.z[goodN].min(), lo.z[goodN].max()]
+            except ValueError:
+                self.spotLimits = []
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)

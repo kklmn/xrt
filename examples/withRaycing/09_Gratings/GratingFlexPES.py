@@ -87,8 +87,8 @@ def build_beamline(azimuth=0, nrays=raycing.nrays):
 
     beamLine.s1s = [
         ra.RectangularAperture(
-            beamLine, 'vert. slit', [0, 0, 0],
-            ('bottom', 'top'), [fixedExit-opening/2., fixedExit+opening/2.])
+            beamLine, 'vert. slit', [0, 0, fixedExit],
+            ('bottom', 'top'), [-opening/2., +opening/2.])
         for opening in s1openings]
 
     beamLine.m4 = roe.ToroidMirror(
@@ -208,7 +208,7 @@ def align_beamline(
     beamLine.pg.center = 0, pPG, fixedExit
     beamLine.pg.yaw = -2 * pitchM1
 
-    beamLine.fsmPG.center = 0, beamLine.pg.center[1]+1000, 0
+    beamLine.fsmPG.center = 0, beamLine.pg.center[1]+1000, fixedExit
 
     pM3 = 1000.
     pM3mer = pM1 + pPG + pM3
@@ -224,9 +224,9 @@ def align_beamline(
     beamLine.m3.R = RM3
 
     beamLine.fsm3hf.center = -qM3mer * np.sin(2*pitchM3),\
-        beamLine.m3.center[1] + qM3mer * np.cos(2*pitchM3), 0
+        beamLine.m3.center[1] + qM3mer * np.cos(2*pitchM3), fixedExit
     beamLine.fsm3vf.center = -qM3sag * np.sin(2*pitchM3),\
-        beamLine.m3.center[1] + qM3sag * np.cos(2*pitchM3), 0
+        beamLine.m3.center[1] + qM3sag * np.cos(2*pitchM3), fixedExit
     for s1 in beamLine.s1s:
         s1.center = beamLine.fsm3vf.center
 
@@ -246,9 +246,9 @@ def align_beamline(
 
     qFSMExp1 = 1500.  # upstream of the focus
     beamLine.fsmExp1.center = beamLine.m4.center[0],\
-        beamLine.m4.center[1] + qM4 - qFSMExp1, 0
+        beamLine.m4.center[1] + qM4 - qFSMExp1, fixedExit
     beamLine.fsmExp2.center = beamLine.m4.center[0],\
-        beamLine.m4.center[1] + qM4, 0
+        beamLine.m4.center[1] + qM4, fixedExit
 
 
 def define_plots(beamLine):
