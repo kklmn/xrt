@@ -245,7 +245,7 @@ class XRT_CL(object):
         n2f = np.remainder(dimension, divider)
         needResize = False
         # odd dimension performance fix
-        if n2f != 0:
+        if n2f != 0 and dimension > divider:
             oldSize = dimension
             dimension = (np.trunc(dimension/divider) + 1) * divider
             nDiff = int(dimension - oldSize)
