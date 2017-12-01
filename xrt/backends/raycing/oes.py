@@ -63,7 +63,7 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: BlazedGrating(OE)
    :members: __init__
-.. autoclass:: PlaneGrating(OE)
+.. autoclass:: LaminarGrating(OE)
 .. autoclass:: VLSGrating(OE)
    :members: __init__
 
@@ -92,7 +92,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
-           'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating', 'VLSGrating')
+           'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating', 'VLSGrating')
 import collections
 __allSectioned__ = collections.OrderedDict([
     ('Generic',
@@ -110,7 +110,7 @@ __allSectioned__ = collections.OrderedDict([
         ('ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
          'DoubleParaboloidLens')),
     ('Gratings and zone plates',
-        ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'PlaneGrating',
+        ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
          'VLSGrating'))
     ])
 
@@ -2154,9 +2154,9 @@ class BlazedGrating(OE):
         return d * self.rho
 
 
-class PlaneGrating(OE):
+class LaminarGrating(OE):
     """
-    Implements a grating of rectangular shape.
+    Implements a grating of rectangular profile.
 
     """
 
@@ -2256,7 +2256,7 @@ class PlaneGrating(OE):
 
 class VLSGrating(OE):
     """
-    Implements a grating of rectangular shape with variable period.
+    Implements a grating of rectangular profile with variable period.
 
     """
 
