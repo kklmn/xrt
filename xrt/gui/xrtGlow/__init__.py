@@ -2541,7 +2541,12 @@ class xrtGlWidget(qt.QGLWidget):
                                             self.coordOffset)))
         gl.glRotatef(np.degrees(oe.pitch * self.scaleVec[2] /
                                 self.scaleVec[1]), 1, 0, 0)
-        gl.glRotatef(np.degrees(oe.yaw * self.scaleVec[0] /
+        yaw = oe.yaw
+        try:
+            az = oe.bl.azimuth
+        except:  # analysis:ignore
+            az = 0
+        gl.glRotatef(np.degrees((yaw-az) * self.scaleVec[0] /
                                 self.scaleVec[1]), 0, 0, 1)
         gl.glTranslatef(*(-1. * self.modelToWorld(np.array(oe.center) -
                                                   self.coordOffset)))
@@ -2551,7 +2556,7 @@ class xrtGlWidget(qt.QGLWidget):
                                                      period - hp)
                 magToggle = not magToggle
                 for gap in [maghH*1.25, -maghH*1.25]:
-                    cubeCenter = np.array([0, pY, gap])
+                    cubeCenter = np.array([oe.center[0], pY, oe.center[2]+gap])
 #                    self.setMaterial('magRed' if magToggle else 'magBlue')
                     magColor = [0.7, 0.1, 0.1, 1.] if magToggle \
                         else [0.1, 0.1, 0.7, 1.]
