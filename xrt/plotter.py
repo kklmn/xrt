@@ -1000,12 +1000,10 @@ class XYCPlot(object):
         self.max2D_RGB = 0
         self.globalMax2D_RGB = 0
         self.size2D = self.yaxis.bins * self.xaxis.bins
-        is4D = (self.fluxKind.lower().endswith('4d') or
-                self.fluxKind.lower().endswith('pca'))
-        if is4D:
+        self.is4D = (self.fluxKind.lower().endswith('4d') or
+                     self.fluxKind.lower().endswith('pca'))
+        if self.is4D:
             self.size4D = self.yaxis.bins * self.xaxis.bins
-            self.total4D = \
-                np.zeros((self.size2D, self.size2D), dtype=dtype)
             self.total4D = np.zeros((self.size2D, self.size2D), dtype=dtype)
 
         for ax in [self.xaxis, self.yaxis, self.caxis]:
@@ -1580,6 +1578,12 @@ class XYCPlot(object):
             axis.total1D_RGB[:] = np.zeros((axis.bins, 3))
         self.total2D[:] = np.zeros((self.yaxis.bins, self.xaxis.bins))
         self.total2D_RGB[:] = np.zeros((self.yaxis.bins, self.xaxis.bins, 3))
+        if self.is4D:
+            if self.fluxKind.startswith('E'):
+                dtype = np.complex128
+            else:
+                dtype = np.float64
+            self.total4D[:] = np.zeros((self.size2D, self.size2D), dtype=dtype)
 
         try:
             self.fig.canvas.window().setWindowTitle(self.title)

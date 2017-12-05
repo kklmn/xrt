@@ -1818,7 +1818,7 @@ class Undulator(object):
 
         if fixedEnergy:
             rsE = fixedEnergy
-            if (self.E_max-self.E_min) > fixedEnergy*1e-3:
+            if (self.E_max-self.E_min) > fixedEnergy*1.1e-3:
                 print("Warning: the bandwidth seem to big. "
                       "Specify it by giving eMin and eMax in the constructor.")
         nrep = 0
