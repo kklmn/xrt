@@ -172,8 +172,8 @@
 			<xPrimeMax type="param">1.</xPrimeMax>
 			<zPrimeMax type="param">0.375</zPrimeMax>
 			<distE type="param">eV</distE>
-			<eMin type="param">7998.5</eMin>
-			<eMax type="param">8001.5</eMax>
+			<eMin type="param">7998</eMin>
+			<eMax type="param">8002</eMax>
 			<eN type="param">51</eN>
 			<K type="param">35</K>
 			<period type="param">150</period>
@@ -391,7 +391,7 @@
 			<cryst2perpTransl type="param">6.5023</cryst2perpTransl>
 			<cryst2longTransl type="param">0</cryst2longTransl>
 			<fixedOffset type="param">None</fixedOffset>
-			<targetOpenCL type="param">CPU</targetOpenCL>
+			<targetOpenCL type="param">None</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.DCM</_object>
@@ -1004,5 +1004,45 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
-<description></description>
+<description>BioXAS Main
+____________
+
+This example is based on the layout of the BioXAS spectroscopy beamline (Canadian Light Source) and incorporates most commonly used optical components: the wiggler source, flat and curved X-ray mirrors with different coatings, filters, slits and screens.
+
+.. imagezoom:: _images/ex03_glow.png
+   :scale: 60%
+
+Features.
+
+1) Thin mirrors on bulk substrate, see the RhOnSi and CVDonSi materials.
+
+.. imagezoom:: _images/ex03_p01.png
+   :scale: 60%
+
+2) Automatic alignment procedures, see the beamline alignE, alignMode, SSRL_DCM bragg properties and the centers of the optical elements. Note that the value of SSRL_DCM.bragg overrides that beamLine.alignE value.
+
+.. imagezoom:: _images/ex03_p02.png
+   :scale: 60%
+
+3) Absorbed power distributons. See how the parameters of the Mirror1.reflect() function.
+
+.. imagezoom:: _images/ex03_p03a.png
+   :scale: 60%
+
+Check the plot properties
+
+.. imagezoom:: _images/ex03_p03b.png
+   :scale: 60%
+
+Increase the energy range...
+
+.. imagezoom:: _images/ex03_p03c.png
+   :scale: 60%
+
+...to see the effect on the absorbed power spectrum.
+
+.. imagezoom:: _images/ex03_p03d.png
+   :scale: 60%
+
+</description>
 </Project>

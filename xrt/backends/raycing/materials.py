@@ -604,8 +604,6 @@ class Multilayer(object):
             self.dbi = np.ones(self.nPairs) * float(bThickness)
 #            self.dbi = np.array([float(bThickness)] * self.nPairs)
 
-        print(self.idThickness, self.subRough, self.nPairs)
-
     def get_Bragg_angle(self, E, order=1):
         a = order * CH / (2*self.d*E)
         try:

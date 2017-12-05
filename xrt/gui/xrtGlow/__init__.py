@@ -3267,7 +3267,7 @@ class xrtGlWidget(qt.QGLWidget):
             return
         startBeam = self.virtBeam
         try:
-            colorArray = self.getColor(startBeam)
+            vColorArray = self.getColor(startBeam)
         except AttributeError:
             return
 
@@ -3277,8 +3277,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         good = np.logical_and(good, intensityAll >= self.cutoffI)
         goodC = np.logical_and(
-            colorArray <= self.selColorMax,
-            colorArray >= self.selColorMin)
+            vColorArray <= self.selColorMax,
+            vColorArray >= self.selColorMin)
 
         good = np.logical_and(good, goodC)
 
@@ -3291,7 +3291,7 @@ class xrtGlWidget(qt.QGLWidget):
                 alphaMax = 1.
         alphaMax = alphaMax if alphaMax != 0 else 1.
         alphaDots = intensity[good].T / alphaMax
-        colorsDots = np.array(colorArray[good]).T
+        colorsDots = np.array(vColorArray[good]).T
 
         if self.colorMin == self.colorMax:
             if self.colorMax == 0:  # and self.colorMin == 0 too
@@ -3327,7 +3327,7 @@ class xrtGlWidget(qt.QGLWidget):
         self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
                                                    alphaColorDots]))
         histogram = np.histogram(np.array(
-            colorArray[good]),
+            vColorArray[good]),
             range=(self.colorMin, self.colorMax),
             weights=intensity[good],
             bins=100)
