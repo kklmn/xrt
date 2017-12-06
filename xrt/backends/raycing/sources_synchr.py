@@ -464,8 +464,8 @@ class BendingMagnet(object):
                 else:
                     dpsi = 0
 
-            bot.a[:] = -np.tan(Theta0 + dtheta)
-            bot.c[:] = -np.tan(Psi0 + dpsi)
+            bot.a[:] = np.tan(Theta0 + dtheta)
+            bot.c[:] = np.tan(Psi0 + dpsi)
 
             intensS = (mJss[I_pass] * np.conj(mJss[I_pass])).real
             intensP = (mJpp[I_pass] * np.conj(mJpp[I_pass])).real
