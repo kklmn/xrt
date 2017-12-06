@@ -975,7 +975,7 @@ class BeamLine(object):
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
-             generator=None, generatorArgs=[]):
+             colorAxisLimits=None, generator=None, generatorArgs=[]):
         if generator is not None:
             gen = generator(*generatorArgs)
             try:
@@ -1018,6 +1018,13 @@ class BeamLine(object):
                 try:
                     colorCB = self.blViewer.colorControls[0]
                     colorCB.setCurrentIndex(colorCB.findText(colorAxis))
+                except:
+                    pass
+            if colorAxisLimits:
+                try:
+                    self.blViewer.customGlWidget.colorMin,\
+                        self.blViewer.customGlWidget.colorMax = colorAxisLimits
+                    self.blViewer.changeColorAxis(None, newLimits=True)
                 except:
                     pass
 
