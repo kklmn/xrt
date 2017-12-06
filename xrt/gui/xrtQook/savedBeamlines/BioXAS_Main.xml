@@ -1004,15 +1004,16 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
-<description>BioXAS Main
+<description>BioXAS-Main
 ____________
 
-This example is based on the layout of the BioXAS spectroscopy beamline (Canadian Light Source) and incorporates most commonly used optical components: the wiggler source, flat and curved X-ray mirrors with different coatings, filters, slits and screens.
+This example is based on the layout of the BioXAS-Main beamline (Canadian Light Source) and incorporates most commonly used optical components: the wiggler source, flat and curved X-ray mirrors with different coatings, filters, slits and screens.
 
 .. imagezoom:: _images/ex03_glow.png
    :scale: 60%
 
 Features.
+________
 
 1) Thin mirrors on bulk substrate, see the RhOnSi and CVDonSi materials.
 

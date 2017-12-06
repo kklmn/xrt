@@ -3,6 +3,7 @@
 <Beams type="prop">
 	<None type="flat"></None>
 	<Undulator01beamGlobal01 type="flat"></Undulator01beamGlobal01>
+	<Screen01beamLocal01 type="flat"></Screen01beamLocal01>
 	<OE01beamGlobal01 type="flat"></OE01beamGlobal01>
 	<OE01beamLocal01 type="flat"></OE01beamLocal01>
 	<OE02beamGlobal01 type="flat"></OE02beamGlobal01>
@@ -13,7 +14,6 @@
 	<OE04beamGlobal01 type="flat"></OE04beamGlobal01>
 	<OE04beamLocal01 type="flat"></OE04beamLocal01>
 	<Screen03beamLocal01 type="flat"></Screen03beamLocal01>
-	<Screen01beamLocal01 type="flat"></Screen01beamLocal01>
 </Beams>
 <Materials type="prop">
 	<matRh type="value">
@@ -44,12 +44,6 @@
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
 			<name type="param">None</name>
-			<nuPoisson type="param">0.0</nuPoisson>
-			<calcBorrmann type="param">None</calcBorrmann>
-			<useTT type="param">False</useTT>
-			<kind type="param">mirror</kind>
-			<efficiency type="param">None</efficiency>
-			<efficiencyFile type="param">None</efficiencyFile>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
 	</xtal1>
@@ -79,17 +73,6 @@
 			<factDW type="param">1.0</factDW>
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
-			<nuPoisson type="param">0.0</nuPoisson>
-			<calcBorrmann type="param">None</calcBorrmann>
-			<useTT type="param">False</useTT>
-			<d type="param">0</d>
-			<V type="param">None</V>
-			<elements type="param">Si</elements>
-			<quantities type="param">None</quantities>
-			<rho type="param">0</rho>
-			<kind type="param">mirror</kind>
-			<efficiency type="param">None</efficiency>
-			<efficiencyFile type="param">None</efficiencyFile>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalFromCell</_object>
 	</xtal2>
@@ -98,6 +81,8 @@
 	<properties type="prop">
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
+		<alignE type="param">2840</alignE>
+		<alignMode type="param">True</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<Undulator01 type="value">
@@ -105,6 +90,8 @@
 			<bl type="param">P01</bl>
 			<name type="param">und</name>
 			<center type="param">(0, 0, 0)</center>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
 			<nrays type="param">1e5</nrays>
 			<eE type="param">6.08</eE>
 			<eI type="param">0.1</eI>
@@ -115,35 +102,33 @@
 			<eEpsilonZ type="param">0.01</eEpsilonZ>
 			<betaX type="param">20.01</betaX>
 			<betaZ type="param">2.36</betaZ>
-			<period type="param">36</period>
-			<n type="param">250</n>
-			<K type="param">10.0</K>
-			<Kx type="param">0</Kx>
-			<Ky type="param">0.0</Ky>
-			<phaseDeg type="param">0</phaseDeg>
-			<taper type="param">None</taper>
-			<R0 type="param">None</R0>
+			<xPrimeMax type="param">0.02</xPrimeMax>
+			<zPrimeMax type="param">0.02</zPrimeMax>
+			<xPrimeMaxAutoReduce type="param">True</xPrimeMaxAutoReduce>
+			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
+			<distE type="param">eV</distE>
 			<targetE type="param">[2840, 1]</targetE>
-			<customField type="param">None</customField>
 			<eMin type="param">2839</eMin>
 			<eMax type="param">2841</eMax>
 			<eN type="param">51</eN>
-			<distE type="param">eV</distE>
-			<xPrimeMax type="param">0.02</xPrimeMax>
-			<zPrimeMax type="param">0.02</zPrimeMax>
+			<K type="param">10.0</K>
+			<Kx type="param">0</Kx>
+			<Ky type="param">0.0</Ky>
+			<period type="param">36</period>
+			<n type="param">250</n>
+			<phaseDeg type="param">0</phaseDeg>
+			<taper type="param">None</taper>
+			<R0 type="param">None</R0>
+			<filamentBeam type="param">False</filamentBeam>
+			<uniformRayDensity type="param">False</uniformRayDensity>
 			<nx type="param">25</nx>
 			<nz type="param">25</nz>
-			<xPrimeMaxAutoReduce type="param">True</xPrimeMaxAutoReduce>
-			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
+			<customField type="param">None</customField>
 			<gp type="param">1e-06</gp>
 			<gIntervals type="param">1</gIntervals>
 			<nRK type="param">30</nRK>
-			<uniformRayDensity type="param">False</uniformRayDensity>
-			<filamentBeam type="param">False</filamentBeam>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
-			<pitch type="param">0</pitch>
-			<yaw type="param">0</yaw>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
@@ -190,12 +175,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">xtal1</material>
 			<alpha type="param">0.25</alpha>
@@ -205,8 +189,10 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -216,6 +202,7 @@
 				<beam type="param">Undulator01beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -233,12 +220,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">xtal1</material>
 			<alpha type="param">-0.25</alpha>
@@ -248,9 +234,11 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
-			<targetOpenCL type="param">auto</targetOpenCL>
+			<alarmLevel type="param">None</alarmLevel>
+			<targetOpenCL type="param">CPU</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
@@ -259,6 +247,7 @@
 				<beam type="param">OE01beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -297,12 +286,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">xtal2</material>
 			<alpha type="param">0</alpha>
@@ -312,8 +300,10 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -323,6 +313,7 @@
 				<beam type="param">OE02beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -340,12 +331,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">xtal2</material>
 			<alpha type="param">0</alpha>
@@ -355,8 +345,10 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -366,6 +358,7 @@
 				<beam type="param">OE03beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
@@ -907,7 +900,29 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
-<description>
+<description>Back scattering and asymmetry in crystals
+________
 
-</description>
+This examples is used to test automatic calculation of the Bragg angle in crystals in backscattering geometry and highly asymmetric cut.
+
+.. imagezoom:: _images/exp04_glow.png
+   :scale: 60%
+
+Notice that the asymmetry angle *alpha* is a property of the optical element, not the material.
+
+
+.. imagezoom:: _images/exp04_p01.png
+   :scale: 60%
+
+Make sure that the asymmetry angle matches the orientation of the optical element.
+
+
+.. imagezoom:: _images/exp04_p02.png
+   :scale: 60%
+
+Energy resolution should consequently improve.
+
+
+.. imagezoom:: _images/exp04_p03.png
+   :scale: 60%</description>
 </Project>

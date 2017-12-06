@@ -2,17 +2,20 @@
 <Project>
 <Beams type="prop">
 	<None type="flat"></None>
-	<geometricSource01beamGlobal01 type="flat"></geometricSource01beamGlobal01>
-	<oe01beamGlobal01 type="flat"></oe01beamGlobal01>
-	<oe01beamLocal01 type="flat"></oe01beamLocal01>
-	<screen01beamLocal01 type="flat"></screen01beamLocal01>
+	<GSourceBeamGlobal type="flat"></GSourceBeamGlobal>
+	<LaminarGratingBeamGlobal type="flat"></LaminarGratingBeamGlobal>
+	<LaminarGratingBeamLocal type="flat"></LaminarGratingBeamLocal>
+	<LGScreenBeamLocal type="flat"></LGScreenBeamLocal>
+	<SphericalGratingBeamGlobal type="flat"></SphericalGratingBeamGlobal>
+	<SphericalGratingBeamLocal type="flat"></SphericalGratingBeamLocal>
+	<SGScreenBeamLocal type="flat"></SGScreenBeamLocal>
 </Beams>
 <Materials type="prop">
-	<material01 type="value">
+	<Si type="value">
 		<properties type="prop">
 			<elements type="param">Si</elements>
 			<quantities type="param">None</quantities>
-			<kind type="param">auto</kind>
+			<kind type="param">grating</kind>
 			<rho type="param">2.3</rho>
 			<t type="param">None</t>
 			<table type="param">Chantler total</table>
@@ -21,7 +24,7 @@
 			<name type="param">None</name>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.Material</_object>
-	</material01>
+	</Si>
 </Materials>
 <beamLine type="value">
 	<properties type="prop">
@@ -31,7 +34,7 @@
 		<alignMode type="param">False</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
-	<geometricSource01 type="value">
+	<GSource type="value">
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
@@ -64,11 +67,11 @@
 			</parameters>
 			<_object type="object">xrt.backends.raycing.sources.GeometricSource.shine</_object>
 			<output type="prop">
-				<beamGlobal type="param">geometricSource01beamGlobal01</beamGlobal>
+				<beamGlobal type="param">GSourceBeamGlobal</beamGlobal>
 			</output>
 		</shine>
-	</geometricSource01>
-	<oe01 type="value">
+	</GSource>
+	<LaminarGrating type="value">
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
@@ -83,7 +86,7 @@
 			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
-			<material type="param">material01</material>
+			<material type="param">Si</material>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">[-1000.0, 1000.0]</limPhysX>
 			<limOptX type="param">None</limOptX>
@@ -101,19 +104,19 @@
 		<_object type="object">xrt.backends.raycing.oes.OE</_object>
 		<reflect type="prop">
 			<parameters type="prop">
-				<beam type="param">geometricSource01beamGlobal01</beam>
+				<beam type="param">GSourceBeamGlobal</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
 				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.OE.reflect</_object>
 			<output type="prop">
-				<beamGlobal type="param">oe01beamGlobal01</beamGlobal>
-				<beamLocal type="param">oe01beamLocal01</beamLocal>
+				<beamGlobal type="param">LaminarGratingBeamGlobal</beamGlobal>
+				<beamLocal type="param">LaminarGratingBeamLocal</beamLocal>
 			</output>
 		</reflect>
-	</oe01>
-	<screen01 type="value">
+	</LaminarGrating>
+	<LGScreen type="value">
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">None</name>
@@ -126,14 +129,82 @@
 		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
 		<expose type="prop">
 			<parameters type="prop">
-				<beam type="param">oe01beamGlobal01</beam>
+				<beam type="param">LaminarGratingBeamGlobal</beam>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
-				<beamLocal type="param">screen01beamLocal01</beamLocal>
+				<beamLocal type="param">LGScreenBeamLocal</beamLocal>
 			</output>
 		</expose>
-	</screen01>
+	</LGScreen>
+	<SphericalGrating type="value">
+		<properties type="prop">
+			<bl type="param">beamLine</bl>
+			<name type="param"></name>
+			<center type="param">[0, 3000, 0]</center>
+			<pitch type="param">1 deg</pitch>
+			<roll type="param">0</roll>
+			<yaw type="param">0</yaw>
+			<positionRoll type="param">0</positionRoll>
+			<extraPitch type="param">0</extraPitch>
+			<extraRoll type="param">0</extraRoll>
+			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
+			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+			<surface type="param">None</surface>
+			<material type="param">Si</material>
+			<alpha type="param">None</alpha>
+			<limPhysX type="param">[-15.0, 15.0]</limPhysX>
+			<limOptX type="param">None</limOptX>
+			<limPhysY type="param">[-25.0, 50.0]</limPhysY>
+			<limOptY type="param">None</limOptY>
+			<isParametric type="param">False</isParametric>
+			<shape type="param">rect</shape>
+			<gratingDensity type="param">['y', 1200, 1, 0 ,0]</gratingDensity>
+			<order type="param">np.linspace(-2, 2, 5)</order>
+			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<R type="param">10000</R>
+			<r type="param">1000</r>
+			<alarmLevel type="param">None</alarmLevel>
+			<targetOpenCL type="param">None</targetOpenCL>
+			<precisionOpenCL type="param">float64</precisionOpenCL>
+		</properties>
+		<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
+		<reflect type="prop">
+			<parameters type="prop">
+				<beam type="param">GSourceBeamGlobal</beam>
+				<needLocal type="param">True</needLocal>
+				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
+			</parameters>
+			<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
+			<output type="prop">
+				<beamGlobal type="param">SphericalGratingBeamGlobal</beamGlobal>
+				<beamLocal type="param">SphericalGratingBeamLocal</beamLocal>
+			</output>
+		</reflect>
+	</SphericalGrating>
+	<SGScreen type="value">
+		<properties type="prop">
+			<bl type="param">beamLine</bl>
+			<name type="param"></name>
+			<center type="param">[0, 5000, 0]</center>
+			<x type="param">auto</x>
+			<z type="param">auto</z>
+			<compressX type="param">None</compressX>
+			<compressZ type="param">None</compressZ>
+		</properties>
+		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
+		<expose type="prop">
+			<parameters type="prop">
+				<beam type="param">SphericalGratingBeamGlobal</beam>
+			</parameters>
+			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
+			<output type="prop">
+				<beamLocal type="param">SGScreenBeamLocal</beamLocal>
+			</output>
+		</expose>
+	</SGScreen>
 </beamLine>
 <plots type="value">
 </plots>
@@ -156,5 +227,31 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
-<description></description>
+<description>Grating diffraction in rays
+________
+
+In this example we demonstrate how to define Gratings, that perform energy dispersion in rays (no efficiency calculation).
+
+.. imagezoom:: _images/exp02_glow.png
+   :scale: 10%
+
+Two gratings recieve the same beam from the Geometrical Source.
+Both set to 1 degree pitch angle.
+
+1) See the *pitch* definition in degrees.
+2) Set realistic physical size for curved elements, otherwise the beam can be blocked by the front surface.
+3) Set the grating density, in this case the spacing is constant.
+4) Specify the orders of diffraction to consider.
+
+
+.. imagezoom:: _images/exp02_p01.png
+   :scale: 60%
+
+Material properties can only be regarded as mirror reflection. Material kind is set to "grating" in this example, but stay "auto" as well, since the material kind will be set to "grating" automatically in the presence of valid *gratingDensity* property.
+
+
+.. imagezoom:: _images/exp02_p02.png
+   :scale: 60%
+
+</description>
 </Project>
