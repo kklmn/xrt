@@ -668,7 +668,7 @@ class XrtQook(qt.QWidget):
         self.isEmpty = True
         self.beamLine = raycing.BeamLine()
         self.beamLine.flowSource = 'Qook'
-        self.updateBeamlineBeams(text=None)
+        self.updateBeamlineBeams(item=None)
         self.updateBeamlineMaterials(item=None)
         self.updateBeamline(item=None)
         self.rayPath = None
@@ -1749,16 +1749,16 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 if iWidget is not None:
                     if item.text() == "output":
                         try:
-                            print("Trying to delete", str(
-                                iWidget.currentText()))
                             del self.beamLine.beamsDict[str(
                                 iWidget.currentText())]
-                            beamInModel = self.beamModel.findItems(
-                                iWidget.currentText())
-                            if len(beamInModel) > 0:
-                                self.beamModel.takeRow(beamInModel[0].row())
-                        except:  # analysis:ignore
-                            pass
+                        except:
+                            print("Failed to delete", iWidget.currentText())
+                            raise
+                        beamInModel = self.beamModel.findItems(
+                            iWidget.currentText())
+                        if len(beamInModel) > 0:
+                            self.beamModel.takeRow(beamInModel[0].row())
+
             self.deleteElement(view, iItem)
         else:
             if item.parent() == self.rootBLItem:
@@ -1966,7 +1966,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                         self.beamLine.flowSource = 'Qook'
                         self.progressBar.setFormat(
                             "Populating the beams... %p%")
-                        self.updateBeamlineBeams(text=None)
+                        self.updateBeamlineBeams(item=None)
                         self.progressBar.setValue(60)
                         self.progressBar.setFormat(
                             "Populating the materials... %p%")
@@ -2690,21 +2690,31 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
                 return str(itemObject.child(iel, 1).text())
         return None
 
-    def updateBeamlineBeams(self, text):
+    def updateBeamlineBeams(self, item):
         sender = self.sender()
         if sender is not None:
-            if sender.staticMetaObject.className() == 'QComboBox':
-                currentIndex = int(sender.currentIndex())
-                beamValues = list(self.beamLine.beamsDict.values())
-                beamKeys = list(self.beamLine.beamsDict.keys())
-                beamKeys[currentIndex] = text
-                self.beamLine.beamsDict = dict(zip(beamKeys, beamValues))
-            elif text is None:
-                beamsDict = dict()
+            if item is None:  # Create empty beam dict
+                beamsDict = OrderedDict()
                 for ib in range(self.rootBeamItem.rowCount()):
                     beamsDict[str(
                         self.rootBeamItem.child(ib, 0).text())] = None
                 self.beamLine.beamsDict = beamsDict
+#            elif sender.staticMetaObject.className() == 'QComboBox':
+#                currentIndex = int(sender.currentIndex())
+#                beamValues = list(self.beamLine.beamsDict.values())
+#                beamKeys = list(self.beamLine.beamsDict.keys())
+#                beamKeys[currentIndex] = item.text()
+#                self.beamLine.beamsDict = OrderedDict(
+#                    zip(beamKeys, beamValues))
+            else:  # Beam renamed
+                bList = []
+                for ib in range(self.rootBeamItem.rowCount()):
+                    bList.append(self.rootBeamItem.child(ib, 0))
+                for key, value in self.beamLine.beamsDict.items():
+                    if key not in bList:
+                        del self.beamLine.beamsDict[key]
+                        self.beamLine.beamsDict[str(item.text())] = value
+                        break
 
     def updateBeamlineMaterials(self, item, newMat=False):
         def createParamDict(parentItem, elementString):
@@ -3200,7 +3210,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         try:
             self.beamLine = raycing.BeamLine()
             self.beamLine.flowSource = 'Qook'
-            self.updateBeamlineBeams(text=None)
+            self.updateBeamlineBeams(item=None)
             self.updateBeamlineMaterials(item=None)
             self.updateBeamline(item=None)
         except:  # analysis:ignore
