@@ -54,8 +54,8 @@
 	<properties type="prop">
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
-		<alignE type="param">9000.0</alignE>
-		<alignMode type="param">False</alignMode>
+		<alignE type="param">10000</alignE>
+		<alignMode type="param">True</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<BendingMagnet01 type="value">
@@ -65,7 +65,7 @@
 			<center type="param">(0, 0, 0)</center>
 			<pitch type="param">0</pitch>
 			<yaw type="param">0</yaw>
-			<nrays type="param">1000000</nrays>
+			<nrays type="param">200000</nrays>
 			<eE type="param">3.0</eE>
 			<eI type="param">0.1</eI>
 			<eEspread type="param">0.0</eEspread>
@@ -106,10 +106,10 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">Crystal1</name>
-			<center type="param">[0, 10000, 0]</center>
+			<center type="param">[0, 100, 0]</center>
 			<pitch type="param">auto</pitch>
-			<roll type="param">0</roll>
-			<yaw type="param">0</yaw>
+			<roll type="param">-1.5deg</roll>
+			<yaw type="param">-11deg</yaw>
 			<positionRoll type="param">0</positionRoll>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
@@ -151,10 +151,10 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">Crystal2</name>
-			<center type="param">[auto, 11000, auto]</center>
+			<center type="param">[auto, 110, auto]</center>
 			<pitch type="param">auto</pitch>
 			<roll type="param">0</roll>
-			<yaw type="param">0</yaw>
+			<yaw type="param">17deg</yaw>
 			<positionRoll type="param">0.5*np.pi</positionRoll>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
@@ -196,7 +196,7 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">Crystal3</name>
-			<center type="param">[auto, 12000, auto]</center>
+			<center type="param">[auto, 120, auto]</center>
 			<pitch type="param">auto</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
@@ -241,10 +241,10 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">Crystal4</name>
-			<center type="param">[auto, 13000, auto]</center>
+			<center type="param">[auto, 130, auto]</center>
 			<pitch type="param">auto</pitch>
 			<roll type="param">0</roll>
-			<yaw type="param">0</yaw>
+			<yaw type="param">45deg</yaw>
 			<positionRoll type="param">-0.5*np.pi</positionRoll>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
@@ -286,7 +286,7 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">Mirror1</name>
-			<center type="param">[auto, 20000, auto]</center>
+			<center type="param">[auto, 200, auto]</center>
 			<pitch type="param">2e-3</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
@@ -331,7 +331,7 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">Mirror2</name>
-			<center type="param">[auto, 22000, auto]</center>
+			<center type="param">[auto, 220, auto]</center>
 			<pitch type="param">-2e-3</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
@@ -376,7 +376,7 @@
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
 			<name type="param">sample</name>
-			<center type="param">[auto, 30000, auto]</center>
+			<center type="param">[auto, 300, auto]</center>
 			<x type="param">auto</x>
 			<z type="param">auto</z>
 			<compressX type="param">None</compressX>
@@ -889,14 +889,14 @@
 <run_ray_tracing type="prop">
 	<_object type="object">xrt.runner.run_ray_tracing</_object>
 	<plots type="param">plots</plots>
-	<repeats type="param">10</repeats>
+	<repeats type="param">50</repeats>
 	<updateEvery type="param">1</updateEvery>
 	<pickleEvery type="param">None</pickleEvery>
 	<energyRange type="param">None</energyRange>
 	<backend type="param">raycing</backend>
 	<beamLine type="param">beamLine</beamLine>
 	<threads type="param">1</threads>
-	<processes type="param">1</processes>
+	<processes type="param">2</processes>
 	<generator type="param">None</generator>
 	<generatorArgs type="param">[]</generatorArgs>
 	<generatorKWargs type="param">auto</generatorKWargs>
@@ -905,11 +905,21 @@
 	<afterScriptArgs type="param">[]</afterScriptArgs>
 	<afterScriptKWargs type="param">{}</afterScriptKWargs>
 </run_ray_tracing>
-<description>This example is used to test the automatic alignment procedures.
-See the *pitch* and *center* properties of the optical elements.
+<description>Auto alignment test
+________
+
+This example is used to test the automatic alignment procedures for the crystals with arbitrary *roll* and *yaw* orientations.
+The *pitch* and *center* properties of the optical elements are calculated for the beamLine. *alignE* energy.
 
 .. imagezoom:: _images/exp01_glow.png
    :scale: 50%
 
-Notice the beam splitting after OE06, some rays travel **over** the surface without reflection.</description>
+The script is run in two parallel processes to improve performance. See Job Settings -> *processes*
+
+Beam direction may vary, but pitch alignment should stay optimal.
+
+.. imagezoom:: _images/exp01_p01.png
+   :scale: 50%
+
+</description>
 </Project>
