@@ -324,7 +324,9 @@ class xrtGlow(qt.QWidget):
         colorLayout.addWidget(self.paletteWidget)
 
         layout = qt.QHBoxLayout()
-        for icSel, cSelText in enumerate(['Axis min', 'Axis max']):
+        for icSel, cSelText in enumerate(['Color Axis min', 'Color Axis max']):
+            if icSel > 0:
+                layout.addStretch()
             selLabel = qt.QLabel(cSelText)
             selValidator = qt.QDoubleValidator()
             selValidator.setRange(-1.0e20 if icSel == 0 else
@@ -347,6 +349,8 @@ class xrtGlow(qt.QWidget):
 
         layout = qt.QHBoxLayout()
         for icSel, cSelText in enumerate(['Selection min', 'Selection max']):
+            if icSel > 0:
+                layout.addStretch()
             selLabel = qt.QLabel(cSelText)
             selValidator = qt.QDoubleValidator()
             selValidator.setRange(self.customGlWidget.colorMin,
@@ -927,13 +931,19 @@ class xrtGlow(qt.QWidget):
 
     def updateColorAxis(self, icSel):
         if icSel == 0:
-            self.customGlWidget.colorMin = float(self.colorControls[1].text())
-            self.colorControls[2].validator().setBottom(
-                self.customGlWidget.colorMin)
+            txt = self.colorControls[1].text()
+            if txt == "{0:.3f}".format(self.customGlWidget.colorMin):
+                return
+            newColorMin = float(txt)
+            self.customGlWidget.colorMin = newColorMin
+            self.colorControls[2].validator().setBottom(newColorMin)
         else:
-            self.customGlWidget.colorMax = float(self.colorControls[2].text())
-            self.colorControls[1].validator().setTop(
-                self.customGlWidget.colorMax)
+            txt = self.colorControls[2].text()
+            if txt == "{0:.3f}".format(self.customGlWidget.colorMax):
+                return
+            newColorMax = float(txt)
+            self.customGlWidget.colorMax = newColorMax
+            self.colorControls[1].validator().setTop(newColorMax)
         self.changeColorAxis(None, newLimits=True)
 
     def changeColorAxis(self, selAxis, newLimits=False):
@@ -1037,10 +1047,12 @@ class xrtGlow(qt.QWidget):
     def updateColorSelFromQLE(self, icSel):
         try:
             editor = self.sender()
-            value = float(str(editor.text()))
+            txt = str(editor.text())
+            value = float(txt)
             extents = list(self.paletteWidget.span.extents)
-            slider = self.colorControls[5]
             if icSel == 0:
+                if txt == "{0:.3f}".format(self.customGlWidget.selColorMin):
+                    return
                 if value < self.customGlWidget.colorMin:
                     self.im.set_extent(
                         [value, self.customGlWidget.colorMax, 0, 1])
@@ -1049,10 +1061,13 @@ class xrtGlow(qt.QWidget):
                 newExtents = (value, extents[1], extents[2], extents[3])
 #                self.colorControls[2].validator().setBottom(value)
             else:
+                if txt == "{0:.3f}".format(self.customGlWidget.selColorMax):
+                    return
                 if value > self.customGlWidget.colorMax:
                     self.im.set_extent(
                         [self.customGlWidget.colorMin, value, 0, 1])
                     self.customGlWidget.colorMax = value
+                self.customGlWidget.selColorMax = value
                 newExtents = (extents[0], value, extents[2], extents[3])
 #                self.colorControls[1].validator().setTop(value)
             center = 0.5 * (newExtents[0] + newExtents[1])
@@ -1060,6 +1075,7 @@ class xrtGlow(qt.QWidget):
             newMin = self.customGlWidget.colorMin + halfWidth
             newMax = self.customGlWidget.colorMax - halfWidth
             newRange = (newMax - newMin) * 0.01
+            slider = self.colorControls[5]
             slider.setRange(newMin, newMax, newRange)
             slider.setValue(center)
             self.paletteWidget.span.extents = newExtents
