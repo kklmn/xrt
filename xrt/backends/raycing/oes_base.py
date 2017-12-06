@@ -53,6 +53,7 @@ def flatten(x):
 class OE(object):
     """The main base class for an optical element. It implements a generic flat
     mirror, crystal, multilayer or grating."""
+    hiddenMethods = ['multiple_reflect']
     cl_plist = ["center"]
     cl_local_z = """
     float local_z(float8 cl_plist, int i, float x, float y)
