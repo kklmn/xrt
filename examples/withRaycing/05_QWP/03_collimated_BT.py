@@ -16,7 +16,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 
 E0 = 9000.
 eLimits = E0, E0+2.5
@@ -233,7 +233,8 @@ def main():
     if showIn3D:
         beamLine.glow(scale=3e2, centerAt='QWP', startFrom=1,
                       generator=plot_generator, generatorArgs=[[], beamLine],
-                      colorAxis='circular_polarization_rate')
+                      colorAxis='circular_polarization_rate',
+                      colorAxisLimits=[-1, 1])
         return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
