@@ -411,7 +411,7 @@ class XYCPlot(object):
         aspect='equal', xPos=1, yPos=1, ePos=1, title='',
         invertColorMap=False, negative=False,
         fluxKind='total', fluxUnit='auto',
-        fluxFormatStr='%g', contourLevels=None, contourColors=None,
+        fluxFormatStr='auto', contourLevels=None, contourColors=None,
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
             beamState=None, beamC=None):
@@ -1502,19 +1502,26 @@ class XYCPlot(object):
                                 mpl.colors.hsv_to_rgb(color)[0, :].reshape(3, )
                         iTextPanel.set_color(color)
             if self.textI:
+                if self.fluxFormatStr == 'auto':
+                    if (self.fluxUnit is None) or (self.nRaysSeeded == 0):
+                        fluxFormatStr = '%g'
+                    else:
+                        fluxFormatStr = '%.2p'
+                else:
+                    fluxFormatStr = self.fluxFormatStr
                 isPowerOfTen = False
-                if self.fluxFormatStr.endswith('p'):
-                    pos = self.fluxFormatStr.find('.')
-                    if 0 < pos+1 < len(self.fluxFormatStr):
+                if fluxFormatStr.endswith('p'):
+                    pos = fluxFormatStr.find('.')
+                    if 0 < pos+1 < len(fluxFormatStr):
                         isPowerOfTen = True
-                        powerOfTenDecN = int(self.fluxFormatStr[pos+1])
+                        powerOfTenDecN = int(fluxFormatStr[pos+1])
                 if (self.fluxUnit is None) or (self.nRaysSeeded == 0):
                     intensityStr = r'$\Phi = $'
                     if isPowerOfTen:
                         intensityStr += self._pow10(
                             self.intensity, powerOfTenDecN)
                     else:
-                        intensityStr += self.fluxFormatStr % self.intensity
+                        intensityStr += fluxFormatStr % self.intensity
                     self.textI.set_text(intensityStr)
                 else:
                     if self.fluxKind.startswith('power'):
@@ -1524,7 +1531,7 @@ class XYCPlot(object):
                                 powerStr2 = r'P$_{\rm abs} = $'
                             else:
                                 powerStr2 = r'P$_{\rm tot} = $'
-                            powerStr = powerStr2 + self.fluxFormatStr + ' W'
+                            powerStr = powerStr2 + fluxFormatStr + ' W'
                             self.textI.set_text(powerStr % self.power)
                     else:
                         if (self.nRaysAll > 0) and (self.nRaysSeeded > 0):
@@ -1533,14 +1540,14 @@ class XYCPlot(object):
                                 intensityStr = self._pow10(
                                     self.flux, powerOfTenDecN)
                             else:
-                                intensityStr = self.fluxFormatStr % self.flux
+                                intensityStr = fluxFormatStr % self.flux
                             intensityStr = \
                                 r'$\Phi = ${0} ph/s'.format(intensityStr)
                             self.textI.set_text(intensityStr)
             self.update_user_elements()
         if (runner.runCardVals.backend == 'shadow'):
             if self.textI:
-                intensityStr = r'$I = $' + self.fluxFormatStr
+                intensityStr = r'$I = $' + fluxFormatStr
                 self.textI.set_text(intensityStr % self.intensity)
 
         if self.xaxis.fwhmFormatStr is not None:
