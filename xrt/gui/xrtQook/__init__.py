@@ -515,8 +515,8 @@ class XrtQook(qt.QWidget):
             self.sender().updateGeometry()
 
     def readStdOutput(self):
-        output = self.qprocess.readAllStandardOutput()
-        self.codeConsole.append(str(output))
+        output = bytes(self.qprocess.readAllStandardOutput()).decode()
+        self.codeConsole.append(output.rstrip())
 
     def zoom(self, factor):
         """Zoom in/out/reset"""
