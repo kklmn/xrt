@@ -24,7 +24,7 @@ In the present version, :mod:`xrtQook` does not provide automated generation of
 the corresponding script parts have to be written manually based on the
 supplied examples and the present documentation.
 
-See a short :ref:`tutorial for xrtQook <qook_tutorial>`.
+See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
 
 .. imagezoom:: _images/xrtQook.png
    :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
@@ -1093,7 +1093,7 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             self.webHelp.page().setLinkDelegationPolicy(1)
             self.webHelp.page().linkClicked.connect(partial(
                 self.showTutorial,
-                tutorial.__doc__[229:],
+                tutorial.__doc__[60:],
                 "Using xrtQook for script generation",
                 self.xrtQookDir))
         else:
