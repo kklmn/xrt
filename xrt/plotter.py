@@ -1503,7 +1503,8 @@ class XYCPlot(object):
                         iTextPanel.set_color(color)
             if self.textI:
                 if self.fluxFormatStr == 'auto':
-                    if (self.fluxUnit is None) or (self.nRaysSeeded == 0):
+                    if (self.fluxUnit is None) or (self.nRaysSeeded == 0)\
+                            or self.fluxKind.startswith('power'):
                         fluxFormatStr = '%g'
                     else:
                         fluxFormatStr = '%.2p'
