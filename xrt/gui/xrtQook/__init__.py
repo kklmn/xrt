@@ -672,6 +672,9 @@ class XrtQook(qt.QWidget):
         self.updateBeamlineMaterials(item=None)
         self.updateBeamline(item=None)
         self.rayPath = None
+        if self.blViewer is not None:
+            self.blViewer.customGlWidget.selColorMin = None
+            self.blViewer.customGlWidget.selColorMax = None
         self.blUpdateLatchOpen = True
 
     def initAllModels(self):
@@ -1826,9 +1829,9 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
         tmpName = self.layoutFileName
         self.layoutFileName = ""
         if not self.exportLayout():
-            self.statusBar.showMessage(
+            self.progressBar.setFormat(
                 'Failed saving to {}'.format(
-                    os.path.basename(str(self.layoutFileName))), 3000)
+                    os.path.basename(str(self.layoutFileName))))
             self.layoutFileName = tmpName
 
     def exportModel(self, item):
