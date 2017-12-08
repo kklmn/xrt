@@ -675,6 +675,8 @@ class XrtQook(qt.QWidget):
         if self.blViewer is not None:
             self.blViewer.customGlWidget.selColorMin = None
             self.blViewer.customGlWidget.selColorMax = None
+            self.blViewer.customGlWidget.tVec = np.array([0., 0., 0.])
+            self.blViewer.customGlWidget.coordOffset = [0., 0., 0.]
         self.blUpdateLatchOpen = True
 
     def initAllModels(self):
