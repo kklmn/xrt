@@ -202,10 +202,6 @@ class GeometricSource(object):
         else:
             self.name = name
 
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
-
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
 
@@ -224,6 +220,11 @@ class GeometricSource(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
+
         self.polarization = polarization
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
@@ -280,6 +281,18 @@ class GeometricSource(object):
 
         .. Returned values: beamGlobal
         """
+        if self.bl is not None:
+            try:
+                self.bl._alignE = float(self.bl.alignE)
+            except ValueError:
+                if self.distE in ['lines', 'normal']:
+                    self.bl._alignE = self.energies[0]
+                elif self.distE in ['flat']:
+                    self.bl._alignE = 0.5 * (self.energies[0] +
+                                             self.energies[-1])
+                else:
+                    self.bl._alignE = self.energies
+
         if self.uniformRayDensity:
             withAmplitudes = True
         bo = Beam(self.nrays, withAmplitudes=withAmplitudes)  # beam-out
@@ -394,10 +407,6 @@ class GaussianBeam(object):
         else:
             self.name = name
 
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
-
         self.center = center  # 3D point in global system
         self.w0 = w0
         self.distE = distE
@@ -405,6 +414,11 @@ class GaussianBeam(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
+
         self.polarization = polarization
         self.vortex = None
         self.pitch = raycing.auto_units_angle(pitch)
@@ -427,6 +441,18 @@ class GaussianBeam(object):
 
         .. Returned values: beamGlobal
         """
+        if self.bl is not None:
+            try:
+                self.bl._alignE = float(self.bl.alignE)
+            except ValueError:
+                if self.distE in ['lines', 'normal']:
+                    self.bl._alignE = self.energies[0]
+                elif self.distE in ['flat']:
+                    self.bl._alignE = 0.5 * (self.energies[0] +
+                                             self.energies[-1])
+                else:
+                    self.bl._alignE = self.energies
+
         try:
             mcRays = len(wave.rDiffr)
         except AttributeError:
@@ -560,10 +586,6 @@ class MeshSource(object):
         else:
             self.name = name
 
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
-
         self.center = center  # 3D point in global system
         self.minxprime = raycing.auto_units_angle(minxprime)
         self.maxxprime = raycing.auto_units_angle(maxxprime)
@@ -577,6 +599,11 @@ class MeshSource(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
+
         self.polarization = polarization
 
     def shine(self, toGlobal=True):
@@ -586,6 +613,18 @@ class MeshSource(object):
 
         .. Returned values: beamGlobal
         """
+        if self.bl is not None:
+            try:
+                self.bl._alignE = float(self.bl.alignE)
+            except ValueError:
+                if self.distE in ['lines', 'normal']:
+                    self.bl._alignE = self.energies[0]
+                elif self.distE in ['flat']:
+                    self.bl._alignE = 0.5 * (self.energies[0] +
+                                             self.energies[-1])
+                else:
+                    self.bl._alignE = self.energies
+
         self.dxprime = (self.maxxprime-self.minxprime) / (self.nx-1)
         self.dzprime = (self.maxzprime-self.minzprime) / (self.nz-1)
         bo = Beam(self.nrays)  # beam-out
@@ -668,10 +707,6 @@ class CollimatedMeshSource(object):
         else:
             self.name = name
 
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
-
         self.center = center  # 3D point in global system
         self.dx = dx
         self.dz = dz
@@ -683,6 +718,11 @@ class CollimatedMeshSource(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
+
         self.polarization = polarization
 
     def shine(self, toGlobal=True):
@@ -692,6 +732,18 @@ class CollimatedMeshSource(object):
 
         .. Returned values: beamGlobal
         """
+        if self.bl is not None:
+            try:
+                self.bl._alignE = float(self.bl.alignE)
+            except ValueError:
+                if self.distE in ['lines', 'normal']:
+                    self.bl._alignE = self.energies[0]
+                elif self.distE in ['flat']:
+                    self.bl._alignE = 0.5 * (self.energies[0] +
+                                             self.energies[-1])
+                else:
+                    self.bl._alignE = self.energies
+
         bo = Beam(self.nrays)  # beam-out
         bo.state[:] = 1
 # in local coordinate system:

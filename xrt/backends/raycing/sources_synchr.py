@@ -133,10 +133,6 @@ class BendingMagnet(object):
         else:
             self.name = name
 
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
-
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
         self.dx = eSigmaX * 1e-3 if eSigmaX else None
@@ -145,8 +141,13 @@ class BendingMagnet(object):
         self.eEpsilonZ = eEpsilonZ
         self.I0 = eI
         self.eEspread = eEspread
-        self.eMin = eMin
-        self.eMax = eMax
+        self.eMin = float(eMin)
+        self.eMax = float(eMax)
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
+
         xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
             isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
         zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
@@ -347,6 +348,12 @@ class BendingMagnet(object):
 
         .. Returned values: beamGlobal
         """
+        if self.bl is not None:
+            try:
+                self.bl._alignE = float(self.bl.alignE)
+            except ValueError:
+                self.bl._alignE = 0.5 * (self.eMin + self.eMax)
+
         if self.uniformRayDensity:
             withAmplitudes = True
 
@@ -841,10 +848,6 @@ class Undulator(object):
         else:
             self.name = name
 
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
-
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
         self.gp = gp
@@ -857,6 +860,9 @@ class Undulator(object):
         self.I0 = float(eI)
         self.eMin = float(eMin)
         self.eMax = float(eMax)
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 0]
         xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
             isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
         zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
@@ -1772,6 +1778,12 @@ class Undulator(object):
 
         .. Returned values: beamGlobal
         """
+        if self.bl is not None:
+            try:
+                self.bl._alignE = float(self.bl.alignE)
+            except ValueError:
+                self.bl._alignE = 0.5 * (self.eMin + self.eMax)
+
         if wave is not None:
             if not hasattr(wave, 'rDiffr'):
                 raise ValueError("If you want to use a `wave`, run a" +

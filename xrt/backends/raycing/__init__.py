@@ -705,7 +705,7 @@ class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
     direction and height."""
-    def __init__(self, azimuth=0., height=0., alignE=9000., alignMode=False):
+    def __init__(self, azimuth=0., height=0., alignE='auto', alignMode=False):
         u"""
         *azimuth*: float
             Is counted in cw direction from the global Y axis. At
@@ -714,10 +714,11 @@ class BeamLine(object):
         *height*: float
             Beamline height in the global system.
 
-        *alignE*: float
-            Energy for automatic alignment in [eV]. Plays a role if the *pitch*
-            or *bragg* parameters of the energy dispersive optical elements
-            were set to 'auto'.
+        *alignE*: float or 'auto'
+            Energy for automatic alignment in [eV]. If 'auto', alignment energy
+            is defined as the middle of the Source energy range.
+            Plays a role if the *pitch* or *bragg* parameters of the energy
+            dispersive optical elements were set to 'auto'.
 
         *alignMode*: bool
             Toggles the automatic position and Bragg angle calculation
@@ -829,7 +830,7 @@ class BeamLine(object):
     def auto_align(self, oe, beam):
         autoCenter = [False] * 3
         autoPitch = autoBragg = False
-        alignE = self.alignE
+        alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
 
         if hasattr(oe, '_center'):
             autoCenter = [x == 'auto' for x in oe._center]
