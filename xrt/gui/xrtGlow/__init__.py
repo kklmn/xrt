@@ -1803,6 +1803,7 @@ class xrtGlWidget(qt.QGLWidget):
 
                         intensity = startBeam.Jss + startBeam.Jpp
                         intensityAll = intensity / np.max(intensity[good])
+
                         good = np.logical_and(good,
                                               intensityAll >= self.cutoffI)
                         goodC = np.logical_and(
@@ -1819,18 +1820,17 @@ class xrtGlWidget(qt.QGLWidget):
                             else:
                                 alphaMax = 1.
                         alphaMax = alphaMax if alphaMax != 0 else 1.
+
                         alphaRays = np.repeat(intensity[good] / alphaMax, 2).T\
                             if alphaRays is None else np.concatenate(
                                 (alphaRays.T,
                                  np.repeat(intensity[good] / alphaMax, 2).T))
-
                         colorsRays = np.repeat(np.array(self.getColor(
                             startBeam)[good]), 2).T if\
                             colorsRays is None else np.concatenate(
                                 (colorsRays.T,
                                  np.repeat(np.array(self.getColor(
                                      startBeam)[good]), 2).T))
-
                         vertices = np.array(
                             [startBeam.x[good] - self.coordOffset[0],
                              endBeam.x[good] - self.coordOffset[0]]).flatten(
@@ -1962,8 +1962,7 @@ class xrtGlWidget(qt.QGLWidget):
                 else:
                     alphaMax = 1.
                 alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaColorRays = np.array([alphaRays / alphaMax]).T *\
-                    self.lineOpacity
+                alphaColorRays = np.array([alphaRays / alphaMax]).T
                 self.raysColor = np.float32(np.hstack([colorsRGBRays,
                                                        alphaColorRays]))
             if self.showLostRays:
@@ -1999,8 +1998,7 @@ class xrtGlWidget(qt.QGLWidget):
                 else:
                     alphaMax = 1.
                 alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaColorDots = np.array([alphaDots / alphaMax]).T *\
-                    self.pointOpacity
+                alphaColorDots = np.array([alphaDots / alphaMax]).T
                 self.dotsColor = np.float32(np.hstack([colorsRGBDots,
                                                        alphaColorDots]))
             if self.showLostRays:
@@ -2551,7 +2549,8 @@ class xrtGlWidget(qt.QGLWidget):
             vertexArray = gl.vbo.VBO(vertices)
         vertexArray.bind()
         gl.glVertexPointerf(vertexArray)
-        colors[:, 3] = np.float32(lineOpacity)
+        pureOpacity = np.copy(colors[:, 3])
+        colors[:, 3] = np.float32(pureOpacity * lineOpacity)
         colorArray = gl.vbo.VBO(colors)
         colorArray.bind()
         gl.glColorPointerf(colorArray)
@@ -2560,6 +2559,7 @@ class xrtGlWidget(qt.QGLWidget):
         else:
             gl.glPointSize(lineWidth)
         gl.glDrawArrays(geom, 0, len(vertices))
+        colors[:, 3] = pureOpacity
         colorArray.unbind()
         vertexArray.unbind()
 
