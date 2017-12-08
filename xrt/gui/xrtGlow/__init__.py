@@ -949,8 +949,8 @@ class xrtGlow(qt.QWidget):
     def changeColorAxis(self, selAxis, newLimits=False):
         if selAxis is None:
             selAxis = self.colorControls[0].currentText()
-            self.customGlWidget.newColorAxis = False if hasattr(
-                self.customGlWidget, 'selColorMin') else True
+            self.customGlWidget.newColorAxis = False if\
+                self.customGlWidget.selColorMin is not None else True
         else:
             self.customGlWidget.getColor = getattr(
                 raycing, 'get_{}'.format(selAxis))
@@ -1639,6 +1639,8 @@ class xrtGlWidget(qt.QGLWidget):
         self.newColorAxis = True
         self.colorMin = -1e20
         self.colorMax = 1e20
+        self.selColorMin = None
+        self.selColorMax = None
         self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.maxLen = 1.
         self.showLostRays = False
