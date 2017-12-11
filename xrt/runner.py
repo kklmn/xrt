@@ -203,6 +203,9 @@ def one_iteration():
 # in the 1st iteration the plots may require some of x, y, e limits to be
 # calculated and thus this case is special:
     cpus = max(runCardVals.threads, runCardVals.processes)
+    if hasattr(runCardVals, 'beamLine'):
+        runCardVals.beamLine.forceAlign = True if runCardVals.iteration == 0\
+            else False
     if runCardVals.iteration == 0:
         runCardVals.needLimits = False
         for plot in _plots:
