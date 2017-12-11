@@ -16,7 +16,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = True
+showIn3D = False
 
 E0 = 9000.
 eLimits = E0, E0+2.5
