@@ -145,8 +145,7 @@ class RectangularAperture(object):
         .. Returned values: beamLocal
         """
         if self.bl is not None:
-            if self.bl.alignMode or raycing.is_auto_align_required(self):
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -451,21 +450,7 @@ class RoundAperture(object):
         .. Returned values: beamLocal
         """
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -585,21 +570,7 @@ class RoundBeamStop(RoundAperture):
         .. Returned values: beamLocal
         """
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -654,21 +625,7 @@ class DoubleSlit(RectangularAperture):
         .. Returned values: beamLocal
         """
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         shadeMin = (1 - self.shadeFraction) * 0.5
         shadeMax = shadeMin + self.shadeFraction
         good = beam.state > 0

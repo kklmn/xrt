@@ -705,7 +705,7 @@ class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
     direction and height."""
-    def __init__(self, azimuth=0., height=0., alignE='auto', alignMode=False):
+    def __init__(self, azimuth=0., height=0., alignE='auto'):
         u"""
         *azimuth*: float
             Is counted in cw direction from the global Y axis. At
@@ -720,11 +720,6 @@ class BeamLine(object):
             Plays a role if the *pitch* or *bragg* parameters of the energy
             dispersive optical elements were set to 'auto'.
 
-        *alignMode*: bool
-            Toggles the automatic position and Bragg angle calculation
-            procedure for the elements of the beamline containing 'auto' in
-            corresponding fields.
-
 
         """
         self.azimuth = azimuth
@@ -732,7 +727,6 @@ class BeamLine(object):
 #        self.cosAzimuth = np.cos(azimuth)  # b0
         self.height = height
         self.alignE = alignE
-        self.alignMode = alignMode
         self.sources = []
         self.oes = []
         self.slits = []
@@ -744,6 +738,7 @@ class BeamLine(object):
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
         self.flowSource = 'legacy'
+        self.forceAlign = False
         self.beamsRevDict = OrderedDict()
         self.beamsRevDictUsed = {}
         self.blViewer = None
@@ -828,106 +823,118 @@ class BeamLine(object):
         self.flowSource = 'prepared_to_run'
 
     def auto_align(self, oe, beam):
-        autoCenter = [False] * 3
-        autoPitch = autoBragg = False
-        alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
+        if self.flowSource == 'Qook':
+            self.forceAlign = True
+        if self.forceAlign or is_auto_align_required(oe):
+            autoCenter = [False] * 3
+            autoPitch = autoBragg = False
+            alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
 
-        if hasattr(oe, '_center'):
-            autoCenter = [x == 'auto' for x in oe._center]
+            if hasattr(oe, '_center'):
+                autoCenter = [x == 'auto' for x in oe._center]
 
-        if hasattr(oe, '_pitch'):
-            try:
-                if isinstance(oe._pitch, (list, tuple)):
-                    alignE = float(oe._pitch[-1])
-                autoPitch = True
-            except:
-                raise("Automatic Bragg angle calculation failed.")
-
-        if hasattr(oe, '_bragg'):
-            try:
-                if isinstance(oe._bragg, (list, tuple)):
-                    alignE = float(oe._bragg[-1])
-                autoBragg = True
-            except:
-                raise("Automatic Bragg angle calculation failed.")
-
-        if any(autoCenter) or autoPitch or autoBragg:
-            good = (beam.state == 1) | (beam.state == 2)
-            if self.flowSource == 'Qook':
-                beam.state[0] = 1
-#                beam.E[0] = alignE
-            intensity = beam.Jss[good] + beam.Jpp[good]
-            totalI = np.sum(intensity)
-            inBeam = aBeam()
-            for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
-                field = getattr(beam, fieldName)
-                if totalI == 0:
-                    fNorm = 1.
-                else:
-                    fNorm = np.sum(field[good] * intensity) / totalI
+            if hasattr(oe, '_pitch'):
                 try:
-                    setattr(inBeam, fieldName,
-                            np.ones(2) * fNorm)
-                    if self.flowSource == 'Qook':
-                        field[0] = fNorm
-                        setattr(inBeam, fieldName, field)
+                    if isinstance(oe._pitch, (list, tuple)):
+                        alignE = float(oe._pitch[-1])
+                    autoPitch = True
                 except:
-                    print("Cannot find direction for automatic alignment.")
+                    raise("Automatic Bragg angle calculation failed.")
+
+            if hasattr(oe, '_bragg'):
+                try:
+                    if isinstance(oe._bragg, (list, tuple)):
+                        alignE = float(oe._bragg[-1])
+                    autoBragg = True
+                except:
+                    raise("Automatic Bragg angle calculation failed.")
+
+            if any(autoCenter) or autoPitch or autoBragg:
+                good = (beam.state == 1) | (beam.state == 2)
+                if self.flowSource == 'Qook':
+                    beam.state[0] = 1
+    #                beam.E[0] = alignE
+                intensity = beam.Jss[good] + beam.Jpp[good]
+                totalI = np.sum(intensity)
+                inBeam = aBeam()
+                for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
+                    field = getattr(beam, fieldName)
+                    if totalI == 0:
+                        fNorm = 1.
+                    else:
+                        fNorm = np.sum(field[good] * intensity) / totalI
+                    try:
+                        setattr(inBeam, fieldName,
+                                np.ones(2) * fNorm)
+                        if self.flowSource == 'Qook':
+                            field[0] = fNorm
+                            setattr(inBeam, fieldName, field)
+                    except:
+                        print("Cannot find direction for automatic alignment.")
+                        raise
+                dirNorm = np.sqrt(inBeam.a[0]**2 + inBeam.b[0]**2 +
+                                  inBeam.c[0]**2)
+                inBeam.a[0] /= dirNorm
+                inBeam.b[0] /= dirNorm
+                inBeam.c[0] /= dirNorm
+
+                if self.flowSource == 'Qook':
+                    beam.a[0] /= dirNorm
+                    beam.b[0] /= dirNorm
+                    beam.c[0] /= dirNorm
+
+            if any(autoCenter):
+                bStartC = np.array([inBeam.x[0], inBeam.y[0],
+                                    inBeam.z[0]])
+                bStartDir = np.array([inBeam.a[0], inBeam.b[0],
+                                      inBeam.c[0]])
+
+                fixedCoord = np.where(np.invert(np.array(autoCenter)))[0]
+                autoCoord = np.where(autoCenter)[0]
+                for dim in fixedCoord:
+                    if np.abs(bStartDir[dim]) > 1e-3:
+                        plNorm = np.squeeze(np.identity(3)[dim, :])
+                        newCenter = bStartC - (np.dot(
+                            bStartC, plNorm) - oe.center[dim]) /\
+                            np.dot(bStartDir, plNorm) * bStartDir
+                        if np.linalg.norm(newCenter - bStartC) > 0:
+                            break
+                for dim in autoCoord:
+                    oe.center[dim] = newCenter[dim]
+
+                print(oe.name, "center:", oe.center)
+
+            if autoBragg or autoPitch:
+                if self.flowSource == 'Qook':
+                    inBeam.E[0] = alignE
+                try:
+                    braggT =\
+                        oe.material.get_Bragg_angle(alignE)
+                    alphaT = 0 if oe.alpha is None else oe.alpha
+                    lauePitch = 0
+
+                    braggT += -oe.material.get_dtheta(alignE, alphaT)
+                    if oe.material.geom.startswith('Laue'):
+                        lauePitch = 0.5 * np.pi
+                    loBeam = copy.deepcopy(inBeam)  # Beam(copyFrom=inBeam)
+                    global_to_virgin_local(self, inBeam, loBeam,
+                                           center=oe.center)
+                    rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),
+                                yaw=-oe.yaw, pitch=0)
+                    theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
+                    th2pitch = np.sqrt(1. - loBeam.a[0]**2)
+                    targetPitch = np.arcsin(np.sin(braggT) / th2pitch) - theta0
+                    targetPitch += alphaT + lauePitch
+                    if autoBragg:
+                        if autoPitch:
+                            oe.pitch = 0
+                        oe.bragg = targetPitch - oe.pitch
+                        print(oe.name, "Bragg:", oe.bragg)
+                    else:  # autoPitch
+                        oe.pitch = targetPitch
+                        print(oe.name, "pitch:", oe.pitch)
+                except:
                     raise
-            dirNorm = np.sqrt(inBeam.a[0]**2 + inBeam.b[0]**2 + inBeam.c[0]**2)
-            inBeam.a[0] /= dirNorm
-            inBeam.b[0] /= dirNorm
-            inBeam.c[0] /= dirNorm
-
-            if self.flowSource == 'Qook':
-                beam.a[0] /= dirNorm
-                beam.b[0] /= dirNorm
-                beam.c[0] /= dirNorm
-
-        if any(autoCenter):
-            bStartC = np.array([inBeam.x[0], inBeam.y[0],
-                                inBeam.z[0]])
-            bStartDir = np.array([inBeam.a[0], inBeam.b[0],
-                                  inBeam.c[0]])
-
-            fixedCoord = np.invert(np.array(autoCenter))
-
-            vLen = np.linalg.norm(np.array(list(compress(
-                bStartC, fixedCoord))) -
-                np.array(list(compress(oe.center, fixedCoord))))
-            oe.center = bStartC + vLen * bStartDir
-            print(oe.name, "center:", oe.center)
-
-        if autoBragg or autoPitch:
-            if self.flowSource == 'Qook':
-                inBeam.E[0] = alignE
-            try:
-                braggT =\
-                    oe.material.get_Bragg_angle(alignE)
-                alphaT = 0 if oe.alpha is None else oe.alpha
-                lauePitch = 0
-
-                braggT += -oe.material.get_dtheta(alignE, alphaT)
-                if oe.material.geom.startswith('Laue'):
-                    lauePitch = 0.5 * np.pi
-                loBeam = copy.deepcopy(inBeam)  # Beam(copyFrom=inBeam)
-                global_to_virgin_local(self, inBeam, loBeam, center=oe.center)
-                rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),
-                            yaw=-oe.yaw, pitch=0)
-                theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
-                th2pitch = np.sqrt(1. - loBeam.a[0]**2)
-                targetPitch = np.arcsin(np.sin(braggT) / th2pitch) - theta0
-                targetPitch += alphaT + lauePitch
-                if autoBragg:
-                    if autoPitch:
-                        oe.pitch = 0
-                    oe.bragg = targetPitch - oe.pitch
-                    print(oe.name, "Bragg:", oe.bragg)
-                else:  # autoPitch
-                    oe.pitch = targetPitch
-                    print(oe.name, "pitch:", oe.pitch)
-            except:
-                raise
 
     def propagate_flow(self, startFrom=0, signal=None):
         if self.oesDict is None or self.flow is None:

@@ -869,21 +869,7 @@ class OE(object):
         """
         self.footprint = []
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         self.get_orientation()
         # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
@@ -944,21 +930,7 @@ class OE(object):
         """
         self.footprint = []
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         self.get_orientation()
 # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
@@ -1919,7 +1891,8 @@ class DCM(OE):
             self._bragg = self.bragg
         self.cryst1roll = raycing.auto_units_angle(kwargs.pop('cryst1roll', 0))
         self.cryst2roll = raycing.auto_units_angle(kwargs.pop('cryst2roll', 0))
-        self.cryst2pitch = raycing.auto_units_angle(kwargs.pop('cryst2pitch', 0))
+        self.cryst2pitch = raycing.auto_units_angle(
+            kwargs.pop('cryst2pitch', 0))
         self.cryst2finePitch = raycing.auto_units_angle(
             kwargs.pop('cryst2finePitch', 0))
         self.cryst2perpTransl = kwargs.pop('cryst2perpTransl', 0)
@@ -2001,21 +1974,7 @@ class DCM(OE):
         """
         self.footprint = []
         if self.bl is not None:
-            needAutoAlign = False
-            try:
-                for autoParam in ["_center", "_pitch", "_bragg"]:
-                    naParam = autoParam.strip("_")
-                    if hasattr(self, autoParam) and\
-                            hasattr(self, naParam):
-                        if str(getattr(self, autoParam)) ==\
-                                str(getattr(self, naParam)):
-                            needAutoAlign = True
-                            print("{0}.{1} requires auto-calculation".format(
-                                self.name, naParam))
-            except:
-                pass
-            if self.bl.alignMode or needAutoAlign:
-                self.bl.auto_align(self, beam)
+            self.bl.auto_align(self, beam)
         self.get_orientation()
         gb = rs.Beam(copyFrom=beam)  # output beam in global coordinates
         if needLocal:
