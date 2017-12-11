@@ -6,13 +6,13 @@
 	<doubleParaboloidLens01beamGlobal01 type="flat"></doubleParaboloidLens01beamGlobal01>
 	<doubleParaboloidLens01beamLocal101 type="flat"></doubleParaboloidLens01beamLocal101>
 	<doubleParaboloidLens01beamLocal201 type="flat"></doubleParaboloidLens01beamLocal201>
-	<screen01beamLocal01 type="flat"></screen01beamLocal01>
 	<doubleParaboloidLens02beamGlobal01 type="flat"></doubleParaboloidLens02beamGlobal01>
 	<doubleParaboloidLens02beamLocal101 type="flat"></doubleParaboloidLens02beamLocal101>
 	<doubleParaboloidLens02beamLocal201 type="flat"></doubleParaboloidLens02beamLocal201>
 	<doubleParaboloidLens03beamGlobal01 type="flat"></doubleParaboloidLens03beamGlobal01>
 	<doubleParaboloidLens03beamLocal101 type="flat"></doubleParaboloidLens03beamLocal101>
 	<doubleParaboloidLens03beamLocal201 type="flat"></doubleParaboloidLens03beamLocal201>
+	<screen01beamLocal01 type="flat"></screen01beamLocal01>
 </Beams>
 <Materials type="prop">
 	<material01 type="value">
@@ -35,7 +35,6 @@
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
 		<alignE type="param">9000.0</alignE>
-		<alignMode type="param">False</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<geometricSource01 type="value">

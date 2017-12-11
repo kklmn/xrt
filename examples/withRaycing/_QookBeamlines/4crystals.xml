@@ -82,7 +82,6 @@
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
 		<alignE type="param">2840</alignE>
-		<alignMode type="param">True</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<Undulator01 type="value">
@@ -924,5 +923,11 @@ Energy resolution should consequently improve.
 
 
 .. imagezoom:: _images/exp04_p03.png
+   :scale: 60%
+
+In order to save the generated plot give it's *saveName* parameter a meaningful value.
+
+
+.. imagezoom:: _images/exp04_p04.png
    :scale: 60%</description>
 </Project>

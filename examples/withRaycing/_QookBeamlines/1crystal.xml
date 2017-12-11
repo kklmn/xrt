@@ -31,7 +31,6 @@
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
 		<alignE type="param">auto</alignE>
-		<alignMode type="param">True</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<bendingMagnet01 type="value">
@@ -54,8 +53,8 @@
 			<xPrimeMax type="param">0.5</xPrimeMax>
 			<zPrimeMax type="param">0.5</zPrimeMax>
 			<distE type="param">eV</distE>
-			<eMin type="param">10000-1</eMin>
-			<eMax type="param">10000+1</eMax>
+			<eMin type="param">10000-10</eMin>
+			<eMax type="param">10000+10</eMax>
 			<eN type="param">51</eN>
 			<B0 type="param">1.0</B0>
 			<rho type="param">None</rho>

@@ -29,7 +29,6 @@
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
 		<alignE type="param">9000.0</alignE>
-		<alignMode type="param">False</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<geometricSource01 type="value">

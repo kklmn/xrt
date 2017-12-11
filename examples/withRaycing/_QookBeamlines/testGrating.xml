@@ -31,7 +31,6 @@
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
 		<alignE type="param">9000.0</alignE>
-		<alignMode type="param">False</alignMode>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<GSource type="value">
@@ -140,7 +139,7 @@
 	<SphericalGrating type="value">
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
-			<name type="param"></name>
+			<name type="param">None</name>
 			<center type="param">[0, 3000, 0]</center>
 			<pitch type="param">1 deg</pitch>
 			<roll type="param">0</roll>
@@ -187,7 +186,7 @@
 	<SGScreen type="value">
 		<properties type="prop">
 			<bl type="param">beamLine</bl>
-			<name type="param"></name>
+			<name type="param">None</name>
 			<center type="param">[0, 5000, 0]</center>
 			<x type="param">auto</x>
 			<z type="param">auto</z>
