@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-1.3.0 (Nov 2017):
+1.3.0beta (Dec 2017):
     - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
 
     - Almost all old examples can now be viewed in xrtGlow as well, just select
@@ -14,8 +14,8 @@ Version history
     - Added 'Chantler total' (see
       :class:`~xrt.backends.raycing.materials.Material`) to the list of
       absorption tables. This table also adds inelastic scattering channels to
-      the photoelectric absorption cross-section (thanks to B. Kozioziemski for
-      discovering the need).
+      the photoelectric absorption cross-section (thanks to B. Kozioziemski
+      (LLNL) for discovering the need).
 
     - The documentation has moved to
       `Read the Docs <http://xrt.readthedocs.io>`_.
@@ -23,7 +23,10 @@ Version history
       also allows to download the complete documentation as a zip file.
 
     - Added modelling of interdiffusion/roughness interface to
-      :class:`~xrt.backends.raycing.materials.Multilayer`.
+      :class:`~xrt.backends.raycing.materials.Multilayer`. Added 
+      :class:`~xrt.backends.raycing.materials.Coated` material -- a derivative
+      class from :class:`~xrt.backends.raycing.materials.Multilayer` with a
+      single reflective layer on a substrate.
 
     - :ref:`Speed tests <tests>` include wave propagation on CPU and GPU nodes.
 

@@ -162,7 +162,7 @@ The code can run in both Python branches without any modification.
 
 setup(
     name='xrt',
-    version='1.3.0alpha',
+    version='1.3.0beta',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
@@ -180,8 +180,7 @@ setup(
         'xrt.backends.raycing': [os.path.join('data', '*.*'), '*.cl'],
         'xrt': ['*.cl, *.ico'],
         'xrt.gui.xrtQook': [os.path.join('_icons', '*.*'),
-                            os.path.join('_images', '*.*'),
-                            os.path.join('savedBeamlines', '*.*')],
+                            os.path.join('_images', '*.*')],
         'xrt.gui.xrtGlow': [os.path.join('_icons', '*.*')]},
     scripts=[os.path.join('xrt', 'gui', 'xrtQookStart.pyw')],
     classifiers=['Development Status :: 5 - Production/Stable',
