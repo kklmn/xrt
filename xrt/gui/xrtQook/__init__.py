@@ -2659,14 +2659,15 @@ Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
             dummy = unicode  # test for Python3 compatibility analysis:ignore
         except NameError:
             unicode = str
-        if isinstance(self.getVal(value), (str, unicode)):
+        value = self.getVal(value)
+        if isinstance(value, (str, unicode)):
             if 'np.' not in value and\
                     (str(self.rootBLItem.text())+'.') not in value:
                 value = 'r\"{}\"'.format(value)
         if str(value) == 'round':
             value = 'r\"{}\"'.format(value)
-        if isinstance(self.getVal(value), tuple):
-            value = list(self.getVal(value))
+        if isinstance(value, tuple):
+            value = list(value)
         return str(value)
 
     def quotizeAll(self, value):
