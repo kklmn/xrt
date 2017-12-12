@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-1.3.0beta (Dec 2017):
+1.3.0beta (12 Dec 2017):
     - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
 
     - Almost all old examples can now be viewed in xrtGlow as well, just select
