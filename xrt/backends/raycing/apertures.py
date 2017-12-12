@@ -34,7 +34,7 @@ class RectangularAperture(object):
     and/or vertical edge(s)."""
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
-                 opening=None, alarmLevel=None):
+                 opening=[-10, 10, -10, 10], alarmLevel=None):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
