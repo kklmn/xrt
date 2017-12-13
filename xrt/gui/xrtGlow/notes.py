@@ -16,9 +16,9 @@ Notes on using xrtGlow
 - The Navigation panel of xrtGlow has several columns. The last columns may be
   hidden in the initial view. You can access them by enlarging the window.
 
-- Load the example `.../xrtQook/savedBeamlines/lens3.xml` and follow the
-  instructions in Description tab in order to understand the visualization
-  precision vs the swiftness of the 3D manipulations.
+- Load the example `.../examples/withRaycing/_QookBeamlines/lens3.xml` and
+  follow the instructions in Description tab in order to understand the
+  visualization precision vs the swiftness of the 3D manipulations.
 
 - From xrtGlow, press F1 to see the available keyboard shortcuts. Also observe
   the available pop-up menu by right mouse click.
