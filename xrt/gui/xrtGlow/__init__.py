@@ -215,7 +215,7 @@ class xrtGlow(qt.QWidget):
 #        rotationLayout.addWidget(rotModeCB, 0, 0)
 
         rotValidator = qt.QDoubleValidator()
-        rotValidator.setRange(-180, 180, 9)
+        rotValidator.setRange(-180., 180., 9)
         self.rotationSliders = []
         self.rotationEditors = []
         for iaxis, axis in enumerate(['pitch (Rx)', 'roll (Ry)', 'yaw (Rz)']):
@@ -1102,7 +1102,7 @@ class xrtGlow(qt.QWidget):
                 position /= slider.scale
             except:  # analysis:ignore
                 pass
-        editor.setText("{0:.0f}".format(position))
+        editor.setText("{0:.2f}".format(position))
         self.customGlWidget.rotations[iax][0] = np.float32(position)
         self.customGlWidget.updateQuats()
         self.customGlWidget.glDraw()
@@ -1112,7 +1112,7 @@ class xrtGlow(qt.QWidget):
                 enumerate(zip(self.rotationSliders, self.rotationEditors)):
             value = actPos[iaxis][0]
             slider.setValue(value)
-            editor.setText("{0:.0f}".format(value))
+            editor.setText("{0:.2f}".format(value))
 
     def updateRotationFromQLE(self, slider):
         editor = self.sender()
