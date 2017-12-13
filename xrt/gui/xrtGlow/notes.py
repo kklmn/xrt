@@ -71,16 +71,16 @@ Notes on using xrtGlow
 
 - Default Zoom does not involve the coordinate grid, if you want to Zoom In/Out
   the whole scene, use CTRL-MouseWheel.
-  
+
 - Convenient way to inspect the detailed beam footprint on the coordinate grid
   is to use Projections: disable the Perspective, select only the footprint of
   interest on the Navigation Panel (or disable all and just leave the Virtual
-  Screen on), enable the projection, set to zero the Projection Line Opacity 
+  Screen on), enable the projection, set to zero the Projection Line Opacity
   (or Line Width, it will do the job too), increase the Projection Point
   Opacity to improve the visibility, enable the Fine Grid. Increase the number
   of rays in the source if necessary.
 
-.. imagezoom:: _images/xrtGlow3.png  
-  
+.. imagezoom:: _images/xrtGlow3.png
+
 
 """
