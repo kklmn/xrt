@@ -22,7 +22,7 @@ Using xrtQook for script generation
   .. imagezoom:: _images/qookTutor01.png
      :scale: 60 %
 
-- In its properties change eMin to 10000-1 and eMax to 10000+1. The middle of
+- In its properties change eMin to 10000-10 and eMax to 10000+10. The middle of
   this range will be used to automatically align crystals (one crystal in this
   example) unless the parameter myTestBeamline.alignE sets another value. Blue
   color indicates non-default values. These will be included into the generated
