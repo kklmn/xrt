@@ -1243,6 +1243,70 @@ class Undulator(object):
         self.reset()
         return np.array(powers)
 
+    def multi_electron_stack(self, energy='auto', theta='auto', psi='auto',
+                             harmonic=None):
+        """Returns Es and Ep in the shape (energy, theta, psi, [harmonic]).
+        Along the 0th axis (energy) are stored "macro-electrons" that emit at
+        the proton energy given by *energy* (constant or variable) onto the
+        angular mesh given by *theta* and *psi*. The transverse field from each
+        macro-electron gets individual random angular offsets dtheta and dpsi
+        within the emittance distribution and an individual random shift to
+        gamma within the energy spread. The parameter self.filamentBeam is
+        irrelevant for this method."""
+        if isinstance(energy, str):  # i.e. if 'auto'
+            energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
+        nmacroe = 1 if len(np.array(energy).shape) == 0 else len(energy)
+
+        if isinstance(theta, str):
+            theta = np.mgrid[
+                self.Theta_min:self.Theta_max + 0.5*self.dTheta:self.dTheta]
+
+        if isinstance(psi, str):
+            psi = np.mgrid[self.Psi_min:self.Psi_max + 0.5*self.dPsi:self.dPsi]
+
+        if harmonic is None:
+            xH = None
+            tomesh = energy, theta, psi
+        else:
+            tomesh = energy, theta, psi, harmonic
+        mesh = np.meshgrid(*tomesh, indexing='ij')
+        if self.dxprime > 0:
+            dthe = np.random.normal(0, self.dxprime, nmacroe)
+            if harmonic is None:
+                mesh[1][:, ...] += dthe[:, np.newaxis, np.newaxis]
+            else:
+                mesh[1][:, ...] += dthe[:, np.newaxis, np.newaxis, np.newaxis]
+        if self.dzprime > 0:
+            dpsi = np.random.normal(0, self.dzprime, nmacroe)
+            if harmonic is None:
+                mesh[2][:, ...] += dpsi[:, np.newaxis, np.newaxis]
+            else:
+                mesh[2][:, ...] += dpsi[:, np.newaxis, np.newaxis, np.newaxis]
+
+        if self.eEspread > 0:
+            spr = np.random.normal(0, self.eEspread, nmacroe) * self.gamma
+            dgamma = np.zeros_like(mesh[0])
+            if harmonic is None:
+                dgamma[:, ...] = spr[:, np.newaxis, np.newaxis]
+            else:
+                dgamma[:, ...] = spr[:, np.newaxis, np.newaxis, np.newaxis]
+            xdGamma = dgamma.ravel()
+        else:
+            xdGamma = 0
+
+        xE, xTheta, xPsi = mesh[0].ravel(), mesh[1].ravel(), mesh[2].ravel()
+        if harmonic is not None:
+            xH = mesh[3].ravel()
+
+        if harmonic is None:
+            sh = nmacroe, len(theta), len(psi)
+        else:
+            sh = nmacroe, len(theta), len(psi), len(harmonic)
+        res = self.build_I_map(xE, xTheta, xPsi, xH, xdGamma)
+        Es = res[1].reshape(sh)
+        Ep = res[2].reshape(sh)
+        return Es, Ep
+
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
                             harmonic=None):
         if isinstance(energy, str):  # i.e. if 'auto'
@@ -1330,6 +1394,7 @@ class Undulator(object):
                     np.where(s0, s3 / s0, s0))
 
     def _sp(self, dim, x, ww1, w, wu, gamma, ddphi, ddpsi):
+        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
         if dim == 0:
             ww1S = ww1
@@ -1342,14 +1407,13 @@ class Undulator(object):
             wuS = wu[:, np.newaxis]
             ddphiS = ddphi[:, np.newaxis]
             ddpsiS = ddpsi[:, np.newaxis]
-            if self.eEspread > 0:
+            if lengamma > 1:
                 gS = gamma[:, np.newaxis]
         elif dim == 3:
             ww1S = ww1[:, :, :, np.newaxis]
             wS, wuS = w[:, :, :, np.newaxis], wu[:, :, :, np.newaxis]
             ddphiS = ddphi[:, :, :, np.newaxis]
-            ddpsiS = ddpsi[:, :, :, np.newaxis]
-            if self.eEspread > 0:
+            if lengamma > 1:
                 gS = gamma[:, :, :, np.newaxis]
         taperC = 1
         alphaS = 0
@@ -1408,7 +1472,7 @@ class Undulator(object):
         return ((nz*(betaPx*bnz - betaPz*bnx) + ddpsiS*primexy) * eucos,
                 (nz*(betaPy*bnz - betaPz*bny) - ddphiS*primexy) * eucos)
 
-    def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=0):
+    def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
         useCL = False
         if isinstance(w, np.ndarray):
             if w.shape[0] > 32:
@@ -1420,26 +1484,23 @@ class Undulator(object):
         else:
             return self._build_I_map_CL(w, ddtheta, ddpsi, harmonic, dg)
 
-    def _build_I_map_conv(self, w, ddtheta, ddpsi, harmonic, dgamma=0):
+    def _build_I_map_conv(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
         #        np.seterr(invalid='ignore')
         #        np.seterr(divide='ignore')
+        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:
-            if np.array(w).shape:
-                if w.shape[0] > 1:
-                    if self.filamentBeam:
-                        gamma += gamma * self.eEspread * np.ones_like(w) *\
-                            np.random.standard_normal()
-                    else:
-                        gamma += dgamma * np.ones_like(w)
-            gamma2 = gamma**2
-            wu = PI * C * 10 / self.L0 / gamma2 * \
-                (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
-        else:
-            gamma = self.gamma
-            gamma2 = self.gamma2
-            wu = self.wu * np.ones_like(w)
+            if dgamma is not None:
+                gamma += dgamma
+            else:
+                sz = 1 if self.filamentBeam else NRAYS
+                gamma += gamma * self.eEspread * np.random.normal(size=sz)
+        if NRAYS > 1:
+            gamma *= np.ones(NRAYS)
+        gamma2 = gamma**2
 
+        wu = PI * C * 10 / self.L0 / gamma2 * np.ones_like(w) *\
+            (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         ww1 = w * ((1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) +
                    gamma2 * (ddtheta**2 + ddpsi**2)) / (2. * gamma2 * wu)
         tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
@@ -1479,28 +1540,21 @@ class Undulator(object):
                 np.sqrt(Amp2Flux) * AB * Bsr,
                 np.sqrt(Amp2Flux) * AB * Bpr)
 
-    def _build_I_map_custom(self, w, ddtheta, ddpsi, harmonic, dgamma=0):
+    def _build_I_map_custom(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
         # time1 = time.time()
+        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:
-            if np.array(w).shape:
-                if w.shape[0] > 1:
-                    if self.filamentBeam:
-                        gamma += gamma * self.eEspread * \
-                            np.ones_like(w, dtype=self.cl_precisionF) *\
-                            np.random.standard_normal()
-                    else:
-                        gamma += dgamma * \
-                            np.ones_like(w, dtype=self.cl_precisionF)
-            gamma2 = gamma**2
-            wu = PI * C * 10 / self.L0 / gamma2 * \
-                (2*gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
-        else:
-            gamma = self.gamma * np.ones_like(w, dtype=self.cl_precisionF)
-            gamma2 = self.gamma2 * np.ones_like(w, dtype=self.cl_precisionF)
-            wu = self.wu * np.ones_like(w, dtype=self.cl_precisionF)
-        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
+            if dgamma is not None:
+                gamma += dgamma
+            else:
+                sz = 1 if self.filamentBeam else NRAYS
+                gamma += gamma * self.eEspread * np.random.normal(size=sz)
+        gamma *= np.ones(NRAYS, dtype=self.cl_precisionF)
+        gamma2 = gamma**2
 
+        wu = PI * C * 10 / self.L0 / gamma2 *\
+            (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         ww1 = w * ((1. + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) +
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
@@ -1640,34 +1694,21 @@ class Undulator(object):
                 np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
                 np.sqrt(Amp2Flux) * Ip_local * ab * 0.5 * dstep)
 
-    def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic, dgamma=0):
+    def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
         # time1 = time.time()
+        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:
-            if np.array(w).shape:
-                if w.shape[0] > 1:
-                    if self.filamentBeam:
-                        gamma += gamma * self.eEspread *\
-                            np.ones_like(w, dtype=self.cl_precisionF) *\
-                            np.random.standard_normal()
-                    else:
-                        if dgamma:
-                            gamma += dgamma *\
-                                np.ones_like(w, dtype=self.cl_precisionF)
-                        else:
-                            gamma += gamma * self.eEspread *\
-                                np.random.normal(size=w.shape[0])
-            gamma2 = gamma**2
-            wu = PI * C * 10 / self.L0 / gamma2 *\
-                (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
-        else:
-            self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 *\
-                (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
-            gamma = self.gamma * np.ones_like(w, dtype=self.cl_precisionF)
-            gamma2 = self.gamma2 * np.ones_like(w, dtype=self.cl_precisionF)
-            wu = self.wu * np.ones_like(w, dtype=self.cl_precisionF)
-        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
+            if dgamma is not None:
+                gamma += dgamma
+            else:
+                sz = 1 if self.filamentBeam else NRAYS
+                gamma += gamma * self.eEspread * np.random.normal(size=sz)
+        gamma *= np.ones(NRAYS, dtype=self.cl_precisionF)
+        gamma2 = gamma**2
 
+        wu = PI * C * 10 / self.L0 / gamma2 *\
+            (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         ww1 = w * ((1. + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) +
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
