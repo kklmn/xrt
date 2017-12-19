@@ -1413,6 +1413,7 @@ class Undulator(object):
             ww1S = ww1[:, :, :, np.newaxis]
             wS, wuS = w[:, :, :, np.newaxis], wu[:, :, :, np.newaxis]
             ddphiS = ddphi[:, :, :, np.newaxis]
+            ddpsiS = ddpsi[:, :, :, np.newaxis]
             if lengamma > 1:
                 gS = gamma[:, :, :, np.newaxis]
         taperC = 1
