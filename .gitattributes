@@ -17,3 +17,4 @@
 *.RTF	 diff=astextplain
 
 f1f2/* linguist-vendored
+examples/withShadow/* linguist-vendored
