@@ -3340,8 +3340,7 @@ class xrtGlWidget(qt.QGLWidget):
             alphaMax = np.max(alphaDots)
         else:
             alphaMax = 1.
-        alphaColorDots = np.array([alphaDots / alphaMax]).T *\
-            self.pointOpacity
+        alphaColorDots = np.array([alphaDots / alphaMax]).T
         self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
                                                    alphaColorDots]))
         histogram = np.histogram(np.array(
