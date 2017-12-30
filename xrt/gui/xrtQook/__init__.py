@@ -747,16 +747,18 @@ class XrtQook(qt.QWidget):
                 for idevice, device in enumerate(platform.get_devices()):
                     if device in iDeviceCPU:
                         oclDev = '({0}, {1})'.format(iplatform, idevice)
-                        oclToolTip = 'Platform: {0}\nDevice: {1}\nType: {2}\n\
-Compute Units: {3}\nFP64 Support: {4}'.format(platform.name,
-                                              device.name,
-                                              cl.device_type.to_string(
-                                                  device.type),
-                                              device.max_compute_units,
-                                              bool(device.double_fp_config))
-                        oclItem, oclItemStr = self.addParam(self.OCLModel,
-                                                            device.name,
-                                                            oclDev)
+                        try:
+                            oclDevStr = cl.device_type.to_string(device.type)
+                        except ValueError:
+                            oclDevStr = str(cl.device_type)
+                        oclToolTip = 'Platform: {0}\nDevice: {1}\nType: \
+{2}\nCompute Units: {3}\nFP64 Support: {4}'.format(
+                            platform.name, device.name,
+                            oclDevStr,
+                            device.max_compute_units,
+                            bool(device.double_fp_config))
+                        oclItem, oclItemStr = self.addParam(
+                            self.OCLModel, device.name, oclDev)
                         oclItem.setToolTip(oclToolTip)
 
         self.materialsModel = qt.QStandardItemModel()

@@ -213,7 +213,7 @@ class XRT_CL(object):
                      slicedROArgs=None, nonSlicedROArgs=None,
                      slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0):
 
-#        t0 = time.time()
+        # t0 = time.time()
         ka_offset = len(scalarArgs) if scalarArgs is not None else 0
         ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
         ns_offset = len(nonSlicedROArgs) if nonSlicedROArgs is not None else 0
@@ -235,9 +235,9 @@ class XRT_CL(object):
             nCUw = 1
             nCU.extend([nCUw])
             tmpWGS = ctx.devices[0].max_work_group_size
-            if tmpWGS  < minWGS:
+            if tmpWGS < minWGS:
                 minWGS = tmpWGS
-            #nCU.extend([ctx.devices[0].max_compute_units*nCUw])
+            # nCU.extend([ctx.devices[0].max_compute_units*nCUw])
 
         totalCUs = np.sum(nCU)
         minWGS = 256
