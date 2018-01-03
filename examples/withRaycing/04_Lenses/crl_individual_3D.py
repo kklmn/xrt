@@ -52,7 +52,7 @@ def build_beamline(nrays=1e4):
         lens = Lens(
             beamLine, 'Lens{0:02d}'.format(ilens), center=[0, p + dz*ilens, 0],
             pitch=np.pi/2, roll=roll, t=0.1, material=material,
-            limPhysX=[-2, 2], limPhysY=[-2, 2],
+            limPhysX=[-2, 2], limPhysY=[-2, 2], shape='round',
             focus=parabolaParam, zmax=zmax, alarmLevel=0.1)
         beamLine.lenses.append(lens)
         if ilens == 0:

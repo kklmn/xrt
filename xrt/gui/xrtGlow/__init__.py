@@ -2714,19 +2714,30 @@ class xrtGlWidget(qt.QGLWidget):
             if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
-        for i in range(self.tiles[0]):
+        localTiles = np.array(self.tiles)
+
+        if oe.shape == 'round':
+            rmax = max(max(np.abs(xLimits)), max(np.abs(yLimits)))
+            xLimits = [0, rmax]
+            yLimits = [0, 2*np.pi]
+            localTiles *= 3
+
+        for i in range(localTiles[0]):
             deltaX = (xLimits[1] - xLimits[0]) /\
-                float(self.tiles[0])
+                float(localTiles[0])
             xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                   xLimits[0] + (i+1)*deltaX,
                                   self.surfCPOrder) + oe.dx
-            for k in range(self.tiles[1]):
+            for k in range(localTiles[1]):
                 deltaY = (yLimits[1] - yLimits[0]) /\
-                    float(self.tiles[1])
+                    float(localTiles[1])
                 yGridOe = np.linspace(yLimits[0] + k*deltaY,
                                       yLimits[0] + (k+1)*deltaY,
                                       self.surfCPOrder)
                 xv, yv = np.meshgrid(xGridOe, yGridOe)
+                if oe.shape == 'round':
+                    xv, yv = xv*np.cos(yv), xv*np.sin(yv)
+
                 xv = xv.flatten()
                 yv = yv.flatten()
 
