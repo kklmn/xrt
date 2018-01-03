@@ -2651,6 +2651,9 @@ class XrtQook(qt.QWidget):
         menu.exec_(self.matTree.viewport().mapToGlobal(position))
 
     def getVal(self, value):
+        if str(value) == 'round':
+            return str(value)
+
         try:
             return eval(str(value))
         except:  # analysis:ignore
@@ -2666,8 +2669,8 @@ class XrtQook(qt.QWidget):
             if 'np.' not in value and\
                     (str(self.rootBLItem.text())+'.') not in value:
                 value = 'r\"{}\"'.format(value)
-        if str(value) == 'round':
-            value = 'r\"{}\"'.format(value)
+#        if str(value) == 'round':
+#            value = 'r\"{}\"'.format(value)
         if isinstance(value, tuple):
             value = list(value)
         return str(value)
