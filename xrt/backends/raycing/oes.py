@@ -349,7 +349,7 @@ class JohannToroid(OE):
         float cosangle = sqrt(z*z - x*x) / fabs(z);
         float sinangle = -x / fabs(z);
         float2 tmpz = rotate_y(0, z, cosangle, sinangle);
-        return tmpz.s1 + cl_plist.s1
+        return tmpz.s1 + cl_plist.s1;
     }"""
 
     def __init__(self, *args, **kwargs):
