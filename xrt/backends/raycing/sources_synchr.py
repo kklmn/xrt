@@ -13,7 +13,7 @@ from .. import raycing
 from . import myopencl as mcl
 from .sources_beams import Beam, allArguments
 from .physconsts import E0, C, M0, EV2ERG, K2B, SIE0,\
-    SIM0, FINE_STR, PI, PI2, SQ3, E2W, CHeVcm, CHBAR
+    SIM0, FINE_STR, PI, PI2, SQ2, SQ3, SQPI, E2W, CHeVcm, CHBAR
 
 try:
     import pyopencl as cl  # analysis:ignore
@@ -1082,11 +1082,10 @@ class Undulator(object):
         self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
             (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         # wnu = 2 * PI * (0.01 * C) / self.L0 / 1e-3 / E2W
+        self.E1 = 2*self.wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
         if _DEBUG:
-            print("E1 = {0}".format(
-                2 * self.wu * self.gamma2 / (1 + 0.5 * self.Ky**2)))
-            print("E3 = {0}".format(
-                6 * self.wu * self.gamma2 / (1 + 0.5 * self.Ky**2)))
+            print("E1 = {0}".format(self.E1))
+            print("E3 = {0}".format(3*self.E1))
             print("B0 = {0}".format(self.Ky / 0.09336 / self.L0))
             if self.taper is not None:
                 print("dB/dx/B = {0}".format(
@@ -1800,6 +1799,68 @@ class Undulator(object):
 #        if nanSum > 0:
 #            print("{0} NaN rays in {1}!".format(nanSum, strName))
 
+    def tanaka_kitamura_Qa2(self, x):
+        """Squared Q_a function from Tanaka and Kitamura J. Synchrotron Rad. 16
+        (2009) 380–386, Eq(17). The argument is normalized energy spread by
+        Eq(13)."""
+        ret = np.ones_like(x, dtype=float)
+        xarr = np.array(x)
+#        ret[x <= 1e-5] = 1  # ret already holds ones
+        y = SQ2 * xarr[xarr > 1e-5]
+        y2 = y**2
+        ret[x > 1e-5] = y2 / (np.exp(-y2) + SQPI*y*special.erf(y) - 1)
+        return ret
+
+    def get_sigma_r02(self, E):  # linear size
+        """Squared sigma_{r0} as by Walker and by Ellaume and
+        Tanaka and Kitamura J. Synchrotron Rad. 16 (2009) 380–386 (see the
+        text after Eq(23))"""
+        return 2 * CHeVcm/E*10 * self.L0*self.Np / PI2**2
+
+    def get_sigmaP_r02(self, E):  # angular size
+        """Squared sigmaP_{r0}"""
+        return CHeVcm/E*10 / (2 * self.L0*self.Np)
+
+    def get_sigma_r2(self, E, onlyOddHarmonics=True):  # linear size
+        """Squared sigma_{r} as by
+        Tanaka and Kitamura J. Synchrotron Rad. 16 (2009) 380–386
+        that also depends on energy spread."""
+        sigma_r02 = self.get_sigma_r02(E)
+        if self.eEspread == 0:
+            return sigma_r02
+        harmonic = np.floor_divide(E, self.E1)
+        harmonic[harmonic < 1] = 1
+        if onlyOddHarmonics:
+            harmonic += harmonic % 2 - 1
+        eEspread_norm = PI2 * harmonic * self.Np * self.eEspread
+        Qa2 = self.tanaka_kitamura_Qa2(eEspread_norm/4.) # note 1/4
+        return sigma_r02 * Qa2**(2/3.)
+
+    def get_sigmaP_r2(self, E, onlyOddHarmonics=True):  # angular size
+        """Squared sigmaP_{r} as by
+        Tanaka and Kitamura J. Synchrotron Rad. 16 (2009) 380–386
+        that also depends on energy spread."""
+        sigmaP_r02 = self.get_sigmaP_r02(E)
+        if self.eEspread == 0:
+            return sigmaP_r02
+        harmonic = np.floor_divide(E, self.E1)
+        harmonic[harmonic < 1] = 1
+        if onlyOddHarmonics:
+            harmonic += harmonic % 2 - 1
+        eEspread_norm = PI2 * harmonic * self.Np * self.eEspread
+        Qa2 = self.tanaka_kitamura_Qa2(eEspread_norm)
+        return sigmaP_r02 * Qa2
+
+    def get_SIGMA(self, E, onlyOddHarmonics=True):  # total linear size
+        sigma_r2 = self.get_sigma_r2(E, onlyOddHarmonics)
+        return ((self.dx**2 + sigma_r2)**0.5,
+                (self.dz**2 + sigma_r2)**0.5)
+
+    def get_SIGMAP(self, E, onlyOddHarmonics=True):  # total angular size
+        sigmaP_r2 = self.get_sigmaP_r2(E, onlyOddHarmonics)
+        return ((self.dxprime**2 + sigmaP_r2)**0.5,
+                (self.dzprime**2 + sigmaP_r2)**0.5)
+
     def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=False,
               wave=None, accuBeam=None):
         u"""
@@ -1953,11 +2014,10 @@ class Undulator(object):
             bot.state[:] = 1  # good
             bot.E[:] = rE[I_pass]
 
-# as by Walker and by Ellaume; SPECTRA's value is two times smaller:
-            sigma_r2 = 2 * (CHeVcm/bot.E*10 * self.L0*self.Np) / PI2**2
             if self.filamentBeam:
                 dxR = rX
                 dzR = rZ
+#                sigma_r2 = self.get_sigma_r2(bot.E)
 #                dxR += np.random.normal(0, sigma_r2**0.5, npassed)
 #                dzR += np.random.normal(0, sigma_r2**0.5, npassed)
             else:
@@ -1967,8 +2027,8 @@ class Undulator(object):
                     dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
                     dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
                 else:
-                    bot.sourceSIGMAx = (self.dx**2 + sigma_r2)**0.5
-                    bot.sourceSIGMAz = (self.dz**2 + sigma_r2)**0.5
+                    bot.sourceSIGMAx, sourceSIGMAz = self.get_SIGMA(
+                        bot.E, onlyOddHarmonics=False)
                     dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
                     dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
 

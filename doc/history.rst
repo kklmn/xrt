@@ -201,9 +201,9 @@ Version history
     - Undulator can now be :ref:`calculated on GPU <calculations_on_GPU>`.
 
     - Natural source size of undulator radiation is now
-      :math:`\sigma_R = \sqrt{2\lambda L}/(2\pi)`, as by Walker and by Ellaume;
-      SPECTRA's value is two times smaller; the value by Kim (the orange
-      booklet) is yet :math:`\sqrt{2}` times smaller.
+      :math:`\sigma_R = \sqrt{2\lambda L}/(2\pi)`, as by Walker, by Ellaume
+      and by Tanaka and Kitamura; the value by Kim (the orange booklet) is
+      :math:`2\sqrt{2}` times smaller.
 
 0.9.1 (08 Jan 2014):
     - Minor bug fixes in OEs and examples.
