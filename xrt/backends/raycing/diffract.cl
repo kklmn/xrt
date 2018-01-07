@@ -10,7 +10,7 @@
 //#include "materials.cl"
 //__constant float Pi = 3.141592653589793;
 //__constant float twoPi = 6.283185307179586476;
-__constant float fourPi = (float)12.566370614359172;
+__constant float invFourPi = (float)0.07957747154594767;
 __constant float2 cmp0 = (float2)(0, 0);
 __constant float2 cmpi1 = (float2)(0, 1);
 
@@ -86,8 +86,8 @@ __kernel void integrate_kirchhoff(
     float2 KirchA_loc, KirchB_loc, KirchC_loc;
     float pathAfter, cosAlpha, cr, sinphase, cosphase;
     unsigned int ii_screen = get_global_id(0);
-//    float wavelength;
     float phase, k2;
+    float invPathAfter;
 
     KirchS_loc = cmp0;
     KirchP_loc = cmp0;
@@ -102,30 +102,29 @@ __kernel void integrate_kirchhoff(
       {
         beam_angle_glo = beam_coord_glo - beamOEglo[i];
         pathAfter = length(beam_angle_glo);
-        cosAlpha = dot(beam_angle_glo, oe_surface_normal[i]) / pathAfter;
-//        wavelength = twoPi / k;
-//        phase = k * (pathAfter + beam_OE_loc_path[i]);
+        invPathAfter = 1. / pathAfter;
+        cosAlpha = dot(beam_angle_glo, oe_surface_normal[i]) * invPathAfter;
         phase = k[i] * pathAfter;
-        cr = k[i] * (cosAlpha + cosGamma[i]) / pathAfter;
+        cr = k[i] * (cosAlpha + cosGamma[i]) * invPathAfter;
         sinphase = sincos(phase, &cosphase);
         gi = (float2)(cr * cosphase, cr * sinphase);
         giEs = prod_c(gi, Es[i]);
         giEp = prod_c(gi, Ep[i]);
         KirchS_loc += giEs;
         KirchP_loc += giEp;
-        gi = k[i] * k[i] * (giEs+giEp) / pathAfter;
+        gi = k[i] * k[i] * (giEs+giEp) * invPathAfter;
         KirchA_loc += prod_c(gi, beam_angle_glo.x);
         KirchB_loc += prod_c(gi, beam_angle_glo.y);
         KirchC_loc += prod_c(gi, beam_angle_glo.z);
       }
   mem_fence(CLK_LOCAL_MEM_FENCE);
 
-  cfactor = -cmpi1 / fourPi;
+  cfactor = -cmpi1 * invFourPi;
   KirchS_gl[ii_screen] = prod_c(cfactor, KirchS_loc);
   KirchP_gl[ii_screen] = prod_c(cfactor, KirchP_loc);
-  KirchA_gl[ii_screen] = KirchA_loc / fourPi;
-  KirchB_gl[ii_screen] = KirchB_loc / fourPi;
-  KirchC_gl[ii_screen] = KirchC_loc / fourPi;
+  KirchA_gl[ii_screen] = KirchA_loc * invFourPi;
+  KirchB_gl[ii_screen] = KirchB_loc * invFourPi;
+  KirchC_gl[ii_screen] = KirchC_loc * invFourPi;
 
   mem_fence(CLK_LOCAL_MEM_FENCE);
 }
@@ -180,7 +179,7 @@ __kernel void integrate_kirchhoff(
 //      }
 //  mem_fence(CLK_LOCAL_MEM_FENCE);
 //
-//  KirchS_gl[ii_screen] = -prod_c(cmpi1*k/fourPi, KirchS_loc);
-//  KirchP_gl[ii_screen] = -prod_c(cmpi1*k/fourPi, KirchP_loc);
+//  KirchS_gl[ii_screen] = -prod_c(cmpi1*k*invFourPi, KirchS_loc);
+//  KirchP_gl[ii_screen] = -prod_c(cmpi1*k*invFourPi, KirchP_loc);
 //  mem_fence(CLK_LOCAL_MEM_FENCE);
 //}
