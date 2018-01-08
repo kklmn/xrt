@@ -34,6 +34,12 @@ components of the coherency matrix of different rays are simply added.
 Synchrotron sources
 ^^^^^^^^^^^^^^^^^^^
 
+.. note::
+
+    In this section we consider z-axis to be directed along the beamline in
+    order to be compatible with the cited works. Elsewhere in xrt z-axis looks
+    upwards.
+
 The synchrotron sources have two implementations: based on own fully pythonic
 or OpenCL aided calculations and based on external codes Urgent [Urgent]_ and
 WS [WS]_. The latter codes have some drawbacks, as demonstrated in the section
@@ -124,9 +130,9 @@ replacing the exponential series by a factor of
 :math:`\omega_1 = \frac{2\gamma^2}{1+K_x^2/2+K_y^2/2+\gamma^2(\theta^2+\psi^2)}
 \omega_u`.
 
-In case of the tapered undulator vertical magnetic field is multiplied by an
-additional factor :math:`1 - \alpha z`, that in turn results in modification of
-horizontal velocity and coordinate.
+In the case of tapered undulator, the vertical magnetic field is multiplied by
+an additional factor :math:`1 - \alpha z`, that in turn results in modification
+of horizontal velocity and coordinate.
 
 In the far-field approximation we consider the undulator as a point source and
 replace the distance :math:`R` by a projection
@@ -153,7 +159,7 @@ form :math:`i\omega (t' + R(t')/c)`.
 
 For the custom field configuratiuons, where the magnetic field components
 are tabulated as functions of longitudinal coordinate
-:math:`\textbf{B}=(B_{x}(z), B_{y}(z), B_{z}(z))` preliminary numerical
+:math:`\textbf{B}=(B_{x}(z), B_{y}(z), B_{z}(z))`, preliminary numerical
 calculation of the velocity and coordinate is nesessary. For that we solve the
 system of differential equations
 
@@ -164,10 +170,39 @@ system of differential equations
         -\beta_{x}B_{z}+B_{x}\\
         -\beta_{y}B_{x}+\beta_{x}B_{y}}\end{bmatrix}
 
-using classical Runge-Kutta method. Integration step is varied in order to
+using the classical Runge-Kutta method. Integration step is varied in order to
 provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of
 the Gauss-Legendre grid.
 
+For the purpose of ray tracing (and this is not necessary for wave propagation)
+the undulator source size is calculated following [TanakaKitamura]_. Their
+formulation includes dependence on electron beam energy spread. The effective
+linear and angular source sizes are given by
+
+    .. math::
+        \Sigma &= \left(\sigma_e^2 + \sigma_r^2\right)^{1/2}
+        =\left(\varepsilon\beta + \frac{\lambda L}{2\pi^2}
+        [Q(\sigma_\epsilon/4)]^{4/3}\right)^{1/2}\\
+        \Sigma' &= \left({\sigma'_e}^2 + {\sigma'_r}^2\right)^{1/2}
+        =\left(\varepsilon/\beta + \frac{\lambda}{2L}
+        [Q(\sigma_\epsilon)]^2\right)^{1/2},
+
+where :math:`\varepsilon` and :math:`\beta` are the electron beam emittance and
+betatron function, the scaling function :math:`Q` is defined as
+
+    .. math::
+        Q(x) = \left(\frac{2x^2}{\exp(-2x^2)+(2\pi)^{1/2}x\ {\rm erf}
+        (2^{1/2}x)-1}\right)^{1/2}
+
+(notice :math:`Q(0)=1`) and :math:`\sigma_\epsilon` is the normalized energy
+spread 
+
+    .. math::
+        \sigma_\epsilon = 2\pi nN\sigma_E
+
+i.e. the energy spread :math:`\sigma_E` divided by the undulator bandwidth
+:math:`1/nN` of the n-th harmonic, with an extra factor :math:`2\pi`. See an
+application example :ref:`here <example-undulator-sizes>`.
 
 .. [Kim] K.-J. Kim, Characteristics of Synchrotron Radiation, AIP Conference
    Proceedings, **184** (AIP, 1989) 565.
@@ -175,6 +210,10 @@ the Gauss-Legendre grid.
 .. [Walker] R. Walker, Insertion devices: undulators and wigglers, CAS - CERN
    Accelerator School: Synchrotron Radiation and Free Electron Lasers,
    Grenoble, France, 22-27 Apr 1996: proceedings (CERN. Geneva, 1998) 129-190.
+
+.. [TanakaKitamura] Tanaka and Kitamura, Universal function for the
+   brilliance of undulator radiation considering the energy spread effect,
+   J. Synchrotron Rad. **16** (2009) 380–6.
 
 .. autoclass:: UndulatorUrgent()
    :members: __init__
@@ -184,7 +223,7 @@ the Gauss-Legendre grid.
    :members: __init__
 
 .. autoclass:: Undulator()
-   :members: __init__, tuning_curves
+   :members: __init__, tuning_curves, get_SIGMA, get_SIGMAP
 .. autoclass:: Wiggler()
    :members: __init__
 .. autoclass:: BendingMagnet()
@@ -478,6 +517,26 @@ color=phase) is not by SRW and SPECTRA but was done by us.
 .. |xrt_pp| imagezoom:: _images/phase_xrt-near05m3verFlux-wave-filament.png
    :loc: upper-right-corner
 
+.. _example-undulator-sizes:
+
+Undulator source size
+~~~~~~~~~~~~~~~~~~~~~
+
+The linear and angular source sizes, as calculated with equations from
+[TanakaKitamura]_ for a U19 undulator in MAX IV 3 GeV ring with
+:math:`\varepsilon_x` = 263 pmrad, :math:`\varepsilon_y` = 8 pmrad,
+:math:`\beta_x` = 9 m and :math:`\beta_y` = 2 m, are shown below. Energy spread
+mainly affects the angular sizes and not the linear ones. The calculated
+angular sizes were further compared with those of the sampled field (circles).
+The latter strongly vary due to energy detuning around the nominal harmonic
+positions. This size variation appear to prevail over the effect of emittance
+and energy spread. The size of the circles is proportional to the total flux
+normalized to the maximum at each respective harmonic. It sharply decreases at
+the higher energy end of a harmonic and has a long tail at the lower energy
+end, in accordance with the above examples.
+
+.. imagezoom:: _images/undulatorLinearSize.png
+.. imagezoom:: _images/undulatorAngularSize.png
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"

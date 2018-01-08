@@ -1799,16 +1799,16 @@ class Undulator(object):
 #        if nanSum > 0:
 #            print("{0} NaN rays in {1}!".format(nanSum, strName))
 
-    def tanaka_kitamura_Qa2(self, x):
+    def tanaka_kitamura_Qa2(self, x, eps=1e-6):
         """Squared Q_a function from Tanaka and Kitamura J. Synchrotron Rad. 16
         (2009) 380–386, Eq(17). The argument is normalized energy spread by
         Eq(13)."""
         ret = np.ones_like(x, dtype=float)
         xarr = np.array(x)
-#        ret[x <= 1e-5] = 1  # ret already holds ones
-        y = SQ2 * xarr[xarr > 1e-5]
+#        ret[x <= eps] = 1  # ret already holds ones
+        y = SQ2 * xarr[xarr > eps]
         y2 = y**2
-        ret[x > 1e-5] = y2 / (np.exp(-y2) + SQPI*y*special.erf(y) - 1)
+        ret[x > eps] = y2 / (np.exp(-y2) + SQPI*y*special.erf(y) - 1)
         return ret
 
     def get_sigma_r02(self, E):  # linear size
@@ -1852,11 +1852,23 @@ class Undulator(object):
         return sigmaP_r02 * Qa2
 
     def get_SIGMA(self, E, onlyOddHarmonics=True):  # total linear size
+        """Calculates total linear source size, also including the effect of
+        electron beam energy spread. Uses Tanaka and Kitamura, J. Synchrotron
+        Rad. 16 (2009) 380–6.
+        
+        *E* can be a value or an array. Returns a 2-tuple with x and y sizes.
+        """
         sigma_r2 = self.get_sigma_r2(E, onlyOddHarmonics)
         return ((self.dx**2 + sigma_r2)**0.5,
                 (self.dz**2 + sigma_r2)**0.5)
 
     def get_SIGMAP(self, E, onlyOddHarmonics=True):  # total angular size
+        """Calculates total angular source size, also including the effect of
+        electron beam energy spread. Uses Tanaka and Kitamura, J. Synchrotron
+        Rad. 16 (2009) 380–6.
+        
+        *E* can be a value or an array. Returns a 2-tuple with x and y sizes.
+        """
         sigmaP_r2 = self.get_sigmaP_r2(E, onlyOddHarmonics)
         return ((self.dxprime**2 + sigmaP_r2)**0.5,
                 (self.dzprime**2 + sigmaP_r2)**0.5)
