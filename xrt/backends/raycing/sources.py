@@ -527,9 +527,10 @@ The linear and angular source sizes, as calculated with equations from
 :math:`\varepsilon_x` = 263 pmrad, :math:`\varepsilon_y` = 8 pmrad,
 :math:`\beta_x` = 9 m and :math:`\beta_y` = 2 m, are shown below. Energy spread
 mainly affects the angular sizes and not the linear ones. The calculated
-angular sizes were further compared with those of the sampled field (circles).
-The latter strongly vary due to energy detuning around the nominal harmonic
-positions. This size variation appear to prevail over the effect of emittance
+angular sizes were further compared with those of the sampled field (circles)
+at variable energies around the nominal harmonic positions. The sampled field
+sizes strongly vary due to energy detuning, as is better seen on the magnified
+inset. This size variation appear to prevail over the effect of emittance
 and energy spread. The size of the circles is proportional to the total flux
 normalized to the maximum at each respective harmonic. It sharply decreases at
 the higher energy end of a harmonic and has a long tail at the lower energy
