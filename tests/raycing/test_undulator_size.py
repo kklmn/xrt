@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerBase
 
 import xrt.backends.raycing.sources as rs
-#withXrtSampling = True
+withXrtSampling = True
 
 thetaMax, psiMax = 60e-6, 30e-6  # rad
 
@@ -18,10 +18,10 @@ thetaMax, psiMax = 60e-6, 30e-6  # rad
 class TwoLineObjectsHandler(HandlerBase):
     def create_artists(self, legend, orig_handle,
                        x0, y0, width, height, fontsize, trans):
-        l1 = plt.Line2D([x0,x0+width], [0.7*height,0.7*height],
+        l1 = plt.Line2D([x0, x0+width], [0.7*height, 0.7*height],
                         linestyle=orig_handle[0].get_linestyle(),
                         color=orig_handle[0].get_color())
-        l2 = plt.Line2D([x0,x0+width], [0.3*height,0.3*height], 
+        l2 = plt.Line2D([x0, x0+width], [0.3*height, 0.3*height],
                         linestyle=orig_handle[1].get_linestyle(),
                         color=orig_handle[1].get_color())
         return [l1, l2]
@@ -30,10 +30,14 @@ class TwoLineObjectsHandler(HandlerBase):
 class TwoScatterObjectsHandler(HandlerBase):
     def create_artists(self, legend, orig_handle,
                        x0, y0, width, height, fontsize, trans):
-        l1 = plt.Line2D([x0+0.2*width], [0.5*height], marker='o', 
-                        color='C0', markerfacecolor='none')
-        l2 = plt.Line2D([x0+0.8*width], [0.5*height], marker='o', 
-                        color='C1', markerfacecolor='none')
+        l1 = plt.Line2D([x0+0.2*width], [0.5*height],
+                        marker=orig_handle[0].get_paths()[0],
+                        color=orig_handle[0].get_edgecolors()[0],
+                        markerfacecolor='none')
+        l2 = plt.Line2D([x0+0.8*width], [0.5*height],
+                        marker=orig_handle[1].get_paths()[0],
+                        color=orig_handle[1].get_edgecolors()[0],
+                        markerfacecolor='none')
         return [l1, l2]
 
 
@@ -78,7 +82,7 @@ def main():
     ax.set_ylim(0, None)
     ax.xaxis.set_ticks([0, 5, 10, 15, 20])
     ax.grid()
-    leg1 = ax.legend([(l1, l3), (l2, l4)], [r"$\sigma_x$", r"$\sigma_y$"], 
+    leg1 = ax.legend([(l1, l3), (l2, l4)], [r"$\sigma_x$", r"$\sigma_y$"],
                      handler_map={tuple: TwoLineObjectsHandler()},
                      loc='center left')
     leg2 = ax.legend([(l1, l2), (l3, l4)],
@@ -100,7 +104,7 @@ def main():
     ax.set_ylim(0, None)
     ax.xaxis.set_ticks([0, 5, 10, 15, 20])
     ax.grid()
-    leg1 = ax.legend([(l1, l3), (l2, l4)], [r"$\sigma'_x$", r"$\sigma'_y$"], 
+    leg1 = ax.legend([(l1, l3), (l2, l4)], [r"$\sigma'_x$", r"$\sigma'_y$"],
                      handler_map={tuple: TwoLineObjectsHandler()},
                      loc='upper center')
     leg2 = ax.legend([(l1, l2), (l3, l4)],
@@ -114,7 +118,7 @@ def main():
         theta = np.linspace(-1, 1, 201) * thetaMax
         psi = np.linspace(-1, 1, 101) * psiMax
         Eh = (np.arange(1, 14, 2) * und.E1 + \
-            20*np.arange(-5, 3.1)[:, np.newaxis])
+            10*np.arange(-10, 7)[:, np.newaxis])
         sh = Eh.shape
 #        und.eEspread = 0
         I0 = und.intensities_on_mesh(Eh.ravel(), theta, psi)[0]
@@ -134,6 +138,18 @@ def main():
                          [r'sampled by xrt'],
                          handler_map={tuple: TwoScatterObjectsHandler()},
                          loc='lower right')
+        # inset
+        axS = fig2.add_axes([0.17, 0.16, 0.22, 0.28])
+        axS.plot(E*1e-3, sPx*1e6, '-C0')
+        axS.plot(E*1e-3, sPz*1e6, '-C1')
+        axS.scatter(Eh*1e-3, sigma2theta**0.5*1e6,
+                    s=fluxsh/fluxMax[np.newaxis, :]*50,
+                    facecolors='none', edgecolors='C0')
+        axS.scatter(Eh*1e-3, sigma2psi**0.5*1e6, s=fluxsh/fluxMax*50,
+                    facecolors='none', edgecolors='C1')
+        axS.set_xlim(10-0.1, 10+0.06)
+        axS.set_ylim(8, 16)
+        ax.arrow(7, 6.5, 2.3, 2.8, head_width=0.25, head_length=0.5)
 
     fig1.savefig("undulatorLinearSize.png")
     fig2.savefig("undulatorAngularSize.png")
