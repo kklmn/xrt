@@ -526,10 +526,10 @@ Undulator source size dependent on energy spread and detuning
 
 The linear and angular source sizes, as calculated with equations from
 [TanakaKitamura]_ (and summarized :ref:`here <undulator-source-size>`) for a
-U19 undulator in MAX IV 3 GeV ring with :math:`\varepsilon_x` = 263 pmrad,
-:math:`\varepsilon_y` = 8 pmrad, :math:`\beta_x` = 9 m and
-:math:`\beta_y` = 2 m, are shown below. Energy spread mainly affects the
-angular sizes and not the linear ones.
+U19 undulator in MAX IV 3 GeV ring (:math:`E_1` = 1429 eV) with
+:math:`\varepsilon_x` = 263 pmrad, :math:`\varepsilon_y` = 8 pmrad,
+:math:`\beta_x` = 9 m and :math:`\beta_y` = 2 m , are shown below. Energy
+spread mainly affects the angular sizes and not the linear ones.
 
 The calculated sizes were further compared with those of the sampled field
 (circles) at variable energies around the nominal harmonic positions. To get
