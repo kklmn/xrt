@@ -1243,15 +1243,15 @@ class Undulator(object):
         return np.array(powers)
 
     def multi_electron_stack(self, energy='auto', theta='auto', psi='auto',
-                             harmonic=None):
+                             harmonic=None, withElectronDivergence=True):
         """Returns Es and Ep in the shape (energy, theta, psi, [harmonic]).
         Along the 0th axis (energy) are stored "macro-electrons" that emit at
         the proton energy given by *energy* (constant or variable) onto the
         angular mesh given by *theta* and *psi*. The transverse field from each
         macro-electron gets individual random angular offsets dtheta and dpsi
-        within the emittance distribution and an individual random shift to
-        gamma within the energy spread. The parameter self.filamentBeam is
-        irrelevant for this method."""
+        within the emittance distribution if *withElectronDivergence* is True
+        and an individual random shift to gamma within the energy spread. The
+        parameter self.filamentBeam is irrelevant for this method."""
         if isinstance(energy, str):  # i.e. if 'auto'
             energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
         nmacroe = 1 if len(np.array(energy).shape) == 0 else len(energy)
@@ -1269,13 +1269,13 @@ class Undulator(object):
         else:
             tomesh = energy, theta, psi, harmonic
         mesh = np.meshgrid(*tomesh, indexing='ij')
-        if self.dxprime > 0:
+        if withElectronDivergence and self.dxprime > 0:
             dthe = np.random.normal(0, self.dxprime, nmacroe)
             if harmonic is None:
                 mesh[1][:, ...] += dthe[:, np.newaxis, np.newaxis]
             else:
                 mesh[1][:, ...] += dthe[:, np.newaxis, np.newaxis, np.newaxis]
-        if self.dzprime > 0:
+        if withElectronDivergence and self.dzprime > 0:
             dpsi = np.random.normal(0, self.dzprime, nmacroe)
             if harmonic is None:
                 mesh[2][:, ...] += dpsi[:, np.newaxis, np.newaxis]
@@ -1318,58 +1318,65 @@ class Undulator(object):
         if isinstance(psi, str):
             psi = np.mgrid[self.Psi_min:self.Psi_max + 0.5*self.dPsi:self.dPsi]
 
-        if harmonic is None:
-            xH = None
-            tomesh = energy, theta, psi
+        tomesh = [energy, theta, psi]
+        if harmonic is not None:
+            tomesh.append(harmonic)
+            iharmonic = len(tomesh)-1
         else:
-            tomesh = energy, theta, psi, harmonic
+            iharmonic = None
+        if self.eEspread > 0:
+            spr = np.linspace(-3, 3, 13)
+            dgamma = self.gamma * spr * self.eEspread
+            wspr = np.exp(-0.5 * spr**2)
+            wspr /= wspr.sum()
+            tomesh.append(dgamma)
+            ispread = len(tomesh)-1
+        else:
+            ispread = None
+
         mesh = np.meshgrid(*tomesh, indexing='ij')
         xE, xTheta, xPsi = mesh[0].ravel(), mesh[1].ravel(), mesh[2].ravel()
-        if harmonic is not None:
-            xH = mesh[3].ravel()
-
-        if self.eEspread > 0:
-            spreads = np.linspace(-3, 3, 13)
-            wspreads = np.exp(-0.5 * spreads**2)
-            wspreads /= wspreads.sum()
+        sh = [len(energy), len(theta), len(psi)]
+        if iharmonic:
+            xH = mesh[iharmonic].ravel()
+            sh.append(len(harmonic))
         else:
-            spreads = [0]
-            wspreads = [1]
-
-        if harmonic is None:
-            sh = len(energy), len(theta), len(psi)
+            xH = None
+        if ispread:
+            xG = mesh[ispread].ravel()
+            sh.append(len(dgamma))
         else:
-            sh = len(energy), len(theta), len(psi), len(harmonic)
-        self.Is = np.zeros(sh, dtype=float)
-        self.Ip = np.zeros(sh, dtype=float)
-        self.Isp = np.zeros(sh, dtype=complex)
-        for spread, wspread in zip(spreads, wspreads):
-            dgamma = self.gamma * spread * self.eEspread
-            res = self.build_I_map(xE, xTheta, xPsi, xH, dgamma)
-            Es = res[1]
-            Ep = res[2]
+            xG = None
+
+        res = self.build_I_map(xE, xTheta, xPsi, xH, xG)
+        Es = res[1].reshape(sh)
+        Ep = res[2].reshape(sh)
+        if ispread:
+            if iharmonic:
+                ws = wspr[np.newaxis, np.newaxis, np.newaxis, np.newaxis, :]
+            else:
+                ws = wspr[np.newaxis, np.newaxis, np.newaxis, :]
+            Is = ((Es*np.conj(Es)).real * ws).sum(axis=ispread)
+            Ip = ((Ep*np.conj(Ep)).real * ws).sum(axis=ispread)
+            Isp = (Es*np.conj(Ep) * ws).sum(axis=ispread)
+        else:
             Is = (Es*np.conj(Es)).real
             Ip = (Ep*np.conj(Ep)).real
             Isp = Es*np.conj(Ep)
-            self.Is += Is.reshape(sh) * wspread
-            self.Ip += Ip.reshape(sh) * wspread
-            self.Isp += Isp.reshape(sh) * wspread
+        self.Is = Is.astype(float)
+        self.Ip = Ip.astype(float)
+        self.Isp = Isp.astype(complex)
 
         s0 = self.Is + self.Ip
         s1 = self.Is - self.Ip
         s2 = 2. * np.real(self.Isp)
         s3 = -2. * np.imag(self.Isp)
 
-# convolution with the angular size:
-        if self.dx > 0 or self.dz > 0:
+        if self.dxprime > 0 or self.dzprime > 0:
             from scipy.ndimage.filters import gaussian_filter
-            dxP = theta[1] - theta[0]
-            dzP = psi[1] - psi[0]
+            Sx = self.dxprime / (theta[1] - theta[0])
+            Sz = self.dzprime / (psi[1] - psi[0])
             for ie, ee in enumerate(energy):
-                # sigma_rP2 = CHeVcm/ee*10 / (self.L0*self.Np)
-                sigma_rP2 = 0.
-                Sx = ((self.dxprime**2 + sigma_rP2)**0.5) / dxP
-                Sz = ((self.dzprime**2 + sigma_rP2)**0.5) / dzP
                 if harmonic is None:
                     s0[ie, :, :] = gaussian_filter(s0[ie, :, :], [Sx, Sz])
                     s1[ie, :, :] = gaussian_filter(s1[ie, :, :], [Sx, Sz])
@@ -1799,6 +1806,80 @@ class Undulator(object):
 #        if nanSum > 0:
 #            print("{0} NaN rays in {1}!".format(nanSum, strName))
 
+    def real_photon_source_sizes(
+            self, energy='auto', theta='auto', psi='auto'):
+        """Returns energy dependent arrays: flux, (dx')², (dz')², dx², dz².
+        Depending on *distE* being 'eV' or 'BW', the flux is either in ph/s or
+        in ph/s/0.1%BW, being integrated over the specified theta and psi
+        ranges. The squared angular and linear photon source sizes are
+        variances, i.e. squared sigmas. The latter two (linear sizes) are in
+        mm**2.
+        """
+        if isinstance(energy, str):  # i.e. if 'auto'
+            energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
+
+        if isinstance(theta, str):
+            theta = np.mgrid[
+                self.Theta_min:self.Theta_max + 0.5*self.dTheta:self.dTheta]
+
+        if isinstance(psi, str):
+            psi = np.mgrid[self.Psi_min:self.Psi_max + 0.5*self.dPsi:self.dPsi]
+
+        tomesh = [energy, theta, psi]
+        sh = [len(energy), len(theta), len(psi)]
+        if self.eEspread > 0:
+            spr = np.linspace(-3, 3, 13)
+            dgamma = self.gamma * spr * self.eEspread
+            wspr = np.exp(-0.5 * spr**2)
+            wspr /= wspr.sum()
+            tomesh.append(dgamma)
+            sh.append(len(dgamma))
+
+        mesh = np.meshgrid(*tomesh, indexing='ij')
+        xE, xTheta, xPsi = mesh[0].ravel(), mesh[1].ravel(), mesh[2].ravel()
+        xG = mesh[3].ravel() if self.eEspread > 0 else None
+
+        res = self.build_I_map(xE, xTheta, xPsi, dg=xG)
+        Es = res[1].reshape(sh)
+        Ep = res[2].reshape(sh)
+        if self.eEspread > 0:
+            ws = wspr[np.newaxis, np.newaxis, np.newaxis, :]
+            Is = ((Es*np.conj(Es)).real * ws).sum(axis=3)
+            Ip = ((Ep*np.conj(Ep)).real * ws).sum(axis=3)
+        else:
+            Is = (Es*np.conj(Es)).real
+            Ip = (Ep*np.conj(Ep)).real
+        I0 = (Is.astype(float) + Ip.astype(float)) *\
+            (theta.max() - theta.min()) * (psi.max() - psi.min())
+        dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
+        flux = I0.sum(axis=(1, 2))
+        theta2 = (I0 * (theta**2)[np.newaxis, :, np.newaxis]).sum(
+            axis=(1, 2)) / flux
+        psi2 = (I0 * (psi**2)[np.newaxis, np.newaxis, :]).sum(
+            axis=(1, 2)) / flux
+
+        EsFT = np.fft.fftshift(np.fft.fft2(Es, axes=(1, 2))) * dtheta * dpsi
+        EpFT = np.fft.fftshift(np.fft.fft2(Ep, axes=(1, 2))) * dtheta * dpsi
+        thetaFT = np.fft.fftshift(np.fft.fftfreq(len(theta), dtheta))
+        psiFT = np.fft.fftshift(np.fft.fftfreq(len(psi), dpsi))
+        if self.eEspread > 0:
+            ws = wspr[np.newaxis, np.newaxis, np.newaxis, :]
+            IsFT = ((EsFT*np.conj(EsFT)).real * ws).sum(axis=3)
+            IpFT = ((EpFT*np.conj(EpFT)).real * ws).sum(axis=3)
+        else:
+            IsFT = (EsFT*np.conj(EsFT)).real
+            IpFT = (EpFT*np.conj(EpFT)).real
+        I0FT = (IsFT.astype(float) + IpFT.astype(float)) *\
+            (thetaFT.max() - thetaFT.min()) * (psiFT.max() - psiFT.min())
+#        fluxFT = I0FT.sum(axis=(1, 2))  # it is equal to flux, checked
+        k = energy / CHBAR * 1e7  # in 1/mm
+        dx2 = (I0FT * (thetaFT**2)[np.newaxis, :, np.newaxis]).sum(
+            axis=(1, 2)) / flux * k**(-2)
+        dz2 = (I0FT * (psiFT**2)[np.newaxis, np.newaxis, :]).sum(
+            axis=(1, 2)) / flux * k**(-2)
+
+        return flux, theta2, psi2, dx2, dz2
+
     def tanaka_kitamura_Qa2(self, x, eps=1e-6):
         """Squared Q_a function from Tanaka and Kitamura J. Synchrotron Rad. 16
         (2009) 380–386, Eq(17). The argument is normalized energy spread by
@@ -1821,27 +1902,27 @@ class Undulator(object):
         """Squared sigmaP_{r0}"""
         return CHeVcm/E*10 / (2 * self.L0*self.Np)
 
-    def get_sigma_r2(self, E, onlyOddHarmonics=True):  # linear size
+    def get_sigma_r2(self, E, onlyOddHarmonics=True, with0eSpread=False):
         """Squared sigma_{r} as by
         Tanaka and Kitamura J. Synchrotron Rad. 16 (2009) 380–386
         that also depends on energy spread."""
         sigma_r02 = self.get_sigma_r02(E)
-        if self.eEspread == 0:
+        if self.eEspread == 0 or with0eSpread:
             return sigma_r02
         harmonic = np.floor_divide(E, self.E1)
         harmonic[harmonic < 1] = 1
         if onlyOddHarmonics:
             harmonic += harmonic % 2 - 1
         eEspread_norm = PI2 * harmonic * self.Np * self.eEspread
-        Qa2 = self.tanaka_kitamura_Qa2(eEspread_norm/4.) # note 1/4
+        Qa2 = self.tanaka_kitamura_Qa2(eEspread_norm/4.)  # note 1/4
         return sigma_r02 * Qa2**(2/3.)
 
-    def get_sigmaP_r2(self, E, onlyOddHarmonics=True):  # angular size
+    def get_sigmaP_r2(self, E, onlyOddHarmonics=True, with0eSpread=False):
         """Squared sigmaP_{r} as by
         Tanaka and Kitamura J. Synchrotron Rad. 16 (2009) 380–386
         that also depends on energy spread."""
         sigmaP_r02 = self.get_sigmaP_r02(E)
-        if self.eEspread == 0:
+        if self.eEspread == 0 or with0eSpread:
             return sigmaP_r02
         harmonic = np.floor_divide(E, self.E1)
         harmonic[harmonic < 1] = 1
@@ -1851,25 +1932,25 @@ class Undulator(object):
         Qa2 = self.tanaka_kitamura_Qa2(eEspread_norm)
         return sigmaP_r02 * Qa2
 
-    def get_SIGMA(self, E, onlyOddHarmonics=True):  # total linear size
+    def get_SIGMA(self, E, onlyOddHarmonics=True, with0eSpread=False):
         """Calculates total linear source size, also including the effect of
         electron beam energy spread. Uses Tanaka and Kitamura, J. Synchrotron
         Rad. 16 (2009) 380–6.
-        
+
         *E* can be a value or an array. Returns a 2-tuple with x and y sizes.
         """
-        sigma_r2 = self.get_sigma_r2(E, onlyOddHarmonics)
+        sigma_r2 = self.get_sigma_r2(E, onlyOddHarmonics, with0eSpread)
         return ((self.dx**2 + sigma_r2)**0.5,
                 (self.dz**2 + sigma_r2)**0.5)
 
-    def get_SIGMAP(self, E, onlyOddHarmonics=True):  # total angular size
+    def get_SIGMAP(self, E, onlyOddHarmonics=True, with0eSpread=False):
         """Calculates total angular source size, also including the effect of
         electron beam energy spread. Uses Tanaka and Kitamura, J. Synchrotron
         Rad. 16 (2009) 380–6.
-        
+
         *E* can be a value or an array. Returns a 2-tuple with x and y sizes.
         """
-        sigmaP_r2 = self.get_sigmaP_r2(E, onlyOddHarmonics)
+        sigmaP_r2 = self.get_sigmaP_r2(E, onlyOddHarmonics, with0eSpread)
         return ((self.dxprime**2 + sigmaP_r2)**0.5,
                 (self.dzprime**2 + sigmaP_r2)**0.5)
 

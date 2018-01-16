@@ -4,6 +4,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "22 Jan 2016"
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 # path to xrt:
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import xrt.backends.raycing.sources as rs
@@ -71,6 +72,7 @@ def main():
     psi = np.linspace(-1, 1, 51) * 30e-6
     kwargs = dict(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
                   betaX=9.539, betaZ=1.982, period=18.5, n=108, K=0.52,
+#                  eEspread=1e-3,
                   xPrimeMax=theta[-1]*1e3, zPrimeMax=psi[-1]*1e3,
 #                  targetOpenCL='CPU',
                   distE='BW')
@@ -111,7 +113,10 @@ def main():
 #    intensity_in_transverse_plane(energy, theta, psi, I0)
 #    colored_intensity_in_transverse_plane(energy, theta, psi, I0)
 
-    plt.show()
 
 if __name__ == '__main__':
+    t0 = time.time()
     main()
+    print("Done in {0} s".format(time.time()-t0))
+    plt.show()
+

@@ -179,6 +179,8 @@ the undulator source size is calculated following [TanakaKitamura]_. Their
 formulation includes dependence on electron beam energy spread. The effective
 linear and angular source sizes are given by
 
+.. _undulator-source-size:
+
     .. math::
         \Sigma &= \left(\sigma_e^2 + \sigma_r^2\right)^{1/2}
         =\left(\varepsilon\beta + \frac{\lambda L}{2\pi^2}
@@ -195,7 +197,7 @@ betatron function, the scaling function :math:`Q` is defined as
         (2^{1/2}x)-1}\right)^{1/2}
 
 (notice :math:`Q(0)=1`) and :math:`\sigma_\epsilon` is the normalized energy
-spread 
+spread
 
     .. math::
         \sigma_\epsilon = 2\pi nN\sigma_E
@@ -223,7 +225,7 @@ application example :ref:`here <example-undulator-sizes>`.
    :members: __init__
 
 .. autoclass:: Undulator()
-   :members: __init__, tuning_curves, get_SIGMA, get_SIGMAP
+   :members: __init__, tuning_curves, get_SIGMA, get_SIGMAP, real_photon_source_sizes
 .. autoclass:: Wiggler()
    :members: __init__
 .. autoclass:: BendingMagnet()
@@ -519,22 +521,29 @@ color=phase) is not by SRW and SPECTRA but was done by us.
 
 .. _example-undulator-sizes:
 
-Undulator source size
-~~~~~~~~~~~~~~~~~~~~~
+Undulator source size dependent on energy spread and detuning
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The linear and angular source sizes, as calculated with equations from
-[TanakaKitamura]_ for a U19 undulator in MAX IV 3 GeV ring with
-:math:`\varepsilon_x` = 263 pmrad, :math:`\varepsilon_y` = 8 pmrad,
-:math:`\beta_x` = 9 m and :math:`\beta_y` = 2 m, are shown below. Energy spread
-mainly affects the angular sizes and not the linear ones. The calculated
-angular sizes were further compared with those of the sampled field (circles)
-at variable energies around the nominal harmonic positions. The sampled field
-sizes strongly vary due to energy detuning, as is better seen on the magnified
-inset. This size variation appear to prevail over the effect of emittance
-and energy spread. The size of the circles is proportional to the total flux
-normalized to the maximum at each respective harmonic. It sharply decreases at
-the higher energy end of a harmonic and has a long tail at the lower energy
-end, in accordance with the above examples.
+[TanakaKitamura]_ (and summarized :ref:`here <undulator-source-size>`) for a
+U19 undulator in MAX IV 3 GeV ring with :math:`\varepsilon_x` = 263 pmrad,
+:math:`\varepsilon_y` = 8 pmrad, :math:`\beta_x` = 9 m and
+:math:`\beta_y` = 2 m, are shown below. Energy spread mainly affects the
+angular sizes and not the linear ones.
+
+The calculated sizes were further compared with those of the sampled field
+(circles) at variable energies around the nominal harmonic positions. To get
+the linear photon source distribution, the angular distributions of Es and Ep
+field amplitudes were Fourier transformed, as described e.g. in
+[TanakaKitamura]_. The sampled field sizes strongly vary due to energy
+detuning, as is better seen on the magnified insets. The angular size variation
+due to detuning appears to prevail over the effect of emittance and energy
+spread.
+
+The size of the circles is proportional to the total flux normalized to the
+maximum at each respective harmonic. It sharply decreases at the higher energy
+end of a harmonic and has a long tail at the lower energy end, in accordance
+with the above examples.
 
 .. imagezoom:: _images/undulatorLinearSize.png
 .. imagezoom:: _images/undulatorAngularSize.png
