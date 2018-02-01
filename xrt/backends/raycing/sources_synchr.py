@@ -2120,7 +2120,7 @@ class Undulator(object):
                     dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
                     dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
                 else:
-                    bot.sourceSIGMAx, sourceSIGMAz = self.get_SIGMA(
+                    bot.sourceSIGMAx, bot.sourceSIGMAz = self.get_SIGMA(
                         bot.E, onlyOddHarmonics=False)
                     dxR = np.random.normal(0, bot.sourceSIGMAx, npassed)
                     dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
