@@ -17,13 +17,16 @@ The following computers have been used:
        Windows 10 with Python 2.7.10 64 bit and 3.6.1 64 bit,
        Ubuntu 16.10 with Python 2.7.12 64 bit and 3.5.2 64 bit.
 
-.. [3] A POWER8 GPU node with 4 Nvidia Tesla K80 GPUs, CentOS 7 -- run by Zdeněk Matěj (MAX IV)
+.. [3] A DELL GPU node with 2 Nvidia Tesla K80 GPUs (double-chip each),
+   CentOS 7 -- run by Zdeněk Matěj (MAX IV)
 
 .. [4] A DELL GPU node with 4 Nvidia Tesla P100 GPUs, CentOS 7 -- run by Zdeněk Matěj (MAX IV)
 
 .. [5] A CPU node with Intel Xeon E5-2650 v3 @ 2.30GHz×20(40) -- run by Zdeněk Matěj (MAX IV)
 
 .. [6] A CPU node with Intel Xeon E5-2650 v4 @ 2.20GHz×24(48) -- run by Zdeněk Matěj (MAX IV)
+
+.. [7] A CPU node with Intel Xeon Gold 6130 @ 2.10GHz×32(64) -- run by Zdeněk Matěj (MAX IV)
 
 .. note::
 
