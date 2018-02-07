@@ -7,10 +7,12 @@
 Described in the __init__ file.
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "08 Mar 2016"
+__date__ = "07 Feb 2018"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import pickle
+import time
+import matplotlib.pyplot as plt
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
@@ -22,6 +24,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 #import xrt.backends.raycing.waves as rw
+import xrt.backends.raycing.coherence as rco
 
 showIn3D = False
 
@@ -50,7 +53,7 @@ targetHarmonic = 1
 gratingMaterial = mGoldenGrating
 material = mGolden
 #material = None
-expSize = 25.
+expSize = 50.
 
 #E0 = 2400.
 #dE = 1.
@@ -74,16 +77,16 @@ ESdZ = 0.1  # in mm EXIT SLIT SIZE
 repeats = 1
 nrays = 1e5
 
-what = 'rays'
-#what = 'hybrid'
+#what = 'rays'
+what = 'hybrid'
 #what = 'wave'
 
 if what == 'rays':
-    prefix = '1D-1-rays-'
+    prefix = 'cxi_1D-1-rays-'
 elif what == 'hybrid':
-    prefix = '1D-2-hybr-'
+    prefix = 'cxi_1D-2-hybr-'
 elif what == 'wave':
-    prefix = '1D-3-wave-'
+    prefix = 'cxi_1D-3-wave-'
 if E0 > 280.1:
     prefix += '{0:.0f}eV-'.format(E0)
 
@@ -94,9 +97,9 @@ vShrink = 1e-3
 hShrink = 1.
 cut = 'hor-'
 prefix += cut
-xbins, xppb = 127, 2
+xbins, xppb = 128, 2
 zbins, zppb = 1, 8
-xebins, xeppb = 255, 1  # at exp screen and wavefront
+xebins, xeppb = 128, 2  # at exp screen and wavefront
 zebins, zeppb = 1, 8
 cbins, cppb = xbins, xppb
 cebins, ceppb = xebins, xeppb
@@ -110,9 +113,9 @@ abins = xebins
 #cut = 'ver-'
 #prefix += cut
 #xbins, xppb = 1, 8
-#zbins, zppb = 127, 2
+#zbins, zppb = 128, 2
 #xebins, xeppb = 1, 8
-#zebins, zeppb = 255, 1  # at exp screen and wavefront
+#zebins, zeppb = 128, 2  # at exp screen and wavefront
 #cbins, cppb = zbins, zppb
 #cebins, ceppb = zebins, zeppb
 #abins = zebins
@@ -125,7 +128,7 @@ if is0emittance:
 else:
     emittanceFactor = 1.
     prefix += 'non0e-'
-    nrays = 2e5
+    nrays = 1e5
     repeats = 160
 
 is0energySpread = True
@@ -169,7 +172,7 @@ def build_beamline(azimuth=0):
         xPrimeMax=acceptanceHor/2*1e3*hShrink,
         zPrimeMax=acceptanceVer/2*1e3*vShrink,
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
-        targetOpenCL='CPU',
+#        targetOpenCL='CPU',
         uniformRayDensity=True,
         filamentBeam=(what != 'rays'))
 
@@ -744,8 +747,8 @@ def define_plots(beamLine):
         caxis=caxis, ePos=ePos, title='06-M5local')
     plots.append(plot)
 
-    complexPlotsDs = []
-    complexPlotsXs = []
+    complexPlotsIs = []
+    complexPlotsPCAs = []
     for ic, (fsmExpCenter, d) in enumerate(
             zip(beamLine.fsmExpCenters, dFocus)):
         ePos = 1 if xebins < 4 else 2
@@ -757,35 +760,30 @@ def define_plots(beamLine):
             yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zebins, ppb=zeppb,
                                limits=[-expSize, expSize]),
             caxis=caxis,
-            fluxKind='Es', ePos=ePos, title='08e-ExpFocus{0:02d}'.format(ic))
+            fluxKind='s', ePos=ePos, title='08-ExpFocus{0:02d}'.format(ic))
         plot.textPanel = plot.fig.text(
             0.88, 0.8, u'f{0:+.0f} mm'.format(d),
             transform=plot.fig.transFigure, size=12, color='r', ha='center')
         plots.append(plot)
-        complexPlotsDs.append(plot)
+        complexPlotsIs.append(plot)
         fsmExpPlot = plot
 
         ePos = 1 if xebins < 4 else 2
         caxis = xrtp.XYCAxis('energy', 'eV', bins=cebins, ppb=ceppb)
-        if 'hor' in cut:
-            xaxis = xrtp.XYCAxis(r'$x$', u'µm', bins=xebins, ppb=xeppb,
-                                 limits=[-expSize, expSize])
-            yaxis = xrtp.XYCAxis(r'$x$', u'µm', bins=xebins, ppb=xeppb,
-                                 limits=[-expSize, expSize])
-        elif 'ver' in cut:
-            xaxis = xrtp.XYCAxis(r'$z$', u'µm', bins=zebins, ppb=zeppb,
-                                 limits=[-expSize, expSize])
-            yaxis = xrtp.XYCAxis(r'$z$', u'µm', bins=zebins, ppb=zeppb,
-                                 limits=[-expSize, expSize])
         plot = xrtp.XYCPlot(
             'beamFSMExp{0:02d}'.format(ic), (1,), aspect='auto',
-            xaxis=xaxis, yaxis=yaxis, caxis=caxis,
-            fluxKind='Esxx', ePos=ePos, title='08x-ExpFocus{0:02d}'.format(ic))
+            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xebins, ppb=xeppb,
+                               limits=[-expSize, expSize]),
+            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zebins, ppb=zeppb,
+                               limits=[-expSize, expSize]),
+            caxis=caxis,
+            fluxKind='EsPCA', ePos=ePos,
+            title='08e-ExpFocus{0:02d}'.format(ic))
         plot.textPanel = plot.fig.text(
             0.88, 0.8, u'f{0:+.0f} mm'.format(d),
             transform=plot.fig.transFigure, size=12, color='r', ha='center')
         plots.append(plot)
-        complexPlotsXs.append(plot)
+        complexPlotsPCAs.append(plot)
 
         ePos = 1 if xebins < 4 else 2
         caxis = xrtp.XYCAxis('Es phase', '', bins=cebins, ppb=ceppb,
@@ -855,8 +853,9 @@ def define_plots(beamLine):
             plot.yaxis.fwhmFormatStr = None
             plot.ax1dHistY.set_visible(False)
 
-    toSave = [complexPlotsDs, complexPlotsXs,
-              beamLine.waveOnSampleA, beamLine.waveOnSampleB,
+    toSave = [complexPlotsIs, complexPlotsPCAs,
+              beamLine.waveOnSampleA,
+              beamLine.waveOnSampleB,
               beamLine.waveOnSampleC]
     lents = len(toSave[0])
     for ts in toSave[1:]:
@@ -867,19 +866,13 @@ def define_plots(beamLine):
 
 def afterScript(toSave):
     dump = []
-    for ic, (complexPlotDs, complexPlotXs, a, b, c) in\
+    for ic, (complexPlotIs, complexPlotPCAs, a, b, c) in\
             enumerate(zip(*toSave)):
-        x = complexPlotDs.xaxis.binCenters
-        y = complexPlotDs.yaxis.binCenters
-        xyE = complexPlotDs.total2D
-        xxE = complexPlotXs.total2D
-        if 'hor' in cut:
-            xyI = complexPlotDs.xaxis.total1D
-            xxI = complexPlotXs.xaxis.total1D
-        elif 'ver' in cut:
-            xyI = complexPlotDs.yaxis.total1D
-            xxI = complexPlotXs.yaxis.total1D
-        dump.append([x, y, xyE, xyI, xxE, xxI, a, b, c])
+        x = complexPlotIs.xaxis.binCenters
+        y = complexPlotIs.yaxis.binCenters
+        Ixy = complexPlotIs.total2D
+        Es = complexPlotPCAs.field3D
+        dump.append([x, y, Ixy, Es, a, b, c])
 
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'wb') as f:
@@ -900,73 +893,49 @@ def main():
 
 
 def plotFocus():
-#    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'rb') as f:
         dump = pickle.load(f)
-
-    maxI = 0.
+    #  normalize over all images:
+    norm = 0.
     for ic, d in enumerate(dFocus):
-        maxI = max(maxI, dump[ic][3].max())
+        Es = dump[ic][3]
+        dmax = ((np.abs(Es)**2).sum(axis=0) / Es.shape[0]).max()
+        if norm < dmax:
+            norm = dmax
+    norm = norm**0.5
 
+    NN = len(dFocus)
     for ic, d in enumerate(dFocus):
-        x, y, xyE, xyI = dump[ic][0:4]
-        eshape = xyE.shape
-        fl = xyI.flatten()
-        centralI = fl[len(fl)//2]
-        norm = (xyI * centralI)**0.5
-        norm[norm == 0] = 1
-        if cut.startswith('hor'):
-            Dx = np.abs(xyE[eshape[0]//2, :]) / norm
-        elif cut.startswith('ver'):
-            Dy = np.abs(xyE[:, eshape[1]//2]) / norm
-        else:
-            raise ValueError('unknown cut')
+        x, y, Ixy, Es = dump[ic][:4]
+        scrStr = 'screen at f+{0:.0f} mm'.format(d)
 
-        figIs = plt.figure(figsize=(6, 5))
-        if cut.startswith('hor'):
-            tit = 'Horizontal'
-        elif cut.startswith('ver'):
-            tit = 'Vertical'
-        figIs.suptitle(tit + ' cut of intensity and degree of coherence,\n' +
-                       u'screen at f{0:+.0f} mm'.format(d), fontsize=14)
-        ax = figIs.add_subplot(111)
-        if cut.startswith('hor'):
-            ax.set_xlabel(u'x (µm)')
-        elif cut.startswith('ver'):
-            ax.set_xlabel(u'z (µm)')
-        ax.set_ylabel(r'intensity s (a.u.)')
+        print("solving PCA problem, {0} of {1}...".format(ic+1, NN))
+        start = time.time()
+        wPCA, vPCA = rco.calc_eigen_modes_PCA(Es)
+        stop = time.time()
+        print("the PCA problem has taken {0} s".format(stop-start))
+        figP = rco.plot_eigen_modes(x, y, wPCA, vPCA,
+                                    xlabel='x (µm)', ylabel='z (µm)')
+        figP.suptitle('Principal components of one-electron images, ' + scrStr,
+                      fontsize=11)
+        figP.savefig('PCA-{0}-{1:02d}.png'.format(prefix, ic))
 
-        if cut.startswith('hor'):
-            lI, = ax.plot(x, xyI, 'r-', label='I')
-        elif cut.startswith('ver'):
-            lI, = ax.plot(y, xyI, 'g-', label='I')
-        ax.set_ylim(0, maxI)
+        xarr, xnam = (x, 'x') if cut.startswith('hor') else (y, 'z')
+        xdata = rco.calc_1D_coherent_fraction(Es/norm, xnam, xarr)
+        fig2D, figXZ = rco.plot_1D_degree_of_coherence(
+            xdata, xnam, xarr, "nm", isIntensityNormalized=True,
+            locLegend='center left')
+        fig2D.suptitle('Mutual intensity, ' + scrStr, size=11)
+        figXZ.suptitle('Intensity and Degree of Coherence, ' + scrStr, size=11)
+        fig2D.savefig('MutualI-{0}-{1:02d}.png'.format(prefix, ic))
+        figXZ.savefig('IDOC-{0}-{1:02d}.png'.format(prefix, ic))
 
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'degree of coherence s (a.u.)')
-        ax2.set_ylim(0, 1.05)
-        if cut.startswith('hor'):
-            lD, = ax2.plot(x, Dx, 'r--', label='DOC')
-        elif cut.startswith('ver'):
-            lD, = ax2.plot(y, Dy, 'g--', label='DOC')
-
-        ax.set_xlim(-expSize, expSize)
-        ax.legend([lI, lD], [lI.get_label(), lD.get_label()], loc='upper left',
-                  fontsize=12)
-#        ax2.legend(loc='upper right', fontsize=12)
-
-        figIs.savefig('IDOC-{0}-{1:02d}.png'.format(prefix, ic))
     print("Done")
     plt.show()
 
 
 def plotFront():
-#    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'rb') as f:
         dump = pickle.load(f)
@@ -977,7 +946,7 @@ def plotFront():
         tit += ', horizontal cuts'
     elif 'ver' in cut:
         tit += ', vertical cuts'
-    figABC.suptitle(tit, fontsize=14)
+    figABC.suptitle(tit, fontsize=11)
     rect2d = [0.15, 0.1, 0.82, 0.83]
     ax = figABC.add_axes(rect2d, aspect='auto')
     ax.set_ylabel(u'y (Å)')
@@ -992,7 +961,7 @@ def plotFront():
         if ic % 2 == 1:
             continue
         x, z = dump[ic][0:2]
-        a, b, c = dump[ic][6:9]
+        a, b, c = dump[ic][4:7]
         if 'hor' in cut:
             d = a - a[abins//2]
             var = x
@@ -1008,100 +977,18 @@ def plotFront():
         style = color + line
         l, = ax.plot(xx, dy, style, lw=2, label='{0:.0f}{1}'.format(df, st))
 
-    ax.legend(title='screen at (mm)', loc='lower center', fontsize=12)
+    ax.legend(title='screen at (mm)', loc='lower center', fontsize=10)
     xm = var[-1] / dFocus[-1] * 1e3
     ax.set_xlim(-xm, xm)
 #    ax.set_xlim(x.min(), x.max())
     ax.set_ylim(-40, 40)
     figABC.savefig('{0}-waveFront.png'.format(prefix))
 
-    plt.show()
-
-
-def plotXX():
-#    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
-
-    pickleName = '{0}-res.pickle'.format(prefix)
-    with open(pickleName, 'rb') as f:
-        dump = pickle.load(f)
-
-    maxI = 0.
-    for ic, d in enumerate(dFocus):
-        maxI = max(maxI, dump[ic][5].max())
-
-    for ic, d in enumerate(dFocus):
-        x, z = dump[ic][0:2]
-        xxE, xxI = dump[ic][4:6]
-
-        figXX = plt.figure(figsize=(10, 8))
-        if cut.startswith('hor'):
-            tit = 'Horizontal'
-            var = x
-        elif cut.startswith('ver'):
-            tit = 'Vertical'
-            var = z
-        figXX.suptitle(tit + ' cut of mutual intensity, ' +
-                       u'screen at f{0:+.0f} mm'.format(d), fontsize=14)
-
-        cmap = cm.get_cmap('jet')
-        dvar = var[1] - var[0]
-        xlim = var[0] - dvar/2., var[-1] + dvar/2.
-
-        rect2dI = [0.08, 0.25, 0.4, 0.5]
-        ax = figXX.add_axes(rect2dI, aspect='auto')
-#        ax.text(0.5, 1.05, 'unnormalized', fontsize=14,
-#                transform=ax.transAxes, ha='center')
-        if cut.startswith('hor'):
-            ax.set_xlabel(u'x$_1$ (µm)')
-            ax.set_ylabel(u'x$_2$ (µm)')
-        elif cut.startswith('ver'):
-            ax.set_xlabel(u'z$_1$ (µm)')
-            ax.set_ylabel(u'z$_2$ (µm)')
-        ax.imshow(abs(xxE), aspect='auto', cmap=cmap, origin="lower",
-                  extent=[xlim[0], xlim[1], xlim[0], xlim[1]])
-        ax.annotate('', (1, 0), (0.75, 0.25), size=10,
-                    xycoords="axes fraction",
-                    arrowprops=dict(alpha=0.5, fc='w', ec='w', headwidth=7,
-                                    frac=0.2))
-        ax.annotate('', (1, 1), (0.75, 0.75), size=10,
-                    xycoords="axes fraction",
-                    arrowprops=dict(alpha=0.5, fc='w', ec='w', headwidth=7,
-                                    frac=0.2))
-
-        norm = np.outer(xxI, xxI)**0.5
-        norm[norm == 0] = 1.
-        nmi = abs(xxE) / norm
-
-        rect1dI = [0.57, 0.55, 0.4, 0.35]
-        axI = figXX.add_axes(rect1dI, aspect='auto')
-        if cut.startswith('hor'):
-            axI.set_xlabel(u'x (µm)')
-        elif cut.startswith('ver'):
-            axI.set_xlabel(u'z (µm)')
-        axI.set_ylabel(u'intensity (a.u.)')
-        axI.plot(var, xxI)
-        axI.set_xlim(xlim)
-        axI.set_ylim(0, maxI)
-
-        rect1dE = [0.57, 0.06, 0.4, 0.35]
-        axE = figXX.add_axes(rect1dE, aspect='auto')
-        if cut.startswith('hor'):
-            axE.set_xlabel(u'x (µm)')
-        elif cut.startswith('ver'):
-            axE.set_xlabel(u'z (µm)')
-        axE.set_ylabel(u'normalized mutual intensity')
-        axE.plot(var, np.flipud(nmi).diagonal())
-        axE.set_xlim(xlim)
-        axE.set_ylim(0, 1.05)
-
-        figXX.savefig('XXIDOC-{0}-{1:02d}.png'.format(prefix, ic))
     print("Done")
     plt.show()
+
 
 if __name__ == '__main__':
     main()
 #    plotFocus()
 #    plotFront()
-#    plotXX()

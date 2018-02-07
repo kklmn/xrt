@@ -7,11 +7,11 @@
 Described in the __init__ file.
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "08 Mar 2016"
+__date__ = "07 Feb 2018"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import pickle
-#import matplotlib as mpl
+import time
 import matplotlib.pyplot as plt
 
 import xrt.backends.raycing as raycing
@@ -24,6 +24,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
+import xrt.backends.raycing.coherence as rco
 
 showIn3D = False
 
@@ -82,7 +83,7 @@ Nzone = ZPdiam/(4*outerzone*1e-3)
 print('f_ZP: = {0} mm'.format(focus))
 print('N_ZP: = {0}'.format(Nzone))
 
-repeats = 1
+repeats = 10
 nrays = 1e5
 
 what = 'rays'
@@ -90,11 +91,11 @@ what = 'rays'
 #what = 'wave'
 
 if what == 'rays':
-    prefix = '1D-1-rays-'
+    prefix = 'stxm-1D-1-rays-'
 elif what == 'hybrid':
-    prefix = '1D-2-hybr-'
+    prefix = 'stxm-1D-2-hybr-'
 elif what == 'wave':
-    prefix = '1D-3-wave-'
+    prefix = 'stxm-1D-3-wave-'
 if E0 > 280.1:
     prefix += '{0:.0f}eV-'.format(E0)
 
@@ -427,7 +428,6 @@ def run_process_hybr(beamLine, shineOnly1stSource=False):
 
         waveOnFZP = beamLine.fzp.prepare_wave(
             beamLine.exitSlit, nrays, shape='round')
-
         rw.diffract(waveOnExitSlit, waveOnFZP)
         beamFZPlocal = waveOnFZP
 
@@ -660,7 +660,7 @@ def define_plots(beamLine):
     plots.append(plot)
 
     complexPlotsIs = []
-    complexPlotsDs = []
+    complexPlotsPCAs = []
     for ic, (fsmExpCenter, d) in enumerate(
             zip(beamLine.fsmExpCenters, dFocus)):
         ePos = 1 if xbins < 4 else 2
@@ -670,7 +670,7 @@ def define_plots(beamLine):
                                limits=[-160, 160]),
             yaxis=xrtp.XYCAxis(r'$z$', r'nm', bins=zbins, ppb=zppb,
                                limits=[-160, 160]),
-            ePos=ePos, title='06-ExpFocus{0:02d}'.format(ic))
+            fluxKind='s', ePos=ePos, title='06-ExpFocus{0:02d}'.format(ic))
         plot.textPanel = plot.fig.text(
             0.88, 0.8, u'f{0:+.1f} µm'.format(d*1e3),
             transform=plot.fig.transFigure, size=12, color='r', ha='center')
@@ -684,12 +684,13 @@ def define_plots(beamLine):
                                limits=[-160, 160]),
             yaxis=xrtp.XYCAxis(r'$z$', r'nm', bins=zbins, ppb=zppb,
                                limits=[-160, 160]),
-            fluxKind='Es', ePos=ePos, title='06e-ExpFocus{0:02d}'.format(ic))
+            fluxKind='EsPCA', ePos=ePos,
+            title='06e-ExpFocus{0:02d}'.format(ic))
         plot.textPanel = plot.fig.text(
             0.88, 0.8, u'f{0:+.1f} µm'.format(d*1e3),
             transform=plot.fig.transFigure, size=12, color='r', ha='center')
         plots.append(plot)
-        complexPlotsDs.append(plot)
+        complexPlotsPCAs.append(plot)
     ax = plot.xaxis
     edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
     beamLine.fsmExpX = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
@@ -714,18 +715,19 @@ def define_plots(beamLine):
             plot.ax2dHist.yaxis.set_ticks([0])
             plot.yaxis.fwhmFormatStr = None
             plot.ax1dHistY.set_visible(False)
-    return plots, complexPlotsIs, complexPlotsDs
+    return plots, complexPlotsIs, complexPlotsPCAs
 
 
-def afterScript(complexPlotsIs, complexPlotsDs):
+def afterScript(complexPlotsIs, complexPlotsPCAs):
     dump = []
-    for ic, (complexPlotIs, complexPlotDs) in enumerate(
-            zip(complexPlotsIs, complexPlotsDs)):
+    for ic, (complexPlotIs, complexPlotPCAs) in enumerate(
+            zip(complexPlotsIs, complexPlotsPCAs)):
         x = complexPlotIs.xaxis.binCenters
         y = complexPlotIs.yaxis.binCenters
         Ixy = complexPlotIs.total2D
-        Dxy = complexPlotDs.total2D
-        dump.append([x, y, Ixy, Dxy])
+        Es = complexPlotPCAs.field3D
+        dump.append([x, y, Ixy, Es])
+    print(Ixy.shape, Es.shape)
 
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'wb') as f:
@@ -747,70 +749,49 @@ def main():
 
 
 def plotFocus():
-    def gaussian(x, *p):
-        """A gaussian peak with:
-        p[0] = peak height above background
-        p[1] = central value
-        p[2] = FWHM"""
-        b = p[0], p[1], p[2]
-        return b[0] * np.exp(-0.5 * ((x-b[1])/b[2])**2) / (2*np.pi)**0.5 / b[2]
-
-#    from scipy.optimize import curve_fit
-
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'rb') as f:
         dump = pickle.load(f)
-
-    maxIxy = 0
+    #  normalize over all images:
+    norm = 0.
     for ic, d in enumerate(dFocus):
-        x, y, Ixy, Dxy = dump[ic]
-        maxIxy = max(maxIxy, Ixy.max())
+        Es = dump[ic][3]
+        dmax = ((np.abs(Es)**2).sum(axis=0) / Es.shape[0]).max()
+        if norm < dmax:
+            norm = dmax
+    norm = norm**0.5
 
+    NN = len(dFocus)
     for ic, d in enumerate(dFocus):
-        x, y, Ixy, Dxy = dump[ic]
-#        print(Ixy.shape, Dxy.shape, x.shape, y.shape)
-        Ixyshape = Ixy.shape
+        x, y, Ixy, Es = dump[ic]
+        scrStr = 'screen at f+{0:.1f} µm'.format(d*1000)
 
-        fl = Ixy.flatten()
-        centralI = fl[len(fl)//2]
+        print("solving PCA problem, {0} of {1}...".format(ic+1, NN))
+        start = time.time()
+        wPCA, vPCA = rco.calc_eigen_modes_PCA(Es)
+        stop = time.time()
+        print("the PCA problem has taken {0} s".format(stop-start))
+        print("Top 4 eigen values (PCA) = {0}".format(wPCA))
 
-        Ix = Ixy[Ixyshape[0]//2, :]
-        normx = (Ix * centralI)**0.5
-        normx[normx == 0] = 1
-        Dx = np.abs(Dxy[Ixyshape[0]//2, :]) / normx
+        figP = rco.plot_eigen_modes(x, y, wPCA, vPCA,
+                                    xlabel='x (µm)', ylabel='z (µm)')
+        figP.suptitle('Principal components of one-electron images, ' + scrStr,
+                      fontsize=11)
+        figP.savefig('PCA-{0}-{1:02d}.png'.format(prefix, ic))
 
-        Iy = Ixy[:, Ixyshape[1]//2]
-        normy = (Iy * centralI)**0.5
-        normy[normy == 0] = 1
-        Dy = np.abs(Dxy[:, Ixyshape[1]//2]) / normy
+        xarr, xnam = (x, 'x') if cut.startswith('hor') else (y, 'z')
+        xdata = rco.calc_1D_coherent_fraction(Es/norm, xnam, xarr)
+        fig2D, figXZ = rco.plot_1D_degree_of_coherence(
+            xdata, xnam, xarr, "nm", isIntensityNormalized=True,
+            locLegend='lower left')
+        fig2D.suptitle('Mutual intensity, ' + scrStr, size=11)
+        figXZ.suptitle('Intensity and Degree of Coherence, ' + scrStr, size=11)
+        fig2D.savefig('MutualI-{0}-{1:02d}.png'.format(prefix, ic))
+        figXZ.savefig('IDOC-{0}-{1:02d}.png'.format(prefix, ic))
 
-        figIs = plt.figure(figsize=(6, 5))
-        figIs.suptitle('intensity and degree of coherence\n' +
-                       u'screen at f{0:+.1f} µm'.format(d*1e3), fontsize=14)
-        ax = figIs.add_subplot(111)
-        ax.set_xlabel(u'x or z (µm)')
-        ax.set_ylabel(r'intensity s (a.u.)')
-
-        if cut.startswith('hor'):
-            ax.plot(x, Ix, 'r-', label='I hor')
-        if cut.startswith('ver'):
-            ax.plot(y, Iy, 'g-', label='I ver')
-        ax.set_ylim(0, maxIxy)
-
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'degree of coherence s (a.u.)')
-        ax2.set_ylim(0, 1.05)
-        if cut.startswith('hor'):
-            ax2.plot(x, Dx, 'r--', label='DOC hor')
-        if cut.startswith('ver'):
-            ax2.plot(y, Dy, 'g--', label='DOC ver')
-
-        ax.legend(loc='upper left', fontsize=12)
-        ax2.legend(loc='upper right', fontsize=12)
-
-        figIs.savefig('IDOC-{0}-{1:02d}.png'.format(prefix, ic))
     print("Done")
     plt.show()
+
 
 if __name__ == '__main__':
     main()

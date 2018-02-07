@@ -170,6 +170,8 @@ be integrated over the screen area to give the flux.
         The above normalization steps are automatically done inside
         :meth:`diffract`.
 
+.. _seq_prop:
+
 Sequential propagation
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -197,14 +199,14 @@ of the largest vector component and only then to take the real part.
 The correctness of this approach to calculating the local wave directions can
 be verified as follows. We first calculate the field distribution on a flat
 screen, together with the local directions. The wave front, as the surface
-being normal to these directions, is calculated by linear integrals of the
+normal to these directions, is calculated by linear integrals of the
 corresponding angular projections. The calculated wave front surface is then
 used as a new screen, where the diffracted wave is supposed to have a constant
 phase. This is indeed demonstrated in :ref:`the example <wavefronts>` applying
 phase as color axis. The sharp phase distribution is indicative of a true wave
 front, which in turn justifies the correct local propagation directions.
 
-After having found two polarization components and new directions at the
+After having found two polarization components and new directions on the
 receiving surface, the last step is to reflect or refract the wave samples as
 rays locally, taking the complex refractive indices for both polarizations.
 This approach is applicable also to wave propagation regime, as the
@@ -311,27 +313,40 @@ done for the field components :math:`E_s` or :math:`E_p` of a field diffracted
 onto a given :math:`(x, y)` plane.
 
 Both functions are Hermitian in respect to the exchange of points 1 and 2.
-There are three common ways for working with them:
+There are two common ways of working with them:
 
-1. to fix one point, typically to the center, i.e. as
-   :math:`J(x_1, y_1, x_2=0, y_2=0)`;
-2. to individually consider horizontal and vertical cuts by fixing the other
-   direction, e.g. as :math:`J(x_1, y_1=0, x_2, y_2=0)` and
-3. by performing modal analysis consisting of solving the eigenvalue problem
-   for the matrix :math:`J^{tr=1}_{12}` -- the matrix :math:`J_{12}` normalized
-   to its trace -- and doing the standard eigendecomposition:
+1. The horizontal and vertical directions are considered independently by
+   placing the points 1 and 2 on a horizontal or vertical line symmetrically
+   about the optical axis. The complex degree of coherence thus becomes a 1D
+   function dependent on the distance between the points, e.g. as
+   :math:`j_{12}^{\rm hor}=j(x_1-x_2)`. The intensity distribution is also
+   determined over the same line as a 1D positional function, e.g. as
+   :math:`I(x)`.
+
+   The widths :math:`\sigma_x` and :math:`\xi_x` of the distributions
+   :math:`I(x)` and :math:`j(x_1-x_2)` give the *coherent fraction*
+   :math:`\zeta_x`
+
+    .. math::
+        \zeta_x = \left(4\sigma_x^2/\xi_x^2 + 1\right)^{-1/2}.
+
+2. The transverse field distribution can be analized integrally (not split into
+   the horizontal and vertical projections) by performing the modal analysis
+   consisting of solving the eigenvalue problem for the matrix
+   :math:`J^{tr=1}_{12}` -- the matrix :math:`J_{12}` normalized to its trace
+   -- and doing the standard eigendecomposition:
 
     .. math::
         J^{tr=1}(x_1, y_1, x_2, y_2) =
-        \sum_{i=0}{w_i V_i(x_1, y_1)V_i^{+}(x_2, y_2)},
+        \sum_i{w_i V_i(x_1, y_1)V_i^{+}(x_2, y_2)},
 
     with :math:`w_i, V_i` being the *i*\ th eigenvalue and eigenvector.
 
     .. note::
         The matrix :math:`J_{12}` is of the size
-        (pixels\ :sub:`x`\ ×pixels\ :sub:`y`)², i.e. *squared* total pixel size
-        of the image! In the current implementation, we use :meth:`eigh` method
-        from ``scipy.linalg``, where a feasible image size should not exceed
+        (N\ :sub:`x`\ ×N\ :sub:`y`)², i.e. *squared* total pixel size of the
+        image! In the current implementation, we use :meth:`eigh` method from
+        ``scipy.linalg``, where a feasible image size should not exceed
         ~100×100 pixels (i.e. ~10\ :sup:`8` size of :math:`J_{12}`).
 
     .. note::
@@ -341,35 +356,50 @@ There are three common ways for working with them:
 
 .. _coh_signs_PCA:
 
-We also propose a fourth method that results in the same (mathematically equal)
-figures as the third method above.
+We also propose a third method that results in the same figures as the second
+method above.
 
-4. It uses Principal Component Analysis (PCA) applied to the filament images
+3. It uses Principal Component Analysis (PCA) applied to the filament images
    :math:`E(x, y)`. It consists of the following steps.
 
    a) Out of *r* repeats of :math:`E(x, y)` build a data matrix :math:`D` with
-      Nx×Ny rows and *r* columns.
+      N\ :sub:`x`\ ×N\ :sub:`y` rows and *r* columns.
    b) The matrix :math:`J_{12}` is equal to the product :math:`DD^T`. Instead
-      of solving this huge eigenvalue problem of (Nx×Ny)² size, we solve a
-      (typically) smaller matrix :math:`D^TD` of the size *r*\ ².
+      of solving this huge eigenvalue problem of (N\ :sub:`x`\ ×N\ :sub:`y`)²
+      size, we solve a typically smaller matrix :math:`D^TD` of the size
+      *r*\ ².
    c) The biggest *r* eigenvalues of :math:`J_{12}` are equal to those of
-      :math:`D^TD` [ref or proof to find]. To find the primary (biggest)
-      eigenvalue is the main objective of the modal analysis (item 3 above) and
-      can be found by PCA much easier.
-   d) Also the *eigen modes* of :math:`J_{12}` can be found by PCA via the
+      :math:`D^TD` [proof to present in the coming paper]. To find the primary
+      (biggest) eigenvalue is the main objective of the modal analysis (item 2
+      above); PCA can provide it much easier due to the smaller size of the
+      problem.
+   d) Also the *eigen modes* of :math:`J_{12}=DD^T` can be found by PCA via the
       eigenvectors :math:`v`'s of :math:`D^TD`. The matrix :math:`Dv_iv_i^{+}`
       is of the size of :math:`D` and has all the columns proportional to each
-      other [ref or proof to find]. These columns are the *i*\ th principal
-      components for the corresponding columns of :math:`D`. Being normalized,
-      all the columns become equal and give the *i*\ th eigenvector of
-      :math:`J_{12}`.
+      other [proof to present in the coming paper]. These columns are the
+      *i*\ th principal components for the corresponding columns of :math:`D`.
+      Being normalized, all the columns become equal and give the *i*\ th
+      eigenvector of :math:`J_{12}`.
 
-   Finally, PCA gives exactly the same information as the modal analysis but is
-   cheaper to calculate by many orders of magnitude.
+   Finally, PCA gives exactly the same information as the direct modal analysis
+   (method No 2 above) but is cheaper to calculate by many orders of magnitude.
 
-The accumulation of :math:`J_{12}` or individual filament images is done inside
-a plot object, please see its :ref:`options<fluxKind>` for selecting one of the
-four analysis ways and consider the example :ref:`SoftiMAX`.
+.. note::
+    A good test for the correctness of the obtained coherent fraction is to
+    find it at various positions on propagating in free space, where the result
+    is expected to be invariant. As appears in the
+    :ref:`examples of SoftiMAX<SoftiMAX>`, the 1D analysis never gives an
+    invariant coherent fraction at the scanned positions around the focus. The
+    primary reason for this is the difficulty in the determination of the width
+    of degree of coherence, for the latter typically being a complex-shaped
+    curve. In contrast, the modal analysis (the PCA implementation is
+    recommended) gives the expected invariance.
+
+Coherence analysis and related plotting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: xrt.backends.raycing.coherence
+
 
 Typical logic for a wave propagation study
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -547,7 +577,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         impactPoints = np.vstack((oeLocal.x[good], secondDim[good])).T
         try:  # convex hull
             hull = ConvexHull(impactPoints)
-        except:  # QhullError
+        except:  # QhullError  # analysis:ignore
             raise ValueError('cannot normalize this way!')
         outerPts = impactPoints[hull.vertices, :]
         lines = np.hstack([outerPts, np.roll(outerPts, -1, axis=0)])
@@ -580,16 +610,11 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
     if waveCL is None:
         kcode = _diffraction_integral_conv
     else:
-        if raycing.is_sequence(targetOpenCL):
+        if targetOpenCL not in ['auto']:  # raycing.is_sequence(targetOpenCL):
             waveCL.set_cl(targetOpenCL, precisionOpenCL)
         kcode = _diffraction_integral_CL
 
     Es, Ep, aE, bE, cE = kcode(oeLocal, n, nl, wave, good)
-    # rotate coherency matrix back:
-    if hasattr(oe, 'rotationSequence'):  # OE
-        rollAngle = oe.roll + oe.positionRoll
-        cosY, sinY = np.cos(rollAngle), np.sin(rollAngle)
-        Es[:], Ep[:] = raycing.rotate_y(Es, Ep, cosY, -sinY)
 
     wave.EsAcc += Es
     wave.EpAcc += Ep
@@ -649,6 +674,12 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 
 # rotate abc, coh.matrix, Es, Ep in the local system of the receiving surface
     if hasattr(wave, 'toOE'):
+        # rotate coherency from oe local back to global for later transforming
+        # it to toOE local:
+        if hasattr(oe, 'rotationSequence'):  # OE
+            rollAngle = oe.roll + oe.positionRoll
+            cosY, sinY = np.cos(rollAngle), np.sin(rollAngle)
+            Es[:], Ep[:] = raycing.rotate_y(Es, Ep, cosY, sinY)
         toOE = wave.toOE
         wave.a[:], wave.b[:], wave.c[:] = glo.a, glo.b, glo.c
         wave.Jss[:], wave.Jpp[:], wave.Jsp[:] = glo.Jss, glo.Jpp, glo.Jsp
@@ -721,6 +752,8 @@ def _diffraction_integral_conv(oeLocal, n, nl, wave, good):
 def _diffraction_integral_CL(oeLocal, n, nl, wave, good):
     myfloat = waveCL.cl_precisionF
     mycomplex = waveCL.cl_precisionC
+#    myfloat = np.float64
+#    mycomplex = np.complex128
 
     imageRays = np.int32(len(wave.xDiffr))
     frontRays = np.int32(len(oeLocal.x[good]))

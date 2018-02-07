@@ -168,6 +168,8 @@ hueMax = 10.
 
 targetOpenCL = 'auto'
 precisionOpenCL = 'auto'
+#targetOpenCL = (0, 0)
+#precisionOpenCL = 'float32'
 
 allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
                  'a', 'b', 'path', 'phase_shift', 'reflection_number', 'order',
@@ -624,10 +626,13 @@ def get_output(plot, beamsReturnedBy_run_process):
             flux = 2*beam.Jsp.real
         elif plot.fluxKind.startswith('left-right'):
             flux = 2*beam.Jsp.imag
-        elif plot.fluxKind.startswith('Es'):
-            flux = beam.Es
-        elif plot.fluxKind.startswith('Ep'):
-            flux = beam.Ep
+        elif plot.fluxKind.startswith('E'):
+            if plot.fluxKind.startswith('Es'):
+                flux = beam.Es
+            elif plot.fluxKind.startswith('Ep'):
+                flux = beam.Ep
+            else:
+                flux = beam.Es + beam.Ep
         else:
             flux = beam.Jss + beam.Jpp
 

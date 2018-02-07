@@ -1048,7 +1048,7 @@ class OE(object):
             rs.rotate_coherency_matrix(lb, slice(None), roll)
         if hasattr(lb, 'Es'):
             cosY, sinY = np.cos(roll), np.sin(roll)
-            lb.Es[:], lb.Ep[:] = raycing.rotate_y(lb.Es, lb.Ep, cosY, -sinY)
+            lb.Es[:], lb.Ep[:] = raycing.rotate_y(lb.Es, lb.Ep, cosY, sinY)
 
         if returnBeam:
             retGlo = rs.Beam(copyFrom=lb)

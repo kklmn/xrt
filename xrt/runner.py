@@ -23,7 +23,7 @@ if sys.version_info < (3, 1):
 else:
     import queue
     Queue = queue
-import uuid  #  is needed on some platforms with pyopencl # analysis:ignore
+import uuid  #  is needed on some platforms with pyopencl  # analysis:ignore
 
 from . import multipro
 from .backends import raycing
@@ -87,7 +87,7 @@ class RunCardVals(object):
         try:
             with open(self.lastRunsPickleName, 'rb') as f:
                 self.lastRuns = pickle.load(f)
-        except:
+        except:  # analysis:ignore
             pass
         if self.lastRuns:
             print("The last {0} run{1}".format(len(self.lastRuns),
@@ -283,10 +283,10 @@ def one_iteration():
                     axis.binEdges = outList[2+iaxis*3]
             plot.total2D += outList[9]
             plot.total2D_RGB += outList[10]
-            is4d = (plot.fluxKind.lower().endswith('4d') or
-                    plot.fluxKind.lower().endswith('pca'))
-            if is4d:
+            if plot.fluxKind.lower().endswith('4d'):
                 plot.total4D += outList[11]
+            elif plot.fluxKind.lower().endswith('pca'):
+                plot.total4D.append(outList[11])
             plot.intensity += outList[12]
 
             if runCardVals.iteration == 0:  # needed for multiprocessing
@@ -308,6 +308,11 @@ def on_finish():
             plot.timer.remove_callback(plot.timer_callback)
         plot.areProcessAlreadyRunning = False
     for plot in _plots:
+        if plot.fluxKind.startswith('E') and \
+                plot.fluxKind.lower().endswith('pca'):
+            xbin, zbin = plot.xaxis.bins, plot.yaxis.bins
+            plot.total4D = np.concatenate(plot.total4D).reshape(-1, xbin, zbin)
+            plot.field3D = plot.total4D
         plot.textStatus.set_text('')
         plot.fig.canvas.mpl_disconnect(plot.cidp)
         plot.plot_plots()

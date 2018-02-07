@@ -537,27 +537,34 @@ class XYCPlot(object):
         .. _fluxKind:
 
         *fluxKind*: str
-            Can begin with 's', 'p', '+-45', 'left-right', 'total' and 'power'.
-            Specifies what kind of flux to use for the brightness of 2D
-            and for the height of 1D histograms. If it ends with 'log', the
-            flux scale is logarithmic.
+            Can begin with 's', 'p', '+-45', 'left-right', 'total', 'power',
+            'Es', 'Ep' and 'E'. Specifies what kind of flux to use for the
+            brightness of 2D and for the height of 1D histograms. If it ends
+            with 'log', the flux scale is logarithmic.
 
-            If starts with 'E' then the mutual intensity is calculated:
+            If starts with 'E' then the *field amplitude* or mutual intensity
+            is considered, not the usual intensity, and accumulated in the 2D
+            histogram or in a 3D stack:
 
-            - If ends with 'xx' or 'zz', the corresponding 2D cuts are done.
-              The plot must have equal axes.
-            - If without these endings, one of the two points in the the mutual
-              intensity is fixed to the center of the image.
+            - If ends with 'xx' or 'zz', the corresponding 2D cuts of mutual
+              intensity are accumulated in the main 2D array (the one visible
+              as a 2D histogram). The plot must have equal axes.
+
             - If ends with '4D', the complete mutual intensity is calculated
-              and stored in *plot.hist4d*.
-            - If ends with 'PCA', the field images are stored in *plot.hist4d*
-              for further Principal Component Analysis. The maximum number of
-              stored images (repeats) is xaxis.bins × yaxis.bins.
+              and stored in *plot.total4D* with the shape
+              (xaxis.bins*yaxis.bins, xaxis.bins*yaxis.bins).
 
             .. warning::
 
                 Be cautious with the size of the mutual intensity object, it is
                 four-dimensional!
+
+            - If ends with 'PCA', the field images are stored in *plot.field3D*
+              with the shape (repeats, xaxis.bins, yaxis.bins) for further
+              Principal Component Analysis.
+
+            - If without these endings, the field aplitudes are simply summed
+              in the 2D histogram.
 
         *fluxUnit*: 'auto' or None
             If a synchrotron source is used and *fluxUnit* is 'auto', the
@@ -1000,11 +1007,12 @@ class XYCPlot(object):
         self.max2D_RGB = 0
         self.globalMax2D_RGB = 0
         self.size2D = self.yaxis.bins * self.xaxis.bins
-        self.is4D = (self.fluxKind.lower().endswith('4d') or
-                     self.fluxKind.lower().endswith('pca'))
+        self.is4D = self.fluxKind.lower().endswith('4d')
         if self.is4D:
-            self.size4D = self.yaxis.bins * self.xaxis.bins
             self.total4D = np.zeros((self.size2D, self.size2D), dtype=dtype)
+        self.isPCA = self.fluxKind.lower().endswith('pca')
+        if self.isPCA:
+            self.total4D = []
 
         for ax in [self.xaxis, self.yaxis, self.caxis]:
             if isinstance(ax, XYCAxis):
@@ -1592,6 +1600,8 @@ class XYCPlot(object):
             else:
                 dtype = np.float64
             self.total4D[:] = np.zeros((self.size2D, self.size2D), dtype=dtype)
+        elif self.isPCA:
+            self.total4D = []
 
         try:
             self.fig.canvas.window().setWindowTitle(self.title)

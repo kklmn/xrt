@@ -7,11 +7,12 @@
 Described in the __init__ file.
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "08 Mar 2016"
+__date__ = "07 Feb 2018"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import pickle
 import time
+import matplotlib.pyplot as plt
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
@@ -23,6 +24,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
+import xrt.backends.raycing.coherence as rco
 
 showIn3D = False
 
@@ -79,19 +81,22 @@ ESdZ = 0.1  # in mm EXIT SLIT RADIUS
 #print('f_ZP: = {0} mm'.format(focus))
 #print('N_ZP: = {0}'.format(Nzone))
 
-repeats = 1
+repeats = 10
 nrays = 1e5
 
-what = 'rays'
-#what = 'hybrid'
+#what = 'rays'
+what = 'hybrid'
 #what = 'wave'
 
 if what == 'rays':
-    prefix = '2D-1-rays-'
+    prefix = 'cxi_2D-1-rays-'
 elif what == 'hybrid':
-    prefix = '2D-2-hybr-'
+    prefix = 'cxi_2D-2-hybr-'
 elif what == 'wave':
-    prefix = '2D-3-wave-'
+    prefix = 'cxi_2D-3-wave-'
+
+xbins, xppb = 64, 4
+zbins, zppb = 64, 4
 
 is0emittance = True
 if is0emittance:
@@ -141,7 +146,7 @@ def build_beamline(azimuth=0):
         xPrimeMax=acceptanceHor/2*1e3,
         zPrimeMax=acceptanceVer/2*1e3,
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
-        targetOpenCL='CPU',
+#        targetOpenCL='CPU',
         uniformRayDensity=True,
         filamentBeam=(what != 'rays'))
 
@@ -599,12 +604,13 @@ def define_plots(beamLine):
 
     complexPlotsIs = []
     complexPlotsEs = []
+    complexPlotsPCAs = []
     for ic, (fsmExpCenter, d) in enumerate(
             zip(beamLine.fsmExpCenters, dFocus)):
         plot = xrtp.XYCPlot(
             'beamFSMExp{0:02d}'.format(ic), (1,), aspect='auto',
-            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=64, ppb=4),
-            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=64, ppb=4),
+            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xbins, ppb=xppb),
+            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zbins, ppb=zppb),
             fluxKind='s', title='08i-ExpFocus-Is{0:02d}'.format(ic))
         plot.xaxis.limits = [imageExtent[0], imageExtent[1]]
         plot.yaxis.limits = [imageExtent[2], imageExtent[3]]
@@ -614,18 +620,32 @@ def define_plots(beamLine):
         plots.append(plot)
         complexPlotsIs.append(plot)
 
+#        plot = xrtp.XYCPlot(
+#            'beamFSMExp{0:02d}'.format(ic), (1,), aspect='auto',
+#            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xbins, ppb=xppb),
+#            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zbins, ppb=zppb),
+#            fluxKind='Es4D', title='08e-ExpFocus-Es{0:02d}'.format(ic))
+#        plot.xaxis.limits = [imageExtent[0], imageExtent[1]]
+#        plot.yaxis.limits = [imageExtent[2], imageExtent[3]]
+#        plot.textPanel = plot.fig.text(
+#            0.88, 0.8, u'f{0:+.0f} mm'.format(d),
+#            transform=plot.fig.transFigure, size=12, color='r', ha='center')
+#        plots.append(plot)
+#        complexPlotsEs.append(plot)
+        complexPlotsEs.append(None)  # the above consumes too much
+
         plot = xrtp.XYCPlot(
             'beamFSMExp{0:02d}'.format(ic), (1,), aspect='auto',
-            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=64, ppb=4),
-            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=64, ppb=4),
-            fluxKind='Es4D', title='08e-ExpFocus-Es{0:02d}'.format(ic))
+            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xbins, ppb=xppb),
+            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zbins, ppb=zppb),
+            fluxKind='EsPCA', title='08pca-ExpFocus-Es{0:02d}'.format(ic))
         plot.xaxis.limits = [imageExtent[0], imageExtent[1]]
         plot.yaxis.limits = [imageExtent[2], imageExtent[3]]
         plot.textPanel = plot.fig.text(
             0.88, 0.8, u'f{0:+.0f} mm'.format(d),
             transform=plot.fig.transFigure, size=12, color='r', ha='center')
         plots.append(plot)
-        complexPlotsEs.append(plot)
+        complexPlotsPCAs.append(plot)
     ax = plot.xaxis
     edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
     beamLine.fsmExpX = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
@@ -642,48 +662,39 @@ def define_plots(beamLine):
             plot.fluxFormatStr = '%.0f'
         else:
             plot.fluxFormatStr = '%.1p'
-    return plots, complexPlotsIs, complexPlotsEs
+    return plots, complexPlotsIs, complexPlotsEs, complexPlotsPCAs
 
 
-def afterScript(complexPlotsIs, complexPlotsEs):
+def afterScript(complexPlotsIs, complexPlotsEs, complexPlotsPCAs):
     if what == 'rays':
         return
-    import scipy.linalg as spl
 
     dump = []
-    for ic, (complexPlotIs, complexPlotEs) in enumerate(
-            zip(complexPlotsIs, complexPlotsEs)):
+    NN = len(complexPlotsEs)
+    for ic, (complexPlotIs, complexPlotEs, complexPlotPCAs) in enumerate(
+            zip(complexPlotsIs, complexPlotsEs, complexPlotsPCAs)):
         x = complexPlotIs.xaxis.binCenters
         y = complexPlotIs.yaxis.binCenters
         Ixy = complexPlotIs.total2D
-        Exy = complexPlotEs.total2D
-        Exy4D = complexPlotEs.total4D
 
-        print("solving eigenvalue problem, {0} of {1}".format(
-              ic+1, len(complexPlotsEs)))
-        start1 = time.time()
-        k = complexPlotEs.size4D
+        if complexPlotEs is None:
+            wN, vN = None, None
+        else:
+            Exy4D = complexPlotEs.total4D
+            print("solving eigenvalue problem, {0} of {1}...".format(ic+1, NN))
+            start = time.time()
+            wN, vN = rco.calc_eigen_modes_4D(Exy4D)
+            stop = time.time()
+            print("the eigenvalue problem has taken {0} s".format(stop-start))
 
-        cE = Exy4D
-        cE /= np.diag(cE).sum()
-#        kwargs = dict()
-        kwargs = dict(eigvals=(k-4, k-1))
-        w, v = spl.eigh(cE, **kwargs)
+        print("solving PCA problem, {0} of {1}...".format(ic+1, NN))
+        Es = complexPlotPCAs.field3D
+        start = time.time()
+        wPCA, vPCA = rco.calc_eigen_modes_PCA(Es)
         stop = time.time()
-        print(w)
-        rE = np.dot(np.dot(v, np.diag(w)), np.conj(v.T))
-#        print("diff source--decomposed = {0}".format(np.abs(cE-rE).sum()))
+        print("the PCA problem has taken {0} s".format(stop-start))
 
-        nI = np.outer(Ixy, Ixy)
-        cE = Exy4D / nI**0.5
-        cE /= np.diag(cE).sum()
-#        kwargs = dict()
-        kwargs = dict(eigvals=(k-4, k-1))
-        wN, vN = spl.eigh(cE, **kwargs)
-
-        print("k={0}; eigenvalue problems have taken {1} s".format(
-              k, stop-start1))
-        dump.append([x, y, Ixy, Exy, w, v, wN, vN])
+        dump.append([x, y, Ixy, wN, vN, Es, wPCA, vPCA])
 
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'wb') as f:
@@ -698,113 +709,54 @@ def main():
 #        beamLine.orient_along_global_Y()
         beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
         return
-    plots, complexPlotsIs, complexPlotsEs = define_plots(beamLine)
+    plots, complexPlotsIs, complexPlotsEs, complexPlotsPCAs = \
+        define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=repeats, beamLine=beamLine,
                          afterScript=afterScript,
-                         afterScriptArgs=[complexPlotsIs, complexPlotsEs],
+                         afterScriptArgs=[
+                             complexPlotsIs, complexPlotsEs, complexPlotsPCAs],
                          processes=1)
 
 
 def plotFocus():
-#    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
-    cmap = cm.get_cmap('cubehelix')
-
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'rb') as f:
         dump = pickle.load(f)
 
-    def plot_modes(name, w, v):
-            figMs = plt.figure(figsize=(10, 10))
-            figMs.suptitle('eigen modes of {0}\n'.format(name) +
-                           u'screen at f{0:+.0f} mm'.format(d), fontsize=14)
-            rect2d = [0.1, 0.505, 0.4, 0.4]
-            ax0 = figMs.add_axes(rect2d, aspect=1)
-            rect2d = [0.505, 0.505, 0.4, 0.4]
-            ax1 = figMs.add_axes(rect2d, aspect=1)
-            rect2d = [0.1, 0.1, 0.4, 0.4]
-            ax2 = figMs.add_axes(rect2d, aspect=1)
-            rect2d = [0.505, 0.1, 0.4, 0.4]
-            ax3 = figMs.add_axes(rect2d, aspect=1)
-            extent = imageExtent
-            for ax in [ax0, ax1, ax2, ax3]:
-                ax.set_xlim(extent[0], extent[1])
-                ax.set_ylim(extent[2], extent[3])
-            im = (v[:, -1]).reshape(len(y), len(x))
-            ax0.imshow(im.real**2 + im.imag**2, extent=extent, cmap=cmap)
-            plt.text(0, 48, '0th (coherent) mode: w={0:.2f}'.format(w[-1]),
-                     transform=ax0.transData, ha='center', va='top', color='w')
-            im = (v[:, -2]).reshape(len(y), len(x))
-            ax1.imshow(im.real**2 + im.imag**2, extent=extent, cmap=cmap)
-            plt.text(0, 48, '1st residual mode: w={0:.2f}'.format(w[-2]),
-                     transform=ax1.transData, ha='center', va='top', color='w')
-            im = (v[:, -3]).reshape(len(y), len(x))
-            ax2.imshow(im.real**2 + im.imag**2, extent=extent, cmap=cmap)
-            plt.text(0, 48, '2nd residual mode: w={0:.2f}'.format(w[-3]),
-                     transform=ax2.transData, ha='center', va='top', color='w')
-            im = (v[:, -4]).reshape(len(y), len(x))
-            ax3.imshow(im.real**2 + im.imag**2, extent=extent, cmap=cmap)
-            plt.text(0, 48, '3rd residual mode: w={0:.2f}'.format(w[-4]),
-                     transform=ax3.transData, ha='center', va='top', color='w')
-
-            figMs.savefig('Modes-{0}-{1}-{2:02d}.png'.format(name, prefix, ic))
-
-    maxIxy = 0
     for ic, d in enumerate(dFocus):
-        Ixy = dump[ic][2]
-#        print(d, w)
-        maxIxy = max(maxIxy, Ixy.max())
+        x, y, Ixy, wN, vN, Es, wPCA, vPCA = dump[ic]
+        scrStr = 'screen at f+{0:.0f} mm'.format(d)
 
-    for ic, d in enumerate(dFocus):
-        x, y, Ixy, Dxy, w, v = dump[ic][0:6]
-        wN, vN = dump[ic][6:8] if len(dump[ic]) > 6 else (None, None)
-
-#        print(Ixy.shape, Dxy.shape, x.shape, y.shape)
-#        print(w.shape, v.shape)
-        Ixyshape = Ixy.shape
-
-        fl = Ixy.flatten()
-        centralI = fl[len(fl)//2]
-
-        Ix = Ixy[Ixyshape[0]//2, :]
-        normx = (Ix * centralI)**0.5
-        normx[normx == 0] = 1
-        Dx = np.abs(Dxy[Ixyshape[0]//2, :]) / normx
-
-        Iy = Ixy[:, Ixyshape[1]//2]
-        normy = (Iy * centralI)**0.5
-        normy[normy == 0] = 1
-        Dy = np.abs(Dxy[:, Ixyshape[1]//2]) / normy
-
-        figIs = plt.figure(figsize=(6, 5))
-        figIs.suptitle('intensity and degree of coherence\n' +
-                       u'screen at f{0:+.0f} mm'.format(d), fontsize=14)
-        ax = figIs.add_subplot(111)
-        ax.set_xlabel(u'x or z (µm)')
-        ax.set_ylabel(r'normalized s intensity (a.u.)')
-
-        ax.plot(x, Ix/maxIxy, 'r-', label='I hor')
-        ax.plot(y, Iy/maxIxy, 'g-', label='I ver')
-        ax.set_ylim(0, 1.05)
-
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'degree of coherence s (a.u.)')
-        ax2.set_ylim(0, 1.05)
-        ax2.plot(x, Dx, 'r--', label='DOC hor')
-        ax2.plot(y, Dy, 'g--', label='DOC ver')
-
-        ax.legend(loc='upper left', fontsize=12)
-        ax2.legend(loc='upper right', fontsize=12)
-
-        figIs.savefig('IDOC-{0}-{1:02d}.png'.format(prefix, ic))
-
-        plot_modes('mutual intensity', w, v)
         if wN is not None:
-            plot_modes('degree of coherence', wN, vN)
+            figE = rco.plot_eigen_modes(x, y, wN, vN,
+                                        xlabel='x (µm)', ylabel='z (µm)')
+            figE.suptitle('Eigen modes of mutual intensity, ' + scrStr,
+                          fontsize=11)
+            figE.savefig('Modes-{0}-{1:02d}.png'.format(prefix, ic))
+
+        figP = rco.plot_eigen_modes(x, y, wPCA, vPCA,
+                                    xlabel='x (µm)', ylabel='z (µm)')
+        figP.suptitle('Principal components of one-electron images, ' + scrStr,
+                      fontsize=11)
+        figP.savefig('PCA-{0}-{1:02d}.png'.format(prefix, ic))
+
+        xdata = rco.calc_1D_coherent_fraction(Es, 'x', x)
+        ydata = rco.calc_1D_coherent_fraction(Es, 'z', y)
+        fig21, figXZ = rco.plot_1D_degree_of_coherence(xdata, 'x', x)
+        fig22, figXZ = rco.plot_1D_degree_of_coherence(ydata, 'z', y,
+                                                       fig2=figXZ)
+        fig21.suptitle('Mutual intensity for horizontal cut,\n '+scrStr,
+                       size=11)
+        fig22.suptitle('Mutual intensity for vertical cut,\n '+scrStr, size=11)
+        figXZ.suptitle('Intensity and Degree of Coherence,\n '+scrStr, size=11)
+
+        fig21.savefig('MutualI-x-{0}-{1:02d}.png'.format(prefix, ic))
+        fig22.savefig('MutualI-z-{0}-{1:02d}.png'.format(prefix, ic))
+        figXZ.savefig('DOC-{0}-{1:02d}.png'.format(prefix, ic))
 
     print("Done")
     plt.show()
+
 
 if __name__ == '__main__':
     main()

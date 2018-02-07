@@ -109,22 +109,25 @@ class GenericProcessOrThread(object):
             used for weighing the histogram in order to colorize it
         *plot* instance of :class:`XYCPlot`: the plot hosting the 2D histogram.
 
-        If *plot.fluxKind* starts with 'E' then the mutual intensity is
-        calculated:
+        If *plot.fluxKind* starts with 'E' then the field amplitude or mutual
+        intensity is accumulated in the 2D histogram:
 
             - If *plot.fluxKind* ends with 'xx' or 'zz', the corresponding 2D
               cuts are done. The *plot* must have equal axes.
 
-            - If without these endings, one of the two points in the the mutual
-              intensity is fixed to the center of the image.
-
             - If *plot.fluxKind* ends with '4D', the complete mutual intensity
-              is calculated in stored in stored in *plot.hist4d*.
+              is accumulated in *plot.hist4D*.
 
             .. warning::
 
                 Be cautious with the size of the mutual intensity object, it is
                 four-dimensional!
+
+            - If *plot.fluxKind* ends with 'PCA', the field distributions are
+              accumulated in *plot.field3D* as a 3D array with the shape
+              (repeats, plot.xaxis.bins, plot.yaxis.bins)
+
+            - If without these endings, the field aplitudes are simply summed.
 
         """
         hist4d = None
@@ -143,32 +146,17 @@ class GenericProcessOrThread(object):
                     or plot.fluxKind.lower().endswith('yy'):
                 return self.do_histXXZZ(y, intensity, cDataRGB, plot.yaxis)
 
-#            if not (raycing.is_sequence(plot.xaxis.limits) and
-#                raycing.is_sequence(plot.yaxis.limits)):
-#                hist2dr, yedges, xedges = histogram2d(
-#                    y, x, bins=xybins, range=xyrange, weights=intensity.real)
-#                xyrange = [[yedges[0], yedges[-1]], [xedges[0], xedges[-1]]]
             hist2dr, t1, t2 = histogram2d(
                 y, x, bins=xybins, range=xyrange, weights=intensity.real)
             hist2di, t1, t2 = histogram2d(
                 y, x, bins=xybins, range=xyrange, weights=intensity.imag)
             hist2d = hist2dr + 1j*hist2di
 
-            size2D = plot.yaxis.bins * plot.xaxis.bins
             if plot.fluxKind.lower().endswith('4d'):
                 hist4d = np.outer(hist2d, hist2d.conjugate())
             elif plot.fluxKind.lower().endswith('pca'):
-                hist4d = np.zeros((size2D, size2D), dtype=np.complex128)
-                if self.ppid < size2D:
-                    hist4d[:, self.ppid] = hist2d.flatten()
-                else:
-                    print('Warning: too many images (repeats) to save for PCA!'
-                          'The next repeats will be ignored.')
+                hist4d = hist2d.T
 
-# equivalent to np.outer(hist2d.flatten(), hist2d.flatten().conjugate())
-            fl = hist2d.flatten()
-            central = fl[len(fl)//2]
-            hist2d *= central.conjugate()
         else:
             hist2d, yedges, xedges = histogram2d(
                 y, x, bins=xybins, range=xyrange, weights=intensity)

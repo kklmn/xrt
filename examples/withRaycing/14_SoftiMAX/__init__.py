@@ -39,7 +39,7 @@ end (FE) slit, to M1, to M2 and to plane grating (PG) – is done with rays:
 
 Starting from PG – to M3, to exit slit, to Fresnel zone plate (FZP) and to
 variously positioned sample screen – the propagation is done by rays or waves,
-compared below. Despite the M3 footprint looks not perfect (not black at
+as compared below. Despite the M3 footprint looks not perfect (not black at
 periphery), the field at normal surfaces (exit slit, FZP (not shown) and sample
 screen) is of perfect quality. At the best focus, rays and waves result in a
 similar image. Notice a micron-sized depth of focus.
@@ -67,25 +67,25 @@ similar image. Notice a micron-sized depth of focus.
 
 .. rubric:: Influence of emittance
 
-Non-zero emittance radiation is treated in xrt not by convolution, as in other
-wave propagation programs, but by incoherent addition of single-electron
-intensities. The filament trajectory of every electron (one per repeat) attains
-a positional and angular shift within the given emittance distribution, and the
-resulted single-electron field is considered as fully coherent. The following
-images are calculated for the exit slit and the focus screen for zero and
-non-zero emittance (for MAX IV 3 GeV ring: ε\ :sub:`x`\ =263 pm·rad,
+Non-zero emittance radiation is treated in xrt by incoherent addition of single
+electron intensities. The single electron (filament) fields are considered as
+fully coherent and are resulted from filament trajectories (one per repeat)
+that attain positional and angular shifts within the given emittance
+distribution. The following images are calculated for the exit slit and the
+focus screen for zero and non-zero emittance
+(for MAX IV 3 GeV ring: ε\ :sub:`x`\ =263 pm·rad,
 β\ :sub:`x`\ =9 m, ε\ :sub:`z`\ =8 pm·rad, β\ :sub:`z`\ =2 m). At the real
 emittance, the horizontal focal size increases by ~75%. A finite energy band,
 as determined by vertical size of the exit slit, results in somewhat bigger
 broadening due to a chromatic dependence of the focal length.
 
-+-----------+------------------+--------------------+--------------------+
-|           |   0 emittance    |   real emittance   |      |refeb|       |
-+===========+==================+====================+====================+
-| exit slit |     |st_hESb|    |      |st_hES2|     |      |st_hES3|     |
-+-----------+------------------+--------------------+--------------------+
-|  sample   |     |st_hSb|     |      |st_hS2|      |      |st_hS3|      |
-+-----------+------------------+--------------------+--------------------+
++-----------+---------------------+---------------------+---------------------+
+|           |     0 emittance     |    real emittance   |       |refeb|       |
++===========+=====================+=====================+=====================+
+| exit slit |      |st_hESb|      |      |st_hES2|      |      |st_hES3|      |
++-----------+---------------------+---------------------+---------------------+
+|  sample   |      |st_hSb|       |      |st_hS2|       |      |st_hS3|       |
++-----------+---------------------+---------------------+---------------------+
 
 .. |refeb| replace:: real emittance, finite energy band
 .. |st_hESb| imagezoom:: _images/stxm-2D-2-hybr-0emit-0enSpread-monoE-04-ExitSlit.*
@@ -100,7 +100,7 @@ broadening due to a chromatic dependence of the focal length.
 .. rubric:: Correction of emittance effects
 
 The increased focal size can be amended by closing the exit slit. With flux
-loss of about 2/3 the focal size is almost restored.
+loss of about 2/3, the focal size is almost restored.
 
 +-----------+--------------------+--------------------+
 |           |  80 µm exit slit   |  20 µm exit slit   |
@@ -119,38 +119,37 @@ loss of about 2/3 the focal size is almost restored.
 
 .. rubric:: Coherence signatures
 
-The beam improvement can also be viewed via the coherence properties by four
-available methods (see :ref:`coh_signs`). As the horizontal exit slit becomes
-smaller, one can observe the increase in the degree of coherence (DOC) and the
-increase of the primary (coherent) mode weight. The width of DOC relative to
-that of the intensity distribution determines the coherent beam fraction. Both
-widths vary with varying the screen position around the focal point, so that
-the coherent fraction also varies, and sometimes it is even not easy to define
-the width of DOC in view of its complex shape. An important advantage of the
-eigen-mode or PCA methods is a simple definition of the coherent fraction as
-the eigenvalue of the zeroth mode (component); this eigenvalue appears to be
-invariant around the focal point, see below. Note that the methods 3 and 4 give
-mathematically equal results; the calculated figures differ by
-~10\ :sup:`-13`\ .
+The beam improvement can also be viewed via the coherence properties by the
+three available methods (see :ref:`coh_signs`). As the horizontal exit slit
+becomes smaller, one can observe the increase of the coherent fraction ζ and
+the increase of the primary (coherent) mode weight. The width of degree of
+coherence (DoC) relative to the width of the intensity distribution determines
+the coherent beam fraction. Both widths vary with varying screen position
+around the focal point such that their ratio is not invariant, so that the
+coherent fraction also varies, which is counter-intuitive. An important
+advantage of the eigen-mode or PCA methods is a simple definition of the
+coherent fraction as the eigenvalue of the zeroth mode (component); this
+eigenvalue appears to be invariant around the focal point, see below. Note that
+the methods 2 and 3 give equal results.
 
 +-----------+--------------------------+--------------------------+
 |           |     80 µm exit slit      |     20 µm exit slit      |
 +===========+==========================+==========================+
 | method 1  |        |st_hS80m1|       |       |st_hS20m1|        |
 +-----------+--------------------------+--------------------------+
-| method 3  |        |st_hS80m3|       |       |st_hS20m3|        |
+| method 2  |        |st_hS80m3|       |       |st_hS20m3|        |
 +-----------+--------------------------+--------------------------+
-| method 4  |        |st_hS80m4|       |       |st_hS20m4|        |
+| method 3  |        |st_hS80m4|       |       |st_hS20m4|        |
 +-----------+--------------------------+--------------------------+
 
 .. |st_hS80m1| animation:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE
 .. |st_hS20m1| animation:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE-025H
    :loc: upper-right-corner
-.. |st_hS80m3| animation:: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE
-.. |st_hS20m3| animation:: _images/stxm-Modes-eigen_modes_of_mutual_intensity-2D-2-hybr-non0e-0enSpread-monoE-025%H
+.. |st_hS80m3| animation:: _images/stxm-Modes-2D-2-hybr-non0e-0enSpread-monoE
+.. |st_hS20m3| animation:: _images/stxm-Modes-2D-2-hybr-non0e-0enSpread-monoE-025H
    :loc: upper-right-corner
-.. |st_hS80m4| animation:: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE
-.. |st_hS20m4| animation:: _images/stxm-Modes-principal_components_of_one-electron_images-2D-2-hybr-non0e-0enSpread-monoE-025%H
+.. |st_hS80m4| animation:: _images/stxm-PCA-2D-2-hybr-non0e-0enSpread-monoE
+.. |st_hS20m4| animation:: _images/stxm-PCA-2D-2-hybr-non0e-0enSpread-monoE-025H
    :loc: upper-right-corner
 
 CXI branch
@@ -169,14 +168,16 @@ directions, which dramatically improves the quality of the footprints.
 Disadvantages of the cuts are losses in visual representation and incorrect
 evaluation of the flux.
 
-+---------------+-------------------+--------------------+--------------------+
-|               |         2D        |     1D hor cut     |     1D ver cut     |
-+===============+===================+====================+====================+
-| M3 footprint  |     |cxiM32D|     |     |cxiM31Dh|     |     |cxiM31Dv|     |
-+---------------+-------------------+--------------------+--------------------+
-| sample screen |     |cxiS2D|      |     |cxiS1Dh|      |     |cxiS1Dv|      |
-+---------------+-------------------+--------------------+--------------------+
++------+----------------------+-----------------------+-----------------------+
+|      |          2D          |   1D horizontal cut   |    1D vertical cut    |
++======+======================+=======================+=======================+
+| |M3| |      |cxiM32D|       |      |cxiM31Dh|       |      |cxiM31Dv|       |
++------+----------------------+-----------------------+-----------------------+
+| |SS| |      |cxiS2D|        |      |cxiS1Dh|        |       |cxiS1Dv|       |
++------+----------------------+-----------------------+-----------------------+
 
+.. |M3| replace:: M3 footprint
+.. |SS| replace:: sample screen
 .. |cxiM32D| imagezoom:: _images/cxi_2D-2-hybr-0emit-0enSpread-monoE-03-M3local.*
 .. |cxiM31Dh| imagezoom:: _images/cxi_1D-2-hybr-1e6hor-0emit-0enSpread-monoE-03-M3local.*
 .. |cxiM31Dv| imagezoom:: _images/cxi_1D-2-hybr-1e6ver-0emit-0enSpread-monoE-03-M3local.*
@@ -188,17 +189,17 @@ evaluation of the flux.
 
 .. _wavefronts:
 
-.. rubric:: Flat screen vs normal-surface screen (wave front)
+.. rubric:: Flat screen vs normal-to-k screen (wave front)
 
 The following images demonstrate the correctness of the directional
-Kirchhoff-like integral. Five diffraction integrals are calculated on flat
-screens around the focus position: for two polarizations and for three
-directional components. The latter ones define the wave fronts at every flat
-screen position; these wave fronts are further used as new curved screens. The
-calculated diffraction fields at these curved screens indeed have narrow phase
-distributions, as shown by the color histograms, which is indeed expected for a
-wave front. The flat screens at the same positions have rapid phase variation
-(several Fresnel zones).
+Kirchhoff-like integral (see :ref:`seq_prop`). Five diffraction integrals are
+calculated on flat screens around the focus position: for two polarizations and
+for three directional components. The latter ones define the wave fronts at
+every flat screen position; these wave fronts are further used as new curved
+screens. The calculated diffraction fields on these curved screens have narrow
+phase distributions, as shown by the color histograms, which is indeed expected
+for a wave front by its definition. In contrast, the *flat* screens at the same
+positions have rapid phase variation over several Fresnel zones.
 
     .. note::
 
@@ -224,7 +225,7 @@ The wave fronts become more flat as one approaches the focus, see the figure
 below. This is in contrast to *ray* propagation, where the angular ray
 distribution is invariant at any position between two optical elements.
 
-.. imagezoom:: _images/cxi-waveFronts.*
+.. imagezoom:: _images/cxi_waveFronts.*
 
 .. rubric:: Rays, waves and hybrid
 
@@ -232,41 +233,41 @@ The following images are horizontal cuts at the footprints and sample screens
 calculated by
 
 - rays,
-- rays + wave hybrid (rays up to PG and wave from PG) and
-- purely by wave.
+- rays + waves hybrid (rays up to PG and wave from PG) and
+- purely by waves.
 
-+-----------------+-------------+--------------+-------------+
-|                 |    rays     |   hybrid     |    wave     |
-+=================+=============+==============+=============+
-| front end slit  |  |cxi-hFE|  | same as rays |  |cxi-wFE|  |
-+-----------------+-------------+--------------+-------------+
-| footprint on M1 |  |cxi-hM1|  | same as rays |  |cxi-wM1|  |
-+-----------------+-------------+--------------+-------------+
-| footprint on M2 |  |cxi-hM2|  | same as rays |  |cxi-wM2|  |
-+-----------------+-------------+--------------+-------------+
-| footprint on PG |  |cxi-hPG|  | same as rays |  |cxi-wPG|  |
-+-----------------+-------------+--------------+-------------+
-| footprint on M3 |  |cxi-rM3|  |  |cxi-hM3|   |  |cxi-wM3|  |
-+-----------------+-------------+--------------+-------------+
-| exit slit       |  |cxi-rES|  |  |cxi-hES|   |  |cxi-wES|  |
-+-----------------+-------------+--------------+-------------+
-| footprint on M4 |  |cxi-rM4|  |  |cxi-hM4|   |  |cxi-wM4|  |
-+-----------------+-------------+--------------+-------------+
-| footprint on M5 |  |cxi-rM5|  |  |cxi-hM5|   |  |cxi-wM5|  |
-+-----------------+-------------+--------------+-------------+
-|  sample screen  |  |cxi-rS|   |  |cxi-hS|    |  |cxi-wS|   |
-+-----------------+-------------+--------------+-------------+
++-----------------+-------------------+-------------------+-------------------+
+|                 |        rays       |      hybrid       |       waves       |
++=================+===================+===================+===================+
+| front end slit  |     |cxi-hFE|     |    same as rays   |      |cxi-wFE|    |
++-----------------+-------------------+-------------------+-------------------+
+| footprint on M1 |     |cxi-hM1|     |    same as rays   |     |cxi-wM1|     |
++-----------------+-------------------+-------------------+-------------------+
+| footprint on M2 |     |cxi-hM2|     |    same as rays   |     |cxi-wM2|     |
++-----------------+-------------------+-------------------+-------------------+
+| footprint on PG |     |cxi-hPG|     |    same as rays   |     |cxi-wPG|     |
++-----------------+-------------------+-------------------+-------------------+
+| footprint on M3 |     |cxi-rM3|     |     |cxi-hM3|     |     |cxi-wM3|     |
++-----------------+-------------------+-------------------+-------------------+
+| exit slit       |     |cxi-rES|     |     |cxi-hES|     |     |cxi-wES|     |
++-----------------+-------------------+-------------------+-------------------+
+| footprint on M4 |     |cxi-rM4|     |     |cxi-hM4|     |     |cxi-wM4|     |
++-----------------+-------------------+-------------------+-------------------+
+| footprint on M5 |     |cxi-rM5|     |     |cxi-hM5|     |     |cxi-wM5|     |
++-----------------+-------------------+-------------------+-------------------+
+|  sample screen  |     |cxi-rS|      |     |cxi-hS|      |     |cxi-wS|      |
++-----------------+-------------------+-------------------+-------------------+
 
-.. |cxi-hFE| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-00-FE.*
+.. |cxi-hFE| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-00-FE.*
 .. |cxi-wFE| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-00-FE.*
    :loc: upper-right-corner
-.. |cxi-hM1| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-01-M1local.*
+.. |cxi-hM1| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-01-M1local.*
 .. |cxi-wM1| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-01-M1local.*
    :loc: upper-right-corner
-.. |cxi-hM2| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-02-M2local.*
+.. |cxi-hM2| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-02-M2local.*
 .. |cxi-wM2| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-02-M2local.*
    :loc: upper-right-corner
-.. |cxi-hPG| imagezoom:: _images/cxi_1D-2-hybr-hor-0emit-0enSpread-monoE-02-PGlocal.*
+.. |cxi-hPG| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-02-PGlocal.*
 .. |cxi-wPG| imagezoom:: _images/cxi_1D-3-wave-hor-0emit-0enSpread-monoE-02-PGlocal.*
    :loc: upper-right-corner
 .. |cxi-rM3| imagezoom:: _images/cxi_1D-1-rays-hor-0emit-0enSpread-monoE-03-M3local.*
@@ -292,21 +293,24 @@ calculated by
 
 .. rubric:: Coherence signatures
 
-This section demonstrates the 2nd method out of the three available (see
-:ref:`coh_signs`), the methods 1 and 3 being considered above for the STXM
-branch. The diagonal cut of the absolute value of the mutual intensity gives
-the usual 1D intensity distribution. The antidiagonal cut represents the
-correlation between two symmetric points relative 0. Normalized by intensity,
-it gives the absolute value of the degree of coherence.
+This section demonstrates the methods 1 and 3 from :ref:`coh_signs`. Notice
+again the difficulty in determining the width of DoC owing to its complex shape
+(at real emittance) or the restricted field of view (the 0 emittance case). In
+contrast, the eigen mode analysis yields an almost invariant well defined
+coherent fraction.
 
-+--------------------------------------+--------------------------------------+
-|             0 emittance              |            real emittance            |
-+======================================+======================================+
-|           |cxi-coh2-0emit|           |           |cxi-coh2-non0e|           |
-+--------------------------------------+--------------------------------------+
++-----------+--------------------------+--------------------------+
+|           |       0 emittance        |      real emittance      |
++===========+==========================+==========================+
+| method 1  |     |cxi-coh1-0emit|     |     |cxi-coh1-non0e|     |
++-----------+--------------------------+--------------------------+
+| method 3  |     |cxi-coh3-0emit|     |     |cxi-coh3-non0e|     |
++-----------+--------------------------+--------------------------+
 
-.. |cxi-coh2-0emit| animation:: _images/cxi-coh2-0emit
-.. |cxi-coh2-non0e| animation:: _images/cxi-coh2-non0e
+.. |cxi-coh1-0emit| animation:: _images/cxi-coh1-0emit
+.. |cxi-coh1-non0e| animation:: _images/cxi-coh1-non0e
+.. |cxi-coh3-0emit| animation:: _images/cxi-coh3-0emit
+.. |cxi-coh3-non0e| animation:: _images/cxi-coh3-non0e
    :loc: upper-right-corner
 
 """
