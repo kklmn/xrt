@@ -28,6 +28,8 @@ elements with various geometries.
 .. autoclass:: JohannToroid(OE)
    :members: __init__
 .. autoclass:: JohanssonToroid(JohannToroid)
+.. autoclass:: GeneralBraggToroid(JohannToroid)
+
 .. autoclass:: DicedJohannToroid(DicedOE, JohannToroid)
 .. autoclass:: DicedJohanssonToroid(DicedJohannToroid, JohanssonToroid)
 .. autoclass:: LauePlate(OE)
@@ -35,6 +37,8 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: GroundBentLaueCylinder(BentLaueCylinder)
 .. autoclass:: BentLaueSphere(BentLaueCylinder)
+.. autoclass:: BentFlatMirror(OE)
+.. autoclass:: ToroidMirror(OE)
 .. .. autoclass:: MirrorOnTripodWithTwoXStages(OE, stages.Tripod, stages.TwoXStages)  # analysis:ignore
 ..    :members: __init__
 .. .. autoclass:: SimpleVCM(OE)
@@ -43,13 +47,16 @@ elements with various geometries.
 .. .. autoclass:: VFM(MirrorOnTripodWithTwoXStages, SimpleVFM)
 .. .. autoclass:: DualVFM(MirrorOnTripodWithTwoXStages)
 ..    :members: __init__
-.. autoclass:: EllipticalMirror(OE)
-.. autoclass:: ParabolicMirror(OE)
+.. .. autoclass:: EllipticalMirror(OE)
+.. .. autoclass:: ParabolicMirror(OE)
 .. autoclass:: EllipticalMirrorParam(OE)
+.. autoclass:: ParabolicalMirrorParam(EllipticalMirrorParam)
 .. autoclass:: DCM(OE)
    :members: __init__, double_reflect
-.. autoclass:: DCMOnTripodWithOneXStage(DCM, stages.Tripod, stages.OneXStage)
+.. autoclass:: DCMwithSagittalFocusing(DCM)
    :members: __init__
+.. .. autoclass:: DCMOnTripodWithOneXStage(DCM, stages.Tripod, stages.OneXStage)
+..    :members: __init__
 .. autoclass:: Plate(DCM)
    :members: __init__, double_refract
 .. autoclass:: ParaboloidFlatLens(Plate)
@@ -87,8 +94,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DicedJohannToroid', 'DicedJohanssonToroid', 'LauePlate',
            'BentLaueCylinder', 'GroundBentLaueCylinder', 'BentLaueSphere',
            'BentFlatMirror', 'ToroidMirror',
-           'EllipticalMirrorParam',
-           'ParabolicalMirrorParam',
+           'EllipticalMirrorParam', 'ParabolicalMirrorParam',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
@@ -1286,7 +1292,7 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
 
 
 class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
-    """Creates a DCM with a horizontal focusing 2nd crystal."""
+    """Creates a DCM with a horizontally focusing 2nd crystal."""
 
     def __init__(self, *args, **kwargs):
         r"""
