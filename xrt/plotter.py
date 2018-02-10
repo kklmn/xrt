@@ -60,7 +60,7 @@ mpl.rcParams['axes.unicode_minus'] = False
 #mpl.rcParams['font.family'] = 'serif'
 #mpl.rcParams['font.serif'] = 'cm'
 mpl.rcParams['axes.linewidth'] = 0.75
-#mpl.rcParams['backend'] = 'Qt4Agg'
+#mpl.rcParams['backend'] = 'Qt5agg'
 #mpl.rcParams['backend'] = 'Agg'
 #mpl.rcParams['xtick.major.pad'] = '5'
 #mpl.rcParams['ytick.major.pad'] = '5'
@@ -727,6 +727,8 @@ class XYCPlot(object):
             xFigSize += xSpaceExtraWhenNoEHistogram
 
         self.fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi)
+        self.local_size_inches = self.fig.get_size_inches()
+
         self.fig.delaxes(self.fig.gca())
         if title != '':
             self.title = title
@@ -1581,6 +1583,8 @@ class XYCPlot(object):
             (fileBaseName, fileExtension) = os.path.splitext(aName)
             saveName = ''.join([fileBaseName, suffix, fileExtension])
             self.fig.savefig(saveName, dpi=self.dpi)
+            # otherwise mpl qt backend wants to change it (only in Windows):
+            self.fig.set_size_inches(self.local_size_inches)
 
     def clean_plots(self):
         """
