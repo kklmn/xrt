@@ -10,13 +10,13 @@
 //#include "materials.cl"
 //__constant float Pi = 3.141592653589793;
 __constant const double twoPi = (double)6.283185307179586476;
-__constant const double invTwoPi = (double)(1./twoPi);
+__constant const double invTwoPi = (double)(1./6.283185307179586476);
 __constant const float invFourPi = (float)0.07957747154594767;
 __constant float2 cmp0 = (float2)(0, 0);
 __constant float2 cmpi1 = (float2)(0, 1);
 __constant double2 cmp0_d = (double2)(0, 0);
 __constant double2 cmpi1_d = (double2)(0, 1);
-__constant const double2 cfactor = (double2)(0, -invFourPi);
+__constant const double2 cfactor = (double2)(0, -0.07957747154594767);
 
 float2 prod_c(float2 a, float2 b)
 {
