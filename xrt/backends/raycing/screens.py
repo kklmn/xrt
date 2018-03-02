@@ -106,7 +106,7 @@ class Screen(object):
         zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
         return xglo, yglo, zglo
 
-    def expose_global(self, beam=None):
+    def expose_global(self, beam=None, onlyPositivePath=False):
         if self.bl is not None:
             self.bl.auto_align(self, beam)
         glo = rs.Beam(copyFrom=beam)  # global
@@ -116,7 +116,10 @@ class Screen(object):
                     (self.center[2]-beam.z) * self.y[2]) /\
                    (beam.a*self.y[0] + beam.b*self.y[1] + beam.c*self.y[2])
 
-        indBad = np.where(np.isnan(path) | np.isinf(path) | (path < 0))
+        condBad = np.isnan(path) | np.isinf(path)
+        if onlyPositivePath:
+            condBad = condBad | (path < 0)
+        indBad = np.where(condBad)
         path[indBad] = 0.
         glo.path += path
         glo.state[indBad] = self.lostNum
@@ -126,7 +129,7 @@ class Screen(object):
         glo.z[:] = beam.z + path*beam.c
         return glo
 
-    def expose(self, beam=None):
+    def expose(self, beam=None, onlyPositivePath=False):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
         desired image.
@@ -154,7 +157,10 @@ class Screen(object):
 
         with np.errstate(divide='ignore'):
             path = -blo.y / blo.b
-        indBad = np.where(np.isnan(path) | np.isinf(path) | (path < 0))
+        condBad = np.isnan(path) | np.isinf(path)
+        if onlyPositivePath:
+            condBad = condBad | (path < 0)
+        indBad = np.where(condBad)
         path[indBad] = 0.
         blo.state[indBad] = self.lostNum
 
@@ -172,8 +178,7 @@ class Screen(object):
             blo.x[:] *= self.compressX
         if self.compressZ:
             blo.z[:] *= self.compressZ
-        raycing.append_to_flow(self.expose, [blo],
-                               inspect.currentframe())
+        raycing.append_to_flow(self.expose, [blo], inspect.currentframe())
         return blo
 
     def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None):
@@ -359,7 +364,7 @@ class HemisphericScreen(Screen):
             self.local_to_global(glo.phi, glo.theta)
         return glo
 
-    def expose(self, beam=None):
+    def expose(self, beam=None, onlyPositivePath=False):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
         desired image.
@@ -378,7 +383,10 @@ class HemisphericScreen(Screen):
         with np.errstate(invalid='ignore'):
             path = -sqb_2 + (sqb_2**2 - sqc)**0.5
 
-        indBad = np.where(np.isnan(path) | np.isinf(path) | (path < 0))
+        condBad = np.isnan(path) | np.isinf(path)
+        if onlyPositivePath:
+            condBad = condBad | (path < 0)
+        indBad = np.where(condBad)
         path[indBad] = 0.
         blo.state[indBad] = self.lostNum
 

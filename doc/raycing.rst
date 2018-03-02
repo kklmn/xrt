@@ -16,6 +16,8 @@ Raycing backend
 
 .. automodule:: xrt.backends.raycing.oes
 
+.. automodule:: test_oes
+
 .. automodule:: xrt.backends.raycing.materials
 
 .. automodule:: test_materials

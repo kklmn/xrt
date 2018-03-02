@@ -908,6 +908,7 @@ class Crystal(Material):
             V = (d * self.sqrthkl2)**3
         self.V = V
         self.chiToF = -R0 / PI / self.V  # minus!
+        self.chiToFd2 = abs(self.chiToF) * self.d**2
         self.geom = geom
         self.geometry = 2*int(geom.startswith('Bragg')) +\
             int(geom.endswith('transmitted'))
@@ -1176,18 +1177,20 @@ class Crystal(Material):
 
         .. math::
 
-            R_{\gamma}^{\rm Bragg} &= \chi_{\vec{H}}C_{\gamma}(\alpha +
-            i\Delta_{\gamma}\cot{l_{\gamma}})^{-1}|b|^{-\frac{1}{2}}\\
-            T_{\gamma}^{\rm Bragg} &= (\cos{l{_\gamma}} - i\alpha\Delta
-            {_\gamma}^{-1}\sin{l_{\gamma}})^{-1}\exp{(i\vec{\kappa}_0^2 L
-            (\chi_0 - \alpha b) (2\vec{\kappa}_0\vec{s})^{-1})}\\
+            R_{\gamma}^{\rm Bragg} &= \chi_{\vec{H}}C_{\gamma}\left(\alpha +
+            i\Delta_{\gamma}\cot{l_{\gamma}}\right)^{-1}|b|^{-\frac{1}{2}}\\
+            T_{\gamma}^{\rm Bragg} &= \left(\cos{l{_\gamma}} - i\alpha\Delta
+            {_\gamma}^{-1}\sin{l_{\gamma}}\right)^{-1}
+            \exp{\left(i\vec{\kappa}_0^2 L
+            (\chi_0 - \alpha b) (2\vec{\kappa}_0\vec{s})^{-1}\right)}\\
             R_{\gamma}^{\rm Laue} &= \chi_{\vec{H}}C_{\gamma}
-            \Delta_{\gamma}^{-1}\sin{l_{\gamma}}\exp{(i\vec{\kappa}_0^2 L
-            (\chi_0 - \alpha b) (2\vec{\kappa}_0\vec{s})^{-1})}
+            \Delta_{\gamma}^{-1}\sin{l_{\gamma}}\exp{\left(i\vec{\kappa}_0^2 L
+            (\chi_0 - \alpha b) (2\vec{\kappa}_0\vec{s})^{-1}\right)}
             |b|^{-\frac{1}{2}}\\
-            T_{\gamma}^{\rm Laue} &= (\cos{l_{\gamma}} + i\alpha
-            \Delta_{\gamma}^{-1}\sin{l_{\gamma}})\exp{(i\vec{\kappa}_0^2 L
-            (\chi_0 - \alpha b) (2\vec{\kappa}_0\vec{s})^{-1})}
+            T_{\gamma}^{\rm Laue} &= \left(\cos{l_{\gamma}} + i\alpha
+            \Delta_{\gamma}^{-1}\sin{l_{\gamma}}\right)
+            \exp{\left(i\vec{\kappa}_0^2
+            L (\chi_0 - \alpha b) (2\vec{\kappa}_0\vec{s})^{-1}\right)}
 
         where
 
@@ -1371,7 +1374,10 @@ class Crystal(Material):
         k0H = abs(beamInDotHNormal) * HH * k
         k02 = k**2
         H2 = (PI2 / self.d)**2
+        kHs0 = kHs == 0
+        kHs[kHs0] = 1
         b = k0s / kHs
+        b[kHs0] = -1
         F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, HH/4./PI)
         thetaB = self.get_Bragg_angle(E)
         alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
@@ -1407,6 +1413,9 @@ class Crystal(Material):
             if a > 1:
                 a = 1 - 1e-16
         return np.arcsin(a)
+
+    def get_backscattering_energy(self):
+        return CH / (2*self.d)
 
     def get_dtheta_symmetric_Bragg(self, E):
         r"""
@@ -1475,6 +1484,22 @@ class Crystal(Material):
             else:
                 return 0.
 
+    def get_refractive_correction(self, E, beamInDotNormal=None, alpha=None):
+        thetaB = self.get_Bragg_angle(E)
+        bothNone = (beamInDotNormal is None) and (alpha is None)
+        bothNotNone = (beamInDotNormal is not None) and (alpha is not None)
+        if bothNone or bothNotNone:
+            raise ValueError(
+                "one of 'beamInDotNormal' or 'alpha' must be given")
+        if beamInDotNormal is not None:
+#            beamInDotNormal[beamInDotNormal > 1] = 1 - 1e-16
+            alpha = np.arcsin(beamInDotNormal) - thetaB
+        pm = -1 if self.geom.startswith('Bragg') else 1
+        beamOutDotNormal = pm * np.sin(thetaB - alpha)
+        b = beamInDotNormal / beamOutDotNormal
+        F0, _, _ = self.get_structure_factor(E, needFhkl=False)
+        return self.chiToFd2 * F0.real * (1 - 1/b)
+
 
 class CrystalFcc(Crystal):
     r"""
@@ -1488,12 +1513,12 @@ class CrystalFcc(Crystal):
         \end{array} \right.
 
     """
-    def get_structure_factor(self, E, sinThetaOverLambda):
+    def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         anomalousPart = self.elements[0].get_f1f2(E)
         F0 = 4 * (self.elements[0].Z+anomalousPart) * self.factDW
         residue = sum(i % 2 for i in self.hkl)
         if residue == 0 or residue == 3:
-            f0 = self.elements[0].get_f0(sinThetaOverLambda)
+            f0 = self.elements[0].get_f0(sinThetaOverLambda) if needFhkl else 0
             Fhkl = 4 * (f0+anomalousPart) * self.factDW
         else:
             Fhkl = 0.
@@ -1510,10 +1535,10 @@ class CrystalDiamond(CrystalFcc):
         F_{hkl}^{\rm diamond} = F_{hkl}^{fcc}\left(1 + e^{i\frac{\pi}{2}
         (h + k + l)}\right).
     """
-    def get_structure_factor(self, E, sinThetaOverLambda):
+    def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         diamondToFcc = 1 + np.exp(0.5j * PI * sum(self.hkl))
         F0, Fhkl, Fhkl_ = super(CrystalDiamond, self).get_structure_factor(
-            E, sinThetaOverLambda)
+            E, sinThetaOverLambda, needFhkl)
         return F0 * 2, Fhkl * diamondToFcc, Fhkl_ * diamondToFcc.conjugate()
 
 
@@ -1718,7 +1743,7 @@ class CrystalFromCell(Crystal):
         self.calcBorrmann = calcBorrmann
         self.useTT = useTT
 
-    def get_structure_factor(self, E, sinThetaOverLambda):
+    def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         F0, Fhkl, Fhkl_ = 0, 0, 0
         uniqueElements = {}
         for el, xyz, af in zip(
@@ -1726,7 +1751,7 @@ class CrystalFromCell(Crystal):
             if el.Z in uniqueElements:
                 f0, anomalousPart = uniqueElements[el.Z]
             else:
-                f0 = el.get_f0(sinThetaOverLambda)
+                f0 = el.get_f0(sinThetaOverLambda) if needFhkl else 0
                 anomalousPart = el.get_f1f2(E)
                 uniqueElements[el.Z] = f0, anomalousPart
             F0 += af * (el.Z+anomalousPart) * self.factDW

@@ -8,7 +8,7 @@ import matplotlib as mpl
 from .. import raycing
 from . import sources as rs
 from . import myopencl as mcl
-from .physconsts import CH, CHBAR
+from .physconsts import PI2, CH, CHBAR
 from .materials import EmptyMaterial
 try:
     import pyopencl as cl  # analysis:ignore
@@ -144,7 +144,8 @@ class OE(object):
             are equal to 1.
 
         *alpha*: float
-            Asymmetry angle for a crystal OE (rad).
+            Asymmetry angle for a crystal OE (rad). Positive sign is for the
+            atomic planes' normal looking towards positive *y*.
 
         *limPhysX* and *limPhysY*: [*min*, *max*] where *min*, *max* are
             floats or sequences of floats
@@ -826,9 +827,10 @@ class OE(object):
     def reflect(self, beam=None, needLocal=True, noIntersectionSearch=False,
                 returnLocalAbsorbed=None):
         r"""
-        Returns the reflected or transmitted beam in global and local
-        (if *needLocal* is true) systems. The new beam direction is calculated
-        as [wikiSnell]_:
+        Returns the reflected or transmitted beam as :math:`\vec{out}` in
+        global and local (if *needLocal* is true) systems.
+
+        .. rubric:: Mirror [wikiSnell]_:
 
         .. math::
 
@@ -844,8 +846,10 @@ class OE(object):
             \cos{\theta_2} &= sign(\cos{\theta_1})\sqrt{1 -
             \left(\frac{n_1}{n_2}\right)^2\left(1-\cos^2{\theta_1}\right)}.
 
-        For a grating or an FZP with the reciprocal vector :math:`g` in
-        :math:`m` th order:
+        .. rubric:: Grating or FZP [SpencerMurty]_:
+
+        For the reciprocal grating vector :math:`\vec{g}` and the :math:`m`\ th
+        diffraction order:
 
         .. math::
 
@@ -855,14 +859,37 @@ class OE(object):
 
         .. math::
 
-            dn &= -\cos{\theta_1} \pm \sqrt{\cos^2{\theta_1} -
-            2\sin{\alpha}m\lambda - \vec{g}^2 m^2\lambda^2}\\
-            \sin{\alpha} &= \vec{g}\cdot\vec{in}\\
+            dn = -\cos{\theta_1} \pm \sqrt{\cos^2{\theta_1} -
+            2(\vec{g}\cdot\vec{in})m\lambda - \vec{g}^2 m^2\lambda^2}
+
+        .. rubric:: Crystal [SanchezDelRioCerrina]_:
+
+        Crystal (generally asymmetrically cut) is considered a grating with the
+        reciprocal grating vector equal to
+
+        .. math::
+
+            \vec{g} = \left(\vec{n_\vec{H}} -
+            (\vec{n_\vec{H}}\cdot\vec{n})\vec{n})\right) / d_\vec{H}.
+
+        Note that :math:`\vec{g}` is along the line of the intersection of the
+        crystal surface with the plane formed by the two normals
+        :math:`\vec{n_\vec{H}}` and :math:`\vec{n}` and its length is
+        :math:`|\vec{g}|=\sin{\alpha}/d_\vec{H}`, with :math:`\alpha`
+        being the asymmetry angle.
 
         .. [wikiSnell] http://en.wikipedia.org/wiki/Snell%27s_law .
+        .. [SpencerMurty] G. H. Spencer and M. V. R. K. Murty,
+           J. Opt. Soc. Am. **52** (1962) 672.
+        .. [SanchezDelRioCerrina] M. Sánchez del Río and F. Cerrina,
+           Rev. Sci. Instrum. **63** (1992) 936.
+
 
         *returnLocalAbsorbed*: None or int
             If not None, returns the absorbed intensity in local beam.
+
+        *noIntersectionSearch*: bool
+            Used in wave propagation, normally should be False.
 
 
         .. .. Returned values: beamGlobal, beamLocal
@@ -1241,32 +1268,25 @@ class OE(object):
         return tMin, tMax, elevation
 
     def _grating_deflection(
-            self, goodN, lb, gNormal, oeNormal, beamInDotNormal, order=1,
-            giveSign=None):
-        beamInDotG = lb.a[goodN]*gNormal[0] +\
-            lb.b[goodN]*gNormal[1] + lb.c[goodN]*gNormal[2]
-        G2 = gNormal[0]**2 + gNormal[1]**2 + gNormal[2]**2
-        if isinstance(order, int):
-            locOrder = order
-        else:
-            locOrder = np.array(order)[np.random.randint(len(order),
-                                       size=goodN.sum())]
+            self, goodN, lb, g, oeNormal, beamInDotNormal, order=1, sig=None):
+        beamInDotG = lb.a[goodN]*g[0] + lb.b[goodN]*g[1] + lb.c[goodN]*g[2]
+        G2 = g[0]**2 + g[1]**2 + g[2]**2
+        locOrder = order if isinstance(order, int) else \
+            np.array(order)[np.random.randint(len(order), size=goodN.sum())]
         lb.order = np.zeros(len(lb.a))
         lb.order[goodN] = locOrder
         orderLambda = locOrder * CH / lb.E[goodN] * 1e-7
 
         u = beamInDotNormal**2 - 2*beamInDotG*orderLambda - G2*orderLambda**2
-        lb.state[goodN][u < 0] = self.lostNum
-        u[u < 0] = 0
-        if giveSign is None:
-            gs = np.sign(beamInDotNormal)
-        else:
-            gs = giveSign
-        dn = beamInDotNormal + gs * np.sqrt(u)
-        a_out = lb.a[goodN] - oeNormal[0]*dn + gNormal[0]*orderLambda
-        b_out = lb.b[goodN] - oeNormal[1]*dn + gNormal[1]*orderLambda
-        c_out = lb.c[goodN] - oeNormal[2]*dn + gNormal[2]*orderLambda
-        return a_out, b_out, c_out
+#        lb.state[goodN][u < 0] = self.lostNum
+#        u[u < 0] = 0
+        gs = np.sign(beamInDotNormal) if sig is None else sig
+        dn = beamInDotNormal + gs*np.sqrt(abs(u))
+        a_out = lb.a[goodN] - oeNormal[-3]*dn + g[0]*orderLambda
+        b_out = lb.b[goodN] - oeNormal[-2]*dn + g[1]*orderLambda
+        c_out = lb.c[goodN] - oeNormal[-1]*dn + g[2]*orderLambda
+        norm = (a_out**2 + b_out**2 + c_out**2)**0.5
+        return a_out/norm, b_out/norm, c_out/norm
 
     def _reportNaN(self, x, strName):
         nanSum = np.isnan(x).sum()
@@ -1386,23 +1406,23 @@ class OE(object):
         must have either the method :meth:`get_refractive_index` or the
         :meth:`get_amplitude`."""
 
-        def _getAsymmetricNormal(_oeNormal, _gNormal):
+        def _get_asymmetric_reflection_grating(
+                _gNormal, _oeNormal, _beamInDotSurfaceNormal):
             normalDotSurfNormal = _oeNormal[0]*_oeNormal[-3] +\
                 _oeNormal[1]*_oeNormal[-2] + _oeNormal[2]*_oeNormal[-1]
-            kw = dict(order=self.order) if matSur.kind == 'multilayer'\
-                else {}
-            # dt = matSur.get_dtheta_symmetric_Bragg(lb.E[goodN], **kw)
-            dt = matSur.get_dtheta(lb.E[goodN], **kw)
-            nanSum = np.isnan(dt).sum()
-            if nanSum > 0:
-                dt[np.isnan(dt)] = 0.
-#                    self._reportNaN(dt, 'dt')
+            # note:
+            # _oeNormal[0:3] is n_B
+            # _oeNormal[-3:] is n_s
+            # normalDotSurfNormal is dot(n_B, n_s)
+            # |vec(n_B) - dot(n_B, n_s)*vec(n_s)| = sin(alpha)
+#            wH = matSur.get_refractive_correction(
+#                lb.E[goodN], abs(_beamInDotSurfaceNormal))
+            wH = 0
             gNormalCryst = np.asarray((
-                (_oeNormal[0]-normalDotSurfNormal*_oeNormal[-3]) * dt,
-                (_oeNormal[1]-normalDotSurfNormal*_oeNormal[-2]) * dt,
-                (_oeNormal[2]-normalDotSurfNormal*_oeNormal[-1]) * dt),
-                order='F') / (matSur.d * 1e-7) *\
-                np.sqrt(abs(1. - normalDotSurfNormal**2))
+                (_oeNormal[0]-normalDotSurfNormal*_oeNormal[-3]) * (1 + wH),
+                (_oeNormal[1]-normalDotSurfNormal*_oeNormal[-2]) * (1 + wH),
+                (_oeNormal[2]-normalDotSurfNormal*_oeNormal[-1]) * (1 + wH)),
+                order='F') / (matSur.d * 1e-7)
             if matSur.geom.endswith('Fresnel'):
                 if isinstance(self.order, int):
                     locOrder = self.order
@@ -1418,9 +1438,10 @@ class OE(object):
             else:
                 _gNormal = gNormalCryst
 
-            return self._grating_deflection(
-                goodN, lb, _gNormal, _oeNormal, beamInDotNormal, 1)
-
+            sg = 1 if matSur.geom.startswith('Laue') else -1
+            res = self._grating_deflection(
+                goodN, lb, _gNormal, _oeNormal, _beamInDotSurfaceNormal, 1, sg)
+            return res
 
 # rotate the world around the mirror.
 # lb is truly local coordinates whereas vlb is in virgin local coordinates:
@@ -1497,7 +1518,8 @@ class OE(object):
         else:
             gNormal = None
             lb.state[good] = self.rays_good(tX, tY, is2ndXtal)
-        goodN = (lb.state == 1) | (lb.state == 2)
+#        goodN = (lb.state == 1) | (lb.state == 2)
+        goodN = (lb.state == 1)
 # normal at x, y, z:
         if goodN.sum() > 0:
             lb.path[goodN] += tMax[goodN]
@@ -1537,6 +1559,7 @@ class OE(object):
                 lb.z[goodN] += lb.c[goodN] * depth
             else:
                 oeNormal = list(local_n(lb.x[goodN], lb.y[goodN]))
+
             n_distorted = self.local_n_distorted(lb.x[goodN], lb.y[goodN])
             if n_distorted is not None:
                 if len(n_distorted) == 2:
@@ -1559,6 +1582,7 @@ class OE(object):
                     raise ValueError(
                         "wrong length returned by 'local_n_distorted'")
             if toWhere < 5:
+                isAsymmetric = len(oeNormal) == 6
                 oeNormal = np.asarray(oeNormal, order='F')
                 beamInDotNormal = lb.a[goodN]*oeNormal[0] +\
                     lb.b[goodN]*oeNormal[1] + lb.c[goodN]*oeNormal[2]
@@ -1567,10 +1591,11 @@ class OE(object):
                 beamInDotNormal[beamInDotNormal > 1] = 1
                 lb.theta[goodN] = np.arccos(beamInDotNormal) - np.pi/2
 
-                if material is not None:
-                    if matSur.kind in ('crystal', 'multilayer'):
-                        beamInDotSurfaceNormal = lb.a[goodN]*oeNormal[-3] +\
-                            lb.b[goodN]*oeNormal[-2] + lb.c[goodN]*oeNormal[-1]
+                if isAsymmetric:
+                    beamInDotSurfaceNormal = lb.a[goodN]*oeNormal[-3] +\
+                        lb.b[goodN]*oeNormal[-2] + lb.c[goodN]*oeNormal[-1]
+                else:
+                    beamInDotSurfaceNormal = beamInDotNormal
 # direction:
             if local_g is None:
                 local_g = self.local_g
@@ -1585,22 +1610,18 @@ class OE(object):
                 giveSign = 1 if toWhere == 4 else -1
                 lb.a[goodN], lb.b[goodN], lb.c[goodN] =\
                     self._grating_deflection(goodN, lb, gNormal, oeNormal,
-                                             beamInDotNormal, self.order,
-                                             giveSign)
+                                             beamInDotSurfaceNormal,
+                                             self.order, giveSign)
             elif toWhere in [0, 2]:  # reflect, straight
                 useAsymmetricNormal = False
                 if material is not None:
                     if matSur.kind in ('crystal', 'multilayer') and\
                             toWhere == 0:
                         useAsymmetricNormal = True
-#                useAsymmetricNormal = False
-#                print('before.a', lb.a)
-#                print('before.b', lb.b)
-#                print('before.c', lb.c)
 
                 if useAsymmetricNormal:
-                    a_out, b_out, c_out = _getAsymmetricNormal(
-                        oeNormal, gNormal)
+                    a_out, b_out, c_out = _get_asymmetric_reflection_grating(
+                        gNormal, oeNormal, beamInDotSurfaceNormal)
                 else:
                     a_out = lb.a[goodN] - oeNormal[0]*2*beamInDotNormal
                     b_out = lb.b[goodN] - oeNormal[1]*2*beamInDotNormal
@@ -1684,10 +1705,10 @@ class OE(object):
                         self.R -= matSur.t
                         lb.z = -self.local_z(lb.x, lb.y) - matSur.t
                         self.R = self.R - (1 - pointOnFan) * matSur.t
-                        oeNormalOut = list(self.local_n(lb.x,
-                                                        deltaY))
-                        a_out, b_out, c_out = _getAsymmetricNormal(
-                            oeNormalOut, gNormal)
+                        oeNormalOut = list(self.local_n(lb.x, deltaY))
+                        a_out, b_out, c_out = \
+                            _get_asymmetric_reflection_grating(
+                                gNormal, oeNormalOut, beamInDotSurfaceNormal)
                         self.R = tmpR
 
                 if toWhere == 0:  # reflect
