@@ -59,8 +59,13 @@ def main():
         xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3,
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
         eEspread=1e-3,
-        targetOpenCL='CPU',
+#        targetOpenCL='CPU',
         precisionOpenCL='float32')
+
+    print(u"Electron beam linear sizes = {0:.3f} µm × {1:.3f} µm".format(
+        und.dx*1e3, und.dz*1e3))
+    print(u"Electron beam angular sizes = {0:.3f} µrad × {1:.3f} µrad".format(
+        und.dxprime*1e6, und.dzprime*1e6))
 
     E = np.linspace(1400., 20000., 1860+1)
     sx0, sz0 = und.get_SIGMA(E, with0eSpread=True)
