@@ -5,11 +5,11 @@ Reflectivity from highly asymmetric crystal in backscattering
 
 A test for the optical scheme from [ShvydkoPRL2006]_, Fig 3.
 
-.. imagezoom:: _images/shvydko-rc.png
+.. imagezoom:: _images/shvydko-rc-ver.png
 
 The blue curve was ray-traced by xrt. The dotted curve is a reconstruction from
 Fig. 4 of [ShvydkoPRL2006]_. The dispersion rate was calculated from a linear
-fit to the energy-angle line and is similar to that reported in
+fit to the energy-angle line (orange) and is similar to that reported in
 [ShvydkoPRL2006]_ as 8.5 µrad/meV.
 
 .. [ShvydkoPRL2006] Yu. V. Shvyd’ko, M. Lerche, U. Kuetgens, H. D. Rüter,

@@ -1494,11 +1494,13 @@ class Crystal(Material):
         if beamInDotNormal is not None:
 #            beamInDotNormal[beamInDotNormal > 1] = 1 - 1e-16
             alpha = np.arcsin(beamInDotNormal) - thetaB
+        if alpha is not None:
+            beamInDotNormal = np.sin(thetaB + alpha)
         pm = -1 if self.geom.startswith('Bragg') else 1
         beamOutDotNormal = pm * np.sin(thetaB - alpha)
         b = beamInDotNormal / beamOutDotNormal
         F0, _, _ = self.get_structure_factor(E, needFhkl=False)
-        return self.chiToFd2 * F0.real * (1 - 1/b)
+        return -self.chiToFd2 * F0.real * (b - 1/b) * np.tan(thetaB)
 
 
 class CrystalFcc(Crystal):

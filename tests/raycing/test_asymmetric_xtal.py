@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
 u"""
-Reflectivity from asymmetrically cut crystal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Reflection from asymmetrically cut crystal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A monochromatic beam of *E* = 2840 eV is diffracted by a Si111 crystal with
-Θ\ :sub:`B`\ = 44.132 deg, α = -20.054 deg, b = -0.453
+θ\ :sub:`B`\ = 44.132 deg and α = -20.054 deg, which results in *b* = -0.453.
 
 The phase space volume in the beam before and after the crystal is indeed
 invariant, whereas the linear and angular sizes have scaled with the ratio
-equal to *b* or 1/*b*. The product FWHM(z)×FWHM(z') = 139 nmrad in both cases.
+equal to *b* or 1/*b*. The product FWHM(z)×FWHM(z') = 135 nmrad in both cases.
+Notice also the deviation of the diffracted beam direction from the exact
+departure angle 2θ\ :sub:`B` seen on the exit screen which is put normally to
+2θ\ :sub:`B` (i.e. z'=0 at the exact departure at 2θ\ :sub:`B`\ ).
+The ray-traced deviation -106 µrad is close to the calculated refractive shift
+-105 µrad.
 
 .. imagezoom:: _images/0-zzP-source,alpha=-0.350.png
 .. imagezoom:: _images/2-zzP-afterXtal,alpha=-0.350.png
@@ -65,6 +70,9 @@ def build_beamline():
         beamLine, center=[0, 2000+p, p*np.tan(2*bragg)],
         x=[1, 0, 0], z=[0, -np.sin(2*bragg), np.cos(2*bragg)])
 
+    beamLine.dbragg = crystalSi.get_refractive_correction(Ec, alpha=alpha)*1e6
+    print(u'refractive shift = {0} µrad'.format(beamLine.dbragg))
+
     return beamLine
 
 
@@ -80,7 +88,7 @@ def run_process(beamLine):
 rrun.run_process = run_process
 
 
-def define_plots():
+def define_plots(beamLine):
     plots = []
 
     plot = xrtplot.XYCPlot(
@@ -93,8 +101,9 @@ def define_plots():
     plot = xrtplot.XYCPlot(
         beam=r"beamScreenSource",
         aspect='auto',
-        xaxis=xrtplot.XYCAxis(r"z", "mm", limits=[-5, 5]),
-        yaxis=xrtplot.XYCAxis(r"z'", u"µrad"))
+        xaxis=xrtplot.XYCAxis(r"z", "mm", limits=[-5, 5], bins=256, ppb=1),
+        yaxis=xrtplot.XYCAxis(r"z'", u"µrad", limits=[-55, 55],
+                              bins=256, ppb=1))
     plot.saveName = ["0-zzP-source,alpha={0:.3f}.png".format(alpha)]
     plotPhaseSpaceBefore = plot
     plots.append(plot)
@@ -113,11 +122,13 @@ def define_plots():
     plot.saveName = ["2-xz-afterXtal,alpha={0:.3f}.png".format(alpha)]
     plots.append(plot)
 
+    ac = beamLine.dbragg
     plot = xrtplot.XYCPlot(
         beam=r"beamScreenXtal",
         aspect='auto',
-        xaxis=xrtplot.XYCAxis(r"z", "mm", limits=[-5, 5]),
-        yaxis=xrtplot.XYCAxis(r"z'", u"µrad"))
+        xaxis=xrtplot.XYCAxis(r"z", "mm", limits=[-5, 5], bins=256, ppb=1),
+        yaxis=xrtplot.XYCAxis(r"z'", u"µrad", limits=[ac-55, ac+55],
+                              bins=256, ppb=1))
     plot.saveName = ["2-zzP-afterXtal,alpha={0:.3f}.png".format(alpha)]
     plotPhaseSpaceAfter = plot
     plots.append(plot)
@@ -143,7 +154,7 @@ def main():
     beamLine = build_beamline()
     E0 = list(beamLine.source.energies)[0]
     beamLine.alignE = E0
-    plots, plotPhaseSpaceBefore, plotPhaseSpaceAfter = define_plots()
+    plots, plotPhaseSpaceBefore, plotPhaseSpaceAfter = define_plots(beamLine)
     xrtrun.run_ray_tracing(
         plots=plots, repeats=1, beamLine=beamLine,
         afterScript=afterScript,
