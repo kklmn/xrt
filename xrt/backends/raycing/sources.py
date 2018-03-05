@@ -174,12 +174,12 @@ using the classical Runge-Kutta method. Integration step is varied in order to
 provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of
 the Gauss-Legendre grid.
 
+.. _undulator-source-size:
+
 For the purpose of ray tracing (and this is not necessary for wave propagation)
 the undulator source size is calculated following [TanakaKitamura]_. Their
 formulation includes dependence on electron beam energy spread. The effective
 linear and angular source sizes are given by
-
-.. _undulator-source-size:
 
     .. math::
         \Sigma &= \left(\sigma_e^2 + \sigma_r^2\right)^{1/2}

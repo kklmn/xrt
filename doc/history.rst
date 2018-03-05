@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-1.3.0beta (12 Dec 2017):
+1.3.0beta (5 Mar 2018):
     - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
 
     - Almost all old examples can now be viewed in xrtGlow as well, just select
@@ -11,22 +11,35 @@ Version history
       generator for making scans can also save a movie -- a series of grabbed
       3D views, as e.g. in :ref:`here <balder_pitch>`.
 
+    - The documentation has moved to
+      `Read the Docs <http://xrt.readthedocs.io>`_.
+      It loads much faster and builds automatically from GitHub xrt sources.
+
     - Added 'Chantler total' (see
       :class:`~xrt.backends.raycing.materials.Material`) to the list of
       absorption tables. This table also adds inelastic scattering channels to
       the photoelectric absorption cross-section (thanks to B. Kozioziemski
       (LLNL) for discovering the need).
 
-    - The documentation has moved to
-      `Read the Docs <http://xrt.readthedocs.io>`_.
-      It loads much faster and builds automatically from GitHub xrt sources. It
-      also allows to download the complete documentation as a zip file.
-
     - Added modelling of interdiffusion/roughness interface to
-      :class:`~xrt.backends.raycing.materials.Multilayer`. Added 
+      :class:`~xrt.backends.raycing.materials.Multilayer`. Added
       :class:`~xrt.backends.raycing.materials.Coated` material -- a derivative
       class from :class:`~xrt.backends.raycing.materials.Multilayer` with a
       single reflective layer on a substrate.
+
+    - A new module :mod:`~xrt.backends.raycing.coherence` that has functions
+      for 1D and 2D analysis of coherence and functions for 1D plotting of
+      degree of coherence and and 2D plotting of eigen modes. Reworked analysis
+      of coherence in :ref:`SoftiMAX` example.
+    
+    - Added energy spread dependence to the linear and angular sizes of
+      undulator source. See the :ref:`formulation <undulator-source-size>` and
+      an :ref:`application exaple<example-undulator-sizes>`.
+
+    - Added :ref:`tests of optical elements <test_oes>` which currently have
+      a test for asymmetric crystal optics (phase space volume conservation)
+      and a test with backscattering at highly asymmetric crystals (comparison
+      with experiment).
 
     - :ref:`Speed tests <tests>` include wave propagation on CPU and GPU nodes.
 
