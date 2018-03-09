@@ -364,12 +364,12 @@ class OE(object):
     def get_Rmer_from_Coddington(self, p, q, pitch=None):
         if pitch is None:
             pitch = self.pitch
-        return 2 * p * q / (p+q) / np.sin(pitch)
+        return 2 * p * q / (p+q) / np.sin(abs(pitch))
 
     def get_rsag_from_Coddington(self, p, q, pitch=None):
         if pitch is None:
             pitch = self.pitch
-        return 2 * p * q / (p+q) * np.sin(pitch)
+        return 2 * p * q / (p+q) * np.sin(abs(pitch))
 
     def local_z(self, x, y):
         """Determines the surface of OE at (*x*, *y*) position. Typically is
