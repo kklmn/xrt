@@ -551,7 +551,7 @@ class OE(object):
                   nn, 's' if nn > 1 else ''))
         if _DEBUG:
             print('numit=', numit)
-        return t2, x2, y2, z2
+        return t2, x2, y2, z2, ind1
 
     def find_intersection_CL(self, local_f, t1, t2, x, y, z, a, b, c,
                              invertNormal, derivOrder=0):
@@ -1252,7 +1252,7 @@ class OE(object):
         if isMulti:
             tMin[:] = 0
             tMaxTmp = np.copy(tMax)
-            tMax, dummy, dummy, dummy = self.find_intersection(
+            tMax, _, _, _, _ = self.find_intersection(
                 local_n, tMin, tMax, x, y, z, a, b, c, invertNormal,
                 derivOrder=1)
             if needElevationMap:
@@ -1278,7 +1278,6 @@ class OE(object):
         orderLambda = locOrder * CH / lb.E[goodN] * 1e-7
 
         u = beamInDotNormal**2 - 2*beamInDotG*orderLambda - G2*orderLambda**2
-#        lb.state[goodN][u < 0] = self.lostNum
 #        u[u < 0] = 0
         gs = np.sign(beamInDotNormal) if sig is None else sig
         dn = beamInDotNormal + gs*np.sqrt(abs(u))
@@ -1483,6 +1482,7 @@ class OE(object):
             lb.elevationY[good] = tY
             lb.elevationZ[good] = tZ
 
+        _lost = None
         if noIntersectionSearch:
             # lb.x[good], lb.y[good], lb.z[good] unchanged
             tMax[good] = 0.
@@ -1491,7 +1491,7 @@ class OE(object):
                     lb.x[good], lb.y[good], lb.z[good])
         else:
             if self.cl_ctx is None:
-                tMax[good], lb.x[good], lb.y[good], lb.z[good] = \
+                tMax[good], lb.x[good], lb.y[good], lb.z[good], _lost = \
                     self.find_intersection(
                         local_z, tMin[good], tMax[good],
                         lb.x[good], lb.y[good], lb.z[good],
@@ -1518,6 +1518,9 @@ class OE(object):
         else:
             gNormal = None
             lb.state[good] = self.rays_good(tX, tY, is2ndXtal)
+        if _lost is not None:
+            lb.state[np.where(good)[0][_lost]] = self.lostNum
+
 #        goodN = (lb.state == 1) | (lb.state == 2)
         goodN = (lb.state == 1)
 # normal at x, y, z:
