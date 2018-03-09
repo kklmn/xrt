@@ -906,6 +906,7 @@ class OE(object):
         else:
             lb = gb
         good = beam.state > 0
+#        good = beam.state == 1
         if good.sum() == 0:
             return gb, lb
 # coordinates in local virgin system:
@@ -1230,16 +1231,17 @@ class OE(object):
         return tMin, tMax
 
     def _bracketing(self, local_n, x, y, z, a, b, c, invertNormal,
-                    is2ndXtal=False, isMulti=False, needElevationMap=False):
+                    is2ndXtal=False, isMulti=False, needElevationMap=False,
+                    mainPart=slice(None)):
         if is2ndXtal:
             surfPhysX = self.surfPhysX2
             surfPhysY = self.surfPhysY2
         else:
             surfPhysX = self.surfPhysX
             surfPhysY = self.surfPhysY
-        maxa = np.max(abs(a))
-        maxb = np.max(abs(b))
-        maxc = np.max(abs(c))
+        maxa = np.max(abs(a[mainPart]))
+        maxb = np.max(abs(b[mainPart]))
+        maxc = np.max(abs(c[mainPart]))
         maxMax = max(maxa, maxb, maxc)
         if maxMax == maxa:
             tMin, tMax = self._set_t(x, a, surfPhysX)
@@ -1466,12 +1468,14 @@ class OE(object):
             invertNormal = 1
         else:
             invertNormal = -1
+#        mainPartForBracketing = lb.state[good] > 0
+        mainPartForBracketing = lb.state[good] == 1
         tMin = np.zeros_like(lb.x)
         tMax = np.zeros_like(lb.x)
         tMin[good], tMax[good], elev = self._bracketing(
             local_n, lb.x[good], lb.y[good], lb.z[good], lb.a[good],
             lb.b[good], lb.c[good], invertNormal, is2ndXtal, isMulti=isMulti,
-            needElevationMap=needElevationMap)
+            needElevationMap=needElevationMap, mainPart=mainPartForBracketing)
         if needElevationMap and elev:
             lb.elevationD[good] = elev[0]
             if self.isParametric:
