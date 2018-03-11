@@ -566,7 +566,8 @@ class xrtGlow(qt.QWidget):
                  'Invert scene color',
                  'Use scalable font',
                  'Show Virtual Screen label',
-                 'Show lost rays'],
+                 'Show lost rays',
+                 'Show local axes'],
                 [self.checkAA,
                  self.checkBlending,
                  self.checkLineDepthTest,
@@ -574,7 +575,8 @@ class xrtGlow(qt.QWidget):
                  self.invertSceneColor,
                  self.checkScalableFont,
                  self.checkShowLabels,
-                 self.checkShowLost])):
+                 self.checkShowLost,
+                 self.checkShowLocalAxes])):
             aaCheckBox = qt.QCheckBox(cbText)
             aaCheckBox.setChecked(iCB in [1, 2])
             aaCheckBox.stateChanged.connect(cbFunc)
@@ -914,6 +916,10 @@ class xrtGlow(qt.QWidget):
     def checkShowLost(self, state):
         self.customGlWidget.showLostRays = True if state > 0 else False
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.glDraw()
+
+    def checkShowLocalAxes(self, state):
+        self.customGlWidget.showLocalAxes = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def setSceneParam(self, iAction, state):
@@ -1644,6 +1650,7 @@ class xrtGlWidget(qt.QGLWidget):
         self.scaleVec = np.array([1e3, 1e1, 1e3])
         self.maxLen = 1.
         self.showLostRays = False
+        self.showLocalAxes = False
         self.populateVerticesArray(modelRoot)
 
         self.drawGrid = True
@@ -2359,6 +2366,17 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glColor4f(1.0, 1.0, 1.0, 1.)
             gl.glLineWidth(1)
             self.drawText(vsLabelPos, vsCenterStr)
+
+        if len(self.oesToPlot) > 0 and self.showLocalAxes:  # Surfaces of optical elements
+            for oeString in self.oesToPlot:
+                try:
+                    oeToPlot = self.oesList[oeString][0]
+                    is2ndXtal = self.oesList[oeString][3]
+                    if hasattr(oeToPlot, 'local_to_global'):
+                        self.drawLocalAxes(oeToPlot, is2ndXtal)
+                except:
+                    continue
+
         gl.glFlush()
 
         self.drawAxes()
@@ -2894,19 +2912,16 @@ class xrtGlWidget(qt.QGLWidget):
             vScrHW = self.vScreenSize
             vScrHH = self.vScreenSize
 
+        dX = vScrHW * np.array(oe.x) * self.maxLen / scAbsX
+        dZ = vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
+
         vScreenBody = np.zeros((4, 3))
-        vScreenBody[0, :] = vScreenBody[1, :] =\
-            oe.center - vScrHW * np.array(oe.x) * self.maxLen / scAbsX
-        vScreenBody[2, :] = vScreenBody[3, :] =\
-            oe.center + vScrHW * np.array(oe.x) * self.maxLen / scAbsX
-        vScreenBody[0, :] -=\
-            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
-        vScreenBody[3, :] -=\
-            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
-        vScreenBody[1, :] +=\
-            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
-        vScreenBody[2, :] +=\
-            vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
+        vScreenBody[0, :] = vScreenBody[1, :] = oe.center - dX
+        vScreenBody[2, :] = vScreenBody[3, :] = oe.center + dX
+        vScreenBody[0, :] -= dZ
+        vScreenBody[1, :] += dZ
+        vScreenBody[2, :] += dZ
+        vScreenBody[3, :] -= dZ
 
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         gl.glBegin(gl.GL_QUADS)
@@ -3193,6 +3208,87 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
         gridArray.unbind()
         gridColorArray.unbind()
+
+    def drawLocalAxes(self, oe, is2ndXtal):
+        def drawArrow(color, arrowArray):
+            gridColor = np.zeros((len(arrowArray) - 1, 4))
+            gridColor[:, color] = 1
+            gridColor[:, 3] = 0.75
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+            gridArray = gl.vbo.VBO(np.float32(arrowArray[1:, :]))
+            gridArray.bind()
+            gl.glVertexPointerf(gridArray)
+            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
+            gridColorArray.bind()
+            gl.glColorPointerf(gridColorArray)
+            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
+            gridArray.unbind()
+            gridColorArray.unbind()
+            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+            gl.glDisableClientState(gl.GL_COLOR_ARRAY) 
+            gl.glBegin(gl.GL_LINES)
+            colorVec = [0, 0, 0, 0.75]
+            colorVec[color] = 1
+            gl.glColor4f(*colorVec)
+            gl.glVertex3f(*arrowArray[0, :])            
+            gl.glVertex3f(*arrowArray[1, :]) 
+            gl.glEnd() 
+
+        z, r, nFacets = 0.25, 0.02, 20
+        phi = np.linspace(0, 2*np.pi, nFacets)
+        xp = np.insert(r * np.cos(phi), 0, [0, 0])
+        yp = np.insert(r * np.sin(phi), 0, [0, 0])
+        zp = np.insert(z*0.8*np.ones_like(phi), 0, [0, z])
+
+        cb = rsources.Beam(nrays=nFacets+2)
+        cb.a[:] = cb.b[:] = cb.c[:] = 0
+        cb.a[0] = cb.b[1] = cb.c[2] = 1
+        cb.state[:] = 1
+
+        if isinstance(oe, (rscreens.HemisphericScreen, rscreens.Screen)):
+            cb.x[:] += oe.center[0]
+            cb.y[:] += oe.center[1]
+            cb.z[:] += oe.center[2]
+            oeNormX = oe.x
+            oeNormY = oe.y
+        else:
+            if is2ndXtal:
+                oe.local_to_global(cb, is2ndXtal=is2ndXtal)
+            else:
+                oe.local_to_global(cb)
+            oeNormX = np.array([cb.a[0], cb.b[0], cb.c[0]])
+            oeNormY = np.array([cb.a[1], cb.b[1], cb.c[1]])
+    
+        scNormX = oeNormX * self.scaleVec
+        scNormY = oeNormY * self.scaleVec
+
+        scNormX /= np.linalg.norm(scNormX)
+        scNormY /= np.linalg.norm(scNormY)
+        scNormZ = np.cross(scNormX, scNormY)
+
+        for iAx in range(3):
+            if iAx == 0:
+                xVec = scNormX
+                yVec = scNormY
+                zVec = scNormZ
+            elif iAx == 2:
+                xVec = scNormY
+                yVec = scNormZ
+                zVec = scNormX
+            else:
+                xVec = scNormZ
+                yVec = scNormX
+                zVec = scNormY                
+            
+            dX = xp[:, np.newaxis] * xVec
+            dY = yp[:, np.newaxis] * yVec
+            dZ = zp[:, np.newaxis] * zVec
+            coneCP = self.modelToWorld(np.vstack((
+                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
+                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
+            drawArrow(iAx, coneCP)
 
     def drawAxes(self):
         arrowSize = 0.05
