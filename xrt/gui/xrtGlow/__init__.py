@@ -2367,7 +2367,7 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glLineWidth(1)
             self.drawText(vsLabelPos, vsCenterStr)
 
-        if len(self.oesToPlot) > 0 and self.showLocalAxes:  # Surfaces of optical elements
+        if len(self.oesToPlot) > 0 and self.showLocalAxes:  # Local axes
             for oeString in self.oesToPlot:
                 try:
                     oeToPlot = self.oesList[oeString][0]
@@ -3212,8 +3212,15 @@ class xrtGlWidget(qt.QGLWidget):
     def drawLocalAxes(self, oe, is2ndXtal):
         def drawArrow(color, arrowArray):
             gridColor = np.zeros((len(arrowArray) - 1, 4))
-            gridColor[:, color] = 1
             gridColor[:, 3] = 0.75
+            if color == 4:
+                gridColor[:, 0] = 1
+                gridColor[:, 1] = 1
+            elif color == 5:
+                gridColor[:, 0] = 1
+                gridColor[:, 1] = 0.5
+            else:
+                gridColor[:, color] = 1
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
             gl.glEnableClientState(gl.GL_COLOR_ARRAY)
@@ -3227,14 +3234,37 @@ class xrtGlWidget(qt.QGLWidget):
             gridArray.unbind()
             gridColorArray.unbind()
             gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-            gl.glDisableClientState(gl.GL_COLOR_ARRAY) 
+            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
             gl.glBegin(gl.GL_LINES)
             colorVec = [0, 0, 0, 0.75]
-            colorVec[color] = 1
+            if color == 4:
+                colorVec[0] = 1
+                colorVec[1] = 1
+            elif color == 5:
+                colorVec[0] = 1
+                colorVec[1] = 0.5
+            else:
+                colorVec[color] = 1
             gl.glColor4f(*colorVec)
-            gl.glVertex3f(*arrowArray[0, :])            
-            gl.glVertex3f(*arrowArray[1, :]) 
-            gl.glEnd() 
+            gl.glVertex3f(*arrowArray[0, :])
+            gl.glVertex3f(*arrowArray[1, :])
+            gl.glEnd()
+            gl.glColor4f(*colorVec)
+            gl.glRasterPos3f(*arrowArray[1, :])
+            if color == 0:
+                axSymb = 'Z'
+            elif color == 1:
+                axSymb = 'Y'
+            elif color == 2:
+                axSymb = 'X'
+            elif color == 4:
+                axSymb = 'CP'
+            else:
+                axSymb = ''
+
+            for symbol in "  {}".format(axSymb):
+                gl.glutBitmapCharacter(
+                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
 
         z, r, nFacets = 0.25, 0.02, 20
         phi = np.linspace(0, 2*np.pi, nFacets)
@@ -3260,7 +3290,7 @@ class xrtGlWidget(qt.QGLWidget):
                 oe.local_to_global(cb)
             oeNormX = np.array([cb.a[0], cb.b[0], cb.c[0]])
             oeNormY = np.array([cb.a[1], cb.b[1], cb.c[1]])
-    
+
         scNormX = oeNormX * self.scaleVec
         scNormY = oeNormY * self.scaleVec
 
@@ -3280,8 +3310,8 @@ class xrtGlWidget(qt.QGLWidget):
             else:
                 xVec = scNormZ
                 yVec = scNormX
-                zVec = scNormY                
-            
+                zVec = scNormY
+
             dX = xp[:, np.newaxis] * xVec
             dY = yp[:, np.newaxis] * yVec
             dZ = zp[:, np.newaxis] * zVec
@@ -3289,6 +3319,38 @@ class xrtGlWidget(qt.QGLWidget):
                 cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
                 cb.z - self.coordOffset[2])).T) + dX + dY + dZ
             drawArrow(iAx, coneCP)
+
+        if False:  # drawAsymmetricPlane:
+            crPlaneZ = np.array([0.5, 0.707, 0.707])  # To take from local_n
+            crPlaneNormZ = crPlaneZ * self.scaleVec
+            crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
+            crPlaneNormX = -np.cross(crPlaneNormZ, scNormZ)
+            crPlaneNormX /= np.linalg.norm(crPlaneNormX)
+            crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
+
+            for iAx in range(3):
+                if iAx == 0:
+                    xVec = crPlaneNormX
+                    yVec = crPlaneNormY
+                    zVec = crPlaneNormZ
+                    color = 4
+                elif iAx == 2:
+                    xVec = crPlaneNormY
+                    yVec = crPlaneNormZ
+                    zVec = crPlaneNormX
+                    color = 5
+                else:
+                    xVec = crPlaneNormZ
+                    yVec = crPlaneNormX
+                    zVec = crPlaneNormY
+                    color = 5
+                dX = xp[:, np.newaxis] * xVec
+                dY = yp[:, np.newaxis] * yVec
+                dZ = zp[:, np.newaxis] * zVec
+                coneCP = self.modelToWorld(np.vstack((
+                    cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
+                    cb.z - self.coordOffset[2])).T) + dX + dY + dZ
+                drawArrow(color, coneCP)
 
     def drawAxes(self):
         arrowSize = 0.05
