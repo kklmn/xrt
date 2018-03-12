@@ -1718,6 +1718,16 @@ class xrtGlWidget(qt.QGLWidget):
                            -self.qRot[2], -self.qRot[3]],
                           self.textOrientation))
 
+    def vecToQ(self, vec, alpha):
+        """ Quaternion from vector and angle"""
+        return np.insert(vec*np.sin(alpha*0.5), 0, np.cos(alpha*0.5))
+
+    def rotateVecQ(self, vec, q):
+        qn = np.copy(q)
+        qn[1:] *= -1
+        return self.quatMult(self.quatMult(
+                q, self.vecToQ(vec, np.pi*0.25)), qn)[1:]
+
     def setPointSize(self, pSize):
         self.pointSize = pSize
         self.glDraw()
@@ -3272,9 +3282,30 @@ class xrtGlWidget(qt.QGLWidget):
         yp = np.insert(r * np.sin(phi), 0, [0, 0])
         zp = np.insert(z*0.8*np.ones_like(phi), 0, [0, z])
 
+        crPlaneZ = None
+        if hasattr(oe, 'local_n'):
+            if is2ndXtal:
+                zExt = '2'
+            else:
+                zExt = '1' if hasattr(oe, 'local_n1') else ''
+            local_n = getattr(oe, 'local_n{}'.format(zExt))
+            normals = local_n(0, 0)
+            if len(normals) > 3:
+                crPlaneZ = np.array(normals[:3])
+                crPlaneZ /= np.linalg.norm(crPlaneZ)
+
         cb = rsources.Beam(nrays=nFacets+2)
         cb.a[:] = cb.b[:] = cb.c[:] = 0
         cb.a[0] = cb.b[1] = cb.c[2] = 1
+
+        if crPlaneZ is not None:  # Adding asymmetric crystal orientation
+            acpX = np.cross(np.array([0, 0, 1]), crPlaneZ)
+            acpX /= np.linalg.norm(acpX)
+            asAlpha = np.arccos(crPlaneZ[2])
+            cb.a[3] = acpX[0]
+            cb.b[3] = acpX[1]
+            cb.c[3] = acpX[2]
+
         cb.state[:] = 1
 
         if isinstance(oe, (rscreens.HemisphericScreen, rscreens.Screen)):
@@ -3320,12 +3351,13 @@ class xrtGlWidget(qt.QGLWidget):
                 cb.z - self.coordOffset[2])).T) + dX + dY + dZ
             drawArrow(iAx, coneCP)
 
-        if False:  # drawAsymmetricPlane:
-            crPlaneZ = np.array([0.5, 0.707, 0.707])  # To take from local_n
-            crPlaneNormZ = crPlaneZ * self.scaleVec
-            crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
-            crPlaneNormX = -np.cross(crPlaneNormZ, scNormZ)
+        if crPlaneZ is not None:  # drawAsymmetricPlane:
+            crPlaneX = np.array([cb.a[3], cb.b[3], cb.c[3]])
+            crPlaneNormX = crPlaneX * self.scaleVec
             crPlaneNormX /= np.linalg.norm(crPlaneNormX)
+            crPlaneNormZ = self.rotateVecQ(
+                    scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
+            crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
             crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
 
             for iAx in range(3):
