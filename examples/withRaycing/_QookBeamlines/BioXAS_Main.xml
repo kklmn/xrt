@@ -367,7 +367,7 @@
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
 			<surface type="param">None</surface>
 			<material type="param">Si220</material>
-			<material2 type="param">None</material2>
+			<material2 type="param">Si220</material2>
 			<alpha type="param">None</alpha>
 			<limPhysX type="param">-20, 20</limPhysX>
 			<limOptX type="param">-20, 20</limOptX>
@@ -424,6 +424,7 @@
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">SSRL_DCMbeamGlobal01</beam>
+				<onlyPositivePath type="param">False</onlyPositivePath>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -624,6 +625,7 @@
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">DBHR2beamGlobal01</beam>
+				<onlyPositivePath type="param">False</onlyPositivePath>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
