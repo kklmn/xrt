@@ -58,7 +58,7 @@ from ...backends.raycing import oes as roes
 from ...backends.raycing import apertures as rapertures
 from ..commons import qt
 from ..commons import gl
-
+_DEBUG_ = False
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
@@ -1802,7 +1802,10 @@ class xrtGlWidget(qt.QGLWidget):
                     self.getColor(startBeam)[good]),
                     newColorMin)
             except:  # analysis:ignore
-                continue
+                if _DEBUG_:
+                    raise
+                else:
+                    continue
 
             if self.newColorAxis:
                 if newColorMin != self.colorMin:
@@ -1909,7 +1912,10 @@ class xrtGlWidget(qt.QGLWidget):
 
                     good = np.logical_and(good, goodC)
                 except:  # analysis:ignore
-                    continue
+                    if _DEBUG_:
+                        raise
+                    else:
+                        continue
 
                 if self.globalNorm:
                     alphaMax = 1.
@@ -1976,7 +1982,7 @@ class xrtGlWidget(qt.QGLWidget):
                                         alphaRays if self.iHSV else
                                         np.ones_like(alphaRays)))
                 colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
-                if self.globalNorm:
+                if self.globalNorm and len(alphaRays) > 0:
                     alphaMax = np.max(alphaRays)
                 else:
                     alphaMax = 1.
@@ -1995,7 +2001,10 @@ class xrtGlWidget(qt.QGLWidget):
                     self.verticesArray = np.float32(np.vstack((
                         self.verticesArray, verticesArrayLost)))
         except:  # analysis:ignore
-            pass
+            if _DEBUG_:
+                raise
+            else:
+                pass
 
         try:
             if self.colorMin == self.colorMax:
@@ -2012,7 +2021,7 @@ class xrtGlWidget(qt.QGLWidget):
                                         alphaDots if self.iHSV else
                                         np.ones_like(alphaDots)))
                 colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-                if self.globalNorm:
+                if self.globalNorm and len(alphaDots) > 0:
                     alphaMax = np.max(alphaDots)
                 else:
                     alphaMax = 1.
@@ -2031,7 +2040,10 @@ class xrtGlWidget(qt.QGLWidget):
                     self.footprintsArray = np.float32(np.vstack((
                         self.footprintsArray, footprintsArrayLost)))
         except:  # analysis:ignore
-            pass
+            if _DEBUG_:
+                raise
+            else:
+                pass
 
         tmpMaxLen = np.max(tmpMax - tmpMin)
         if tmpMaxLen > maxLen:
@@ -2385,7 +2397,10 @@ class xrtGlWidget(qt.QGLWidget):
                     if hasattr(oeToPlot, 'local_to_global'):
                         self.drawLocalAxes(oeToPlot, is2ndXtal)
                 except:
-                    continue
+                    if _DEBUG_:
+                        raise
+                    else:
+                        continue
 
         gl.glFlush()
 
@@ -3537,7 +3552,7 @@ class xrtGlWidget(qt.QGLWidget):
         self.virtDotsArray = vertices.T
 
         colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-        if self.globalNorm:
+        if self.globalNorm and len(alphaDots) > 0:
             alphaMax = np.max(alphaDots)
         else:
             alphaMax = 1.
@@ -3635,7 +3650,10 @@ class xrtGlWidget(qt.QGLWidget):
                             self.virtScreen.beamEnd = bEnd0
                             self.virtScreen.beamToExpose = beamStartTmp
             except:  # analysis:ignore
-                continue
+                if _DEBUG_:
+                    raise
+                else:
+                    continue
 
         if cProj is not None:
             self.virtScreen.center = cProj
