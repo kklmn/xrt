@@ -1787,20 +1787,21 @@ class xrtGlWidget(qt.QGLWidget):
                     self.oesList[str(ioeItem.text())][1]]
 #                lostNum = self.oesList[str(ioeItem.text())][0].lostNum
                 good = startBeam.state > 0
-                for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
-                    axMin = np.min(getattr(startBeam, tAxis)[good])
-                    axMax = np.max(getattr(startBeam, tAxis)[good])
-                    if axMin < tmpMin[tmpCoord]:
-                        tmpMin[tmpCoord] = axMin
-                    if axMax > tmpMax[tmpCoord]:
-                        tmpMax[tmpCoord] = axMax
-
-                newColorMax = max(np.max(
-                    self.getColor(startBeam)[good]),
-                    newColorMax)
-                newColorMin = min(np.min(
-                    self.getColor(startBeam)[good]),
-                    newColorMin)
+                if len(startBeam.state[good]) > 0:
+                    for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
+                        axMin = np.min(getattr(startBeam, tAxis)[good])
+                        axMax = np.max(getattr(startBeam, tAxis)[good])
+                        if axMin < tmpMin[tmpCoord]:
+                            tmpMin[tmpCoord] = axMin
+                        if axMax > tmpMax[tmpCoord]:
+                            tmpMax[tmpCoord] = axMax
+    
+                    newColorMax = max(np.max(
+                        self.getColor(startBeam)[good]),
+                        newColorMax)
+                    newColorMin = min(np.min(
+                        self.getColor(startBeam)[good]),
+                        newColorMin)
             except:  # analysis:ignore
                 if _DEBUG_:
                     raise
@@ -1822,7 +1823,8 @@ class xrtGlWidget(qt.QGLWidget):
                         endBeam = self.beamsDict[
                             self.oesList[str(segmentItem0.text())[3:]][1]]
                         good = startBeam.state > 0
-
+                        if len(startBeam.state[good]) == 0:
+                            continue
                         intensity = startBeam.Jss + startBeam.Jpp
                         intensityAll = intensity / np.max(intensity[good])
 
@@ -1902,6 +1904,8 @@ class xrtGlWidget(qt.QGLWidget):
 
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
                 good = startBeam.state > 0
+                if len(startBeam.state[good]) == 0:
+                    continue
                 intensity = startBeam.Jss + startBeam.Jpp
                 try:
                     intensityAll = intensity / np.max(intensity[good])
@@ -2064,7 +2068,7 @@ class xrtGlWidget(qt.QGLWidget):
     def worldToModel(self, coords):
             return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
 
-    def drawText(self, coord, text, noScalable=False):
+    def drawText(self, coord, text, noScalable=False, alignment=None):
         useScalableFont = False if noScalable else self.useScalableFont
         if not useScalableFont:
             gl.glRasterPos3f(*coord)
@@ -2072,10 +2076,26 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glutBitmapCharacter(
                     gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
         else:
+            fontScale = self.fontSize / 12500.
+            coordShift = np.zeros(3, dtype=np.float32)
+            if alignment is not None:
+                if alignment[0] == 'left':
+                    coordShift[0] = -fontScale *\
+                        len(text) * 104.76
+                else:
+                    coordShift[0] = fontScale * 104.76
+
+                if alignment[1] == 'top':
+                    vOffset = 0.5
+                elif alignment[1] == 'bottom':
+                    vOffset = -1.5
+                else:
+                    vOffset = -0.5
+                coordShift[1] = vOffset * fontScale * 119.05
             gl.glPushMatrix()
             gl.glTranslatef(*coord)
             gl.glRotatef(*self.qText)
-            fontScale = self.fontSize / 12500.
+            gl.glTranslatef(*coordShift)
             gl.glScalef(fontScale, fontScale, fontScale)
             for symbol in text:
                 gl.glutStrokeCharacter(gl.GLUT_STROKE_ROMAN, ord(symbol))
@@ -2404,7 +2424,7 @@ class xrtGlWidget(qt.QGLWidget):
 
         gl.glFlush()
 
-        self.drawAxes()
+        self.drawDirectionAxes()
         if self.showHelp:
             self.drawHelp()
         if self.enableBlending:
@@ -2487,6 +2507,29 @@ class xrtGlWidget(qt.QGLWidget):
             gridArrayVBO.unbind()
             gridColorArray.unbind()
 
+        def getAlignment(point, hDim, vDim=None):
+            pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
+            sp0 = np.array(gl.gluProject(*point,
+                model=pModel, proj=pProjection, view=pView))
+            pointH = np.copy(point)
+            pointH[hDim] *= 1.1
+            spH = np.array(gl.gluProject(*pointH,
+                model=pModel, proj=pProjection, view=pView))
+            pointV = np.copy(point)
+            if vDim is None:
+                vAlign = 'middle'
+            else:
+                pointV[vDim] *= 1.1
+                spV = np.array(gl.gluProject(*pointV,
+                model=pModel, proj=pProjection, view=pView))
+                vAlign = 'top' if spV[1] - sp0[1] > 0 else 'bottom'
+                print(sp0, spV)
+            hAlign = 'left' if spH[0] - sp0[0] < 0 else 'right'
+            return (hAlign, vAlign)
+
+
         back = np.array([[-self.aPos[0], self.aPos[1], -self.aPos[2]],
                          [-self.aPos[0], self.aPos[1], self.aPos[2]],
                          [-self.aPos[0], -self.aPos[1], self.aPos[2]],
@@ -2559,22 +2602,39 @@ class xrtGlWidget(qt.QGLWidget):
         else:
             gl.glColor4f(1.0, 1.0, 1.0, 1.)
         gl.glLineWidth(1)
+
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
                     iAx == self.visibleAxes[2]):
-                if iAx == self.visibleAxes[1]:
-                    axisL[iAx][self.visibleAxes[2], :] *= 1.05
-                    axisL[iAx][self.visibleAxes[0], :] *= 1.05
-                if iAx == self.visibleAxes[0]:
-                    axisL[iAx][self.visibleAxes[1], :] *= 1.05
-                    axisL[iAx][self.visibleAxes[2], :] *= 1.05
-                if iAx == self.visibleAxes[2]:
-                    axisL[iAx][self.visibleAxes[1], :] *= 1.05
-                    axisL[iAx][self.visibleAxes[0], :] *= 1.05
+                tAlign = None
+                midp = int(len(axisL[iAx][0, :])/2)
+                if iAx == self.visibleAxes[1]:  # Side plane,
+                    if self.useScalableFont:
+                        tAlign = getAlignment(axisL[iAx][:, midp],
+                                              self.visibleAxes[0])
+                    else:
+                        axisL[iAx][self.visibleAxes[2], :] *= 1.05  # depth
+                        axisL[iAx][self.visibleAxes[0], :] *= 1.05  # side
+                if iAx == self.visibleAxes[0]:  # Bottom plane, left-right
+                    if self.useScalableFont:
+                        tAlign = getAlignment(axisL[iAx][:, midp],
+                                              self.visibleAxes[2],
+                                              self.visibleAxes[1])
+                    else:
+                        axisL[iAx][self.visibleAxes[1], :] *= 1.05  # height
+                        axisL[iAx][self.visibleAxes[2], :] *= 1.05  # side
+                if iAx == self.visibleAxes[2]:  # Bottom plane, left-right
+                    if self.useScalableFont:
+                        tAlign = getAlignment(axisL[iAx][:, midp],
+                                              self.visibleAxes[0],
+                                              self.visibleAxes[1])
+                    else:
+                        axisL[iAx][self.visibleAxes[1], :] *= 1.05  # height
+                        axisL[iAx][self.visibleAxes[0], :] *= 1.05  # side
                 for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
                                                  precisionLabels[iAx])):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
-                    self.drawText(tick, valueStr)
+                    self.drawText(tick, valueStr, alignment=tAlign)
 #            if not self.enableAA:
 #                gl.glDisable(gl.GL_LINE_SMOOTH)
         gl.glEnable(gl.GL_LINE_SMOOTH)
@@ -3235,7 +3295,7 @@ class xrtGlWidget(qt.QGLWidget):
         gridColorArray.unbind()
 
     def drawLocalAxes(self, oe, is2ndXtal):
-        def drawArrow(color, arrowArray):
+        def drawArrow(color, arrowArray, yText='hkl'):
             gridColor = np.zeros((len(arrowArray) - 1, 4))
             gridColor[:, 3] = 0.75
             if color == 4:
@@ -3283,7 +3343,7 @@ class xrtGlWidget(qt.QGLWidget):
             elif color == 2:
                 axSymb = 'X'
             elif color == 4:
-                axSymb = 'CP'
+                axSymb = yText
             else:
                 axSymb = ''
 
@@ -3298,16 +3358,30 @@ class xrtGlWidget(qt.QGLWidget):
         zp = np.insert(z*0.8*np.ones_like(phi), 0, [0, z])
 
         crPlaneZ = None
+        yText = None
         if hasattr(oe, 'local_n'):
+            material = None
+            if hasattr(oe, 'material'):
+                material = oe.material
             if is2ndXtal:
                 zExt = '2'
+                if hasattr(oe, 'material2'):
+                    material = oe.material2
             else:
                 zExt = '1' if hasattr(oe, 'local_n1') else ''
+
             local_n = getattr(oe, 'local_n{}'.format(zExt))
             normals = local_n(0, 0)
             if len(normals) > 3:
                 crPlaneZ = np.array(normals[:3])
                 crPlaneZ /= np.linalg.norm(crPlaneZ)
+                if material not in [None, 'None']:
+                    if hasattr(material, 'hkl'):
+                        hklSeparator = ',' if np.any(np.array(
+                                material.hkl) > 10) else ''
+                        yText = '[{0[0]}{1}{0[1]}{1}{0[2]}]'.format(
+                                list(material.hkl), hklSeparator)
+#                        yText = '{}'.format(list(material.hkl))
 
         cb = rsources.Beam(nrays=nFacets+2)
         cb.a[:] = cb.b[:] = cb.c[:] = 0
@@ -3375,31 +3449,20 @@ class xrtGlWidget(qt.QGLWidget):
             crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
             crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
 
-            for iAx in range(3):
-                if iAx == 0:
-                    xVec = crPlaneNormX
-                    yVec = crPlaneNormY
-                    zVec = crPlaneNormZ
-                    color = 4
-                elif iAx == 2:
-                    xVec = crPlaneNormY
-                    yVec = crPlaneNormZ
-                    zVec = crPlaneNormX
-                    color = 5
-                else:
-                    xVec = crPlaneNormZ
-                    yVec = crPlaneNormX
-                    zVec = crPlaneNormY
-                    color = 5
-                dX = xp[:, np.newaxis] * xVec
-                dY = yp[:, np.newaxis] * yVec
-                dZ = zp[:, np.newaxis] * zVec
-                coneCP = self.modelToWorld(np.vstack((
-                    cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
-                    cb.z - self.coordOffset[2])).T) + dX + dY + dZ
-                drawArrow(color, coneCP)
+            xVec = crPlaneNormX
+            yVec = crPlaneNormY
+            zVec = crPlaneNormZ
+            color = 4
 
-    def drawAxes(self):
+            dX = xp[:, np.newaxis] * xVec
+            dY = yp[:, np.newaxis] * yVec
+            dZ = zp[:, np.newaxis] * zVec
+            coneCP = self.modelToWorld(np.vstack((
+                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
+                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
+            drawArrow(color, coneCP, yText)
+
+    def drawDirectionAxes(self):
         arrowSize = 0.05
         axisLen = 0.1
         tLen = (arrowSize + axisLen) * 2

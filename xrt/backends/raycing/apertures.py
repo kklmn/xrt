@@ -175,17 +175,17 @@ class RectangularAperture(object):
             lo.Ep[good] *= propPhase
 
         goodN = lo.state > 0
-        if self.spotLimits:
-            self.spotLimits[0] = min(self.spotLimits[0], lo.x[goodN].min())
-            self.spotLimits[1] = max(self.spotLimits[1], lo.x[goodN].max())
-            self.spotLimits[2] = min(self.spotLimits[2], lo.z[goodN].min())
-            self.spotLimits[3] = max(self.spotLimits[3], lo.z[goodN].max())
-        else:
-            try:
+        try:
+            if self.spotLimits:
+                self.spotLimits[0] = min(self.spotLimits[0], lo.x[goodN].min())
+                self.spotLimits[1] = max(self.spotLimits[1], lo.x[goodN].max())
+                self.spotLimits[2] = min(self.spotLimits[2], lo.z[goodN].min())
+                self.spotLimits[3] = max(self.spotLimits[3], lo.z[goodN].max())
+            else:
                 self.spotLimits = [lo.x[goodN].min(), lo.x[goodN].max(),
                                    lo.z[goodN].min(), lo.z[goodN].max()]
-            except ValueError:
-                self.spotLimits = []
+        except ValueError:
+            self.spotLimits = []
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
