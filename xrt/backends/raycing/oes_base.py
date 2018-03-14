@@ -1239,10 +1239,15 @@ class OE(object):
         else:
             surfPhysX = self.surfPhysX
             surfPhysY = self.surfPhysY
-        maxa = np.max(abs(a[mainPart]))
-        maxb = np.max(abs(b[mainPart]))
-        maxc = np.max(abs(c[mainPart]))
+
+        try:
+            maxa = np.max(abs(a[mainPart]))
+            maxb = np.max(abs(b[mainPart]))
+            maxc = np.max(abs(c[mainPart]))
+        except ValueError:
+            maxa, maxb, maxc = 0, 1, 0
         maxMax = max(maxa, maxb, maxc)
+
         if maxMax == maxa:
             tMin, tMax = self._set_t(x, a, surfPhysX)
         elif maxMax == maxb:
@@ -1978,7 +1983,10 @@ class DCM(OE):
         return self.local_n(x, y)
 
     def local_n2(self, x, y):
-        return self.local_n1(x, y)
+        res = self.local_n1(x, y)
+        if self.alpha:
+            res[1] *= -1
+        return res
 
     def get_orientation(self):
         if self.fixedOffset not in [0, None]:
