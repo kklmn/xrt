@@ -3319,6 +3319,8 @@ class xrtGlWidget(qt.QGLWidget):
             gridColorArray.unbind()
             gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
             gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
             gl.glBegin(gl.GL_LINES)
             colorVec = [0, 0, 0, 0.75]
             if color == 4:
@@ -3349,12 +3351,13 @@ class xrtGlWidget(qt.QGLWidget):
             for symbol in "  {}".format(axSymb):
                 gl.glutBitmapCharacter(
                     gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+            gl.glDisable(gl.GL_LINE_SMOOTH)
 
         z, r, nFacets = 0.25, 0.02, 20
         phi = np.linspace(0, 2*np.pi, nFacets)
-        xp = np.insert(r * np.cos(phi), 0, [0, 0])
-        yp = np.insert(r * np.sin(phi), 0, [0, 0])
-        zp = np.insert(z*0.8*np.ones_like(phi), 0, [0, z])
+        xp = np.insert(r * np.cos(phi), 0, [0., 0.])
+        yp = np.insert(r * np.sin(phi), 0, [0., 0.])
+        zp = np.insert(z*0.8*np.ones_like(phi), 0, [0., z])
 
         crPlaneZ = None
         yText = None
@@ -3385,8 +3388,8 @@ class xrtGlWidget(qt.QGLWidget):
 #                        yText = '{}'.format(list(material.hkl))
 
         cb = rsources.Beam(nrays=nFacets+2)
-        cb.a[:] = cb.b[:] = cb.c[:] = 0
-        cb.a[0] = cb.b[1] = cb.c[2] = 1
+        cb.a[:] = cb.b[:] = cb.c[:] = 0.
+        cb.a[0] = cb.b[1] = cb.c[2] = 1.
 
         if crPlaneZ is not None:  # Adding asymmetric crystal orientation
             nPlaneZ = np.array([0., 0., 1.], dtype=np.float)
@@ -3419,6 +3422,7 @@ class xrtGlWidget(qt.QGLWidget):
         scNormX /= np.linalg.norm(scNormX)
         scNormY /= np.linalg.norm(scNormY)
         scNormZ = np.cross(scNormX, scNormY)
+        scNormZ /= np.linalg.norm(scNormZ)
 
         for iAx in range(3):
             if iAx == 0:
@@ -3450,15 +3454,13 @@ class xrtGlWidget(qt.QGLWidget):
                     scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
             crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
             crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
+            crPlaneNormY /= np.linalg.norm(crPlaneNormY)
 
-            xVec = crPlaneNormX
-            yVec = crPlaneNormY
-            zVec = crPlaneNormZ
             color = 4
 
-            dX = xp[:, np.newaxis] * xVec
-            dY = yp[:, np.newaxis] * yVec
-            dZ = zp[:, np.newaxis] * zVec
+            dX = xp[:, np.newaxis] * crPlaneNormX
+            dY = yp[:, np.newaxis] * crPlaneNormY
+            dZ = zp[:, np.newaxis] * crPlaneNormZ
             coneCP = self.modelToWorld(np.vstack((
                 cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
                 cb.z - self.coordOffset[2])).T) + dX + dY + dZ
