@@ -3369,16 +3369,18 @@ class xrtGlWidget(qt.QGLWidget):
                     material = oe.material2
             else:
                 zExt = '1' if hasattr(oe, 'local_n1') else ''
+            if raycing.is_sequence(material):
+                material = material[oe.curSurface]
 
             local_n = getattr(oe, 'local_n{}'.format(zExt))
             normals = local_n(0, 0)
             if len(normals) > 3:
-                crPlaneZ = np.array(normals[:3])
+                crPlaneZ = np.array(normals[:3], dtype=np.float)
                 crPlaneZ /= np.linalg.norm(crPlaneZ)
                 if material not in [None, 'None']:
                     if hasattr(material, 'hkl'):
                         hklSeparator = ',' if np.any(np.array(
-                                material.hkl) > 10) else ''
+                                material.hkl) >= 10) else ''
                         yText = '[{0[0]}{1}{0[1]}{1}{0[2]}]'.format(
                                 list(material.hkl), hklSeparator)
 #                        yText = '{}'.format(list(material.hkl))
@@ -3388,7 +3390,8 @@ class xrtGlWidget(qt.QGLWidget):
         cb.a[0] = cb.b[1] = cb.c[2] = 1
 
         if crPlaneZ is not None:  # Adding asymmetric crystal orientation
-            acpX = np.cross(np.array([0, 0, 1]), crPlaneZ)
+            nPlaneZ = np.array(normals[3:], dtype=np.float)
+            acpX = np.cross(nPlaneZ, crPlaneZ)
             acpX /= np.linalg.norm(acpX)
             asAlpha = np.arccos(crPlaneZ[2])
             cb.a[3] = acpX[0]
