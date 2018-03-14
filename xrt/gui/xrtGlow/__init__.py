@@ -3390,7 +3390,7 @@ class xrtGlWidget(qt.QGLWidget):
         cb.a[0] = cb.b[1] = cb.c[2] = 1
 
         if crPlaneZ is not None:  # Adding asymmetric crystal orientation
-            nPlaneZ = np.array(normals[3:], dtype=np.float)
+            nPlaneZ = np.array([0., 0., 1.], dtype=np.float)
             acpX = np.cross(nPlaneZ, crPlaneZ)
             acpX /= np.linalg.norm(acpX)
             asAlpha = np.arccos(crPlaneZ[2])
