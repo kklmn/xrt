@@ -2525,7 +2525,6 @@ class xrtGlWidget(qt.QGLWidget):
                 spV = np.array(gl.gluProject(*pointV,
                 model=pModel, proj=pProjection, view=pView))
                 vAlign = 'top' if spV[1] - sp0[1] > 0 else 'bottom'
-                print(sp0, spV)
             hAlign = 'left' if spH[0] - sp0[0] < 0 else 'right'
             return (hAlign, vAlign)
 
