@@ -1500,11 +1500,14 @@ class OE(object):
                     lb.x[good], lb.y[good], lb.z[good])
         else:
             if self.cl_ctx is None:
-                tMax[good], lb.x[good], lb.y[good], lb.z[good], _lost = \
+                res_find = \
                     self.find_intersection(
                         local_z, tMin[good], tMax[good],
                         lb.x[good], lb.y[good], lb.z[good],
                         lb.a[good], lb.b[good], lb.c[good], invertNormal)
+                tMax[good], lb.x[good], lb.y[good], lb.z[good] = res_find[:4]
+                if len(res_find) > 4:
+                    _lost = res_find[4]
             else:
                 tMax[good], lb.x[good], lb.y[good], lb.z[good] = \
                     self.find_intersection_CL(
