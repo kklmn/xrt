@@ -37,6 +37,7 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
        the effect of refractive focusing.
 
 """
+from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 
 import sys
@@ -1359,7 +1360,6 @@ class xrtGlow(qt.QWidget):
             extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
-#            print filename
             image.save(filename)
 
     def saveSceneDialog(self):
@@ -1400,7 +1400,6 @@ class xrtGlow(qt.QWidget):
                       'globalNorm', 'viewPortGL', 'iHSV']:
             params[param] = getattr(self.customGlWidget, param)
         params['size'] = self.geometry()
-        print(self.geometry())
         params['sizeGL'] = self.canvasSplitter.sizes()
         params['colorAxis'] = str(self.colorControls[0].currentText())
         try:
@@ -1795,7 +1794,7 @@ class xrtGlWidget(qt.QGLWidget):
                             tmpMin[tmpCoord] = axMin
                         if axMax > tmpMax[tmpCoord]:
                             tmpMax[tmpCoord] = axMax
-    
+
                     newColorMax = max(np.max(
                         self.getColor(startBeam)[good]),
                         newColorMax)
@@ -2511,23 +2510,22 @@ class xrtGlWidget(qt.QGLWidget):
             pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
             pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
             pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-            sp0 = np.array(gl.gluProject(*point,
-                model=pModel, proj=pProjection, view=pView))
+            sp0 = np.array(gl.gluProject(
+                *point, model=pModel, proj=pProjection, view=pView))
             pointH = np.copy(point)
             pointH[hDim] *= 1.1
-            spH = np.array(gl.gluProject(*pointH,
-                model=pModel, proj=pProjection, view=pView))
+            spH = np.array(gl.gluProject(*pointH, model=pModel,
+                                         proj=pProjection, view=pView))
             pointV = np.copy(point)
             if vDim is None:
                 vAlign = 'middle'
             else:
                 pointV[vDim] *= 1.1
-                spV = np.array(gl.gluProject(*pointV,
-                model=pModel, proj=pProjection, view=pView))
+                spV = np.array(gl.gluProject(*pointV, model=pModel,
+                                             proj=pProjection, view=pView))
                 vAlign = 'top' if spV[1] - sp0[1] > 0 else 'bottom'
             hAlign = 'left' if spH[0] - sp0[0] < 0 else 'right'
             return (hAlign, vAlign)
-
 
         back = np.array([[-self.aPos[0], self.aPos[1], -self.aPos[2]],
                          [-self.aPos[0], self.aPos[1], self.aPos[2]],
@@ -3394,7 +3392,7 @@ class xrtGlWidget(qt.QGLWidget):
         if crPlaneZ is not None:  # Adding asymmetric crystal orientation
             asAlpha = np.arccos(crPlaneZ[2])
             acpX = np.array([0., 0., 1.], dtype=np.float) if asAlpha == 0 else\
-               np.cross(np.array([0., 0., 1.], dtype=np.float), crPlaneZ)
+                np.cross(np.array([0., 0., 1.], dtype=np.float), crPlaneZ)
             acpX /= np.linalg.norm(acpX)
 
             cb.a[3] = acpX[0]
