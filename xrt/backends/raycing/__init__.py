@@ -132,6 +132,8 @@ __module__ = "raycing"
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 
+_DEBUG_ = False
+
 try:  # for Python 3 compatibility:
     unicode = unicode
 except NameError:
@@ -700,16 +702,15 @@ def is_auto_align_required(oe):
     return needAutoAlign
 
 
-class aBeam(object):
-    def __init__(self):
-        for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
-            setattr(self, prop, np.zeros(2))
-
-
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
     direction and height."""
+    class aBeam(object):
+        def __init__(self):
+            for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
+                setattr(self, prop, np.zeros(2))
+
     def __init__(self, azimuth=0., height=0., alignE='auto'):
         u"""
         *azimuth*: float
@@ -844,7 +845,8 @@ class BeamLine(object):
                         alignE = float(oe._pitch[-1])
                     autoPitch = True
                 except:
-                    raise("Automatic Bragg angle calculation failed.")
+                    print("Automatic Bragg angle calculation failed.")
+                    raise
 
             if hasattr(oe, '_bragg'):
                 try:
@@ -852,7 +854,8 @@ class BeamLine(object):
                         alignE = float(oe._bragg[-1])
                     autoBragg = True
                 except:
-                    raise("Automatic Bragg angle calculation failed.")
+                    print("Automatic Bragg angle calculation failed.")
+                    raise
 
             if any(autoCenter) or autoPitch or autoBragg:
                 good = (beam.state == 1) | (beam.state == 2)
@@ -861,7 +864,7 @@ class BeamLine(object):
     #                beam.E[0] = alignE
                 intensity = beam.Jss[good] + beam.Jpp[good]
                 totalI = np.sum(intensity)
-                inBeam = aBeam()
+                inBeam = self.aBeam()
                 for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
                     field = getattr(beam, fieldName)
                     if totalI == 0:
@@ -939,7 +942,10 @@ class BeamLine(object):
                         oe.pitch = targetPitch
                         print(oe.name, "pitch:", oe.pitch)
                 except:
-                    raise
+                    if _DEBUG_:
+                        raise
+                    else:
+                        pass
 
     def propagate_flow(self, startFrom=0, signal=None):
         if self.oesDict is None or self.flow is None:
@@ -974,11 +980,14 @@ class BeamLine(object):
                         [signal, iseg+1, totalStages, signalStr]
             except:
                 pass
+
             try:
                 outBeams = segment[1](segOE, **fArgs)
             except:
-                raise
-                continue
+                if _DEBUG_:
+                    raise
+                else:
+                    continue
 
             if isinstance(outBeams, tuple):
                 for outBeam, beamName in zip(list(outBeams),
@@ -1074,7 +1083,10 @@ class BeamLine(object):
                         signal.emit((float(iseg+1) / float(totalStages),
                                      signalStr))
                 except:
-                    pass
+                    if _DEBUG_:
+                        raise
+                    else:
+                        pass
 
                 try:
                     methStr = str(segment[1])
@@ -1128,7 +1140,10 @@ class BeamLine(object):
                         rayPath.append([outputBeamMatch[tmpBeamName],
                                         tmpBeamName, oeStr, gBeamName])
                 except:
-                    continue
+                    if _DEBUG_:
+                        raise
+                    else:
+                        continue
 
         totalBeams = len(beamDict)
         for itBeam, tBeam in enumerate(beamDict.values()):
@@ -1137,6 +1152,10 @@ class BeamLine(object):
                     signalStr = "Calculating trajectory, %p% done."
                     signal.emit((float(itBeam+1)/float(totalBeams), signalStr))
                 except:
-                    pass
-            calc_weighted_center(tBeam)
+                    if _DEBUG_:
+                        raise
+                    else:
+                        pass
+            if tBeam is not None:
+                calc_weighted_center(tBeam)
         return [rayPath, beamDict, oesDict]
