@@ -37,6 +37,8 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "25 Jun 2017"
 __version__ = "1.3"
 
+_DEBUG_ = False
+
 import os
 import sys
 import textwrap
@@ -953,7 +955,10 @@ class XrtQook(qt.QWidget):
                 showVal = showVal.strip('"') if\
                     (arg == 'bl' and showVal is not None) else showVal
             except:  # analysis:ignore
-                pass
+                if _DEBUG_:
+                    raise
+                else:
+                    pass
             argSpecStr += '{0}={1}, '.format(arg, showVal)
         argSpecStr = argSpecStr.rstrip(', ') + ')'
         objP = self.getVal(obj)
@@ -1513,7 +1518,10 @@ class XrtQook(qt.QWidget):
             try:
                 self.beamLine.beamsDict[beamName] = None
             except KeyError:
-                pass
+                if _DEBUG_:
+                    raise
+                else:
+                    pass
 
         self.showDoc(methodItem.index())
         self.addCombo(self.tree, methodItem)
@@ -1704,11 +1712,20 @@ class XrtQook(qt.QWidget):
         item.model().blockSignals(True)
         self.flattenElement(view, item)
         item.model().blockSignals(False)
+        tmpGlowUpdate = False
+        if self.isGlowAutoUpdate:
+            tmpGlowUpdate = True
+            self.isGlowAutoUpdate = False
         newItem = parent.takeRow(oldRowNumber)
         parent.insertRow(oldRowNumber + mvDir, newItem)
         self.addCombo(view, newItem[0])
         view.setExpanded(newItem[0].index(), statusExpanded)
         self.updateBeamline(newItem[0], newOrder=True)
+        if tmpGlowUpdate:
+            self.isGlowAutoUpdate = True
+            startFrom = self.nameToFlowPos(newItem[0].text())
+            if startFrom is not None:
+                self.blPropagateFlow(startFrom)
 
     def copyChildren(self, itemTo, itemFrom):
         if itemFrom.hasChildren():
@@ -1760,7 +1777,10 @@ class XrtQook(qt.QWidget):
                                 iWidget.currentText())]
                         except:
                             print("Failed to delete", iWidget.currentText())
-                            raise
+                            if _DEBUG_:
+                                raise
+                            else:
+                                pass
                         beamInModel = self.beamModel.findItems(
                             iWidget.currentText())
                         if len(beamInModel) > 0:
@@ -1985,8 +2005,10 @@ class XrtQook(qt.QWidget):
                             "Initializing optical elements... %p%")
                         self.updateBeamline(item=None)
                     except:  # analysis:ignore
-                        raise
-                        pass
+                        if _DEBUG_:
+                            raise
+                        else:
+                            pass
                     self.progressBar.setValue(100)
                     self.progressBar.setFormat('Loaded layout from {}'.format(
                             os.path.basename(str(self.layoutFileName))))
@@ -2720,7 +2742,8 @@ class XrtQook(qt.QWidget):
             else:  # Beam renamed
                 bList = []
                 for ib in range(self.rootBeamItem.rowCount()):
-                    bList.append(self.rootBeamItem.child(ib, 0))
+                    bList.append(self.rootBeamItem.child(ib, 0).text())
+
                 for key, value in self.beamLine.beamsDict.items():
                     if key not in bList:
                         del self.beamLine.beamsDict[key]
@@ -2852,7 +2875,10 @@ class XrtQook(qt.QWidget):
                     retVal = isegment
                     break
         except:  # analysis:ignore
-            pass
+            if _DEBUG_:
+                raise
+            else:
+                pass
         return retVal
 
     def nameToBLPos(self, elname):
@@ -2969,7 +2995,10 @@ class XrtQook(qt.QWidget):
                                                         ).setFilterRegExp(
                                                             regexp)
                                                 except:  # analysis:ignore
-                                                    continue
+                                                    if _DEBUG_:
+                                                        raise
+                                                    else:
+                                                        continue
                                 elif str(methItem.text()) == 'output':
                                     for iBeam in range(methItem.rowCount()):
                                         bItem = methItem.child(iBeam, 0)
@@ -2987,7 +3016,10 @@ class XrtQook(qt.QWidget):
                                                         ).setFilterRegExp(
                                                             regexp)
                                                 except:  # analysis:ignore
-                                                    continue
+                                                    if _DEBUG_:
+                                                        raise
+                                                    else:
+                                                        continue
         self.rootBLItem.model().blockSignals(True)
         self.flattenElement(self.tree,
                             self.rootBLItem if item is None else item)
@@ -3084,6 +3116,7 @@ class XrtQook(qt.QWidget):
                             print("Element", item.text(),
                                   "was removed")
                             startElement = str(item.text())
+                            startFrom = self.nameToFlowPos(startElement)
                             self.beamLine.flow =\
                                 buildFlow(startFrom=startElement)
                         else:
@@ -3091,7 +3124,8 @@ class XrtQook(qt.QWidget):
                                 if self.beamLine.flow[iel][0] == startElement:
                                     self.beamLine.flow[iel][0] =\
                                         str(item.text())
-                        startFrom = self.nameToFlowPos(startElement)
+                        if not wasDeleted:
+                            startFrom = self.nameToFlowPos(startElement)
                 elif pText in ['properties'] and iCol > 0:
                     elItem = item.parent().parent()
                     elNameStr = str(elItem.text())
@@ -3203,8 +3237,10 @@ class XrtQook(qt.QWidget):
                 self.blPropagateFlow(startFrom)
 
     def blPropagateFlow(self, startFrom):
+        print('Propagating the flow', startFrom)
         objThread = qt.QThread(self)
         obj = PropagationConnect()
+        obj.emergencyRetrace.connect(partial(self.reTrace, objThread))
         obj.finished.connect(objThread.quit)
         obj.rayPathReady.connect(self.blRunGlow)
         obj.propagationProceed.connect(self.updateProgressBar)
@@ -3213,6 +3249,17 @@ class XrtQook(qt.QWidget):
             obj.propagateFlowThread, self.beamLine, startFrom)
         objThread.started.connect(propagateFlowInThread)
         objThread.start()
+
+    def reTrace(self, objThread):
+        print('Beam structure integrity corrupted. Retracing from the Source.')
+        try:
+            objThread.quit()
+        except:
+            if _DEBUG_:
+                raise
+            else:
+                pass
+        self.populateBeamline(item=None)
 
     def populateBeamline(self, item=None):
         self.blUpdateLatchOpen = False
@@ -3225,7 +3272,10 @@ class XrtQook(qt.QWidget):
             self.updateBeamlineMaterials(item=None)
             self.updateBeamline(item=None)
         except:  # analysis:ignore
-            pass
+            if _DEBUG_:
+                raise
+            else:
+                pass
         self.blUpdateLatchOpen = True
 
     def toggleGlow(self, status):
@@ -3736,17 +3786,26 @@ class PropagationConnect(qt.QObject):
     propagationProceed = qt.pyqtSignal(tuple)
     rayPathReady = qt.pyqtSignal(list)
     finished = qt.pyqtSignal()
+    emergencyRetrace = qt.pyqtSignal()
 
     def propagateFlowThread(self, blRef, startFrom):
-        self.propagationProceed.emit((0.5, "Starting propagation"))
-        blRef.propagate_flow(
-            startFrom=startFrom,
-            signal=self.propagationProceed)
-        self.propagationProceed.emit((1, "Preparing data for Glow"))
-        rayPath = blRef.export_to_glow(signal=self.propagationProceed)
-        self.propagationProceed.emit((1, "Done"))
-        self.rayPathReady.emit(rayPath)
-        self.finished.emit()
+        try:
+            self.propagationProceed.emit((0.5, "Starting propagation"))
+            blRef.propagate_flow(
+                startFrom=startFrom,
+                signal=self.propagationProceed)
+            self.propagationProceed.emit((1, "Preparing data for Glow"))
+            rayPath = blRef.export_to_glow(signal=self.propagationProceed)
+            self.propagationProceed.emit((1, "Done"))
+            self.rayPathReady.emit(rayPath)
+            self.finished.emit()
+        except:
+            if _DEBUG_:
+                print('Propagation impossible', startFrom)
+                raise
+            else:
+                if startFrom != 0:
+                    self.emergencyRetrace.emit()
 
 
 if __name__ == '__main__':
