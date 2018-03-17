@@ -1,4 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import os
 import time
 import numpy as np
@@ -15,7 +16,7 @@ try:
     isOpenCL = True
 except ImportError:
     isOpenCL = False
-
+    
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "06 Oct 2017"
 
@@ -774,7 +775,7 @@ class OE(object):
             surfOptY = self.surfOptY
 
         locState = np.ones(x.size, dtype=np.int)
-        if isinstance(self.shape, str):
+        if isinstance(self.shape, raycing.basestring):
             if self.shape.startswith('re'):
                 if surfOptX is not None:
                     locState[((surfPhysX[0] <= x) & (x < surfOptX[0])) |
