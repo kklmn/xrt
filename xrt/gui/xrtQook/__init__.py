@@ -3237,7 +3237,6 @@ class XrtQook(qt.QWidget):
                 self.blPropagateFlow(startFrom)
 
     def blPropagateFlow(self, startFrom):
-        print('Propagating the flow', startFrom)
         objThread = qt.QThread(self)
         obj = PropagationConnect()
         obj.emergencyRetrace.connect(partial(self.reTrace, objThread))
