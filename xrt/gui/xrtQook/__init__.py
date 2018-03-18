@@ -1859,6 +1859,9 @@ class XrtQook(qt.QWidget):
             self.layoutFileName = tmpName
 
     def exportModel(self, item):
+        def despace(pStr):
+            return re.sub(' ', '_', pStr)
+
         flatModel = False
         if item.model() in [self.beamModel]:
             flatModel = True
@@ -1869,7 +1872,8 @@ class XrtQook(qt.QWidget):
             else:
                 itemType = "prop"
             self.confText += '{0}<{1} type=\"{2}\">\n'.format(
-                self.prefixtab, str(item.text()).strip('()'), itemType)
+                self.prefixtab, despace(str(item.text()).strip('()')),
+                itemType)
             self.ntab += 1
             self.prefixtab = self.ntab * '\t'
             for ii in range(item.rowCount()):
@@ -1886,18 +1890,18 @@ class XrtQook(qt.QWidget):
                             self.confText +=\
                                 '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
                                     self.prefixtab,
-                                    child0.text(),
+                                    despace(str(child0.text())),
                                     child1.text(),
                                     itemType)
                 elif flatModel:
                         self.confText +=\
                             '{0}<{1} type=\"flat\"></{1}>\n'.format(
-                                self.prefixtab, child0.text())
+                                self.prefixtab, despace(str(child0.text())))
 
             self.ntab -= 1
             self.prefixtab = self.ntab * '\t'
             self.confText += '{0}</{1}>\n'.format(
-                self.prefixtab, str(item.text()).strip('()'))
+                self.prefixtab, despace(str(item.text()).strip('()')))
         else:
             pass
 
