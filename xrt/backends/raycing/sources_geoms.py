@@ -194,13 +194,16 @@ class GeometricSource(object):
 
         """
         self.bl = bl
-        bl.sources.append(self)
-        self.ordinalNum = len(bl.sources)
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+        if bl is not None:
+            if self not in bl.sources:
+                bl.sources.append(self)
+                self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
+#        if name in [None, 'None', '']:
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
+#        else:
+#            self.name = name
 
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
@@ -399,13 +402,16 @@ class GaussianBeam(object):
 
         """
         self.bl = bl
-        bl.sources.append(self)
-        self.ordinalNum = len(bl.sources)
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+        if bl is not None:
+            if self not in bl.sources:
+                bl.sources.append(self)
+                self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
+#        if name in [None, 'None', '']:
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
+#        else:
+#            self.name = name
 
         self.center = center  # 3D point in global system
         self.w0 = w0
@@ -577,14 +583,17 @@ class MeshSource(object):
         """
         self.bl = bl
         if autoAppendToBL:
-            bl.sources.append(self)
-            self.ordinalNum = len(bl.sources)
+            if bl is not None:
+                if self not in bl.sources:
+                    bl.sources.append(self)
+                    self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
         self.withCentralRay = withCentralRay
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+#        if name in [None, 'None', '']:
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
+#        else:
+#            self.name = name
 
         self.center = center  # 3D point in global system
         self.minxprime = raycing.auto_units_angle(minxprime)
@@ -698,14 +707,17 @@ class CollimatedMeshSource(object):
             withCentralRay=True, autoAppendToBL=False):
         self.bl = bl
         if autoAppendToBL:
-            bl.sources.append(self)
-            self.ordinalNum = len(bl.sources)
+            if bl is not None:
+                if self not in bl.sources:
+                    bl.sources.append(self)
+                    self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
         self.withCentralRay = withCentralRay
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+#        if name in [None, 'None', '']:
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
+#        else:
+#            self.name = name
 
         self.center = center  # 3D point in global system
         self.dx = dx

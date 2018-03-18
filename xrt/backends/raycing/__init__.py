@@ -702,6 +702,14 @@ def is_auto_align_required(oe):
     return needAutoAlign
 
 
+def set_name(elementClass, name):
+    if name not in [None, 'None', '']:
+        elementClass.name = name
+    elif not hasattr(elementClass, 'name'):
+        elementClass.name = '{0}{1}'.format(elementClass.__class__.__name__,
+                                            elementClass.ordinalNum)
+
+
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line

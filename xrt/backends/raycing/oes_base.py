@@ -17,7 +17,7 @@ try:
     isOpenCL = True
 except ImportError:
     isOpenCL = False
-    
+
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "06 Oct 2017"
 
@@ -233,14 +233,16 @@ class OE(object):
         """
         self.bl = bl
         if bl is not None:
-            bl.oes.append(self)
-            self.ordinalNum = len(bl.oes)
-        self.lostNum = -self.ordinalNum
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+            if self not in bl.oes:  # First init
+                bl.oes.append(self)
+                self.ordinalNum = len(bl.oes)
+                self.lostNum = -self.ordinalNum
+        raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

@@ -125,13 +125,15 @@ class BendingMagnet(object):
 
         self.bl = bl
         if bl is not None:
-            bl.sources.append(self)
-            self.ordinalNum = len(bl.sources)
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+            if self not in bl.sources:
+                bl.sources.append(self)
+                self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
+#        if name in [None, 'None', '']:
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
+#        else:
+#            self.name = name
 
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
@@ -840,13 +842,15 @@ class Undulator(object):
         """
         self.bl = bl
         if bl is not None:
-            bl.sources.append(self)
-            self.ordinalNum = len(bl.sources)
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+            if self not in bl.sources:
+                bl.sources.append(self)
+                self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
+#        if name in [None, 'None', '']:
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
+#        else:
+#            self.name = name
 
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)

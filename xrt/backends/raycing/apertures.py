@@ -65,14 +65,16 @@ class RectangularAperture(object):
         """
         self.bl = bl
         if bl is not None:
-            bl.slits.append(self)
-            self.ordinalNum = len(bl.slits)
-            self.lostNum = -self.ordinalNum - 1000
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+            if self not in bl.slits:
+                bl.slits.append(self)
+                self.ordinalNum = len(bl.slits)
+                self.lostNum = -self.ordinalNum - 1000
+        raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -326,14 +328,17 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
         """
         self.bl = bl
-        bl.slits.append(self)
-        self.ordinalNum = len(bl.slits)
-        self.lostNum = -self.ordinalNum - 1000
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+        if bl is not None:
+            if self not in bl.slits:
+                bl.slits.append(self)
+                self.ordinalNum = len(bl.slits)
+                self.lostNum = -self.ordinalNum - 1000
+        raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -411,14 +416,16 @@ class RoundAperture(object):
         """
         self.bl = bl
         if bl is not None:
-            bl.slits.append(self)
-            self.ordinalNum = len(bl.slits)
-            self.lostNum = -self.ordinalNum - 1000
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+            if self not in bl.slits:
+                bl.slits.append(self)
+                self.ordinalNum = len(bl.slits)
+                self.lostNum = -self.ordinalNum - 1000
+        raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

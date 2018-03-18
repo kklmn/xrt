@@ -62,15 +62,17 @@ class Screen(object):
         """
         self.bl = bl
         if bl is not None:
-            bl.screens.append(self)
-            self.ordinalNum = len(bl.screens)
-            self.lostNum = -self.ordinalNum - 2000
+            if self not in bl.screens:
+                bl.screens.append(self)
+                self.ordinalNum = len(bl.screens)
+                self.lostNum = -self.ordinalNum - 2000
         self.set_orientation(x, z)
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+        raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -308,15 +310,17 @@ class HemisphericScreen(Screen):
         """
         self.bl = bl
         if bl is not None:
-            bl.screens.append(self)
-            self.ordinalNum = len(bl.screens)
-            self.lostNum = -self.ordinalNum - 2000
+            if self not in bl.screens:
+                bl.screens.append(self)
+                self.ordinalNum = len(bl.screens)
+                self.lostNum = -self.ordinalNum - 2000
         self.set_orientation(x, z)
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+        raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
