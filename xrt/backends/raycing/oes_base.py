@@ -4,6 +4,7 @@ import os
 import time
 import numpy as np
 import inspect
+import copy
 
 import matplotlib as mpl
 from .. import raycing
@@ -249,13 +250,13 @@ class OE(object):
 
         self.center = center
         if any([x == 'auto' for x in self.center]):
-            self._center = self.center
+            self._center = copy.copy(self.center)
         if (bl is not None) and self.shouldCheckCenter:
             self.checkCenter()
 
         self.pitch = raycing.auto_units_angle(pitch)
         if isinstance(self.pitch, (raycing.basestring, list, tuple)):
-            self._pitch = self.pitch
+            self._pitch = copy.copy(self.pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
         self.rotationSequence = rotationSequence
@@ -1925,7 +1926,7 @@ class DCM(OE):
     def __pop_kwargs(self, **kwargs):
         self.bragg = raycing.auto_units_angle(kwargs.pop('bragg', 0))
         if isinstance(self.bragg, (raycing.basestring, list, tuple)):
-            self._bragg = self.bragg
+            self._bragg = copy.copy(self.bragg)
         self.cryst1roll = raycing.auto_units_angle(kwargs.pop('cryst1roll', 0))
         self.cryst2roll = raycing.auto_units_angle(kwargs.pop('cryst2roll', 0))
         self.cryst2pitch = raycing.auto_units_angle(

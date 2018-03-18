@@ -17,6 +17,7 @@ size that lets the whole beam through.
 
 import numpy as np
 import inspect
+import copy
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
@@ -79,7 +80,7 @@ class RectangularAperture(object):
 
         self.center = center
         if any([x == 'auto' for x in self.center]):
-            self._center = self.center
+            self._center = copy.copy(self.center)
         if isinstance(kind, str):
             self.kind = (kind,)
             self.opening = [opening, ]
@@ -340,7 +341,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
         self.center = center
         if any([x == 'auto' for x in self.center]):
-            self._center = self.center
+            self._center = copy.copy(self.center)
         self.zActuator = center[2]
         self.z0 = center[2]
         self.apertures = apertures
@@ -425,7 +426,7 @@ class RoundAperture(object):
 
         self.center = center
         if any([x == 'auto' for x in self.center]):
-            self._center = self.center
+            self._center = copy.copy(self.center)
         self.r = r
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:

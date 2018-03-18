@@ -3079,6 +3079,7 @@ class XrtQook(qt.QWidget):
                                         if elNameStr != oesKeys[counter] and\
                                                 startElement is None:
                                             startElement = elNameStr
+                                            newElName = elNameStr
                                     else:
                                         newDict[elNameStr] = oesValues[counter]
                                         if elNameStr != oesKeys[counter]:
@@ -3096,6 +3097,7 @@ class XrtQook(qt.QWidget):
                                                     startElement, elNameStr))
                                             print("Element", startElement,
                                                   "renamed to", elNameStr)
+                                            newElName = elNameStr
                                     counter += 1
                             self.beamLine.oesDict = newDict
                         if newOrder:
@@ -3125,7 +3127,7 @@ class XrtQook(qt.QWidget):
                                     self.beamLine.flow[iel][0] =\
                                         str(item.text())
                         if not wasDeleted:
-                            startFrom = self.nameToFlowPos(startElement)
+                            startFrom = self.nameToFlowPos(newElName)
                 elif pText in ['properties'] and iCol > 0:
                     elItem = item.parent().parent()
                     elNameStr = str(elItem.text())

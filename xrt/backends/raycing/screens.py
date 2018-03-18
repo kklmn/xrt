@@ -19,6 +19,7 @@ __all__ = 'Screen', 'HemisphericScreen'
 import numpy as np
 from .. import raycing
 import inspect
+import copy
 
 from . import sources as rs
 from .physconsts import CHBAR
@@ -77,7 +78,7 @@ class Screen(object):
 
         self.center = center
         if any([coord == 'auto' for coord in self.center]):
-            self._center = self.center
+            self._center = copy.copy(self.center)
         self.compressX = compressX
         self.compressZ = compressZ
 
@@ -323,7 +324,7 @@ class HemisphericScreen(Screen):
 
         self.center = center
         if any([coord == 'auto' for coord in self.center]):
-            self._center = self.center
+            self._center = copy.copy(self.center)
         self.R = R
         self.phiOffset = phiOffset
         self.thetaOffset = thetaOffset
