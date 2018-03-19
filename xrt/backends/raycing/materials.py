@@ -1016,6 +1016,24 @@ class Crystal(Material):
             polFactor = np.cos(2. * theta0)
         return 2 * (np.sqrt((polFactor**2 * chih*chih_ / b)) / sin2theta).real
 
+    def get_epsilon_h(self, E, b=1., polarization='s'):
+        r"""Calculates the relative spectral width :math:`epsilon_h` as
+        (Shvyd'ko)
+
+        .. math::
+
+            \epsilon_h = epsilon_h^{(s)}/\sqrt{|b|},
+            \epsilon_h^{(s)}/\sqrt{|b|} = \frac{4r_e d_h^2}{\pi V}|CF_h|.
+
+        """
+        F0, Fhkl, Fhkl_, _, _, _ = self.get_F_chi(E, 0.5/self.d)
+        if polarization == 's':
+            polFactor = 1.
+        else:
+            theta0 = self.get_Bragg_angle(E)
+            polFactor = np.abs(np.cos(2. * theta0))
+        return 4 * self.chiToFd2 * polFactor * np.abs(Fhkl) / abs(b)**0.5
+
     def get_extinction_depth(self, E, polarization='s'):  # in microns
         theta0 = self.get_Bragg_angle(E)
         dw = self.get_Darwin_width(E, 1., polarization)
@@ -1053,7 +1071,7 @@ class Crystal(Material):
             thickness = self.t * 1e7 if self.t is not None else 0
             k = PI2 / waveLength
             HH = PI2 / self.d
-            F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, HH/4./PI)
+            F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/self.d)
             gamma_0h = beamInDotNormal * beamOutDotNormal
 
             if thickness == 0:
@@ -1373,12 +1391,12 @@ class Crystal(Material):
         HH = PI2 / self.d
         k0H = abs(beamInDotHNormal) * HH * k
         k02 = k**2
-        H2 = (PI2 / self.d)**2
+        H2 = HH**2
         kHs0 = kHs == 0
         kHs[kHs0] = 1
         b = k0s / kHs
         b[kHs0] = -1
-        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, HH/4./PI)
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/self.d)
         thetaB = self.get_Bragg_angle(E)
         alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
 
