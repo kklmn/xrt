@@ -35,9 +35,6 @@ User's Guide
    speed.rst
    license.rst
 
-.. addverify::
-
-
 .. Indices and tables
    ------------------
    * :ref:`genindex`
