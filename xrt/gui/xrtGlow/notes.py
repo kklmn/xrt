@@ -13,8 +13,18 @@ Notes on using xrtGlow
   again after any change in xrtQook. To really close xrtGlow, deactivate the
   button.
 
+- You can use the CTRL-F1 shortcut to open xrtGlow, F4 to dock/undock it
+  into/from the xrtQook window.
+
 - The Navigation panel of xrtGlow has several columns. The last columns may be
   hidden in the initial view. You can access them by enlarging the window.
+
+- The element will appear on the Navigation panel only if interacts with the
+  beam, i.e. has an assigned method returning Beams.
+
+- Export to Image is available under the context menu -> File. You can save and
+  load the scene settings (camera position, model orientation, rays opacity and
+  so on) as well.
 
 - Load the example `.../examples/withRaycing/_QookBeamlines/lens3.xml` and
   follow the instructions in Description tab in order to understand the
@@ -81,6 +91,15 @@ Notes on using xrtGlow
   of rays in the source if necessary.
 
 .. imagezoom:: _images/xrtGlow3.png
+
+- If you have any doubts regarding the orientation of the optical element or
+  trying to identify the directions, you can plot local coordinate axes by
+  checking the corresponding option on the Scene panel or in the context menu.
+  Make sure that the surface rendering is enabled for this element on the
+  Navigation panel. Orientation of the diffraction planes will be represented
+  by the yellow arrow in case of the crystals with asymmetric cut.
+
+.. imagezoom:: _images/xrtGlow4.png
 
 
 """
