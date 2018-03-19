@@ -166,7 +166,7 @@ kwargs = dict(
     filamentBeam=filamentBeam)
 xlimits = [-xPrimeMax*R0*1e-3, xPrimeMax*R0*1e-3]
 zlimits = [-zPrimeMax*R0*1e-3, zPrimeMax*R0*1e-3]
-kwargs['customField'] = ['B-Hamed.xlsx', dict(sheetname=sheet, skiprows=0)]
+kwargs['customField'] = ['B-Hamed.xlsx', dict(sheet_name=sheet, skiprows=0)]
 #kwargs['customField'] = 10.
 
 if False:  # zero source size:

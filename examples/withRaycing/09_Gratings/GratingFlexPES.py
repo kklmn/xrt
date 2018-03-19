@@ -303,89 +303,89 @@ def define_plots(beamLine):
     plot = xrtp.XYCPlot(
         'beamFSMPG', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-4, 4]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[fixedExit-4, fixedExit+4]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[-4, 4]),
         title='05-FSMPG')
     plots.append(plot)
 
     plot = xrtp.XYCPlot(
         'beamFSMPG', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-4, 4]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[fixedExit-4, fixedExit+4]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[-4, 4]),
         caxis=xrtp.XYCAxis('path', 'mm'),
         title='05-FSMPG-P')
     plot.caxis.offset = 16000
     plots.append(plot)
 
-#    plot = xrtp.XYCPlot(
-#        'beamM3local', (1,), aspect='auto',
-#        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-4, 4]),
-#        yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=[-150, 150]),
-#        title='06-M3local')
-#    plots.append(plot)
-#
-#    plot = xrtp.XYCPlot(
-#        'beamFSM3hf', (1,),
-#        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.5, 0.5]),
-#        yaxis=xrtp.XYCAxis(r'$z$', 'mm',
-#                           limits=[fixedExit-0.5, fixedExit+0.5]),
-#        title='07-FSM3hf')
-#    plots.append(plot)
-#
-#    for is1, (s1, op) in enumerate(zip(beamLine.s1s, s1openings)):
-#        sti = '{0:02d}'.format(is1)
-#
-#        plot = xrtp.XYCPlot(
-#            'beamFSM3vf', (1,),
-#            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.5, 0.5]),
-#            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
-#                               limits=[fixedExit-0.5, fixedExit+0.5]),
-#            title='08-FSM3vfOp'+sti, oe=s1)
-#        plots.append(plot)
-#
-#        plot = xrtp.XYCPlot(
-#            'beamFSM3vsOp'+sti, (1,),
-#            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.5, 0.5]),
-#            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
-#                               limits=[fixedExit-0.5, fixedExit+0.5]),
-#            title='09-FSM3vsOp'+sti)
-#        plots.append(plot)
-#        plotsMono.append(plot)
-#
-#        plot = xrtp.XYCPlot(
-#            'beamM4localOp'+sti, (1,), aspect='auto',
-#            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-4, 4]),
-#            yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=[-150, 150]),
-#            title='10-M4localOp'+sti)
-#        plots.append(plot)
-#        plotsMono.append(plot)
-#
-#        plot = xrtp.XYCPlot(
-#            'beamFSMExp1Op'+sti, (1,),
-#            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-1, 1]),
-#            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
-#                               limits=[fixedExit-1, fixedExit+1]),
-#            title='11-FSMExp1Op'+sti)
-#        plot.xaxis.fwhmFormatStr = '%.3f'
-#        plot.yaxis.fwhmFormatStr = '%.3f'
-#        plots.append(plot)
-#        plotsMono.append(plot)
-#
-#        plot = xrtp.XYCPlot(
-#            'beamFSMExp2Op'+sti, (1,),
-#            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.25, 0.25]),
-#            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
-#                               limits=[fixedExit-0.25, fixedExit+0.25]),
-#            caxis=xrtp.XYCAxis('energy', 'eV', bins=256, ppb=1),
-#            title='12-FSMExp2Op'+sti)
-#        plot.xaxis.fwhmFormatStr = '%.3f'
-#        plot.yaxis.fwhmFormatStr = '%.3f'
-#        if len(s1openings) > 1:
-#            plot.textPanel = plot.fig.text(
-#                0.8, 0.8, u'slit opening\n{0:.0f} µm'.format(op*1e3),
-#                transform=plot.fig.transFigure, size=14, color='r', ha='left')
-#        plots.append(plot)
-#        plotsMono.append(plot)
-#        plotsFocus.append(plot)
+    plot = xrtp.XYCPlot(
+        'beamM3local', (1,), aspect='auto',
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-4, 4]),
+        yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=[-150, 150]),
+        title='06-M3local')
+    plots.append(plot)
+
+    plot = xrtp.XYCPlot(
+        'beamFSM3hf', (1,),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.5, 0.5]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+                           limits=[-0.5, 0.5]),
+        title='07-FSM3hf')
+    plots.append(plot)
+
+    for is1, (s1, op) in enumerate(zip(beamLine.s1s, s1openings)):
+        sti = '{0:02d}'.format(is1)
+
+        plot = xrtp.XYCPlot(
+            'beamFSM3vf', (1,),
+            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.5, 0.5]),
+            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+                               limits=[-0.5, 0.5]),
+            title='08-FSM3vfOp'+sti, oe=s1)
+        plots.append(plot)
+
+        plot = xrtp.XYCPlot(
+            'beamFSM3vsOp'+sti, (1,),
+            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.5, 0.5]),
+            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+                               limits=[-0.5, 0.5]),
+            title='09-FSM3vsOp'+sti)
+        plots.append(plot)
+        plotsMono.append(plot)
+
+        plot = xrtp.XYCPlot(
+            'beamM4localOp'+sti, (1,), aspect='auto',
+            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-4, 4]),
+            yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=[-150, 150]),
+            title='10-M4localOp'+sti)
+        plots.append(plot)
+        plotsMono.append(plot)
+
+        plot = xrtp.XYCPlot(
+            'beamFSMExp1Op'+sti, (1,),
+            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-1, 1]),
+            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+                               limits=[-1, 1]),
+            title='11-FSMExp1Op'+sti)
+        plot.xaxis.fwhmFormatStr = '%.3f'
+        plot.yaxis.fwhmFormatStr = '%.3f'
+        plots.append(plot)
+        plotsMono.append(plot)
+
+        plot = xrtp.XYCPlot(
+            'beamFSMExp2Op'+sti, (1,),
+            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.25, 0.25]),
+            yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+                               limits=[-0.25, 0.25]),
+            caxis=xrtp.XYCAxis('energy', 'eV', bins=256, ppb=1),
+            title='12-FSMExp2Op'+sti)
+        plot.xaxis.fwhmFormatStr = '%.3f'
+        plot.yaxis.fwhmFormatStr = '%.3f'
+        if len(s1openings) > 1:
+            plot.textPanel = plot.fig.text(
+                0.8, 0.8, u'slit opening\n{0:.0f} µm'.format(op*1e3),
+                transform=plot.fig.transFigure, size=14, color='r', ha='left')
+        plots.append(plot)
+        plotsMono.append(plot)
+        plotsFocus.append(plot)
 
     for plot in plots:
         if "energy" in plot.caxis.label:

@@ -69,6 +69,8 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
+showIn3D = False
+
 parabolaParam = 1.  # mm
 zmax = 1.  # mm
 E0 = 9000.  # eV
@@ -127,7 +129,8 @@ def run_process(beamLine):
     for i, dq in enumerate(beamLine.fsm2.dqs):
         beamLine.fsm2.center[1] = p + q + dq
         outDict['beamFSM2_{0:02d}'.format(i)] = beamLine.fsm2.expose(lglobal)
-    beamLine.prepare_flow()
+    if showIn3D:
+        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process
@@ -309,14 +312,15 @@ def plot_generator(plots, plotsFSM2, beamLine):
 
 def main():
     beamLine = build_beamline()
-    beamLine.glow()
-#    plots, plotsFSM2 = define_plots(beamLine)
-#    xrtr.run_ray_tracing(
-#        plots, repeats=16, generator=plot_generator,
-#        generatorArgs=[plots, plotsFSM2, beamLine],
-#        updateEvery=1, beamLine=beamLine, processes='half')
+    if showIn3D:
+        beamLine.glow(scale=1e3, centerAt='CRL_Exit')
+        return
+    plots, plotsFSM2 = define_plots(beamLine)
+    xrtr.run_ray_tracing(
+        plots, repeats=16, generator=plot_generator,
+        generatorArgs=[plots, plotsFSM2, beamLine],
+        updateEvery=1, beamLine=beamLine, processes='half')
 
-#    beamLine.glow()
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

@@ -80,6 +80,7 @@ def afterScript(plots):
     with open(pickleName, 'wb') as f:
         pickle.dump((flux, plot.caxis.binEdges, plot.caxis.total1D), f,
                     protocol=2)
+    plot_compare()
 
 
 def main():
@@ -92,7 +93,7 @@ def main():
                              afterScript=afterScript, afterScriptArgs=[plots])
 
 
-def plot():
+def plot_compare():
     fig1 = plt.figure(1, figsize=(7, 5))
     ax = plt.subplot(111, label='1')
     ax.set_xlabel(u'energy (keV)')
@@ -106,9 +107,12 @@ def plot():
     E = binEdges[:-1] + dE/2.
     ax.plot(E, total1D/max(total1D), 'r', label='calculated by xrt', lw=2)
 
-    e, f = np.loadtxt('fluxUndulator1DtaperP06.dc0', skiprows=10,
-                      usecols=[0, 1], unpack=True)
-    ax.plot(e*1e-3, f/max(f), 'b', label='calculated by Spectra', lw=2)
+    try:
+        e, f = np.loadtxt('fluxUndulator1DtaperP06.dc0', skiprows=10,
+                          usecols=[0, 1], unpack=True)
+        ax.plot(e*1e-3, f/max(f), 'b', label='calculated by Spectra', lw=2)
+    except:  # analysis:ignore
+        pass
 
 #    e, f = np.loadtxt('yaup-0.out', skiprows=32, usecols=[0, 1], unpack=True)
 #    ax.plot(e*1e-3, f/max(f), 'g', label='calculated by YAUP/XOP', lw=2)
@@ -126,6 +130,6 @@ def plot():
     fig1.savefig('compareTaper.png')
     plt.show()
 
+
 if __name__ == '__main__':
     main()
-#    plot()

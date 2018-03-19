@@ -4,7 +4,10 @@ import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:igno
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import xlwt
+try:
+    import xlwt
+except ImportError:
+    xlwt = None
 
 import xrt.backends.raycing.sources as rs
 from xrt.backends.raycing.physconsts import SIE0
@@ -160,26 +163,30 @@ def run(case):
     plt.savefig(u'flux_{0}_{1:.0f}×{2:.0f}µrad².png'.format(
         case, theta[-1]*2e6, psi[-1]*2e6))
 
-    wb = xlwt.Workbook()
-    ws = wb.add_sheet('flux')
-    ws.write(0, 0, u'energy (eV)')
-    ws.write(0, 1, u'fluxW through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
-             theta[-1]*2e6, psi[-1]*2e6))
-    if withUndulator:
-        ws.write(0, 2,
-                 u'fluxU through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
-                     theta[-1]*2e6, psi[-1]*2e6))
-
-    for i, e in enumerate(energy):
-        ws.write(i+1, 0, e)
-        ws.write(i+1, 1, fluxW[i])
+    if xlwt is not None:
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet('flux')
+        ws.write(0, 0, u'energy (eV)')
+        ws.write(
+            0, 1, u'fluxW through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
+                theta[-1]*2e6, psi[-1]*2e6))
         if withUndulator:
-            ws.write(i+1, 2, fluxW[i])
+            ws.write(
+                0, 2,
+                u'fluxU through {0:.0f}×{1:.0f} µrad² (ph/s/0.1%BW)'.format(
+                    theta[-1]*2e6, psi[-1]*2e6))
 
-    wb.save(u'flux_{0}_{1:.0f}×{2:.0f}µrad².xls'.format(
-        case, theta[-1]*2e6, psi[-1]*2e6))
+        for i, e in enumerate(energy):
+            ws.write(i+1, 0, e)
+            ws.write(i+1, 1, fluxW[i])
+            if withUndulator:
+                ws.write(i+1, 2, fluxW[i])
+
+        wb.save(u'flux_{0}_{1:.0f}×{2:.0f}µrad².xls'.format(
+            case, theta[-1]*2e6, psi[-1]*2e6))
 
     plt.show()
+
 
 if __name__ == '__main__':
 #    run('Balder')
