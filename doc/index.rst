@@ -34,6 +34,7 @@ User's Guide
    gallery4.rst
    speed.rst
    license.rst
+   googlefc270ce8cd25e311.rst
 
 .. Indices and tables
    ------------------
