@@ -1742,7 +1742,7 @@ class XYCPlot(object):
             if True:  # _DEBUG:
                 print('persistentName=', self.persistentName)
                 print('saved nRaysAll=', self.nRaysAll)
-        except IOError:
+        except (IOError, TypeError):
             pass
 
 
