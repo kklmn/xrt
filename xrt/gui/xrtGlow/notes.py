@@ -69,19 +69,6 @@ Notes on using xrtGlow
   rays. It is especially important if Intensity defines the Value key in HSV
   color space when dark rays can shadow the whole beam.
 
-- Depth test is disabled by default for the Points. Enable it if you do not
-  want the footprints to shine through solid surfaces of the optical elements.
-  Be aware that the Points may be obscured by rays in this case.
-
-- Antialiasing can improve the visual quality of the scene, but it seriously
-  affects the performance (depending on the number of rays / elements in the
-  model), only enable it after all modifications to the scene are applied,
-  prior the Export to file. Nevertheless antialiasing is always enabled for the
-  coordinate grid.
-
-- Default Zoom does not involve the coordinate grid, if you want to Zoom In/Out
-  the whole scene, use CTRL-MouseWheel.
-
 - Convenient way to inspect the detailed beam footprint on the coordinate grid
   is to use Projections: disable the Perspective, select only the footprint of
   interest on the Navigation Panel (or disable all and just leave the Virtual
@@ -100,6 +87,19 @@ Notes on using xrtGlow
   by the yellow arrow in case of the crystals with asymmetric cut.
 
 .. imagezoom:: _images/xrtGlow4.png
+
+- Depth test is disabled by default for the Points. Enable it if you do not
+  want the footprints to shine through solid surfaces of the optical elements.
+  Be aware that the Points may be obscured by rays in this case.
+
+- Antialiasing can improve the visual quality of the scene, but it seriously
+  affects the performance (depending on the number of rays / elements in the
+  model), only enable it after all modifications to the scene are applied,
+  prior the Export to file. Nevertheless antialiasing is always enabled for the
+  coordinate grid.
+
+- Default Zoom does not involve the coordinate grid, if you want to Zoom In/Out
+  the whole scene, use CTRL-MouseWheel.
 
 
 """
