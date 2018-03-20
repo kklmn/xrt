@@ -225,9 +225,11 @@ Usage
 
     .. warning::
         Long calculation on GPU in Windows may result in the system message
-        “Display driver stopped responding and has recovered”. The solution is
-        to change TdrDelay registry key from the default value of 2 seconds to
-        some hundreds or even thousands. Please refer to
+        “Display driver stopped responding and has recovered” or python
+        RuntimeError: out of resources (yes, it's about the driver response,
+        not the lack of memory). The solution is to change TdrDelay registry
+        key from the default value of 2 seconds to some hundreds or even
+        thousands. Please refer to
         https://msdn.microsoft.com/en-us/library/windows/hardware/ff569918(v=vs.85).aspx
 
     .. tip::
