@@ -1791,6 +1791,7 @@ class XrtQook(qt.QWidget):
             if item.parent() == self.rootBLItem:
                 del self.beamLine.oesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
+                self.updateBeamModel()
                 self.updateBeamline(item, newElement=False)
             if item.parent() is not None:
                 item.parent().removeRow(item.index().row())
@@ -1823,6 +1824,8 @@ class XrtQook(qt.QWidget):
                 item.model().blockSignals(True)
                 self.flattenElement(view, item)
                 item.model().blockSignals(False)
+                if item == self.rootBeamItem:
+                    self.updateBeamModel()
                 if item == self.rootPlotItem and\
                         self.rootPlotItem.rowCount() == 0:
                     item = self.plotModel.invisibleRootItem()
@@ -2165,6 +2168,7 @@ class XrtQook(qt.QWidget):
             pass
 
     def updateBeamImport(self):
+        outBeams = ['None']
         self.rootBeamItem.setChild(
             0, 1,
             qt.QStandardItem("beamGlobalLocal"))
@@ -2187,6 +2191,8 @@ class XrtQook(qt.QWidget):
                                 for ii in range(metChItem.rowCount()):
                                     child0 = metChItem.child(ii, 0)
                                     child1 = metChItem.child(ii, 1)
+                                    if child1 is not None:
+                                        outBeams.append(str(child1.text()))
                                     for irow in range(
                                             self.rootBeamItem.rowCount()):
                                         if str(child1.text()) ==\
@@ -2203,6 +2209,10 @@ class XrtQook(qt.QWidget):
                                                 qt.QStandardItem(str(
                                                     self.nameToBLPos(
                                                         elNameStr))))
+        for ibm in reversed(range(self.beamModel.rowCount())):
+            beamName = str(self.beamModel.item(ibm, 0).text())
+            if beamName not in outBeams:
+                self.beamModel.takeRow(ibm)
 
     def intToRegexp(self, intStr):
         a = list(str(int(intStr)))
@@ -2726,6 +2736,29 @@ class XrtQook(qt.QWidget):
             if itemObject.child(iel, 0).text() == '_object':
                 return str(itemObject.child(iel, 1).text())
         return None
+
+    def updateBeamModel(self):
+        """This function cleans the beam model. It will do nothing if
+        move/delete OE procedures perform correctly."""
+        outBeams = ['None']
+        for ie in range(self.rootBLItem.rowCount()):
+            if self.rootBLItem.child(ie, 0).text() != "properties" and\
+                    self.rootBLItem.child(ie, 0).text() != "_object":
+                tItem = self.rootBLItem.child(ie, 0)
+                for ieph in range(tItem.rowCount()):
+                    if tItem.child(ieph, 0).text() != '_object' and\
+                            tItem.child(ieph, 0).text() != 'properties':
+                        pItem = tItem.child(ieph, 0)                
+                        for imet in range(pItem.rowCount()):
+                            if pItem.child(imet, 0).text() == 'output':
+                                mItem = pItem.child(imet, 0)
+                                for iep in range(mItem.rowCount()):
+                                    outvalue = mItem.child(iep, 1).text()
+                                    outBeams.append(str(outvalue))
+        for ibm in reversed(range(self.beamModel.rowCount())):
+            beamName = str(self.beamModel.item(ibm, 0).text())
+            if beamName not in outBeams:
+                self.beamModel.takeRow(ibm)
 
     def updateBeamlineBeams(self, item):
         sender = self.sender()
@@ -3388,6 +3421,7 @@ if __name__ == '__main__':
                     matItem.text(), str.rstrip(ieinit, ","))
         self.progressBar.setValue(30)
         self.progressBar.setFormat("Adding optical elements.")
+        outBeams = ['None']
         for ie in range(self.rootBLItem.rowCount()):
             if self.rootBLItem.child(ie, 0).text() != "properties" and\
                     self.rootBLItem.child(ie, 0).text() != "_object":
@@ -3455,6 +3489,7 @@ if __name__ == '__main__':
                                 for iep in range(mItem.rowCount()):
                                     paravalue = mItem.child(iep, 1).text()
                                     paraOutBeams.append(str(paravalue))
+                                    outBeams.append(str(paravalue))
                                     paraOutput += str(paravalue)+", "
                                     if len(re.findall('sources', elstr)) > 0\
                                             and tmpSourceName == "":
@@ -3478,6 +3513,10 @@ if __name__ == '__main__':
         codeRunProcess += r"{0}outDict = ".format(myTab) + "{"
         self.progressBar.setValue(60)
         self.progressBar.setFormat("Defining the propagation.")
+        for ibm in reversed(range(self.beamModel.rowCount())):
+            beamName = str(self.beamModel.item(ibm, 0).text())
+            if beamName not in outBeams:
+                self.beamModel.takeRow(ibm)
         for ibm in range(self.beamModel.rowCount()):
             beamName = str(self.beamModel.item(ibm, 0).text())
             if beamName != "None":
