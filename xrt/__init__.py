@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 u"""Package xrt (XRayTracer) is a python software library for ray tracing and
 wave propagation in x-ray regime. It is primarily meant for modeling
 synchrotron sources, beamlines and beamline elements. Includes a GUI for
@@ -203,7 +203,8 @@ __module__ = "xrt"
 __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory), " +\
     "Roman Chernikov (Canadian Light Source)"
-__email__ = "first dot last at gmail dot com"
+__email__ = "konstantin DOT klementiev AT gmail DOT com, " +\
+            "rchernikov AT gmail DOT com"
 __versioninfo__ = __versioninfo__
 __version__ = __version__
 __date__ = "1 Nov 2017"
