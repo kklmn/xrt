@@ -206,6 +206,9 @@ def one_iteration():
     if hasattr(runCardVals, 'beamLine'):
         runCardVals.beamLine.forceAlign = True if runCardVals.iteration == 0\
             else False
+        if (runCardVals.beamLine.flowSource == 'legacy' and
+                runCardVals.iteration > 0):
+            runCardVals.beamLine.flowSource = 'done_once'
     if runCardVals.iteration == 0:
         runCardVals.needLimits = False
         for plot in _plots:
