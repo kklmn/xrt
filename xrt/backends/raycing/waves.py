@@ -587,7 +587,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         if hasattr(oeLocal, 'areaFraction'):
             oeLocal.area *= oeLocal.areaFraction
     if _DEBUG > 10:
-        print("The area of {0} under the beam is {1}".format(
+        print("The area of {0} under the beam is {1:.4g}".format(
               oe.name, oeLocal.area))
 
     if hasattr(oe, 'rotationSequence'):  # OE
@@ -725,7 +725,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
                 b.Ep *= norm**0.5
 
     if _DEBUG > 10:
-        print("diffract on {0} completed in {1} s".format(
+        print("diffract on {0} completed in {1:.4f} s".format(
               oe.name, time.time()-t0))
 
     return glo
