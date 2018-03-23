@@ -117,7 +117,7 @@ def plot_compare():
 #    e, f = np.loadtxt('yaup-0.out', skiprows=32, usecols=[0, 1], unpack=True)
 #    ax.plot(e*1e-3, f/max(f), 'g', label='calculated by YAUP/XOP', lw=2)
 
-    theta, fl = np.loadtxt("thetaexafssc1an_zn_hgap_00002r2.fio",
+    theta, fl = np.loadtxt("thetaexafssc1an_zn_hgap_00002r2.fio.gz",
                            skiprows=113, usecols=(0, 5), unpack=True)
     si_1 = rm.CrystalSi(hkl=(1, 1, 1), tK=77)
     E = rm.ch / (2 * si_1.d * np.sin(np.radians(theta)))
