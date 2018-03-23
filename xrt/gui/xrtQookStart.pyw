@@ -16,7 +16,13 @@ if __name__ == '__main__':
         if str(sys.executable).endswith('pythonw.exe'):
             sys.stdout = open("output.log", "w")
 
+    # If xrtQook looks too small, one can play with scaling:
+    # either with "auto" factor or with a manually set factor.
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+#    os.environ["QT_SCALE_FACTOR"] = "1.5"
+
     app = xQ.qt.QApplication(sys.argv)
+
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")
     ex.show()
