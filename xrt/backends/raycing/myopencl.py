@@ -122,6 +122,9 @@ class XRT_CL(object):
                                 pass
                     for GPUDevice in GPUdevices:
                         try:
+                            if ('graphics' in GPUDevice.name.lower() and
+                                    'intel' in GPUDevice.vendor.lower()):
+                                continue
                             tmpctx = cl.Context(devices=[GPUDevice])
                             if GPUDevice.double_fp_config > 0:
                                 iDeviceGPU.extend([GPUDevice])
