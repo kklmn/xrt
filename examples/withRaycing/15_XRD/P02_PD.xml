@@ -3,8 +3,8 @@
 <Beams type="prop">
 	<None type="flat"></None>
 	<Undulator01beamGlobal01 type="flat"></Undulator01beamGlobal01>
-	<FSM_SourcebeamLocal01 type="flat"></FSM_SourcebeamLocal01>
 	<SLIT_FEbeamLocal01 type="flat"></SLIT_FEbeamLocal01>
+	<FSM_SourcebeamLocal01 type="flat"></FSM_SourcebeamLocal01>
 	<LP1beamGlobal01 type="flat"></LP1beamGlobal01>
 	<LP1beamLocal01 type="flat"></LP1beamLocal01>
 	<LP2beamGlobal01 type="flat"></LP2beamGlobal01>
@@ -14,8 +14,8 @@
 	<PowderSamplebeamGlobal01 type="flat"></PowderSamplebeamGlobal01>
 	<PowderSamplebeamLocal01 type="flat"></PowderSamplebeamLocal01>
 	<FSM_SamplebeamLocal01 type="flat"></FSM_SamplebeamLocal01>
-	<FSM_DetectorbeamLocal01 type="flat"></FSM_DetectorbeamLocal01>
 	<RoundBeamStop01beamLocal01 type="flat"></RoundBeamStop01beamLocal01>
+	<FSM_DetectorbeamLocal01 type="flat"></FSM_DetectorbeamLocal01>
 </Beams>
 <Materials type="prop">
 	<LaueXtal type="value">
@@ -37,14 +37,6 @@
 			<factDW type="param">1.0</factDW>
 			<geom type="param">Laue reflected</geom>
 			<table type="param">Chantler</table>
-			<d type="param">0</d>
-			<V type="param">None</V>
-			<elements type="param">Si</elements>
-			<quantities type="param">None</quantities>
-			<rho type="param">0</rho>
-			<kind type="param">mirror</kind>
-			<efficiency type="param">None</efficiency>
-			<efficiencyFile type="param">None</efficiencyFile>
 		</properties>
 		<_object type="object">xrt.backends.raycing.materials.CrystalHarmonics</_object>
 	</LaueXtal>
@@ -78,22 +70,32 @@
 			<factDW type="param">1.0</factDW>
 			<geom type="param">Bragg reflected</geom>
 			<table type="param">Chantler</table>
+		</properties>
+		<_object type="object">xrt.backends.raycing.materials.Powder</_object>
+	</PowderSample>
+	<crystalSi01 type="value">
+		<properties type="prop">
+			<tK type="param">297.15</tK>
+			<hkl type="param">[1, 1, 1]</hkl>
 			<d type="param">0</d>
 			<V type="param">None</V>
 			<elements type="param">Si</elements>
 			<quantities type="param">None</quantities>
 			<rho type="param">0</rho>
-			<kind type="param">mirror</kind>
-			<efficiency type="param">None</efficiency>
-			<efficiencyFile type="param">None</efficiencyFile>
+			<t type="param">None</t>
+			<factDW type="param">1.0</factDW>
+			<geom type="param">Bragg reflected</geom>
+			<table type="param">Chantler</table>
+			<name type="param"></name>
 		</properties>
-		<_object type="object">xrt.backends.raycing.materials.Powder</_object>
-	</PowderSample>
+		<_object type="object">xrt.backends.raycing.materials.CrystalSi</_object>
+	</crystalSi01>
 </Materials>
 <P02_2 type="value">
 	<properties type="prop">
 		<azimuth type="param">0.0</azimuth>
 		<height type="param">0.0</height>
+		<alignE type="param">auto</alignE>
 	</properties>
 	<_object type="object">xrt.backends.raycing.BeamLine</_object>
 	<Undulator01 type="value">
@@ -101,6 +103,8 @@
 			<bl type="param">P02_2</bl>
 			<name type="param">P02_U23</name>
 			<center type="param">(0, 0, 0)</center>
+			<pitch type="param">0</pitch>
+			<yaw type="param">0</yaw>
 			<nrays type="param">100000</nrays>
 			<eE type="param">6.08</eE>
 			<eI type="param">0.2</eI>
@@ -111,35 +115,33 @@
 			<eEpsilonZ type="param">0.01</eEpsilonZ>
 			<betaX type="param">20.01</betaX>
 			<betaZ type="param">2.36</betaZ>
-			<period type="param">23</period>
-			<n type="param">87</n>
-			<K type="param">10.0</K>
-			<Kx type="param">0</Kx>
-			<Ky type="param">0.0</Ky>
-			<phaseDeg type="param">0</phaseDeg>
-			<taper type="param">None</taper>
-			<R0 type="param">None</R0>
+			<xPrimeMax type="param">0.06/29</xPrimeMax>
+			<zPrimeMax type="param">0.06/29</zPrimeMax>
+			<xPrimeMaxAutoReduce type="param">True</xPrimeMaxAutoReduce>
+			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
+			<distE type="param">eV</distE>
 			<targetE type="param">[60000, 11]</targetE>
-			<customField type="param">None</customField>
 			<eMin type="param">59940</eMin>
 			<eMax type="param">60060</eMax>
 			<eN type="param">51</eN>
-			<distE type="param">eV</distE>
-			<xPrimeMax type="param">0.06/29</xPrimeMax>
-			<zPrimeMax type="param">0.06/29</zPrimeMax>
+			<K type="param">10.0</K>
+			<Kx type="param">0</Kx>
+			<Ky type="param">0.0</Ky>
+			<period type="param">23</period>
+			<n type="param">87</n>
+			<phaseDeg type="param">0</phaseDeg>
+			<taper type="param">None</taper>
+			<R0 type="param">None</R0>
+			<filamentBeam type="param">False</filamentBeam>
+			<uniformRayDensity type="param">False</uniformRayDensity>
 			<nx type="param">25</nx>
 			<nz type="param">25</nz>
-			<xPrimeMaxAutoReduce type="param">True</xPrimeMaxAutoReduce>
-			<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
+			<customField type="param">None</customField>
 			<gp type="param">1e-06</gp>
 			<gIntervals type="param">1</gIntervals>
 			<nRK type="param">30</nRK>
-			<uniformRayDensity type="param">False</uniformRayDensity>
-			<filamentBeam type="param">False</filamentBeam>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">auto</precisionOpenCL>
-			<pitch type="param">0</pitch>
-			<yaw type="param">0</yaw>
 		</properties>
 		<_object type="object">xrt.backends.raycing.sources.Undulator</_object>
 		<shine type="prop">
@@ -191,6 +193,7 @@
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">Undulator01beamGlobal01</beam>
+				<onlyPositivePath type="param">False</onlyPositivePath>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -207,12 +210,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">np.pi*0.5</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">LaueXtal</material>
 			<alpha type="param">None</alpha>
@@ -222,8 +224,10 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -233,6 +237,7 @@
 				<beam type="param">Undulator01beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.LauePlate.reflect</_object>
 			<output type="prop">
@@ -250,12 +255,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">-np.pi*0.5</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">LaueXtal</material>
 			<alpha type="param">None</alpha>
@@ -265,8 +269,10 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -276,6 +282,7 @@
 				<beam type="param">LP1beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.LauePlate.reflect</_object>
 			<output type="prop">
@@ -298,6 +305,7 @@
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">LP2beamGlobal01</beam>
+				<onlyPositivePath type="param">False</onlyPositivePath>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -335,12 +343,11 @@
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>
 			<positionRoll type="param">0</positionRoll>
-			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraPitch type="param">0</extraPitch>
 			<extraRoll type="param">0</extraRoll>
 			<extraYaw type="param">0</extraYaw>
+			<rotationSequence type="param">RzRyRx</rotationSequence>
 			<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-			<alarmLevel type="param">None</alarmLevel>
 			<surface type="param">None</surface>
 			<material type="param">PowderSample</material>
 			<alpha type="param">None</alpha>
@@ -350,8 +357,10 @@
 			<limOptY type="param">None</limOptY>
 			<isParametric type="param">False</isParametric>
 			<shape type="param">rect</shape>
+			<gratingDensity type="param">None</gratingDensity>
 			<order type="param">None</order>
 			<shouldCheckCenter type="param">False</shouldCheckCenter>
+			<alarmLevel type="param">None</alarmLevel>
 			<targetOpenCL type="param">auto</targetOpenCL>
 			<precisionOpenCL type="param">float64</precisionOpenCL>
 		</properties>
@@ -361,6 +370,7 @@
 				<beam type="param">LP2beamGlobal01</beam>
 				<needLocal type="param">True</needLocal>
 				<noIntersectionSearch type="param">False</noIntersectionSearch>
+				<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.oes.LauePlate.reflect</_object>
 			<output type="prop">
@@ -383,6 +393,7 @@
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">PowderSamplebeamGlobal01</beam>
+				<onlyPositivePath type="param">False</onlyPositivePath>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -395,8 +406,8 @@
 			<bl type="param">P02_2</bl>
 			<name type="param">BeamStop</name>
 			<center type="param">P02_2.PowderSample.center[0], 65499, P02_2.PowderSample.center[2]</center>
-			<r type="param">20</r>
 			<alarmLevel type="param">None</alarmLevel>
+			<r type="param">20</r>
 		</properties>
 		<_object type="object">xrt.backends.raycing.apertures.RoundBeamStop</_object>
 		<propagate type="prop">
@@ -424,6 +435,7 @@
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">PowderSamplebeamGlobal01</beam>
+				<onlyPositivePath type="param">False</onlyPositivePath>
 			</parameters>
 			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
 			<output type="prop">
@@ -706,7 +718,7 @@
 		<contourColors type="param">None</contourColors>
 		<contourFmt type="param">%.1f</contourFmt>
 		<contourFactor type="param">1.0</contourFactor>
-		<saveName type="param">Plo04.title.png</saveName>
+		<saveName type="param">Plot04.title.png</saveName>
 		<persistentName type="param">None</persistentName>
 		<oe type="param">None</oe>
 		<raycingParam type="param">0</raycingParam>
