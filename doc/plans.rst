@@ -3,10 +3,12 @@
 Plans
 -----
 
+- full propagation through the beamline completely within OpenCL
+
 - easy facilities to model mosaic crystals
 
 - models of isotropic fluorescence beams, including proper quantum fluorescence
-  yield.
+  yield
 
 - comparison of wave propagation with SRW
 
