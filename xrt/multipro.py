@@ -270,14 +270,17 @@ class GenericProcessOrThread(object):
                     shadow.get_output(
                         plot, self.card.fPolar, self.card.blockNRays,
                         self.runDir)
+                flux = intensity
             elif self.card.backend.startswith('raycing'):
-                x, y, intensity, cData, locNrays, locAlive, locGood, locOut,\
-                    locOver, locDead, locAccepted, locAcceptedE, locSeeded,\
-                    locSeededI = raycing.get_output(plot, raycing_output)
+                x, y, intensity, flux, cData, locNrays, locAlive, locGood,\
+                    locOut, locOver, locDead, locAccepted, locAcceptedE,\
+                    locSeeded, locSeededI =\
+                    raycing.get_output(plot, raycing_output)
                 if hasattr(plot, 'displayAsAbsorbedPower'):
                     displayAsAbsorbedPower = True
             elif self.card.backend.startswith('dummy'):
                 x, y, intensity, cData, locNrays = dummy_output
+                flux = intensity
 
             if self.card.iteration == 0:
                 leadingLimits = None
@@ -307,10 +310,6 @@ class GenericProcessOrThread(object):
                 cData01 -= 0.5
                 cData01[cData01 < 0] += 1
 
-            if intensity.dtype == np.complex128:
-                flux = intensity.real**2 + intensity.imag**2
-            else:
-                flux = intensity
             cDataHSV = np.dstack(
                 (cData01, np.ones_like(cData01) * plot.colorSaturation,
                  flux.reshape(-1, 1)))

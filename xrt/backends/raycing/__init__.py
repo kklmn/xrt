@@ -598,13 +598,15 @@ def get_output(plot, beamsReturnedBy_run_process):
         y = plot.yaxis.data * plot.yaxis.factor
     else:
         raise ValueError('cannot find data for y!')
+
     if plot.caxis.useCategory:
         cData = np.zeros_like(beamState)
         cData[beamState == stateGood] = hueGood
         cData[beamState == stateOut] = hueOut
         cData[beamState == stateOver] = hueOver
         cData[beamState < 0] = hueDead
-        flux = np.ones_like(x)
+        intensity = np.ones_like(x)
+        flux = intensity
     else:
         if plot.beamC is None:
             beamC = beam
@@ -618,29 +620,35 @@ def get_output(plot, beamsReturnedBy_run_process):
             raise ValueError('cannot find data for cData!')
 
         if plot.fluxKind.startswith('power'):
-            flux = ((beam.Jss + beam.Jpp) *
-                    beam.E * beam.accepted / beam.seeded * SIE0)
+            intensity = ((beam.Jss + beam.Jpp) *
+                         beam.E * beam.accepted / beam.seeded * SIE0)
         elif plot.fluxKind.startswith('s'):
-            flux = beam.Jss
+            intensity = beam.Jss
         elif plot.fluxKind.startswith('p'):
-            flux = beam.Jpp
+            intensity = beam.Jpp
         elif plot.fluxKind.startswith('+-45'):
-            flux = 2*beam.Jsp.real
+            intensity = 2*beam.Jsp.real
         elif plot.fluxKind.startswith('left-right'):
-            flux = 2*beam.Jsp.imag
+            intensity = 2*beam.Jsp.imag
         elif plot.fluxKind.startswith('E'):
             if plot.fluxKind.startswith('Es'):
-                flux = beam.Es
+                intensity = beam.Es
+                flux = beam.Jss
             elif plot.fluxKind.startswith('Ep'):
-                flux = beam.Ep
+                intensity = beam.Ep
+                flux = beam.Jpp
             else:
-                flux = beam.Es + beam.Ep
+                intensity = beam.Es + beam.Ep
+                flux = beam.Jss + beam.Jpp
         else:
-            flux = beam.Jss + beam.Jpp
+            intensity = beam.Jss + beam.Jpp
 
-    return x[part], y[part], flux[part], cData[part], nrays, locAlive,\
-        locGood, locOut, locOver, locDead, locAccepted, locAcceptedE,\
-        locSeeded, locSeededI
+        if not plot.fluxKind.startswith('E'):
+            flux = intensity
+
+    return x[part], y[part], intensity[part], flux[part], cData[part], nrays,\
+        locAlive, locGood, locOut, locOver, locDead,\
+        locAccepted, locAcceptedE, locSeeded, locSeededI
 
 
 def auto_units_angle(angle):
