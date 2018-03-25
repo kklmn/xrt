@@ -158,11 +158,21 @@ view of xrtQook. OpenGL is required for xrtGlow.
 Python 2 and 3
 --------------
 The code can run in both Python branches without any modification.
+
+Get xrt
+-------
+xrt is available as source distribution from `pypi.python.org
+<https://pypi.python.org/pypi/xrt>`_ and from `GitHub
+<https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
+and examples. The complete documentation is available at
+`Read the Docs <http://xrt.readthedocs.io>`_ and as zip file from
+`GitHub <https://github.com/kklmn/xrt>`_ .
+
 """
 
 setup(
     name='xrt',
-    version='1.3.0beta',
+    version='1.3.0',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
@@ -182,7 +192,8 @@ setup(
         'xrt.gui.xrtQook': [os.path.join('_icons', '*.*'),
                             os.path.join('_images', '*.*')],
         'xrt.gui.xrtGlow': [os.path.join('_icons', '*.*')]},
-    scripts=[os.path.join('xrt', 'gui', 'xrtQookStart.pyw')],
+    scripts=[os.path.join('xrt', 'gui', 'xrtQookStart.pyw'),
+             os.path.join('xrt', 'gui', 'xrtQookStart.py')],
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',

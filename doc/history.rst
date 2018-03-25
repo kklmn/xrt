@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-1.3.0beta (5 Mar 2018):
+1.3.0 (25 Mar 2018):
     - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
 
     - Almost all old examples can now be viewed in xrtGlow as well, just select
@@ -29,12 +29,12 @@ Version history
 
     - A new module :mod:`~xrt.backends.raycing.coherence` that has functions
       for 1D and 2D analysis of coherence and functions for 1D plotting of
-      degree of coherence and and 2D plotting of eigen modes. Reworked analysis
-      of coherence in :ref:`SoftiMAX` example.
+      degree of coherence and 2D plotting of eigen modes. Reworked analysis of
+      coherence in :ref:`SoftiMAX` example.
     
-    - Added energy spread dependence to the linear and angular sizes of
-      undulator source. See the :ref:`formulation <undulator-source-size>` and
-      an :ref:`application exaple<example-undulator-sizes>`.
+    - Added electron energy spread dependence to the linear and angular sizes
+      of undulator source. See the :ref:`formulation <undulator-source-size>`
+      and an :ref:`application example<example-undulator-sizes>`.
 
     - Added :ref:`tests of optical elements <test_oes>` which currently have
       a test for asymmetric crystal optics (phase space volume conservation)

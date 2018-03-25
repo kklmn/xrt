@@ -205,9 +205,7 @@ __author__ = \
     "Roman Chernikov (Canadian Light Source)"
 __email__ = "konstantin DOT klementiev AT gmail DOT com, " +\
             "rchernikov AT gmail DOT com"
-__versioninfo__ = __versioninfo__
-__version__ = __version__
-__date__ = "1 Nov 2017"
+__date__ = "25 Mar 2018"
 __license__ = "MIT license"
 
 # __all__ = ['plotter', 'runner', 'multipro']
