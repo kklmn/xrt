@@ -179,8 +179,7 @@ setup(
                 'and viewing it in 3D.',
     long_description=long_description,
     author='Konstantin Klementiev, Roman Chernikov',
-    author_email='konstantin DOT klementiev AT gmail DOT com, '
-                 'rchernikov AT gmail DOT com',
+    author_email='konstantin.klementiev@gmail.com, rchernikov@gmail.com',
     url='http://xrt.readthedocs.io',
     platforms='OS Independent',
     license='MIT License',
