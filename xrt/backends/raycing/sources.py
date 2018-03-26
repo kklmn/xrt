@@ -213,7 +213,7 @@ application example :ref:`here <example-undulator-sizes>`.
    Accelerator School: Synchrotron Radiation and Free Electron Lasers,
    Grenoble, France, 22-27 Apr 1996: proceedings (CERN. Geneva, 1998) 129-190.
 
-.. [TanakaKitamura] Tanaka and Kitamura, Universal function for the
+.. [TanakaKitamura] T. Tanaka and H. Kitamura, Universal function for the
    brilliance of undulator radiation considering the energy spread effect,
    J. Synchrotron Rad. **16** (2009) 380–6.
 
@@ -545,8 +545,17 @@ maximum at each respective harmonic. It sharply decreases at the higher energy
 end of a harmonic and has a long tail at the lower energy end, in accordance
 with the above examples.
 
+The effect of energy detuning from the nominal undulator harmonic energy is
+compared to the results by Cloïsson [Cloïsson]_ (cross signs in the figures
+below). His effect of detuning has a comparable amplitude. A sharper dependence
+is probably due to a smaller (and unknown) angular acceptance and a somewhat
+special definition of the beam size.
+
 .. imagezoom:: _images/undulatorLinearSize.png
 .. imagezoom:: _images/undulatorAngularSize.png
+
+.. [Cloïsson] R. Coïsson, Effective phase space widths of undulator radiation,
+   Opt. Eng. **27** (1988) 250–2.
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
