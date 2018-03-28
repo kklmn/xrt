@@ -282,13 +282,16 @@ done within that loop.
 
 The quality of the resulting diffraction images is mainly characterized by the
 blackness of the dark field – the area of expected zero intensity. If the
-statistics is not sufficient, the dark area is not black, and even can be
-bright enough to mask the main spot. The quality depends both on beamline
+statistics is not sufficient, the dark area is not black, and can even be
+bright enough to mask the main spot. The contrast depends both on beamline
 geometry (distances) and on the number of wave field samples (a parameter for
 ``prepare_wave``). Shorter distances require more samples for the same quality,
 and for the distances shorter than a few meters one may have to reduce the
 problem dimensionality by cutting in horizontal or vertical, see the
-:ref:`examples of SoftiMAX<SoftiMAX>`.
+:ref:`examples of SoftiMAX<SoftiMAX>`. In the console output, ``diffract``
+reports on *samples per zone* (meaning per Fresnel zone). As a rule of thumb,
+this figure should be greater than ~10\ :sup:`4` for a good resulting quality.
+
 
 .. automethod:: xrt.backends.raycing.oes.OE.prepare_wave
 .. automethod:: xrt.backends.raycing.apertures.RectangularAperture.prepare_wave
@@ -301,7 +304,7 @@ Coherence signatures
 ~~~~~~~~~~~~~~~~~~~~
 
 A standard way to define coherence properties is via *mutual intensity J* and
-*complex degree of coherence j* (normalized mutual intensity):
+*complex degree of coherence j* (DOC,  normalized *J*):
 
     .. math::
         J(x_1, y_1, x_2, y_2) \equiv J_{12} =
@@ -319,11 +322,10 @@ There are two common ways of working with them:
 
 1. The horizontal and vertical directions are considered independently by
    placing the points 1 and 2 on a horizontal or vertical line symmetrically
-   about the optical axis. The complex degree of coherence thus becomes a 1D
-   function dependent on the distance between the points, e.g. as
-   :math:`j_{12}^{\rm hor}=j(x_1-x_2)`. The intensity distribution is also
-   determined over the same line as a 1D positional function, e.g. as
-   :math:`I(x)`.
+   about the optical axis. DOC thus becomes a 1D function dependent on the
+   distance between the points, e.g. as :math:`j_{12}^{\rm hor}=j(x_1-x_2)`.
+   The intensity distribution is also determined over the same line as a 1D
+   positional function, e.g. as :math:`I(x)`.
 
    The widths :math:`\sigma_x` and :math:`\xi_x` of the distributions
    :math:`I(x)` and :math:`j(x_1-x_2)` give the *coherent fraction*
@@ -390,12 +392,12 @@ method above.
     A good test for the correctness of the obtained coherent fraction is to
     find it at various positions on propagating in free space, where the result
     is expected to be invariant. As appears in the
-    :ref:`examples of SoftiMAX<SoftiMAX>`, the 1D analysis never gives an
-    invariant coherent fraction at the scanned positions around the focus. The
-    primary reason for this is the difficulty in the determination of the width
-    of degree of coherence, for the latter typically being a complex-shaped
-    curve. In contrast, the modal analysis (the PCA implementation is
-    recommended) gives the expected invariance.
+    :ref:`examples of SoftiMAX<SoftiMAX>`, the analysis based on DOC never
+    gives an invariant coherent fraction at the scanned positions around the
+    focus. The primary reason for this is the difficulty in the determination
+    of the width of degree of coherence, for the latter typically being a
+    complex-shaped oscillatory curve. In contrast, the modal analysis (the PCA
+    implementation is recommended) gives the expected invariance.
 
 Coherence analysis and related plotting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
