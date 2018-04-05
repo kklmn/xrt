@@ -81,7 +81,7 @@ else:
 if not starImport:
     (QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar,
      QTreeView, QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout,
-     QSplitter, QComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
+     QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
@@ -123,3 +123,19 @@ try:
 except:  # analysis:ignore
     glowSlider = mySlider
     glowTopScale = QSlider.TicksAbove
+
+class QComboBox(StdQComboBox):
+    """
+    Disabling off-focus mouse wheel scroll is based on the following solution:
+    https://stackoverflow.com/questions/3241830/qt-how-to-disable-mouse-scrolling-of-qcombobox/3242107#3242107
+    """
+    def __init__(self, *args, **kwargs):
+        super(QComboBox, self).__init__(*args, **kwargs)
+#        self.scrollWidget=scrollWidget
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+    def wheelEvent(self, *args, **kwargs):
+        if self.hasFocus():
+            return StdQComboBox.wheelEvent(self, *args, **kwargs)
+        else:
+            return self.parent().wheelEvent(*args, **kwargs)

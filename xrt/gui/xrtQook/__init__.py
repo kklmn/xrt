@@ -1325,6 +1325,7 @@ class XrtQook(qt.QWidget):
             self.autoAssignMethod(elementItem)
         self.isEmpty = False
         self.tabs.setCurrentWidget(self.tree)
+        self.tree.setCurrentIndex(elementItem.index())
 
     def getParams(self, obj):
         uArgs = OrderedDict()
