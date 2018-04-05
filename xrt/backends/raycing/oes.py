@@ -765,6 +765,8 @@ class ToroidMirror(OE):
             self.R = self.get_Rmer_from_Coddington(self.R[0], self.R[1])
         if isinstance(self.r, (tuple, list)):
             self.r = self.get_rsag_from_Coddington(self.r[0], self.r[1])
+        if self.r == 0:
+            raise ValueError("r must be non-zero")
 
     def __pop_kwargs(self, **kwargs):
         self.R = kwargs.pop('R', 5.0e6)
@@ -772,16 +774,15 @@ class ToroidMirror(OE):
         return kwargs
 
     def local_z(self, x, y):
-        rx = self.r**2 - x**2
-        try:
-            rx[rx < 0] = 0.
-        except TypeError:
-            pass
-        return y**2/2.0/self.R + self.r - rx**0.5
+        rx = 1 - (np.asarray(x)/self.r)**2
+        rx[rx < 0] = 0.  # becomes flat at the equator
+        return y**2/2.0/self.R + self.r*(1 - rx**0.5)
 
     def local_n(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
-        a = -x * (self.r**2-x**2)**(-0.5)  # -dz/dx
+        rx = 1 - (np.asarray(x)/self.r)**2
+        ax = np.where(rx < 0, 0, rx**(-0.5))  # becomes flat at the equator
+        a = -x / self.r * ax  # -dz/dx
         b = -y / self.R  # -dz/dy
         c = 1.
         norm = (a**2 + b**2 + 1)**0.5
@@ -1418,10 +1419,11 @@ class Plate(DCM):
         is true) systems.
 
         *returnLocalAbsorbed*: None, int
-            If not None, returns the absorbed intensity in local beam. If
-            equals zero, total absorbed intensity is return in the last local
-            beam, otherwise the N-th local beam returns the
-            absorbed intensity on N-th surface of the optical element.
+            If not None, returned local beam represents the absorbed intensity
+            instead of transmitted. The parameter defines the ordinal number of
+            the surface in multi-surface element to return the absorbed
+            intensity, i.e. 1 for the entrance surface of the plate, 2 for the
+            exit, 0 for total intensity absorbed in the element.
 
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
@@ -1449,7 +1451,7 @@ class Plate(DCM):
                 absorbedLb = rs.Beam(copyFrom=lb1)
                 absorbedLb.absorb_intensity(beam)
                 lb1 = absorbedLb
-            elif returnLocalAbsorbed == 1:
+            elif returnLocalAbsorbed == 2:
                 absorbedLb = rs.Beam(copyFrom=lb2)
                 absorbedLb.absorb_intensity(lb1)
                 lb2 = absorbedLb

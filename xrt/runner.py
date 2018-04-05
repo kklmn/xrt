@@ -366,8 +366,12 @@ def on_finish():
     runCardVals.lastRuns.append([runCardVals.tstartLong, runCardVals.tstopLong,
                                  runCardVals.tstop-runCardVals.tstart,
                                  runCardVals.runfile])
-    with open(runCardVals.lastRunsPickleName, 'wb') as f:
-        pickle.dump(runCardVals.lastRuns[-10:], f, protocol=2)
+    try:
+        with open(runCardVals.lastRunsPickleName, 'wb') as f:
+            pickle.dump(runCardVals.lastRuns[-10:], f, protocol=2)
+    except OSError:  # Read-only file system
+        pass  # no history tracking of last 10 runs
+
 #    plt.close('all')
     if runCardProcs.afterScript:
         runCardProcs.afterScript(
