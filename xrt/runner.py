@@ -257,8 +257,10 @@ def one_iteration():
             if (runCardVals.iteration >= runCardVals.repeats) or \
                     runCardVals.stop_event.is_set():
                 continue
-            plot.textStatus.set_text("{0} of {1} (right click to stop)".format(
-                runCardVals.iteration+1, runCardVals.repeats))
+            tFromStart = time.time() - runCardVals.tstart
+            plot.textStatus.set_text(
+                "{0} of {1} in {2:.1f} s (right click to stop)".format(
+                    runCardVals.iteration+1, runCardVals.repeats, tFromStart))
 
             plot.nRaysAll += outList[13]
             if runCardVals.backend.startswith('shadow'):

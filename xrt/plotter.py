@@ -959,7 +959,7 @@ class XYCPlot(object):
             transform=self.ax1dHistY.transAxes, ha='left', va='center')
         self.textStatus = plt.text(
             xTextPosStatus, yTextPosStatus, '', transform=self.fig.transFigure,
-            ha='right', va='bottom')
+            ha='right', va='bottom', fontsize=9)
         self.textStatus.set_color('r')
 
         self.ax1dHistX.imshow(
