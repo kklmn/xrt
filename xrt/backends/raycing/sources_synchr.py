@@ -1506,8 +1506,7 @@ class Undulator(object):
             else:
                 sz = 1 if self.filamentBeam else NRAYS
                 gamma += gamma * self.eEspread * np.random.normal(size=sz)
-        if NRAYS > 1:
-            gamma *= np.ones(NRAYS)
+        gamma = gamma * np.ones(NRAYS, dtype=self.cl_precisionF)
         gamma2 = gamma**2
 
         wu = PI * C * 10 / self.L0 / gamma2 * np.ones_like(w) *\
@@ -1561,7 +1560,7 @@ class Undulator(object):
             else:
                 sz = 1 if self.filamentBeam else NRAYS
                 gamma += gamma * self.eEspread * np.random.normal(size=sz)
-        gamma *= np.ones(NRAYS, dtype=self.cl_precisionF)
+        gamma = gamma * np.ones(NRAYS, dtype=self.cl_precisionF)
         gamma2 = gamma**2
 
         wu = PI * C * 10 / self.L0 / gamma2 *\

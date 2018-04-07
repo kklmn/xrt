@@ -15,6 +15,7 @@ import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.run as rr
+import xrt.backends.raycing.coherence as rco
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
@@ -25,7 +26,7 @@ R0 = 25000
 xPrimeMax = 0.6
 zPrimeMax = 0.6
 repeats = 100
-#repeats = 1
+#repeats = 5
 
 #sheet, prefix = 'EPU_HP_mode', '1'
 #sheet, prefix = 'EPU_VP_mode', '3'
@@ -45,7 +46,7 @@ prefix += '-7-mono3rdHarmonic'
 #prefix += '-9-mono5thHarmonic'
 
 fixedEnergy = False
-filamentBeam = False
+filamentBeam = True
 if 'VP' in prefix:
     eMinRays, eMaxRays = 3., 60.
 else:
@@ -318,41 +319,34 @@ def afterScript(plots, complexPlotsPCA, beamLine):
         ax.set_zlabel(u"$y$, µm")
         plt.title("trajectory 3D")
         plt.savefig(prefix + '0trajectory' + suffix + '.png')
-        plt.show()
 
     if not complexPlotsPCA:
         return
     if not ('mono' in prefix):
         return
 
-    import scipy.linalg as spl
     dump = []
     start = time.time()
-    for complexPlotPCA in complexPlotsPCA:
-        k = complexPlotPCA.size2D
-        wPCA, vPCA, outPCA = None, None, None
+    NN = len(complexPlotsPCA)
+    for ic, complexPlotPCA in enumerate(complexPlotsPCA):
         x = complexPlotPCA.xaxis.binCenters
         y = complexPlotPCA.yaxis.binCenters
         if repeats >= 4:
-            pE = complexPlotPCA.total4D
-            cEr = pE[:, :repeats]
-            cE = np.dot(cEr.T.conjugate(), cEr)
-            cE /= np.diag(cE).sum()
-            kwargs = dict(eigvals=(repeats-4, repeats-1))
-            wPCA, vPCA = spl.eigh(cE, **kwargs)
-            print(wPCA)
-            outPCA = np.zeros((k, repeats), dtype=np.complex128)
-            for i in range(4):
-                mPCA = np.outer(vPCA[:, -1-i], vPCA[:, -1-i].T.conjugate())
-                outPCA[:, -1-i] = np.dot(cEr, mPCA)[:, 0]
-            print("repeats={0}; PCA problem has taken {1} s".format(
-                  repeats, time.time()-start))
-            dump.append([repeats, x, y, wPCA, outPCA])
+            print("solving PCA problem, {0} of {1}...".format(ic+1, NN))
+            Es = complexPlotPCA.field3D
+            start = time.time()
+            wPCA, vPCA = rco.calc_eigen_modes_PCA(Es)
+            stop = time.time()
+            print("the PCA problem has taken {0:.4f} s".format(stop-start))
+            dump.append([repeats, x, y, wPCA, vPCA])
 
     pickleName = '{0}-{1}repeats.pickle'.format(prefix, repeats)
     with open(pickleName, 'wb') as f:
         pickle.dump(dump, f, protocol=2)
+
     print("Done")
+    if beamLine.source.trajectory is not None:
+        plt.show()
 
 
 def main():
