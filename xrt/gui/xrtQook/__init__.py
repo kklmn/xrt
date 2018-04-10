@@ -2902,8 +2902,9 @@ class XrtQook(qt.QWidget):
                         else:
                             continue
                         break
-                    if startFrom is not None:
-                        self.blPropagateFlow(startFrom)
+                    if self.isGlowAutoUpdate:
+                        if startFrom is not None:
+                            self.blPropagateFlow(startFrom)
 
     def nameToFlowPos(self, elementNameStr):
         retVal = 0
