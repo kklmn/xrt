@@ -237,7 +237,10 @@ __kernel void undulator_nf(const float R0,
 
         if (isHiPrecision) {
             krel = 1. - dot(n, beta);
-            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel);
+//velocity field
+//            nnb = nnb + (n - beta)*(1 - beta*beta)*C / (krel*krel*R0);
+            }
         else
             nnb = (n - beta) * w[ii];
 
@@ -427,7 +430,10 @@ __kernel void undulator_nf_full(const float R0,
 
         if (isHiPrecision) {
             krel = 1. - dot(n, beta);
-            nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
+            nnb = cross(n, cross((n - beta), betaP))/(krel*krel);
+//velocity field
+//            nnb = nnb + (n - beta)*(1 - beta*beta)*C / (krel*krel*R0);
+            }
         else
             nnb = (n - beta) * w[ii];
 
