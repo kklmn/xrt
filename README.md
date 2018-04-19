@@ -9,4 +9,5 @@ xrt is also available as source distribution from
 https://pypi.python.org/pypi/xrt
 [![PyPI version](https://badge.fury.io/py/xrt.svg)](https://badge.fury.io/py/xrt)
 
-See the documentation at http://xrt.readthedocs.io.
+See the documentation at http://xrt.readthedocs.io 
+[![Documentation Status](https://readthedocs.org/projects/xrt/badge/?version=latest)](http://xrt.readthedocs.io/?badge=latest)
