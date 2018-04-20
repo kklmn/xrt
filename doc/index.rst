@@ -6,10 +6,27 @@
 xrt (XRayTracer)
 ================
 
-:Release: |version| :ref:`version history <history>`, :ref:`plans <plans>`
-:Date: |today|
-:Authors: Konstantin Klementiev (MAX IV Laboratory), Roman Chernikov (Canadian Light Source)
-:License: Open Source, :ref:`MIT License <license>`
+|  GitHub: |GHver| |GHdate|
+|  PyPI: |PPver| |PPdate| :ref:`version history <history>`, :ref:`plans <plans>`
+|  Authors: Konstantin Klementiev (MAX IV Laboratory), Roman Chernikov (Canadian Light Source)
+|  |GHlic|
+
+-----
+
+.. |GHver| image:: https://badge.fury.io/gh/kklmn%2Fxrt.svg
+    :target: https://github.com/kklmn/xrt
+
+.. |GHdate| image:: https://img.shields.io/github/issues/detail/last-update/kklmn/xrt/130.svg
+    :target: https://github.com/kklmn/xrt
+
+.. |PPver| image:: https://badge.fury.io/py/xrt.svg
+    :target: https://pypi.org/project/xrt/
+
+.. |PPdate| image:: https://img.shields.io/github/release-date/kklmn/xrt.svg
+    :target: https://pypi.org/project/xrt/
+
+.. |GHlic| image:: https://img.shields.io/pypi/l/xrt.svg
+   :target: https://github.com/kklmn/xrt/blob/master/LICENSE.txt
 
 .. automodule:: xrt.__init__
 
