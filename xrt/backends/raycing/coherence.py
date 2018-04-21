@@ -200,12 +200,15 @@ def calc_eigen_modes_4D(J, eigenN=4):
     return w, v
 
 
-def calc_eigen_modes_PCA(U, eigenN=4):
+def calc_eigen_modes_PCA(U, eigenN=4, normalize=False):
     """
     Solves the PCA problem for a field stack *U* shaped as (repeats, nx, ny).
     Returns a tuple of two arrays: eigenvalues in a 1D array and eigenvectors
     as columns of a 2D array. This is a much faster and exact replacement of
     the full eigen mode decomposition by :func:`calc_eigen_modes_4D`.
+    
+    If *normalize* is True, the eigenvectors are normalized, otherwise
+    they are the PCs of the field stack in the original field units.
     """
     repeats, binsx, binsz = U.shape
     if repeats < eigenN:
@@ -219,7 +222,11 @@ def calc_eigen_modes_PCA(U, eigenN=4):
     outPCA = np.zeros((k, eigenN), dtype=np.complex128)
     for i in range(eigenN):
         mPCA = np.outer(vPCA[:, -1-i], vPCA[:, -1-i].T.conjugate())
-        outPCA[:, -1-i] = np.dot(D, mPCA)[:, 0]
+        vv = np.dot(D, mPCA)[:, 0]
+        if normalize:
+            outPCA[:, -1-i] = vv / np.dot(vv, vv.conj())**0.5
+        else:
+            outPCA[:, -1-i] = vv
     return wPCA, outPCA
 
 
