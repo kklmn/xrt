@@ -120,7 +120,7 @@ loss of about 2/3, the focal size is almost restored.
 .. rubric:: Coherence signatures
 
 The beam improvement can also be viewed via the coherence properties by the
-three available methods (see :ref:`coh_signs`). As the horizontal exit slit
+four available methods (see :ref:`coh_signs`). As the horizontal exit slit
 becomes smaller, one can observe the increase of the coherent fraction ζ and
 the increase of the primary (coherent) mode weight. The width of degree of
 coherence (DoC) relative to the width of the intensity distribution determines
@@ -130,7 +130,9 @@ coherent fraction also varies, which is counter-intuitive. An important
 advantage of the eigen-mode or PCA methods is a simple definition of the
 coherent fraction as the eigenvalue of the zeroth mode (component); this
 eigenvalue appears to be invariant around the focal point, see below. Note that
-the methods 2 and 3 give equal results.
+the methods 2 and 3 give equal results. The method 4 that gives the degree of
+transverse coherence (DoTC) is also invariant around the focal point, see DoTC
+values on the pictures of Principal Components.
 
 +-----------+--------------------------+--------------------------+
 |           |     80 µm exit slit      |     20 µm exit slit      |
@@ -139,7 +141,8 @@ the methods 2 and 3 give equal results.
 +-----------+--------------------------+--------------------------+
 | method 2  |        |st_hS80m3|       |       |st_hS20m3|        |
 +-----------+--------------------------+--------------------------+
-| method 3  |        |st_hS80m4|       |       |st_hS20m4|        |
+| method 3, |        |st_hS80m4|       |       |st_hS20m4|        |
+| method 4b |                          |                          |
 +-----------+--------------------------+--------------------------+
 
 .. |st_hS80m1| animation:: _images/stxm-IDOC-2D-2-hybr-non0e-0enSpread-monoE

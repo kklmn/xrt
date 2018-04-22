@@ -76,25 +76,29 @@ def main():
                 J = np.dot(D, D.T.conjugate())  # / repeats
                 print("solving eigenvalue problem...")
                 start = time.time()
+                dotc4 = rco.calc_degree_of_transverse_coherence_4D(J)
+#                print('dotc4', dotc4)
                 wN, vN = rco.calc_eigen_modes_4D(J, eigenN=4)
                 stop = time.time()
                 print("the eigenvalue problem has taken {0:.4} s".format(
                     stop-start))
                 print("vN.shape", vN.shape)
                 print("Top 4 eigen values (4D) = {0}".format(wN))
-
                 figE4 = rco.plot_eigen_modes(theta*p, psi*p, wN, vN,
                                              xlabel='x (mm)', ylabel='z (mm)')
+                figE4.axes[0].xaxis.set_ticklabels([])
+                figE4.axes[1].xaxis.set_ticklabels([])
                 figE4.suptitle('Eigen modes of mutual intensity,\n'
                                + cap, fontsize=11)
+                plt.text(0.05, 0.05, 'DoTC={0:.3f}'.format(dotc4),
+                         transform=figE4.axes[0].transAxes,
+                         ha='left', va='bottom', color='w', size=10)
                 figE4.savefig('Modes-{0}-{1}.png'.format('s', baseName))
 
-##                total4D = []
-##                for i in range(repeats):
-##                    total4D.append(Es[i])
-#                Esl = np.concatenate(total4D).reshape((-1, binsx, binsz))
                 print("solving PCA problem...")
                 start = time.time()
+                dotcP = rco.calc_degree_of_transverse_coherence_PCA(Es)
+#                print('dotcP', dotcP)
                 wPCA, vPCA = rco.calc_eigen_modes_PCA(Es, eigenN=4)
                 stop = time.time()
                 print("the PCA problem has taken {0:.4} s".format(stop-start))
@@ -102,8 +106,13 @@ def main():
                 print("Top 4 eigen values (PCA) = {0}".format(wPCA))
                 figEP = rco.plot_eigen_modes(theta*p, psi*p, wPCA, vPCA,
                                              xlabel='x (mm)', ylabel='z (mm)')
+                figEP.axes[0].xaxis.set_ticklabels([])
+                figEP.axes[1].xaxis.set_ticklabels([])
                 figEP.suptitle('Principal components of one-electron images,\n'
                                + cap, fontsize=11)
+                plt.text(0.05, 0.05, 'DoTC={0:.3f}'.format(dotcP),
+                         transform=figEP.axes[0].transAxes,
+                         ha='left', va='bottom', color='w', size=10)
                 figEP.savefig('Components-{0}-{1}.png'.format('s', baseName))
 
                 xdata = rco.calc_1D_coherent_fraction(Es, 'x', theta*p, p)

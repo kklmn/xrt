@@ -685,10 +685,14 @@ def plotFocus():
                       fontsize=11)
         figE.savefig('Modes-{0}-{1:02d}.png'.format(prefix, ic))
 
+        dotcP = rco.calc_degree_of_transverse_coherence_PCA(Es)
         figP = rco.plot_eigen_modes(x, y, wPCA, vPCA,
                                     xlabel='x (nm)', ylabel='z (nm)')
         figP.suptitle('Principal components of one-electron images, '+scrStr,
                       fontsize=11)
+        plt.text(0.05, 0.05, 'DoTC={0:.3f}'.format(dotcP),
+                 transform=figP.axes[0].transAxes,
+                 ha='left', va='bottom', color='w', size=10)
         figP.savefig('PCA-{0}-{1:02d}.png'.format(prefix, ic))
 
         xdata = rco.calc_1D_coherent_fraction(Es/norm, 'x', x)

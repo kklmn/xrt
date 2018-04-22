@@ -14,6 +14,10 @@ be found in ``...\tests\raycing\test_coherent_fraction_stack.py`` and in
 
 .. autofunction:: plot_1D_degree_of_coherence
 
+.. autofunction:: calc_degree_of_transverse_coherence_4D
+
+.. autofunction:: calc_degree_of_transverse_coherence_PCA
+
 .. autofunction:: calc_eigen_modes_4D
 
 .. autofunction:: calc_eigen_modes_PCA
@@ -41,7 +45,7 @@ def calc_1D_coherent_fraction(U, axisName, axis, p=0):
 
     *U*: complex valued ndarray, shape(repeats, nx, ny)
         3D stack of field images. For a 1D cut along *axis*, the middle of the
-        other dimesion is sliced out.
+        other dimension is sliced out.
 
     *axis*: str, one of 'x' or ('y' or 'z')
         Specifies the 1D axis of interest.
@@ -106,7 +110,8 @@ def plot_1D_degree_of_coherence(data1D, axisName, axis, unit="mm", fig2=None,
 
     *unit*: str, used in labels.
 
-    *fig2*: matplotlib figure object, if needed for shared plotting of two 1D axes.
+    *fig2*: matplotlib figure object, if needed for shared plotting of two 1D
+    axes.
 
     *isIntensityNormalized*: bool, controls the intensity axis label.
 
@@ -184,9 +189,35 @@ def plot_1D_degree_of_coherence(data1D, axisName, axis, unit="mm", fig2=None,
     return fig1, fig2
 
 
+def calc_degree_of_transverse_coherence_4D(J):
+    """
+    Calculates DoTC from the mutual intensity *J* as Tr(*J²*)/Tr²(*J*). This
+    function should only be used for demonstration purpose. There is a faster
+    alternative: :func:`calc_degree_of_transverse_coherence_PCA`.
+    """
+    res = np.diag(np.dot(J, J)).sum() / np.diag(J).sum()**2
+    return res.real
+
+
+def calc_degree_of_transverse_coherence_PCA(U):
+    """
+    Calculates DoTC from the field stack *U*. The field images of *U* are
+    flattened to form the matrix D shaped as (repeats, nx×ny).
+    DoTC = Tr(*D*\ :sup:`+`\ *DD*\ :sup:`+`\ *D*)/Tr²(*D*\ :sup:`+`\ *D*),
+    which is equal to the original DoTC for the mutual intensity *J*:
+    DoTC = Tr(*J²*)/Tr²(*J*).
+    """
+    repeats, binsx, binsz = U.shape
+    k = binsx * binsz
+    D = np.array(U).reshape((repeats, k), order='F').T
+    DTD = np.dot(D.T.conjugate(), D)
+    res = np.diag(np.dot(DTD, DTD)).sum() / np.diag(DTD).sum()**2
+    return res.real
+
+
 def calc_eigen_modes_4D(J, eigenN=4):
     """
-    Solves the eigenvalue problem for a mutual intensity *J*. This function
+    Solves the eigenvalue problem for the mutual intensity *J*. This function
     should only be used for demonstration purpose. There is a much faster
     alternative: :func:`calc_eigen_modes_PCA`.
     """
@@ -202,15 +233,25 @@ def calc_eigen_modes_4D(J, eigenN=4):
 
 def calc_eigen_modes_PCA(U, eigenN=4, normalize=False):
     """
-    Solves the PCA problem for a field stack *U* shaped as (repeats, nx, ny).
+    Solves the PCA problem for the field stack *U* shaped as (repeats, nx, ny).
+    The field images are flattened to form the matrix D shaped as
+    (repeats, nx×ny). The eigenvalue problem is solved for the matrix
+    *D*\ :sup:`+`\*D*.
+
     Returns a tuple of two arrays: eigenvalues in a 1D array and eigenvectors
     as columns of a 2D array. This is a much faster and exact replacement of
     the full eigen mode decomposition by :func:`calc_eigen_modes_4D`.
-    
+
+    *eigenN* sets the number of returned eigen modes. If None, the number of
+    modes is inferred from the shape of the field stack *U* and is equal to the
+    number of macroelectrons (repeats).
+
     If *normalize* is True, the eigenvectors are normalized, otherwise
     they are the PCs of the field stack in the original field units.
     """
     repeats, binsx, binsz = U.shape
+    if eigenN is None:
+        eigenN = repeats
     if repeats < eigenN:
         raise ValueError('"repeats" must be >= {0}'.format(eigenN))
     k = binsx * binsz
@@ -227,9 +268,10 @@ def calc_eigen_modes_PCA(U, eigenN=4, normalize=False):
             outPCA[:, -1-i] = vv / np.dot(vv, vv.conj())**0.5
         else:
             outPCA[:, -1-i] = vv
+    if (eigenN is None) and normalize:
+        rE = np.dot(np.dot(vPCA, np.diag(wPCA)), np.conj(vPCA.T))
+        print("diff DTD--decomposed(DTD) = {0}".format(np.abs(DTD-rE).sum()))
     return wPCA, outPCA
-
-
 calc_eigen_modes = calc_eigen_modes_PCA
 
 
@@ -312,8 +354,8 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
         imA = im.real**2 + im.imag**2
         ax.imshow(imA, extent=extent, cmap=cmap, interpolation='none')
         plt.text(
-            0, extent[-1]*0.9, lab.format(modeName, w[-iax-1]),
-            transform=ax.transData, ha='center', va='top', color='w', size=10)
+            0.5, 0.95, lab.format(modeName, w[-iax-1]),
+            transform=ax.transAxes, ha='center', va='top', color='w', size=10)
 
     if xlabel:
         figMs.text((xMargin+dX+space/2.)/xFigSize, yMargin*0.3/yFigSize,

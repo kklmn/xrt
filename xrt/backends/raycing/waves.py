@@ -304,7 +304,7 @@ Coherence signatures
 ~~~~~~~~~~~~~~~~~~~~
 
 A standard way to define coherence properties is via *mutual intensity J* and
-*complex degree of coherence j* (DOC,  normalized *J*):
+*complex degree of coherence j* (DoC,  normalized *J*):
 
     .. math::
         J(x_1, y_1, x_2, y_2) \equiv J_{12} =
@@ -322,7 +322,7 @@ There are two common ways of working with them:
 
 1. The horizontal and vertical directions are considered independently by
    placing the points 1 and 2 on a horizontal or vertical line symmetrically
-   about the optical axis. DOC thus becomes a 1D function dependent on the
+   about the optical axis. DoC thus becomes a 1D function dependent on the
    distance between the points, e.g. as :math:`j_{12}^{\rm hor}=j(x_1-x_2)`.
    The intensity distribution is also determined over the same line as a 1D
    positional function, e.g. as :math:`I(x)`.
@@ -345,6 +345,8 @@ There are two common ways of working with them:
         \sum_i{w_i V_i(x_1, y_1)V_i^{+}(x_2, y_2)},
 
     with :math:`w_i, V_i` being the *i*\ th eigenvalue and eigenvector.
+    :math:`w_0` is the fraction of the total flux contained in the 0th
+    (coherent) mode or *coherent flux fraction*.
 
     .. note::
         The matrix :math:`J_{12}` is of the size
@@ -368,36 +370,57 @@ method above.
 
    a) Out of *r* repeats of :math:`E(x, y)` build a data matrix :math:`D` with
       N\ :sub:`x`\ ×N\ :sub:`y` rows and *r* columns.
-   b) The matrix :math:`J_{12}` is equal to the product :math:`DD^T`. Instead
+   b) The matrix :math:`J_{12}` is equal to the product :math:`DD^{+}`. Instead
       of solving this huge eigenvalue problem of (N\ :sub:`x`\ ×N\ :sub:`y`)²
-      size, we solve a typically smaller matrix :math:`D^TD` of the size
+      size, we solve a typically smaller matrix :math:`D^{+}D` of the size
       *r*\ ².
    c) The biggest *r* eigenvalues of :math:`J_{12}` are equal to those of
-      :math:`D^TD` [proof to present in the coming paper]. To find the primary
-      (biggest) eigenvalue is the main objective of the modal analysis (item 2
-      above); PCA can provide it much easier due to the smaller size of the
-      problem.
-   d) Also the *eigen modes* of :math:`J_{12}=DD^T` can be found by PCA via the
-      eigenvectors :math:`v`'s of :math:`D^TD`. The matrix :math:`Dv_iv_i^{+}`
-      is of the size of :math:`D` and has all the columns proportional to each
-      other [proof to present in the coming paper]. These columns are the
-      *i*\ th principal components for the corresponding columns of :math:`D`.
-      Being normalized, all the columns become equal and give the *i*\ th
-      eigenvector of :math:`J_{12}`.
+      :math:`D^{+}D` [proof to present in the coming paper]. To find the
+      primary (biggest) eigenvalue is the main objective of the modal analysis
+      (item 2 above); PCA can provide it much easier due to the smaller size of
+      the problem.
+   d) Also the *eigen modes* of :math:`J_{12}=DD^{+}` can be found by PCA via
+      the eigenvectors :math:`v`'s of :math:`D^{+}D`. The matrix
+      :math:`Dv_iv_i^{+}` is of the size of :math:`D` and has all the columns
+      proportional to each other [proof to present in the coming paper]. These
+      columns are the *i*\ th principal components for the corresponding
+      columns of :math:`D`. Being normalized, all the columns become equal and
+      give the *i*\ th eigenvector of :math:`J_{12}`.
 
    Finally, PCA gives exactly the same information as the direct modal analysis
    (method No 2 above) but is cheaper to calculate by many orders of magnitude.
+
+One can define another measure of coherence as a single number, termed as
+*degree of transverse coherence* (DoTC) [Saldin2008]_:
+
+.. math::
+    {\rm DoTC} = \frac{\iiiint |J_{12}|^2 dx_1 dy_1 dx_2 dy_2}
+    {\left[\iint J_{11} dx_1 dy_1\right]^2}
+
+.. [Saldin2008] E.L. Saldin, E.A. Schneidmiller, M.V. Yurkov, *Coherence
+   properties of the radiation from X-ray free electron laser*, Opt. Commun.
+   **281** (2008) 1179–88.
+
+We propose to calculate DoTC from the matrix traces [derivation to present in
+the coming paper] as:
+
+4. a) DoTC = Tr(*J²*)/Tr²(*J*).
+
+   b) DoTC = Tr(*D*\ :sup:`+`\ *DD*\ :sup:`+`\ *D*)/Tr²(*D*\ :sup:`+`\ *D*),
+      with the matrix *D* defined above. The exactly same result as in (a) but
+      obtained with smaller matrices.
+
 
 .. note::
     A good test for the correctness of the obtained coherent fraction is to
     find it at various positions on propagating in free space, where the result
     is expected to be invariant. As appears in the
-    :ref:`examples of SoftiMAX<SoftiMAX>`, the analysis based on DOC never
+    :ref:`examples of SoftiMAX<SoftiMAX>`, the analysis based on DoC never
     gives an invariant coherent fraction at the scanned positions around the
     focus. The primary reason for this is the difficulty in the determination
-    of the width of degree of coherence, for the latter typically being a
-    complex-shaped oscillatory curve. In contrast, the modal analysis (the PCA
-    implementation is recommended) gives the expected invariance.
+    of the width of DoC, for the latter typically being a complex-shaped
+    oscillatory curve. In contrast, the modal analysis (the PCA implementation
+    is recommended) and the DoTC give the expected invariance.
 
 Coherence analysis and related plotting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
