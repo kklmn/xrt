@@ -14,16 +14,16 @@ xrt (XRayTracer)
 -----
 
 .. |GHver| image:: https://badge.fury.io/gh/kklmn%2Fxrt.svg
-    :target: https://github.com/kklmn/xrt
+   :target: https://github.com/kklmn/xrt
 
-.. |GHdate| image:: https://img.shields.io/github/issues/detail/last-update/kklmn/xrt/130.svg
-    :target: https://github.com/kklmn/xrt
+.. |GHdate| image:: https://img.shields.io/github/last-commit/kklmn/xrt.svg
+   :target: https://github.com/kklmn/xrt
 
 .. |PPver| image:: https://badge.fury.io/py/xrt.svg
-    :target: https://pypi.org/project/xrt/
+   :target: https://pypi.org/project/xrt/
 
 .. |PPdate| image:: https://img.shields.io/github/release-date/kklmn/xrt.svg
-    :target: https://pypi.org/project/xrt/
+   :target: https://pypi.org/project/xrt/
 
 .. |GHlic| image:: https://img.shields.io/pypi/l/xrt.svg
    :target: https://github.com/kklmn/xrt/blob/master/LICENSE.txt
