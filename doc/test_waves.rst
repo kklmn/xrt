@@ -1,3 +1,3 @@
 .. _test_waves:
 
-.. automodule:: tests.raycing.laguerre_gaussian_beam
+.. automodule:: tests.raycing.laguerre_hermite_gaussian_beam

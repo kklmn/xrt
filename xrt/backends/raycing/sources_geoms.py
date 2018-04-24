@@ -368,7 +368,7 @@ class GaussianBeam(object):
     r"""Implements a Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
     It *must* be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
-    example in ``\tests\raycing\laguerre_gaussian_beam.py``."""
+    example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), polarization='horizontal',
@@ -427,6 +427,7 @@ class GaussianBeam(object):
 
         self.polarization = polarization
         self.vortex = None
+        self.tem = None
         self.pitch = raycing.auto_units_angle(pitch)
         self.yaw = raycing.auto_units_angle(yaw)
 
@@ -471,21 +472,39 @@ class GaussianBeam(object):
                 wave.E[:] = accuBeam.E[:]
         make_polarization(self.polarization, wave, mcRays)
 
-        l, p = self.vortex if self.vortex is not None else (0, 0)
+        if self.vortex is not None:
+            l, p = self.vortex
+            gouy = abs(l) + 2*p
+        elif self.tem is not None:
+            m, n = self.tem
+            gouy = m + n
+        else:
+            gouy = 0
         k = wave.E / CHBAR * 1e7  # mm^-1
         yR = k/2 * self.w0**2
         invR = wave.yDiffr / (wave.yDiffr**2 + yR**2)
-        psi = (abs(l) + 2*p + 1) * np.arctan2(wave.yDiffr, yR)
+        psi = (gouy + 1) * np.arctan2(wave.yDiffr, yR)
         w = self.w(wave.yDiffr, yR=yR)
         phi = np.arctan2(wave.zDiffr, wave.xDiffr)
         rSquare = wave.xDiffr**2 + wave.zDiffr**2
         amp = (2/np.pi)**0.5 / w * np.exp(
             -rSquare/w**2 + 1j*k*(wave.yDiffr + 0.5*rSquare*invR) - 1j*psi)
-        clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
-        amp *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
-        if p > 0:
-            lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
-            amp *= lg
+        if self.vortex is not None:
+            clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
+            amp *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
+            if p > 0:
+                lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
+                amp *= lg
+        elif self.tem is not None:
+            clp = (2**(m+n)*np.math.factorial(m)*np.math.factorial(n))**(-0.5)
+            amp *= clp
+            if m > 0:
+                hm = sp.special.eval_hermite(m, 2**0.5*wave.xDiffr/w)
+                amp *= hm
+            if n > 0:
+                hn = sp.special.eval_hermite(n, 2**0.5*wave.zDiffr/w)
+                amp *= hn
+
         amp *= wave.dS**0.5
         wave.Es *= amp
         wave.Ep *= amp
@@ -519,15 +538,15 @@ class GaussianBeam(object):
 
 
 class LaguerreGaussianBeam(GaussianBeam):
-    r"""Implements a Laguerre-Gaussian beam
+    r"""Implements Laguerre-Gaussian beam
     https://en.wikipedia.org/wiki/Gaussian_beam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
-    example in ``\tests\raycing\laguerre_gaussian_beam.py``."""
+    example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
     def __init__(self, *args, **kwargs):
         """
         *vortex*: None or tuple(l, p)
-            specifies a Laguerre-Gaussian beam with *l* the azimuthal index and
+            specifies Laguerre-Gaussian beam with *l* the azimuthal index and
             *p* >= 0 the radial index.
 
 
@@ -535,6 +554,25 @@ class LaguerreGaussianBeam(GaussianBeam):
         vortex = kwargs.pop('vortex', None)
         GaussianBeam.__init__(self, *args, **kwargs)
         self.vortex = vortex
+
+
+class HermiteGaussianBeam(GaussianBeam):
+    r"""Implements Hermite-Gaussian beam
+    https://en.wikipedia.org/wiki/Gaussian_beam.
+    It must be used for an already available set of 3D points which are
+    obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
+    example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+    def __init__(self, *args, **kwargs):
+        """
+        *TEM*: None or tuple(m, n)
+            specifies Hermite-Gaussian beam of order (m, n) referring to the x
+            and y directions.
+
+
+        """
+        tem = kwargs.pop('TEM', None)
+        GaussianBeam.__init__(self, *args, **kwargs)
+        self.tem = tem
 
 
 class MeshSource(object):
