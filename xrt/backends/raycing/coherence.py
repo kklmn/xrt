@@ -231,7 +231,7 @@ def calc_eigen_modes_4D(J, eigenN=4):
     return w, v
 
 
-def calc_eigen_modes_PCA(U, eigenN=4, normalize=False):
+def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
     """
     Solves the PCA problem for the field stack *U* shaped as (repeats, nx, ny).
     The field images are flattened to form the matrix D shaped as
@@ -246,16 +246,20 @@ def calc_eigen_modes_PCA(U, eigenN=4, normalize=False):
     modes is inferred from the shape of the field stack *U* and is equal to the
     number of macroelectrons (repeats).
 
+    if *maxRepeats* are given, the stack is sliced up to that number. This
+    option is introduced in order not to make the eigenvalue problem too big.
+
     If *normalize* is True, the eigenvectors are normalized, otherwise
     they are the PCs of the field stack in the original field units.
     """
-    repeats, binsx, binsz = U.shape
+    locU = U if maxRepeats is None else U[:maxRepeats, :, :]
+    repeats, binsx, binsz = locU.shape
     if eigenN is None:
         eigenN = repeats
     if repeats < eigenN:
         raise ValueError('"repeats" must be >= {0}'.format(eigenN))
     k = binsx * binsz
-    D = np.array(U).reshape((repeats, k), order='F').T
+    D = np.array(locU).reshape((repeats, k), order='F').T
     DTD = np.dot(D.T.conjugate(), D)
     DTD /= np.diag(DTD).sum()
     kwargs = dict(eigvals=(repeats-eigenN, repeats-1))
