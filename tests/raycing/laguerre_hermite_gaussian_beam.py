@@ -8,6 +8,13 @@ Tests of Kirchhoff integral with Gaussian and Laguerre-Gaussian beams
 Find the test module laguerre_gaussian_beam.py, as well as several other tests
 for raycing backend, in ``\tests\raycing``.
 
+.. note::
+
+    In this section we consider z-axis to be directed along the beamline in
+    order to be compatible with the cited works. Elsewhere in xrt z-axis looks
+    upwards.
+
+
 Gaussian beam
 ~~~~~~~~~~~~~
 
