@@ -17,7 +17,8 @@ MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
                 'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
                 'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets',
                 'matplotlib.backends.backend_qt5agg',
-                'PySide', 'PySide.QtCore']
+                'PySide', 'PySide.QtCore',
+                'spyder.widgets', 'spyderlib.widgets']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # import Cloud
