@@ -17,6 +17,12 @@ Using xrtQook for script generation
 
          python xrtQookStart.pyw --disable-web-security
 
+
+  .. note::
+      The scaling of GUI may behave differently in different systems and Qt
+      versions. If it looks wrong, try the scaling options in
+      ``xrtQookStart.pyw``.
+
   .. note::
      If you want to start xrtQook from Spyder, select the run option
      "Execute in an external system terminal".
