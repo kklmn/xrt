@@ -11,3 +11,6 @@ https://pypi.python.org/pypi/xrt
 
 See the documentation at http://xrt.readthedocs.io 
 [![Documentation Status](https://readthedocs.org/projects/xrt/badge/?version=latest)](http://xrt.readthedocs.io/?badge=latest)
+
+See [Detailed instructions for installing dependencies](http://xrt.readthedocs.io/instructions.html).
+
