@@ -135,6 +135,10 @@ Features of xrt
 * *Examples*. xrt comes with many examples; see the galleries, the links are at
   the top bar.
 
+Python 2 and 3
+--------------
+The code can run in both Python branches without any modification.
+
 Dependencies
 ------------
 numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
@@ -143,9 +147,7 @@ GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
 for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
 view of xrtQook. OpenGL is required for xrtGlow.
 
-Python 2 and 3
---------------
-The code can run in both Python branches without any modification.
+See :ref:`detailed instructions for installing dependencies <instructions>`.
 
 Get xrt
 -------
