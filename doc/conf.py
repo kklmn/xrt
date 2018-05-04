@@ -120,7 +120,6 @@ html_theme_options = {
     "rightsidebar": False,
 #    "stickysidebar": True,
     "collapsiblesidebar": True,
-    "body_min_width": '96%',
 #    "max_width": 20,
 #    "externalrefs": True,
 #    "roottarget": "index"
@@ -156,6 +155,7 @@ if on_rtd:
 else:
 #    html_theme = 'nature'
     html_static_path = ['_static']
+    html_theme_options["body_min_width"] = '96%'
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
