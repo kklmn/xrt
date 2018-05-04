@@ -400,7 +400,7 @@ class xrtGlow(qt.QWidget):
         explLabel = qt.QLabel("Color bump height, mm")
         explEdit = qt.QLineEdit("0.0")
         explValidator = qt.QDoubleValidator()
-        explValidator.setRange(-100, 100, 3)
+        explValidator.setRange(-1000, 1000, 3)
         explEdit.setValidator(explValidator)
         explEdit.editingFinished.connect(self.updateExplosionDepth)
         explLabel.setMinimumWidth(144)
