@@ -12,15 +12,18 @@ creating a beamline and interactively viewing it in 3D.
    :alt: &ensp;Intensity of undulator radiation on a transverse flat screen.
        The long axis is energy. One can observe two harmonics crossing the
        central line: the former is odd and the latter is even.
+
 .. |vcmSi-P| animation:: _images/vcmSi-FootprintP
    :alt: &ensp;Absorbed power and power density on a mirror at varying pitch
-         angle.
+       angle.
    :loc: upper-right-corner
+
 .. |VortexB| animation:: _images/Laguerre-Gauss-ani
    :alt: &ensp;Vortex beam with <i>l</i>=1 and <i>p</i>=1. Colored by phase.
    :loc: upper-right-corner
 
 .. automodule:: xrt.gui.xrtQook
+
 .. automodule:: xrt.gui.xrtGlow
 
 Features of xrt
@@ -137,10 +140,12 @@ Features of xrt
 
 Python 2 and 3
 --------------
+
 The code can run in both Python branches without any modification.
 
 Dependencies
 ------------
+
 numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
 GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
 (these are search key words), pytools and pyopencl. PyQt4 or PyQt5 are needed
@@ -151,6 +156,7 @@ See :ref:`detailed instructions for installing dependencies <instructions>`.
 
 Get xrt
 -------
+
 xrt is available as source distribution from `pypi.python.org
 <https://pypi.python.org/pypi/xrt>`_ and from `GitHub
 <https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
@@ -160,6 +166,7 @@ and examples. The complete documentation is available as zip file from
 
 Installation
 ------------
+
 Unzip the .zip file into a suitable directory and use
 `sys.path.append(path-to-xrt)` in your script. You can also install xrt to the
 standard location by running ``python setup.py install`` from the directory
@@ -171,6 +178,7 @@ Windows and Linux and between Python 2 and Python 3.
 
 Citing xrt
 ----------
+
 Please cite xrt as:
 `K. Klementiev and R. Chernikov, "Powerful scriptable ray tracing package xrt",
 Proc. SPIE 9209, Advances in Computational Methods for X-Ray Optics III,
@@ -178,6 +186,7 @@ Proc. SPIE 9209, Advances in Computational Methods for X-Ray Optics III,
 
 Acknowledgments
 ---------------
+
 Josep Nicolás and Jordi Juanhuix (synchrotron Alba) are acknowledged for
 discussion and for their Matlab codes used as examples at early stages of the
 project. Summer students of DESY Andrew Geondzhian and Victoria Kabanova are
@@ -191,6 +200,7 @@ field. Bernard Kozioziemski (LLNL) has pointed to the importance of considering
 the *total* absorption cross-section (not just photoelectric absorption) in the
 cases of light materials at high energy. Emilio Heredia (CLS) is thanked for
 valuable suggestions on GUI.
+
 """
 
 # ========Convention: note the difference from PEP8 for variables!=============
@@ -207,7 +217,7 @@ __author__ = \
     "Roman Chernikov (Canadian Light Source)"
 __email__ = "konstantin DOT klementiev AT gmail DOT com, " +\
             "rchernikov AT gmail DOT com"
-__date__ = "25 Mar 2018"
+__date__ = "4 May 2018"
 __license__ = "MIT license"
 
 # __all__ = ['plotter', 'runner', 'multipro']
