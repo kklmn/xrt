@@ -152,8 +152,6 @@ GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
 for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
 view of xrtQook. OpenGL is required for xrtGlow.
 
-See :ref:`detailed instructions for installing dependencies <instructions>`.
-
 Get xrt
 -------
 
