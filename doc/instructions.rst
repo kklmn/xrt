@@ -27,7 +27,6 @@ glut (see below).
 
 Anaconda is the only option to run xrt. 
 
-
 Dependencies
 ~~~~~~~~~~~~
 
@@ -38,7 +37,7 @@ for plotting but often requires manual installation.
 Some of xrt examples require xlrd, xlwt and pandas for working with Excel files
 (i.e. for custom magnetic field data).
 
-Spyder (>=3.0.0) is a cross-platform IDE for python, xrtQook GUI uses some of
+Spyder (>=3.0.0) is a cross-platform IDE for python; xrtQook GUI uses some of
 its libraries to render the live help and provide the console interface (highly
 recommended for nicer look). Be aware that starting from version 3.2.0 spyder
 switched to IPython and has no classic python console (consider version 3.1.4
@@ -57,22 +56,25 @@ PyQt4 (Qt>=4.8) or PyQt5 (Qt>=5.2) are needed for xrtQook interface.
 PyOpenGL (>=3.1.1) and PyOpenGL_Accelerate (>=3.1.1) (not required but
 recommended) are used by xrtGlow for the 3D scene rendering.
 
+Automatic installation of dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Starting from version 1.3.1 xrt installer script automatically analyses the
-dependencies list. Just run the pip command::
+list of dependencies. Just run the pip install command::
 
     pip install xrt
-	 #Or, if you downloaded the archive from github
-	 pip install <xrt-file>
-	
-In addition to automatic installation: be aware that in python2 you have to
+    #or, if you've downloaded the archive from github:
+    pip install <xrt-zip-file>
+
+In addition to the automatic installation: be aware that in python2 you have to
 install PyQt4 libraries manually. 
-Linux users should install tkinter backend (python-tk or python3-tk) using
+Linux users should install tkinter backend (python-tk or python3-tk) using a
 system package manager. 
 Binary packages of pyopengl are highly recommended for Windows users (see
 below).
 
-Installation of dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Manual installation of dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. rubric:: Windows
 
@@ -106,7 +108,7 @@ For python2::
     sudo apt-get install python-numpy python-scipy python-matplotlib python-tk spyder
     #file import
     sudo apt-get install python-pandas python-xlrd python-xlwt
-    #GUI (xrtQook and xrtGlow). 
+    #GUI (xrtQook and xrtGlow)
     sudo apt-get install python-qt4 python-qt4-gl python-qwt5-qt4 freeglut3-dev python-opengl
 
 For python3::
@@ -115,20 +117,18 @@ For python3::
     sudo apt-get install python3-pandas python3-xlrd
     sudo apt-get install python3-pyqt5 python3-pyqt5.qtopengl freeglut3-dev python3-opengl
 
-Replace "apt-get" with "yum" if you use the RedHat-family distribution.
+Replace "apt-get" with "yum" if you use a RedHat-family distribution.
 
-If using pip, some packages still have to be installed from the system package
-manager. In case of python 2 it's all GUI packages and python-tk. pip will take
-care of the rest.
-Python2::
+If using pip, some packages still have to be installed from a system package
+manager. In case of python 2, these are all GUI packages (see above) and
+python-tk. pip will take care of the rest. Python2::
 
     pip install numpy scipy matplotlib spyder
     pip install pandas xlrd xlwt
     pip install pyopengl pyopengl_accelerate
 
 In Python3 replace pip with pip3. PyQt5 is available from pip. python3-tk
-should be installed with system package manager.
-Python3::
+should be installed with a system package manager. Python3::
 
     pip3 install pyqt5
 
@@ -138,13 +138,12 @@ Use conda package manager to install all required packages::
 
     conda install numpy scipy matplotlib pytools spyder pyqt pyopengl pyopencl
 
-
 PyOpenCL
 ~~~~~~~~
 
 Before installing PyOpenCL you need at least one existing OpenCL implementation
 (driver). OpenCL can come with a graphics card driver and/or with an OpenCL CPU
-runtime. High profile graphics card (those with a high FP64/FP32 ratio) are
+runtime. High profile graphics cards (those with a high FP64/FP32 ratio) are
 advantageous.
 
 On Windows, the binary package of pyopencl by C. Gohlke usually works out of
@@ -153,7 +152,8 @@ the box.
 For installing on macOS and Linux, see the
 `pyopencl site <https://documen.tician.de/pyopencl/misc.html>`_.
 The following works on Ubuntu (used on Ubuntu 18.04 with the recommended Nvidia
-proprietary driver or `OpenCL runtime for Intel processors <https://software.intel.com/en-us/articles/opencl-drivers>`_)::
+proprietary driver or
+`OpenCL runtime for Intel processors <https://software.intel.com/en-us/articles/opencl-drivers>`_)::
 
     apt-get install opencl-headers ocl-icd-opencl-dev
     pip install pyopencl
