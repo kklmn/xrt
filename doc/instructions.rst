@@ -153,7 +153,7 @@ The following works on Ubuntu (used on Ubuntu 18.04 with the recommended Nvidia
 proprietary driver or
 `OpenCL runtime for Intel processors <https://software.intel.com/en-us/articles/opencl-drivers>`_)::
 
-    apt-get install opencl-headers ocl-icd-opencl-dev
+    sudo apt-get install opencl-headers ocl-icd-opencl-dev
     pip install pyopencl
 
 Instead of installing ocl-icd-opencl-dev, one can locate libOpenCL.so and
