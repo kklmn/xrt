@@ -61,8 +61,8 @@ Starting from version 1.3.1 xrt installer script automatically analyses the
 dependencies list. Just run the pip command::
 
     pip install xrt
-	#Or, if you downloaded the archive from github
-	pip install <xrt-file>
+	 #Or, if you downloaded the archive from github
+	 pip install <xrt-file>
 	
 In addition to automatic installation: be aware that in python2 you have to
 install PyQt4 libraries manually. 
@@ -130,7 +130,7 @@ In Python3 replace pip with pip3. PyQt5 is available from pip. python3-tk
 should be installed with system package manager.
 Python3::
 
-    pip install pyqt5
+    pip3 install pyqt5
 
 .. rubric:: macOS
 
