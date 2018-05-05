@@ -117,8 +117,6 @@ For python3::
     sudo apt-get install python3-pandas python3-xlrd
     sudo apt-get install python3-pyqt5 python3-pyqt5.qtopengl freeglut3-dev python3-opengl
 
-Replace "apt-get" with "yum" if you use a RedHat-family distribution.
-
 If using pip, some packages still have to be installed from a system package
 manager. In case of python 2, these are all GUI packages (see above) and
 python-tk. pip will take care of the rest. Python2::
