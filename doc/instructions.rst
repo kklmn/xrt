@@ -57,6 +57,20 @@ PyQt4 (Qt>=4.8) or PyQt5 (Qt>=5.2) are needed for xrtQook interface.
 PyOpenGL (>=3.1.1) and PyOpenGL_Accelerate (>=3.1.1) (not required but
 recommended) are used by xrtGlow for the 3D scene rendering.
 
+Starting from version 1.3.1 xrt installer script automatically analyses the
+dependencies list. Just run the pip command::
+
+    pip install xrt
+	#Or, if you downloaded the archive from github
+	pip install <xrt-file>
+	
+In addition to automatic installation: be aware that in python2 you have to
+install PyQt4 libraries manually. 
+Linux users should install tkinter backend (python-tk or python3-tk) using
+system package manager. 
+Binary packages of pyopengl are highly recommended for Windows users (see
+below).
+
 Installation of dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -89,32 +103,40 @@ differ, here are the corresponding commands for both cases.
 For python2::
 
     #base xrt dependencies
-    sudo apt-get install pip python-numpy python-scipy python-matplotlib python-tk spyder
+    sudo apt-get install python-numpy python-scipy python-matplotlib python-tk spyder
     #file import
     sudo apt-get install python-pandas python-xlrd python-xlwt
-    #GUI (xrtQook and xrtGlow)
+    #GUI (xrtQook and xrtGlow). 
     sudo apt-get install python-qt4 python-qt4-gl python-qwt5-qt4 freeglut3-dev python-opengl
 
 For python3::
 
-    sudo apt-get install python3-pip python3-numpy python3-scipy python3-matplotlib python3-tk spyder3
+    sudo apt-get install python3-numpy python3-scipy python3-matplotlib python3-tk spyder3
     sudo apt-get install python3-pandas python3-xlrd
     sudo apt-get install python3-pyqt5 python3-pyqt5.qtopengl freeglut3-dev python3-opengl
 
 Replace "apt-get" with "yum" if you use the RedHat-family distribution.
 
-If using pip and Python2::
+If using pip, some packages still have to be installed from the system package
+manager. In case of python 2 it's all GUI packages and python-tk. pip will take
+care of the rest.
+Python2::
 
     pip install numpy scipy matplotlib spyder
     pip install pandas xlrd xlwt
-    pip install PyQt4
     pip install pyopengl pyopengl_accelerate
 
-In Python3 replace pip with pip3 and install PyQt5 instead of PyQt4.
+In Python3 replace pip with pip3. PyQt5 is available from pip. python3-tk
+should be installed with system package manager.
+Python3::
+
+    pip install pyqt5
 
 .. rubric:: macOS
 
-Use pip to install all required packages.
+Use conda package manager to install all required packages::
+
+    conda install numpy scipy matplotlib pytools spyder pyqt pyopengl pyopencl
 
 
 PyOpenCL
@@ -131,7 +153,7 @@ the box.
 For installing on macOS and Linux, see the
 `pyopencl site <https://documen.tician.de/pyopencl/misc.html>`_.
 The following works on Ubuntu (used on Ubuntu 18.04 with the recommended Nvidia
-proprietary driver)::
+proprietary driver or `OpenCL runtime for Intel processors <https://software.intel.com/en-us/articles/opencl-drivers>`_)::
 
     apt-get install opencl-headers ocl-icd-opencl-dev
     pip install pyopencl

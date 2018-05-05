@@ -1363,7 +1363,7 @@ class OE(object):
         calctype = 0
         if matcr.kind == "powder":
             calctype = 5
-        elif matcr.kind == "single crystal":
+        elif matcr.kind == "monocrystal":
             calctype = 10 + matcr.Nmax
         elif matcr.kind == "crystal harmonics":
             calctype = 100 + matcr.Nmax
