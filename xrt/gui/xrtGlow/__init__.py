@@ -567,6 +567,7 @@ class xrtGlow(qt.QWidget):
                  'Invert scene color',
                  'Use scalable font',
                  'Show Virtual Screen label',
+                 'Virtual Screen for Indexing',
                  'Show lost rays',
                  'Show local axes'],
                 [self.checkAA,
@@ -576,6 +577,7 @@ class xrtGlow(qt.QWidget):
                  self.invertSceneColor,
                  self.checkScalableFont,
                  self.checkShowLabels,
+                 self.checkVSColor,
                  self.checkShowLost,
                  self.checkShowLocalAxes])):
             aaCheckBox = qt.QCheckBox(cbText)
@@ -912,6 +914,11 @@ class xrtGlow(qt.QWidget):
 
     def checkShowLabels(self, state):
         self.customGlWidget.showOeLabels = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkVSColor(self, state):
+        self.customGlWidget.vScreenForColors = True if state > 0 else False
+        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
     def checkShowLost(self, state):
@@ -1602,7 +1609,10 @@ class xrtGlWidget(qt.QGLWidget):
         self.virtBeam = None
         self.virtDotsArray = None
         self.virtDotsColor = None
+        self.vScreenForColors = False
+        self.globalColorIndex = None
         self.isVirtScreenNormal = False
+        self.segmentModel = modelRoot
         self.vScreenSize = 0.5
         self.setMinimumSize(400, 400)
         self.aspect = 1.
@@ -1735,7 +1745,10 @@ class xrtGlWidget(qt.QGLWidget):
         self.lineWidth = lWidth
         self.glDraw()
 
-    def populateVerticesArray(self, segmentsModelRoot):
+    def populateVerticesOnly(self, segmentsModelRoot):
+        if segmentsModelRoot is None:
+            return
+        self.segmentModel = segmentsModelRoot
         # signal = self.QookSignal
         self.verticesArray = None
         self.footprintsArray = None
@@ -1746,6 +1759,8 @@ class xrtGlWidget(qt.QGLWidget):
         alphaRays = None
         colorsDots = None
         alphaDots = None
+        globalColorsDots = None
+        globalColorsRays = None
 
         verticesArrayLost = None
         colorsRaysLost = None
@@ -1835,25 +1850,37 @@ class xrtGlWidget(qt.QGLWidget):
 
                         good = np.logical_and(good, goodC)
 
-                        if self.globalNorm:
-                            alphaMax = 1.
+                        if self.vScreenForColors and\
+                                self.globalColorIndex is not None:
+                            good = np.logical_and(good, self.globalColorIndex)
+                            globalColorsRays = np.repeat(
+                                    self.globalColorArray[good], 2, axis=0) if\
+                                globalColorsRays is None else np.concatenate(
+                                    (globalColorsRays,
+                                     np.repeat(self.globalColorArray[good], 2,
+                                               axis=0)))
                         else:
-                            if len(intensity[good]) > 0:
-                                alphaMax = np.max(intensity[good])
-                            else:
+                            if self.globalNorm:
                                 alphaMax = 1.
-                        alphaMax = alphaMax if alphaMax != 0 else 1.
+                            else:
+                                if len(intensity[good]) > 0:
+                                    alphaMax = np.max(intensity[good])
+                                else:
+                                    alphaMax = 1.
+                            alphaMax = alphaMax if alphaMax != 0 else 1.
 
-                        alphaRays = np.repeat(intensity[good] / alphaMax, 2).T\
-                            if alphaRays is None else np.concatenate(
-                                (alphaRays.T,
-                                 np.repeat(intensity[good] / alphaMax, 2).T))
-                        colorsRays = np.repeat(np.array(self.getColor(
-                            startBeam)[good]), 2).T if\
-                            colorsRays is None else np.concatenate(
-                                (colorsRays.T,
-                                 np.repeat(np.array(self.getColor(
-                                     startBeam)[good]), 2).T))
+                            alphaRays = np.repeat(intensity[good] / alphaMax,
+                                                  2).T\
+                                if alphaRays is None else np.concatenate(
+                                    (alphaRays.T,
+                                     np.repeat(intensity[good] / alphaMax,
+                                               2).T))
+                            colorsRays = np.repeat(np.array(self.getColor(
+                                startBeam)[good]), 2).T if\
+                                colorsRays is None else np.concatenate(
+                                    (colorsRays.T,
+                                     np.repeat(np.array(self.getColor(
+                                         startBeam)[good]), 2).T))
                         vertices = np.array(
                             [startBeam.x[good] - self.coordOffset[0],
                              endBeam.x[good] - self.coordOffset[0]]).flatten(
@@ -1919,24 +1946,29 @@ class xrtGlWidget(qt.QGLWidget):
                         raise
                     else:
                         continue
-
-                if self.globalNorm:
-                    alphaMax = 1.
+                if self.vScreenForColors and self.globalColorIndex is not None:
+                    good = np.logical_and(good, self.globalColorIndex)
+                    globalColorsDots = self.globalColorArray[good] if\
+                        globalColorsDots is None else np.concatenate(
+                            (globalColorsDots, self.globalColorArray[good]))
                 else:
-                    if len(intensity[good]) > 0:
-                        alphaMax = np.max(intensity[good])
-                    else:
+                    if self.globalNorm:
                         alphaMax = 1.
-                alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaDots = intensity[good].T / alphaMax if\
-                    alphaDots is None else np.concatenate(
-                        (alphaDots.T, intensity[good].T / alphaMax))
+                    else:
+                        if len(intensity[good]) > 0:
+                            alphaMax = np.max(intensity[good])
+                        else:
+                            alphaMax = 1.
 
-                colorsDots = np.array(self.getColor(
-                    startBeam)[good]).T if\
-                    colorsDots is None else np.concatenate(
-                        (colorsDots.T, np.array(self.getColor(
-                             startBeam)[good]).T))
+                    alphaMax = alphaMax if alphaMax != 0 else 1.
+                    alphaDots = intensity[good].T / alphaMax if\
+                        alphaDots is None else np.concatenate(
+                            (alphaDots.T, intensity[good].T / alphaMax))
+                    colorsDots = np.array(self.getColor(
+                        startBeam)[good]).T if\
+                        colorsDots is None else np.concatenate(
+                            (colorsDots.T, np.array(self.getColor(
+                                 startBeam)[good]).T))
 
                 vertices = np.array(startBeam.x[good] - self.coordOffset[0])
                 vertices = np.vstack((vertices, np.array(
@@ -1977,7 +2009,10 @@ class xrtGlWidget(qt.QGLWidget):
                 else:
                     self.colorMin = self.colorMax * 0.99
                     self.colorMax *= 1.01
-            if colorsRays is not None:
+
+            if self.vScreenForColors and self.globalColorIndex is not None:
+                self.raysColor = globalColorsRays
+            elif colorsRays is not None:
                 colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
                                                            self.colorMin)
                 colorsRays = np.dstack((colorsRays,
@@ -2016,7 +2051,9 @@ class xrtGlWidget(qt.QGLWidget):
                 else:
                     self.colorMin = self.colorMax * 0.99
                     self.colorMax *= 1.01
-            if colorsDots is not None:
+            if self.vScreenForColors and self.globalColorIndex is not None:
+                self.dotsColor = globalColorsDots
+            elif colorsDots is not None:
                 colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
                                                            self.colorMin)
                 colorsDots = np.dstack((colorsDots,
@@ -2024,6 +2061,7 @@ class xrtGlWidget(qt.QGLWidget):
                                         alphaDots if self.iHSV else
                                         np.ones_like(alphaDots)))
                 colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
+
                 if self.globalNorm and len(alphaDots) > 0:
                     alphaMax = np.max(alphaDots)
                 else:
@@ -2032,6 +2070,7 @@ class xrtGlWidget(qt.QGLWidget):
                 alphaColorDots = np.array([alphaDots / alphaMax]).T
                 self.dotsColor = np.float32(np.hstack([colorsRGBDots,
                                                        alphaColorDots]))
+
             if self.showLostRays:
                 if colorsDotsLost is not None:
                     lostColor = np.zeros((colorsDotsLost, 4))
@@ -2047,13 +2086,17 @@ class xrtGlWidget(qt.QGLWidget):
                 raise
             else:
                 pass
-
         tmpMaxLen = np.max(tmpMax - tmpMin)
         if tmpMaxLen > maxLen:
             maxLen = tmpMaxLen
         self.maxLen = maxLen
         self.newColorAxis = False
+
+    def populateVerticesArray(self, segmentsModelRoot):
+        self.populateVerticesOnly(segmentsModelRoot)
         self.populateVScreen()
+        if self.vScreenForColors:
+            self.populateVerticesOnly(segmentsModelRoot)
 
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
@@ -2628,6 +2671,7 @@ class xrtGlWidget(qt.QGLWidget):
                     else:
                         axisL[iAx][self.visibleAxes[1], :] *= 1.05  # height
                         axisL[iAx][self.visibleAxes[0], :] *= 1.05  # side
+                gl.glLineWidth(2)
                 for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
                                                  precisionLabels[iAx])):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
@@ -2644,6 +2688,8 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
+        if vertices is None or colors is None:
+            return
 
         if bool(tr):
             vertexArray = gl.vbo.VBO(self.modelToWorld(vertices))
@@ -3255,7 +3301,7 @@ class xrtGlWidget(qt.QGLWidget):
             'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
             'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
             'CTRL+LeftMouse: Drag Virtual Screen',
-            'ALT+LeftMouse: Scale Virtual Screen',
+            'ALT+WheelMouse: Scale Virtual Screen',
             'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
             '                      (with Beamline along the longest view axis)',  # analysis:ignore
             'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
@@ -3581,6 +3627,7 @@ class xrtGlWidget(qt.QGLWidget):
             vColorArray >= self.selColorMin)
 
         good = np.logical_and(good, goodC)
+        self.globalColorIndex = good if self.vScreenForColors else None
 
         if self.globalNorm:
             alphaMax = 1.
@@ -3590,9 +3637,10 @@ class xrtGlWidget(qt.QGLWidget):
             else:
                 alphaMax = 1.
         alphaMax = alphaMax if alphaMax != 0 else 1.
-        alphaDots = intensity[good].T / alphaMax
-        colorsDots = np.array(vColorArray[good]).T
-
+#        alphaDots = intensity[good].T / alphaMax
+#        colorsDots = np.array(vColorArray[good]).T
+        alphaDots = intensity.T / alphaMax
+        colorsDots = np.array(vColorArray).T
         if self.colorMin == self.colorMax:
             if self.colorMax == 0:  # and self.colorMin == 0 too
                 self.colorMin, self.colorMax = -0.1, 0.1
@@ -3600,7 +3648,7 @@ class xrtGlWidget(qt.QGLWidget):
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
         colorsDots = (colorsDots-self.colorMin) / (self.colorMax-self.colorMin)
-        depthDots = copy.deepcopy(colorsDots) * self.depthScaler
+        depthDots = copy.deepcopy(colorsDots[good]) * self.depthScaler
 
         colorsDots = np.dstack((colorsDots,
                                 np.ones_like(alphaDots)*0.85,
@@ -3618,13 +3666,17 @@ class xrtGlWidget(qt.QGLWidget):
         self.virtDotsArray = vertices.T
 
         colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-        if self.globalNorm and len(alphaDots) > 0:
-            alphaMax = np.max(alphaDots)
+        if self.globalNorm and len(alphaDots[good]) > 0:
+            alphaMax = np.max(alphaDots[good])
         else:
             alphaMax = 1.
         alphaColorDots = np.array([alphaDots / alphaMax]).T
-        self.virtDotsColor = np.float32(np.hstack([colorsRGBDots,
-                                                   alphaColorDots]))
+        if self.vScreenForColors:
+            self.globalColorArray = np.float32(np.hstack([colorsRGBDots,
+                                                          alphaColorDots]))
+        self.virtDotsColor = np.float32(np.hstack([colorsRGBDots[good],
+                                                   alphaColorDots[good]]))
+
         histogram = np.histogram(np.array(
             vColorArray[good]),
             range=(self.colorMin, self.colorMax),
@@ -3667,6 +3719,8 @@ class xrtGlWidget(qt.QGLWidget):
             self.virtScreen.center = self.worldToModel(np.array([0, 0, 0])) +\
                 self.coordOffset
             self.positionVScreen()
+            if self.vScreenForColors:
+                self.populateVerticesOnly(self.segmentModel)
             self.glDraw()
         except:  # analysis:ignore
             self.clearVScreen()
@@ -3757,6 +3811,9 @@ class xrtGlWidget(qt.QGLWidget):
         self.virtBeam = None
         self.virtDotsArray = None
         self.virtDotsColor = None
+        if self.globalColorIndex is not None:
+            self.globalColorIndex = None
+            self.populateVerticesOnly(self.segmentModel)
         self.histogramUpdated.emit((None, None))
         self.glDraw()
 

@@ -91,6 +91,12 @@ Notes on using xrtGlow
 - Depth test is disabled by default for the Points. Enable it if you do not
   want the footprints to shine through solid surfaces of the optical elements.
   Be aware that the Points may be obscured by rays in this case.
+  
+- Scene checkbox 'Virtual Screen for Indexing' can be used to filter the rays
+  hitting the Virtual Screen. This is convenient for retrospective analysis,
+  to highlight the rays of the initial beam that reach the final point.
+
+.. imagezoom:: _images/xrtGlow5.png
 
 - Antialiasing can improve the visual quality of the scene, but it seriously
   affects the performance (depending on the number of rays / elements in the
