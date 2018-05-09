@@ -95,8 +95,8 @@ If you use Anaconda, type the command above in a system terminal launched from
 
 If you use Anaconda, the required packages are already there, except it
 probably lacks the GLUT library used by PyOpenGL. Then you can first install
-freeglut3-dev by apt and then pyopengl by pip or directly the packaged
-python-opengl or python3-opengl by apt.
+freeglut3-dev by apt (or freeglut-devel on rpm systems) and then pyopengl by
+pip or directly the packaged python-opengl or python3-opengl by apt.
 
 If you use a system-wide Python, all required packages can be installed with a
 system package manager (aptitude, yum) or with pip. Names of the packages can
