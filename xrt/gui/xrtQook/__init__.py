@@ -54,7 +54,7 @@ try:
     import pyopencl as cl
     cl_platforms = cl.get_platforms()
     isOpenCL = True
-except ImportError:
+except (ImportError, cl.LogicError):
     isOpenCL = False
 
 from ..commons import myspyder as spyder  # analysis:ignore
