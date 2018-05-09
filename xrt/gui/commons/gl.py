@@ -11,7 +11,7 @@ except ImportError:
 if isOpenGL:
 
     from OpenGL.GL import glRotatef, glMaterialfv, glClearColor, glMatrixMode,\
-        glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc,\
+        glLoadIdentity, glOrtho, glClear, glEnable, glBlendFunc, glIsEnabled,\
         glEnableClientState, glPolygonMode, glGetDoublev, glDisable,\
         glDisableClientState, glRasterPos3f, glPushMatrix, glTranslatef,\
         glScalef, glPopMatrix, glFlush, glVertexPointerf, glColorPointerf,\
@@ -28,12 +28,14 @@ if isOpenGL:
         GL_MAP2_VERTEX_3, GL_MAP2_NORMAL, GL_LIGHTING, GL_POINTS,\
         GL_LIGHT_MODEL_TWO_SIDE, GL_LIGHT0, GL_POSITION, GL_SPOT_DIRECTION,\
         GL_SPOT_CUTOFF, GL_SPOT_EXPONENT, GL_TRIANGLE_FAN, GL_VIEWPORT,\
-        GL_LINES, GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX
+        GL_LINES, GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX, GL_LINE_WIDTH
 
     from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
 
     from OpenGL.GLUT import glutBitmapCharacter, glutStrokeCharacter,\
-        glutInit, glutInitDisplayMode, GLUT_BITMAP_HELVETICA_12,\
+        glutInit, glutInitDisplayMode, GLUT_BITMAP_HELVETICA_10,\
+        GLUT_BITMAP_HELVETICA_12, GLUT_BITMAP_HELVETICA_18,\
+        GLUT_BITMAP_TIMES_ROMAN_10, GLUT_BITMAP_TIMES_ROMAN_24,\
         GLUT_STROKE_ROMAN, GLUT_RGBA, GLUT_DOUBLE, GLUT_DEPTH,\
         GLUT_STROKE_MONO_ROMAN
 

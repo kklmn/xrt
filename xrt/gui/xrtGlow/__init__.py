@@ -1668,8 +1668,18 @@ class xrtGlWidget(qt.QGLWidget):
         self.aPos = [0.9, 0.9, 0.9]
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
+        self.coordinateGridLineWidth = 1
+#        self.fixedFontType = 'GLUT_BITMAP_TIMES_ROMAN'
+        self.fixedFontType = 'GLUT_BITMAP_HELVETICA'
+        self.fixedFontSize = '12'  # 10, 12, 18 for Helvetica; 10, 24 for Roman
+        self.fixedFont = getattr(gl, "{0}_{1}".format(self.fixedFontType,
+                                                      self.fixedFontSize))
         self.useScalableFont = False
         self.fontSize = 5
+        self.scalableFontType = gl.GLUT_STROKE_ROMAN
+#        self.scalableFontType = gl.GLUT_STROKE_MONO_ROMAN
+        self.scalableFontWidth = 1
+        self.useFontAA = False
         self.tVec = np.array([0., 0., 0.])
         self.cameraTarget = [0., 0., 0.]
         self.cameraPos = np.float32([3.5, 0., 0.])
@@ -2115,8 +2125,7 @@ class xrtGlWidget(qt.QGLWidget):
         if not useScalableFont:
             gl.glRasterPos3f(*coord)
             for symbol in text:
-                gl.glutBitmapCharacter(
-                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
         else:
             fontScale = self.fontSize / 12500.
             coordShift = np.zeros(3, dtype=np.float32)
@@ -2139,9 +2148,21 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glRotatef(*self.qText)
             gl.glTranslatef(*coordShift)
             gl.glScalef(fontScale, fontScale, fontScale)
+            tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
+            tLineAA = gl.glIsEnabled(gl.GL_LINE_SMOOTH)
+            if self.useFontAA:
+                gl.glEnable(gl.GL_LINE_SMOOTH)
+            else:
+                gl.glDisable(gl.GL_LINE_SMOOTH)
+            gl.glLineWidth(self.scalableFontWidth)
             for symbol in text:
-                gl.glutStrokeCharacter(gl.GLUT_STROKE_ROMAN, ord(symbol))
+                gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
             gl.glPopMatrix()
+            gl.glLineWidth(tLineWidth)
+            if tLineAA:
+                gl.glEnable(gl.GL_LINE_SMOOTH)
+            else:
+                gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def setMaterial(self, mat):
         if mat == 'Cu':
@@ -2641,7 +2662,6 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glColor4f(0.0, 0.0, 0.0, 1.)
         else:
             gl.glColor4f(1.0, 1.0, 1.0, 1.)
-        gl.glLineWidth(1)
 
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
@@ -2671,7 +2691,7 @@ class xrtGlWidget(qt.QGLWidget):
                     else:
                         axisL[iAx][self.visibleAxes[1], :] *= 1.05  # height
                         axisL[iAx][self.visibleAxes[0], :] *= 1.05  # side
-                gl.glLineWidth(2)
+
                 for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
                                                  precisionLabels[iAx])):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
@@ -2681,11 +2701,15 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnable(gl.GL_LINE_SMOOTH)
         gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
         gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-        drawGridLines(np.vstack((back, side, bottom)), 2., 0.75, gl.GL_QUADS)
-        drawGridLines(axGrid, 1., 0.5, gl.GL_LINES)
+        tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
+        drawGridLines(np.vstack((back, side, bottom)),
+                      self.coordinateGridLineWidth * 2, 0.75, gl.GL_QUADS)
+        drawGridLines(axGrid, self.coordinateGridLineWidth, 0.5, gl.GL_LINES)
         if self.fineGridEnabled:
-            drawGridLines(fineAxGrid, 1., 0.25, gl.GL_LINES)
+            drawGridLines(fineAxGrid, self.coordinateGridLineWidth, 0.25,
+                          gl.GL_LINES)
         gl.glDisable(gl.GL_LINE_SMOOTH)
+        gl.glLineWidth(tLineWidth)
 
     def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
         if vertices is None or colors is None:
@@ -3393,8 +3417,7 @@ class xrtGlWidget(qt.QGLWidget):
                 axSymb = ''
 
             for symbol in "  {}".format(axSymb):
-                gl.glutBitmapCharacter(
-                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
             gl.glDisable(gl.GL_LINE_SMOOTH)
 
         z, r, nFacets = 0.25, 0.02, 20
@@ -3579,20 +3602,17 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glColor4f(1, 0, 0, 1)
             gl.glRasterPos3f(0, 0, axisLen*1.5)
             for symbol in "  {} (mm)".format('Z'):
-                gl.glutBitmapCharacter(
-                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
             gl.glColor4f(0, 0.75, 0, 1)
             gl.glRasterPos3f(0, axisLen*1.5, 0)
             for symbol in "  {} (mm)".format('Y'):
-                gl.glutBitmapCharacter(
-                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
         if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
             gl.glColor4f(0, 0.5, 1, 1)
             gl.glRasterPos3f(axisLen*1.5, 0, 0)
             for symbol in "  {} (mm)".format('X'):
-                gl.glutBitmapCharacter(
-                    gl.GLUT_BITMAP_HELVETICA_12, ord(symbol))
+                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
 #        gl.glFlush()
         gl.glViewport(*pView)
         gl.glColor4f(1, 1, 1, 1)
