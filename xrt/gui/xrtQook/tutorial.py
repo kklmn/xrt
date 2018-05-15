@@ -10,18 +10,9 @@ Using xrtQook for script generation
   location.
 
   .. note::
-     On some Qt systems, e.g. in macOS Anaconda, the access from the Qt browser
-     to local files is by default forbidden. This results in some incomplete
-     rendering of the help pages in xrtQook. The solution is to use the Qt
-     switch ``--disable-web-security``::
-
-         python xrtQookStart.pyw --disable-web-security
-
-
-  .. note::
-      The scaling of GUI may behave differently in different systems and Qt
-      versions. If it looks wrong, try the scaling options in
-      ``xrtQookStart.pyw``.
+     The scaling of GUI may behave differently in different systems and Qt
+     versions. If it looks wrong, try the scaling options in
+     ``xrtQookStart.pyw``.
 
   .. note::
      If you want to start xrtQook from Spyder, select the run option
