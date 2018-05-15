@@ -22,7 +22,11 @@ components of the coherency matrix of different rays are simply added.
    :members: __init__
 .. autoclass:: CollimatedMeshSource
 .. autoclass:: GaussianBeam
+   :members: __init__
 .. autoclass:: LaguerreGaussianBeam
+   :members: __init__
+.. autoclass:: HermiteGaussianBeam
+   :members: __init__
 
 .. autofunction:: make_energy
 .. autofunction:: make_polarization
