@@ -17,20 +17,21 @@ because the horizontal emittance is much larger than the vertical one.
 .. [Zozulya_Sprung] A. Zozulya and M. Sprung, measured at P10 beamline,
     DESY Photon Science (2014) unpublished.
 
-+---------+----------------+----------------+----------------+--------------+
-| slit    | ray tracing,   | diffraction,   | diffraction,   | experimental |
-| size    | zero emittance | zero emittance | real emittance |              |
-| (µm²)   |                |                |                |              |
-+=========+================+================+================+==============+
-| 100×100 | |slit_r0_100|  | |slit_w0_100|  | |slit_wr_100|  | |slit_e_100| |
-+---------+----------------+----------------+----------------+--------------+
-| 150×150 | |slit_r0_150|  | |slit_w0_150|  | |slit_wr_150|  | |slit_e_150| |
-+---------+----------------+----------------+----------------+--------------+
-| 200×200 | |slit_r0_200|  | |slit_w0_200|  | |slit_wr_200|  | |slit_e_200| |
-+---------+----------------+----------------+----------------+--------------+
-| 300×300 | |slit_r0_300|  | |slit_w0_300|  | |slit_wr_300|  | |slit_e_300| |
-+---------+----------------+----------------+----------------+--------------+
++-------+------------------------+------------------------+------------------------+--------+
+| slit  |     ray tracing,       |     diffraction,       |     diffraction,       |  |exp| |
+| size  |     zero emittance     |     zero emittance     |     real emittance     |        |
+| (µm²) |                        |                        |                        |        |
++=======+========================+========================+========================+========+
+|100×100|     |slit_r0_100|      |     |slit_w0_100|      |     |slit_wr_100|      | |e100| |
++-------+------------------------+------------------------+------------------------+--------+
+|150×150|     |slit_r0_150|      |     |slit_w0_150|      |     |slit_wr_150|      | |e150| |
++-------+------------------------+------------------------+------------------------+--------+
+|200×200|     |slit_r0_200|      |     |slit_w0_200|      |     |slit_wr_200|      | |e200| |
++-------+------------------------+------------------------+------------------------+--------+
+|300×300|     |slit_r0_300|      |     |slit_w0_300|      |     |slit_wr_300|      | |e300| |
++-------+------------------------+------------------------+------------------------+--------+
 
+.. |exp| replace:: exp P10
 .. |slit_r0_100| imagezoom:: _images/slit_r0_100.*
 .. |slit_r0_150| imagezoom:: _images/slit_r0_150.*
 .. |slit_r0_200| imagezoom:: _images/slit_r0_200.*
@@ -46,13 +47,13 @@ because the horizontal emittance is much larger than the vertical one.
 .. |slit_wr_200| imagezoom:: _images/slit_wr_200.*
 .. |slit_wr_300| imagezoom:: _images/slit_wr_300.*
 
-.. |slit_e_100| imagezoom:: _images/slit_e_100.*
+.. |e100| imagezoom:: _images/slit_e_100.*
    :loc: upper-right-corner
-.. |slit_e_150| imagezoom:: _images/slit_e_150.*
+.. |e150| imagezoom:: _images/slit_e_150.*
    :loc: upper-right-corner
-.. |slit_e_200| imagezoom:: _images/slit_e_200.*
+.. |e200| imagezoom:: _images/slit_e_200.*
    :loc: upper-right-corner
-.. |slit_e_300| imagezoom:: _images/slit_e_300.*
+.. |e300| imagezoom:: _images/slit_e_300.*
    :loc: upper-right-corner
 
 """
