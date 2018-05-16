@@ -288,7 +288,7 @@ tt {
 }
 
 th {
-    background-color: #ececec;
+    background-color: #eee;
 }
 
 .warning tt {
