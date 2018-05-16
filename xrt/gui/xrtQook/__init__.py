@@ -1135,7 +1135,7 @@ class XrtQook(qt.QWidget):
         if strURL.endswith('tutorial.html') or strURL.endswith('tutorial'):
             self.showTutorial(tutorial.__doc__[60:],
                               "Using xrtQook for script generation")
-        elif strURL.startswith('http'):
+        elif strURL.startswith('http') or strURL.startswith('ftp'):
             if self.lastBrowserLink == strURL:
                 return
             webbrowser.open(strURL)
@@ -1144,19 +1144,16 @@ class XrtQook(qt.QWidget):
     def showOCLinfo(self):
         argDocStr = u""
         for iplatform, platform in enumerate(cl_platforms):
-            argDocStr += u'.. raw:: html\n\n   <div class="title"> '\
-                u'<h3> Platform {0}: {1} </h3> </div>\n'.format(
-                    iplatform, platform.name)
-            argDocStr += '-' * 25 + '\n'
-            argDocStr += '**Vendor**:  {0}\n\n'.format(platform.vendor)
-            argDocStr += '**Version**:  {0}\n\n'.format(platform.version)
-            # argDocStr += '**Extensions**:  {0}\n\n'.format(
-            #    platform.extensions)
+            argDocStr += 'Platform {0}: {1}\n'.format(iplatform, platform.name)
+            argDocStr += '-' * 25 + '\n\n'
+            argDocStr += ':Vendor:  {0}\n'.format(platform.vendor)
+            argDocStr += ':Version:  {0}\n'.format(platform.version)
+            argDocStr += ':Extensions:  {0}\n'.format(platform.extensions)
             for idevice, device in enumerate(platform.get_devices()):
                 maxFNLen = 0
                 maxFVLen = 0
-                argDocStr += '{0}**DEVICE {1}**: {2}\n\n'.format(
-                    myTab, idevice, device.name)
+                argDocStr += '{0}**Device {1}**: {2}\n\n'.format(
+                    '', idevice, device.name)
                 fNames = ['*Type*',
                           '*Max Clock Speed*',
                           '*Compute Units*',
@@ -1179,10 +1176,10 @@ class XrtQook(qt.QWidget):
                     if len(fieldVal) > maxFVLen:
                         maxFVLen = len(fieldVal)
                 spacerH = '{0}+{1}+{2}+\n'.format(
-                    myTab, (maxFNLen + 2) * '-', (maxFVLen + 2) * '-')
+                    myTab, (maxFNLen + 2) * '-', (maxFVLen + 4) * '-')
                 argDocStr += spacerH
                 for fName, fVal in zip(fNames, fVals):
-                    argDocStr += '{0}| {1} | {2} |\n'.format(
+                    argDocStr += '{0}| {1} |  {2}  |\n'.format(
                         myTab,
                         fName + (maxFNLen - len(fName)) * ' ',
                         fVal + (maxFVLen - len(fVal)) * ' ')
