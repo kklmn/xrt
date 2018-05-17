@@ -8,7 +8,7 @@ Python
 
 .. rubric:: Windows
 
-`WinPython <https://sourceforge.net/projects/winpython/files>`_ or 
+`WinPython <https://sourceforge.net/projects/winpython/files>`_ or
 `Anaconda <https://www.anaconda.com/download>`_ are advised.
 xrt can run in both Python 2 and Python 3 branches. Python 3 is recommended as
 Python 2 will `retire soon <https://pythonclock.org>`_.
@@ -25,7 +25,7 @@ glut (see below).
 
 .. rubric:: macOS
 
-Anaconda is the only option to run xrt. 
+Anaconda is the only option to run xrt.
 
 Dependencies
 ~~~~~~~~~~~~
@@ -38,13 +38,16 @@ Some of xrt examples require xlrd, xlwt and pandas for working with Excel files
 (i.e. for custom magnetic field data).
 
 Spyder (>=3.0.0) is a cross-platform IDE for python; xrtQook GUI uses some of
-its libraries to render the live help and provide the console interface (highly
+its libraries to provide the editor and the console interface (highly
 recommended for nicer look). Be aware that starting from version 3.2.0 spyder
 switched to IPython and has no classic python console (consider version 3.1.4
 in case you want the classic console). The IPython console of spyder does
 unwanted integration of matplotlib images (can be switched off) and prohibits
 the use of multiprocessing. Therefore, if you run an xrt script from spyder,
 select to run it in an external console.
+
+Sphinx (>=1.6.2) creates nice looking documentation pages dynamically displayed
+by xrtQook. Sphinx is also a part of Spyder installation.
 
 pyopencl (>=2015.1) is highly recommended if you calculate undulator sources
 (it’s still possible in pure numpy, but significantly slower), and is required
@@ -67,9 +70,9 @@ list of dependencies. Just run the pip install command::
     pip install <xrt-zip-file>
 
 In addition to the automatic installation: be aware that in python2 you have to
-install PyQt4 libraries manually. 
+install PyQt4 libraries manually.
 Linux users should install tkinter backend (python-tk or python3-tk) using a
-system package manager. 
+system package manager.
 Binary packages of pyopengl are highly recommended for Windows users (see
 below).
 
@@ -87,16 +90,16 @@ To install a whl package, start a terminal: as "WinPython Command Prompt.exe"
 and run::
 
     pip install <path-to-whl>
-    
-If you use Anaconda, type the command above in a system terminal launched from
-"Anaconda/Scripts" or "Anaconda/bin" folder.
+
+If you use Anaconda, type the above command in a system terminal launched from
+"anaconda/Scripts" or "anaconda/bin" folder.
 
 .. rubric:: Linux
 
 If you use Anaconda, the required packages are already there, except it
-probably lacks the GLUT library used by PyOpenGL. Then you can first install
-freeglut3-dev by apt (or freeglut-devel on rpm systems) and then pyopengl by
-pip or directly the packaged python-opengl or python3-opengl by apt.
+probably lacks the GLUT library used by PyOpenGL. In this case do::
+
+    ./conda install -c conda-forge pyopengl  # from anaconda/bin
 
 If you use a system-wide Python, all required packages can be installed with a
 system package manager (aptitude, yum) or with pip. Names of the packages can
@@ -134,7 +137,9 @@ should be installed with a system package manager. Python3::
 
 Use conda package manager to install all required packages::
 
-    conda install numpy scipy matplotlib pytools spyder pyqt pyopengl pyopencl
+    cd <anaconda/bin>
+    ./conda install numpy scipy matplotlib pytools spyder pyqt
+    ./conda install -c conda-forge pyopengl
 
 PyOpenCL
 ~~~~~~~~
@@ -147,14 +152,16 @@ advantageous.
 On Windows, the binary package of pyopencl by C. Gohlke usually works out of
 the box.
 
-For installing on macOS and Linux, see the
-`pyopencl site <https://documen.tician.de/pyopencl/misc.html>`_.
-The following works on Ubuntu (used on Ubuntu 18.04 with the recommended Nvidia
-proprietary driver or
+If you use Anaconda in Linux or macOS::
+
+    ./conda install -c conda-forge pyopencl  # from anaconda/bin
+
+If you use a system-wide Python in Linux, do similar to this (works on Ubuntu
+18.04 with the recommended Nvidia proprietary driver or
 `OpenCL runtime for Intel processors <https://software.intel.com/en-us/articles/opencl-drivers>`_)::
 
     sudo apt-get install opencl-headers ocl-icd-opencl-dev
-    pip install pyopencl
+    pip install pyopencl  # pip3 for python3
 
 Instead of installing ocl-icd-opencl-dev, one can locate libOpenCL.so and
 create a symbolic link in /usr/lib or any other lib folder in the path search.
