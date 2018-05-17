@@ -151,7 +151,7 @@ html_favicon = "_images/xrt_logo.ico"
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
 #    html_theme = 'default'
-    html_static_path = ['_static']
+    html_static_path = []
 else:
 #    html_theme = 'nature'
     html_static_path = ['_static']
