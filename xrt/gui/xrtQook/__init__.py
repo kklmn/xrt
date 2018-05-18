@@ -1151,7 +1151,7 @@ class XrtQook(qt.QWidget):
             argDocStr += '-' * 25 + '\n\n'
             argDocStr += ':Vendor:  {0}\n'.format(platform.vendor)
             argDocStr += ':Version:  {0}\n'.format(platform.version)
-            argDocStr += ':Extensions:  {0}\n'.format(platform.extensions)
+#            argDocStr += ':Extensions:  {0}\n'.format(platform.extensions)
             for idevice, device in enumerate(platform.get_devices()):
                 maxFNLen = 0
                 maxFVLen = 0
