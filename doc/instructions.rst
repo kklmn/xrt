@@ -1,4 +1,4 @@
-.. _instructions:
+﻿.. _instructions:
 
 Detailed instructions for installing dependencies
 -------------------------------------------------
@@ -155,6 +155,13 @@ the box.
 If you use Anaconda in Linux or macOS::
 
     ./conda install -c conda-forge pyopencl  # from anaconda/bin
+
+In Linux Anaconda you may encounter the situation when pyopencl finds no OpenCL
+driver, which is reported by xrtQook on its welcome screen. The solution is
+presented `here <https://documen.tician.de/pyopencl/misc.html#using-vendor-supplied-opencl-drivers-linux>`_. 
+It consists of copying *.icd files from /etc/OpenCL/vendors to
+<your-anaconda>/etc/OpenCL/vendors or to your environment within anaconda if
+you use it.
 
 If you use a system-wide Python in Linux, do similar to this (works on Ubuntu
 18.04 with the recommended Nvidia proprietary driver or
