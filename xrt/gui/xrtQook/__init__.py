@@ -54,10 +54,13 @@ try:
     import pyopencl as cl
     cl_platforms = cl.get_platforms()
     isOpenCL = True
+    isOpenStatus = 'present'
 except ImportError:
     isOpenCL = False
+    isOpenStatus = 'is not found'
 except cl.LogicError:
     isOpenCL = False
+    isOpenStatus = 'is installed but no OpenCL driver found'
 import platform as pythonplatform
 import webbrowser
 
@@ -1078,7 +1081,7 @@ class XrtQook(qt.QWidget):
             if isinstance(vercl, (list, tuple)):
                 vercl = '.'.join(map(str, vercl))
         else:
-            vercl = '(or OpenCL driver) not found'
+            vercl = isOpenStatus
         strOpenCL = r'pyopencl {}'.format(vercl)
         strXrt = 'xrt {0} in {1}'.format(
             xrtversion, path_to_xrt).replace('\\', '\\\\')
