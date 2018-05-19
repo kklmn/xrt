@@ -57,10 +57,10 @@ try:
     isOpenStatus = 'present'
 except ImportError:
     isOpenCL = False
-    isOpenStatus = 'is not found'
+    isOpenStatus = ':red:`is not found`'
 except cl.LogicError:
     isOpenCL = False
-    isOpenStatus = 'is installed but no OpenCL driver found'
+    isOpenStatus = 'is installed :red:`but no OpenCL driver found`'
 import platform as pythonplatform
 import webbrowser
 
@@ -1075,7 +1075,7 @@ class XrtQook(qt.QWidget):
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
         else:
-            strOpenGL = 'OpenGL not found'
+            strOpenGL = 'OpenGL :red:`not found`'
         if isOpenCL:
             vercl = cl.VERSION
             if isinstance(vercl, (list, tuple)):
@@ -1164,6 +1164,10 @@ class XrtQook(qt.QWidget):
                           '*Constant Memory*',
                           '*Global Memory*',
                           '*FP64 Support*']
+                isFP64 = bool(int(device.double_fp_config/63))
+                strFP64 = str(isFP64)
+                if not isFP64:
+                    strFP64 = ':red:`'+strFP64+'`'
                 fVals = [cl.device_type.to_string(device.type, "%d"),
                          str(device.max_clock_frequency) + ' MHz',
                          str(device.max_compute_units),
@@ -1172,7 +1176,7 @@ class XrtQook(qt.QWidget):
                              device.max_constant_buffer_size/1024)) + ' kB',
                          '{0:.2f}'.format(
                              device.global_mem_size/1073741824.) + ' GB',
-                         str(bool(int(device.double_fp_config/63)))]
+                         strFP64]
                 for fieldName, fieldVal in zip(fNames, fVals):
                     if len(fieldName) > maxFNLen:
                         maxFNLen = len(fieldName)

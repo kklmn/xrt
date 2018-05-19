@@ -335,3 +335,8 @@ div.viewcode-block:target {
     border-top: 1px solid #ac9;
     border-bottom: 1px solid #ac9;
 }
+
+.red {
+    color:red;
+}
+
