@@ -57,7 +57,7 @@ try:
     isOpenStatus = 'present'
 except ImportError:
     isOpenCL = False
-    isOpenStatus = ':red:`is not found`'
+    isOpenStatus = ':red:`not found`'
 except cl.LogicError:
     isOpenCL = False
     isOpenStatus = 'is installed :red:`but no OpenCL driver found`'
