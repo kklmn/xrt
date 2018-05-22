@@ -140,50 +140,25 @@ except AttributeError:
             self.setPage(web_page)
 
 
-#class SphinxThread(qt.QThread):
-#    # Signals
-#    html_ready = qt.Signal()
-#
-#    def __init__(self, html_text_no_doc='no docs evailable'):
-#        super(SphinxThread, self).__init__()
-#        self.doc = None
-#        self.html_text_no_doc = html_text_no_doc
-#
-#    def render(self, doc, docName, docArgspec, docNote, img_path=""):
-#        """Start thread to render a given documentation"""
-#        # If the thread is already running wait for it to finish before
-#        # starting it again.
-#        if self.wait():
-#            self.doc = doc
-#            self.docName = docName
-#            self.docArgspec = docArgspec
-#            self.docNote = docNote
-#            self.img_path = img_path
-#            # This causes run() to be executed in separate thread
-#            self.start()
-#
-#    def run(self):
-#        cntx = ext.generate_context(
-#            name=self.docName,
-#            argspec=self.docArgspec,
-#            note=self.docNote)
-#        ext.sphinxify(self.doc, cntx, img_path=self.img_path)
-#        self.html_ready.emit()
-
-class SphinxThread(qt.QObject):
-    # Signals
+class SphinxWorker(qt.QObject):
     html_ready = qt.pyqtSignal()
-    finished = qt.pyqtSignal()
 
-    def render(self, doc=None, docName=None, docArgspec=None,
-               docNote=None, img_path=""):
+    def prepare(self, doc=None, docName=None, docArgspec=None,
+                docNote=None, img_path=""):
+        self.doc = doc
+        self.docName = docName
+        self.docArgspec = docArgspec
+        self.docNote = docNote
+        self.img_path = img_path
+
+    def render(self):
         cntx = ext.generate_context(
-            name=docName,
-            argspec=docArgspec,
-            note=docNote)
-        ext.sphinxify(doc, cntx, img_path=img_path)
+            name=self.docName,
+            argspec=self.docArgspec,
+            note=self.docNote)
+        ext.sphinxify(self.doc, cntx, img_path=self.img_path)
+        self.thread().terminate()
         self.html_ready.emit()
-        self.finished.emit()
 
 
 class XrtQook(qt.QWidget):
@@ -236,9 +211,11 @@ class XrtQook(qt.QWidget):
         docWidget = qt.QWidget()
         docWidget.setMinimumWidth(500)
         # Add worker thread for handling rich text rendering
-        self._sphinx_thread = SphinxThread()
-        self._sphinx_thread.html_ready.connect(
-            self._on_sphinx_thread_html_ready)
+        self.sphinxThread = qt.QThread(self)
+        self.sphinxWorker = SphinxWorker()
+        self.sphinxWorker.moveToThread(self.sphinxThread)
+        self.sphinxThread.started.connect(self.sphinxWorker.render)
+        self.sphinxWorker.html_ready.connect(self._on_sphinx_thread_html_ready)
 
         mainBox.addWidget(self.toolBar)
         tabsLayout = qt.QHBoxLayout()
@@ -997,17 +974,6 @@ class XrtQook(qt.QWidget):
                     break
         return obj
 
-    def renderLiveDoc(self, doc, docName, docArgspec, docNote, img_path=""):
-        objThread = qt.QThread(self)
-        obj = SphinxThread()
-        obj.finished.connect(objThread.quit)
-        obj.html_ready.connect(self._on_sphinx_thread_html_ready)
-        obj.moveToThread(objThread)
-        renderInThread = partial(
-            obj.render, doc, docName, docArgspec, docNote, img_path)
-        objThread.started.connect(renderInThread)
-        objThread.start()
-
     def showDoc(self, selIndex):
         level = 0
         index = selIndex
@@ -1075,9 +1041,12 @@ class XrtQook(qt.QWidget):
             self.webHelp.setText(textwrap.dedent(argDocStr))
             self.webHelp.setReadOnly(True)
 
+    def renderLiveDoc(self, doc, docName, docArgspec, docNote, img_path=""):
+        self.sphinxWorker.prepare(doc, docName, docArgspec, docNote, img_path)
+        self.sphinxThread.start()
+
     def _on_sphinx_thread_html_ready(self):
         """Set our sphinx documentation based on thread result"""
-#        self._sphinx_thread.wait()
         self.webHelp.load(qt.QUrl(ext.xrtQookPage))
 
     def updateDescription(self):
