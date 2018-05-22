@@ -140,35 +140,50 @@ except AttributeError:
             self.setPage(web_page)
 
 
-class SphinxThread(qt.QThread):
+#class SphinxThread(qt.QThread):
+#    # Signals
+#    html_ready = qt.Signal()
+#
+#    def __init__(self, html_text_no_doc='no docs evailable'):
+#        super(SphinxThread, self).__init__()
+#        self.doc = None
+#        self.html_text_no_doc = html_text_no_doc
+#
+#    def render(self, doc, docName, docArgspec, docNote, img_path=""):
+#        """Start thread to render a given documentation"""
+#        # If the thread is already running wait for it to finish before
+#        # starting it again.
+#        if self.wait():
+#            self.doc = doc
+#            self.docName = docName
+#            self.docArgspec = docArgspec
+#            self.docNote = docNote
+#            self.img_path = img_path
+#            # This causes run() to be executed in separate thread
+#            self.start()
+#
+#    def run(self):
+#        cntx = ext.generate_context(
+#            name=self.docName,
+#            argspec=self.docArgspec,
+#            note=self.docNote)
+#        ext.sphinxify(self.doc, cntx, img_path=self.img_path)
+#        self.html_ready.emit()
+
+class SphinxThread(qt.QObject):
     # Signals
-    html_ready = qt.Signal()
+    html_ready = qt.pyqtSignal()
+    finished = qt.pyqtSignal()
 
-    def __init__(self, html_text_no_doc='no docs evailable'):
-        super(SphinxThread, self).__init__()
-        self.doc = None
-        self.html_text_no_doc = html_text_no_doc
-
-    def render(self, doc, docName, docArgspec, docNote, img_path=""):
-        """Start thread to render a given documentation"""
-        # If the thread is already running wait for it to finish before
-        # starting it again.
-        if self.wait():
-            self.doc = doc
-            self.docName = docName
-            self.docArgspec = docArgspec
-            self.docNote = docNote
-            self.img_path = img_path
-            # This causes run() to be executed in separate thread
-            self.start()
-
-    def run(self):
+    def render(self, doc=None, docName=None, docArgspec=None,
+               docNote=None, img_path=""):
         cntx = ext.generate_context(
-            name=self.docName,
-            argspec=self.docArgspec,
-            note=self.docNote)
-        ext.sphinxify(self.doc, cntx, img_path=self.img_path)
+            name=docName,
+            argspec=docArgspec,
+            note=docNote)
+        ext.sphinxify(doc, cntx, img_path=img_path)
         self.html_ready.emit()
+        self.finished.emit()
 
 
 class XrtQook(qt.QWidget):
@@ -982,6 +997,17 @@ class XrtQook(qt.QWidget):
                     break
         return obj
 
+    def renderLiveDoc(self, doc, docName, docArgspec, docNote, img_path=""):
+        objThread = qt.QThread(self)
+        obj = SphinxThread()
+        obj.finished.connect(objThread.quit)
+        obj.html_ready.connect(self._on_sphinx_thread_html_ready)
+        obj.moveToThread(objThread)
+        renderInThread = partial(
+            obj.render, doc, docName, docArgspec, docNote, img_path)
+        objThread.started.connect(renderInThread)
+        objThread.start()
+
     def showDoc(self, selIndex):
         level = 0
         index = selIndex
@@ -1042,7 +1068,7 @@ class XrtQook(qt.QWidget):
         if ext.isSphinx:
             self.webHelp.history().clear()
             self.webHelp.page().history().clear()
-            self._sphinx_thread.render(argDocStr, nameStr, argSpecStr, noteStr)
+            self.renderLiveDoc(argDocStr, nameStr, argSpecStr, noteStr)
         else:
             argDocStr = u'{0}\nDefiniiton: {1}\n\nType: {2}\n\n\n'.format(
                 nameStr.upper(), argSpecStr, noteStr) + argDocStr
@@ -1051,7 +1077,7 @@ class XrtQook(qt.QWidget):
 
     def _on_sphinx_thread_html_ready(self):
         """Set our sphinx documentation based on thread result"""
-        self._sphinx_thread.wait()
+#        self._sphinx_thread.wait()
         self.webHelp.load(qt.QUrl(ext.xrtQookPage))
 
     def updateDescription(self):
@@ -1128,7 +1154,7 @@ class XrtQook(qt.QWidget):
         argDocStr = argDocStr.replace('imagezoom::', 'image::')
         self.webHelp.history().clear()
         self.webHelp.page().history().clear()
-        self._sphinx_thread.render(argDocStr, name, "", "", img_path)
+        self.renderLiveDoc(argDocStr, name, "", "", img_path)
         self.curObj = None
 
     def linkClicked(self, url):
@@ -1196,7 +1222,7 @@ class XrtQook(qt.QWidget):
         if ext.isSphinx:
             self.webHelp.history().clear()
             self.webHelp.page().history().clear()
-            self._sphinx_thread.render(
+            self.renderLiveDoc(
                 argDocStr, "OpenCL Platforms and Devices", "", "")
         else:
             argDocStr = "OpenCL Platforms and Devices\n\n" + argDocStr
