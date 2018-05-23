@@ -42,10 +42,13 @@ xrtQookPage = re.sub('\\\\', '/', xrtQookPage)
 from . import qt
 shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
 
-from xml.sax.saxutils import escape
-from docutils.utils import SystemMessage
-from sphinx.application import Sphinx
-import codecs
+try:
+    from xml.sax.saxutils import escape
+    from docutils.utils import SystemMessage
+    from sphinx.application import Sphinx
+    import codecs
+except:
+    isSphinx = False
 
 
 def generate_context(name='', argspec='', note=''):
