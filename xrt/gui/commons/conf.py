@@ -13,6 +13,10 @@ extensions = ['sphinx.ext.mathjax']
 # The suffix of source filenames.
 source_suffix = '.rst'
 
+rst_prolog = """
+.. role:: red
+"""
+
 # The encoding of source files.
 #source_encoding = 'utf-8'
 

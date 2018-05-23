@@ -38,6 +38,7 @@ __date__ = "25 Jun 2017"
 __version__ = "1.3"
 
 _DEBUG_ = False
+redStr = ':red:`{0}`'
 
 import os
 import sys
@@ -57,10 +58,10 @@ try:
     isOpenStatus = 'present'
 except ImportError:
     isOpenCL = False
-    isOpenStatus = ':red:`not found`'
+    isOpenStatus = redStr.format('not found')
 except cl.LogicError:
     isOpenCL = False
-    isOpenStatus = 'is installed :red:`but no OpenCL driver found`'
+    isOpenStatus = 'is installed '+redStr.format('but no OpenCL driver found')
 import platform as pythonplatform
 import webbrowser
 
@@ -1070,7 +1071,7 @@ class XrtQook(qt.QWidget):
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
         else:
-            strOpenGL = 'OpenGL :red:`not found`'
+            strOpenGL = 'OpenGL '+redStr.format('not found')
         if isOpenCL:
             vercl = cl.VERSION
             if isinstance(vercl, (list, tuple)):
@@ -1162,7 +1163,7 @@ class XrtQook(qt.QWidget):
                 isFP64 = bool(int(device.double_fp_config/63))
                 strFP64 = str(isFP64)
                 if not isFP64:
-                    strFP64 = ':red:`'+strFP64+'`'
+                    strFP64 = redStr.format(strFP64)
                 fVals = [cl.device_type.to_string(device.type, "%d"),
                          str(device.max_clock_frequency) + ' MHz',
                          str(device.max_compute_units),
