@@ -100,6 +100,7 @@ If you use Anaconda, the required packages are already there, except it
 probably lacks the GLUT library used by PyOpenGL. In this case do::
 
     ./conda install -c conda-forge pyopengl  # from anaconda/bin
+    ./conda install -c conda-forge freeglut  # from anaconda/bin
 
 If you use a system-wide Python, all required packages can be installed with a
 system package manager (aptitude, yum) or with pip. Names of the packages can
