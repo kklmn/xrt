@@ -18,10 +18,12 @@ if __name__ == '__main__':
 
     # If xrtQook looks too small, one can play with scaling:
     # either with "auto" factor or with a manually set factor.
-    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+#    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 #    os.environ["QT_SCALE_FACTOR"] = "1.5"
 
-    app = xQ.qt.QApplication(sys.argv)
+    args = sys.argv
+#    args.append("--disable-web-security")
+    app = xQ.qt.QApplication(args)
 
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")

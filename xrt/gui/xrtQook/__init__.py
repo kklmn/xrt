@@ -38,6 +38,7 @@ __date__ = "25 Jun 2017"
 __version__ = "1.3"
 
 _DEBUG_ = False
+redStr = ':red:`{0}`'
 
 import os
 import sys
@@ -54,10 +55,17 @@ try:
     import pyopencl as cl
     cl_platforms = cl.get_platforms()
     isOpenCL = True
-except (ImportError, cl.LogicError):
+    isOpenStatus = 'present'
+except ImportError:
     isOpenCL = False
+    isOpenStatus = redStr.format('not found')
+except cl.LogicError:
+    isOpenCL = False
+    isOpenStatus = 'is installed '+redStr.format('but no OpenCL driver found')
+import platform as pythonplatform
+import webbrowser
 
-from ..commons import myspyder as spyder  # analysis:ignore
+from ..commons import ext
 
 sys.path.append(os.path.join('..', '..', '..'))
 import xrt  #analysis:ignore
@@ -69,12 +77,15 @@ from ...backends.raycing import oes as roes  # analysis:ignore
 from ...backends.raycing import apertures as rapts  # analysis:ignore
 from ...backends.raycing import oes as roes  # analysis:ignore
 from ...backends.raycing import run as rrun  # analysis:ignore
+from ...version import __version__ as xrtversion
 from ... import plotter as xrtplot  # analysis:ignore
 from ... import runner as xrtrun  # analysis:ignore
 from ..commons import qt  # analysis:ignore
 from ..commons import gl  # analysis:ignore
+from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
+
 
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
@@ -85,19 +96,7 @@ withSlidersInTree = ['pitch', 'roll', 'yaw', 'bragg']
 slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
 try:
-    class WebPage(qt.QtWeb.QWebPage):
-        """
-        Web page subclass to manage hyperlinks like in WebEngine
-        """
-        showHelp = qt.Signal()
-
-    class QWebView(qt.QtWeb.QWebView):
-        """Web view"""
-        def __init__(self):
-            qt.QtWeb.QWebView.__init__(self)
-            web_page = WebPage(self)
-            self.setPage(web_page)
-
+    QWebView = qt.QtWeb.QWebView
 except AttributeError:
     # QWebKit deprecated in Qt 5.7
     # The idea and partly the code of the compatibility fix is borrowed from
@@ -111,8 +110,7 @@ except AttributeError:
         functionality for it.
         """
         linkClicked = qt.Signal(qt.QUrl)
-        showHelp = qt.Signal()
-        linkDelegationPolicy = 0
+        linkDelegationPolicy = 2
 
         def setLinkDelegationPolicy(self, policy):
             self.linkDelegationPolicy = policy
@@ -121,21 +119,19 @@ except AttributeError:
             """
             Overloaded method to handle links ourselves
             """
-            if navigation_type in\
-                    [qt.QtWeb.QWebEnginePage.NavigationTypeLinkClicked] and\
-                    str(url.toString()).startswith('file:'):
-                if self.linkDelegationPolicy == 1 and\
-                        '.png' not in url.toString():
-                    self.linkClicked.emit(url)
+            strURL = str(url.toString())
+            if strURL.endswith('png'):
                 return False
-            elif navigation_type in\
-                    [qt.QtWeb.QWebEnginePage.NavigationTypeBackForward] and\
-                    self.linkDelegationPolicy == 0:
-                if str(qt.QUrl(spyder.CSS_PATH).toString()).lower() in\
-                        str(url.toString()).lower():
-                    self.showHelp.emit()
+            elif strURL.startswith('file'):
+                if strURL.endswith('tutorial.html') or\
+                        strURL.endswith('tutorial'):
+                    self.linkClicked.emit(url)
                     return False
-            return True
+                else:
+                    return True
+            else:
+                self.linkClicked.emit(url)
+                return False
 
     class QWebView(qt.QtWeb.QWebEngineView):
         """Web view"""
@@ -143,6 +139,27 @@ except AttributeError:
             qt.QtWeb.QWebEngineView.__init__(self)
             web_page = WebPage(self)
             self.setPage(web_page)
+
+
+class SphinxWorker(qt.QObject):
+    html_ready = qt.pyqtSignal()
+
+    def prepare(self, doc=None, docName=None, docArgspec=None,
+                docNote=None, img_path=""):
+        self.doc = doc
+        self.docName = docName
+        self.docArgspec = docArgspec
+        self.docNote = docNote
+        self.img_path = img_path
+
+    def render(self):
+        cntx = ext.generate_context(
+            name=self.docName,
+            argspec=self.docArgspec,
+            note=self.docNote)
+        ext.sphinxify(self.doc, cntx, img_path=self.img_path)
+        self.thread().terminate()
+        self.html_ready.emit()
 
 
 class XrtQook(qt.QWidget):
@@ -154,6 +171,8 @@ class XrtQook(qt.QWidget):
         super(XrtQook, self).__init__()
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
+        self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
+
         self.prepareViewer = False
         self.isGlowAutoUpdate = False
         self.experimentalMode = False
@@ -183,7 +202,7 @@ class XrtQook(qt.QWidget):
         canvasSplitter.setChildrenCollapsible(False)
 
         mainWidget = qt.QWidget()
-        mainWidget.setMinimumWidth(400)
+        mainWidget.setMinimumWidth(430)
         mainBox = qt.QVBoxLayout()
         mainBox.setContentsMargins(0, 0, 0, 0)
         docBox = qt.QVBoxLayout()
@@ -192,6 +211,12 @@ class XrtQook(qt.QWidget):
         self.helptab = qt.QTabWidget()
         docWidget = qt.QWidget()
         docWidget.setMinimumWidth(500)
+        # Add worker thread for handling rich text rendering
+        self.sphinxThread = qt.QThread(self)
+        self.sphinxWorker = SphinxWorker()
+        self.sphinxWorker.moveToThread(self.sphinxThread)
+        self.sphinxThread.started.connect(self.sphinxWorker.render)
+        self.sphinxWorker.html_ready.connect(self._on_sphinx_thread_html_ready)
 
         mainBox.addWidget(self.toolBar)
         tabsLayout = qt.QHBoxLayout()
@@ -217,6 +242,22 @@ class XrtQook(qt.QWidget):
         canvasSplitter.addWidget(self.helptab)
         self.setLayout(canvasBox)
         self.initAllTrees()
+
+    def check_pypi_version(self):
+        try:
+            import requests
+            import distutils.version as dv
+            import json
+            PyPI = 'https://pypi.python.org/pypi/xrt/json'
+            req = requests.get(PyPI)
+            if req.status_code != requests.codes.ok:
+                return
+            rels = json.loads(req.text)['releases']
+            v = max([dv.LooseVersion(r) for r in rels if 'b' not in r])
+            return v, dv.LooseVersion(xrtversion)
+        except:
+            pass
+        raise
 
     def _addAction(self, module, elname, afunction, menu):
         objName = '{0}.{1}'.format(module.__name__, elname)
@@ -311,12 +352,12 @@ class XrtQook(qt.QWidget):
         tutorAction.setShortcut('Ctrl+H')
         tutorAction.triggered.connect(self.showWelcomeScreen)
 
-        aboutAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, 'dialog-information.png')),
-            'About xrtQook',
-            self)
-        aboutAction.setShortcut('Ctrl+I')
-        aboutAction.triggered.connect(self.aboutCode)
+#        aboutAction = qt.QAction(
+#            qt.QIcon(os.path.join(self.iconsDir, 'dialog-information.png')),
+#            'About xrtQook',
+#            self)
+#        aboutAction.setShortcut('Ctrl+I')
+#        aboutAction.triggered.connect(self.aboutCode)
 
         self.vToolBar = qt.QToolBar('Add Elements buttons')
         self.vToolBar.setOrientation(qt.QtCore.Qt.Vertical)
@@ -384,7 +425,7 @@ class XrtQook(qt.QWidget):
         if isOpenCL:
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
-        self.toolBar.addAction(aboutAction)
+#        self.toolBar.addAction(aboutAction)
         bbl = qt.QShortcut(self)
         bbl.setKey(qt.Key_F4)
         bbl.activated.connect(self.catchViewer)
@@ -434,10 +475,15 @@ class XrtQook(qt.QWidget):
         self.runTree = qt.QTreeView()
 
         self.defaultFont = qt.QFont("Courier New", 9)
-        if spyder.isSphinx:
+        if ext.isSphinx:
             self.webHelp = QWebView()
+            self.webHelp.page().setLinkDelegationPolicy(2)
             self.webHelp.setContextMenuPolicy(qt.CustomContextMenu)
             self.webHelp.customContextMenuRequested.connect(self.docMenu)
+
+            self.lastBrowserLink = ''
+            self.webHelp.page().linkClicked.connect(
+                partial(self.linkClicked), type=qt.UniqueConnection)
         else:
             self.webHelp = qt.QTextEdit()
             self.webHelp.setFont(self.defaultFont)
@@ -451,8 +497,8 @@ class XrtQook(qt.QWidget):
         self.matTree.customContextMenuRequested.connect(self.matMenu)
         self.tree.customContextMenuRequested.connect(self.openMenu)
 
-        if spyder.isSpyderlib:
-            self.codeEdit = spyder.codeeditor.CodeEditor(self)
+        if ext.isSpyderlib:
+            self.codeEdit = ext.codeeditor.CodeEditor(self)
             self.codeEdit.setup_editor(linenumbers=True, markers=True,
                                        tab_mode=False, language='py',
                                        font=self.defaultFont,
@@ -489,8 +535,8 @@ class XrtQook(qt.QWidget):
 
         self.setGeometry(100, 100, 1200, 600)
 
-        if spyder.isSpyderConsole:
-            self.codeConsole = spyder.pythonshell.ExternalPythonShell(
+        if ext.isSpyderConsole:
+            self.codeConsole = ext.pythonshell.ExternalPythonShell(
                 wdir=os.path.dirname(__file__))
 
         else:
@@ -533,22 +579,21 @@ class XrtQook(qt.QWidget):
 
     def docMenu(self, position):
         menu = qt.QMenu()
-        menu.addAction("Zoom In",
-                       lambda: self.zoomDoc(1))
+        menu.addAction("Zoom In", lambda: self.zoomDoc(1))
         menu.addAction("Zoom Out", lambda: self.zoomDoc(-1))
         menu.addAction("Zoom reset", lambda: self.zoomDoc(0))
-        menu.addSeparator()
-        if str(self.webHelp.url().toString()).startswith('http:'):
-            menu.addAction("Back", self.goBack)
-            if self.webHelp.history().canGoForward():
-                menu.addAction("Forward", self.webHelp.forward)
+#        menu.addSeparator()
+#        if str(self.webHelp.url().toString()).startswith('http:'):
+#            menu.addAction("Back", self.goBack)
+#            if self.webHelp.history().canGoForward():
+#                menu.addAction("Forward", self.webHelp.forward)
         menu.exec_(self.webHelp.mapToGlobal(position))
 
-    def goBack(self):
-        if self.webHelp.history().canGoBack():
-            self.webHelp.back()
-        else:
-            self.webHelp.page().showHelp.emit()
+#    def goBack(self):
+#        if self.webHelp.history().canGoBack():
+#            self.webHelp.back()
+#        else:
+#            self.webHelp.page().showHelp.emit()
 
     def zoomDoc(self, factor):
         """Zoom in/out/reset"""
@@ -657,7 +702,6 @@ class XrtQook(qt.QWidget):
         self.pltColorCounter = 0
         self.fileDescription = ""
 #        self.descrEdit.setText("")
-        self.currHtml = ""
         self.showWelcomeScreen()
         self.writeCodeBox("")
         self.setWindowTitle("xrtQook")
@@ -870,7 +914,7 @@ class XrtQook(qt.QWidget):
                 self.tabs.setCurrentWidget(self.tree)
 
     def writeCodeBox(self, text):
-        if spyder.isSpyderlib:
+        if ext.isSpyderlib:
             self.codeEdit.set_text(text)
         else:
             self.codeEdit.setText(text)
@@ -944,8 +988,6 @@ class XrtQook(qt.QWidget):
 
     def showObjHelp(self, obj):
         self.curObj = obj
-        if spyder.isSphinx:
-            self.webHelp.page().setLinkDelegationPolicy(0)
         argSpecStr = '('
         for arg, argVal in self.getParams(obj):
             showVal = self.quotize(argVal)
@@ -973,160 +1015,144 @@ class XrtQook(qt.QWidget):
             if len(headerDocRip) > 0:
                 headerDoc = headerDocRip[0].strip()
 
-        argDocStr = u'{0}{1}\n\n'.format(myTab, headerDoc) if\
+        argDocStr = u'{0}\n\n'.format(inspect.cleandoc(headerDoc)) if\
             objP.__doc__ is not None else "\n\n"
         dNames, dVals = self.getArgDescr(obj)
         if len(dNames) > 0:
-            argDocStr += '{0}Properties\n{0}{1}\n\n'.format(myTab, 10*'-')
+            argDocStr += u'.. raw:: html\n\n   <div class="title"> '\
+                u'<h3> Properties: </h3> </div>\n'
         for dName, dVal in zip(dNames, dVals):
-            argDocStr += u'{2}*{0}*: {1}\n\n'.format(dName, dVal, myTab)
+            argDocStr += u'*{0}*: {1}\n\n'.format(dName, dVal)
+        retValStr = re.findall(r"Returned values:.*", objP.__doc__)
+        if len(retValStr) > 0:
+            argDocStr += u'.. raw:: html\n\n   <div class="title"> '\
+                u'<h3> Returns: </h3> </div>\n'
+            retVals = retValStr[-1].replace("Returned values: ", '').split(',')
+            argDocStr += ', '.join("*{0}*".format(v.strip()) for v in retVals)
 
-        if spyder.isSphinx:
+        argDocStr = argDocStr.replace('imagezoom::', 'image::')
+
+        if ext.isSphinx:
             self.webHelp.history().clear()
             self.webHelp.page().history().clear()
-            err = None
-            try:
-                cntx = spyder.generate_context(
-                    name=nameStr,
-                    argspec=argSpecStr,
-                    note=noteStr,
-                    img_path=self.xrtQookDir,
-                    math=True)
-            except TypeError as err:
-                cntx = spyder.generate_context(
-                    name=nameStr,
-                    argspec=argSpecStr,
-                    note=noteStr,
-                    math=True)
-
-            argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
-            if err is None:
-                html2 = re.findall(' {4}return.*', html_text)[0]
-                sbsPath = re.sub('img_name',
-                                 'attr',
-                                 re.sub('\\\\', '/', html2))
-                if 'file://' not in sbsPath:
-                    sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
-                new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
-            else:
-                spyder_crutch = "<script>\n$(document).ready(\
-    function () {\n    $('img').attr\
-    ('src', function(index, attr){\n     return \'file:///"
-                spyder_crutch += "{0}\' + \'/\' + attr\n".format(
-                    re.sub('\\\\', '/', os.path.join(path_to_xrt,
-                                                     'xrt',
-                                                     'xrtQook')))
-                spyder_crutch += "    });\n});\n</script>\n<body>"
-                new_html = re.sub('<body>', spyder_crutch, html_text, 1)
-            self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
-            self.currHtml = new_html
-            self.webHelp.page().showHelp.connect(partial(
-                self.webHelp.setHtml, self.currHtml, qt.QUrl(spyder.CSS_PATH)))
+            self.renderLiveDoc(argDocStr, nameStr, argSpecStr, noteStr)
         else:
             argDocStr = u'{0}\nDefiniiton: {1}\n\nType: {2}\n\n\n'.format(
                 nameStr.upper(), argSpecStr, noteStr) + argDocStr
             self.webHelp.setText(textwrap.dedent(argDocStr))
             self.webHelp.setReadOnly(True)
 
+    def renderLiveDoc(self, doc, docName, docArgspec, docNote, img_path=""):
+        self.sphinxWorker.prepare(doc, docName, docArgspec, docNote, img_path)
+        self.sphinxThread.start()
+
+    def _on_sphinx_thread_html_ready(self):
+        """Set our sphinx documentation based on thread result"""
+        self.webHelp.load(qt.QUrl(ext.xrtQookPage))
+
     def updateDescription(self):
         self.typingTimer.start(500)
 
     def updateDescriptionDelayed(self):
         self.fileDescription = self.descrEdit.toPlainText()
-        img_path = __file__ if self.layoutFileName == "" else\
-            self.layoutFileName
-        self.showTutorial(self.fileDescription,
-                          "Description",
-                          os.path.dirname(os.path.abspath(str(img_path))))
+        img_path = "" if self.layoutFileName == "" else\
+            os.path.join(
+                os.path.dirname(os.path.abspath(str(self.layoutFileName))),
+                "_images")
+        self.showTutorial(self.fileDescription, "Description", img_path)
         self.descrEdit.setFocus()
 
     def showWelcomeScreen(self):
-        argDescr = u"""
+        Qt_version = qt.QT_VERSION_STR
+        PyQt_version = qt.PYQT_VERSION_STR
+        locos = pythonplatform.platform(terse=True)
+        if 'Linux' in locos:
+            locos = " ".join(pythonplatform.linux_distribution())
+        if gl.isOpenGL:
+            strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
+        else:
+            strOpenGL = 'OpenGL '+redStr.format('not found')
+        if isOpenCL:
+            vercl = cl.VERSION
+            if isinstance(vercl, (list, tuple)):
+                vercl = '.'.join(map(str, vercl))
+        else:
+            vercl = isOpenStatus
+        strOpenCL = r'pyopencl {}'.format(vercl)
+        strXrt = 'xrt {0} in {1}'.format(
+            xrtversion, path_to_xrt).replace('\\', '\\\\')
+        if type(self.xrt_pypi_version) is tuple:
+            pypi_ver, cur_ver = self.xrt_pypi_version
+            if cur_ver < pypi_ver:
+                strXrt += \
+                    ', **version {0} available from PyPI**'.format(pypi_ver)
+            else:
+                strXrt += ', this is the latest version at PyPI'
 
-        .. image:: _images/qookSplash2.gif
-           :scale: 75 %
+        txt = u"""
+.. image:: _images/qookSplash2.gif
+   :scale: 80 %
 
-        xrtQook is a qt-based GUI for using xrt without having to write python
-        scripts. See a short startup `tutorial <tutorial>`_.
+| xrtQook is a qt-based GUI for beamline layout manipulation and automated code generation.
+| See a brief startup `tutorial <{0}>`_. See the full documentation `here <http://xrt.rtfd.io>`_.
 
-        """
-        self.showTutorial(argDescr,
-                          "xrtQook",
-                          os.path.dirname(os.path.abspath(__file__)),
-                          delegateLink=True)
+:Created by:
+    Roman Chernikov (Canadian Light Source)\n
+    Konstantin Klementiev (MAX IV Laboratory)
+:License:
+    MIT License, March 2016
+:Your system:
+    {1}, Python {2}\n
+    Qt {3}, {4} {5}\n
+    {6}\n
+    {7}\n
+    {8} """.format(
+            'tutorial',
+            locos, pythonplatform.python_version(), Qt_version, qt.QtName,
+            PyQt_version, strOpenGL, strOpenCL, strXrt)
+        self.showTutorial(txt, "xrtQook")
 
     def showDescrByTab(self, tab):
         if tab == 4:
             self.updateDescriptionDelayed()
 
-    def showTutorial(self, argDocStr, name, img_path, delegateLink=False):
+    def showTutorial(self, argDocStr, name, img_path=''):
         if argDocStr is None:
             return
-        if not spyder.isSphinx:
+        if not ext.isSphinx:
             return
-        err = None
-        try:
-            cntx = spyder.generate_context(
-                name=name,
-                argspec="",
-                note="",
-                img_path=img_path,
-                math=True)
-        except TypeError as err:
-            cntx = spyder.generate_context(
-                name=name,
-                argspec="",
-                note="",
-                math=True)
         argDocStr = argDocStr.replace('imagezoom::', 'image::')
-        html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
-        if err is None:
-            html2 = re.findall(' {4}return.*', html_text)[0]
-            sbsPath = re.sub('img_name',
-                             'attr',
-                             re.sub('\\\\', '/', html2))
-            if 'file://' not in sbsPath:
-                sbsPath = re.sub('return \'', 'return \'file:///', sbsPath)
-            new_html = re.sub(' {4}return.*', sbsPath, html_text, 1)
-        else:
-            spyder_crutch = "<script>\n$(document).ready(\
-    function () {\n    $('img').attr\
-    ('src', function(index, attr){\n     return \'file:///"
-            spyder_crutch += "{0}\' + \'/\' + attr\n".format(
-                re.sub('\\\\', '/', os.path.join(path_to_xrt,
-                                                 'xrt',
-                                                 'xrtQook')))
-            spyder_crutch += "    });\n});\n</script>\n<body>"
-            new_html = re.sub('<body>', spyder_crutch, html_text, 1)
-        self.webHelp.setHtml(new_html, qt.QUrl(spyder.CSS_PATH))
-        if delegateLink:
-            from . import tutorial
-            self.webHelp.page().setLinkDelegationPolicy(1)
-            self.webHelp.page().linkClicked.connect(partial(
-                self.showTutorial,
-                tutorial.__doc__[60:],
-                "Using xrtQook for script generation",
-                self.xrtQookDir))
-        else:
-            self.webHelp.page().setLinkDelegationPolicy(0)
+        self.webHelp.history().clear()
+        self.webHelp.page().history().clear()
+        self.renderLiveDoc(argDocStr, name, "", "", img_path)
         self.curObj = None
+
+    def linkClicked(self, url):
+        strURL = str(url.toString())
+        if strURL.endswith('png'):
+            return
+        if strURL.endswith('tutorial.html') or strURL.endswith('tutorial'):
+            self.showTutorial(tutorial.__doc__[60:],
+                              "Using xrtQook for script generation")
+        elif strURL.startswith('http') or strURL.startswith('ftp'):
+            if self.lastBrowserLink == strURL:
+                return
+            webbrowser.open(strURL)
+            self.lastBrowserLink = strURL
 
     def showOCLinfo(self):
         argDocStr = u""
         for iplatform, platform in enumerate(cl_platforms):
-            argDocStr += '=' * 25 + '\n'
             argDocStr += 'Platform {0}: {1}\n'.format(iplatform, platform.name)
-            argDocStr += '=' * 25 + '\n'
-            argDocStr += '**Vendor**:  {0}\n\n'.format(platform.vendor)
-            argDocStr += '**Version**:  {0}\n\n'.format(platform.version)
-            # argDocStr += '**Extensions**:  {0}\n\n'.format(
-            #    platform.extensions)
+            argDocStr += '-' * 25 + '\n\n'
+            argDocStr += ':Vendor:  {0}\n'.format(platform.vendor)
+            argDocStr += ':Version:  {0}\n'.format(platform.version)
+#            argDocStr += ':Extensions:  {0}\n'.format(platform.extensions)
             for idevice, device in enumerate(platform.get_devices()):
                 maxFNLen = 0
                 maxFVLen = 0
-                argDocStr += '{0}**DEVICE {1}**: {2}\n\n'.format(
-                    myTab, idevice, device.name)
+                argDocStr += '{0}**Device {1}**: {2}\n\n'.format(
+                    '', idevice, device.name)
                 fNames = ['*Type*',
                           '*Max Clock Speed*',
                           '*Compute Units*',
@@ -1134,6 +1160,10 @@ class XrtQook(qt.QWidget):
                           '*Constant Memory*',
                           '*Global Memory*',
                           '*FP64 Support*']
+                isFP64 = bool(int(device.double_fp_config/63))
+                strFP64 = str(isFP64)
+                if not isFP64:
+                    strFP64 = redStr.format(strFP64)
                 fVals = [cl.device_type.to_string(device.type, "%d"),
                          str(device.max_clock_frequency) + ' MHz',
                          str(device.max_compute_units),
@@ -1142,32 +1172,28 @@ class XrtQook(qt.QWidget):
                              device.max_constant_buffer_size/1024)) + ' kB',
                          '{0:.2f}'.format(
                              device.global_mem_size/1073741824.) + ' GB',
-                         str(bool(int(device.double_fp_config/63)))]
+                         strFP64]
                 for fieldName, fieldVal in zip(fNames, fVals):
                     if len(fieldName) > maxFNLen:
                         maxFNLen = len(fieldName)
                     if len(fieldVal) > maxFVLen:
                         maxFVLen = len(fieldVal)
                 spacerH = '{0}+{1}+{2}+\n'.format(
-                    myTab, (maxFNLen + 2) * '-', (maxFVLen + 2) * '-')
+                    myTab, (maxFNLen + 2) * '-', (maxFVLen + 4) * '-')
                 argDocStr += spacerH
                 for fName, fVal in zip(fNames, fVals):
-                    argDocStr += '{0}| {1} | {2} |\n'.format(
+                    argDocStr += '{0}| {1} |  {2}  |\n'.format(
                         myTab,
                         fName + (maxFNLen - len(fName)) * ' ',
                         fVal + (maxFVLen - len(fVal)) * ' ')
                     argDocStr += spacerH
         argDocStr += '\n'
-        if spyder.isSphinx:
-            self.webHelp.page().setLinkDelegationPolicy(0)
-            cntx = spyder.generate_context(
-                name="OpenCL Platforms and Devices",
-                argspec="",
-                note="",
-                math=True)
-            argDocStr = argDocStr.replace('imagezoom::', 'image::')
-            html_text = spyder.sphinxify(textwrap.dedent(argDocStr), cntx)
-            self.webHelp.setHtml(html_text, qt.QUrl(spyder.CSS_PATH))
+        argDocStr = argDocStr.replace('imagezoom::', 'image::')
+        if ext.isSphinx:
+            self.webHelp.history().clear()
+            self.webHelp.page().history().clear()
+            self.renderLiveDoc(
+                argDocStr, "OpenCL Platforms and Devices", "", "")
         else:
             argDocStr = "OpenCL Platforms and Devices\n\n" + argDocStr
             self.webHelp.setText(textwrap.dedent(argDocStr))
@@ -1984,8 +2010,8 @@ class XrtQook(qt.QWidget):
                     self.showTutorial(
                         self.fileDescription,
                         "Descriprion",
-                        os.path.dirname(os.path.abspath(str(
-                            self.layoutFileName))))
+                        os.path.join(os.path.dirname(os.path.abspath(str(
+                            self.layoutFileName))), "_images"))
                     self.setWindowTitle(self.layoutFileName + " - xrtQook")
                     self.writeCodeBox("")
                     self.plotTree.expand(self.rootPlotItem.index())
@@ -2749,7 +2775,7 @@ class XrtQook(qt.QWidget):
                 for ieph in range(tItem.rowCount()):
                     if tItem.child(ieph, 0).text() != '_object' and\
                             tItem.child(ieph, 0).text() != 'properties':
-                        pItem = tItem.child(ieph, 0)                
+                        pItem = tItem.child(ieph, 0)
                         for imet in range(pItem.rowCount()):
                             if pItem.child(imet, 0).text() == 'output':
                                 mItem = pItem.child(imet, 0)
@@ -3692,7 +3718,7 @@ if __name__ == '__main__':
         if self.glowOnly:
             self.glowCode = fullCode
         else:
-            if spyder.isSpyderlib:
+            if ext.isSpyderlib:
                 self.codeEdit.set_text(fullCode)
             else:
                 self.codeEdit.setText(fullCode)
@@ -3724,7 +3750,7 @@ if __name__ == '__main__':
                     os.path.basename(str(self.saveFileName)))
                 self.tabs.setTabText(
                     5, os.path.basename(str(self.saveFileName)))
-                if spyder.isSpyderConsole:
+                if ext.isSpyderConsole:
                     self.codeConsole.wdir = os.path.dirname(
                         str(self.saveFileName))
                 else:
@@ -3750,7 +3776,7 @@ if __name__ == '__main__':
     def execCode(self):
         self.saveCode()
         self.tabs.setCurrentWidget(self.codeConsole)
-        if spyder.isSpyderConsole:
+        if ext.isSpyderConsole:
             self.codeConsole.fname = str(self.saveFileName)
             self.codeConsole.create_process()
         else:
@@ -3765,67 +3791,67 @@ if __name__ == '__main__':
         self.progressBar.setFormat("Experimental Mode {}abled".format(
             "en" if self.experimentalMode else "dis"))
 
-    def aboutCode(self):
-        import platform
-        from ...version import __version__ as xrtversion
-#        if use_pyside:
-#            Qt_version = qt.__version__
-#            PyQt_version = PySide.__version__
+#    def aboutCode(self):
+#        import platform
+#        from ...version import __version__ as xrtversion
+##        if use_pyside:
+##            Qt_version = qt.__version__
+##            PyQt_version = PySide.__version__
+##        else:
+#        Qt_version = qt.QT_VERSION_STR
+#        PyQt_version = qt.PYQT_VERSION_STR
+#
+#        msgBox = qt.QMessageBox()
+#        msgBox.setWindowIcon(qt.QIcon(
+#            os.path.join(self.xrtQookDir, '_icons', 'xrQt1.ico')))
+#        msgBox.setWindowTitle("About xrtQook")
+#        msgBox.setIconPixmap(qt.QPixmap(
+#            os.path.join(self.xrtQookDir, '_icons', 'logo-xrtQt.png')))
+#        msgBox.setTextFormat(qt.RichText)
+#        msgBox.setText("Beamline layout manipulation and automated code\
+# generation tool for the <a href='http://xrt.rtfd.io'>xrt ray tracing\
+# package</a>.\nFor a quick start see this short \
+# <a href='http://xrt.rtfd.io/qook_tutorial.html'>tutorial</a>.")
+#        locos = platform.platform(terse=True)
+#        if 'Linux' in locos:
+#            locos = " ".join(platform.linux_distribution())
+#        infText = """Created by:\
+#\nRoman Chernikov (Canadian Light Source)\
+#\nKonstantin Klementiev (MAX IV Laboratory)\
+#\nLicensed under the terms of the MIT License\nMarch 2016\
+#\n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(
+#                locos, platform.python_version(),
+#                Qt_version, qt.QtName, PyQt_version)
+#        if isOpenCL:
+#            vercl = cl.VERSION
+#            if isinstance(vercl, (list, tuple)):
+#                vercl = '.'.join(map(str, vercl))
 #        else:
-        Qt_version = qt.QT_VERSION_STR
-        PyQt_version = qt.PYQT_VERSION_STR
-
-        msgBox = qt.QMessageBox()
-        msgBox.setWindowIcon(qt.QIcon(
-            os.path.join(self.xrtQookDir, '_icons', 'xrQt1.ico')))
-        msgBox.setWindowTitle("About xrtQook")
-        msgBox.setIconPixmap(qt.QPixmap(
-            os.path.join(self.xrtQookDir, '_icons', 'logo-xrtQt.png')))
-        msgBox.setTextFormat(qt.RichText)
-        msgBox.setText("Beamline layout manipulation and automated code\
- generation tool for the <a href='http://xrt.rtfd.io'>xrt ray tracing\
- package</a>.\nFor a quick start see this short \
- <a href='http://xrt.rtfd.io/qook_tutorial.html'>tutorial</a>.")
-        locos = platform.platform(terse=True)
-        if 'Linux' in locos:
-            locos = " ".join(platform.linux_distribution())
-        infText = """Created by:\
-\nRoman Chernikov (Canadian Light Source)\
-\nKonstantin Klementiev (MAX IV Laboratory)\
-\nLicensed under the terms of the MIT License\nMarch 2016\
-\n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(
-                locos, platform.python_version(),
-                Qt_version, qt.QtName, PyQt_version)
-        if isOpenCL:
-            vercl = cl.VERSION
-            if isinstance(vercl, (list, tuple)):
-                vercl = '.'.join(map(str, vercl))
-        else:
-            vercl = 'not found'
-        infText += '\npyopencl {}'.format(vercl)
-        if gl.isOpenGL:
-            infText += '\n{0} {1}'.format(gl.__name__, gl.__version__)
-        infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
-        msgBox.setInformativeText(infText)
-        msgBox.setStandardButtons(qt.QMessageBox.Ok)
-        msgBox.exec_()
-
-    def closeEvent(self, event):
-        ret = qt.QMessageBox.question(
-            self, 'Exit',
-            "Do you want to save Beamline Layout before exit?",
-            qt.QMessageBox.Yes | qt.QMessageBox.No | qt.QMessageBox.Cancel,
-            qt.QMessageBox.Cancel)
-
-        if ret == qt.QMessageBox.Yes:
-            if self.exportLayout():
-                event.accept()
-            else:
-                event.ignore()
-        elif ret == qt.QMessageBox.Cancel:
-            event.ignore()
-        else:
-            event.accept()
+#            vercl = 'not found'
+#        infText += '\npyopencl {}'.format(vercl)
+#        if gl.isOpenGL:
+#            infText += '\n{0} {1}'.format(gl.__name__, gl.__version__)
+#        infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
+#        msgBox.setInformativeText(infText)
+#        msgBox.setStandardButtons(qt.QMessageBox.Ok)
+#        msgBox.exec_()
+#
+#    def closeEvent(self, event):
+#        ret = qt.QMessageBox.question(
+#            self, 'Exit',
+#            "Do you want to save Beamline Layout before exit?",
+#            qt.QMessageBox.Yes | qt.QMessageBox.No | qt.QMessageBox.Cancel,
+#            qt.QMessageBox.Cancel)
+#
+#        if ret == qt.QMessageBox.Yes:
+#            if self.exportLayout():
+#                event.accept()
+#            else:
+#                event.ignore()
+#        elif ret == qt.QMessageBox.Cancel:
+#            event.ignore()
+#        else:
+#            event.accept()
 
 
 class PropagationConnect(qt.QObject):
