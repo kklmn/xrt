@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-import os
-from distutils.core import setup
+from setuptools import setup
 
-#import importLongDescription
-#long_description = importLongDescription.output()
+# import importLongDescription
+# long_description = importLongDescription.output()
 long_description = u"""
 Package xrt (XRayTracer) is a python software library for ray tracing and wave
 propagation in x-ray regime. It is primarily meant for modeling synchrotron
@@ -172,7 +171,7 @@ and examples. The complete documentation is available at
 
 setup(
     name='xrt',
-    version='1.3.0',
+    version='1.3.1',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
@@ -183,16 +182,22 @@ setup(
     url='http://xrt.readthedocs.io',
     platforms='OS Independent',
     license='MIT License',
+    keywords='',
+    # python_requires=,
+    zip_safe=True,
     packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.gui',
               'xrt.gui.commons', 'xrt.gui.xrtGlow', 'xrt.gui.xrtQook'],
     package_data={
-        'xrt.backends.raycing': [os.path.join('data', '*.*'), '*.cl'],
+        'xrt.backends.raycing': ['data/*.npz', 'data/*.dat', '*.cl'],
         'xrt': ['*.cl, *.ico'],
-        'xrt.gui.xrtQook': [os.path.join('_icons', '*.*'),
-                            os.path.join('_images', '*.*')],
-        'xrt.gui.xrtGlow': [os.path.join('_icons', '*.*')]},
-    scripts=[os.path.join('xrt', 'gui', 'xrtQookStart.pyw'),
-             os.path.join('xrt', 'gui', 'xrtQookStart.py')],
+        'xrt.gui': ['*.pyw'],
+        'xrt.gui.commons': ['_images/*.*',
+                            '_themes/qook/*.*', '_themes/qook/static/*.*'],
+        'xrt.gui.xrtQook': ['_icons/*.*'],
+        'xrt.gui.xrtGlow': ['_icons/*.*']},
+    scripts=['xrt/gui/xrtQookStart.pyw', 'xrt/gui/xrtQookStart.py'],
+    install_requires=['numpy>=1.8.0', 'scipy>=0.17.0', 'matplotlib>=2.0.0',
+                      'sphinx>=1.6.2'],
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',
