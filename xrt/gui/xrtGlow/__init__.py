@@ -59,6 +59,7 @@ from ...backends.raycing import oes as roes
 from ...backends.raycing import apertures as rapertures
 from ..commons import qt
 from ..commons import gl
+from ...plotter import colorFactor, colorSaturation
 _DEBUG_ = False
 
 class xrtGlow(qt.QWidget):
@@ -812,12 +813,12 @@ class xrtGlow(qt.QWidget):
             self.segmentsModelRoot.appendRow(newRow)
 
     def drawColorMap(self, axis):
-        xv, yv = np.meshgrid(np.linspace(0, 1, 200),
+        xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
                              np.linspace(0, 1, 200))
         xv = xv.flatten()
         yv = yv.flatten()
         self.im = self.mplAx.imshow(mpl.colors.hsv_to_rgb(np.vstack((
-            xv, np.ones_like(xv)*0.85, yv)).T).reshape((200, 200, 3)),
+            xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape((200, 200, 3)),
             aspect='auto', origin='lower',
             extent=(self.customGlWidget.colorMin,
                     self.customGlWidget.colorMax,
@@ -836,8 +837,8 @@ class xrtGlow(qt.QWidget):
             histVals = np.int32(intensity * (size-1))
             for col in range(size):
                 histImage[0:histVals[col], col, :] = mpl.colors.hsv_to_rgb(
-                    ((histArray[1][col] - colorMin) / (colorMax - colorMin),
-                     0.85, intensity[col]))
+                    (colorFactor * (histArray[1][col] - colorMin) / (colorMax - colorMin),
+                     colorSaturation, intensity[col]))
             self.im.set_data(histImage)
             try:
                 topEl = np.where(intensity >= 0.5)[0]
@@ -852,12 +853,12 @@ class xrtGlow(qt.QWidget):
             self.mplFig.canvas.blit()
             self.paletteWidget.span.extents = self.paletteWidget.span.extents
         else:
-            xv, yv = np.meshgrid(np.linspace(0, 1, 200),
+            xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
                                  np.linspace(0, 1, 200))
             xv = xv.flatten()
             yv = yv.flatten()
             self.im.set_data(mpl.colors.hsv_to_rgb(np.vstack((
-                xv, np.ones_like(xv)*0.85, yv)).T).reshape((200, 200, 3)))
+                xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape((200, 200, 3)))
             self.mplAx.set_title("")
             self.mplFig.canvas.draw()
             self.mplFig.canvas.blit()
@@ -2023,10 +2024,10 @@ class xrtGlWidget(qt.QGLWidget):
             if self.vScreenForColors and self.globalColorIndex is not None:
                 self.raysColor = globalColorsRays
             elif colorsRays is not None:
-                colorsRays = (colorsRays-self.colorMin) / (self.colorMax -
-                                                           self.colorMin)
+                colorsRays = colorFactor * (colorsRays-self.colorMin) /\
+                    (self.colorMax - self.colorMin)
                 colorsRays = np.dstack((colorsRays,
-                                        np.ones_like(alphaRays)*0.85,
+                                        np.ones_like(alphaRays)*colorSaturation,
                                         alphaRays if self.iHSV else
                                         np.ones_like(alphaRays)))
                 colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
@@ -2064,10 +2065,10 @@ class xrtGlWidget(qt.QGLWidget):
             if self.vScreenForColors and self.globalColorIndex is not None:
                 self.dotsColor = globalColorsDots
             elif colorsDots is not None:
-                colorsDots = (colorsDots-self.colorMin) / (self.colorMax -
-                                                           self.colorMin)
+                colorsDots = colorFactor * (colorsDots-self.colorMin) /\
+                    (self.colorMax - self.colorMin)
                 colorsDots = np.dstack((colorsDots,
-                                        np.ones_like(alphaDots)*0.85,
+                                        np.ones_like(alphaDots)*colorSaturation,
                                         alphaDots if self.iHSV else
                                         np.ones_like(alphaDots)))
                 colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
@@ -3667,11 +3668,12 @@ class xrtGlWidget(qt.QGLWidget):
             else:
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
-        colorsDots = (colorsDots-self.colorMin) / (self.colorMax-self.colorMin)
+        colorsDots = colorFactor * (colorsDots-self.colorMin) /\
+            (self.colorMax-self.colorMin)
         depthDots = copy.deepcopy(colorsDots[good]) * self.depthScaler
 
         colorsDots = np.dstack((colorsDots,
-                                np.ones_like(alphaDots)*0.85,
+                                np.ones_like(alphaDots)*colorSaturation,
                                 alphaDots if self.iHSV else
                                 np.ones_like(alphaDots)))
 
