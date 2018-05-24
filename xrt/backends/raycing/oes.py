@@ -965,7 +965,8 @@ class DualVFM(MirrorOnTripodWithTwoXStages):
 
 
 class EllipticalMirror(OE):
-    """Implements cylindrical elliptical mirror."""
+    """Implements cylindrical elliptical mirror.
+    Deprecated, use EllipticalMirrorParam instead."""
 
     cl_plist = ("p", "alpha", "ae", "be", "ce")
     cl_local_z = """
@@ -995,6 +996,8 @@ class EllipticalMirror(OE):
 
 
         """
+        print("EllipticalMirror is deprecated, "
+              "use EllipticalMirrorParam instead.")
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.get_orientation()
@@ -1042,7 +1045,8 @@ class EllipticalMirror(OE):
 class ParabolicMirror(OE):
     """Implements parabolic mirror. The user supplies the focal distance *p*.
     if *p*>0, the mirror is collimating, otherwise focusing. The figure is a
-    parabolic cylinder."""
+    parabolic cylinder.
+    Deprecated, use ParabolicalMirrorParam instead."""
 
     cl_plist = ("p", "pp", "delta_y", "delta_z")
     cl_local_z = """
@@ -1061,6 +1065,8 @@ class ParabolicMirror(OE):
     }"""
 
     def __init__(self, *args, **kwargs):
+        print("ParabolicMirror is deprecated, "
+              "use ParabolicalMirrorParam instead.")
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.get_orientation()
