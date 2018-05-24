@@ -54,7 +54,7 @@ pyopencl (>=2015.1) is highly recommended if you calculate undulator sources
 for custom magnetic field sources and wave propagation. Some materials (Powder,
 CrystalHarmonics) will not work without pyopencl.
 
-PyQt4 (Qt>=4.8) or PyQt5 (Qt>=5.2) are needed for xrtQook interface.
+PyQt4 (Qt>=4.8) or PyQt5 (Qt>=5.7) are needed for xrtQook interface.
 
 PyOpenGL (>=3.1.1) and PyOpenGL_Accelerate (>=3.1.1) (not required but
 recommended) are used by xrtGlow for the 3D scene rendering.
@@ -160,7 +160,7 @@ If you use Anaconda in Linux or macOS::
 In Linux Anaconda you may encounter the situation when pyopencl finds no OpenCL
 driver, which is reported by xrtQook on its welcome screen. The solution is
 presented `here <https://documen.tician.de/pyopencl/misc.html#using-vendor-supplied-opencl-drivers-linux>`_. 
-It consists of copying *.icd files from /etc/OpenCL/vendors to
+It consists of copying \*.icd files from /etc/OpenCL/vendors to
 <your-anaconda>/etc/OpenCL/vendors or to your environment within anaconda if
 you use it.
 

@@ -390,6 +390,8 @@ method above.
    Finally, PCA gives exactly the same information as the direct modal analysis
    (method No 2 above) but is cheaper to calculate by many orders of magnitude.
 
+.. _coh_signs_DoTC:
+
 One can define another measure of coherence as a single number, termed as
 *degree of transverse coherence* (DoTC) [Saldin2008]_:
 

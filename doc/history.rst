@@ -3,6 +3,17 @@
 Version history
 ---------------
 
+1.3.1 (24 May 2018):
+    - Added :ref:`detailed instructions for installing dependencies <instructions>`.
+
+    - Added :ref:`Hermite-gaussian beam <test_waves>` to the tests of wave propagation.
+
+    - Added :ref:`degree of transverse coherence <coh_signs_DoTC>` to analysis
+      methods of coherence signatures.
+
+    - Minor bug fixes and updates.
+
+
 1.3.0 (25 Mar 2018):
     - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
 

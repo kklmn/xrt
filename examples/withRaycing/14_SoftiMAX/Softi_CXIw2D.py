@@ -39,7 +39,7 @@ mRhFZP = rm.Material('Rh', rho=12.41, kind='FZP')
 E0 = 280.
 dE = 0.5
 targetHarmonic = 1
-acceptanceHor = 2.2e-4  # FE acceptance, full angle, mrad
+acceptanceHor = 2.2e-4  # FE acceptance, full angle, rad
 acceptanceVer = 4.2e-4  # FE acceptance
 
 dFocus = np.linspace(-100, 100, 9) if not showIn3D else [0]

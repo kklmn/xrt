@@ -2,8 +2,8 @@
 r"""
 .. _test-Laguerre-Gaussian:
 
-Tests of Kirchhoff integral with Gaussian and Laguerre-Gaussian beams
----------------------------------------------------------------------
+Tests of Kirchhoff integral with various Gaussian beams
+-------------------------------------------------------
 
 Find the test module laguerre_gaussian_beam.py, as well as several other tests
 for raycing backend, in ``\tests\raycing``.

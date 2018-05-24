@@ -33,7 +33,7 @@ mRhodiumGrating = rm.Material('Rh', rho=12.41, kind='grating')
 mGolden = rm.Material('Au', rho=19.32)
 mGoldenGrating = rm.Material('Au', rho=19.32, kind='grating')
 
-acceptanceHor = 2.2e-4  # FE acceptance, full angle, mrad
+acceptanceHor = 2.2e-4  # FE acceptance, full angle, rad
 acceptanceVer = 4.2e-4  # FE acceptance
 
 pFE = 19250.
