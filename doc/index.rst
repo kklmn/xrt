@@ -6,12 +6,16 @@
 xrt (XRayTracer)
 ================
 
+:DOI: |DOI|
 :GitHub: |GHver| |GHdate|
 :PyPI: |PPver| |PPdate| :ref:`version history <history>`, :ref:`plans <plans>`
 :Authors: Konstantin Klementiev (MAX IV Laboratory), Roman Chernikov (Canadian Light Source)
 :License:  |GHlic|
 
 -----
+
+.. |DOI| image:: https://zenodo.org/badge/54989724.svg
+   :target: https://zenodo.org/badge/latestdoi/54989724
 
 .. |GHver| image:: https://badge.fury.io/gh/kklmn%2Fxrt.svg
    :target: https://github.com/kklmn/xrt
