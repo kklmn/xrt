@@ -257,7 +257,6 @@ class XrtQook(qt.QWidget):
             return v, dv.LooseVersion(xrtversion)
         except:
             pass
-        raise
 
     def _addAction(self, module, elname, afunction, menu):
         objName = '{0}.{1}'.format(module.__name__, elname)
