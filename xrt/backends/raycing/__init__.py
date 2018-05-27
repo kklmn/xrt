@@ -1108,6 +1108,8 @@ class BeamLine(object):
                     methStr = str(segment[1])
                     oeStr = segment[0]
                     segOE = self.oesDict[oeStr][0]
+                    if segOE is None:  # Protection from non-initialized OEs
+                        continue
                     oesDict[oeStr] = self.oesDict[oeStr]
                     if 'beam' in segment[2].keys():
                         if str(segment[2]['beam']) == 'None':
