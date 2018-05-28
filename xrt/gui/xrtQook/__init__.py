@@ -211,6 +211,7 @@ class XrtQook(qt.QWidget):
         self.helptab = qt.QTabWidget()
         docWidget = qt.QWidget()
         docWidget.setMinimumWidth(500)
+        docWidget.setMinimumHeight(620)
         # Add worker thread for handling rich text rendering
         self.sphinxThread = qt.QThread(self)
         self.sphinxWorker = SphinxWorker()
