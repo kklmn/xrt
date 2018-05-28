@@ -402,6 +402,8 @@ class XrtQook(qt.QWidget):
                 self.vToolBar.addSeparator()
 
         self.tabs = qt.QTabWidget()
+        # compacting the default (wider) tabs:
+        self.tabs.setStyleSheet("QTabBar::tab:top {padding: 5px 5px 5px 5px;}")
         self.toolBar = qt.QToolBar('Action buttons')
 
 #        self.statusBar = qt.QStatusBar()
