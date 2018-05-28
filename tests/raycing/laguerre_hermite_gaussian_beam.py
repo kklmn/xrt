@@ -60,8 +60,8 @@ diffraction integral (in our implementation, the Kirchhoff integral):
 
 The table below compares Kirchhoff diffraction integrals of a Gaussian waist
 with analytical solutions. The coloring is by wave phase. Notice equal shape
-and (almost) equal total flux. The Gaussian waist was calculated as
-GaussianBeam with :math:`w_0` = 15 µm:
+and unity total flux. The Gaussian waist was calculated as GaussianBeam with
+:math:`w_0` = 15 µm:
 
 +------------------------+
 |  Gaussian waist (z=0)  |
@@ -70,6 +70,12 @@ GaussianBeam with :math:`w_0` = 15 µm:
 +------------------------+
 
 .. |g00m| imagezoom:: _images/Gauss-0-beamFSMg-at00m.png
+
+.. note::
+    The resulting unity flux is *not* obtained by an ad hoc normalization after
+    the diffraction. This flux is obtained from the diffraction field as is,
+    which demonstrates the correctness of the field amplitude in our
+    implementation of the Kirchhoff integral.
 
 +-------+--------------------------+---------------------------------+
 |       | analytical Gaussian beam | numerical Kirchhoff diffraction |
@@ -116,9 +122,8 @@ The flux is again normalized to unity.
 
 The table below compares Kirchhoff diffraction integrals of a Laguerre-Gaussian
 waist with analytical solutions. The coloring is by wave phase. Notice equal
-shape and (almost) equal total flux. The Laguerre-Gaussian waist was calculated
-as LaguerreGaussianBeam with :math:`w_0` = 15 µm, :math:`l` = 1 and
-:math:`p` = 1:
+shape and unity total flux. The Laguerre-Gaussian waist was calculated as
+LaguerreGaussianBeam with :math:`w_0` = 15 µm, :math:`l` = 1 and :math:`p` = 1:
 
 +---------------------------------+
 |  Laguerre-Gaussian waist (z=0)  |
@@ -127,6 +132,12 @@ as LaguerreGaussianBeam with :math:`w_0` = 15 µm, :math:`l` = 1 and
 +---------------------------------+
 
 .. |lg00m| imagezoom:: _images/Laguerre-Gauss-0-beamFSMg-at00m.png
+
+.. note::
+    The resulting unity flux is *not* obtained by an ad hoc normalization after
+    the diffraction. This flux is obtained from the diffraction field as is,
+    which demonstrates the correctness of the field amplitude in our
+    implementation of the Kirchhoff integral.
 
 +-------+-----------------------------------+---------------------------------+
 |       | analytical Laguerre-Gaussian beam | numerical Kirchhoff diffraction |
@@ -174,9 +185,8 @@ where :math:`r^2 = x^2 + y^2`. The flux is again normalized to unity.
 
 The table below compares Kirchhoff diffraction integrals of a Hermite-Gaussian
 waist with analytical solutions. The coloring is by wave phase. Notice equal
-shape and (almost) equal total flux. The Hermite-Gaussian waist was calculated
-as HermiteGaussianBeam with :math:`w_0` = 15 µm, :math:`m` = 3 and
-:math:`n` = 2:
+shape and unity total flux. The Hermite-Gaussian waist was calculated as
+HermiteGaussianBeam with :math:`w_0` = 15 µm, :math:`m` = 3 and :math:`n` = 2:
 
 +---------------------------------+
 |  Hermite-Gaussian waist (z=0)   |
@@ -185,6 +195,12 @@ as HermiteGaussianBeam with :math:`w_0` = 15 µm, :math:`m` = 3 and
 +---------------------------------+
 
 .. |hg00m| imagezoom:: _images/Hermite-Gauss-0-beamFSMg-at00m.png
+
+.. note::
+    The resulting unity flux is *not* obtained by an ad hoc normalization after
+    the diffraction. This flux is obtained from the diffraction field as is,
+    which demonstrates the correctness of the field amplitude in our
+    implementation of the Kirchhoff integral.
 
 +-------+-----------------------------------+---------------------------------+
 |       | analytical Hermite-Gaussian beam  | numerical Kirchhoff diffraction |
