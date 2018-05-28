@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     # If xrtQook looks too small, one can play with scaling:
     # either with "auto" factor or with a manually set factor.
-#    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+#    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" # "1" is "yes", not factor
 #    os.environ["QT_SCALE_FACTOR"] = "1.5"
 
     args = sys.argv

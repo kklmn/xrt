@@ -231,7 +231,7 @@ class XrtQook(qt.QWidget):
 
         mainWidget.setLayout(mainBox)
         docWidget.setLayout(docBox)
-        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
+#        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
         self.helptab.addTab(docWidget, "Live Doc")
         self.helptab.tabBar().setVisible(False)
 #        self.helptab.setTabsClosable(True)
@@ -402,8 +402,8 @@ class XrtQook(qt.QWidget):
                 self.vToolBar.addSeparator()
 
         self.tabs = qt.QTabWidget()
-        # compacting the default (wider) tabs:
-        self.tabs.setStyleSheet("QTabBar::tab:top {padding: 5px 5px 5px 5px;}")
+        # compacting the default (wider) tabs: (doesn't work in macOS)
+#        self.tabs.setStyleSheet("QTabBar::tab {padding: 5px 5px 5px 5px;}")
         self.toolBar = qt.QToolBar('Action buttons')
 
 #        self.statusBar = qt.QStatusBar()
@@ -1087,20 +1087,23 @@ class XrtQook(qt.QWidget):
             pypi_ver, cur_ver = self.xrt_pypi_version
             if cur_ver < pypi_ver:
                 strXrt += \
-                    ', **version {0} available from PyPI**'.format(pypi_ver)
+                    ', **version {0} is available from** PyPI_'.format(pypi_ver)
             else:
-                strXrt += ', this is the latest version at PyPI'
+                strXrt += ', this is the latest version at PyPI_'
 
         txt = u"""
 .. image:: _images/qookSplash2.gif
    :scale: 80 %
+   :target: http://xrt.rtfd.io
+
+.. _PyPI: https://pypi.org/project/xrt
 
 | xrtQook is a qt-based GUI for beamline layout manipulation and automated code generation.
-| See a brief startup `tutorial <{0}>`_. See the full documentation `here <http://xrt.rtfd.io>`_.
+| See a brief `startup tutorial <{0}>`_, `the documentation <http://xrt.rtfd.io>`_ and check the latest updates `at GitHub <https://github.com/kklmn/xrt>`_.
 
 :Created by:
-    Roman Chernikov (Canadian Light Source)\n
-    Konstantin Klementiev (MAX IV Laboratory)
+    Roman Chernikov (`Canadian Light Source <http://www.lightsource.ca>`_)\n
+    Konstantin Klementiev (`MAX IV Laboratory <https://www.maxiv.lu.se/>`_)
 :License:
     MIT License, March 2016
 :Your system:
