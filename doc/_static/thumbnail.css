@@ -10,10 +10,10 @@ z-index: 50;
 }
 .thumbnail span{ /*CSS for enlarged image*/
 position: absolute;
-background-color: #90C8F6;
-padding: 0px;
+background-color: #F2F2F2;
+padding: 5px;
 left: -1000px; 
-border: 1px solid gray;
+border: 2px solid gray;
 visibility: hidden;
 color: black;
 text-decoration: none;

@@ -122,15 +122,17 @@ class AnimationDirective(Directive):
         if alt:
             if alt.startswith("&ensp;") or alt.startswith("&ensp;"):
                 # Unicode &ensp; or &emsp;
-                alt = '<br />{0}'.format(alt)
+#                alt = '<br />{0}'.format(alt)
+                alt = '{0}'.format(alt)
             else: # otherwise the substitution name is passed by docutils as 'alt'
                 alt = ''
 #        self.options['uri'] = uri
         env = self.state.document.settings.env
         targetid = "animation{0}".format(env.new_serialno('animation'))
         if uri.endswith('.png'):
-            text = '<a class={6}><img src="{0}" {1} />'\
-            '<span {5}>'\
+            text = '<a class={6}>'\
+            '<img src="{0}" {1} />'\
+            '<span {5}>{2}'\
             '<canvas id="{3}" {4} ></canvas>{2}'\
             '<script>set_static("{0}", "{3}")</script></span></a>'.format(
                 uri, size, alt, targetid, sizezoom, locst, self.aclass)
@@ -140,7 +142,7 @@ class AnimationDirective(Directive):
             '<script type="text/javascript" src="{0}/b_anim.js"></script>'\
             '<canvas id="s_{1}" {2}></canvas>'\
             '<script>set_animation("{0}/s_packed.png", s_timeline, "s_{1}")'\
-            '</script><span {5}><canvas id="b_{1}" {4}></canvas>{3}'\
+            '</script><span {5}>{3}<canvas id="b_{1}" {4}></canvas>{3}'\
             '<script>set_animation("{0}/b_packed.png", b_timeline, "b_{1}")'\
             '</script></span></a>'.format(
                 uri, targetid, size, alt, sizezoom, locst, self.aclass)
