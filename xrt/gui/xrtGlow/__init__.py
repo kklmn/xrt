@@ -3633,7 +3633,9 @@ class xrtGlWidget(qt.QGLWidget):
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
 
     def populateVScreen(self):
-        if self.virtBeam is None:
+        if any([prop is None for prop in [self.virtBeam,
+                                          self.selColorMax,
+                                          self.selColorMin]]):
             return
         startBeam = self.virtBeam
         try:
@@ -3651,6 +3653,8 @@ class xrtGlWidget(qt.QGLWidget):
             vColorArray >= self.selColorMin)
 
         good = np.logical_and(good, goodC)
+        if len(vColorArray[good]) == 0:
+            return
         self.globalColorIndex = good if self.vScreenForColors else None
 
         if self.globalNorm:

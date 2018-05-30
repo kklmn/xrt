@@ -44,7 +44,7 @@ import os
 import sys
 import textwrap
 import numpy as np  # analysis:ignore , really needed
-
+import time
 from datetime import date
 import inspect
 import re
@@ -721,6 +721,7 @@ class XrtQook(qt.QWidget):
         self.updateBeamline(item=None)
         self.rayPath = None
         if self.blViewer is not None:
+            self.blViewer.customGlWidget.clearVScreen()
             self.blViewer.customGlWidget.selColorMin = None
             self.blViewer.customGlWidget.selColorMax = None
             self.blViewer.customGlWidget.tVec = np.array([0., 0., 0.])
@@ -2036,6 +2037,7 @@ class XrtQook(qt.QWidget):
                         self.progressBar.setValue(60)
                         self.progressBar.setFormat(
                             "Populating the materials... %p%")
+                        time.sleep(0.5)  # To prevent file read error in Py3
                         self.updateBeamlineMaterials(item=None)
                         self.progressBar.setValue(70)
                         self.prbStart = 70
@@ -2857,12 +2859,15 @@ class XrtQook(qt.QWidget):
                                 matName))
                         print("Class", matName, "successfully initialized.")
                     except:  # analysis:ignore
-                        self.beamLine.materialsDict[matName] = None
-                        self.progressBar.setFormat(
-                            "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
-                                matName))
-                        print("Incorrect parameters. Class", matName,
-                              "not initialized.")
+                        if _DEBUG_:
+                            raise
+                        else:
+                            self.beamLine.materialsDict[matName] = None
+                            self.progressBar.setFormat(
+                                "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
+                                    matName))
+                            print("Incorrect parameters. Class", matName,
+                                  "not initialized.")
         else:
             if item.index().column() == 0 and not newMat:  # Rename material
                 matValues = list(self.beamLine.materialsDict.values())
