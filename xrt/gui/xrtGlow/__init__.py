@@ -297,6 +297,7 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setTitle("Color")
         colorLayout = qt.QVBoxLayout()
         self.mplFig = mpl.figure.Figure(dpi=self.logicalDpiX()*0.8)
+        self.mplFig.patch.set_alpha(0.)
         self.mplFig.subplots_adjust(left=0.15, bottom=0.15, top=0.92)
         self.mplAx = self.mplFig.add_subplot(111)
         self.mplFig.suptitle("")
@@ -1698,7 +1699,7 @@ class xrtGlWidget(qt.QGLWidget):
         self.signs = np.ones_like(pModelT)
         self.invertColors = False
         self.showHelp = False
-        self.glDraw()
+#        self.glDraw()
 
     def eulerToQ(self, rotMatrXYZ):
         hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
