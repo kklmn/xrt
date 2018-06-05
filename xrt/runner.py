@@ -203,36 +203,49 @@ def one_iteration():
 # in the 1st iteration the plots may require some of x, y, e limits to be
 # calculated and thus this case is special:
     cpus = max(runCardVals.threads, runCardVals.processes)
-    if hasattr(runCardVals, 'beamLine'):
-        runCardVals.beamLine.forceAlign = True if runCardVals.iteration == 0\
-            else False
-        if (runCardVals.beamLine.flowSource == 'legacy' and
-                runCardVals.iteration > 0):
-            runCardVals.beamLine.flowSource = 'done_once'
+
     if runCardVals.iteration == 0:
-        runCardVals.needLimits = False
-        for plot in _plots:
-            xLimitsDefined = (plot.xaxis.limits is not None) and\
-                (not isinstance(plot.xaxis.limits, str))
-            yLimitsDefined = (plot.yaxis.limits is not None) and\
-                (not isinstance(plot.yaxis.limits, str))
-            cLimitsDefined = (plot.caxis.limits is not None) and\
-                (not isinstance(plot.caxis.limits, str)) or plot.ePos == 0
-            if not (xLimitsDefined and yLimitsDefined and cLimitsDefined):
-                runCardVals.needLimits = True
-                break
-        if runCardVals.needLimits:
+        runCardVals.uniqueFirstRun = False
+        if hasattr(runCardVals, 'beamLine'):
+            bl = runCardVals.beamLine
+            bl.forceAlign = False
+            for oe in bl.oes + bl.slits + bl.screens:
+                if raycing.is_auto_align_required(oe):
+                    bl.forceAlign = True
+                    runCardVals.uniqueFirstRun = True
+                    break
+
+        if not runCardVals.uniqueFirstRun:
+            for plot in _plots:
+                xLimitsDefined = (plot.xaxis.limits is not None) and\
+                    (not isinstance(plot.xaxis.limits, str))
+                yLimitsDefined = (plot.yaxis.limits is not None) and\
+                    (not isinstance(plot.yaxis.limits, str))
+                cLimitsDefined = (plot.caxis.limits is not None) and\
+                    (not isinstance(plot.caxis.limits, str)) or plot.ePos == 0
+                if not (xLimitsDefined and yLimitsDefined and cLimitsDefined):
+                    runCardVals.uniqueFirstRun = True
+                    break
+
+        if runCardVals.uniqueFirstRun:
             cpus = 1
-    elif runCardVals.iteration == 1:  # balances the 1st one
-        if runCardVals.needLimits:
+
+    elif runCardVals.iteration == 1:
+        if hasattr(runCardVals, 'beamLine'):
+            bl = runCardVals.beamLine
+            bl.forceAlign = False
+            if bl.flowSource == 'legacy':
+                bl.flowSource = 'done_once'
+        if runCardVals.uniqueFirstRun:  # balances the 1st iteration
             cpus -= 1
+
     if cpus < 1:
         cpus = 1
 
     if runCardVals.backend.startswith('raycing'):
         runCardVals.beamLine.alarms = []
 
-    if runCardVals.threads >= runCardVals.processes:
+    if runCardVals.threads >= runCardVals.processes or cpus == 1:
         BackendOrProcess = multipro.BackendThread
     else:
         BackendOrProcess = multipro.BackendProcess
