@@ -289,7 +289,8 @@ class RectangularAperture(object):
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
         prevOE = wave.parent
-        print("Diffract", self.name, " Prev OE:", prevOE.name)
+        if raycing._VERBOSITY_ > 10:
+            print("Diffract", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
             if raycing.is_auto_align_required(self):
                 if beam is not None:

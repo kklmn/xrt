@@ -60,7 +60,7 @@ from ...backends.raycing import apertures as rapertures
 from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
-_DEBUG_ = False
+_DEBUG_ = False  # If False, exceptions inside the module are ignored
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):

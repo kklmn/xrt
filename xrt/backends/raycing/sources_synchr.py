@@ -22,7 +22,7 @@ try:
 except ImportError:
     isOpenCL = False
 
-_DEBUG = 20  # if non-zero, some diagnostics is printed out
+# _DEBUG replaced with raycing._VERBOSITY_
 
 
 class BendingMagnet(object):
@@ -534,7 +534,7 @@ class BendingMagnet(object):
             else:
                 bo.concatenate(bot)
             length = len(bo.a)
-            if _DEBUG > 10:
+            if raycing._VERBOSITY_ > 0:
                 print("{0} rays of {1}".format(length, self.nrays))
                 try:
                     if self.bl is not None:
@@ -554,7 +554,7 @@ class BendingMagnet(object):
                 rep_condition = length < self.nrays
             if self.uniformRayDensity:
                 rep_condition = False
-            if _DEBUG:
+            if raycing._VERBOSITY_ > 0:
                 sys.stdout.flush()
 
         if length >= self.nrays:
@@ -636,7 +636,7 @@ class Wiggler(BendingMagnet):
         tmpK = self.K
         powers = []
         for iK, K in enumerate(Ks):
-            if _DEBUG > 10:
+            if raycing._VERBOSITY_ > 10:
                 print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
             self.K = K
             self.reset()
@@ -937,7 +937,7 @@ class Undulator(object):
         else:
             self.dzprime = self.eEpsilonZ / self.dz if self.dz > 0\
                 else 0.  # [rad]
-        if _DEBUG:
+        if raycing._VERBOSITY_ > 10:
             print('dx = {0} mm'.format(self.dx))
             print('dz = {0} mm'.format(self.dz))
             print('dxprime = {0} rad'.format(self.dxprime))
@@ -948,7 +948,7 @@ class Undulator(object):
         if targetE is not None:
             K = np.sqrt(targetE[1] * 8 * PI * C * 10 * self.gamma2 /
                         period / targetE[0] / E2W - 2)
-            if _DEBUG:
+            if raycing._VERBOSITY_ > 10:
                 print("K = {0}".format(K))
             if np.isnan(K):
                 raise ValueError("Cannot calculate K, try to increase the "
@@ -957,7 +957,7 @@ class Undulator(object):
                 isElliptical = targetE[2]
                 if isElliptical:
                     Kx = Ky = K / 2**0.5
-                    if _DEBUG:
+                    if raycing._VERBOSITY_ > 10:
                         print("Kx = Ky = {0}".format(Kx))
 
         self.Kx = Kx
@@ -1087,7 +1087,7 @@ class Undulator(object):
             (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         # wnu = 2 * PI * (0.01 * C) / self.L0 / 1e-3 / E2W
         self.E1 = 2*self.wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
-        if _DEBUG:
+        if raycing._VERBOSITY_ > 10:
             print("E1 = {0}".format(self.E1))
             print("E3 = {0}".format(3*self.E1))
             print("B0 = {0}".format(self.Ky / 0.09336 / self.L0))
@@ -1142,7 +1142,7 @@ class Undulator(object):
                 I1 = I2
                 I2 = In
             quad_int_error = np.abs((I2 - I1)/I2)
-            if _DEBUG:
+            if raycing._VERBOSITY_ > 10:
                 print("G = {0}".format(
                     [self.gIntervals, self.quadm, quad_int_error, I2,
                      2-self.ag_n.sum()]))
@@ -1155,7 +1155,7 @@ class Undulator(object):
                 continue
         """end of Adjusting the number of points for Gauss integration"""
         self.eEspread = tmpeEspread
-        if _DEBUG:
+        if raycing._VERBOSITY_ > 10:
             print("Done with Gaussian optimization, {0} points will be used"
                   " in {1} interval{2}".format(
                       self.quadm, self.gIntervals,
@@ -1202,7 +1202,7 @@ class Undulator(object):
         tunesE, tunesF = [], []
         tmpKy = self.Ky
         for iK, K in enumerate(Ks):
-            if _DEBUG > 10:
+            if raycing._VERBOSITY_ > 10:
                 print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
             self.Ky = K
             self.reset()
@@ -1231,7 +1231,7 @@ class Undulator(object):
         tmpKy = self.Ky
         powers = []
         for iK, K in enumerate(Ks):
-            if _DEBUG > 10:
+            if raycing._VERBOSITY_ > 10:
                 print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
             self.Ky = K
             self.reset()
@@ -1995,7 +1995,7 @@ class Undulator(object):
         if self.uniformRayDensity:
             withAmplitudes = True
         if not self.uniformRayDensity:
-            if _DEBUG > 10:
+            if raycing._VERBOSITY_ > 0:
                 print("Rays generation")
         bo = None
         length = 0
@@ -2085,7 +2085,7 @@ class Undulator(object):
             if tmp_max > self.Imax:
                 self.Imax = tmp_max
                 self.fluxConst = self.Imax * self.xzE
-                if _DEBUG:
+                if raycing._VERBOSITY_ > 10:
                     imax = np.argmax(Intensity)
                     print(self.Imax, imax, rE[imax], rTheta[imax], rPsi[imax])
             if self.uniformRayDensity:
@@ -2096,11 +2096,12 @@ class Undulator(object):
                 I_pass = np.where(self.Imax * rndg < Intensity)[0]
                 npassed = len(I_pass)
             if npassed == 0:
-                print('No good rays in this seed!', length, 'of',
-                      self.nrays, 'rays in total so far...')
-                print(self.Imax, self.E_min, self.E_max,
-                      self.Theta_min, self.Theta_max,
-                      self.Psi_min, self.Psi_max)
+                if raycing._VERBOSITY_ > 0:
+                    print('No good rays in this seed!', length, 'of',
+                          self.nrays, 'rays in total so far...')
+                    print(self.Imax, self.E_min, self.E_max,
+                          self.Theta_min, self.Theta_max,
+                          self.Psi_min, self.Psi_max)
                 continue
 
             if wave is not None:
@@ -2183,7 +2184,7 @@ class Undulator(object):
                 bo.concatenate(bot)
             length = len(bo.a)
             if not self.uniformRayDensity:
-                if _DEBUG > 10:
+                if raycing._VERBOSITY_ > 0:
                     print("{0} rays of {1}".format(length, self.nrays))
                     try:
                         if self.bl is not None:
@@ -2208,7 +2209,7 @@ class Undulator(object):
             bo.acceptedE = bo.E.sum() * self.fluxConst * SIE0
             bo.seeded = seeded
             bo.seededI = seededI
-            if _DEBUG:
+            if raycing._VERBOSITY_ > 0:
                 sys.stdout.flush()
 
         if length > self.nrays and not self.filamentBeam and wave is None:
@@ -2224,7 +2225,7 @@ class Undulator(object):
         bo.b /= norm
         bo.c /= norm
 
-#        if _DEBUG:
+#        if raycing._VERBOSITY_ > 10:
 #            self._reportNaN(bo.Jss, 'Jss')
 #            self._reportNaN(bo.Jpp, 'Jpp')
 #            self._reportNaN(bo.Jsp, 'Jsp')

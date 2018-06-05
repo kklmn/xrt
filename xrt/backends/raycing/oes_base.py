@@ -22,7 +22,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "06 Oct 2017"
 
 __dir__ = os.path.dirname(__file__)
-_DEBUG = False
+
 allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
                 'rotationSequence', 'extraRotationSequence',
@@ -508,7 +508,7 @@ class OE(object):
                 surf = np.zeros_like(z)
             ind = np.isnan(surf)
             if ind.sum() > 0:
-                if _DEBUG:
+                if raycing._VERBOSITY_ > 0:
                     print('{0} NaNs in the surface!!!'.format(ind.sum()))
                 surf[ind] = 0
             dz = (z - surf) * diffSign * invertNormal
@@ -549,11 +549,11 @@ class OE(object):
             t2, x2, y2, z2, numit = self._use_my_method(
                 local_f, t1, t2, x, y, z, a, b, c, invertNormal, derivOrder,
                 dz1, dz2, tMin, tMax, x2, y2, z2, ind)
-        if numit == raycing.maxIteration and _DEBUG:
+        if numit == raycing.maxIteration and raycing._VERBOSITY_ > 10:
             nn = ind.sum()
             print('maxIteration is reached for {0} ray{1}!!!'.format(
                   nn, 's' if nn > 1 else ''))
-        if _DEBUG:
+        if raycing._VERBOSITY_ > 10:
             print('numit=', numit)
         return t2, x2, y2, z2, ind1
 
@@ -977,7 +977,7 @@ class OE(object):
         while iRefl <= maxReflections:
             tmpX, tmpY, tmpZ =\
                 np.copy(lb.x[good]), np.copy(lb.y[good]), np.copy(lb.z[good])
-            if _DEBUG:
+            if raycing._VERBOSITY_ > 10:
                 print('reflection No {0}'.format(iRefl + 1))
             if iRefl == 0:
                 if needElevationMap:
@@ -1005,7 +1005,7 @@ class OE(object):
             else:
                 lbN.concatenate(lb)
             iRefl += 1
-            if _DEBUG:
+            if raycing._VERBOSITY_ > 10:
                 print('iRefl=', iRefl, 'remains=', good.sum())
 #                if good.sum() > 0:
 #                    print('y min max ', lb.y[good].min(), lb.y[good].max())
@@ -1503,7 +1503,7 @@ class OE(object):
                 lb.x[good], lb.y[good], lb.z[good] = self.xyz_to_param(
                     lb.x[good], lb.y[good], lb.z[good])
         else:
-            if True:  # self.cl_ctx is None: 
+            if True:  # self.cl_ctx is None:
                 res_find = \
                     self.find_intersection(
                         local_z, tMin[good], tMax[good],

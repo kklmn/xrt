@@ -58,6 +58,7 @@ import time
 import pickle
 import numpy as np
 from scipy.special import jn as besselJn
+from .. import raycing
 
 from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO
 
@@ -768,7 +769,9 @@ class Multilayer(object):
                 ri_p = (rij_p + rj_p*p2i) / (1 + rij_p*rj_p*p2i)
                 rj_s, rj_p = ri_s, ri_p
             t2 = time.time()
-            print('ML reflection calculated with CPU in {} s'.format(t2-t0))
+            if raycing._VERBOSITY_ > 10:
+                print('ML reflection calculated with CPU in {} s'.format(
+                      t2-t0))
         else:
             scalarArgs = [np.int32(self.nPairs)]
 
@@ -794,7 +797,9 @@ class Multilayer(object):
                 'get_amplitude_graded_multilayer', scalarArgs, slicedROArgs,
                 nonSlicedROArgs, slicedRWArgs, None, len(E))
             t2 = time.time()
-            print('ML reflection calculated with OCL in {} s'.format(t2-t0))
+            if raycing._VERBOSITY_ > 10:
+                print('ML reflection calculated with OCL in {} s'.format(
+                      t2-t0))
         return ri_s, ri_p
 
 

@@ -37,7 +37,7 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "25 Jun 2017"
 __version__ = "1.3"
 
-_DEBUG_ = False
+_DEBUG_ = False  # If False, exceptions inside the module are ignored
 redStr = ':red:`{0}`'
 
 import os

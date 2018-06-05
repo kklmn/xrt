@@ -132,7 +132,8 @@ __module__ = "raycing"
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 
-_DEBUG_ = False
+_DEBUG_ = False  # If False, exceptions inside the module are ignored
+_VERBOSITY_ = 10   # [0-100] Regulates the level of diagnostics printout
 
 try:  # for Python 3 compatibility:
     unicode = unicode
@@ -704,9 +705,13 @@ def is_auto_align_required(oe):
                 hasattr(oe, naParam):
             if str(getattr(oe, autoParam)) ==\
                     str(getattr(oe, naParam)):
+                if _VERBOSITY_ > 20:
+                    print(autoParam, str(getattr(oe, autoParam)),
+                          naParam, str(getattr(oe, naParam)))
                 needAutoAlign = True
-#                print("{0}.{1} requires auto-calculation".format(
-#                    self.name, naParam))
+                if _VERBOSITY_ > 10:
+                    print("{0}.{1} requires auto-calculation".format(
+                        oe.name, naParam))
     return needAutoAlign
 
 
@@ -925,8 +930,8 @@ class BeamLine(object):
                             break
                 for dim in autoCoord:
                     oe.center[dim] = newCenter[dim]
-
-                print(oe.name, "center:", oe.center)
+                if _VERBOSITY_ > 0:
+                    print(oe.name, "center:", oe.center)
 
             if autoBragg or autoPitch:
                 if self.flowSource == 'Qook':
@@ -953,10 +958,12 @@ class BeamLine(object):
                         if autoPitch:
                             oe.pitch = 0
                         oe.bragg = targetPitch - oe.pitch
-                        print(oe.name, "Bragg:", oe.bragg)
+                        if _VERBOSITY_ > 0:
+                            print(oe.name, "Bragg:", oe.bragg)
                     else:  # autoPitch
                         oe.pitch = targetPitch
-                        print(oe.name, "pitch:", oe.pitch)
+                        if _VERBOSITY_ > 0:
+                            print(oe.name, "pitch:", oe.pitch)
                 except:
                     if _DEBUG_:
                         raise

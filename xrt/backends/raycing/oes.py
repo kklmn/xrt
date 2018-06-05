@@ -139,7 +139,6 @@ except ImportError:
     isOpenCL = False
 
 __dir__ = os.path.dirname(__file__)
-_DEBUG = False
 
 allParamsSorted = []
 
@@ -1877,7 +1876,7 @@ class NormalFZP(OE):
         self.zones = np.arange(self.N+1)
         self.rn = np.sqrt(self.zones*self.f*lambdaE +
                           0.25*(self.zones*lambdaE)**2)
-        if _DEBUG:
+        if raycing._VERBOSITY_ > 10:
             print(self.rn)
             print(self.f, self.N)
             print('R(N)={0}, dR(N)={1}'.format(
