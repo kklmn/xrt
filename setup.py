@@ -171,7 +171,7 @@ and examples. The complete documentation is available at
 
 setup(
     name='xrt',
-    version='1.3.1',
+    version='1.3.2',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
