@@ -1585,6 +1585,7 @@ class XYCPlot(object):
             self.fig.savefig(saveName, dpi=self.dpi)
             # otherwise mpl qt backend wants to change it (only in Windows):
             self.fig.set_size_inches(self.local_size_inches)
+            self.fig.canvas.draw()
 
     def clean_plots(self):
         """
