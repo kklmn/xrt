@@ -944,15 +944,13 @@ class OE(object):
             returnLocalAbsorbed=None):
         """
         Does the same as :meth:`reflect` but with up to *maxReflections*
-        reflection on the same surface. *way* gives the sequence of rotations
-        around the local axes.
+        reflection on the same surface.
 
-        The returned beam has additional
-        fields: *nRefl* for the number of reflections, *elevationD* for the
-        maximum elevation distance between the rays and the surface as the ray
-        travels between the impact
-        points, *elevationX*, *elevationY*, *elevationZ* for the coordinates
-        of the maximum elevation points.
+        The returned beam has additional fields: *nRefl* for the number of
+        reflections, *elevationD* for the maximum elevation distance between
+        the rays and the surface as the ray travels between the impact points,
+        *elevationX*, *elevationY*, *elevationZ* for the coordinates of the
+        maximum elevation points.
 
         *returnLocalAbsorbed*: None or int
             If not None, returns the absorbed intensity in local beam.
@@ -974,7 +972,7 @@ class OE(object):
         raycing.global_to_virgin_local(self.bl, beam, lb, self.center, good)
         iRefl = 0
         isMulti = False
-        while iRefl <= maxReflections:
+        while iRefl < maxReflections:
             tmpX, tmpY, tmpZ =\
                 np.copy(lb.x[good]), np.copy(lb.y[good]), np.copy(lb.z[good])
             if raycing._VERBOSITY_ > 10:
