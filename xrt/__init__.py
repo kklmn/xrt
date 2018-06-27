@@ -160,9 +160,9 @@ Get xrt
 xrt is available as source distribution from `pypi.python.org
 <https://pypi.python.org/pypi/xrt>`_ and from `GitHub
 <https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
-and examples. The complete documentation is available as zip file from
-`GitHub <https://github.com/kklmn/xrt>`_ and
-`Read the Docs <http://xrt.readthedocs.io>`_.
+and examples. The complete documentation is available online at
+`Read the Docs <http://xrt.readthedocs.io>`_ and offline as zip file at
+`GitHub <https://github.com/kklmn/xrt-docs>`_.
 
 Installation
 ------------
