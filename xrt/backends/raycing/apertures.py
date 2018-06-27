@@ -17,6 +17,7 @@ size that lets the whole beam through.
 
 import numpy as np
 import inspect
+from matplotlib.path import Path as mplPath
 import copy
 from .. import raycing
 from . import sources as rs
@@ -683,3 +684,161 @@ class DoubleSlit(RectangularAperture):
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
             return lo
+
+
+class PolygonalAperture(object):
+    """Implements an aperture or an obstacle defined as a set of polygon
+    vertices."""
+    def __init__(self, bl=None, name='', center=[0, 0, 0],
+                 opening=None, alarmLevel=None):
+        """
+        *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
+            Container for beamline elements. Optical elements are added to its
+            `slits` list.
+
+        *name*: str
+            User-specified name, can be used for diagnostics output.
+
+        *center*: 3-sequence of floats
+            3D point in global system. The aperture is assumed to be a vertical
+            plane perpendicular to the beam line.
+
+        *opening*: sequence
+            Coordinates [(x0, y0),...(xN, yN)] of the polygon vertices.
+
+        *alarmLevel*: float or None.
+            Allowed fraction of number of rays absorbed at the aperture
+            relative to the number of incident rays. If exceeded, an alarm
+            output is printed in the console.
+
+
+        """
+        self.bl = bl
+        if bl is not None:
+            bl.slits.append(self)
+            self.ordinalNum = len(bl.slits)
+            self.lostNum = -self.ordinalNum - 1000
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.name] = [self, 1]
+
+        self.center = center
+        if any([x == 'auto' for x in self.center]):
+            self._center = self.center
+
+        self.opening = opening
+        self.vertices = np.array(self.opening)
+        self.alarmLevel = alarmLevel
+# For plotting footprint images with the envelope aperture:
+        self.surface = name,
+        self.limOptX = [-500, 500]
+        self.limOptY = [-500, 500]
+        self.limPhysX = self.limOptX
+        self.limPhysY = self.limOptY
+        if opening is not None:
+            self.set_optical_limits()
+        self.shape = 'polygon'
+
+    def set_optical_limits(self):
+        """For plotting footprint images with the envelope aperture."""
+        self.limOptX = [np.min(self.vertices[:, 0]),
+                        np.max(self.vertices[:, 0])]
+        self.limOptY = [np.min(self.vertices[:, 1]),
+                        np.max(self.vertices[:, 1])]
+
+    def propagate(self, beam=None, needNewGlobal=False):
+        """Assigns the "lost" value to *beam.state* array for the rays
+        intercepted by the aperture. The "lost" value is
+        ``-self.ordinalNum - 1000.``
+
+        .. Returned values: beamLocal
+        """
+        if self.bl is not None:
+            self.bl.auto_align(self, beam)
+        good = beam.state > 0
+# beam in local coordinates
+        lo = rs.Beam(copyFrom=beam)
+        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        path = -lo.y[good] / lo.b[good]
+        lo.x[good] += lo.a[good] * path
+        lo.z[good] += lo.c[good] * path
+        lo.path[good] += path
+
+        footprint = mplPath(self.vertices)
+        badIndices = np.invert(footprint.contains_points(np.array(
+                list(zip(lo.x, lo.z)))))
+        beam.state[badIndices] = self.lostNum
+
+        lo.state[good] = beam.state[good]
+        lo.y[good] = 0.
+
+        if hasattr(lo, 'Es'):
+            propPhase = np.exp(1e7j * (lo.E[good]/CHBAR) * path)
+            lo.Es[good] *= propPhase
+            lo.Ep[good] *= propPhase
+
+        if self.alarmLevel is not None:
+            raycing.check_alarm(self, good, beam)
+        if needNewGlobal:
+            glo = rs.Beam(copyFrom=lo)
+            raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+            return glo, lo
+        else:
+            raycing.append_to_flow(self.propagate, [lo],
+                                   inspect.currentframe())
+            return lo
+
+    def local_to_global(self, glo, **kwargs):
+        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+
+    def prepare_wave(self, prevOE, nrays):
+        """Creates the beam arrays used in wave diffraction calculations.
+        *prevOE* is the diffracting element: a descendant from
+        :class:`~xrt.backends.raycing.oes.OE`,
+        :class:`~xrt.backends.raycing.apertures.RectangularAperture` or
+        :class:`~xrt.backends.raycing.apertures.RoundAperture`.
+        *nrays* of samples are randomly distributed over the slit area.
+        """
+        from . import waves as rw
+
+        nrays = int(nrays)
+        wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
+
+        dX = self.limOptX[1] - self.limOptX[0]
+        dZ = self.limOptY[1] - self.limOptY[0]
+
+        footprint = mplPath(self.vertices, closed=True)
+        randRays = 0
+        goodX = []
+        goodY = []
+        while randRays < nrays:
+            xy = np.random.rand(nrays, 2)
+            rndX = xy[:, 0] * dX + self.limOptX[0]
+            rndY = xy[:, 1] * dZ + self.limOptY[0]
+            inDots = footprint.contains_points(zip(rndX, rndY))
+            goodX = rndX[inDots] if randRays == 0 else\
+                np.append(goodX, rndX[inDots])
+            goodY = rndY[inDots] if randRays == 0 else\
+                np.append(goodY, rndY[inDots])
+            randRays = len(goodX)
+            if raycing._VERBOSITY_ > 10:
+                print("Generated {0} dots of {1}".format(randRays, nrays))
+
+        wave.x[:] = goodX[:nrays]
+        wave.z[:] = goodY[:nrays]
+        wave.area = 0.5 * np.abs(
+                np.dot(self.vertices[:, 0], np.roll(self.vertices[:, 1], 1)) -
+                np.dot(self.vertices[:, 1], np.roll(self.vertices[:, 0], 1)))
+        wave.dS = wave.area / nrays
+        wave.toOE = self
+
+        glo = rs.Beam(copyFrom=wave)
+        self.local_to_global(glo)
+        rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
+        return wave
