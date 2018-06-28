@@ -70,7 +70,7 @@ def load_res():
     repo_url = "https://github.com/kklmn/xrt.git"
     git_clone(repo_url, repo_dir)
 
-    for dd in ["_images", "_static", "_templates", "_themes", "exts"]:
+    for dd in ["_images", "_static", "_templates", "_themes"]:
         shutil.move(os.path.join(repo_dir, "doc", dd), __dir__)
     for ff in os.listdir(os.path.join(repo_dir, "doc")):
         print(ff)
