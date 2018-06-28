@@ -5,6 +5,8 @@
 
 import sys
 import os
+import shutil
+import subprocess
 from unittest.mock import MagicMock
 
 class Mock(MagicMock):
@@ -20,6 +22,59 @@ MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
                 'PySide', 'PySide.QtCore',
                 'spyder.widgets', 'spyderlib.widgets']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+__dir__ = os.path.dirname(os.path.abspath(__file__))
+
+
+def execute_shell_command(cmd, repo_dir):
+    """Executes a shell command in a subprocess, waiting until it has completed.
+
+    :param cmd: Command to execute.
+    :param work_dir: Working directory path.
+    """
+    pipe = subprocess.Popen(cmd, shell=True, cwd=repo_dir,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (out, error) = pipe.communicate()
+    print(out, error)
+    pipe.wait()
+
+
+def git_clone(repo_url, repo_dir):
+    cmd = 'git clone --depth 1 -b docres ' + repo_url + ' ' + repo_dir
+    execute_shell_command(cmd, repo_dir)
+
+
+def onerror(func, path, exc_info):
+    """
+    Error handler for ``shutil.rmtree``.
+    https://stackoverflow.com/questions/2656322/
+        shutil-rmtree-fails-on-windows-with-access-is-denied
+
+    Usage : ``shutil.rmtree(path, onerror=onerror)``
+    """
+    import stat
+    if not os.access(path, os.W_OK):
+        # Is the error an access error ?
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise
+
+
+def load_res():
+    repo_dir = os.path.join(__dir__, "tmp")
+    while os.path.exists(repo_dir):
+        repo_dir += "t"
+    os.makedirs(repo_dir)
+
+    repo_url = "https://github.com/kklmn/xrt.git"
+    git_clone(repo_url, repo_dir)
+
+    for dd in ["_images"]:
+        shutil.move(os.path.join(repo_dir, "doc", dd),
+                    os.path.join(__dir__, dd))
+    shutil.rmtree(repo_dir, onerror=onerror)
+
 
 # import Cloud
 #import cloud_sptheme as csp
@@ -151,6 +206,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
 #    html_theme = 'default'
     html_static_path = []
+    load_res()
 else:
 #    html_theme = 'nature'
     html_static_path = ['_static']
