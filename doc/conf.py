@@ -62,6 +62,9 @@ def onerror(func, path, exc_info):
 
 
 def load_res():
+    if os.path.exists(os.path.join(__dir__, "_images")):
+        return  # already exists from the 1st run (rtfd has several runs)
+
     repo_dir = os.path.join(__dir__, "tmp")
     while os.path.exists(repo_dir):
         repo_dir += "t"
@@ -71,12 +74,18 @@ def load_res():
     git_clone(repo_url, repo_dir)
 
     for dd in ["_images", "_static", "_templates", "_themes"]:
-        shutil.move(os.path.join(repo_dir, "doc", dd), __dir__)
+        try:
+            shutil.move(os.path.join(repo_dir, "doc", dd), __dir__)
+        except shutil.Error:
+            pass
     for ff in os.listdir(os.path.join(repo_dir, "doc")):
         print(ff)
         if ff == 'conf.py':
             continue
-        shutil.move(os.path.join(repo_dir, "doc", ff), __dir__)
+        try:
+            shutil.move(os.path.join(repo_dir, "doc", ff), __dir__)
+        except shutil.Error:
+            pass
 
     shutil.rmtree(repo_dir, onerror=onerror)
 
