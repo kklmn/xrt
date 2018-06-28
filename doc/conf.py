@@ -81,16 +81,9 @@ def load_res():
     shutil.rmtree(repo_dir, onerror=onerror)
 
 
-# import Cloud
-#import cloud_sptheme as csp
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, '..')
 sys.path.insert(0, '.')
-#sys.path.append('..')
-sys.path.append(os.path.abspath('exts'))
+
 #autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
 import matplotlib as mpl
 mpl.use('agg')
@@ -217,6 +210,11 @@ else:
 #    html_theme = 'nature'
     html_static_path = ['_static']
 html_theme_options["body_min_width"] = '96%'
+
+# If extensions (or modules to document with autodoc) are in another directory,
+# add these directories to sys.path here. If the directory is relative to the
+# documentation root, use os.path.abspath to make it absolute, like shown here.
+sys.path.append(os.path.abspath('exts'))
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
