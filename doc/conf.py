@@ -70,9 +70,14 @@ def load_res():
     repo_url = "https://github.com/kklmn/xrt.git"
     git_clone(repo_url, repo_dir)
 
-    for dd in ["_images"]:
-        shutil.move(os.path.join(repo_dir, "doc", dd),
-                    os.path.join(__dir__, dd))
+    for dd in ["_images", "_static", "_templates", "_themes", "exts"]:
+        shutil.move(os.path.join(repo_dir, "doc", dd), __dir__)
+    for ff in os.listdir(os.path.join(repo_dir, "doc")):
+        print(ff)
+        if ff == 'conf.py':
+            continue
+        shutil.move(os.path.join(repo_dir, "doc", ff), __dir__)
+
     shutil.rmtree(repo_dir, onerror=onerror)
 
 
@@ -206,7 +211,8 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
 #    html_theme = 'default'
     html_static_path = []
-    load_res()
+    # for keeping Download ZIP smaller:
+    load_res()  # load doc resources from a dedicated branch
 else:
 #    html_theme = 'nature'
     html_static_path = ['_static']
