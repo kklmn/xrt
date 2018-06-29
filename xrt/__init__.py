@@ -183,6 +183,8 @@ Please cite xrt as:
 `K. Klementiev and R. Chernikov, "Powerful scriptable ray tracing package xrt",
 Proc. SPIE 9209, Advances in Computational Methods for X-Ray Optics III,
 92090A; doi:10.1117/12.2061400 <http://dx.doi.org/10.1117/12.2061400>`_.
+`Online documentation at xrt.readthedocs.io;
+doi:10.5281/zenodo.1252468 <https://doi.org/10.5281/zenodo.1252468>`_.
 
 Acknowledgments
 ---------------
