@@ -7,21 +7,25 @@ import sys
 import os
 import shutil
 import subprocess
-from unittest.mock import MagicMock
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-            return MagicMock()
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
-MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
-                'OpenGL.arrays', 'pyopencl',
-                'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
-                'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets',
-                'matplotlib.backends.backend_qt5agg',
-                'PySide', 'PySide.QtCore',
-                'spyder.widgets', 'spyderlib.widgets']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+if on_rtd:
+    from unittest.mock import MagicMock
+
+    class Mock(MagicMock):
+        @classmethod
+        def __getattr__(cls, name):
+                return MagicMock()
+
+    MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
+                    'OpenGL.arrays', 'pyopencl',
+                    'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
+                    'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets',
+                    'matplotlib.backends.backend_qt5agg',
+                    'PySide', 'PySide.QtCore',
+                    'spyder.widgets', 'spyderlib.widgets']
+    sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -216,7 +220,6 @@ html_favicon = "_images/xrt_logo.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
 #    html_theme = 'default'
     html_static_path = []
