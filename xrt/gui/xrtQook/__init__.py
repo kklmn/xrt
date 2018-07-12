@@ -1073,6 +1073,8 @@ class XrtQook(qt.QWidget):
             locos = " ".join(pythonplatform.linux_distribution())
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
+            if not bool(gl.glutBitmapCharacter):
+                strOpenGL += ' ' + redStr.format('but GLUT is not found')
         else:
             strOpenGL = 'OpenGL '+redStr.format('not found')
         if isOpenCL:
