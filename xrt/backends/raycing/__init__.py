@@ -687,12 +687,16 @@ def append_to_flow(meth, bOut, frame):
         return
     if oe.bl.flowSource != 'legacy':
         return
+    argValues = inspect.getargvalues(frame)
     fdoc = re.findall(r"Returned values:.*", meth.__doc__)
     if fdoc:
         fdoc = fdoc[0].replace("Returned values: ", '').split(',')
+        if 'needNewGlobal' in argValues.args[1:]:
+            if argValues.locals['needNewGlobal']:
+                fdoc.insert(0, 'beamGlobal')
+
     kwArgsIn = OrderedDict()
     kwArgsOut = OrderedDict()
-    argValues = inspect.getargvalues(frame)
     for arg in argValues.args[1:]:
         if str(arg) == 'beam':
             kwArgsIn[arg] = id(argValues.locals[arg])
@@ -1126,6 +1130,8 @@ class BeamLine(object):
                         if str(segment[2]['beam']) == 'None':
                             continue
                         tmpBeamName = segment[2]['beam']
+                        beamDict[tmpBeamName] = copy.deepcopy(
+                            self.beamsDict[tmpBeamName])
                     if 'beamGlobal' in segment[3].keys():
                         outputBeamMatch[segment[3]['beamGlobal']] = oeStr
                     if len(re.findall('raycing.sou',
@@ -1156,10 +1162,14 @@ class BeamLine(object):
                         rayPath.append([oeStr, g1BeamName,
                                        oeStr, gBeamName])
                     elif len(re.findall(('propagate'), methStr)) > 0:
-                        lBeam1Name = segment[3]['beamLocal']
+                        if 'beamGlobal' in segment[3].keys():
+                            lBeam1Name = segment[3]['beamGlobal']
+                            gBeamName = lBeam1Name
+                        else:
+                            lBeam1Name = segment[3]['beamLocal']
+                            gBeamName = '{}toGlobal'.format(lBeam1Name)
                         gBeam = copy.deepcopy(self.beamsDict[lBeam1Name])
                         segOE.local_to_global(gBeam)
-                        gBeamName = '{}toGlobal'.format(lBeam1Name)
                         beamDict[gBeamName] = gBeam
                         rayPath.append([outputBeamMatch[tmpBeamName],
                                         tmpBeamName, oeStr, gBeamName])

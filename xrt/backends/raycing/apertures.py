@@ -197,6 +197,8 @@ class RectangularAperture(object):
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+            raycing.append_to_flow(self.propagate, [glo, lo],
+                                   inspect.currentframe())
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
