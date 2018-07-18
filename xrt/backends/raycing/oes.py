@@ -71,7 +71,7 @@ elements with various geometries.
 .. autoclass:: BlazedGrating(OE)
    :members: __init__
 .. autoclass:: LaminarGrating(OE)
-.. autoclass:: VLSGrating(OE)
+.. autoclass:: VLSLaminarGrating(OE)
    :members: __init__
 
 .. _distorted:
@@ -98,7 +98,8 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
-           'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating', 'VLSGrating')
+           'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
+           'VLSLaminarGrating')
 import collections
 __allSectioned__ = collections.OrderedDict([
     ('Generic',
@@ -117,7 +118,7 @@ __allSectioned__ = collections.OrderedDict([
          'DoubleParaboloidLens')),
     ('Gratings and zone plates',
         ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
-         'VLSGrating'))
+         'VLSLaminarGrating'))
     ])
 
 import os
@@ -2038,8 +2039,8 @@ class BlazedGrating(OE):
 
         In contrast to the geometric implementation of the grating diffraction
         when the deflection is calculated by the grating equation, the
-        diffraction by :class:`BlazedGrating` is meant to be calculated by the
-        wave propagation methods, see :ref:`gallery3`. In those methods, the
+        diffraction by :class:`BlazedGrating` **is meant to be used by the wave
+        propagation methods**\ , see :ref:`gallery3`. In those methods, the
         diffraction is not given by the grating equation but by the *surface
         itself* through the calculation of the Kirchhoff integral. Therefore
         the surface material should not have the property ``kind='grating'``
@@ -2055,8 +2056,7 @@ class BlazedGrating(OE):
     area). The right picture demonstrates the correct behavior of
     :class:`BlazedGrating` in respect to illumination and shadowing. Notice
     that wave propagation gives the same result for the two cases, apart from a
-    small vertical shift. The difference is purely esthetic and caresses our
-    perfectionism.
+    small vertical shift. The difference is purely esthetic.
 
             +-----------------+--------------------+
             |       OE        |   BlazedGrating    |
@@ -2076,13 +2076,30 @@ class BlazedGrating(OE):
             Angles in radians
 
         *rho*: float
-            Line density in inverse mm.
+            Constant line density in inverse mm. If the density is variable,
+            use *gratingDensity* from the parental class :class:`OE` with the
+            1st argument 'y' (i.e. along y-axis).
 
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
-        self.rho_1 = 1. / self.rho
+        if self.gratingDensity is not None:
+            self.rho0 = self.gratingDensity[1]
+            self.coeffs = self.gratingDensity[2:5]
+            self.ticks = []
+            lim = self.limOptY if self.limOptY is not None else self.limPhysY
+            self.ticksN = int(round(
+                self._get_groove(lim[1]) - self._get_groove(lim[0])))
+            y = lim[0]
+            while y < lim[1]:
+                self.ticks.append(y)
+                y += self._get_period(y)
+            self.ticks = np.array(self.ticks)
+            print("tick len {0}, integrated as {1}".format(
+                len(self.ticks), self.ticksN))
+        self.rho_1 = 1. / self.rho0
+
         self.sinBlaze, self.cosBlaze, self.tanBlaze =\
             np.sin(self.blaze), np.cos(self.blaze), np.tan(self.blaze)
         self.sinAntiblaze, self.cosAntiblaze, self.tanAntiblaze =\
@@ -2093,39 +2110,74 @@ class BlazedGrating(OE):
         self.blaze = raycing.auto_units_angle(kwargs.pop('blaze'))
         self.antiblaze = raycing.auto_units_angle(
             kwargs.pop('antiblaze', np.pi*0.4999))
-        self.rho = kwargs.pop('rho')
+        self.rho0 = kwargs.pop('rho', 1)
         return kwargs
+
+    def _get_period(self, coord):
+        dy = 1. / self.rho0 / (self.coeffs[0] + 2.*self.coeffs[1]*coord +
+                               3.*self.coeffs[2]*coord**2)
+        if type(dy) == float:
+            assert dy > 0, "wrong coefficients: negative groove density"
+        return dy
+
+    def _get_groove(self, coord):
+        return self.rho0 * (self.coeffs[0]*coord + self.coeffs[1]*coord**2 +
+                            self.coeffs[2]*coord**3)
 
     def assign_auto_material_kind(self, material):
         material.kind = 'mirror'  # to be used with wave propagation
 
+    def local_pre(self, x, y):
+        if self.gratingDensity is not None:
+            y0ind = np.searchsorted(self.ticks[:-1], y) - 1
+            y0 = self.ticks[y0ind]
+            y1 = self.ticks[y0ind+1]
+            yL = y - y0
+        else:
+            y0 = (y // self.rho_1) * self.rho_1
+            y1 = y0 + self.rho_1
+            yL = y % self.rho_1
+        yC = (y1-y0) / (1 + self.tanAntiblaze/self.tanBlaze)
+        return y0ind, y0, y1, yC, yL
+
     def local_z(self, x, y):
-        crossingY = self.rho_1 / (1 + self.tanAntiblaze/self.tanBlaze)
-        yL = y % self.rho_1
-        return np.where(yL > crossingY, (yL - self.rho_1) * self.tanBlaze,
-                        -yL * self.tanAntiblaze)
+        y0ind, y0, y1, yC, yL = self.local_pre(x, y)
+        z = np.where(yL > yC, -(y1-y) * self.tanBlaze, -yL * self.tanAntiblaze)
+        if self.gratingDensity is not None:
+            z[(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 0
+        return z
 
     def local_n(self, x, y):
-        crossingY = self.rho_1 / (1 + self.tanAntiblaze/self.tanBlaze)
-        yL = y % self.rho_1
-        return [np.zeros_like(x),
-                np.where(yL > crossingY, -self.sinBlaze, self.sinAntiblaze),
-                np.where(yL > crossingY, self.cosBlaze, self.cosAntiblaze)]
+        y0ind, y0, y1, yC, yL = self.local_pre(x, y)
+        n = [np.zeros_like(x),
+             np.where(yL > yC, -self.sinBlaze, self.sinAntiblaze),
+             np.where(yL > yC, self.cosBlaze, self.cosAntiblaze)]
+        if self.gratingDensity is not None:
+            n[1][(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 0.
+            n[2][(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 1.
+        return n
 
     def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
                           invertNormal, derivOrder=0):
         b_c = b / c
-        n = np.floor((y - b_c*z) / self.rho_1)
-        if self.antiblaze == np.pi/2:
-            zabl = (self.rho_1 * n - y) / b_c + z
+        if self.gratingDensity is not None:
+            y0ind = np.searchsorted(self.ticks[:-1], y - b_c*z) - 1
+            y0 = self.ticks[y0ind]
+            y1 = self.ticks[y0ind+1]
         else:
-            zabl = -self.tanAntiblaze * (y - b_c*z - self.rho_1*n) /\
+            n = np.floor((y - b_c*z) / self.rho_1)
+            y0 = self.rho_1 * n
+            y1 = y0 + self.rho_1
+
+        if self.antiblaze == np.pi/2:
+            zabl = (y0-y) / b_c + z
+        else:
+            zabl = -self.tanAntiblaze * (y - b_c*z - y0) /\
                 (1 + self.tanAntiblaze*b_c)
         if self.blaze == np.pi/2:
-            zbl = (self.rho_1 * (n+1) - y) / b_c + z
+            zbl = (y1-y) / b_c + z
         else:
-            zbl = self.tanBlaze * (y - b_c*z - self.rho_1*(n+1)) /\
-                (1 - self.tanBlaze*b_c)
+            zbl = self.tanBlaze * (y - b_c*z - y1) / (1 - self.tanBlaze*b_c)
         if ((zabl > 0) & (zbl > 0)).any():
             raise
         zabl[zabl > 0] = zbl[zabl > 0] - 1
@@ -2148,7 +2200,7 @@ class BlazedGrating(OE):
         y2 = self.rho_1
         z2 = 0
         d = ((y2-y1)**2 + (z2-z1)**2)**0.5
-        return d * self.rho
+        return d * self.rho0
 
 
 class LaminarGrating(OE):
@@ -2158,8 +2210,15 @@ class LaminarGrating(OE):
     """
 
     def __init__(self, *args, **kwargs):
-        """*blaze* and *antiblaze* are angles in radians. *rho* is the line
-        density in inverse mm."""
+        """
+        *rho* is the line density in inverse mm.
+
+        *aspect* is the ratio of the top-to-bottom surfaces.
+
+        *depth* of the groove in mm.
+
+
+        """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.rho_1 = 1. / self.rho  # Period of the grating in [mm]
@@ -2167,8 +2226,6 @@ class LaminarGrating(OE):
 
     def __pop_kwargs(self, **kwargs):
         self.rho = kwargs.pop('rho')
-        self.blaze = raycing.auto_units_angle(
-            kwargs.pop('blaze', np.pi*0.4999))
         self.aspect = kwargs.pop('aspect', 0.5)
         self.depth = kwargs.pop('depth', 1e-3)
         return kwargs
@@ -2251,7 +2308,7 @@ class LaminarGrating(OE):
         return self.aspect + self.illuminatedGroove
 
 
-class VLSGrating(OE):
+class VLSLaminarGrating(OE):
     """
     Implements a grating of rectangular profile with variable period.
 
@@ -2259,35 +2316,37 @@ class VLSGrating(OE):
 
     def __init__(self, *args, **kwargs):
         r"""
-        *coeffs*: list
-            Contains the coefficients in the formula defining the period:
+        *aspect* is the ratio of the top-to-bottom surfaces.
 
-            .. math::
+        *depth* of the groove in mm.
 
-                \rho_y = \rho * (\mathit{coeffs}_0 +
-                2 * \mathit{coeffs}_1 * y + 3 * \mathit{coeffs}_2 * y^2).
-
-        *rho*: float
-            Initial line density :math:`\rho` in inverse mm.
+        For the VLS density, use *gratingDensity* of the parental class
+        :class:`OE` with the 1st argument 'y' (i.e. along y-axis).
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
+        if self.gratingDensity is not None:
+            self.rho0 = self.gratingDensity[1]
+            self.coeffs = self.gratingDensity[2:5]
         self.ticks = []
         p0 = self.limOptY[0]
         while p0 < self.limOptY[1]:
             self.ticks.append(p0)
-            p0 += self.__get_period(p0)
+            p0 += self._get_period(p0)
         self.ticks = np.array(self.ticks)
         self.illuminatedGroove = 0
         self.rho_1 = 1. / self.rho0
 
-    def __get_period(self, coord):
-        return 1. / self.rho0 / (self.coeffs[0] + 2. * self.coeffs[1] *
-                                 coord + 3. * self.coeffs[2] * coord**2)
+    def _get_period(self, coord):
+        dy = 1. / self.rho0 / (self.coeffs[0] + 2.*self.coeffs[1]*coord +
+                               3.*self.coeffs[2]*coord**2)
+        if type(dy) == float:
+            assert dy > 0, "wrong coefficients: negative groove density"
+        return dy
 
     def __pop_kwargs(self, **kwargs):
-        self.rho0 = kwargs.pop('rho')
+        self.rho0 = kwargs.pop('rho', None)
         self.aspect = kwargs.pop('aspect', 0.5)
         self.coeffs = kwargs.pop('coeffs', [1, 0, 0])
         self.depth = kwargs.pop('depth', 1e-3)  # 1 micron depth
@@ -2376,3 +2435,6 @@ class VLSGrating(OE):
         (along *y*) dimension that is illuminated.
         """
         return self.aspect
+
+
+VLSGrating = VLSLaminarGrating

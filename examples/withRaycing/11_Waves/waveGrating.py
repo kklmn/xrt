@@ -129,10 +129,11 @@ maxDisplayOrder = 3
 
 #LEG:
 pitch = np.radians(4.)
-blaze = np.radians(1.85)
+blazeDeg = 1.85
+blaze = np.radians(blazeDeg)
 rho = 600.  # lines/mm
 material = 'Au'
-coating = rm.Material('Au', rho=19.3)
+coating = rm.Material('Au', rho=19.3, kind='mirror')
 coatingGr = rm.Material('Au', rho=19.3, kind='grating')
 #energies = np.linspace(60, 275, 44)
 energies = np.linspace(60, 280, 23)
@@ -205,15 +206,6 @@ class Grating(roe.OE):
         return 0, -rho, 0  # constant line spacing along y
 
 
-#class BlazedGratingAlt(roe.BlazedGrating):
-#    def rays_good(self, x, y, is2ndXtal=False):
-#        locState = roe.BlazedGrating.rays_good(self, x, y, is2ndXtal)
-#        locState[(y % self.rho_1) > self.rho_1/2.] = self.lostNum
-#        #print('{0} or {1} are lost'.format(
-#            #(locState == self.lostNum).sum(), len(y)))
-#        return locState
-
-
 def order_2theta(order, E, pitch, rho=rho):
     l_d = rm.ch / E * 1e-7 * rho
     wrong = np.abs(np.asarray(order)*l_d - np.cos(pitch)) > 1
@@ -264,29 +256,34 @@ def get_grating_area_fraction(rho, blaze, pitch):
 
 
 def visualize_grating():
+    from  matplotlib.patches import Arc
+
     beamLine = raycing.BeamLine()
-#    bg = BlazedGratingAlt(
     bg = roe.BlazedGrating(
         beamLine, 'BlazedGrating', (0, p, 0), pitch=pitch, material=coating,
         blaze=blaze,
         #antiblaze=pitch,
-        rho=rho)
+        rho=rho,
+#        gratingDensity=['y', rho, 1, 0, 1e-7]
+        )
 
-    fig1 = plt.figure(figsize=(8, 6), dpi=72)
+    fig1 = plt.figure(figsize=(8, 6), dpi=100)
     rect2d = [0.1, 0.1, 0.8, 0.8]
     ax = fig1.add_axes(rect2d, aspect='auto')
     ax.set_xlabel(u'y (µm)')
     ax.set_ylabel(u'z (nm)')
     ax.set_title(
-        u'Grating profile with {0:.0f} lines/mm and {1}° blaze angle\n'.format(
+        u'Grating profile with {0:.0f} lines/mm and {1:.2f}° blaze angle\n'.format(
             rho, np.degrees(blaze)) +
         u'and beam footprint at {0}° pitch angle'.format(np.degrees(pitch)))
 
     maxY = 2.2 * bg.rho_1
-    y = np.linspace(-2*maxY, 2*maxY, 280)
+    y = np.linspace(-2*maxY, 2*maxY, 1000)
     z = bg.local_z(0, y)
     ax.plot(y*1e3, z*1e6, '-k', lw=2)
 
+    y = np.linspace(-2*maxY, 2*maxY, 300)
+    z = bg.local_z(0, y)
     beamSource = rs.Beam(nrays=len(y), forceState=1)
     beamSourceLoc = rs.Beam(copyFrom=beamSource)
     raycing.global_to_virgin_local(bg.bl, beamSource, beamSourceLoc,
@@ -304,10 +301,23 @@ def visualize_grating():
     mz = bg.rho_1*np.tan(blaze)
     ax.set_ylim(-mz*1.1e6, mz*0.2e6)
 
-    y1, y2, z1, z2, d = get_grating_area_fraction(rho, blaze, pitch)
-    xs = np.array([y1, y2]) * 1e3
-    ys = np.array([z1, z2]) * 1e6
-    ax.plot(xs, ys, 'og', lw=3)
+#    y1, y2, z1, z2, d = get_grating_area_fraction(rho, blaze, pitch)
+#    xs = np.array([y1, y2]) * 1e3
+#    ys = np.array([z1, z2]) * 1e6
+#    ax.plot(xs, ys, 'og', lw=3)
+
+    if bg.gratingDensity is not None:
+        ax.plot(bg.ticks*1e3, np.zeros_like(bg.ticks), 'og', lw=3)
+
+    ax.plot([-0.5, 2.2], [-mz*1e6, -mz*1e6], alpha=0.5, lw=1)
+    ax.add_patch(Arc([0, -mz*1e6], maxY*0.22e3, mz*0.2e6, theta1=0,
+                     theta2=90-blazeDeg, color='b'))
+    ax.add_patch(Arc([bg.rho_1*1e3, -mz*1e6], maxY*0.22e3, mz*0.2e6, theta1=90,
+                     theta2=180, color='b'))
+    ax.text(bg.rho_1*0.15e3, -mz*0.9e6, 'blaze', ha='left', va='center',
+            fontsize=12, color='b')
+    ax.text(bg.rho_1*0.97e3, -mz*0.83e6, 'anti-\nblaze', ha='right', va='center',
+            fontsize=12, color='b')
 
     fig1.savefig(prefix + '_profile.png')
     plt.show()
@@ -318,10 +328,12 @@ def build_beamline(nrays=nrays):
     rs.GeometricSource(
         beamLine, 'source', nrays=nrays, polarization=polarization, **kw)
 
-#    beamLine.bg = BlazedGratingAlt(
     beamLine.bg = roe.BlazedGrating(
         beamLine, 'BlazedGrating', (0, p, 0), pitch=pitch, material=coating,
-        blaze=blaze, rho=rho)
+        blaze=blaze, 
+        rho=rho,
+#        gratingDensity=['y', rho, 1, 0, 1e-7]
+        )
     drho = beamLine.bg.get_grating_area_fraction()
     beamLine.bg.area = dx * dz / np.sin(pitch) * drho
 
@@ -601,7 +613,7 @@ def visualize_efficiency():
     axEff = figEff.add_axes(rect2d, aspect='auto', xlabel=axisLabel,
                             ylabel='absolute grating efficiency')
     axEff.set_title(
-        u'{0} {1} at {2}° pitch and {3}° blaze angles'.format(
+        u'{0} {1} at {2}° pitch and {3:.2f}° blaze angles'.format(
             material, prefix[2:5], np.degrees(pitch), np.degrees(blaze)))
     axEff.plot(scanAxis*scanAxisFactor, eff[:, 1-minOrder], '.r', lw=2,
                label='1 xrt')
@@ -633,7 +645,7 @@ def visualize_efficiency():
         rs = refl[0]
         axEff.plot(
             scanAxis*scanAxisFactor, abs(rs)**2, '-b', lw=2,
-            label=material+u' mirror at\n{0}° pitch'.format(
+            label=material+u' mirror at\n{0:.2f}° pitch'.format(
                 np.degrees(pitch+blaze)))
 
     lines = axEff.lines
@@ -712,5 +724,5 @@ def visualize_efficiency():
 
 if __name__ == '__main__':
 #    visualize_grating()
-    get_efficiency()
-#    visualize_efficiency()
+#    get_efficiency()
+    visualize_efficiency()
