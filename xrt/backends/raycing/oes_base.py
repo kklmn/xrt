@@ -210,6 +210,9 @@ class OE(object):
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
 
         *shouldCheckCenter*: bool
+            This is a leagcy parameter designed to work together with alignment
+            stages -- classes in module :mod:`~xrt.backends.raycing.stages` --
+            which modify the orientation of an optical element.
             if True, invokes *checkCenter* method for checking whether the oe
             center lies on the original beam line. *checkCenter* implies
             vertical deflection and ignores any difference in height. You
@@ -362,7 +365,7 @@ class OE(object):
     def get_orientation(self):
         """To be overridden. Should provide pitch, roll, yaw, height etc. given
         other, possibly newly added variables. Used in conjunction with the
-        classes in :mod:`stages`."""
+        classes in :mod:`~xrt.backends.raycing.stages`."""
         pass
 
     def get_Rmer_from_Coddington(self, p, q, pitch=None):
