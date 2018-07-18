@@ -61,6 +61,14 @@ The following coordinate systems are considered (always right-handed):
       and Y is along the beam line. The origin is given by the user. Usually it
       is on the original beam line.
 
+xrt sequentially transforms beams (instances of
+:class:`~xrt.backends.raycing.sources.Beam`) -- containers of arrays which hold
+beam properties for each ray. Geometrical beam properties such as *x, y, z*
+(ray origins) and *a, b, c* (directional cosines) as well as polarization
+characteristics depend on the above coordinate systems. Therefore, beams are
+usually represented by two different objects: one in the global and one in a
+local system.
+
 .. imagezoom:: _images/axes.png
 
 Units
