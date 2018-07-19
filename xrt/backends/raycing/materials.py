@@ -475,6 +475,11 @@ class Material(object):
         .. [Als-Nielsen] Jens Als-Nielsen, Des McMorrow, *Elements of Modern
            X-ray Physics*, John Wiley and Sons, 2001.
         """
+# in case `assign_auto_material_kind hasn't happened before, which can be
+# e.g. in calculator where materials are used without oes:
+        if self.kind == 'auto':
+            self.kind = 'mirror'  # used to be the default kind before xrtQook
+
 #        if self.kind in ('grating', 'FZP'):
         if self.kind in ('FZP'):
             return 1, 1, 0
