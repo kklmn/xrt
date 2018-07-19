@@ -525,9 +525,9 @@ class GaussianBeam(object):
         wave.b /= norm
         wave.c /= norm
         bo = Beam(copyFrom=wave)
-        bo.x = wave.xDiffr
-        bo.y = wave.yDiffr
-        bo.z = wave.zDiffr
+        bo.x[:] = wave.xDiffr
+        bo.y[:] = wave.yDiffr
+        bo.z[:] = wave.zDiffr
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
