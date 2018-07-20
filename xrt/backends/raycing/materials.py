@@ -1697,6 +1697,14 @@ class CrystalFromCell(Crystal):
         *atomsXYZ*: list of 3-sequences
             List of atomic coordinates in cell units.
 
+            .. note::
+
+                *atoms* and *atomsXYZ* must contain *all* the atoms, not only
+                the unique ones for a given symmetry group (we do not consider
+                symmetry here). For example, the unit cell of magnetite (Fe3O4)
+                has 3 unique atomic positions and 56 in total; here, all 56 are
+                needed.
+
         *atomsFraction*: a list of float or None
             Atomic fractions. If None, all values are 1.
 
