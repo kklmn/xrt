@@ -9,6 +9,8 @@ absorption coefficient etc. with those calculated by XOP.
 Various material properties are compared with those calculated by XCrystal/XOP
 (also used by shadow for modeling crystal optics), XInpro/XOP and others.
 
+Find the corresponding scripts in `tests/raycing` directory.
+
 Reflectivity of Bragg crystals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -166,6 +168,28 @@ essentially different and wrong with Laue transmittivity.
 .. |ltSi333_007_0| imagezoom:: _images/ltSi333_007mum_0.*
 .. |ltSi333_007_5| imagezoom:: _images/ltSi333_007mum_5.*
    :loc: upper-right-corner
+
+.. _tests_mosaic:
+
+Reflectivity of mosaic crystals
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These tests implement the diffraction setup from [SanchezDelRioMosaic]_, Fig.
+4. In our case, the source has a finite energy band to demonstrate the energy
+dispersion effect in parafocusing (cf. Figs. 5 and 6 ibid).
+
+.. imagezoom:: _images/MosaicGraphite002-screenA.*
+.. imagezoom:: _images/MosaicGraphite002-screenB.*
+
+The penetration depth distribution should be compared with Fig 7 ibid.
+
+.. imagezoom:: _images/MosaicGraphite002-Z.*
+
+The reflectivity curves are compared with those by XCrystal/XOP [XOP]_. The
+small differences are primarily due to small changes in the tabulations of the
+scattering factors. We use the one by Chantler [Chantler]_.
+
+.. imagezoom:: _images/MosaicGraphite002-ReflectivityS.*
 
 Mirror reflectivity
 ~~~~~~~~~~~~~~~~~~~

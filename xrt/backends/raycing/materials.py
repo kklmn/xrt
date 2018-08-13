@@ -60,7 +60,7 @@ import numpy as np
 from scipy.special import jn as besselJn
 from .. import raycing
 
-from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO
+from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO, SQRT2PI
 
 try:
     import pyopencl as cl  # analysis:ignore
@@ -610,7 +610,8 @@ class Multilayer(object):
             self.dbi = np.ones(self.nPairs) * float(bThickness)
 #            self.dbi = np.array([float(bThickness)] * self.nPairs)
 
-    def get_Bragg_angle(self, E, order=1):
+    def get_sin_Bragg_angle(self, E, order=1):
+        """ensures that -1 <= sin(theta) <= 1"""
         a = order * CH / (2*self.d*E)
         try:
             a[a > 1] = 1 - 1e-16
@@ -620,6 +621,10 @@ class Multilayer(object):
                 a = 1 - 1e-16
             elif a < -1:
                 a = -1 + 1e-16
+        return a
+
+    def get_Bragg_angle(self, E, order=1):
+        a = self.get_sin_Bragg_angle(E, order)
         return np.arcsin(a)
 
     def get_dtheta(self, E, order=1):
@@ -861,7 +866,7 @@ class Crystal(Material):
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler', name='',
-                 nuPoisson=0., calcBorrmann=None, useTT=False):
+                 nuPoisson=0., calcBorrmann=None, useTT=False, mosaicity=0):
         u"""
         *hkl*: sequence
             hkl indices.
@@ -907,6 +912,29 @@ class Crystal(Material):
             for the Laue geometry). Must be set to 'True' in order to calculate
             the reflectivity of bent crystals.
 
+        *mosaicity*: float, radians
+            The sigma of the normal distribution of the crystallite normals.
+
+            xrt follows the concept of mosaic crystals from
+            [SanchezDelRioMosaic]_. This concept has three main parts: (i) a
+            random distribution of the crystallite normals results in a
+            distribution in the reflected directions, (ii) the secondary
+            extinction results in a mean free path distribution in the new ray
+            origins and (iii) the reflectivity is calculated following the work
+            [BaconLowde]_.
+
+            .. note::
+                The mosaicity is assumed large compared with the Darwin width.
+                Therefore, there is no continuous transition mosaic-to-perfect
+                crystal at a continuously reduced mosaicity parameter.
+
+            See the tests :ref:`here <tests_mosaic>`.
+
+            .. [SanchezDelRioMosaic] M. Sánchez del Río et al.,
+               Rev. Sci. Instrum. 63 (1992) 932.
+
+            .. [BaconLowde] G. E. Bacon and R. D. Lowde,
+               Acta Crystallogr. 1, (1948) 303.
 
         """
         super(Crystal, self).__init__(
@@ -928,6 +956,7 @@ class Crystal(Material):
         self.nuPoisson = nuPoisson
         self.calcBorrmann = calcBorrmann
         self.useTT = useTT
+        self.mosaicity = mosaicity
 
 #    def get_amplitude_Authie(self, E, gamma0, gammah, beamInDotHNormal):
 #        """A. Authier, Dynamical Theory of X-ray Diffraction -1. Perfect
@@ -1043,11 +1072,6 @@ class Crystal(Material):
             theta0 = self.get_Bragg_angle(E)
             polFactor = np.abs(np.cos(2. * theta0))
         return 4 * self.chiToFd2 * polFactor * np.abs(Fhkl) / abs(b)**0.5
-
-    def get_extinction_depth(self, E, polarization='s'):  # in microns
-        theta0 = self.get_Bragg_angle(E)
-        dw = self.get_Darwin_width(E, 1., polarization)
-        return self.d / 2. / dw * np.tan(theta0) * 1e-4   # in microns
 
     def get_Borrmann_out(self, goodN, oeNormal, lb, a_out, b_out, c_out,
                          alphaAsym=None, Rcurvmm=None, ucl=None, useTT=False):
@@ -1433,13 +1457,73 @@ class Crystal(Material):
         curveP = calc_model(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
-    def get_Bragg_angle(self, E):
-        a = CH / (2*self.d*E)
+    def get_amplitude_mosaic(self, E, beamInDotNormal):
+        def for_one_polarization(Q):
+            a = Q*w / mu
+            b = (1 + 2*a)**0.5
+            if self.t is None:  # thick Bragg
+                return a / (1 + a + b)
+            A = mu * self.t / np.sin(thetaB)
+            if self.geom.startswith('Bragg'):
+                return a / (1 + a + b/np.tanh(A*b))
+            else:  # Laue
+                return np.sinh(A*a) * np.exp(-A*(1+a))
+        Qs, Qp, thetaB = self.get_kappa_Q(E)[2:5]  # in cm^-1
+        delta = np.arcsin(np.abs(beamInDotNormal)) - thetaB
+        w = np.exp(-0.5*delta**2/self.mosaicity**2) / (SQRT2PI*self.mosaicity)
+        mu = self.get_absorption_coefficient(E)  # in cm^-1
+        curveS = for_one_polarization(Qs)
+        curveP = for_one_polarization(Qp)
+        return curveS**0.5, curveP**0.5
+
+    def get_kappa_Q(self, E):
+        """kappa: inversed extinction length;
+        Q: integrated reflecting power per unit propagation path.
+        Returned as a tuple (kappas, kappap, Qs, Qp), all in cm^-1."""
+        thetaB = self.get_Bragg_angle(E) - self.get_dtheta(E)
+        waveLength = CH / E
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/self.d)
+        polFactor = np.cos(2*thetaB)
+#        kappas = abs(chih) / waveLength * PI  # or the same:
+        kappas = abs(Fhkl) * waveLength * R0 / self.V
+        Qs = kappas**2 * waveLength / np.sin(2*thetaB)
+        kappap = kappas * abs(polFactor)
+        Qp = Qs * polFactor**2  # as by Kato, note power 1 in Shadow paper
+#        return kappas, kappap, Qs, Qp  # in Å^-1
+        return kappas*1e8, kappap*1e8, Qs*1e8, Qp*1e8, thetaB  # in cm^-1
+
+    def get_extinction_lengths(self, E):
+        """Returns a tuple of primary extinction lengths for s and p and, if
+        mosaicity is given, secondary extinction lengths: l1s, l1p, {l2s, l2p},
+        all in mm."""
+        kappas, kappap, Qs, Qp = self.get_kappa_Q(E)[0:4]
+        if self.mosaicity:
+            w = 1. / (SQRT2PI*self.mosaicity)
+            return 10./kappas, 10./kappap, 10./(w*Qs), 10./(w*Qp)  # in mm
+        else:
+            return 10./kappas, 10./kappap  # in mm
+
+    def get_extinction_depth(self, E, polarization='s'):
+        """Same as get_extinction_length but measured normal to the surface."""
+        theta = self.get_Bragg_angle(E)
+        res = self.get_extinction_length(E, polarization)
+        return [r * np.sin(theta) for r in res]
+
+    def get_sin_Bragg_angle(self, E, order=1):
+        """ensures that -1 <= sin(theta) <= 1"""
+        a = order * CH / (2*self.d*E)
         try:
             a[a > 1] = 1 - 1e-16
+            a[a < -1] = -1 + 1e-16
         except TypeError:
             if a > 1:
                 a = 1 - 1e-16
+            elif a < -1:
+                a = -1 + 1e-16
+        return a
+
+    def get_Bragg_angle(self, E, order=1):
+        a = self.get_sin_Bragg_angle(E, order)
         return np.arcsin(a)
 
     def get_backscattering_energy(self):
@@ -1647,10 +1731,10 @@ class CrystalFromCell(Crystal):
     atomic positions which can be found e.g. in Crystals.dat of XOP [XOP]_ or
     xraylib.
 
-    Example:
-        >>> xtal = rm.CrystalFromCell(
+    Examples:
+        >>> xtalQu = rm.CrystalFromCell(
         >>>     'alphaQuartz', (1, 0, 2), a=4.91304, c=5.40463, gamma=120,
-        >>>     atoms=[14, 14, 14, 8, 8, 8, 8, 8, 8],
+        >>>     atoms=[14]*3 + [8]*6,
         >>>     atomsXYZ=[[0.4697, 0., 0.],
         >>>               [-0.4697, -0.4697, 1./3],
         >>>               [0., 0.4697, 2./3],
@@ -1660,6 +1744,15 @@ class CrystalFromCell(Crystal):
         >>>               [0.1463, -0.2662, -0.1188],
         >>>               [-0.4125, -0.1463, 0.2145],
         >>>               [0.2662, 0.4125, 0.5479]])
+        >>>
+        >>> xtalGr = rm.CrystalFromCell(
+        >>>     'graphite', (0, 0, 2), a=2.456, c=6.696, gamma=120,
+        >>>     atoms=[6]*4, atomsXYZ=[[0., 0., 0.], [0., 0., 0.5],
+        >>>                            [1./3, 2./3, 0.], [2./3, 1./3, 0.5]])
+        >>>
+        >>> xtalBe = rm.CrystalFromCell(
+        >>>     'Be', (0, 0, 2), a=2.287, c=3.583, gamma=120,
+        >>>     atoms=[4]*2, atomsXYZ=[[1./3, 2./3, 0.25], [2./3, 1./3, 0.75]])
 
     """
     def __init__(self, name='', hkl=[1, 1, 1],
@@ -1676,7 +1769,7 @@ class CrystalFromCell(Crystal):
                  atomsFraction=None, tK=0,
                  t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler total',
-                 nuPoisson=0., calcBorrmann=None, useTT=False):
+                 nuPoisson=0., calcBorrmann=None, useTT=False, mosaicity=0):
         u"""
         *name*: str
             Crystal name. Not used by xrt.
@@ -1780,6 +1873,7 @@ class CrystalFromCell(Crystal):
         self.nuPoisson = nuPoisson
         self.calcBorrmann = calcBorrmann
         self.useTT = useTT
+        self.mosaicity = mosaicity
 
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         F0, Fhkl, Fhkl_ = 0, 0, 0

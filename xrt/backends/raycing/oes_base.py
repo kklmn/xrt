@@ -10,7 +10,7 @@ import matplotlib as mpl
 from .. import raycing
 from . import sources as rs
 from . import myopencl as mcl
-from .physconsts import PI2, CH, CHBAR
+from .physconsts import PI2, CH, CHBAR, SQRT2PI
 from .materials import EmptyMaterial
 try:
     import pyopencl as cl  # analysis:ignore
@@ -1400,6 +1400,90 @@ class OE(object):
             slicedRWArgs, None, lenGood)
         return a_out, b_out, c_out, curveS, curveP
 
+    def _mosaic_normal(self, mat, oeNormal, beamInDotNormal, lb, goodN):
+        E = lb.E[goodN]
+        theta = mat.get_Bragg_angle(E) - mat.get_dtheta(E)
+
+        sinTheta = np.sin(theta)
+        cosTheta = (1 - sinTheta**2)**0.5
+
+        cosAlpha = np.abs(beamInDotNormal)
+        sinAlpha = (1 - cosAlpha**2)**0.5
+
+        # rotate the crystallite normal to meet the Bragg condition
+        cn = cosTheta / sinAlpha
+        ck = sinTheta + cn*beamInDotNormal
+        n1a = cn*oeNormal[0] - ck*lb.a[goodN]
+        n1b = cn*oeNormal[1] - ck*lb.b[goodN]
+        n1c = cn*oeNormal[2] - ck*lb.c[goodN]
+
+        # this simple solution does the same job as the one in Shadow:
+        phi = np.random.normal(0, mat.mosaicity, len(sinTheta))
+        # this is the Shadow's solution:
+#        import scipy.stats
+#        ss = sinAlpha*sinTheta  # sinTheta = cosThetaD
+#        cc = cosAlpha*cosTheta  # cosTheta = sinThetaD
+#        sinAlphaMinusThetaD = np.abs(ss - cc).min()  # sin(alpha - thetaD)
+#        lower = np.arcsin(sinAlphaMinusThetaD)
+#        sinAlphaPlusThetaD = np.abs(ss + cc).max()  # sin(alpha + thetaD)
+#        if sinAlphaPlusThetaD > 1:
+#            sinAlphaPlusThetaD = 1 - 1e-20
+#        upper = np.arcsin(sinAlphaPlusThetaD)
+#        phi = scipy.stats.truncnorm.rvs(
+#            lower/mat.mosaicity, upper/mat.mosaicity,
+#            loc=0, scale=mat.mosaicity, size=len(sinTheta))
+
+        cosPhi = np.cos(phi)
+        # rotating around in-beam does the same job the Shadow's solution
+        cosBeta = cosPhi
+        # this is the Shadow's solution:
+#        ctanTheta = cosTheta / sinTheta
+#        tanAlpha = abs(sinAlpha / cosAlpha)
+#        cosBeta = (ctanTheta**2 + tanAlpha**2 - sinTheta**-2 - cosAlpha**-2 +
+#                   2*cosPhi/(sinTheta*cosAlpha)) / (2*ctanTheta*tanAlpha)
+#        cosBeta[cosBeta > 1] = 1 - 1e-20
+
+        sinBeta = (1 - cosBeta**2)**0.5
+        signs = np.random.randint(2, size=len(sinTheta))
+        signs[signs == 0] = -1
+        sinBeta *= signs
+        ocosBeta = 1 - cosBeta
+
+        # en.wikipedia.org/wiki/Rodrigues%27_rotation_formula, made with sympy
+        kx, ky, kz = lb.a[goodN], lb.b[goodN], lb.c[goodN]
+        nra = n1a*(-ky**2*ocosBeta - kz**2*ocosBeta + 1) +\
+            n1b*(kx*ky*ocosBeta - kz*sinBeta) +\
+            n1c*(kx*kz*ocosBeta + ky*sinBeta)
+        nrb = n1a*(kx*ky*ocosBeta + kz*sinBeta) +\
+            n1b*(-kx**2*ocosBeta - kz**2*ocosBeta + 1) +\
+            n1c*(-kx*sinBeta + ky*kz*ocosBeta)
+        nrc = n1a*(kx*kz*ocosBeta - ky*sinBeta) +\
+            n1b*(kx*sinBeta + ky*kz*ocosBeta) +\
+            n1c*(-kx**2*ocosBeta - ky**2*ocosBeta + 1)
+        beamInDotNormalN = lb.a[goodN]*nra + lb.b[goodN]*nrb + lb.c[goodN]*nrc
+
+        return np.asarray([nra, nrb, nrc], order='F'), beamInDotNormalN
+
+    def _mosaic_length(self, mat, beamInDotNormal, lb, goodN):
+        Qs, Qp, thetaB = mat.get_kappa_Q(lb.E[goodN])[2:5]  # in cm^-1
+        norm = lb.Jss[goodN] + lb.Jpp[goodN]
+        norm[norm == 0] = 1.
+        Q = (Qs*lb.Jss[goodN] + Qp*lb.Jpp[goodN]) / norm
+        delta = np.arcsin(np.abs(beamInDotNormal)) - thetaB
+        w = np.exp(-0.5*delta**2 / mat.mosaicity**2) / (SQRT2PI*mat.mosaicity)
+        rate = w*Q  # in cm^-1
+        rate[rate <= 1e-3] = 1e-3
+        length = np.random.exponential(10./rate, size=len(Qs))  # in mm
+        if mat.t:
+            through = length*beamInDotNormal > mat.t
+            length[through] = mat.t / beamInDotNormal[through]
+        else:
+            through = None
+        lb.x[goodN] += lb.olda * length
+        lb.y[goodN] += lb.oldb * length
+        lb.z[goodN] += lb.oldc * length
+        return length, through
+
     def _reflect_local(
         self, good, lb, vlb, pitch, roll, yaw, dx=None, dy=None, dz=None,
         local_z=None, local_n=None, local_g=None, fromVacuum=True,
@@ -1541,7 +1625,8 @@ class OE(object):
 #        goodN = (lb.state == 1) | (lb.state == 2)
         goodN = (lb.state == 1)
 # normal at x, y, z:
-        if goodN.sum() > 0:
+        goodNsum = goodN.sum()
+        if goodNsum > 0:
             lb.path[goodN] += tMax[goodN]
 
             toWhere = 0  # 0: reflect, 1: refract, 2: pass straight
@@ -1616,9 +1701,13 @@ class OE(object):
                         lb.b[goodN]*oeNormal[-2] + lb.c[goodN]*oeNormal[-1]
                 else:
                     beamInDotSurfaceNormal = beamInDotNormal
+
+                if matSur.mosaicity:
+                    oeNormal, beamInDotNormalNew = self._mosaic_normal(
+                        matSur, oeNormal, beamInDotNormal, lb, goodN)
+                    beamInDotNormalOld = beamInDotNormal
+                    beamInDotNormal = beamInDotNormalNew
 # direction:
-            if local_g is None:
-                local_g = self.local_g
             if toWhere in [3, 4]:  # grating, FZP
                 if gNormal is None:
                     if self.isParametric:
@@ -1626,6 +1715,8 @@ class OE(object):
                             lb.x[goodN], lb.y[goodN], lb.z[goodN])[0:2]
                     else:
                         tXN, tYN = lb.x[goodN], lb.y[goodN]
+                    if local_g is None:
+                        local_g = self.local_g
                     gNormal = np.asarray(local_g(tXN, tYN), order='F')
                 giveSign = 1 if toWhere == 4 else -1
                 lb.a[goodN], lb.b[goodN], lb.c[goodN] =\
@@ -1636,7 +1727,7 @@ class OE(object):
                 useAsymmetricNormal = False
                 if material is not None:
                     if matSur.kind in ('crystal', 'multilayer') and\
-                            toWhere == 0:
+                            toWhere == 0 and matSur.mosaicity == 0:
                         useAsymmetricNormal = True
 
                 if useAsymmetricNormal:
@@ -1732,6 +1823,10 @@ class OE(object):
                         self.R = tmpR
 
                 if toWhere == 0:  # reflect
+                    if matSur.mosaicity:
+                        lb.olda = np.array(lb.a[goodN])
+                        lb.oldb = np.array(lb.b[goodN])
+                        lb.oldc = np.array(lb.c[goodN])
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
@@ -1788,16 +1883,20 @@ class OE(object):
                 if toWhere in [5, 6, 7]:  # powder,
                     refl = rasP, rapP
                 elif matSur.kind == 'crystal':
-                    beamOutDotSurfaceNormal = a_out * oeNormal[-3] + \
-                        b_out * oeNormal[-2] + c_out * oeNormal[-1]
-                    refl = matSur.get_amplitude(
-                        lb.E[goodN], beamInDotSurfaceNormal,
-                        beamOutDotSurfaceNormal, beamInDotNormal,
-                        alphaAsym=self.alpha,
-                        Rcurvmm=self.R if 'R' in self.__dict__.keys()
-                        else None,
-                        ucl=self.ucl,
-                        useTT=matSur.useTT)
+                    if matSur.mosaicity:
+                        refl = matSur.get_amplitude_mosaic(
+                            lb.E[goodN], beamInDotNormalOld)
+                    else:
+                        beamOutDotSurfaceNormal = a_out*oeNormal[-3] + \
+                            b_out*oeNormal[-2] + c_out*oeNormal[-1]
+                        refl = matSur.get_amplitude(
+                            lb.E[goodN], beamInDotSurfaceNormal,
+                            beamOutDotSurfaceNormal, beamInDotNormal,
+                            alphaAsym=self.alpha,
+                            Rcurvmm=self.R if 'R' in self.__dict__.keys()
+                            else None,
+                            ucl=self.ucl,
+                            useTT=matSur.useTT)
                 elif matSur.kind == 'multilayer':
                     refl = matSur.get_amplitude(
                         lb.E[goodN], beamInDotSurfaceNormal,
@@ -1832,6 +1931,10 @@ class OE(object):
 #                self._reportNaN(lb.Jss[goodN], 'lb.Jss[goodN]')
 #                self._reportNaN(lb.Jpp[goodN], 'lb.Jpp[goodN]')
 #                self._reportNaN(lb.Jsp[goodN], 'lb.Jsp[goodN]')
+            if hasattr(lb, 'Es'):
+                lb.Es[goodN] *= ras
+                lb.Ep[goodN] *= rap
+
             if (not fromVacuum) and\
                     not (matSur.kind in ('crystal', 'multilayer')):
                 # tMax in mm, refl[2]=mu0 in 1/cm
@@ -1849,20 +1952,39 @@ class OE(object):
                     mPh = np.exp(1e7j * lb.E[goodN]/CHBAR * tMax[goodN])
                     lb.Es[goodN] *= mPh
                     lb.Ep[goodN] *= mPh
-# rotate coherency matrix back:
-            vlb.Jss[goodN], vlb.Jpp[goodN], vlb.Jsp[goodN] =\
-                rs.rotate_coherency_matrix(lb, goodN, rollAngle)
-            if hasattr(lb, 'Es'):
-                lb.Es[goodN] *= ras
-                lb.Ep[goodN] *= rap
-                vlb.Es[goodN], vlb.Ep[goodN] = raycing.rotate_y(
-                    lb.Es[goodN], lb.Ep[goodN], cosY, sinY)
+
         if self.isParametric:
             lb.s = np.copy(lb.x)
             lb.phi = np.copy(lb.y)
             lb.r = np.copy(lb.z)
             lb.x[good], lb.y[good], lb.z[good] = self.param_to_xyz(
                 lb.x[good], lb.y[good], lb.z[good])
+
+        if goodNsum > 0:
+            if matSur.mosaicity:  # secondary extinction and attenuation
+                length, through = self._mosaic_length(
+                    matSur, beamInDotNormalOld, lb, goodN)
+                if through is not None:
+                    lb.a[goodN][through] = lb.olda[through]
+                    lb.b[goodN][through] = lb.oldb[through]
+                    lb.c[goodN][through] = lb.oldc[through]
+                n = matSur.get_refractive_index(lb.E[goodN])
+                if hasattr(lb, 'Es'):
+                    nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
+                    mPh = np.exp(1j * nk * 0.2*length)
+                    if through is not None:
+                        mPh[through] = att**0.5 *\
+                            np.exp(1j * nk * 0.1*length)[through]
+                    lb.Es[goodN] *= mPh
+                    lb.Ep[goodN] *= mPh
+
+# rotate coherency matrix back:
+            vlb.Jss[goodN], vlb.Jpp[goodN], vlb.Jsp[goodN] =\
+                rs.rotate_coherency_matrix(lb, goodN, rollAngle)
+            if hasattr(lb, 'Es'):
+                vlb.Es[goodN], vlb.Ep[goodN] = raycing.rotate_y(
+                    lb.Es[goodN], lb.Ep[goodN], cosY, sinY)
+
         if vlb is not lb:
             # includeJspEsp=False because Jss, Jpp, Jsp, Es and Ep are in vlb
             # already:
