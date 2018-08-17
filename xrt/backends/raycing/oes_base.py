@@ -1702,11 +1702,12 @@ class OE(object):
                 else:
                     beamInDotSurfaceNormal = beamInDotNormal
 
-                if matSur.mosaicity:
-                    oeNormal, beamInDotNormalNew = self._mosaic_normal(
-                        matSur, oeNormal, beamInDotNormal, lb, goodN)
-                    beamInDotNormalOld = beamInDotNormal
-                    beamInDotNormal = beamInDotNormalNew
+                if material is not None:
+                    if matSur.mosaicity:
+                        oeNormal, beamInDotNormalNew = self._mosaic_normal(
+                            matSur, oeNormal, beamInDotNormal, lb, goodN)
+                        beamInDotNormalOld = beamInDotNormal
+                        beamInDotNormal = beamInDotNormalNew
 # direction:
             if toWhere in [3, 4]:  # grating, FZP
                 if gNormal is None:
@@ -1823,10 +1824,11 @@ class OE(object):
                         self.R = tmpR
 
                 if toWhere == 0:  # reflect
-                    if matSur.mosaicity:
-                        lb.olda = np.array(lb.a[goodN])
-                        lb.oldb = np.array(lb.b[goodN])
-                        lb.oldc = np.array(lb.c[goodN])
+                    if material is not None:
+                        if matSur.mosaicity:
+                            lb.olda = np.array(lb.a[goodN])
+                            lb.oldb = np.array(lb.b[goodN])
+                            lb.oldc = np.array(lb.c[goodN])
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
@@ -1961,22 +1963,23 @@ class OE(object):
                 lb.x[good], lb.y[good], lb.z[good])
 
         if goodNsum > 0:
-            if matSur.mosaicity:  # secondary extinction and attenuation
-                length, through = self._mosaic_length(
-                    matSur, beamInDotNormalOld, lb, goodN)
-                if through is not None:
-                    lb.a[goodN][through] = lb.olda[through]
-                    lb.b[goodN][through] = lb.oldb[through]
-                    lb.c[goodN][through] = lb.oldc[through]
-                n = matSur.get_refractive_index(lb.E[goodN])
-                if hasattr(lb, 'Es'):
-                    nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
-                    mPh = np.exp(1j * nk * 0.2*length)
+            if material is not None:
+                if matSur.mosaicity:  # secondary extinction and attenuation
+                    length, through = self._mosaic_length(
+                        matSur, beamInDotNormalOld, lb, goodN)
                     if through is not None:
-                        mPh[through] = att**0.5 *\
-                            np.exp(1j * nk * 0.1*length)[through]
-                    lb.Es[goodN] *= mPh
-                    lb.Ep[goodN] *= mPh
+                        lb.a[goodN][through] = lb.olda[through]
+                        lb.b[goodN][through] = lb.oldb[through]
+                        lb.c[goodN][through] = lb.oldc[through]
+                    n = matSur.get_refractive_index(lb.E[goodN])
+                    if hasattr(lb, 'Es'):
+                        nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
+                        mPh = np.exp(1j * nk * 0.2*length)
+                        if through is not None:
+                            mPh[through] = att**0.5 *\
+                                np.exp(1j * nk * 0.1*length)[through]
+                        lb.Es[goodN] *= mPh
+                        lb.Ep[goodN] *= mPh
 
 # rotate coherency matrix back:
             vlb.Jss[goodN], vlb.Jpp[goodN], vlb.Jsp[goodN] =\
