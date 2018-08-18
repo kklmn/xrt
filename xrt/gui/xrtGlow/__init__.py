@@ -258,22 +258,19 @@ class xrtGlow(qt.QWidget):
         opacityLayout = qt.QVBoxLayout()
         self.opacitySliders = []
         self.opacityEditors = []
-        for iaxis, axis in enumerate(
-                ['Line opacity', 'Line width', 'Point opacity', 'Point size']):
+        for iaxis, (axis, rstart, rend, rstep, val) in enumerate(zip(
+                ('Line opacity', 'Line width', 'Point opacity', 'Point size'),
+                (0, 0, 0, 0), (1., 20., 1., 20.), (0.001, 0.01, 0.001, 0.01),
+                (0.2, 2., 0.25, 3.))):
             axLabel = qt.QLabel(axis)
             opacityValidator = qt.QDoubleValidator()
             axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
 
-            if iaxis in [0, 2]:
-                axSlider.setRange(0, 1., 0.001)
-                axSlider.setValue(0.1)
-                axEdit = qt.QLineEdit("0.1")
-                opacityValidator.setRange(0, 1., 5)
-            else:
-                axSlider.setRange(0, 20, 0.01)
-                axSlider.setValue(1.)
-                axEdit = qt.QLineEdit("1")
-                opacityValidator.setRange(0, 20., 5)
+            axSlider.setRange(rstart, rend, rstep)
+            axSlider.setValue(val)
+            axEdit = qt.QLineEdit()
+            opacityValidator.setRange(rstart, rend, 5)
+            self.updateOpacity(iaxis, axEdit, val)
 
             axEdit.setValidator(opacityValidator)
             axEdit.editingFinished.connect(
