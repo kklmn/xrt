@@ -1815,7 +1815,8 @@ class xrtGlWidget(qt.QGLWidget):
                 startBeam = self.beamsDict[
                     self.oesList[str(ioeItem.text())][1]]
 #                lostNum = self.oesList[str(ioeItem.text())][0].lostNum
-                good = startBeam.state > 0
+                # good = startBeam.state > 0
+                good = (startBeam.state == 1) | (startBeam.state == 2)
                 if len(startBeam.state[good]) > 0:
                     for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
                         axMin = np.min(getattr(startBeam, tAxis)[good])
@@ -1851,7 +1852,8 @@ class xrtGlWidget(qt.QGLWidget):
                     if segmentItem0.checkState() == 2:
                         endBeam = self.beamsDict[
                             self.oesList[str(segmentItem0.text())[3:]][1]]
-                        good = startBeam.state > 0
+                        # good = startBeam.state > 0
+                        good = (startBeam.state == 1) | (startBeam.state == 2)
                         if len(startBeam.state[good]) == 0:
                             continue
                         intensity = startBeam.Jss + startBeam.Jpp
@@ -1944,7 +1946,8 @@ class xrtGlWidget(qt.QGLWidget):
                                     np.vstack((verticesArrayLost, verticesLost.T))  # analysis:ignore
 
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
-                good = startBeam.state > 0
+                # good = startBeam.state > 0
+                good = (startBeam.state == 1) | (startBeam.state == 2)
                 if len(startBeam.state[good]) == 0:
                     continue
                 intensity = startBeam.Jss + startBeam.Jpp
