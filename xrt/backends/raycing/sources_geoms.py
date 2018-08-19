@@ -282,6 +282,7 @@ class GeometricSource(object):
         contains arrays Es and Ep with the *s* and *p* components of the
         electric field.
 
+
         .. Returned values: beamGlobal
         """
         if self.bl is not None:
@@ -445,6 +446,7 @@ class GaussianBeam(object):
         .. note::
             You must run :meth:`prepare_wave` before shine() as it needs a wave
             object for which the intensities will be calculated!
+
 
         .. Returned values: beamGlobal
         """
@@ -658,6 +660,7 @@ class MeshSource(object):
         Returns the source. If *toGlobal* is True, the output is in the global
         system.
 
+
         .. Returned values: beamGlobal
         """
         if self.bl is not None:
@@ -707,6 +710,7 @@ class NESWSource(MeshSource):
         u"""
         Returns the source. If *toGlobal* is True, the output is in the global
         system.
+
 
         .. Returned values: beamGlobal
         """
@@ -779,6 +783,7 @@ class CollimatedMeshSource(object):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in the
         global system.
+
 
         .. Returned values: beamGlobal
         """

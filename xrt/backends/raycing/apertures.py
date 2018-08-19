@@ -146,6 +146,7 @@ class RectangularAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+
         .. Returned values: beamLocal
         """
         if self.bl is not None:
@@ -293,14 +294,13 @@ class RectangularAperture(object):
         if raycing._VERBOSITY_ > 10:
             print("Diffract", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
-            if raycing.is_auto_align_required(self):
-                if beam is not None:
-                    self.bl.auto_align(self, beam)
-                elif 'source' in str(type(prevOE)):
-                    self.bl.auto_align(self, wave)
-                else:
-                    self.bl.auto_align(self, prevOE.local_to_global(
-                        wave, returnBeam=True))
+            if beam is not None:
+                self.bl.auto_align(self, beam)
+            elif 'source' in str(type(prevOE)):
+                self.bl.auto_align(self, wave)
+            else:
+                self.bl.auto_align(self, prevOE.local_to_global(
+                    wave, returnBeam=True))
         waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
         if 'source' in str(type(prevOE)):
             retGlo = prevOE.shine(wave=waveOnSelf)
@@ -457,6 +457,7 @@ class RoundAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+
         .. Returned values: beamLocal
         """
         if self.bl is not None:
@@ -547,14 +548,13 @@ class RoundAperture(object):
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
         prevOE = wave.parent
         if self.bl is not None:
-            if raycing.is_auto_align_required(self):
-                if beam is not None:
-                    self.bl.auto_align(self, beam)
-                elif 'source' in str(type(prevOE)):
-                    self.bl.auto_align(self, wave)
-                else:
-                    self.bl.auto_align(self, prevOE.local_to_global(
-                        wave, returnBeam=True))
+            if beam is not None:
+                self.bl.auto_align(self, beam)
+            elif 'source' in str(type(prevOE)):
+                self.bl.auto_align(self, wave)
+            else:
+                self.bl.auto_align(self, prevOE.local_to_global(
+                    wave, returnBeam=True))
         waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
         if 'source' in str(type(prevOE)):
             prevOE.shine(wave=waveOnSelf)
@@ -576,6 +576,7 @@ class RoundBeamStop(RoundAperture):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
+
 
         .. Returned values: beamLocal
         """
@@ -631,6 +632,7 @@ class DoubleSlit(RectangularAperture):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
+
 
         .. Returned values: beamLocal
         """
@@ -756,6 +758,7 @@ class PolygonalAperture(object):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
+
 
         .. Returned values: beamLocal
         """

@@ -348,6 +348,7 @@ class BendingMagnet(object):
         contains arrays Es and Ep with the *s* and *p* components of the
         electric field.
 
+
         .. Returned values: beamGlobal
         """
         if self.bl is not None:
@@ -1974,6 +1975,7 @@ class Undulator(object):
         obtained by a previous `prepare_wave` run. *accuBeam* is only needed
         with *several* repeats of diffraction integrals when the parameters of
         the filament beam must be preserved for all the repeats.
+
 
         .. Returned values: beamGlobal
         """

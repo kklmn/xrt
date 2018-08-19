@@ -137,6 +137,7 @@ class Screen(object):
         returned beam is in local system of the screen and represents the
         desired image.
 
+
         .. .. Returned values: beamLocal
         """
         if self.bl is not None:
@@ -256,14 +257,13 @@ class Screen(object):
         from . import waves as rw
         prevOE = wave.parent
         if self.bl is not None:
-            if raycing.is_auto_align_required(self):
-                if beam is not None:
-                    self.bl.auto_align(self, beam)
-                elif 'source' in str(type(prevOE)):
-                    self.bl.auto_align(self, wave)
-                else:
-                    self.bl.auto_align(self, prevOE.local_to_global(
-                        wave, returnBeam=True))
+            if beam is not None:
+                self.bl.auto_align(self, beam)
+            elif 'source' in str(type(prevOE)):
+                self.bl.auto_align(self, wave)
+            else:
+                self.bl.auto_align(self, prevOE.local_to_global(
+                    wave, returnBeam=True))
 
         if isinstance(dim1, int) or isinstance(dim2, int):
             if beam is None:
@@ -373,6 +373,7 @@ class HemisphericScreen(Screen):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
         desired image.
+
 
         .. Returned values: beamLocal
         """
