@@ -1200,14 +1200,13 @@ class OE(object):
         prevOE = wave.parent
         print("Diffract on", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
-            if raycing.is_auto_align_required(self):
-                if beam is not None:
-                    self.bl.auto_align(self, beam)
-                elif 'source' in str(type(prevOE)):
-                    self.bl.auto_align(self, wave)
-                else:
-                    self.bl.auto_align(self, prevOE.local_to_global(
-                        wave, returnBeam=True))
+            if beam is not None:
+                self.bl.auto_align(self, beam)
+            elif 'source' in str(type(prevOE)):
+                self.bl.auto_align(self, wave)
+            else:
+                self.bl.auto_align(self, prevOE.local_to_global(
+                    wave, returnBeam=True))
         waveOnSelf = self.prepare_wave(prevOE, waveSize, rw=rw)
         if 'source' in str(type(prevOE)):
             beamToSelf = prevOE.shine(wave=waveOnSelf)
@@ -1626,6 +1625,7 @@ class OE(object):
         goodN = (lb.state == 1)
 # normal at x, y, z:
         goodNsum = goodN.sum()
+        needMosaicity = False
         if goodNsum > 0:
             lb.path[goodN] += tMax[goodN]
 
@@ -1640,6 +1640,9 @@ class OE(object):
                 if matSur.kind in ('plate', 'lens'):
                     toWhere = 1
                 elif matSur.kind in ('crystal', 'multilayer'):
+                    if matSur.kind == 'crystal':
+                        if matSur.mosaicity:
+                            needMosaicity = True
                     if matSur.geom.endswith('transmitted'):
                         toWhere = 2
                 elif matSur.kind == 'grating':
@@ -1702,12 +1705,11 @@ class OE(object):
                 else:
                     beamInDotSurfaceNormal = beamInDotNormal
 
-                if material is not None:
-                    if matSur.mosaicity:
-                        oeNormal, beamInDotNormalNew = self._mosaic_normal(
-                            matSur, oeNormal, beamInDotNormal, lb, goodN)
-                        beamInDotNormalOld = beamInDotNormal
-                        beamInDotNormal = beamInDotNormalNew
+                if needMosaicity:
+                    oeNormal, beamInDotNormalNew = self._mosaic_normal(
+                        matSur, oeNormal, beamInDotNormal, lb, goodN)
+                    beamInDotNormalOld = beamInDotNormal
+                    beamInDotNormal = beamInDotNormalNew
 # direction:
             if toWhere in [3, 4]:  # grating, FZP
                 if gNormal is None:
@@ -1728,7 +1730,7 @@ class OE(object):
                 useAsymmetricNormal = False
                 if material is not None:
                     if matSur.kind in ('crystal', 'multilayer') and\
-                            toWhere == 0 and matSur.mosaicity == 0:
+                            toWhere == 0 and (not needMosaicity):
                         useAsymmetricNormal = True
 
                 if useAsymmetricNormal:
@@ -1824,11 +1826,10 @@ class OE(object):
                         self.R = tmpR
 
                 if toWhere == 0:  # reflect
-                    if material is not None:
-                        if matSur.mosaicity:
-                            lb.olda = np.array(lb.a[goodN])
-                            lb.oldb = np.array(lb.b[goodN])
-                            lb.oldc = np.array(lb.c[goodN])
+                    if needMosaicity:
+                        lb.olda = np.array(lb.a[goodN])
+                        lb.oldb = np.array(lb.b[goodN])
+                        lb.oldc = np.array(lb.c[goodN])
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
@@ -1885,7 +1886,7 @@ class OE(object):
                 if toWhere in [5, 6, 7]:  # powder,
                     refl = rasP, rapP
                 elif matSur.kind == 'crystal':
-                    if matSur.mosaicity:
+                    if needMosaicity:
                         refl = matSur.get_amplitude_mosaic(
                             lb.E[goodN], beamInDotNormalOld)
                     else:
@@ -1963,23 +1964,22 @@ class OE(object):
                 lb.x[good], lb.y[good], lb.z[good])
 
         if goodNsum > 0:
-            if material is not None:
-                if matSur.mosaicity:  # secondary extinction and attenuation
-                    length, through = self._mosaic_length(
-                        matSur, beamInDotNormalOld, lb, goodN)
+            if needMosaicity:  # secondary extinction and attenuation
+                length, through = self._mosaic_length(
+                    matSur, beamInDotNormalOld, lb, goodN)
+                if through is not None:
+                    lb.a[goodN][through] = lb.olda[through]
+                    lb.b[goodN][through] = lb.oldb[through]
+                    lb.c[goodN][through] = lb.oldc[through]
+                n = matSur.get_refractive_index(lb.E[goodN])
+                if hasattr(lb, 'Es'):
+                    nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
+                    mPh = np.exp(1j * nk * 0.2*length)
                     if through is not None:
-                        lb.a[goodN][through] = lb.olda[through]
-                        lb.b[goodN][through] = lb.oldb[through]
-                        lb.c[goodN][through] = lb.oldc[through]
-                    n = matSur.get_refractive_index(lb.E[goodN])
-                    if hasattr(lb, 'Es'):
-                        nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
-                        mPh = np.exp(1j * nk * 0.2*length)
-                        if through is not None:
-                            mPh[through] = att**0.5 *\
-                                np.exp(1j * nk * 0.1*length)[through]
-                        lb.Es[goodN] *= mPh
-                        lb.Ep[goodN] *= mPh
+                        mPh[through] = att**0.5 *\
+                            np.exp(1j * nk * 0.1*length)[through]
+                    lb.Es[goodN] *= mPh
+                    lb.Ep[goodN] *= mPh
 
 # rotate coherency matrix back:
             vlb.Jss[goodN], vlb.Jpp[goodN], vlb.Jsp[goodN] =\
