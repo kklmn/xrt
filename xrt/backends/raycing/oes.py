@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Optical elements
 ----------------
@@ -139,7 +139,7 @@ try:
 except ImportError:
     isOpenCL = False
 
-__dir__ = os.path.dirname(__file__)
+__fdir__ = os.path.dirname(__file__)
 
 allParamsSorted = []
 

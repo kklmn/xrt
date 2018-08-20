@@ -21,7 +21,7 @@ except ImportError:
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "06 Oct 2017"
 
-__dir__ = os.path.dirname(__file__)
+__fdir__ = os.path.dirname(__file__)
 
 allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
@@ -302,10 +302,10 @@ class OE(object):
             if not isOpenCL:
                 print("pyopencl is not available!")
             else:
-                cl_template = os.path.join(__dir__, r'materials.cl')
+                cl_template = os.path.join(__fdir__, r'materials.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource = f.read()
-                cl_template = os.path.join(__dir__, r'OE.cl')
+                cl_template = os.path.join(__fdir__, r'OE.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource += f.read()
                 kernelsource = kernelsource.replace('MY_LOCAL_Z',

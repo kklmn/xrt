@@ -29,7 +29,7 @@ from . import multipro
 from .backends import raycing
 
 # _DEBUG = True
-__dir__ = os.path.abspath(os.path.dirname(__file__))
+__fdir__ = os.path.abspath(os.path.dirname(__file__))
 runCardVals = None
 runCardProcs = None
 _plots = []
@@ -82,7 +82,7 @@ class RunCardVals(object):
         self.passNo = 0
         self.savedResults = []
         self.iteration = 0
-        self.lastRunsPickleName = os.path.join(__dir__, 'lastRuns.pickle')
+        self.lastRunsPickleName = os.path.join(__fdir__, 'lastRuns.pickle')
         self.lastRuns = []
         try:
             with open(self.lastRunsPickleName, 'rb') as f:

@@ -15,7 +15,7 @@ try:
 except ImportError:
     isOpenCL = False
 
-__dir__ = os.path.dirname(__file__)
+__fdir__ = os.path.dirname(__file__)
 _DEBUG = 20
 
 
@@ -206,7 +206,7 @@ class XRT_CL(object):
                 self.cl_queue.extend([cl.CommandQueue(cl_ctx, device)])
                 self.cl_program.extend(
                     [cl.Program(cl_ctx, kernelsource).build(
-                        options=['-I', __dir__])])
+                        options=['-I', __fdir__])])
                 self.cl_ctx.extend([cl_ctx])
 
             self.cl_mf = cl.mem_flags

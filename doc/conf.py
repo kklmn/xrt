@@ -27,7 +27,7 @@ if on_rtd:
                     'spyder.widgets', 'spyderlib.widgets']
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-__dir__ = os.path.dirname(os.path.abspath(__file__))
+__fdir__ = os.path.dirname(os.path.abspath(__file__))
 
 
 def execute_shell_command(cmd, repo_dir):
@@ -66,10 +66,10 @@ def onerror(func, path, exc_info):
 
 
 def load_res():
-    if os.path.exists(os.path.join(__dir__, "_images")):
+    if os.path.exists(os.path.join(__fdir__, "_images")):
         return  # already exists from the 1st run (rtfd has several runs)
 
-    repo_dir = os.path.join(__dir__, "tmp")
+    repo_dir = os.path.join(__fdir__, "tmp")
     while os.path.exists(repo_dir):
         repo_dir += "t"
     os.makedirs(repo_dir)
@@ -79,7 +79,7 @@ def load_res():
 
     for dd in ["_images", "_static", "_templates", "_themes"]:
         try:
-            shutil.move(os.path.join(repo_dir, "doc", dd), __dir__)
+            shutil.move(os.path.join(repo_dir, "doc", dd), __fdir__)
         except shutil.Error:
             pass
     for ff in os.listdir(os.path.join(repo_dir, "doc")):
@@ -87,7 +87,7 @@ def load_res():
         if ff == 'conf.py':
             continue
         try:
-            shutil.move(os.path.join(repo_dir, "doc", ff), __dir__)
+            shutil.move(os.path.join(repo_dir, "doc", ff), __fdir__)
         except shutil.Error:
             pass
 

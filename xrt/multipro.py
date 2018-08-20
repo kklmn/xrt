@@ -22,7 +22,7 @@ from .backends import shadow
 from .backends import dummy
 from .backends import raycing
 
-__dir__ = os.path.dirname(__file__)
+__fdir__ = os.path.dirname(__file__)
 
 
 _DEBUG = 1
