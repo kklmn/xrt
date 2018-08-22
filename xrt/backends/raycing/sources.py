@@ -45,11 +45,11 @@ Synchrotron sources
     upwards.
 
 The synchrotron sources have two implementations: based on own fully pythonic
-or OpenCL aided calculations and based on external codes Urgent [Urgent]_ and
-WS [WS]_. The latter codes have some drawbacks, as demonstrated in the section
+or OpenCL aided calculations and based on external codes [Urgent]_ and [WS]_.
+The latter codes have some drawbacks, as demonstrated in the section
 :ref:`comparison-synchrotron-sources`, but nonetheless can be used for
 comparison purposes. If you are going to use them, the codes are freely
-available as parts of XOP package [XOP]_.
+available as parts of [XOP]_ package.
 
 .. [Urgent] R. P. Walker, B. Diviacco, URGENT, A computer program for
    calculating undulator radiation spectral, angular, polarization and power
@@ -210,6 +210,13 @@ i.e. the energy spread :math:`\sigma_E` divided by the undulator bandwidth
 :math:`1/nN` of the n-th harmonic, with an extra factor :math:`2\pi`. See an
 application example :ref:`here <example-undulator-sizes>`.
 
+.. note::
+
+   If you want to compare the source size with that by [SPECTRA]_, note that
+   their radiation source size :math:`\sigma_r` is by the factor of 2 smaller
+   in order to be compatible with the traditional formula by [Kim]_. In this
+   aspect SPECTRA contradicts to their own paper [TanakaKitamura]_.
+
 .. [Kim] K.-J. Kim, Characteristics of Synchrotron Radiation, AIP Conference
    Proceedings, **184** (AIP, 1989) 565.
 
@@ -261,8 +268,8 @@ For an undulator the calculations are much more demanding and for a wide
 angular acceptance the Monte Carlo ray sampling can be extremely inefficient.
 To improve the efficiency, a reasonably small acceptance should be considered.
 
-There are several codes that can calculate undulator spectra: Urgent [Urgent]_,
-US [US]_, SPECTRA [SPECTRA]_. There is a common problem about them that the
+There are several codes that can calculate undulator spectra: [Urgent]_,
+[US]_, [SPECTRA]_. There is a common problem about them that the
 energy spectrum may get *strong distortions* if calculated with a sparse
 spatial and energy mesh. SPECTRA code seems to provide the best reference for
 undulator spectra, which was used to optimize the meshes of the other codes.
@@ -289,10 +296,10 @@ harmonic is shown below.
 Undulator spectrum at very high energies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The codes Urgent [Urgent]_ and SPECTRA [SPECTRA]_ result in saturation at high
+The codes [Urgent]_ and [SPECTRA]_ result in saturation at high
 energies (see the image below) thus leading to a divergent total power
 integral. The false radiation has a circular off-axis shape. To the contrary,
-xrt and SRW [SRW]_ flux at high energies vanishes and follows the wiggler
+xrt and [SRW]_ flux at high energies vanishes and follows the wiggler
 approximation. More discussion will follow in a future journal article about
 xrt.
 
@@ -302,7 +309,7 @@ Single-electron and multi-electron undulator radiation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here we compare single-electron and multi-electron (i.e. with a finite electron
-beam size and energy spread) undulator radiation, as calculated by xrt and SRW
+beam size and energy spread) undulator radiation, as calculated by xrt and
 [SRW]_. The calculations are done on a 3D mesh of energy (the long axis on the
 images below) and two transverse angles. Notice also the duration of execution
 given below each image. The 3D mesh was the following: theta = 321 point, -0.3
@@ -348,7 +355,7 @@ Undulator spectrum with tapering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The spectrum can be broadened by tapering the magnetic gap. The figure below
-shows a comparison of xrt with SPECTRA [SPECTRA]_, YAUP [YAUP]_ and
+shows a comparison of xrt with [SPECTRA]_, [YAUP]_ and
 experimental measurements [exp_taper]_. The gap values and the taper were
 slightly varied in all three codes to reach the best match with the
 experimental curve. We had to do so because in the other codes taper is not
@@ -376,9 +383,9 @@ one below was calculated for the emittance of Petra III ring.
 Undulator spectrum in transverse plane
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The codes calculating undulator spectra -- Urgent [Urgent]_, US [US]_, SPECTRA
-[SPECTRA]_ -- calculate either the spectrum of flux through a given aperture
-*or* the transversal distribution at a fixed energy. It is not possible to
+The codes calculating undulator spectra -- [Urgent]_, [US]_, [SPECTRA]_ --
+calculate either the spectrum of flux through a given aperture *or* the
+transversal distribution at a fixed energy. It is not possible to
 simultaneously have two dependencies: on energy *and* on transversal
 coordinates.
 
