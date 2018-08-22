@@ -213,9 +213,10 @@ application example :ref:`here <example-undulator-sizes>`.
 .. note::
 
    If you want to compare the source size with that by [SPECTRA]_, note that
-   their radiation source size :math:`\sigma_r` is by the factor of 2 smaller
-   in order to be compatible with the traditional formula by [Kim]_. In this
-   aspect SPECTRA contradicts to their own paper [TanakaKitamura]_.
+   their radiation source size :math:`\sigma_r` is by a factor of 2 smaller in
+   order to be compatible with the traditional formula by [Kim]_. In this
+   aspect SPECTRA contradicts to their own paper [TanakaKitamura]_, see the
+   paragraph after Eq(23).
 
 .. [Kim] K.-J. Kim, Characteristics of Synchrotron Radiation, AIP Conference
    Proceedings, **184** (AIP, 1989) 565.
