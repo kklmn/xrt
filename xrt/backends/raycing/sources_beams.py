@@ -289,7 +289,7 @@ class Beam(object):
         self.Es += sign*wave.Es
         self.Ep += sign*wave.Ep
         self.Jss = (self.Es * self.Es.conjugate()).real
-        self.Jss = (self.Ep * self.Ep.conjugate()).real
+        self.Jpp = (self.Ep * self.Ep.conjugate()).real
         self.Jsp = self.Es * self.Ep.conjugate()
 
     def project_energy_to_band(self, EnewMin, EnewMax):
