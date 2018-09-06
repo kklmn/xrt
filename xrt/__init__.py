@@ -176,6 +176,12 @@ python-64-bit is by ~20% faster than the 32-bit version (tested with
 WinPython). Also consider :ref:`Speed tests <tests>` for making choice between
 Windows and Linux and between Python 2 and Python 3.
 
+Get help
+--------
+
+For getting help and/or reporting a bug please use `GitHub xrt Issues
+<https://github.com/kklmn/xrt/issues>`_.
+
 Citing xrt
 ----------
 
