@@ -14,7 +14,7 @@ Find the corresponding scripts in `tests/raycing` directory.
 Reflectivity of Bragg crystals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All the curves are basically equal. The small amplitude differences are due
+The small amplitude differences with XOP results are due
 to slight differences in Debye-Waller factor and/or tabulated values of the
 atomic scattering factors. The phase difference between s- and p-polarized
 rays (calculated by xrt, cyan line, right Y axis) is not calculated by the
@@ -62,7 +62,7 @@ XOP programs and therefore is given without comparison.
 Reflectivity of Laue crystals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All the curves are basically equal. The small amplitude differences are due
+The small amplitude differences with XOP results are due
 to slight differences in Debye-Waller factor and/or tabulated values of the
 atomic scattering factors. The phase difference between s- and p-polarized
 rays (calculated by xrt, cyan line, right Y axis) is not calculated by the
@@ -102,8 +102,10 @@ Transmittivity of Bragg crystals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The curves are basically equal only for the symmetric case. Both
-XCrystal/XOP and XInpro/XOP are wrong for asymmetric crystals, when they
-give too low or too high (>1) transmittivity.
+XCrystal/XOP and XInpro/XOP are different for asymmetric crystals, when they
+give too low or too high (>1) transmittivity. This is because they refer to
+intencities, not flux and therefore cannot be directly applied to rays in
+ray tracing.
 
 +-------+--------------------+-------------------+--------------------+
 |       |      α = -5°       |     symmetric     |        α = 5°      |
@@ -186,15 +188,15 @@ The penetration depth distribution should be compared with Fig 7 ibid.
 .. imagezoom:: _images/MosaicGraphite002-Z.*
 
 The reflectivity curves are compared with those by XCrystal/XOP [XOP]_. The
-small differences are primarily due to small changes in the tabulations of the
-scattering factors. We use the one by Chantler [Chantler]_.
+small differences are primarily due to small differences in the tabulations of
+the scattering factors. We use the one by Chantler [Chantler]_.
 
 .. imagezoom:: _images/MosaicGraphite002-ReflectivityS.*
 
 Mirror reflectivity
 ~~~~~~~~~~~~~~~~~~~
 
-The curves are basically equal. The small amplitude differences are due
+The small amplitude differences with XOP are due
 to slight differences in tabulated values of the atomic scattering factors.
 The phase difference between s- and p-polarized rays (calculated by xrt,
 cyan line, right Y axis) is not calculated by the XOP programs and
@@ -202,33 +204,38 @@ therefore is given without comparison.
 
 .. imagezoom:: _images/MirrorReflSi@0.5deg.*
 .. imagezoom:: _images/MirrorReflSiO2@0.5deg.*
-.. imagezoom:: _images/MirrorReflRh@2mrad.*
    :loc: upper-right-corner
+
+.. imagezoom:: _images/MirrorReflRh@2mrad.*
 .. imagezoom:: _images/MirrorReflPt@4mrad.*
+   :loc: upper-right-corner
 
 .. _multilayer_reflectivity:
 
 Slab, multilayer and coating reflectivity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The curves are basically equal. The small amplitude differences are due
-to slight differences in tabulated values of the atomic scattering factors.
-The phase difference between s- and p-polarized rays is given without
+    The phase difference between s- and p-polarized rays is given without
 comparison.
 
 .. imagezoom:: _images/SlabReflW.*
 .. imagezoom:: _images/MultilayerSiW.*
+   :loc: upper-right-corner
+
 .. imagezoom:: _images/MultilayerSiW-graded.*
 .. imagezoom:: _images/MultilayerSiWCXRO_id0.*
+   :loc: upper-right-corner
+
 .. imagezoom:: _images/MultilayerSiWCXRO_id6.*
 .. imagezoom:: _images/MirrorRefl30nmRhOnSi_4mrad_RMSroughness2nm.*
-.. imagezoom:: _images/MirrorRefl20nmDiamondOnQuartz_0.2deg_RMSroughness1nm.*
    :loc: upper-right-corner
+
+.. imagezoom:: _images/MirrorRefl20nmDiamondOnQuartz_0.2deg_RMSroughness1nm.*
 
 Transmittivity of materials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The curves are basically equal. The small amplitude differences are due
+The small amplitude differences with XOP are due
 to slight differences in tabulated values of the atomic scattering factors.
 
 .. imagezoom:: _images/TransmDiamond.*
@@ -236,11 +243,13 @@ to slight differences in tabulated values of the atomic scattering factors.
 Absorption of materials
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The curves are generally equal, deviating at low energies due to differences in
-tabulated values of the atomic scattering factors.
+The deviations at low energies due to differences in tabulated values of the
+atomic scattering factors.
 
 .. imagezoom:: _images/AbsorptionBe.*
 .. imagezoom:: _images/AbsorptionNi.*
+   :loc: upper-right-corner
+
 .. imagezoom:: _images/AbsorptionAu.*
 
 """
