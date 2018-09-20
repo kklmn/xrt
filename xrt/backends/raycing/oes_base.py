@@ -1319,7 +1319,7 @@ class OE(object):
         a /= norm
         b /= norm
         c /= norm
-        return [a, b, c]
+        return [a, -np.abs(b), c]
 
     def _reflect_crystal_cl(self, goodN, lb, matcr, oeNormal):
         DW = self.cl_precisionF(matcr.factDW)
@@ -1967,17 +1967,22 @@ class OE(object):
             if needMosaicity:  # secondary extinction and attenuation
                 length, through = self._mosaic_length(
                     matSur, beamInDotNormalOld, lb, goodN)
+                n = matSur.get_refractive_index(lb.E[goodN])
                 if through is not None:
                     lb.a[goodN][through] = lb.olda[through]
                     lb.b[goodN][through] = lb.oldb[through]
                     lb.c[goodN][through] = lb.oldc[through]
-                n = matSur.get_refractive_index(lb.E[goodN])
+                    att = np.exp(-abs(n.imag) * lb.E[goodN] / CHBAR * 2e8 *
+                                 tMax[goodN] * 0.1)
+                    lb.Jss[goodN][through] *= att[through]
+                    lb.Jpp[goodN][through] *= att[through]
+                    lb.Jsp[goodN][through] *= att[through]
                 if hasattr(lb, 'Es'):
                     nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
-                    mPh = np.exp(1j * nk * 0.2*length)
+                    mPh = np.exp(1j * nk * 0.2*length)  # *2: in and out
                     if through is not None:
-                        mPh[through] = att**0.5 *\
-                            np.exp(1j * nk * 0.1*length)[through]
+                        mPh[through] =\
+                            (att**0.5 * np.exp(1j * nk * 0.1*length))[through]
                     lb.Es[goodN] *= mPh
                     lb.Ep[goodN] *= mPh
 
