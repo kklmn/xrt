@@ -66,6 +66,7 @@ mpl.rcParams['axes.linewidth'] = 0.75
 #mpl.rcParams['ytick.major.pad'] = '5'
 import matplotlib.pyplot as plt
 
+epsHist = 1e-100  # prevents problem with normalization of histograms
 # [Sizes and positions of plots]
 dpi = 100
 xOrigin2d = 80  # all sizes are in pixels
@@ -1195,7 +1196,7 @@ class XYCPlot(object):
 
         t1D = axis.total1D
         axis.max1D = float(np.max(t1D))
-        if axis.max1D > 0:
+        if axis.max1D > epsHist:
             if runner.runCardVals.passNo > 0:
                 mult = 1.0 / axis.globalMax1D
             else:
@@ -1210,7 +1211,7 @@ class XYCPlot(object):
 
         t1D_RGB = axis.total1D_RGB
         axis.max1D_RGB = float(np.max(t1D_RGB))
-        if axis.max1D_RGB > 0:
+        if axis.max1D_RGB > epsHist:
             if runner.runCardVals.passNo > 1:
                 mult = 1.0 / axis.globalMax1D_RGB
             else:
