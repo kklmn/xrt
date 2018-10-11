@@ -36,20 +36,22 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
    :members: __init__
 .. autoclass:: CrystalHarmonics(CrystalFromCell)
    :members: __init__
+.. autoclass:: MonoCrystal(CrystalFromCell)
+   :members: __init__
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Mar 2017"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'GradedMultilayer',
            'Coated', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
-           'Powder', 'CrystalHarmonics')
+           'Powder', 'CrystalHarmonics', 'MonoCrystal')
 import collections
 __allSectioned__ = collections.OrderedDict([
     ('Material', None),
     ('Crystals', ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
                   'CrystalFromCell')),  # don't include 'Crystal'
     ('Layered', ('Coated', 'Multilayer', 'GradedMultilayer')),
-    ('Advanced', ('Powder', 'CrystalHarmonics', 'EmptyMaterial'))
+    ('Advanced', ('Powder', 'CrystalHarmonics', 'MonoCrystal', 'EmptyMaterial'))
     ])
 import sys
 import os
