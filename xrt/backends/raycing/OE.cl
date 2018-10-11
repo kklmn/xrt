@@ -33,6 +33,34 @@ float2 rotate_z(float x, float y, float cosangle, float sinangle) {
     return (float2) (cosangle * x - sinangle*y, sinangle * x + cosangle * y);
 }
 
+
+float4 quatMult(float4 qf, float4 qt) {
+    return qf.x*qt + 
+           qf.y*(float4)(-qt.y, qt.x,-qt.w, qt.z) +
+           qf.z*(float4)(-qt.z, qt.w, qt.x,-qt.y) + 
+           qf.w*(float4)(-qt.w,-qt.z, qt.y, qt.x);
+//    return (float4)(qf.x*qt.x-qf.y*qt.y-qf.z*qt.z-qf.w*qt.w,
+//                    qf.x*qt.y+qf.y*qt.x+qf.z*qt.w-qf.w*qt.z,
+//                    qf.x*qt.z-qf.y*qt.w+qf.z*qt.x+qf.w*qt.y,
+//                    qf.x*qt.w+qf.y*qt.z-qf.z*qt.y+qf.w*qt.x);
+}
+
+float4 quatFromVec(float4 vec, float angle, bool isRotation) {
+    float sinAngle, cosAngle;
+    float4 retVec = (float4)(0, vec.x, vec.y, vec.z);
+    if (isRotation) {
+        sinAngle = sincos(angle*0.5, &cosAngle);
+        retVec.yzw *= sinAngle;
+        retVec.x = cosAngle;
+        };
+    return retVec;
+}
+
+float4 quatToVec(float4 quat){
+    return (float4)(quat.y, quat.z, quat.w, 0);
+}
+
+
 MY_LOCAL_Z
 
 MY_LOCAL_N
@@ -166,9 +194,11 @@ float4 _use_Brent_method(float8 cl_plist,
             fai = fa;
             fbi = fb;
             fci = fc;
-            xs = xai * fbi * fci / (fai - fbi) / (fai - fci) +
-                    fai * xbi * fci / (fbi - fai) / (fbi - fci) +
-                    fai * fbi * xci / (fci - fai) / (fci - fbi);
+
+            
+            xs = xai * fbi * fci / ((fai - fbi) * (fai - fci)) +
+                    fai * xbi * fci / ((fbi - fai) * (fbi - fci)) +
+                    fai * fbi * xci / ((fci - fai) * (fci - fbi));
         } else {
             xai = xa;
             xbi = xb;
@@ -177,16 +207,16 @@ float4 _use_Brent_method(float8 cl_plist,
             xs = xbi - fbi * (xbi - xai) / (fbi - fai);
         }
 
-        cond1 = (((xs < (3 * xa + xb) / 4.) & (xs < xb)) |
-                ((xs > (3 * xa + xb) / 4.) & (xs > xb)));
-        cond2 = (mf & (fabs(xs - xb) >= (fabs(xb - xc) / 2.)));
-        cond3 = ((!mf) & (fabs(xs - xb) >= (fabs(xc - xd) / 2.)));
+        cond1 = (((xs < (3 * xa + xb) * 0.25) & (xs < xb)) |
+                ((xs > (3 * xa + xb) * 0.25) & (xs > xb)));
+        cond2 = (mf & (fabs(xs - xb) >= (fabs(xb - xc) * 0.5)));
+        cond3 = ((!mf) & (fabs(xs - xb) >= (fabs(xc - xd) * 0.5)));
         cond4 = (mf & (fabs(xb - xc) < zEps));
         cond5 = ((!mf) & (fabs(xc - xd) < zEps));
         conds = (cond1 | cond2 | cond3 | cond4 | cond5);
 
         if (conds) {
-            xs = (xa + xb) / 2;
+            xs = (xa + xb) * 0.5;
         }
 
         mf = conds;
@@ -366,6 +396,9 @@ float8 reflect_crystal_internal(const float factDW,
     float2 plane_d;
     //float epsilonB = 0.01;
     beamInDotNormal = dot(abc, planeNormal);
+    if (beamInDotNormal > 0) {
+        planeNormal *= -1;
+        beamInDotNormal *= -1;}
 
     if (temperature > 0) {
         plane_d = get_distance_Si(temperature, dhkl);
@@ -396,7 +429,7 @@ float8 reflect_crystal_internal(const float factDW,
     dt = 1.;
     normalDotSurfNormal = dot(planeNormal, surfNormal);
     gNormalCryst = (planeNormal - normalDotSurfNormal * surfNormal) *
-            dt / d / 1e-7; // *
+            dt / d * 1e7; // *
 //            sqrt(fabs(1. - normalDotSurfNormal * normalDotSurfNormal));
     /*          if matSur.geom.endswith('Fresnel'):
                if isinstance(self.order, int):
@@ -525,7 +558,7 @@ float8 reflect_crystal_internal_E(const float factDW,
     dt = 1;
     normalDotSurfNormal = dot(planeNormal, surfNormal);
     gNormalCryst = (planeNormal - normalDotSurfNormal * surfNormal) *
-            dt / d / 1e-7; // *
+            dt / d * 1e7; // *
  //         sqrt(fabs(1. - pown(normalDotSurfNormal, 2)));
     /*          if matSur.geom.endswith('Fresnel'):
                if isinstance(self.order, int):
@@ -605,6 +638,7 @@ float8 reflect_single_crystal(const float factDW,
         int4 hkl,
         int nmax,
         const int maxEl,
+        float randomDisc,
         __global float* elements,
         __global float* f0cfs,
         __global float* E_vector,
@@ -614,71 +648,99 @@ float8 reflect_single_crystal(const float factDW,
         ) {
 
     float4 abc_out, max_abc;
-    //unsigned int Z = 14; //for debug only
-    float iPlaneMod = 0;
-    //float2 zero2 = (float2)(0,0);
-    //abc=normalize(abc);
+    float4 nPlaneNormal, nCutNormal;
     abc_out = abc;
     max_abc = abc_out;
     float2 maxS = cmp0;
     float2 maxP = cmp0;
-    //float beamDotiPlane;
     int ih, ik, il;
-    float4 cutNormal = (float4) (1, 1, 1, 0);
-    float cutNormalMod = length(cutNormal);
-    //int4 maxhkl = (int4)(0,0,0,0);
+    float4 cutNormal = (float4)(hkl.x, hkl.y, hkl.z, 0);
     float2 curveS, curveP;
     float8 dirflux;
-    float4 iPlaneinCut, iPlane, iPlaneOrt;
-    float4 dmaxhkl = (float4) (0, 0, 0, 0);
-    float rAngle = -acos(dot(planeNormal / length(planeNormal), cutNormal / length(cutNormal)));
-    float Qw = cos(0.5 * rAngle);
-    float4 Qvp = cross(planeNormal / length(planeNormal), cutNormal / length(cutNormal));
-    float4 Qv = Qvp / length(Qvp) * sin(0.5 * rAngle);
-    //setting up quarternions
-    float Qxx = Qv.x * Qv.x;
-    float Qxy = Qv.x * Qv.y;
-    float Qxz = Qv.x * Qv.z;
-    float Qxw = Qv.x*Qw;
-    float Qyy = Qv.y * Qv.y;
-    float Qyz = Qv.y * Qv.z;
-    float Qyw = Qv.y*Qw;
-    float Qzz = Qv.z * Qv.z;
-    float Qzw = Qv.z*Qw;
-    float4 Mrx = (float4) (1 - 2 * (Qyy + Qzz), 2 * (Qxy - Qzw), 2 * (Qxz + Qyw), 0);
-    float4 Mry = (float4) (2 * (Qxy + Qzw), 1 - 2 * (Qxx + Qzz), 2 * (Qyz - Qxw), 0);
-    float4 Mrz = (float4) (2 * (Qxz - Qyw), 2 * (Qyz + Qxw), 1 - 2 * (Qxx + Qyy), 0);
+    float4 iPlaneInCut, iPlaneOrt;
+//    float4 dmaxhkl = (float4) (0, 0, 0, 0);
+
+    nPlaneNormal = normalize(planeNormal);
+    nCutNormal = normalize(cutNormal);
+    float4 Qv = quatFromVec(normalize(cross(nCutNormal, nPlaneNormal)), 
+                            acos(dot(nPlaneNormal, nCutNormal)), true);
+    float4 rQv = (float4)(Qv.x, -Qv.y, -Qv.z, -Qv.w);
+    float normIntensity = 0;
+    float absOne = 0;
+    float absSP = 0;
 
     for (ih = -nmax; ih < nmax + 1; ih++) {
         for (ik = -nmax; ik < nmax + 1; ik++) {
             for (il = -nmax; il < nmax + 1; il++) {
 
                 if (abs(ih) + abs(ik) + abs(il) == 0) continue;
-                iPlane = (float4) (ih, ik, il, 0);
-                iPlaneMod = length(iPlane);
-                iPlaneOrt = iPlane / iPlaneMod;
-                iPlaneinCut.x = dot(Mrx, iPlaneOrt);
-                iPlaneinCut.y = dot(Mry, iPlaneOrt);
-                iPlaneinCut.z = dot(Mrz, iPlaneOrt);
+                iPlaneOrt = quatFromVec(normalize(
+                    (float4)(ih, ik, il, 0)), 0, false);
                 //beamDotiPlane = dot(abc,iPlaneinCut);
+                iPlaneInCut = quatToVec(quatMult(
+                    quatMult(Qv, iPlaneOrt), rQv));
+//                if (ray==0) {
+//                printf("hkl: [%i, %i, %i]\n", ih, ik, il);
+//                printf("iPlane normal: %v4g\n", iPlaneInCut);}
                 dirflux = reflect_crystal_internal(factDW, thickness, geom, lattice,
-                        temperature, abc, E, iPlaneinCut, surfNormal,
+                        temperature, abc, E, iPlaneInCut, surfNormal,
                         (int4) (ih, ik, il, 0), maxEl, elements,
                         f0cfs, E_vector, f1_vector, f2_vector, ray
                         );
+                mem_fence(CLK_LOCAL_MEM_FENCE);
                 curveS = (dirflux.lo).lo;
                 curveP = (dirflux.lo).hi;
-                abc_out = dirflux.hi;
-                if (abs_c(curveS) + abs_c(curveP) >= abs_c(maxS) + abs_c(maxP)) {
-                    maxS = curveS;
-                    maxP = curveP;
-                    max_abc = abc_out;
-                    //maxhkl = (int4)(ih,ik,il,0);
-                    //dmaxhkl = iPlaneinCut;
-                }
+                //abc_out = dirflux.hi;
+                absSP = 0;
+                absOne = abs_c(curveS);
+                absSP += absOne * absOne;
+                absOne = abs_c(curveP);
+                absSP += absOne * absOne;
+                normIntensity += absSP;
+                //if (ray == 0) printf("%i%i%i; absSP %g; normInt %g\n", ih, ik, il, absSP, normIntensity);
             }
         }
     }
+
+    float cumSum = 0;
+    absOne = 0;
+    float revNorm = 1. / normIntensity;
+    bool breakKey = false;
+
+    for (ih = -nmax; ih < nmax + 1; ih++) {
+        for (ik = -nmax; ik < nmax + 1; ik++) {
+            for (il = -nmax; il < nmax + 1; il++) {
+
+                if (abs(ih) + abs(ik) + abs(il) == 0) continue;
+                iPlaneOrt = quatFromVec(normalize(
+                    (float4)(ih, ik, il, 0)), 0, false);
+                iPlaneInCut = quatToVec(quatMult(
+                    quatMult(Qv, iPlaneOrt), rQv));
+                dirflux = reflect_crystal_internal(factDW, thickness, geom, lattice,
+                        temperature, abc, E, iPlaneInCut, surfNormal,
+                        (int4) (ih, ik, il, 0), maxEl, elements,
+                        f0cfs, E_vector, f1_vector, f2_vector, ray
+                        );
+                mem_fence(CLK_LOCAL_MEM_FENCE);
+                curveS = (dirflux.lo).lo;
+                curveP = (dirflux.lo).hi;
+                abc_out = dirflux.hi;
+                absOne = abs_c(curveS);
+                cumSum += absOne * absOne * revNorm;
+                absOne = abs_c(curveP);
+                cumSum += absOne * absOne * revNorm;
+                if (cumSum > randomDisc) {
+                    maxS = curveS;
+                    maxP = curveP;
+                    max_abc = abc_out;
+                    breakKey = true;
+                    break;
+                    }
+                }
+            if (breakKey) break;
+            }
+        if (breakKey) break;
+        }
     mem_fence(CLK_LOCAL_MEM_FENCE);
     max_abc.w = 0;
     return (float8) (maxS, maxP, max_abc);
@@ -819,6 +881,7 @@ __kernel void reflect_crystal(const int calctype,
         __global float* surfNormalX,
         __global float* surfNormalY,
         __global float* surfNormalZ,
+        __global float* randomGlobal,
         __global float* elements,
         __global float* f0cfs,
         __global float* E_vector,
@@ -838,6 +901,7 @@ __kernel void reflect_crystal(const int calctype,
     float4 abc = (float4) (a_gl[ii], b_gl[ii], c_gl[ii], 0);
     planeNormal = (float4) (planeNormalX[ii], planeNormalY[ii], planeNormalZ[ii], 0);
     surfNormal = (float4) (surfNormalX[ii], surfNormalY[ii], surfNormalZ[ii], 0);
+    float randomDisc = randomGlobal[ii];
     //printf("planeNormal: %g %g %g\n", planeNormal.x, planeNormal.y, planeNormal.z);
     //printf("surfNormal: %g %g %g\n", surfNormal.x, surfNormal.y, surfNormal.z);
     //uint ins = floor(Energy*100);
@@ -858,7 +922,7 @@ __kernel void reflect_crystal(const int calctype,
     } else if (calctype > 10 && calctype < 100) {
         dirflux = reflect_single_crystal(factDW, thickness, geom, lattice,
                 temperature, abc, Energy, planeNormal, surfNormal,
-                hkl, calctype - 10, maxEl, elements,
+                hkl, calctype - 10, maxEl, randomDisc, elements,
                 f0cfs, E_vector, f1_vector, f2_vector, ii);
         mem_fence(CLK_LOCAL_MEM_FENCE);
     } else if (calctype == 5) {

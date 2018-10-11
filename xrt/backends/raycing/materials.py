@@ -1957,3 +1957,37 @@ class CrystalHarmonics(CrystalFromCell):
     def __pop_kwargs(self, **kwargs):
         self.Nmax = kwargs.pop('Nmax', 3)
         return kwargs
+
+
+class MonoCrystal(CrystalFromCell):
+    u"""
+    A derivative class from :class:`CrystalFromCell`, used for calculation of
+    the single crystal diffraction patterns (so far cubic symettries only).
+    Similar to the parent class, parameter *hkl* defines the cut orientation,
+    whereas *Nmax* stands for the highest index to consider, i.e. for every ray
+    the code would calculate the range of reflexes from [-Nmax, -Nmax, -Nmax]
+    to [Nmax, Nmax, Nmax] (required amount of reflectivity calculations is
+    therefore 2*(2*Nmax+1)^3 per every ray), but only return one of them
+    regarding their intensities. Brighter reflexes would be selected with
+    higher probability.
+
+    .. warning::
+        Heavy computational load. Requires OpenCL. Decent GPU highly
+        recommended.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        u"""
+        *Nmax*: int
+            Specifies the highest order of reflection to be calculated.
+
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        CrystalFromCell.__init__(self, *args, **kwargs)
+        self.kind = 'monocrystal'
+
+    def __pop_kwargs(self, **kwargs):
+        self.Nmax = kwargs.pop('Nmax', 3)
+        return kwargs

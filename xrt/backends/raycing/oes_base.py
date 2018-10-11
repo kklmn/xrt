@@ -1382,6 +1382,9 @@ class OE(object):
                         self.cl_precisionF(oeNormal[-2]*bOnes),  # surfNormalY
                         self.cl_precisionF(oeNormal[-1]*bOnes)]  # surfNormalZ
 
+        if matcr.kind == "monocrystal":
+            slicedROArgs.extend([self.cl_precisionF(np.random.rand(lenGood))])
+
         nonSlicedROArgs = [elements_in.flatten(),  # elements
                            f0_in.flatten(),  # f0
                            E_in.flatten(),   # E_in

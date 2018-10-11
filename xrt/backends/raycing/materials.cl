@@ -10,7 +10,8 @@
 
 #include "xrt_complex.cl"
 
-__constant float PI =    3.141592653589793238;
+__constant float PI = 3.141592653589793238;
+__constant float revPI = 0.3183098862;
 __constant float ch = 12398.4186;  // {5}   {c*h[eV*A]}
 __constant float twoPi = 6.283185307179586476;
 __constant float chbar = 1973.269606712496640;  // {c*hbar[eV*A]}
@@ -133,12 +134,13 @@ float2 get_distance(float8 lattice, float4 hkl)
         //    mass += elements[i].s4 * elements[i].s6;
 
         //rho = mass / avogadro / V * 1e24;
-        float d = V / (basis.x * basis.y * basis.z) /
-            sqrt(pown(hkl.x*sin_abg.x/basis.x,2) + pown(hkl.y*sin_abg.y/basis.y,2) + pown(hkl.z*sin_abg.z/basis.z,2) +
-                 2*hkl.x*hkl.y * (cos_abg.x*cos_abg.y - cos_abg.z) / (basis.x*basis.y) +
-                 2*hkl.x*hkl.z * (cos_abg.x*cos_abg.z - cos_abg.y) / (basis.x*basis.z) +
-                 2*hkl.y*hkl.z * (cos_abg.y*cos_abg.z - cos_abg.x) / (basis.y*basis.z));
-        float chiToF = -r0 / PI / V;  // minus!
+        float rbx = 1. / basis.x, rby = 1. / basis.y, rbz = 1. / basis.z;
+        float d = V * rbx * rby * rbz /
+            sqrt(pown(hkl.x*sin_abg.x*rbx,2) + pown(hkl.y*sin_abg.y*rby,2) + pown(hkl.z*sin_abg.z*rbz,2) +
+                 2*hkl.x*hkl.y * (cos_abg.x*cos_abg.y - cos_abg.z) *rbx*rby +
+                 2*hkl.x*hkl.z * (cos_abg.x*cos_abg.z - cos_abg.y) *rbx*rbz +
+                 2*hkl.y*hkl.z * (cos_abg.y*cos_abg.z - cos_abg.x) *rby*rbz);
+        float chiToF = -r0 * revPI / V;  // minus!
         //printf("V, d: %g %g\n", V, d);
         mem_fence(CLK_LOCAL_MEM_FENCE);
         res = (float2)(d,chiToF);
@@ -151,7 +153,7 @@ float2 get_distance_Si(float temperature, float4 dhkl)
         float aSi = 5.419490 * (Si_dl_l(temperature) - Si_dl_l(273.15) + 1);
         mem_fence(CLK_LOCAL_MEM_FENCE);
         float d = aSi/sqrt(dot(dhkl,dhkl));
-        float chiToF = -r0 / PI / pown(aSi,3);
+        float chiToF = -r0 * revPI / pown(aSi,3);
         return (float2)(d,chiToF);
     }
 
@@ -265,7 +267,7 @@ float2 for_one_polarization(float polFactor,
                                     prod_c(chih, chih_));
 
             float t = thickness * 1.e7;
-            float2 L = t * delta * k02 / 2 / kHs;
+            float2 L = t * delta * k02 * 0.5 / kHs;
             //printf("geom.lo, hi: %i, %i\n",geom.lo, geom.hi);
             if (geom.lo == 1) //Bragg
               {
@@ -273,7 +275,7 @@ float2 for_one_polarization(float polFactor,
                   {
                     //printf("Bragg transmitted, %i, %i\n", geom.lo, geom.hi);
                     ra = prod_c(rec_c(cos_c(L) - prod_c(prod_c(im1, alpha), div_c(sin_c(L),delta))),
-                        exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t / 2 / k0s));
+                        exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t * 0.5 / k0s));
                   }
                 else // reflected
                   {
@@ -301,7 +303,7 @@ float2 for_one_polarization(float polFactor,
                   {
                     //printf("Laue transmitted, %i, %i\n",geom.lo, geom.hi);
                     ra = prod_c(cos_c(L) + prod_c(prod_c(im1, alpha), div_c(sin_c(L),delta)),
-                          exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t / 2 / k0s));
+                          exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t * 0.5 / k0s));
                   }
                 else
                   {
@@ -309,7 +311,7 @@ float2 for_one_polarization(float polFactor,
                     //printf("delta, L, t, k0s, k02: %g+j%g, %g+j%g, %g, %g, %g\n",
                     //       delta.x, delta.y, L.x, L.y, t, k0s, k02);
                     ra = prod_c(div_c(prod_c(chih * polFactor,sin_c(L)), delta),
-                        exp_c(prod_c(im1, chi0 - alpha * b) * k02 * t / 2 / k0s));
+                        exp_c(prod_c(im1, chi0 - alpha * b) * k02 * t * 0.5 / k0s));
                   }
               }
             if (geom.hi == 0) ra /= sqrt(fabs(b));
@@ -328,10 +330,10 @@ float get_dtheta_symmetric_Bragg(float E, float d, int4 hkl,
                                __global float* f0cfs, __global float* E_vector,
                                __global float* f1_vector, __global float* f2_vector)
   {
-        float8 F = get_structure_factor_general(E, factDW, hkl, 0.5 / d,
+        float8 F = get_structure_factor_general(E, factDW, hkl, 0.5/d,
                                              maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
         mem_fence(CLK_LOCAL_MEM_FENCE);
-        float2 chi0 = (F.lo).lo * chiToF * pown(ch / E,2);
+        float2 chi0 = (F.lo).lo * chiToF * pown(ch/E, 2);
         return (chi0 / sin(2 * get_Bragg_angle(E, d))).lo;
   }
 
@@ -343,8 +345,8 @@ float get_dtheta_symmetric_Bragg_E(float E, float d, int4 hkl,
         float8 F = get_structure_factor_general_E(E, factDW, hkl, 0.5 / d,
                                              maxEl, elements, f0cfs, f1f2);
         mem_fence(CLK_LOCAL_MEM_FENCE);
-        float2 chi0 = (F.lo).lo * chiToF * pown(ch / E,2);
-        return (chi0 / sin(2 * get_Bragg_angle(E, d))).lo;
+        float2 chi0 = (F.lo).lo * chiToF * pown(ch/E, 2);
+        return (chi0/sin(2*get_Bragg_angle(E, d))).lo;
   }
 
 float get_dtheta(float E, float d, int4 hkl,
@@ -460,28 +462,25 @@ float4 get_amplitude_internal(float E, float d, int4 hkl,
     //printf("bIDN, bODN: %g, %g\n", beamInDotNormal, beamOutDotNormal);
     float k0s = -beamInDotNormal * k;
     float kHs = -beamOutDotNormal * k;
-
+    float revd = 1. / d;
     float b = k0s / kHs;
-    float k0H = fabs(beamInDotHNormal) * (twoPi / d) * k;
+    float k0H = fabs(beamInDotHNormal) * (twoPi * revd) * k;
     float k02 = k * k;
-    float H2 = pown(twoPi / d, 2);
+    float H2 = pown(twoPi * revd, 2);
 
-
-    //float8 F = get_structure_factor_diamond(E, factDW, hkl, 0.5 / d,
-    //                           maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
-    float8 F = get_structure_factor_general(E, factDW, hkl, 0.5 / d,
+    float8 F = get_structure_factor_general(E, factDW, hkl, 0.5 * revd,
                                maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
     mem_fence(CLK_LOCAL_MEM_FENCE);
     float2 F0 = (F.lo).lo;
     float2 Fhkl = (F.lo).hi;
     float2 Fhkl_ = (F.hi).lo;
-    float lambdaSquare = pown(waveLength,2);
+    float lambdaSquare = pown(waveLength, 2);
     float chiToFlambdaSquare = chiToF * lambdaSquare;
     float2 chi0 = conj_c(F0) * chiToFlambdaSquare;
     float2 chih = conj_c(Fhkl) * chiToFlambdaSquare;
     float2 chih_ = conj_c(Fhkl_) * chiToFlambdaSquare;
     //printf("chih, chih_: %g+j%g, %g+j%g\n", chih.x, chih.y, chih_.x, chih_.y);
-    float2 alpha = r2cmp((0.5*H2 - k0H) / k02) + chi0 * 0.5 * (1 / b - 1);
+    float2 alpha = r2cmp((0.5*H2 - k0H) / k02) + chi0 * 0.5 * (1. / b - 1.);
     float2 curveS = for_one_polarization(1.,
                                 chih, chih_, chi0,
                                 k02, k0s, kHs,
@@ -515,18 +514,18 @@ float4 get_amplitude_internal_E(float E, float d, int4 hkl,
     //printf("bIDN, bODN: %g, %g\n", beamInDotNormal, beamOutDotNormal);
     float k0s = -beamInDotNormal * k;
     float kHs = -beamOutDotNormal * k;
-
+    float revd = 1. / d;
     float b = k0s / kHs;
-    float k0H = fabs(beamInDotHNormal) * (twoPi / d) * k;
+    float k0H = fabs(beamInDotHNormal) * (twoPi * revd) * k;
     float k02 = k * k;
-    float H2 = pown(twoPi / d, 2);
+    float H2 = pown(twoPi * revd, 2);
 
 
     //float8 F = get_structure_factor_diamond(E, factDW, hkl, 0.5 / d,
     //                           maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
     //float8 F = get_structure_factor_general(E, factDW, hkl, 0.5 / d,
     //                           maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
-    float8 F = get_structure_factor_general_E(E, factDW, hkl, 0.5 / d,
+    float8 F = get_structure_factor_general_E(E, factDW, hkl, 0.5 * revd,
                                maxEl, elements, f0cfs, f1f2);
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -539,7 +538,7 @@ float4 get_amplitude_internal_E(float E, float d, int4 hkl,
     float2 chih = conj_c(Fhkl) * chiToFlambdaSquare;
     float2 chih_ = conj_c(Fhkl_) * chiToFlambdaSquare;
     //printf("chih, chih_: %g+j%g, %g+j%g\n", chih.x, chih.y, chih_.x, chih_.y);
-    float2 alpha = r2cmp((0.5*H2 - k0H) / k02) + chi0 * 0.5 * (1 / b - 1);
+    float2 alpha = r2cmp((0.5*H2 - k0H)/k02) + chi0 * 0.5 * (1/b - 1);
     float2 curveS = for_one_polarization(1.,
                                 chih, chih_, chi0,
                                 k02, k0s, kHs,
@@ -580,7 +579,7 @@ float4 get_amplitude_multilayer_internal(const int npairs,
         lsw = -lsw;
         rij_s = lsw * rtb_si;
         rij_p = lsw * rtb_pi;
-        p2i = (lsw + 1) * p2bi / 2. - (lsw - 1) * p2ti / 2.;
+        p2i = (lsw + 1.) * p2bi * 0.5 - (lsw - 1.) * p2ti * 0.5;
 
         rj2i = prod_c(rj_s, p2i);
 
