@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 """
 __author__ = "Roman Chernikov", "Konstantin Klementiev"
