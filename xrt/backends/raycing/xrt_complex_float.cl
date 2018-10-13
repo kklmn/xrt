@@ -3,7 +3,7 @@
 
 #ifdef cl_khr_fp64
 #if __OPENCL_VERSION__<120
-//#pragma OPENCL EXTENSION cl_khr_fp64: enable
+#pragma OPENCL EXTENSION cl_khr_fp64: enable
 #endif
 #endif
 
