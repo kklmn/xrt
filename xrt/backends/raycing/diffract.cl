@@ -9,30 +9,30 @@
 
 //#include "materials.cl"
 //__constant float Pi = 3.141592653589793;
-__constant const double twoPi = (double)6.283185307179586476;
-__constant const double invTwoPi = (double)(1./6.283185307179586476);
+__constant const float twoPi = (float)6.283185307179586476;
+__constant const float invTwoPi = (float)(1./6.283185307179586476);
 __constant const float invFourPi = (float)0.07957747154594767;
 __constant float2 cmp0 = (float2)(0, 0);
 __constant float2 cmpi1 = (float2)(0, 1);
-__constant double2 cmp0_d = (double2)(0, 0);
-__constant double2 cmpi1_d = (double2)(0, 1);
-__constant const double2 cfactor = (double2)(0, -0.07957747154594767);
+//__constant float2 cmp0_d = (float2)(0, 0);
+//__constant float2 cmpi1_d = (float2)(0, 1);
+__constant const float2 cfactor = (float2)(0, -0.07957747154594767);
 
 float2 prod_c(float2 a, float2 b)
 {
     return (float2)(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 }
-double2 prod_c_d(double2 a, double2 b)
+float2 prod_c_d(float2 a, float2 b)
 {
-    return (double2)(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
+    return (float2)(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 }
-double to2pi(double val)
+float to2pi(float val)
 {
 	return val - trunc(val*invTwoPi) * twoPi;
 }
-//double dot3(double3 a, double3 b)
+//float dot3(float3 a, float3 b)
 //{
-//    return (double)(a.x*b.x + a.y*b.y + a.z*b.z);
+//    return (float)(a.x*b.x + a.y*b.y + a.z*b.z);
 //}
 
 
@@ -153,33 +153,33 @@ __kernel void integrate_kirchhoff(
 //__kernel void integrate_kirchhoff_d(
 //                    //const unsigned int imageLength,
 //                    const unsigned int fullnrays,
-//                    __global double* x_glo,
-//                    __global double* y_glo,
-//                    __global double* z_glo,
-//                    __global double* cosGamma,
-//                    __global double2* Es,
-//                    __global double2* Ep,
-//                    __global double* k,
-//                    __global double3* beamOEglo,
-//                    __global double3* oe_surface_normal,
-////                    __global double* beam_OE_loc_path,
-//                    __global double2* KirchS_gl,
-//                    __global double2* KirchP_gl,
-//                    __global double2* KirchA_gl,
-//                    __global double2* KirchB_gl,
-//                    __global double2* KirchC_gl)
+//                    __global float* x_glo,
+//                    __global float* y_glo,
+//                    __global float* z_glo,
+//                    __global float* cosGamma,
+//                    __global float2* Es,
+//                    __global float2* Ep,
+//                    __global float* k,
+//                    __global float3* beamOEglo,
+//                    __global float3* oe_surface_normal,
+////                    __global float* beam_OE_loc_path,
+//                    __global float2* KirchS_gl,
+//                    __global float2* KirchP_gl,
+//                    __global float2* KirchA_gl,
+//                    __global float2* KirchB_gl,
+//                    __global float2* KirchC_gl)
 //{
 //    unsigned int i;
 ////    unsigned int imageLength = get_global_size(0);
-//    double3 beam_coord_glo, beam_angle_glo;
-//    double2 gi, giEs, giEp;
-//    double2 KirchS_loc, KirchP_loc;
-//    double2 KirchA_loc, KirchB_loc, KirchC_loc;
-////    double pathAfter, cosAlpha, cr;
-//    double cosAlpha, cr;
+//    float3 beam_coord_glo, beam_angle_glo;
+//    float2 gi, giEs, giEp;
+//    float2 KirchS_loc, KirchP_loc;
+//    float2 KirchA_loc, KirchB_loc, KirchC_loc;
+////    float pathAfter, cosAlpha, cr;
+//    float cosAlpha, cr;
 //    float sinphase, cosphase;
-//    double phase;
-//    double invPathAfter, kp;
+//    float phase;
+//    float invPathAfter, kp;
 //    unsigned int ii_screen = get_global_id(0);
 //
 //    KirchS_loc = cmp0_d;
@@ -203,7 +203,7 @@ __kernel void integrate_kirchhoff(
 //        cosAlpha = dot(beam_angle_glo, oe_surface_normal[i]) * invPathAfter;
 //        cr = kp * (cosAlpha + cosGamma[i]);
 //        sinphase = sincos((float)phase, &cosphase);
-//        gi = (double2)((double)cosphase, (double)sinphase);
+//        gi = (float2)((float)cosphase, (float)sinphase);
 //        giEs = prod_c_d(gi, Es[i]);
 //        giEp = prod_c_d(gi, Ep[i]);
 //        KirchS_loc += giEs * cr;

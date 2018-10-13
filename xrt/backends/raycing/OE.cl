@@ -39,10 +39,6 @@ float4 quatMult(float4 qf, float4 qt) {
            qf.y*(float4)(-qt.y, qt.x,-qt.w, qt.z) +
            qf.z*(float4)(-qt.z, qt.w, qt.x,-qt.y) + 
            qf.w*(float4)(-qt.w,-qt.z, qt.y, qt.x);
-//    return (float4)(qf.x*qt.x-qf.y*qt.y-qf.z*qt.z-qf.w*qt.w,
-//                    qf.x*qt.y+qf.y*qt.x+qf.z*qt.w-qf.w*qt.z,
-//                    qf.x*qt.z-qf.y*qt.w+qf.z*qt.x+qf.w*qt.y,
-//                    qf.x*qt.w+qf.y*qt.z-qf.z*qt.y+qf.w*qt.x);
 }
 
 float4 quatFromVec(float4 vec, float angle, bool isRotation) {
@@ -97,7 +93,6 @@ float4 find_dz(float8 cl_plist,
         dz = (z - surf) * diffSign * invertNormal;
     } else {
         surf3 = local_n(cl_plist, local_f, x, y).s012;
-        //surf3 = (float3)(0,0,0);
         if (!isnormal(surf)) {
             surf3.s0 = 0;
             surf3.s1 = 0;
@@ -207,16 +202,16 @@ float4 _use_Brent_method(float8 cl_plist,
             xs = xbi - fbi * (xbi - xai) / (fbi - fai);
         }
 
-        cond1 = (((xs < (3 * xa + xb) * 0.25) & (xs < xb)) |
-                ((xs > (3 * xa + xb) * 0.25) & (xs > xb)));
-        cond2 = (mf & (fabs(xs - xb) >= (fabs(xb - xc) * 0.5)));
-        cond3 = ((!mf) & (fabs(xs - xb) >= (fabs(xc - xd) * 0.5)));
+        cond1 = (((xs < (3 * xa + xb) * (float)0.25) & (xs < xb)) |
+                ((xs > (3 * xa + xb) * (float)0.25) & (xs > xb)));
+        cond2 = (mf & (fabs(xs - xb) >= (fabs(xb - xc) * (float)0.5)));
+        cond3 = ((!mf) & (fabs(xs - xb) >= (fabs(xc - xd) * (float)0.5)));
         cond4 = (mf & (fabs(xb - xc) < zEps));
         cond5 = ((!mf) & (fabs(xc - xd) < zEps));
         conds = (cond1 | cond2 | cond3 | cond4 | cond5);
 
         if (conds) {
-            xs = (xa + xb) * 0.5;
+            xs = (xa + xb) * (float)0.5;
         }
 
         mf = conds;
@@ -301,7 +296,7 @@ float4 find_intersection_internal(float8 cl_plist,
     res = tmp1;
 
     if (state > 0) {
-        if (fabs(dz2) > fabs(dz1) * 20.) {
+        if (fabs(dz2) > fabs(dz1) * (float)20.) {
             res = _use_Brent_method(cl_plist, local_f,
                     tMin, tMax, t1, t2, x, y, z, a, b, c,
                     invertNormal, derivOrder, dz1, dz2, res.s1, res.s2, res.s3);
@@ -336,10 +331,6 @@ __kernel void find_intersection(
         ) {
     float4 res;
     float8 cl_plist = cl_plist_gl;
-    //unsigned int i = get_local_id(0);
-    //unsigned int group_id = get_group_id(0);
-    //unsigned int nloc = get_local_size(0);
-    //unsigned int ii = nloc * group_id + i;
     unsigned int ii = get_global_id(0);
     res = find_intersection_internal(cl_plist, local_zN,
             tMin, tMax, t1[ii], t2[ii],
@@ -361,10 +352,10 @@ float4 _grating_deflection(float4 abc, float4 oeNormal, float4 gNormal,
     beamInDotG = dot(abc, gNormal);
     G2 = dot(gNormal, gNormal); //pown(length(gNormal), 2);
     locOrder = order;
-    orderLambda = locOrder * ch / E * 1.e-7;
-    sig = (isTransmitting) ? 1. : -1.;
+    orderLambda = locOrder * ch / E * (float)1.e-7;
+    sig = (isTransmitting) ? (float)1. : (float)-1.;
     dn = beamInDotNormal + sig * sqrt(fabs(beamInDotNormal * beamInDotNormal -
-            2. * beamInDotG * orderLambda -
+            (float)2. * beamInDotG * orderLambda -
             G2 * orderLambda * orderLambda));
     abc_out = abc - oeNormal * dn + gNormal*orderLambda;
     //mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -429,7 +420,7 @@ float8 reflect_crystal_internal(const float factDW,
     dt = 1.;
     normalDotSurfNormal = dot(planeNormal, surfNormal);
     gNormalCryst = (planeNormal - normalDotSurfNormal * surfNormal) *
-            dt / d * 1e7; // *
+            dt / d * (float)1e7; // *
 //            sqrt(fabs(1. - normalDotSurfNormal * normalDotSurfNormal));
     /*          if matSur.geom.endswith('Fresnel'):
                if isinstance(self.order, int):
@@ -453,7 +444,7 @@ float8 reflect_crystal_internal(const float factDW,
      */
     beamInDotSurfaceNormal = dot(abc, surfNormal);
     abc_out = _grating_deflection(abc, surfNormal, gNormal,
-            E, beamInDotSurfaceNormal, 1.,
+            E, beamInDotSurfaceNormal, (float)1.,
             !(bool)(geom.lo), ray);
     mem_fence(CLK_LOCAL_MEM_FENCE);
     beamOutDotSurfaceNormal = dot(abc_out, surfNormal);
@@ -471,7 +462,6 @@ float8 reflect_crystal_internal(const float factDW,
             f0cfs, E_vector,
             f1_vector, f2_vector);
     mem_fence(CLK_LOCAL_MEM_FENCE);
-    //printf("amplitudes %g %g %g %g\n", amplitudes.x,amplitudes.y,amplitudes.z,amplitudes.w);
     if (any(isnan(amplitudes.lo))) {
         amplitudes.lo = cmp0;
     }
@@ -525,8 +515,6 @@ float8 reflect_crystal_internal_E(const float factDW,
     float beamInDotSurfaceNormal, beamOutDotSurfaceNormal, dt;
     dhkl = (float4) (hkl.x, hkl.y, hkl.z, 0);
     float2 plane_d;
-    //      float alpha = 0;
-    //float epsilonB = 0.01;
     beamInDotNormal = dot(abc, planeNormal);
 
     if (temperature > 0) {
@@ -558,7 +546,7 @@ float8 reflect_crystal_internal_E(const float factDW,
     dt = 1;
     normalDotSurfNormal = dot(planeNormal, surfNormal);
     gNormalCryst = (planeNormal - normalDotSurfNormal * surfNormal) *
-            dt / d * 1e7; // *
+            dt / d * (float)1e7; // *
  //         sqrt(fabs(1. - pown(normalDotSurfNormal, 2)));
     /*          if matSur.geom.endswith('Fresnel'):
                if isinstance(self.order, int):
@@ -576,7 +564,7 @@ float8 reflect_crystal_internal_E(const float factDW,
      */ gNormal = gNormalCryst;
     beamInDotSurfaceNormal = dot(abc, surfNormal);
     abc_out = _grating_deflection(abc, surfNormal, gNormal,
-            E, beamInDotSurfaceNormal, 1.,
+            E, beamInDotSurfaceNormal, (float)1.,
             !(bool)(geom.lo), ray);
     mem_fence(CLK_LOCAL_MEM_FENCE);
     beamOutDotSurfaceNormal = dot(abc_out, surfNormal);
@@ -593,7 +581,6 @@ float8 reflect_crystal_internal_E(const float factDW,
             thickness, geom, maxEl, elements,
             f0cfs, f1f2);
     mem_fence(CLK_LOCAL_MEM_FENCE);
-    //printf("amplitudes %g %g %g %g\n", amplitudes.x,amplitudes.y,amplitudes.z,amplitudes.w);
     if (any(isnan(amplitudes.lo))) {
         amplitudes.lo = cmp0;
     }
@@ -658,8 +645,6 @@ float8 reflect_single_crystal(const float factDW,
     float2 curveS, curveP;
     float8 dirflux;
     float4 iPlaneInCut, iPlaneOrt;
-//    float4 dmaxhkl = (float4) (0, 0, 0, 0);
-
     nPlaneNormal = normalize(planeNormal);
     nCutNormal = normalize(cutNormal);
     float4 Qv = quatFromVec(normalize(cross(nCutNormal, nPlaneNormal)), 
@@ -676,12 +661,8 @@ float8 reflect_single_crystal(const float factDW,
                 if (abs(ih) + abs(ik) + abs(il) == 0) continue;
                 iPlaneOrt = quatFromVec(normalize(
                     (float4)(ih, ik, il, 0)), 0, false);
-                //beamDotiPlane = dot(abc,iPlaneinCut);
                 iPlaneInCut = quatToVec(quatMult(
                     quatMult(Qv, iPlaneOrt), rQv));
-//                if (ray==0) {
-//                printf("hkl: [%i, %i, %i]\n", ih, ik, il);
-//                printf("iPlane normal: %v4g\n", iPlaneInCut);}
                 dirflux = reflect_crystal_internal(factDW, thickness, geom, lattice,
                         temperature, abc, E, iPlaneInCut, surfNormal,
                         (int4) (ih, ik, il, 0), maxEl, elements,
@@ -690,14 +671,12 @@ float8 reflect_single_crystal(const float factDW,
                 mem_fence(CLK_LOCAL_MEM_FENCE);
                 curveS = (dirflux.lo).lo;
                 curveP = (dirflux.lo).hi;
-                //abc_out = dirflux.hi;
                 absSP = 0;
                 absOne = abs_c(curveS);
                 absSP += absOne * absOne;
                 absOne = abs_c(curveP);
                 absSP += absOne * absOne;
                 normIntensity += absSP;
-                //if (ray == 0) printf("%i%i%i; absSP %g; normInt %g\n", ih, ik, il, absSP, normIntensity);
             }
         }
     }
@@ -767,7 +746,6 @@ float8 reflect_harmonics(const float factDW,
         ) {
 
     float4 abc_out, max_abc;
-    //float2 zero2 = (float2)(0,0);
     abc_out = abc;
     max_abc = abc_out;
     float2 maxS = cmp0;
@@ -794,6 +772,7 @@ float8 reflect_harmonics(const float factDW,
         }
 
     }
+
     mem_fence(CLK_LOCAL_MEM_FENCE);
     max_abc.w = 0;
     return (float8) (maxS, maxP, max_abc);
@@ -810,6 +789,7 @@ float8 reflect_powder(const float factDW,
         float4 surfNormal,
         int4 hklmax,
         const int maxEl,
+        float randomDisc,
         __global float* elements,
         __global float* f0cfs,
         __global float* E_vector,
@@ -820,13 +800,16 @@ float8 reflect_powder(const float factDW,
 
     float4 abc_out;
     float4 max_abc = (float4) (0, 0, 0, 0);
-    //float2 zero2 = (float2)(0,0);
     float2 maxS = cmp0;
     float2 maxP = cmp0;
     int ih, ik, il;
-    //int4 maxhkl;
     float2 curveS, curveP;
     float8 dirflux;
+
+    float normIntensity = 0;
+    float absOne = 0;
+    float absSP = 0;
+
     for (ih = 0; ih < hklmax.x + 1; ih++) {
         for (ik = 0; ik < hklmax.y + 1; ik++) {
             for (il = 0; il < hklmax.z + 1; il++) {
@@ -838,25 +821,67 @@ float8 reflect_powder(const float factDW,
                 mem_fence(CLK_LOCAL_MEM_FENCE);
                 curveS = (dirflux.lo).lo;
                 curveP = (dirflux.lo).hi;
-                //printf("AS, AP: %g+j%g, %g+j%g\n", curveS.x, curveS.y, curveP.x, curveP.y);
-
-                abc_out = dirflux.hi;
-                if (any(isnan(curveS))) {
-                    curveS = cmp0;
-                }
-                if (any(isnan(curveP))) {
-                    curveP = cmp0;
-                }
-                if (abs_c(curveS) + abs_c(curveP) > abs_c(maxS) + abs_c(maxP)) {
-                    maxS = curveS;
-                    maxP = curveP;
-                    max_abc = abc_out;
-                }
-                mem_fence(CLK_LOCAL_MEM_FENCE);
+//                if (any(isnan(curveS))) {
+//                    curveS = cmp0;
+//                }
+//                if (any(isnan(curveP))) {
+//                    curveP = cmp0;
+//                }
+                absSP = 0;
+                absOne = abs_c(curveS);
+                absSP += absOne * absOne;
+                absOne = abs_c(curveP);
+                absSP += absOne * absOne;
+                normIntensity += absSP;
+//                if (abs_c(curveS) + abs_c(curveP) > abs_c(maxS) + abs_c(maxP)) {
+//                    maxS = curveS;
+//                    maxP = curveP;
+//                    max_abc = abc_out;
+//                }
+//                mem_fence(CLK_LOCAL_MEM_FENCE);
             }
         }
     }
-    //printf("AS, AP: %g+j%g, %g+j%g\n", maxS.x, maxS.y, maxP.x, maxP.y);
+
+    float cumSum = 0;
+    absOne = 0;
+    float revNorm = 1. / normIntensity;
+    bool breakKey = false;
+
+    for (ih = 0; ih < hklmax.x + 1; ih++) {
+        for (ik = 0; ik < hklmax.y + 1; ik++) {
+            for (il = 0; il < hklmax.z + 1; il++) {
+                if (abs(ih) + abs(ik) + abs(il) == 0) continue;
+                dirflux = reflect_crystal_internal(factDW, thickness, geom, lattice,
+                        temperature, abc, E, planeNormal, surfNormal,
+                        (int4) (ih, ik, il, 0), maxEl, elements,
+                        f0cfs, E_vector, f1_vector, f2_vector, ray);
+                mem_fence(CLK_LOCAL_MEM_FENCE);
+                curveS = (dirflux.lo).lo;
+                curveP = (dirflux.lo).hi;
+                abc_out = dirflux.hi;
+//                if (any(isnan(curveS))) {
+//                    curveS = cmp0;
+//                }
+//                if (any(isnan(curveP))) {
+//                    curveP = cmp0;
+//                }
+                absOne = abs_c(curveS);
+                cumSum += absOne * absOne * revNorm;
+                absOne = abs_c(curveP);
+                cumSum += absOne * absOne * revNorm;
+                if (cumSum > randomDisc) {
+                    maxS = curveS;
+                    maxP = curveP;
+                    max_abc = abc_out;
+                    breakKey = true;
+                    break;
+                    }
+                }
+            if (breakKey) break;
+            }
+        if (breakKey) break;
+        }
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
     max_abc.w = 0;
@@ -887,7 +912,6 @@ __kernel void reflect_crystal(const int calctype,
         __global float* E_vector,
         __global float* f1_vector,
         __global float* f2_vector,
-        //__global ranluxcl_state_t *ranluxcltab,
         __global float2* refl_s,
         __global float2* refl_p,
         __global float* a_out,
@@ -902,17 +926,9 @@ __kernel void reflect_crystal(const int calctype,
     planeNormal = (float4) (planeNormalX[ii], planeNormalY[ii], planeNormalZ[ii], 0);
     surfNormal = (float4) (surfNormalX[ii], surfNormalY[ii], surfNormalZ[ii], 0);
     float randomDisc = randomGlobal[ii];
-    //printf("planeNormal: %g %g %g\n", planeNormal.x, planeNormal.y, planeNormal.z);
-    //printf("surfNormal: %g %g %g\n", surfNormal.x, surfNormal.y, surfNormal.z);
-    //uint ins = floor(Energy*100);
-    //ranluxcl_state_t ranluxclstate;
-    //ranluxcl_initialization(ins, ranluxcltab);
-    //ranluxcl_download_seed(&ranluxclstate, ranluxcltab);
-    //printf("cl_gl addr: %i\n",cl_gl);
     int2 geom;
     geom.lo = geom_b > 1 ? 1 : 0;
     geom.hi = (int) (fabs(remainder(geom_b, 2.)));
-    //printf("calctype = %i\n", calctype);
     if (calctype > 100) {
         dirflux = reflect_harmonics(factDW, thickness, geom, lattice,
                 temperature, abc, Energy, planeNormal, surfNormal,
@@ -928,7 +944,7 @@ __kernel void reflect_crystal(const int calctype,
     } else if (calctype == 5) {
         dirflux = reflect_powder(factDW, thickness, geom, lattice,
                 temperature, abc, Energy, planeNormal, surfNormal,
-                hkl, maxEl, elements,
+                hkl, maxEl, randomDisc, elements,
                 f0cfs, E_vector, f1_vector, f2_vector, ii);
         mem_fence(CLK_LOCAL_MEM_FENCE);
     } else // (calctype == 0)
@@ -939,213 +955,10 @@ __kernel void reflect_crystal(const int calctype,
                 f0cfs, E_vector, f1_vector, f2_vector, ii);
         mem_fence(CLK_LOCAL_MEM_FENCE);
     }
-    //params.s01 = ranluxcl64(&ranluxclstate).s01;
-    //float4 randomnr = ranluxcl64(&ranluxclstate);
-
-
-    //printf("S, P: %g+j%g, %g+j%g, ray %i\n",
-    //      dirflux.s0, dirflux.s1, dirflux.s2, dirflux.s3, ii);
     refl_s[ii] = dirflux.s01;
     refl_p[ii] = dirflux.s23;
     a_out[ii] = dirflux.s4;
     b_out[ii] = dirflux.s5;
     c_out[ii] = dirflux.s6;
     mem_fence(CLK_GLOBAL_MEM_FENCE);
-    //barrier(CLK_LOCAL_MEM_FENCE);
-    //ranluxcl_upload_seed(&ranluxclstate, ranluxcltab);
 }
-
-/*
-__kernel void propagate_wave_material(
-                    const unsigned int nInputRays,
-                    const unsigned int nOutputRays,
-                    const float chbar,
-                    const float2 refrac_n,
-                    const float thickness,
-                    const int kind,
-                    const unsigned int fromVacuum,
-                    const float E_loc,
-                    //__global float* cosGamma,
-                    __global float* x_glo,
-                    __global float* y_glo,
-                    __global float* z_glo,
-                    __global float* ag,
-                    __global float2* Es,
-                    __global float2* Ep,
-                    //__global float* E_loc,
-                    __global float4* beamOEglo,
-
-                    __global float* surfNormalX,
-                    __global float* surfNormalY,
-                    __global float* surfNormalZ,
-                    __global float2* KirchS_gl,
-                    __global float2* KirchP_gl)
-
-{
-    unsigned int i;
-    float4 beam_coord_glo, beam_angle_glo;
-    float2 gi, KirchS_loc, KirchP_loc, Esr, Epr;
-    float pathAfter, cosAlpha, cr;
-    unsigned int ii_screen = get_global_id(0);
-    float k, wavelength;
-    float phase, ag_loc;
-    KirchS_loc = cmp0;
-    KirchP_loc = cmp0;
-    float4 refl_amp=(float4)(cmp1,cmp1);
-    float4 oe_surface_normal = (float4)(surfNormalX[ii_screen],
-                                            surfNormalY[ii_screen],
-                                            surfNormalZ[ii_screen], 0);
-
-    beam_coord_glo.x = x_glo[ii_screen];
-    beam_coord_glo.y = y_glo[ii_screen];
-    beam_coord_glo.z = z_glo[ii_screen];
-    beam_coord_glo.w = 0.;
-
-
-    for (i=0; i<nInputRays; i++)
-    {
-        refl_amp = (float4)(cmp1,cmp1);
-        beam_angle_glo = beam_coord_glo - beamOEglo[i];
-        pathAfter = length(beam_angle_glo);
-        cosAlpha = dot(beam_angle_glo, oe_surface_normal) / pathAfter;
-        if (kind==0) //mirror
-        {
-            refl_amp = get_amplitude_material(E_loc, kind, refrac_n, cosAlpha,
-                                                thickness, fromVacuum);
-        }
-        else if (kind==6) //crystal
-        {
-            refl_amp = get_amplitude_material(E_loc, kind, refrac_n, cosAlpha,
-                                                thickness, fromVacuum);
-        }
-
-        k = E_loc / chbar * 1.e7;
-        wavelength = twoPi / k;
-        phase = k * pathAfter;
-        Esr = prod_c(Es[i], refl_amp.s01);
-        Epr = prod_c(Ep[i], refl_amp.s23);
-        //Esr = Es[i];
-        //Epr = Ep[i];
-        cr = cosAlpha / pathAfter;
-        gi = (float2)(cr * cos(phase), cr * sin(phase));
-        //ag_loc = pown(ag[i],gau);
-
-        KirchS_loc += (ag[i] * prod_c(gi, Esr));
-        KirchP_loc += (ag[i] * prod_c(gi, Epr));
-    }
-  mem_fence(CLK_LOCAL_MEM_FENCE);
-
-  KirchS_gl[ii_screen] = prod_c((-cmpi1/wavelength), KirchS_loc);
-  KirchP_gl[ii_screen] = prod_c((-cmpi1/wavelength), KirchP_loc);
-  mem_fence(CLK_LOCAL_MEM_FENCE);
-}
-
-
-__kernel void propagate_wave_crystal(
-                    const unsigned int nInputRays,
-                    const unsigned int nOutputRays,
-                    const float chbar,
-
-                    const int kind,
-                    const int4 hkl,
-                    const float factDW,
-                    const float thickness,
-                    const float temperature,
-                    const int geom_b,
-                    const int maxEl,
-                    const float8 lattice,
-
-                    const float E_loc,
-
-                    __global float* x_glo,
-                    __global float* y_glo,
-                    __global float* z_glo,
-                    __global float* ag,
-                    __global float2* Es,
-                    __global float2* Ep,
-
-                    __global float4* beamOEglo,
-
-                    __global float* planeNormalX,
-                    __global float* planeNormalY,
-                    __global float* planeNormalZ,
-                    __global float* surfNormalX,
-                    __global float* surfNormalY,
-                    __global float* surfNormalZ,
-
-                    __global float* elements,
-                    __global float* f0cfs,
-                    __global float2* f1f2,
-
-                    __global float2* KirchS_gl,
-                    __global float2* KirchP_gl)
-
-{
-    unsigned int i;
-    int2 geom;
-    float4 beam_coord_glo, beam_angle_glo, abc;
-    float2 gi, KirchS_loc, KirchP_loc, Esr, Epr;
-    float pathAfter, cosAlpha, cr;
-    unsigned int ii_screen = get_global_id(0);
-    float k, wavelength;
-    float phase, ag_loc;
-    KirchS_loc = cmp0;
-    KirchP_loc = cmp0;
-    float4 refl_amp=(float4)(cmp1,cmp1);
-
-    geom.lo = geom_b > 1 ? 1 : 0;
-    geom.hi = (int)(fabs(remainder(geom_b,2.)));
-
-    float4 planeNormal = (float4)(planeNormalX[ii_screen],
-                            planeNormalY[ii_screen],
-                            planeNormalZ[ii_screen],0);
-
-    float4 surfNormal = (float4)(surfNormalX[ii_screen],
-                            surfNormalY[ii_screen],
-                            surfNormalZ[ii_screen],0);
-
-
-
-    beam_coord_glo.x = x_glo[ii_screen];
-    beam_coord_glo.y = y_glo[ii_screen];
-    beam_coord_glo.z = z_glo[ii_screen];
-    beam_coord_glo.w = 0.;
-
-
-    for (i=0; i<nInputRays; i++)
-    {
-        refl_amp = (float4)(cmp1,cmp1);
-        beam_angle_glo = beam_coord_glo - beamOEglo[i];
-        pathAfter = length(beam_angle_glo);
-        cosAlpha = dot(beam_angle_glo, surfNormal) / pathAfter;
-        abc = beam_angle_glo/pathAfter;
-        if (kind==6) //crystal
-        {
-            refl_amp = (reflect_crystal_internal_E(factDW,thickness,geom,lattice,
-                temperature, abc, E_loc, planeNormal, surfNormal,
-                hkl, maxEl, elements,
-                f0cfs, f1f2, i
-                )).s0123;
-        }
-
-        k = E_loc / chbar * 1.e7;
-        wavelength = twoPi / k;
-        phase = k * pathAfter;
-        Esr = prod_c(Es[i], refl_amp.s01);
-        Epr = prod_c(Ep[i], refl_amp.s23);
-        //Esr = Es[i];
-        //Epr = Ep[i];
-        cr = cosAlpha / pathAfter;
-        gi = (float2)(cr * cos(phase), cr * sin(phase));
-        //ag_loc = pown(ag[i],gau);
-
-        KirchS_loc += (ag[i] * prod_c(gi, Esr));
-        KirchP_loc += (ag[i] * prod_c(gi, Epr));
-    }
-  mem_fence(CLK_LOCAL_MEM_FENCE);
-
-  KirchS_gl[ii_screen] = prod_c((-cmpi1/wavelength), KirchS_loc);
-  KirchP_gl[ii_screen] = prod_c((-cmpi1/wavelength), KirchP_loc);
-  mem_fence(CLK_LOCAL_MEM_FENCE);
-}
- */

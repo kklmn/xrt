@@ -1319,7 +1319,7 @@ class OE(object):
         a /= norm
         b /= norm
         c /= norm
-        return [a, -np.abs(b), c]
+        return [a, b, c]
 
     def _reflect_crystal_cl(self, goodN, lb, matcr, oeNormal):
         DW = self.cl_precisionF(matcr.factDW)
@@ -1332,7 +1332,7 @@ class OE(object):
         if not np.all(np.array(matcr.atoms) == 14):
             temperature = self.cl_precisionF(0)
 
-        lenGood = len(lb.E[goodN])
+        lenGood = np.int32(len(lb.E[goodN]))
         bOnes = np.ones(lenGood)
 
         iHKL = np.zeros(4, dtype=np.int32)
@@ -1382,8 +1382,7 @@ class OE(object):
                         self.cl_precisionF(oeNormal[-2]*bOnes),  # surfNormalY
                         self.cl_precisionF(oeNormal[-1]*bOnes)]  # surfNormalZ
 
-        if matcr.kind == "monocrystal":
-            slicedROArgs.extend([self.cl_precisionF(np.random.rand(lenGood))])
+        slicedROArgs.extend([self.cl_precisionF(np.random.rand(lenGood))])
 
         nonSlicedROArgs = [elements_in.flatten(),  # elements
                            f0_in.flatten(),  # f0
@@ -1873,7 +1872,7 @@ class OE(object):
             if material is not None:
                 if hasattr(matSur, 'get_amplitude'):
                     findReflectivity = True
-                if toWhere in [5, ]:  # powder,
+                if toWhere in [5, 6, 7]:  # powder,
                     findReflectivity = True
 
             # rotate coherency matrix:

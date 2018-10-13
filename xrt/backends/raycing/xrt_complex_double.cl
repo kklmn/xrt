@@ -10,6 +10,7 @@
 __constant double2 cmp1 = (double2)(1,0);
 __constant double2 cmpi1 = (double2)(0,1);
 __constant double2 cmp0 = (double2)(0,0);
+__constant double HALF = (double)0.5;
 
 double2 r2cmp(double a)
   {
@@ -49,7 +50,7 @@ double2 div_c(double2 a, double2 b)
 double2 sqrt_c(double2 a)
   {
     double phi = atan2(a.y, a.x);
-    return (double2)(cos(0.5 * phi), sin(0.5 * phi)) * sqrt(length(a));
+    return (double2)(cos(HALF * phi), sin(HALF * phi)) * sqrt(length(a));
   }
 
 double2 sqr_c(double2 a)

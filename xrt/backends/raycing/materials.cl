@@ -8,24 +8,24 @@
 #endif
 #endif
 
-#include "xrt_complex.cl"
+#include "xrt_complex_float.cl"
 
 __constant float PI = 3.141592653589793238;
-__constant float revPI = 0.3183098862;
+__constant float twoPI = 6.283185307179586476;
+__constant float halfPI = 1.570796326794896619;
+__constant float revPI = 0.31830988618379067;
 __constant float ch = 12398.4186;  // {5}   {c*h[eV*A]}
-__constant float twoPi = 6.283185307179586476;
 __constant float chbar = 1973.269606712496640;  // {c*hbar[eV*A]}
 __constant float r0 = 2.817940285e-5;  // A
 __constant float avogadro = 6.02214199e23;  // atoms/mol
+//__constant float HALF = 0.5;
+__constant float TWO = (float)2.;
+__constant float ONE = (float)1.;
 
-float get_f0(float qOver4pi, int iN, __global float* f0cfs)
-  {
+float get_f0(float qOver4pi, int iN, __global float* f0cfs) {
     float res = f0cfs[iN*11+5];
-    //printf("c=%g\n",f0cfs[Zi*11+5]);
     for (int i=0;i<5;i++)
     {
-            //printf("a[%i]=%g\n",i,f0cfs[Zi*11+i]);
-            //printf("b[%i]=%g\n",i,f0cfs[Zi*11+i+6]);
             res += f0cfs[iN*11+i] * exp(-f0cfs[iN*11+i+6] * qOver4pi * qOver4pi);
     }
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -35,12 +35,8 @@ float get_f0(float qOver4pi, int iN, __global float* f0cfs)
 
 float2 get_f1f2(float E, int iN, int VectorMax,
                  __global float* E_vector,
-                 __global float* f1_vector, __global float* f2_vector)
-  {
-    //printf("VectMax, E, iN  %i %f %i\n",VectorMax,E,iN);
-    //printf("Estart, Eend: %f, %f\n",E_vector[iN*300], E_vector[iN*300+VectorMax]);
+                 __global float* f1_vector, __global float* f2_vector) {
     int pn = floor((VectorMax-1)*log(E-E_vector[iN*300])/log(E_vector[iN*300+VectorMax]-E_vector[iN*300]));
-    //printf("pn %i\n",pn);
     if (E_vector[iN*300+pn]>E)
       {
         while (E_vector[iN*300+pn] > E) pn--;
@@ -64,8 +60,7 @@ float8 get_structure_factor_fcc(float E, float factDW,
                                   int4 hkl_i, float sinThetaOverLambda,
                                   const int maxEl,  __global float* elements,
                                   __global float* f0cfs, __global float* E_vector,
-                                  __global float* f1_vector, __global float* f2_vector)
-  {
+                                  __global float* f1_vector, __global float* f2_vector)  {
         float4 hkl;
         hkl.x = (float)hkl_i.x;
         hkl.y = (float)hkl_i.y;
@@ -73,23 +68,16 @@ float8 get_structure_factor_fcc(float E, float factDW,
         hkl.w = 0;
         float2 anomalousPart = get_f1f2(E, 0, round(elements[7]), E_vector, f1_vector, f2_vector);
         float2 F0 = 4 * ((float2)(elements[5],0) + anomalousPart) * factDW;
-        //printf("F0_gsf: %g + %gj\n", F0.x, F0.y);
-        //printf("anomalous part: %g + %gj\n", anomalousPart.x, anomalousPart.y);
-        float residue = dot(fabs(remainder(hkl,2.)),1.);
-        //printf("residue: %e", residue);
+        float residue = dot(fabs(remainder(hkl,TWO)), ONE);
         float Fcoef=0.;
 
-        if (residue==0 || residue==3) Fcoef = 1.;
-        //printf("f0: %g\n", get_f0(sinThetaOverLambda, Z, f0cfs));
+        if (residue==0 || residue==3) Fcoef = ONE;
         float2 Fhkl = 4 * Fcoef * factDW *
                          (r2cmp(get_f0(sinThetaOverLambda, 0, f0cfs)) + anomalousPart);
-        //printf("Fhkl_gsf: %g + %gj\n", Fhkl.x, Fhkl.y);
-        //mem_fence(CLK_LOCAL_MEM_FENCE);
         return (float8)(F0, Fhkl, Fhkl, cmp0);
   }
 
-float Si_dl_l(float t)
-  {
+float Si_dl_l(float t)  {
         float res;
         float t2 = t * t;
         float t3 = t2 * t;
@@ -118,8 +106,7 @@ float Si_dl_l(float t)
         return res;
   }
 
-float2 get_distance(float8 lattice, float4 hkl)
-    {
+float2 get_distance(float8 lattice, float4 hkl)    {
         float2 res;
         float4 basis = lattice.lo;
         float4 angles = lattice.hi;
@@ -128,29 +115,21 @@ float2 get_distance(float8 lattice, float4 hkl)
         float4 sin_abg = sin(angles);
 
         float V = basis.x * basis.y * basis.z *
-            sqrt(1 - pown(cos_abg.x,2) - pown(cos_abg.y,2) - pown(cos_abg.z,2) + 2*cos_abg.x*cos_abg.y*cos_abg.z);
-        //mass = 0.;
-        //for (i=0;i<nmax;i++)
-        //    mass += elements[i].s4 * elements[i].s6;
-
-        //rho = mass / avogadro / V * 1e24;
-        float rbx = 1. / basis.x, rby = 1. / basis.y, rbz = 1. / basis.z;
+            sqrt(ONE - pown(cos_abg.x,2) - pown(cos_abg.y,2) - pown(cos_abg.z,2) + TWO*cos_abg.x*cos_abg.y*cos_abg.z);
+        float rbx = ONE / basis.x, rby = ONE / basis.y, rbz = ONE / basis.z;
         float d = V * rbx * rby * rbz /
             sqrt(pown(hkl.x*sin_abg.x*rbx,2) + pown(hkl.y*sin_abg.y*rby,2) + pown(hkl.z*sin_abg.z*rbz,2) +
                  2*hkl.x*hkl.y * (cos_abg.x*cos_abg.y - cos_abg.z) *rbx*rby +
                  2*hkl.x*hkl.z * (cos_abg.x*cos_abg.z - cos_abg.y) *rbx*rbz +
                  2*hkl.y*hkl.z * (cos_abg.y*cos_abg.z - cos_abg.x) *rby*rbz);
         float chiToF = -r0 * revPI / V;  // minus!
-        //printf("V, d: %g %g\n", V, d);
         mem_fence(CLK_LOCAL_MEM_FENCE);
         res = (float2)(d,chiToF);
         return res;
     }
 
-float2 get_distance_Si(float temperature, float4 dhkl)
-    {
-        //float2 res;
-        float aSi = 5.419490 * (Si_dl_l(temperature) - Si_dl_l(273.15) + 1);
+float2 get_distance_Si(float temperature, float4 dhkl)    {
+        float aSi = 5.419490 * (Si_dl_l(temperature) - Si_dl_l(273.15) + ONE);
         mem_fence(CLK_LOCAL_MEM_FENCE);
         float d = aSi/sqrt(dot(dhkl,dhkl));
         float chiToF = -r0 * revPI / pown(aSi,3);
@@ -162,18 +141,14 @@ float8 get_structure_factor_diamond(float E, float factDW,
                                   int4 hkl_i, float sinThetaOverLambda,
                                   const int maxEl, __global float* elements,
                                   __global float* f0cfs, __global float* E_vector,
-                                  __global float* f1_vector, __global float* f2_vector)
-  {
+                                  __global float* f1_vector, __global float* f2_vector)  {
         float8 res;
         float4 hkl;
         hkl.x = (float)hkl_i.x;
         hkl.y = (float)hkl_i.y;
         hkl.z = (float)hkl_i.z;
         hkl.w = 0;
-        //float2 im1 = (float2)(0,1);
-        float2 diamondToFcc = cmp1 + exp_c(cmpi1 * 0.5 * PI * dot(hkl,1));
-        //printf("hkl: %i, %i, %i\n", hkl_i.x,hkl_i.y,hkl_i.z);
-        //printf("diamond2fcc %g + %gj\n",diamondToFcc.x, diamondToFcc.y);
+        float2 diamondToFcc = cmp1 + exp_c(cmpi1 * halfPI * dot(hkl, ONE));
         float8 Fd = get_structure_factor_fcc(E, factDW,
                                   hkl_i, sinThetaOverLambda,
                                   maxEl, elements,
@@ -195,12 +170,10 @@ float8 get_structure_factor_general(float E, float factDW,
                                     int4 hkl_i, float sinThetaOverLambda,
                                     const int maxEl, __global float* elements,
                                     __global float* f0cfs, __global float* E_vector,
-                                    __global float* f1_vector, __global float* f2_vector)
-    {
+                                    __global float* f1_vector, __global float* f2_vector)    {
         int i;
         float4 hkl,xyz;
         float2 F0,Fhkl,Fhkl_,anomalousPart,fact,expiHr;
-        //float2 zero2 = (float2)(0,0);
         hkl.x = (float)hkl_i.x;
         hkl.y = (float)hkl_i.y;
         hkl.z = (float)hkl_i.z;
@@ -214,7 +187,7 @@ float8 get_structure_factor_general(float E, float factDW,
                 fact = elements[i*8+4] * (r2cmp(get_f0(sinThetaOverLambda, i, f0cfs)) + anomalousPart) * factDW;
                 mem_fence(CLK_LOCAL_MEM_FENCE);
                 xyz = (float4)(elements[i*8],elements[i*8+1],elements[i*8+2],0);
-                expiHr = exp_c((float2)(0,2 * PI * dot(xyz, hkl)));
+                expiHr = exp_c((float2)(0, twoPI * dot(xyz, hkl)));
                 Fhkl += prod_c(fact, expiHr);
                 Fhkl_ += div_c(fact, expiHr);
                 mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -226,12 +199,10 @@ float8 get_structure_factor_general(float E, float factDW,
 float8 get_structure_factor_general_E(float E, float factDW,
                                     int4 hkl_i, float sinThetaOverLambda,
                                     const int maxEl, __global float* elements,
-                                    __global float* f0cfs, __global float2* f1f2)
-    {
+                                    __global float* f0cfs, __global float2* f1f2)    {
         int i;
         float4 hkl,xyz;
         float2 F0,Fhkl,Fhkl_,anomalousPart,fact,expiHr;
-        //float2 zero2 = (float2)(0,0);
         hkl.x = (float)hkl_i.x;
         hkl.y = (float)hkl_i.y;
         hkl.z = (float)hkl_i.z;
@@ -245,7 +216,7 @@ float8 get_structure_factor_general_E(float E, float factDW,
                 fact = elements[i*8+4] * (r2cmp(get_f0(sinThetaOverLambda, i, f0cfs)) + anomalousPart) * factDW;
                 mem_fence(CLK_LOCAL_MEM_FENCE);
                 xyz = (float4)(elements[i*8],elements[i*8+1],elements[i*8+2],0);
-                expiHr = exp_c((float2)(0,2 * PI * dot(xyz, hkl)));
+                expiHr = exp_c((float2)(0, twoPI * dot(xyz, hkl)));
                 Fhkl += prod_c(fact, expiHr);
                 Fhkl_ += div_c(fact, expiHr);
                 mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -259,40 +230,35 @@ float8 get_structure_factor_general_E(float E, float factDW,
 float2 for_one_polarization(float polFactor,
                              float2 chih, float2 chih_, float2 chi0,
                              float k02, float k0s, float kHs,
-                             float2 alpha, float b, float thickness, int2 geom)
-  {
+                             float2 alpha, float b, float thickness, int2 geom)  {
             float2 im1 = (float2)(0, 1);
             float2 ra, rb;
             float2 delta = sqrt_c(sqr_c(alpha) + polFactor * polFactor / b *
                                     prod_c(chih, chih_));
 
-            float t = thickness * 1.e7;
-            float2 L = t * delta * k02 * 0.5 / kHs;
-            //printf("geom.lo, hi: %i, %i\n",geom.lo, geom.hi);
+            float t = thickness * (float)1e7;
+            float2 L = t * delta * k02 * HALF / kHs;
+
             if (geom.lo == 1) //Bragg
               {
                 if (geom.hi == 1) //transmitted
                   {
-                    //printf("Bragg transmitted, %i, %i\n", geom.lo, geom.hi);
                     ra = prod_c(rec_c(cos_c(L) - prod_c(prod_c(im1, alpha), div_c(sin_c(L),delta))),
-                        exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t * 0.5 / k0s));
+                        exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t * HALF / k0s));
                   }
                 else // reflected
                   {
-                    if (thickness == 0 || thickness > 0.51) // is None:  # thick Bragg
+                    if (thickness == 0 || thickness > HALF) // is None:  # thick Bragg
                       {
-                        //printf("am I here?, t=%d\n",thickness);
                         ra = div_c(chih * polFactor, alpha + delta);
                         float2 ad = alpha - delta;
                         if (abs_c(ad) == 0) ad = (float2)(1e-100, 0);
                         rb = div_c(chih * polFactor, ad);
 
                         if (isnan(abs_c(ra)) || (abs_c(rb) < abs_c(ra))) ra = rb;
-                        //return ra / sqrt(fabs(b));
                       }
                     else
                     {
-                    //printf("Bragg reflected, %i, %i\n",geom.lo, geom.hi);
                     ra = polFactor * div_c(chih,(alpha + div_c(prod_c(im1,delta),tan_c(L))));
                     }
                   }
@@ -301,17 +267,13 @@ float2 for_one_polarization(float polFactor,
               {
                 if (geom.hi == 1) //transmitted
                   {
-                    //printf("Laue transmitted, %i, %i\n",geom.lo, geom.hi);
                     ra = prod_c(cos_c(L) + prod_c(prod_c(im1, alpha), div_c(sin_c(L),delta)),
-                          exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t * 0.5 / k0s));
+                          exp_c(prod_c(im1,chi0 - alpha * b) * k02 * t * HALF / k0s));
                   }
                 else
                   {
-                    //printf("Laue reflected, %i, %i\n",geom.lo, geom.hi);
-                    //printf("delta, L, t, k0s, k02: %g+j%g, %g+j%g, %g, %g, %g\n",
-                    //       delta.x, delta.y, L.x, L.y, t, k0s, k02);
                     ra = prod_c(div_c(prod_c(chih * polFactor,sin_c(L)), delta),
-                        exp_c(prod_c(im1, chi0 - alpha * b) * k02 * t * 0.5 / k0s));
+                        exp_c(prod_c(im1, chi0 - alpha * b) * k02 * t * HALF / k0s));
                   }
               }
             if (geom.hi == 0) ra /= sqrt(fabs(b));
@@ -319,8 +281,7 @@ float2 for_one_polarization(float polFactor,
   }
 
 
-float get_Bragg_angle(float E, float d)
-  {
+float get_Bragg_angle(float E, float d)  {
         return asin(ch / (2 * d * E));
   }
 
@@ -328,9 +289,8 @@ float get_dtheta_symmetric_Bragg(float E, float d, int4 hkl,
                                float chiToF, float factDW,
                                const int maxEl, __global float* elements,
                                __global float* f0cfs, __global float* E_vector,
-                               __global float* f1_vector, __global float* f2_vector)
-  {
-        float8 F = get_structure_factor_general(E, factDW, hkl, 0.5/d,
+                               __global float* f1_vector, __global float* f2_vector)  {
+        float8 F = get_structure_factor_general(E, factDW, hkl, HALF/d,
                                              maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
         mem_fence(CLK_LOCAL_MEM_FENCE);
         float2 chi0 = (F.lo).lo * chiToF * pown(ch/E, 2);
@@ -340,9 +300,8 @@ float get_dtheta_symmetric_Bragg(float E, float d, int4 hkl,
 float get_dtheta_symmetric_Bragg_E(float E, float d, int4 hkl,
                                float chiToF, float factDW,
                                const int maxEl, __global float* elements,
-                               __global float* f0cfs, __global float2* f1f2)
-  {
-        float8 F = get_structure_factor_general_E(E, factDW, hkl, 0.5 / d,
+                               __global float* f0cfs, __global float2* f1f2)  {
+        float8 F = get_structure_factor_general_E(E, factDW, hkl, HALF / d,
                                              maxEl, elements, f0cfs, f1f2);
         mem_fence(CLK_LOCAL_MEM_FENCE);
         float2 chi0 = (F.lo).lo * chiToF * pown(ch/E, 2);
@@ -354,18 +313,17 @@ float get_dtheta(float E, float d, int4 hkl,
                    const int maxEl, __global float* elements,
                    __global float* f0cfs, __global float* E_vector,
                    __global float* f1_vector, __global float* f2_vector,
-                  float alpha, int2 geom)
-  {
+                  float alpha, int2 geom)  {
         float symm_dt = get_dtheta_symmetric_Bragg(E, d,
                                                     hkl, chiToF, factDW,
                                                     maxEl, elements,
                                                     f0cfs, E_vector,
                                                     f1_vector, f2_vector);
         float thetaB = get_Bragg_angle(E, d);
-        float geom_factor = geom.lo == 1 ? -1. : 1.;
+        float geom_factor = geom.lo == 1 ? -ONE : ONE;
         float gamma0 = sin(thetaB + alpha);
         float gammah = geom_factor * sin(thetaB - alpha);
-        float osqg0 = sqrt(1. - gamma0*gamma0);
+        float osqg0 = sqrt(ONE - gamma0*gamma0);
         return -(geom_factor*gamma0 - geom_factor*sqrt(gamma0*gamma0 +
                  geom_factor*(gamma0 - gammah) * osqg0 * symm_dt)) / osqg0;
   }
@@ -375,24 +333,22 @@ float get_dtheta_E(float E, float d, int4 hkl,
                    float chiToF, float factDW,
                    const int maxEl, __global float* elements,
                    __global float* f0cfs, __global float2* f1f2,
-                  float alpha, int2 geom)
-  {
+                  float alpha, int2 geom)  {
         float symm_dt = get_dtheta_symmetric_Bragg_E(E, d,
                                                       hkl, chiToF, factDW,
                                                       maxEl, elements,
                                                       f0cfs, f1f2);
         float thetaB = get_Bragg_angle(E, d);
-        float geom_factor = geom.lo == 1 ? -1. : 1.;
+        float geom_factor = geom.lo == 1 ? -ONE : ONE;
         float gamma0 = sin(thetaB + alpha);
         float gammah = geom_factor * sin(thetaB - alpha);
-        float osqg0 = sqrt(1. - gamma0*gamma0);
+        float osqg0 = sqrt(ONE - gamma0*gamma0);
         return -(geom_factor*gamma0 - geom_factor*sqrt(gamma0*gamma0 +
                  geom_factor*(gamma0 - gammah) * osqg0 * symm_dt)) / osqg0;
   }
 
 float4 get_amplitude_material(float E, int kind, float2 refrac_n, float beamInDotNormal,
-                                float thickness, int fromVacuum)
-{
+                                float thickness, int fromVacuum)  {
     float2 n1, n2, n12s, rs, rp, p2, tf;
     float cosAlpha, sinAlpha;
     float2 n1cosAlpha, n2cosAlpha, n1cosBeta, n2cosBeta, cosBeta;
@@ -410,7 +366,7 @@ float4 get_amplitude_material(float E, int kind, float2 refrac_n, float beamInDo
         n2 = cmp1;
     }
     cosAlpha = fabs(beamInDotNormal);
-    sinAlpha = sqrt(1. - beamInDotNormal * beamInDotNormal);
+    sinAlpha = sqrt(ONE - beamInDotNormal * beamInDotNormal);
     if (isnan(sinAlpha)) sinAlpha = 0.;
     n1cosAlpha = n1 * cosAlpha;
     n2cosAlpha = n2 * cosAlpha;
@@ -425,8 +381,8 @@ float4 get_amplitude_material(float E, int kind, float2 refrac_n, float beamInDo
                    (n2cosAlpha + n1cosBeta));
         if (kind == 1)
         {
-            p2 = exp_c(E * thickness * 1.e7 / chbar *
-                        prod_c(2. * cmpi1, n2cosBeta));
+            p2 = exp_c(E * thickness * (float)1e7 / chbar *
+                        prod_c(TWO * cmpi1, n2cosBeta));
             rs = prod_c(rs, div_c((cmp1 - p2),
                                   (cmp1 - prod_c(sqr_c(rs), p2))));
             rp = prod_c(rp, div_c((cmp1 - p2),
@@ -437,8 +393,8 @@ float4 get_amplitude_material(float E, int kind, float2 refrac_n, float beamInDo
     {
         tf = sqrt(
             (prod_c(n2cosBeta, conj_c(n1))).s0 / cosAlpha) / abs_c(n1);
-        rs = div_c((2. * tf * n1cosAlpha), (n1cosAlpha + n2cosBeta));
-        rp = div_c((2. * tf * n1cosAlpha), (n2cosAlpha + n1cosBeta));
+        rs = div_c((TWO * tf * n1cosAlpha), (n1cosAlpha + n2cosBeta));
+        rp = div_c((TWO * tf * n1cosAlpha), (n2cosAlpha + n1cosBeta));
     }
     return (float4)(rs, rp); //, abs(n.imag) * E / chbar * 2e8  # 1/cm
 }
@@ -454,22 +410,20 @@ float4 get_amplitude_internal(float E, float d, int4 hkl,
                                __global float* f0cfs,
                                __global float* E_vector,
                                __global float* f1_vector,
-                               __global float* f2_vector)
-{
+                               __global float* f2_vector)  {
     float waveLength = ch / E;
-    float k = twoPi / waveLength;
-    //printf("k %g\n", k);
-    //printf("bIDN, bODN: %g, %g\n", beamInDotNormal, beamOutDotNormal);
+    float k = twoPI / waveLength;
     float k0s = -beamInDotNormal * k;
     float kHs = -beamOutDotNormal * k;
-    float revd = 1. / d;
+    float revd = ONE / d;
     float b = k0s / kHs;
-    float k0H = fabs(beamInDotHNormal) * (twoPi * revd) * k;
+    float k0H = fabs(beamInDotHNormal) * (twoPI * revd) * k;
     float k02 = k * k;
-    float H2 = pown(twoPi * revd, 2);
+    float H2 = pown(twoPI * revd, 2);
 
-    float8 F = get_structure_factor_general(E, factDW, hkl, 0.5 * revd,
-                               maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
+    float8 F = get_structure_factor_general(E, factDW, hkl, HALF * revd,
+                               maxEl, elements, f0cfs, E_vector, f1_vector, 
+                               f2_vector);
     mem_fence(CLK_LOCAL_MEM_FENCE);
     float2 F0 = (F.lo).lo;
     float2 Fhkl = (F.lo).hi;
@@ -479,21 +433,19 @@ float4 get_amplitude_internal(float E, float d, int4 hkl,
     float2 chi0 = conj_c(F0) * chiToFlambdaSquare;
     float2 chih = conj_c(Fhkl) * chiToFlambdaSquare;
     float2 chih_ = conj_c(Fhkl_) * chiToFlambdaSquare;
-    //printf("chih, chih_: %g+j%g, %g+j%g\n", chih.x, chih.y, chih_.x, chih_.y);
-    float2 alpha = r2cmp((0.5*H2 - k0H) / k02) + chi0 * 0.5 * (1. / b - 1.);
-    float2 curveS = for_one_polarization(1.,
+    float2 alpha = r2cmp((HALF*H2 - k0H) / k02) + chi0 * HALF * (ONE / b - ONE);
+    float2 curveS = for_one_polarization(ONE,
                                 chih, chih_, chi0,
                                 k02, k0s, kHs,
                                 alpha, b,
                                 thickness, geom);  //# s polarization
     mem_fence(CLK_LOCAL_MEM_FENCE);
-    float2 curveP = for_one_polarization(cos(2. * get_Bragg_angle(E, d)),
+    float2 curveP = for_one_polarization(cos(TWO * get_Bragg_angle(E, d)),
                                 chih, chih_, chi0,
                                 k02, k0s, kHs,
                                 alpha, b,
                                 thickness, geom);  //# p polarization
     mem_fence(CLK_LOCAL_MEM_FENCE);
-    //printf("AS, AP: %g+j%g, %g+j%g\n", curveS.x, curveS.y, curveP.x, curveP.y);
     return (float4)(curveS, curveP);//  # , phi.real
 }
 
@@ -506,26 +458,18 @@ float4 get_amplitude_internal_E(float E, float d, int4 hkl,
                                const int maxEl,
                                __global float* elements,
                                __global float* f0cfs,
-                               __global float2* f1f2)
-{
+                               __global float2* f1f2)  {
     float waveLength = ch / E;
-    float k = twoPi / waveLength;
-    //printf("k %g\n", k);
-    //printf("bIDN, bODN: %g, %g\n", beamInDotNormal, beamOutDotNormal);
+    float k = twoPI / waveLength;
     float k0s = -beamInDotNormal * k;
     float kHs = -beamOutDotNormal * k;
-    float revd = 1. / d;
+    float revd = ONE / d;
     float b = k0s / kHs;
-    float k0H = fabs(beamInDotHNormal) * (twoPi * revd) * k;
+    float k0H = fabs(beamInDotHNormal) * (twoPI * revd) * k;
     float k02 = k * k;
-    float H2 = pown(twoPi * revd, 2);
+    float H2 = pown(twoPI * revd, 2);
 
-
-    //float8 F = get_structure_factor_diamond(E, factDW, hkl, 0.5 / d,
-    //                           maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
-    //float8 F = get_structure_factor_general(E, factDW, hkl, 0.5 / d,
-    //                           maxEl, elements, f0cfs, E_vector, f1_vector, f2_vector);
-    float8 F = get_structure_factor_general_E(E, factDW, hkl, 0.5 * revd,
+    float8 F = get_structure_factor_general_E(E, factDW, hkl, HALF * revd,
                                maxEl, elements, f0cfs, f1f2);
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -537,21 +481,19 @@ float4 get_amplitude_internal_E(float E, float d, int4 hkl,
     float2 chi0 = conj_c(F0) * chiToFlambdaSquare;
     float2 chih = conj_c(Fhkl) * chiToFlambdaSquare;
     float2 chih_ = conj_c(Fhkl_) * chiToFlambdaSquare;
-    //printf("chih, chih_: %g+j%g, %g+j%g\n", chih.x, chih.y, chih_.x, chih_.y);
-    float2 alpha = r2cmp((0.5*H2 - k0H)/k02) + chi0 * 0.5 * (1/b - 1);
-    float2 curveS = for_one_polarization(1.,
+    float2 alpha = r2cmp((HALF*H2 - k0H)/k02) + chi0 * HALF * (1/b - 1);
+    float2 curveS = for_one_polarization(ONE,
                                 chih, chih_, chi0,
                                 k02, k0s, kHs,
                                 alpha, b,
                                 thickness, geom);  //# s polarization
     mem_fence(CLK_LOCAL_MEM_FENCE);
-    float2 curveP = for_one_polarization(cos(2. * get_Bragg_angle(E, d)),
+    float2 curveP = for_one_polarization(cos(TWO * get_Bragg_angle(E, d)),
                                 chih, chih_, chi0,
                                 k02, k0s, kHs,
                                 alpha, b,
                                 thickness, geom);  //# p polarization
     mem_fence(CLK_LOCAL_MEM_FENCE);
-    //printf("AS, AP: %g+j%g, %g+j%g\n", curveS.x, curveS.y, curveP.x, curveP.y);
     return (float4)(curveS, curveP);//  # , phi.real
 }
 
@@ -564,12 +506,9 @@ float4 get_amplitude_multilayer_internal(const int npairs,
                                             float2 rvt_si,
                                             float2 rvt_pi,
                                             float2 p2ti,
-                                            float2 p2bi)
-{
+                                            float2 p2bi)  {
     int i;
     float2 rij_s, rij_p, p2i, rj_s, rj_p, rj2i, ri_si, ri_pi;
-    //float2 rbt_s = -rtb_si;
-    //float2 rbt_p = -rtb_pi;
     rj_s = rbs_si;
     rj_p = rbs_pi;
     int lsw = -1;
@@ -579,7 +518,7 @@ float4 get_amplitude_multilayer_internal(const int npairs,
         lsw = -lsw;
         rij_s = lsw * rtb_si;
         rij_p = lsw * rtb_pi;
-        p2i = (lsw + 1.) * p2bi * 0.5 - (lsw - 1.) * p2ti * 0.5;
+        p2i = (lsw + ONE) * p2bi * HALF - (lsw - ONE) * p2ti * HALF;
 
         rj2i = prod_c(rj_s, p2i);
 
@@ -602,7 +541,6 @@ float4 get_amplitude_multilayer_internal(const int npairs,
     rj2i = prod_c(rj_p,p2i);
     ri_pi = div_c((rij_p + rj2i),
                     (cmp1 + prod_c(rij_p, rj2i)));
-    //mem_fence(CLK_LOCAL_MEM_FENCE);
     return (float4)(ri_si, ri_pi);
 }
 
@@ -616,13 +554,10 @@ float4 get_amplitude_graded_multilayer_internal(const int npairs,
                                             float2 qti,
                                             float2 qbi,
 										__global float* dti,
-										__global float* dbi)
-{
+										__global float* dbi)  {
     int i;
     float2 rij_s, rij_p, p2i, rj_s, rj_p, rj2i, ri_si, ri_pi;
 	float2 p2bi, p2ti;
-    //float2 rbt_s = -rtb_si;
-    //float2 rbt_p = -rtb_pi;
     rj_s = rbs_si;
     rj_p = rbs_pi;
     int lsw = -1;
@@ -641,8 +576,6 @@ float4 get_amplitude_graded_multilayer_internal(const int npairs,
 			p2ti = exp_c(prod_c(cmpi1, dti[i/2] * qti));
             p2i = p2ti;
 		}
-        //p2i = (lsw + 1) * p2bi / 2. - (lsw - 1) * p2ti / 2.;
-
         rj2i = prod_c(rj_s, p2i);
 
         ri_si = div_c((rij_s + rj2i),
@@ -656,7 +589,6 @@ float4 get_amplitude_graded_multilayer_internal(const int npairs,
 
     rij_s = rvt_si;
     rij_p = rvt_pi;
-    //printf("dti[0] %g, dbi[0] %g\n",di[0].x, di[0].y);
     p2i = exp_c(prod_c(cmpi1, dti[0] * qti));
     rj2i = prod_c(rj_s,p2i);
     ri_si = div_c((rij_s + rj2i),
@@ -686,13 +618,12 @@ __kernel void get_amplitude(const int4 hkl,
                             __global float* f1_vector,
                             __global float* f2_vector,
                             __global float2* refl_s,
-                            __global float2* refl_p)
-{
+                            __global float2* refl_p)  {
     unsigned int ii = get_global_id(0);
     float4 amplitudes;
     int2 geom;
     geom.lo = geom_b > 1 ? 1 : 0;
-    geom.hi = (int)(fabs(remainder(geom_b,2.)));
+    geom.hi = (int)(fabs(remainder(geom_b,TWO)));
     amplitudes = get_amplitude_internal(Energy_gl[ii], IPDistance_gl[ii], hkl,
                                ChiToF_gl[ii], factDW,
                                BeamInDotNormal_gl[ii], BeamOutDotNormal_gl[ii],
@@ -715,8 +646,7 @@ __kernel void get_amplitude_multilayer(const int npairs,
                             __global float2* p2t,
                             __global float2* p2b,
                             __global float2* ri_s,
-                            __global float2* ri_p)
-{
+                            __global float2* ri_p)  {
     unsigned int ii = get_global_id(0);
     float4 amplitudes;
     amplitudes = get_amplitude_multilayer_internal(npairs,
@@ -740,8 +670,7 @@ __kernel void get_amplitude_graded_multilayer(const int npairs,
                             __global float* dti,
                             __global float* dbi,
                             __global float2* ri_s,
-                            __global float2* ri_p)
-{
+                            __global float2* ri_p)  {
     unsigned int ii = get_global_id(0);
     float4 amplitudes;
     amplitudes = get_amplitude_graded_multilayer_internal(npairs,
@@ -755,55 +684,55 @@ __kernel void get_amplitude_graded_multilayer(const int npairs,
 
 __kernel void tt_laue_spherical_single(
                   const int nLayers,
-                  const double2 Wgrad,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0t,
-                  __global double2 *Dht,
-                  __global double2 *D0,
-                  __global double2 *Dh
+                  const float2 Wgrad,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0t,
+                  __global float2 *Dht,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
-      double2 C1, C2, C3, C4;
-      double8 D0_line, Dh_line, Mvec;
+      float2 C1, C2, C3, C4;
+      float8 D0_line, Dh_line, Mvec;
       unsigned int ii = get_global_id(0);
       unsigned int iloc = ii*(nLayers+3);
       int i, j;
-      C1 = (double2)(1,0) - W[ii];
-      C2 = (double2)(1,0) - V[ii];
-      C3 = (double2)(1,0) + W[ii];
-      C4 = (double2)(1,0) + V[ii];
+      C1 = (float2)(1,0) - W[ii];
+      C2 = (float2)(1,0) - V[ii];
+      C3 = (float2)(1,0) + W[ii];
+      C4 = (float2)(1,0) + V[ii];
 
-      double2 AB = prod_c(A[ii], B[ii]);
+      float2 AB = prod_c(A[ii], B[ii]);
 
-      D0_line = (double8)(prod_c(C4, C1),
+      D0_line = (float8)(prod_c(C4, C1),
                          prod_c(A[ii], C1),
                          AB,
                          prod_c(A[ii], C3));
-      Dh_line = (double8)(prod_c(B[ii], C4),
+      Dh_line = (float8)(prod_c(B[ii], C4),
                          AB,
                          prod_c(B[ii], C2),
                          prod_c(C3, C2));
 
-      D0t[iloc] = (double2)(0.0, 0.0);
-      Dht[iloc] = (double2)(0.0, 0.0);
-      D0t[iloc+1] = (double2)(1.0, 0.0);
-      Dht[iloc+1] = (double2)(0.0, 0.0);
+      D0t[iloc] = (float2)(0.0, 0.0);
+      Dht[iloc] = (float2)(0.0, 0.0);
+      D0t[iloc+1] = (float2)(1.0, 0.0);
+      Dht[iloc+1] = (float2)(0.0, 0.0);
 
-      double2 EEr = rec_c(prod_c(C1, C2) - AB);
+      float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
       for (i=0; i<nLayers-1; i++)
         {
           // i -- ordinary number of the layer
-          D0t[iloc+i+3] = (double2)(0.0, 0.0);
-          Dht[iloc+i+3] = (double2)(0.0, 0.0);
+          D0t[iloc+i+3] = (float2)(0.0, 0.0);
+          Dht[iloc+i+3] = (float2)(0.0, 0.0);
 
           for (j=0; j<i+2; j++)
             {
               // j -- ordinary number of the element in the layer
-              Mvec = (double8)(D0t[iloc+j+1],
+              Mvec = (float8)(D0t[iloc+j+1],
                                Dht[iloc+j+1],
                                D0t[iloc+j],
                                Dht[iloc+j]);
@@ -827,42 +756,42 @@ __kernel void tt_laue_spherical_single(
 
 __kernel void tt_laue_plain(
                   const int nLayers,
-                  const double2 Wgrad,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0,
-                  __global double2 *Dh
+                  const float2 Wgrad,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
-      double2 C1, C2, C3, C4, D0t, Dht;
-      double8 D0_line, Dh_line, Mvec;
+      float2 C1, C2, C3, C4, D0t, Dht;
+      float8 D0_line, Dh_line, Mvec;
       unsigned int ii = get_global_id(0);
 
       int i;
-      C1 = (double2)(1.0, 0.0) - W[ii];
-      C2 = (double2)(1.0, 0.0) - V[ii];
-      C3 = (double2)(1.0, 0.0) + W[ii];
-      C4 = (double2)(1.0, 0.0) + V[ii];
+      C1 = (float2)(1.0, 0.0) - W[ii];
+      C2 = (float2)(1.0, 0.0) - V[ii];
+      C3 = (float2)(1.0, 0.0) + W[ii];
+      C4 = (float2)(1.0, 0.0) + V[ii];
 
-      double2 AB = prod_c(A[ii], B[ii]);
+      float2 AB = prod_c(A[ii], B[ii]);
 
-      D0_line = (double8)(prod_c(C4, C1),
+      D0_line = (float8)(prod_c(C4, C1),
                           prod_c(A[ii], C1),
                           AB,
                           prod_c(A[ii], C3));
-      Dh_line = (double8)(prod_c(B[ii], C4),
+      Dh_line = (float8)(prod_c(B[ii], C4),
                           AB,
                           prod_c(B[ii], C2),
                           prod_c(C3, C2));
 
-      D0t = (double2)(1.0, 0.0);
-      Dht = (double2)(0.0, 0.0);
+      D0t = (float2)(1.0, 0.0);
+      Dht = (float2)(0.0, 0.0);
 
-      double2 EEr = rec_c(prod_c(C1, C2) - AB);
+      float2 EEr = rec_c(prod_c(C1, C2) - AB);
       for (i=0; i<nLayers; i++) {
-          Mvec = (double8)(D0t,
+          Mvec = (float8)(D0t,
                            Dht,
                            D0t,
                            Dht);
@@ -877,52 +806,52 @@ __kernel void tt_laue_plain(
 
 __kernel void tt_laue_plain_bent(
                   const int nOfLayers,
-//                  const double2 Wgrad,
-                  __global double2 *Wgrad_global,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0,
-                  __global double2 *Dh
+//                  const float2 Wgrad,
+                  __global float2 *Wgrad_global,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
 
-    double2 C1, C2, C3, C4, D0t, Dht, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
-    double8 D0_line, Dh_line, Mvec;
-    double2 cOne = (double2)(1.0, 0.0);
+    float2 C1, C2, C3, C4, D0t, Dht, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
+    float8 D0_line, Dh_line, Mvec;
+    float2 cOne = (float2)(1.0, 0.0);
     unsigned int ii = get_global_id(0);
     int i;
     
     Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
     Vloc = V[ii];
     Wgrad = Wgrad_global[ii];
-    double2 AB = prod_c(Aloc, Bloc);
+    float2 AB = prod_c(Aloc, Bloc);
     C2 = cOne - Vloc;
     C4 = cOne + Vloc;
 
-    double2 BC2 = prod_c(Bloc, C2);
-    double2 BC4 = prod_c(Bloc, C4);
+    float2 BC2 = prod_c(Bloc, C2);
+    float2 BC4 = prod_c(Bloc, C4);
 
     D0t = cOne;
-    Dht = (double2)(0.0, 0.0);
+    Dht = (float2)(0.0, 0.0);
 
       for (i=0; i<nOfLayers; i++) {
-          Wi = (i == 0) ? Wloc : Wloc + Wgrad*((double)i - 0.5);
+          Wi = (i == 0) ? Wloc : Wloc + Wgrad*((float)i - HALF);
           C1 = cOne - Wi;
           C3 = cOne + Wi;
 
-          D0_line = (double8)(prod_c(C4, C1),
+          D0_line = (float8)(prod_c(C4, C1),
                               prod_c(Aloc, C1),
                               AB,
                               prod_c(Aloc, C3));
-          Dh_line = (double8)(BC4,
+          Dh_line = (float8)(BC4,
                               AB,
                               BC2,
                               prod_c(C3, C2));
 
-          double2 EEr = rec_c(prod_c(C1, C2) - AB);
-          Mvec = (double8)(D0t,
+          float2 EEr = rec_c(prod_c(C1, C2) - AB);
+          Mvec = (float8)(D0t,
                            Dht,
                            D0t,
                            Dht);
@@ -938,42 +867,42 @@ __kernel void tt_laue_plain_bent(
 /*
 __kernel void tt_bragg_plain_single(
                   const int nLayers,
-                  const double2 Wgrad,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0,
-                  __global double2 *Dh
+                  const float2 Wgrad,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
-      double2 C1, C2, C3, C4, D0t, Dht;
-      double8 D0_line, Dh_line, Mvec;
+      float2 C1, C2, C3, C4, D0t, Dht;
+      float8 D0_line, Dh_line, Mvec;
       unsigned int ii = get_global_id(0);
 
       int i;
-      C1 = (double2)(1.0, 0.0) - W[ii];
-      C2 = (double2)(1.0, 0.0) - V[ii];
-      C3 = (double2)(1.0, 0.0) + W[ii];
-      C4 = (double2)(1.0, 0.0) + V[ii];
+      C1 = (float2)(1.0, 0.0) - W[ii];
+      C2 = (float2)(1.0, 0.0) - V[ii];
+      C3 = (float2)(1.0, 0.0) + W[ii];
+      C4 = (float2)(1.0, 0.0) + V[ii];
 
-      double2 AB = prod_c(A[ii], B[ii]);
+      float2 AB = prod_c(A[ii], B[ii]);
 
-      D0_line = (double8)(prod_c(C4, C1),
+      D0_line = (float8)(prod_c(C4, C1),
                           prod_c(A[ii], C1),
                           AB,
                           prod_c(A[ii], C3));
-      Dh_line = (double8)(prod_c(B[ii], C4),
+      Dh_line = (float8)(prod_c(B[ii], C4),
                           AB,
                           prod_c(B[ii], C2),
                           prod_c(C3, C2));
 
-      D0t = (double2)(1.0, 0.0);
-      Dht = (double2)(0.0, 0.0);
+      D0t = (float2)(1.0, 0.0);
+      Dht = (float2)(0.0, 0.0);
 
-      double2 EEr = rec_c(prod_c(C1, C2) - AB);
+      float2 EEr = rec_c(prod_c(C1, C2) - AB);
       for (i=0; i<nLayers; i++) {
-          Mvec = (double8)(D0t,
+          Mvec = (float8)(D0t,
                            Dht,
                            D0t,
                            Dht);
@@ -988,46 +917,46 @@ __kernel void tt_bragg_plain_single(
 */
 __kernel void tt_bragg_plain(
                   const int nLayers,
-                  const double2 Wgrad,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0t,
-                  __global double2 *Dht,
-                  __global double2 *D0,
-                  __global double2 *Dh
-//                  __global double2 *Dh_pic
+                  const float2 Wgrad,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0t,
+                  __global float2 *Dht,
+                  __global float2 *D0,
+                  __global float2 *Dh
+//                  __global float2 *Dh_pic
                   )
 {
     int arrSize = PRIVATELAYERS;
-    __private double2 D0Arr[PRIVATELAYERS+1];
-    __private double2 DhArr[PRIVATELAYERS+1];
-    double2 C1,C2,C3,C4;
-    double8 D0_line, Dh_line, Mvec;
+    __private float2 D0Arr[PRIVATELAYERS+1];
+    __private float2 DhArr[PRIVATELAYERS+1];
+    float2 C1,C2,C3,C4;
+    float8 D0_line, Dh_line, Mvec;
     int diff, stripeWidth, stripeHeight;
 
     unsigned int ii = get_global_id(0);
     int i, j, n;
     unsigned int cnt_loc = ii * (nLayers+1);
-    C1 = (double2)(1,0) - W[ii];
-    C2 = (double2)(1,0) - V[ii];
-    C3 = (double2)(1,0) + W[ii];
-    C4 = (double2)(1,0) + V[ii];
+    C1 = (float2)(1,0) - W[ii];
+    C2 = (float2)(1,0) - V[ii];
+    C3 = (float2)(1,0) + W[ii];
+    C4 = (float2)(1,0) + V[ii];
 
-    double2 AB = prod_c(A[ii], B[ii]);
-    D0_line = (double8)(prod_c(C4, C1),
+    float2 AB = prod_c(A[ii], B[ii]);
+    D0_line = (float8)(prod_c(C4, C1),
                         prod_c(A[ii], C1),
                         AB,
                         prod_c(A[ii], C3));
-    Dh_line = (double8)(prod_c(B[ii], C4),
+    Dh_line = (float8)(prod_c(B[ii], C4),
                         AB,
                         prod_c(B[ii], C2),
                         prod_c(C3, C2));
-    double2 EEr = rec_c(prod_c(C1, C2) - AB);
+    float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
-    D0t[cnt_loc] = (double2)(0.0, 0.0);
-    Dht[cnt_loc] = (double2)(0.0, 0.0);
+    D0t[cnt_loc] = (float2)(0.0, 0.0);
+    Dht[cnt_loc] = (float2)(0.0, 0.0);
 
     int nStripes = ceil((float)nLayers/(float)arrSize);
 
@@ -1036,8 +965,8 @@ __kernel void tt_bragg_plain(
         stripeWidth = min(arrSize, diff);
         stripeHeight = n*arrSize;
         for (j=1; j<stripeWidth+1; j++) {
-            D0Arr[j] = (double2)(0.0, 0.0);
-            DhArr[j] = (double2)(0.0, 0.0);
+            D0Arr[j] = (float2)(0.0, 0.0);
+            DhArr[j] = (float2)(0.0, 0.0);
             }
         //Parallel propagation
         for (i=0; i<stripeHeight; i++) {
@@ -1045,7 +974,7 @@ __kernel void tt_bragg_plain(
             D0Arr[0] = D0t[cnt_loc+i];
             DhArr[0] = Dht[cnt_loc+i];
             for (j=0; j<stripeWidth; j++) {
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j+1],
                                  DhArr[j+1]);
@@ -1057,10 +986,10 @@ __kernel void tt_bragg_plain(
             }
         //Triangular propagation
         for (i=0; i<stripeWidth; i++) {
-            D0Arr[i] = (double2)(1.0, 0.0);
-            DhArr[i] = (double2)(0.0, 0.0);
+            D0Arr[i] = (float2)(1.0, 0.0);
+            DhArr[i] = (float2)(0.0, 0.0);
             for (j=i; j<stripeWidth; j++) {
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j+1],
                                  DhArr[j+1]);
@@ -1079,23 +1008,23 @@ __kernel void tt_bragg_plain(
 
 __kernel void tt_bragg_plain_bent(
                   const int nLayers,
-                  __global double2 *Wgrad_global,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0t,
-                  __global double2 *Dht,
-                  __global double2 *D0,
-                  __global double2 *Dh
+                  __global float2 *Wgrad_global,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0t,
+                  __global float2 *Dht,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
     int arrSize = PRIVATELAYERS;
-    __private double2 D0Arr[PRIVATELAYERS+1];
-    __private double2 DhArr[PRIVATELAYERS+1];
-    double2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
-    double8 D0_line, Dh_line, Mvec;
-    double2 cOne = (double2)(1.0, 0.0);
+    __private float2 D0Arr[PRIVATELAYERS+1];
+    __private float2 DhArr[PRIVATELAYERS+1];
+    float2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
+    float8 D0_line, Dh_line, Mvec;
+    float2 cOne = (float2)(1.0, 0.0);
     int diff, stripeWidth, stripeHeight;
 
     unsigned int ii = get_global_id(0);
@@ -1105,15 +1034,15 @@ __kernel void tt_bragg_plain_bent(
     Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
     Vloc = V[ii];
     Wgrad = Wgrad_global[ii];
-    double2 AB = prod_c(Aloc, Bloc);
+    float2 AB = prod_c(Aloc, Bloc);
     C2 = cOne - Vloc;
     C4 = cOne + Vloc;
 
-    double2 BC2 = prod_c(Bloc, C2);
-    double2 BC4 = prod_c(Bloc, C4);
+    float2 BC2 = prod_c(Bloc, C2);
+    float2 BC4 = prod_c(Bloc, C4);
 
-    D0t[cnt_loc] = (double2)(0.0, 0.0);
-    Dht[cnt_loc] = (double2)(0.0, 0.0);
+    D0t[cnt_loc] = (float2)(0.0, 0.0);
+    Dht[cnt_loc] = (float2)(0.0, 0.0);
 
     int nStripes = ceil((float)nLayers/(float)arrSize);
 
@@ -1122,8 +1051,8 @@ __kernel void tt_bragg_plain_bent(
         stripeWidth = min(arrSize, diff);
         stripeHeight = n*arrSize;
         for (j=1; j<stripeWidth+1; j++) {
-            D0Arr[j] = (double2)(0.0, 0.0);
-            DhArr[j] = (double2)(0.0, 0.0);
+            D0Arr[j] = (float2)(0.0, 0.0);
+            DhArr[j] = (float2)(0.0, 0.0);
             }
         //Parallel propagation
         for (i=0; i<stripeHeight; i++) {
@@ -1134,22 +1063,22 @@ __kernel void tt_bragg_plain_bent(
 
                 iLayer = n*arrSize + i + j + 2;
 //                if (ii==0) printf("Parallel: n, i, j, iLayer: %i, %i, %i, %i\n", n, i, j, iLayer);
-                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((double)(iLayer)  - 0.5) * 0.5;
+                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((float)(iLayer)  - HALF) * HALF;
                 C1 = cOne - Wi;
                 C3 = cOne + Wi;
 
-                D0_line = (double8)(prod_c(C4, C1),
+                D0_line = (float8)(prod_c(C4, C1),
                                     prod_c(Aloc, C1),
                                     AB,
                                     prod_c(Aloc, C3));
-                Dh_line = (double8)(BC4,
+                Dh_line = (float8)(BC4,
                                     AB,
                                     BC2,
                                     prod_c(C3, C2));
 
-                double2 EEr = rec_c(prod_c(C1, C2) - AB);
+                float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j+1],
                                  DhArr[j+1]);
@@ -1162,28 +1091,28 @@ __kernel void tt_bragg_plain_bent(
         //Triangular propagation
         for (i=0; i<stripeWidth; i++) {
 
-            D0Arr[i] = (double2)(1.0, 0.0);
-            DhArr[i] = (double2)(0.0, 0.0);
+            D0Arr[i] = (float2)(1.0, 0.0);
+            DhArr[i] = (float2)(0.0, 0.0);
             for (j=i; j<stripeWidth; j++) {
 
                 iLayer = 2*n*(arrSize) + i + j + 2;
 //                if (ii==0) printf("Triangular: n, i, j, iLayer: %i, %i, %i, %i\n", n, i, j, iLayer);
-                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((double)(iLayer)  - 0.5) * 0.5;
+                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((float)(iLayer)  - HALF) * HALF;
                 C1 = cOne - Wi;
                 C3 = cOne + Wi;
 
-                D0_line = (double8)(prod_c(C4, C1),
+                D0_line = (float8)(prod_c(C4, C1),
                                     prod_c(Aloc, C1),
                                     AB,
                                     prod_c(Aloc, C3));
-                Dh_line = (double8)(BC4,
+                Dh_line = (float8)(BC4,
                                     AB,
                                     BC2,
                                     prod_c(C3, C2));
 
-                double2 EEr = rec_c(prod_c(C1, C2) - AB);
+                float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j+1],
                                  DhArr[j+1]);
@@ -1202,23 +1131,23 @@ __kernel void tt_bragg_plain_bent(
 
 __kernel void tt_bragg_plain_thickness_bent(
                   const int nLayers,
-                  __global double2 *Wgrad_global,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0t,
-                  __global double2 *Dht,
-                  __global double2 *D0,
-                  __global double2 *Dh
+                  __global float2 *Wgrad_global,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0t,
+                  __global float2 *Dht,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
     int arrSize = PRIVATELAYERS;
-    __private double2 D0Arr[PRIVATELAYERS+1];
-    __private double2 DhArr[PRIVATELAYERS+1];
-    double2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
-    double8 D0_line, Dh_line, Mvec;
-    double2 cOne = (double2)(1.0, 0.0);
+    __private float2 D0Arr[PRIVATELAYERS+1];
+    __private float2 DhArr[PRIVATELAYERS+1];
+    float2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
+    float8 D0_line, Dh_line, Mvec;
+    float2 cOne = (float2)(1.0, 0.0);
     int diff, stripeWidth, stripeHeight;
 
     unsigned int ii = get_global_id(0);
@@ -1228,15 +1157,15 @@ __kernel void tt_bragg_plain_thickness_bent(
     Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
     Vloc = V[ii];
     Wgrad = Wgrad_global[ii];
-    double2 AB = prod_c(Aloc, Bloc);
+    float2 AB = prod_c(Aloc, Bloc);
     C2 = cOne - Vloc;
     C4 = cOne + Vloc;
 
-    double2 BC2 = prod_c(Bloc, C2);
-    double2 BC4 = prod_c(Bloc, C4);
+    float2 BC2 = prod_c(Bloc, C2);
+    float2 BC4 = prod_c(Bloc, C4);
 
-    D0t[cnt_loc] = (double2)(0.0, 0.0);
-    Dht[cnt_loc] = (double2)(0.0, 0.0);
+    D0t[cnt_loc] = (float2)(0.0, 0.0);
+    Dht[cnt_loc] = (float2)(0.0, 0.0);
 
     int nStripes = ceil((float)nLayers/(float)arrSize);
 
@@ -1245,8 +1174,8 @@ __kernel void tt_bragg_plain_thickness_bent(
         stripeWidth = min(arrSize, diff);
         stripeHeight = n*arrSize;
         for (j=1; j<stripeWidth+1; j++) {
-            D0Arr[j] = (double2)(0.0, 0.0);
-            DhArr[j] = (double2)(0.0, 0.0);
+            D0Arr[j] = (float2)(0.0, 0.0);
+            DhArr[j] = (float2)(0.0, 0.0);
             }
         //Parallel propagation
         for (i=0; i<stripeHeight; i++) {
@@ -1257,22 +1186,22 @@ __kernel void tt_bragg_plain_thickness_bent(
 
                 iLayer = n*arrSize + i + j + 2;
 //                if (ii==0) printf("Parallel: n, i, j, iLayer: %i, %i, %i, %i\n", n, i, j, iLayer);
-                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((double)(iLayer)  - 0.5) * 0.5;
+                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((float)(iLayer)  - HALF) * HALF;
                 C1 = cOne - Wi;
                 C3 = cOne + Wi;
 
-                D0_line = (double8)(prod_c(C4, C1),
+                D0_line = (float8)(prod_c(C4, C1),
                                     prod_c(Aloc, C1),
                                     AB,
                                     prod_c(Aloc, C3));
-                Dh_line = (double8)(BC4,
+                Dh_line = (float8)(BC4,
                                     AB,
                                     BC2,
                                     prod_c(C3, C2));
 
-                double2 EEr = rec_c(prod_c(C1, C2) - AB);
+                float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j+1],
                                  DhArr[j+1]);
@@ -1285,28 +1214,28 @@ __kernel void tt_bragg_plain_thickness_bent(
         //Triangular propagation
         for (i=0; i<stripeWidth; i++) {
 
-            D0Arr[i] = (double2)(1.0, 0.0);
-            DhArr[i] = (double2)(0.0, 0.0);
+            D0Arr[i] = (float2)(1.0, 0.0);
+            DhArr[i] = (float2)(0.0, 0.0);
             for (j=i; j<stripeWidth; j++) {
 
                 iLayer = 2*n*(arrSize) + i + j + 2;
 //                if (ii==0) printf("Triangular: n, i, j, iLayer: %i, %i, %i, %i\n", n, i, j, iLayer);
-                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((double)(iLayer)  - 0.5) * 0.5;
+                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad * fabs((float)(iLayer)  - HALF) * HALF;
                 C1 = cOne - Wi;
                 C3 = cOne + Wi;
 
-                D0_line = (double8)(prod_c(C4, C1),
+                D0_line = (float8)(prod_c(C4, C1),
                                     prod_c(Aloc, C1),
                                     AB,
                                     prod_c(Aloc, C3));
-                Dh_line = (double8)(BC4,
+                Dh_line = (float8)(BC4,
                                     AB,
                                     BC2,
                                     prod_c(C3, C2));
 
-                double2 EEr = rec_c(prod_c(C1, C2) - AB);
+                float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j+1],
                                  DhArr[j+1]);
@@ -1324,45 +1253,45 @@ __kernel void tt_bragg_plain_thickness_bent(
 
 __kernel void tt_laue_spherical(
                   const int nLayers,
-                  const double2 Wgrad,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0t,
-                  __global double2 *Dht,
-                  __global double2 *D0,
-                  __global double2 *Dh
+                  const float2 Wgrad,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0t,
+                  __global float2 *Dht,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
     int arrSize = PRIVATELAYERS;
-    __private double2 D0Arr[PRIVATELAYERS+1];
-    __private double2 DhArr[PRIVATELAYERS+1];
-    double2 C1,C2,C3,C4;
-    double8 D0_line, Dh_line, Mvec;
+    __private float2 D0Arr[PRIVATELAYERS+1];
+    __private float2 DhArr[PRIVATELAYERS+1];
+    float2 C1,C2,C3,C4;
+    float8 D0_line, Dh_line, Mvec;
     int diff, stripeWidth, stripeHeight;
 
     unsigned int ii = get_global_id(0);
     int i, j, n;
     unsigned int cnt_loc = ii * (nLayers+1);
-    C1 = (double2)(1,0) - W[ii];
-    C2 = (double2)(1,0) - V[ii];
-    C3 = (double2)(1,0) + W[ii];
-    C4 = (double2)(1,0) + V[ii];
+    C1 = (float2)(1,0) - W[ii];
+    C2 = (float2)(1,0) - V[ii];
+    C3 = (float2)(1,0) + W[ii];
+    C4 = (float2)(1,0) + V[ii];
 
-    double2 AB = prod_c(A[ii], B[ii]);
-    D0_line = (double8)(prod_c(C4, C1),
+    float2 AB = prod_c(A[ii], B[ii]);
+    D0_line = (float8)(prod_c(C4, C1),
                         prod_c(A[ii], C1),
                         AB,
                         prod_c(A[ii], C3));
-    Dh_line = (double8)(prod_c(B[ii], C4),
+    Dh_line = (float8)(prod_c(B[ii], C4),
                         AB,
                         prod_c(B[ii], C2),
                         prod_c(C3, C2));
-    double2 EEr = rec_c(prod_c(C1, C2) - AB);
+    float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
-    D0t[cnt_loc] = (double2)(0.0, 0.0);
-    Dht[cnt_loc] = (double2)(0.0, 0.0);
+    D0t[cnt_loc] = (float2)(0.0, 0.0);
+    Dht[cnt_loc] = (float2)(0.0, 0.0);
 
     int nStripes = ceil((float)nLayers/(float)(arrSize-1));
 
@@ -1372,8 +1301,8 @@ __kernel void tt_laue_spherical(
         stripeHeight = max(nLayers + 1 - (n+1)*(arrSize-1), 0);
 
         for (j=0; j<stripeWidth; j++) {
-            D0Arr[j] = (double2)(0.0, 0.0);
-            DhArr[j] = (double2)(0.0, 0.0);
+            D0Arr[j] = (float2)(0.0, 0.0);
+            DhArr[j] = (float2)(0.0, 0.0);
         }
         //Parallel propagation
         for (i=0; i<stripeHeight; i++) {
@@ -1381,10 +1310,10 @@ __kernel void tt_laue_spherical(
             DhArr[0] = Dht[cnt_loc+i];
             for (j=1; j<stripeWidth; j++) {
                 if ((n==0)&&(i==0)) {
-                    D0Arr[1] = (double2)(1.0, 0.0);
-                    DhArr[1] = (double2)(0.0, 0.0);
+                    D0Arr[1] = (float2)(1.0, 0.0);
+                    DhArr[1] = (float2)(0.0, 0.0);
                 } else {
-                    Mvec = (double8)(D0Arr[j],
+                    Mvec = (float8)(D0Arr[j],
                                      DhArr[j],
                                      D0Arr[j-1],
                                      DhArr[j-1]);
@@ -1400,7 +1329,7 @@ __kernel void tt_laue_spherical(
             D0Arr[0] = D0t[cnt_loc+i+stripeHeight];
             DhArr[0] = Dht[cnt_loc+i+stripeHeight];
             for (j=1; j<stripeWidth-i; j++) {
-                Mvec = (double8)(D0Arr[j],
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j-1],
                                  DhArr[j-1]);
@@ -1416,24 +1345,24 @@ __kernel void tt_laue_spherical(
 
 __kernel void tt_laue_spherical_bent(
                   const int nLayers,
-//                  const double2 Wgrad,
-                  __global double2 *Wgrad_global,
-                  __global double2 *A,
-                  __global double2 *B,
-                  __global double2 *W,
-                  __global double2 *V,
-                  __global double2 *D0t,
-                  __global double2 *Dht,
-                  __global double2 *D0,
-                  __global double2 *Dh
+//                  const float2 Wgrad,
+                  __global float2 *Wgrad_global,
+                  __global float2 *A,
+                  __global float2 *B,
+                  __global float2 *W,
+                  __global float2 *V,
+                  __global float2 *D0t,
+                  __global float2 *Dht,
+                  __global float2 *D0,
+                  __global float2 *Dh
                   )
 {
     int arrSize = PRIVATELAYERS;
-    __private double2 D0Arr[PRIVATELAYERS+1];
-    __private double2 DhArr[PRIVATELAYERS+1];
-    double2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
-    double8 D0_line, Dh_line, Mvec;
-    double2 cOne = (double2)(1.0, 0.0);
+    __private float2 D0Arr[PRIVATELAYERS+1];
+    __private float2 DhArr[PRIVATELAYERS+1];
+    float2 C1, C2, C3, C4, Aloc, Bloc, Wloc, Vloc, Wi, Wgrad;
+    float8 D0_line, Dh_line, Mvec;
+    float2 cOne = (float2)(1.0, 0.0);
     int diff, stripeWidth, stripeHeight;
 
     unsigned int ii = get_global_id(0);
@@ -1443,15 +1372,15 @@ __kernel void tt_laue_spherical_bent(
     Aloc = A[ii]; Bloc = B[ii]; Wloc = W[ii];
     Vloc = V[ii];
     Wgrad = Wgrad_global[ii];
-    double2 AB = prod_c(Aloc, Bloc);
+    float2 AB = prod_c(Aloc, Bloc);
     C2 = cOne - Vloc;
     C4 = cOne + Vloc;
 
-    double2 BC2 = prod_c(Bloc, C2);
-    double2 BC4 = prod_c(Bloc, C4);
+    float2 BC2 = prod_c(Bloc, C2);
+    float2 BC4 = prod_c(Bloc, C4);
 
-    D0t[cnt_loc] = (double2)(0.0, 0.0);
-    Dht[cnt_loc] = (double2)(0.0, 0.0);
+    D0t[cnt_loc] = (float2)(0.0, 0.0);
+    Dht[cnt_loc] = (float2)(0.0, 0.0);
 
     int nStripes = ceil((float)nLayers/(float)(arrSize-1));
 
@@ -1461,8 +1390,8 @@ __kernel void tt_laue_spherical_bent(
         stripeHeight = max(nLayers + 1 - (n+1)*(arrSize-1), 0);
 
         for (j=0; j<stripeWidth; j++) {
-            D0Arr[j] = (double2)(0.0, 0.0);
-            DhArr[j] = (double2)(0.0, 0.0);
+            D0Arr[j] = (float2)(0.0, 0.0);
+            DhArr[j] = (float2)(0.0, 0.0);
         }
         //Parallel propagation
         for (i=0; i<stripeHeight; i++) {
@@ -1470,26 +1399,26 @@ __kernel void tt_laue_spherical_bent(
             DhArr[0] = Dht[cnt_loc+i];
             for (j=1; j<stripeWidth; j++) {
                 iLayer = n*(arrSize-1) + i + j - 1;
-                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad*((double)iLayer - 0.5);
+                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad*((float)iLayer - HALF);
                 C1 = cOne - Wi;
                 C3 = cOne + Wi;
 
-                D0_line = (double8)(prod_c(C4, C1),
+                D0_line = (float8)(prod_c(C4, C1),
                                     prod_c(Aloc, C1),
                                     AB,
                                     prod_c(Aloc, C3));
-                Dh_line = (double8)(BC4,
+                Dh_line = (float8)(BC4,
                                     AB,
                                     BC2,
                                     prod_c(C3, C2));
 
-                double2 EEr = rec_c(prod_c(C1, C2) - AB);
+                float2 EEr = rec_c(prod_c(C1, C2) - AB);
 
                 if ((n==0)&&(i==0)) {
-                    D0Arr[1] = (double2)(1.0, 0.0);
-                    DhArr[1] = (double2)(0.0, 0.0);
+                    D0Arr[1] = (float2)(1.0, 0.0);
+                    DhArr[1] = (float2)(0.0, 0.0);
                 } else {
-                    Mvec = (double8)(D0Arr[j],
+                    Mvec = (float8)(D0Arr[j],
                                      DhArr[j],
                                      D0Arr[j-1],
                                      DhArr[j-1]);
@@ -1507,21 +1436,21 @@ __kernel void tt_laue_spherical_bent(
             DhArr[0] = Dht[cnt_loc+i+stripeHeight];
             for (j=1; j<stripeWidth-i; j++) {
                 iLayer = n*(arrSize-1) + i + j + stripeHeight - 1;
-                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad*((double)iLayer - 0.5);
+                Wi = (iLayer == 0) ? Wloc : Wloc + Wgrad*((float)iLayer - HALF);
                 C1 = cOne - Wi;
                 C3 = cOne + Wi;
 
-                D0_line = (double8)(prod_c(C4, C1),
+                D0_line = (float8)(prod_c(C4, C1),
                                     prod_c(Aloc, C1),
                                     AB,
                                     prod_c(Aloc, C3));
-                Dh_line = (double8)(BC4,
+                Dh_line = (float8)(BC4,
                                     AB,
                                     BC2,
                                     prod_c(C3, C2));
 
-                double2 EEr = rec_c(prod_c(C1, C2) - AB);
-                Mvec = (double8)(D0Arr[j],
+                float2 EEr = rec_c(prod_c(C1, C2) - AB);
+                Mvec = (float8)(D0Arr[j],
                                  DhArr[j],
                                  D0Arr[j-1],
                                  DhArr[j-1]);
