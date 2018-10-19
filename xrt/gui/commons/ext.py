@@ -73,7 +73,7 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
         leading = '/' if os.name.startswith('posix') else ''
         docstring = docstring.replace('_images', leading+img_path)
 
-    srcdir = CONFDIR
+    srcdir = osp.join(CONFDIR, '_sources')
 #    srcdir = encoding.to_unicode_from_fs(srcdir)
     base_name = osp.join(srcdir, xrtQookPageName)
     rst_name = base_name + '.rst'
@@ -99,8 +99,8 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
     confoverrides = {'html_context': context,
                      'extensions': ['sphinx.ext.mathjax']}
 
-    doctreedir = osp.join(srcdir, 'doctrees')
-    sphinx_app = Sphinx(srcdir, CONFDIR, srcdir, doctreedir, buildername,
+    doctreedir = osp.join(CONFDIR, 'doctrees')
+    sphinx_app = Sphinx(srcdir, CONFDIR, CONFDIR, doctreedir, buildername,
                         confoverrides, status=None, warning=None,
                         freshenv=True, warningiserror=False, tags=None)
     try:
