@@ -74,6 +74,8 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
         docstring = docstring.replace('_images', leading+img_path)
 
     srcdir = osp.join(CONFDIR, '_sources')
+    if not os.path.exists(srcdir):
+        os.makedirs(srcdir)
 #    srcdir = encoding.to_unicode_from_fs(srcdir)
     base_name = osp.join(srcdir, xrtQookPageName)
     rst_name = base_name + '.rst'
