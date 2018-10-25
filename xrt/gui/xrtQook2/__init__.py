@@ -328,9 +328,17 @@ class MyComboBox(qt.QComboBox):
 
 
 class xrtPlotWidget(qt.QWidget):
-    def __init__(self, parent=None):
+    windowClosed = qt.pyqtSignal(int)
+
+    def __init__(self, parent=None, plotId=0):
         super(xrtPlotWidget, self).__init__()
         self.parentRef = parent
+        self.plotId = plotId
+
+    def closeEvent(self, event):
+        self.setVisible(False)
+        self.windowClosed.emit(self.plotId)
+        event.ignore()
 
 coordParams = ['center', 'pitch', 'roll', 'yaw', 'positionRoll', 'extraPitch',
                'extraRoll', 'extraYaw', 'rotationSequence',
@@ -1586,9 +1594,11 @@ class XrtQook(qt.QWidget):
                     q2 = qt.QSqlQuery()
                     q2.exec_("""SELECT beams.name FROM beams WHERE
                              beams.parent_id=(SELECT id FROM oes WHERE
-                             name='{}') AND type='beamLocal'""".format(oeName))
+                             name='{}')""".format(oeName))
+                    print(q2.lastQuery())
                     if q2.next():
                         paramValue = q2.value(0)
+                        print(paramValue)
                 if className == "XYCPlot":
                     paramType = 0 if paramName in plotBeamParams else 1
                     if paramName in ['xaxis', 'yaxis', 'caxis']:
@@ -1615,10 +1625,13 @@ class XrtQook(qt.QWidget):
                 self.processSqlError(query)
         self.plotsTable.model().select()
         self.initPythonObject('plots', pltLength)
-        self.plotWidgets[pltLength+1] = xrtPlotWidget(parent=self)
+        self.plotWidgets[pltLength+1] = xrtPlotWidget(
+                parent=self, plotId=pltLength+1)
         plotLayout = qt.QVBoxLayout()
         plotLayout.addWidget(self.objectsDict['plots'][pltLength+1].canvas)
         self.plotWidgets[pltLength+1].setLayout(plotLayout)
+        self.plotWidgets[pltLength+1].windowClosed.connect(
+                self.updatePlotState)
         self.plotWidgets[pltLength+1].show()
         self.showDoc(obj)
 
@@ -2044,6 +2057,12 @@ class XrtQook(qt.QWidget):
         self.showTutorial(self.fileDescription, "Description", img_path)
         self.descrEdit.setFocus()
 
+    def updatePlotState(self, plotId):
+        query = qt.QSqlQuery()
+        query.exec_("""UPDATE plots SET visibility=0 WHERE id={}""".format(
+                plotId))
+        self.plotsTable.model().select()
+
     def showWelcomeScreen(self):
         Qt_version = qt.QT_VERSION_STR
         PyQt_version = qt.PYQT_VERSION_STR
@@ -2179,6 +2198,10 @@ class XrtQook(qt.QWidget):
             backend=r"raycing",
             repeats=1,
             beamLine=self.beamLine)
+
+    def closeEvent(self, event):
+        self.db.close()
+        event.accept()
 
 
 if __name__ == '__main__':

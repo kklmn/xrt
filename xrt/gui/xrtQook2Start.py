@@ -5,6 +5,7 @@ __date__ = "27 Oct 2017"
 
 import sys
 import os
+import platform
 sys.path.append(os.path.join('..', '..'))
 import xrt.gui.xrtQook2 as xQ
 
@@ -22,11 +23,12 @@ if __name__ == '__main__':
 #    os.environ["QT_SCALE_FACTOR"] = "1.5"
 
     args = sys.argv
-#    args.append("--disable-web-security")
+    if platform.system() in ['Darwin']:
+        args.append("--disable-web-security")
     app = xQ.qt.QApplication(args)
-    
+
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")
-    ex.showMaximized()    
+    ex.showMaximized()
     ex.show()
     sys.exit(app.exec_())
