@@ -71,7 +71,8 @@ elif QtName == "PyQt5":
     locals().update(vars(PyQt5.QtCore.Qt))
 
     from PyQt5.QtOpenGL import QGLWidget
-    from PyQt5.QtSql import QSqlQuery, QSqlTableModel, QSqlQueryModel
+    from PyQt5.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
+                             QSqlQueryModel)
     try:
         import PyQt5.QtWebEngineWidgets as QtWeb
     except ImportError:
@@ -82,12 +83,12 @@ else:
     raise ImportError("Cannot import any Python Qt package!")
 
 if not starImport:
-    (QWidget, QApplication, QAction, QDrag, QTabWidget, QToolBar, QStatusBar,
+    (QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar,
      QTreeView, QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout,
      QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton) = (
-        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction, myQtGUI.QDrag,
+        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
         myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
@@ -98,10 +99,10 @@ if not starImport:
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
-     QDoubleValidator, QIntValidator) = (
+     QDoubleValidator, QIntValidator, QDrag) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
         QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
-        QtGui.QIntValidator)
+        QtGui.QIntValidator, QtGui.QDrag)
 
 
 class mySlider(QSlider):
