@@ -23,11 +23,11 @@ except ImportError:
 try:
     from spyder.widgets.externalshell import pythonshell
     isSpyderConsole = True
-except ImportError:
+except (ImportError, KeyError):
     try:
         from spyderlib.widgets.externalshell import pythonshell  # analysis:ignore
         isSpyderConsole = True
-    except ImportError:
+    except (ImportError, KeyError):
         isSpyderConsole = False
 
 isSphinx = True

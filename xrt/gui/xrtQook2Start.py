@@ -24,12 +24,9 @@ if __name__ == '__main__':
     args = sys.argv
 #    args.append("--disable-web-security")
     app = xQ.qt.QApplication(args)
-
+    
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")
-#    wIcon = xQ.qt.QIcon(':/xrtQook/_icons/xrQt1.ico')
-#    print(wIcon.isNull())
-#    app.setWindowIcon(wIcon)
-#    ex.setWindowIcon(wIcon)
+    ex.showMaximized()    
     ex.show()
     sys.exit(app.exec_())

@@ -221,15 +221,16 @@ class MyTableView(qt.QTableView):
 class ElementSqlTableModel(qt.QSqlTableModel):
 #    dataReloaded = qt.pyqtSignal()
 
-    def __init__(self, db, iconsDir):
+    def __init__(self, db, iconsDir, parentView):
         super(ElementSqlTableModel, self).__init__(db=db)
         self.iconsDir = iconsDir
+        self.parentView = parentView
 
     def data(self, index, role):
         if not index.isValid():
             return
-        dataR = qt.QSqlTableModel.data(self,
-                                       index, role=qt.QtCore.Qt.DisplayRole)
+        dataR = super(qt.QSqlTableModel, self).data(
+            index, role=qt.QtCore.Qt.DisplayRole)
         if (role == qt.QtCore.Qt.DisplayRole):
             if index.column() == 3 and self.tableName() == 'plots':
                 return ""
@@ -277,14 +278,22 @@ class ElementSqlTableModel(qt.QSqlTableModel):
     def flags(self, index):
         itemState = qt.QtCore.Qt.ItemIsEnabled
         if index.column() == 3 and self.tableName() == 'plots':
-            return itemState | qt.QtCore.Qt.ItemIsUserCheckable
-        return itemState
+            return itemState | qt.QtCore.Qt.ItemIsUserCheckable | qt.QtCore.Qt.ItemIsSelectable
+        return itemState | qt.QtCore.Qt.ItemIsEditable
 
-#    def setData(self, index, value, role):
-#        if not index.isValid() or role!=Qt.CheckStateRole: return False
-#        self._checked[index.row()][index.column()]=value
-#        self.dataChanged.emit(index, index)
-#        return True
+    def setData(self, index, value, role):
+        if not index.isValid():
+            return False
+        if (role == qt.QtCore.Qt.CheckStateRole and
+                self.tableName() == 'plots' and
+                index.column() == 3):
+            value = 1 if value else 0
+            role = qt.QtCore.Qt.EditRole
+
+        sdState = qt.QSqlTableModel.setData(self, index, value, role)
+        print(sdState, value)
+        self.dataChanged.emit(index, index)
+        return sdState
 
 
 class ParamSqlTableModel(qt.QSqlTableModel):
@@ -486,16 +495,16 @@ class XrtQook(qt.QWidget):
 
         saveScriptAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'pythonscriptsave.png')),
-            'Save Python Script',
+            'Export Python Script',
             self)
         saveScriptAction.setShortcut('Alt+S')
 #        saveScriptAction.triggered.connect(self.saveCode)
 
-        saveScriptAsAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, 'pythonscriptsaveas.png')),
-            'Save Python Script As ...',
-            self)
-        saveScriptAsAction.setShortcut('Alt+A')
+#        saveScriptAsAction = qt.QAction(
+#            qt.QIcon(os.path.join(self.iconsDir, 'pythonscriptsaveas.png')),
+#            'Save Python Script As ...',
+#            self)
+#        saveScriptAsAction.setShortcut('Alt+A')
 #        saveScriptAsAction.triggered.connect(self.saveCodeAs)
 
         runScriptAction = qt.QAction(
@@ -521,7 +530,7 @@ class XrtQook(qt.QWidget):
             self)
         if isOpenCL:
             OCLAction.setShortcut('Alt+I')
-#            OCLAction.triggered.connect(self.showOCLinfo)
+            OCLAction.triggered.connect(self.showOCLinfo)
 
         tutorAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'home.png')),
@@ -614,7 +623,7 @@ class XrtQook(qt.QWidget):
         self.toolBar.addSeparator()
         self.toolBar.addAction(generateCodeAction)
         self.toolBar.addAction(saveScriptAction)
-        self.toolBar.addAction(saveScriptAsAction)
+#        self.toolBar.addAction(saveScriptAsAction)
         self.toolBar.addAction(runScriptAction)
         self.toolBar.addSeparator()
         if gl.isOpenGL:
@@ -654,20 +663,20 @@ class XrtQook(qt.QWidget):
 #        self.matTree.customContextMenuRequested.connect(self.matMenu)
 #        self.beamlineTable.customContextMenuRequested.connect(self.openMenu)
 
-        if ext.isSpyderlib:
-            self.codeEdit = ext.codeeditor.CodeEditor(self)
-            self.codeEdit.setup_editor(linenumbers=True, markers=True,
-                                       tab_mode=False, language='py',
-                                       font=self.defaultFont,
-                                       color_scheme='Pydev')
-            qt.QShortcut(qt.QKeySequence.ZoomIn, self, lambda: self.zoom(1))
-            qt.QShortcut(qt.QKeySequence.ZoomOut, self, lambda: self.zoom(-1))
-            qt.QShortcut("Ctrl+0", self, lambda: self.zoom(0))
-            for action in self.codeEdit.menu.actions()[-3:]:
-                self.codeEdit.menu.removeAction(action)
-        else:
-            self.codeEdit = qt.QTextEdit()
-            self.codeEdit.setFont(self.defaultFont)
+#        if ext.isSpyderlib:
+#            self.codeEdit = ext.codeeditor.CodeEditor(self)
+#            self.codeEdit.setup_editor(linenumbers=True, markers=True,
+#                                       tab_mode=False, language='py',
+#                                       font=self.defaultFont,
+#                                       color_scheme='Pydev')
+#            qt.QShortcut(qt.QKeySequence.ZoomIn, self, lambda: self.zoom(1))
+#            qt.QShortcut(qt.QKeySequence.ZoomOut, self, lambda: self.zoom(-1))
+#            qt.QShortcut("Ctrl+0", self, lambda: self.zoom(0))
+#            for action in self.codeEdit.menu.actions()[-3:]:
+#                self.codeEdit.menu.removeAction(action)
+#        else:
+#            self.codeEdit = qt.QTextEdit()
+#            self.codeEdit.setFont(self.defaultFont)
 
         self.descrEdit = qt.QTextEdit()
         self.descrEdit.setFont(self.defaultFont)
@@ -678,18 +687,18 @@ class XrtQook(qt.QWidget):
 
         self.setGeometry(100, 100, 1200, 600)
 
-        if ext.isSpyderConsole:
-            self.codeConsole = ext.pythonshell.ExternalPythonShell(
-                wdir=os.path.dirname(__file__))
-
-        else:
-            self.qprocess = qt.QProcess()
-            self.qprocess.setProcessChannelMode(qt.QProcess.MergedChannels)
-            self.qprocess.readyReadStandardOutput.connect(self.readStdOutput)
-            qt.QShortcut("Ctrl+X", self, self.qprocess.kill)
-            self.codeConsole = qt.QTextEdit()
-            self.codeConsole.setFont(self.defaultFont)
-            self.codeConsole.setReadOnly(True)
+#        if ext.isSpyderConsole:
+#            self.codeConsole = ext.pythonshell.ExternalPythonShell(
+#                wdir=os.path.dirname(__file__))
+#
+#        else:
+#            self.qprocess = qt.QProcess()
+#            self.qprocess.setProcessChannelMode(qt.QProcess.MergedChannels)
+#            self.qprocess.readyReadStandardOutput.connect(self.readStdOutput)
+#            qt.QShortcut("Ctrl+X", self, self.qprocess.kill)
+#            self.codeConsole = qt.QTextEdit()
+#            self.codeConsole.setFont(self.defaultFont)
+#            self.codeConsole.setReadOnly(True)
 
         self.beamlineTable = MyTableView()
         self.oeCoordTable = MyTableView()
@@ -749,8 +758,8 @@ class XrtQook(qt.QWidget):
         self.tabs.addTab(tabSplitter, "Job Settings")
 
         self.tabs.addTab(self.descrEdit, "Description")
-        self.tabs.addTab(self.codeEdit, "Code")
-        self.tabs.addTab(self.codeConsole, "Console")
+#        self.tabs.addTab(self.codeEdit, "Code")
+#        self.tabs.addTab(self.codeConsole, "Console")
 
         self.initTables()
 
@@ -765,7 +774,8 @@ class XrtQook(qt.QWidget):
                 [[4, 5, 6], [3, 4, 5], [4, 5]]):
             self.objectsDict[table] = dict()  # Preparing the dicts for objects
 #            fModel = qt.QSqlTableModel()
-            fModel = ElementSqlTableModel(db=self.db, iconsDir=self.iconsDir)
+            fModel = ElementSqlTableModel(db=self.db, iconsDir=self.iconsDir,
+                                          parentView=view)
             fModel.setTable(table)
             fModel.setEditStrategy(qt.QSqlTableModel.OnFieldChange)
             fModel.dataChanged.connect(partial(self.addElementCombo, view))
@@ -1164,9 +1174,16 @@ class XrtQook(qt.QWidget):
             parent.insertRow(source.row() + 1, [child0, child1])
         return child0
 
-    def addElementCombo(self, view):
+    def addElementCombo(self, view, index):
         if view.model().tableName() in ['oes', 'plots']:
             comboColumn = 2 if view.model().tableName() == 'oes' else 1
+            if comboColumn == 1 and index.column() == 3:
+                plotPos = index.row()
+                plotVis = view.model().data(index,
+                                            role=qt.QtCore.Qt.CheckStateRole)
+                plotId = int(view.model().index(plotPos, 5).data())
+                print("Plot", plotId, "at", plotPos, "visible", plotVis)
+                self.plotWidgets[plotId].setVisible(bool(plotVis))
             for ii in range(view.model().rowCount()):
                 valueIndex = view.model().index(ii, comboColumn)
                 value = valueIndex.data()
@@ -1546,7 +1563,7 @@ class XrtQook(qt.QWidget):
         queryStr = """INSERT INTO plots (name, oe_id, type,
             visibility, position) SELECT "{0}", (SELECT id FROM oes WHERE
             name="{1}"), "{2}", {3}, {4}""".format(
-            plotName, oeName, template, 0, pltLength)
+            plotName, oeName, template, 1, pltLength)
         self.query.exec_(queryStr)
         self.processSqlError(self.query)
         obj = "{}.XYCPlot".format(xrtplot.__name__)
@@ -1598,7 +1615,7 @@ class XrtQook(qt.QWidget):
                 self.processSqlError(query)
         self.plotsTable.model().select()
         self.initPythonObject('plots', pltLength)
-        self.plotWidgets[pltLength+1] = xrtPlotWidget(parent=None)
+        self.plotWidgets[pltLength+1] = xrtPlotWidget(parent=self)
         plotLayout = qt.QVBoxLayout()
         plotLayout.addWidget(self.objectsDict['plots'][pltLength+1].canvas)
         self.plotWidgets[pltLength+1].setLayout(plotLayout)
@@ -1945,6 +1962,65 @@ class XrtQook(qt.QWidget):
         else:
             argDocStr = u'{0}\nDefiniiton: {1}\n\nType: {2}\n\n\n'.format(
                 nameStr.upper(), argSpecStr, noteStr) + argDocStr
+            self.webHelp.setText(textwrap.dedent(argDocStr))
+            self.webHelp.setReadOnly(True)
+
+    def showOCLinfo(self):
+        argDocStr = u""
+        for iplatform, platform in enumerate(cl_platforms):
+            argDocStr += 'Platform {0}: {1}\n'.format(iplatform, platform.name)
+            argDocStr += '-' * 25 + '\n\n'
+            argDocStr += ':Vendor:  {0}\n'.format(platform.vendor)
+            argDocStr += ':Version:  {0}\n'.format(platform.version)
+#            argDocStr += ':Extensions:  {0}\n'.format(platform.extensions)
+            for idevice, device in enumerate(platform.get_devices()):
+                maxFNLen = 0
+                maxFVLen = 0
+                argDocStr += '{0}**Device {1}**: {2}\n\n'.format(
+                    '', idevice, device.name)
+                fNames = ['*Type*',
+                          '*Max Clock Speed*',
+                          '*Compute Units*',
+                          '*Local Memory*',
+                          '*Constant Memory*',
+                          '*Global Memory*',
+                          '*FP64 Support*']
+                isFP64 = bool(int(device.double_fp_config/63))
+                strFP64 = str(isFP64)
+                if not isFP64:
+                    strFP64 = redStr.format(strFP64)
+                fVals = [cl.device_type.to_string(device.type, "%d"),
+                         str(device.max_clock_frequency) + ' MHz',
+                         str(device.max_compute_units),
+                         str(int(device.local_mem_size/1024)) + ' kB',
+                         str(int(
+                             device.max_constant_buffer_size/1024)) + ' kB',
+                         '{0:.2f}'.format(
+                             device.global_mem_size/1073741824.) + ' GB',
+                         strFP64]
+                for fieldName, fieldVal in zip(fNames, fVals):
+                    if len(fieldName) > maxFNLen:
+                        maxFNLen = len(fieldName)
+                    if len(fieldVal) > maxFVLen:
+                        maxFVLen = len(fieldVal)
+                spacerH = '{0}+{1}+{2}+\n'.format(
+                    myTab, (maxFNLen + 2) * '-', (maxFVLen + 4) * '-')
+                argDocStr += spacerH
+                for fName, fVal in zip(fNames, fVals):
+                    argDocStr += '{0}| {1} |  {2}  |\n'.format(
+                        myTab,
+                        fName + (maxFNLen - len(fName)) * ' ',
+                        fVal + (maxFVLen - len(fVal)) * ' ')
+                    argDocStr += spacerH
+        argDocStr += '\n'
+        argDocStr = argDocStr.replace('imagezoom::', 'image::')
+        if ext.isSphinx:
+            self.webHelp.history().clear()
+            self.webHelp.page().history().clear()
+            self.renderLiveDoc(
+                argDocStr, "OpenCL Platforms and Devices", "", "")
+        else:
+            argDocStr = "OpenCL Platforms and Devices\n\n" + argDocStr
             self.webHelp.setText(textwrap.dedent(argDocStr))
             self.webHelp.setReadOnly(True)
 
