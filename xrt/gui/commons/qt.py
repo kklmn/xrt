@@ -41,6 +41,8 @@ if QtName == "PyQt4":
     locals().update(vars(PyQt4.QtCore.Qt))
 
     from PyQt4.QtOpenGL import QGLWidget
+    from PyQt4.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
+                             QSqlQueryModel)
     import PyQt4.QtWebKit as QtWeb
     try:
         import PyQt4.Qwt5 as Qwt
@@ -69,6 +71,7 @@ elif QtName == "PyQt5":
     locals().update(vars(PyQt5.QtCore.Qt))
 
     from PyQt5.QtOpenGL import QGLWidget
+    from PyQt5.QtSql import QSqlQuery, QSqlTableModel, QSqlQueryModel
     try:
         import PyQt5.QtWebEngineWidgets as QtWeb
     except ImportError:
@@ -79,19 +82,19 @@ else:
     raise ImportError("Cannot import any Python Qt package!")
 
 if not starImport:
-    (QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar,
+    (QWidget, QApplication, QAction, QDrag, QTabWidget, QToolBar, QStatusBar,
      QTreeView, QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout,
      QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
-     QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel,
+     QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton) = (
-        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
+        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction, myQtGUI.QDrag,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
         myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
         myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
         myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
         myQtGUI.QListWidgetItem, myQtGUI.QGroupBox, myQtGUI.QProgressBar,
-        myQtGUI.QLabel, myQtGUI.QSizePolicy,
+        myQtGUI.QLabel, myQtGUI.QTableView, myQtGUI.QSizePolicy,
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,

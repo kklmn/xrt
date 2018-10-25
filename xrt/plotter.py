@@ -42,6 +42,12 @@ from matplotlib.ticker import MaxNLocator
 from . import runner
 # from runner import runCardVals, runCardProcs
 from .backends import raycing
+try:
+    from .gui.commons import qt
+except ImportError:
+    pass
+
+from matplotlib.figure import Figure
 
 try:  # for Python 3 compatibility:
     unicode = unicode
@@ -123,6 +129,13 @@ colorSaturation = 0.85
 def versiontuple(v):
     a = v.split(".")
     return tuple(map(int, [''.join(c for c in s if c.isdigit()) for s in a]))
+
+
+class MyQtFigCanvas(qt.FigCanvas):
+    def __init__(self, figure, xrtplot):
+        super(MyQtFigCanvas, self).__init__(figure)
+        self.xrtplot = xrtplot
+#        self.parentView = parentView
 
 
 class XYCAxis(object):
@@ -415,7 +428,7 @@ class XYCPlot(object):
         fluxFormatStr='auto', contourLevels=None, contourColors=None,
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
-            beamState=None, beamC=None):
+            beamState=None, beamC=None, useQtWidget=False):
         u"""
         *beam*: str
             The beam to be visualized.
@@ -643,11 +656,14 @@ class XYCPlot(object):
 
 
         """
-        plt.ion()
+        if not useQtWidget:
+            plt.ion()
         self.colorSaturation = colorSaturation
 
         self.beam = beam  # binary shadow image: star, mirr or screen
-        if '.' in beam:
+        if beam is None:
+            self.backend = 'raycing'
+        elif '.' in beam:
             self.backend = 'shadow'
         elif ('dummy' in beam) or (beam == ''):
             self.backend = 'dummy'
@@ -727,7 +743,11 @@ class XYCPlot(object):
         if self.ePos != 1:
             xFigSize += xSpaceExtraWhenNoEHistogram
 
-        self.fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi)
+        if useQtWidget:
+            self.fig = Figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi)
+        else:
+            self.fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi),
+                                  dpi=dpi)
         self.local_size_inches = self.fig.get_size_inches()
 
         self.fig.delaxes(self.fig.gca())
@@ -737,6 +757,9 @@ class XYCPlot(object):
             self.title = beam
         else:
             self.title = ' '
+        if useQtWidget:
+            self.canvas = MyQtFigCanvas(figure=self.fig, xrtplot=self)
+
         self.fig.canvas.set_window_title(self.title)
 
         if plt.get_backend().lower() in (
@@ -777,7 +800,8 @@ class XYCPlot(object):
             visible=(yPos != 0), **kwmpl)
 
         # make some labels invisible
-        plt.setp(
+        pset = plt.setp
+        pset(
             self.ax1dHistX.get_xticklabels() +
             self.ax1dHistX.get_yticklabels() +
             self.ax1dHistY.get_xticklabels() +
@@ -819,11 +843,11 @@ class XYCPlot(object):
             self.ax1dHistE = self.fig.add_axes(
                 rect1dE, sharey=self.ax1dHistEbar, autoscale_on=False,
                 frameon=frameon, **kwmpl)
-            plt.setp(
+            pset(
                 self.ax1dHistEbar.get_xticklabels() +
                 self.ax1dHistE.get_xticklabels() +
                 self.ax1dHistE.get_yticklabels(), visible=False)
-            plt.setp(self.ax1dHistEbar, xticks=())
+            pset(self.ax1dHistEbar, xticks=())
             self.ax1dHistE.yaxis.set_major_formatter(
                 mpl.ticker.ScalarFormatter(useOffset=False))
             if self.caxis.limits is not None:
@@ -846,11 +870,11 @@ class XYCPlot(object):
             self.ax1dHistE = self.fig.add_axes(
                 rect1dE, sharex=self.ax1dHistEbar, autoscale_on=False,
                 frameon=frameon, **kwmpl)
-            plt.setp(
+            pset(
                 self.ax1dHistEbar.get_yticklabels() +
                 self.ax1dHistE.get_yticklabels() +
                 self.ax1dHistE.get_xticklabels(), visible=False)
-            plt.setp(self.ax1dHistEbar, yticks=())
+            pset(self.ax1dHistEbar, yticks=())
             self.ax1dHistE.xaxis.set_major_formatter(
                 mpl.ticker.ScalarFormatter(useOffset=False))
             if self.caxis.limits is not None:
@@ -866,12 +890,14 @@ class XYCPlot(object):
                 for line in axXY.get_ticklines():
                     line.set_color('grey')
 
+        mplTxt = self.ax1dHistX.text if useQtWidget else plt.text
+
         if self.ePos == 1:
-            self.textDE = plt.text(
+            self.textDE = mplTxt(
                 xTextPosDy, yTextPosDy, ' ', rotation='vertical',
                 transform=self.ax1dHistE.transAxes, ha='left', va='center')
         elif self.ePos == 2:
-            self.textDE = plt.text(
+            self.textDE = mplTxt(
                 xTextPosDx, yTextPosDx, ' ',
                 transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
 
@@ -891,15 +917,15 @@ class XYCPlot(object):
 
         self.textNrays = None
         if self.backend == 'shadow' or self.backend == 'dummy':
-            self.textNrays = plt.text(
+            self.textNrays = mplTxt(
                 xTextPos, yTextPosNrays, ' ', transform=transform, ha='left',
                 va='top')
             self.nRaysNeeded = np.long(0)
             if self.rayFlag != 2:
-                self.textGoodrays = plt.text(
+                self.textGoodrays = mplTxt(
                     xTextPos, yTextPosGoodrays, ' ', transform=transform,
                     ha='left', va='top')
-            self.textI = plt.text(
+            self.textI = mplTxt(
                 xTextPos, yTextPosI, ' ', transform=transform, ha='left',
                 va='top')
         elif self.backend == 'raycing':
@@ -918,7 +944,7 @@ class XYCPlot(object):
             self.nRaysAcceptedE = 0.
             self.nRaysSeeded = np.long(0)
             self.nRaysSeededI = 0.
-            self.textNrays = plt.text(
+            self.textNrays = mplTxt(
                 xTextPos, yTextPosNraysR, ' ', transform=transform, ha='left',
                 va='top')
             self.textGood = None
@@ -927,38 +953,38 @@ class XYCPlot(object):
             self.textAlive = None
             self.textDead = None
             if 1 in self.rayFlag:
-                self.textGood = plt.text(
+                self.textGood = mplTxt(
                     xTextPos, yTextPosNrays1, ' ', transform=transform,
                     ha='left', va='top')
             if 2 in self.rayFlag:
-                self.textOut = plt.text(
+                self.textOut = mplTxt(
                     xTextPos, yTextPosNrays2, ' ', transform=transform,
                     ha='left', va='top')
             if 3 in self.rayFlag:
-                self.textOver = plt.text(
+                self.textOver = mplTxt(
                     xTextPos, yTextPosNrays3, ' ', transform=transform,
                     ha='left', va='top')
             if 4 in self.rayFlag:
-                self.textAlive = plt.text(
+                self.textAlive = mplTxt(
                     xTextPos, yTextPosGoodraysR, ' ', transform=transform,
                     ha='left', va='top')
             if not self.caxis.useCategory:
-                self.textI = plt.text(
+                self.textI = mplTxt(
                     xTextPos, yTextPosNrays4, ' ', transform=transform,
                     ha='left', va='top')
             else:
                 if (np.array(self.rayFlag) < 0).sum() > 0:
-                    self.textDead = plt.text(
+                    self.textDead = mplTxt(
                         xTextPos, yTextPosNrays4, ' ', transform=transform,
                         ha='left', va='top')
 
-        self.textDx = plt.text(
+        self.textDx = mplTxt(
             xTextPosDx, yTextPosDx, ' ', transform=self.ax1dHistX.transAxes,
             ha='center', va='bottom')
-        self.textDy = plt.text(
+        self.textDy = mplTxt(
             xTextPosDy, yTextPosDy, ' ', rotation='vertical',
             transform=self.ax1dHistY.transAxes, ha='left', va='center')
-        self.textStatus = plt.text(
+        self.textStatus = mplTxt(
             xTextPosStatus, yTextPosStatus, '', transform=self.fig.transFigure,
             ha='right', va='bottom', fontsize=9)
         self.textStatus.set_color('r')
@@ -996,7 +1022,8 @@ class XYCPlot(object):
 
         self.cidp = self.fig.canvas.mpl_connect(
             'button_press_event', self.on_press)
-        plt.ioff()
+        if not useQtWidget:
+            plt.ioff()
         self.fig.canvas.draw()
 
     def reset_bins2D(self):
@@ -1611,6 +1638,7 @@ class XYCPlot(object):
 
         try:
             self.fig.canvas.window().setWindowTitle(self.title)
+
         except AttributeError:
             pass
         self.nRaysAll = np.long(0)

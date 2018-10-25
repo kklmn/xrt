@@ -1027,6 +1027,10 @@ class BeamLine(object):
             else:
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
+    def run_process_qook(self, beamLine):
+        beamLine.propagate_flow()
+        return beamLine.beamsDict
+
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[]):
         if generator is not None:
