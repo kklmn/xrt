@@ -371,10 +371,11 @@ class XrtQook(qt.QWidget):
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
         self.db = qt.QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(":memory:")
-#        self.db.setDatabaseName("db4.dat")
+#        self.db.setDatabaseName("db5.dat")
         if not self.db.open():
             print("DATABASE NOT OPEN")
         self.query = qt.QSqlQuery()
+        self.queryStrings = dict()
         self.templates = ['Total Flux', 'Absorbed Power', 'Divergence',
                           'Custom']
         self.populateDatabase()
@@ -414,6 +415,7 @@ class XrtQook(qt.QWidget):
         self.sphinxWorker.moveToThread(self.sphinxThread)
         self.sphinxThread.started.connect(self.sphinxWorker.render)
         self.sphinxWorker.html_ready.connect(self._on_sphinx_thread_html_ready)
+        self.showWelcomeScreen()
 
         mainBox.addWidget(self.toolBar)
         tabsLayout = qt.QHBoxLayout()
@@ -437,7 +439,6 @@ class XrtQook(qt.QWidget):
         self.beamLineName = 'BeamLine'
         self.beamLine = raycing.BeamLine()
         self.beamLine.flowSource = 'Qook'
-#        self.initAllTrees()
 
     def check_pypi_version(self):
         try:
@@ -454,14 +455,14 @@ class XrtQook(qt.QWidget):
         except:
             pass
 
-    def _addAction(self, module, elname, afunction, menu):
+    def _addAction(self, module, elname, table, afunction, menu):
         objName = '{0}.{1}'.format(module.__name__, elname)
         elAction = qt.QAction(self)
         elAction.setText(elname)
         elAction.hovered.connect(
             partial(self.showObjHelp, objName))
         elAction.triggered.connect(
-            partial(afunction, elname, objName, None))
+            partial(afunction, elname, objName, table))
         menu.addAction(elAction)
 
     def initToolBar(self):
@@ -478,7 +479,7 @@ class XrtQook(qt.QWidget):
             'Load Beamline Layout',
             self)
         loadBLAction.setShortcut('Ctrl+L')
-#        loadBLAction.triggered.connect(self.importLayout)
+        loadBLAction.triggered.connect(self.importLayout)
 
         saveBLAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'filesave.png')),
@@ -545,35 +546,26 @@ class XrtQook(qt.QWidget):
             'Show Welcome Screen',
             self)
         tutorAction.setShortcut('Ctrl+H')
-#        tutorAction.triggered.connect(self.showWelcomeScreen)
-
-#        aboutAction = qt.QAction(
-#            qt.QIcon(os.path.join(self.iconsDir, 'dialog-information.png')),
-#            'About xrtQook',
-#            self)
-#        aboutAction.setShortcut('Ctrl+I')
-#        aboutAction.triggered.connect(self.aboutCode)
+        tutorAction.triggered.connect(self.showWelcomeScreen)
 
         self.vToolBar = qt.QToolBar('Add Elements buttons')
         self.vToolBar.setOrientation(qt.QtCore.Qt.Vertical)
         self.vToolBar.setIconSize(qt.QtCore.QSize(56, 56))
 
-#        print("populating classes table")
         modCounter = 0
         queryStr = """INSERT INTO classes (class_name, module_name, primary_type, secondary_type
             ) VALUES ('{0}', '{1}', {2}, {3})"""
-        for menuName, amodule, afunction, aicon in zip(
+        for menuName, amodule, afunction, table, aicon in zip(
                 ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
                  'Add Material', 'Add Plot'],
                 [rsources, roes, rapts, rscreens, rmats, None],
-                [self.addElement]*4 + [self.addMaterial, self.addPlot],
+                [self.addElement]*5 + [self.addPlot],
+                ['oes']*4 + ['materials'] + ['plots'],
                 ['add{0:1d}'.format(i+1) for i in range(6)]):
             amenuButton = qt.QToolButton()
             amenuButton.setIcon(qt.QIcon(os.path.join(
                 self.iconsDir, '{}.png'.format(aicon))))
             amenuButton.setToolTip(menuName)
-#            self.query.exec_("""INSERT INTO xrt_modules (module_name) VALUES
-#                             '{}' """.format(amodule.__name__))
 
             tmenu = qt.QMenu()
             if amodule is not None:
@@ -587,17 +579,19 @@ class XrtQook(qt.QWidget):
                                         elname, amodule.__name__, modCounter,
                                         isec))
                                 self._addAction(
-                                    amodule, elname, afunction, smenu)
+                                    amodule, elname, table, afunction, smenu)
                         else:  # as single entry itself
                             self.query.exec_(queryStr.format(
                                     sec, amodule.__name__, modCounter, -1))
-                            self._addAction(amodule, sec, afunction, tmenu)
+                            self._addAction(amodule, sec, table, afunction,
+                                            tmenu)
                 else:  # only with __all__
                     for elname in amodule.__all__:
                         self.query.exec_(queryStr.format(
                                 elname, amodule.__name__, modCounter, -1))
-                        self._addAction(amodule, elname, afunction, tmenu)
-            else:
+                        self._addAction(amodule, elname, table, afunction,
+                                        tmenu)
+            else:  # adding plots
                 for template in self.templates:
                     subAction = qt.QAction(self)
                     subAction.setText(template)
@@ -801,7 +795,7 @@ class XrtQook(qt.QWidget):
             for tc in hidC:
                 view.setColumnHidden(tc, True)
 
-        filterBase = "parent_id = (SELECT id FROM {0} WHERE position={1})"
+        filterBase = "parent_id = (SELECT id FROM {0} WHERE position={1}) AND ptype"
         for table, parent_table, view, parent_view, ptypeStr, hidC in zip(
                 ['oes_params']*2 + ['oes_methods'] + ['materials_params'] +
                 ['plots_params']*2 + ['axes_params']*3,
@@ -811,9 +805,7 @@ class XrtQook(qt.QWidget):
                  self.xParamTable, self.yParamTable, self.cParamTable],
                 [self.beamlineTable]*3 + [self.materialsTable] +
                 [self.plotsTable]*5,
-                [" AND ptype=1", " AND ptype=2", "", "",
-                 " AND ptype=0", " AND ptype=1", " AND ptype=2",
-                 " AND ptype=3", " AND ptype=4"],
+                ["=1", "=2", ">=0", ">=0", "=0", "=1", "=2", "=3", "=4"],
                 [list(range(2, 6))]*9):
             filterStr = filterBase + ptypeStr
             fModel = ParamSqlTableModel(
@@ -897,6 +889,7 @@ class XrtQook(qt.QWidget):
                     pname TEXT NOT NULL,
                     pvalue TEXT,
                     dvalue TEXT,
+                    ptype INTEGER,
                     parent_id INTEGER,
                     id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL)""")
         self.query.exec_("""CREATE TABLE plots (
@@ -934,8 +927,42 @@ class XrtQook(qt.QWidget):
                     type TEXT NOT NULL,
                     parent_id INTEGER NOT NULL,
                     id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL)""")
-        self.query.exec_("""INSERT INTO beams (beam_name, beam_type,
+
+        self.queryStrings['oes_insert'] =\
+            """INSERT INTO oes (name, class, type, oe_input, state, position)
+            SELECT "{0}", classes.class_name, classes.primary_type,
+            IFNULL((SELECT oes.id FROM oes, beams WHERE
+            beams.parent_id = oes.id AND
+            beams.type='beamGlobal'
+            ORDER BY oes.position DESC LIMIT 1), -1), 1,
+            {2} FROM classes WHERE class_name="{1}" """
+        self.queryStrings['materials_insert'] = \
+            """INSERT INTO materials (name, class, state, type, position)
+            SELECT "{0}", classes.class_name, 1, classes.primary_type, {2}
+            FROM classes WHERE classes.class_name="{1}" """
+        self.queryStrings['params_insert'] = \
+            """INSERT INTO {3}_params (pname, pvalue,
+            dvalue, ptype, parent_id) SELECT "{0}", "{1}",  "{1}", {2},
+            (SELECT MAX(id) FROM {3})"""
+        self.queryStrings['oes_input_update'] =\
+            """UPDATE oes SET oe_input = -1 WHERE id =
+            (SELECT MAX(id) FROM oes) AND type = 0"""
+        self.queryStrings['beams_insert'] =\
+            """INSERT INTO beams (name, type, parent_id) VALUES
+            ('{0}', '{1}', {2})"""
+        self.queryStrings['method_param_insert'] = \
+            """INSERT INTO oes_methods (pname, pvalue,
+             dvalue, ptype, parent_id) SELECT "{0}", "{1}", "{1}", {2},
+            (SELECT oes.id FROM oes WHERE oes.name="{3}")"""
+
+
+        self.query.exec_("""INSERT INTO beams (name, type,
                          parent_id) VALUES ('None', 'beamGlobal', -1)""")
+
+
+
+
+
         self.populateDBPlotParams()
 
     def processSqlError(self, query):
@@ -1098,8 +1125,8 @@ class XrtQook(qt.QWidget):
 
     def classNameToStr(self, name):
         className = str(name)
-        if len(className) > 2:
-            return '{0}{1}'.format(className[:2].lower(), className[2:])
+        if len(className) > 3:
+            return '{0}{1}'.format(className[:3].lower(), className[3:])
         else:
             return className.lower()
 
@@ -1398,166 +1425,52 @@ class XrtQook(qt.QWidget):
         combo.setInsertPolicy(1)
         return combo
 
-    def addElement(self, name, obj, copyFrom=None):
-        t0 = time.time()
-        blLength = self.beamlineTable.model().rowCount()
+    def addElement(self, name, obj, table, paramDict=None):
+        view = self.beamlineTable if table == 'oes' else self.materialsTable
+        model = view.model()
+        clsName = str(obj).split(".")[-1]
+        tableLength = model.rowCount()
         for i in range(99):
             elementName = self.classNameToStr(name) + '{:02d}'.format(i+1)
             dupl = False
-            for ibm in range(blLength):
-                if str(self.beamlineTable.model().index(ibm, 0).data()) ==\
+            for ibm in range(tableLength):
+                if str(model.index(ibm, 0).data()) ==\
                         str(elementName):
                     dupl = True
             if not dupl:
                 break
 
-        queryStr = """INSERT INTO oes (name, class, type, oe_input, state, position)
-                SELECT "{0}", classes.class_name, classes.primary_type,
-                IFNULL((SELECT oes.id FROM oes, beams WHERE
-                beams.parent_id = oes.id AND
-                beams.type='beamGlobal'
-                ORDER BY oes.position DESC LIMIT 1), -1), 1,
-                {2} FROM classes WHERE class_name='{1}'""".format(
-                elementName, name, blLength)
+        queryStr = self.queryStrings['{}_insert'.format(table)].format(
+                elementName, clsName, tableLength)
         self.query.exec_(queryStr)
         self.processSqlError(self.query)
 
-        queryStr = """UPDATE oes SET oe_input = -1 WHERE id =
-                (SELECT MAX(id) FROM oes) AND type = 0"""
-        self.query.exec_(queryStr)
-        self.processSqlError(self.query)
+        if table == 'oes':
+            self.query.exec_(self.queryStrings['oes_input_update'])
+            self.processSqlError(self.query)
 
         for arg, argVal in self.getParams(obj):
             paramtype = 1 if arg in coordParams else 2
+            if paramDict is not None:
+                try:
+                    argVal = paramDict[arg]
+                except (KeyError, TypeError):
+                    pass
             argVal = elementName if arg == 'name' else argVal
-            self.query.exec_("""INSERT INTO oes_params (pname, pvalue,
-                 dvalue, ptype, parent_id) SELECT "{0}", "{1}",  "{1}", {2},
-                (SELECT MAX(id) FROM oes)""".format(
-                arg, argVal, paramtype))
+            self.query.exec_(self.queryStrings['params_insert'].format(
+                arg, argVal, paramtype, table))
             self.processSqlError(self.query)
+
         t1 = time.time()
-        print("DB insert time:", t1-t0, "s")
-        self.initPythonObject('oes', blLength)
+        self.initPythonObject(table, tableLength)
         t2 = time.time()
         print("Python Object Init time:", t2-t1, "s")
-        self.beamlineTable.model().select()
-        self.autoAssignMethod(obj, elementName)
-        t3 = time.time()
-        print("Method insert time:", t3-t2, "s")
+        model.select()
         self.showDoc(obj)
-        t4 = time.time()
-        print("Doc Render time:", t4-t3, "s")
+        if table == 'oes':
+            self.autoAssignMethod(obj, elementName)
 
-    def autoAssignMethod(self, elClassStr, elName):
-        elCls = eval(elClassStr)
-        if hasattr(elCls, 'hiddenMethods'):
-            hmList = elCls.hiddenMethods
-        else:
-            hmList = []
-        for namef, objf in inspect.getmembers(elCls):
-            if (inspect.ismethod(objf) or inspect.isfunction(objf)) and\
-                    not str(namef).startswith("_") and\
-                    not str(namef) in hmList:
-                fdoc = objf.__doc__
-                if fdoc is not None:
-                    objfNm = '{0}.{1}'.format(elClassStr,
-                                              objf.__name__)
-                    fdoc = re.findall(r"Returned values:.*", fdoc)
-                    if len(fdoc) > 0 and (
-                            str(objf.__name__) not in
-                            self.experimentalModeFilter or
-                            self.experimentalMode):
-                        self.addMethod(objfNm, elName, fdoc)
-                        break
-
-    def addMethod(self, fnName, elName, fdoc):
-        fdoc = fdoc[0].replace("Returned values: ", '').split(',')
-        methodName = fnName.split('.')[-1] + '()'
-        self.query.exec_("""INSERT INTO oes_methods (pname, pvalue,
-             dvalue, ptype, parent_id) SELECT "{0}", "{1}", "{1}", {2},
-            (SELECT MAX(id) FROM oes)""".format(
-            "methodName", methodName, 0))  # method input parameters. Type 0 stands for method name
-        self.processSqlError(self.query)
-        for arg, argVal in self.getParams(fnName):
-                if arg == 'bl':
-                    argVal = self.beamLineName
-                elif 'beam' in arg:  # input parameters. taking the last global beam
-                    self.query.exec_("""SELECT beams.name FROM beams, oes WHERE
-                                  beams.type = 'beamGlobal' AND
-                                  beams.parent_id = IFNULL((SELECT oe_input FROM oes
-                                  WHERE name='{}'), 'None')""".format(elName))
-                    self.processSqlError(self.query)
-                    if self.query.next():
-                        argVal = "None" if arg.lower() == 'accubeam' else\
-                            self.query.value(0)
-                    arg = 'Incoming beam'
-
-                self.query.exec_("""INSERT INTO oes_methods (pname, pvalue,
-                     dvalue, ptype, parent_id) SELECT "{0}", "{1}", "{1}", {2},
-                    (SELECT MAX(id) FROM oes)""".format(
-                    arg, argVal, 1))  # method input parameters
-                self.processSqlError(self.query)
-        for outstr in fdoc:
-            outVal = outstr.strip()
-            beamName = '{0}_{1}'.format(elName, outVal)
-#                dupl = False
-#                for ibm in range(self.beamModel.rowCount()):
-#                    if str(self.beamModel.index(ibm, 0).data(0)) ==\
-#                            str(beamName):
-#                        dupl = True
-#                if not dupl:
-#                    break
-
-#            child0, child1 = self.addParam(methodOut, outval, beamName)
-#            if 'shine' in name:
-#                outval += 'Local'
-
-            queryStr = """INSERT INTO beams (name, type, parent_id) VALUES
-                    ("{0}", "{1}", (SELECT MAX(id) FROM oes))""".format(
-                    beamName, outVal.strip(('12')), elName)
-            self.query.exec_(queryStr)
-            self.processSqlError(self.query)
-            self.query.exec_("""INSERT INTO oes_methods (pname, pvalue,
-                 dvalue, ptype, parent_id) SELECT "Out {0}", "{1}", "{1}", {2},
-                (SELECT MAX(id) FROM oes)""".format(
-                outVal, beamName, 2))  # method input parameters
-            self.processSqlError(self.query)
-        self.showDoc(fnName)
-
-    def addMaterial(self, name, obj, copyFrom=None):
-        matLength = self.materialsTable.model().rowCount()
-        for i in range(99):
-            elementName = self.classNameToStr(name) + '{:02d}'.format(i+1)
-            dupl = False
-            for ibm in range(matLength):
-                if str(self.materialsTable.model().index(ibm, 0).data()) ==\
-                        str(elementName):
-                    dupl = True
-            if not dupl:
-                break
-
-        queryStr = """INSERT INTO materials (name, class, state, type, position)
-                SELECT "{0}", classes.class_name, 1, classes.primary_type, {2}
-                FROM classes WHERE classes.class_name="{1}" """.format(
-                elementName, name, matLength)
-        self.query.exec_(queryStr)
-#        print(self.query.lastQuery())
-        self.processSqlError(self.query)
-
-        for arg, argVal in self.getParams(obj):
-            argVal = elementName if arg == 'name' else argVal
-            queryStr = """INSERT INTO materials_params (pname, pvalue, dvalue,
-                          parent_id) SELECT "{0}", "{1}", "{1}",
-                          (SELECT max(id) FROM materials)"""
-            self.query.exec_(queryStr.format(
-                  arg, argVal))
-#            print(self.query.lastQuery())
-            self.processSqlError(self.query)
-        self.initPythonObject('materials', matLength)
-        self.materialsTable.model().select()
-        self.showDoc(obj)
-
-    def addPlot(self, oeName=None, template='Flux Total', copyFrom=None):
+    def addPlot(self, oeName=None, template='Flux Total', paramsDict=None):
         pltLength = self.plotsTable.model().rowCount()
         for i in range(99):
             plotName = '{0} - {1} {2:02d}'.format(oeName, template, i+1)
@@ -1595,10 +1508,8 @@ class XrtQook(qt.QWidget):
                     q2.exec_("""SELECT beams.name FROM beams WHERE
                              beams.parent_id=(SELECT id FROM oes WHERE
                              name='{}')""".format(oeName))
-                    print(q2.lastQuery())
                     if q2.next():
                         paramValue = q2.value(0)
-                        print(paramValue)
                 if className == "XYCPlot":
                     paramType = 0 if paramName in plotBeamParams else 1
                     if paramName in ['xaxis', 'yaxis', 'caxis']:
@@ -1634,6 +1545,73 @@ class XrtQook(qt.QWidget):
                 self.updatePlotState)
         self.plotWidgets[pltLength+1].show()
         self.showDoc(obj)
+
+    def addMethod(self, elName, methodDict, methodObj):
+        for methKey, methVal in methodDict.items():
+            for paramName, paramValue in methVal.items():
+                self.query.exec_(
+                    self.queryStrings['method_param_insert'].format(
+                        paramName, paramValue, methKey, elName))  # method input parameters. Type 0 stands for method name            
+                print(self.query.lastQuery())
+#        self.showDoc(methodObj)
+
+    def autoAssignMethod(self, elClassStr, elName):
+        elCls = eval(elClassStr)
+        methodDict = OrderedDict()
+        methInParams = OrderedDict()
+        methOutParams = OrderedDict()
+        if hasattr(elCls, 'hiddenMethods'):
+            hmList = elCls.hiddenMethods
+        else:
+            hmList = []
+        for namef, objf in inspect.getmembers(elCls):
+            if (inspect.ismethod(objf) or inspect.isfunction(objf)) and\
+                    not str(namef).startswith("_") and\
+                    not str(namef) in hmList:
+                fdoc = objf.__doc__
+                if fdoc is not None:
+                    objfNm = '{0}.{1}'.format(elClassStr,
+                                              objf.__name__)
+                    fdoc = re.findall(r"Returned values:.*", fdoc)
+                    if len(fdoc) > 0 and (
+                            str(objf.__name__) not in
+                            self.experimentalModeFilter or
+                            self.experimentalMode):
+                        break
+
+        fdoc = fdoc[0].replace("Returned values: ", '').split(',')
+        methodName = objfNm.split('.')[-1] + '()'
+        methodDict[0] = {'methodName': methodName}
+
+        for arg, argVal in self.getParams(objfNm):
+            if arg == 'bl':
+                argVal = self.beamLineName
+            elif 'beam' in arg:  # input parameters. taking the last global beam
+                self.query.exec_("""SELECT beams.name FROM beams, oes WHERE
+                              beams.type = 'beamGlobal' AND
+                              beams.parent_id = IFNULL((SELECT oe_input FROM oes
+                              WHERE name='{}'), 'None')""".format(elName))
+                self.processSqlError(self.query)
+                if self.query.next():
+                    argVal = "None" if arg.lower() == 'accubeam' else\
+                        self.query.value(0)
+            methInParams[arg] = argVal
+        methodDict[1] = methInParams
+
+        for outstr in fdoc:
+            outVal = outstr.strip()
+            beamName = '{0}_{1}'.format(elName, outVal)
+            methOutParams[outVal] = beamName
+            queryStr = """INSERT INTO beams (name, type, parent_id) VALUES
+                    ("{0}", "{1}", (SELECT MAX(id) FROM oes))""".format(
+                    beamName, outVal.strip(('12')), elName)
+            self.query.exec_(queryStr)
+            self.processSqlError(self.query)
+
+        methodDict[2] = methOutParams
+        self.addMethod(elName, methodDict, objfNm)
+
+
 
     def initPythonObject(self, table, position):
         elParams = OrderedDict()
@@ -1687,6 +1665,7 @@ class XrtQook(qt.QWidget):
                     elProps[4], elProps[1]))(**elParams)
             initState = 2
         except:
+            raise
             initState = 0
             elementInstance = None
 
@@ -1872,6 +1851,88 @@ class XrtQook(qt.QWidget):
             parseDescr(objRef)
 
         return sortDescr()
+
+    def importLayout(self):
+        def loadParams(pRecord):
+            paramsDict = OrderedDict()
+            for cRecord in pRecord:
+                if cRecord.attrib['type'] in ['prop', 'object']:
+                    continue
+                paramsDict[str(cRecord.tag)] = str(cRecord.text)
+            return paramsDict
+
+        self.isEmpty = True
+        if not self.isEmpty:
+            msgBox = qt.QMessageBox()
+            if msgBox.warning(self,
+                              'Warning',
+                              'Current layout will be overwritten. Continue?',
+                              buttons=qt.QMessageBox.Yes |
+                              qt.QMessageBox.No,
+                              defaultButton=qt.QMessageBox.No)\
+                    == qt.QMessageBox.Yes:
+                self.isEmpty = True
+        if self.isEmpty:
+            openFileName = ""
+            openDialog = qt.QFileDialog()
+            openDialog.setFileMode(qt.QFileDialog.ExistingFile)
+            openDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
+            openDialog.setNameFilter("XML files (*.xml)")
+            if (openDialog.exec_()):
+                openFileName = openDialog.selectedFiles()[0]
+                ldMsg = 'Loading layout from {}'.format(
+                        os.path.basename(str(openFileName)))
+                parseOK = False
+                try:
+                    treeImport = ET.parse(openFileName)
+                    parseOK = True
+                except (IOError, OSError, ET.ParseError) as errStr:
+                    ldMsg = str(errStr)
+                if parseOK:
+                    self.blUpdateLatchOpen = False
+                    root = treeImport.getroot()
+
+                    for beamName in list(loadParams(
+                            root.find('Beams')).keys()):
+                        self.query.exec_(
+                            self.queryStrings['beams_insert'].format(
+                                    beamName, "None", -1))
+
+                    for material in root.find('Materials'):
+                        materialName = material.tag
+                        materialObj = material.find('_object').text
+                        materialParams = loadParams(
+                                material.find('properties'))
+                        self.addElement(materialName, materialObj, 'materials',
+                                        materialParams)
+                        time.sleep(0.1)  # Material properties file error
+
+                    blName = root[2].tag
+                    for element in root[2]:
+                        if element.attrib['type'] != 'value':
+                            continue
+                        elementName = element.tag
+                        elementObj = element.find('_object').text
+                        elementParams = loadParams(element.find('properties'))
+                        self.addElement(elementName, elementObj, 'oes',
+                                        elementParams)
+                        for cRecord in element:
+                            if cRecord.tag in ['_object', 'properties']:
+                                continue
+                            methodObj = cRecord.find('_object').text
+                            methodDict = OrderedDict()
+                            methodDict[0] = {'methodName': cRecord.tag + "()"}
+                            methodDict[1] = loadParams(
+                                    cRecord.find('parameters'))
+                            methodDict[2] = loadParams(cRecord.find('output'))
+                            self.addMethod(elementName, methodDict, methodObj)
+                    for plot in root.find('plots'):
+                        plotName = plot.tag
+                        plotParams = loadParams(plot)
+                        for axis in plot:
+                            if axis.attrib['type'] == 'prop':
+                                axisName = axis.tag
+                                axisParams = loadParams(axis)
 
     def moveItem(self, oldPos, newPos):
         print("Start moving!")
@@ -2168,7 +2229,7 @@ class XrtQook(qt.QWidget):
                 return methodObj, inkwargs, outkwargs
             else:
                 return None, None, None
-#
+
         def buildFlow(startFrom=0):
             blFlow = []
             query = qt.QSqlQuery()

@@ -29,6 +29,6 @@ if __name__ == '__main__':
 
     ex = xQ.XrtQook()
     ex.setWindowTitle("xrtQook")
-    ex.showMaximized()
+#    ex.showMaximized()
     ex.show()
     sys.exit(app.exec_())
