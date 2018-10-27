@@ -823,7 +823,6 @@ class BeamLine(object):
                     " for {1}.".format(v1, v2)
             print("Warning: the flow seems corrupt. Make sure each propagation"
                   " method assigns returned beams to local variables." + addw)
-
         if self.flowSource != 'legacy':
             return
         frame = inspect.currentframe()
@@ -1026,10 +1025,6 @@ class BeamLine(object):
                     self.beamsDict[beamName] = outBeam
             else:
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
-
-    def run_process_qook(self, beamLine):
-        beamLine.propagate_flow()
-        return beamLine.beamsDict
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[]):

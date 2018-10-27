@@ -164,26 +164,6 @@ class SphinxWorker(qt.QObject):
         self.html_ready.emit()
 
 
-#class MyTreeView(qt.QTreeView):
-#    sig_MoveItem = qt.pyqtSignal(int, int)
-#
-#    def dropEvent(self, event):
-#        oldRow = None
-#        newRow = None
-#        indexes = self.selectedIndexes()
-#        if len(indexes) > 0:
-#            oldRow = indexes[0].row()
-#        index = self.indexAt(event.pos())
-#        while index.parent().isValid():
-#            child = index
-#            newRow = index.row()
-#            index = index.parent()
-#        print(child.data())
-#        if all([oldRow, newRow]):
-#            if oldRow != newRow:
-#                print("Moving by DND", oldRow, newRow)
-#                self.sig_MoveItem.emit(oldRow, newRow)
-
 class MyTableView(qt.QTableView):
     sig_MoveItem = qt.pyqtSignal(int, int)
 
@@ -219,7 +199,6 @@ class MyTableView(qt.QTableView):
 
 
 class ElementSqlTableModel(qt.QSqlTableModel):
-#    dataReloaded = qt.pyqtSignal()
 
     def __init__(self, db, iconsDir, parentView):
         super(ElementSqlTableModel, self).__init__(db=db)
@@ -291,7 +270,6 @@ class ElementSqlTableModel(qt.QSqlTableModel):
             role = qt.QtCore.Qt.EditRole
 
         sdState = qt.QSqlTableModel.setData(self, index, value, role)
-#        print(sdState, value)
         self.dataChanged.emit(index, index)
         return sdState
 
@@ -307,8 +285,10 @@ class ParamSqlTableModel(qt.QSqlTableModel):
 
     def updateFilterRow(self, index):
         filterStr = self.filter()
+        rr = index.row()
+        cc = self.parentView.model().columnCount()
+        self.parentId = self.parentView.model().index(rr, cc-1).data()
         newFilterStr = self.filterStr.format(self.parentTable, index.row())
-        self.parentElement = index.row()
         if filterStr != newFilterStr:
             self.setFilter(newFilterStr)
             self.select()
@@ -354,6 +334,7 @@ class XrtQook(qt.QWidget):
 
     def __init__(self):
         super(XrtQook, self).__init__()
+        self.setAttribute(qt.QtCore.Qt.WA_DeleteOnClose, True)
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
         self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
@@ -369,9 +350,10 @@ class XrtQook(qt.QWidget):
 
         self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
+        self.axesIndex = {'xaxis': 2, 'yaxis': 3, 'caxis': 4}
         self.db = qt.QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName(":memory:")
-#        self.db.setDatabaseName("db5.dat")
+#        self.db.setDatabaseName("db1.db")
         if not self.db.open():
             print("DATABASE NOT OPEN")
         self.query = qt.QSqlQuery()
@@ -613,8 +595,6 @@ class XrtQook(qt.QWidget):
 #        self.tabs.setStyleSheet("QTabBar::tab {padding: 5px 5px 5px 5px;}")
         self.toolBar = qt.QToolBar('Action buttons')
 
-#        self.statusBar = qt.QStatusBar()
-#        self.statusBar.setSizeGripEnabled(False)
         self.progressBar = qt.QProgressBar()
         self.progressBar.setTextVisible(True)
         self.progressBar.setRange(0, 100)
@@ -831,7 +811,7 @@ class XrtQook(qt.QWidget):
 
     def reInitElement(self, indexTL, indexBR):
         sender = self.sender()
-        self.initPythonObject(sender.parentTable, sender.parentElement)
+        self.initPythonObject(sender.parentTable, sender.parentId)
         sender.parentView.model().select()
 
     def populatePlotsMenu(self, template):
@@ -935,18 +915,19 @@ class XrtQook(qt.QWidget):
             beams.parent_id = oes.id AND
             beams.type='beamGlobal'
             ORDER BY oes.position DESC LIMIT 1), -1), 1,
-            {2} FROM classes WHERE class_name="{1}" """
+            (SELECT COUNT(*) FROM oes) FROM classes WHERE class_name="{1}" """
         self.queryStrings['materials_insert'] =\
             """INSERT INTO materials (name, class, state, type, position)
-            SELECT "{0}", classes.class_name, 1, classes.primary_type, {2}
+            SELECT "{0}", classes.class_name, 1, classes.primary_type,
+            (SELECT COUNT(*) FROM materials)
             FROM classes WHERE classes.class_name="{1}" """
         self.queryStrings['params_insert'] =\
             """INSERT INTO {3}_params (pname, pvalue,
             dvalue, ptype, parent_id) SELECT "{0}", "{1}",  "{1}", {2},
             (SELECT MAX(id) FROM {3})"""
         self.queryStrings['oes_input_update'] =\
-            """UPDATE oes SET oe_input = -1 WHERE id =
-            (SELECT MAX(id) FROM oes) AND type = 0"""
+            """UPDATE oes SET oe_input = -1 WHERE id=
+            (SELECT MAX(id) FROM oes) AND type=0"""
         self.queryStrings['beams_insert'] =\
             """INSERT INTO beams (name, type, parent_id) VALUES
             ('{0}', '{1}', {2})"""
@@ -957,12 +938,13 @@ class XrtQook(qt.QWidget):
         self.queryStrings['plots_insert'] =\
             """INSERT INTO plots (name, oe_id, type,
             visibility, position) SELECT "{0}", (SELECT id FROM oes WHERE
-            name="{1}"), "{2}", {3}, {4}"""
+            name="{1}"), "{2}", {3}, (SELECT COUNT(*) FROM plots)"""
         self.queryStrings['plots_param_insert'] =\
             """INSERT INTO {4}_params (pname, pvalue,
             dvalue, ptype, parent_id) SELECT "{0}", "{1}", "{2}", {3},
             (SELECT MAX(id) FROM plots)"""
-
+        self.queryStrings['get_last_rowid'] =\
+            "SELECT LAST_INSERT_ROWID()"
         self.query.exec_("""INSERT INTO beams (name, type,
                          parent_id) VALUES ('None', 'beamGlobal', -1)""")
 
@@ -982,7 +964,7 @@ class XrtQook(qt.QWidget):
 #
 #
 #
-#        self.query.exec_("""INSERT INTO plot_template_params (ttype, ptype, pname, 
+#        self.query.exec_("""INSERT INTO plot_template_params (ttype, ptype, pname,
 #            pvalue) VALUES (0, 0, "fluxKind", "total")""")
 
 
@@ -1224,16 +1206,16 @@ class XrtQook(qt.QWidget):
             parent.insertRow(source.row() + 1, [child0, child1])
         return child0
 
-    def addElementCombo(self, view, index):
+    def addElementCombo(self, view, index=None):
         if view.model().tableName() in ['oes', 'plots']:
             comboColumn = 2 if view.model().tableName() == 'oes' else 1
-            if comboColumn == 1 and index.column() == 3:
-                plotPos = index.row()
-                plotVis = view.model().data(index,
-                                            role=qt.QtCore.Qt.CheckStateRole)
-                plotId = int(view.model().index(plotPos, 5).data())
-                print("Plot", plotId, "at", plotPos, "visible", plotVis)
-                self.plotWidgets[plotId].setVisible(bool(plotVis))
+            if index is not None:
+                if comboColumn == 1 and index.column() == 3:
+                    plotPos = index.row()
+                    plotVis = view.model().data(
+                            index, role=qt.QtCore.Qt.CheckStateRole)
+                    plotId = int(view.model().index(plotPos, 5).data())
+                    self.plotWidgets[plotId].setVisible(bool(plotVis))
             for ii in range(view.model().rowCount()):
                 valueIndex = view.model().index(ii, comboColumn)
                 value = valueIndex.data()
@@ -1257,29 +1239,9 @@ class XrtQook(qt.QWidget):
                 combo.currentIndexChanged['QString'].connect(partial(
                     view.setDataFromCombo, valueIndex, 'oes'))
                 view.setIndexWidget(valueIndex, combo)
+                self.beamlineTable.model().dataChanged.connect(
+                        combo.reload_model)
 
-#    def addPlotCombo(self, view):
-#        for ii in range(view.model().rowCount()):
-#            valueIndex = view.model().index(ii, 1)
-#            value = valueIndex.data()
-#            query = qt.QSqlQuery()
-#            query.exec_("SELECT name FROM oes WHERE id={}".format(value))
-#            currentName = query.value(0) if query.next() else ""
-#            queryStr = """SELECT oes.name, oes.id FROM oes, beams WHERE
-#                beams.parent_id = oes.id AND
-#                beams.type='beamGlobal' AND
-#                oes.position < {} ORDER BY oes.position""".format(
-#                    ii if int(view.model().index(ii, 4).data()) > 0 else -10)
-#            query.exec_(queryStr)
-#            self.processSqlError(query)
-#            fModel = qt.QSqlQueryModel()
-#            fModel.setQuery(query)
-#            combo = MyComboBox()
-#            combo.setModel(fModel)
-#            combo.setCurrentIndex(combo.findText(currentName))
-#            combo.currentIndexChanged['QString'].connect(partial(
-#                                    view.setDataFromCombo, valueIndex, 'oes'))
-#            view.setIndexWidget(valueIndex, combo)
         view.setVisible(False)
         view.setVisible(True)
 
@@ -1445,8 +1407,14 @@ class XrtQook(qt.QWidget):
         model = view.model()
         clsName = str(obj).split(".")[-1]
         tableLength = model.rowCount()
+        elementId = None
+
+        elementName = name
+        baseName = name
+        dupl = False
         for i in range(99):
-            elementName = self.classNameToStr(name) + '{:02d}'.format(i+1)
+            if dupl:
+                elementName = baseName + '{:02d}'.format(i)
             dupl = False
             for ibm in range(tableLength):
                 if str(model.index(ibm, 0).data()) ==\
@@ -1456,9 +1424,12 @@ class XrtQook(qt.QWidget):
                 break
 
         queryStr = self.queryStrings['{}_insert'.format(table)].format(
-                elementName, clsName, tableLength)
+                elementName, clsName)
         self.query.exec_(queryStr)
         self.processSqlError(self.query)
+        self.query.exec_(self.queryStrings['get_last_rowid'])
+        if self.query.next():
+            elementId = self.query.value(0)
 
         if table == 'oes':
             self.query.exec_(self.queryStrings['oes_input_update'])
@@ -1473,11 +1444,11 @@ class XrtQook(qt.QWidget):
                     pass
             argVal = elementName if arg == 'name' else argVal
             self.query.exec_(self.queryStrings['params_insert'].format(
-                arg, argVal, paramtype, table))
+                arg, self.halfQuotes(argVal), paramtype, table))
             self.processSqlError(self.query)
 
         t1 = time.time()
-        self.initPythonObject(table, tableLength)
+        self.initPythonObject(table, elementId)
         t2 = time.time()
         print("Python Object Init time:", t2-t1, "s")
         model.select()
@@ -1487,26 +1458,22 @@ class XrtQook(qt.QWidget):
 
     def addPlot(self, plotList=None, paramsDict=None):
         self.query.exec_(self.queryStrings['plots_insert'].format(
-            *plotList))
-#        print(self.query.lastQuery())
-        self.processSqlError(self.query) 
-        #    (plotName, oeName, template, 1, plotPosition)
-        self.query.exec_("""SELECT id FROM plots WHERE name="{}" """.format(
-            plotList[0]))
-        
+            *plotList))  # (plotName, oeName, template, initial_visibility)
+        self.processSqlError(self.query)
+        self.query.exec_(self.queryStrings['get_last_rowid'])
+        self.processSqlError(self.query)
         if self.query.next():
             plotId = self.query.value(0)
         else:
             return
-        self.processSqlError(self.query) 
 
         for icln, className in enumerate(["XYCPlot"] + ["XYCAxis"]*3):
             self.query.exec_("""SELECT param_name, param_value FROM default_params
                              WHERE class_name='{}'""".format(className))
-            self.processSqlError(self.query) 
+            self.processSqlError(self.query)
             while self.query.next():
                 paramName = self.query.value(0)
-                if paramName in ['xaxis', 'yaxis', 'caxis']:
+                if paramName in self.axesIndex.keys():
                     continue
                 defParamVal = self.query.value(1)
                 paramValue = defParamVal
@@ -1520,14 +1487,13 @@ class XrtQook(qt.QWidget):
                     pass
                 q2 = qt.QSqlQuery()
                 q2.exec_(self.queryStrings['plots_param_insert'].format(
-                paramName, paramValue, defParamVal, paramType, 
+                paramName, paramValue, defParamVal, paramType,
                 'plots' if paramType < 2 else 'axes'))
-#                print(q2.lastQuery())
-                self.processSqlError(q2) 
+                self.processSqlError(q2)
 
         obj = "{}.XYCPlot".format(xrtplot.__name__)
         self.plotsTable.model().select()
-        self.initPythonObject('plots', plotList[4])
+        self.initPythonObject('plots', plotId)
         self.plotWidgets[plotId] = xrtPlotWidget(
                 parent=self, plotId=plotId)
         plotLayout = qt.QVBoxLayout()
@@ -1535,7 +1501,8 @@ class XrtQook(qt.QWidget):
         self.plotWidgets[plotId].setLayout(plotLayout)
         self.plotWidgets[plotId].windowClosed.connect(
                 self.updatePlotState)
-        self.plotWidgets[plotId].show()
+        if bool(plotList[3]):
+            self.plotWidgets[plotId].show()
         self.showDoc(obj)
 
     def addMethod(self, elName, methodDict, methodObj):
@@ -1543,14 +1510,15 @@ class XrtQook(qt.QWidget):
             for paramName, paramValue in methVal.items():
                 self.query.exec_(
                     self.queryStrings['method_param_insert'].format(
-                        paramName, paramValue, methKey, elName))  # method input parameters. Type 0 stands for method name            
-#                print(self.query.lastQuery())
+                        paramName, paramValue, methKey, elName))
+                self.processSqlError(self.query)
+                # method input parameters. Type 0 stands for method name
 #        self.showDoc(methodObj)
 
     def preparePlot(self, oeName=None, plotType='Flux Total'):
         pltLength = self.plotsTable.model().rowCount()
         pltName = "{0:2d} {1} - {2}".format(pltLength, oeName, plotType)
-        plotList = [pltName, oeName, plotType, 1, pltLength]
+        plotList = [pltName, oeName, plotType, 1]
 
         paramDict = OrderedDict()
         paramDict[0] = dict()
@@ -1575,7 +1543,7 @@ class XrtQook(qt.QWidget):
                         paramValue = q2.value(0)
                 if className == "XYCPlot":
                     paramType = 0 if paramName in plotBeamParams else 1
-                    if paramName in ['xaxis', 'yaxis', 'caxis']:
+                    if paramName in self.axesIndex.keys():
                         continue
                     elif paramName == "title":
                         paramValue = pltName
@@ -1650,23 +1618,22 @@ class XrtQook(qt.QWidget):
         methodDict[2] = methOutParams
         self.addMethod(elName, methodDict, objfNm)
 
-    def initPythonObject(self, table, position):
+    def initPythonObject(self, table, elementId):
         elParams = OrderedDict()
-        queryStr = """SELECT id, "XYCPlot", 0, 0, "xrt.plotter" FROM {0}
-                   WHERE position={1}""" if table == 'plots' else\
-                   """SELECT  {0}.id, {0}.class, {0}.type, {0}.name, classes.module_name
-                   FROM {0}, classes WHERE {0}.position={1} AND
+        queryStr = """SELECT "XYCPlot", 0, 0, "xrt.plotter" FROM {0}
+                   WHERE id={1}""" if table == 'plots' else\
+                   """SELECT  {0}.class, {0}.type, {0}.name, classes.module_name
+                   FROM {0}, classes WHERE {0}.id={1} AND
                    {0}.class = classes.class_name"""
-        self.query.exec_(queryStr.format(table, position))
+        self.query.exec_(queryStr.format(table, elementId))
         self.processSqlError(self.query)
         while self.query.next():
             elProps = [self.query.value(0), self.query.value(1),
-                       self.query.value(2), self.query.value(3),
-                       self.query.value(4)]
+                       self.query.value(2), self.query.value(3)]
             #  0-id, 1-class, 2-type, 3-name, 4-module,
         self.query.exec_("""SELECT  pname, pvalue FROM {0}_params WHERE
                          parent_id={1}{2}""".format(
-                         table, elProps[0],
+                         table, elementId,
                          " AND ptype<2" if table == 'plots' else ""))
         self.processSqlError(self.query)
         while self.query.next():
@@ -1682,24 +1649,30 @@ class XrtQook(qt.QWidget):
                     [self.getVal(c.strip())
                      for c in str.split(
                      paramValue, ',')]
+                elParams[paramName] = paramValue
+            elif paramName.lower() in ['tlayer', 'blayer', 'coating',
+                                       'material', 'material2', 'substrate']:
+                paramValue =\
+                    self.objectsDict['materials'][paramValue][0]
+                elParams[paramName] = paramValue
             else:
                 elParams[paramName] = self.parametrize(paramValue)
         if table == 'plots':
             for iax, axis in enumerate(['xaxis', 'yaxis', 'caxis']):
                 self.query.exec_("""SELECT  pname, pvalue FROM axes_params WHERE
                                  parent_id={0} AND ptype={1}""".format(
-                                 elProps[0], iax+2))
+                                 elementId, iax+2))
                 axParams = OrderedDict()
                 while self.query.next():
                     paramName = self.query.value(0)
                     paramValue = self.query.value(1)
                     axParams[paramName] = self.parametrize(paramValue)
                 axisObj = eval("{0}.{1}".format(
-                        elProps[4], "XYCAxis"))(**axParams)
+                        elProps[3], "XYCAxis"))(**axParams)
                 elParams[axis] = axisObj
         try:
             elementInstance = eval("{0}.{1}".format(
-                    elProps[4], elProps[1]))(**elParams)
+                    elProps[3], elProps[0]))(**elParams)
             initState = 2
         except:
             raise
@@ -1707,12 +1680,12 @@ class XrtQook(qt.QWidget):
             elementInstance = None
 
         if table == 'plots':
-            self.objectsDict[table][elProps[0]] = elementInstance
+            self.objectsDict[table][elementId] = elementInstance
         else:
-            self.objectsDict[table][elProps[3]] = [elementInstance, elProps[2]]
+            self.objectsDict[table][elProps[2]] = [elementInstance, elProps[1]]
             self.query.exec_("""UPDATE {0} SET state={1}
                              WHERE id={2}""".format(
-                             table, initState, elProps[0]))
+                             table, initState, elementId))
             self.processSqlError(self.query)
 
     def getVal(self, value):
@@ -1731,13 +1704,19 @@ class XrtQook(qt.QWidget):
         value = self.getVal(value)
         if isinstance(value, (str, unicode)):
             if 'np.' not in value:
-                value = 'r\"{}\"'.format(value)
+                value = 'r\'{}\''.format(value)
         if isinstance(value, tuple):
             value = list(value)
         return str(value)
 
     def quotizeAll(self, value):
-        return str('r\"{}\"'.format(value))
+        return str('r\'{}\''.format(value))
+
+    def halfQuotes(self, value):
+        if isinstance(value, raycing.basestring):
+            return re.sub('\"', '\'', value)
+        else:
+            return value
 
     def parametrize(self, value):
         try:
@@ -1792,7 +1771,6 @@ class XrtQook(qt.QWidget):
                                                    argSpec[3]):
                                 if arg == 'bl':
                                     argVal = 'beamLine'
-#                                    argVal = self.rootBLItem.text()
                                 if arg not in args and arg not in hpList:
                                     uArgs[arg] = argVal
                         if namef == "__init__" or namef.endswith("pop_kwargs"):
@@ -1898,6 +1876,27 @@ class XrtQook(qt.QWidget):
                 paramsDict[str(cRecord.tag)] = str(cRecord.text)
             return paramsDict
 
+        def fixBeamStructure(bName, bType, oeName):
+            self.query.exec_("""UPDATE beams SET parent_id=
+                             (SELECT oes.id FROM oes
+                             WHERE oes.name="{1}"), type="{2}"
+                             WHERE name="{0}" """.format(
+                                 bName, oeName, bType))
+            self.processSqlError(self.query)
+
+        def fixOEStructure():
+            self.query.exec_("SELECT id FROM oes")
+            while self.query.next():
+                q3 = qt.QSqlQuery()
+                q3.exec_("""UPDATE oes SET oe_input=(SELECT beams.parent_id
+                            FROM beams, oes_methods WHERE
+                            beams.name=oes_methods.pvalue
+                            AND oes_methods.ptype=1
+                            AND oes_methods.parent_id={0} LIMIT 1)
+                            WHERE id={0}""".format(
+                            self.query.value(0)))
+                self.processSqlError(q3)
+
         self.isEmpty = True
         if not self.isEmpty:
             msgBox = qt.QMessageBox()
@@ -1944,7 +1943,7 @@ class XrtQook(qt.QWidget):
                                         materialParams)
                         time.sleep(0.1)  # Material properties file error
 
-                    blName = root[2].tag
+                    self.beamLineName = root[2].tag
                     for element in root[2]:
                         if element.attrib['type'] != 'value':
                             continue
@@ -1962,15 +1961,55 @@ class XrtQook(qt.QWidget):
                             methodDict[1] = loadParams(
                                     cRecord.find('parameters'))
                             methodDict[2] = loadParams(cRecord.find('output'))
+                            for mpName, mpVal in methodDict[2].items():
+                                fixBeamStructure(
+                                    mpVal, str(mpName).strip('12'),
+                                    elementName)
                             self.addMethod(elementName, methodDict, methodObj)
+
+                    fixOEStructure()
+
                     for plot in root.find('plots'):
                         plotName = plot.tag
+                        plotOe = -1
                         plotDict = OrderedDict()
-                        plotDict['params'] = loadParams(plot)
+                        plotDict[0] = dict()
+                        plotDict[1] = dict()
+                        plotParams = loadParams(plot)
+                        plotType = plotParams['fluxKind']
+                        plotName = plotParams['title'] if\
+                            plotParams['title'] != "" else plotName
+                        query = qt.QSqlQuery()
+                        query.exec_("""SELECT oes.name FROM oes, beams WHERE
+                                    oes.id=beams.parent_id AND
+                                    beams.name="{}" LIMIT 1""".format(
+                                        plotParams['beam']))
+                        self.processSqlError(query)
+                        if query.next():
+                            plotOe = query.value(0)
+                        plotList = [plotName, plotOe, plotType, 0]
+#                        print(plotList)
+                        for paramName, paramValue in plotParams.items():
+                            pType = 0 if paramName in plotBeamParams else 1
+                            plotDict[pType][paramName] = paramValue
                         for axis in plot:
                             if axis.attrib['type'] == 'prop':
-                                plotDict[axis.tag] = loadParams(axis)
-#                        self.addPlot()
+                                plotDict[self.axesIndex[axis.tag]] =\
+                                    loadParams(axis)
+                        self.addPlot(plotList, plotDict)
+
+                    self.layoutFileName = openFileName
+                    self.fileDescription = root[5].text if\
+                        len(root) > 5 else ""
+                    self.descrEdit.setText(self.fileDescription)
+                    self.showTutorial(
+                        self.fileDescription,
+                        "Descriprion",
+                        os.path.join(os.path.dirname(os.path.abspath(str(
+                            self.layoutFileName))), "_images"))
+                    self.setWindowTitle(self.layoutFileName + " - xrtQook")
+
+
 
     def moveItem(self, oldPos, newPos):
         print("Start moving!")
@@ -2273,34 +2312,44 @@ class XrtQook(qt.QWidget):
             query = qt.QSqlQuery()
             query.exec_("""SELECT classes.class_name, classes.module_name,
                         oes.id, oes.name FROM classes, oes
-                        WHERE classes.class_name=oes.class ORDER BY oes.position""")
+                        WHERE classes.class_name=oes.class
+                        ORDER BY oes.position""")
             while query.next():
                 oeCls = query.value(0)
                 moduleName = query.value(1)
                 oeId = query.value(2)
                 oeName = query.value(3)
-                print(oeCls, moduleName, oeId, oeName)
                 methodObj, inkwArgs, outkwArgs = createMethodDict(
                     oeId, "{0}.{1}".format(moduleName, oeCls))
                 blFlow.append([oeName, methodObj, inkwArgs, outkwArgs])
             return blFlow
+
+        def run_process_qook(beamLine):
+            beamLine.propagate_flow()
+            return beamLine.beamsDict
+
+        if self.beamLine.alignE == 'auto':
+            self.beamLine.alignE = (self.beamLine.sources[0].eMin +
+                                    self.beamLine.sources[0].eMax) * 0.5
         self.beamLine.flow = buildFlow()
-        print("Flow", self.beamLine.flow)
-#        self.beamLine.flowSource = 'legacy'
         self.beamLine.oesDict = self.objectsDict['oes']
-        self.rrun = rrun
-#        self.beamLine.returnDict = True
-        self.rrun.run_process = self.beamLine.run_process_qook
+        rrun.run_process = run_process_qook
 
     def execCode(self):
         xrtrun.run_ray_tracing(
             plots=list(self.objectsDict['plots'].values()),
             backend=r"raycing",
+#            processes=2,
+#            threads=2,
             repeats=1,
             beamLine=self.beamLine)
 
+
+
     def closeEvent(self, event):
         self.db.close()
+        for plot in self.plotWidgets.values():
+            plot.close()
         event.accept()
 
 
