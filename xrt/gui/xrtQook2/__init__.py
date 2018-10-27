@@ -224,6 +224,9 @@ class ElementSqlTableModel(qt.QSqlTableModel):
                 return statStr
             else:
                 return dataR
+        elif (role == qt.QtCore.Qt.EditRole):
+            return super(qt.QSqlTableModel, self).data(
+                    index, role=qt.QtCore.Qt.EditRole)
         elif (role == qt.QtCore.Qt.DecorationRole):
             if index.column() == 0 and self.tableName() == 'oes':
                 aicon = 'add{0:1d}'.format(self.index(index.row(), 4).data()+1)
@@ -255,10 +258,12 @@ class ElementSqlTableModel(qt.QSqlTableModel):
                 return qt.QtGui.QBrush(color)
 
     def flags(self, index):
-        itemState = qt.QtCore.Qt.ItemIsEnabled
+        itemState = qt.QtCore.Qt.ItemIsEnabled | qt.QtCore.Qt.ItemIsSelectable
+        if index.column() == 0:
+            return itemState | qt.QtCore.Qt.ItemIsEditable
         if index.column() == 3 and self.tableName() == 'plots':
-            return itemState | qt.QtCore.Qt.ItemIsUserCheckable | qt.QtCore.Qt.ItemIsSelectable
-        return itemState | qt.QtCore.Qt.ItemIsEditable
+            return itemState | qt.QtCore.Qt.ItemIsUserCheckable
+        return itemState 
 
     def setData(self, index, value, role):
         if not index.isValid():
@@ -294,6 +299,55 @@ class ParamSqlTableModel(qt.QSqlTableModel):
             self.select()
             self.dataReloaded.emit()
 
+    def data(self, index, role):
+        if not index.isValid():
+            return
+        dataR = super(qt.QSqlTableModel, self).data(
+            index, role=qt.QtCore.Qt.DisplayRole)
+        if (role == qt.QtCore.Qt.DisplayRole):
+            return dataR
+        elif (role == qt.QtCore.Qt.EditRole):
+            return super(qt.QSqlTableModel, self).data(
+            index, role=qt.QtCore.Qt.EditRole)
+#        elif (role == qt.QtCore.Qt.DecorationRole):
+#            if index.column() == 0 and self.tableName() == 'oes':
+#                aicon = 'add{0:1d}'.format(self.index(index.row(), 4).data()+1)
+#                return qt.QIcon(os.path.join(
+#                                self.iconsDir, '{}.png'.format(aicon)))
+        elif (role == qt.QtCore.Qt.FontRole):
+            if (self.tableName() == 'oes_methods' and index.column() == 1
+                and index.row() == 0):
+                font = qt.QFont()
+                font.setItalic(True)
+                return font
+        elif (role == qt.QtCore.Qt.ForegroundRole):
+            if (index.column() == 0):
+                color = qt.QtGui.QColor(0, 0, 0)
+                if self.tableName() == 'oes_methods' and index.row() == 0:
+                    return color
+                row = index.row()
+                if self.index(row, 1).data() != self.index(row, 2).data():
+                    color = qt.QtGui.QColor(0, 0, 225)
+                return qt.QtGui.QBrush(color)
+
+    def flags(self, index):
+        itemState = qt.QtCore.Qt.ItemIsEnabled | qt.QtCore.Qt.ItemIsSelectable
+        if index.column() == 0:
+            return itemState 
+        return itemState | qt.QtCore.Qt.ItemIsEditable
+
+    def setData(self, index, value, role):
+#        if not index.isValid():
+#            return False
+#        if (role == qt.QtCore.Qt.CheckStateRole and
+#                self.tableName() == 'plots' and
+#                index.column() == 3):
+#            value = 1 if value else 0
+#            role = qt.QtCore.Qt.EditRole
+
+        sdState = qt.QSqlTableModel.setData(self, index, value, role)
+        self.dataChanged.emit(index, index)
+        return sdState
 
 class MyComboBox(qt.QComboBox):
     def reload_model(self):
@@ -1675,7 +1729,7 @@ class XrtQook(qt.QWidget):
                     elProps[3], elProps[0]))(**elParams)
             initState = 2
         except:
-            raise
+#            raise
             initState = 0
             elementInstance = None
 
@@ -2324,7 +2378,7 @@ class XrtQook(qt.QWidget):
                 blFlow.append([oeName, methodObj, inkwArgs, outkwArgs])
             return blFlow
 
-        def run_process_qook(beamLine):
+        def run_process(beamLine):
             beamLine.propagate_flow()
             return beamLine.beamsDict
 
@@ -2333,7 +2387,7 @@ class XrtQook(qt.QWidget):
                                     self.beamLine.sources[0].eMax) * 0.5
         self.beamLine.flow = buildFlow()
         self.beamLine.oesDict = self.objectsDict['oes']
-        rrun.run_process = run_process_qook
+        rrun.run_process = run_process
 
     def execCode(self):
         xrtrun.run_ray_tracing(
@@ -2341,7 +2395,7 @@ class XrtQook(qt.QWidget):
             backend=r"raycing",
 #            processes=2,
 #            threads=2,
-            repeats=1,
+            repeats=8,
             beamLine=self.beamLine)
 
 
