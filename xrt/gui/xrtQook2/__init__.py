@@ -265,7 +265,7 @@ class ElementSqlTableModel(qt.QSqlTableModel):
             return itemState | qt.QtCore.Qt.ItemIsUserCheckable
         return itemState 
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role=qt.QtCore.Qt.EditRole):
         if not index.isValid():
             return False
         if (role == qt.QtCore.Qt.CheckStateRole and
@@ -336,7 +336,7 @@ class ParamSqlTableModel(qt.QSqlTableModel):
             return itemState 
         return itemState | qt.QtCore.Qt.ItemIsEditable
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role=qt.QtCore.Qt.EditRole):
 #        if not index.isValid():
 #            return False
 #        if (role == qt.QtCore.Qt.CheckStateRole and
@@ -374,10 +374,17 @@ class xrtPlotWidget(qt.QWidget):
         self.windowClosed.emit(self.plotId)
         event.ignore()
 
+    
+
 coordParams = ['center', 'pitch', 'roll', 'yaw', 'positionRoll', 'extraPitch',
                'extraRoll', 'extraYaw', 'rotationSequence',
                'extraRotationSequence']
 plotBeamParams = ['beam', 'rayFlag', 'fluxKind', 'beamState', 'beamC']
+
+class GlowOutlook(xrtglow.xrtGlWidget):
+    def autoSetView(self):
+        pass
+
 
 
 class XrtQook(qt.QWidget):
@@ -1511,6 +1518,7 @@ class XrtQook(qt.QWidget):
             self.autoAssignMethod(obj, elementName)
 
     def addPlot(self, plotList=None, paramsDict=None):
+#        print(plotList)
         self.query.exec_(self.queryStrings['plots_insert'].format(
             *plotList))  # (plotName, oeName, template, initial_visibility)
         self.processSqlError(self.query)
@@ -1551,10 +1559,13 @@ class XrtQook(qt.QWidget):
         self.plotWidgets[plotId] = xrtPlotWidget(
                 parent=self, plotId=plotId)
         plotLayout = qt.QVBoxLayout()
+#        print(self.objectsDict['plots'][plotId].canvas.geometry())
         plotLayout.addWidget(self.objectsDict['plots'][plotId].canvas)
+#        plotLayout.setSizeConstraint(qt.QtGui.QLayout.SetNoConstraint)
         self.plotWidgets[plotId].setLayout(plotLayout)
         self.plotWidgets[plotId].windowClosed.connect(
                 self.updatePlotState)
+
         if bool(plotList[3]):
             self.plotWidgets[plotId].show()
         self.showDoc(obj)
@@ -1673,6 +1684,7 @@ class XrtQook(qt.QWidget):
         self.addMethod(elName, methodDict, objfNm)
 
     def initPythonObject(self, table, elementId):
+#        print(table, elementId)
         elParams = OrderedDict()
         queryStr = """SELECT "XYCPlot", 0, 0, "xrt.plotter" FROM {0}
                    WHERE id={1}""" if table == 'plots' else\
@@ -1729,12 +1741,23 @@ class XrtQook(qt.QWidget):
                     elProps[3], elProps[0]))(**elParams)
             initState = 2
         except:
-#            raise
+            raise
             initState = 0
             elementInstance = None
 
         if table == 'plots':
             self.objectsDict[table][elementId] = elementInstance
+    #        print(self.objectsDict['plots'][plotId].canvas.geometry())
+            if elementId in self.plotWidgets:
+                canvas = self.plotWidgets[elementId].layout().itemAt(0).widget()
+                self.plotWidgets[elementId].layout().removeWidget(canvas)
+##                canvas.delete_later()
+                canvas.setParent(None)
+                canvas.setVisible(False)
+#                canvas = None
+                self.plotWidgets[elementId].layout().addWidget(elementInstance.canvas)
+                self.plotWidgets[elementId].layout().activate()
+
         else:
             self.objectsDict[table][elProps[2]] = [elementInstance, elProps[1]]
             self.query.exec_("""UPDATE {0} SET state={1}
@@ -2020,7 +2043,7 @@ class XrtQook(qt.QWidget):
                                     mpVal, str(mpName).strip('12'),
                                     elementName)
                             self.addMethod(elementName, methodDict, methodObj)
-
+                        time.sleep(0.1)  # Material properties file error
                     fixOEStructure()
 
                     for plot in root.find('plots'):

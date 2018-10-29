@@ -2252,7 +2252,7 @@ class Undulator(object):
 
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
-        bor.parent = self
+        bor.parentId = self.name
         raycing.append_to_flow(self.shine, [bor],
                                inspect.currentframe())
         return bor

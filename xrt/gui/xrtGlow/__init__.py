@@ -947,14 +947,14 @@ class xrtGlow(qt.QWidget):
 
     def updateColorAxis(self, icSel):
         if icSel == 0:
-            txt = self.colorControls[1].text()
+            txt = re.sub(',', '.', str(self.colorControls[1].text()))
             if txt == "{0:.3f}".format(self.customGlWidget.colorMin):
                 return
             newColorMin = float(txt)
             self.customGlWidget.colorMin = newColorMin
             self.colorControls[2].validator().setBottom(newColorMin)
         else:
-            txt = self.colorControls[2].text()
+            txt = re.sub(',', '.', str(self.colorControls[2].text()))
             if txt == "{0:.3f}".format(self.customGlWidget.colorMax):
                 return
             newColorMax = float(txt)
@@ -1132,7 +1132,7 @@ class xrtGlow(qt.QWidget):
 
     def updateRotationFromQLE(self, slider):
         editor = self.sender()
-        value = float(str(editor.text()))
+        value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
     def updateScale(self, iax, editor, position):
@@ -1157,7 +1157,7 @@ class xrtGlow(qt.QWidget):
 
     def updateScaleFromQLE(self, slider):
         editor = self.sender()
-        value = float(str(editor.text()))
+        value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
     def updateFontSize(self, position):
@@ -1273,7 +1273,7 @@ class xrtGlow(qt.QWidget):
 
     def updateGridFromQLE(self, slider):
         editor = self.sender()
-        value = float(str(editor.text()))
+        value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
     def updateGridFromGL(self, aPos):
@@ -1509,7 +1509,7 @@ class xrtGlow(qt.QWidget):
     def updateCutoffFromQLE(self):
         try:
             editor = self.sender()
-            value = float(str(editor.text()))
+            value = float(re.sub(',', '.', str(editor.text())))
             extents = list(self.paletteWidget.span.extents)
             self.customGlWidget.cutoffI = np.float32(value)
             self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
@@ -1523,7 +1523,7 @@ class xrtGlow(qt.QWidget):
     def updateExplosionDepth(self):
         try:
             editor = self.sender()
-            value = float(str(editor.text()))
+            value = float(re.sub(',', '.', str(editor.text())))
             self.customGlWidget.depthScaler = np.float32(value)
             if self.customGlWidget.virtScreen is not None:
                 self.customGlWidget.populateVScreen()
@@ -1587,7 +1587,7 @@ class xrtGlow(qt.QWidget):
 
     def updateProjectionOpacityFromQLE(self, slider):
         editor = self.sender()
-        value = float(str(editor.text()))
+        value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
         self.customGlWidget.glDraw()
 
@@ -2867,26 +2867,30 @@ class xrtGlWidget(qt.QGLWidget):
             xLimits = list(oe.limPhysX2)
 #            xLimits = list(oe.limOptX2) if\
 #                oe.limOptX2 is not None else oe.limPhysX2
-            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE) or\
+                    oe.isParametric:
                 if oe.footprint is not None:
                     xLimits = oe.footprint[nsIndex][:, 0]
             yLimits = list(oe.limPhysY2)
 #            yLimits = list(oe.limOptY2) if\
 #                oe.limOptY2 is not None else oe.limPhysY2
-            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE) or\
+                    oe.isParametric:
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
         else:
             xLimits = list(oe.limPhysX)
 #            xLimits = list(oe.limOptX) if\
 #                oe.limOptX is not None else oe.limPhysX
-            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE) or\
+                    oe.isParametric:
                 if oe.footprint is not None:
                     xLimits = oe.footprint[nsIndex][:, 0]
             yLimits = list(oe.limPhysY)
 #            yLimits = list(oe.limOptY) if\
 #                oe.limOptY is not None else oe.limPhysY
-            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE) or\
+                    oe.isParametric:
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
         localTiles = np.array(self.tiles)
@@ -2902,7 +2906,7 @@ class xrtGlWidget(qt.QGLWidget):
                 float(localTiles[0])
             xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                   xLimits[0] + (i+1)*deltaX,
-                                  self.surfCPOrder) + oe.dx
+                                  self.surfCPOrder) + oe.dx  # not sure about dx in parametric coordinates
             for k in range(localTiles[1]):
                 deltaY = (yLimits[1] - yLimits[0]) /\
                     float(localTiles[1])
@@ -2920,54 +2924,63 @@ class xrtGlWidget(qt.QGLWidget):
                     zExt = '2'
                 else:
                     zExt = '1' if hasattr(oe, 'local_z1') else ''
-                local_z = getattr(oe, 'local_z{}'.format(zExt))
+                local_z = getattr(oe, 'local_r{}'.format(zExt)) if\
+                    oe.isParametric else getattr(oe, 'local_z{}'.format(zExt))
                 local_n = getattr(oe, 'local_n{}'.format(zExt))
 
-                zv = local_z(xv, yv)
-                nv = local_n(xv, yv)
+                txv = np.copy(xv)
+                tyv = np.copy(yv)
 
-                gbp = rsources.Beam(nrays=len(xv))
-                gbp.x = xv
-                gbp.y = yv
-                gbp.z = zv
-
-                gbp.a = nv[0] * np.ones_like(zv)
-                gbp.b = nv[1] * np.ones_like(zv)
-                gbp.c = nv[2] * np.ones_like(zv)
-
-                oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
-
-                if hasattr(oe, '_nCRL'):
-                    cShift = oe.centerShift
-                    nSurf = oe._nCRL
-                else:
-                    cShift = np.zeros(3)
-                    nSurf = 1
-
-                for iSurf in range(nSurf):
-                    dC = cShift * iSurf
-                    surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
-                                        gbp.y - self.coordOffset[1] - dC[1],
-                                        gbp.z - self.coordOffset[2] - dC[2])).T
-
-                    gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                               self.modelToWorld(surfCP.reshape(
-                                   self.surfCPOrder,
-                                   self.surfCPOrder, 3)))
-
-                    surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
-                                          np.ones_like(gbp.a))).T
-
-                    gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                               surfNorm.reshape(
-                                   self.surfCPOrder,
-                                   self.surfCPOrder, 4))
-
-                    gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                                   self.surfCPOrder, 0.0, 1.0)
-
-                    gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
-                                   0, self.surfCPOrder)
+                branches = [1, -1] if oe.isParametric else [1]
+                for branch in branches:
+                    zv = local_z(txv, tyv*branch)
+                    nv = local_n(txv*branch, tyv*branch)
+    
+                    gbp = rsources.Beam(nrays=len(xv))
+                    if oe.isParametric:
+                        xv, yv, zv = oe.param_to_xyz(txv, tyv*branch, zv)
+    
+                    gbp.x = xv
+                    gbp.y = yv
+                    gbp.z = zv
+    
+                    gbp.a = nv[0] * np.ones_like(zv)
+                    gbp.b = nv[1] * np.ones_like(zv)
+                    gbp.c = nv[2] * np.ones_like(zv)
+    
+                    oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
+    
+                    if hasattr(oe, '_nCRL'):
+                        cShift = oe.centerShift
+                        nSurf = oe._nCRL
+                    else:
+                        cShift = np.zeros(3)
+                        nSurf = 1
+    
+                    for iSurf in range(nSurf):
+                        dC = cShift * iSurf
+                        surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
+                                            gbp.y - self.coordOffset[1] - dC[1],
+                                            gbp.z - self.coordOffset[2] - dC[2])).T
+    
+                        gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                                   self.modelToWorld(surfCP.reshape(
+                                       self.surfCPOrder,
+                                       self.surfCPOrder, 3)))
+    
+                        surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
+                                              np.ones_like(gbp.a))).T
+    
+                        gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                                   surfNorm.reshape(
+                                       self.surfCPOrder,
+                                       self.surfCPOrder, 4))
+    
+                        gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                                       self.surfCPOrder, 0.0, 1.0)
+    
+                        gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+                                       0, self.surfCPOrder)
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
@@ -4029,3 +4042,4 @@ class xrtGlWidget(qt.QGLWidget):
         if not ctrlOn:
             self.scaleUpdated.emit(self.scaleVec)
         self.glDraw()
+

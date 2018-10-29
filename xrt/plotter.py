@@ -132,10 +132,10 @@ def versiontuple(v):
 
 
 class MyQtFigCanvas(qt.FigCanvas):
+    windowClosed = qt.pyqtSignal(int)
     def __init__(self, figure, xrtplot):
         super(MyQtFigCanvas, self).__init__(figure)
         self.xrtplot = xrtplot
-#        self.parentView = parentView
 
 
 class XYCAxis(object):

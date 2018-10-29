@@ -292,7 +292,7 @@ class RectangularAperture(object):
         """
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
-        prevOE = wave.parent
+        prevOE = self.bl.oesDict[wave.parentId]
         if raycing._VERBOSITY_ > 10:
             print("Diffract", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
@@ -308,7 +308,7 @@ class RectangularAperture(object):
             retGlo = prevOE.shine(wave=waveOnSelf)
         else:
             retGlo = rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parent = self
+        waveOnSelf.parentId = self.name
         return retGlo, waveOnSelf
 
 
@@ -548,7 +548,7 @@ class RoundAperture(object):
         """
         from . import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
-        prevOE = wave.parent
+        prevOE = self.bl.oesDict[wave.parentId]
         if self.bl is not None:
             if beam is not None:
                 self.bl.auto_align(self, beam)
@@ -562,7 +562,7 @@ class RoundAperture(object):
             prevOE.shine(wave=waveOnSelf)
         else:
             rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parent = self
+        waveOnSelf.parentId = self.name
         return self.local_to_global(waveOnSelf, returnBeam=True), waveOnSelf
 
 

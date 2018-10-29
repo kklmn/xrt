@@ -71,7 +71,7 @@ class Beam(object):
                     pickleFile = open(copyFrom, 'rb')
                     self.__dict__.update(pickle.load(pickleFile))
                     pickleFile.close()
-                for key in ['fromOE', 'toOE', 'parent']:
+                for key in ['fromOE', 'toOE', 'parentId']:
                     if hasattr(self, key):
                         if bl is not None:
                             try:
@@ -125,7 +125,7 @@ class Beam(object):
         future imports in xrt as it does not allow correct load."""
         outputDict = dict()
         outputDict.update(self.__dict__)
-        for key in ['fromOE', 'toOE', 'parent']:
+        for key in ['fromOE', 'toOE', 'parentId']:
             if hasattr(self, key):
                 try:
                     outputDict[key] = getattr(self, key).name

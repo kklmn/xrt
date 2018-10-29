@@ -255,7 +255,7 @@ class Screen(object):
         .. Returned values: beamLocal
         """
         from . import waves as rw
-        prevOE = wave.parent
+        prevOE = self.bl.oesDict[wave.parentId]
         if self.bl is not None:
             if beam is not None:
                 self.bl.auto_align(self, beam)
@@ -285,7 +285,7 @@ class Screen(object):
             prevOE.shine(wave=waveOnSelf)
         else:
             rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parent = self
+        waveOnSelf.parentId = self.name
         return waveOnSelf
 
 

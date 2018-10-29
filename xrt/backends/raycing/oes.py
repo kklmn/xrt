@@ -1199,7 +1199,7 @@ class EllipticalMirrorParam(OE):
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)
 
     def local_n(self, s, phi):
-        A2s2 = self.ellipseA**2 - s**2
+        A2s2 = np.array(self.ellipseA**2 - s**2)
         A2s2[A2s2 <= 0] = 1e22
         nr = -self.ellipseB / self.ellipseA * s / np.sqrt(A2s2)
         norm = np.sqrt(nr**2 + 1)

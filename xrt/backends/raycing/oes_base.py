@@ -939,7 +939,7 @@ class OE(object):
             absorbedLb.absorb_intensity(beam)
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
-        lb.parent = self
+        lb.parentId = self.name
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -1027,7 +1027,7 @@ class OE(object):
             absorbedLb = rs.Beam(copyFrom=lb)
             absorbedLb.absorb_intensity(beam)
             lbN = absorbedLb
-        lbN.parent = self
+        lbN.parentId = self.name
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())
         return gb, lbN
@@ -1197,7 +1197,7 @@ class OE(object):
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
 #        if wave is None and beam is not None:
 #            wave = beam
-        prevOE = wave.parent
+        prevOE = self.bl.oesDict[wave.parentId]
         print("Diffract on", self.name, " Prev OE:", prevOE.name)
         if self.bl is not None:
             if beam is not None:
@@ -1215,7 +1215,7 @@ class OE(object):
             beamToSelf = rw.diffract(wave, waveOnSelf)
             nIS = True
         retGlo, retLoc = self.reflect(beamToSelf, noIntersectionSearch=nIS)
-        retLoc.parent = self
+        retLoc.parent = self.name
         return retGlo, retLoc
 
     def _set_t(self, xyz=None, abc=None, surfPhys=None,
@@ -2014,10 +2014,17 @@ class OE(object):
         raycing.rotate_beam(vlb, good,
                             rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw)
-        self.footprint.extend([np.hstack((np.min(np.vstack((
-            lb.x[good], lb.y[good], lb.z[good])), axis=1),
-            np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
-                   axis=1))).reshape(2, 3)])
+        if self.isParametric:
+            self.footprint.extend([np.hstack((np.min(np.vstack((
+                lb.s[good], np.abs(lb.phi[good]), lb.r[good])), axis=1),
+                np.max(np.vstack((lb.s[good], np.abs(lb.phi[good]), lb.r[good])),
+                       axis=1))).reshape(2, 3)])
+        else:
+            self.footprint.extend([np.hstack((np.min(np.vstack((
+                lb.x[good], lb.y[good], lb.z[good])), axis=1),
+                np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
+                       axis=1))).reshape(2, 3)])
+
 #        print len(self.footprint)
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, vlb)
@@ -2213,7 +2220,7 @@ class DCM(OE):
                 absorbedLb = rs.Beam(copyFrom=lo2)
                 absorbedLb.absorb_intensity(lo1)
                 lo2 = absorbedLb
-        lo2.parent = self
+        lo2.parentId = self.name
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
 
