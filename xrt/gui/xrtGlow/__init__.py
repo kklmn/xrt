@@ -2867,30 +2867,26 @@ class xrtGlWidget(qt.QGLWidget):
             xLimits = list(oe.limPhysX2)
 #            xLimits = list(oe.limOptX2) if\
 #                oe.limOptX2 is not None else oe.limPhysX2
-            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE) or\
-                    oe.isParametric:
+            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     xLimits = oe.footprint[nsIndex][:, 0]
             yLimits = list(oe.limPhysY2)
 #            yLimits = list(oe.limOptY2) if\
 #                oe.limOptY2 is not None else oe.limPhysY2
-            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE) or\
-                    oe.isParametric:
+            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
         else:
             xLimits = list(oe.limPhysX)
 #            xLimits = list(oe.limOptX) if\
 #                oe.limOptX is not None else oe.limPhysX
-            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE) or\
-                    oe.isParametric:
+            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     xLimits = oe.footprint[nsIndex][:, 0]
             yLimits = list(oe.limPhysY)
 #            yLimits = list(oe.limOptY) if\
 #                oe.limOptY is not None else oe.limPhysY
-            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE) or\
-                    oe.isParametric:
+            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
                 if oe.footprint is not None:
                     yLimits = oe.footprint[nsIndex][:, 1]
         localTiles = np.array(self.tiles)
@@ -2928,59 +2924,61 @@ class xrtGlWidget(qt.QGLWidget):
                     oe.isParametric else getattr(oe, 'local_z{}'.format(zExt))
                 local_n = getattr(oe, 'local_n{}'.format(zExt))
 
-                txv = np.copy(xv)
-                tyv = np.copy(yv)
+                xv = np.copy(xv)
+                yv = np.copy(yv)
+                zv = np.zeros_like(xv)
+                
+                if oe.isParametric:
+                    xv, yv, zv = oe.xyz_to_param(xv, yv, zv)
 
-                branches = [1, -1] if oe.isParametric else [1]
-                for branch in branches:
-                    zv = local_z(txv, tyv*branch)
-                    nv = local_n(txv*branch, tyv*branch)
-    
-                    gbp = rsources.Beam(nrays=len(xv))
-                    if oe.isParametric:
-                        xv, yv, zv = oe.param_to_xyz(txv, tyv*branch, zv)
-    
-                    gbp.x = xv
-                    gbp.y = yv
-                    gbp.z = zv
-    
-                    gbp.a = nv[0] * np.ones_like(zv)
-                    gbp.b = nv[1] * np.ones_like(zv)
-                    gbp.c = nv[2] * np.ones_like(zv)
-    
-                    oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
-    
-                    if hasattr(oe, '_nCRL'):
-                        cShift = oe.centerShift
-                        nSurf = oe._nCRL
-                    else:
-                        cShift = np.zeros(3)
-                        nSurf = 1
-    
-                    for iSurf in range(nSurf):
-                        dC = cShift * iSurf
-                        surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
-                                            gbp.y - self.coordOffset[1] - dC[1],
-                                            gbp.z - self.coordOffset[2] - dC[2])).T
-    
-                        gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                                   self.modelToWorld(surfCP.reshape(
-                                       self.surfCPOrder,
-                                       self.surfCPOrder, 3)))
-    
-                        surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
-                                              np.ones_like(gbp.a))).T
-    
-                        gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                                   surfNorm.reshape(
-                                       self.surfCPOrder,
-                                       self.surfCPOrder, 4))
-    
-                        gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                                       self.surfCPOrder, 0.0, 1.0)
-    
-                        gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
-                                       0, self.surfCPOrder)
+                zv = local_z(xv, yv)
+                nv = local_n(xv, yv)
+
+                gbp = rsources.Beam(nrays=len(xv))
+                if oe.isParametric:
+                    xv, yv, zv = oe.param_to_xyz(xv, yv, zv)
+
+                gbp.x = xv
+                gbp.y = yv
+                gbp.z = zv
+
+                gbp.a = nv[0] * np.ones_like(zv)
+                gbp.b = nv[1] * np.ones_like(zv)
+                gbp.c = nv[2] * np.ones_like(zv)
+
+                oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
+
+                if hasattr(oe, '_nCRL'):
+                    cShift = oe.centerShift
+                    nSurf = oe._nCRL
+                else:
+                    cShift = np.zeros(3)
+                    nSurf = 1
+
+                for iSurf in range(nSurf):
+                    dC = cShift * iSurf
+                    surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
+                                        gbp.y - self.coordOffset[1] - dC[1],
+                                        gbp.z - self.coordOffset[2] - dC[2])).T
+
+                    gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                               self.modelToWorld(surfCP.reshape(
+                                   self.surfCPOrder,
+                                   self.surfCPOrder, 3)))
+
+                    surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
+                                          np.ones_like(gbp.a))).T
+
+                    gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                               surfNorm.reshape(
+                                   self.surfCPOrder,
+                                   self.surfCPOrder, 4))
+
+                    gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                                   self.surfCPOrder, 0.0, 1.0)
+
+                    gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+                                   0, self.surfCPOrder)
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)

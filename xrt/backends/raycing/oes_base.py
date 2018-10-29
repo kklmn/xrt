@@ -2014,16 +2014,10 @@ class OE(object):
         raycing.rotate_beam(vlb, good,
                             rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw)
-        if self.isParametric:
-            self.footprint.extend([np.hstack((np.min(np.vstack((
-                lb.s[good], np.abs(lb.phi[good]), lb.r[good])), axis=1),
-                np.max(np.vstack((lb.s[good], np.abs(lb.phi[good]), lb.r[good])),
-                       axis=1))).reshape(2, 3)])
-        else:
-            self.footprint.extend([np.hstack((np.min(np.vstack((
-                lb.x[good], lb.y[good], lb.z[good])), axis=1),
-                np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
-                       axis=1))).reshape(2, 3)])
+        self.footprint.extend([np.hstack((np.min(np.vstack((
+            lb.x[good], lb.y[good], lb.z[good])), axis=1),
+            np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
+                   axis=1))).reshape(2, 3)])
 
 #        print len(self.footprint)
         if self.alarmLevel is not None:
