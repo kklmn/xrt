@@ -263,7 +263,7 @@ class ElementSqlTableModel(qt.QSqlTableModel):
             return itemState | qt.QtCore.Qt.ItemIsEditable
         if index.column() == 3 and self.tableName() == 'plots':
             return itemState | qt.QtCore.Qt.ItemIsUserCheckable
-        return itemState 
+        return itemState
 
     def setData(self, index, value, role=qt.QtCore.Qt.EditRole):
         if not index.isValid():
@@ -333,21 +333,16 @@ class ParamSqlTableModel(qt.QSqlTableModel):
     def flags(self, index):
         itemState = qt.QtCore.Qt.ItemIsEnabled | qt.QtCore.Qt.ItemIsSelectable
         if index.column() == 0:
-            return itemState 
+            return itemState
         return itemState | qt.QtCore.Qt.ItemIsEditable
 
     def setData(self, index, value, role=qt.QtCore.Qt.EditRole):
-#        if not index.isValid():
-#            return False
-#        if (role == qt.QtCore.Qt.CheckStateRole and
-#                self.tableName() == 'plots' and
-#                index.column() == 3):
-#            value = 1 if value else 0
-#            role = qt.QtCore.Qt.EditRole
-
+        if not index.isValid():
+            return False
         sdState = qt.QSqlTableModel.setData(self, index, value, role)
         self.dataChanged.emit(index, index)
         return sdState
+
 
 class MyComboBox(qt.QComboBox):
     def reload_model(self):
@@ -359,6 +354,20 @@ class MyComboBox(qt.QComboBox):
             query.exec_(queryStr)
             self.model().setQuery(query)
             self.setCurrentIndex(tmpIndex)
+
+
+#class MyComboDelegate(qt.QtGui.QStyledItemDelegate):
+#
+#    def __init__(self, parent=None):
+#        super(MyComboDelegate, self).__init__(parent)
+#
+#    def createEditor(self, parent, option, index):
+#        if parent.model().tableName() == 'oes' and index.column() == 2:
+#            combobox = MyComboBox(parent)
+#            combobox.addItems(sorted(index.model().owners))
+#            combobox.setEditable(True)
+#            return combobox
+
 
 
 class xrtPlotWidget(qt.QWidget):
@@ -374,17 +383,16 @@ class xrtPlotWidget(qt.QWidget):
         self.windowClosed.emit(self.plotId)
         event.ignore()
 
-    
 
 coordParams = ['center', 'pitch', 'roll', 'yaw', 'positionRoll', 'extraPitch',
                'extraRoll', 'extraYaw', 'rotationSequence',
                'extraRotationSequence']
 plotBeamParams = ['beam', 'rayFlag', 'fluxKind', 'beamState', 'beamC']
 
+
 class GlowOutlook(xrtglow.xrtGlWidget):
     def autoSetView(self):
         pass
-
 
 
 class XrtQook(qt.QWidget):
@@ -1747,14 +1755,11 @@ class XrtQook(qt.QWidget):
 
         if table == 'plots':
             self.objectsDict[table][elementId] = elementInstance
-    #        print(self.objectsDict['plots'][plotId].canvas.geometry())
             if elementId in self.plotWidgets:
                 canvas = self.plotWidgets[elementId].layout().itemAt(0).widget()
                 self.plotWidgets[elementId].layout().removeWidget(canvas)
-##                canvas.delete_later()
                 canvas.setParent(None)
                 canvas.setVisible(False)
-#                canvas = None
                 self.plotWidgets[elementId].layout().addWidget(elementInstance.canvas)
                 self.plotWidgets[elementId].layout().activate()
 

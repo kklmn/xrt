@@ -364,6 +364,8 @@ class Material(object):
             if t is None:
                 raise ValueError('Give the thin mirror a thickness!')
             self.t = t  # t in mm
+        else:
+            self.t = t
         self.rho = rho  # density g/cm^3
         self.geom = ''
         self.efficiency = efficiency

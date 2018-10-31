@@ -57,10 +57,11 @@ from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
 from ...backends.raycing import oes as roes
 from ...backends.raycing import apertures as rapertures
+from ...backends.raycing import materials as rmats
 from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
-_DEBUG_ = False  # If False, exceptions inside the module are ignored
+_DEBUG_ = True  # If False, exceptions inside the module are ignored
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
@@ -1630,7 +1631,9 @@ class xrtGlWidget(qt.QGLWidget):
         self.arrayOfRays = arrayOfRays
         self.beamsDict = arrayOfRays[1]
         self.oesList = oesList
+        self.oeContour = dict()
         self.beamsToElements = b2els
+        self.slitThickness = 2  # mm
 
         self.projectionsVisibility = [0, 0, 0]
         self.lineOpacity = 0.1
@@ -2200,6 +2203,16 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
                             [0.1, 0.1, 0.1, 1])
             gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
+        elif mat == 'semiSi':
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
+                            [0.1, 0.1, 0.1, 0.75])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
+                            [0.3, 0.3, 0.3, 0.75])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
+                            [1., 0.9, 0.8, 0.75])
+            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
+                            [0.1, 0.1, 0.1, 0.75])
+            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
         else:
             gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
                             [0.1, 0.1, 0.1, 1])
@@ -2250,9 +2263,7 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
         gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-
         gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
         self.rotateZYX()
@@ -2310,37 +2321,6 @@ class xrtGlWidget(qt.QGLWidget):
         if self.enableAA:
             gl.glDisable(gl.GL_LINE_SMOOTH)
 
-        gl.glEnable(gl.GL_DEPTH_TEST)
-        if self.drawGrid:  # Coordinate grid box
-            self.drawCoordinateGrid()
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        if len(self.oesToPlot) > 0:  # Surfaces of optical elements
-            gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
-            gl.glEnable(gl.GL_NORMALIZE)
-
-            self.addLighting(3.)
-            for oeString in self.oesToPlot:
-                try:
-                    oeToPlot = self.oesList[oeString][0]
-                    is2ndXtal = self.oesList[oeString][3]
-                    if isinstance(oeToPlot, roes.OE):
-                        self.setMaterial('Si')
-                        self.plotOeSurface(oeToPlot, is2ndXtal)
-                    if isinstance(oeToPlot, (rapertures.RectangularAperture,
-                                             rapertures.RoundAperture)):
-                        self.setMaterial('Cu')
-                        self.plotAperture(oeToPlot)
-                    else:
-                        continue
-                except:  # analysis:ignore
-                    continue
-
-            gl.glDisable(gl.GL_LIGHTING)
-            gl.glDisable(gl.GL_NORMALIZE)
-            gl.glDisableClientState(gl.GL_NORMAL_ARRAY)
-        gl.glDisable(gl.GL_DEPTH_TEST)
-
         if self.linesDepthTest:
             gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -2359,6 +2339,41 @@ class xrtGlWidget(qt.QGLWidget):
         if self.enableAA:
             gl.glDisable(gl.GL_LINE_SMOOTH)
 
+
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        if len(self.oesToPlot) > 0:  # Surfaces of optical elements
+            gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
+            gl.glEnable(gl.GL_NORMALIZE)
+
+            self.addLighting(3.)
+            for oeString in self.oesToPlot:
+                try:
+                    oeToPlot = self.oesList[oeString][0]
+                    is2ndXtal = self.oesList[oeString][3]
+                    if isinstance(oeToPlot, roes.OE):
+                        self.plotOeSurface(oeToPlot, is2ndXtal)
+                    elif isinstance(oeToPlot, rscreens.HemisphericScreen):
+                        self.setMaterial('semiSi')
+                        self.plotHemiScreen(oeToPlot)
+                    elif isinstance(oeToPlot, rscreens.Screen):
+                        self.setMaterial('semiSi')
+                        self.plotScreen(oeToPlot)
+                    if isinstance(oeToPlot, (rapertures.RectangularAperture,
+                                             rapertures.RoundAperture)):
+                        self.setMaterial('Cu')
+                        self.plotAperture(oeToPlot)
+                    else:
+                        continue
+                except:  # analysis:ignore
+                    raise
+                    continue
+
+            gl.glDisable(gl.GL_LIGHTING)
+            gl.glDisable(gl.GL_NORMALIZE)
+            gl.glDisableClientState(gl.GL_NORMAL_ARRAY)
+        gl.glDisable(gl.GL_DEPTH_TEST)
+
         if self.enableAA:
             gl.glEnable(gl.GL_LINE_SMOOTH)
             gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
@@ -2371,10 +2386,12 @@ class xrtGlWidget(qt.QGLWidget):
                                          rsources.Wiggler,
                                          rsources.Undulator)):
                     self.plotSource(oeToPlot)
-                elif isinstance(oeToPlot, rscreens.HemisphericScreen):
-                    self.plotHemiScreen(oeToPlot)
-                elif isinstance(oeToPlot, rscreens.Screen):
-                    self.plotScreen(oeToPlot)
+#                elif isinstance(oeToPlot, rscreens.HemisphericScreen):
+#                    self.plotHemiScreen(oeToPlot)
+#                elif isinstance(oeToPlot, rscreens.Screen):
+#                    self.plotScreen(oeToPlot)
+                elif isinstance(oeToPlot, roes.OE):
+                    self.drawOeContour(oeToPlot)
                 else:
                     continue
 
@@ -2490,6 +2507,9 @@ class xrtGlWidget(qt.QGLWidget):
                     else:
                         continue
 
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        if self.drawGrid:  # Coordinate grid box
+            self.drawCoordinateGrid()
         gl.glFlush()
 
         self.drawDirectionAxes()
@@ -2563,6 +2583,9 @@ class xrtGlWidget(qt.QGLWidget):
             return axisLabelC, np.vstack((xLines, yLines, zLines))
 
         def drawGridLines(gridArray, lineWidth, lineOpacity, figType):
+            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
             gridColor = np.ones((len(gridArray), 4)) * lineOpacity
             gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
             gridArrayVBO.bind()
@@ -2574,6 +2597,8 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glDrawArrays(figType, 0, len(gridArrayVBO))
             gridArrayVBO.unbind()
             gridColorArray.unbind()
+            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
         def getAlignment(point, hDim, vDim=None):
             pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
@@ -2859,9 +2884,55 @@ class xrtGlWidget(qt.QGLWidget):
 #        gl.glDisable(gl.GL_MAP2_VERTEX_3)
 #        gl.glDisable(gl.GL_MAP2_NORMAL)
 
+    def plotCurvedMesh(self, x, y, z, a, b, c, shift):
+        surfCP = np.vstack((x - self.coordOffset[0] - shift[0],
+                            y - self.coordOffset[1] - shift[1],
+                            z - self.coordOffset[2] - shift[2])).T
+        gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
+                   self.modelToWorld(surfCP.reshape(
+                       self.surfCPOrder,
+                       self.surfCPOrder, 3)))
+
+        surfNorm = np.vstack((a, b, c,
+                              np.ones_like(a))).T
+
+        gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
+                   surfNorm.reshape(
+                       self.surfCPOrder,
+                       self.surfCPOrder, 4))
+
+        gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
+                       self.surfCPOrder, 0.0, 1.0)
+
+        gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
+                       0, self.surfCPOrder)
+
     def plotOeSurface(self, oe, is2ndXtal):
+        def getThickness(element):
+            thickness = 0
+            if isinstance(oe, roes.Plate):
+                if oe.t is not None:
+                    return oe.t
+            if hasattr(oe, "material"):
+                if oe.material is not None:
+                    thickness = 10.
+                    if hasattr(oe.material, "t"):
+                        thickness = oe.material.t if oe.material.t is not None\
+                            else thickness
+                    elif isinstance(oe.material, rmats.Multilayer):
+                        if oe.material.substrate is not None:
+                            if hasattr(oe.material.substrate, 't'):
+                                if oe.material.substrate.t is not None:
+                                    thickness = oe.material.substrate.t
+            return thickness
+
+        thickness = getThickness(oe)
+
+        self.setMaterial('Si')
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
         gl.glEnable(gl.GL_MAP2_NORMAL)
+
+        # Top and Bottom Surfaces
         nsIndex = int(is2ndXtal)
         if is2ndXtal:
             xLimits = list(oe.limPhysX2)
@@ -2892,26 +2963,31 @@ class xrtGlWidget(qt.QGLWidget):
         localTiles = np.array(self.tiles)
 
         if oe.shape == 'round':
-            rmax = max(max(np.abs(xLimits)), max(np.abs(yLimits)))
-            xLimits = [0, rmax]
+            rX = np.abs((xLimits[1] - xLimits[0]))*0.5
+            rY = np.abs((yLimits[1] - yLimits[0]))*0.5
+            cX = (xLimits[1] + xLimits[0])*0.5
+            cY = (yLimits[1] + yLimits[0])*0.5
+            xLimits = [0, 1.]
             yLimits = [0, 2*np.pi]
-            localTiles *= 3
+            localTiles[1] *= 3
 
         for i in range(localTiles[0]):
             deltaX = (xLimits[1] - xLimits[0]) /\
                 float(localTiles[0])
             xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                   xLimits[0] + (i+1)*deltaX,
-                                  self.surfCPOrder) + oe.dx  # not sure about dx in parametric coordinates
+                                  self.surfCPOrder) + oe.dx
+
             for k in range(localTiles[1]):
                 deltaY = (yLimits[1] - yLimits[0]) /\
                     float(localTiles[1])
                 yGridOe = np.linspace(yLimits[0] + k*deltaY,
                                       yLimits[0] + (k+1)*deltaY,
                                       self.surfCPOrder)
+
                 xv, yv = np.meshgrid(xGridOe, yGridOe)
                 if oe.shape == 'round':
-                    xv, yv = xv*np.cos(yv), xv*np.sin(yv)
+                    xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
 
                 xv = xv.flatten()
                 yv = yv.flatten()
@@ -2927,26 +3003,40 @@ class xrtGlWidget(qt.QGLWidget):
                 xv = np.copy(xv)
                 yv = np.copy(yv)
                 zv = np.zeros_like(xv)
-                
+
                 if oe.isParametric:
                     xv, yv, zv = oe.xyz_to_param(xv, yv, zv)
 
                 zv = local_z(xv, yv)
                 nv = local_n(xv, yv)
 
-                gbp = rsources.Beam(nrays=len(xv))
+                gbT = rsources.Beam(nrays=len(xv))
                 if oe.isParametric:
                     xv, yv, zv = oe.param_to_xyz(xv, yv, zv)
 
-                gbp.x = xv
-                gbp.y = yv
-                gbp.z = zv
+                gbT.x = xv
+                gbT.y = yv
+                gbT.z = zv
 
-                gbp.a = nv[0] * np.ones_like(zv)
-                gbp.b = nv[1] * np.ones_like(zv)
-                gbp.c = nv[2] * np.ones_like(zv)
+                gbT.a = nv[0] * np.ones_like(zv)
+                gbT.b = nv[1] * np.ones_like(zv)
+                gbT.c = nv[2] * np.ones_like(zv)
 
-                oe.local_to_global(gbp, is2ndXtal=is2ndXtal)
+                if thickness > 0:
+                    gbB = rsources.Beam(copyFrom=gbT)
+                    if isinstance(oe, roes.LauePlate):
+                        gbB.z[:] = gbT.z - thickness
+                        gbB.a = -gbT.a
+                        gbB.b = -gbT.b
+                        gbB.c = -gbT.c
+                    else:
+                        gbB.z[:] = -thickness
+                        gbB.a[:] = 0
+                        gbB.b[:] = 0
+                        gbB.c[:] = -1.
+                    oe.local_to_global(gbB, is2ndXtal=is2ndXtal)
+
+                oe.local_to_global(gbT, is2ndXtal=is2ndXtal)
 
                 if hasattr(oe, '_nCRL'):
                     cShift = oe.centerShift
@@ -2957,31 +3047,192 @@ class xrtGlWidget(qt.QGLWidget):
 
                 for iSurf in range(nSurf):
                     dC = cShift * iSurf
-                    surfCP = np.vstack((gbp.x - self.coordOffset[0] - dC[0],
-                                        gbp.y - self.coordOffset[1] - dC[1],
-                                        gbp.z - self.coordOffset[2] - dC[2])).T
+                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+                                        gbT.a, gbT.b, gbT.c, dC)
+                    if thickness > 0 and\
+                            not isinstance(oe, roes.DoubleParaboloidLens):
+                        self.plotCurvedMesh(gbB.x, gbB.y, gbB.z,
+                                            gbB.a, gbB.b, gbB.c, dC)
 
-                    gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                               self.modelToWorld(surfCP.reshape(
-                                   self.surfCPOrder,
-                                   self.surfCPOrder, 3)))
+    # Side faces
+        if isinstance(oe, roes.Plate):
+            self.setMaterial('semiSi')
+        if thickness > 0:
+            for ie, yPos in enumerate(yLimits):
+                for i in range(localTiles[0]):
+                    if oe.shape == 'round':
+                        continue
+                    deltaX = (xLimits[1] - xLimits[0]) /\
+                        float(localTiles[0])
+                    xGridOe = np.linspace(xLimits[0] + i*deltaX,
+                                          xLimits[0] + (i+1)*deltaX,
+                                          self.surfCPOrder) + oe.dx  # not sure about dx in parametric coordinates
 
-                    surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
-                                          np.ones_like(gbp.a))).T
+                    edgeX = xGridOe
+                    edgeY = np.ones_like(xGridOe)*yPos
+                    edgeZ = np.zeros_like(xGridOe)
+                    if oe.isParametric:
+                        edgeX, edgeY, edgeZ = oe.xyz_to_param(
+                                edgeX, edgeY, edgeZ)
 
-                    gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                               surfNorm.reshape(
-                                   self.surfCPOrder,
-                                   self.surfCPOrder, 4))
+                    edgeZ = local_z(edgeX, edgeY)
+                    if oe.isParametric:
+                        edgeX, edgeY, edgeZ = oe.param_to_xyz(
+                                edgeX, edgeY, edgeZ)
 
-                    gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                                   self.surfCPOrder, 0.0, 1.0)
+                    gridZ = None
+                    for zTop in edgeZ:
+                        gridZ = np.linspace(-thickness, zTop, self.surfCPOrder) if\
+                            gridZ is None else np.concatenate((
+                                    gridZ, np.linspace(-thickness, zTop,
+                                                       self.surfCPOrder)))
 
-                    gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
-                                   0, self.surfCPOrder)
+                    gridX = np.repeat(edgeX, len(edgeZ))
+                    gridY = np.ones_like(gridX) * yPos
 
+                    xN = np.zeros_like(gridX)
+                    yN = (1 if ie == 1 else -1)*np.ones_like(gridX)
+                    zN = np.zeros_like(gridX)
+
+                    faceBeam = rsources.Beam(nrays=len(gridX))
+                    faceBeam.x = gridX
+                    faceBeam.y = gridY
+                    faceBeam.z = gridZ
+                    faceBeam.a = xN
+                    faceBeam.b = yN
+                    faceBeam.c = zN
+                    oe.local_to_global(faceBeam, is2ndXtal=is2ndXtal)
+                    self.plotCurvedMesh(faceBeam.x, faceBeam.y, faceBeam.z,
+                                        faceBeam.a, faceBeam.b, faceBeam.c,
+                                        [0]*3)
+
+            for ie, xPos in enumerate(xLimits):
+                if ie == 0 and oe.shape == 'round':
+                    continue
+                for i in range(localTiles[1]):
+                    deltaY = (yLimits[1] - yLimits[0]) /\
+                        float(localTiles[1])
+                    yGridOe = np.linspace(yLimits[0] + i*deltaY,
+                                          yLimits[0] + (i+1)*deltaY,
+                                          self.surfCPOrder)
+
+                    edgeY = yGridOe
+                    edgeX = np.ones_like(yGridOe)*xPos
+                    edgeZ = np.zeros_like(xGridOe)
+
+                    if oe.shape == 'round':
+                        edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX,\
+                            rY*edgeX*np.sin(edgeY)+cY
+
+                    if oe.isParametric:
+                        edgeX, edgeY, edgeZ = oe.xyz_to_param(
+                                edgeX, edgeY, edgeZ)
+                    edgeZ = local_z(edgeX, edgeY)
+                    if oe.isParametric:
+                        edgeX, edgeY, edgeZ = oe.param_to_xyz(
+                                edgeX, edgeY, edgeZ)
+
+                    zN = 0
+                    gridZ = None
+                    for zTop in edgeZ:
+                        gridZ = np.linspace(-thickness, zTop, self.surfCPOrder) if\
+                            gridZ is None else np.concatenate((
+                                    gridZ, np.linspace(-thickness, zTop,
+                                                       self.surfCPOrder)))
+
+                    gridY = np.repeat(edgeY, len(edgeZ))
+                    if oe.shape == 'round':
+                        yN = (gridY-cY) / rY
+                        gridX = np.repeat(edgeX, len(edgeZ))
+                        xN = (gridX-cX) / rX
+                    else:
+                        gridX = np.ones_like(gridY) * xPos
+                        yN = np.zeros_like(gridX)
+                        xN = (1 if ie == 1 else -1) * np.ones_like(gridX)
+                    zN = np.zeros_like(gridX)
+
+                    faceBeam = rsources.Beam(nrays=len(gridX))
+                    faceBeam.x = gridX
+                    faceBeam.y = gridY
+                    faceBeam.z = gridZ
+
+                    faceBeam.a = xN
+                    faceBeam.b = yN
+                    faceBeam.c = zN
+
+                    oe.local_to_global(faceBeam, is2ndXtal=is2ndXtal)
+                    self.plotCurvedMesh(faceBeam.x, faceBeam.y, faceBeam.z,
+                                        faceBeam.a, faceBeam.b, faceBeam.c,
+                                        [0]*3)
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
+
+        # Bounding box
+        xBound = np.linspace(xLimits[0], xLimits[1],
+                             self.surfCPOrder*(localTiles[0]+1))
+        yBound = np.linspace(yLimits[0], yLimits[1],
+                             self.surfCPOrder*(localTiles[1]+1))
+        if oe.shape == 'round':
+            oeContour = [0]
+            oneEdge = [0]
+        else:
+            oeContour = [0]*4
+            oneEdge = [0]*4
+            oeContour[0] = np.array([xBound,
+                                     yBound[0]*np.ones_like(xBound)])  # bottom
+            oeContour[1] = np.array([xBound[-1]*np.ones_like(yBound),
+                                     yBound])  # left
+            oeContour[2] = np.array([np.flip(xBound, 0),
+                                     yBound[-1]*np.ones_like(xBound)])  # top
+            oeContour[3] = np.array([xBound[0]*np.ones_like(yBound),
+                                     np.flip(yBound, 0)])  # right
+
+        for ie, edge in enumerate(oeContour):
+            if oe.shape == 'round':
+                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
+            else:
+                edgeX = edge[0, :]
+                edgeY = edge[1, :]
+            edgeZ = np.zeros_like(edgeX)
+
+            if oe.isParametric:
+                edgeX, edgeY, edgeZ = oe.xyz_to_param(edgeX, edgeY,
+                                                      edgeZ)
+
+            edgeZ = local_z(edgeX, edgeY)
+            if oe.isParametric:
+                edgeX, edgeY, edgeZ = oe.param_to_xyz(
+                        edgeX, edgeY, edgeZ)
+
+            edgeBeam = rsources.Beam(nrays=len(edgeX))
+            edgeBeam.x = edgeX
+            edgeBeam.y = edgeY
+            edgeBeam.z = edgeZ
+
+            oe.local_to_global(edgeBeam, is2ndXtal=is2ndXtal)
+            oneEdge[ie] = np.vstack((edgeBeam.x - self.coordOffset[0],
+                                     edgeBeam.y - self.coordOffset[1],
+                                     edgeBeam.z - self.coordOffset[2])).T
+
+        self.oeContour[oe.name] = oneEdge
+
+    def drawOeContour(self, oe):
+        pass
+        gl.glEnable(gl.GL_MAP1_VERTEX_3)
+        gl.glLineWidth(4)
+        gl.glColor4f(0.0, 0.0, 1.0, 1.0)
+        cpo = self.surfCPOrder
+        for ie in range(len(self.oeContour[oe.name])):
+            edge = self.oeContour[oe.name][ie]
+            nTiles = self.tiles[0] if ie in [0, 2] else self.tiles[1]
+            nTiles = self.tiles[1]*3 if oe.shape == 'round' else nTiles
+            for tile in range(nTiles+1):
+                gl.glMap1f(gl.GL_MAP1_VERTEX_3,  0, 1,
+                           self.modelToWorld(edge[tile*cpo:(tile+1)*cpo+1, :]))
+                gl.glMapGrid1f(cpo, 0.0, 1.0)
+                gl.glEvalMesh1(gl.GL_LINE, 0, cpo)
+
+        gl.glDisable(gl.GL_MAP1_VERTEX_3)
 
     def plotAperture(self, oe):
         surfCPOrder = self.surfCPOrder
@@ -3041,31 +3292,51 @@ class xrtGlWidget(qt.QGLWidget):
                 xv = xv.flatten()
                 yv = yv.flatten()
 
-                gbp = rsources.Beam(nrays=len(xv))
-                gbp.x = xv
-                gbp.y = np.zeros_like(xv)
-                gbp.z = yv
+                gbT = rsources.Beam(nrays=len(xv))
+                gbT.x = xv
+                gbT.y = np.zeros_like(xv)
+                gbT.z = yv
 
-                gbp.a = np.zeros_like(xv)
-                gbp.b = np.ones_like(xv)
-                gbp.c = np.zeros_like(xv)
+                gbT.a = np.zeros_like(xv)
+                gbT.b = np.ones_like(xv)
+                gbT.c = np.zeros_like(xv)
 
-                oe.local_to_global(gbp)
-                surfCP = np.vstack((gbp.x - self.coordOffset[0],
-                                    gbp.y - self.coordOffset[1],
-                                    gbp.z - self.coordOffset[2])).T
+                oe.local_to_global(gbT)
 
-                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                           self.modelToWorld(surfCP.reshape(
-                               surfCPOrder, surfCPOrder, 3)))
+                for surf in [1, -1]:
+                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+                                        gbT.a, gbT.b[:]*surf, gbT.c,
+                                        [0, 0, 0])
 
-                surfNorm = np.vstack((gbp.a, gbp.b, gbp.c,
-                                      np.ones_like(gbp.a))).T
+#        for iface, face in enumerate([[left-wf, right+wf, top+wf], [left-wf, right+wf, bottom-wf],
+#                     [top+wf, bottom-wf, left-wf], [top+wf, bottom-wf, right+wf]]):
+#
+#            faceX = np.linspace(face[0], face[1], surfCPOrder)
+#            faceY = np.linspace(-0.5, 0.5, surfCPOrder) * self.slitThickness
+#            faceX, faceY = np.meshgrid(faceX, faceY)
+#
+#            gbT = rsources.Beam(nrays=len(faceX)*len(faceY))
+#            gbT.x = faceX.flatten()
+#            gbT.y = faceY.flatten()
+#            gbT.z = np.ones_like(gbT.x) * face[2]
+#
+#            if iface in [2, 3]:
+#                gbT.x, gbT.z = gbT.z, gbT.x
+#
+#            if iface in [0, 1]:
+#                gbT.c = np.ones_like(gbT.x)
+#                gbT.a = np.zeros_like(gbT.x)
+#            else:
+#                gbT.a = np.ones_like(gbT.x)
+#                gbT.c = np.zeros_like(gbT.x)
+#
+#            if iface in [1, 3]:
+#                gbT.a *= -1
+#                gbT.c *= -1
+#            oe.local_to_global(gbT)
+#            self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+#                                gbT.a, gbT.b[:], gbT.c, [0]*3)
 
-                gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                           surfNorm.reshape(surfCPOrder, surfCPOrder, 4))
-                gl.glMapGrid2f(surfCPOrder*4, 0., 1., surfCPOrder*4, 0., 1.)
-                gl.glEvalMesh2(gl.GL_FILL, 0, surfCPOrder*4, 0, surfCPOrder*4)
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
@@ -3094,10 +3365,10 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         gl.glBegin(gl.GL_QUADS)
 
-        if self.invertColors:
-            gl.glColor4f(0.0, 0.0, 0.0, 0.2)
-        else:
-            gl.glColor4f(1.0, 1.0, 1.0, 0.2)
+#        if self.invertColors:
+#            gl.glColor4f(0.0, 0.0, 0.0, 0.2)
+#        else:
+#            gl.glColor4f(1.0, 1.0, 1.0, 0.2)
 
         for i in range(4):
             gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
