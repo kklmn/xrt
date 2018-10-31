@@ -61,7 +61,7 @@ from ...backends.raycing import materials as rmats
 from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
-_DEBUG_ = True  # If False, exceptions inside the module are ignored
+_DEBUG_ = False  # If False, exceptions inside the module are ignored
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
@@ -1538,7 +1538,10 @@ class xrtGlow(qt.QWidget):
             try:
                 position /= slider.scale
             except:  # analysis:ignore
-                pass
+                if _DEBUG_:
+                    raise
+                else:
+                    pass
         editor.setText("{0:.2f}".format(position))
         if iax == 0:
             self.customGlWidget.lineOpacity = np.float32(position)
@@ -1574,7 +1577,10 @@ class xrtGlow(qt.QWidget):
             try:
                 position /= slider.scale
             except:  # analysis:ignore
-                pass
+                if _DEBUG_:
+                    raise
+                else:
+                    pass
         editor.setText("{0:.2f}".format(position))
         if iax == 0:
             self.customGlWidget.lineProjectionOpacity = np.float32(position)
@@ -2366,8 +2372,10 @@ class xrtGlWidget(qt.QGLWidget):
                     else:
                         continue
                 except:  # analysis:ignore
-                    raise
-                    continue
+                    if _DEBUG_:
+                        raise
+                    else:
+                        continue
 
             gl.glDisable(gl.GL_LIGHTING)
             gl.glDisable(gl.GL_NORMALIZE)
@@ -2390,8 +2398,8 @@ class xrtGlWidget(qt.QGLWidget):
 #                    self.plotHemiScreen(oeToPlot)
 #                elif isinstance(oeToPlot, rscreens.Screen):
 #                    self.plotScreen(oeToPlot)
-                elif isinstance(oeToPlot, roes.OE):
-                    self.drawOeContour(oeToPlot)
+#                elif isinstance(oeToPlot, roes.OE):
+#                    self.drawOeContour(oeToPlot)
                 else:
                     continue
 
@@ -2485,7 +2493,10 @@ class xrtGlWidget(qt.QGLWidget):
                 lblCenter = self.virtScreen.frame[1] if scr1 > scr2 else\
                     self.virtScreen.frame[2]
             except:  # analysis:ignore
-                lblCenter = self.virtScreen.center
+                if _DEBUG_:
+                    raise
+                else:
+                    lblCenter = self.virtScreen.center
             vsLabelPos = self.modelToWorld(lblCenter - self.coordOffset)
             if self.invertColors:
                 gl.glColor4f(0.0, 0.0, 0.0, 1.)
@@ -2777,7 +2788,10 @@ class xrtGlWidget(qt.QGLWidget):
             try:
                 lPeriod = (oe.Theta_max - oe.Theta_min) * oe.ro * 1000
             except AttributeError:
-                lPeriod = 500.
+                if _DEBUG_:
+                    raise
+                else:
+                    lPeriod = 500.
             maghL = lPeriod
 
         maghH = 10 * 0.5
@@ -2805,7 +2819,10 @@ class xrtGlWidget(qt.QGLWidget):
         try:
             az = oe.bl.azimuth
         except:  # analysis:ignore
-            az = 0
+            if _DEBUG_:
+                raise
+            else:
+                az = 0
         gl.glRotatef(np.degrees((yaw-az) * self.scaleVec[0] /
                                 self.scaleVec[1]), 0, 0, 1)
         gl.glTranslatef(*(-1. * self.modelToWorld(np.array(oe.center) -
@@ -3017,7 +3034,6 @@ class xrtGlWidget(qt.QGLWidget):
                 gbT.x = xv
                 gbT.y = yv
                 gbT.z = zv
-
                 gbT.a = nv[0] * np.ones_like(zv)
                 gbT.b = nv[1] * np.ones_like(zv)
                 gbT.c = nv[2] * np.ones_like(zv)
@@ -3146,7 +3162,7 @@ class xrtGlWidget(qt.QGLWidget):
                         gridX = np.repeat(edgeX, len(edgeZ))
                         xN = (gridX-cX) / rX
                     else:
-                        gridX = np.ones_like(gridY) * xPos
+                        gridX = np.repeat(edgeX, len(edgeZ))
                         yN = np.zeros_like(gridX)
                         xN = (1 if ie == 1 else -1) * np.ones_like(gridX)
                     zN = np.zeros_like(gridX)
@@ -3167,7 +3183,7 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
 
-        # Bounding box
+        # Contour
         xBound = np.linspace(xLimits[0], xLimits[1],
                              self.surfCPOrder*(localTiles[0]+1))
         yBound = np.linspace(yLimits[0], yLimits[1],
@@ -3203,7 +3219,6 @@ class xrtGlWidget(qt.QGLWidget):
             if oe.isParametric:
                 edgeX, edgeY, edgeZ = oe.param_to_xyz(
                         edgeX, edgeY, edgeZ)
-
             edgeBeam = rsources.Beam(nrays=len(edgeX))
             edgeBeam.x = edgeX
             edgeBeam.y = edgeY
@@ -3215,6 +3230,7 @@ class xrtGlWidget(qt.QGLWidget):
                                      edgeBeam.z - self.coordOffset[2])).T
 
         self.oeContour[oe.name] = oneEdge
+
 
     def drawOeContour(self, oe):
         pass
@@ -3252,7 +3268,10 @@ class xrtGlWidget(qt.QGLWidget):
             try:
                 left, right, bottom, top = oe.spotLimits
             except:  # analysis:ignore
-                left, right, bottom, top = 0, 0, 0, 0
+                if _DEBUG_:
+                    raise
+                else:
+                    left, right, bottom, top = 0, 0, 0, 0
             for akind, d in zip(oe.kind, oe.opening):
                 if akind.startswith('l'):
                     left = d
@@ -3924,7 +3943,10 @@ class xrtGlWidget(qt.QGLWidget):
         try:
             vColorArray = self.getColor(startBeam)
         except AttributeError:
-            return
+            if _DEBUG_:
+                raise
+            else:
+                return
 
         good = (startBeam.state == 1) | (startBeam.state == 2)
         intensity = startBeam.Jss + startBeam.Jpp
@@ -4035,7 +4057,10 @@ class xrtGlWidget(qt.QGLWidget):
                 self.populateVerticesOnly(self.segmentModel)
             self.glDraw()
         except:  # analysis:ignore
-            self.clearVScreen()
+            if _DEBUG_:
+                raise
+            else:
+                self.clearVScreen()
 
     def positionVScreen(self):
         if self.virtScreen is None:
@@ -4282,7 +4307,6 @@ class xrtGlWidget(qt.QGLWidget):
                     self.positionVScreen()
 
             self.glDraw()
-
         self.prevMPos[0] = mouseX
         self.prevMPos[1] = mouseY
 
