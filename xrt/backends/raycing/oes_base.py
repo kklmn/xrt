@@ -812,15 +812,18 @@ class OE(object):
                 centerX = (surfPhysX[0]+surfPhysX[1]) * 0.5
                 if np.isnan(centerX):
                     centerX = 0
-                radius = (surfPhysX[1]-surfPhysX[0]) * 0.5
-                if surfOptY is not None:
+                radiusX = (surfPhysX[1]-surfPhysX[0]) * 0.5
+                if surfPhysY is not None:
                     centerY = (surfPhysY[0]+surfPhysY[1]) * 0.5
+                    radiusY = (surfPhysY[1]-surfPhysY[0]) * 0.5
                 else:
                     centerY = 0.
+                    radiusY = radiusX
                 if np.isnan(centerY):
                     centerY = 0
-                if not np.isinf(radius):
-                    locState[((x-centerX)**2 + (y-centerY)**2) > radius**2] =\
+                if not np.isinf(radiusX):
+                    locState[((x-centerX)/radiusX)**2 +
+                             ((y-centerY)/radiusY)**2 > 1] =\
                         self.lostNum
         elif isinstance(self.shape, list):
             footprint = mpl.path.Path(self.shape)
