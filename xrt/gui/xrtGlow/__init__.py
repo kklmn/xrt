@@ -177,7 +177,7 @@ class xrtGlow(qt.QWidget):
         self.zoomPanel.setFlat(False)
         self.zoomPanel.setTitle("Log scale")
         zoomLayout = qt.QVBoxLayout()
-
+        fitLayout = qt.QHBoxLayout()
         scaleValidator = qt.QDoubleValidator()
         scaleValidator.setRange(0, 7, 7)
         self.zoomSliders = []
@@ -205,13 +205,20 @@ class xrtGlow(qt.QWidget):
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             zoomLayout.addLayout(layout)
+
+        for iaxis, axis in enumerate(['x', 'y', 'z', 'all']):
+            fitX = qt.QPushButton("fit {}".format(axis))
+            dim = [iaxis] if iaxis < 3 else [0, 1, 2]
+            fitX.clicked.connect(partial(self.fitScales, dim))
+            fitLayout.addWidget(fitX)
+        zoomLayout.addLayout(fitLayout)
         self.zoomPanel.setLayout(zoomLayout)
 
         self.rotationPanel = qt.QGroupBox(self)
         self.rotationPanel.setFlat(False)
         self.rotationPanel.setTitle("Rotation (deg)")
         rotationLayout = qt.QVBoxLayout()
-
+        fixedViewsLayout = qt.QHBoxLayout()
 #        rotModeCB = qt.QCheckBox('Use Eulerian rotation')
 #        rotModeCB.setCheckState(2)
 #        rotModeCB.stateChanged.connect(self.checkEulerian)
@@ -242,6 +249,17 @@ class xrtGlow(qt.QWidget):
             layout.addWidget(axEdit)
             layout.addWidget(axSlider)
             rotationLayout.addLayout(layout)
+
+        for axis, angles in zip(['Side', 'Front', 'Top', 'Isometric'],
+                                [[[0.], [0.], [0.]],
+                                 [[0.], [0.], [90.]],
+                                 [[0.], [90.], [0.]],
+                                 [[0.], [35.264], [-45.]]]):
+            setView = qt.QPushButton(axis)
+            setView.clicked.connect(partial(self.updateRotationFromGL, angles))
+            fixedViewsLayout.addWidget(setView)
+        rotationLayout.addLayout(fixedViewsLayout)
+
         self.rotationPanel.setLayout(rotationLayout)
 
         self.transformationPanel = qt.QWidget(self)
@@ -250,6 +268,16 @@ class xrtGlow(qt.QWidget):
         transformationLayout.addWidget(self.rotationPanel)
         transformationLayout.addStretch()
         self.transformationPanel.setLayout(transformationLayout)
+
+    def fitScales(self, dims):
+        for dim in dims:
+            dimMin = np.min(self.customGlWidget.footprintsArray[:, dim])
+            dimMax = np.max(self.customGlWidget.footprintsArray[:, dim])
+            newScale =  1.9 * self.customGlWidget.aPos[dim] /\
+                (dimMax - dimMin) * self.customGlWidget.maxLen
+            self.customGlWidget.tVec[dim] = -0.5 * (dimMin + dimMax)
+            self.customGlWidget.scaleVec[dim] = newScale
+        self.updateScaleFromGL(self.customGlWidget.scaleVec)
 
     def makeColorsPanel(self):
         self.opacityPanel = qt.QGroupBox(self)
