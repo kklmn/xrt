@@ -44,8 +44,9 @@ from . import runner
 from .backends import raycing
 try:
     from .gui.commons import qt
+    hasQt = True
 except ImportError:
-    pass
+    hasQt = False
 
 from matplotlib.figure import Figure
 
@@ -131,11 +132,13 @@ def versiontuple(v):
     return tuple(map(int, [''.join(c for c in s if c.isdigit()) for s in a]))
 
 
-class MyQtFigCanvas(qt.FigCanvas):
-    windowClosed = qt.pyqtSignal(int)
-    def __init__(self, figure, xrtplot):
-        super(MyQtFigCanvas, self).__init__(figure)
-        self.xrtplot = xrtplot
+if hasQt:
+    class MyQtFigCanvas(qt.FigCanvas):
+        windowClosed = qt.pyqtSignal(int)
+
+        def __init__(self, figure, xrtplot):
+            super(MyQtFigCanvas, self).__init__(figure)
+            self.xrtplot = xrtplot
 
 
 class XYCAxis(object):
@@ -656,6 +659,8 @@ class XYCPlot(object):
 
 
         """
+        if not hasQt:
+            useQtWidget = False
         if not useQtWidget:
             plt.ion()
         self.colorSaturation = colorSaturation

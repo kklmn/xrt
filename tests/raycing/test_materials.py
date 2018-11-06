@@ -215,7 +215,7 @@ therefore is given without comparison.
 Slab, multilayer and coating reflectivity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    The phase difference between s- and p-polarized rays is given without
+The phase difference between s- and p-polarized rays is given without
 comparison.
 
 .. imagezoom:: _images/SlabReflW.*
