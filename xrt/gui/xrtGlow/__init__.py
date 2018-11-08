@@ -1666,8 +1666,10 @@ class xrtGlWidget(qt.QGLWidget):
         self.beamsDict = arrayOfRays[1]
         self.oesList = oesList
         self.oeContour = dict()
+        self.slitEdges = dict()
         self.beamsToElements = b2els
-        self.slitThickness = 2  # mm
+        self.slitThickness = 2.  # mm
+        self.contourWidth = 2
 
         self.projectionsVisibility = [0, 0, 0]
         self.lineOpacity = 0.1
@@ -2162,34 +2164,16 @@ class xrtGlWidget(qt.QGLWidget):
     def worldToModel(self, coords):
             return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
 
-    def drawText(self, coord, text, noScalable=False, alignment=None):
+    def drawText(self, coord, text, noScalable=False, alignment=None,
+                 useCaption=False):
         useScalableFont = False if noScalable else self.useScalableFont
+        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+        pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
         if not useScalableFont:
             gl.glRasterPos3f(*coord)
             for symbol in text:
                 gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
         else:
-            fontScale = self.fontSize / 12500.
-            coordShift = np.zeros(3, dtype=np.float32)
-            if alignment is not None:
-                if alignment[0] == 'left':
-                    coordShift[0] = -fontScale *\
-                        len(text) * 104.76
-                else:
-                    coordShift[0] = fontScale * 104.76
-
-                if alignment[1] == 'top':
-                    vOffset = 0.5
-                elif alignment[1] == 'bottom':
-                    vOffset = -1.5
-                else:
-                    vOffset = -0.5
-                coordShift[1] = vOffset * fontScale * 119.05
-            gl.glPushMatrix()
-            gl.glTranslatef(*coord)
-            gl.glRotatef(*self.qText)
-            gl.glTranslatef(*coordShift)
-            gl.glScalef(fontScale, fontScale, fontScale)
             tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
             tLineAA = gl.glIsEnabled(gl.GL_LINE_SMOOTH)
             if self.useFontAA:
@@ -2197,9 +2181,94 @@ class xrtGlWidget(qt.QGLWidget):
             else:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
             gl.glLineWidth(self.scalableFontWidth)
-            for symbol in text:
-                gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
-            gl.glPopMatrix()
+
+            fontScale = self.fontSize / 12500.
+            coordShift = np.zeros(3, dtype=np.float32)
+            fontSizeLoc = np.float32(np.array([104.76, 119.05, 0])*fontScale)
+            if alignment is not None:
+                if alignment[0] == 'left':
+                    coordShift[0] = -fontSizeLoc[0] * len(text)
+                else:
+                    coordShift[0] = fontSizeLoc[0]
+
+                if alignment[1] == 'top':
+                    vOffset = 0.5
+                elif alignment[1] == 'bottom':
+                    vOffset = -1.5
+                else:
+                    vOffset = -0.5
+                coordShift[1] = vOffset * fontSizeLoc[1]
+            if useCaption:
+                textWidth = 0
+                for symbol in text.strip(" "):
+                    textWidth += gl.glutStrokeWidth(self.scalableFontType,
+                                                    ord(symbol))
+                gl.glPushMatrix()
+                gl.glTranslatef(*coord)
+                gl.glRotatef(*self.qText)
+                gl.glTranslatef(*coordShift)
+                gl.glScalef(fontScale, fontScale, fontScale)
+                depthCounter = 1
+                spaceFound = False
+                while not spaceFound:
+                    depthCounter += 1
+                    for dy in [-1, 1]:
+                        for dx in [1, -1]:
+                            textShift = (depthCounter+0.5*dy) * 119.05*1.5
+                            gl.glPushMatrix()
+                            textPos = [dx*depthCounter * 119.05*1.5 + (0 if dx > 0 else -1) * textWidth,
+                                       dy*textShift, 0]
+                            gl.glTranslatef(*textPos)
+                            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+                            bottomLeft = np.array(gl.gluProject(
+                                *[0, 0, 0], model=pModel, proj=pProjection,
+                                view=pView)[:-1])
+                            topRight = np.array(gl.gluProject(
+                                *[textWidth, 119.05*2.5, 0],
+                                model=pModel, proj=pProjection,
+                                view=pView)[:-1])
+                            gl.glPopMatrix()
+                            spaceFound = True
+                            for oeLabel in list(self.labelsBounds.values()):
+                                if not (bottomLeft[0] > oeLabel[1][0] or
+                                    bottomLeft[1] > oeLabel[1][1] or
+                                    topRight[0] < oeLabel[0][0] or
+                                    topRight[1] < oeLabel[0][1]):
+                                        spaceFound = False
+                            if spaceFound:
+                                self.labelsBounds[text] = [0]*2
+                                self.labelsBounds[text][0] = bottomLeft
+                                self.labelsBounds[text][1] = topRight
+                                break
+                        if spaceFound:
+                            break
+                                
+                gl.glPopMatrix()
+                gl.glPushMatrix()
+                gl.glTranslatef(*coord)
+                gl.glRotatef(*self.qText)
+                gl.glScalef(fontScale, fontScale, fontScale)
+                captionPos = depthCounter * 119.05*1.5
+                gl.glBegin(gl.GL_LINE_STRIP)
+                gl.glVertex3f(0, 0, 0)
+                gl.glVertex3f(captionPos*dx, captionPos*dy, 0)
+                gl.glVertex3f(captionPos*dx + textWidth*dx,
+                              captionPos*dy, 0)
+                gl.glEnd()
+                gl.glTranslatef(*textPos)
+                for symbol in text.strip(" "):
+                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
+                gl.glPopMatrix()
+            else:
+                gl.glPushMatrix()
+                gl.glTranslatef(*coord)
+                gl.glRotatef(*self.qText)
+                gl.glTranslatef(*coordShift)
+                gl.glScalef(fontScale, fontScale, fontScale)
+                for symbol in text:
+                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
+                gl.glPopMatrix()
+
             gl.glLineWidth(tLineWidth)
             if tLineAA:
                 gl.glEnable(gl.GL_LINE_SMOOTH)
@@ -2426,8 +2495,10 @@ class xrtGlWidget(qt.QGLWidget):
 #                    self.plotHemiScreen(oeToPlot)
 #                elif isinstance(oeToPlot, rscreens.Screen):
 #                    self.plotScreen(oeToPlot)
-#                elif isinstance(oeToPlot, roes.OE):
-#                    self.drawOeContour(oeToPlot)
+                elif isinstance(oeToPlot, roes.OE):
+                    self.drawOeContour(oeToPlot)
+                elif isinstance(oeToPlot, rapertures.RectangularAperture):
+                    self.drawSlitEdges(oeToPlot)
                 else:
                     continue
 
@@ -2468,37 +2539,24 @@ class xrtGlWidget(qt.QGLWidget):
         if self.pointsDepthTest:
             gl.glDisable(gl.GL_DEPTH_TEST)
 
-        oeLabels = OrderedDict()
+#        oeLabels = OrderedDict()
+        self.labelsBounds = OrderedDict()
         if len(self.labelsToPlot) > 0:
-            for oeKey, oeValue in self.oesList.items():
-                if oeKey in self.labelsToPlot:
-                    oeCenterStr = makeCenterStr(oeValue[2],
-                                                self.labelCoordPrec)
-                    addStr = True
-                    for oeLabelKey, oeLabelValue in oeLabels.items():
-                        if np.all(np.round(
-                                oeLabelValue[0], self.labelCoordPrec) ==
-                                np.round(oeValue[2], self.labelCoordPrec)):
-                            oeLabelValue.append(oeKey)
-                            addStr = False
-                    if addStr:
-                        oeLabels[oeCenterStr] = [oeValue[2], oeKey]
             if self.invertColors:
                 gl.glColor4f(0.0, 0.0, 0.0, 1.)
             else:
                 gl.glColor4f(1.0, 1.0, 1.0, 1.)
             gl.glLineWidth(1)
-            for oeKey, oeValue in oeLabels.items():
-                outCenterStr = ''
-                for oeIndex, oeLabel in enumerate(oeValue):
-                    if oeIndex > 0:
-                        outCenterStr += '{}, '.format(oeLabel)
-                    else:
-                        oeCoord = np.array(oeLabel)
-                oeCenterStr = '    {0}: {1}mm'.format(
-                    outCenterStr[:-2], oeKey)
+#            for oeKey, oeValue in self.oesList.items():
+            for oeKey in self.labelsToPlot:
+                oeValue = self.oesList[oeKey]
+                oeCenterStr = makeCenterStr(oeValue[2],
+                                            self.labelCoordPrec)
+                oeCoord = np.array(oeValue[2])
+                oeCenterStr = '  {0}: {1}mm'.format(
+                    oeKey, oeCenterStr)
                 oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
-                self.drawText(oeLabelPos, oeCenterStr)
+                self.drawText(oeLabelPos, oeCenterStr, useCaption=True)
 
         if self.showOeLabels and self.virtScreen is not None:
             vsCenterStr = '    {0}: {1}mm'.format(
@@ -3261,10 +3319,9 @@ class xrtGlWidget(qt.QGLWidget):
 
 
     def drawOeContour(self, oe):
-        pass
         gl.glEnable(gl.GL_MAP1_VERTEX_3)
-        gl.glLineWidth(4)
-        gl.glColor4f(0.0, 0.0, 1.0, 1.0)
+        gl.glLineWidth(self.contourWidth)
+        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
         cpo = self.surfCPOrder
         for ie in range(len(self.oeContour[oe.name])):
             edge = self.oeContour[oe.name][ie]
@@ -3278,10 +3335,49 @@ class xrtGlWidget(qt.QGLWidget):
 
         gl.glDisable(gl.GL_MAP1_VERTEX_3)
 
+    def drawSlitEdges(self, oe):
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+        gl.glLineWidth(self.contourWidth)
+        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
+        gl.glBegin(gl.GL_QUADS)
+        for edge in self.modelToWorld(np.array(self.slitEdges[oe.name]) - np.array(self.coordOffset)):
+            gl.glVertex3f(*edge[0,:])
+            gl.glVertex3f(*edge[1,:])
+            gl.glVertex3f(*edge[3,:])
+            gl.glVertex3f(*edge[2,:])
+
+            gl.glVertex3f(*edge[0,:])
+            gl.glVertex3f(*edge[1,:])
+            gl.glVertex3f(*edge[5,:])
+            gl.glVertex3f(*edge[4,:])
+
+            gl.glVertex3f(*edge[5,:])
+            gl.glVertex3f(*edge[1,:])
+            gl.glVertex3f(*edge[3,:])
+            gl.glVertex3f(*edge[7,:])
+
+            gl.glVertex3f(*edge[4,:])
+            gl.glVertex3f(*edge[5,:])
+            gl.glVertex3f(*edge[7,:])
+            gl.glVertex3f(*edge[6,:])
+
+            gl.glVertex3f(*edge[0,:])
+            gl.glVertex3f(*edge[4,:])
+            gl.glVertex3f(*edge[6,:])
+            gl.glVertex3f(*edge[2,:])
+
+            gl.glVertex3f(*edge[2,:])
+            gl.glVertex3f(*edge[3,:])
+            gl.glVertex3f(*edge[7,:])
+            gl.glVertex3f(*edge[6,:])
+        gl.glEnd()
+
     def plotAperture(self, oe):
         surfCPOrder = self.surfCPOrder
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
         gl.glEnable(gl.GL_MAP2_NORMAL)
+        plotVolume = True
+        slitT = self.slitThickness
 
         if oe.shape == 'round':
             r = oe.r
@@ -3326,23 +3422,66 @@ class xrtGlWidget(qt.QGLWidget):
 
             tiles = self.tiles[1]
 
-        for xMin, xMax, yMin, yMax in limits:
-            xGridOe = np.linspace(xMin, xMax, surfCPOrder)
-            deltaY = (yMax - yMin) / float(tiles)
-            for k in range(tiles):
-                yMinT = yMin + k*deltaY
-                yMaxT = yMinT + deltaY
-                yGridOe = np.linspace(yMinT, yMaxT, surfCPOrder)
-                xv, yv = np.meshgrid(xGridOe, yGridOe)
-                if oe.shape == 'round':
-                    xv, yv = xv*np.cos(yv), xv*np.sin(yv)
+        if not plotVolume:
+            for xMin, xMax, yMin, yMax in limits:
+                xGridOe = np.linspace(xMin, xMax, surfCPOrder)
+                deltaY = (yMax - yMin) / float(tiles)
+                for k in range(tiles):
+                    yMinT = yMin + k*deltaY
+                    yMaxT = yMinT + deltaY
+                    yGridOe = np.linspace(yMinT, yMaxT, surfCPOrder)
+                    xv, yv = np.meshgrid(xGridOe, yGridOe)
+                    if oe.shape == 'round':
+                        xv, yv = xv*np.cos(yv), xv*np.sin(yv)
+                    xv = xv.flatten()
+                    yv = yv.flatten()
+
+                    gbT = rsources.Beam(nrays=len(xv))
+                    gbT.x = xv
+                    gbT.y = np.zeros_like(xv)
+                    gbT.z = yv
+
+                    gbT.a = np.zeros_like(xv)
+                    gbT.b = np.ones_like(xv)
+                    gbT.c = np.zeros_like(xv)
+
+                    oe.local_to_global(gbT)
+
+                    for surf in [1, -1]:
+                        self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+                                            gbT.a, gbT.b[:]*surf, gbT.c,
+                                            [0, 0, 0])
+        else:
+            self.slitEdges[oe.name] = []
+            for iface, face in enumerate(limits):
+                dT = slitT if iface < 2 else -slitT  # Slit thickness
+                # front
+                xGridOe = np.linspace(face[0], face[1], surfCPOrder)
+                zGridOe = np.linspace(face[2], face[3], surfCPOrder)
+                yGridOe = np.linspace(0, -dT, surfCPOrder)
+                xVert, yVert, zVert = np.meshgrid([face[0], face[1]],
+                                                  [0, -dT],
+                                                  [face[2], face[3]])
+                bladeVertices = np.vstack((xVert.flatten(),
+                                           yVert.flatten(),
+                                           zVert.flatten())).T
+                gbt = rsources.Beam(nrays=8)
+                gbt.x = bladeVertices[:, 0]
+                gbt.y = bladeVertices[:, 1]
+                gbt.z = bladeVertices[:, 2]
+                oe.local_to_global(gbt)
+
+                self.slitEdges[oe.name].append(np.vstack((gbt.x, gbt.y,
+                                                           gbt.z)).T)
+
+                xv, zv = np.meshgrid(xGridOe, zGridOe)
                 xv = xv.flatten()
-                yv = yv.flatten()
+                zv = zv.flatten()
 
                 gbT = rsources.Beam(nrays=len(xv))
                 gbT.x = xv
                 gbT.y = np.zeros_like(xv)
-                gbT.z = yv
+                gbT.z = zv
 
                 gbT.a = np.zeros_like(xv)
                 gbT.b = np.ones_like(xv)
@@ -3350,40 +3489,56 @@ class xrtGlWidget(qt.QGLWidget):
 
                 oe.local_to_global(gbT)
 
-                for surf in [1, -1]:
+                for ysurf in [0, dT]:
+                    nsurf = 1. if (dT > 0 and ysurf != 0) or\
+                        (ysurf == 0 and dT < 0) else -1.
                     self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-                                        gbT.a, gbT.b[:]*surf, gbT.c,
-                                        [0, 0, 0])
+                                        gbT.a, gbT.b[:]*nsurf, gbT.c,
+                                        [0, ysurf, 0])
 
-#        for iface, face in enumerate([[left-wf, right+wf, top+wf], [left-wf, right+wf, bottom-wf],
-#                     [top+wf, bottom-wf, left-wf], [top+wf, bottom-wf, right+wf]]):
-#
-#            faceX = np.linspace(face[0], face[1], surfCPOrder)
-#            faceY = np.linspace(-0.5, 0.5, surfCPOrder) * self.slitThickness
-#            faceX, faceY = np.meshgrid(faceX, faceY)
-#
-#            gbT = rsources.Beam(nrays=len(faceX)*len(faceY))
-#            gbT.x = faceX.flatten()
-#            gbT.y = faceY.flatten()
-#            gbT.z = np.ones_like(gbT.x) * face[2]
-#
-#            if iface in [2, 3]:
-#                gbT.x, gbT.z = gbT.z, gbT.x
-#
-#            if iface in [0, 1]:
-#                gbT.c = np.ones_like(gbT.x)
-#                gbT.a = np.zeros_like(gbT.x)
-#            else:
-#                gbT.a = np.ones_like(gbT.x)
-#                gbT.c = np.zeros_like(gbT.x)
-#
-#            if iface in [1, 3]:
-#                gbT.a *= -1
-#                gbT.c *= -1
-#            oe.local_to_global(gbT)
-#            self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-#                                gbT.a, gbT.b[:], gbT.c, [0]*3)
+                # side
+                zv, yv = np.meshgrid(zGridOe, yGridOe)
+                zv = zv.flatten()
+                yv = yv.flatten()
 
+                gbT = rsources.Beam(nrays=len(yv))
+                gbT.y = yv
+                gbT.x = np.zeros_like(yv)
+                gbT.z = zv
+
+                gbT.a = np.ones_like(yv)
+                gbT.b = np.zeros_like(yv)
+                gbT.c = np.zeros_like(yv)
+
+                oe.local_to_global(gbT)
+
+                for isurf, xsurf in enumerate([face[0], face[1]]):
+                    nsurf = 1. if isurf == 0 else -1
+                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+                                        gbT.a[:]*nsurf, gbT.b, gbT.c,
+                                        [xsurf, 0, 0])
+
+                # top
+                xv, yv = np.meshgrid(xGridOe, yGridOe)
+                xv = xv.flatten()
+                yv = yv.flatten()
+
+                gbT = rsources.Beam(nrays=len(yv))
+                gbT.x = xv
+                gbT.y = yv
+                gbT.z = np.zeros_like(xv)
+
+                gbT.a = np.zeros_like(yv)
+                gbT.b = np.zeros_like(yv)
+                gbT.c = np.ones_like(yv)
+
+                oe.local_to_global(gbT)
+
+                for isurf, zsurf in enumerate([face[2], face[3]]):
+                    nsurf = 1. if isurf == 0 else -1
+                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+                                        gbT.a, gbT.b, gbT.c[:]*nsurf,
+                                        [0, 0, zsurf])
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
