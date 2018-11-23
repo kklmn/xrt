@@ -1486,21 +1486,36 @@ class Crystal(Material):
         curveP = for_one_polarization_TT(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
-    def get_amplitude_mosaic(self, E, beamInDotNormal):
+    def get_amplitude_mosaic(self, E, beamInDotNormal, beamOutDotNormal=None,
+                             beamInDotHNormal=None):
+        """Based on Bacon and Lowde"""
         def for_one_polarization(Q):
             a = Q*w / mu
             b = (1 + 2*a)**0.5
             if self.t is None:  # thick Bragg
                 return a / (1 + a + b)
-            A = mu * self.t / np.sin(thetaB)
+            A = mu * self.t / g0
             if self.geom.startswith('Bragg'):
-                return a / (1 + a + b/np.tanh(A*b))
+                return a / (1 + a + b/np.tanh(A*b))  # Eq. (17)
             else:  # Laue
-                return np.sinh(A*a) * np.exp(-A*(1+a))
+                # return np.sinh(A*a) * np.exp(-A*(1+a))  # Eq. (18)
+                sigma = Q*w / g0
+                overGamma = 0.5 * (1/g0 + 1/gH)
+                overG = 0.5 * (1/g0 - 1/gH)
+                sm = (sigma**2 + mu**2*overG**2)**0.5
+                sGamma = sigma + mu*overGamma
+                # Eq. (24):
+                return sigma/sm * np.sinh(sm*self.t) * np.exp(-sGamma*self.t)
         Qs, Qp, thetaB = self.get_kappa_Q(E)[2:5]  # in cm^-1
-        delta = np.arcsin(np.abs(beamInDotNormal)) - thetaB
+        if beamInDotHNormal is None:
+            beamInDotHNormal = beamInDotNormal
+        delta = np.arcsin(np.abs(beamInDotHNormal)) - thetaB
+        g0 = np.abs(beamInDotNormal)
+        gH = g0 if beamOutDotNormal is None else np.abs(beamOutDotNormal)
         w = np.exp(-0.5*delta**2/self.mosaicity**2) / (SQRT2PI*self.mosaicity)
         mu = self.get_absorption_coefficient(E)  # in cm^-1
+        if self.geom.startswith('Bragg'):
+            mu *= 0.5 * (1 + g0/gH)  # Eq. (23)
         curveS = for_one_polarization(Qs)
         curveP = for_one_polarization(Qp)
         return curveS**0.5, curveP**0.5
