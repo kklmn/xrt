@@ -1224,8 +1224,7 @@ class Crystal(Material):
         return totalX
 
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None, alphaAsym=None,
-                      Rcurvmm=None, ucl=None, useTT=False):
+                      beamInDotHNormal=None):
         r"""
         Calculates complex amplitude reflectivity and transmittivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases for the
@@ -1342,6 +1341,35 @@ class Crystal(Material):
                 ra /= np.sqrt(abs(b))
             return ra
 
+        waveLength = CH / E  # the word "lambda" is reserved
+        k = PI2 / waveLength
+        k0s = -beamInDotNormal * k
+        if beamOutDotNormal is None:
+            beamOutDotNormal = -beamInDotNormal
+        kHs = -beamOutDotNormal * k
+        if beamInDotHNormal is None:
+            beamInDotHNormal = beamInDotNormal
+        HH = PI2 / self.d
+        k0H = abs(beamInDotHNormal) * HH * k
+        k02 = k**2
+        H2 = HH**2
+        kHs0 = kHs == 0
+        kHs[kHs0] = 1
+        b = k0s / kHs
+        b[kHs0] = -1
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/self.d)
+        thetaB = self.get_Bragg_angle(E)
+        alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
+
+        curveS = for_one_polarization(1.)  # s polarization
+        polFactor = np.cos(2. * thetaB)
+        curveP = for_one_polarization(polFactor)  # p polarization
+        return curveS, curveP  # , phi.real
+
+    def get_amplitude_TT(self, E, beamInDotNormal, beamOutDotNormal=None,
+                         beamInDotHNormal=None, alphaAsym=None,
+                         Rcurvmm=None, ucl=None):
+
         def for_one_polarization_TT(polFactor):
 
             if thickness == 0:
@@ -1438,27 +1466,24 @@ class Crystal(Material):
         thetaB = self.get_Bragg_angle(E)
         alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
 
-        if useTT:
-            thickness = 0 if self.t is None else self.t * 1e7
-            if thickness == 0:
-                N_layers = 10000
-            else:
-                N_layers = thickness / 100.
-                if N_layers < 2000:
-                    N_layers = 2000
-            bLength = len(E)
-            dtsin2tb = (H2/2. - k0H) / (k**2)
-            if Rcurvmm in [0, None]:
-                Rcurv = np.inf
-            else:
-                Rcurv = Rcurvmm * 1.0e7
-            beta_h = dtsin2tb - 0.5 * chi0.conjugate()
-            calc_model = for_one_polarization_TT
+        thickness = 0 if self.t is None else self.t * 1e7
+        if thickness == 0:
+            N_layers = 10000
         else:
-            calc_model = for_one_polarization
-        curveS = calc_model(1.)  # s polarization
+            N_layers = thickness / 100.
+            if N_layers < 2000:
+                N_layers = 2000
+        bLength = len(E)
+        dtsin2tb = (H2/2. - k0H) / (k**2)
+        if Rcurvmm in [0, None]:
+            Rcurv = np.inf
+        else:
+            Rcurv = Rcurvmm * 1.0e7
+        beta_h = dtsin2tb - 0.5 * chi0.conjugate()
+
+        curveS = for_one_polarization_TT(1.)  # s polarization
         polFactor = np.cos(2. * thetaB)
-        curveP = calc_model(polFactor)  # p polarization
+        curveP = for_one_polarization_TT(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
     def get_amplitude_mosaic(self, E, beamInDotNormal):
