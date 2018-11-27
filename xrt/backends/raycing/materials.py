@@ -22,7 +22,8 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 
 .. autoclass:: Crystal(Material)
    :members: __init__, get_Darwin_width, get_amplitude,
-             get_dtheta_symmetric_Bragg, get_dtheta, get_dtheta_regular
+             get_dtheta_symmetric_Bragg, get_dtheta, get_dtheta_regular,
+             get_refractive_correction
 
 .. autoclass:: CrystalFcc(Crystal)
    :members: get_structure_factor
@@ -1641,6 +1642,18 @@ class Crystal(Material):
                 return 0.
 
     def get_refractive_correction(self, E, beamInDotNormal=None, alpha=None):
+        r"""
+        The difference in the glancing angle of incidence for incident and exit
+        waves, Eqs. (2.152) and (2.112) in [Shvydko_XRO]_:
+
+        .. math::
+            \theta_c - \theta'_c = \frac{w_H^{(s)}}{2} \left(b - \frac{1}{b}
+            \right) \tan{\theta_c}
+
+        .. [Shvydko_XRO] Yu. Shvyd'ko, X-Ray Optics High-Energy-Resolution
+           Applications, Springer-Verlag Berlin Heidelberg, 2004.
+
+        """
         thetaB = self.get_Bragg_angle(E)
         bothNone = (beamInDotNormal is None) and (alpha is None)
         bothNotNone = (beamInDotNormal is not None) and (alpha is not None)
@@ -1908,6 +1921,7 @@ class CrystalFromCell(Crystal):
              2*h*l * (ca*cg - cb) / (self.a*self.c) +
              2*k*l * (cb*cg - ca) / (self.b*self.c))**(-0.5)
         self.chiToF = -R0 / PI / self.V  # minus!
+        self.chiToFd2 = abs(self.chiToF) * self.d**2
         self.geom = geom
         self.geometry = 2*int(geom.startswith('Bragg')) +\
             int(geom.endswith('transmitted'))
