@@ -1495,7 +1495,7 @@ class Crystal(Material):
             b = (1 + 2*a)**0.5
             if self.t is None:  # thick Bragg
                 return a / (1 + a + b)
-            A = mu * self.t / g0
+            A = mu*t / g0
             if self.geom.startswith('Bragg'):
                 return a / (1 + a + b/np.tanh(A*b))  # Eq. (17)
             else:  # Laue
@@ -1506,7 +1506,7 @@ class Crystal(Material):
                 sm = (sigma**2 + mu**2*overG**2)**0.5
                 sGamma = sigma + mu*overGamma
                 # Eq. (24):
-                return sigma/sm * np.sinh(sm*self.t) * np.exp(-sGamma*self.t)
+                return sigma/sm * np.sinh(sm*t) * np.exp(-sGamma*t)
         Qs, Qp, thetaB = self.get_kappa_Q(E)[2:5]  # in cm^-1
         if beamInDotHNormal is None:
             beamInDotHNormal = beamInDotNormal
@@ -1517,6 +1517,8 @@ class Crystal(Material):
         mu = self.get_absorption_coefficient(E)  # in cm^-1
         if self.geom.startswith('Bragg'):
             mu *= 0.5 * (1 + g0/gH)  # Eq. (23)
+        if self.t is not None:
+            t = self.t*0.1  # t is in cm
         curveS = for_one_polarization(Qs)
         curveP = for_one_polarization(Qp)
         return curveS**0.5, curveP**0.5
@@ -1649,6 +1651,9 @@ class Crystal(Material):
         .. math::
             \theta_c - \theta'_c = \frac{w_H^{(s)}}{2} \left(b - \frac{1}{b}
             \right) \tan{\theta_c}
+
+        .. note::
+            Not valid close to backscattering.
 
         .. [Shvydko_XRO] Yu. Shvyd'ko, X-Ray Optics High-Energy-Resolution
            Applications, Springer-Verlag Berlin Heidelberg, 2004.
