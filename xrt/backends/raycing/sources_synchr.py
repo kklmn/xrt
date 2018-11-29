@@ -1548,8 +1548,8 @@ class Undulator(object):
         #        np.seterr(divide='warn')
         return (Amp2Flux * AB**2 * 0.25 * dstep**2 *
                 (np.abs(Bsr)**2 + np.abs(Bpr)**2),
-                np.sqrt(Amp2Flux) * AB * Bsr,
-                np.sqrt(Amp2Flux) * AB * Bpr)
+                np.sqrt(Amp2Flux) * AB * Bsr * 0.5 * dstep,
+                np.sqrt(Amp2Flux) * AB * Bpr * 0.5 * dstep)
 
     def _build_I_map_custom(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
         # time1 = time.time()
