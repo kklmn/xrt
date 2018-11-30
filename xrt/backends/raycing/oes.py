@@ -2137,6 +2137,7 @@ class BlazedGrating(OE):
             y0 = (y // self.rho_1) * self.rho_1
             y1 = y0 + self.rho_1
             yL = y % self.rho_1
+            y0ind = 0
         yC = (y1-y0) / (1 + self.tanAntiblaze/self.tanBlaze)
         return y0ind, y0, y1, yC, yL
 
