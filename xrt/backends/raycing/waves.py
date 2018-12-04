@@ -583,7 +583,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 
     # this would be better in prepare_wave but energy is unknown there yet
     nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
-    print("Effective Fresnel number = {0:.3g}, samples per zone = {1:.0f}".
+    print("Effective Fresnel number = {0:.3g}, samples per zone = {1:.3g}".
           format(nf, spz))
 
     shouldCalculateArea = False
