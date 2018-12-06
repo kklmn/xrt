@@ -550,8 +550,14 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
 def qualify_sampling(wave, E, goodlen):
     a = wave.xDiffr / wave.rDiffr  # a and c of wave change in diffract
     c = wave.zDiffr / wave.rDiffr
-    NAx = (a.max() - a.min()) * 0.5
-    NAz = (c.max() - c.min()) * 0.5
+    if hasattr(wave, 'amin') and hasattr(wave, 'amax'):
+        NAx = (wave.amax - wave.amin) * 0.5
+    else:
+        NAx = (a.max() - a.min()) * 0.5
+    if hasattr(wave, 'cmin') and hasattr(wave, 'cmax'):
+        NAz = (wave.cmax - wave.cmin) * 0.5
+    else:
+        NAz = (c.max() - c.min()) * 0.5
     invLambda = E / CH * 1e7
     fn = (NAx**2 + NAz**2) * wave.rDiffr.mean() * invLambda  # Fresnel number
     samplesPerZone = goodlen / fn
