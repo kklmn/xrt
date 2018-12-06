@@ -555,7 +555,9 @@ class Multilayer(object):
         *tThickness* and *bThickness*: float
             The thicknesses of the layers in Å. If the multilayer is depth
             graded, *tThickness* and *bThickness* are at the top and
-            *tThicknessLow* and *bThicknessLow* are at the substrate.
+            *tThicknessLow* and *bThicknessLow* are at the substrate. If you
+            need laterally graded thicknesses, modify `get_t_thickness` and/or
+            `get_b_thickness` in a subclass.
 
         *power*: float
             Defines the exponent of the layer thickness power law, if the
