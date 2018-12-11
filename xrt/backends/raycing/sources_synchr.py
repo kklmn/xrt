@@ -421,8 +421,9 @@ class BendingMagnet(object):
             rnd_r = np.random.rand(mcRays, 4)
             seeded += mcRays
             if self.filamentBeam:
-                rThetaMin = np.max(self.Theta_min, rTheta0 - 1 / self.gamma)
-                rThetaMax = np.min(self.Theta_max, rTheta0 + 1 / self.gamma)
+#                print(self.Theta_min, rTheta0 - 1. / self.gamma)
+                rThetaMin = np.max((self.Theta_min, rTheta0 - 1. / self.gamma))
+                rThetaMax = np.min((self.Theta_max, rTheta0 + 1. / self.gamma))
                 rTheta = (rnd_r[:, 1]) * (rThetaMax - rThetaMin) +\
                     rThetaMin
                 rE *= np.ones(mcRays)
