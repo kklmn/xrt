@@ -2211,11 +2211,14 @@ class LaminarGrating(OE):
 
     def __init__(self, *args, **kwargs):
         """
-        *rho* is the line density in inverse mm.
+        *rho*: float
+            Lines density in inverse mm.
 
-        *aspect* is the ratio of the top-to-bottom surfaces.
+        *aspect*: float
+            Top-to-period ratio of the groove.
 
-        *depth* of the groove in mm.
+        *depth*: float
+            Depth of the groove in mm.
 
 
         """
@@ -2316,9 +2319,11 @@ class VLSLaminarGrating(OE):
 
     def __init__(self, *args, **kwargs):
         r"""
-        *aspect* is the ratio of the top-to-bottom surfaces.
+        *aspect*: float
+            Top-to-period ratio of the groove.
 
-        *depth* of the groove in mm.
+        *depth*: float
+            Depth of the groove in mm.
 
         For the VLS density, use *gratingDensity* of the parental class
         :class:`OE` with the 1st argument 'y' (i.e. along y-axis).
@@ -2434,7 +2439,7 @@ class VLSLaminarGrating(OE):
         illuminated surface area. It returns the fraction of the longitudinal
         (along *y*) dimension that is illuminated.
         """
-        return self.aspect
+        return self.aspect + self.illuminatedGroove
 
 
 VLSGrating = VLSLaminarGrating
