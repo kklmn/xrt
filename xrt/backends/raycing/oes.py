@@ -1261,7 +1261,7 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
 
         If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
         creation of the OE, you must invoke the method :meth:`reset_pqpitch` to
-        recalculate the ellipsoid parameters.
+        recalculate the paraboloid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
 
