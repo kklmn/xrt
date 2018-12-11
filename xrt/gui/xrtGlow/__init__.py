@@ -273,7 +273,7 @@ class xrtGlow(qt.QWidget):
         for dim in dims:
             dimMin = np.min(self.customGlWidget.footprintsArray[:, dim])
             dimMax = np.max(self.customGlWidget.footprintsArray[:, dim])
-            newScale =  1.9 * self.customGlWidget.aPos[dim] /\
+            newScale = 1.9 * self.customGlWidget.aPos[dim] /\
                 (dimMax - dimMin) * self.customGlWidget.maxLen
             self.customGlWidget.tVec[dim] = -0.5 * (dimMin + dimMax)
             self.customGlWidget.scaleVec[dim] = newScale
@@ -2216,7 +2216,8 @@ class xrtGlWidget(qt.QGLWidget):
                         for dx in [1, -1]:
                             textShift = (depthCounter+0.5*dy) * 119.05*1.5
                             gl.glPushMatrix()
-                            textPos = [dx*depthCounter * 119.05*1.5 + (0 if dx > 0 else -1) * textWidth,
+                            textPos = [dx*depthCounter * 119.05*1.5 +
+                                       (0 if dx > 0 else -1) * textWidth,
                                        dy*textShift, 0]
                             gl.glTranslatef(*textPos)
                             pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
@@ -2231,10 +2232,10 @@ class xrtGlWidget(qt.QGLWidget):
                             spaceFound = True
                             for oeLabel in list(self.labelsBounds.values()):
                                 if not (bottomLeft[0] > oeLabel[1][0] or
-                                    bottomLeft[1] > oeLabel[1][1] or
-                                    topRight[0] < oeLabel[0][0] or
-                                    topRight[1] < oeLabel[0][1]):
-                                        spaceFound = False
+                                        bottomLeft[1] > oeLabel[1][1] or
+                                        topRight[0] < oeLabel[0][0] or
+                                        topRight[1] < oeLabel[0][1]):
+                                    spaceFound = False
                             if spaceFound:
                                 self.labelsBounds[text] = [0]*2
                                 self.labelsBounds[text][0] = bottomLeft
@@ -2242,7 +2243,7 @@ class xrtGlWidget(qt.QGLWidget):
                                 break
                         if spaceFound:
                             break
-                                
+
                 gl.glPopMatrix()
                 gl.glPushMatrix()
                 gl.glTranslatef(*coord)
@@ -2442,7 +2443,6 @@ class xrtGlWidget(qt.QGLWidget):
         if self.enableAA:
             gl.glDisable(gl.GL_LINE_SMOOTH)
 
-
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         if len(self.oesToPlot) > 0:  # Surfaces of optical elements
@@ -2495,10 +2495,10 @@ class xrtGlWidget(qt.QGLWidget):
 #                    self.plotHemiScreen(oeToPlot)
 #                elif isinstance(oeToPlot, rscreens.Screen):
 #                    self.plotScreen(oeToPlot)
-                elif isinstance(oeToPlot, roes.OE):
-                    self.drawOeContour(oeToPlot)
-                elif isinstance(oeToPlot, rapertures.RectangularAperture):
-                    self.drawSlitEdges(oeToPlot)
+#                elif isinstance(oeToPlot, roes.OE):
+#                    self.drawOeContour(oeToPlot)
+#                elif isinstance(oeToPlot, rapertures.RectangularAperture):
+#                    self.drawSlitEdges(oeToPlot)
                 else:
                     continue
 
@@ -2617,6 +2617,8 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glDisable(gl.GL_BLEND)
             gl.glDisable(gl.GL_POINT_SMOOTH)
 
+        gl.glFlush()
+
     def quatMult(self, qf, qt):
         return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
                 qf[0]*qt[1]+qf[1]*qt[0]+qf[2]*qt[3]-qf[3]*qt[2],
@@ -2682,7 +2684,7 @@ class xrtGlWidget(qt.QGLWidget):
         def drawGridLines(gridArray, lineWidth, lineOpacity, figType):
             gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
             gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
             gridColor = np.ones((len(gridArray), 4)) * lineOpacity
             gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
             gridArrayVBO.bind()
@@ -3168,7 +3170,7 @@ class xrtGlWidget(qt.QGLWidget):
                         float(localTiles[0])
                     xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                           xLimits[0] + (i+1)*deltaX,
-                                          self.surfCPOrder) + oe.dx  # not sure about dx in parametric coordinates
+                                          self.surfCPOrder) + oe.dx
 
                     edgeX = xGridOe
                     edgeY = np.ones_like(xGridOe)*yPos
@@ -3184,7 +3186,8 @@ class xrtGlWidget(qt.QGLWidget):
 
                     gridZ = None
                     for zTop in edgeZ:
-                        gridZ = np.linspace(-thickness, zTop, self.surfCPOrder) if\
+                        gridZ = np.linspace(-thickness, zTop,
+                                            self.surfCPOrder) if\
                             gridZ is None else np.concatenate((
                                     gridZ, np.linspace(-thickness, zTop,
                                                        self.surfCPOrder)))
@@ -3237,7 +3240,8 @@ class xrtGlWidget(qt.QGLWidget):
                     zN = 0
                     gridZ = None
                     for zTop in edgeZ:
-                        gridZ = np.linspace(-thickness, zTop, self.surfCPOrder) if\
+                        gridZ = np.linspace(-thickness, zTop,
+                                            self.surfCPOrder) if\
                             gridZ is None else np.concatenate((
                                     gridZ, np.linspace(-thickness, zTop,
                                                        self.surfCPOrder)))
@@ -3270,114 +3274,114 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glDisable(gl.GL_MAP2_NORMAL)
 
         # Contour
-        xBound = np.linspace(xLimits[0], xLimits[1],
-                             self.surfCPOrder*(localTiles[0]+1))
-        yBound = np.linspace(yLimits[0], yLimits[1],
-                             self.surfCPOrder*(localTiles[1]+1))
-        if oe.shape == 'round':
-            oeContour = [0]
-            oneEdge = [0]
-        else:
-            oeContour = [0]*4
-            oneEdge = [0]*4
-            oeContour[0] = np.array([xBound,
-                                     yBound[0]*np.ones_like(xBound)])  # bottom
-            oeContour[1] = np.array([xBound[-1]*np.ones_like(yBound),
-                                     yBound])  # left
-            oeContour[2] = np.array([np.flip(xBound, 0),
-                                     yBound[-1]*np.ones_like(xBound)])  # top
-            oeContour[3] = np.array([xBound[0]*np.ones_like(yBound),
-                                     np.flip(yBound, 0)])  # right
+#        xBound = np.linspace(xLimits[0], xLimits[1],
+#                             self.surfCPOrder*(localTiles[0]+1))
+#        yBound = np.linspace(yLimits[0], yLimits[1],
+#                             self.surfCPOrder*(localTiles[1]+1))
+#        if oe.shape == 'round':
+#            oeContour = [0]
+#            oneEdge = [0]
+#        else:
+#            oeContour = [0]*4
+#            oneEdge = [0]*4
+#            oeContour[0] = np.array([xBound,
+#                                     yBound[0]*np.ones_like(xBound)])  # bottom
+#            oeContour[1] = np.array([xBound[-1]*np.ones_like(yBound),
+#                                     yBound])  # left
+#            oeContour[2] = np.array([np.flip(xBound, 0),
+#                                     yBound[-1]*np.ones_like(xBound)])  # top
+#            oeContour[3] = np.array([xBound[0]*np.ones_like(yBound),
+#                                     np.flip(yBound, 0)])  # right
+#
+#        for ie, edge in enumerate(oeContour):
+#            if oe.shape == 'round':
+#                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
+#            else:
+#                edgeX = edge[0, :]
+#                edgeY = edge[1, :]
+#            edgeZ = np.zeros_like(edgeX)
+#
+#            if oe.isParametric:
+#                edgeX, edgeY, edgeZ = oe.xyz_to_param(edgeX, edgeY,
+#                                                      edgeZ)
+#
+#            edgeZ = local_z(edgeX, edgeY)
+#            if oe.isParametric:
+#                edgeX, edgeY, edgeZ = oe.param_to_xyz(
+#                        edgeX, edgeY, edgeZ)
+#            edgeBeam = rsources.Beam(nrays=len(edgeX))
+#            edgeBeam.x = edgeX
+#            edgeBeam.y = edgeY
+#            edgeBeam.z = edgeZ
+#
+#            oe.local_to_global(edgeBeam, is2ndXtal=is2ndXtal)
+#            oneEdge[ie] = np.vstack((edgeBeam.x - self.coordOffset[0],
+#                                     edgeBeam.y - self.coordOffset[1],
+#                                     edgeBeam.z - self.coordOffset[2])).T
+#
+#        self.oeContour[oe.name] = oneEdge
 
-        for ie, edge in enumerate(oeContour):
-            if oe.shape == 'round':
-                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
-            else:
-                edgeX = edge[0, :]
-                edgeY = edge[1, :]
-            edgeZ = np.zeros_like(edgeX)
+#    def drawOeContour(self, oe):
+#        gl.glEnable(gl.GL_MAP1_VERTEX_3)
+#        gl.glLineWidth(self.contourWidth)
+#        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
+#        cpo = self.surfCPOrder
+#        for ie in range(len(self.oeContour[oe.name])):
+#            edge = self.oeContour[oe.name][ie]
+#            nTiles = self.tiles[0] if ie in [0, 2] else self.tiles[1]
+#            nTiles = self.tiles[1]*3 if oe.shape == 'round' else nTiles
+#            for tile in range(nTiles+1):
+#                gl.glMap1f(gl.GL_MAP1_VERTEX_3,  0, 1,
+#                           self.modelToWorld(edge[tile*cpo:(tile+1)*cpo+1, :]))
+#                gl.glMapGrid1f(cpo, 0.0, 1.0)
+#                gl.glEvalMesh1(gl.GL_LINE, 0, cpo)
+#
+#        gl.glDisable(gl.GL_MAP1_VERTEX_3)
 
-            if oe.isParametric:
-                edgeX, edgeY, edgeZ = oe.xyz_to_param(edgeX, edgeY,
-                                                      edgeZ)
-
-            edgeZ = local_z(edgeX, edgeY)
-            if oe.isParametric:
-                edgeX, edgeY, edgeZ = oe.param_to_xyz(
-                        edgeX, edgeY, edgeZ)
-            edgeBeam = rsources.Beam(nrays=len(edgeX))
-            edgeBeam.x = edgeX
-            edgeBeam.y = edgeY
-            edgeBeam.z = edgeZ
-
-            oe.local_to_global(edgeBeam, is2ndXtal=is2ndXtal)
-            oneEdge[ie] = np.vstack((edgeBeam.x - self.coordOffset[0],
-                                     edgeBeam.y - self.coordOffset[1],
-                                     edgeBeam.z - self.coordOffset[2])).T
-
-        self.oeContour[oe.name] = oneEdge
-
-
-    def drawOeContour(self, oe):
-        gl.glEnable(gl.GL_MAP1_VERTEX_3)
-        gl.glLineWidth(self.contourWidth)
-        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-        cpo = self.surfCPOrder
-        for ie in range(len(self.oeContour[oe.name])):
-            edge = self.oeContour[oe.name][ie]
-            nTiles = self.tiles[0] if ie in [0, 2] else self.tiles[1]
-            nTiles = self.tiles[1]*3 if oe.shape == 'round' else nTiles
-            for tile in range(nTiles+1):
-                gl.glMap1f(gl.GL_MAP1_VERTEX_3,  0, 1,
-                           self.modelToWorld(edge[tile*cpo:(tile+1)*cpo+1, :]))
-                gl.glMapGrid1f(cpo, 0.0, 1.0)
-                gl.glEvalMesh1(gl.GL_LINE, 0, cpo)
-
-        gl.glDisable(gl.GL_MAP1_VERTEX_3)
-
-    def drawSlitEdges(self, oe):
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-        gl.glLineWidth(self.contourWidth)
-        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-        gl.glBegin(gl.GL_QUADS)
-        for edge in self.modelToWorld(np.array(self.slitEdges[oe.name]) - np.array(self.coordOffset)):
-            gl.glVertex3f(*edge[0,:])
-            gl.glVertex3f(*edge[1,:])
-            gl.glVertex3f(*edge[3,:])
-            gl.glVertex3f(*edge[2,:])
-
-            gl.glVertex3f(*edge[0,:])
-            gl.glVertex3f(*edge[1,:])
-            gl.glVertex3f(*edge[5,:])
-            gl.glVertex3f(*edge[4,:])
-
-            gl.glVertex3f(*edge[5,:])
-            gl.glVertex3f(*edge[1,:])
-            gl.glVertex3f(*edge[3,:])
-            gl.glVertex3f(*edge[7,:])
-
-            gl.glVertex3f(*edge[4,:])
-            gl.glVertex3f(*edge[5,:])
-            gl.glVertex3f(*edge[7,:])
-            gl.glVertex3f(*edge[6,:])
-
-            gl.glVertex3f(*edge[0,:])
-            gl.glVertex3f(*edge[4,:])
-            gl.glVertex3f(*edge[6,:])
-            gl.glVertex3f(*edge[2,:])
-
-            gl.glVertex3f(*edge[2,:])
-            gl.glVertex3f(*edge[3,:])
-            gl.glVertex3f(*edge[7,:])
-            gl.glVertex3f(*edge[6,:])
-        gl.glEnd()
+#    def drawSlitEdges(self, oe):
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+#        gl.glLineWidth(self.contourWidth)
+#        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
+#        gl.glBegin(gl.GL_QUADS)
+#        for edge in self.modelToWorld(np.array(self.slitEdges[oe.name]) -
+#                                      np.array(self.coordOffset)):
+#            gl.glVertex3f(*edge[0, :])
+#            gl.glVertex3f(*edge[1, :])
+#            gl.glVertex3f(*edge[3, :])
+#            gl.glVertex3f(*edge[2, :])
+#
+#            gl.glVertex3f(*edge[0, :])
+#            gl.glVertex3f(*edge[1, :])
+#            gl.glVertex3f(*edge[5, :])
+#            gl.glVertex3f(*edge[4, :])
+#
+#            gl.glVertex3f(*edge[5, :])
+#            gl.glVertex3f(*edge[1, :])
+#            gl.glVertex3f(*edge[3, :])
+#            gl.glVertex3f(*edge[7, :])
+#
+#            gl.glVertex3f(*edge[4, :])
+#            gl.glVertex3f(*edge[5, :])
+#            gl.glVertex3f(*edge[7, :])
+#            gl.glVertex3f(*edge[6, :])
+#
+#            gl.glVertex3f(*edge[0, :])
+#            gl.glVertex3f(*edge[4, :])
+#            gl.glVertex3f(*edge[6, :])
+#            gl.glVertex3f(*edge[2, :])
+#
+#            gl.glVertex3f(*edge[2, :])
+#            gl.glVertex3f(*edge[3, :])
+#            gl.glVertex3f(*edge[7, :])
+#            gl.glVertex3f(*edge[6, :])
+#        gl.glEnd()
 
     def plotAperture(self, oe):
         surfCPOrder = self.surfCPOrder
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
         gl.glEnable(gl.GL_MAP2_NORMAL)
-        plotVolume = True
-        slitT = self.slitThickness
+        plotVolume = False
+#        slitT = self.slitThickness
 
         if oe.shape == 'round':
             r = oe.r
@@ -3451,94 +3455,94 @@ class xrtGlWidget(qt.QGLWidget):
                         self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
                                             gbT.a, gbT.b[:]*surf, gbT.c,
                                             [0, 0, 0])
-        else:
-            self.slitEdges[oe.name] = []
-            for iface, face in enumerate(limits):
-                dT = slitT if iface < 2 else -slitT  # Slit thickness
-                # front
-                xGridOe = np.linspace(face[0], face[1], surfCPOrder)
-                zGridOe = np.linspace(face[2], face[3], surfCPOrder)
-                yGridOe = np.linspace(0, -dT, surfCPOrder)
-                xVert, yVert, zVert = np.meshgrid([face[0], face[1]],
-                                                  [0, -dT],
-                                                  [face[2], face[3]])
-                bladeVertices = np.vstack((xVert.flatten(),
-                                           yVert.flatten(),
-                                           zVert.flatten())).T
-                gbt = rsources.Beam(nrays=8)
-                gbt.x = bladeVertices[:, 0]
-                gbt.y = bladeVertices[:, 1]
-                gbt.z = bladeVertices[:, 2]
-                oe.local_to_global(gbt)
-
-                self.slitEdges[oe.name].append(np.vstack((gbt.x, gbt.y,
-                                                           gbt.z)).T)
-
-                xv, zv = np.meshgrid(xGridOe, zGridOe)
-                xv = xv.flatten()
-                zv = zv.flatten()
-
-                gbT = rsources.Beam(nrays=len(xv))
-                gbT.x = xv
-                gbT.y = np.zeros_like(xv)
-                gbT.z = zv
-
-                gbT.a = np.zeros_like(xv)
-                gbT.b = np.ones_like(xv)
-                gbT.c = np.zeros_like(xv)
-
-                oe.local_to_global(gbT)
-
-                for ysurf in [0, dT]:
-                    nsurf = 1. if (dT > 0 and ysurf != 0) or\
-                        (ysurf == 0 and dT < 0) else -1.
-                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-                                        gbT.a, gbT.b[:]*nsurf, gbT.c,
-                                        [0, ysurf, 0])
-
-                # side
-                zv, yv = np.meshgrid(zGridOe, yGridOe)
-                zv = zv.flatten()
-                yv = yv.flatten()
-
-                gbT = rsources.Beam(nrays=len(yv))
-                gbT.y = yv
-                gbT.x = np.zeros_like(yv)
-                gbT.z = zv
-
-                gbT.a = np.ones_like(yv)
-                gbT.b = np.zeros_like(yv)
-                gbT.c = np.zeros_like(yv)
-
-                oe.local_to_global(gbT)
-
-                for isurf, xsurf in enumerate([face[0], face[1]]):
-                    nsurf = 1. if isurf == 0 else -1
-                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-                                        gbT.a[:]*nsurf, gbT.b, gbT.c,
-                                        [xsurf, 0, 0])
-
-                # top
-                xv, yv = np.meshgrid(xGridOe, yGridOe)
-                xv = xv.flatten()
-                yv = yv.flatten()
-
-                gbT = rsources.Beam(nrays=len(yv))
-                gbT.x = xv
-                gbT.y = yv
-                gbT.z = np.zeros_like(xv)
-
-                gbT.a = np.zeros_like(yv)
-                gbT.b = np.zeros_like(yv)
-                gbT.c = np.ones_like(yv)
-
-                oe.local_to_global(gbT)
-
-                for isurf, zsurf in enumerate([face[2], face[3]]):
-                    nsurf = 1. if isurf == 0 else -1
-                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-                                        gbT.a, gbT.b, gbT.c[:]*nsurf,
-                                        [0, 0, zsurf])
+#        else:
+#            self.slitEdges[oe.name] = []
+#            for iface, face in enumerate(limits):
+#                dT = slitT if iface < 2 else -slitT  # Slit thickness
+#                # front
+#                xGridOe = np.linspace(face[0], face[1], surfCPOrder)
+#                zGridOe = np.linspace(face[2], face[3], surfCPOrder)
+#                yGridOe = np.linspace(0, -dT, surfCPOrder)
+#                xVert, yVert, zVert = np.meshgrid([face[0], face[1]],
+#                                                  [0, -dT],
+#                                                  [face[2], face[3]])
+#                bladeVertices = np.vstack((xVert.flatten(),
+#                                           yVert.flatten(),
+#                                           zVert.flatten())).T
+#                gbt = rsources.Beam(nrays=8)
+#                gbt.x = bladeVertices[:, 0]
+#                gbt.y = bladeVertices[:, 1]
+#                gbt.z = bladeVertices[:, 2]
+#                oe.local_to_global(gbt)
+#
+#                self.slitEdges[oe.name].append(np.vstack((gbt.x, gbt.y,
+#                                                          gbt.z)).T)
+#
+#                xv, zv = np.meshgrid(xGridOe, zGridOe)
+#                xv = xv.flatten()
+#                zv = zv.flatten()
+#
+#                gbT = rsources.Beam(nrays=len(xv))
+#                gbT.x = xv
+#                gbT.y = np.zeros_like(xv)
+#                gbT.z = zv
+#
+#                gbT.a = np.zeros_like(xv)
+#                gbT.b = np.ones_like(xv)
+#                gbT.c = np.zeros_like(xv)
+#
+#                oe.local_to_global(gbT)
+#
+#                for ysurf in [0, dT]:
+#                    nsurf = 1. if (dT > 0 and ysurf != 0) or\
+#                        (ysurf == 0 and dT < 0) else -1.
+#                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+#                                        gbT.a, gbT.b[:]*nsurf, gbT.c,
+#                                        [0, ysurf, 0])
+#
+#                # side
+#                zv, yv = np.meshgrid(zGridOe, yGridOe)
+#                zv = zv.flatten()
+#                yv = yv.flatten()
+#
+#                gbT = rsources.Beam(nrays=len(yv))
+#                gbT.y = yv
+#                gbT.x = np.zeros_like(yv)
+#                gbT.z = zv
+#
+#                gbT.a = np.ones_like(yv)
+#                gbT.b = np.zeros_like(yv)
+#                gbT.c = np.zeros_like(yv)
+#
+#                oe.local_to_global(gbT)
+#
+#                for isurf, xsurf in enumerate([face[0], face[1]]):
+#                    nsurf = 1. if isurf == 0 else -1
+#                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+#                                        gbT.a[:]*nsurf, gbT.b, gbT.c,
+#                                        [xsurf, 0, 0])
+#
+#                # top
+#                xv, yv = np.meshgrid(xGridOe, yGridOe)
+#                xv = xv.flatten()
+#                yv = yv.flatten()
+#
+#                gbT = rsources.Beam(nrays=len(yv))
+#                gbT.x = xv
+#                gbT.y = yv
+#                gbT.z = np.zeros_like(xv)
+#
+#                gbT.a = np.zeros_like(yv)
+#                gbT.b = np.zeros_like(yv)
+#                gbT.c = np.ones_like(yv)
+#
+#                oe.local_to_global(gbT)
+#
+#                for isurf, zsurf in enumerate([face[2], face[3]]):
+#                    nsurf = 1. if isurf == 0 else -1
+#                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
+#                                        gbT.a, gbT.b, gbT.c[:]*nsurf,
+#                                        [0, 0, zsurf])
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
@@ -4518,4 +4522,3 @@ class xrtGlWidget(qt.QGLWidget):
         if not ctrlOn:
             self.scaleUpdated.emit(self.scaleVec)
         self.glDraw()
-
