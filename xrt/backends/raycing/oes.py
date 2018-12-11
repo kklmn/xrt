@@ -1112,16 +1112,25 @@ class EllipticalMirrorParam(OE):
     coordinates in planes normal to the major axis at every point *s*. The
     polar axis is upwards.
 
-    The user supplies the two focal distances *p* and *q* (both are positive)
-    and the *pitch* angle. If *isCylindrical* is True, the figure is an
-    elliptical cylinder, otherwise it is an ellipsoid of revolution around the
-    major axis.
+    The user supplies two foci and *pitch* angle. The foci are given either by
+    focal distances *p* and *q* (both are positive) or as *f1* and *f2* points
+    in the global coordinate system (3-sequences). Any combination of (*p* or
+    *f1*) and (*q* or *f2*) is allowed. If *p* is supplied, not *f1*, the
+    incoming optical axis is assumed to be along the beamline (Y axis). For a
+    general orientation of the ellipse axes *f1* should rather be supplied.
+
+    If *isCylindrical* is True, the figure is an elliptical cylinder, otherwise
+    it is an ellipsoid of revolution around the major axis.
 
     .. warning::
 
-        If you want to change any of *p*, *q* or *pitch* from outside of the
-        constructor, you must invoke the method :meth:`reset_pqpitch` to
-        recalculate the ellipsoid parameters."""
+        If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
+        creation of the OE, you must invoke the method :meth:`reset_pqpitch` to
+        recalculate the ellipsoid parameters.
+
+    The usage is exemplified in `test_param_mirror.py`.
+
+    """
 
     cl_plist = ("ellipseA", "ellipseB", "y0", "z0",
                 "cosGamma", "sinGamma", "isCylindrical")
@@ -1147,24 +1156,38 @@ class EllipticalMirrorParam(OE):
         *p* and *q*: float
             *p* and *q* arms of the mirror, both are positive.
 
+        *f1* and *f2*: 3-sequence
+            Focal points in the global coordinate system. Alternatives for,
+            correspondingly, *p* and *q*.
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.reset_pqpitch(self.p, self.q, self.pitch)
+        self.reset_pqpitch(self.p, self.q, self.pitch, self.f1, self.f2)
 
-    def reset_pqpitch(self, p=None, q=None, pitch=None):
-        """This method allows re-assignment of *p*, *q* and *pitch* from
-        outside of the constructor.
+    def reset_pqpitch(self, p=None, q=None, pitch=None, f1=None, f2=None):
+        """This method allows re-assignment of *p*, *q*, *pitch*, *f1* and *f2*
+        from outside of the constructor.
         """
+        dgamma = 0
+        if f1 is not None:
+            p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
+            self.f1 = f1
+            cosdgamma = abs(self.center[1] - f1[1]) / p
+            if cosdgamma > 1:
+                cosdgamma = 1
+            dgamma = np.arccos(cosdgamma)
         if p is not None:
             self.p = p
+        if f2 is not None:
+            q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
+            self.f2 = f2
         if q is not None:
             self.q = q
         if pitch is not None:
             self.pitch = pitch
-        absPitch = abs(self.pitch)
+        absPitch = abs(self.pitch - dgamma)
         gamma = np.arctan2((self.p - self.q) * np.sin(absPitch),
                            (self.p + self.q) * np.cos(absPitch))
         self.cosGamma = np.cos(gamma)
@@ -1175,6 +1198,8 @@ class EllipticalMirrorParam(OE):
         self.ellipseB = np.sqrt(self.q * self.p) * np.sin(absPitch)
 
     def __pop_kwargs(self, **kwargs):
+        self.f1 = kwargs.pop('f1', None)
+        self.f2 = kwargs.pop('f2', None)
         self.p = kwargs.pop('p', 1000)  # source-to-mirror
         self.q = kwargs.pop('q', 1000)  # mirror-to-focus
         self.isCylindrical = kwargs.pop('isCylindrical', False)
@@ -1193,7 +1218,7 @@ class EllipticalMirrorParam(OE):
         return x, yNew + self.y0, zNew + self.z0
 
     def local_r(self, s, phi):
-        r = self.ellipseB * np.sqrt(1 - s**2 / self.ellipseA**2)
+        r = self.ellipseB * np.sqrt(abs(1 - s**2 / self.ellipseA**2))
         if self.isCylindrical:
             r /= abs(np.cos(phi))
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)
@@ -1217,48 +1242,78 @@ class EllipticalMirrorParam(OE):
 class ParabolicalMirrorParam(EllipticalMirrorParam):
     """The parabolical mirror is implemented as a parametric surface. The
     parameterization is the following: *s* - is local coordinate along the
-    major axis with origin at the ellipse center. *phi* and *r* are local polar
-    coordinates in planes normal to the major axis at every point *s*. The
-    polar axis is upwards.
+    paraboloid axis with origin at the focus. *phi* and *r* are local polar
+    coordinates in planes normal to the axis at every point *s*. The polar axis
+    is upwards.
 
-    The user supplies the focal distance *p* or *q* (both are positive)
-    and the *pitch* angle. If *isCylindrical* is True, the figure is an
-    elliptical cylinder, otherwise it is an ellipsoid of revolution around the
+    The user supplies one (and only one) focal distance *p* or *q* as a
+    positive value and *pitch* angle. Alternatively, instead of *p* one can
+    specify *f1* (3-sequence) as a 3D point in the global coordinate system and
+    instead of *q* -- *f2*. If *p* or *q* is supplied, the paraboloid axis is
+    assumed to be along the beamline (its Y axis). For a more general case,
+    specify *f1* or *f2*.
+
+    If *isCylindrical* is True, the figure is an
+    parabolical cylinder, otherwise it is a paraboloid of revolution around the
     major axis.
 
     .. warning::
 
-        If you want to change any of *p*, *q* or *pitch* from outside of the
-        constructor, you must invoke the method :meth:`reset_pqpitch` to
-        recalculate the ellipsoid parameters."""
+        If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
+        creation of the OE, you must invoke the method :meth:`reset_pqpitch` to
+        recalculate the ellipsoid parameters.
+
+    The usage is exemplified in `test_param_mirror.py`.
+
+    """
+
     def __init__(self, *args, **kwargs):
         """
         *p* or *q*: float
             *p* and *q* arms of the mirror, both are positive. One and only one
             of them must be given.
 
+        *f1* and *f2*: 3-sequence
+            Focal points in the global coordinate system. Alternatives for,
+            correspondingly, *p* and *q*. Only one of them must be given.
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.reset_pqpitch(self.p, self.q, self.pitch)
+        self.reset_pqpitch(self.p, self.q, self.pitch, self.f1, self.f2)
 
-    def reset_pqpitch(self, p=None, q=None, pitch=None):
+    def reset_pqpitch(self, p=None, q=None, pitch=None, f1=None, f2=None):
         """This method allows re-assignment of *p*, *q* and *pitch* from
         outside of the constructor.
         """
+        dgamma = 0
+        if f1 is not None:
+            p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
+            self.f1 = f1
+            cosdgamma = abs(self.center[1] - f1[1]) / p
+            if cosdgamma > 1:
+                cosdgamma = 1
+            dgamma = np.arccos(cosdgamma)
         if p is not None:
             self.p = p
+        if f2 is not None:
+            q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
+            self.f2 = f2
+            cosdgamma = abs(self.center[1] - f2[1]) / q
+            if cosdgamma > 1:
+                cosdgamma = 1
+            dgamma = np.arccos(cosdgamma)
         if q is not None:
             self.q = q
         if ((self.p is not None) and (self.q is not None)) or\
                 ((self.p is None) and (self.q is None)):
             print('p={0}, q={1}'.format(self.p, self.q))
-            raise ValueError('One and only one of p or q must be None!')
+            raise ValueError('One and only one of p (or f1) or q (or f2)'
+                             ' must be None!')
         if pitch is not None:
             self.pitch = pitch
-        absPitch = abs(self.pitch)
+        absPitch = abs(self.pitch - dgamma)
         if self.p is None:
             self.y0 = self.q * np.cos(absPitch)
             self.z0 = self.q * np.sin(absPitch)
@@ -1273,6 +1328,8 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         self.sinGamma = np.sin(gamma)
 
     def __pop_kwargs(self, **kwargs):
+        self.f1 = kwargs.pop('f1', None)
+        self.f2 = kwargs.pop('f2', None)
         self.p = kwargs.pop('p', None)  # source-to-mirror
         self.q = kwargs.pop('q', None)  # mirror-to-focus
         self.isCylindrical = kwargs.pop('isCylindrical', False)
