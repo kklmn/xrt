@@ -22,7 +22,8 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 
 .. autoclass:: Crystal(Material)
    :members: __init__, get_Darwin_width, get_amplitude,
-             get_dtheta_symmetric_Bragg, get_dtheta, get_dtheta_regular
+             get_dtheta_symmetric_Bragg, get_dtheta, get_dtheta_regular,
+             get_refractive_correction
 
 .. autoclass:: CrystalFcc(Crystal)
    :members: get_structure_factor
@@ -554,7 +555,9 @@ class Multilayer(object):
         *tThickness* and *bThickness*: float
             The thicknesses of the layers in Å. If the multilayer is depth
             graded, *tThickness* and *bThickness* are at the top and
-            *tThicknessLow* and *bThicknessLow* are at the substrate.
+            *tThicknessLow* and *bThicknessLow* are at the substrate. If you
+            need laterally graded thicknesses, modify `get_t_thickness` and/or
+            `get_b_thickness` in a subclass.
 
         *power*: float
             Defines the exponent of the layer thickness power law, if the
@@ -1224,8 +1227,7 @@ class Crystal(Material):
         return totalX
 
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None, alphaAsym=None,
-                      Rcurvmm=None, ucl=None, useTT=False):
+                      beamInDotHNormal=None):
         r"""
         Calculates complex amplitude reflectivity and transmittivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases for the
@@ -1342,6 +1344,35 @@ class Crystal(Material):
                 ra /= np.sqrt(abs(b))
             return ra
 
+        waveLength = CH / E  # the word "lambda" is reserved
+        k = PI2 / waveLength
+        k0s = -beamInDotNormal * k
+        if beamOutDotNormal is None:
+            beamOutDotNormal = -beamInDotNormal
+        kHs = -beamOutDotNormal * k
+        if beamInDotHNormal is None:
+            beamInDotHNormal = beamInDotNormal
+        HH = PI2 / self.d
+        k0H = abs(beamInDotHNormal) * HH * k
+        k02 = k**2
+        H2 = HH**2
+        kHs0 = kHs == 0
+        kHs[kHs0] = 1
+        b = k0s / kHs
+        b[kHs0] = -1
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/self.d)
+        thetaB = self.get_Bragg_angle(E)
+        alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
+
+        curveS = for_one_polarization(1.)  # s polarization
+        polFactor = np.cos(2. * thetaB)
+        curveP = for_one_polarization(polFactor)  # p polarization
+        return curveS, curveP  # , phi.real
+
+    def get_amplitude_TT(self, E, beamInDotNormal, beamOutDotNormal=None,
+                         beamInDotHNormal=None, alphaAsym=None,
+                         Rcurvmm=None, ucl=None):
+
         def for_one_polarization_TT(polFactor):
 
             if thickness == 0:
@@ -1438,44 +1469,58 @@ class Crystal(Material):
         thetaB = self.get_Bragg_angle(E)
         alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
 
-        if useTT:
-            thickness = 0 if self.t is None else self.t * 1e7
-            if thickness == 0:
-                N_layers = 10000
-            else:
-                N_layers = thickness / 100.
-                if N_layers < 2000:
-                    N_layers = 2000
-            bLength = len(E)
-            dtsin2tb = (H2/2. - k0H) / (k**2)
-            if Rcurvmm in [0, None]:
-                Rcurv = np.inf
-            else:
-                Rcurv = Rcurvmm * 1.0e7
-            beta_h = dtsin2tb - 0.5 * chi0.conjugate()
-            calc_model = for_one_polarization_TT
+        thickness = 0 if self.t is None else self.t * 1e7
+        if thickness == 0:
+            N_layers = 10000
         else:
-            calc_model = for_one_polarization
-        curveS = calc_model(1.)  # s polarization
+            N_layers = thickness / 100.
+            if N_layers < 2000:
+                N_layers = 2000
+        bLength = len(E)
+        dtsin2tb = (H2/2. - k0H) / (k**2)
+        if Rcurvmm in [0, None]:
+            Rcurv = np.inf
+        else:
+            Rcurv = Rcurvmm * 1.0e7
+        beta_h = dtsin2tb - 0.5 * chi0.conjugate()
+
+        curveS = for_one_polarization_TT(1.)  # s polarization
         polFactor = np.cos(2. * thetaB)
-        curveP = calc_model(polFactor)  # p polarization
+        curveP = for_one_polarization_TT(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
-    def get_amplitude_mosaic(self, E, beamInDotNormal):
+    def get_amplitude_mosaic(self, E, beamInDotNormal, beamOutDotNormal=None,
+                             beamInDotHNormal=None):
+        """Based on Bacon and Lowde"""
         def for_one_polarization(Q):
             a = Q*w / mu
             b = (1 + 2*a)**0.5
             if self.t is None:  # thick Bragg
                 return a / (1 + a + b)
-            A = mu * self.t / np.sin(thetaB)
+            A = mu*t / g0
             if self.geom.startswith('Bragg'):
-                return a / (1 + a + b/np.tanh(A*b))
+                return a / (1 + a + b/np.tanh(A*b))  # Eq. (17)
             else:  # Laue
-                return np.sinh(A*a) * np.exp(-A*(1+a))
+                # return np.sinh(A*a) * np.exp(-A*(1+a))  # Eq. (18)
+                sigma = Q*w / g0
+                overGamma = 0.5 * (1/g0 + 1/gH)
+                overG = 0.5 * (1/g0 - 1/gH)
+                sm = (sigma**2 + mu**2*overG**2)**0.5
+                sGamma = sigma + mu*overGamma
+                # Eq. (24):
+                return sigma/sm * np.sinh(sm*t) * np.exp(-sGamma*t)
         Qs, Qp, thetaB = self.get_kappa_Q(E)[2:5]  # in cm^-1
-        delta = np.arcsin(np.abs(beamInDotNormal)) - thetaB
+        if beamInDotHNormal is None:
+            beamInDotHNormal = beamInDotNormal
+        delta = np.arcsin(np.abs(beamInDotHNormal)) - thetaB
+        g0 = np.abs(beamInDotNormal)
+        gH = g0 if beamOutDotNormal is None else np.abs(beamOutDotNormal)
         w = np.exp(-0.5*delta**2/self.mosaicity**2) / (SQRT2PI*self.mosaicity)
         mu = self.get_absorption_coefficient(E)  # in cm^-1
+        if self.geom.startswith('Bragg'):
+            mu *= 0.5 * (1 + g0/gH)  # Eq. (23)
+        if self.t is not None:
+            t = self.t*0.1  # t is in cm
         curveS = for_one_polarization(Qs)
         curveP = for_one_polarization(Qp)
         return curveS**0.5, curveP**0.5
@@ -1601,6 +1646,21 @@ class Crystal(Material):
                 return 0.
 
     def get_refractive_correction(self, E, beamInDotNormal=None, alpha=None):
+        r"""
+        The difference in the glancing angle of incidence for incident and exit
+        waves, Eqs. (2.152) and (2.112) in [Shvydko_XRO]_:
+
+        .. math::
+            \theta_c - \theta'_c = \frac{w_H^{(s)}}{2} \left(b - \frac{1}{b}
+            \right) \tan{\theta_c}
+
+        .. note::
+            Not valid close to backscattering.
+
+        .. [Shvydko_XRO] Yu. Shvyd'ko, X-Ray Optics High-Energy-Resolution
+           Applications, Springer-Verlag Berlin Heidelberg, 2004.
+
+        """
         thetaB = self.get_Bragg_angle(E)
         bothNone = (beamInDotNormal is None) and (alpha is None)
         bothNotNone = (beamInDotNormal is not None) and (alpha is not None)
@@ -1868,6 +1928,7 @@ class CrystalFromCell(Crystal):
              2*h*l * (ca*cg - cb) / (self.a*self.c) +
              2*k*l * (cb*cg - ca) / (self.b*self.c))**(-0.5)
         self.chiToF = -R0 / PI / self.V  # minus!
+        self.chiToFd2 = abs(self.chiToF) * self.d**2
         self.geom = geom
         self.geometry = 2*int(geom.startswith('Bragg')) +\
             int(geom.endswith('transmitted'))

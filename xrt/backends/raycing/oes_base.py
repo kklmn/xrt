@@ -1466,7 +1466,7 @@ class OE(object):
             n1c*(-kx**2*ocosBeta - ky**2*ocosBeta + 1)
         beamInDotNormalN = lb.a[goodN]*nra + lb.b[goodN]*nrb + lb.c[goodN]*nrc
 
-        return np.asarray([nra, nrb, nrc], order='F'), beamInDotNormalN
+        return [nra, nrb, nrc], beamInDotNormalN
 
     def _mosaic_length(self, mat, beamInDotNormal, lb, goodN):
         Qs, Qp, thetaB = mat.get_kappa_Q(lb.E[goodN])[2:5]  # in cm^-1
@@ -1711,10 +1711,15 @@ class OE(object):
                     beamInDotSurfaceNormal = beamInDotNormal
 
                 if needMosaicity:
-                    oeNormal, beamInDotNormalNew = self._mosaic_normal(
+                    oeNormalN, beamInDotNormalN = self._mosaic_normal(
                         matSur, oeNormal, beamInDotNormal, lb, goodN)
+                    if isAsymmetric:
+                        o1 = np.ones_like(lb.a[goodN])
+                        oeNormalN.extend([
+                            oeNormal[-3]*o1, oeNormal[-2]*o1, oeNormal[-1]*o1])
+                    oeNormal = np.asarray(oeNormalN, order='F')
                     beamInDotNormalOld = beamInDotNormal
-                    beamInDotNormal = beamInDotNormalNew
+                    beamInDotNormal = beamInDotNormalN
 # direction:
             if toWhere in [3, 4]:  # grating, FZP
                 if gNormal is None:
@@ -1891,20 +1896,24 @@ class OE(object):
                 if toWhere in [5, 6, 7]:  # powder,
                     refl = rasP, rapP
                 elif matSur.kind == 'crystal':
+                    beamOutDotSurfaceNormal = a_out*oeNormal[-3] + \
+                        b_out*oeNormal[-2] + c_out*oeNormal[-1]
                     if needMosaicity:
                         refl = matSur.get_amplitude_mosaic(
-                            lb.E[goodN], beamInDotNormalOld)
-                    else:
-                        beamOutDotSurfaceNormal = a_out*oeNormal[-3] + \
-                            b_out*oeNormal[-2] + c_out*oeNormal[-1]
-                        refl = matSur.get_amplitude(
+                            lb.E[goodN], beamInDotSurfaceNormal,
+                            beamOutDotSurfaceNormal, beamInDotNormalOld)
+                    elif matSur.useTT:
+                        refl = matSur.get_amplitude_TT(
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             alphaAsym=self.alpha,
                             Rcurvmm=self.R if 'R' in self.__dict__.keys()
                             else None,
-                            ucl=self.ucl,
-                            useTT=matSur.useTT)
+                            ucl=self.ucl)
+                    else:
+                        refl = matSur.get_amplitude(
+                            lb.E[goodN], beamInDotSurfaceNormal,
+                            beamOutDotSurfaceNormal, beamInDotNormal)
                 elif matSur.kind == 'multilayer':
                     refl = matSur.get_amplitude(
                         lb.E[goodN], beamInDotSurfaceNormal,
@@ -1971,7 +1980,7 @@ class OE(object):
         if goodNsum > 0:
             if needMosaicity:  # secondary extinction and attenuation
                 length, through = self._mosaic_length(
-                    matSur, beamInDotNormalOld, lb, goodN)
+                    matSur, beamInDotSurfaceNormal, lb, goodN)
                 n = matSur.get_refractive_index(lb.E[goodN])
                 if through is not None:
                     lb.a[goodN][through] = lb.olda[through]
