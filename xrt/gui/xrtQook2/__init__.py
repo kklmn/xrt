@@ -1721,7 +1721,7 @@ class XrtQook(qt.QWidget):
                     elProps[3], elProps[0]))(**elParams)
             initState = 2
         except:
-            raise
+#            raise
             initState = 0
             elementInstance = None
 
