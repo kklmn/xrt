@@ -1174,10 +1174,7 @@ class EllipticalMirrorParam(OE):
         if f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
             self.f1 = f1
-            cosdgamma = abs(self.center[1] - f1[1]) / p
-            if cosdgamma > 1:
-                cosdgamma = 1
-            dgamma = np.arccos(cosdgamma)
+            dgamma = np.arctan2(self.center[2] - f1[2], self.center[1] - f1[1])
         if p is not None:
             self.p = p
         if f2 is not None:
@@ -1187,6 +1184,11 @@ class EllipticalMirrorParam(OE):
             self.q = q
         if pitch is not None:
             self.pitch = pitch
+        if abs(dgamma) > np.pi/2:
+            if dgamma > 0:
+                dgamma -= np.pi
+            else:
+                dgamma += np.pi
         absPitch = abs(self.pitch - dgamma)
         gamma = np.arctan2((self.p - self.q) * np.sin(absPitch),
                            (self.p + self.q) * np.cos(absPitch))
@@ -1291,19 +1293,13 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         if f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
             self.f1 = f1
-            cosdgamma = abs(self.center[1] - f1[1]) / p
-            if cosdgamma > 1:
-                cosdgamma = 1
-            dgamma = np.arccos(cosdgamma)
+            dgamma = np.arctan2(self.center[2] - f1[2], self.center[1] - f1[1])
         if p is not None:
             self.p = p
         if f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
             self.f2 = f2
-            cosdgamma = abs(self.center[1] - f2[1]) / q
-            if cosdgamma > 1:
-                cosdgamma = 1
-            dgamma = np.arccos(cosdgamma)
+            dgamma = np.arctan2(self.center[2] - f2[2], self.center[1] - f2[1])
         if q is not None:
             self.q = q
         if ((self.p is not None) and (self.q is not None)) or\
@@ -1313,6 +1309,11 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
                              ' must be None!')
         if pitch is not None:
             self.pitch = pitch
+        if abs(dgamma) > np.pi/2:
+            if dgamma > 0:
+                dgamma -= np.pi
+            else:
+                dgamma += np.pi
         absPitch = abs(self.pitch - dgamma)
         if self.p is None:
             self.y0 = self.q * np.cos(absPitch)
