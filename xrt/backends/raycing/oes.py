@@ -1112,21 +1112,21 @@ class EllipticalMirrorParam(OE):
     coordinates in planes normal to the major axis at every point *s*. The
     polar axis is upwards.
 
-    The user supplies two foci and *pitch* angle. The foci are given either by
-    focal distances *p* and *q* (both are positive) or as *f1* and *f2* points
-    in the global coordinate system (3-sequences). Any combination of (*p* or
-    *f1*) and (*q* or *f2*) is allowed. If *p* is supplied, not *f1*, the
-    incoming optical axis is assumed to be along the beamline (Y axis). For a
-    general orientation of the ellipse axes *f1* should rather be supplied.
+    The user supplies two foci either by focal distances *p* and *q* (both are
+    positive) or as *f1* and *f2* points in the global coordinate system
+    (3-sequences). Any combination of (*p* or *f1*) and (*q* or *f2*) is
+    allowed. If *p* is supplied, not *f1*, the incoming optical axis is assumed
+    to be along the beamline (Y axis). For a general orientation of the ellipse
+    axes *f1* should rather be supplied.
 
     If *isCylindrical* is True, the figure is an elliptical cylinder, otherwise
     it is an ellipsoid of revolution around the major axis.
 
     .. warning::
 
-        If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
-        creation of the OE, you must invoke the method :meth:`reset_pq` to
-        recalculate the ellipsoid parameters.
+        If you want to change any of *p*, *q*, *f1* or *f2* after the creation
+        of the OE, you must invoke the method :meth:`reset_pq` to recalculate
+        the ellipsoid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
 
@@ -1263,11 +1263,11 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
     is upwards.
 
     The user supplies one (and only one) focal distance *p* or *q* as a
-    positive value and *pitch* angle. Alternatively, instead of *p* one can
-    specify *f1* (3-sequence) as a 3D point in the global coordinate system and
-    instead of *q* -- *f2*. If *p* or *q* is supplied, the paraboloid axis is
-    assumed to be along the beamline (its Y axis). For a more general case,
-    specify *f1* or *f2*.
+    positive value. Alternatively, instead of *p* one can specify *f1*
+    (3-sequence) as a 3D point in the global coordinate system and instead of
+    *q* -- *f2*. If *p* or *q* is supplied, the paraboloid axis isassumed to be
+    along the beamline (its Y axis). For a more general case, specify *f1* or
+    *f2*.
 
     If *isCylindrical* is True, the figure is an
     parabolical cylinder, otherwise it is a paraboloid of revolution around the
@@ -1275,9 +1275,9 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
 
     .. warning::
 
-        If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
-        creation of the OE, you must invoke the method :meth:`reset_pq` to
-        recalculate the paraboloid parameters.
+        If you want to change any of *p*, *q*, *f1* or *f2* after the creation
+        of the OE, you must invoke the method :meth:`reset_pq` to recalculate
+        the paraboloid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
 
