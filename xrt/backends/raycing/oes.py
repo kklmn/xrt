@@ -1125,7 +1125,7 @@ class EllipticalMirrorParam(OE):
     .. warning::
 
         If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
-        creation of the OE, you must invoke the method :meth:`reset_pqpitch` to
+        creation of the OE, you must invoke the method :meth:`reset_pq` to
         recalculate the ellipsoid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
@@ -1164,32 +1164,46 @@ class EllipticalMirrorParam(OE):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.reset_pqpitch(self.p, self.q, self.pitch, self.f1, self.f2)
+        self.reset_pq(self.p, self.q, self.f1, self.f2)
 
-    def reset_pqpitch(self, p=None, q=None, pitch=None, f1=None, f2=None):
+    def _to_global(self, lb):
+        if self.extraPitch or self.extraRoll or self.extraYaw:
+            raycing.rotate_beam(
+                lb, rotationSequence='-'+self.extraRotationSequence,
+                pitch=self.extraPitch, roll=self.extraRoll,
+                yaw=self.extraYaw, skip_xyz=True)
+        raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
+                            pitch=self.pitch, roll=self.roll+self.positionRoll,
+                            yaw=self.yaw, skip_xyz=True)
+        raycing.virgin_local_to_global(self.bl, lb, self.center, skip_xyz=True)
+
+    def reset_pqpitch(self, p=None, q=None, pitch=None):
+        """Compatibility method. To pass pitch is not needed any longer."""
+        self.reset_pq(p, q)
+
+    def reset_pq(self, p=None, q=None, f1=None, f2=None):
         """This method allows re-assignment of *p*, *q*, *pitch*, *f1* and *f2*
         from outside of the constructor.
         """
-        dgamma = 0
+        lbn = rs.Beam(nrays=1)
+        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
+        self._to_global(lbn)
+        normal = lbn.a[0], lbn.b[0], lbn.c[0]
         if f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
-            self.f1 = f1
-            dgamma = np.arctan2(self.center[2] - f1[2], self.center[1] - f1[1])
+            axis = [c-f for c, f in zip(self.center, f1)]
+            norm = sum([a**2 for a in axis])**0.5
+        else:
+            axis = [0, 1, 0]
+            norm = 1.
+        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
+        absPitch = abs(np.arcsin(sintheta))
         if p is not None:
             self.p = p
         if f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
-            self.f2 = f2
         if q is not None:
             self.q = q
-        if pitch is not None:
-            self.pitch = pitch
-        if abs(dgamma) > np.pi/2:
-            if dgamma > 0:
-                dgamma -= np.pi
-            else:
-                dgamma += np.pi
-        absPitch = abs(self.pitch - dgamma)
         gamma = np.arctan2((self.p - self.q) * np.sin(absPitch),
                            (self.p + self.q) * np.cos(absPitch))
         self.cosGamma = np.cos(gamma)
@@ -1262,7 +1276,7 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
     .. warning::
 
         If you want to change any of *p*, *q*, *pitch*, *f1* or *f2* after the
-        creation of the OE, you must invoke the method :meth:`reset_pqpitch` to
+        creation of the OE, you must invoke the method :meth:`reset_pq` to
         recalculate the paraboloid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
@@ -1283,23 +1297,32 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.reset_pqpitch(self.p, self.q, self.pitch, self.f1, self.f2)
+        self.reset_pq(self.p, self.q, self.f1, self.f2)
 
-    def reset_pqpitch(self, p=None, q=None, pitch=None, f1=None, f2=None):
+    def reset_pq(self, p=None, q=None, f1=None, f2=None):
         """This method allows re-assignment of *p*, *q* and *pitch* from
         outside of the constructor.
         """
-        dgamma = 0
+        lbn = rs.Beam(nrays=1)
+        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
+        self._to_global(lbn)
+        normal = lbn.a[0], lbn.b[0], lbn.c[0]
         if f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
-            self.f1 = f1
-            dgamma = np.arctan2(self.center[2] - f1[2], self.center[1] - f1[1])
+            axis = [c-f for c, f in zip(self.center, f1)]
+            norm = sum([a**2 for a in axis])**0.5
+        elif f2 is not None:
+            q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
+            axis = [c-f for c, f in zip(self.center, f2)]
+            norm = sum([a**2 for a in axis])**0.5
+        else:
+            axis = [0, 1, 0]
+            norm = 1.
+        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
+        absPitch = abs(np.arcsin(sintheta))
+
         if p is not None:
             self.p = p
-        if f2 is not None:
-            q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
-            self.f2 = f2
-            dgamma = np.arctan2(self.center[2] - f2[2], self.center[1] - f2[1])
         if q is not None:
             self.q = q
         if ((self.p is not None) and (self.q is not None)) or\
@@ -1307,14 +1330,6 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
             print('p={0}, q={1}'.format(self.p, self.q))
             raise ValueError('One and only one of p (or f1) or q (or f2)'
                              ' must be None!')
-        if pitch is not None:
-            self.pitch = pitch
-        if abs(dgamma) > np.pi/2:
-            if dgamma > 0:
-                dgamma -= np.pi
-            else:
-                dgamma += np.pi
-        absPitch = abs(self.pitch - dgamma)
         if self.p is None:
             self.y0 = self.q * np.cos(absPitch)
             self.z0 = self.q * np.sin(absPitch)

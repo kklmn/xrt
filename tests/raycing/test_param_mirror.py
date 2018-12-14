@@ -17,8 +17,13 @@ E0, dE = 9000., 5.,
 p = 10000.
 q = p/2.
 pitch = 2e-3
-inclination = 2.5e-3
 lim = [-0.5, 0.5]
+
+inclination = 0
+#inclination = 2.5e-3
+globalRoll = 0
+#globalRoll = np.pi/2
+#globalRoll = np.pi/4
 
 case = 'elliptical'
 #case = 'parabolical'
@@ -26,7 +31,7 @@ case = 'elliptical'
 
 def build_beamline(nrays=1e5):
     beamLine = raycing.BeamLine(height=0)
-    sourceCenter = (0, 0, 0)
+    sourceCenter = [0, 0, 0]
     mirrorCenter = [0, p, p*np.tan(inclination)]
 
     kw = dict(
@@ -43,19 +48,20 @@ def build_beamline(nrays=1e5):
             dx=1, dz=1, distx='flat', distz='flat',
             distxprime=None, distzprime=None))
         Mirror = roe.ParabolicalMirrorParam
-        kwMirror = dict(f2=[0,
-                            mirrorCenter[1] + q*np.cos(2*pitch + inclination),
-                            mirrorCenter[2] + q*np.sin(2*pitch + inclination)])
-
+        dp = q * np.sin(2*pitch)
+        di = q * np.sin(inclination)
+        kwMirror = dict(f2=[mirrorCenter[0] + dp*np.sin(globalRoll),
+                            mirrorCenter[1] + q,
+                            mirrorCenter[2] + dp*np.cos(globalRoll) + di])
     rs.GeometricSource(
         beamLine, 'GeometricSource', sourceCenter, **kw)
     beamLine.fsm1 = rsc.Screen(beamLine, 'beforeMirror', mirrorCenter)
     beamLine.ellMirror = Mirror(
-        beamLine, 'EM', mirrorCenter, pitch=pitch+inclination, **kwMirror)
+        beamLine, 'EllM', mirrorCenter, rotationSequence='RyRzRx',
+        pitch=pitch+inclination*np.cos(globalRoll), positionRoll=globalRoll,
+        yaw=inclination*np.sin(globalRoll), **kwMirror)
 
-    pitchS = 2*pitch + inclination
-    beamLine.fsm2 = rsc.Screen(
-        beamLine, '@focus', [0, 0, 0], z=(0, -np.sin(pitchS), np.cos(pitchS)))
+    beamLine.fsm2 = rsc.Screen(beamLine, '@focus', [0, 0, 0])
     beamLine.fsm2dY = np.linspace(-2, 2, 5) * q*0.1
     return beamLine
 
@@ -68,10 +74,13 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamEMglobal': beamEMglobal,
                'beamEMlocal': beamEMlocal}
     for i, dy in enumerate(beamLine.fsm2dY):
-        beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] +\
-            (q+dy) * np.cos(2*pitch + inclination)
+        dp = (q+dy) * np.sin(2*pitch)
+        di = (q+dy) * np.sin(inclination)
+        beamLine.fsm2.center[0] = beamLine.ellMirror.center[0] +\
+            dp*np.sin(globalRoll)
+        beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + (q+dy)
         beamLine.fsm2.center[2] = beamLine.ellMirror.center[2] +\
-            (q+dy) * np.sin(2*pitch + inclination)
+            dp*np.cos(globalRoll) + di
         beamFSM2 = beamLine.fsm2.expose(beamEMglobal)
         outDict['beamFSM2-{0:d}'.format(i+1)] = beamFSM2
 
@@ -98,7 +107,18 @@ def main():
         plot.xaxis.limits = lim
         plot.yaxis.limits = lim
         plot.fluxFormatStr = '%.2e'
-        plot.saveName = [case + '-' + plot.title + '.png', ]
+        if globalRoll == 0:
+            globalRollTxt = '0'
+        elif globalRoll == np.pi/2:
+            globalRollTxt = u'0.5π'
+        elif globalRoll == np.pi/4:
+            globalRollTxt = u'0.25π'
+        elif globalRoll == np.pi:
+            globalRollTxt = u'π'
+        else:
+            globalRollTxt = '{0}'.format(globalRoll)
+        plot.saveName = \
+            ['{0}-roll={1}-{2}.png'.format(case, globalRollTxt, plot.title)]
 
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine)
 
