@@ -27,6 +27,18 @@ modify them in the module or externally as in the xrt_logo.py example.
     this behavior, one can mask the beam by apertures or by selecting the
     physical or optical limits of an optical element.
 
+.. tip::
+
+    If you do not want to create plot windows (e.g. when they are too many or
+    when you run xrt on a remote machine) but only want to save plots, you can
+    use a non-interactive matplotlib backend such as Agg (for PNGs), PDF, SVG
+    or PS::
+
+        matplotlib.use('agg')
+
+    Importantly, this must be done at the very top of your script, right after
+    import matplotlib and before importing anything else.
+
 """
 from __future__ import unicode_literals
 __author__ = "Konstantin Klementiev, Roman Chernikov"
