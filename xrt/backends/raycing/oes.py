@@ -63,6 +63,7 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: ParabolicCylinderFlatLens(ParaboloidFlatLens)
 .. autoclass:: DoubleParaboloidLens(ParaboloidFlatLens)
+.. autoclass:: DoubleParabolicCylinderLens(ParabolicCylinderFlatLens)
 .. autoclass:: SurfaceOfRevolution(OE)
 .. autoclass:: NormalFZP(OE)
    :members: __init__, rays_good
@@ -97,7 +98,8 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'EllipticalMirrorParam', 'ParabolicalMirrorParam',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
-           'DoubleParaboloidLens', 'SurfaceOfRevolution', 'NormalFZP',
+           'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
+           'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
            'VLSLaminarGrating')
 import collections
@@ -115,7 +117,7 @@ __allSectioned__ = collections.OrderedDict([
          'DCMwithSagittalFocusing')),
     ('Refractive optics',
         ('ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
-         'DoubleParaboloidLens')),
+         'DoubleParaboloidLens', 'DoubleParabolicCylinderLens')),
     ('Gratings and zone plates',
         ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
          'VLSLaminarGrating'))
@@ -1870,6 +1872,17 @@ class DoubleParaboloidLens(ParaboloidFlatLens):
 
     def local_n2(self, x, y):
         return self.local_n1(x, y)
+
+
+class DoubleParabolicCylinderLens(ParabolicCylinderFlatLens):
+    """Implements a refractive lens or a stack of lenses (CRL) with two equal
+    parabolic cylinders from both sides."""
+    def local_z2(self, x, y):
+        return self.local_z1(x, y)
+
+    def local_n2(self, x, y):
+        return self.local_n1(x, y)
+
 
 # class ConvConcParaboloidLens(ParaboloidFlatLens):
 #    def local_z2(self, x, y):
