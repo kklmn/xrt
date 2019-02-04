@@ -675,6 +675,9 @@ class Multilayer(object):
         top interface of the multilayer is assumed to be with vacuum. Returns a
         tuple of the amplitudes of s and p polarizations.
 
+        If *isParametric* in the constructor is True the *x* and *y* local
+        coordinates are assumed to be *s* and *phi*.
+
         The calculation starts from the bottommost layer (with index
         :math:`N`). The reflectivity from its top into the adjacent layer
         (:math:`N-1`) is:
