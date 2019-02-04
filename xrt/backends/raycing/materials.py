@@ -16,7 +16,8 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
              get_amplitude
 
 .. autoclass:: Multilayer()
-   :members: __init__, get_amplitude, get_dtheta_symmetric_Bragg
+   :members: __init__, get_t_thickness, get_b_thickness, get_amplitude,
+             get_dtheta_symmetric_Bragg
 .. autoclass:: Coated()
    :members: __init__
 
@@ -658,11 +659,25 @@ class Multilayer(object):
             ((order * CH / E)**2 + self.d**2 * 8*d_)**0.5 / (2*self.d))
 
     def get_t_thickness(self, x, y, iPair):
+        u"""
+        The top (the upper in the period pair) layer thickness in Å as a
+        function of local coordinates *x* and *y* and the index (zero at
+        vacuum) of the period pair.
+
+        For parametric surfaces, the *x* and *y* local coordinates are assumed
+        to be *s* and *phi* of the parametric representation."""
         f = 1.
 #       f = np.random.normal(size=len(x))*self.tError + 1 if self.tError else 1
         return self.dti[iPair] * f
 
     def get_b_thickness(self, x, y, iPair):
+        u"""
+        The bottom (the lower in the period pair) layer thickness in Å as a
+        function of local coordinates *x* and *y* and the index (zero at
+        vacuum) of the period pair.
+
+        For parametric surfaces, the *x* and *y* local coordinates are assumed
+        to be *s* and *phi* of the parametric representation."""
         f = 1.
 #       f = np.random.normal(size=len(x))*self.tError + 1 if self.tError else 1
         return self.dbi[iPair] * f
@@ -674,9 +689,6 @@ class Multilayer(object):
         the normal (:math:`\theta_0` below), both can be scalars or arrays. The
         top interface of the multilayer is assumed to be with vacuum. Returns a
         tuple of the amplitudes of s and p polarizations.
-
-        If *isParametric* in the constructor is True the *x* and *y* local
-        coordinates are assumed to be *s* and *phi*.
 
         The calculation starts from the bottommost layer (with index
         :math:`N`). The reflectivity from its top into the adjacent layer
