@@ -22,7 +22,7 @@ def plot_in_hull(p, cloud):
     plt.clf()
     plt.title('in hull: green, out of hull: red')
     plt.gca().add_collection(poly)
-    plt.plot(hull.points[:, 0], hull.points[:, 1], 'o', hold=1, color='grey',
+    plt.plot(hull.points[:, 0], hull.points[:, 1], 'o', color='grey',
              alpha=0.2)
 
     # plot tested points `p` - green are inside hull, red outside
