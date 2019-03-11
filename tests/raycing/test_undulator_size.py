@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Created on Fri Jan  5 19:59:40 2018
 
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerBase
 
 import xrt.backends.raycing.sources as rs
-withXrtSampling = True
+withXrtSampling = False
 
 thetaMax, psiMax = 60e-6, 30e-6  # rad
 
