@@ -134,6 +134,11 @@ should be installed with a system package manager. Python3::
 
     pip3 install pyqt5
 
+Sometimes QtWebEngineWidgets is reported as missing:
+`No module named 'PyQt5.QtWebEngineWidgets`. Then::
+
+    pip3 install PyQtWebEngine
+
 .. rubric:: macOS
 
 Use conda package manager to install all required packages::

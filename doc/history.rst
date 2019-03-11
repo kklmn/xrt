@@ -3,6 +3,13 @@
 Version history
 ---------------
 
+1.3.3 (11 Mar 2019):
+    - Added mosaic crystals.
+
+    - Added Polygonal Apertures.
+
+    - Bug fixes and minor updates.
+
 1.3.2 (7 Jun 2018):
     - Bug fixes and minor updates.
 
