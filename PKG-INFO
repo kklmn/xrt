@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: xrt
-Version: 1.3.2
+Version: 1.3.3
 Summary: Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI for creating a beamline and viewing it in 3D.
 Home-page: http://xrt.readthedocs.io
 Author: Konstantin Klementiev, Roman Chernikov
@@ -159,16 +159,24 @@ Description:
         
         Python 2 and 3
         --------------
+        
         The code can run in both Python branches without any modification.
         
         Get xrt
         -------
+        
         xrt is available as source distribution from `pypi.python.org
         <https://pypi.python.org/pypi/xrt>`_ and from `GitHub
         <https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
-        and examples. The complete documentation is available at
-        `Read the Docs <http://xrt.readthedocs.io>`_ and as zip file from
-        `GitHub <https://github.com/kklmn/xrt>`_ .
+        and examples. The complete documentation is available online at
+        `Read the Docs <http://xrt.readthedocs.io>`_ and offline as zip file at
+        `GitHub <https://github.com/kklmn/xrt-docs>`_.
+        
+        Get help
+        --------
+        
+        For getting help and/or reporting a bug please use `GitHub xrt Issues
+        <https://github.com/kklmn/xrt/issues>`_.
         
         
 Platform: OS Independent

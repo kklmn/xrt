@@ -179,7 +179,7 @@ For getting help and/or reporting a bug please use `GitHub xrt Issues
 
 setup(
     name='xrt',
-    version='1.3.2',
+    version='1.3.3',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
