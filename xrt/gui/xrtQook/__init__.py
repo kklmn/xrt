@@ -3796,7 +3796,7 @@ if __name__ == '__main__':
             self.codeConsole.append('Starting {}\n\n'.format(
                     os.path.basename(str(self.saveFileName))))
             self.codeConsole.append('Press Ctrl+X to terminate process\n\n')
-            self.qprocess.start("python", ['-u', str(self.saveFileName)])
+            self.qprocess.start(sys.executable, ['-u', str(self.saveFileName)])
 
     def toggleExperimentalMode(self):
         self.experimentalMode = not self.experimentalMode
