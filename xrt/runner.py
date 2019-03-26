@@ -231,11 +231,6 @@ def one_iteration():
             cpus = 1
 
     elif runCardVals.iteration == 1:
-        if hasattr(runCardVals, 'beamLine'):
-            bl = runCardVals.beamLine
-            bl.forceAlign = False
-            if bl.flowSource == 'legacy':
-                bl.flowSource = 'done_once'
         if runCardVals.uniqueFirstRun:  # balances the 1st iteration
             cpus -= 1
 
@@ -314,6 +309,11 @@ def one_iteration():
             runCardVals.iteration += 1
     for p in processes:
         p.join(60.)
+    if hasattr(runCardVals, 'beamLine'):
+        bl = runCardVals.beamLine
+        bl.forceAlign = False
+        if bl.flowSource == 'legacy':
+            bl.flowSource = 'done_once'
 
 
 def on_finish():
