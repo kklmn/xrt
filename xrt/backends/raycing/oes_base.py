@@ -10,7 +10,7 @@ import matplotlib as mpl
 from .. import raycing
 from . import sources as rs
 from . import myopencl as mcl
-from .physconsts import PI2, CH, CHBAR, SQRT2PI
+from .physconsts import PI2, CH, CHBAR, SQRT2PI, M0C2, R0
 from .materials import EmptyMaterial
 try:
     import pyopencl as cl  # analysis:ignore
@@ -1035,6 +1035,128 @@ class OE(object):
                                inspect.currentframe())
         return gb, lbN
 
+    def scatter(self, beam=None, needLocal=True, channels=['inelastic'],
+                withSelfAbsorption=True, face='front'):
+        r"""
+
+        .. .. Returned values: beamGlobal, beamLocal
+        """
+        self.footprint = []
+        if self.bl is not None:
+            self.bl.auto_align(self, beam)
+        self.get_orientation()
+        # output beam in global coordinates
+        gb = rs.Beam(copyFrom=beam)
+        if needLocal:
+            # output beam in local coordinates
+            lb = rs.Beam(copyFrom=beam)
+        else:
+            lb = gb
+        good = beam.state > 0
+#        good = beam.state == 1
+        if good.sum() == 0:
+            return gb, lb
+# coordinates in local virgin system:
+        pitch = self.pitch
+        if hasattr(self, 'bragg'):
+            pitch += self.bragg
+        raycing.global_to_virgin_local(self.bl, beam, lb, self.center, good)
+
+        fluoLines = []
+        for fluoChannel in channels:
+            if isinstance(fluoChannel, (list, tuple)):
+                for element in self.material.elements:
+                    if element.name == fluoChannel[0]:
+                        if str(fluoChannel[1]).upper() == 'ALL':
+                            for fluoLine in element.flLines:
+                                fluoLines.append((fluoChannel[0],
+                                                  element.flLines[fluoLine]))
+                        else:
+                            fluoLines.append((fluoChannel[0],
+                                              element.flLines[fluoChannel[1]]))
+                        break
+            else:
+                fluoLines.append(fluoChannel)
+        lbf2 = None
+        gbf2 = None
+        for fluoChannel in fluoLines:
+            lbf = rs.Beam(copyFrom=lb)
+            gbf = rs.Beam(copyFrom=gb)
+
+            if hasattr(self, 't'):  # Plate
+                self._reflect_local(
+                    good, lbf, gbf, pitch,  # self.pitch + self.bragg,
+                    self.roll + self.positionRoll + self.cryst1roll, self.yaw,
+                    self.dx, local_z=self.local_z1, local_n=self.local_n1,
+                    material=self.material, fluo=fluoChannel)
+            else:
+                self._reflect_local(
+                    good, lbf, gbf, pitch, self.roll+self.positionRoll,
+                    self.yaw, self.dx, material=self.material,
+                    fluo=fluoChannel)
+            goodAfter = (gbf.state == 1) | (gbf.state == 2)
+            notGood = ~goodAfter
+            if notGood.sum() > 0:
+                rs.copy_beam(gbf, beam, notGood)
+
+            if gbf2 is None:
+                lbf2 = lbf
+                gbf2 = gbf
+            else:
+                lbf2.concatenate(lbf)
+                gbf2.concatenate(gbf)
+
+        goodAfter = (gbf2.state == 1) | (gbf2.state == 2)
+        locCoord = rs.Beam(copyFrom=lbf2)
+        if needLocal:
+            lbf2 = rs.Beam(copyFrom=gbf2)  # output beam in local coordinates
+        else:
+            lbf2 = gbf2
+        good2 = goodAfter
+        if hasattr(self, 't'):  # is instance of Plate
+            gbf2.state[~good2] = self.lostNum
+        if good2.sum() == 0:
+            return gbf2, lbf2
+
+        if withSelfAbsorption:
+            if not hasattr(self, 't'):
+                face = 'front'
+
+            if face == 'front':
+                self._reflect_local(
+                    good2, lbf2, gbf2, pitch, self.roll+self.positionRoll,
+                    self.yaw, self.dx, material=self.material,
+                    fromVacuum=False)  # , is2ndXtal=True)
+            else:
+                self._reflect_local(
+                    good2, lbf2, gbf2,
+                    -self.pitch - self.bragg +
+                    self.cryst2pitch + self.cryst2finePitch,
+                    self.roll + self.cryst2roll - np.pi + self.positionRoll,
+                    -self.yaw,
+                    -self.dx, self.cryst2longTransl, -self.cryst2perpTransl,
+                    local_z=self.local_z2, local_n=self.local_n2,
+                    fromVacuum=False, material=self.material2, is2ndXtal=True)
+
+            goodAfter = (gbf2.state == 1) | (gbf2.state == 2)
+
+        lbf2.x = locCoord.x
+        lbf2.y = locCoord.y
+        lbf2.z = locCoord.z
+        if goodAfter.sum() > 0:
+            raycing.virgin_local_to_global(self.bl, gbf2, self.center,
+                                           goodAfter)
+    # not intersected rays remain unchanged except their state:
+#            notGood = ~goodAfter
+#            if notGood.sum() > 0:
+#                rs.copy_beam(gbf2, beam, notGood)
+
+    # in global coordinate system:
+        raycing.append_to_flow(self.scatter, [gbf2, lbf2],
+                               inspect.currentframe())
+        gbf2.parent = self
+        return gbf2, lbf2  # in global(gb) and local(lb) coordinates
+
     def local_to_global(self, lb, returnBeam=False, **kwargs):
         dx, dy, dz = 0, 0, 0
         if isinstance(self, DCM):
@@ -1307,7 +1429,7 @@ class OE(object):
             print("{0} NaN rays in array {1} in optical element {2}!".format(
                   nanSum, strName, self.name))
 
-    def local_n_random(self, bLength, chi):
+    def local_n_random(self, bLength, theta=0, phi=0, chi=0):
         a = np.zeros(bLength)
         b = np.zeros(bLength)
         c = np.ones(bLength)
@@ -1318,6 +1440,7 @@ class OE(object):
 
         a, c = raycing.rotate_y(a, c, np.cos(y_angle), np.sin(y_angle))
         a, b = raycing.rotate_z(a, b, np.cos(z_angle), np.sin(z_angle))
+#        b, c = raycing.rotate_x(a, b, np.cos(x_angle), np.sin(x_angle))
         norm = np.sqrt(a**2 + b**2 + c**2)
         a /= norm
         b /= norm
@@ -1492,7 +1615,7 @@ class OE(object):
         self, good, lb, vlb, pitch, roll, yaw, dx=None, dy=None, dz=None,
         local_z=None, local_n=None, local_g=None, fromVacuum=True,
         material=None, is2ndXtal=False, needElevationMap=False,
-            noIntersectionSearch=False, isMulti=False):
+            noIntersectionSearch=False, isMulti=False, fluo=None):
         """Finds the intersection points of rays in the beam *lb* indexed by
         *good* array. *vlb* is the same beam in virgin local system.
         *pitch, roll, yaw* determine the transformation between true local and
@@ -1574,6 +1697,7 @@ class OE(object):
             local_n, lb.x[good], lb.y[good], lb.z[good], lb.a[good],
             lb.b[good], lb.c[good], invertNormal, is2ndXtal, isMulti=isMulti,
             needElevationMap=needElevationMap, mainPart=mainPartForBracketing)
+
         if needElevationMap and elev:
             lb.elevationD[good] = elev[0]
             if self.isParametric:
@@ -1662,7 +1786,7 @@ class OE(object):
                     toWhere = 7
             if toWhere == 5:
                 oeNormal = list(
-                    self.local_n_random(len(lb.E[goodN]), matSur.chi))
+                    self.local_n_random(len(lb.E[goodN]), chi=matSur.chi))
 #                n = matSur.get_refractive_index(lb.E[goodN])
 #                mu = abs(n.imag) * lb.E[goodN] / CHBAR * 2e8  # 1/cm
 #                att = np.exp(-mu * tMax[goodN] * 0.1)
@@ -1952,7 +2076,123 @@ class OE(object):
                 lb.Es[goodN] *= ras
                 lb.Ep[goodN] *= rap
 
-            if (not fromVacuum) and\
+            if fluo:
+                beamLen = len(lb.E[goodN])
+                depth = np.random.rand(beamLen) * self.t if hasattr(self, 't')\
+                    else 0
+                lb.x[goodN] -= lb.a[goodN] / lb.c[goodN] * depth
+                lb.y[goodN] -= lb.b[goodN] / lb.c[goodN] * depth
+                lb.z[goodN] -= depth
+#                mu_total = matSur.get_absorption_coefficient(lb.E[goodN])
+                mu_total = refl[2]
+                rayDepth = np.sqrt(lb.x[goodN]**2 + lb.y[goodN]**2 +
+                                   lb.z[goodN]**2)
+                att = np.exp(-mu_total*0.1*rayDepth)
+                dphi = 10
+                dtheta = 10
+
+                phi = np.array([-1, 1]) * np.radians(dphi)  # roll, y_angle
+                theta = np.array([-1, 1]) * np.radians(dtheta) +\
+                    np.radians(45)  # pitch, x_angle
+
+                fl_c = np.ones(beamLen)
+                fl_a = np.zeros_like(fl_c)
+                fl_b = np.zeros_like(fl_c)
+
+                y_angle = np.random.uniform(phi[0], phi[1], size=beamLen)
+                x_angle = -np.random.uniform(theta[0], theta[1], size=beamLen)
+
+                fl_b, fl_c = raycing.rotate_x(fl_b, fl_c, np.cos(x_angle),
+                                              np.sin(x_angle))
+                fl_a, fl_c = raycing.rotate_y(fl_a, fl_c, np.cos(y_angle),
+                                              np.sin(y_angle))
+
+                normDir = np.sqrt(fl_a*fl_a + fl_b*fl_b + fl_c*fl_c)
+                fl_a /= normDir
+                fl_b /= normDir
+                fl_c /= normDir
+
+                if isinstance(fluo, tuple):  # single fluorescence line
+                    # flLine: [energy, edgeName, absIntensity, lineWidth]
+                    (flElement, flLine) = fluo
+                    mu_pe = matSur.get_photoabsorption_coefficient(
+                        lb.E[goodN])[flElement]
+                    noFl = lb.E[goodN] < flLine[1]
+                    beamLen = len(lb.E[goodN])
+                    if isinstance(flLine[3], (list, tuple)):
+                        flLine[3] = 0
+                    lb.E[goodN] = flLine[0] +\
+                        flLine[3] * np.random.standard_cauchy(beamLen)
+
+                    lb.Jss[goodN] *= flLine[2] * mu_pe
+                    lb.Jpp[goodN] *= flLine[2] * mu_pe
+                    lb.Jsp[goodN] = 0  # flLine[2] * mu_pe
+                    lb.state[(lb.E <= flLine[0] - flLine[3]*100) |
+                             (lb.E > flLine[0] + flLine[3]*100)] = self.lostNum
+                    lb.state[noFl] = self.lostNum
+                else:  # 'inelastic' or 'elastic'
+                    cosTheta = fl_a*lb.a[goodN] + fl_b*lb.b[goodN] +\
+                        fl_c*lb.c[goodN]  # in-plane angle, "vertical" pol.
+                    fl_c2 = fl_c*fl_c
+                    # cos(dRoll) = fl_c; sin(dRoll) = sqrt(1-fl_c2)
+                    # cos(2*dRoll) = 2*fl_c2-1
+                    # sin(2*dRoll) = 2*fl_c*sqrt(1-fl_c2)
+                    sin2dRoll = 2*fl_c*np.sqrt(1 - fl_c2)
+                    cos2dRoll = 2*fl_c2 - 1
+                    # converting coherency matrix to Stokes vector
+                    S0 = lb.Jss[goodN] + lb.Jpp[goodN]
+                    S1 = lb.Jss[goodN] - lb.Jpp[goodN]
+                    S2 = 2*lb.Jsp[goodN].real
+                    S3 = 2*lb.Jsp[goodN].imag
+                    # adjusting for the scattering plane roll
+                    S1prime = S2*sin2dRoll + S1*cos2dRoll
+                    S2prime = -S1*sin2dRoll + S2*cos2dRoll
+
+                    if fluo == 'inelastic':  # Compton scattering
+                        PEprime = 1./(1. +
+                                      lb.E[goodN]*(1. - cosTheta)*1e-6/M0C2)
+                        PEprimeSum = PEprime + 1./PEprime
+                        lb.E[goodN] = lb.E[goodN] * PEprime
+                        C0 = 0.25 * np.pi * (PEprime)**2 * R0**2 * 1e-16
+
+                        lb.Jss[goodN] = matSur.sigma_to_mu(
+                            0.5 * C0 * (S0 * PEprimeSum + S1prime))
+                        lb.Jpp[goodN] = matSur.sigma_to_mu(
+                            0.5 * C0 * (S0 * (-2*(1-cosTheta**2)+PEprimeSum) +
+                                        S1prime * (1 - 2*cosTheta**2)))
+                        lb.Jsp[goodN] = matSur.sigma_to_mu(
+                            C0 * (S2prime * cosTheta + S3 * (
+                                cosTheta + 0.5 * cosTheta * (PEprimeSum - 2))))
+                        if False:  # analytic solution for total cross-section
+                            eRel = lb.E[goodN][0] / 0.511 * 1e-6
+                            eRelP1 = eRel + 1
+                            eRel2P1 = 2*eRel + 1
+                            sigmaKNtotal = (0.75*eRelP1*eRel**-3*(
+                                    2*eRel*eRelP1/eRel2P1 - np.log(eRel2P1)) +
+                                    0.5/eRel*np.log(eRel2P1) -
+                                    (1 + 3*eRel)*eRel2P1**-2) * R0**2 * 1e-16
+                            print("sigmaKNtotal", sigmaKNtotal,
+                                  "muKNtotal",
+                                  matSur.sigma_to_mu(sigmaKNtotal))
+                    else:  # fluo == 'elastic':
+                        ats = np.zeros_like(lb.E[goodN])
+                        for el, xi in zip(matSur.elements, matSur.quantities):
+                            ats += np.abs(el.get_f1f2(lb.E[goodN]))**2 * xi
+                        C0 = 0.75 * np.pi * R0**2 * 1e-16
+                        lb.Jss[goodN] = matSur.sigma_to_mu(C0 * cosTheta**2 *
+                                                           (S0 + S1prime))
+                        lb.Jpp[goodN] = matSur.sigma_to_mu(C0 * (S0 - S1prime))
+                        lb.Jsp[goodN] = matSur.sigma_to_mu(C0 * cosTheta *
+                                                           (S2prime + S3))
+
+                lb.Jss[goodN] *= att
+                lb.Jpp[goodN] *= att
+                lb.Jsp[goodN] *= att
+                lb.a[goodN] = fl_a
+                lb.b[goodN] = fl_b
+                lb.c[goodN] = fl_c
+
+            if (not fromVacuum) and fluo is None and\
                     not (matSur.kind in ('crystal', 'multilayer')):
                 # tMax in mm, refl[2]=mu0 in 1/cm
                 att = np.exp(-refl[2] * tMax[goodN] * 0.1)

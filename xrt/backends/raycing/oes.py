@@ -1488,6 +1488,7 @@ class Plate(DCM):
 
     def __pop_kwargs(self, **kwargs):
         self.t = kwargs.pop('t', 0)  # difference of z zeros in mm
+        self.fwhm = kwargs.pop('fwhm', 0)  # difference of z zeros in mm
         return kwargs
 
     def assign_auto_material_kind(self, material):
@@ -1536,6 +1537,11 @@ class Plate(DCM):
                 absorbedLb = rs.Beam(copyFrom=lb2)
                 absorbedLb.absorb_intensity(lb1)
                 lb2 = absorbedLb
+            good = lb2.state > 0
+            if self.fwhm > 0:
+                lb2.E[good] += self.fwhm * np.random.normal(
+                        size=len(lb2.E[good]))
+
         lb2.parent = self
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())

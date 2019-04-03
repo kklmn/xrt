@@ -152,7 +152,17 @@ class Element(object):
             raise NameError('Wrong element')
         self.f0coeffs = self.read_f0_Kissel()
         self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
+        self.fpe = self.read_f1f2_vs_E(table='Chantler')[2]
+        self.flLines = self.read_fl_lines()
         self.mass = read_atomic_data(self.Z)
+
+    def read_fl_lines(self):
+        dataDir = os.path.dirname(__file__)
+        pname = os.path.join(dataDir, 'data', 'xraydb_fluo.npz')
+        with open(pname, 'rb') as f:
+            res = np.load(f)
+            flLines = res[self.name].item()
+        return flLines
 
     def read_f0_Kissel(self):
         r"""
@@ -253,6 +263,17 @@ class Element(object):
         f1 = np.interp(E, self.E, self.f1)
         f2 = np.interp(E, self.E, self.f2)
         return f1 + 1j*f2
+
+    def get_fpe(self, E):
+        """Calculates (interpolates) f1 and f2 for the given array *E*."""
+        if np.any(E < self.E[0]) or np.any(E > self.E[-1]):
+            raise ValueError(
+                ('E={0} is out of the data table range ' +
+                 '[{1}, {2}]!!! Use another table.').format(
+                    E[np.where((E < self.E[0]) | (E > self.E[-1]))], self.E[0],
+                    self.E[-1]))
+        fpe = np.interp(E, self.E, self.fpe)
+        return fpe
 
 
 class Material(object):
@@ -419,6 +440,18 @@ class Material(object):
             \mu = \Im(n)/\lambda.
         """
         return abs((self.get_refractive_index(E)).imag) * E / CHBAR * 2e8
+
+    def get_photoabsorption_coefficient(self, E):  # mu0
+        r"""
+        """
+        res = {}
+        for elem, xi in zip(self.elements, self.quantities):
+            res[elem.name] = elem.get_fpe(E) * xi * 2e-16 * AVOGADRO * R0 *\
+                CH/E * self.rho / self.mass
+        return res
+
+    def sigma_to_mu(self, sigma):
+        return AVOGADRO * sigma / self.mass * self.rho  # [cm^-1] 
 
     def get_grating_efficiency(self, beam, good):
         """Gets grating efficiency from the parameters *efficiency* and
