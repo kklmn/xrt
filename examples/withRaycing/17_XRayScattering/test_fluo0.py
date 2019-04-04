@@ -20,7 +20,9 @@ import xrt.backends.raycing.run as rrun
 import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
+import numpy as np
 
+nrays = 1e5
 
 NiCuZn = rmats.Material(
     elements=['Ni', 'Cu', 'Zn'],
@@ -30,7 +32,7 @@ NiCuZn = rmats.Material(
     t=0.5,
     name=None)
 
-Me = 'Se'
+Me = 'Cu'
 
 CopperInGlass = rmats.Material(
     elements=['Si', 'O', Me],
@@ -56,7 +58,7 @@ Si = rmats.Material(
     t=0.5,
     name=None)
 
-E0 = 14000
+E0 = 12000
 
 
 def build_beamline():
@@ -64,7 +66,7 @@ def build_beamline():
 
     beamLine.bendingMagnet01 = rsources.BendingMagnet(
         bl=beamLine,
-        nrays=1e5,
+        nrays=nrays,
         center=[0, 0, 0],
         eMin=E0-2,
         eMax=E0+2,
@@ -73,7 +75,7 @@ def build_beamline():
 
 #    beamLine.bendingMagnet01 = rsources.GeometricSource(
 #        bl=beamLine,
-#        nrays=1e5,
+#        nrays=nrays,
 #        center=[0, 0, 0],
 #        distE='lines', #'normal',
 #        distx=None, distz=None,
@@ -139,12 +141,19 @@ def run_process(beamLine):
                                                    (Me, 'Kb1'),
                                                    (Me, 'Kb3'),
                                                   ],
-            withSelfAbsorption=True)
+            dtheta=['25deg', '65deg'], dphi=['-20deg', '20deg'])
+
     screen01beamLocal01 = beamLine.screen01.expose(
         beam=plate01beamGlobal01)
 
     screen02beamLocal01 = beamLine.screen02.expose(
         beam=fluoBeam)
+
+    fluoElastic = rsources.Beam(copyFrom=screen02beamLocal01).filter_by_index(
+            np.arange(0, int(nrays)))
+
+    fluoInelastic = rsources.Beam(copyFrom=screen02beamLocal01).filter_by_index(
+            np.arange(int(nrays), int(2*nrays)))
 
     detectorGlobal, detectorLocal1, detectorLocal2 =\
         beamLine.SDD.double_refract(beam=fluoBeam, returnLocalAbsorbed=0)
@@ -155,6 +164,9 @@ def run_process(beamLine):
         'plate01beamLocal101': plate01beamLocal101,
         'plate01beamLocal201': plate01beamLocal201,
         'fluoBeam': fluoBeam,
+        'fluoBeamLocal': fluoBeamLocal,
+        'fluoElastic': fluoElastic,
+        'fluoInelastic': fluoInelastic,
         'detectorGlobal': detectorGlobal,
         'detectorLocal1': detectorLocal1,
         'detectorLocal2': detectorLocal2,
@@ -177,24 +189,20 @@ def define_plots():
             label=r"z", bins=512, ppb=1,),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
-#            limits=[18500, 19750],
-#            limits=[E0-1600, E0],
-#            limits=[7250, 9500],
             bins=512, ppb=1,
             unit=r"eV"),
         title=r"Source Beam")
     plots.append(plot01)
 
     plot01a = xrtplot.XYCPlot(
-        beam=r"fluoBeam", ePos=2, aspect='equal',
+        beam=r"fluoBeamLocal", ePos=2, aspect='auto',
         xaxis=xrtplot.XYCAxis(
-            label=r"y", bins=512, ppb=1, limits=[4999.75, 5000.25]),
+            label=r"y", bins=512, ppb=1, limits=[-0.5, 0.5]),
         yaxis=xrtplot.XYCAxis(
-            label=r"x", bins=512, ppb=1, limits=[-0.25, 0.25]),
+            label=r"z", bins=512, ppb=1, limits=[-0.5, 0.5]),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
-#            limits=[8847-160, 8847+160],
-            limits=[E0-3500, E0+500],
+            limits=[E0-5500, E0+500],
             bins=512, ppb=1,
             unit=r"eV"),
         title=r"Sample top view")
@@ -208,12 +216,38 @@ def define_plots():
             label=r"z", bins=512, ppb=1,),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
-#            limits=[18500, 19750],
-#            limits=[E0-1600, E0],
-            limits=[E0-3500, E0+500],
+            limits=[E0-5500, E0+500],
             bins=512, ppb=1,
             unit=r"eV"),
-        title=r"Side screen")
+        title=r"Side screen total fluorescence")
+    plots.append(plot01)
+
+    plot01 = xrtplot.XYCPlot(
+        beam=r"fluoElastic", ePos=2, aspect='auto',
+        xaxis=xrtplot.XYCAxis(
+            label=r"x", bins=512, ppb=1,),
+        yaxis=xrtplot.XYCAxis(
+            label=r"z", bins=512, ppb=1,),
+        caxis=xrtplot.XYCAxis(
+            label=r"energy",
+#            limits=[E0-5500, E0+500],
+            bins=512, ppb=1,
+            unit=r"eV"),
+        title=r"Side screen elastically scattered beam")
+    plots.append(plot01)
+
+    plot01 = xrtplot.XYCPlot(
+        beam=r"fluoInelastic", ePos=2, aspect='auto',
+        xaxis=xrtplot.XYCAxis(
+            label=r"x", bins=512, ppb=1,),
+        yaxis=xrtplot.XYCAxis(
+            label=r"z", bins=512, ppb=1,),
+        caxis=xrtplot.XYCAxis(
+            label=r"energy",
+#            limits=[E0-5500, E0+500],
+            bins=512, ppb=1,
+            unit=r"eV"),
+        title=r"Side screen inelastically scattered beam")
     plots.append(plot01)
 
     plot02 = xrtplot.XYCPlot(
@@ -236,7 +270,7 @@ def define_plots():
             label=r"y", bins=512, ppb=1),
         caxis=xrtplot.XYCAxis(
             label=r"energy", bins=512, ppb=1,
-            limits=[E0-3500, E0+500],
+            limits=[E0-5500, E0+500],
             unit=r"eV"),
         title=r"Absorption on SDD")
     plots.append(plot02)
@@ -249,7 +283,7 @@ def define_plots():
             label=r"y", bins=512, ppb=1),
         caxis=xrtplot.XYCAxis(
             label=r"energy", bins=512, ppb=1,
-            limits=[E0-3500, E0+500],
+            limits=[E0-5500, E0+500],
             unit=r"eV"),
         title=r"Absorption on SDD")
     plots.append(plot02)

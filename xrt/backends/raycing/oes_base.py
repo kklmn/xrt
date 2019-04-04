@@ -1035,12 +1035,45 @@ class OE(object):
                                inspect.currentframe())
         return gb, lbN
 
-    def scatter(self, beam=None, needLocal=True, channels=['inelastic'],
-                withSelfAbsorption=True, face='front'):
+    def scatter(self, beam=None, needLocal=True, channels=['elastic'],
+                face='front',
+                dtheta=['44deg', '46deg'], dphi=['-1deg', '1deg']):
         r"""
+        Returns scattered beams into a specified solid angle. Local beam
+        shows the distribution of scattering coordinate inside the element,
+        whereas global beam originates on its surface. If optical element has
+        no thickness property, the maximum scattering depth is calculated
+        as :math:`log{nrays}` absorption lengths.
+
+        *channels*: list
+            Scattering channels. May take the following values:
+            'elastic' - the beam resulting from the Rayleigh scattering;
+            'inelastic' - Compton scattering;
+            tuple of (element, line), i.e. ('Cu', 'Ka1') - characteristic
+            X-Ray emission line.
+            Note that resulting beam will have the size of
+            len(channels)*len(beam), in other words, each scattering channel
+            generates the full sized beam.
+
+        *face*: 'front' or 'back'
+            The surface of the optical element, the scattered beam is going out
+            from. For the ifinitely thick elements with no 't' property it is
+            always 'front'.
+
+        *dtheta*: list
+            The angular range of the outgoing beam around local *x* axis. Zero
+            angle is normal to the surface.
+
+        *dphi*: list
+            The angular range of the outgoing beam around local *y* axis. Zero
+            angle is normal to the surface.
+
 
         .. .. Returned values: beamGlobal, beamLocal
         """
+        if self.material is None:
+            print("Cannot calculate scattering! Please define the material.")
+            return beam, beam
         self.footprint = []
         if self.bl is not None:
             self.bl.auto_align(self, beam)
@@ -1088,12 +1121,13 @@ class OE(object):
                     good, lbf, gbf, pitch,  # self.pitch + self.bragg,
                     self.roll + self.positionRoll + self.cryst1roll, self.yaw,
                     self.dx, local_z=self.local_z1, local_n=self.local_n1,
-                    material=self.material, fluo=fluoChannel)
+                    material=self.material, fluo=fluoChannel, dtheta=dtheta,
+                    dphi=dphi)
             else:
                 self._reflect_local(
                     good, lbf, gbf, pitch, self.roll+self.positionRoll,
                     self.yaw, self.dx, material=self.material,
-                    fluo=fluoChannel)
+                    fluo=fluoChannel, dtheta=dtheta, dphi=dphi)
             goodAfter = (gbf.state == 1) | (gbf.state == 2)
             notGood = ~goodAfter
             if notGood.sum() > 0:
@@ -1117,7 +1151,7 @@ class OE(object):
             gbf2.state[~good2] = self.lostNum
         if good2.sum() == 0:
             return gbf2, lbf2
-
+        withSelfAbsorption = True  # Only used to verify total cross-sections
         if withSelfAbsorption:
             if not hasattr(self, 't'):
                 face = 'front'
@@ -1615,7 +1649,8 @@ class OE(object):
         self, good, lb, vlb, pitch, roll, yaw, dx=None, dy=None, dz=None,
         local_z=None, local_n=None, local_g=None, fromVacuum=True,
         material=None, is2ndXtal=False, needElevationMap=False,
-            noIntersectionSearch=False, isMulti=False, fluo=None):
+            noIntersectionSearch=False, isMulti=False, fluo=None,
+            dtheta=None, dphi=None):
         """Finds the intersection points of rays in the beam *lb* indexed by
         *good* array. *vlb* is the same beam in virgin local system.
         *pitch, roll, yaw* determine the transformation between true local and
@@ -2076,31 +2111,30 @@ class OE(object):
                 lb.Es[goodN] *= ras
                 lb.Ep[goodN] *= rap
 
-            if fluo:
+            if fluo and material is not None:
                 beamLen = len(lb.E[goodN])
-                depth = np.random.rand(beamLen) * self.t if hasattr(self, 't')\
-                    else 0
+                mu_total = refl[2]
+                maxDepth = self.t if hasattr(self, 't') else\
+                    np.log(beamLen) / mu_total * 10.
+                depth = np.random.rand(beamLen) * maxDepth
                 lb.x[goodN] -= lb.a[goodN] / lb.c[goodN] * depth
                 lb.y[goodN] -= lb.b[goodN] / lb.c[goodN] * depth
                 lb.z[goodN] -= depth
-#                mu_total = matSur.get_absorption_coefficient(lb.E[goodN])
-                mu_total = refl[2]
                 rayDepth = np.sqrt(lb.x[goodN]**2 + lb.y[goodN]**2 +
                                    lb.z[goodN]**2)
                 att = np.exp(-mu_total*0.1*rayDepth)
-                dphi = 10
-                dtheta = 10
-
-                phi = np.array([-1, 1]) * np.radians(dphi)  # roll, y_angle
-                theta = np.array([-1, 1]) * np.radians(dtheta) +\
-                    np.radians(45)  # pitch, x_angle
 
                 fl_c = np.ones(beamLen)
                 fl_a = np.zeros_like(fl_c)
                 fl_b = np.zeros_like(fl_c)
 
-                y_angle = np.random.uniform(phi[0], phi[1], size=beamLen)
-                x_angle = -np.random.uniform(theta[0], theta[1], size=beamLen)
+                y_angle = np.random.uniform(raycing.auto_units_angle(dphi[0]),
+                                            raycing.auto_units_angle(dphi[1]),
+                                            size=beamLen)  # roll, y_angle
+                x_angle = -np.random.uniform(
+                        raycing.auto_units_angle(dtheta[0]),
+                        raycing.auto_units_angle(dtheta[1]),
+                        size=beamLen)  # pitch, x_angle
 
                 fl_b, fl_c = raycing.rotate_x(fl_b, fl_c, np.cos(x_angle),
                                               np.sin(x_angle))
@@ -2116,7 +2150,7 @@ class OE(object):
                     # flLine: [energy, edgeName, absIntensity, lineWidth]
                     (flElement, flLine) = fluo
                     mu_pe = matSur.get_photoabsorption_coefficient(
-                        lb.E[goodN])[flElement]
+                            lb.E[goodN])[flElement]
                     noFl = lb.E[goodN] < flLine[1]
                     beamLen = len(lb.E[goodN])
                     if isinstance(flLine[3], (list, tuple)):
