@@ -2211,7 +2211,7 @@ class OE(object):
                     else:  # fluo == 'elastic':
                         ats = np.zeros_like(lb.E[goodN])
                         for el, xi in zip(matSur.elements, matSur.quantities):
-                            ats += np.abs(el.get_f1f2(lb.E[goodN]))**2 * xi
+                            ats += np.abs(el.Z + el.get_f1f2(lb.E[goodN]))**2 * xi
                         C0 = 0.75 * np.pi * R0**2 * 1e-16
                         lb.Jss[goodN] = matSur.sigma_to_mu(C0 * cosTheta**2 *
                                                            (S0 + S1prime))
