@@ -329,7 +329,7 @@ There are two common ways of working with them:
 
    The widths :math:`\sigma_x` and :math:`\xi_x` of the distributions
    :math:`I(x)` and :math:`j(x_1-x_2)` give the *coherent fraction*
-   :math:`\zeta_x`
+   :math:`\zeta_x` [Vartanyants2010]_
 
     .. math::
         \zeta_x = \left(4\sigma_x^2/\xi_x^2 + 1\right)^{-1/2}.
@@ -402,6 +402,10 @@ One can define another measure of coherence as a single number, termed as
 .. [Saldin2008] E.L. Saldin, E.A. Schneidmiller, M.V. Yurkov, *Coherence
    properties of the radiation from X-ray free electron laser*, Opt. Commun.
    **281** (2008) 1179–88.
+
+.. [Vartanyants2010] I. A. Vartanyants and A. Singer, *Coherence properties of
+   hard x-ray synchrotron sources and x-ray free-electron lasers*,
+   New Journal of Physics **12** (2010) 035004.
 
 We propose to calculate DoTC from the matrix traces [derivation to present in
 the coming paper] as:
