@@ -558,7 +558,7 @@ end of a harmonic and has a long tail at the lower energy end, in accordance
 with the above examples.
 
 The effect of energy detuning from the nominal undulator harmonic energy is
-compared to the results by Cloïsson [Cloïsson]_ (cross signs in the figures
+compared to the results by Coïsson [Coïsson]_ (cross signs in the figures
 below). His effect of detuning has a comparable amplitude. A sharper dependence
 is probably due to a smaller (and unknown) angular acceptance and a somewhat
 special definition of the beam size.
@@ -566,7 +566,7 @@ special definition of the beam size.
 .. imagezoom:: _images/undulatorLinearSize.png
 .. imagezoom:: _images/undulatorAngularSize.png
 
-.. [Cloïsson] R. Coïsson, Effective phase space widths of undulator radiation,
+.. [Coïsson] R. Coïsson, Effective phase space widths of undulator radiation,
    Opt. Eng. **27** (1988) 250–2.
 
 """
