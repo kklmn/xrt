@@ -2172,7 +2172,7 @@ class BlazedGrating(OE):
         OE.__init__(self, *args, **kwargs)
         if self.gratingDensity is not None:
             self.rho0 = self.gratingDensity[1]
-            self.coeffs = self.gratingDensity[2:5]
+            self.coeffs = self.gratingDensity[2:]
             self.ticks = []
             lim = self.limOptY if self.limOptY is not None else self.limPhysY
             self.ticksN = int(round(
@@ -2200,15 +2200,19 @@ class BlazedGrating(OE):
         return kwargs
 
     def _get_period(self, coord):
-        dy = 1. / self.rho0 / (self.coeffs[0] + 2.*self.coeffs[1]*coord +
-                               3.*self.coeffs[2]*coord**2)
+        poly = 0.
+        for ic, coeff in enumerate(self.coeffs):
+            poly += (ic+1) * coeff * coord**ic
+        dy = 1. / self.rho0 / poly
         if type(dy) == float:
             assert dy > 0, "wrong coefficients: negative groove density"
         return dy
 
     def _get_groove(self, coord):
-        return self.rho0 * (self.coeffs[0]*coord + self.coeffs[1]*coord**2 +
-                            self.coeffs[2]*coord**3)
+        poly = 0.
+        for ic, coeff in enumerate(self.coeffs):
+            poly += coeff * coord**(ic+1)
+        return self.rho0 * poly
 
     def assign_auto_material_kind(self, material):
         material.kind = 'mirror'  # to be used with wave propagation
@@ -2420,7 +2424,7 @@ class VLSLaminarGrating(OE):
         OE.__init__(self, *args, **kwargs)
         if self.gratingDensity is not None:
             self.rho0 = self.gratingDensity[1]
-            self.coeffs = self.gratingDensity[2:5]
+            self.coeffs = self.gratingDensity[2:]
         self.ticks = []
         p0 = self.limOptY[0]
         while p0 < self.limOptY[1]:
@@ -2431,8 +2435,10 @@ class VLSLaminarGrating(OE):
         self.rho_1 = 1. / self.rho0
 
     def _get_period(self, coord):
-        dy = 1. / self.rho0 / (self.coeffs[0] + 2.*self.coeffs[1]*coord +
-                               3.*self.coeffs[2]*coord**2)
+        poly = 0.
+        for ic, coeff in enumerate(self.coeffs):
+            poly += (ic+1) * coeff * coord**ic
+        dy = 1. / self.rho0 / poly
         if type(dy) == float:
             assert dy > 0, "wrong coefficients: negative groove density"
         return dy

@@ -193,18 +193,19 @@ class OE(object):
 
         *gratingDensity*: None or list
             If material *kind* = 'grating', its density can be defined as list
-            [axis, ρ\ :sub:`0`, *P*\ :sub:`0`, *P*\ :sub:`1`, *P*\ :sub:`2`],
+            [axis, ρ\ :sub:`0`, *P*\ :sub:`0`, *P*\ :sub:`1`, ...],
             where ρ\ :sub:`0` is the constant line density in inverse mm,
-            *P*\ :sub:`0` -- *P*\ :sub:`2` are polynom coefficients defining
+            *P*\ :sub:`0` -- *P*\ :sub:`n` are polynom coefficients defining
             the line density variation, so that for a given axis
 
             .. math::
 
-                \\rho_x = \\rho_0\\cdot(P_0 + 2 P_1 x + 3 P_2 x^2).
+                \\rho_x = \\rho_0\\cdot(P_0 + 2 P_1 x + 3 P_2 x^2 + ...).
 
-            Example: ['y', 800, 1, 0, 0] for the grating with constant
+            Example: ['y', 800, 1] for the grating with constant
             spacing along the 'y' direction; ['y', 1200, 1, 1e-6, 3.1e-7] for
-            the VLS grating.
+            a VLS grating. The length of the list determines the polynomial
+            order.
 
         *order*: int or sequence of ints
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
@@ -291,7 +292,7 @@ class OE(object):
 
         self.shape = shape
         self.gratingDensity = gratingDensity
-        if self.gratingDensity is not None:
+        if self.gratingDensity is not None and material is None:
             self.material = EmptyMaterial()
         self.order = 1 if order is None else order
         self.get_surface_limits()
@@ -397,15 +398,17 @@ class OE(object):
         try:
             rhoList = self.gratingDensity
             if rhoList is not None:
+                coord = x if rhoList[0] == 'x' else y
+                poly = 0.
+                for ic, coeff in enumerate(rhoList[2:]):
+                    poly += (ic+1) * coeff * coord**ic
+                N = rhoList[1] * poly
+
                 if rhoList[0] == 'x':
-                    N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*x +
-                                      3*rhoList[4]*x**2)
                     return N, np.zeros_like(N), np.zeros_like(N)
                 elif rhoList[0] == 'y':
-                    N = rhoList[1] * (rhoList[2] + 2*rhoList[3]*y +
-                                      3*rhoList[4]*y**2)
                     return np.zeros_like(N), N, np.zeros_like(N)
-        except:
+        except:  # noqa
             pass
         return 0, rho, 0  # constant line spacing along y
 
