@@ -292,7 +292,8 @@ class OE(object):
 
         self.shape = shape
         self.gratingDensity = gratingDensity
-        if self.gratingDensity is not None and material is None:
+        if self.gratingDensity is not None and material is None and \
+                not hasattr(self, 'get_grating_area_fraction'):
             self.material = EmptyMaterial()
         self.order = 1 if order is None else order
         self.get_surface_limits()
