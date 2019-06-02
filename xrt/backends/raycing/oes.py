@@ -2341,10 +2341,10 @@ class LaminarGrating(OE):
         norm_x = np.zeros_like(y)
         norm_y = np.zeros_like(y)
         norm_z = np.ones_like(y)
-        rindex = (yL == 0)
+        rindex = (yL < raycing.zEps)
         norm_y[rindex] = 1
         norm_z[rindex] = 0
-        rindex = (yL == groove)
+        rindex = (np.abs(yL - groove) < raycing.zEps)
         norm_y[rindex] = -1
         norm_z[rindex] = 0
         return [norm_x, norm_y, norm_z]
@@ -2470,10 +2470,10 @@ class VLSLaminarGrating(OE):
         norm_x = np.zeros_like(y)
         norm_y = np.zeros_like(y)
         norm_z = np.ones_like(y)
-        rindex = (yL == 0)
+        rindex = (yL < raycing.zEps)
         norm_y[rindex] = 1
         norm_z[rindex] = 0
-        rindex = (yL == groove)
+        rindex = (np.abs(yL - groove) < raycing.zEps)
         norm_y[rindex] = -1
         norm_z[rindex] = 0
         return [norm_x, norm_y, norm_z]
