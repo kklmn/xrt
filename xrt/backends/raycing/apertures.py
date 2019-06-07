@@ -818,7 +818,7 @@ class PolygonalAperture(object):
         dX = self.limOptX[1] - self.limOptX[0]
         dZ = self.limOptY[1] - self.limOptY[0]
 
-        footprint = mplPath(self.vertices, closed=True)
+        footprint = mplPath(self.vertices)
         randRays = 0
         goodX = []
         goodY = []
@@ -847,3 +847,21 @@ class PolygonalAperture(object):
         self.local_to_global(glo)
         rw.prepare_wave(prevOE, wave, glo.x, glo.y, glo.z)
         return wave
+
+
+class SiemensStar(PolygonalAperture):
+    def __init__(self, *args, **kwargs):
+        nSpokes = kwargs.pop('nSpokes', 25)
+        slitRx = kwargs.pop('rX', 0.1)
+        slitRz = kwargs.pop('rZ', 0.1)
+        phi0 = kwargs.pop('phi0', 0)
+        star = np.linspace(0, 2*np.pi, nSpokes*2, endpoint=False) - phi0
+        starX = slitRx*np.sin(star)
+        starY = slitRz*np.cos(star)
+        starXs = np.hstack((starX.reshape((nSpokes, 2)),
+                            np.zeros((nSpokes, 1))))
+        starYs = np.hstack((starY.reshape((nSpokes, 2)),
+                            np.zeros((nSpokes, 1))))
+        kwargs['opening'] = zip(starXs.flatten(), starYs.flatten())
+
+        super(SiemensStar, self).__init__(*args, **kwargs)

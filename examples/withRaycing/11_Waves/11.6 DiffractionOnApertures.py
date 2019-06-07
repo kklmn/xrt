@@ -82,6 +82,7 @@ zlimits = [-0.175, 0.175]
 xName = '$x$'
 zName = '$z$'
 unit = "mm"
+nSpokes = 12
 
 dx = (xlimits[1] - xlimits[0]) / float(xBins)
 xmesh = np.linspace((xlimits[0] + dx/2) / xfactor,
@@ -99,18 +100,14 @@ def build_beamline(nrays=mynrays):
 #        beamLine, 'squareSlit', [0, R0, 0], ('left', 'right', 'bottom', 'top'),
 #        [-slitDx, slitDx, -slitDz, slitDz])
 
-    star = np.linspace(0, 2*np.pi, 6)
-    starX = slitDx*np.sin(star)
-    starY = slitDx*np.cos(star)
-    
-    beamLine.slit = ra.PolygonalAperture(
-        bl=beamLine,
-        name=None,
-        center=[0, R0, 0],
-        opening=[(starX[0], starY[0]), (starX[2], starY[2]), 
-                 (starX[4], starY[4]), (starX[1], starY[1]),
-                 (starX[3], starY[3]), (starX[0], starY[0])])
-#        opening=list(zip(starX, starY)))
+    beamLine.slit = ra.SiemensStar(
+            bl=beamLine,
+            name='SiemensStar',
+            center=[0, R0, 0],
+            nSpokes=nSpokes,
+            rX=slitDx,
+            rZ=slitDz,
+            phi0 = 0.5*np.pi/nSpokes)
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', [0, R0, 0])
     return beamLine
