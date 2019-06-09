@@ -855,13 +855,30 @@ class SiemensStar(PolygonalAperture):
         slitRx = kwargs.pop('rX', 0.1)
         slitRz = kwargs.pop('rZ', 0.1)
         phi0 = kwargs.pop('phi0', 0)
+        vortex = kwargs.pop('vortex', 0)
+        vortexNr = kwargs.pop('vortexNradial', 7)
         star = np.linspace(0, 2*np.pi, nSpokes*2, endpoint=False) - phi0
-        starX = slitRx*np.sin(star)
-        starY = slitRz*np.cos(star)
-        starXs = np.hstack((starX.reshape((nSpokes, 2)),
-                            np.zeros((nSpokes, 1))))
-        starYs = np.hstack((starY.reshape((nSpokes, 2)),
-                            np.zeros((nSpokes, 1))))
-        kwargs['opening'] = zip(starXs.flatten(), starYs.flatten())
+        if vortex:
+            xstack = []
+            ystack = []
+            for ir in reversed(range(vortexNr)):
+                fr = (ir+1.) / vortexNr
+                dphi = 2*np.pi * vortex / nSpokes * fr
+                starX = (fr * slitRx * np.sin(star+dphi)).reshape((nSpokes, 2))
+                starY = (fr * slitRz * np.cos(star+dphi)).reshape((nSpokes, 2))
+                xstack.insert(0, starX[:, 0:1])
+                xstack.append(starX[:, 1:2])
+                ystack.insert(0, starY[:, 0:1])
+                ystack.append(starY[:, 1:2])
+        else:
+            starX = slitRx * np.sin(star)
+            starY = slitRz * np.cos(star)
+            xstack = [starX.reshape((nSpokes, 2))]
+            ystack = [starY.reshape((nSpokes, 2))]
+        xstack.append(np.zeros((nSpokes, 1)))
+        ystack.append(np.zeros((nSpokes, 1)))
+        starXs = np.hstack(xstack)
+        starYs = np.hstack(ystack)
+        kwargs['opening'] = list(zip(starXs.flatten(), starYs.flatten()))
 
         super(SiemensStar, self).__init__(*args, **kwargs)

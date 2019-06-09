@@ -403,7 +403,7 @@ One can define another measure of coherence as a single number, termed as
    properties of the radiation from X-ray free electron laser*, Opt. Commun.
    **281** (2008) 1179–88.
 
-.. [Vartanyants2010] I. A. Vartanyants and A. Singer, *Coherence properties of
+.. [Vartanyants2010] I.A. Vartanyants and A. Singer, *Coherence properties of
    hard x-ray synchrotron sources and x-ray free-electron lasers*,
    New Journal of Physics **12** (2010) 035004.
 
