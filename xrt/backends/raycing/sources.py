@@ -129,8 +129,8 @@ the corresponding velosity components are
 where :math:`\omega_u = 2\pi c /\lambda_u` - undulator frequency,
 :math:`\phi` - phase shift between the magnetic field components. In this
 simple case one can consider only one period in the integral phase term
-replacing the exponential series by a factor of
-:math:`\frac{\sin(N\pi\omega_1/\omega)}{\sin(\pi\omega_1/\omega)}`, where
+replacing the exponential series by a factor
+:math:`\frac{\sin(N\pi\omega/\omega_1)}{\sin(\pi\omega/\omega_1)}`, where
 :math:`\omega_1 = \frac{2\gamma^2}{1+K_x^2/2+K_y^2/2+\gamma^2(\theta^2+\psi^2)}
 \omega_u`.
 
