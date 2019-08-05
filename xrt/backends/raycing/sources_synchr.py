@@ -1915,7 +1915,7 @@ class Undulator(object):
         if self.eEspread == 0 or with0eSpread:
             return sigma_r02
         harmonic = np.floor_divide(E, self.E1)
-        harmonic[harmonic < 1] = 1
+#        harmonic[harmonic < 1] = 1
         if onlyOddHarmonics:
             harmonic += harmonic % 2 - 1
         eEspread_norm = PI2 * harmonic * self.Np * self.eEspread
@@ -1930,7 +1930,7 @@ class Undulator(object):
         if self.eEspread == 0 or with0eSpread:
             return sigmaP_r02
         harmonic = np.floor_divide(E, self.E1)
-        harmonic[harmonic < 1] = 1
+#        harmonic[harmonic < 1] = 1
         if onlyOddHarmonics:
             harmonic += harmonic % 2 - 1
         eEspread_norm = PI2 * harmonic * self.Np * self.eEspread
