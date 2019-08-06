@@ -156,6 +156,15 @@ class AnimationHoverDirective(AnimationDirective):
 def setup(app):
     global lapp
     lapp = app
+    try:
+        app.add_css_file("thumbnail.css")
+    except AttributeError:
+        app.add_stylesheet("thumbnail.css")
+    try:
+        app.add_js_file("animation.js")
+    except AttributeError:
+        app.add_javascript("animation.js")
+
     app.add_node(animation)
     app.add_directive('animation', AnimationDirective)
     app.add_directive('imagezoom', AnimationDirective)
