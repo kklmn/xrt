@@ -22,6 +22,28 @@ body {
     padding: 0;
 }
 
+dl.field-list {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+dl.field-list > dt {
+    flex-basis: 10%;
+    font-weight: bold;
+    padding: 0em;
+    margin: 0em;
+}
+ 
+dl.field-list > dd {
+    flex-basis: 90%;
+    padding: 0em;
+    margin: 0em;
+}
+
+dl.field-list > dt:after {
+    content: ":";
+}
+
 div.document {
     background-color: {{ theme_sidebarbgcolor }};
 }
