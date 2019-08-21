@@ -594,7 +594,7 @@ class Wiggler(BendingMagnet):
         u"""Parameters are the same as in BendingMagnet except *B0* and *rho*
         which are not required and additionally:
 
-        .. note::
+        .. warning::
             If you change *K* outside of the constructor, invoke
             ``your_wiggler_instance.reset()``.
 
@@ -676,8 +676,8 @@ class Undulator(object):
                  precisionOpenCL=raycing.precisionOpenCL,
                  pitch=0, yaw=0):
         u"""
-        .. note::
-            If you change any ondulator parameter outside of the constructor,
+        .. warning::
+            If you change any undulator parameter outside of the constructor,
             invoke ``your_undulator_instance.reset()``.
 
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
@@ -776,10 +776,10 @@ class Undulator(object):
                 angles. Use this source only with reasonably small *xPrimeMax*
                 and *zPrimeMax*!
 
-        .. note::
-            If you change these parameters outside of the constructor,
-            interpret them in *rad*; in the constructor they are given in
-            *mrad*. This awkwardness is kept for version compatibility.
+            .. warning::
+                If you change these parameters outside of the constructor,
+                interpret them in *rad*; in the constructor they are given in
+                *mrad*. This awkwardness is kept for version compatibility.
 
         *nx*, *nz*: int
             Number of intervals in the horizontal and vertical directions,
