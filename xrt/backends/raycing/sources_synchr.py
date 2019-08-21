@@ -594,6 +594,10 @@ class Wiggler(BendingMagnet):
         u"""Parameters are the same as in BendingMagnet except *B0* and *rho*
         which are not required and additionally:
 
+        .. note::
+            If you change *K* outside of the constructor, invoke
+            ``your_wiggler_instance.reset()``.
+
         *K*: float
             Deflection parameter
 
@@ -655,7 +659,7 @@ class Wiggler(BendingMagnet):
 
 class Undulator(object):
     u"""
-    Undulator source. The computation is volumnous an thus requires a GPU.
+    Undulator source. The computation is volumnous and thus requires a GPU.
     """
     def __init__(self, bl=None, name='und', center=(0, 0, 0),
                  nrays=raycing.nrays,
@@ -672,6 +676,10 @@ class Undulator(object):
                  precisionOpenCL=raycing.precisionOpenCL,
                  pitch=0, yaw=0):
         u"""
+        .. note::
+            If you change any ondulator parameter outside of the constructor,
+            invoke ``your_undulator_instance.reset()``.
+
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
             `sources` list.
@@ -767,6 +775,11 @@ class Undulator(object):
                 restrict the sampled angular acceptance down to very small
                 angles. Use this source only with reasonably small *xPrimeMax*
                 and *zPrimeMax*!
+
+        .. note::
+            If you change these parameters outside of the constructor,
+            interpret them in *rad*; in the constructor they are given in
+            *mrad*. This awkwardness is kept for version compatibility.
 
         *nx*, *nz*: int
             Number of intervals in the horizontal and vertical directions,
@@ -1812,7 +1825,7 @@ class Undulator(object):
 #            print("{0} NaN rays in {1}!".format(nanSum, strName))
 
     def real_photon_source_sizes(
-            self, energy='auto', theta='auto', psi='auto'):
+            self, energy='auto', theta='auto', psi='auto', method='rms'):
         """Returns energy dependent arrays: flux, (dx')², (dz')², dx², dz².
         Depending on *distE* being 'eV' or 'BW', the flux is either in ph/s or
         in ph/s/0.1%BW, being integrated over the specified theta and psi
@@ -1857,11 +1870,30 @@ class Undulator(object):
         I0 = (Is.astype(float) + Ip.astype(float)) *\
             (theta.max() - theta.min()) * (psi.max() - psi.min())
         dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
-        flux = I0.sum(axis=(1, 2))
-        theta2 = (I0 * (theta**2)[np.newaxis, :, np.newaxis]).sum(
-            axis=(1, 2)) / flux
-        psi2 = (I0 * (psi**2)[np.newaxis, np.newaxis, :]).sum(
-            axis=(1, 2)) / flux
+        if method == 'rms':
+            flux = (I0).sum(axis=(1, 2))
+            theta2 = (I0 * (theta[np.newaxis, :, np.newaxis])**2).sum(
+                axis=(1, 2)) / flux
+            psi2 = (I0 * (psi[np.newaxis, np.newaxis, :])**2).sum(
+                axis=(1, 2)) / flux
+        elif isinstance(method, float):  # 0 < method < 1
+            mesh2D = np.meshgrid(theta, psi, indexing='ij')
+            xTheta2D, xPsi2D = mesh2D[0].ravel(), mesh2D[1].ravel()
+            radius2 = xTheta2D**2 + xPsi2D**2
+            azimuth = np.arctan2(xPsi2D, xTheta2D)
+            ind = np.lexsort((azimuth, radius2))
+            theta2 = np.zeros_like(energy)
+            psi2 = np.zeros_like(energy)
+            flux = np.zeros_like(energy)
+            for ie, ee in enumerate(energy):
+                I0cut = I0[ie, :, :].ravel()[ind]  # sorted by radius then arg
+                flux[ie] = I0cut.sum()
+                cumFlux = np.cumsum(I0cut)
+                argBorder = np.argwhere(cumFlux > flux[ie]*method)[0][0]
+                theta2[ie] = radius2[ind][argBorder]
+                psi2[ie] = theta2[ie]
+        else:
+            raise ValueError('unknown method!')
 
         EsFT = np.fft.fftshift(np.fft.fft2(Es, axes=(1, 2))) * dtheta * dpsi
         EpFT = np.fft.fftshift(np.fft.fft2(Ep, axes=(1, 2))) * dtheta * dpsi
