@@ -1344,7 +1344,7 @@ class Undulator(object):
         else:
             iharmonic = None
         if self.eEspread > 0:
-            spr = np.linspace(-3, 3, 13)
+            spr = np.linspace(-3.5, 3.5, 25)
             dgamma = self.gamma * spr * self.eEspread
             wspr = np.exp(-0.5 * spr**2)
             wspr /= wspr.sum()
