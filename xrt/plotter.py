@@ -639,9 +639,12 @@ class XYCPlot(object):
             from the state when the persistent file was written. If the file
             does not exist yet, the histograms are initialized to zeros. The
             persistent file is rewritten when ray tracing is completed and
-            the number of repeats > 0. Be careful when you use it: if you
-            intend to start from zeros, make sure that this option is switched
-            off or the pickle files are deleted!
+            the number of repeats > 0.
+
+            .. warning::
+                Be careful when you use it: if you intend to start from zeros,
+                make sure that this option is switched off or the pickle files
+                do not exist! Otherwise you do resume, not really start anew.
 
             if *persistentName* ends with '.mat', a Matlab file is generated.
 
