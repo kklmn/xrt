@@ -48,3 +48,14 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+xrt.egg-info/
+xrt/gui/commons/.buildinfo
+xrt/gui/commons/_sources/
+xrt/gui/commons/_static/
+xrt/gui/commons/doctrees/
+xrt/gui/commons/genindex.html
+xrt/gui/commons/objects.inv
+xrt/gui/commons/search.html
+xrt/gui/commons/searchindex.js
+xrt/gui/commons/xrtQookPage.html
