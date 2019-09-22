@@ -206,6 +206,7 @@ setup(
         'xrt.gui.xrtQook': ['_icons/*.*'],
         'xrt.gui.xrtGlow': ['_icons/*.*']},
     scripts=['xrt/gui/xrtQookStart.pyw', 'xrt/gui/xrtQookStart.py'],
+    entry_points={'console_scripts': ['xrt = xrt.gui.xrtQookStart:main']},
     install_requires=['numpy>=1.8.0', 'scipy>=0.17.0', 'matplotlib>=2.0.0',
                       'sphinx>=1.6.2',
                       # 'openpyxl', 'distro'

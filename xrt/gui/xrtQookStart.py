@@ -9,7 +9,7 @@ sys.path.append(os.path.join('..', '..'))
 import xrt.gui.xrtQook as xQ
 
 
-if __name__ == '__main__':
+def main():
     if any('spyder' in name.lower() for name in os.environ):
         pass  # spyder is present
     else:
@@ -29,3 +29,7 @@ if __name__ == '__main__':
     ex.setWindowTitle("xrtQook")
     ex.show()
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
