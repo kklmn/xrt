@@ -7,7 +7,7 @@ Module :mod:`~xrt.backends.raycing.screens` defines a flat screen and a
 hemispheric screen that intercept a beam and give its image.
 
 .. autoclass:: xrt.backends.raycing.screens.Screen()
-   :members: __init__, expose, prepare_wave
+   :members: __init__, expose, prepare_wave, set_orientation
 
 .. autoclass:: xrt.backends.raycing.screens.HemisphericScreen()
    :members: __init__
@@ -51,6 +51,10 @@ class Screen(object):
             local x and z axes lying in the screen plane. If *x* is 'auto', it
             is horizontal and perpendicular to the beam line. If *z* is 'auto',
             it is vertical.
+
+            .. warning::
+                If you change *x* and/or *z* outside of the constructor, you
+                must invoke the method :meth:`set_orientation`.
 
         *compressX, compressZ*: float
             Multiplicative compression coefficients for the corresponding axes.
@@ -302,6 +306,10 @@ class HemisphericScreen(Screen):
             coincides with the beamline's *x*. The equator plane is then
             vertical. The polar angle θ is counted from -π/2 to π/2 with 0 at
             the equator and π/2 at the polar axis direction.
+
+            .. warning::
+                If you change *x* and/or *z* outside of the constructor, you
+                must invoke the method :meth:`set_orientation`.
 
         *R*: float
             Radius of the hemisphere in mm.
