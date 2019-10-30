@@ -1344,7 +1344,7 @@ class Undulator(object):
         else:
             iharmonic = None
         if self.eEspread > 0:
-            spr = np.linspace(-3.5, 3.5, 25)
+            spr = np.linspace(-3.5, 3.5, 36)
             dgamma = self.gamma * spr * self.eEspread
             wspr = np.exp(-0.5 * spr**2)
             wspr /= wspr.sum()
@@ -1391,7 +1391,8 @@ class Undulator(object):
         s2 = 2. * np.real(self.Isp)
         s3 = -2. * np.imag(self.Isp)
 
-        if self.dxprime > 0 or self.dzprime > 0:
+        if (self.dxprime > 0 or self.dzprime > 0) and \
+                len(theta) > 1 and len(psi) > 1:
             from scipy.ndimage.filters import gaussian_filter
             Sx = self.dxprime / (theta[1] - theta[0])
             Sz = self.dzprime / (psi[1] - psi[0])
