@@ -537,31 +537,31 @@ Undulator source size dependent on energy spread and detuning
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The linear and angular source sizes, as calculated with equations from
-[TanakaKitamura]_ (and summarized :ref:`here <undulator-source-size>`) for a
+[TanakaKitamura]_ (summarized :ref:`here <undulator-source-size>`) for a
 U19 undulator in MAX IV 3 GeV ring (:math:`E_1` = 1429 eV) with
 :math:`\varepsilon_x` = 263 pmrad, :math:`\varepsilon_y` = 8 pmrad,
-:math:`\beta_x` = 9 m and :math:`\beta_y` = 2 m , are shown below. Energy
+:math:`\beta_x` = 9 m and :math:`\beta_y` = 2 m, are shown below. Energy
 spread mainly affects the angular sizes and not the linear ones.
 
 The calculated sizes were further compared with those of the sampled field
 (circles) at variable energies around the nominal harmonic positions. To get
 the linear photon source distribution, the angular distributions of Es and Ep
-field amplitudes were Fourier transformed, as described e.g. in
-[TanakaKitamura]_. The sampled field sizes strongly vary due to energy
-detuning, as is better seen on the magnified insets. The angular size variation
-due to detuning appears to prevail over the effect of emittance and energy
-spread.
+field amplitudes were Fourier transformed, as described in [Coïsson]_. The
+sampled field sizes strongly vary due to energy detuning, as is better seen on
+the magnified insets. The size variation by detuning is the underlying reason
+for the size dependence on energy spread: with a non-zero energy spread the
+undulator becomes effectively detuned for some electrons.
 
 The size of the circles is proportional to the total flux normalized to the
 maximum at each respective harmonic. It sharply decreases at the higher energy
 end of a harmonic and has a long tail at the lower energy end, in accordance
 with the above examples.
 
-The effect of energy detuning from the nominal undulator harmonic energy is
-compared to the results by Coïsson [Coïsson]_ (cross signs in the figures
-below). His effect of detuning has a comparable amplitude. A sharper dependence
-is probably due to a smaller (and unknown) angular acceptance and a somewhat
-special definition of the beam size.
+The effect of energy detuning from the nominal undulator harmonic energy on the
+photon source size is compared to the results by Coïsson [Coïsson]_ (crosses in
+the figures below). He calculated the sizes for a single electron field, and
+thus without emittance and energy spread. For comparison, we also sampled the
+undulator field at zero energy spread and emission.
 
 .. imagezoom:: _images/undulatorLinearSize.png
 .. imagezoom:: _images/undulatorAngularSize.png
