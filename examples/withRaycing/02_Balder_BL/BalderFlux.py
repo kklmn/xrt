@@ -13,7 +13,7 @@ import xrt.backends.raycing.sources as rs
 #import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
 #import xrt.backends.raycing.screens as rsc
-
+from xrt.backends.raycing.physconsts import SIE0
 
 #stripeSi = rm.Material('Si', rho=2.33)
 #stripeSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2)
@@ -21,16 +21,20 @@ stripePt = rm.Material('Pt', rho=21.45)
 #filterDiamond = rm.Material('C', rho=3.52, kind='plate')
 #si = rm.CrystalSi(hkl=(1, 1, 1), tK=-171+273.15)
 
-eMax = 200  # keV
+eMax = 300  # keV
+#accHor, accVer = 0.4, 0.1  # mrad
+#accHor, accVer = 1.1, 1.2  # mrad
+accHor, accVer = 7./18, 0.2/18  # mrad
 
 
 def run(case):
     myBalder = raycing.BeamLine(azimuth=0, height=0)
     kwargs = dict(
         name='SoleilW50', center=(0, 0, 0),
-        period=50., K=8.446, n=39, eE=3., eI=0.5,
+        period=50., K=8.446*0.9, n=39, eE=3., eI=0.140,
         eSigmaX=48.66, eSigmaZ=6.197, eEpsilonX=0.263, eEpsilonZ=0.008,
-        eMin=50, eMax=eMax*1e3+50, xPrimeMax=0.2, zPrimeMax=0.05,
+        eMin=50, eMax=eMax*1e3+50,
+        xPrimeMax=accHor/2, zPrimeMax=accVer/2.,
         eN=2000, nx=20, nz=10)
     kwargs['distE'] = 'BW'
     source = rs.Wiggler(myBalder, **kwargs)
@@ -40,9 +44,8 @@ def run(case):
     flux = I0.sum(axis=(1, 2)) * source.dTheta * source.dPsi
 
     fig = plt.figure(figsize=(10, 6))
-    fig.suptitle(u'Integrated {0}'.format(case) +
-                 u' beam flux into 0.4$\\times$ 0.1 mrad$^2$',
-                 fontsize=14)
+    fig.suptitle(u'Integrated {0} beam flux into {1}×{2} mrad²'.format(
+        case, accHor, accVer), fontsize=14)
 #    fig.subplots_adjust(right=0.88)
     ax = fig.add_subplot(111)
     ax.set_xlabel(r'energy (keV)')
@@ -63,6 +66,7 @@ def run(case):
     else:
         fluxRes = flux
     ax.plot(E*1e-3, fluxRes, '-r', lw=2, label='wiggler')
+    print('total power = {0} W'.format(1e3*fluxRes.sum()*(E[1]-E[0])*SIE0))
 
     ax.set_ylim(0, None)
     ax.set_xlim(0, eMax)
@@ -74,9 +78,11 @@ def run(case):
     ws = wb.add_sheet('flux')
     ws.write(0, 0, "energy (eV)")
     if case == 'monochromatic':
-        ws.write(0, 1, "flux (ph/s/(Si111 DCM bw)")
+        cap = "flux (ph/s/(Si111 DCM bw)"
     else:
-        ws.write(0, 1, "flux (ph/s/0.1%bw)")
+        cap = "flux (ph/s/0.1%bw)"
+    cap += " through {0}×{1} mrad²".format(accHor, accVer)
+    ws.write(0, 1, cap)
 
     for ie, (e, f) in enumerate(zip(E, fluxRes)):
         ws.write(ie+1, 0, e)
@@ -88,6 +94,6 @@ def run(case):
 
 
 if __name__ == '__main__':
-    run('white')
-#    run('monochromatic')
+#    run('white')
+    run('monochromatic')
     print('finished')

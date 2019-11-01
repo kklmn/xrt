@@ -250,7 +250,7 @@ def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
         return
 
     plots = define_plots(myBalder, prefix, suffix)
-    xrtr.run_ray_tracing(plots, repeats=1, beamLine=myBalder, processes=4)
+    xrtr.run_ray_tracing(plots, repeats=8, beamLine=myBalder, processes='half')
 #    myBalder.glow()
 
 
