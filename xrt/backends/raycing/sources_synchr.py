@@ -13,7 +13,7 @@ from .. import raycing
 from . import myopencl as mcl
 from .sources_beams import Beam, allArguments
 from .physconsts import E0, C, M0, EV2ERG, K2B, SIE0,\
-    SIM0, FINE_STR, PI, PI2, SQ2, SQ3, SQPI, E2W, CHeVcm, CHBAR
+    SIM0, FINE_STR, PI, PI2, SQ2, SQ3, SQPI, E2W, CHeVcm, CH, CHBAR
 
 try:
     import pyopencl as cl  # analysis:ignore
@@ -1265,12 +1265,12 @@ class Undulator(object):
                              harmonic=None, withElectronDivergence=True):
         """Returns Es and Ep in the shape (energy, theta, psi, [harmonic]).
         Along the 0th axis (energy) are stored "macro-electrons" that emit at
-        the proton energy given by *energy* (constant or variable) onto the
+        the photon energy given by *energy* (constant or variable) onto the
         angular mesh given by *theta* and *psi*. The transverse field from each
         macro-electron gets individual random angular offsets dtheta and dpsi
         within the emittance distribution if *withElectronDivergence* is True
-        and an individual random shift to gamma within the energy spread. The
-        parameter self.filamentBeam is irrelevant for this method."""
+        and an individual random shift to gamma within the energy spread.
+        The parameter self.filamentBeam is irrelevant for this method."""
         if isinstance(energy, str):  # i.e. if 'auto'
             energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
         nmacroe = 1 if len(np.array(energy).shape) == 0 else len(energy)
@@ -1868,38 +1868,17 @@ class Undulator(object):
         else:
             Is = (Es*np.conj(Es)).real
             Ip = (Ep*np.conj(Ep)).real
-        I0 = (Is.astype(float) + Ip.astype(float)) *\
-            (theta.max() - theta.min()) * (psi.max() - psi.min())
         dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
-        if method == 'rms':
-            flux = (I0).sum(axis=(1, 2))
-            theta2 = (I0 * (theta[np.newaxis, :, np.newaxis])**2).sum(
-                axis=(1, 2)) / flux
-            psi2 = (I0 * (psi[np.newaxis, np.newaxis, :])**2).sum(
-                axis=(1, 2)) / flux
-        elif isinstance(method, float):  # 0 < method < 1
-            mesh2D = np.meshgrid(theta, psi, indexing='ij')
-            xTheta2D, xPsi2D = mesh2D[0].ravel(), mesh2D[1].ravel()
-            radius2 = xTheta2D**2 + xPsi2D**2
-            azimuth = np.arctan2(xPsi2D, xTheta2D)
-            ind = np.lexsort((azimuth, radius2))
-            theta2 = np.zeros_like(energy)
-            psi2 = np.zeros_like(energy)
-            flux = np.zeros_like(energy)
-            for ie, ee in enumerate(energy):
-                I0cut = I0[ie, :, :].ravel()[ind]  # sorted by radius then arg
-                flux[ie] = I0cut.sum()
-                cumFlux = np.cumsum(I0cut)
-                argBorder = np.argwhere(cumFlux > flux[ie]*method)[0][0]
-                theta2[ie] = radius2[ind][argBorder]
-                psi2[ie] = theta2[ie]
-        else:
-            raise ValueError('unknown method!')
+        I0 = (Is.astype(float) + Ip.astype(float))
+        flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+        theta2, psi2 = self._get_2D_sizes(
+            I0, flux, theta, psi, dtheta, dpsi, method)
 
-        EsFT = np.fft.fftshift(np.fft.fft2(Es, axes=(1, 2))) * dtheta * dpsi
-        EpFT = np.fft.fftshift(np.fft.fft2(Ep, axes=(1, 2))) * dtheta * dpsi
-        thetaFT = np.fft.fftshift(np.fft.fftfreq(len(theta), dtheta))
-        psiFT = np.fft.fftshift(np.fft.fftfreq(len(psi), dpsi))
+        EsFT = np.fft.fftshift(np.fft.fft2(Es), axes=(1, 2)) * dtheta * dpsi
+        EpFT = np.fft.fftshift(np.fft.fft2(Ep), axes=(1, 2)) * dtheta * dpsi
+        thetaFT = np.fft.fftshift(np.fft.fftfreq(len(theta), d=dtheta))
+        psiFT = np.fft.fftshift(np.fft.fftfreq(len(psi), d=dpsi))
+        dthetaFT, dpsiFT = thetaFT[1] - thetaFT[0], psiFT[1] - psiFT[0]
         if self.eEspread > 0:
             ws = wspr[np.newaxis, np.newaxis, np.newaxis, :]
             IsFT = ((EsFT*np.conj(EsFT)).real * ws).sum(axis=3)
@@ -1907,16 +1886,55 @@ class Undulator(object):
         else:
             IsFT = (EsFT*np.conj(EsFT)).real
             IpFT = (EpFT*np.conj(EpFT)).real
-        I0FT = (IsFT.astype(float) + IpFT.astype(float)) *\
-            (thetaFT.max() - thetaFT.min()) * (psiFT.max() - psiFT.min())
-#        fluxFT = I0FT.sum(axis=(1, 2))  # it is equal to flux, checked
-        k = energy / CHBAR * 1e7  # in 1/mm
-        dx2 = (I0FT * (thetaFT**2)[np.newaxis, :, np.newaxis]).sum(
-            axis=(1, 2)) / flux * k**(-2)
-        dz2 = (I0FT * (psiFT**2)[np.newaxis, np.newaxis, :]).sum(
-            axis=(1, 2)) / flux * k**(-2)
+        I0FT = (IsFT.astype(float) + IpFT.astype(float))
+        fluxFT = I0FT.sum(axis=(1, 2)) * dthetaFT * dpsiFT
+        # flux equals fluxFT, check it:
+#        print(flux)
+#        print(fluxFT)
+        k = energy / CH * 1e7  # in 1/mm
+        dx2, dz2 = self._get_2D_sizes(
+            I0FT, fluxFT, thetaFT, psiFT, dthetaFT, dpsiFT, method, k)
 
         return flux, theta2, psi2, dx2, dz2
+
+    def _get_2D_sizes(
+            self, I0, flux, theta, psi, dtheta, dpsi, method, k=None):
+        if method == 'rms':
+            theta2 = (I0 * (theta[np.newaxis, :, np.newaxis])**2).sum(
+                axis=(1, 2)) * dtheta * dpsi / flux
+            psi2 = (I0 * (psi[np.newaxis, np.newaxis, :])**2).sum(
+                axis=(1, 2)) * dtheta * dpsi / flux
+        elif isinstance(method, float):  # 0 < method < 1
+            theta2 = self._get_1D_size(I0, flux, theta, dtheta, 1, method)
+            psi2 = self._get_1D_size(I0, flux, psi, dpsi, 2, method)
+        else:
+            raise ValueError('unknown method!')
+        if k is not None:
+            theta2 *= k**(-2)
+            psi2 *= k**(-2)
+        return theta2, psi2
+
+    def _get_1D_size(self, I0, flux, ang, dang, axis, method):
+        ang2 = np.zeros(I0.shape[0])
+        if axis == 1:
+            angCutI0 = I0[:, I0.shape[1]//2:, I0.shape[2]//2].squeeze()
+        elif axis == 2:
+            angCutI0 = I0[:, I0.shape[1]//2, I0.shape[2]//2:].squeeze()
+        angCumFlux = (angCutI0*ang[np.newaxis, len(ang)//2:]).cumsum(axis=1)\
+            * 2*np.pi * dang
+        for ie, ee in enumerate(flux):
+            try:
+                argBorder = np.argwhere(angCumFlux[ie, :] > ee*method)[0][0]
+            except IndexError:
+                ang2[ie] = 0
+                continue
+            r2a = ang[len(ang)//2+argBorder-1]**2
+            va = angCumFlux[ie, argBorder-1]
+            r2b = ang[len(ang)//2+argBorder]**2
+            vb = angCumFlux[ie, argBorder]
+            r2m = (ee*method - va) * (r2b-r2a) / (vb-va) + r2a
+            ang2[ie] = r2m
+        return ang2
 
     def tanaka_kitamura_Qa2(self, x, eps=1e-6):
         """Squared Q_a function from Tanaka and Kitamura J. Synchrotron Rad. 16
