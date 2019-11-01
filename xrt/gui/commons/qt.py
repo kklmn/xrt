@@ -129,6 +129,7 @@ except:  # analysis:ignore
     glowSlider = mySlider
     glowTopScale = QSlider.TicksAbove
 
+
 class QComboBox(StdQComboBox):
     """
     Disabling off-focus mouse wheel scroll is based on the following solution:

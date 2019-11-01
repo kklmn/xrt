@@ -21,7 +21,7 @@ powers = source.power_vs_K(energy, theta, psi, harmonics, Ks)
 
 plt.plot(gaps, powers, 'o-')
 ax = plt.gca()
-ax.set_xlabel(u'magnet gap (mm)')
+ax.set_xlabel(u'magnetic gap (mm)')
 ax.set_ylabel(u'total power through (60 µrad)² (W)')
 
 maxPower = powers.max()
