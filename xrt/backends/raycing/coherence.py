@@ -354,8 +354,9 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
     labels = ['0th (coherent) {0}: w={1:.3f}', '1st residual {0}: w={1:.3f}',
               '2nd residual {0}: w={1:.3f}', '3rd residual {0}: w={1:.3f}']
     for iax, (ax, lab) in enumerate(zip([ax0, ax1, ax2, ax3], labels)):
+        assert v[:, -iax-1].shape[0] == len(y)*len(x)
         im = (v[:, -iax-1]).reshape(len(y), len(x))
-        imA = im.real**2 + im.imag**2
+        imA = (im.real**2 + im.imag**2).astype(float)
         ax.imshow(imA, extent=extent, cmap=cmap, interpolation='none')
         plt.text(
             0.5, 0.95, lab.format(modeName, w[-iax-1]),
