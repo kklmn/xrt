@@ -1184,7 +1184,7 @@ class XYCPlot(object):
             r[1] *= self.xaxis.factor
             r[2] *= self.yaxis.factor
             r[3] *= self.yaxis.factor
-            if isinstance(self.oe.shape, str):
+            if isinstance(self.oe.shape, (str, unicode)):
                 if self.oe.shape.startswith('ro') and\
                         (self.raycingParam < 1000):
                     envelope = mpl.patches.Circle(
