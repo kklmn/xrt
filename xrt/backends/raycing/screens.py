@@ -90,22 +90,9 @@ class Screen(object):
 
     def set_orientation(self, x=None, z=None):
         """Determines the local x, y and z in the global system."""
-        if x is not None:
-            if isinstance(x, (list, tuple, np.ndarray)):
-                norm = sum([xc**2 for xc in x])**0.5
-                self.x = [xc/norm for xc in x]
-            else:
-                self.x = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
-        if z is not None:
-            if isinstance(z, (list, tuple, np.ndarray)):
-                norm = sum([zc**2 for zc in z])**0.5
-                self.z = [zc/norm for zc in z]
-            else:
-                self.z = 0., 0., 1.
-        xdotz = np.dot(self.x, self.z)
-        if abs(xdotz) > 1e-8:
-            print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
-        self.y = np.cross(self.z, self.x)
+        if x == z == 'auto':
+            x, z = None, None
+        self.x, self.y, self.z = raycing.xyz_from_xz(self.bl, x, z)
 
     def local_to_global(self, x=0, y=0, z=0):
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
@@ -147,21 +134,8 @@ class Screen(object):
         if self.bl is not None:
             self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
-        # Converting the beam to the screen local coordinates
-        blo.x[:] = beam.x[:] - self.center[0]
-        blo.y[:] = beam.y[:] - self.center[1]
-        blo.z[:] = beam.z[:] - self.center[2]
-
-        xyz = blo.x, blo.y, blo.z
-        blo.x[:], blo.y[:], blo.z[:] = \
-            sum(c*b for c, b in zip(self.x, xyz)),\
-            sum(c*b for c, b in zip(self.y, xyz)),\
-            sum(c*b for c, b in zip(self.z, xyz))
-        abc = beam.a, beam.b, beam.c
-        blo.a[:], blo.b[:], blo.c[:] = \
-            sum(c*b for c, b in zip(self.x, abc)),\
-            sum(c*b for c, b in zip(self.y, abc)),\
-            sum(c*b for c, b in zip(self.z, abc))
+        xyz = self.x, self.y, self.z
+        raycing.global_to_virgin_local(xyz, beam, blo, self.center)
 
         with np.errstate(divide='ignore'):
             path = -blo.y / blo.b

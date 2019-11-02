@@ -331,19 +331,33 @@ def global_to_virgin_local(bl, beam, lo, center=None, part=None):
     *bl* is an instance of :class:`BeamLine`"""
     if part is None:
         part = np.ones(beam.x.shape, dtype=np.bool)
-    a0, b0 = bl.sinAzimuth, bl.cosAzimuth
     if center is None:
         center = [0, 0, 0]
     lo.x[part] = beam.x[part] - center[0]
     lo.y[part] = beam.y[part] - center[1]
     lo.z[part] = beam.z[part] - center[2]
-    if a0 == 0:
-        lo.a[part] = beam.a[part]
-        lo.b[part] = beam.b[part]
-    else:
-        lo.x[part], lo.y[part] = rotate_z(lo.x[part], lo.y[part], b0, a0)
-        lo.a[part], lo.b[part] = rotate_z(beam.a[part], beam.b[part], b0, a0)
-    lo.c[part] = beam.c[part]  # unchanged
+    if isinstance(bl, BeamLine):
+        a0, b0 = bl.sinAzimuth, bl.cosAzimuth
+        if a0 == 0:
+            lo.a[part] = beam.a[part]
+            lo.b[part] = beam.b[part]
+        else:
+            lo.x[part], lo.y[part] = rotate_z(lo.x[part], lo.y[part], b0, a0)
+            lo.a[part], lo.b[part] = \
+                rotate_z(beam.a[part], beam.b[part], b0, a0)
+        lo.c[part] = beam.c[part]  # unchanged
+    elif isinstance(bl, (list, tuple)):
+        lx, ly, lz = bl
+        xyz = lo.x[part], lo.y[part], lo.z[part]
+        lo.x[part], lo.y[part], lo.z[part] = (
+            sum(c*b for c, b in zip(lx, xyz)),
+            sum(c*b for c, b in zip(ly, xyz)),
+            sum(c*b for c, b in zip(lz, xyz)))
+        abc = beam.a[part], beam.b[part], beam.c[part]
+        lo.a[part], lo.b[part], lo.c[part] = (
+            sum(c*b for c, b in zip(lx, abc)),
+            sum(c*b for c, b in zip(ly, abc)),
+            sum(c*b for c, b in zip(lz, abc)))
 
 
 def virgin_local_to_global(bl, vlb, center=None, part=None,
@@ -367,6 +381,29 @@ def virgin_local_to_global(bl, vlb, center=None, part=None,
         vlb.x[part] += center[0]
         vlb.y[part] += center[1]
         vlb.z[part] += center[2]
+
+
+def xyz_from_xz(bl, x=None, z=None):
+    if x == z == 'auto':
+        return 'auto'
+
+    if isinstance(x, (list, tuple, np.ndarray)):
+        norm = sum([xc**2 for xc in x])**0.5
+        retx = [xc/norm for xc in x]
+    else:
+        retx = bl.cosAzimuth, -bl.sinAzimuth, 0.
+
+    if isinstance(z, (list, tuple, np.ndarray)):
+        norm = sum([zc**2 for zc in z])**0.5
+        retz = [zc/norm for zc in z]
+    else:
+        retz = 0., 0., 1.
+
+    xdotz = np.dot(retx, retz)
+    if abs(xdotz) > 1e-8:
+        print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
+    rety = np.cross(retz, retx)
+    return [retx, rety, retz]
 
 
 def check_alarm(self, incoming, beam):

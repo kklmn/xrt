@@ -24,7 +24,7 @@ from . import sources as rs
 from .physconsts import CHBAR
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "26 Mar 2016"
+__date__ = "1 Nov 2019"
 __all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
 
 allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'alarmLevel', 'r',
@@ -32,11 +32,12 @@ allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'alarmLevel', 'r',
 
 
 class RectangularAperture(object):
-    """Implements an aperture or an obstacle with a combination of horizontal
-    and/or vertical edge(s)."""
+    """Implements an aperture or an obstacle as a combination of straight
+    edges."""
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
-                 opening=[-10, 10, -10, 10], alarmLevel=None):
+                 opening=[-10, 10, -10, 10], x='auto', z='auto',
+                 alarmLevel=None):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -46,16 +47,25 @@ class RectangularAperture(object):
             User-specified name, can be used for diagnostics output.
 
         *center*: 3-sequence of floats
-            3D point in global system. The aperture is assumed to be a vertical
-            plane perpendicular to the beam line.
+            3D point in global system.
 
         *kind*: sequence
             Any combination of 'top', 'bottom', 'left', 'right'.
 
         *opening*: sequence
             Distances (with sign according to the local coordinate system) from
-            the blade edges to the initial beam line with the length
+            the blade edges to the aperture center with the length
             corresponding to *kind*.
+
+        *x, z*: 3-tuples or 'auto'.
+            Normalized 3D vectors in the global system which determine the
+            local x and z axes lying in the aperture plane. If *x* is 'auto',
+            it is horizontal and normal to the beam line. If *z* is 'auto', it
+            is vertical.
+
+            .. warning::
+                If you change *x* and/or *z* outside of the constructor, you
+                must invoke the method :meth:`set_orientation`.
 
         *alarmLevel*: float or None.
             Allowed fraction of number of rays absorbed at the aperture
@@ -82,8 +92,9 @@ class RectangularAperture(object):
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
+        if any([xc == 'auto' for xc in self.center]):
             self._center = copy.copy(self.center)
+        self.set_orientation(x, z)
         if isinstance(kind, str):
             self.kind = (kind,)
             self.opening = [opening, ]
@@ -101,6 +112,10 @@ class RectangularAperture(object):
             self.set_optical_limits()
         self.shape = 'rect'
         self.spotLimits = []
+
+    def set_orientation(self, x=None, z=None):
+        """Determines the local x, y and z as vectors in the global system."""
+        self.xyz = raycing.xyz_from_xz(self.bl, x, z)
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
@@ -154,11 +169,13 @@ class RectangularAperture(object):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        bl = self.bl if self.xyz == 'auto' else self.xyz
+        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         path = -lo.y[good] / lo.b[good]
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
         lo.path[good] += path
+
         badIndices = np.zeros(len(beam.x), dtype=np.bool)
         for akind, d in zip(self.kind, self.opening):
             if akind.startswith('l'):
@@ -212,7 +229,8 @@ class RectangularAperture(object):
 #        good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        bl = self.bl if self.xyz == 'auto' else self.xyz
+        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         lo.y[good] /= lo.b[good]
         if ('left' in self.kind) or ('right' in self.kind):
             lo.x[good] -= lo.a[good] * lo.y[good]
@@ -315,7 +333,7 @@ class RectangularAperture(object):
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
     """Implements a set of coplanar apertures with a Z actuator."""
     def __init__(self, bl, name, center, apertures, centerZs, dXs, dZs,
-                 alarmLevel=None):
+                 x='auto', z='auto', alarmLevel=None):
         """
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
@@ -328,6 +346,16 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         *dXs* and *dZs*: sequence of float
             Openings in x and z local axes which correspond to
             *apertures[:-1]*.
+
+        *x, z*: 3-tuples or 'auto'.
+            Normalized 3D vectors in the global system which determine the
+            local x and z axes lying in the aperture plane. If *x* is 'auto',
+            it is horizontal and normal to the beam line. If *z* is 'auto', it
+            is vertical.
+
+            .. warning::
+                If you change *x* and/or *z* outside of the constructor, you
+                must invoke the method :meth:`set_orientation`.
 
 
         """
@@ -349,8 +377,9 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
+        if any([xc == 'auto' for xc in self.center]):
             self._center = copy.copy(self.center)
+        self.set_orientation(x, z)
         self.zActuator = center[2]
         self.z0 = center[2]
         self.apertures = apertures
@@ -414,9 +443,22 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
     def __init__(self, bl=None, name='',
-                 center=[0, 0, 0], r=1, alarmLevel=None):
-        """ The aperture is assumed to be a vertical plane perpendicular
-        to the beam line. *r* is the radius.
+                 center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None):
+        """ A round aperture aperture.
+
+        *r* is the radius.
+
+        *x, z*: 3-tuples or 'auto'.
+            Normalized 3D vectors in the global system which determine the
+            local x and z axes lying in the aperture plane. If *x* is 'auto',
+            it is horizontal and normal to the beam line. If *z* is 'auto', it
+            is vertical.
+
+            .. warning::
+                If you change *x* and/or *z* outside of the constructor, you
+                must invoke the method :meth:`set_orientation`.
+
+
         """
         self.bl = bl
         if bl is not None:
@@ -436,8 +478,9 @@ class RoundAperture(object):
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
+        if any([xc == 'auto' for xc in self.center]):
             self._center = copy.copy(self.center)
+        self.set_orientation(x, z)
         self.r = r
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
@@ -448,6 +491,10 @@ class RoundAperture(object):
         self.limPhysY = self.limOptY
         self.shape = 'round'
         self.spotLimits = []
+
+    def set_orientation(self, x=None, z=None):
+        """Determines the local x, y and z as vectors in the global system."""
+        self.xyz = raycing.xyz_from_xz(self.bl, x, z)
 
     def get_divergence(self, source):
         """Gets the full divergence given the aperture radius."""
@@ -467,7 +514,8 @@ class RoundAperture(object):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        bl = self.bl if self.xyz == 'auto' else self.xyz
+        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         path = -lo.y[good] / lo.b[good]
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
@@ -587,7 +635,8 @@ class RoundBeamStop(RoundAperture):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        bl = self.bl if self.xyz == 'auto' else self.xyz
+        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         with np.errstate(divide='ignore'):
             path = -lo.y[good] / lo.b[good]
         indBad = np.where(np.isnan(path))
@@ -645,7 +694,8 @@ class DoubleSlit(RectangularAperture):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        bl = self.bl if self.xyz == 'auto' else self.xyz
+        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         path = -lo.y[good] / lo.b[good]
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
@@ -694,7 +744,7 @@ class PolygonalAperture(object):
     """Implements an aperture or an obstacle defined as a set of polygon
     vertices."""
     def __init__(self, bl=None, name='', center=[0, 0, 0],
-                 opening=None, alarmLevel=None):
+                 opening=None, x='auto', z='auto', alarmLevel=None):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -704,11 +754,20 @@ class PolygonalAperture(object):
             User-specified name, can be used for diagnostics output.
 
         *center*: 3-sequence of floats
-            3D point in global system. The aperture is assumed to be a vertical
-            plane perpendicular to the beam line.
+            3D point in global system.
 
         *opening*: sequence
             Coordinates [(x0, y0),...(xN, yN)] of the polygon vertices.
+
+        *x, z*: 3-tuples or 'auto'.
+            Normalized 3D vectors in the global system which determine the
+            local x and z axes lying in the aperture plane. If *x* is 'auto',
+            it is horizontal and normal to the beam line. If *z* is 'auto', it
+            is vertical.
+
+            .. warning::
+                If you change *x* and/or *z* outside of the constructor, you
+                must invoke the method :meth:`set_orientation`.
 
         *alarmLevel*: float or None.
             Allowed fraction of number of rays absorbed at the aperture
@@ -733,8 +792,9 @@ class PolygonalAperture(object):
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
+        if any([xc == 'auto' for xc in self.center]):
             self._center = self.center
+        self.set_orientation(x, z)
 
         self.opening = opening
         self.vertices = np.array(self.opening)
@@ -748,6 +808,10 @@ class PolygonalAperture(object):
         if opening is not None:
             self.set_optical_limits()
         self.shape = 'polygon'
+
+    def set_orientation(self, x=None, z=None):
+        """Determines the local x, y and z as vectors in the global system."""
+        self.xyz = raycing.xyz_from_xz(self.bl, x, z)
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
@@ -769,7 +833,8 @@ class PolygonalAperture(object):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        raycing.global_to_virgin_local(self.bl, beam, lo, self.center, good)
+        bl = self.bl if self.xyz == 'auto' else self.xyz
+        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         path = -lo.y[good] / lo.b[good]
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
@@ -826,7 +891,7 @@ class PolygonalAperture(object):
             xy = np.random.rand(nrays, 2)
             rndX = xy[:, 0] * dX + self.limOptX[0]
             rndY = xy[:, 1] * dZ + self.limOptY[0]
-            inDots = footprint.contains_points(zip(rndX, rndY))
+            inDots = footprint.contains_points(list(zip(rndX, rndY)))
             goodX = rndX[inDots] if randRays == 0 else\
                 np.append(goodX, rndX[inDots])
             goodY = rndY[inDots] if randRays == 0 else\
