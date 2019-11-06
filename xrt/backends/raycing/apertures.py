@@ -13,6 +13,21 @@ The classes have useful methods for getting divergence from the aperture size,
 for setting divergence (calculating the aperture size given the divergence) and
 for touching the beam with the aperture, i.e. calculating the minimum aperture
 size that lets the whole beam through.
+
+.. autoclass:: xrt.backends.raycing.apertures.RectangularAperture()
+   :members: __init__, get_divergence, set_divergence, propagate, touch_beam
+
+.. autoclass:: xrt.backends.raycing.apertures.RoundAperture()
+   :members: __init__, get_divergence, propagate
+
+.. autoclass:: xrt.backends.raycing.apertures.RoundBeamStop()
+
+.. autoclass:: xrt.backends.raycing.apertures.DoubleSlit()
+   :members: __init__
+
+.. autoclass:: xrt.backends.raycing.apertures.PolygonalAperture()
+   :members: __init__
+
 """
 
 import numpy as np
@@ -25,10 +40,11 @@ from .physconsts import CHBAR
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Nov 2019"
-__all__ = 'RectangularAperture', 'RoundAperture', 'RoundBeamStop', 'DoubleSlit'
+__all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
+           'DoubleSlit', 'PolygonalAperture')
 
-allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'alarmLevel', 'r',
-                'shadeFraction')
+allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
+                'alarmLevel', 'r', 'shadeFraction')
 
 
 class RectangularAperture(object):
@@ -615,12 +631,8 @@ class RoundAperture(object):
 
 
 class RoundBeamStop(RoundAperture):
-    """Implements a round beamstop."""
-
-#    def _reportNaN(self, x, strName):
-#        nanSum = np.isnan(x).sum()
-#        if nanSum > 0:
-#            print("{0} NaN rays in {1}!".format(nanSum, strName))
+    """Implements a round beamstop. Descends from RoundAperture and has the
+    same parameters."""
 
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
@@ -676,6 +688,9 @@ class DoubleSlit(RectangularAperture):
     """Implements an aperture or an obstacle with a combination of horizontal
     and/or vertical edge(s)."""
     def __init__(self, *args, **kwargs):
+        """Same parameters as in :class:`RectangularAperture` and additionally
+        *shadeFraction* as a value from 0 to 1.
+        """
         self.shadeFraction = kwargs.pop('shadeFraction', 0.5)
         super(DoubleSlit, self).__init__(*args, **kwargs)
 
