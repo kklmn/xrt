@@ -31,14 +31,9 @@ Raycing backend
 ..    :members: __init__, set_x_stages, get_orientation
 
 .. automodule:: xrt.backends.raycing.apertures
-.. autoclass:: xrt.backends.raycing.apertures.RectangularAperture()
-   :members: __init__, get_divergence, set_divergence, propagate, touch_beam
-.. autoclass:: xrt.backends.raycing.apertures.SetOfRectangularAperturesOnZActuator(RectangularAperture)
-   :members: __init__, select_aperture
-.. autoclass:: xrt.backends.raycing.apertures.RoundAperture()
-   :members: __init__, get_divergence, propagate
 
 .. automodule:: xrt.backends.raycing.screens
+
 .. automodule:: xrt.backends.raycing.waves
 
 .. automodule:: test_waves
