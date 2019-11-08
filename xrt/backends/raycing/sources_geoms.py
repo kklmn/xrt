@@ -13,10 +13,12 @@ from .physconsts import PI2, CHBAR
 # _DEBUG replaced with raycing._VERBOSITY_
 
 
-def make_energy(distE, energies, nrays, filamentBeam=False):
+def make_energy(
+        distE, energies, nrays, filamentBeam=False, energyWeights=None):
     """Creates energy distributions with the distribution law given by *distE*.
     *energies* either determine the limits or is a sequence of discrete
-    energies.
+    energies. If *distE* is 'lines', *energyWeights* can define the relative
+    weights of the lines.
     """
     locnrays = 1 if filamentBeam else int(nrays)
     if distE == 'normal':
@@ -27,7 +29,8 @@ def make_energy(distE, energies, nrays, filamentBeam=False):
     elif distE == 'flat':
         E = np.random.uniform(energies[0], energies[1], locnrays)
     elif distE == 'lines':
-        E = np.array(energies)[np.random.randint(len(energies), size=locnrays)]
+#        E = np.array(energies)[np.random.randint(len(energies), size=locnrays)]
+        E = np.random.choice(energies, size=locnrays, p=energyWeights)
     return E
 
 
@@ -136,7 +139,7 @@ class GeometricSource(object):
         self, bl=None, name='', center=(0, 0, 0), nrays=raycing.nrays,
         distx='normal', dx=0.32, disty=None, dy=0, distz='normal', dz=0.018,
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
-        distE='lines', energies=(defaultEnergy,),
+        distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', filamentBeam=False,
             uniformRayDensity=False, pitch=0, yaw=0):
         """
@@ -167,6 +170,10 @@ class GeometricSource(object):
         *energies*: all in eV. (centerE, sigmaE) for *distE* = 'normal',
             (minE, maxE) for *distE* = 'flat', a sequence of E values for
             *distE* = 'lines'
+
+        *energyWeights*: 1-D array-like
+            Can be used together with *distE* = 'lines' to specify the weight
+            of each line. Must be of the shape of *energies*.
 
         *polarization*:
             'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]', 'l[eft]',
@@ -223,6 +230,7 @@ class GeometricSource(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+        self.energyWeights = energyWeights
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -351,8 +359,9 @@ class GeometricSource(object):
             bo.b[:] = (1 - ac)**0.5
         if self.distE is not None:
             if accuBeam is None:
-                bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
-                                      self.filamentBeam)
+                bo.E[:] = make_energy(
+                    self.distE, self.energies, self.nrays, self.filamentBeam,
+                    energyWeights=self.energyWeights)
             else:
                 bo.E[:] = accuBeam.E[:]
 
@@ -372,8 +381,8 @@ class GaussianBeam(object):
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
-        distE='lines', energies=(defaultEnergy,), polarization='horizontal',
-            pitch=0, yaw=0):
+        distE='lines', energies=(defaultEnergy,), energyWeights=None,
+            polarization='horizontal', pitch=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -390,6 +399,10 @@ class GaussianBeam(object):
         *energies*: all in eV. (centerE, sigmaE) for *distE* = 'normal',
             (minE, maxE) for *distE* = 'flat', a sequence of E values for
             *distE* = 'lines'
+
+        *energyWeights*: 1-D array-like
+            Can be used together with *distE* = 'lines' to specify the weight
+            of each line. Must be of the shape of *energies*.
 
         *polarization*:
             'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]', 'l[eft]',
@@ -421,6 +434,7 @@ class GaussianBeam(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+        self.energyWeights = energyWeights
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -468,8 +482,9 @@ class GaussianBeam(object):
             raise ValueError("run a `prepare_wave` before shine!")
         if self.distE is not None:
             if accuBeam is None:
-                wave.E[:] = make_energy(self.distE, self.energies, mcRays,
-                                        filamentBeam=False)
+                wave.E[:] = make_energy(
+                    self.distE, self.energies, mcRays, filamentBeam=False,
+                    energyWeights=self.energyWeights)
             else:
                 wave.E[:] = accuBeam.E[:]
         make_polarization(self.polarization, wave, mcRays)
@@ -585,8 +600,9 @@ class MeshSource(object):
         self, bl=None, name='', center=(0, 0, 0),
         minxprime=-1e-4, maxxprime=1e-4,
         minzprime=-1e-4, maxzprime=1e-4, nx=11, nz=11,
-        distE='lines', energies=(defaultEnergy,), polarization='horizontal',
-            withCentralRay=True, autoAppendToBL=False):
+        distE='lines', energies=(defaultEnergy,), energyWeights=None,
+        polarization='horizontal', withCentralRay=True,
+            autoAppendToBL=False):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -606,6 +622,10 @@ class MeshSource(object):
         *energies*, all in eV: (centerE, sigmaE) for *distE* = 'normal',
             (minE, maxE) for *distE* = 'flat', a sequence of E values for
             *distE* = 'lines'
+
+        *energyWeights*: 1-D array-like
+            Can be used together with *distE* = 'lines' to specify the weight
+            of each line. Must be of the shape of *energies*.
 
         *polarization*: 'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]',
             'l[eft]', None, custom. In the latter case the polarization is
@@ -648,6 +668,7 @@ class MeshSource(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+        self.energyWeights = energyWeights
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -692,7 +713,8 @@ class MeshSource(object):
         bo.c[:] /= bo.b
         bo.b[:] = 1.0 / bo.b
         if self.distE is not None:
-            bo.E[:] = make_energy(self.distE, self.energies, self.nrays)
+            bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
+                                  energyWeights=self.energyWeights)
         make_polarization(self.polarization, bo, self.nrays)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
@@ -745,8 +767,9 @@ class CollimatedMeshSource(object):
     """
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), dx=1., dz=1., nx=11, nz=11,
-        distE='lines', energies=(defaultEnergy,), polarization='horizontal',
-            withCentralRay=True, autoAppendToBL=False):
+        distE='lines', energies=(defaultEnergy,), energyWeights=None,
+        polarization='horizontal', withCentralRay=True,
+            autoAppendToBL=False):
         self.bl = bl
         if autoAppendToBL:
             if bl is not None:
@@ -772,6 +795,7 @@ class CollimatedMeshSource(object):
             self.energies = np.array(energies)
         else:
             self.energies = energies
+        self.energyWeights = energyWeights
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -809,7 +833,8 @@ class CollimatedMeshSource(object):
         bo.x[int(self.withCentralRay):] = xx.flatten()
         bo.z[int(self.withCentralRay):] = zz.flatten()
         if self.distE is not None:
-            bo.E[:] = make_energy(self.distE, self.energies, self.nrays)
+            bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
+                                  energyWeights=self.energyWeights)
         make_polarization(self.polarization, bo, self.nrays)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
