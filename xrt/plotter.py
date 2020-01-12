@@ -157,6 +157,7 @@ class XYCAxis(object):
     u"""
     Contains a generic record structure describing each of the 3 axes:
     X, Y and Color (typ. Energy)."""
+
     def __init__(
         self, label='', unit='mm', factor=None, data='auto', limits=None,
         offset=0, bins=defaultBins, ppb=defaultPixelPerBin,
@@ -435,6 +436,7 @@ class XYCPlot(object):
     images, this class provides with useful fields like *dx*, *dy*, *dE*
     (FWHM), *cx*, *cy*, *cE* (centers) and *intensity* which can be used in
     scripts for producing scan-like results."""
+
     def __init__(
         self, beam=None, rayFlag=(1,), xaxis=None, yaxis=None, caxis=None,
         aspect='equal', xPos=1, yPos=1, ePos=1, title='',
@@ -1535,7 +1537,16 @@ class XYCPlot(object):
                 strDict = {0: r'lost', 1: r'good'}
                 self.textGoodrays.set_text(
                     ''.join([r'$N_{\rm ', strDict[self.rayFlag[0]],
-                            r'} = $%s']) % self.nRaysNeeded)
+                             r'} = $%s']) % self.nRaysNeeded)
+        if self.textI:
+            if self.fluxFormatStr == 'auto':
+                if (self.fluxUnit is None) or (self.nRaysSeeded == 0)\
+                        or self.fluxKind.startswith('power'):
+                    fluxFormatStr = '%g'
+                else:
+                    fluxFormatStr = '%.2p'
+            else:
+                fluxFormatStr = self.fluxFormatStr
         if (runner.runCardVals.backend == 'raycing'):
             for iTextPanel, iEnergy, iN, substr in zip(
                 [self.textGood, self.textOut, self.textOver, self.textAlive,
@@ -1560,14 +1571,6 @@ class XYCPlot(object):
                                 mpl.colors.hsv_to_rgb(color)[0, :].reshape(3, )
                         iTextPanel.set_color(color)
             if self.textI:
-                if self.fluxFormatStr == 'auto':
-                    if (self.fluxUnit is None) or (self.nRaysSeeded == 0)\
-                            or self.fluxKind.startswith('power'):
-                        fluxFormatStr = '%g'
-                    else:
-                        fluxFormatStr = '%.2p'
-                else:
-                    fluxFormatStr = self.fluxFormatStr
                 isPowerOfTen = False
                 if fluxFormatStr.endswith('p'):
                     pos = fluxFormatStr.find('.')
@@ -1840,6 +1843,7 @@ class PlotCard2Pickle(object):
     Container for a minimum set of properties (a "card") describing the plot.
     Used for passing it to a new process or thread. Must be pickleable.
     """
+
     def __init__(self, plot):
         self.xaxis = plot.xaxis
         self.yaxis = plot.yaxis
@@ -1862,6 +1866,7 @@ class SaveResults(object):
     Container for the accumulated arrays (histograms) and values (like flux)
     for subsequent pickling/unpickling or for global flux normalization.
     """
+
     def __init__(self, plot):
         """
         Stores the arrays and values and finds the global histogram maxima.
