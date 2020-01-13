@@ -45,7 +45,8 @@ class GenericProcessOrThread(object):
         self.outPlotQueues = outPlotQueues
         self.alarmQueue = alarmQueue
         self.card = locCard
-        self.card.beamLine.flow = []
+        if self.card.backend.startswith('raycing'):
+            self.card.beamLine.flow = []
 
     def do_hist1d(self, x, intensity, cDataRGB, axis):
         """

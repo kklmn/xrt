@@ -1540,13 +1540,22 @@ class XYCPlot(object):
                              r'} = $%s']) % self.nRaysNeeded)
         if self.textI:
             if self.fluxFormatStr == 'auto':
-                if (self.fluxUnit is None) or (self.nRaysSeeded == 0)\
-                        or self.fluxKind.startswith('power'):
+                cond = (self.fluxUnit is None) or \
+                    self.fluxKind.startswith('power')
+                if (runner.runCardVals.backend == 'raycing'):
+                    cond = cond or (self.nRaysSeeded == 0)
+                if cond:
                     fluxFormatStr = '%g'
                 else:
                     fluxFormatStr = '%.2p'
             else:
                 fluxFormatStr = self.fluxFormatStr
+            isPowerOfTen = False
+            if fluxFormatStr.endswith('p'):
+                pos = fluxFormatStr.find('.')
+                if 0 < pos+1 < len(fluxFormatStr):
+                    isPowerOfTen = True
+                    powerOfTenDecN = int(fluxFormatStr[pos+1])
         if (runner.runCardVals.backend == 'raycing'):
             for iTextPanel, iEnergy, iN, substr in zip(
                 [self.textGood, self.textOut, self.textOver, self.textAlive,
@@ -1571,12 +1580,6 @@ class XYCPlot(object):
                                 mpl.colors.hsv_to_rgb(color)[0, :].reshape(3, )
                         iTextPanel.set_color(color)
             if self.textI:
-                isPowerOfTen = False
-                if fluxFormatStr.endswith('p'):
-                    pos = fluxFormatStr.find('.')
-                    if 0 < pos+1 < len(fluxFormatStr):
-                        isPowerOfTen = True
-                        powerOfTenDecN = int(fluxFormatStr[pos+1])
                 if (self.fluxUnit is None) or (self.nRaysSeeded == 0):
                     intensityStr = r'$\Phi = $'
                     if isPowerOfTen:
@@ -1609,8 +1612,13 @@ class XYCPlot(object):
             self.update_user_elements()
         if (runner.runCardVals.backend == 'shadow'):
             if self.textI:
-                intensityStr = r'$I = $' + fluxFormatStr
-                self.textI.set_text(intensityStr % self.intensity)
+                intensityStr = r'$I = $'
+                if isPowerOfTen:
+                    intensityStr += self._pow10(
+                        self.intensity, powerOfTenDecN)
+                else:
+                    intensityStr += fluxFormatStr % self.intensity
+                self.textI.set_text(intensityStr)
 
         if self.xaxis.fwhmFormatStr is not None:
             self.textFWHM(self.xaxis, self.textDx, self.cx, self.dx/2)
