@@ -4,6 +4,15 @@ This is a deprecated backend. :mod:`~xrt.backends.raycing` is much more
 functional. Module :mod:`~xrt.backends.shadow` works with shadow input files,
 starts the ray-tracing and gets its output.
 
+.. warning::
+
+    Shadow3 is not supported.
+
+.. warning::
+
+    xrtQook and xrtGlow do not work with this backend. A beamline created in
+    Shadow cannot be visualized by xrtGlow.
+
 Description of shadow
 ---------------------
 
