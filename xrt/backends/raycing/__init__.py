@@ -982,16 +982,22 @@ class BeamLine(object):
             if self.flowSource == 'Qook':
                 inBeam.E[0] = alignE
             try:
-                braggT = oe.material.get_Bragg_angle(alignE)
-                alphaT = 0 if oe.alpha is None else oe.alpha
-                lauePitch = 0
-
-                braggT += -oe.material.get_dtheta(alignE, alphaT)
-                if oe.material.geom.startswith('Laue'):
-                    lauePitch = 0.5 * np.pi
+                if is_sequence(oe.material):
+                    mat = oe.material[oe.curSurface]
+                else:
+                    mat = oe.material
+                braggT = mat.get_Bragg_angle(alignE)
+                alphaT = 0.
+                lauePitch = 0.
+                if mat.kind == 'multilayer':
+                    braggT += -mat.get_dtheta(alignE)
+                else:
+                    alphaT = 0 if oe.alpha is None else oe.alpha
+                    braggT += -mat.get_dtheta(alignE, alphaT)
+                    if mat.geom.startswith('Laue'):
+                        lauePitch = 0.5 * np.pi
                 loBeam = copy.deepcopy(inBeam)  # Beam(copyFrom=inBeam)
-                global_to_virgin_local(self, inBeam, loBeam,
-                                       center=oe.center)
+                global_to_virgin_local(self, inBeam, loBeam, center=oe.center)
                 rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),
                             yaw=-oe.yaw, pitch=0)
                 theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
@@ -1003,14 +1009,15 @@ class BeamLine(object):
                         oe.pitch = 0
                     oe.bragg = targetPitch - oe.pitch
                     if _VERBOSITY_ > 0:
-                        print(oe.name, "Bragg:", oe.bragg)
+                        print("{0}: Bragg={1} at E={2}".format(
+                                oe.name, oe.bragg, alignE))
                 else:  # autoPitch
                     oe.pitch = targetPitch
                     if _VERBOSITY_ > 0:
                         print(oe.name, "pitch:", oe.pitch)
-            except:
+            except Exception as e:
                 if _DEBUG_:
-                    raise
+                    raise e
                 else:
                     pass
 
