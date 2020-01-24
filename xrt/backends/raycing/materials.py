@@ -655,7 +655,7 @@ class Multilayer(object):
         tThickness = self.tThicknessHigh
         bThickness = self.bThicknessHigh
         d_ = abs((nt-1) * tThickness + (nb-1) * bThickness) / self.d
-        return self.get_Bragg_angle(E) - np.arcsin(
+        return self.get_Bragg_angle(E, order) - np.arcsin(
             ((order * CH / E)**2 + self.d**2 * 8*d_)**0.5 / (2*self.d))
 
     def get_t_thickness(self, x, y, iPair):
