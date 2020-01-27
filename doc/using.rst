@@ -36,7 +36,7 @@ function that will be executed after all the repeats have been completed. A
 typical usage of such a function is to pickle 1D and 2D histograms, fwhm values
 etc. For example:
 
-- ``plot.xaxis.globalMax1D`` is the 1D histogram of ``xaxis`` of ``plot``. Use
+- ``plot.xaxis.total1D`` is the 1D histogram of ``xaxis`` of ``plot``. Use
   an appropriate axis, there are three available: ``xaxis``, ``yaxis`` and
   ``caxis``.
 - ``plot.xaxis.binCenters`` and ``axis.binEdges`` are the edges and centers of
