@@ -1891,6 +1891,10 @@ class SaveResults(object):
         axes = [plot.xaxis, plot.yaxis]
         if plot.ePos:
             axes.append(plot.caxis)
+            self.cE, self.dE = copy.copy(plot.cE), copy.copy(plot.dE)
+        self.cx, self.dx = copy.copy(plot.cx), copy.copy(plot.dx)
+        self.cy, self.dy = copy.copy(plot.cy), copy.copy(plot.dy)
+
         for axis in axes:
             if axis.globalMax1D < axis.max1D:
                 axis.globalMax1D = axis.max1D
@@ -1913,14 +1917,16 @@ class SaveResults(object):
                 self.nRaysAcceptedE = copy.copy(plot.nRaysAcceptedE)
                 self.nRaysSeeded = copy.copy(plot.nRaysSeeded)
                 self.nRaysSeededI = copy.copy(plot.nRaysSeededI)
+                self.flux = copy.copy(plot.flux)
+            self.power = copy.copy(plot.power)
 
-        self.xlimits = plot.xaxis.limits
-        self.ylimits = plot.yaxis.limits
-        self.elimits = plot.caxis.limits
-        self.xbinEdges = plot.xaxis.binEdges
-        self.ybinEdges = plot.yaxis.binEdges
-        self.ebinEdges = plot.caxis.binEdges
-        self.fluxKind = plot.fluxKind
+        self.xlimits = copy.copy(plot.xaxis.limits)
+        self.ylimits = copy.copy(plot.yaxis.limits)
+        self.elimits = copy.copy(plot.caxis.limits)
+        self.xbinEdges = copy.copy(plot.xaxis.binEdges)
+        self.ybinEdges = copy.copy(plot.yaxis.binEdges)
+        self.ebinEdges = copy.copy(plot.caxis.binEdges)
+        self.fluxKind = copy.copy(plot.fluxKind)
 
     def restore(self, plot):
         """
