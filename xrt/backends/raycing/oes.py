@@ -1206,10 +1206,12 @@ class EllipticalMirrorParam(OE):
             q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
         if q is not None:
             self.q = q
+        # gamma is angle between the major axis and the mirror surface
         gamma = np.arctan2((self.p - self.q) * np.sin(absPitch),
                            (self.p + self.q) * np.cos(absPitch))
         self.cosGamma = np.cos(gamma)
         self.sinGamma = np.sin(gamma)
+        # (y0, z0) is the ellipse center in local coordinates
         self.y0 = (self.q - self.p)/2. * np.cos(absPitch)
         self.z0 = (self.q + self.p)/2. * np.sin(absPitch)
         self.ellipseA = (self.q + self.p)/2.
@@ -1332,6 +1334,8 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
             print('p={0}, q={1}'.format(self.p, self.q))
             raise ValueError('One and only one of p (or f1) or q (or f2)'
                              ' must be None!')
+        # (y0, z0) is the focus point in local coordinates
+        # gamma is angle between the parabola axis and the mirror surface
         if self.p is None:
             self.y0 = self.q * np.cos(absPitch)
             self.z0 = self.q * np.sin(absPitch)
@@ -1354,7 +1358,9 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         return kwargs
 
     def local_r(self, s, phi):
-        r = 2 * (self.parabParam*s + self.parabParam**2)**0.5
+        r2 = self.parabParam*s + self.parabParam**2
+        r2[r2 < 0] = 0
+        r = 2 * r2**0.5
         if self.isCylindrical:
             r /= abs(np.cos(phi))
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)

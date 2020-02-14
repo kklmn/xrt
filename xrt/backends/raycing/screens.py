@@ -46,7 +46,7 @@ class Screen(object):
         *center*: tuple of 3 floats
             3D point in the global system.
 
-        *x, z*: 3-tuples or 'auto'.
+        *x, z*: 3-sequence or 'auto'.
             Normalized 3D vectors in the global system which determine the
             local x and z axes lying in the screen plane. If *x* is 'auto', it
             is horizontal and perpendicular to the beam line. If *z* is 'auto',
@@ -90,8 +90,10 @@ class Screen(object):
 
     def set_orientation(self, x=None, z=None):
         """Determines the local x, y and z in the global system."""
-        if x == z == 'auto':
-            x, z = None, None
+        if isinstance(x, raycing.basestring):
+            x = None
+        if isinstance(z, raycing.basestring):
+            z = None
         self.x, self.y, self.z = raycing.xyz_from_xz(self.bl, x, z)
 
     def local_to_global(self, x=0, y=0, z=0):

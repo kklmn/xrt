@@ -384,7 +384,7 @@ def virgin_local_to_global(bl, vlb, center=None, part=None,
 
 
 def xyz_from_xz(bl, x=None, z=None):
-    if x == z == 'auto':
+    if isinstance(x, basestring) and isinstance(z, basestring):
         return 'auto'
 
     if isinstance(x, (list, tuple, np.ndarray)):
