@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev"
-__date__ = "10 Dec 2018"
+__date__ = "20 Feb 2020"
 import sys
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import numpy as np
@@ -18,6 +18,7 @@ p = 10000.
 q = p/2.
 pitch = 2e-3
 lim = [-0.5, 0.5]
+limZoom = [-1, 1]
 
 inclination = 0
 #inclination = 2.5e-3
@@ -74,13 +75,13 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamEMglobal': beamEMglobal,
                'beamEMlocal': beamEMlocal}
     for i, dy in enumerate(beamLine.fsm2dY):
-        dp = (q+dy) * np.sin(2*pitch)
-        di = (q+dy) * np.sin(inclination)
+        dqs = (q+dy) * np.sin(2*pitch+inclination)
+        dqc = (q+dy) * np.cos(2*pitch+inclination)
         beamLine.fsm2.center[0] = beamLine.ellMirror.center[0] +\
-            dp*np.sin(globalRoll)
-        beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + (q+dy)
+            dqs*np.sin(globalRoll)
+        beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + dqc
         beamLine.fsm2.center[2] = beamLine.ellMirror.center[2] +\
-            dp*np.cos(globalRoll) + di
+            dqs*np.cos(globalRoll)
         beamFSM2 = beamLine.fsm2.expose(beamEMglobal)
         outDict['beamFSM2-{0:d}'.format(i+1)] = beamFSM2
 
@@ -97,15 +98,22 @@ def main():
     plots.append(plot)
 
     for i, dy in enumerate(beamLine.fsm2dY):
-        plot = xrtp.XYCPlot('beamFSM2-{0:d}'.format(i+1), caxis='category')
+        if i == len(beamLine.fsm2dY) // 2:
+            limits = limZoom
+            unit = 'fm'
+        else:
+            limits = lim
+            unit = u'mm'
+        xaxis = xrtp.XYCAxis(r'$x$', unit, limits=limits)
+        yaxis = xrtp.XYCAxis(r'$z$', unit, limits=limits)
+        plot = xrtp.XYCPlot('beamFSM2-{0:d}'.format(i+1),
+                            xaxis=xaxis, yaxis=yaxis, caxis='category')
         plots.append(plot)
 
     for plot in plots:
         plot.caxis.fwhmFormatStr = fwhmFormatStrE
         plot.xaxis.fwhmFormatStr = fwhmFormatStrE
         plot.yaxis.fwhmFormatStr = fwhmFormatStrE
-        plot.xaxis.limits = lim
-        plot.yaxis.limits = lim
         plot.fluxFormatStr = '%.2e'
         if globalRoll == 0:
             globalRollTxt = '0'
