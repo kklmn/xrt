@@ -991,6 +991,7 @@ class Undulator(object):
             self.taper = None
         if self.Kx == 0 and self.Ky == 0:
             self.Ky = self.K
+        self._initialK = self.K
 
         self.B0x = K2B * self.Kx / self.L0
         self.B0y = K2B * self.Ky / self.L0
@@ -1098,6 +1099,10 @@ class Undulator(object):
     def reset(self):
         """This method must be invoked after any changes in the undulator
         parameters."""
+        if self._initialK != self.K:  # self.K was modified externally
+            self.Ky = self.K
+            self._initialK = self.K
+
         self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
             (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
         # wnu = 2 * PI * (0.01 * C) / self.L0 / 1e-3 / E2W
