@@ -400,7 +400,7 @@ class XYCAxis(object):
             factor = 1e-3
         elif self.unit in ['mrad', 'meV']:
             factor = 1.0e3
-        elif self.unit in [u'$\mu$rad', u'µrad']:
+        elif self.unit in [u'$\mu$rad', u'µrad', u'urad']:
             factor = 1.0e6
         else:
             if backend == 'shadow':
@@ -408,7 +408,7 @@ class XYCAxis(object):
                     factor = 1e-2
                 elif self.unit in ['mm', ]:
                     factor = 10.
-                elif self.unit in [u'$\mu$m', u'µm', u'µm']:
+                elif self.unit in [u'$\mu$m', u'µm', 'um']:
                     factor = 1.0e4
                 elif self.unit in ['nm', ]:
                     factor = 1.0e7
@@ -417,7 +417,7 @@ class XYCAxis(object):
                     factor = 1e-3
                 elif self.unit in ['mm', ]:
                     factor = 1.
-                elif self.unit in [u'$\mu$m', u'µm', u'µm']:
+                elif self.unit in [u'$\mu$m', u'µm', 'um']:
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6
@@ -427,6 +427,8 @@ class XYCAxis(object):
                     factor = 1.0e12
                 elif self.unit.startswith('deg'):
                     factor = np.degrees(1)
+                elif self.unit.startswith('mdeg'):
+                    factor = np.degrees(1)*1e3
         self.factor = factor
 
 
