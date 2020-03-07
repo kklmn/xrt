@@ -179,9 +179,9 @@ def plot_1D_degree_of_coherence(data1D, axisName, axis, unit="mm", fig2=None,
     pp = mpatches.Patch(color='none')  # a fake element to add text to legends
     legendX = ax3.legend(
         (l1, l3, pp),
-        ("I({0}),\nσ$_{0}$ = {1:.2f} mm".format(axisName, varIx**0.5),
-         "DoC({0}$_1-${0}$_2$),\nξ$_{0}$ = {1:.2f} mm".format(
-             axisName, varJdx**0.5),
+        ("I({0}),\nσ$_{0}$ = {1:.2f} {2}".format(axisName, varIx**0.5, unit),
+         "DoC({0}$_1-${0}$_2$),\nξ$_{0}$ = {1:.2f} {2}".format(
+             axisName, varJdx**0.5, unit),
          "\nζ$_{0}$ = {1:.1f} %".format(axisName, cohFrx*100)),
         loc=loc)
     ax3.add_artist(legendX)
