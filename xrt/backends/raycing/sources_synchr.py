@@ -1240,6 +1240,13 @@ class Undulator(object):
         """Calculates *power curve* -- total power in W for all *harmomonics*
         at given K values (*Ks*). The power is calculated through the aperture
         defined by *theta* and *psi* opening angles within the *energy* range.
+        
+        The result of this numerical integration depends on the used angular
+        and energy meshes; you should check convergence. Internally, electron
+        beam energy spread is also sampled by adding another dimension to the
+        intensity array and making it 5-dimensional. You therefore may want to
+        set energy spread to zero, it doesn’t affect the resulting power
+        anyway.
 
         Returns a 1D array corresponding to *Ks*.
         """
