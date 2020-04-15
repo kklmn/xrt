@@ -15,7 +15,8 @@ for touching the beam with the aperture, i.e. calculating the minimum aperture
 size that lets the whole beam through.
 
 .. autoclass:: xrt.backends.raycing.apertures.RectangularAperture()
-   :members: __init__, get_divergence, set_divergence, propagate, touch_beam
+   :members: __init__, get_divergence, set_divergence, propagate, touch_beam,
+             prepare_wave
 
 .. autoclass:: xrt.backends.raycing.apertures.RoundAperture()
    :members: __init__, get_divergence, propagate

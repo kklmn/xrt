@@ -1105,7 +1105,7 @@ class OE(object):
         :class:`~xrt.backends.raycing.apertures.RectangularAperture` or
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
         *nrays* of samples are randomly distributed over the surface within
-        self.limPhysX limits.
+        ``self.limPhysX`` limits.
         """
         if rw is None:
             from . import waves as rw

@@ -18,7 +18,7 @@ elements with various geometries.
 
 .. autoclass:: OE()
    :members: __init__, local_z, local_n, local_n_distorted, local_g, reflect,
-             multiple_reflect
+             multiple_reflect, prepare_wave
 .. autoclass:: DicedOE(OE)
    :members: __init__, facet_center_z, facet_center_n, facet_delta_z,
              facet_delta_n

@@ -294,8 +294,14 @@ this figure should be greater than ~10\ :sup:`4` for a good resulting quality.
 
 
 .. automethod:: xrt.backends.raycing.oes.OE.prepare_wave
+   :noindex:
+
 .. automethod:: xrt.backends.raycing.apertures.RectangularAperture.prepare_wave
+   :noindex:
+
 .. automethod:: xrt.backends.raycing.screens.Screen.prepare_wave
+   :noindex:
+
 .. autofunction:: diffract
 
 .. _coh_signs:
