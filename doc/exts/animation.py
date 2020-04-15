@@ -105,6 +105,7 @@ class AnimationDirective(Directive):
 #        print sizezoom
 
         loc = self.options.get('loc', 'upper-left-corner')
+        ta = "text-align: left"
         if 'corner' in loc:
             if 'lower' in loc:
                 loctop = u'top: -{0}px'.format(int(heightzoom)-20)
@@ -114,13 +115,13 @@ class AnimationDirective(Directive):
                 locleft = u'left: -{0}px'.format(int(widthzoom)-int(width))
             else:
                 locleft = u'left: -{0}px'.format(0)
-            locst = u'style="{0}; {1};"'.format(loctop, locleft)
+            locst = u'style="{0}; {1}; {2}"'.format(loctop, locleft, ta)
         else:
-            locst = u'style="{0}"'.format(loc)
+            locst = u'style="{0}; {1}"'.format(loc, ta)
 
         alt = self.options.get('alt', '')
         if alt:
-            if alt.startswith("&ensp;") or alt.startswith("&ensp;"):
+            if alt.startswith("&ensp;") or alt.startswith("&emsp;"):
                 # Unicode &ensp; or &emsp;
 #                alt = '<br />{0}'.format(alt)
                 alt = '{0}'.format(alt)
