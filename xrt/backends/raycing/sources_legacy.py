@@ -445,22 +445,22 @@ class UndulatorUrgent(object):
         if self.useZip:
             if _DEBUG:
                 print('zipping ... ')
-            poolz = Pool(self.processes)
-            if self.mode == 1:
-                for iE, E in enumerate(self.Es):
-                    tmpwd = self.tmp_wd_E(cwd, iE)
-                    msg = self.msg_E(iE) if iE % 10 == 0 else None
-                    poolz.apply_async(gzip_output, (
-                        tmpwd, self.code_name() + '.out', msg))
-            elif self.mode in (2, 4):
-                for iz, z in enumerate(self.zs):
-                    for ix, x in enumerate(self.xs):
-                        tmpwd = self.tmp_wd_xz(cwd, ix, iz)
-                        msg = self.msg_xz(ix, iz) if ix % 10 == 0 else None
+            with multiprocessing_context(processes=self.processes) as poolz:
+                if self.mode == 1:
+                    for iE, E in enumerate(self.Es):
+                        tmpwd = self.tmp_wd_E(cwd, iE)
+                        msg = self.msg_E(iE) if iE % 10 == 0 else None
                         poolz.apply_async(gzip_output, (
                             tmpwd, self.code_name() + '.out', msg))
-            poolz.close()
-            poolz.join()
+                elif self.mode in (2, 4):
+                    for iz, z in enumerate(self.zs):
+                        for ix, x in enumerate(self.xs):
+                            tmpwd = self.tmp_wd_xz(cwd, ix, iz)
+                            msg = self.msg_xz(ix, iz) if ix % 10 == 0 else None
+                            poolz.apply_async(gzip_output, (
+                                tmpwd, self.code_name() + '.out', msg))
+                poolz.close()
+                poolz.join()
 
     def make_spline_arrays(self, skiprows, cols1, cols2):
         cwd = os.getcwd()
