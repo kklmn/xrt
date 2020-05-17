@@ -26,6 +26,19 @@ if os.name == 'posix':
 else:
     xopBinDir = r'c:\XOP\bin.x86'
 
+# from stackoverflow.com/questions/46507828/difference-between-python2-and-python3-in-terms-of-multiprocessing
+# For python 2/3 compatibility, define pool context manager
+# to support the 'with' statement in Python 2
+if sys.version_info[0] == 2:
+    from contextlib import contextmanager
+    @contextmanager
+    def multiprocessing_context(*args, **kwargs):
+        pool = Pool(*args, **kwargs)
+        yield pool
+        pool.terminate()
+else:
+    multiprocessing_context = Pool
+
 
 def run_one(path, tmpwd, infile, msg=None):
     from subprocess import Popen, PIPE
@@ -38,7 +51,8 @@ def run_one(path, tmpwd, infile, msg=None):
                 print(msg + ' ')
             sys.stdout.flush()
     with open(os.devnull, 'w') as fn:
-        cproc = Popen(path, stdin=PIPE, stdout=fn, cwd=tmpwd)
+        cproc = Popen(path, stdin=PIPE, stdout=fn, cwd=tmpwd,
+                      universal_newlines=True)
         cproc.communicate(infile)
 
 
@@ -392,38 +406,40 @@ class UndulatorUrgent(object):
                 ('.exe' if os.name == 'nt' else ''))
         if not os.path.exists(self.path):
             raise ImportError("The file {0} does not exist!".format(self.path))
-        pool = Pool(self.processes)
-        if _DEBUG:
-            print('calculating with {0} ... '.format(self.code_name()))
-        if self.mode == 1:
-            for iE, E in enumerate(self.Es):
-                tmpwd = self.tmp_wd_E(cwd, iE)
-                if not os.path.exists(tmpwd):
-                    os.makedirs(tmpwd)
-                infile = self.make_input(0, 0, E)
-                if iniFileForEachDirectory:
-                    inpName = os.path.join(tmpwd, self.code_name()+'.inp')
-                    with open(inpName, 'w') as f:
-                        f.write(infile)
-                msg = self.msg_E(iE) if iE % 10 == 0 else None
-                pool.apply_async(run_one, (self.path, tmpwd, infile, msg))
-        elif self.mode in (2, 4):
-            for iz, z in enumerate(self.zs):
-                for ix, x in enumerate(self.xs):
-                    tmpwd = self.tmp_wd_xz(cwd, ix, iz)
+        with multiprocessing_context(processes=self.processes) as pool:
+            if _DEBUG:
+                print('calculating with {0} ... '.format(self.code_name()))
+            if self.mode == 1:
+                for iE, E in enumerate(self.Es):
+                    tmpwd = self.tmp_wd_E(cwd, iE)
                     if not os.path.exists(tmpwd):
                         os.makedirs(tmpwd)
-                    infile = self.make_input(x, z, self.eMin)
+                    infile = self.make_input(0, 0, E)
                     if iniFileForEachDirectory:
                         inpName = os.path.join(tmpwd, self.code_name()+'.inp')
                         with open(inpName, 'w') as f:
                             f.write(infile)
-                    msg = self.msg_xz(ix, iz) if ix % 10 == 0 else None
+                    msg = self.msg_E(iE) if iE % 10 == 0 else None
                     pool.apply_async(run_one, (self.path, tmpwd, infile, msg))
-        else:
-            raise ValueError("mode must be 1, 2 or 4!")
-        pool.close()
-        pool.join()
+            elif self.mode in (2, 4):
+                for iz, z in enumerate(self.zs):
+                    for ix, x in enumerate(self.xs):
+                        tmpwd = self.tmp_wd_xz(cwd, ix, iz)
+                        if not os.path.exists(tmpwd):
+                            os.makedirs(tmpwd)
+                        infile = self.make_input(x, z, self.eMin)
+                        if iniFileForEachDirectory:
+                            inpName = os.path.join(
+                                tmpwd, self.code_name()+'.inp')
+                            with open(inpName, 'w') as f:
+                                f.write(infile)
+                        msg = self.msg_xz(ix, iz) if ix % 10 == 0 else None
+                        pool.apply_async(
+                            run_one, (self.path, tmpwd, infile, msg))
+            else:
+                raise ValueError("mode must be 1, 2 or 4!")
+            pool.close()
+            pool.join()
         if _DEBUG:
             print()
         if self.useZip:
