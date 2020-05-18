@@ -317,9 +317,11 @@ class UndulatorUrgent(object):
         infile += '1 {0} {1} {2} 0. {3}\n'.format(
             self.period*1e-3, self.Kx, self.K, self.n)
         infile += '{0} {1} {2}\n'.format(E, self.eMax, self.eN)
+        eSigmaXP = self.eEpsilonX/self.eSigmaX if self.eSigmaX > 0 else 0.
+        eSigmaZP = self.eEpsilonZ/self.eSigmaZ if self.eSigmaZ > 0 else 0.
         infile += '{0} {1} {2} {3} {4:.7f} {5:.7f}\n'.format(
             self.eE, self.eI, self.eSigmaX*1e-3, self.eSigmaZ*1e-3,
-            self.eEpsilonX/self.eSigmaX, self.eEpsilonZ/self.eSigmaZ)
+            eSigmaXP, eSigmaZP)
         if self.mode == 1:
             infile += '0. {0} {1} {2} {3} {4} {5}\n'.format(
                 0, 0, 2*self.xPrimeMax, 2*self.zPrimeMax, self.nx, self.nz)
