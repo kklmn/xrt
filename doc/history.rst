@@ -3,8 +3,22 @@
 Version history
 ---------------
 
+1.3.4 (21 May 2020):
+    - Bug fixes and minor updates.
+
+    - Several user stories made us insert warnings in the code and explanations
+      in the :ref:`docs <mesh-methods>` about the proper usage of mesh-based
+      methods of xrt Undulator.
+
+    - Added custom orientation to apertures.
+
+    - Added undulator source size from FT of the back propagated angular
+      distribution (following Coïsson [Coïsson]_). The description to come in
+      a paper about coherence properties.
+
 1.3.3 (11 Mar 2019):
-    - Added mosaic crystals.
+    - Added mosaic crystals. (thank you to B. Kozioziemski (LLNL) for deep
+      testing)
 
     - Added Polygonal Apertures.
 
