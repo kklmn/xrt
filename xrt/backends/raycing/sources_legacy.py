@@ -253,6 +253,8 @@ class UndulatorUrgent(object):
         self.zPrimeMax = zPrimeMax
         self.nx = nx
         self.nz = nz
+        self.dx = xPrimeMax / (nx+0.5)
+        self.dz = zPrimeMax / (nz+0.5)
         self.path = path
         self.mode = mode
         self.icalc = icalc
@@ -330,7 +332,7 @@ class UndulatorUrgent(object):
                 x, z, self.xPrimeMax, self.zPrimeMax, self.nx, self.nz)
         elif self.mode == 4:
             infile += '0. {0} {1} {2} {3} {4} {5}\n'.format(
-                x, z, self.xPrimeMax/self.nx, self.zPrimeMax/self.nz, 11, 11)
+                x, z, self.dx, self.dz, 15, 15)
 # ICALC=1 non-zero emittance, finite N
 # ICALC=2 non-zero emittance, infinite N
 # ICALC=3 zero emittance, finite N
@@ -359,8 +361,8 @@ class UndulatorUrgent(object):
             (str(len(self.Es))).zfill(self.Epads))
 
     def run(self, forceRecalculate=False, iniFileForEachDirectory=False):
-        self.xs = np.linspace(0, self.xPrimeMax, self.nx+1)
-        self.zs = np.linspace(0, self.zPrimeMax, self.nz+1)
+        self.xs = np.linspace(0, self.xPrimeMax-self.dx*0.5, self.nx+1)
+        self.zs = np.linspace(0, self.zPrimeMax-self.dz*0.5, self.nz+1)
         self.Es = np.linspace(self.eMin, self.eMax, self.eN+1)
         self.energies = self.Es
         cwd = os.getcwd()
@@ -512,8 +514,7 @@ class UndulatorUrgent(object):
                         if res is not None:
                             self.Es, It, l1t, l2t, l3t = res
                             if self.mode == 4:
-                                It /= self.xPrimeMax / (self.nx+0.5) *\
-                                    self.zPrimeMax / (self.nz+0.5)
+                                It /= self.dx * self.dz
                         else:
                             pass
                         if I is None:
@@ -796,7 +797,7 @@ class WigglerWS(UndulatorUrgent):
                 0, 0, xxx, 2*self.zPrimeMax, self.nx, self.nz)
         elif self.mode == 2:
             infile += '0. {0} {1} {2} {3} {4} {5}\n'.format(
-                x, z, xxx, self.zPrimeMax/self.nz, self.nx, self.nz)
+                x, z, xxx, self.zPrimeMax/(self.nz+0.5), self.nx, self.nz)
         infile += '{0}\n'.format(self.mode)
         return infile
 

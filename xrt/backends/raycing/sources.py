@@ -237,7 +237,9 @@ application example :ref:`here <example-undulator-sizes>`.
    :members: __init__
 
 .. autoclass:: Undulator()
-   :members: __init__, tuning_curves, get_SIGMA, get_SIGMAP, real_photon_source_sizes
+   :members: __init__, tuning_curves, get_SIGMA, get_SIGMAP,
+             real_photon_source_sizes, multi_electron_stack,
+             intensities_on_mesh, power_vs_K, tuning_curves
 .. autoclass:: Wiggler()
    :members: __init__
 .. autoclass:: BendingMagnet()
@@ -247,6 +249,32 @@ application example :ref:`here <example-undulator-sizes>`.
 
 Comparison of synchrotron source codes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. _mesh-methods:
+
+Using xrt synchrotron sources on a mesh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The main modus operandi of xrt synchrotron sources is to provide Monte Carlo
+rays or wave samples. For comparing our sources with other codes – all of them
+are fully deterministic, being defined on certain meshes – we also supply mesh
+methods such as `intensities_on_mesh`, `power_vs_K` and `tuning_curves`. Note
+that we do not provide any internal mesh optimization, as these mesh functions
+are not our core objectives. Instead, the user themself should care about the
+proper mesh limits and step sizes. In particular, the angular meshes must be
+wider than the electron beam divergences in order to convolve the field
+distribution with the electron distribution of non-zero emittance. The above
+mentioned mesh methods will print a warning (new in version 1.3.4) if the
+requested meshes are too narrow.
+
+If you want to calculate flux through a narrow aperture, you first calculate
+`intensities_on_mesh` on wide enough angular meshes and then slice the
+intensity down to the needed aperture size. An example of such calculations is
+given in `tests/raycing/test_undulator_on_mesh.py` which produces the following
+plot (for a BESSY undulator, zero energy spread, as Urgent cannot take account
+of it):
+
+.. imagezoom:: _images/flux_case3_xrt_UrgentICALC1.png
 
 Undulator spectrum across a harmonic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

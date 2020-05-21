@@ -1016,12 +1016,14 @@ class Undulator(object):
         else:
             self.customFieldData = None
 
+        self.xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
         if xPrimeMaxAutoReduce:
             xPrimeMaxTmp = self.Ky / self.gamma
             if self.xPrimeMax > xPrimeMaxTmp:
                 print("Reducing xPrimeMax from {0} down to {1} mrad".format(
                       self.xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
                 self.xPrimeMax = xPrimeMaxTmp
+        self.zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
         if zPrimeMaxAutoReduce:
             K0 = self.Kx if self.Kx > 0 else 1.
             zPrimeMaxTmp = K0 / self.gamma
@@ -1240,7 +1242,7 @@ class Undulator(object):
         """Calculates *power curve* -- total power in W for all *harmomonics*
         at given K values (*Ks*). The power is calculated through the aperture
         defined by *theta* and *psi* opening angles within the *energy* range.
-        
+
         The result of this numerical integration depends on the used angular
         and energy meshes; you should check convergence. Internally, electron
         beam energy spread is also sampled by adding another dimension to the
@@ -1339,6 +1341,20 @@ class Undulator(object):
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
                             harmonic=None):
+        """Returns the Stokes parameters in the shape (energy, theta, psi,
+        [harmonic]), with *theta* being the horizontal mesh angles and *psi*
+        the vertical mesh angles. Each one of the input parameters is a 1D
+        array of an individually selectable length.
+
+        .. note::
+           We do not provide any internal mesh optimization, as mesh functions
+           are not our core objectives. In particular, the angular meshes must
+           be wider than the electron beam divergences in order to convolve the
+           field distribution with the electron distribution. A warning will be
+           printed (new in version 1.3.4) if the requested meshes are too
+           narrow.
+
+        """
         if isinstance(energy, str):  # i.e. if 'auto'
             energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
 
@@ -1408,6 +1424,32 @@ class Undulator(object):
             from scipy.ndimage.filters import gaussian_filter
             Sx = self.dxprime / (theta[1] - theta[0])
             Sz = self.dzprime / (psi[1] - psi[0])
+#            print(self.dxprime, theta[-1] - theta[0], Sx, len(theta))
+#            print(self.dzprime, psi[-1] - psi[0], Sz, len(psi))
+            if Sx > len(theta)//4:  # ±2σ
+                print("************* Warning ***********************")
+                print("Your theta mesh is too narrow!")
+                print("It must be wider than the electron beam width")
+                print("*********************************************")
+            if self.xPrimeMax < theta.max():
+                print("************* Warning ****************************")
+                print("Your xPrimeMax is too small!")
+                print("It must be bigger than theta.max()")
+                if self.xPrimeMaxAutoReduce:
+                    print("You probably need to set xPrimeMaxAutoReduce=False")
+                print("**************************************************")
+            if Sz > len(psi)//4:  # ±2σ
+                print("************* Warning ************************")
+                print("Your psi mesh is too narrow!")
+                print("It must be wider than the electron beam height")
+                print("**********************************************")
+            if self.zPrimeMax < psi.max():
+                print("************* Warning ****************************")
+                print("Your zPrimeMax is too small!")
+                print("It must be bigger than psi.max()")
+                if self.zPrimeMaxAutoReduce:
+                    print("You probably need to set zPrimeMaxAutoReduce=False")
+                print("**************************************************")
             for ie, ee in enumerate(energy):
                 if harmonic is None:
                     s0[ie, :, :] = gaussian_filter(s0[ie, :, :], [Sx, Sz])
