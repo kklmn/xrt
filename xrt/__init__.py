@@ -11,7 +11,7 @@ creating a beamline and interactively viewing it in 3D.
 .. |Itot| animation:: _images/Itot
    :alt: &ensp;Intensity of undulator radiation on a transverse flat screen.
        The long axis is energy. One can observe two harmonics crossing the
-       central line: the former is odd and the latter is even.
+       central line: the one at 2400 eV is odd and the one at 4800 eV is even.
 
 .. |vcmSi-P| animation:: _images/vcmSi-FootprintP
    :alt: &ensp;Absorbed power and power density on a mirror at varying pitch
@@ -135,8 +135,13 @@ Features of xrt
 * *Portability*. xrt runs on Windows and Unix-like platforms, wherever you can
   run python.
 
-* *Examples*. xrt comes with many examples; see the galleries, the links are at
+* *Examples*. xrt comes with many examples. See the galleries, the links are at
   the top bar.
+
+* *Tests*. xrt comes with the tests of its several main aspects. See the folder
+  `tests` and also this documentation for the tests of
+  :ref:`undulators <mesh-methods>`, :ref:`optical elements <test_oes>`,
+  :ref:`materials <test_materials>` and :ref:`wave propagation <test_waves>`.
 
 Python 2 and 3
 --------------
