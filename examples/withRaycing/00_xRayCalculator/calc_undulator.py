@@ -9,6 +9,8 @@ import time
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import xrt.backends.raycing.sources as rs
 
+wantUrgentUndulator = False
+
 
 def flux_through_aperture(energy, theta, psi, I0):
     dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
@@ -72,24 +74,18 @@ def main():
     psi = np.linspace(-1, 1, 51) * 30e-6
     kwargs = dict(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
                   betaX=9.539, betaZ=1.982, period=18.5, n=108, K=0.52,
-#                  eEspread=1e-3,
                   xPrimeMax=theta[-1]*1e3, zPrimeMax=psi[-1]*1e3,
 #                  targetOpenCL='CPU',
                   distE='BW')
 
-#    energy = [200000., 200000.]
-#    theta = np.linspace(-2./25000., 2./25000., 51)
-#    psi = np.linspace(-2./25000., 2./25000., 51)
-#    kwargs = dict(name='IVU18.5', eE=3.0, eI=0.5,
-#                  eEpsilonX=0.263, eEpsilonZ=0.008,
-#                  betaX=9., betaZ=2.,
-#                  period=18.5, n=108, K=1.92,
-#                  xPrimeMax=theta[-1]*1e3, zPrimeMax=psi[-1]*1e3, distE='BW')
+    source = rs.Undulator(**kwargs)
+    I0, l1, l2, l3 = source.intensities_on_mesh(energy, theta, psi)
 
-    if True:  # xrt Undulator
-        source = rs.Undulator(**kwargs)
-        I0, l1, l2, l3 = source.intensities_on_mesh(energy, theta, psi)
-    else:  # Urgent
+    flux_through_aperture(energy, theta, psi, I0)
+#    intensity_in_transverse_plane(energy, theta, psi, I0)
+#    colored_intensity_in_transverse_plane(energy, theta, psi, I0)
+
+    if wantUrgentUndulator:
         kwargs['eSigmaX'] = (kwargs['eEpsilonX']*kwargs['betaX']*1e3)**0.5
         kwargs['eSigmaZ'] = (kwargs['eEpsilonZ']*kwargs['betaZ']*1e3)**0.5
         del(kwargs['distE'])
@@ -103,15 +99,13 @@ def main():
         kwargs['nz'] = len(psi)//2
         import xrt.backends.raycing as raycing
         beamLine = raycing.BeamLine(azimuth=0, height=0)
-        source = rs.UndulatorUrgent(beamLine, **kwargs)
+        sourceU = rs.UndulatorUrgent(beamLine, **kwargs)
 
-        I0, l1, l2, l3 = source.intensities_on_mesh()
+        I0, l1, l2, l3 = sourceU.intensities_on_mesh()
         I0 = np.concatenate((I0[:, :0:-1, :], I0), axis=1)
         I0 = np.concatenate((I0[:, :, :0:-1], I0), axis=2)
-
-    flux_through_aperture(energy, theta, psi, I0)
-#    intensity_in_transverse_plane(energy, theta, psi, I0)
-#    colored_intensity_in_transverse_plane(energy, theta, psi, I0)
+        urgentEnergy = sourceU.Es
+        flux_through_aperture(urgentEnergy, theta, psi, I0*1e6)
 
 
 if __name__ == '__main__':
@@ -119,4 +113,3 @@ if __name__ == '__main__':
     main()
     print("Done in {0} s".format(time.time()-t0))
     plt.show()
-
