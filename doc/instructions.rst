@@ -99,8 +99,7 @@ If you use Anaconda, type the above command in a system terminal launched from
 If you use Anaconda, the required packages are already there, except it
 probably lacks the GLUT library used by PyOpenGL. In this case do::
 
-    ./conda install -c conda-forge pyopengl  # from anaconda/bin
-    ./conda install -c conda-forge freeglut  # from anaconda/bin
+    ./conda install -c conda-forge pyopengl freeglut # from anaconda/bin
 
 If you use a system-wide Python, all required packages can be installed with a
 system package manager (aptitude, yum) or with pip. Names of the packages can
@@ -135,7 +134,7 @@ should be installed with a system package manager. Python3::
     pip3 install pyqt5
 
 Sometimes QtWebEngineWidgets is reported as missing:
-`No module named 'PyQt5.QtWebEngineWidgets`. Then::
+`No module named 'PyQt5.QtWebEngineWidgets'`. Then::
 
     pip3 install PyQtWebEngine
 
@@ -153,7 +152,9 @@ PyOpenCL
 Before installing PyOpenCL you need at least one existing OpenCL implementation
 (driver). OpenCL can come with a graphics card driver and/or with an OpenCL CPU
 runtime. High profile graphics cards (those with a high FP64/FP32 ratio) are
-advantageous.
+advantageous. If you try xrt in a VM, `pocl` may be useful::
+
+    ./conda install -c conda-forge pocl  # from anaconda/bin
 
 On Windows, the binary package of pyopencl by C. Gohlke usually works out of
 the box.
