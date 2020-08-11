@@ -1070,7 +1070,15 @@ class XrtQook(qt.QWidget):
         PyQt_version = qt.PYQT_VERSION_STR
         locos = pythonplatform.platform(terse=True)
         if 'Linux' in locos:
-            locos = " ".join(pythonplatform.linux_distribution())
+            try:
+                locos = " ".join(pythonplatform.linux_distribution())
+            except AttributeError:  # no platform.linux_distribution in py3.8
+                try:
+                    import distro
+                    locos = " ".join(distro.linux_distribution())
+                except ImportError:
+                    print("do 'pip install distro' for a better view of Linux"
+                          " distro string")
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
             if not bool(gl.glutBitmapCharacter):
