@@ -1917,7 +1917,8 @@ class OE(object):
                     else:
                         refl = matSur.get_amplitude(
                             lb.E[goodN], beamInDotSurfaceNormal,
-                            beamOutDotSurfaceNormal, beamInDotNormal)
+                            beamOutDotSurfaceNormal, beamInDotNormal,
+                            lb.x[goodN], lb.y[goodN])
                 elif matSur.kind == 'multilayer':
                     refl = matSur.get_amplitude(
                         lb.E[goodN], beamInDotSurfaceNormal,

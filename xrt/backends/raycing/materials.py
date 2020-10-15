@@ -1242,7 +1242,7 @@ class Crystal(Material):
         return totalX
 
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None):
+                      beamInDotHNormal=None, xd=None, yd=None):
         r"""
         Calculates complex amplitude reflectivity and transmittivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases for the
@@ -1309,6 +1309,13 @@ class Crystal(Material):
         .. [BD] V. A. Belyakov and V. E. Dmitrienko, *Polarization phenomena in
            x-ray optics*, Uspekhi Fiz. Nauk. **158** (1989) 679–721, Sov. Phys.
            Usp. **32** (1989) 697–719.
+
+        *xd* and *yd* are local coordinates of the corresponding optical
+        element. If they are not None and crystal's `get_d` method exists, the
+        d spacing is given by the `get_d` method, otherwise it equals to
+        `self.d`. In a parametric representation, *xd* and *yd* are the same
+        parametric coordinates used in `local_r` and local_n` methods of the
+        corresponding optical element.
         """
         def for_one_polarization(polFactor):
             delta = np.sqrt((alpha**2 + polFactor**2 * chih * chih_ / b))
@@ -1367,7 +1374,11 @@ class Crystal(Material):
         kHs = -beamOutDotNormal * k
         if beamInDotHNormal is None:
             beamInDotHNormal = beamInDotNormal
-        HH = PI2 / self.d
+        if hasattr(self, 'get_d') and xd is not None and yd is not None:
+            crystd = self.get_d(xd, yd)
+        else:
+            crystd = self.d
+        HH = PI2 / crystd
         k0H = abs(beamInDotHNormal) * HH * k
         k02 = k**2
         H2 = HH**2
@@ -1375,8 +1386,8 @@ class Crystal(Material):
         kHs[kHs0] = 1
         b = k0s / kHs
         b[kHs0] = -1
-        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/self.d)
-        thetaB = self.get_Bragg_angle(E)
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/crystd)
+        thetaB = self.get_Bragg_angle(E)  # variation of d ignored in polFactor
         alpha = (H2/2 - k0H) / k02 + chi0/2 * (1/b - 1)
 
         curveS = for_one_polarization(1.)  # s polarization
