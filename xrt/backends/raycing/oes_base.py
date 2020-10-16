@@ -1510,7 +1510,8 @@ class OE(object):
         :meth:`get_amplitude`."""
 
         def _get_asymmetric_reflection_grating(
-                _gNormal, _oeNormal, _beamInDotSurfaceNormal):
+                _gNormal, _oeNormal, _beamInDotSurfaceNormal,
+                xd=None, yd=None):
             normalDotSurfNormal = _oeNormal[0]*_oeNormal[-3] +\
                 _oeNormal[1]*_oeNormal[-2] + _oeNormal[2]*_oeNormal[-1]
             # note:
@@ -1521,11 +1522,17 @@ class OE(object):
 #            wH = matSur.get_refractive_correction(
 #                lb.E[goodN], abs(_beamInDotSurfaceNormal))
             wH = 0
+            if hasattr(matSur, 'get_d') and xd is not None and yd is not None:
+                crystd = matSur.get_d(xd, yd)
+            else:
+                crystd = matSur.d
+
+            wHd = (1 + wH) / (crystd * 1e-7)
             gNormalCryst = np.asarray((
-                (_oeNormal[0]-normalDotSurfNormal*_oeNormal[-3]) * (1 + wH),
-                (_oeNormal[1]-normalDotSurfNormal*_oeNormal[-2]) * (1 + wH),
-                (_oeNormal[2]-normalDotSurfNormal*_oeNormal[-1]) * (1 + wH)),
-                order='F') / (matSur.d * 1e-7)
+                (_oeNormal[0]-normalDotSurfNormal*_oeNormal[-3]) * wHd,
+                (_oeNormal[1]-normalDotSurfNormal*_oeNormal[-2]) * wHd,
+                (_oeNormal[2]-normalDotSurfNormal*_oeNormal[-1]) * wHd),
+                order='F')
             if matSur.geom.endswith('Fresnel'):
                 if isinstance(self.order, int):
                     locOrder = self.order
@@ -1749,7 +1756,8 @@ class OE(object):
 
                 if useAsymmetricNormal:
                     a_out, b_out, c_out = _get_asymmetric_reflection_grating(
-                        gNormal, oeNormal, beamInDotSurfaceNormal)
+                        gNormal, oeNormal, beamInDotSurfaceNormal,
+                        lb.x[goodN], lb.y[goodN])
                 else:
                     a_out = lb.a[goodN] - oeNormal[0]*2*beamInDotNormal
                     b_out = lb.b[goodN] - oeNormal[1]*2*beamInDotNormal
