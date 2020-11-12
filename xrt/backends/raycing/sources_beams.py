@@ -49,7 +49,8 @@ class Beam(object):
                             'elevationX', 'elevationY', 'elevationZ', 's',
                             'phi', 'r', 'theta', 'order', 'accepted',
                             'acceptedE', 'seeded', 'seededI', 'Es', 'Ep',
-                            'area', 'nRefl']
+                            # 'area',
+                            'nRefl']
         if type(copyFrom) == type(self):
             try:
                 for attr in self.listOfAttrs:
