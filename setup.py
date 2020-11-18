@@ -179,7 +179,7 @@ For getting help and/or reporting a bug please use `GitHub xrt Issues
 
 setup(
     name='xrt',
-    version='1.3.4',
+    version='1.3.5',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
@@ -205,7 +205,7 @@ setup(
         'xrt.gui.xrtGlow': ['_icons/*.*']},
     scripts=['xrt/gui/xrtQookStart.pyw', 'xrt/gui/xrtQookStart.py'],
     install_requires=['numpy>=1.8.0', 'scipy>=0.17.0', 'matplotlib>=2.0.0',
-                      'sphinx>=1.6.2'],
+                      'sphinx>=1.6.2', 'openpyxl', 'distro'],
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',
