@@ -143,6 +143,7 @@ def main():
         sPxfine, sPzfine = und.get_SIGMAP(Efine)
 
         und.eEspread = 0.
+        print('please wait...')
         flux, sigma2theta, sigma2psi, dx2, dz2 = und.real_photon_source_sizes(
             Eh.ravel(), theta, psi, method=0.39)
         sigma2theta += und.dxprime**2

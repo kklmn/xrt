@@ -25,7 +25,7 @@ crystalSi01 = rmats.CrystalSi(
     t=0.1,
     hkl=[1, 1, 1],
     useTT=True,
-    calcBorrmann=True,
+    calcBorrmann='TT',
     geom=r"Laue reflected")
 
 
@@ -145,8 +145,9 @@ def align_beamline(beamLine, energy):
 
     lauePlate01beamGlobal01, lauePlate01beamLocal01 = beamLine.lauePlate01.reflect(
         beam=geometricSource01beamGlobal01)
-    print "Laue Plate exit point"
-    print lauePlate01beamGlobal01.x, lauePlate01beamGlobal01.y, lauePlate01beamGlobal01.z
+    print("Laue Plate exit point")
+    print(lauePlate01beamGlobal01.x, lauePlate01beamGlobal01.y,
+          lauePlate01beamGlobal01.z)
     tmpy = beamLine.screen01.center[1]
     newx = lauePlate01beamGlobal01.x[0] +\
         lauePlate01beamGlobal01.a[0] * (tmpy - lauePlate01beamGlobal01.y[0]) /\

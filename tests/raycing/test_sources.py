@@ -101,8 +101,8 @@ def visualize(source, data, title, saveName=None, sign=1):
         data = np.concatenate((data[:, :, :0:-1], sign*data), axis=2)
         xs = np.concatenate((-xs[:0:-1], xs), axis=1)
         zs = np.concatenate((-zs[:0:-1], zs), axis=1)
-    xSlice = (data.shape[1]-1) / 2
-    zSlice = (data.shape[2]-1) / 2
+    xSlice = (data.shape[1]-1) // 2
+    zSlice = (data.shape[2]-1) // 2
 
     figX, ax2EX, ax1EX, ax1XX = one_fig(data[:, :, zSlice], xs, 'x', 'z')
     figZ, ax2EZ, ax1EZ, ax1ZZ = one_fig(data[:, xSlice, :], zs, 'z', 'x')
@@ -289,7 +289,7 @@ def test_synchrotron_source(SourceClass, **kwargs):
 #    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
 ##select only one visualize3D at a time:
-#    visualize3D(source, I0, isZplane=False, saveName='Itot')
+    # visualize3D(source, I0, isZplane=False, saveName='Itot')
 #    visualize3D(source, I0*(1+l1)/2., isZplane=False, saveName='IsPol')
 #    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
 #    visualize3D(source, I0*l2/2., saveName='IspRe')

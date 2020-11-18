@@ -1,5 +1,4 @@
 ﻿# -*- coding: utf-8 -*-
-"""Select one of the 3 functions at the end of main()"""
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "21 May 2020"
 import numpy as np
@@ -88,6 +87,7 @@ def main(case, icalc, plot):
     dtheta = theta[1] - theta[0]
     dpsi = psi[1] - psi[0]
     source = rs.Undulator(**kwargs)
+    print('please wait...')
     I0x, l1, l2, l3 = source.intensities_on_mesh(energy, theta, psi)
     whereTheta = np.argwhere(abs(theta) <= angleMaxX)
     wherePsi = np.argwhere(abs(psi) <= angleMaxZ)
