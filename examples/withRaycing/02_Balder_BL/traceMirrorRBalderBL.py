@@ -40,7 +40,7 @@ def define_plots():
 
     plot = xrtp.XYCPlot(
         'beamFSMSample', (1,), aspect='auto',
-        xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xrtp.defaultBins/2),
+        xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xrtp.defaultBins//2),
         yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
         caxis=xrtp.XYCAxis('energy', 'eV'), title='Sample')
     plot.xaxis.limits = [-300, 300]

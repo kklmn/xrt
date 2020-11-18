@@ -13,5 +13,5 @@ E = 10000
 theta = np.linspace(0, 10, 501)  # degrees
 rs, rp = layerW.get_amplitude(E, np.sin(np.deg2rad(theta)))[0:2]
 
-plt.semilogy(theta, abs(rs)**2, 'r', theta, abs(rp)**2, 'b')
+plt.semilogy(theta, abs(rs)**2, theta, abs(rp)**2)
 plt.show()

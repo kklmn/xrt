@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xrt.backends.raycing.sources as rs
 
+print("please wait...")
 source = rs.Undulator(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
                       betaX=9., betaZ=2., period=19.3, n=101, K=0.52,
                       eEspread=0*1e-3, distE='BW')
@@ -29,6 +30,7 @@ for i, (power, K, gap) in enumerate(zip(powers, Ks, gaps)):
     ax.text(gap, power + maxPower*0.03 * (i % 2 * 2 - 1),
             '{0}{1:.1f}'.format('K=' if i == 0 else '', K), fontsize=9,
             ha='center', va='center')
+print("done!")
 
 plt.savefig('undulator_power_CoSAXS.png')
 plt.show()

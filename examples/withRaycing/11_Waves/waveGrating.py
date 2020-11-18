@@ -723,6 +723,6 @@ def visualize_efficiency():
 
 
 if __name__ == '__main__':
-#    visualize_grating()
-#    get_efficiency()
-    visualize_efficiency()
+    # visualize_grating()
+    get_efficiency()
+    # visualize_efficiency()

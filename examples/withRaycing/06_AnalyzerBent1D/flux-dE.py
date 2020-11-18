@@ -113,7 +113,7 @@ dxP, dzP = 0.108328852831, 0.0969846310393
 Case('Johann as von Hamos', 's', thetaD, dxP, dzP, 400e6, 143235, 0.086,
      4e8, 143160)
 
-block = len(cases) / 3
+block = len(cases) // 3
 
 
 def plot_res_eff():
@@ -175,6 +175,7 @@ def plot_res_eff():
                      numpoints=1, loc=(1, 0.5))
     for line in leg.get_lines():
         line._legmarker.set_markerfacecolor('gray')
+        line._legmarker.set_markeredgecolor('gray')
     ax1.add_artist(legBragg)
 
     if band == 'narrow':
