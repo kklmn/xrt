@@ -3,6 +3,12 @@
 Version history
 ---------------
 
+1.3.5 (19 Nov 2020):
+    - Bug fixes.
+
+    - Variable d-spacing in crystals given by a user method; thanks to
+      H. Gretarsson (DESY) for testing.
+
 1.3.4 (21 May 2020):
     - Bug fixes and minor updates.
 
