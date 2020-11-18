@@ -1041,7 +1041,7 @@ class Undulator(object):
 
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             import pandas
-            data = pandas.read_excel(fname, **kwargs).values
+            data = pandas.read_excel(fname, **kwargs, engine="openpyxl").values
         else:
             data = np.loadtxt(fname)
 
@@ -2138,7 +2138,7 @@ class Undulator(object):
         if fixedEnergy:
             rsE = fixedEnergy
             if (self.E_max-self.E_min) > fixedEnergy*1.1e-3:
-                print("Warning: the bandwidth seem too big. "
+                print("Warning: the bandwidth seems too big. "
                       "Specify it by giving eMin and eMax in the constructor.")
         nrep = 0
         rep_condition = True
