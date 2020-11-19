@@ -192,7 +192,7 @@ setup(
     license='MIT License',
     keywords='',
     # python_requires=,
-    zip_safe=True,
+    zip_safe=False,  # True: build zipped egg, False: unzipped
     packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.gui',
               'xrt.gui.commons', 'xrt.gui.xrtGlow', 'xrt.gui.xrtQook'],
     package_data={
@@ -205,7 +205,9 @@ setup(
         'xrt.gui.xrtGlow': ['_icons/*.*']},
     scripts=['xrt/gui/xrtQookStart.pyw', 'xrt/gui/xrtQookStart.py'],
     install_requires=['numpy>=1.8.0', 'scipy>=0.17.0', 'matplotlib>=2.0.0',
-                      'sphinx>=1.6.2', 'openpyxl', 'distro'],
+                      'sphinx>=1.6.2',
+                      # 'openpyxl', 'distro'
+                      ],
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',

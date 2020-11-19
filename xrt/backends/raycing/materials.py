@@ -1133,7 +1133,7 @@ class Crystal(Material):
             if thickness == 0:
                 N_layers = 10000
             else:
-                N_layers = thickness / 200.
+                N_layers = int(thickness / 200.)
                 if N_layers < 2000:
                     N_layers = 2000
             IhMap = np.zeros((bLength, (N_layers+1)))
