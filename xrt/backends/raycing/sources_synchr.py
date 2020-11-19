@@ -1041,7 +1041,8 @@ class Undulator(object):
 
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             import pandas
-            data = pandas.read_excel(fname, **kwargs, engine="openpyxl").values
+            kwargs['engine'] = "openpyxl"
+            data = pandas.read_excel(fname, **kwargs).values
         else:
             data = np.loadtxt(fname)
 
