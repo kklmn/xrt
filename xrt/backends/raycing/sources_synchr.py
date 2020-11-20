@@ -1042,7 +1042,13 @@ class Undulator(object):
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             import pandas
             kwargs['engine'] = "openpyxl"
-            data = pandas.read_excel(fname, **kwargs).values
+            try:
+                data = pandas.read_excel(fname, **kwargs).values
+            except ValueError as e:
+                print(e)
+                if 'openpyxl' in str(e):
+                    print('install it as `pip install openpyxl`')
+                    raise e
         else:
             data = np.loadtxt(fname)
 
@@ -2278,14 +2284,17 @@ class Undulator(object):
                 sSP = 1.
             else:
                 sSP = mJs2 + mJp2
-
             bot.Jsp[:] = np.where(sSP, mJs * np.conj(mJp) / sSP, 0)
             bot.Jss[:] = np.where(sSP, mJs2 / sSP, 0)
             bot.Jpp[:] = np.where(sSP, mJp2 / sSP, 0)
 
             if withAmplitudes:
-                bot.Es[:] = mJs
-                bot.Ep[:] = mJp
+                if self.uniformRayDensity:
+                    bot.Es[:] = mJs
+                    bot.Ep[:] = mJp
+                else:
+                    bot.Es[:] = mJs / mJs2**0.5
+                    bot.Ep[:] = mJp / mJp2**0.5
 
             if bo is None:
                 bo = bot
