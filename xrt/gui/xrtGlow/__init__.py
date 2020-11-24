@@ -126,7 +126,8 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.oesList = self.oesList
         toggleHelp = qt.QShortcut(self)
         toggleHelp.setKey(qt.Key_F1)
-        toggleHelp.activated.connect(self.customGlWidget.toggleHelp)
+        toggleHelp.activated.connect(self.openHelpDialog)
+#        toggleHelp.activated.connect(self.customGlWidget.toggleHelp)
         fastSave = qt.QShortcut(self)
         fastSave.setKey(qt.Key_F5)
         fastSave.activated.connect(partial(self.saveScene, '_xrtScnTmp_.npy'))
@@ -1529,6 +1530,46 @@ class xrtGlow(qt.QWidget):
                 print('no glowFrameName was given!')
         print("Finished with the movie.")
 
+    def openHelpDialog(self):
+        d = qt.QDialog(self)
+        d.setMinimumSize(300, 200)
+        d.resize(600, 600)
+        layout = qt.QVBoxLayout()
+        helpText = """
+- **F1**: Open/Close this help window
+- **F3**: Add/Remove Virtual Screen
+- **F4**: Dock/Undock xrtGlow if launched from xrtQook
+- **F5/F6**: Quick Save/Load Scene
+                    """
+        if hasattr(self, 'generator'):
+            helpText += "- **F7**: Start recording movie"
+        helpText += """
+- **LeftMouse**: Rotate the Scene
+- **SHIFT+LeftMouse**: Translate in perpendicular to the shortest view axis
+- **ALT+LeftMouse**: Translate in parallel to the shortest view axis
+- **CTRL+LeftMouse**: Drag Virtual Screen
+- **ALT+WheelMouse**: Scale Virtual Screen
+- **CTRL+SHIFT+LeftMouse**: Translate the Beamline around Virtual Screen
+                      (with Beamline along the longest view axis)
+- **CTRL+ALT+LeftMouse**: Translate the Beamline around Virtual Screen
+                    (with Beamline along the shortest view axis)
+- **CTRL+T**: Toggle Virtual Screen orientation (vertical/normal to the beam)
+                    WheelMouse: Zoom the Beamline
+- **CTRL+WheelMouse**: Zoom the Scene
+        """
+        helpWidget = qt.QTextEdit()
+        helpWidget.setMarkdown(helpText)
+        helpWidget.setReadOnly(True)
+        layout.addWidget(helpWidget)
+        closeButton = qt.QPushButton("Close", d)
+        closeButton.clicked.connect(d.hide)
+        layout.addWidget(closeButton)
+        d.setLayout(layout)
+        d.setWindowTitle("Quick Help")
+        d.setModal(False)
+        d.show()        
+
+
     def centerEl(self, oeName):
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
@@ -2445,7 +2486,7 @@ class xrtGlWidget(qt.QGLWidget):
 
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        if len(self.oesToPlot) > 0:  # Surfaces of optical elements
+        if len(self.oesToPlot) > 0 or self.virtScreen is not None:  # Surfaces of optical elements
             gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
             gl.glEnable(gl.GL_NORMALIZE)
 
@@ -2461,7 +2502,7 @@ class xrtGlWidget(qt.QGLWidget):
                         self.plotHemiScreen(oeToPlot)
                     elif isinstance(oeToPlot, rscreens.Screen):
                         self.setMaterial('semiSi')
-                        self.plotScreen(oeToPlot)
+                        self.plotScreen(oeToPlot, frameColor=[1, 1, 0, 0.8])
                     if isinstance(oeToPlot, (rapertures.RectangularAperture,
                                              rapertures.RoundAperture)):
                         self.setMaterial('Cu')
@@ -2473,6 +2514,12 @@ class xrtGlWidget(qt.QGLWidget):
                         raise
                     else:
                         continue
+
+
+            if self.virtScreen is not None:
+                self.setMaterial('semiSi')
+                self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
+                                [1, 0, 0, 0.8], plotFWHM=True)
 
             gl.glDisable(gl.GL_LIGHTING)
             gl.glDisable(gl.GL_NORMALIZE)
@@ -2502,13 +2549,6 @@ class xrtGlWidget(qt.QGLWidget):
                 else:
                     continue
 
-        if self.virtScreen is not None:
-            gl.glEnable(gl.GL_LINE_SMOOTH)
-            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-
-            self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
-                            [1, 0, 0, 1], plotFWHM=True)
 
 #            if not self.enableAA:
 #                gl.glDisable(gl.GL_LINE_SMOOTH)
@@ -2610,8 +2650,9 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glFlush()
 
         self.drawDirectionAxes()
-        if self.showHelp:
-            self.drawHelp()
+#        if self.showHelp:
+#            self.openHelpDialog()
+#            self.drawHelp()
         if self.enableBlending:
             gl.glDisable(gl.GL_MULTISAMPLE)
             gl.glDisable(gl.GL_BLEND)
@@ -3582,7 +3623,12 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnd()
 
         if frameColor is not None:
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
             self.virtScreen.frame = vScreenBody
+            gl.glDisable(gl.GL_LIGHTING)
+            gl.glDisable(gl.GL_NORMALIZE)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
             gl.glLineWidth(2)
             gl.glBegin(gl.GL_QUADS)
@@ -3591,10 +3637,18 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
                                                  self.coordOffset))
             gl.glEnd()
+            gl.glEnable(gl.GL_LIGHTING)
+            gl.glEnable(gl.GL_NORMALIZE)
+            if not self.enableAA:
+                gl.glDisable(gl.GL_LINE_SMOOTH)
 
         if plotFWHM:
             gl.glLineWidth(1)
             gl.glDisable(gl.GL_LINE_SMOOTH)
+
+            gl.glDisable(gl.GL_LIGHTING)
+            gl.glDisable(gl.GL_NORMALIZE)
+
             if self.invertColors:
                 gl.glColor4f(0.0, 0.0, 0.0, 1.)
             else:
@@ -3652,6 +3706,8 @@ class xrtGlWidget(qt.QGLWidget):
                     gl.glutStrokeCharacter(
                         gl.GLUT_STROKE_MONO_ROMAN, ord(symbol))
                 gl.glPopMatrix()
+            gl.glEnable(gl.GL_LIGHTING)
+            gl.glEnable(gl.GL_NORMALIZE)
             gl.glEnable(gl.GL_LINE_SMOOTH)
 
     def plotHemiScreen(self, oe, dimensions=None):
@@ -3764,75 +3820,75 @@ class xrtGlWidget(qt.QGLWidget):
 #            glVertex4f(*corners[len(corners)-iLight-1])
 #            gl.glEnd()
 
-    def toggleHelp(self):
-        self.showHelp = not self.showHelp
-        self.glDraw()
+#    def toggleHelp(self):
+#        self.showHelp = not self.showHelp
+#        self.glDraw()
 
-    def drawHelp(self):
-        hHeight = 300
-        hWidth = 500
-        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-        gl.glViewport(0, self.viewPortGL[3]-hHeight, hWidth, hHeight)
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        gl.glOrtho(-1, 1, -1, 1, -1, 1)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        gl.glBegin(gl.GL_QUADS)
-
-        if self.invertColors:
-            gl.glColor4f(1.0, 1.0, 1.0, 0.9)
-        else:
-            gl.glColor4f(0.0, 0.0, 0.0, 0.9)
-        backScreen = [[1, 1], [1, -1],
-                      [-1, -1], [-1, 1]]
-        for corner in backScreen:
-                gl.glVertex3f(corner[0], corner[1], 0)
-
-        gl.glEnd()
-
-        if self.invertColors:
-            gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-        else:
-            gl.glColor4f(1.0, 1.0, 1.0, 1.0)
-        gl.glLineWidth(3)
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-        gl.glBegin(gl.GL_QUADS)
-        backScreen = [[1, 1], [1, -1],
-                      [-1, -1], [-1, 1]]
-        for corner in backScreen:
-                gl.glVertex3f(corner[0], corner[1], 0)
-        gl.glEnd()
-
-        helpList = [
-            'F1: Open/Close this help window',
-            'F3: Add/Remove Virtual Screen',
-            'F4: Dock/Undock xrtGlow if launched from xrtQook',
-            'F5/F6: Quick Save/Load Scene']
-        if hasattr(self, 'generator'):
-            helpList += ['F7: Start recording movie']
-        helpList += [
-            'LeftMouse: Rotate the Scene',
-            'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
-            'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
-            'CTRL+LeftMouse: Drag Virtual Screen',
-            'ALT+WheelMouse: Scale Virtual Screen',
-            'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
-            '                      (with Beamline along the longest view axis)',  # analysis:ignore
-            'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
-            '                      (with Beamline along the shortest view axis)',  # analysis:ignore
-            'CTRL+T: Toggle Virtual Screen orientation (vertical/normal to the beam)',  # analysis:ignore
-            'WheelMouse: Zoom the Beamline',
-            'CTRL+WheelMouse: Zoom the Scene']
-        for iLine, text in enumerate(helpList):
-            self.drawText([-1. + 0.05,
-                           1. - 2. * (iLine + 1) / float(len(helpList)+1), 0],
-                          text, True)
-
-        gl.glFlush()
-        gl.glViewport(*pView)
+#    def drawHelp(self):
+#        hHeight = 300
+#        hWidth = 500
+#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+#        gl.glViewport(0, self.viewPortGL[3]-hHeight, hWidth, hHeight)
+#        gl.glMatrixMode(gl.GL_PROJECTION)
+#        gl.glLoadIdentity()
+#        gl.glOrtho(-1, 1, -1, 1, -1, 1)
+#        gl.glMatrixMode(gl.GL_MODELVIEW)
+#        gl.glLoadIdentity()
+#
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+#        gl.glBegin(gl.GL_QUADS)
+#
+#        if self.invertColors:
+#            gl.glColor4f(1.0, 1.0, 1.0, 0.9)
+#        else:
+#            gl.glColor4f(0.0, 0.0, 0.0, 0.9)
+#        backScreen = [[1, 1], [1, -1],
+#                      [-1, -1], [-1, 1]]
+#        for corner in backScreen:
+#                gl.glVertex3f(corner[0], corner[1], 0)
+#
+#        gl.glEnd()
+#
+#        if self.invertColors:
+#            gl.glColor4f(0.0, 0.0, 0.0, 1.0)
+#        else:
+#            gl.glColor4f(1.0, 1.0, 1.0, 1.0)
+#        gl.glLineWidth(3)
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+#        gl.glBegin(gl.GL_QUADS)
+#        backScreen = [[1, 1], [1, -1],
+#                      [-1, -1], [-1, 1]]
+#        for corner in backScreen:
+#                gl.glVertex3f(corner[0], corner[1], 0)
+#        gl.glEnd()
+#
+#        helpList = [
+#            'F1: Open/Close this help window',
+#            'F3: Add/Remove Virtual Screen',
+#            'F4: Dock/Undock xrtGlow if launched from xrtQook',
+#            'F5/F6: Quick Save/Load Scene']
+#        if hasattr(self, 'generator'):
+#            helpList += ['F7: Start recording movie']
+#        helpList += [
+#            'LeftMouse: Rotate the Scene',
+#            'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
+#            'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
+#            'CTRL+LeftMouse: Drag Virtual Screen',
+#            'ALT+WheelMouse: Scale Virtual Screen',
+#            'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
+#            '                      (with Beamline along the longest view axis)',  # analysis:ignore
+#            'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
+#            '                      (with Beamline along the shortest view axis)',  # analysis:ignore
+#            'CTRL+T: Toggle Virtual Screen orientation (vertical/normal to the beam)',  # analysis:ignore
+#            'WheelMouse: Zoom the Beamline',
+#            'CTRL+WheelMouse: Zoom the Scene']
+#        for iLine, text in enumerate(helpList):
+#            self.drawText([-1. + 0.05,
+#                           1. - 2. * (iLine + 1) / float(len(helpList)+1), 0],
+#                          text, True)
+#
+#        gl.glFlush()
+#        gl.glViewport(*pView)
 
     def drawCone(self, z, r, nFacets, color):
         phi = np.linspace(0, 2*np.pi, nFacets)
