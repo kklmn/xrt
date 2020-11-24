@@ -61,7 +61,7 @@ from ...backends.raycing import materials as rmats
 from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
-_DEBUG_ = True #False  # If False, exceptions inside the module are ignored
+_DEBUG_ = False  # If False, exceptions inside the module are ignored
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
@@ -3592,7 +3592,6 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glDisable(gl.GL_MAP2_NORMAL)
 
     def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
-#        print(oe, frameColor)
         scAbsZ = np.linalg.norm(oe.z * self.scaleVec)
         scAbsX = np.linalg.norm(oe.x * self.scaleVec)
         if dimensions is not None:
