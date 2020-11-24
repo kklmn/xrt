@@ -88,7 +88,7 @@ if not starImport:
      QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
-     QPushButton) = (
+     QPushButton, QDialog) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -98,7 +98,8 @@ if not starImport:
         myQtGUI.QListWidgetItem, myQtGUI.QGroupBox, myQtGUI.QProgressBar,
         myQtGUI.QLabel, myQtGUI.QTableView, myQtGUI.QSizePolicy,
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
-        myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton)
+        myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
+        myQtGUI.QDialog)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
