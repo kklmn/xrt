@@ -1536,7 +1536,7 @@ class xrtGlow(qt.QWidget):
         d.resize(600, 600)
         layout = qt.QVBoxLayout()
         helpText = """
-- **F1**: Open/Close this help window
+- **F1**: Open this help window
 - **F3**: Add/Remove Virtual Screen
 - **F4**: Dock/Undock xrtGlow if launched from xrtQook
 - **F5/F6**: Quick Save/Load Scene
@@ -1554,7 +1554,7 @@ class xrtGlow(qt.QWidget):
 - **CTRL+ALT+LeftMouse**: Translate the Beamline around Virtual Screen
                     (with Beamline along the shortest view axis)
 - **CTRL+T**: Toggle Virtual Screen orientation (vertical/normal to the beam)
-                    WheelMouse: Zoom the Beamline
+- **WheelMouse**: Zoom the Beamline
 - **CTRL+WheelMouse**: Zoom the Scene
         """
         helpWidget = qt.QTextEdit()
