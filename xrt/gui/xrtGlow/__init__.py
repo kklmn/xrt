@@ -2517,9 +2517,6 @@ class xrtGlWidget(qt.QGLWidget):
 
 
             if self.virtScreen is not None:
-#                gl.glEnable(gl.GL_LINE_SMOOTH)
-#                gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-#                gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
                 self.setMaterial('semiSi')
                 self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
                                 [1, 0, 0, 0.8], plotFWHM=True)
@@ -3627,6 +3624,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         if frameColor is not None:
             gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
             self.virtScreen.frame = vScreenBody
             gl.glDisable(gl.GL_LIGHTING)
             gl.glDisable(gl.GL_NORMALIZE)
