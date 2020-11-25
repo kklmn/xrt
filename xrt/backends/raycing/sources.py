@@ -237,7 +237,7 @@ application example :ref:`here <example-undulator-sizes>`.
    :members: __init__
 
 .. autoclass:: Undulator()
-   :members: __init__, tuning_curves, get_SIGMA, get_SIGMAP,
+   :members: __init__, get_SIGMA, get_SIGMAP,
              real_photon_source_sizes, multi_electron_stack,
              intensities_on_mesh, power_vs_K, tuning_curves
 .. autoclass:: Wiggler()
