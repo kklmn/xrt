@@ -650,7 +650,7 @@ class xrtGlow(qt.QWidget):
                 partial(self.updateThicknessFromQLE, it))
 
             layout = qt.QHBoxLayout()
-            tLabel.setMinimumWidth(125)
+            tLabel.setMinimumWidth(145)
             layout.addWidget(tLabel)
             tEdit.setMaximumWidth(48)
             layout.addWidget(tEdit)
