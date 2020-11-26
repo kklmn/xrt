@@ -630,12 +630,22 @@ class xrtGlow(qt.QWidget):
             self.sceneControls.append(aaCheckBox)
             sceneLayout.addWidget(aaCheckBox)
 
-        for it, (what, defv) in enumerate(zip(
-                ['Default OE thickness, mm', 'Aperture frame size, %'],
+        for it, (what, tt, defv) in enumerate(zip(
+                ['Default OE thickness, mm',
+                 'Force OE thickness, mm',
+                 'Aperture frame size, %'],
+                ['For OEs that do not have thickness',
+                 'For OEs that have thickness, e.g. plates or lenses',
+                 None],
                 [self.customGlWidget.oeThickness,
+                 self.customGlWidget.oeThicknessForce,
                  self.customGlWidget.slitThicknessFraction])):
             tLabel = qt.QLabel(what)
-            tEdit = qt.QLineEdit(str(defv))
+            tLabel.setToolTip(tt)
+            tEdit = qt.QLineEdit()
+            tEdit.setToolTip(tt)
+            if defv is not None:
+                tEdit.setText(str(defv))
             tEdit.editingFinished.connect(
                 partial(self.updateThicknessFromQLE, it))
 
@@ -1671,11 +1681,13 @@ class xrtGlow(qt.QWidget):
 
     def updateThicknessFromQLE(self, ia):
         editor = self.sender()
-        value = float(str(editor.text()))
+        value = float(str(editor.text())) if editor.text() else None
         if ia == 0:
-            self.customGlWidget.oeThickness = np.int(value)
+            self.customGlWidget.oeThickness = value
         elif ia == 1:
-            self.customGlWidget.slitThicknessFraction = np.int(value)
+            self.customGlWidget.oeThicknessForce = value
+        elif ia == 2:
+            self.customGlWidget.slitThicknessFraction = value
         else:
             return
         self.customGlWidget.glDraw()
@@ -1756,6 +1768,7 @@ class xrtGlWidget(qt.QGLWidget):
         self.slitEdges = dict()
         self.beamsToElements = b2els
         self.oeThickness = 5  # mm
+        self.oeThicknessForce = None
         self.slitThicknessFraction = 50
         self.contourWidth = 2
 
@@ -3107,6 +3120,8 @@ class xrtGlWidget(qt.QGLWidget):
 
     def plotOeSurface(self, oe, is2ndXtal):
         def getThickness(element):
+            if self.oeThicknessForce is not None:
+                return self.oeThicknessForce
             thickness = 0
             if isinstance(oe, roes.Plate):
                 if oe.t is not None:
