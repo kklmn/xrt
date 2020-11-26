@@ -149,8 +149,17 @@ class xrtGlow(qt.QWidget):
 
     def closeEvent(self, event):
         if self.parentRef is not None:
-            event.ignore()
-            self.setVisible(False)      
+            try:
+                parentAlive = self.parentRef.isVisible()
+                if parentAlive:
+                    event.ignore()
+                    self.setVisible(False)
+                else:
+                    event.accept()
+            except:
+                event.accept()
+        else:
+            event.accept()
       
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
