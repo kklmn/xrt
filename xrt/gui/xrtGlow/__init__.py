@@ -3640,7 +3640,8 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glEnable(gl.GL_LINE_SMOOTH)
             gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
             gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-            self.virtScreen.frame = vScreenBody
+            if self.virtScreen is not None:
+                self.virtScreen.frame = vScreenBody
             gl.glDisable(gl.GL_LIGHTING)
             gl.glDisable(gl.GL_NORMALIZE)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
@@ -3651,10 +3652,11 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
                                                  self.coordOffset))
             gl.glEnd()
-            gl.glEnable(gl.GL_LIGHTING)
-            gl.glEnable(gl.GL_NORMALIZE)
             if not self.enableAA:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            gl.glEnable(gl.GL_LIGHTING)
+            gl.glEnable(gl.GL_NORMALIZE)
 
         if plotFWHM:
             gl.glLineWidth(1)
@@ -3722,7 +3724,8 @@ class xrtGlWidget(qt.QGLWidget):
                 gl.glPopMatrix()
             gl.glEnable(gl.GL_LIGHTING)
             gl.glEnable(gl.GL_NORMALIZE)
-            gl.glEnable(gl.GL_LINE_SMOOTH)
+            if self.enableAA:
+                gl.glEnable(gl.GL_LINE_SMOOTH)
 
     def plotHemiScreen(self, oe, dimensions=None):
         try:
