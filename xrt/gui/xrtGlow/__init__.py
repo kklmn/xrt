@@ -147,6 +147,11 @@ class xrtGlow(qt.QWidget):
         tiltScreen.setKey(qt.CTRL + qt.Key_T)
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
+    def closeEvent(self, event):
+        if self.parentRef is not None:
+            event.ignore()
+            self.setVisible(False)      
+      
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
 
