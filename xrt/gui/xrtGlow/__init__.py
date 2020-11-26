@@ -630,6 +630,23 @@ class xrtGlow(qt.QWidget):
             self.sceneControls.append(aaCheckBox)
             sceneLayout.addWidget(aaCheckBox)
 
+        for it, (what, defv) in enumerate(zip(
+                ['Default OE thickness, mm', 'Aperture frame size, %'],
+                [self.customGlWidget.oeThickness,
+                 self.customGlWidget.slitThicknessFraction])):
+            tLabel = qt.QLabel(what)
+            tEdit = qt.QLineEdit(str(defv))
+            tEdit.editingFinished.connect(
+                partial(self.updateThicknessFromQLE, it))
+
+            layout = qt.QHBoxLayout()
+            tLabel.setMinimumWidth(125)
+            layout.addWidget(tLabel)
+            tEdit.setMaximumWidth(48)
+            layout.addWidget(tEdit)
+            layout.addStretch()
+            sceneLayout.addLayout(layout)
+
         axLabel = qt.QLabel('Font Size')
         axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
         axSlider.setRange(1, 20, 0.5)
@@ -657,9 +674,11 @@ class xrtGlow(qt.QWidget):
 
         oeTileValidator = qt.QIntValidator()
         oeTileValidator.setRange(1, 20)
-        for ia, axis in enumerate(['OE tessellation X', 'OE tessellation Y']):
+        for ia, (axis, defv) in enumerate(zip(
+                ['OE tessellation X', 'OE tessellation Y'],
+                self.customGlWidget.tiles)):
             axLabel = qt.QLabel(axis)
-            axEdit = qt.QLineEdit("2")
+            axEdit = qt.QLineEdit(str(defv))
             axEdit.setValidator(oeTileValidator)
             axEdit.editingFinished.connect(partial(self.updateTileFromQLE, ia))
 
@@ -1650,6 +1669,17 @@ class xrtGlow(qt.QWidget):
             slider.setValue(op)
             editor.setText("{0:.2f}".format(op))
 
+    def updateThicknessFromQLE(self, ia):
+        editor = self.sender()
+        value = float(str(editor.text()))
+        if ia == 0:
+            self.customGlWidget.oeThickness = np.int(value)
+        elif ia == 1:
+            self.customGlWidget.slitThicknessFraction = np.int(value)
+        else:
+            return
+        self.customGlWidget.glDraw()
+
     def updateTileFromQLE(self, ia):
         editor = self.sender()
         value = float(str(editor.text()))
@@ -1725,7 +1755,8 @@ class xrtGlWidget(qt.QGLWidget):
         self.oeContour = dict()
         self.slitEdges = dict()
         self.beamsToElements = b2els
-        self.slitThickness = 2.  # mm
+        self.oeThickness = 5  # mm
+        self.slitThicknessFraction = 50
         self.contourWidth = 2
 
         self.projectionsVisibility = [0, 0, 0]
@@ -3082,7 +3113,7 @@ class xrtGlWidget(qt.QGLWidget):
                     return oe.t
             if hasattr(oe, "material"):
                 if oe.material is not None:
-                    thickness = 10.
+                    thickness = self.oeThickness
                     if hasattr(oe.material, "t"):
                         thickness = oe.material.t if oe.material.t is not None\
                             else thickness
@@ -3443,7 +3474,6 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
         gl.glEnable(gl.GL_MAP2_NORMAL)
         plotVolume = False
-#        slitT = self.slitThickness
 
         if oe.shape == 'round':
             r = oe.r
@@ -3451,7 +3481,8 @@ class xrtGlWidget(qt.QGLWidget):
             if isBeamStop:
                 limits = [[0, r, 0, 2*np.pi]]
             else:
-                wf = max(r*0.25, 2.5)
+                # wf = max(r*0.25, 2.5)
+                wf = 2*r * self.slitThicknessFraction*0.01
                 limits = [[r, r+wf, 0, 2*np.pi]]
             tiles = self.tiles[1] * 5
         else:
@@ -3474,7 +3505,8 @@ class xrtGlWidget(qt.QGLWidget):
 
             w = right - left
             h = top - bottom
-            wf = max(min(w, h)*0.5, 2.5)
+            # wf = max(min(w, h)*0.5, 2.5)
+            wf = min(w, h) * self.slitThicknessFraction*0.01
             limits = []
             for akind, d in zip(oe.kind, oe.opening):
                 if akind.startswith('l'):
