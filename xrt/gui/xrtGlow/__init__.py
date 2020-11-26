@@ -40,7 +40,7 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 
-import sys
+# import sys
 import os
 import numpy as np
 from functools import partial
@@ -62,6 +62,7 @@ from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
 _DEBUG_ = False  # If False, exceptions inside the module are ignored
+
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
@@ -160,7 +161,7 @@ class xrtGlow(qt.QWidget):
                 event.accept()
         else:
             event.accept()
-      
+
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
 
@@ -1405,7 +1406,9 @@ class xrtGlow(qt.QWidget):
         saveDialog = qt.QFileDialog()
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
-        saveDialog.setNameFilter("BMP files (*.bmp);;JPG files (*.jpg);;JPEG files (*.jpeg);;PNG files (*.png);;TIFF files (*.tif)")  # analysis:ignore
+        saveDialog.setNameFilter(
+            "BMP files (*.bmp);;JPG files (*.jpg);;JPEG files (*.jpeg);;"
+            "PNG files (*.png);;TIFF files (*.tif)")
         saveDialog.selectNameFilter("JPG files (*.jpg)")
         if (saveDialog.exec_()):
             image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
@@ -1581,8 +1584,7 @@ class xrtGlow(qt.QWidget):
         d.setLayout(layout)
         d.setWindowTitle("Quick Help")
         d.setModal(False)
-        d.show()        
-
+        d.show()
 
     def centerEl(self, oeName):
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
@@ -1841,7 +1843,7 @@ class xrtGlWidget(qt.QGLWidget):
         qn = np.copy(q)
         qn[1:] *= -1
         return self.quatMult(self.quatMult(
-                q, self.vecToQ(vec, np.pi*0.25)), qn)[1:]
+            q, self.vecToQ(vec, np.pi*0.25)), qn)[1:]
 
     def setPointSize(self, pSize):
         self.pointSize = pSize
@@ -1962,7 +1964,7 @@ class xrtGlWidget(qt.QGLWidget):
                                 self.globalColorIndex is not None:
                             good = np.logical_and(good, self.globalColorIndex)
                             globalColorsRays = np.repeat(
-                                    self.globalColorArray[good], 2, axis=0) if\
+                                self.globalColorArray[good], 2, axis=0) if\
                                 globalColorsRays is None else np.concatenate(
                                     (globalColorsRays,
                                      np.repeat(self.globalColorArray[good], 2,
@@ -2024,17 +2026,20 @@ class xrtGlWidget(qt.QGLWidget):
                                     [startBeam.x[lost] - self.coordOffset[0],
                                      endBeam.x[lost] -
                                      self.coordOffset[0]]).flatten('F')
-                                verticesLost = np.vstack((verticesLost, np.array(  # analysis:ignore
-                                    [startBeam.y[lost] - self.coordOffset[1],
-                                     endBeam.y[lost] -
-                                     self.coordOffset[1]]).flatten('F')))
-                                verticesLost = np.vstack((verticesLost, np.array(  # analysis:ignore
-                                    [startBeam.z[lost] - self.coordOffset[2],
-                                     endBeam.z[lost] -
-                                     self.coordOffset[2]]).flatten('F')))
+                                verticesLost = np.vstack(
+                                    (verticesLost, np.array(
+                                        [startBeam.y[lost]-self.coordOffset[1],
+                                         endBeam.y[lost] -
+                                         self.coordOffset[1]]).flatten('F')))
+                                verticesLost = np.vstack(
+                                    (verticesLost, np.array(
+                                        [startBeam.z[lost]-self.coordOffset[2],
+                                         endBeam.z[lost] -
+                                         self.coordOffset[2]]).flatten('F')))
                                 verticesArrayLost = verticesLost.T if\
                                     verticesArrayLost is None else\
-                                    np.vstack((verticesArrayLost, verticesLost.T))  # analysis:ignore
+                                    np.vstack(
+                                        (verticesArrayLost, verticesLost.T))
 
             if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
                 # good = startBeam.state > 0
@@ -2077,7 +2082,7 @@ class xrtGlWidget(qt.QGLWidget):
                         startBeam)[good]).T if\
                         colorsDots is None else np.concatenate(
                             (colorsDots.T, np.array(self.getColor(
-                                 startBeam)[good]).T))
+                                startBeam)[good]).T))
 
                 vertices = np.array(startBeam.x[good] - self.coordOffset[0])
                 vertices = np.vstack((vertices, np.array(
@@ -2124,10 +2129,11 @@ class xrtGlWidget(qt.QGLWidget):
             elif colorsRays is not None:
                 colorsRays = colorFactor * (colorsRays-self.colorMin) /\
                     (self.colorMax - self.colorMin)
-                colorsRays = np.dstack((colorsRays,
-                                        np.ones_like(alphaRays)*colorSaturation,  # analysis:ignore
-                                        alphaRays if self.iHSV else
-                                        np.ones_like(alphaRays)))
+                colorsRays = np.dstack(
+                    (colorsRays,
+                     np.ones_like(alphaRays)*colorSaturation,
+                     alphaRays if self.iHSV else
+                     np.ones_like(alphaRays)))
                 colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
                 if self.globalNorm and len(alphaRays) > 0:
                     alphaMax = np.max(alphaRays)
@@ -2165,10 +2171,11 @@ class xrtGlWidget(qt.QGLWidget):
             elif colorsDots is not None:
                 colorsDots = colorFactor * (colorsDots-self.colorMin) /\
                     (self.colorMax - self.colorMin)
-                colorsDots = np.dstack((colorsDots,
-                                        np.ones_like(alphaDots)*colorSaturation,  # analysis:ignore
-                                        alphaDots if self.iHSV else
-                                        np.ones_like(alphaDots)))
+                colorsDots = np.dstack(
+                    (colorsDots,
+                     np.ones_like(alphaDots)*colorSaturation,
+                     alphaDots if self.iHSV else
+                     np.ones_like(alphaDots)))
                 colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
 
                 if self.globalNorm and len(alphaDots) > 0:
@@ -2217,7 +2224,7 @@ class xrtGlWidget(qt.QGLWidget):
                               self.scaleVec[dimension]) / self.maxLen)
 
     def worldToModel(self, coords):
-            return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
+        return np.float32(coords * self.maxLen / self.scaleVec - self.tVec)
 
     def drawText(self, coord, text, noScalable=False, alignment=None,
                  useCaption=False):
@@ -2500,7 +2507,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        if len(self.oesToPlot) > 0 or self.virtScreen is not None:  # Surfaces of optical elements
+        # Surfaces of optical elements:
+        if len(self.oesToPlot) > 0 or self.virtScreen is not None:
             gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
             gl.glEnable(gl.GL_NORMALIZE)
 
@@ -2528,7 +2536,6 @@ class xrtGlWidget(qt.QGLWidget):
                         raise
                     else:
                         continue
-
 
             if self.virtScreen is not None:
                 self.setMaterial('semiSi')
@@ -3232,20 +3239,20 @@ class xrtGlWidget(qt.QGLWidget):
                     edgeZ = np.zeros_like(xGridOe)
                     if oe.isParametric:
                         edgeX, edgeY, edgeZ = oe.xyz_to_param(
-                                edgeX, edgeY, edgeZ)
+                            edgeX, edgeY, edgeZ)
 
                     edgeZ = local_z(edgeX, edgeY)
                     if oe.isParametric:
                         edgeX, edgeY, edgeZ = oe.param_to_xyz(
-                                edgeX, edgeY, edgeZ)
+                            edgeX, edgeY, edgeZ)
 
                     gridZ = None
                     for zTop in edgeZ:
                         gridZ = np.linspace(-thickness, zTop,
                                             self.surfCPOrder) if\
                             gridZ is None else np.concatenate((
-                                    gridZ, np.linspace(-thickness, zTop,
-                                                       self.surfCPOrder)))
+                                gridZ, np.linspace(-thickness, zTop,
+                                                   self.surfCPOrder)))
 
                     gridX = np.repeat(edgeX, len(edgeZ))
                     gridY = np.ones_like(gridX) * yPos
@@ -3286,11 +3293,11 @@ class xrtGlWidget(qt.QGLWidget):
 
                     if oe.isParametric:
                         edgeX, edgeY, edgeZ = oe.xyz_to_param(
-                                edgeX, edgeY, edgeZ)
+                            edgeX, edgeY, edgeZ)
                     edgeZ = local_z(edgeX, edgeY)
                     if oe.isParametric:
                         edgeX, edgeY, edgeZ = oe.param_to_xyz(
-                                edgeX, edgeY, edgeZ)
+                            edgeX, edgeY, edgeZ)
 
                     zN = 0
                     gridZ = None
@@ -3298,8 +3305,8 @@ class xrtGlWidget(qt.QGLWidget):
                         gridZ = np.linspace(-thickness, zTop,
                                             self.surfCPOrder) if\
                             gridZ is None else np.concatenate((
-                                    gridZ, np.linspace(-thickness, zTop,
-                                                       self.surfCPOrder)))
+                                gridZ, np.linspace(-thickness, zTop,
+                                                   self.surfCPOrder)))
 
                     gridY = np.repeat(edgeY, len(edgeZ))
                     if oe.shape == 'round':
@@ -4015,9 +4022,9 @@ class xrtGlWidget(qt.QGLWidget):
                 if material not in [None, 'None']:
                     if hasattr(material, 'hkl'):
                         hklSeparator = ',' if np.any(np.array(
-                                material.hkl) >= 10) else ''
+                            material.hkl) >= 10) else ''
                         yText = '[{0[0]}{1}{0[1]}{1}{0[2]}]'.format(
-                                list(material.hkl), hklSeparator)
+                            list(material.hkl), hklSeparator)
 #                        yText = '{}'.format(list(material.hkl))
 
         cb = rsources.Beam(nrays=nFacets+2)
@@ -4085,7 +4092,7 @@ class xrtGlWidget(qt.QGLWidget):
             crPlaneNormX = crPlaneX * self.scaleVec
             crPlaneNormX /= np.linalg.norm(crPlaneNormX)
             crPlaneNormZ = self.rotateVecQ(
-                    scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
+                scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
             crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
             crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
             crPlaneNormY /= np.linalg.norm(crPlaneNormY)
