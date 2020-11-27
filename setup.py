@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup
 
+long_description_content_type = 'text/x-rst'
+
 # import importLongDescription
 # long_description = importLongDescription.output()
 long_description = u"""
@@ -164,10 +166,10 @@ Get xrt
 
 xrt is available as source distribution from `pypi.python.org
 <https://pypi.python.org/pypi/xrt>`_ and from `GitHub
-<https://github.com/kklmn/xrt>`_. The distribution archive also includes tests,
+<https://github.com/kklmn/xrt>`_. The distribution archive also includes tests
 and examples. The complete documentation is available online at
-`Read the Docs <http://xrt.readthedocs.io>`_ and offline as zip file at
-`GitHub <https://github.com/kklmn/xrt-docs>`_.
+`Read the Docs <http://xrt.readthedocs.io>`_ and offline as
+`zip file at GitHub <https://github.com/kklmn/xrt-docs>`_.
 
 Get help
 --------
