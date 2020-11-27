@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup
 
-long_description_content_type = 'text/x-rst'
-
 # import importLongDescription
 # long_description = importLongDescription.output()
 long_description = u"""
@@ -187,6 +185,7 @@ setup(
                 'beamline elements. Includes a GUI for creating a beamline '
                 'and viewing it in 3D.',
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     author='Konstantin Klementiev, Roman Chernikov',
     author_email='konstantin.klementiev@gmail.com, rchernikov@gmail.com',
     url='http://xrt.readthedocs.io',
