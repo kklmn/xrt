@@ -1604,7 +1604,10 @@ class xrtGlow(qt.QWidget):
 - **CTRL+WheelMouse**: Zoom the Scene
         """
         helpWidget = qt.QTextEdit()
-        helpWidget.setMarkdown(helpText)
+        try:
+            helpWidget.setMarkdown(helpText)
+        except AttributeError:
+            helpWidget.setText(helpText)
         helpWidget.setReadOnly(True)
         layout.addWidget(helpWidget)
         closeButton = qt.QPushButton("Close", d)
