@@ -1034,6 +1034,41 @@ class Undulator(object):
 
         self.reset()
 
+    def _clenshaw_curtis(self, n):
+        """
+        Adopted from quadpy https://github.com/nschloe/quadpy
+        Fixed python 2 compatibilty
+        """
+        points = -np.cos((np.pi * np.arange(n)) / (n - 1))
+    
+        if n == 2:
+            weights = np.array([1.0, 1.0])
+            return (points, weights)
+    
+        n -= 1
+        N = np.arange(1, n, 2)
+        length = len(N)
+        m = n - length
+        v0 = np.concatenate(
+            [2.0 / N / (N - 2), np.array([1.0 / N[-1]]), np.zeros(m)]
+        )
+        v2 = -v0[:-1] - v0[:0:-1]
+        g0 = -np.ones(n)
+        g0[length] += n
+        g0[m] += n
+        g = g0 / (n ** 2 - 1 + (n % 2))
+    
+        w = np.fft.ihfft(v2 + g)
+        assert max(w.imag) < 1.0e-15
+        w = w.real
+    
+        if n % 2 == 1:
+            weights = np.concatenate([w, w[::-1]])
+        else:
+            weights = np.concatenate([w, w[len(w) - 2 :: -1]])
+    
+        return (points, weights)
+
     def read_custom_field(self, fname, kwargs={}):
         def my_sin(x, a, k, ph, c):
             return a * np.cos(k * x + ph) + c
@@ -1042,13 +1077,7 @@ class Undulator(object):
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             import pandas
             kwargs['engine'] = "openpyxl"
-            try:
-                data = pandas.read_excel(fname, **kwargs).values
-            except ValueError as e:
-                print(e)
-                if 'openpyxl' in str(e):
-                    print('install it as `pip install openpyxl`')
-                    raise e
+            data = pandas.read_excel(fname, **kwargs).values
         else:
             data = np.loadtxt(fname)
 
@@ -1591,6 +1620,7 @@ class Undulator(object):
         ww1 = w * ((1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) +
                    gamma2 * (ddtheta**2 + ddpsi**2)) / (2. * gamma2 * wu)
         tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
+#        tg_n, ag_n = self._clenshaw_curtis(self.quadm)
         self.tg_n, self.ag_n = tg_n, ag_n
 
         if (self.taper is not None) or (self.R0 is not None):
@@ -1651,6 +1681,7 @@ class Undulator(object):
         Np = np.int32(self.Np)
 
         tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
+#        tg_n, ag_n = self._clenshaw_curtis(self.quadm)
         self.tg_n, self.ag_n = tg_n, ag_n
 
         ab = 1. / PI2 / wu
@@ -1810,6 +1841,7 @@ class Undulator(object):
         Np = np.int32(self.Np)
 
         tg_n, ag_n = np.polynomial.legendre.leggauss(self.quadm)
+#        tg_n, ag_n = self._clenshaw_curtis(self.quadm)
         self.tg_n, self.ag_n = tg_n, ag_n
 
         dstep = 2 * PI / float(self.gIntervals)
@@ -2284,17 +2316,14 @@ class Undulator(object):
                 sSP = 1.
             else:
                 sSP = mJs2 + mJp2
+
             bot.Jsp[:] = np.where(sSP, mJs * np.conj(mJp) / sSP, 0)
             bot.Jss[:] = np.where(sSP, mJs2 / sSP, 0)
             bot.Jpp[:] = np.where(sSP, mJp2 / sSP, 0)
 
             if withAmplitudes:
-                if self.uniformRayDensity:
-                    bot.Es[:] = mJs
-                    bot.Ep[:] = mJp
-                else:
-                    bot.Es[:] = mJs / mJs2**0.5
-                    bot.Ep[:] = mJp / mJp2**0.5
+                bot.Es[:] = mJs
+                bot.Ep[:] = mJp
 
             if bo is None:
                 bo = bot
