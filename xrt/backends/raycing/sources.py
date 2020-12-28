@@ -610,4 +610,4 @@ from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
     CollimatedMeshSource, shrink_source, make_energy, make_polarization,\
     GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam
 from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS
-from .sources_synchr import BendingMagnet, Wiggler, Undulator
+from .sources_synchr import BendingMagnet, Wiggler, Undulator, SourceFromField

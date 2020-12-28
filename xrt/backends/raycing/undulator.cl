@@ -623,9 +623,9 @@ float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
 }
 
 
-__kernel void undulator_custom(const int jend,
+__kernel void custom_field(const int jend,
                                 const int nwt,
-                                const float lUnd,
+                                const float R0,
                                 __global float* gamma,
                                 __global float* w,
                                 __global float* ddphi,
@@ -645,18 +645,28 @@ __kernel void undulator_custom(const int jend,
     float ucos, sinucos, cosucos, rkStep, wu_int, betam_int, krel;
     float revg = 1. / gamma[ii];
     float revg2 = revg * revg;
-    float emcg = lUnd * SIE0 / SIM0 / C * revg / PI2;
+    float emcg = SIE0 / SIM0 / C * revg;
     float revgamma = 1. - revg2;
     float8 betaTraj;
     float2 eucos;
     float2 Is = zero2;
     float2 Ip = zero2;
     float2 beta, beta0;
-    float3 traj, n, traj0, betaC, betaP, nnb;
+    float3 r0, traj, n, traj0, betaC, betaP, nnb;
+    float betazav; 
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
+    n = normalize(n);
+
+    if (R0>0) {
+        float wR0 = R0;
+        n.x = tan(ddphi[ii]);
+        n.y = tan(ddpsi[ii]);
+        n.z = 1.;
+        n = normalize(n);
+        r0 = wR0 * n; }
 
     beta = zero2;
     beta0 = zero2;
@@ -700,7 +710,8 @@ __kernel void undulator_custom(const int jend,
     beta = beta0;
     traj = traj0;
     betam_int /= (tg[jend-1] - tg[0]);
-    wu_int = PI2 * C * betam_int / lUnd / E2W;
+    betazav = betam_int;
+//    wu_int = PI2 * C * betam_int / lUnd / E2W;
 
     for (j=1; j<jend; j++) {
         iBase = 2*(j-1)*nwt;
@@ -716,7 +727,10 @@ __kernel void undulator_custom(const int jend,
             traj = betaTraj.s234; }
 
         mem_fence(CLK_LOCAL_MEM_FENCE);
-        ucos = w[ii] / wu_int * (tg[j]  - dot(n, traj));
+        if (R0 > 0) {
+            ucos = w[ii] * E2W / betazav / C * (tg[j] + length(r0 - traj)); }
+        else {
+            ucos = w[ii] * E2W / betazav / C * (tg[j] - dot(n, traj)); }
         sinucos = sincos(ucos, &cosucos);
         eucos.x = cosucos;
         eucos.y = sinucos;
@@ -725,23 +739,20 @@ __kernel void undulator_custom(const int jend,
 
         betaC.x = beta.x;
         betaC.y = beta.y;
-        betaC.z = 1 - HALF*(revg2 + betaC.x*betaC.x + betaC.y*betaC.y);
+        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
 
-        betaP.x = wu_int * emcg * (betaC.y*Bz[jb] - By[jb]);
-        betaP.y = wu_int * emcg * (-betaC.x*Bz[jb] + Bx[jb]);
-        betaP.z = wu_int * emcg * (betaC.x*By[jb] - betaC.y*Bx[jb]);
+        betaP.x = emcg * (betaC.y*Bz[jb] - By[jb]);
+        betaP.y = emcg * (-betaC.x*Bz[jb] + Bx[jb]);
+        betaP.z = emcg * (betaC.x*By[jb] - betaC.y*Bx[jb]);
 
-        if (isHiPrecision) {
+//        if (isHiPrecision) {
             krel = 1. - dot(n, betaC);
-            nnb = cross(n, cross((n - betaC), betaP))/(krel*krel); }
-        else
-            nnb = (n - betaC) * w[ii];
+            nnb = cross(n, cross((n - betaC), betaP))/(krel*krel); //}
+//        else
+//            nnb = (n - betaC) * w[ii];
 
-        Is += (ag[j] * nnb.x) * eucos;
-        Ip += (ag[j] * nnb.y) * eucos; }
-
-        //Is += ag[j] * (ddphi[ii] - beta.x) * eucos;
-        //Ip += ag[j] * (ddpsi[ii] - beta.y) * eucos; }
+        Is += (ag[j] * nnb.x) * eucos / betazav;
+        Ip += (ag[j] * nnb.y) * eucos / betazav; }
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
 
@@ -837,12 +848,11 @@ __kernel void get_trajectory(const int jend,
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-__kernel void undulator_custom_filament(const int jend,
-                                        const int nwt,
+__kernel void custom_field_filament(const int jend,
+//                                        const int nwt,
                                         const float emcg,
                                         const float gamma2,
-                                        const float wu,
-                                        const float L0,
+                                        const float betazav,
                                         const float R0,
                                         __global float* w,
                                         __global float* ddphi,
@@ -861,7 +871,7 @@ __kernel void undulator_custom_filament(const int jend,
                                         __global float2* Ip_gl)
 {
     unsigned int ii = get_global_id(0);
-    int j, jb;
+    int j;
 
     float ucos, sinucos, cosucos, wR0, krel;
     float revg2 = 1./gamma2;
@@ -875,46 +885,45 @@ __kernel void undulator_custom_filament(const int jend,
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
+    n = normalize(n);
 
     if (R0>0) {
-        wR0 = R0 * PI2 / L0;
-        r0.x = wR0 * tan(ddphi[ii]);
-        r0.y = wR0 * tan(ddpsi[ii]);
-        r0.z = wR0 * cos(sqrt(ddphi[ii]*ddphi[ii] + ddpsi[ii]*ddpsi[ii])); }
+        wR0 = R0;
+        n.x = tan(ddphi[ii]);
+        n.y = tan(ddpsi[ii]);
+        n.z = 1.;
+        n = normalize(n);
+        r0 = wR0 * n; }
 
     for (j=1; j<jend; j++) {
         traj.x = trajx[j];
         traj.y = trajy[j];
         traj.z = trajz[j];
+
+        betaC.x = betax[j];
+        betaC.y = betay[j];
+        betaC.z = sqrt(1. - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
+
         if (R0 > 0) {
-            ucos = w[ii] / wu * (tg[j] + length(r0 - traj)); }
+            ucos = w[ii] * E2W / betazav / C * (tg[j] + length(r0 - traj)); }
         else {
-            ucos = w[ii] / wu * (tg[j] - dot(n, traj)); }
+            ucos = w[ii] * E2W / betazav / C * (tg[j] - dot(n, traj)); }
+
         sinucos = sincos(ucos, &cosucos);
         eucos.x = cosucos;
         eucos.y = sinucos;
 
-        jb = 2*j*nwt;
+//        jb = 2*j*nwt;
 
-        betaC.x = betax[j];
-        betaC.y = betay[j];
-        betaC.z = 1 - HALF*(revg2 + betaC.x*betaC.x + betaC.y*betaC.y);
+        betaP.x = emcg * (betaC.y*Bz[j] - By[j]);
+        betaP.y = emcg * (-betaC.x*Bz[j] + Bx[j]);
+        betaP.z = emcg * (betaC.x*By[j] - betaC.y*Bx[j]);
 
-        betaP.x = wu * emcg * (betaC.y*Bz[jb] - By[jb]);
-        betaP.y = wu * emcg * (-betaC.x*Bz[jb] + Bx[jb]);
-        betaP.z = wu * emcg * (betaC.x*By[jb] - betaC.y*Bx[jb]);
-
-        if (isHiPrecision) {
-            krel = 1. - dot(n, betaC);
-            nnb = cross(n, cross((n - betaC), betaP))/(krel*krel); }
-        else
-            nnb = (n - betaC) * w[ii];
+        krel = 1. - dot(n, betaC);
+        nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
 
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
-
-        //Is += ag[j] * (n.x - betax[j]) * eucos;
-        //Ip += ag[j] * (n.y - betay[j]) * eucos; }
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
     Is_gl[ii] = Is;
