@@ -398,7 +398,8 @@ class SourceFromField(object):
                 print("G = {0}".format(
                     [self.gIntervals, self.quadm, mad, dimad]))
 #            if (self.quadm<500 and dimad<self.gp) or (mad < 10):
-            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary):
+            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary)\
+                    or (dimad<1e-4):
 #            if mad < 10:
                 break
             if self.quadm > 400000:
