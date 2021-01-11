@@ -11,10 +11,11 @@ __constant float QUAR = 0.25;
 __constant float HALF = 0.5;
 __constant float TWO = 2.;
 __constant float SIX = 6.;
+__constant float REVSIX = 1./6.;
 __constant bool isHiPrecision = sizeof(TWO) == 8;
 //__constant bool isHiPrecision = false;
 __constant float2 zero2 = (float2)(0, 0);
-
+__constant float3 zero3 = (float3)(0, 0, 0);
 __constant float PI2 = (float)6.283185307179586476925286766559;
 __constant float PI = (float)3.1415926535897932384626433832795;
 
@@ -22,6 +23,27 @@ __constant float E2W = 1.51926751475e15;
 __constant float C = 2.99792458e11;
 __constant float SIE0 = 1.602176565e-19;
 __constant float SIM0 = 9.10938291e-31;
+//__constant float RK4_STEPS[3] = {0.5, 0.5, 1.};
+//__constant float RK4_B[4] = {1./6., 1./3., 1./3., 1./6.};
+//__constant float RK4_A[9] = {0.5, 0.0, 0.0,
+//                             0.0, 0.5, 0.0,
+//                             0.0, 0.0, 1.0};
+//
+//__constant float RK8_B[10] =
+//{41./840., 0, 0, 27./840., 272./840.,
+//27./840., 216./840., 0, 216./840., 41./840.} ;
+//
+//__constant float RK8_A[81] = {
+//4./27., 0, 0, 0, 0, 0, 0, 0, 0,
+//1./18, 3./18., 0, 0, 0, 0, 0, 0, 0,
+//1./12., 0, 3./12., 0, 0, 0, 0, 0, 0,
+//1./8., 0, 0, 3./8., 0, 0, 0, 0, 0,
+//13./54., 0, -27./54., 42./54., 8./54., 0, 0, 0, 0,
+//389./4320., 0, -54./4320., 966./4320., -824./4320., 243./4320., 0, 0, 0,
+//-234./20., 0, 81./20., -1164./20., 656./20., -122./20., 800./20., 0, 0,
+//-127./288., 0, 18./288., -678./288., 456./288., -9./288., 576./288., 4./288., 0,
+//1481./820., 0, -81./820., 7104./820., -3376./820., 72./820., -5040./820., -60./820., 720./820.};
+
 
 __kernel void undulator(const float alpha,
                         const float Kx,
@@ -176,7 +198,6 @@ __kernel void undulator_taper(const float alpha,
 __kernel void undulator_nf(const float R0,
                            const float Kx,
                            const float Ky,
-//                           const float phase,
                            const int jend,
                            const int nmax,
                            __global float* gamma,
@@ -198,10 +219,11 @@ __kernel void undulator_nf(const float R0,
     int j, np;
 
     float2 eucos;
-    float ucos, sinucos, cosucos, krel, LR, zloc, zterm, Kys, Kxsph;
+    float ucos, sinucos, cosucos, krel, LR, zloc, zterm, Kys, Kxsph, drs;
+    float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
     float2 Is = zero2;
     float2 Ip = zero2;
-    float3 r, r0, n, nloc, nnb, beta, betaP;
+    float3 r, r0, n, nloc, nnb, beta, betaP, dr;
     float Kx2 = Kx * Kx;
     float Ky2 = Ky * Ky;
     float revg = 1. / gamma[ii];
@@ -212,8 +234,11 @@ __kernel void undulator_nf(const float R0,
     nloc.x = tan(ddphi[ii]);
     nloc.y = tan(ddpsi[ii]);
     nloc.z = 1.;
-    nloc = normalize(nloc);
+
+    nloc /= length(nloc);
+
     r0 = R0 * nloc;
+    sinr0z = sincos(wwu * r0.z, &cosr0z);
 
     for (np=0; np<nmax; np++) {
         for (j=0; j<jend; j++) {
@@ -221,17 +246,23 @@ __kernel void undulator_nf(const float R0,
             Kys = Ky * sintg[j];
             Kxsph = Kx * sintgph[j];
             zloc = -(nmax-1)*PI + np*PI2 + tg[j];
-    
+                
             r.x = Kys * revg;
             r.y = -Kxsph * revg;
             r.z = betam * zloc - QUAR * zterm * revg;
-            LR = length(r0 - r);
-   
-            ucos = wwu * (zloc + LR);
-    
-            sinucos = sincos(ucos, &cosucos);
-            eucos.x = cosucos;
-            eucos.y = sinucos;
+            
+            dr = r0 - r;
+            drs = 0.5*(dr.x*dr.x+dr.y*dr.y)/dr.z;
+
+            sinzloc = sincos(wwu *zloc*(1-betam), &coszloc);
+            sindrs = sincos(wwu *(drs + QUAR * zterm * revg), &cosdrs);
+            
+            LR = dr.z + drs; // - 0.125*drs*drs;
+
+            eucos.x = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
+                       cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
+            eucos.y = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
+                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs; 
     
             beta.x = Ky * revg * costg[j];
             beta.y = -Kx * revg * costgph[j];
@@ -241,7 +272,7 @@ __kernel void undulator_nf(const float R0,
             betaP.x = -Kys; //* revg;
             betaP.y = Kxsph; //* revg;
             betaP.z = zterm; //* revg;
-            n = (r0 - r)/LR;
+            n = dr/LR;
 
             krel = 1. - dot(n, beta);
             nnb = cross(n, cross((n - beta), betaP))/(krel*krel);
@@ -250,9 +281,9 @@ __kernel void undulator_nf(const float R0,
     //            }
     //        else
     //            nnb = (n - beta) * w[ii];
-    
+  
             Is += (ag[j] * nnb.x) * eucos;
-            Ip += (ag[j] * nnb.y) * eucos; }}
+            Ip += (ag[j] * nnb.y) * eucos;}}
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
 
@@ -297,11 +328,6 @@ __kernel void undulator_full(const float alpha,
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
-    //float betax0 = 0; //1e-6;
-    //float betay0 = 0;
-    //float rx0 = 2e-2*PI2/L0/wu[ii];
-    //float ry0 = 0;
-    //n.z = sqrt(1. - n.x*n.x - n.y*n.y);
     n.z = 1 - HALF*(n.x*n.x + n.y*n.y);
 
     for (j=0; j<jend; j++) {
@@ -546,8 +572,56 @@ __kernel void undulator_nf_byparts(const float alpha,
     Is_gl[ii] = Is;
     Ip_gl[ii] = Ip;
     }
-*/
 
+
+float2 next_beta_rkn(float2 beta, int nmax,
+                     float rkStep, float emcg,
+                     float* Bx, float* By, float* Bz)
+{
+    float2 kBetaFinal = zero2;
+    float2 fArg;
+    float2 kf_beta[10];
+    int i, j;
+    for (i=0;i<nmax;i++) {
+        fArg = zero2;
+        for (j=0;j<i;j++) {
+            fArg += RK8_A[(i-1)*(nmax-1)+j]*kf_beta[j];
+        }
+        kf_beta[i] = f_beta(
+                Bx[i], By[i], Bz[i], emcg,
+                rkStep*fArg+beta);
+        kBetaFinal += kf_beta[i]*RK8_B[i];
+    }
+
+    return rkStep*kBetaFinal + beta;
+}
+
+float8 next_traj_rkn(float2 beta, float3 traj,
+                     int nmax, float rkStep, float emcg, float revgamma,
+                     float* Bx, float* By, float* Bz)
+{
+    float2 kBetaFinal=zero2;
+    float3 kTrajFinal=zero3;
+    float2 fArg;
+    float2 kf_beta[10];
+    float3 kf_traj[10];
+    int i, j;
+    for (i=0;i<nmax;i++) {
+        fArg = zero2;
+        for (j=0;j<i;j++) {
+            fArg += RK8_A[(i-1)*(nmax-1)+j]*kf_beta[j];
+        }
+        kf_beta[i] = f_beta(
+                Bx[i], By[i], Bz[i], emcg,
+                rkStep*fArg+beta);
+        kf_traj[i] = f_traj(revgamma, rkStep*fArg+beta);
+        kBetaFinal += kf_beta[i]*RK8_B[i];
+        kTrajFinal += kf_traj[i]*RK8_B[i];
+    }
+    return (float8)(rkStep*kBetaFinal+beta,
+                    rkStep*kTrajFinal+traj, zero3);
+}
+*/
 float2 f_beta(float Bx, float By, float Bz,
                float emcg,
                float2 beta)
@@ -560,39 +634,30 @@ float3 f_traj(float revgamma, float2 beta)
 {
     return (float3)(beta.x,
                      beta.y,
+// TODO: convert to series
                      sqrt(revgamma-beta.x*beta.x-beta.y*beta.y));
 }
 
-float2 next_beta_rk(float2 beta, int iZeroStep, int iHalfStep,
-                     int iFullStep, float rkStep, float emcg,
+float2 next_beta_rk(float2 beta, int iBase, float rkStep, float emcg,
                      __global float* Bx,
                      __global float* By,
                      __global float* Bz)
 {
     float2 k1Beta, k2Beta, k3Beta, k4Beta;
 
-    k1Beta = rkStep * f_beta(Bx[iZeroStep],
-                             By[iZeroStep],
-                             Bz[iZeroStep],
+    k1Beta = rkStep * f_beta(Bx[iBase], By[iBase], Bz[iBase],
                              emcg, beta);
-    k2Beta = rkStep * f_beta(Bx[iHalfStep],
-                             By[iHalfStep],
-                             Bz[iHalfStep],
+    k2Beta = rkStep * f_beta(Bx[iBase+1], By[iBase+1], Bz[iBase+1],
                              emcg, beta + HALF*k1Beta);
-    k3Beta = rkStep * f_beta(Bx[iHalfStep],
-                             By[iHalfStep],
-                             Bz[iHalfStep],
+    k3Beta = rkStep * f_beta(Bx[iBase+1], By[iBase+1], Bz[iBase+1],
                              emcg, beta + HALF*k2Beta);
-    k4Beta = rkStep * f_beta(Bx[iFullStep],
-                             By[iFullStep],
-                             Bz[iFullStep],
+    k4Beta = rkStep * f_beta(Bx[iBase+2], By[iBase+2], Bz[iBase+2],
                              emcg, beta + k3Beta);
-    return beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta) / SIX;
+    return beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta)*REVSIX;
 }
 
-float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
-                     int iFullStep, float rkStep, float emcg,
-                     float revgamma,
+float8 next_traj_rk(float2 beta, float3 traj, int iBase, float rkStep,
+                    float emcg, float revgamma,
                      __global float* Bx,
                      __global float* By,
                      __global float* Bz)
@@ -600,34 +665,27 @@ float8 next_traj_rk(float2 beta, float3 traj, int iZeroStep, int iHalfStep,
     float2 k1Beta, k2Beta, k3Beta, k4Beta;
     float3 k1Traj, k2Traj, k3Traj, k4Traj;
 
-    k1Beta = rkStep * f_beta(Bx[iZeroStep],
-                             By[iZeroStep],
-                             Bz[iZeroStep],
+    k1Beta = rkStep * f_beta(Bx[iBase], By[iBase], Bz[iBase],
                              emcg, beta);
     k1Traj = rkStep * f_traj(revgamma, beta);
 
-    k2Beta = rkStep * f_beta(Bx[iHalfStep],
-                             By[iHalfStep],
-                             Bz[iHalfStep],
+    k2Beta = rkStep * f_beta(Bx[iBase+1], By[iBase+1], Bz[iBase+1],
                              emcg, beta + HALF*k1Beta);
     k2Traj = rkStep * f_traj(revgamma, beta + HALF*k1Beta);
 
-    k3Beta = rkStep * f_beta(Bx[iHalfStep],
-                             By[iHalfStep],
-                             Bz[iHalfStep],
+    k3Beta = rkStep * f_beta(Bx[iBase+1], By[iBase+1], Bz[iBase+1],
                              emcg, beta + HALF*k2Beta);
     k3Traj = rkStep * f_traj(revgamma, beta + HALF*k2Beta);
 
-    k4Beta = rkStep * f_beta(Bx[iFullStep],
-                             By[iFullStep],
-                             Bz[iFullStep],
+    k4Beta = rkStep * f_beta(Bx[iBase+2], By[iBase+2], Bz[iBase+2],
                              emcg, beta + k3Beta);
     k4Traj = rkStep * f_traj(revgamma, beta + k3Beta);
 
-    return (float8)(beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta)/SIX,
-                     traj + (k1Traj + TWO*k2Traj + TWO*k3Traj + k4Traj)/SIX,
+    return (float8)(beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta)*REVSIX,
+                     traj + (k1Traj + TWO*k2Traj + TWO*k3Traj + k4Traj)*REVSIX,
                      0., 0., 0.);
 }
+
 
 __kernel void custom_field(const int jend,
                                 const int nwt,
@@ -648,10 +706,11 @@ __kernel void custom_field(const int jend,
     int j, k, jb;
     int iBase, iZeroStep, iHalfStep, iFullStep;
 
-    float ucos, sinucos, cosucos, rkStep, wu_int, betam_int, krel, LR;
+    float ucos, sinucos, cosucos, rkStep, betam_int, krel;
     float revg = 1. / gamma[ii];
     float revg2 = revg * revg;
     float emcg = SIE0 / SIM0 / C * revg;
+// TODO: convert to series, leave only 1/gamma2
     float revgamma = 1. - revg2;
     float8 betaTraj;
     float2 eucos;
@@ -659,19 +718,19 @@ __kernel void custom_field(const int jend,
     float2 Ip = zero2;
     float2 beta, beta0;
     float3 r0, traj, n, traj0, betaC, betaP, nnb;
-    float betazav; 
+    float betazav;
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
-    n = normalize(n);
+    n /= length(n);
 
     if (R0>0) {
         float wR0 = R0;
         n.x = tan(ddphi[ii]);
         n.y = tan(ddpsi[ii]);
         n.z = 1.;
-        n = normalize(n);
+        n /= length(n);
         r0 = wR0 * n; }
 
     beta = zero2;
@@ -685,7 +744,7 @@ __kernel void custom_field(const int jend,
             iZeroStep  = iBase + 2*k;
             iHalfStep = iBase + 2*k + 1;
             iFullStep = iBase + 2*(k + 1);
-            beta = next_beta_rk(beta, iZeroStep, iHalfStep, iFullStep,
+            beta = next_beta_rk(beta, iZeroStep,
                                 rkStep, emcg, Bx, By, Bz);
             beta0 += beta * rkStep; } }
 
@@ -703,7 +762,7 @@ __kernel void custom_field(const int jend,
             iHalfStep = iBase + 2*k + 1;
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
-                                    iZeroStep, iHalfStep, iFullStep,
+                                    iZeroStep,
                                     rkStep, emcg, revgamma, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234;
@@ -727,15 +786,13 @@ __kernel void custom_field(const int jend,
             iHalfStep = iBase + 2*k + 1;
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
-            iZeroStep, iHalfStep, iFullStep,
-            rkStep, emcg, revgamma, Bx, By, Bz);
+            iZeroStep, rkStep, emcg, revgamma, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234; }
 
         mem_fence(CLK_LOCAL_MEM_FENCE);
         if (R0 > 0) {
-            LR = length(r0 - traj);
-            ucos = w[ii] * E2W / betazav / C * (tg[j] + LR); }
+            ucos = w[ii] * E2W / betazav / C * (tg[j] + length(r0 - traj)); }
         else {
             ucos = w[ii] * E2W / betazav / C * (tg[j] - dot(n, traj)); }
         sinucos = sincos(ucos, &cosucos);
@@ -752,10 +809,11 @@ __kernel void custom_field(const int jend,
         betaP.y = emcg * (-betaC.x*Bz[jb] + Bx[jb]);
         betaP.z = emcg * (betaC.x*By[jb] - betaC.y*Bx[jb]);
 
-        n = (r0 - traj) / LR;
-
-        krel = 1. - dot(n, betaC);
-        nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
+//        if (isHiPrecision) {
+            krel = 1. - dot(n, betaC);
+            nnb = cross(n, cross((n - betaC), betaP))/(krel*krel); //}
+//        else
+//            nnb = (n - betaC) * w[ii];
 
         Is += (ag[j] * nnb.x) * eucos / betazav;
         Ip += (ag[j] * nnb.y) * eucos / betazav; }
@@ -767,7 +825,6 @@ __kernel void custom_field(const int jend,
 }
 
 __kernel void get_trajectory(const int jend,
-                             const int nwt,
                              const float emcg,
                              const float gamma2,
                              __global float* tg,
@@ -781,81 +838,81 @@ __kernel void get_trajectory(const int jend,
                              __global float* trajy,
                              __global float* trajz)
 {
-    int j, k;
-    int iBase, iZeroStep, iHalfStep, iFullStep;
-
+    int j;
     float rkStep;
+    // TODO: leave only 1/gamma2
     float revgamma = 1. - 1./gamma2;
     float betam_int = 0;
     float2 beta, beta0;
     float3 traj, traj0;
     float8 betaTraj;
-
+//    float Bx4[10], By4[10], Bz4[10];
+//    int nmax = 10;
     beta = zero2;
     beta0 = zero2;
 
-    for (j=1; j<jend; j++) {
-        iBase = (j-1)*2*nwt;
-        rkStep = (tg[j] - tg[j-1]) / nwt;
-        for (k=0; k<nwt; k++) {
-            iZeroStep  = iBase + 2*k;
-            iHalfStep = iBase + 2*k + 1;
-            iFullStep = iBase + 2*(k + 1);
-            beta = next_beta_rk(beta, iZeroStep, iHalfStep, iFullStep,
-                                rkStep, emcg, Bx, By, Bz);
-            beta0 += beta * rkStep; } }
+    for (j=0; j<jend-1; j++) {
+        rkStep = tg[j+1] - tg[j];
+        beta = next_beta_rk(beta, j*2, rkStep, emcg, Bx, By, Bz);
+//        for (k=0;k<nmax;k++){
+//            Bx4[k] = Bx[j+k]; By4[k] = By[j+k]; Bz4[k] = Bz[j+k];}
+//        beta = next_beta_rkn(beta, nmax, rkStep, emcg, Bx4, By4, Bz4);
+        beta0 += beta * rkStep;
+    }
     mem_fence(CLK_LOCAL_MEM_FENCE);
     beta0 /= -(tg[jend-1] - tg[0]);
     beta = beta0;
     traj = (float3)(0., 0., 0.);
     traj0 = (float3)(0., 0., 0.);
 
-    for (j=1; j<jend; j++) {
-        iBase = 2*(j-1)*nwt;
-        rkStep = (tg[j] - tg[j-1]) / nwt;
-        for (k=0; k<nwt; k++) {
-            iZeroStep  = iBase + 2*k;
-            iHalfStep = iBase + 2*k + 1;
-            iFullStep = iBase + 2*(k + 1);
-            betaTraj = next_traj_rk(beta, traj,
-                                    iZeroStep, iHalfStep, iFullStep,
-                                    rkStep, emcg, revgamma, Bx, By, Bz);
-            beta = betaTraj.s01;
-            traj = betaTraj.s234;
-            traj0 += traj * rkStep;
-            betam_int += rkStep*sqrt(revgamma - beta.x*beta.x -
-                                     beta.y*beta.y); } }
+    for (j=0; j<jend-1; j++) {
+        rkStep = tg[j+1] - tg[j];
+        betaTraj = next_traj_rk(beta, traj, j*2,
+                                rkStep, emcg, revgamma, Bx, By, Bz);
+//        for (k=0;k<nmax;k++){
+//            Bx4[k] = Bx[j+k]; By4[k] = By[j+k]; Bz4[k] = Bz[j+k];}
+//        betaTraj = next_traj_rkn(beta, traj, nmax, rkStep, emcg, revgamma,
+//                                 Bx4, By4, Bz4);
+        beta = betaTraj.s01;
+        traj = betaTraj.s234;
+        traj0 += traj * rkStep;
+        betam_int += rkStep*sqrt(revgamma - beta.x*beta.x -
+                                 beta.y*beta.y);
+    }
     mem_fence(CLK_LOCAL_MEM_FENCE);
     traj0 /= -(tg[jend-1] - tg[0]);
     beta = beta0;
     traj = traj0;
     betam_int /= tg[jend-1] - tg[0];
 
-    for (j=1; j<jend; j++) {
-        iBase = 2*(j-1)*nwt;
-        rkStep = (tg[j] - tg[j-1]) / nwt;
-        for (k=0; k<nwt; k++) {
-            iZeroStep  = iBase + 2*k;
-            iHalfStep = iBase + 2*k + 1;
-            iFullStep = iBase + 2*(k + 1);
-            betaTraj = next_traj_rk(beta, traj,
-                                    iZeroStep, iHalfStep, iFullStep,
-                                    rkStep, emcg, revgamma, Bx, By, Bz);
-            beta = betaTraj.s01;
-            traj = betaTraj.s234; }
+    betax[0] = beta0.x;
+    betay[0] = beta0.y;
+    trajx[0] = traj0.x;
+    trajy[0] = traj0.y;
+    trajz[0] = traj0.z;
 
-        betax[j] = beta.x;
-        betay[j] = beta.y;
-        betazav[j] = betam_int;
-        trajx[j] = traj.x;
-        trajy[j] = traj.y;
-        trajz[j] = traj.z; }
+    for (j=0; j<jend-1; j++) {
+        rkStep = tg[j+1] - tg[j];
+        betaTraj = next_traj_rk(beta, traj, j*2,
+                                rkStep, emcg, revgamma, Bx, By, Bz);
+//        for (k=0;k<nmax;k++){
+//            Bx4[k] = Bx[j+k]; By4[k] = By[j+k]; Bz4[k] = Bz[j+k];}
+//        betaTraj = next_traj_rkn(beta, traj, nmax, rkStep, emcg, revgamma,
+//                                 Bx4, By4, Bz4);
+        beta = betaTraj.s01;
+        traj = betaTraj.s234;
+
+        betax[j+1] = beta.x;
+        betay[j+1] = beta.y;
+        betazav[j+1] = betam_int;
+        trajx[j+1] = traj.x;
+        trajy[j+1] = traj.y;
+        trajz[j+1] = traj.z; }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void custom_field_filament(const int jend,
-                                        const int nwt,
                                         const float emcg,
                                         const float gamma2,
                                         const float betazav,
@@ -877,31 +934,34 @@ __kernel void custom_field_filament(const int jend,
                                         __global float2* Ip_gl)
 {
     unsigned int ii = get_global_id(0);
-    int j, jb;
+    int j;
 
-    float ucos, sinucos, cosucos, wR0, krel, LR;
+    float ucos, sinucos, cosucos, wR0, krel, LR, LRS, drs;
+    float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
     float revg2 = 1./gamma2;
 
     float2 eucos;
     float2 Is = (float2)(0., 0.);
     float2 Ip = (float2)(0., 0.);
 
-    float3 traj, n, r0, betaC, betaP, nnb;
-    
+    float3 traj, n, r0, betaC, betaP, nnb, dr;
+
     float wc = w[ii] * E2W / betazav / C;
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
-    n = normalize(n);
+    n /= length(n);
 
     if (R0>0) {
         wR0 = R0;
         n.x = tan(ddphi[ii]);
         n.y = tan(ddpsi[ii]);
         n.z = 1.;
-        n = normalize(n);
+        n /= length(n);
         r0 = wR0 * n; }
+
+    sinr0z = sincos(wc * r0.z, &cosr0z);
 
     for (j=1; j<jend; j++) {
         traj.x = trajx[j];
@@ -912,16 +972,27 @@ __kernel void custom_field_filament(const int jend,
         betaC.y = betay[j];
         betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
 
+        dr = r0 - traj;
+        drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
+
+        LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
         LR = length(r0 - traj);
 
-        if (R0 > 0) {
-            ucos = wc * (tg[j] + LR); }
-        else {
-            ucos = wc * (tg[j] - dot(n, traj)); }
+        sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
+        sindrs = sincos(wc * LRS, &cosdrs);
 
-        sinucos = sincos(ucos, &cosucos);
-        eucos.x = cosucos;
-        eucos.y = sinucos;
+        if (R0 > 0) {
+            eucos.x = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
+                       cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
+            eucos.y = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
+                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs; }
+
+        else {
+            ucos = wc * (tg[j] - dot(n, traj));
+
+            sinucos = sincos(ucos, &cosucos);
+            eucos.x = cosucos;
+            eucos.y = sinucos;}
 
         betaP.x = betaC.y*Bz[j] - betaC.z*By[j];
         betaP.y = -betaC.x*Bz[j] + betaC.z*Bx[j];

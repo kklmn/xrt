@@ -7,6 +7,7 @@ import sys
 import numpy as np
 from scipy import optimize
 from scipy import special
+from scipy.interpolate import interp1d
 import inspect
 import time
 
@@ -103,10 +104,10 @@ class SourceFromField(object):
         except TypeError:
             self.needConvergence = True
         self.madBoundary = 20
-        self.convergence_finder = 'diff' #, 'NN', "mad"
+        self.convergence_finder = 'diff' #, "mad"
         self.useGauLeg = False
         self.maxIntegrationSteps = 9000  # Up to 511000 nodes
-        self.nRK = 10  # Number of Runge-Kutta steps between the nodes
+#        self.nRK = 10  # Number of Runge-Kutta steps between the nodes
         self.trajectory = None
         self.needReset = True
         # OpenCL-related init
@@ -166,10 +167,22 @@ class SourceFromField(object):
                 kwargs = {}
             if fname:
                 self.customFieldData = self._read_custom_field(fname, kwargs)
-        else:
+        else:  # Test with periodic field
+            self.Kx = 0.
+            self.Ky = 17.274 #1.7
+            self.phase = 0
+            self.L0 = 100 #10.
+            self.Np = 70 #30
+            self.quadm = 50
+            self.gIntervals = 2*self.Np
+            self.wtGrid = np.linspace(-self.L0*self.Np*0.5,
+                                      self.L0*self.Np*0.5,
+                                      1000*self.Np)  # 1000 points per period
             self.customFieldData = None
+            Bx, By, Bz = self._magnetic_field_periodic(self.wtGrid)
+            self.customFieldData = np.vstack((self.wtGrid, Bx, By, Bz)).T
 
-        self.reset()
+        self.needReset = True
 
     @property
     def eSigmaX(self):
@@ -321,7 +334,7 @@ class SourceFromField(object):
 
         return (points, weights)
 
-    def _find_convergence_thrsh(self, testMode=False):
+    def _find_convergence_thrsh(self, testMode=False):  # Obsolete
         mstart = 5
         m = mstart
         quad_int_error = self.gp * 10.
@@ -335,10 +348,9 @@ class SourceFromField(object):
             self.quadm = int(1.5**m)
             self._build_integration_grid()
             if self.cl_ctx is not None:
-                # sE = np.linspace(self.E_min, self.E_max, self.eN)
-                sE = self.E_max * np.ones(3)
-                sTheta_max = self.Theta_max * np.ones(3)
-                sPsi_max = self.Psi_max * np.ones(3)
+                sE = self.E_max * np.ones(2)
+                sTheta_max = self.Theta_max * np.ones(2)
+                sPsi_max = self.Psi_max * np.ones(2)
                 In = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
             else:
                 In = self.build_I_map(
@@ -372,6 +384,7 @@ class SourceFromField(object):
             return converged, (0,)
 
     def _find_convergence_mixed(self, testMode=False):
+        print("Estimating convergence")
         mstart = 5
         m = mstart
         quad_int_error = self.gp * 10.
@@ -380,14 +393,11 @@ class SourceFromField(object):
             xm = []
             pltout = []
             statOut = []
-#        mad = 1e6
-#        dimad = 1e6
-        # PHASE 1
-        print("Phase 1")
+        # PHASE 1: Find convergence, very rough and fast
+        print("Phase 1. Exponential / rough")
         step_stat = 5
         while m<10000:
             m += 1
-#            self.quadm = int(1.5**m)
             self.quadm = int(2**m)
 #            self._build_integration_grid()
             mad, dimad = self._get_mad()
@@ -398,34 +408,30 @@ class SourceFromField(object):
             if raycing._VERBOSITY_ > 10:
                 print("G = {0}".format(
                     [self.gIntervals, self.quadm, mad, dimad]))
-#            if (self.quadm<500 and dimad<self.gp) or (mad < 10):
-            if (self.quadm<150000 and dimad<self.gp) or (mad < self.madBoundary)\
-                    or (dimad<1e-4):
-#            if mad < 10:
+            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary)\
+                    or (dimad<1e-5):
                 break
             if self.quadm > 400000:
                 break
 
-        # PHASE 2
+        # PHASE 2: Bisection last interval, locate the threshold precizely
         ph2start = int(2**(m-1))
         ph2end = self.quadm
         jmax = int(np.log2((ph2end-ph2start) / (4*step_stat)))
-        print("Phase2. Jmax=", jmax)
+        print("Phase 2. Bisection / precize. {} steps".format(jmax))
         for j in range(jmax):
             self.quadm = int(0.5*(ph2end+ph2start))
             mad, dimad = self._get_mad()
-            if (self.quadm<150000 and dimad<self.gp) or (mad < self.madBoundary):
-#            if mad < 10:
+            if (self.quadm<150000 and dimad<self.gp) or\
+                    (mad < self.madBoundary):
                 ph2end = self.quadm
             else:
                 ph2start = self.quadm
-#            print(ph2start, ph2end)
         self.quadm = ph2end
 
-
         if testMode:
-            return converged, (np.array(xm), np.array(pltout), np.array(statOut),
-                   np.array(statOut))
+            return converged, (np.array(xm), np.array(pltout),
+                               np.array(statOut), np.array(statOut))
         else:
             return converged, (0,)
 
@@ -463,6 +469,7 @@ class SourceFromField(object):
             pltout.append(Inew)
             dIout.append(np.abs(Inew-Iold)/Inew)
             Iold = Inew
+            sys.exit()
 #            m += 1
 
 #        if m > stat_step:
@@ -565,26 +572,39 @@ class SourceFromField(object):
             data = np.loadtxt(fname)
         return data
 
-    def _magnetic_field(self):
-        z = self.wtGrid  # 'z' in mm
+    def _magnetic_field(self, grid=None):
         dataz = self.customFieldData[:, 0]
+        self.BGrid = np.linspace(dataz[0], dataz[-1], 2*len(dataz)-1)
+        z = self.BGrid if grid is None else grid  # 'z' in mm
         dataShape = self.customFieldData.shape
         if dataShape[1] == 2:
-            By = np.interp(z, dataz, self.customFieldData[:, 1])
+            By = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
             Bx = np.zeros_like(By)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 3:
-            Bx = np.interp(z, dataz, self.customFieldData[:, 1])
-            By = np.interp(z, dataz, self.customFieldData[:, 2])
+            Bx = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
+            By = interp1d(dataz, self.customFieldData[:, 2], kind='cubic')(z)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 4:
-            Bx = np.interp(z, dataz, self.customFieldData[:, 1])
-            By = np.interp(z, dataz, self.customFieldData[:, 2])
-            Bz = np.interp(z, dataz, self.customFieldData[:, 3])
+            Bx = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
+            By = interp1d(dataz, self.customFieldData[:, 2], kind='cubic')(z)
+            Bz = interp1d(dataz, self.customFieldData[:, 3], kind='cubic')(z)
         else:
             print("Unknown file structure.")
             raise
-        return (Bx, By, Bz)
+        # TODO: return as function
+        return Bx, By, Bz
+
+    def _magnetic_field_periodic(self, grid=None):
+        z = self.BGrid if grid is None else grid
+        self.B0x = K2B * self.Kx / self.L0
+        self.B0y = K2B * self.Ky / self.L0
+        self.B0z = 0
+        z = 2*np.pi*z/self.L0
+        Bx = self.B0x*np.sin(z)
+        By = self.B0y*np.sin(z + self.phase)
+        Bz = self.B0z*np.ones_like(Bx)
+        return Bx, By, Bz
 
     def reset(self):
         """This method must be invoked after any changes in the undulator
@@ -654,13 +674,14 @@ class SourceFromField(object):
         self._build_integration_grid()
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
-        if self.needReset:
-            self.reset()
-        useCL = False
+        useCL = False  # TODO: Add integration in pure numpy
         if isinstance(w, np.ndarray):
-            if w.shape[0] > 2:
+            if w.shape[0] > 1:
                 useCL = True
-        if useCL and self.customField is not None:
+        if self.customFieldData is None:
+            return self._build_I_map_custom_field(w, ddtheta, ddpsi,
+                                                  harmonic, dg)            
+        elif useCL: # and self.customField is not None:
             return self._build_I_map_custom_field(w, ddtheta, ddpsi,
                                                   harmonic, dg)
 
@@ -669,62 +690,76 @@ class SourceFromField(object):
             self._clenshaw_curtis
         tg_n, ag_n = quad_rule(self.quadm)
 
-        if isinstance(self.customFieldData, (float, int)):
-            dataz = [-0.5*self.L0*self.Np + self.L0/2., 0.5*self.L0*self.Np]
+        if isinstance(self.customFieldData, (float, int)) or\
+                self.customFieldData is None:  # TODO: this is not correct
+            dataz = [-0.5*self.L0*self.Np, 0.5*self.L0*self.Np]
         else:
             dataz = self.customFieldData[:, 0]
         dstep = (dataz[-1] - dataz[0]) / float(self.gIntervals)
         dI = np.arange(0.5 * dstep + dataz[0], dataz[-1], dstep)
 
-        self.tg = np.array([dataz[0]])
-        self.ag = [0]
-
-        self.tg = self.cl_precisionF(
-            np.concatenate((self.tg, (dI[:, None]+0.5*dstep*tg_n).ravel())))
-        self.ag = self.cl_precisionF(np.concatenate(
-            (self.ag, (dI[:, None]*0+ag_n).ravel())))
+        self.tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).ravel())
+        self.ag = self.cl_precisionF((dI[:, None]*0+ag_n).ravel())
         self.dstep = dstep
 
-        wtGrid = []
-        for itg in range(len(self.tg) - 1):
-            wtGrid.extend(np.linspace(self.tg[itg],
-                                      self.tg[itg+1],
-                                      2*self.nRK,
-                                      endpoint=False))
-        wtGrid.append(self.tg[-1])
-        self.wtGrid = wtGrid
-
     def build_trajectory(self, Bx, By, Bz, gamma=None):
+        t0 = time.time()
         if gamma is None:
-            gamma = np.array(self.gamma)[0]
+            gamma = np.array(self.gamma) #[0] TODO: check for consistency
         emcg = SIE0 / SIM0 / C / 10. / gamma
-        scalarArgsTraj = [np.int32(len(self.tg)),  # jend
-                          np.int32(self.nRK),
+        scalarArgsTraj = [np.int32(len(self.wtGrid)),  # jend
                           self.cl_precisionF(emcg),
                           self.cl_precisionF(gamma**2)]
 
-        nonSlicedROArgs = [self.tg,  # Integration grid
+        nonSlicedROArgs = [self.cl_precisionF(self.wtGrid),  # Integration grid
                            self.cl_precisionF(Bx),  # Mangetic field
                            self.cl_precisionF(By),  # components on the
                            self.cl_precisionF(Bz)]  # Runge-Kutta grid
 
-        nonSlicedRWArgs = [np.zeros_like(self.tg),  # beta.x
-                           np.zeros_like(self.tg),  # beta.y
-                           np.zeros_like(self.tg),  # beta.z average
-                           np.zeros_like(self.tg),  # traj.x
-                           np.zeros_like(self.tg),  # traj.y
-                           np.zeros_like(self.tg)]  # traj.z
+        nonSlicedRWArgs = [np.zeros_like(self.wtGrid),  # beta.x
+                           np.zeros_like(self.wtGrid),  # beta.y
+                           np.zeros_like(self.wtGrid),  # beta.z average
+                           np.zeros_like(self.wtGrid),  # traj.x
+                           np.zeros_like(self.wtGrid),  # traj.y
+                           np.zeros_like(self.wtGrid)]  # traj.z
 
         clKernel = 'get_trajectory'
-#            betax, betay, betazav, trajx, trajy, trajz
-        return self.ucl.run_parallel(
-            clKernel, scalarArgsTraj, None, nonSlicedROArgs, None,
-            nonSlicedRWArgs, 1)
-            
+
+        betax, betay, betazav, trajx, trajy, trajz = self.ucl.run_parallel(
+            clKernel, scalarArgsTraj, None, nonSlicedROArgs,
+            None, nonSlicedRWArgs, 1)
+        print("Trajectory calculated in", time.time()-t0, "s")
+
+        betaxTg = interp1d(self.wtGrid, betax, kind='cubic')(self.tg)
+        betayTg = interp1d(self.wtGrid, betay, kind='cubic')(self.tg)
+
+        trajxTg = interp1d(self.wtGrid, trajx, kind='cubic')(self.tg)
+        trajyTg = interp1d(self.wtGrid, trajy, kind='cubic')(self.tg)
+        trajzTg = interp1d(self.wtGrid, trajz, kind='cubic')(self.tg)
+        return betaxTg, betayTg, [betazav[-1]], trajxTg, trajyTg, trajzTg
+       
+    def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
+        if gamma is None:
+            gamma = np.array(self.gamma) #[0]
+        gamma2 = gamma**2
+        betam = 1. - (1. + 0.5 * self.Kx**2 + 0.5*self.Ky**2) / 2. / gamma2
+        self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / gamma2 * \
+            (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
+
+        z = 2*np.pi*self.tg/self.L0
+        tgw = self.L0 / 2. / np.pi
+        betax = self.Ky / gamma * np.cos(z)
+        betay =-self.Kx / gamma * np.cos(z + self.phase)
+        trajx = tgw * self.Ky / gamma * np.sin(z)
+        trajy =-tgw * self.Kx / gamma * np.sin(z + self.phase)
+        trajz = tgw * (betam * z - 0.125 / gamma**2 *
+                 (self.Ky**2 * np.sin(2*z) +
+                  self.Kx**2 * np.sin(2*(z + self.phase))))
+        return betax, betay, [betam], trajx, trajy, trajz
 
     def _build_I_map_custom_field(self, w, ddtheta, ddpsi,
                                   harmonic=None, dgamma=None):
-        # time1 = time.time()
+
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:
@@ -734,31 +769,97 @@ class SourceFromField(object):
                 sz = 1 if self.filamentBeam else NRAYS
                 gamma += gamma * self.eEspread * np.random.normal(size=sz)
         gamma = gamma * np.ones(NRAYS, dtype=self.cl_precisionF)
-
         scalarArgs = []  # R0
         R0 = self.R0 if self.R0 is not None else 0
 
-        Bx, By, Bz = self._magnetic_field()
+        if self.customFieldData is not None:
+            Bx, By, Bz = self._magnetic_field()
+        else:
+            Bx, By, Bz = self._magnetic_field_periodic()
 
         if self.filamentBeam:
-            betax, betay, betazav, trajx, trajy, trajz =\
-                self.build_trajectory(Bx, By, Bz, gamma[0])
-            Bxt = np.copy(Bx[::2*self.nRK])
-            Byt = np.copy(By[::2*self.nRK])
-            Bzt = np.copy(Bz[::2*self.nRK])
+            if self.customFieldData is not None:
+                betax, betay, betazav, trajx, trajy, trajz =\
+                    self.build_trajectory(Bx, By, Bz, gamma[0])
+
+            Bxt, Byt, Bzt = self._magnetic_field(self.tg)  # TODO: take from B
+
             self.beta = [betax, betay]
-            self.trajectory = [trajx[1:-1],
-                               trajy[1:-1],
-                               trajz[1:-1]]
+            self.trajectory = [trajx, trajy, trajz]
+
+            if False:  # Test of interpolation quality
+                emax, tmax, pmax = np.max(w), np.max(ddtheta), np.max(ddpsi)
+                Bx2, By2, Bz2 = self._magnetic_field_periodic(self.tg)
+                betax2, betay2, betazav2, trajx2, trajy2, trajz2 =\
+                    self.build_trajectory_periodic(Bx2, By2, Bz2, gamma[0])
+
+                n0 = np.array([np.tan(tmax), np.tan(pmax), 1.])
+                n0 /= np.linalg.norm(n0)
+                r0 = np.expand_dims(self.R0 * n0, axis=1)
+               
+                dr = r0 - np.array(self.trajectory)
+                dr2 = (r0 - np.array([trajx2, trajy2, trajz2]))
+                wc = emax * E2W / betazav[-1] / C / 10
+                wwu = emax / self.wu
+
+                ucos = wc*(self.tg + dr[2, :]+ np.sqrt(dr[0, :]**2+dr[1, :]**2+dr[2, :]**2))
+                ucos2 = wwu*np.pi*2/self.L0*(self.tg+dr2[2, :] + np.sqrt(dr2[0, :]**2+dr2[1, :]**2+dr2[2, :]**2))
+
+                from matplotlib import pyplot as plt
+                plt.figure("dBy")
+                plt.plot(self.tg, Byt-By2)
+                plt.figure("dBetaX")
+                plt.plot(self.tg, betax-betax2)
+#                plt.figure("dBetaY")
+#                plt.plot(trajz, betay-betay2)
+                plt.figure("dX")
+                plt.plot(self.tg, trajx-trajx2)
+#                plt.figure("dY")
+#                plt.plot(trajz, trajy-trajy2)
+#                plt.figure("dY")
+#                plt.plot(trajz, trajy-trajy2)
+                plt.figure("dCmplPhase")
+                plt.plot(self.tg, ucos-ucos2)
+                plt.figure("By")
+                plt.plot(self.tg, Byt)
+                plt.plot(self.tg, By2)
+                plt.figure("BetaX")
+                plt.plot(self.tg, betax)
+                plt.plot(self.tg, betax2)
+#                plt.figure("dBetaY")
+#                plt.plot(trajz, betay-betay2)
+                plt.figure("X")
+                plt.plot(self.tg, trajx)
+                plt.plot(self.tg, trajx2)
+                plt.figure("Z")
+                plt.plot(self.tg, trajz)
+                plt.plot(self.tg, trajz2)
+                plt.figure("CmplPhasemR0")
+                plt.plot(self.tg, wc*(self.tg - trajz))
+                plt.plot(self.tg, wwu*np.pi*2/self.L0*(self.tg - trajz2))
+                plt.figure("CmplPhase")
+                plt.plot(self.tg, ucos)
+                plt.plot(self.tg, ucos2)
+                plt.figure("sinCmplPhase")
+                plt.plot(self.tg, np.sin(ucos))
+                plt.plot(self.tg, np.sin(ucos2))
+                plt.figure("cosCmplPhase")
+                plt.plot(self.tg, np.cos(ucos))
+                plt.plot(self.tg, np.cos(ucos2))
+#                plt.figure("dY")
+#                plt.plot(trajz, trajy-trajy2)
+
+                plt.show()
+                sys.exit()
+
 #            wuAv = C * 10. * betazav[-1] / E2W  # beta.z average
-            wuAv = betazav[-1]
-            ab = 0.5 / np.pi / wuAv
+            betam = betazav[-1]
+            ab = 0.5 / np.pi / betam
             emcg = SIE0 / SIM0 / C / 10. / gamma[0]
             scalarArgsTest = [np.int32(len(self.tg)),
-#                              np.int32(self.nRK),
                               self.cl_precisionF(emcg),
                               self.cl_precisionF(gamma[0]**2),
-                              self.cl_precisionF(wuAv),
+                              self.cl_precisionF(betam),
                               self.cl_precisionF(R0)]
 
             slicedROArgs = [self.cl_precisionF(w),  # Energy
@@ -769,7 +870,7 @@ class SourceFromField(object):
                                self.ag,   # Integration weights
                                self.cl_precisionF(Bxt),  # Mangetic field
                                self.cl_precisionF(Byt),  # components on the
-                               self.cl_precisionF(Bzt),  # Runge-Kutta grid
+                               self.cl_precisionF(Bzt),  # CC grid
                                self.cl_precisionF(betax),  # Components of the
                                self.cl_precisionF(betay),  # velosity and
                                self.cl_precisionF(trajx),  # trajectory of the
@@ -2404,7 +2505,6 @@ class Undulator(object):
 #            print(ph2start, ph2end)
         self.quadm = ph2end
 
-
         if testMode:
             return converged, (np.array(xm), np.array(pltout), np.array(statOut),
                    np.array(statOut))
@@ -2427,9 +2527,9 @@ class Undulator(object):
         pltout = []
         dIout = []
 
-        sE = self.E_max * np.ones(1)
-        sTheta_max = self.Theta_max * np.ones(1)
-        sPsi_max = self.Psi_max * np.ones(1)
+        sE = self.E_max * np.ones(3)
+        sTheta_max = self.Theta_max * np.ones(3)
+        sPsi_max = self.Psi_max * np.ones(3)
 
 #        while m < stat_step:
         for m in range(stat_step):
@@ -2442,14 +2542,14 @@ class Undulator(object):
             if m == 0:
                 Iold = Inew
                 continue
-#            print(self.quadm, Inew)
+            print(self.quadm, Iout)
             pltout.append(Inew)
             dIout.append(np.abs(Inew-Iold)/Inew)
             Iold = Inew
-
+#            sys.exit()
         mad = _mad(np.abs(np.array(pltout)))
         dIMAD = np.median(dIout)
-#        print(self.quadm, mad, dIMAD, Inew)
+        print(self.quadm, mad, dIMAD, Inew)
 
         self.quadm = tmp_quadm
         self.gIntervals = tmp_GI
@@ -2902,7 +3002,7 @@ class Undulator(object):
                     np.where(s0, s3 / s0, s0))
 
 #    @profile
-    def _sp(self, dim, x, ww1, w, wu, gamma, ddphi, ddpsi):
+    def _sp(self, dim, tg, ag, ww1, w, wu, gamma, ddphi, ddpsi, R0=None):
         lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
         if dim == 0:
@@ -2925,78 +3025,93 @@ class Undulator(object):
             ddpsiS = ddpsi[:, :, :, np.newaxis]
             if lengamma > 1:
                 gS = gamma[:, :, :, np.newaxis]
+
         taperC = 1
         alphaS = 0
-        sinx = np.sin(x)
-        cosx = np.cos(x)
+        sinx = np.sin(tg)
+        cosx = np.cos(tg)
         sin2x = 2*sinx*cosx
-        #TODO: sin/cos pre-calculated, new formula for direction in NF/taper
+        sinxph = np.sin(tg+self.phase)
+        cosxph = np.cos(tg+self.phase)        
+        sin2xph = 2*sinxph*cosxph
+        revgamma = 1./gS
+        revgamma2 = revgamma**2
+        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
+        wwuS = wS/wuS
+        dirx = ddphiS
+        diry = ddpsiS
+        dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
 
         if self.taper is not None:
-            alphaS = self.taper * C * 10 / E2W
-            taperC = 1 - alphaS * x / wuS
-            ucos = ww1S * x +\
-                wS / gS / wuS *\
-                (-self.Ky * ddphiS * (sinx + alphaS / wuS *
-                                      (1 - cosx - x * sinx)) +
-                 self.Kx * ddpsiS * np.sin(x + self.phase) +
-                 0.125 / gS *
-                 (self.Kx**2 * np.sin(2 * (x + self.phase)) +
-                 self.Ky**2 * (sin2x - 2 * alphaS / wuS *
-                               (x**2 + cosx**2 + x * sin2x))))
+            alphaS = self.taper*C*10/E2W
+            taperC = 1 - alphaS*tg/wuS
+            ucos = ww1S*tg +\
+                wwuS*revgamma*\
+                (-self.Ky*dirx*(sinx + alphaS/wuS*
+                                (1 - cosx - tg*sinx)) +
+                 self.Kx*diry*sinx + 0.125*revgamma*
+                 (self.Kx**2 * sin2xph + self.Ky**2 * (sin2x -
+                  2*alphaS/wuS*(tg**2 + cosx**2 + tg*sin2x))))
         elif self.R0 is not None:
-            betam = 1 - (1 + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) / 2. / gS**2
-            WR0 = self.R0 / 10 / C * E2W
-#            print("WR0diff", WR0*wuS, self.R0*2*np.pi/self.L0)
-            ddphiS = -ddphiS
-            drx = WR0 * np.tan(ddphiS) - self.Ky / wuS / gS * sinx
-            dry = WR0 * np.tan(ddpsiS) + self.Kx / wuS / gS * np.sin(
-                x + self.phase)
-            drz = WR0 * np.cos(np.sqrt(ddphiS**2+ddpsiS**2)) -\
-                betam * x / wuS + 0.125 / wuS / gS**2 *\
-                (self.Ky**2 * sin2x +
-                 self.Kx**2 * np.sin(2 * (x + self.phase)))
-            ucos = wS * (x / wuS + np.sqrt(drx**2 + dry**2 + drz**2))
+            zterm = 0.5*(self.Ky**2*sin2x +
+                         self.Kx**2*sin2xph)*revgamma
+            rloc = np.array([self.Ky*sinx*revgamma, 
+                             self.Kx*sinxph*revgamma,
+                             betam*tg-0.25*zterm*revgamma])
+            dist = np.linalg.norm(R0 - rloc, axis=0)
+            ucos = wwuS*(tg + dist)
+            direction = (R0 - rloc)/dist
+            dirx = direction[0, :]
+            diry = direction[1, :]
+            dirz = direction[2, :]
         else:
-            ucos = ww1S * x + wS / gS / wuS *\
-                (-self.Ky * ddphiS * sinx +
-                 self.Kx * ddpsiS * np.sin(x + self.phase) +
-                 0.125 / gS * (self.Ky**2 * sin2x +
-                               self.Kx**2 * np.sin(2. * (x + self.phase))))
+            ucos = ww1S*tg + wwuS*revgamma*\
+                (-self.Ky*ddphiS*sinx + self.Kx*ddpsiS*sinxph +
+                 0.125*revgamma*(self.Ky**2 * sin2x +
+                               self.Kx**2 * sin2xph))
 
-        nz = 1 - 0.5*(ddphiS**2 + ddpsiS**2)
-        betax = taperC * self.Ky / gS * cosx
-        betay = -self.Kx / gS * np.cos(x + self.phase)
-        betaz = 1 - 0.5*(1./gS**2 + betax**2 + betay**2)
+        betax = taperC*self.Ky*revgamma*cosx
+        betay = -self.Kx*revgamma*cosxph
+        betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
 
-        betaPx = -wuS * self.Ky / gS * (alphaS * cosx + taperC * sinx)
-        betaPy = wuS * self.Kx / gS * np.sin(x + self.phase)
-        betaPz = 0.5 * wuS / gS**2 *\
-            (self.Ky**2 * taperC * (alphaS*cosx**2 + taperC * sin2x) +
-             self.Kx**2 * np.sin(2. * (x + self.phase)))
-        krel = 1. - ddphiS*betax - ddpsiS*betay - nz*betaz
-        eucos = np.exp(1j * ucos) / krel**2
+        betaPx = -self.Ky*(alphaS*cosx + taperC*sinx)
+        betaPy = self.Kx*sinxph
+        betaPz = 0.5*revgamma*\
+            (self.Ky**2 * taperC*(alphaS*cosx**2 + taperC*sin2x)+
+             self.Kx**2 * sin2xph)
 
-        bnx = betax - ddphiS
-        bny = betay - ddpsiS
-        bnz = betaz - nz
-        primexy = betaPx*bny - betaPy*bnx
+        rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
+        eucos = ag * np.exp(1j*ucos)*rkrel*rkrel
 
-        return ((nz*(betaPx*bnz - betaPz*bnx) + ddpsiS*primexy) * eucos,
-                (nz*(betaPy*bnz - betaPz*bny) - ddphiS*primexy) * eucos)
+        bnx = dirx - betax
+        bny = diry - betay
+        bnz = dirz - betaz
+
+        dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
+        dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
+
+        Bsr = np.sum(eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
+        Bpr = np.sum(eucos*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+
+        return Bsr, Bpr
 
 #    @profile
-    def _sp_sum(self, tg, ag, sinx, cosx, sinxph, cosxph, ww1S, wS, wuS, gS, ddphiS, ddpsiS, R0=None):
+    def _sp_sum(self, tg, ag, ww1S, wS, wuS, gS, ddphiS, ddpsiS, R0=None):
 
         taperC = 1
         alphaS = 0
 
+        sinx = np.sin(tg)
+        sinxph = np.sin(tg+self.phase)
+        cosx = np.cos(tg)
+        cosxph = np.cos(tg+self.phase)
         sin2x = 2.*sinx*cosx
         sin2xph = 2.*sinxph*cosxph
         revgamma = 1. / gS
         revgamma2 = revgamma**2
         betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
         wwuS = wS/wuS
+#        print("wwuS = {:.32e}".format(wwuS[0]))
 
         Bsr = np.complex(0)
         Bpr = np.complex(0)
@@ -3004,11 +3119,11 @@ class Undulator(object):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        Nmx = self.Np if (self.R0 is not None or self.taper is not None) else 1
+        Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
 
         for Nperiod in range(Nmx):
             if raycing._VERBOSITY_ > 30 and (self.taper is not None or\
-                                             self.R0 is not None):
+                                             R0 is not None):
                 print("Period {} out of {}".format(Nperiod+1, Nmx))
             for i in range(len(tg)):
                 if self.taper is not None:
@@ -3022,7 +3137,7 @@ class Undulator(object):
                          self.Kx*diry*sinx[i] + 0.125*revgamma*
                          (self.Kx**2 * sin2xph[i] + self.Ky**2 * (sin2x[i] -
                           2*alphaS/wuS*(zloc**2 + cosx[i]**2 + zloc*sin2x[i]))))
-                elif self.R0 is not None:
+                elif R0 is not None:
                     zterm = 0.5*(self.Ky**2*sin2x[i] +
                                  self.Kx**2*sin2xph[i])*revgamma
                     zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
@@ -3030,7 +3145,11 @@ class Undulator(object):
                                      self.Kx*sinxph[i]*revgamma,
                                      betam*zloc-0.25*zterm*revgamma])
                     dist = np.linalg.norm(R0 - rloc, axis=0)
+
                     ucos = wwuS*(zloc + dist)
+                    if i==0 or i==len(tg)-1:
+                        print("ucos0 {:.15e}, ucos1 {:.15e}".format(
+                                (wwuS*zloc)[0], (wwuS*dist)[0]))
                     direction = (R0 - rloc)/dist
                     dirx = direction[0, :]
                     diry = direction[1, :]
@@ -3072,7 +3191,7 @@ class Undulator(object):
             self.reset()
         useCL = False
         if isinstance(w, np.ndarray):
-            if w.shape[0] > 32:
+            if w.shape[0] > 1:
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic, dg)
@@ -3111,45 +3230,39 @@ class Undulator(object):
         dstep = 2 * PI / float(self.gIntervals)
         dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
-        t0sp = time.time()
-        if NRAYS > 100:
-            tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
-            ag = (dI[:, None]*0 + ag_n).ravel()
-            sinx = np.sin(tg)
-            sinxph = np.sin(tg+self.phase)
-            cosx = np.cos(tg)
-            cosxph = np.cos(tg+self.phase)
-            if self.R0:
-                R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
-                R0n = np.linalg.norm(R0v, axis=0)
-                R0v *= self.R0*np.pi*2/self.L0/R0n
-            else:
-                R0v=None
-#            if len(ww1) > 1:
-            if self.filamentBeam:
-                gamma = self.gamma
-            sp3res = self._sp_sum(
-                    tg, ag, sinx, cosx, sinxph, cosxph, ww1, w, wu, gamma,
-                    ddtheta, ddpsi, R0v)
-            Bsr = sp3res[0]
-            Bpr = sp3res[1]
-#            else:
-#                sp3res = self._sp_sum(
-#                        tg, ag, sinx, cosx, sinxph, cosxph, ww1, w, wu, gamma,
-#                        ddtheta, ddpsi, R0v)
-#                Bsr = sp3res[0]
-#                Bpr = sp3res[1]
+        if self.R0:
+            R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
+            R0n = np.linalg.norm(R0v, axis=0)
+            R0out = R0v/R0n
+            R0v *= self.R0*np.pi*2/self.L0/R0n
 
         else:
+            R0v=None
+
+#        t0sp = time.time()
+        if NRAYS > 1:
+            tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
+            ag = (dI[:, None]*0 + ag_n).ravel()
+
+            if self.filamentBeam:
+                gamma = self.gamma
+            Bsr, Bpr = self._sp_sum(
+                    tg, ag, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
+#            Bsr = sp3res[0]
+#            Bpr = sp3res[1]
+        else:
+            if (self.taper is not None) or (self.R0 is not None):
+                dI = np.arange(0.5 * dstep - PI * self.Np, PI * self.Np, dstep)
             tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
             ag = (dI[:, None]*0 + ag_n).ravel()
             # Bsr = np.zeros_like(w, dtype='complex')
             # Bpr = np.zeros_like(w, dtype='complex')
             dim = len(np.array(w).shape)
-            sp3res = self._sp(dim, tg, ww1, w, wu, gamma, ddtheta, ddpsi)
-            Bsr = np.sum(ag * sp3res[0], axis=dim)
-            Bpr = np.sum(ag * sp3res[1], axis=dim)
-        print("Time to calc", time.time()-t0sp, "s")
+            Bsr, Bpr = self._sp(
+                    dim, tg, ag, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
+#            Bsr = np.sum(ag * sp3res[0], axis=dim)
+#            Bpr = np.sum(ag * sp3res[1], axis=dim)
+#        print("Time to calc", time.time()-t0sp, "s")
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
@@ -3159,7 +3272,7 @@ class Undulator(object):
             Bpr[ww1 > harmonic+0.5] = 0
             Bsr[ww1 < harmonic-0.5] = 0
             Bpr[ww1 < harmonic-0.5] = 0
-
+        print("Is_local", "Ip_local", Bsr, Bpr)
         #        np.seterr(invalid='warn')
         #        np.seterr(divide='warn')
         return (Amp2Flux * AB**2 * 0.25 * dstep**2 *
@@ -3169,7 +3282,7 @@ class Undulator(object):
 
 
     def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
-        # time1 = time.time()
+
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:
@@ -3189,36 +3302,30 @@ class Undulator(object):
         scalarArgs = [self.cl_precisionF(0.)]
 
         if self.R0 is not None:
-            scalarArgs = [self.cl_precisionF(self.R0)] #,  # R0
-#                          self.cl_precisionF(self.L0)]
+            scalarArgs = [self.cl_precisionF(self.R0*np.pi*2/self.L0)] #,  # R0
         elif self.taper:
             scalarArgs = [self.cl_precisionF(self.taper)]
-
-        Np = np.int32(self.Np)
 
         quad_rule = np.polynomial.legendre.leggauss if self._useGauLeg else\
             self._clenshaw_curtis
         tg_n, ag_n = quad_rule(self.quadm)
         self.tg_n, self.ag_n = tg_n, ag_n
 
-        dstep = 2 * PI / float(self.gIntervals)
-        if (self.taper is not None) or (self.R0 is not None) or self.full:
+        if (self.taper is not None) or (self.R0 is not None):
             ab = 1. / PI2 / wu
-            dI = np.arange(0.5 * dstep - PI * Np, PI * Np, dstep)
         else:
-            ab = 1. / PI2 / wu * np.sin(PI * Np * ww1) / np.sin(PI * ww1)
-            dI = np.arange(-PI + 0.5*dstep, PI, dstep)
+            ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
+        dstep = 2 * PI / float(self.gIntervals)
+        dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
-        extra = PI/2*0
-        tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).ravel()) + extra
+        tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).ravel())
         ag = self.cl_precisionF((dI[:, None]*0+ag_n).ravel())
 
         scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
                            self.cl_precisionF(self.Ky),  # Ky
-#                           self.cl_precisionF(self.phase),  # phase
                            np.int32(len(tg))])  # jend
         if (self.taper is not None) or (self.R0 is not None):
-            scalarArgs.extend([Np])
+            scalarArgs.extend([np.int32(self.Np)])
 
 
         slicedROArgs = [self.cl_precisionF(gamma),  # gamma
@@ -3270,7 +3377,6 @@ class Undulator(object):
             Is_local[ww1 < harmonic-0.5] = 0
             Ip_local[ww1 < harmonic-0.5] = 0
 
-        # print("Build_I_Map completed in {0} s".format(time.time() - time1))
         return (Amp2Flux * ab**2 * 0.25 * dstep**2 *
                 (np.abs(Is_local)**2 + np.abs(Ip_local)**2),
                 np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
