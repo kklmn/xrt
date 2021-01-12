@@ -66,7 +66,7 @@ class SourceFromField(object):
         self.eEspread = eEspread
         self.eI = float(eI)
 
-        self.eMin = float(eMin)
+        self._eMin = float(eMin)
         self._eMax = float(eMax)
 
         self.R0 = R0  # Position of the screen
@@ -109,7 +109,7 @@ class SourceFromField(object):
         self.maxIntegrationSteps = 9000  # Up to 511000 nodes
 #        self.nRK = 10  # Number of Runge-Kutta steps between the nodes
         self.trajectory = None
-        self.needReset = True
+#        self.needReset = True
         # OpenCL-related init
         self.cl_ctx = None
         if (self.R0 is not None):
@@ -241,6 +241,16 @@ class SourceFromField(object):
         self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
 
     @property
+    def eMin(self):
+        return self._eMin
+
+    @eMin.setter
+    def eMin(self, eMin):
+        self._eMin = eMin
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
     def eMax(self):
         return self._eMax
 
@@ -274,6 +284,7 @@ class SourceFromField(object):
     def eE(self, eE):
         self._eE = float(eE)
         self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
+        self.gamma2 = self.gamma**2
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -399,7 +410,6 @@ class SourceFromField(object):
         while m<10000:
             m += 1
             self.quadm = int(2**m)
-#            self._build_integration_grid()
             mad, dimad = self._get_mad()
             if testMode:
                 xm.append(self.quadm*self.gIntervals)
@@ -451,9 +461,9 @@ class SourceFromField(object):
         pltout = []
         dIout = []
 
-        sE = self.E_max * np.ones(3)
-        sTheta_max = self.Theta_max * np.ones(3)
-        sPsi_max = self.Psi_max * np.ones(3)
+        sE = self.E_max * np.ones(2)
+        sTheta_max = self.Theta_max * np.ones(2)
+        sPsi_max = self.Psi_max * np.ones(2)
 
 #        while m < stat_step:
         for m in range(stat_step):
@@ -462,14 +472,14 @@ class SourceFromField(object):
             self.gIntervals = 2
             self._build_integration_grid()
             Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
-#            print(self.quadm, Inew)
+            print(self.quadm, Inew)
             if m == 0:
                 Iold = Inew
                 continue
             pltout.append(Inew)
             dIout.append(np.abs(Inew-Iold)/Inew)
             Iold = Inew
-            sys.exit()
+#            sys.exit()
 #            m += 1
 
 #        if m > stat_step:
@@ -574,8 +584,11 @@ class SourceFromField(object):
 
     def _magnetic_field(self, grid=None):
         dataz = self.customFieldData[:, 0]
-        self.BGrid = np.linspace(dataz[0], dataz[-1], 2*len(dataz)-1)
+        lenmm = np.abs(dataz[-1] - dataz[0])
+        self.wtGrid = np.linspace(dataz[0], dataz[-1], int(lenmm*10))
+        self.BGrid = np.linspace(dataz[0], dataz[-1], 2*len(self.wtGrid)-1)
         z = self.BGrid if grid is None else grid  # 'z' in mm
+#        print(self.wtGrid, self.BGrid)
         dataShape = self.customFieldData.shape
         if dataShape[1] == 2:
             By = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
@@ -674,6 +687,8 @@ class SourceFromField(object):
         self._build_integration_grid()
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
+        if self.needReset:
+            self.reset()
         useCL = False  # TODO: Add integration in pure numpy
         if isinstance(w, np.ndarray):
             if w.shape[0] > 1:
@@ -728,7 +743,7 @@ class SourceFromField(object):
         betax, betay, betazav, trajx, trajy, trajz = self.ucl.run_parallel(
             clKernel, scalarArgsTraj, None, nonSlicedROArgs,
             None, nonSlicedRWArgs, 1)
-        print("Trajectory calculated in", time.time()-t0, "s")
+#        print("Trajectory calculated in", time.time()-t0, "s")
 
         betaxTg = interp1d(self.wtGrid, betax, kind='cubic')(self.tg)
         betayTg = interp1d(self.wtGrid, betay, kind='cubic')(self.tg)
@@ -1074,6 +1089,8 @@ class SourceFromField(object):
 
         .. Returned values: beamGlobal
         """
+        if self.needReset:
+            self.reset()
         if self.bl is not None:
             try:
                 self.bl._alignE = float(self.bl.alignE)
@@ -1475,7 +1492,7 @@ class BendingMagnet(object):
         self.dz = eSigmaZ * 1e-3 if eSigmaZ else None
         self.eEpsilonX = eEpsilonX
         self.eEpsilonZ = eEpsilonZ
-        self.I0 = eI
+        self.eI = eI
         self.eEspread = eEspread
         self.eMin = float(eMin)
         self.eMax = float(eMax)
@@ -1646,7 +1663,7 @@ class BendingMagnet(object):
         ampP = np.where(np.isfinite(ampP), ampP, 0.)
 
         bwFact = 0.001 if self.distE == 'BW' else 1./dde
-        Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0 * 2 * self.Np
+        Amp2Flux = FINE_STR * bwFact * self.eI / SIE0 * 2 * self.Np
 
         np.seterr(invalid='warn')
         np.seterr(divide='warn')
@@ -2204,43 +2221,58 @@ class Undulator(object):
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
         self.gp = gp
-        self.dx = eSigmaX * 1e-3 if eSigmaX else None
-        self.dz = eSigmaZ * 1e-3 if eSigmaZ else None
-        self.eEpsilonX = eEpsilonX * 1e-6
-        self.eEpsilonZ = eEpsilonZ * 1e-6
-        self.Ee = float(eE)
+
+        self._eEpsilonX = eEpsilonX * 1e-6  # input in nmrad
+        self._eEpsilonZ = eEpsilonZ * 1e-6  # input in nmrad
+        self.dx = eSigmaX * 1e-3 if eSigmaX else None  # input in mkm
+        self.dz = eSigmaZ * 1e-3 if eSigmaZ else None  # input in mkm
+        self._eE = float(eE)
+        self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
+        self.gamma2 = self.gamma**2
         self.eEspread = eEspread
-        self.I0 = float(eI)
-        self.eMin = float(eMin)
-        self.eMax = float(eMax)
+        self.eI = float(eI)
+        self._eMin = float(eMin)
+        self._eMax = float(eMax)
+        self.L0 = period
+        self.Np = n
+        self._R0 = R0 # if R0 is None else R0 # + self.L0*0.25
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.name] = [self, 0]
+
         xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
             isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
         zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
             isinstance(zPrimeMax, raycing.basestring) else zPrimeMax
-        self.xPrimeMax = xPrimeMax * 1e-3  # if xPrimeMax else None
-        self.zPrimeMax = zPrimeMax * 1e-3  # if zPrimeMax else None
-        self.betaX = betaX * 1e3
-        self.betaZ = betaZ * 1e3
-        self.eN = eN + 1
-        self.nx = 2*nx + 1
-        self.nz = 2*nz + 1
-        self.xs = np.linspace(-self.xPrimeMax, self.xPrimeMax, self.nx)
-        self.zs = np.linspace(-self.zPrimeMax, self.zPrimeMax, self.nz)
-        self.energies = np.linspace(eMin, eMax, self.eN)
+        self._xPrimeMax = xPrimeMax * 1e-3  # if xPrimeMax else None
+        self._zPrimeMax = zPrimeMax * 1e-3  # if zPrimeMax else None
+        self._betaX = betaX * 1e3 if betaX else None  # input in m
+        self._betaZ = betaZ * 1e3 if betaX else None  # input in m
+        if (self.dx is not None) and (self._betaX is None):
+            self._betaX = self.dx**2 / self._eEpsilonX if self._eEpsilonX\
+                else 0.
+        if (self.dz is not None) and (self._betaZ is None):
+            self._betaZ = self.dz**2 / self._eEpsilonZ if self._eEpsilonZ\
+                else 0.
+
+#        self.eN = eN + 1
+#        self.nx = 2*nx + 1
+#        self.nz = 2*nz + 1
+#
+#        self.xs = np.linspace(-self.xPrimeMax, self.xPrimeMax, self.nx)
+#        self.zs = np.linspace(-self.zPrimeMax, self.zPrimeMax, self.nz)
+#        self.energies = np.linspace(eMin, eMax, self.eN)
+
         self.distE = distE
         self.uniformRayDensity = uniformRayDensity
         self.filamentBeam = filamentBeam
         self.pitch = raycing.auto_units_angle(pitch)
         self.yaw = raycing.auto_units_angle(yaw)
         self.gIntervals = gIntervals
-        self._convergence_finder = 'mad'  # 'diff', 'NN'
+        self._convergence_finder = 'mixed'  # 'diff', 'mad'
         self._useGauLeg = False
-        self.L0 = period
-        self.R0 = R0 if R0 is None else R0 + self.L0*0.25
-        self.nRK = nRK
+
         self.madBoundary = 20
         self.trajectory = None
         fullLength = False  # NOTE maybe a future input parameter
@@ -2268,138 +2300,357 @@ class Undulator(object):
                     self.cl_mf = self.ucl.cl_mf
                     self.cl_is_blocking = self.ucl.cl_is_blocking
 
-#        self.mode = 1
-
-        if (self.dx is None) and (self.betaX is not None):
-            self.dx = np.sqrt(self.eEpsilonX*self.betaX)
-        elif (self.dx is None) and (self.betaX is None):
+        # Beam size and divergence conversion
+        if (self.dx is None) and (self._betaX is not None):
+            self.dx = np.sqrt(self._eEpsilonX*self._betaX)
+        elif (self.dx is None) and (self._betaX is None):
             print("Set either dx or betaX!")
-        if (self.dz is None) and (self.betaZ is not None):
-            self.dz = np.sqrt(self.eEpsilonZ*self.betaZ)
-        elif (self.dz is None) and (self.betaZ is None):
+        if (self.dz is None) and (self._betaZ is not None):
+            self.dz = np.sqrt(self._eEpsilonZ*self._betaZ)
+        elif (self.dz is None) and (self._betaZ is None):
             print("Set either dz or betaZ!")
         dxprime, dzprime = None, None
         if dxprime:
             self.dxprime = dxprime
         else:
-            self.dxprime = self.eEpsilonX / self.dx if self.dx > 0\
+            self.dxprime = self._eEpsilonX / self.dx if self.dx > 0\
                 else 0.  # [rad]
         if dzprime:
             self.dzprime = dzprime
         else:
-            self.dzprime = self.eEpsilonZ / self.dz if self.dz > 0\
+            self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0\
                 else 0.  # [rad]
         if raycing._VERBOSITY_ > 10:
-            print('dx = {0} mm'.format(self.dx))
-            print('dz = {0} mm'.format(self.dz))
-            print('dxprime = {0} rad'.format(self.dxprime))
-            print('dzprime = {0} rad'.format(self.dzprime))
-        self.gamma = self.Ee * 1e9 * EV2ERG / (M0 * C**2)
-        self.gamma2 = self.gamma**2
+            print('Beam horz. size dx = {0} mm'.format(self.dx))
+            print('Beam vert. size dz = {0} mm'.format(self.dz))
+            print('Beam horz. diverg. dxprime = {0} rad'.format(self.dxprime))
+            print('Beam vert. diverg. dzprime = {0} rad'.format(self.dzprime))
 
         if targetE is not None:
-            K = np.sqrt(targetE[1] * 8 * PI * C * 10 * self.gamma2 /
+            self._targetE = targetE
+            Ky = np.sqrt(targetE[1] * 8 * PI * C * 10 * self.gamma2 /
                         period / targetE[0] / E2W - 2)
             if raycing._VERBOSITY_ > 10:
-                print("K = {0}".format(K))
-            if np.isnan(K):
+                print("K = {0}".format(Ky))
+            if np.isnan(Ky):
                 raise ValueError("Cannot calculate K, try to increase the "
                                  "undulator harmonic number")
             if len(targetE) > 2:
                 isElliptical = targetE[2]
                 if isElliptical:
-                    Kx = Ky = K / 2**0.5
+                    Kx = Ky / 2**0.5
                     if raycing._VERBOSITY_ > 10:
                         print("Kx = Ky = {0}".format(Kx))
 
-        self.Kx = Kx
-        self.Ky = Ky
-        self.K = K
+        self._Kx = Kx
+        self._Ky = Ky
+#        self.K = K
         phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
             isinstance(phaseDeg, raycing.basestring) else phaseDeg
         self.phase = np.radians(phaseDeg)
 
-        self.Np = n
+
 
         if taper is not None:
             self.taper = taper[0] / self.Np / self.L0 / taper[1]
             self.gap = taper[1]
         else:
             self.taper = None
-        if self.Kx == 0 and self.Ky == 0:
-            self.Ky = self.K
-        self._initialK = self.K
+        if self._Kx == 0 and self._Ky == 0:
+            self._Ky = K
+#        self._initialK = self.K
 
-        self.B0x = K2B * self.Kx / self.L0
-        self.B0y = K2B * self.Ky / self.L0
-        self.customField = customField
+        self._B0x = K2B * self.Kx / self.L0
+        self._B0y = K2B * self.Ky / self.L0
+#        self.customField = customField
 
-        if customField is not None:
-            self.gIntervals *= 2
-            if isinstance(customField, (tuple, list)):
-                fname = customField[0]
-                kwargs = customField[1]
-            elif isinstance(customField, (float, int)):
-                fname = None
-                self.customFieldData = customField
-                if customField > 0:
-                    betaL = 2 * M0*C**2*self.gamma / customField / E0 / 1e6
-                    print("Larmor betatron function = {0} m".format(betaL))
-            else:
-                fname = customField
-                kwargs = {}
-            if fname:
-                self.customFieldData = self.read_custom_field(fname, kwargs)
-        else:
-            self.customFieldData = None
+#        if customField is not None:
+#            self.gIntervals *= 2
+#            if isinstance(customField, (tuple, list)):
+#                fname = customField[0]
+#                kwargs = customField[1]
+#            elif isinstance(customField, (float, int)):
+#                fname = None
+#                self.customFieldData = customField
+#                if customField > 0:
+#                    betaL = 2 * M0*C**2*self.gamma / customField / E0 / 1e6
+#                    print("Larmor betatron function = {0} m".format(betaL))
+#            else:
+#                fname = customField
+#                kwargs = {}
+#            if fname:
+#                self.customFieldData = self.read_custom_field(fname, kwargs)
+#        else:
+#            self.customFieldData = None
 
         self.xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
-        if xPrimeMaxAutoReduce:
-            xPrimeMaxTmp = self.Ky / self.gamma
-            if self.xPrimeMax > xPrimeMaxTmp:
-                print("Reducing xPrimeMax from {0} down to {1} mrad".format(
-                      self.xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
-                self.xPrimeMax = xPrimeMaxTmp
         self.zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
+        if self.R0 is not None:  # Required for convergence
+            self.xPrimeMaxAutoReduce = True
+            self.zPrimeMaxAutoReduce = True
+
+        if xPrimeMaxAutoReduce:
+            K0 = self.Ky if self.Ky > 0 else self.Kx
+            xPrimeMaxTmp = K0 / self.gamma
+            if self._xPrimeMax > xPrimeMaxTmp:
+                print("Reducing xPrimeMax from {0} down to {1} mrad".format(
+                      self._xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
+                self._xPrimeMax = xPrimeMaxTmp
         if zPrimeMaxAutoReduce:
-            K0 = self.Kx if self.Kx > 0 else 1.
+            K0 = self.Kx if self.Kx > 0 else self.Ky
             zPrimeMaxTmp = K0 / self.gamma
-            if self.zPrimeMax > zPrimeMaxTmp:
+            if self._zPrimeMax > zPrimeMaxTmp:
                 print("Reducing zPrimeMax from {0} down to {1} mrad".format(
-                      self.zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
-                self.zPrimeMax = zPrimeMaxTmp
+                      self._zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
+                self._zPrimeMax = zPrimeMaxTmp
 
-        self.reset()
+        self.needReset = True
 
-    def _clenshaw_curtis(self, n):
+    @property
+    def eSigmaX(self):
+        return self.dx * 1e3  # returns in mkm
+
+    @eSigmaX.setter
+    def eSigmaX(self, eSigmaX):
+        self.dx = eSigmaX * 1e-3  # conversion from mkm to mm
+
+    @property
+    def eSigmaZ(self):
+        return self.dz * 1e3  # returns in mkm
+
+    @eSigmaZ.setter
+    def eSigmaZ(self, eSigmaZ):
+        self.dz = eSigmaZ * 1e-3  # conversion from mkm to mm
+
+    @property
+    def eEpsilonX(self):
+        return self._eEpsilonX * 1e6  # returns in nmrad
+
+    @eEpsilonX.setter
+    def eEpsilonX(self, eEpsilonX):
+        self._eEpsilonX = eEpsilonX * 1e-6  # conversion from nmrad to mmrad
+        self.dx = np.sqrt(self._eEpsilonX * self._betaX)
+        self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+
+    @property
+    def eEpsilonZ(self):
+        return self._eEpsilonZ * 1e6  # returns in nmrad
+
+    @eEpsilonZ.setter
+    def eEpsilonZ(self, eEpsilonZ):
+        self._eEpsilonZ = eEpsilonZ * 1e-6  # conversion from nmrad to mmrad
+        self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
+        self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+
+    @property
+    def betaX(self):
+        return self._betaX * 1e-3  # returns in m
+
+    @betaX.setter
+    def betaX(self, betaX):
+        self._betaX = betaX * 1e3  # conversion from m to mm
+        self.dx = np.sqrt(self._eEpsilonX * self._betaX)
+        self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+
+    @property
+    def betaZ(self):
+        return self._betaZ * 1e-3  # returns in m
+
+    @betaZ.setter
+    def betaZ(self, betaZ):
+        self._betaZ = betaZ * 1e3  # conversion from m to mm
+        self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
+        self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+
+    @property
+    def eMin(self):
+        return self._eMin
+
+    @eMin.setter
+    def eMin(self, eMin):
+        self._eMin = eMin
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def eMax(self):
+        return self._eMax
+
+    @eMax.setter
+    def eMax(self, eMax):
+        self._eMax = eMax
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def xPrimeMax(self):
+        return self._xPrimeMax * 1e3  # return in mrad
+
+    @xPrimeMax.setter
+    def xPrimeMax(self, xPrimeMax):
+        self._xPrimeMax = xPrimeMax * 1e-3  # convert from mrad to rad
+
+    @property
+    def zPrimeMax(self):
+        return self._zPrimeMax * 1e3  # return in mrad
+
+    @zPrimeMax.setter
+    def zPrimeMax(self, zPrimeMax):
+        self._zPrimeMax = zPrimeMax * 1e-3  # convert from mrad to rad
+
+    @property
+    def eE(self):
+        return self._eE
+
+    @eE.setter
+    def eE(self, eE):
+        self._eE = float(eE)
+        self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
+        self.gamma2 = self.gamma**2
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def period(self):
+        return self.L0
+
+    @period.setter
+    def period(self, period):
+        self.L0 = float(period)
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def n(self):
+        return self.Np
+
+    @n.setter
+    def n(self, n):
+        self.Np = float(n)
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def R0(self):
+        return self._R0
+
+    @R0.setter
+    def R0(self, R0):
+        self._R0 = float(R0)
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def targetE(self):
+        return self._targetE
+
+    @targetE.setter
+    def targetE(self, targetE):
+        self._targetE = targetE
+        Ky = np.sqrt(targetE[1] * 8 * PI * C * 10 * self.gamma2 /
+                    self.L0 / targetE[0] / E2W - 2)
+        Kx = 0
+        if raycing._VERBOSITY_ > 10:
+            print("K = {0}".format(Ky))
+        if np.isnan(Ky):
+            raise ValueError("Cannot calculate K, try to increase the "
+                             "undulator harmonic number")
+        if len(targetE) > 2:
+            isElliptical = targetE[2]
+            if isElliptical:
+                Kx = Ky / 2**0.5
+                if raycing._VERBOSITY_ > 10:
+                    print("Kx = Ky = {0}".format(Kx))
+        self._Kx = Kx
+        self._Ky = Ky
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def Kx(self):
+        return self._Kx
+
+    @Kx.setter
+    def Kx(self, Kx):
+        self._Kx = float(Kx)
+        self._B0x = K2B * Kx / self.L0 
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def Ky(self):
+        return self._Ky
+
+    @Ky.setter
+    def Ky(self, Ky):
+        self._Ky = float(Ky)
+        self._K = float(Ky)
+        self._B0y = K2B * Ky / self.L0 
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def K(self):
+        return self._Ky
+
+    @K.setter
+    def K(self, K):
+        self._Ky = float(K)
+        self._B0y = K2B * K / self.L0 
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def B0x(self):
+        return self._B0x
+
+    @B0x.setter
+    def B0x(self, B0x):
+        self._B0x = float(B0x)
+        self._Kx = B0x * self.L0 / K2B
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def B0y(self):
+        return self._B0y
+
+    @B0y.setter
+    def B0y(self, B0y):
+        self._B0y = float(B0y)
+        self._Ky = B0y * self.L0 / K2B 
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    def _clenshaw_curtis(self, ncc):
         """
         Adopted from quadpy https://github.com/nschloe/quadpy
         Fixed python 2 compatibilty
         """
-        points = -np.cos((np.pi * np.arange(n)) / (n - 1))
+        points = -np.cos((np.pi * np.arange(ncc)) / (ncc - 1))
 
-        if n == 2:
+        if ncc == 2:
             weights = np.array([1.0, 1.0])
             return (points, weights)
 
-        n -= 1
-        N = np.arange(1, n, 2)
+        ncc -= 1
+        N = np.arange(1, ncc, 2)
         length = len(N)
-        m = n - length
+        m = ncc - length
         v0 = np.concatenate(
             [2.0 / N / (N - 2), np.array([1.0 / N[-1]]), np.zeros(m)]
         )
         v2 = -v0[:-1] - v0[:0:-1]
-        g0 = -np.ones(n)
-        g0[length] += n
-        g0[m] += n
-        g = g0 / (n ** 2 - 1 + (n % 2))
+        g0 = -np.ones(ncc)
+        g0[length] += ncc
+        g0[m] += ncc
+        g = g0 / (ncc ** 2 - 1 + (ncc % 2))
 
         w = np.fft.ihfft(v2 + g)
         assert max(w.imag) < 1.0e-15
         w = w.real
 
-        if n % 2 == 1:
+        if ncc % 2 == 1:
             weights = np.concatenate([w, w[::-1]])
         else:
             weights = np.concatenate([w, w[len(w) - 2 :: -1]])
@@ -2418,12 +2669,10 @@ class Undulator(object):
         while quad_int_error >= self.gp:
             m += 1
             self.quadm = int(1.5**m)
-            self._build_integration_grid()
             if self.cl_ctx is not None:
-                # sE = np.linspace(self.E_min, self.E_max, self.eN)
-                sE = self.E_max * np.ones(3)
-                sTheta_max = self.Theta_max * np.ones(3)
-                sPsi_max = self.Psi_max * np.ones(3)
+                sE = self.E_max * np.ones(2)
+                sTheta_max = self.Theta_max * np.ones(2)
+                sPsi_max = self.Psi_max * np.ones(2)
                 In = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
             else:
                 In = self.build_I_map(
@@ -2457,6 +2706,7 @@ class Undulator(object):
             return converged, (0,)
 
     def _find_convergence_mixed(self, testMode=False):
+        print("Estimating convergence")
         mstart = 5
         m = mstart
         quad_int_error = self.gp * 10.
@@ -2465,17 +2715,12 @@ class Undulator(object):
             xm = []
             pltout = []
             statOut = []
-#        mad = 1e6
-#        dimad = 1e6
         # PHASE 1
-        print("Phase 1")
+        print("Phase 1. Exponential / rough")
         step_stat = 5
-#        print(self.Kx, self.Ky, self.E_max, self.Theta_max, self.Psi_max)
         while m<10000:
             m += 1
-#            self.quadm = int(1.5**m)
             self.quadm = int(2**m)
-#            self._build_integration_grid()
             mad, dimad = self._get_mad()
             if testMode:
                 xm.append(self.quadm*self.gIntervals)
@@ -2493,7 +2738,7 @@ class Undulator(object):
         ph2start = int(2**(m-1))
         ph2end = self.quadm
         jmax = int(np.log2((ph2end-ph2start) / (4*step_stat)))
-        print("Phase2. Jmax=", jmax)
+        print("Phase 2. Bisection / precize. {} steps".format(jmax))
         for j in range(jmax):
             self.quadm = int(0.5*(ph2end+ph2start))
             mad, dimad = self._get_mad()
@@ -2527,29 +2772,26 @@ class Undulator(object):
         pltout = []
         dIout = []
 
-        sE = self.E_max * np.ones(3)
-        sTheta_max = self.Theta_max * np.ones(3)
-        sPsi_max = self.Psi_max * np.ones(3)
+        sE = self.E_max * np.ones(2)
+        sTheta_max = self.Theta_max * np.ones(2)
+        sPsi_max = self.Psi_max * np.ones(2)
 
-#        while m < stat_step:
         for m in range(stat_step):
             k += m_step
             self.quadm = k
             self.gIntervals = 2
-#            self._build_integration_grid()
             Iout = self.build_I_map(sE, sTheta_max, sPsi_max)
             Inew = np.abs(Iout[2])
             if m == 0:
                 Iold = Inew
                 continue
-            print(self.quadm, Iout)
+#            print(self.quadm, Iout)
             pltout.append(Inew)
             dIout.append(np.abs(Inew-Iold)/Inew)
             Iold = Inew
 #            sys.exit()
         mad = _mad(np.abs(np.array(pltout)))
         dIMAD = np.median(dIout)
-        print(self.quadm, mad, dIMAD, Inew)
 
         self.quadm = tmp_quadm
         self.gIntervals = tmp_GI
@@ -2562,10 +2804,10 @@ class Undulator(object):
             return np.median(np.abs(vin - med))
 
         self.gIntervals = 2
-#        madBoundary = 10
+
         m_start = 5
         m_step = 1
-        stat_step = 20
+        stat_step = 5
         m = 0
         k = m_start
         converged = False
@@ -2593,7 +2835,7 @@ class Undulator(object):
 
             k += m_step
             self.quadm = k
-#            self._build_integration_grid()
+
             if testMode:
                 xm.append(k*self.gIntervals)
             Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
@@ -2608,7 +2850,6 @@ class Undulator(object):
                 postConv += 1
             if m > stat_step:
                 mad = _mad(np.abs(np.array(pltout))[m-stat_step:m])
-                print(m, mad)
                 dIMAD = np.median(dIout[m-stat_step:m])
 
                 if testMode:
@@ -2658,9 +2899,9 @@ class Undulator(object):
         """This method must be invoked after any changes in the undulator
         parameters."""
         self.needReset = False
-        if self._initialK != self.K:  # self.K was modified externally
-            self.Ky = self.K
-            self._initialK = self.K
+#        if self._initialK != self.K:  # self.K was modified externally
+#            self.Ky = self.K
+#            self._initialK = self.K
 
         self.wu = PI * (0.01 * C) / self.L0 / 1e-3 / self.gamma2 * \
             (2*self.gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2W
@@ -2673,26 +2914,28 @@ class Undulator(object):
             if self.taper is not None:
                 print("dB/dx/B = {0}".format(
                     -PI * self.gap * self.taper / self.L0 * 1e3))
-        mE = self.eN
-        mTheta = self.nx
-        mPsi = self.nz
+#        mE = self.eN
+#        mTheta = self.nx
+#        mPsi = self.nz
 
-        if not self.xPrimeMax:
+        if not self._xPrimeMax:
             print("No Theta range specified, using default 1 mrad")
-            self.xPrimeMax = 1e-3
+            self._xPrimeMax = 1e-3
 
-        self.Theta_min = -float(self.xPrimeMax)
-        self.Theta_max = float(self.xPrimeMax)
-        self.Psi_min = -float(self.zPrimeMax)
-        self.Psi_max = float(self.zPrimeMax)
+        self.Theta_min = -float(self._xPrimeMax)
+        self.Theta_max = float(self._xPrimeMax)
+        self.Psi_min = -float(self._zPrimeMax)
+        self.Psi_max = float(self._zPrimeMax)
+        self.E_min = float(min(self.eMin, self.eMax))
+        self.E_max = float(max(self.eMin, self.eMax))
 
-        self.energies = np.linspace(self.eMin, self.eMax, self.eN)
-        self.E_min = float(np.min(self.energies))
-        self.E_max = float(np.max(self.energies))
+#        self.energies = np.linspace(self.eMin, self.eMax, self.eN)
+#        self.E_min = float(np.min(self.energies))
+#        self.E_max = float(np.max(self.energies))
 
-        self.dE = (self.E_max - self.E_min) / float(mE - 1)
-        self.dTheta = (self.Theta_max - self.Theta_min) / float(mTheta - 1)
-        self.dPsi = (self.Psi_max - self.Psi_min) / float(mPsi - 1)
+#        self.dE = (self.E_max - self.E_min) / float(mE - 1)
+#        self.dTheta = (self.Theta_max - self.Theta_min) / float(mTheta - 1)
+#        self.dPsi = (self.Psi_max - self.Psi_min) / float(mPsi - 1)
 
         """Adjusting the number of points for Gauss integration"""
         # self.gp = 1
@@ -2700,7 +2943,6 @@ class Undulator(object):
         self.quadm = 0
         tmpeEspread = self.eEspread
         self.eEspread = 0
-#        self._find_convergence_thrsh_mad()
         self._find_convergence_mixed()
 
         """end of Adjusting the number of points for Gauss integration"""
@@ -2755,7 +2997,7 @@ class Undulator(object):
             if raycing._VERBOSITY_ > 10:
                 print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
             self.Ky = K
-            self.reset()
+#            self.reset()
             I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
             flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
             argm = np.argmax(flux, axis=0)
@@ -2763,7 +3005,7 @@ class Undulator(object):
             tunesE.append(energy[argm] / 1000.)
             tunesF.append(fluxm)
         self.Ky = tmpKy
-        self.reset()
+#        self.reset()
         return np.array(tunesE).T, np.array(tunesF).T
 
     def power_vs_K(self, energy, theta, psi, harmonics, Ks):
@@ -2791,7 +3033,7 @@ class Undulator(object):
             if raycing._VERBOSITY_ > 10:
                 print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
             self.Ky = K
-            self.reset()
+#            self.reset()
             I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
             if self.distE == 'BW':
                 I0 *= 1e3
@@ -2800,7 +3042,7 @@ class Undulator(object):
             power = I0.sum() * dtheta * dpsi * dE * EV2ERG * 1e-7  # [W]
             powers.append(power)
         self.Ky = tmpKy
-        self.reset()
+#        self.reset()
         return np.array(powers)
 
     def multi_electron_stack(self, energy='auto', theta='auto', psi='auto',
@@ -3195,8 +3437,8 @@ class Undulator(object):
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic, dg)
-        elif self.customField is not None:
-            return self._build_I_map_custom_field(w, ddtheta, ddpsi, harmonic, dg)
+#        elif self.customField is not None:
+#            return self._build_I_map_custom_field(w, ddtheta, ddpsi, harmonic, dg)
         else:
             return self._build_I_map_CL(w, ddtheta, ddpsi, harmonic, dg)
 
@@ -3233,7 +3475,7 @@ class Undulator(object):
         if self.R0:
             R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
             R0n = np.linalg.norm(R0v, axis=0)
-            R0out = R0v/R0n
+#            R0out = R0v/R0n
             R0v *= self.R0*np.pi*2/self.L0/R0n
 
         else:
@@ -3265,14 +3507,14 @@ class Undulator(object):
 #        print("Time to calc", time.time()-t0sp, "s")
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
-        Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
+        Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
 
         if harmonic is not None:
             Bsr[ww1 > harmonic+0.5] = 0
             Bpr[ww1 > harmonic+0.5] = 0
             Bsr[ww1 < harmonic-0.5] = 0
             Bpr[ww1 < harmonic-0.5] = 0
-        print("Is_local", "Ip_local", Bsr, Bpr)
+#        print("Is_local", "Ip_local", Bsr, Bpr)
         #        np.seterr(invalid='warn')
         #        np.seterr(divide='warn')
         return (Amp2Flux * AB**2 * 0.25 * dstep**2 *
@@ -3369,7 +3611,7 @@ class Undulator(object):
             slicedRWArgs, dimension=NRAYS)
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
-        Amp2Flux = FINE_STR * bwFact * self.I0 / SIE0
+        Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
 
         if harmonic is not None:
             Is_local[ww1 > harmonic+0.5] = 0
@@ -3593,6 +3835,8 @@ class Undulator(object):
 
         .. Returned values: beamGlobal
         """
+        if self.needReset:
+            self.reset()
         if self.bl is not None:
             try:
                 self.bl._alignE = float(self.bl.alignE)
