@@ -602,8 +602,7 @@ class SourceFromField(object):
             z = self.BGrid  # 'z' in mm
         else:
             z = grid
-#        print(self.wtGrid, self.BGrid)
-#        print(dataz, z)
+
         dataShape = self.customFieldData.shape
         if dataShape[1] == 2:
             By = interp1d(dataz, self.customFieldData[:, 1], kind='cubic',
@@ -707,6 +706,217 @@ class SourceFromField(object):
         self.fluxConst = self.Imax * self.xzE
 
         self._build_integration_grid()
+"""
+    def _sp(self, dim, tg, ag, w, gamma, ddphi, ddpsi, R0=None):
+        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
+        gS = gamma
+        if dim == 0:
+            wS = w
+            ddphiS = ddphi
+            ddpsiS = ddpsi
+        elif dim == 1:
+            wS = w[:, np.newaxis]
+            ddphiS = ddphi[:, np.newaxis]
+            ddpsiS = ddpsi[:, np.newaxis]
+            if lengamma > 1:
+                gS = gamma[:, np.newaxis]
+        elif dim == 3:
+            wS = w[:, :, :, np.newaxis]
+            ddphiS = ddphi[:, :, :, np.newaxis]
+            ddpsiS = ddpsi[:, :, :, np.newaxis]
+            if lengamma > 1:
+                gS = gamma[:, :, :, np.newaxis]
+
+        sinx = np.sin(tg)
+        cosx = np.cos(tg)
+        sin2x = 2*sinx*cosx
+        sinxph = np.sin(tg+self.phase)
+        cosxph = np.cos(tg+self.phase)        
+        sin2xph = 2*sinxph*cosxph
+        revgamma = 1./gS
+        revgamma2 = revgamma**2
+        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
+
+        dirx = ddphiS
+        diry = ddpsiS
+        dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
+
+        wc = wS * E2W / betam / C / 10
+
+        sinr0z = np.sin(wc*R0)
+        cosr0z = np.cos(wc*R0)
+
+        dr = np.array([R0[0] - trajx, R0[1] - trajy, R0 - trajz])
+        
+
+#        dr = R0 - rloc
+
+        dist = np.linalg.norm(dr, axis=0)
+
+
+
+
+        drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+#
+        sinzloc = np.sin(wwuS * tg*(1.-betam))
+        coszloc = np.cos(wwuS * tg*(1.-betam))
+        sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
+        cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
+#            ucos = wwuS*(zloc + dist)
+        eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
+                   cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
+        eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
+                   cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
+        eucos = eucosx + 1j*eucosy
+#            eucos = np.exp(1j*ucos)
+
+        direction = dr/dist
+        dirx = direction[0, :]
+        diry = direction[1, :]
+        dirz = direction[2, :]
+        else:
+            ucos = ww1S*tg + wwuS*revgamma*\
+                (-self.Ky*ddphiS*sinx + self.Kx*ddpsiS*sinxph +
+                 0.125*revgamma*(self.Ky**2 * sin2x +
+                               self.Kx**2 * sin2xph))
+            eucos = np.exp(1j*ucos)
+
+        betax = taperC*self.Ky*revgamma*cosx
+        betay = -self.Kx*revgamma*cosxph
+        betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
+
+        betaPx = -self.Ky*(alphaS*cosx + taperC*sinx)
+        betaPy = self.Kx*sinxph
+        betaPz = 0.5*revgamma*\
+            (self.Ky**2 * taperC*(alphaS*cosx**2 + taperC*sin2x)+
+             self.Kx**2 * sin2xph)
+
+        rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
+#        eucos = ag * np.exp(1j*ucos)*rkrel*rkrel
+        eucos *= ag * rkrel**2 
+        bnx = dirx - betax
+        bny = diry - betay
+        bnz = dirz - betaz
+
+        dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
+        dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
+
+        Bsr = np.sum(eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
+        Bpr = np.sum(eucos*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+#        Bsr1 = np.sum(eucos1*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
+#        Bpr1 = np.sum(eucos1*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+#
+#        print()        
+
+        return Bsr, Bpr
+
+#    @profile
+    def _sp_sum(self, tg, ag, ww1S, wS, wuS, gS, ddphiS, ddpsiS, R0=None):
+
+        taperC = 1
+        alphaS = 0
+
+        sinx = np.sin(tg)
+        sinxph = np.sin(tg+self.phase)
+        cosx = np.cos(tg)
+        cosxph = np.cos(tg+self.phase)
+        sin2x = 2.*sinx*cosx
+        sin2xph = 2.*sinxph*cosxph
+        revgamma = 1. / gS
+        revgamma2 = revgamma**2
+        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
+        wwuS = wS/wuS
+#        print("wwuS = {:.32e}".format(wwuS[0]))
+
+        Bsr = np.complex(0)
+        Bpr = np.complex(0)
+        
+        dirx = ddphiS
+        diry = ddpsiS
+        dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
+        Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
+
+        sinr0z = np.sin(R0)
+        cosr0z = np.cos(R0)
+
+        for Nperiod in range(Nmx):
+#            if raycing._VERBOSITY_ > 30 and (self.taper is not None or\
+#                                             R0 is not None):
+#                print("Period {} out of {}".format(Nperiod+1, Nmx))
+            for i in range(len(tg)):
+                if self.taper is not None:
+                    zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
+                    alphaS = self.taper*C*10/E2W
+                    taperC = 1 - alphaS*zloc/wuS
+                    ucos = ww1S*zloc +\
+                        wwuS*revgamma*\
+                        (-self.Ky*dirx*(sinx[i] + alphaS/wuS*
+                                        (1 - cosx[i] - zloc*sinx[i])) +
+                         self.Kx*diry*sinx[i] + 0.125*revgamma*
+                         (self.Kx**2 * sin2xph[i] + self.Ky**2 * (sin2x[i] -
+                          2*alphaS/wuS*(zloc**2 + cosx[i]**2 + zloc*sin2x[i]))))
+                    eucos = np.exp(1j*ucos)
+                elif R0 is not None:
+                    zterm = 0.5*(self.Ky**2*sin2x[i] +
+                                 self.Kx**2*sin2xph[i])*revgamma
+                    zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
+                    rloc = np.array([self.Ky*sinx[i]*revgamma, 
+                                     self.Kx*sinxph[i]*revgamma,
+                                     betam*zloc-0.25*zterm*revgamma])
+                    dr = R0 - rloc
+                    dist = np.linalg.norm(dr, axis=0)
+
+                    drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :];
+        
+                    sinzloc = np.sin(wwuS * zloc*(1.-betam))
+                    coszloc = np.cos(wwuS * zloc*(1.-betam))
+                    sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
+                    cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
+#                    ucos = wwuS*(zloc + dist)
+                    eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
+                               cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
+                    eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
+                               cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs;
+                    eucos = eucosx + 1j*eucosy
+
+                    direction = dr/dist
+                    dirx = direction[0, :]
+                    diry = direction[1, :]
+                    dirz = direction[2, :]
+    
+                else:
+                    ucos = ww1S*tg[i] + wwuS*revgamma*\
+                        (-self.Ky*ddphiS*sinx[i] + self.Kx*ddpsiS*sinxph[i] +
+                         0.125*revgamma*(self.Ky**2 * sin2x[i] +
+                                       self.Kx**2 * sin2xph[i]))
+                    eucos = np.exp(1j*ucos)
+        
+                betax = taperC*self.Ky*revgamma*cosx[i]
+                betay = -self.Kx*revgamma*cosxph[i]
+                betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
+        
+                betaPx = -self.Ky*(alphaS*cosx[i] + taperC*sinx[i])
+                betaPy = self.Kx*sinxph[i]
+                betaPz = 0.5*revgamma*\
+                    (self.Ky**2 * taperC*(alphaS*cosx[i]**2 + taperC*sin2x[i])+
+                     self.Kx**2 * sin2xph[i])
+    
+                rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
+#                eucos = ag[i] * *rkrel*rkrel
+                eucos *= ag[i] * rkrel**2 
+        
+                bnx = dirx - betax
+                bny = diry - betay
+                bnz = dirz - betaz
+    
+                dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
+                dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
+    
+                Bsr += eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB)
+                Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
+
+        return wuS*revgamma*Bsr, wuS*revgamma*Bpr
+"""
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
         if self.needReset:
@@ -739,7 +949,7 @@ class SourceFromField(object):
         self.ag = self.cl_precisionF((dI[:, None]*0+ag_n).ravel())
         self.dstep = dstep
 
-    def build_trajectory(self, Bx, By, Bz, gamma=None):
+    def build_trajectory_CL(self, Bx, By, Bz, gamma=None):
         t0 = time.time()
         if gamma is None:
             gamma = np.array(self.gamma) #[0] TODO: check for consistency
@@ -778,13 +988,96 @@ class SourceFromField(object):
                            bounds_error=False, fill_value="extrapolate")(self.tg)
         return betaxTg, betayTg, [betazav[-1]], trajxTg, trajyTg, trajzTg
 
-#    def build_trajectory_conv(self, Bx, By, Bz, gamma=None):
-#        def f_beta():
-#            
-#        
-#        if gamma is None:
-#            gamma = np.array(self.gamma) #[0] TODO: check for consistency
-#        emcg = SIE0 / SIM0 / C / 10. / gamma
+    def build_trajectory_conv(self, Bx, By, Bz, gamma=None):
+        def f_beta(B, beta):
+            return emcg*np.array((beta[1]*B[2]-B[1], B[0] - beta[0]*B[2]))
+
+        def f_traj(beta):
+            smTerm = 1./gamma**2 + beta[0]**2 + beta[1]**2
+            return np.array((beta[0], beta[1], 1.-0.5*smTerm+0.125*smTerm**2))
+
+        def next_beta_rk(iB, beta):
+            k1beta = rkStep * f_beta([Bx[iB], By[iB], Bz[iB]],
+                                     beta)
+            k2beta = rkStep * f_beta([Bx[iB+1], By[iB+1], Bz[iB+1]],
+                                     beta + 0.5*k1beta)
+            k3beta = rkStep * f_beta([Bx[iB+1], By[iB+1], Bz[iB+1]],
+                                     beta + 0.5*k2beta)
+            k4beta = rkStep * f_beta([Bx[iB+2], By[iB+2], Bz[iB+2]],
+                                     beta + k3beta)
+            return beta + (k1beta + 2*k2beta + 2*k3beta + k4beta)/6.
+
+        def next_traj_rk(iB, beta, traj):
+            k1beta = rkStep * f_beta([Bx[iB], By[iB], Bz[iB]],
+                                        beta)
+            k1traj = rkStep * f_traj(beta)
+            k2beta = rkStep * f_beta([Bx[iB+1], By[iB+1], Bz[iB+1]],
+                                     beta + 0.5*k1beta)
+            k2traj = rkStep * f_traj(beta + 0.5*k1beta)
+            k3beta = rkStep * f_beta([Bx[iB+1], By[iB+1], Bz[iB+1]],
+                                     beta + 0.5*k2beta)
+            k3traj = rkStep * f_traj(beta + 0.5*k2beta)
+            k4beta = rkStep * f_beta([Bx[iB+2], By[iB+2], Bz[iB+2]],
+                                     beta + k3beta)
+            k4traj = rkStep * f_traj(beta + k3beta)
+            return (beta + (k1beta + 2*k2beta + 2*k3beta + k4beta)/6.,
+                    traj + (k1traj + 2*k2traj + 2*k3traj + k4traj)/6.)
+        
+        if gamma is None:
+            gamma = np.array(self.gamma) #[0] TODO: check for consistency
+        emcg = SIE0 / SIM0 / C / 10. / gamma
+        beta_next = np.zeros(2)
+        beta0 = np.zeros(2)
+        betam_int = 0
+
+        for i in range(len(self.wtGrid)-1):
+            rkStep = self.wtGrid[i+1] - self.wtGrid[i]
+            beta_next = next_beta_rk(2*i, beta_next)
+            beta0 += rkStep * beta_next 
+
+        beta0 /= -(self.wtGrid[-1] - self.wtGrid[0])
+        beta_next = np.copy(beta0)
+        traj_next = np.zeros(3)
+        traj0 = np.zeros(3)
+
+        for i in range(len(self.wtGrid)-1):
+            rkStep = self.wtGrid[i+1] - self.wtGrid[i]
+            beta_next, traj_next = next_traj_rk(2*i, beta_next, traj_next)
+            traj0 += rkStep * traj_next
+            betam_int += rkStep * np.sqrt(
+                    1. - 1./gamma**2 - beta_next[0]**2 - beta_next[1]**2)
+
+        traj0 /= -(self.wtGrid[-1] - self.wtGrid[0])
+        beta_next = np.copy(beta0)
+        traj_next = np.copy(traj0)
+        betam_int /= -(self.wtGrid[-1] - self.wtGrid[0])
+
+        betax = [beta0[0]]
+        betay = [beta0[1]]
+        trajx = [traj0[0]]
+        trajy = [traj0[1]]
+        trajz = [traj0[2]]
+
+        for i in range(len(self.wtGrid)-1):
+            rkStep = self.wtGrid[i+1] - self.wtGrid[i]
+            beta_next, traj_next = next_traj_rk(2*i, beta_next, traj_next)
+            betax.append(beta_next[0])
+            betay.append(beta_next[1])
+            trajx.append(traj_next[0])
+            trajy.append(traj_next[1])
+            trajz.append(traj_next[2])
+
+        betaxTg = interp1d(self.wtGrid, betax, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        betayTg = interp1d(self.wtGrid, betay, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        trajxTg = interp1d(self.wtGrid, trajx, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        trajyTg = interp1d(self.wtGrid, trajy, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        trajzTg = interp1d(self.wtGrid, trajz, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        return betaxTg, betayTg, [betam_int], trajxTg, trajyTg, trajzTg
        
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
         if gamma is None:
@@ -828,12 +1121,14 @@ class SourceFromField(object):
         if self.filamentBeam:
             if self.customFieldData is not None and not self.periodicTest:
                 betax, betay, betazav, trajx, trajy, trajz =\
-                    self.build_trajectory(Bx, By, Bz, gamma[0])
-                Bxt, Byt, Bzt = self._magnetic_field(self.tg)  # TODO: take from B
+                    self.build_trajectory_CL(Bx, By, Bz, gamma[0])
+#                betax3, betay3, betazav3, trajx3, trajy3, trajz3 =\
+#                    self.build_trajectory_conv(Bx, By, Bz, gamma[0])
+                Bxt, Byt, Bzt = self._magnetic_field(self.tg)
             else:
                 betax, betay, betazav, trajx, trajy, trajz =\
                     self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
-                Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)  # TODO: take from B
+                Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
             self.beta = [betax, betay]
             self.trajectory = [trajx, trajy, trajz]
@@ -857,14 +1152,22 @@ class SourceFromField(object):
                 ucos2 = wwu*np.pi*2/self.L0*(self.tg+dr2[2, :] + np.sqrt(dr2[0, :]**2+dr2[1, :]**2+dr2[2, :]**2))
 
                 from matplotlib import pyplot as plt
+
+
+
+
                 plt.figure("dBy")
                 plt.plot(self.tg, Byt-By2)
                 plt.figure("dBetaX")
                 plt.plot(self.tg, betax-betax2)
+                plt.figure("dBetaX3")
+                plt.plot(self.tg, betax-betax3)
 #                plt.figure("dBetaY")
 #                plt.plot(trajz, betay-betay2)
                 plt.figure("dX")
                 plt.plot(self.tg, trajx-trajx2)
+                plt.figure("dX3")
+                plt.plot(self.tg, trajx-trajx3)
 #                plt.figure("dY")
 #                plt.plot(trajz, trajy-trajy2)
 #                plt.figure("dY")
@@ -876,12 +1179,12 @@ class SourceFromField(object):
                 plt.plot(self.tg, By2)
                 plt.figure("BetaX")
                 plt.plot(self.tg, betax)
-                plt.plot(self.tg, betax2)
+                plt.plot(self.tg, betax3)
 #                plt.figure("dBetaY")
 #                plt.plot(trajz, betay-betay2)
                 plt.figure("X")
                 plt.plot(self.tg, trajx)
-                plt.plot(self.tg, trajx2)
+                plt.plot(self.tg, trajx3)
                 plt.figure("Z")
                 plt.plot(self.tg, trajz)
                 plt.plot(self.tg, trajz2)
