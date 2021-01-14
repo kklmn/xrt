@@ -55,7 +55,7 @@ class SourceFromField(object):
         self.center = center  # 3D point in global system
         self.nrays = np.long(nrays)
         self.gp = gp
-
+        self.periodicTest = False
         # Explicit init, private properties to be modified via decorators.
         self._eEpsilonX = eEpsilonX * 1e-6  # input in nmrad
         self._eEpsilonZ = eEpsilonZ * 1e-6  # input in nmrad
@@ -170,10 +170,10 @@ class SourceFromField(object):
                 self.customFieldData = self._read_custom_field(fname, kwargs)
         else:  # Test with periodic field
             self.Kx = 0.
-            self.Ky = 17.274 #1.7
+            self.Ky = 4.4 #17.274 #1.7
             self.phase = 0
-            self.L0 = 100 #10.
-            self.Np = 70 #30
+            self.L0 = 53.96 #100 #10.
+            self.Np = 41 #70 #30
             self.quadm = 50
             self.gIntervals = 2*self.Np
             self.wtGrid = np.linspace(-self.L0*self.Np*0.5,
@@ -595,24 +595,34 @@ class SourceFromField(object):
 
     def _magnetic_field(self, grid=None):
         dataz = self.customFieldData[:, 0]
-        lenmm = np.abs(dataz[-1] - dataz[0])
-        self.wtGrid = np.linspace(dataz[0], dataz[-1], int(lenmm*10))
-        self.BGrid = np.linspace(dataz[0], dataz[-1], 2*len(self.wtGrid)-1)
-        z = self.BGrid if grid is None else grid  # 'z' in mm
+        if grid is None:
+            lenmm = np.abs(dataz[-1] - dataz[0])
+            self.wtGrid = np.linspace(dataz[0], dataz[-1], int(lenmm*10))
+            self.BGrid = np.linspace(dataz[0], dataz[-1], 2*len(self.wtGrid)-1)
+            z = self.BGrid  # 'z' in mm
+        else:
+            z = grid
 #        print(self.wtGrid, self.BGrid)
+#        print(dataz, z)
         dataShape = self.customFieldData.shape
         if dataShape[1] == 2:
-            By = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
+            By = interp1d(dataz, self.customFieldData[:, 1], kind='cubic',
+                          bounds_error=False, fill_value="extrapolate")(z)
             Bx = np.zeros_like(By)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 3:
-            Bx = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
-            By = interp1d(dataz, self.customFieldData[:, 2], kind='cubic')(z)
+            Bx = interp1d(dataz, self.customFieldData[:, 1], kind='cubic',
+                          bounds_error=False, fill_value="extrapolate")(z)
+            By = interp1d(dataz, self.customFieldData[:, 2], kind='cubic',
+                          bounds_error=False, fill_value="extrapolate")(z)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 4:
-            Bx = interp1d(dataz, self.customFieldData[:, 1], kind='cubic')(z)
-            By = interp1d(dataz, self.customFieldData[:, 2], kind='cubic')(z)
-            Bz = interp1d(dataz, self.customFieldData[:, 3], kind='cubic')(z)
+            Bx = interp1d(dataz, self.customFieldData[:, 1], kind='cubic',
+                          bounds_error=False, fill_value="extrapolate")(z)
+            By = interp1d(dataz, self.customFieldData[:, 2], kind='cubic',
+                          bounds_error=False, fill_value="extrapolate")(z)
+            Bz = interp1d(dataz, self.customFieldData[:, 3], kind='cubic',
+                          bounds_error=False, fill_value="extrapolate")(z)
         else:
             print("Unknown file structure.")
             raise
@@ -620,7 +630,14 @@ class SourceFromField(object):
         return Bx, By, Bz
 
     def _magnetic_field_periodic(self, grid=None):
-        z = self.BGrid if grid is None else grid
+        if grid is None:
+            dataz = self.customFieldData[:, 0]
+            lenmm = np.abs(dataz[-1] - dataz[0])
+            self.wtGrid = np.linspace(dataz[0], dataz[-1], int(lenmm*10))
+            self.BGrid = np.linspace(dataz[0], dataz[-1], 2*len(self.wtGrid)-1)
+            z = self.BGrid
+        else:
+            z = grid
         self.B0x = K2B * self.Kx / self.L0
         self.B0y = K2B * self.Ky / self.L0
         self.B0z = 0
@@ -749,13 +766,16 @@ class SourceFromField(object):
             clKernel, scalarArgsTraj, None, nonSlicedROArgs,
             None, nonSlicedRWArgs, 1)
 #        print("Trajectory calculated in", time.time()-t0, "s")
-
-        betaxTg = interp1d(self.wtGrid, betax, kind='cubic')(self.tg)
-        betayTg = interp1d(self.wtGrid, betay, kind='cubic')(self.tg)
-
-        trajxTg = interp1d(self.wtGrid, trajx, kind='cubic')(self.tg)
-        trajyTg = interp1d(self.wtGrid, trajy, kind='cubic')(self.tg)
-        trajzTg = interp1d(self.wtGrid, trajz, kind='cubic')(self.tg)
+        betaxTg = interp1d(self.wtGrid, betax, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        betayTg = interp1d(self.wtGrid, betay, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        trajxTg = interp1d(self.wtGrid, trajx, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        trajyTg = interp1d(self.wtGrid, trajy, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
+        trajzTg = interp1d(self.wtGrid, trajz, kind='cubic',
+                           bounds_error=False, fill_value="extrapolate")(self.tg)
         return betaxTg, betayTg, [betazav[-1]], trajxTg, trajyTg, trajzTg
 
 #    def build_trajectory_conv(self, Bx, By, Bz, gamma=None):
@@ -765,9 +785,6 @@ class SourceFromField(object):
 #        if gamma is None:
 #            gamma = np.array(self.gamma) #[0] TODO: check for consistency
 #        emcg = SIE0 / SIM0 / C / 10. / gamma
-        
-
-        
        
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
         if gamma is None:
@@ -803,22 +820,25 @@ class SourceFromField(object):
         scalarArgs = []  # R0
         R0 = self.R0 if self.R0 is not None else 0
 
-        if self.customFieldData is not None:
+        if self.customFieldData is not None and not self.periodicTest:
             Bx, By, Bz = self._magnetic_field()
         else:
             Bx, By, Bz = self._magnetic_field_periodic()
 
         if self.filamentBeam:
-            if self.customFieldData is not None:
+            if self.customFieldData is not None and not self.periodicTest:
                 betax, betay, betazav, trajx, trajy, trajz =\
                     self.build_trajectory(Bx, By, Bz, gamma[0])
-
-            Bxt, Byt, Bzt = self._magnetic_field(self.tg)  # TODO: take from B
+                Bxt, Byt, Bzt = self._magnetic_field(self.tg)  # TODO: take from B
+            else:
+                betax, betay, betazav, trajx, trajy, trajz =\
+                    self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
+                Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)  # TODO: take from B
 
             self.beta = [betax, betay]
             self.trajectory = [trajx, trajy, trajz]
 
-            if False:  # Test of interpolation quality
+            if True:  # Test of interpolation quality
                 emax, tmax, pmax = np.max(w), np.max(ddtheta), np.max(ddpsi)
                 Bx2, By2, Bz2 = self._magnetic_field_periodic(self.tg)
                 betax2, betay2, betazav2, trajx2, trajy2, trajz2 =\
@@ -948,7 +968,7 @@ class SourceFromField(object):
 
         integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
         if self.convergenceSearchFlag:
-            return np.abs(np.sqrt(integralField) * ab * 0.5 * self.dstep)
+            return np.abs(np.sqrt(integralField) * 0.5 * self.dstep)
         else:
             return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
                     np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,

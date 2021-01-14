@@ -632,10 +632,11 @@ float2 f_beta(float Bx, float By, float Bz,
 
 float3 f_traj(float revgamma, float2 beta)
 {
+    float smTerm = revgamma+beta.x*beta.x+beta.y*beta.y;
     return (float3)(beta.x,
-                     beta.y,
-// TODO: convert to series
-                     sqrt(revgamma-beta.x*beta.x-beta.y*beta.y));
+                    beta.y,
+//                     sqrt(1. - smTerm));
+                    1. - 0.5*smTerm + 0.125*smTerm*smTerm); // - 0.0625*smTerm*smTerm*smTerm
 }
 
 float2 next_beta_rk(float2 beta, int iBase, float rkStep, float emcg,
@@ -841,7 +842,7 @@ __kernel void get_trajectory(const int jend,
     int j;
     float rkStep;
     // TODO: leave only 1/gamma2
-    float revgamma = 1. - 1./gamma2;
+    float revgamma = 1./gamma2;
     float betam_int = 0;
     float2 beta, beta0;
     float3 traj, traj0;
@@ -876,7 +877,7 @@ __kernel void get_trajectory(const int jend,
         beta = betaTraj.s01;
         traj = betaTraj.s234;
         traj0 += traj * rkStep;
-        betam_int += rkStep*sqrt(revgamma - beta.x*beta.x -
+        betam_int += rkStep*sqrt(1. - revgamma - beta.x*beta.x -
                                  beta.y*beta.y);
     }
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -939,6 +940,7 @@ __kernel void custom_field_filament(const int jend,
     float ucos, sinucos, cosucos, wR0, krel, LR, LRS, drs;
     float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
     float revg2 = 1./gamma2;
+    float smTerm;
 
     float2 eucos;
     float2 Is = (float2)(0., 0.);
@@ -970,13 +972,16 @@ __kernel void custom_field_filament(const int jend,
 
         betaC.x = betax[j];
         betaC.y = betay[j];
-        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
+        smTerm = revg2 + betaC.x*betaC.x + betaC.y*betaC.y;
+        betaC.z = 1. - 0.5*smTerm + 0.125*smTerm*smTerm;
+//        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
 
         dr = r0 - traj;
         drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
 
         LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
-        LR = length(r0 - traj);
+        LR = length(dr);
+
 
         sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
         sindrs = sincos(wc * LRS, &cosdrs);
@@ -997,7 +1002,7 @@ __kernel void custom_field_filament(const int jend,
         betaP.x = betaC.y*Bz[j] - betaC.z*By[j];
         betaP.y = -betaC.x*Bz[j] + betaC.z*Bx[j];
         betaP.z = betaC.x*By[j] - betaC.y*Bx[j];
-        n = (r0 - traj) / LR;
+        n = dr / LR;
 
         krel = 1. - dot(n, betaC);
         nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
