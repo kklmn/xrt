@@ -107,6 +107,7 @@ class SourceFromField(object):
         self.convergence_finder = 'diff' #, "mad"
         self.useGauLeg = False
         self.maxIntegrationSteps = 9000  # Up to 511000 nodes
+        self.convergenceSearchFlag = False
 #        self.nRK = 10  # Number of Runge-Kutta steps between the nodes
         self.trajectory = None
 #        self.needReset = True
@@ -285,6 +286,16 @@ class SourceFromField(object):
         self._eE = float(eE)
         self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
         self.gamma2 = self.gamma**2
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
+    def R0(self):
+        return self._R0
+
+    @R0.setter
+    def R0(self, R0):
+        self._R0 = R0
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -471,7 +482,7 @@ class SourceFromField(object):
             self.quadm = k
             self.gIntervals = 2
             self._build_integration_grid()
-            Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
+            Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0] #[0]
             print(self.quadm, Inew)
             if m == 0:
                 Iold = Inew
@@ -641,20 +652,14 @@ class SourceFromField(object):
         tmpeEspread = self.eEspread
         self.eEspread = 0
 
+        self.convergenceSearchFlag = True
+
         if self.convergence_finder == 'mad':
             convRes, stats = self._find_convergence_thrsh_mad(testMode=False)
         else:
             convRes, stats = self._find_convergence_mixed(testMode=False)
-#            convRes, stats = self._find_convergence_thrsh(testMode=True)
 
-#        from matplotlib import pyplot as plt
-#        plt.figure("Convergence Ipi")
-#        plt.semilogy(stats[0], stats[1][:])
-#        plt.savefig("Convergence {} Ipi.png".format(self.convergence_finder))
-
-#        plt.figure("Convergence Ipi")
-#        plt.semilogy(stats[0], stats[:, 2])
-#        plt.savefig("Convergence mad Ipi.png")
+        self.convergenceSearchFlag = False
 
         """end of Adjusting the number of points for numerical integration"""
         self.eEspread = tmpeEspread
@@ -752,6 +757,17 @@ class SourceFromField(object):
         trajyTg = interp1d(self.wtGrid, trajy, kind='cubic')(self.tg)
         trajzTg = interp1d(self.wtGrid, trajz, kind='cubic')(self.tg)
         return betaxTg, betayTg, [betazav[-1]], trajxTg, trajyTg, trajzTg
+
+#    def build_trajectory_conv(self, Bx, By, Bz, gamma=None):
+#        def f_beta():
+#            
+#        
+#        if gamma is None:
+#            gamma = np.array(self.gamma) #[0] TODO: check for consistency
+#        emcg = SIE0 / SIM0 / C / 10. / gamma
+        
+
+        
        
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
         if gamma is None:
@@ -929,10 +945,14 @@ class SourceFromField(object):
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
-        return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 *
-                (np.abs(Is_local)**2 + np.abs(Ip_local)**2),
-                np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
-                np.sqrt(Amp2Flux) * Ip_local * 0.5 * self.dstep * ab)
+
+        integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
+        if self.convergenceSearchFlag:
+            return np.abs(np.sqrt(integralField) * ab * 0.5 * self.dstep)
+        else:
+            return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
+                    np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
+                    np.sqrt(Amp2Flux) * Ip_local * 0.5 * self.dstep * ab)
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
                             harmonic=None):
@@ -2272,7 +2292,7 @@ class Undulator(object):
         self.gIntervals = gIntervals
         self._convergence_finder = 'mixed'  # 'diff', 'mad'
         self._useGauLeg = False
-
+        self.convergenceSearchFlag = False
         self.madBoundary = 20
         self.trajectory = None
         fullLength = False  # NOTE maybe a future input parameter
@@ -2536,7 +2556,7 @@ class Undulator(object):
 
     @R0.setter
     def R0(self, R0):
-        self._R0 = float(R0)
+        self._R0 = R0
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -2781,7 +2801,8 @@ class Undulator(object):
             self.quadm = k
             self.gIntervals = 2
             Iout = self.build_I_map(sE, sTheta_max, sPsi_max)
-            Inew = np.abs(Iout[2])
+            Inew = np.abs(Iout[0])
+#            Inew = np.abs(Iout[2])
             if m == 0:
                 Iold = Inew
                 continue
@@ -2937,14 +2958,16 @@ class Undulator(object):
 #        self.dTheta = (self.Theta_max - self.Theta_min) / float(mTheta - 1)
 #        self.dPsi = (self.Psi_max - self.Psi_min) / float(mPsi - 1)
 
+
+
         """Adjusting the number of points for Gauss integration"""
         # self.gp = 1
-
+        self.convergenceSearchFlag = True
         self.quadm = 0
         tmpeEspread = self.eEspread
         self.eEspread = 0
         self._find_convergence_mixed()
-
+        self.convergenceSearchFlag = False
         """end of Adjusting the number of points for Gauss integration"""
         self.eEspread = tmpeEspread
         if True: #raycing._VERBOSITY_ > 10:
@@ -3283,7 +3306,6 @@ class Undulator(object):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-
         if self.taper is not None:
             alphaS = self.taper*C*10/E2W
             taperC = 1 - alphaS*tg/wuS
@@ -3294,15 +3316,35 @@ class Undulator(object):
                  self.Kx*diry*sinx + 0.125*revgamma*
                  (self.Kx**2 * sin2xph + self.Ky**2 * (sin2x -
                   2*alphaS/wuS*(tg**2 + cosx**2 + tg*sin2x))))
-        elif self.R0 is not None:
+            eucos = np.exp(1j*ucos)
+        elif R0 is not None:
+            sinr0z = np.sin(wwuS*R0)
+            cosr0z = np.cos(wwuS*R0)
             zterm = 0.5*(self.Ky**2*sin2x +
                          self.Kx**2*sin2xph)*revgamma
             rloc = np.array([self.Ky*sinx*revgamma, 
                              self.Kx*sinxph*revgamma,
                              betam*tg-0.25*zterm*revgamma])
-            dist = np.linalg.norm(R0 - rloc, axis=0)
+#            dist = np.linalg.norm(R0 - rloc, axis=0)
+            dr = R0 - rloc
+
+            dist = np.linalg.norm(dr, axis=0)
             ucos = wwuS*(tg + dist)
-            direction = (R0 - rloc)/dist
+            drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+#
+            sinzloc = np.sin(wwuS * tg*(1.-betam))
+            coszloc = np.cos(wwuS * tg*(1.-betam))
+            sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
+            cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
+#            ucos = wwuS*(zloc + dist)
+            eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
+                       cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
+            eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
+                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
+            eucos = eucosx + 1j*eucosy
+#            eucos = np.exp(1j*ucos)
+
+            direction = dr/dist
             dirx = direction[0, :]
             diry = direction[1, :]
             dirz = direction[2, :]
@@ -3311,6 +3353,7 @@ class Undulator(object):
                 (-self.Ky*ddphiS*sinx + self.Kx*ddpsiS*sinxph +
                  0.125*revgamma*(self.Ky**2 * sin2x +
                                self.Kx**2 * sin2xph))
+            eucos = np.exp(1j*ucos)
 
         betax = taperC*self.Ky*revgamma*cosx
         betay = -self.Kx*revgamma*cosxph
@@ -3323,8 +3366,8 @@ class Undulator(object):
              self.Kx**2 * sin2xph)
 
         rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
-        eucos = ag * np.exp(1j*ucos)*rkrel*rkrel
-
+#        eucos = ag * np.exp(1j*ucos)*rkrel*rkrel
+        eucos *= ag * rkrel**2 
         bnx = dirx - betax
         bny = diry - betay
         bnz = dirz - betaz
@@ -3334,6 +3377,10 @@ class Undulator(object):
 
         Bsr = np.sum(eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
         Bpr = np.sum(eucos*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+#        Bsr1 = np.sum(eucos1*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
+#        Bpr1 = np.sum(eucos1*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+#
+#        print()        
 
         return Bsr, Bpr
 
@@ -3363,10 +3410,13 @@ class Undulator(object):
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
         Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
 
+        sinr0z = np.sin(R0)
+        cosr0z = np.cos(R0)
+
         for Nperiod in range(Nmx):
-            if raycing._VERBOSITY_ > 30 and (self.taper is not None or\
-                                             R0 is not None):
-                print("Period {} out of {}".format(Nperiod+1, Nmx))
+#            if raycing._VERBOSITY_ > 30 and (self.taper is not None or\
+#                                             R0 is not None):
+#                print("Period {} out of {}".format(Nperiod+1, Nmx))
             for i in range(len(tg)):
                 if self.taper is not None:
                     zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
@@ -3379,6 +3429,7 @@ class Undulator(object):
                          self.Kx*diry*sinx[i] + 0.125*revgamma*
                          (self.Kx**2 * sin2xph[i] + self.Ky**2 * (sin2x[i] -
                           2*alphaS/wuS*(zloc**2 + cosx[i]**2 + zloc*sin2x[i]))))
+                    eucos = np.exp(1j*ucos)
                 elif R0 is not None:
                     zterm = 0.5*(self.Ky**2*sin2x[i] +
                                  self.Kx**2*sin2xph[i])*revgamma
@@ -3386,13 +3437,23 @@ class Undulator(object):
                     rloc = np.array([self.Ky*sinx[i]*revgamma, 
                                      self.Kx*sinxph[i]*revgamma,
                                      betam*zloc-0.25*zterm*revgamma])
-                    dist = np.linalg.norm(R0 - rloc, axis=0)
+                    dr = R0 - rloc
+                    dist = np.linalg.norm(dr, axis=0)
 
-                    ucos = wwuS*(zloc + dist)
-                    if i==0 or i==len(tg)-1:
-                        print("ucos0 {:.15e}, ucos1 {:.15e}".format(
-                                (wwuS*zloc)[0], (wwuS*dist)[0]))
-                    direction = (R0 - rloc)/dist
+                    drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :];
+        
+                    sinzloc = np.sin(wwuS * zloc*(1.-betam))
+                    coszloc = np.cos(wwuS * zloc*(1.-betam))
+                    sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
+                    cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
+#                    ucos = wwuS*(zloc + dist)
+                    eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
+                               cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
+                    eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
+                               cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs;
+                    eucos = eucosx + 1j*eucosy
+
+                    direction = dr/dist
                     dirx = direction[0, :]
                     diry = direction[1, :]
                     dirz = direction[2, :]
@@ -3402,6 +3463,7 @@ class Undulator(object):
                         (-self.Ky*ddphiS*sinx[i] + self.Kx*ddpsiS*sinxph[i] +
                          0.125*revgamma*(self.Ky**2 * sin2x[i] +
                                        self.Kx**2 * sin2xph[i]))
+                    eucos = np.exp(1j*ucos)
         
                 betax = taperC*self.Ky*revgamma*cosx[i]
                 betay = -self.Kx*revgamma*cosxph[i]
@@ -3414,7 +3476,8 @@ class Undulator(object):
                      self.Kx**2 * sin2xph[i])
     
                 rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
-                eucos = ag[i] * np.exp(1j*ucos)*rkrel*rkrel
+#                eucos = ag[i] * *rkrel*rkrel
+                eucos *= ag[i] * rkrel**2 
         
                 bnx = dirx - betax
                 bny = diry - betay
@@ -3466,9 +3529,9 @@ class Undulator(object):
         self.tg_n, self.ag_n = tg_n, ag_n
 
         if (self.taper is not None) or (self.R0 is not None):
-            AB = 1. / PI2 / wu
+            ab = 1. / PI2 / wu
         else:
-            AB = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
+            ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
         dstep = 2 * PI / float(self.gIntervals)
         dI = np.arange(-PI + 0.5 * dstep, PI, dstep)
 
@@ -3488,39 +3551,42 @@ class Undulator(object):
 
             if self.filamentBeam:
                 gamma = self.gamma
-            Bsr, Bpr = self._sp_sum(
+            Is_local, Ip_local = self._sp_sum(
                     tg, ag, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
-#            Bsr = sp3res[0]
-#            Bpr = sp3res[1]
+#            Is_local = sp3res[0]
+#            Ip_local = sp3res[1]
         else:
             if (self.taper is not None) or (self.R0 is not None):
                 dI = np.arange(0.5 * dstep - PI * self.Np, PI * self.Np, dstep)
             tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
             ag = (dI[:, None]*0 + ag_n).ravel()
-            # Bsr = np.zeros_like(w, dtype='complex')
-            # Bpr = np.zeros_like(w, dtype='complex')
+            # Is_local = np.zeros_like(w, dtype='complex')
+            # Ip_local = np.zeros_like(w, dtype='complex')
             dim = len(np.array(w).shape)
-            Bsr, Bpr = self._sp(
+            Is_local, Ip_local = self._sp(
                     dim, tg, ag, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
-#            Bsr = np.sum(ag * sp3res[0], axis=dim)
-#            Bpr = np.sum(ag * sp3res[1], axis=dim)
+#            Is_local = np.sum(ag * sp3res[0], axis=dim)
+#            Ip_local = np.sum(ag * sp3res[1], axis=dim)
 #        print("Time to calc", time.time()-t0sp, "s")
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
 
         if harmonic is not None:
-            Bsr[ww1 > harmonic+0.5] = 0
-            Bpr[ww1 > harmonic+0.5] = 0
-            Bsr[ww1 < harmonic-0.5] = 0
-            Bpr[ww1 < harmonic-0.5] = 0
-#        print("Is_local", "Ip_local", Bsr, Bpr)
+            Is_local[ww1 > harmonic+0.5] = 0
+            Ip_local[ww1 > harmonic+0.5] = 0
+            Is_local[ww1 < harmonic-0.5] = 0
+            Ip_local[ww1 < harmonic-0.5] = 0
+#        print("Is_local", "Ip_local", Is_local, Ip_local)
         #        np.seterr(invalid='warn')
         #        np.seterr(divide='warn')
-        return (Amp2Flux * AB**2 * 0.25 * dstep**2 *
-                (np.abs(Bsr)**2 + np.abs(Bpr)**2),
-                np.sqrt(Amp2Flux) * AB * Bsr * 0.5 * dstep,
-                np.sqrt(Amp2Flux) * AB * Bpr * 0.5 * dstep)
+        integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
+        if self.convergenceSearchFlag:
+            return np.abs(np.sqrt(integralField) * 0.5 * dstep)
+        else:
+            return (Amp2Flux * ab**2 * 0.25 * dstep**2 * integralField,
+                    np.sqrt(Amp2Flux) * ab * Is_local * 0.5 * dstep,
+                    np.sqrt(Amp2Flux) * ab * Ip_local * 0.5 * dstep)
 
 
     def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
@@ -3619,10 +3685,13 @@ class Undulator(object):
             Is_local[ww1 < harmonic-0.5] = 0
             Ip_local[ww1 < harmonic-0.5] = 0
 
-        return (Amp2Flux * ab**2 * 0.25 * dstep**2 *
-                (np.abs(Is_local)**2 + np.abs(Ip_local)**2),
-                np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
-                np.sqrt(Amp2Flux) * Ip_local * ab * 0.5 * dstep)
+        integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
+        if self.convergenceSearchFlag:
+            return np.abs(np.sqrt(integralField) * 0.5 * dstep)
+        else:
+            return (Amp2Flux * ab**2 * 0.25 * dstep**2 * integralField,
+                    np.sqrt(Amp2Flux) * Is_local * ab * 0.5 * dstep,
+                    np.sqrt(Amp2Flux) * Ip_local * ab * 0.5 * dstep)
 
 #    def _reportNaN(self, x, strName):
 #        nanSum = np.isnan(x).sum()
