@@ -706,8 +706,9 @@ class SourceFromField(object):
         self.fluxConst = self.Imax * self.xzE
 
         self._build_integration_grid()
-"""
-    def _sp(self, dim, tg, ag, w, gamma, ddphi, ddpsi, R0=None):
+
+    def _sp(self, dim, emcg, tg, ag, w, gamma, ddphi, ddpsi, Bx, By, Bz, 
+            betax, betay, betam, trajx, trajy, trajz, R0=None):
         lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
         if dim == 0:
@@ -727,72 +728,55 @@ class SourceFromField(object):
             if lengamma > 1:
                 gS = gamma[:, :, :, np.newaxis]
 
-        sinx = np.sin(tg)
-        cosx = np.cos(tg)
-        sin2x = 2*sinx*cosx
-        sinxph = np.sin(tg+self.phase)
-        cosxph = np.cos(tg+self.phase)        
-        sin2xph = 2*sinxph*cosxph
-        revgamma = 1./gS
-        revgamma2 = revgamma**2
-        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
-
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
 
-        wc = wS * E2W / betam / C / 10
+        wc = wS * E2W / betam / C / 10.
 
         sinr0z = np.sin(wc*R0)
         cosr0z = np.cos(wc*R0)
 
-        dr = np.array([R0[0] - trajx, R0[1] - trajy, R0 - trajz])
-        
-
-#        dr = R0 - rloc
-
+        rloc = np.array([trajx, trajy, trajz]) 
+        dr = R0 - rloc
         dist = np.linalg.norm(dr, axis=0)
 
-
-
-
-        drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
-#
-        sinzloc = np.sin(wwuS * tg*(1.-betam))
-        coszloc = np.cos(wwuS * tg*(1.-betam))
-        sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
-        cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
-#            ucos = wwuS*(zloc + dist)
-        eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
-                   cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
-        eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
-                   cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
-        eucos = eucosx + 1j*eucosy
-#            eucos = np.exp(1j*ucos)
-
-        direction = dr/dist
-        dirx = direction[0, :]
-        diry = direction[1, :]
-        dirz = direction[2, :]
+        if R0 is not None:
+            drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+            LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
+            sinzloc = np.sin(wc * (tg - trajz))
+            coszloc = np.cos(wc * (tg - trajz))
+            sindrs = np.sin(wc * LRS)
+            cosdrs = np.cos(wc * LRS)
+            eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
+                       cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
+            eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
+                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
         else:
-            ucos = ww1S*tg + wwuS*revgamma*\
-                (-self.Ky*ddphiS*sinx + self.Kx*ddpsiS*sinxph +
-                 0.125*revgamma*(self.Ky**2 * sin2x +
-                               self.Kx**2 * sin2xph))
-            eucos = np.exp(1j*ucos)
+            phz = wc*(tg - dirz*trajz)
+            phxy = wc*(dirx*trajx + diry*trajy)
+            sinphz, cosphz = np.sin(phz), np.cos(phz)
+            sinphxy, cosphxy = np.sin(phxy), np.cos(phxy)
+            eucosx = sinphz*cosphxy - cosphz*sinphxy
+            eucosy = cosphz*cosphxy + sinphz*sinphxy
 
-        betax = taperC*self.Ky*revgamma*cosx
-        betay = -self.Kx*revgamma*cosxph
-        betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
+        eucos = eucosx + 1j*eucosy
 
-        betaPx = -self.Ky*(alphaS*cosx + taperC*sinx)
-        betaPy = self.Kx*sinxph
-        betaPz = 0.5*revgamma*\
-            (self.Ky**2 * taperC*(alphaS*cosx**2 + taperC*sin2x)+
-             self.Kx**2 * sin2xph)
+        if R0 is not None:
+            direction = dr/dist
+            dirx = direction[0, :]
+            diry = direction[1, :]
+            dirz = direction[2, :]
+
+        smTerm = 1./gS**2 + betax**2 + betay**2
+        betaz = 1 - 0.5*smTerm + 0.125*smTerm**2
+
+        betaPx = betay*Bz - betaz*By
+        betaPy = -betax*Bz + betaz*Bx
+        betaPz = betax*By - betay*Bx
 
         rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
-#        eucos = ag * np.exp(1j*ucos)*rkrel*rkrel
+
         eucos *= ag * rkrel**2 
         bnx = dirx - betax
         bny = diry - betay
@@ -803,120 +787,80 @@ class SourceFromField(object):
 
         Bsr = np.sum(eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
         Bpr = np.sum(eucos*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
-#        Bsr1 = np.sum(eucos1*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
-#        Bpr1 = np.sum(eucos1*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
-#
-#        print()        
 
-        return Bsr, Bpr
+        return Bsr*emcg, Bpr*emcg
 
 #    @profile
-    def _sp_sum(self, tg, ag, ww1S, wS, wuS, gS, ddphiS, ddpsiS, R0=None):
-
-        taperC = 1
-        alphaS = 0
-
-        sinx = np.sin(tg)
-        sinxph = np.sin(tg+self.phase)
-        cosx = np.cos(tg)
-        cosxph = np.cos(tg+self.phase)
-        sin2x = 2.*sinx*cosx
-        sin2xph = 2.*sinxph*cosxph
-        revgamma = 1. / gS
-        revgamma2 = revgamma**2
-        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
-        wwuS = wS/wuS
-#        print("wwuS = {:.32e}".format(wwuS[0]))
+    def _sp_sum(self, emcg, tg, ag, w, gamma, ddphi, ddpsi, Bx, By, Bz, 
+                betax, betay, betam, trajx, trajy, trajz, R0=None):
 
         Bsr = np.complex(0)
         Bpr = np.complex(0)
         
-        dirx = ddphiS
-        diry = ddpsiS
-        dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
+        dirx = ddphi
+        diry = ddpsi
+        dirz = 1. - 0.5*(ddphi**2 + ddpsi**2)
 
         sinr0z = np.sin(R0)
         cosr0z = np.cos(R0)
+        wc = w * E2W / betam / C / 10.
 
-        for Nperiod in range(Nmx):
-#            if raycing._VERBOSITY_ > 30 and (self.taper is not None or\
-#                                             R0 is not None):
-#                print("Period {} out of {}".format(Nperiod+1, Nmx))
-            for i in range(len(tg)):
-                if self.taper is not None:
-                    zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
-                    alphaS = self.taper*C*10/E2W
-                    taperC = 1 - alphaS*zloc/wuS
-                    ucos = ww1S*zloc +\
-                        wwuS*revgamma*\
-                        (-self.Ky*dirx*(sinx[i] + alphaS/wuS*
-                                        (1 - cosx[i] - zloc*sinx[i])) +
-                         self.Kx*diry*sinx[i] + 0.125*revgamma*
-                         (self.Kx**2 * sin2xph[i] + self.Ky**2 * (sin2x[i] -
-                          2*alphaS/wuS*(zloc**2 + cosx[i]**2 + zloc*sin2x[i]))))
-                    eucos = np.exp(1j*ucos)
-                elif R0 is not None:
-                    zterm = 0.5*(self.Ky**2*sin2x[i] +
-                                 self.Kx**2*sin2xph[i])*revgamma
-                    zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
-                    rloc = np.array([self.Ky*sinx[i]*revgamma, 
-                                     self.Kx*sinxph[i]*revgamma,
-                                     betam*zloc-0.25*zterm*revgamma])
-                    dr = R0 - rloc
-                    dist = np.linalg.norm(dr, axis=0)
+        if R0 is not None:
+            sinr0z, cosr0z = np.sin(wc*R0), np.cos(wc*R0)
 
-                    drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :];
-        
-                    sinzloc = np.sin(wwuS * zloc*(1.-betam))
-                    coszloc = np.cos(wwuS * zloc*(1.-betam))
-                    sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
-                    cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
-#                    ucos = wwuS*(zloc + dist)
-                    eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
-                               cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
-                    eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
-                               cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs;
-                    eucos = eucosx + 1j*eucosy
+        for i in range(len(tg)):
+            rloc = np.array([trajx[i], trajy[i], trajz[i]]) 
+            dr = R0 - rloc
+            dist = np.linalg.norm(dr, axis=0)
 
-                    direction = dr/dist
-                    dirx = direction[0, :]
-                    diry = direction[1, :]
-                    dirz = direction[2, :]
+            if R0 is not None:
+                drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+                LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
+                sinzloc = np.sin(wc * (tg[i] - trajz[i]))
+                coszloc = np.cos(wc * (tg[i] - trajz[i]))
+                sindrs = np.sin(wc * LRS)
+                cosdrs = np.cos(wc * LRS)
+                eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
+                           cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
+                eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
+                           cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
+            else:
+                phz = wc*(tg[i] - dirz*trajz[i])
+                phxy = wc*(dirx*trajx[i] + diry*trajy[i])
+                sinphz, cosphz = np.sin(phz), np.cos(phz)
+                sinphxy, cosphxy = np.sin(phxy), np.cos(phxy)
+                eucosx = sinphz*cosphxy - cosphz*sinphxy
+                eucosy = cosphz*cosphxy + sinphz*sinphxy
     
-                else:
-                    ucos = ww1S*tg[i] + wwuS*revgamma*\
-                        (-self.Ky*ddphiS*sinx[i] + self.Kx*ddpsiS*sinxph[i] +
-                         0.125*revgamma*(self.Ky**2 * sin2x[i] +
-                                       self.Kx**2 * sin2xph[i]))
-                    eucos = np.exp(1j*ucos)
-        
-                betax = taperC*self.Ky*revgamma*cosx[i]
-                betay = -self.Kx*revgamma*cosxph[i]
-                betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
-        
-                betaPx = -self.Ky*(alphaS*cosx[i] + taperC*sinx[i])
-                betaPy = self.Kx*sinxph[i]
-                betaPz = 0.5*revgamma*\
-                    (self.Ky**2 * taperC*(alphaS*cosx[i]**2 + taperC*sin2x[i])+
-                     self.Kx**2 * sin2xph[i])
+            eucos = eucosx + 1j*eucosy
     
-                rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
-#                eucos = ag[i] * *rkrel*rkrel
-                eucos *= ag[i] * rkrel**2 
-        
-                bnx = dirx - betax
-                bny = diry - betay
-                bnz = dirz - betaz
+            if R0 is not None:
+                direction = dr/dist
+                dirx = direction[0, :]
+                diry = direction[1, :]
+                dirz = direction[2, :]
     
-                dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
-                dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
+            smTerm = 1./gamma**2 + betax[i]**2 + betay[i]**2
+            betaz = 1 - 0.5*smTerm + 0.125*smTerm**2
     
-                Bsr += eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB)
-                Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
+            betaPx = betay[i]*Bz - betaz*By
+            betaPy = -betax[i]*Bz + betaz*Bx
+            betaPz = betax[i]*By - betay[i]*Bx
+    
+            rkrel = 1./(1. - dirx*betax[i] - diry*betay[i] - dirz*betaz)
+    
+            eucos *= ag[i] * rkrel**2 
+            bnx = dirx - betax[i]
+            bny = diry - betay[i]
+            bnz = dirz - betaz
+    
+            dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
+            dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
+   
+            Bsr += eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB)
+            Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
 
-        return wuS*revgamma*Bsr, wuS*revgamma*Bpr
-"""
+        return Bsr*emcg, Bpr*emcg
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
         if self.needReset:
@@ -950,7 +894,7 @@ class SourceFromField(object):
         self.dstep = dstep
 
     def build_trajectory_CL(self, Bx, By, Bz, gamma=None):
-        t0 = time.time()
+#        t0 = time.time()
         if gamma is None:
             gamma = np.array(self.gamma) #[0] TODO: check for consistency
         emcg = SIE0 / SIM0 / C / 10. / gamma

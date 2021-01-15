@@ -991,7 +991,7 @@ __kernel void custom_field_filament(const int jend,
                        cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
             eucos.y = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
                        cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs; }
-
+            n = dr / LR;
         else {
             ucos = wc * (tg[j] - dot(n, traj));
 
@@ -1002,7 +1002,6 @@ __kernel void custom_field_filament(const int jend,
         betaP.x = betaC.y*Bz[j] - betaC.z*By[j];
         betaP.y = -betaC.x*Bz[j] + betaC.z*Bx[j];
         betaP.z = betaC.x*By[j] - betaC.y*Bx[j];
-        n = dr / LR;
 
         krel = 1. - dot(n, betaC);
         nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
