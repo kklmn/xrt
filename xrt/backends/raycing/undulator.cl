@@ -17,9 +17,10 @@ __constant bool isHiPrecision = sizeof(TWO) == 8;
 __constant float2 zero2 = (float2)(0, 0);
 __constant float3 zero3 = (float3)(0, 0, 0);
 __constant float PI2 = (float)6.283185307179586476925286766559;
-__constant float PI = (float)3.1415926535897932384626433832795;
+__constant float PI =  (float)3.1415926535897932384626433832795;
 
-__constant float E2W = 1.51926751475e15;
+//__constant float E2W = 1.51926751475e15;
+__constant float E2W = 1519267514747457.9195337718065469;
 __constant float C = 2.99792458e11;
 __constant float SIE0 = 1.602176565e-19;
 __constant float SIM0 = 9.10938291e-31;
@@ -166,27 +167,27 @@ __kernel void undulator_taper(const float alpha,
                        (Ky2 * (sin2tg - TWO * alphaS *
                         (zloc * zloc + costg[j] * costg[j] + zloc * sin2tg)) +
                         Kx2 * sin2tgph));
-    
+
             sinucos = sincos(ucos, &cosucos);
             eucos.x = cosucos;
             eucos.y = sinucos;
-    
+
             beta.x = Ky * revg * costg[j] * (1 - alphaS * zloc);
             beta.y = -Kx * revg * costgph[j];
             beta.z = 1 - HALF*(revg2 + beta.x*beta.x + beta.y*beta.y);
-    
+
             betaP.x = -Ky * wug * (alphaS*costg[j] + (1 - alphaS*zloc)*sintg[j]);
             betaP.y = Kx * wug * sintgph[j];
             betaP.z = wu[ii] * revg2 *
                 (Kx2*sintgph[j]*costgph[j] + Ky2*(1 - alphaS*zloc)*
                  (alphaS * costg[j] * costg[j] + (1 - alphaS*zloc)*sintg[j]*costg[j]));
-    
+
             if (isHiPrecision) {
                 krel = 1. - dot(n, beta);
                 nnb = cross(n, cross((n - beta), betaP))/(krel*krel); }
             else
                 nnb = (n - beta) * w[ii];
-    
+
             Is += (ag[j] * nnb.x) * eucos;
             Ip += (ag[j] * nnb.y) * eucos; }}
 
@@ -246,24 +247,24 @@ __kernel void undulator_nf(const float R0,
             Kys = Ky * sintg[j];
             Kxsph = Kx * sintgph[j];
             zloc = -(nmax-1)*PI + np*PI2 + tg[j];
-                
+
             r.x = Kys * revg;
             r.y = -Kxsph * revg;
             r.z = betam * zloc - QUAR * zterm * revg;
-            
+
             dr = r0 - r;
             drs = 0.5*(dr.x*dr.x+dr.y*dr.y)/dr.z;
 
             sinzloc = sincos(wwu *zloc*(1-betam), &coszloc);
             sindrs = sincos(wwu *(drs + QUAR * zterm * revg), &cosdrs);
-            
+
             LR = dr.z + drs; // - 0.125*drs*drs;
 
             eucos.x = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
                        cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
             eucos.y = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
-                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs; 
-    
+                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs;
+
             beta.x = Ky * revg * costg[j];
             beta.y = -Kx * revg * costgph[j];
 //            beta.z = sqrt(1. - revg2 - beta.x*beta.x - beta.y*beta.y);
@@ -281,7 +282,7 @@ __kernel void undulator_nf(const float R0,
     //            }
     //        else
     //            nnb = (n - beta) * w[ii];
-  
+
             Is += (ag[j] * nnb.x) * eucos;
             Ip += (ag[j] * nnb.y) * eucos;}}
 
@@ -337,7 +338,7 @@ __kernel void undulator_full(const float alpha,
         beta.x = Ky*costg*revg + beta0.x;
         beta.y= -Kx*costgph*revg + beta0.y;
         beta.z = 1. - HALF*(revg2 + beta.x*beta.x + beta.y*beta.y);
-        
+
         r.x = Ky*sintg*revg + beta0.x*tg[j];
         r.y = -Kx*sintgph*revg + beta0.y*tg[j];
         r.z = -QUAR*revg2*(Kx2*sintgph*costgph + Ky2*sintg*costg) + tg[j]*betam +
@@ -438,7 +439,7 @@ __kernel void undulator_nf_full(const float R0,
         beta.x = Ky*costg*revg + beta0.x;
         beta.y= -Kx*costgph*revg + beta0.y;
         beta.z = 1. - HALF*(revg2 + beta.x*beta.x + beta.y*beta.y);
-        
+
         r.x = Ky*sintg*revg + beta0.x*tg[j];
         r.y = -Kx*sintgph*revg + beta0.y*tg[j];
         r.z = -QUAR*revg2*(Kx2*sintgph*costgph + Ky2*sintg*costg) + tg[j]*betam +
@@ -949,7 +950,7 @@ __kernel void custom_field_filament(const int jend,
     float3 traj, n, r0, betaC, betaP, nnb, dr;
 
     float wc = w[ii] * E2W / betazav / C;
-    if (ii==0) {printf("wc %3.8f\n", wc);}
+
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
@@ -962,9 +963,8 @@ __kernel void custom_field_filament(const int jend,
         n.z = 1.;
         n /= length(n);
         r0 = wR0 * n; }
-    if (ii==0) {printf("r0 %3.8f, %3.8f, %3.16e\n", r0.x, r0.y, wc *r0.z);}
-    sinr0z = sincos(wc * r0.z, &cosr0z);
-    if (ii==0) {printf("sinr0z %3.8f\n", sinr0z);}
+        sinr0z = sincos(wc * r0.z, &cosr0z);
+
     for (j=0; j<jend; j++) {
         traj.x = trajx[j];
         traj.y = trajy[j];
@@ -975,19 +975,15 @@ __kernel void custom_field_filament(const int jend,
         smTerm = revg2 + betaC.x*betaC.x + betaC.y*betaC.y;
         betaC.z = 1. - 0.5*smTerm + 0.125*smTerm*smTerm;
 //        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
-//    if (ii==0) {printf("beta %i, %3.8f, %3.8f, %3.8f\n", j, betaC.x, betaC.y, betaC.z);}
-        dr = r0 - traj;
-        drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
-
-        LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
-        LR = length(dr);
-//        if (ii==0) {printf("drs= %3.4e, lrs=%3.4e, lr=%3.4e\n", drs, LRS, LR);}
-
-        sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
-//        if (ii==0) {printf("sinzloc %3.6e\n", sinzloc);}
-        sindrs = sincos(wc * LRS, &cosdrs);
-//        if (ii==0) {printf("sindrs %3.6e\n", sindrs);}
         if (R0 > 0) {
+            dr = r0 - traj;
+            drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
+
+            LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
+            LR = length(dr);
+
+            sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
+            sindrs = sincos(wc * LRS, &cosdrs);
             eucos.x = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
                        cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
             eucos.y = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
@@ -999,19 +995,14 @@ __kernel void custom_field_filament(const int jend,
             sinucos = sincos(ucos, &cosucos);
             eucos.x = cosucos;
             eucos.y = sinucos;}
-//    if (ii==0) {printf("B %i, %3.8f, %3.8f, %3.8f\n", j,
-//               Bx[j], By[j], Bz[j]);}
-//        if (ii==0) {printf("eucos %2.8e %2.8e\n", eucos.x, eucos.y);}
+
         betaP.x = betaC.y*Bz[j] - betaC.z*By[j];
         betaP.y = -betaC.x*Bz[j] + betaC.z*Bx[j];
         betaP.z = betaC.x*By[j] - betaC.y*Bx[j];
-//    if (ii==0) {printf("betap %i, %3.8f, %3.8f, %3.8f\n", j,
-//               betaP.x, betaP.y, betaP.z);}
-//    if (ii==0) {printf("N %i, %3.8e, %3.8e, %3.8e\n", j,
-//               n.x, n.y, n.z);}
+
         krel = 1. - dot(n, betaC);
         nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
-//        if (ii==0) {printf("krel %3.8e\n", 1./krel);}
+
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
 

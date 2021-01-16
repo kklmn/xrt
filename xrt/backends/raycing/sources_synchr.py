@@ -733,21 +733,24 @@ class SourceFromField(object):
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
 
         wc = wS * E2W / betam / C / 10.
-
-        sinr0z = np.sin(wc*R0)
-        cosr0z = np.cos(wc*R0)
-
         rloc = np.array([trajx, trajy, trajz])
-        dr = R0 - rloc
-        dist = np.linalg.norm(dr, axis=0)
 
         if R0 is not None:
-            drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+            R0 = np.expand_dims(R0, axis=1)
+            dr = R0 - rloc
+            dist = np.linalg.norm(dr, axis=0)
+            sinr0z = np.sin(wc*R0[2, :])
+            cosr0z = np.cos(wc*R0[2, :])
+
+            drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+
             LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
             sinzloc = np.sin(wc * (self.tg - trajz))
             coszloc = np.cos(wc * (self.tg - trajz))
+
             sindrs = np.sin(wc * LRS)
             cosdrs = np.cos(wc * LRS)
+
             eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
                        cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
             eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
@@ -803,12 +806,10 @@ class SourceFromField(object):
         revgamma2 = 1./gamma**2
 
         wc = w * E2W / betam / C / 10.
-        print(len(self.tg), emcg, gamma**2, betam)
-        print("WC", wc)
+
         if R0 is not None:
             sinr0z, cosr0z = np.sin(wc*R0[2, :]), np.cos(wc*R0[2, :])
-            print("wcR0 {:3.16e}".format(wc[0]*R0[2, 0]))
-#            print("sinR0z", sinr0z)
+
         for i in range(len(self.tg)):
             rloc = np.array([trajx[i], trajy[i], trajz[i]])
             dr = R0 - np.expand_dims(rloc, 1)
@@ -817,12 +818,9 @@ class SourceFromField(object):
             if R0 is not None:
                 drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
                 LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
-#                print("DRS", drs, "LRS", LRS, "LR", dist)
                 sinzloc = np.sin(wc * (self.tg[i] - trajz[i]))
                 coszloc = np.cos(wc * (self.tg[i] - trajz[i]))
-#                print("sinzloc", sinzloc)
                 sindrs = np.sin(wc * LRS)
-#                print("sindrs", sindrs)
                 cosdrs = np.cos(wc * LRS)
                 eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
                            cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
@@ -847,15 +845,10 @@ class SourceFromField(object):
             smTerm = revgamma2 + betax[i]**2 + betay[i]**2
             betaz = 1. - 0.5*smTerm + 0.125*smTerm**2
 
-#            print("BETA", i, betax[i], betay[i], betaz)
-#            print("B", i, Bx[i], By[i], Bz[i])
             betaPx = betay[i]*Bz[i] - betaz*By[i]
             betaPy = -betax[i]*Bz[i] + betaz*Bx[i]
             betaPz = betax[i]*By[i] - betay[i]*Bx[i]
             rkrel = 1./(1. - dirx*betax[i] - diry*betay[i] - dirz*betaz)
-#            print("N", dirx, diry, dirz)
-#            print("krel", rkrel)
-#            print("eucos", eucos)
             eucos *= self.ag[i] * rkrel**2
 
             bnx = dirx - betax[i]
@@ -867,22 +860,20 @@ class SourceFromField(object):
 
             Bsr += eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB)
             Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
-
         return Bsr*emcg, Bpr*emcg
 
-    def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
+    def build_I_map(self, w, ddtheta, ddpsi, dg=None):
         if self.needReset:
             self.reset()
-        useCL = False  # TODO: Add integration in pure numpy
+        useCL = False
         if isinstance(w, np.ndarray):
             if w.shape[0] > 1:
                 useCL = True
-        if self.customFieldData is None:
-            return self._build_I_map_custom_field(w, ddtheta, ddpsi,
-                                                  harmonic, dg)
-        elif useCL: # and self.customField is not None:
-            return self._build_I_map_custom_field(w, ddtheta, ddpsi,
-                                                  harmonic, dg)
+        if (self.cl_ctx is None) or not useCL:
+            return self._build_I_map_custom_field_conv(w, ddtheta, ddpsi, dg)
+        else:
+            return self._build_I_map_custom_field_CL(w, ddtheta, ddpsi, dg)
+
 
     def _build_integration_grid(self):
         quad_rule = np.polynomial.legendre.leggauss if self.useGauLeg else\
@@ -897,11 +888,17 @@ class SourceFromField(object):
         dstep = (dataz[-1] - dataz[0]) / float(self.gIntervals)
         dI = np.arange(0.5 * dstep + dataz[0], dataz[-1], dstep)
 
-        self.tg = self.cl_precisionF((dI[:, None]+0.5*dstep*tg_n).ravel())
-        self.ag = self.cl_precisionF((dI[:, None]*0+ag_n).ravel())
+        self.tg = (dI[:, None]+0.5*dstep*tg_n).ravel()
+        self.ag = (dI[:, None]*0+ag_n).ravel()
         self.dstep = dstep
 
-    def build_trajectory_CL(self, Bx, By, Bz, gamma=None):
+    def build_trajectory(self, Bx, By, Bz, gamma=None):
+        if self.cl_ctx is None:
+            return self._build_trajectory_conv(Bx, By, Bz, gamma)
+        else:
+            return self._build_trajectory_CL(Bx, By, Bz, gamma)            
+
+    def _build_trajectory_CL(self, Bx, By, Bz, gamma=None):
 #        t0 = time.time()
         if gamma is None:
             gamma = np.array(self.gamma) #[0] TODO: check for consistency
@@ -940,7 +937,7 @@ class SourceFromField(object):
                            bounds_error=False, fill_value="extrapolate")(self.tg)
         return betaxTg, betayTg, [betazav[-1]], trajxTg, trajyTg, trajzTg
 
-    def build_trajectory_conv(self, Bx, By, Bz, gamma=None):
+    def _build_trajectory_conv(self, Bx, By, Bz, gamma=None):
         def f_beta(B, beta):
             return emcg*np.array((beta[1]*B[2]-B[1], B[0] - beta[0]*B[2]))
 
@@ -1050,7 +1047,7 @@ class SourceFromField(object):
                   self.Kx**2 * np.sin(2*(z + self.phase))))
         return betax, betay, [betam], trajx, trajy, trajz
 
-    def _build_I_map_custom_field(self, w, ddtheta, ddpsi,
+    def _build_I_map_custom_field_CL(self, w, ddtheta, ddpsi,
                                   harmonic=None, dgamma=None):
 
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
@@ -1073,7 +1070,7 @@ class SourceFromField(object):
         if self.filamentBeam:
             if self.customFieldData is not None and not self.periodicTest:
                 betax, betay, betazav, trajx, trajy, trajz =\
-                    self.build_trajectory_CL(Bx, By, Bz, gamma[0])
+                    self.build_trajectory(Bx, By, Bz, gamma[0])
 #                betax3, betay3, betazav3, trajx3, trajy3, trajz3 =\
 #                    self.build_trajectory_conv(Bx, By, Bz, gamma[0])
                 Bxt, Byt, Bzt = self._magnetic_field(self.tg)
@@ -1104,10 +1101,6 @@ class SourceFromField(object):
                 ucos2 = wwu*np.pi*2/self.L0*(self.tg+dr2[2, :] + np.sqrt(dr2[0, :]**2+dr2[1, :]**2+dr2[2, :]**2))
 
                 from matplotlib import pyplot as plt
-
-
-
-
                 plt.figure("dBy")
                 plt.plot(self.tg, Byt-By2)
                 plt.figure("dBetaX")
@@ -1172,8 +1165,8 @@ class SourceFromField(object):
                             self.cl_precisionF(ddtheta),  # Theta
                             self.cl_precisionF(ddpsi)]  # Psi
 
-            nonSlicedROArgs = [self.tg,  # Integration grid
-                               self.ag,   # Integration weights
+            nonSlicedROArgs = [self.cl_precisionF(self.tg),  # Integration grid
+                               self.cl_precisionF(self.ag),   # Integration weights
                                self.cl_precisionF(Bxt),  # Mangetic field
                                self.cl_precisionF(Byt),  # components on the
                                self.cl_precisionF(Bzt),  # CC grid
@@ -1191,10 +1184,6 @@ class SourceFromField(object):
             Is_local, Ip_local = self.ucl.run_parallel(
                 clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
                 slicedRWArgs, None, NRAYS)
-
-            aa, bb = self._build_I_map_custom_field_conv(w, ddtheta, ddpsi)
-#            print("Is_local, Ip_local", Is_local, Ip_local)
-            print("Is_amp, Is_phase", np.abs(Is_local), np.angle(Is_local))
         else:
             ab = 0.5 / np.pi
 
@@ -1243,7 +1232,7 @@ class SourceFromField(object):
             else:
                 sz = 1 if self.filamentBeam else NRAYS
                 gamma += gamma * self.eEspread * np.random.normal(size=sz)
-        gamma = gamma * np.ones(NRAYS, dtype=self.cl_precisionF)
+        gamma = gamma * np.ones(NRAYS)
 
         R0 = self.R0 if self.R0 is not None else 0
 
@@ -1255,7 +1244,7 @@ class SourceFromField(object):
         if self.filamentBeam:
             if self.customFieldData is not None and not self.periodicTest:
                 betax, betay, betazav, trajx, trajy, trajz =\
-                    self.build_trajectory_CL(Bx, By, Bz, gamma[0])
+                    self.build_trajectory(Bx, By, Bz, gamma[0])
 #                betax3, betay3, betazav3, trajx3, trajy3, trajz3 =\
 #                    self.build_trajectory_conv(Bx, By, Bz, gamma[0])
                 Bxt, Byt, Bzt = self._magnetic_field(self.tg)
@@ -1268,18 +1257,16 @@ class SourceFromField(object):
             self.trajectory = [trajx, trajy, trajz]
 
             betam = betazav[-1]
-#            ab = 0.5 / np.pi / betam
+            ab = 0.5 / np.pi / betam
             emcg = SIE0 / SIM0 / C / 10. / gamma[0]
 
             if self.R0:
                 R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
                 R0n = np.linalg.norm(R0v, axis=0)
-    #            R0out = R0v/R0n
-                R0v *= R0*R0n
+                R0v *= R0/R0n
             else:
                 R0v=None
-    
-    #        t0sp = time.time()
+
             if NRAYS > 1:
                 Is_local, Ip_local = self._sp_sum(
                         emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
@@ -1289,12 +1276,16 @@ class SourceFromField(object):
                 Is_local, Ip_local = self._sp(
                         dim, emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
                         betax, betay, betam, trajx, trajy, trajz, R0v)
-#            print("Is_local, Ip_local", Is_local, Ip_local)
-            print("Is_amp, Is_phase", np.abs(Is_local), np.angle(Is_local))
-            return Is_local, Ip_local
+        bwFact = 0.001 if self.distE == 'BW' else 1./w
+        Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
 
-
-
+        integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
+        if self.convergenceSearchFlag:
+            return np.abs(np.sqrt(integralField) * 0.5 * self.dstep)
+        else:
+            return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
+                    np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
+                    np.sqrt(Amp2Flux) * Ip_local * 0.5 * self.dstep * ab)
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
                             harmonic=None):
@@ -3880,36 +3871,28 @@ class Undulator(object):
         if self.R0:
             R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
             R0n = np.linalg.norm(R0v, axis=0)
-#            R0out = R0v/R0n
             R0v *= self.R0*np.pi*2/self.L0/R0n
 
         else:
             R0v=None
 
-#        t0sp = time.time()
         if NRAYS > 1:
-            tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
+            tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()
             ag = (dI[:, None]*0 + ag_n).ravel()
 
             if self.filamentBeam:
                 gamma = self.gamma
             Is_local, Ip_local = self._sp_sum(
                     tg, ag, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
-#            Is_local = sp3res[0]
-#            Ip_local = sp3res[1]
         else:
             if (self.taper is not None) or (self.R0 is not None):
                 dI = np.arange(0.5 * dstep - PI * self.Np, PI * self.Np, dstep)
             tg = (dI[:, None] + 0.5*dstep*tg_n).ravel()  # + PI/2
             ag = (dI[:, None]*0 + ag_n).ravel()
-            # Is_local = np.zeros_like(w, dtype='complex')
-            # Ip_local = np.zeros_like(w, dtype='complex')
+
             dim = len(np.array(w).shape)
             Is_local, Ip_local = self._sp(
                     dim, tg, ag, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
-#            Is_local = np.sum(ag * sp3res[0], axis=dim)
-#            Ip_local = np.sum(ag * sp3res[1], axis=dim)
-#        print("Time to calc", time.time()-t0sp, "s")
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
@@ -3919,7 +3902,7 @@ class Undulator(object):
             Ip_local[ww1 > harmonic+0.5] = 0
             Is_local[ww1 < harmonic-0.5] = 0
             Ip_local[ww1 < harmonic-0.5] = 0
-#        print("Is_local", "Ip_local", Is_local, Ip_local)
+
         #        np.seterr(invalid='warn')
         #        np.seterr(divide='warn')
         integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
