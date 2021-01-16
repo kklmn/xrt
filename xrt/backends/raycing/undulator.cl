@@ -949,7 +949,7 @@ __kernel void custom_field_filament(const int jend,
     float3 traj, n, r0, betaC, betaP, nnb, dr;
 
     float wc = w[ii] * E2W / betazav / C;
-
+    if (ii==0) {printf("wc %3.8f\n", wc);}
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
@@ -962,10 +962,10 @@ __kernel void custom_field_filament(const int jend,
         n.z = 1.;
         n /= length(n);
         r0 = wR0 * n; }
-
+    if (ii==0) {printf("r0 %3.8f, %3.8f, %3.16e\n", r0.x, r0.y, wc *r0.z);}
     sinr0z = sincos(wc * r0.z, &cosr0z);
-
-    for (j=1; j<jend; j++) {
+    if (ii==0) {printf("sinr0z %3.8f\n", sinr0z);}
+    for (j=0; j<jend; j++) {
         traj.x = trajx[j];
         traj.y = trajy[j];
         traj.z = trajz[j];
@@ -975,37 +975,43 @@ __kernel void custom_field_filament(const int jend,
         smTerm = revg2 + betaC.x*betaC.x + betaC.y*betaC.y;
         betaC.z = 1. - 0.5*smTerm + 0.125*smTerm*smTerm;
 //        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
-
+//    if (ii==0) {printf("beta %i, %3.8f, %3.8f, %3.8f\n", j, betaC.x, betaC.y, betaC.z);}
         dr = r0 - traj;
         drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
 
         LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
         LR = length(dr);
-
+//        if (ii==0) {printf("drs= %3.4e, lrs=%3.4e, lr=%3.4e\n", drs, LRS, LR);}
 
         sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
+//        if (ii==0) {printf("sinzloc %3.6e\n", sinzloc);}
         sindrs = sincos(wc * LRS, &cosdrs);
-
+//        if (ii==0) {printf("sindrs %3.6e\n", sindrs);}
         if (R0 > 0) {
             eucos.x = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
                        cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
             eucos.y = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
-                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs; }
-            n = dr / LR;
+                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs;
+            n = dr / LR; }
         else {
             ucos = wc * (tg[j] - dot(n, traj));
 
             sinucos = sincos(ucos, &cosucos);
             eucos.x = cosucos;
             eucos.y = sinucos;}
-
+//    if (ii==0) {printf("B %i, %3.8f, %3.8f, %3.8f\n", j,
+//               Bx[j], By[j], Bz[j]);}
+//        if (ii==0) {printf("eucos %2.8e %2.8e\n", eucos.x, eucos.y);}
         betaP.x = betaC.y*Bz[j] - betaC.z*By[j];
         betaP.y = -betaC.x*Bz[j] + betaC.z*Bx[j];
         betaP.z = betaC.x*By[j] - betaC.y*Bx[j];
-
+//    if (ii==0) {printf("betap %i, %3.8f, %3.8f, %3.8f\n", j,
+//               betaP.x, betaP.y, betaP.z);}
+//    if (ii==0) {printf("N %i, %3.8e, %3.8e, %3.8e\n", j,
+//               n.x, n.y, n.z);}
         krel = 1. - dot(n, betaC);
         nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
-
+//        if (ii==0) {printf("krel %3.8e\n", 1./krel);}
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
 

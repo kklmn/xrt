@@ -175,7 +175,7 @@ class SourceFromField(object):
             self.L0 = 53.96 #100 #10.
             self.Np = 41 #70 #30
             self.quadm = 50
-            self.gIntervals = 2*self.Np
+            self.gIntervals = 2 #*self.Np
             self.wtGrid = np.linspace(-self.L0*self.Np*0.5,
                                       self.L0*self.Np*0.5,
                                       1000*self.Np)  # 1000 points per period
@@ -501,7 +501,7 @@ class SourceFromField(object):
 
         self.quadm = tmp_quadm
         self.gIntervals = tmp_GI
-        
+
         return mad, dIMAD
 
     def _find_convergence_thrsh_mad(self, testMode=False):
@@ -707,7 +707,7 @@ class SourceFromField(object):
 
         self._build_integration_grid()
 
-    def _sp(self, dim, emcg, tg, ag, w, gamma, ddphi, ddpsi, Bx, By, Bz, 
+    def _sp(self, dim, emcg, w, gamma, ddphi, ddpsi, Bx, By, Bz,
             betax, betay, betam, trajx, trajy, trajz, R0=None):
         lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
@@ -737,15 +737,15 @@ class SourceFromField(object):
         sinr0z = np.sin(wc*R0)
         cosr0z = np.cos(wc*R0)
 
-        rloc = np.array([trajx, trajy, trajz]) 
+        rloc = np.array([trajx, trajy, trajz])
         dr = R0 - rloc
         dist = np.linalg.norm(dr, axis=0)
 
         if R0 is not None:
             drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
             LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
-            sinzloc = np.sin(wc * (tg - trajz))
-            coszloc = np.cos(wc * (tg - trajz))
+            sinzloc = np.sin(wc * (self.tg - trajz))
+            coszloc = np.cos(wc * (self.tg - trajz))
             sindrs = np.sin(wc * LRS)
             cosdrs = np.cos(wc * LRS)
             eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
@@ -753,7 +753,7 @@ class SourceFromField(object):
             eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
                        cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
         else:
-            phz = wc*(tg - dirz*trajz)
+            phz = wc*(self.tg - dirz*trajz)
             phxy = wc*(dirx*trajx + diry*trajy)
             sinphz, cosphz = np.sin(phz), np.cos(phz)
             sinphxy, cosphxy = np.sin(phxy), np.cos(phxy)
@@ -777,7 +777,7 @@ class SourceFromField(object):
 
         rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
 
-        eucos *= ag * rkrel**2 
+        eucos *= self.ag * rkrel**2
         bnx = dirx - betax
         bny = diry - betay
         bnz = dirz - betaz
@@ -791,72 +791,80 @@ class SourceFromField(object):
         return Bsr*emcg, Bpr*emcg
 
 #    @profile
-    def _sp_sum(self, emcg, tg, ag, w, gamma, ddphi, ddpsi, Bx, By, Bz, 
+    def _sp_sum(self, emcg, w, gamma, ddphi, ddpsi, Bx, By, Bz,
                 betax, betay, betam, trajx, trajy, trajz, R0=None):
 
         Bsr = np.complex(0)
         Bpr = np.complex(0)
-        
+
         dirx = ddphi
         diry = ddpsi
         dirz = 1. - 0.5*(ddphi**2 + ddpsi**2)
+        revgamma2 = 1./gamma**2
 
-        sinr0z = np.sin(R0)
-        cosr0z = np.cos(R0)
         wc = w * E2W / betam / C / 10.
-
+        print(len(self.tg), emcg, gamma**2, betam)
+        print("WC", wc)
         if R0 is not None:
-            sinr0z, cosr0z = np.sin(wc*R0), np.cos(wc*R0)
-
-        for i in range(len(tg)):
-            rloc = np.array([trajx[i], trajy[i], trajz[i]]) 
-            dr = R0 - rloc
+            sinr0z, cosr0z = np.sin(wc*R0[2, :]), np.cos(wc*R0[2, :])
+            print("wcR0 {:3.16e}".format(wc[0]*R0[2, 0]))
+#            print("sinR0z", sinr0z)
+        for i in range(len(self.tg)):
+            rloc = np.array([trajx[i], trajy[i], trajz[i]])
+            dr = R0 - np.expand_dims(rloc, 1)
             dist = np.linalg.norm(dr, axis=0)
 
             if R0 is not None:
-                drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :]
+                drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
                 LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
-                sinzloc = np.sin(wc * (tg[i] - trajz[i]))
-                coszloc = np.cos(wc * (tg[i] - trajz[i]))
+#                print("DRS", drs, "LRS", LRS, "LR", dist)
+                sinzloc = np.sin(wc * (self.tg[i] - trajz[i]))
+                coszloc = np.cos(wc * (self.tg[i] - trajz[i]))
+#                print("sinzloc", sinzloc)
                 sindrs = np.sin(wc * LRS)
+#                print("sindrs", sindrs)
                 cosdrs = np.cos(wc * LRS)
                 eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
                            cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
                 eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
                            cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
             else:
-                phz = wc*(tg[i] - dirz*trajz[i])
+                phz = wc*(self.tg[i] - dirz*trajz[i])
                 phxy = wc*(dirx*trajx[i] + diry*trajy[i])
                 sinphz, cosphz = np.sin(phz), np.cos(phz)
                 sinphxy, cosphxy = np.sin(phxy), np.cos(phxy)
                 eucosx = sinphz*cosphxy - cosphz*sinphxy
                 eucosy = cosphz*cosphxy + sinphz*sinphxy
-    
+
             eucos = eucosx + 1j*eucosy
-    
+
             if R0 is not None:
                 direction = dr/dist
                 dirx = direction[0, :]
                 diry = direction[1, :]
                 dirz = direction[2, :]
-    
-            smTerm = 1./gamma**2 + betax[i]**2 + betay[i]**2
-            betaz = 1 - 0.5*smTerm + 0.125*smTerm**2
-    
-            betaPx = betay[i]*Bz - betaz*By
-            betaPy = -betax[i]*Bz + betaz*Bx
-            betaPz = betax[i]*By - betay[i]*Bx
-    
+
+            smTerm = revgamma2 + betax[i]**2 + betay[i]**2
+            betaz = 1. - 0.5*smTerm + 0.125*smTerm**2
+
+#            print("BETA", i, betax[i], betay[i], betaz)
+#            print("B", i, Bx[i], By[i], Bz[i])
+            betaPx = betay[i]*Bz[i] - betaz*By[i]
+            betaPy = -betax[i]*Bz[i] + betaz*Bx[i]
+            betaPz = betax[i]*By[i] - betay[i]*Bx[i]
             rkrel = 1./(1. - dirx*betax[i] - diry*betay[i] - dirz*betaz)
-    
-            eucos *= ag[i] * rkrel**2 
+#            print("N", dirx, diry, dirz)
+#            print("krel", rkrel)
+#            print("eucos", eucos)
+            eucos *= self.ag[i] * rkrel**2
+
             bnx = dirx - betax[i]
             bny = diry - betay[i]
             bnz = dirz - betaz
-    
+
             dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
             dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
-   
+
             Bsr += eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB)
             Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
 
@@ -871,7 +879,7 @@ class SourceFromField(object):
                 useCL = True
         if self.customFieldData is None:
             return self._build_I_map_custom_field(w, ddtheta, ddpsi,
-                                                  harmonic, dg)            
+                                                  harmonic, dg)
         elif useCL: # and self.customField is not None:
             return self._build_I_map_custom_field(w, ddtheta, ddpsi,
                                                   harmonic, dg)
@@ -966,7 +974,7 @@ class SourceFromField(object):
             k4traj = rkStep * f_traj(beta + k3beta)
             return (beta + (k1beta + 2*k2beta + 2*k3beta + k4beta)/6.,
                     traj + (k1traj + 2*k2traj + 2*k3traj + k4traj)/6.)
-        
+
         if gamma is None:
             gamma = np.array(self.gamma) #[0] TODO: check for consistency
         emcg = SIE0 / SIM0 / C / 10. / gamma
@@ -977,7 +985,7 @@ class SourceFromField(object):
         for i in range(len(self.wtGrid)-1):
             rkStep = self.wtGrid[i+1] - self.wtGrid[i]
             beta_next = next_beta_rk(2*i, beta_next)
-            beta0 += rkStep * beta_next 
+            beta0 += rkStep * beta_next
 
         beta0 /= -(self.wtGrid[-1] - self.wtGrid[0])
         beta_next = np.copy(beta0)
@@ -1022,7 +1030,7 @@ class SourceFromField(object):
         trajzTg = interp1d(self.wtGrid, trajz, kind='cubic',
                            bounds_error=False, fill_value="extrapolate")(self.tg)
         return betaxTg, betayTg, [betam_int], trajxTg, trajyTg, trajzTg
-       
+
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
         if gamma is None:
             gamma = np.array(self.gamma) #[0]
@@ -1077,7 +1085,7 @@ class SourceFromField(object):
             self.beta = [betax, betay]
             self.trajectory = [trajx, trajy, trajz]
 
-            if True:  # Test of interpolation quality
+            if False:  # Test of interpolation quality
                 emax, tmax, pmax = np.max(w), np.max(ddtheta), np.max(ddpsi)
                 Bx2, By2, Bz2 = self._magnetic_field_periodic(self.tg)
                 betax2, betay2, betazav2, trajx2, trajy2, trajz2 =\
@@ -1086,7 +1094,7 @@ class SourceFromField(object):
                 n0 = np.array([np.tan(tmax), np.tan(pmax), 1.])
                 n0 /= np.linalg.norm(n0)
                 r0 = np.expand_dims(self.R0 * n0, axis=1)
-               
+
                 dr = r0 - np.array(self.trajectory)
                 dr2 = (r0 - np.array([trajx2, trajy2, trajz2]))
                 wc = emax * E2W / betazav[-1] / C / 10
@@ -1183,6 +1191,10 @@ class SourceFromField(object):
             Is_local, Ip_local = self.ucl.run_parallel(
                 clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
                 slicedRWArgs, None, NRAYS)
+
+            aa, bb = self._build_I_map_custom_field_conv(w, ddtheta, ddpsi)
+#            print("Is_local, Ip_local", Is_local, Ip_local)
+            print("Is_amp, Is_phase", np.abs(Is_local), np.angle(Is_local))
         else:
             ab = 0.5 / np.pi
 
@@ -1220,6 +1232,69 @@ class SourceFromField(object):
             return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
                     np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
                     np.sqrt(Amp2Flux) * Ip_local * 0.5 * self.dstep * ab)
+
+    def _build_I_map_custom_field_conv(self, w, ddtheta, ddpsi, dgamma=None):
+
+        NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
+        gamma = self.gamma
+        if self.eEspread > 0:
+            if dgamma is not None:
+                gamma += dgamma
+            else:
+                sz = 1 if self.filamentBeam else NRAYS
+                gamma += gamma * self.eEspread * np.random.normal(size=sz)
+        gamma = gamma * np.ones(NRAYS, dtype=self.cl_precisionF)
+
+        R0 = self.R0 if self.R0 is not None else 0
+
+        if self.customFieldData is not None and not self.periodicTest:
+            Bx, By, Bz = self._magnetic_field()
+        else:
+            Bx, By, Bz = self._magnetic_field_periodic()
+
+        if self.filamentBeam:
+            if self.customFieldData is not None and not self.periodicTest:
+                betax, betay, betazav, trajx, trajy, trajz =\
+                    self.build_trajectory_CL(Bx, By, Bz, gamma[0])
+#                betax3, betay3, betazav3, trajx3, trajy3, trajz3 =\
+#                    self.build_trajectory_conv(Bx, By, Bz, gamma[0])
+                Bxt, Byt, Bzt = self._magnetic_field(self.tg)
+            else:
+                betax, betay, betazav, trajx, trajy, trajz =\
+                    self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
+                Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
+
+            self.beta = [betax, betay]
+            self.trajectory = [trajx, trajy, trajz]
+
+            betam = betazav[-1]
+#            ab = 0.5 / np.pi / betam
+            emcg = SIE0 / SIM0 / C / 10. / gamma[0]
+
+            if self.R0:
+                R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
+                R0n = np.linalg.norm(R0v, axis=0)
+    #            R0out = R0v/R0n
+                R0v *= R0*R0n
+            else:
+                R0v=None
+    
+    #        t0sp = time.time()
+            if NRAYS > 1:
+                Is_local, Ip_local = self._sp_sum(
+                        emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
+                        betax, betay, betam, trajx, trajy, trajz, R0v)
+            else:
+                dim = len(np.array(w).shape)
+                Is_local, Ip_local = self._sp(
+                        dim, emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
+                        betax, betay, betam, trajx, trajy, trajz, R0v)
+#            print("Is_local, Ip_local", Is_local, Ip_local)
+            print("Is_amp, Is_phase", np.abs(Is_local), np.angle(Is_local))
+            return Is_local, Ip_local
+
+
+
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
                             harmonic=None):
@@ -2860,7 +2935,7 @@ class Undulator(object):
     @Kx.setter
     def Kx(self, Kx):
         self._Kx = float(Kx)
-        self._B0x = K2B * Kx / self.L0 
+        self._B0x = K2B * Kx / self.L0
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -2872,7 +2947,7 @@ class Undulator(object):
     def Ky(self, Ky):
         self._Ky = float(Ky)
         self._K = float(Ky)
-        self._B0y = K2B * Ky / self.L0 
+        self._B0y = K2B * Ky / self.L0
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -2883,7 +2958,7 @@ class Undulator(object):
     @K.setter
     def K(self, K):
         self._Ky = float(K)
-        self._B0y = K2B * K / self.L0 
+        self._B0y = K2B * K / self.L0
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -2905,7 +2980,7 @@ class Undulator(object):
     @B0y.setter
     def B0y(self, B0y):
         self._B0y = float(B0y)
-        self._Ky = B0y * self.L0 / K2B 
+        self._Ky = B0y * self.L0 / K2B
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -3083,7 +3158,7 @@ class Undulator(object):
 
         self.quadm = tmp_quadm
         self.gIntervals = tmp_GI
-        
+
         return mad, dIMAD
 
     def _find_convergence_thrsh_mad(self, testMode=False):
@@ -3564,7 +3639,7 @@ class Undulator(object):
         cosx = np.cos(tg)
         sin2x = 2*sinx*cosx
         sinxph = np.sin(tg+self.phase)
-        cosxph = np.cos(tg+self.phase)        
+        cosxph = np.cos(tg+self.phase)
         sin2xph = 2*sinxph*cosxph
         revgamma = 1./gS
         revgamma2 = revgamma**2
@@ -3589,7 +3664,7 @@ class Undulator(object):
             cosr0z = np.cos(wwuS*R0)
             zterm = 0.5*(self.Ky**2*sin2x +
                          self.Kx**2*sin2xph)*revgamma
-            rloc = np.array([self.Ky*sinx*revgamma, 
+            rloc = np.array([self.Ky*sinx*revgamma,
                              self.Kx*sinxph*revgamma,
                              betam*tg-0.25*zterm*revgamma])
 #            dist = np.linalg.norm(R0 - rloc, axis=0)
@@ -3634,7 +3709,7 @@ class Undulator(object):
 
         rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
 #        eucos = ag * np.exp(1j*ucos)*rkrel*rkrel
-        eucos *= ag * rkrel**2 
+        eucos *= ag * rkrel**2
         bnx = dirx - betax
         bny = diry - betay
         bnz = dirz - betaz
@@ -3647,7 +3722,7 @@ class Undulator(object):
 #        Bsr1 = np.sum(eucos1*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
 #        Bpr1 = np.sum(eucos1*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
 #
-#        print()        
+#        print()
 
         return Bsr, Bpr
 
@@ -3671,7 +3746,7 @@ class Undulator(object):
 
         Bsr = np.complex(0)
         Bpr = np.complex(0)
-        
+
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
@@ -3701,14 +3776,14 @@ class Undulator(object):
                     zterm = 0.5*(self.Ky**2*sin2x[i] +
                                  self.Kx**2*sin2xph[i])*revgamma
                     zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + tg[i]
-                    rloc = np.array([self.Ky*sinx[i]*revgamma, 
+                    rloc = np.array([self.Ky*sinx[i]*revgamma,
                                      self.Kx*sinxph[i]*revgamma,
                                      betam*zloc-0.25*zterm*revgamma])
-                    dr = R0 - rloc
+                    dr = R0 - np.expand_dims(rloc, 1)
                     dist = np.linalg.norm(dr, axis=0)
 
                     drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :];
-        
+
                     sinzloc = np.sin(wwuS * zloc*(1.-betam))
                     coszloc = np.cos(wwuS * zloc*(1.-betam))
                     sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
@@ -3724,35 +3799,35 @@ class Undulator(object):
                     dirx = direction[0, :]
                     diry = direction[1, :]
                     dirz = direction[2, :]
-    
+
                 else:
                     ucos = ww1S*tg[i] + wwuS*revgamma*\
                         (-self.Ky*ddphiS*sinx[i] + self.Kx*ddpsiS*sinxph[i] +
                          0.125*revgamma*(self.Ky**2 * sin2x[i] +
                                        self.Kx**2 * sin2xph[i]))
                     eucos = np.exp(1j*ucos)
-        
+
                 betax = taperC*self.Ky*revgamma*cosx[i]
                 betay = -self.Kx*revgamma*cosxph[i]
                 betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
-        
+
                 betaPx = -self.Ky*(alphaS*cosx[i] + taperC*sinx[i])
                 betaPy = self.Kx*sinxph[i]
                 betaPz = 0.5*revgamma*\
                     (self.Ky**2 * taperC*(alphaS*cosx[i]**2 + taperC*sin2x[i])+
                      self.Kx**2 * sin2xph[i])
-    
+
                 rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
 #                eucos = ag[i] * *rkrel*rkrel
-                eucos *= ag[i] * rkrel**2 
-        
+                eucos *= ag[i] * rkrel**2
+
                 bnx = dirx - betax
                 bny = diry - betay
                 bnz = dirz - betaz
-    
+
                 dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
                 dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
-    
+
                 Bsr += eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB)
                 Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
 
@@ -3924,7 +3999,7 @@ class Undulator(object):
                            self.cl_precisionF(np.sin(tg)),
                            self.cl_precisionF(np.cos(tg)),
                            self.cl_precisionF(np.sin(tg+self.phase)),
-                           self.cl_precisionF(np.cos(tg+self.phase))] 
+                           self.cl_precisionF(np.cos(tg+self.phase))]
         slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
                         np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
 
