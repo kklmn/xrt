@@ -637,7 +637,7 @@ float3 f_traj(float revgamma, float2 beta)
     return (float3)(beta.x,
                     beta.y,
 //                     sqrt(1. - smTerm));
-                    1. - 0.5*smTerm + 0.125*smTerm*smTerm); // - 0.0625*smTerm*smTerm*smTerm
+                    1. - 0.5*smTerm - 0.125*smTerm*smTerm); // - 0.0625*smTerm*smTerm*smTerm
 }
 
 float2 next_beta_rk(float2 beta, int iBase, float rkStep, float emcg,

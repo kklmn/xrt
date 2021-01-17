@@ -943,7 +943,7 @@ class SourceFromField(object):
 
         def f_traj(beta):
             smTerm = 1./gamma**2 + beta[0]**2 + beta[1]**2
-            return np.array((beta[0], beta[1], 1.-0.5*smTerm+0.125*smTerm**2))
+            return np.array((beta[0], beta[1], 1.-0.5*smTerm-0.125*smTerm**2))
 
         def next_beta_rk(iB, beta):
             k1beta = rkStep * f_beta([Bx[iB], By[iB], Bz[iB]],
