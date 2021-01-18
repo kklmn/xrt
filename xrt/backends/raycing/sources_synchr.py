@@ -45,6 +45,7 @@ class SourceFromField(object):
         which are not required and additionally:
 
         """
+        print("INIT")
         self.bl = bl
         if bl is not None:
             if self not in bl.sources:
@@ -99,7 +100,8 @@ class SourceFromField(object):
         # Integration routine-related init
         self.gIntervals = 2
         try:
-            self.quadm = int(gridLength)
+            self.gIntervals = int(gridLength[0])
+            self.quadm = int(gridLength[1])
             self.needConvergence = False
         except TypeError:
             self.needConvergence = True
@@ -163,6 +165,7 @@ class SourceFromField(object):
                 kwargs = customField[1]
             elif isinstance(customField, np.ndarray):
                 self.customFieldData = customField
+                fname = None
             else:
                 fname = customField
                 kwargs = {}
@@ -429,8 +432,9 @@ class SourceFromField(object):
             if raycing._VERBOSITY_ > 10:
                 print("G = {0}".format(
                     [self.gIntervals, self.quadm, mad, dimad]))
-            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary)\
-                    or (dimad<1e-5):
+            if (dimad < self.gp) or (mad < self.gp):
+#            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary)\
+#                    or (dimad<1e-5):
                 break
             if self.quadm > 400000:
                 break
@@ -443,8 +447,9 @@ class SourceFromField(object):
         for j in range(jmax):
             self.quadm = int(0.5*(ph2end+ph2start))
             mad, dimad = self._get_mad()
-            if (self.quadm<150000 and dimad<self.gp) or\
-                    (mad < self.madBoundary):
+#            if (self.quadm<150000 and dimad<self.gp) or\
+#                    (mad < self.madBoundary):
+            if (dimad < self.gp) or (mad < self.gp):
                 ph2end = self.quadm
             else:
                 ph2start = self.quadm
@@ -480,7 +485,7 @@ class SourceFromField(object):
         for m in range(stat_step):
             k += m_step
             self.quadm = k
-            self.gIntervals = 2
+#            self.gIntervals = 2
             self._build_integration_grid()
             Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0] #[0]
             print(self.quadm, Inew)
@@ -509,7 +514,7 @@ class SourceFromField(object):
             med = np.median(vin)
             return np.median(np.abs(vin - med))
 
-        self.gIntervals = 2
+#        self.gIntervals = 2
 #        madBoundary = 10
         m_start = 5
         m_step = 1
@@ -604,6 +609,7 @@ class SourceFromField(object):
             z = grid
 
         dataShape = self.customFieldData.shape
+#        print(dataShape)
         if dataShape[1] == 2:
             By = interp1d(dataz, self.customFieldData[:, 1], kind='cubic',
                           bounds_error=False, fill_value="extrapolate")(z)
@@ -649,6 +655,7 @@ class SourceFromField(object):
     def reset(self):
         """This method must be invoked after any changes in the undulator
         parameters."""
+        print(self.gIntervals)
         self.needReset = False
         if not self._xPrimeMax:
             print("No Theta range specified, using default 1 mrad")
@@ -662,23 +669,27 @@ class SourceFromField(object):
         self.E_max = float(max(self.eMin, self.eMax))
 
         """Adjusting the number of points for numerical integration"""
-        # self.gp = 1
+        if self.needConvergence:
+            # self.gp = 1
+    
+            self.quadm = 0
+            tmpeEspread = self.eEspread
+            self.eEspread = 0
 
-        self.quadm = 0
-        tmpeEspread = self.eEspread
-        self.eEspread = 0
+            self.convergenceSearchFlag = True
+    
+            if self.convergence_finder == 'mad':
+                convRes, stats = self._find_convergence_thrsh_mad(testMode=False)
+            else:
+                convRes, stats = self._find_convergence_mixed(testMode=False)
+    
+            self.convergenceSearchFlag = False
 
-        self.convergenceSearchFlag = True
-
-        if self.convergence_finder == 'mad':
-            convRes, stats = self._find_convergence_thrsh_mad(testMode=False)
+            """end of Adjusting the number of points for numerical integration"""
+            self.eEspread = tmpeEspread
         else:
-            convRes, stats = self._find_convergence_mixed(testMode=False)
+            self._build_integration_grid()
 
-        self.convergenceSearchFlag = False
-
-        """end of Adjusting the number of points for numerical integration"""
-        self.eEspread = tmpeEspread
         if raycing._VERBOSITY_ > 10:
             print("Done with integration optimization, {0} points will be used"
                   " in {1} interval{2}".format(
@@ -1442,6 +1453,7 @@ class SourceFromField(object):
 
         .. Returned values: beamGlobal
         """
+        print("Shining", self.gIntervals)
         if self.needReset:
             self.reset()
         if self.bl is not None:
@@ -2623,6 +2635,13 @@ class Undulator(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.yaw = raycing.auto_units_angle(yaw)
         self.gIntervals = gIntervals
+        try:
+            self.gIntervals = int(gridLength[0])
+            self.quadm = int(gridLength[1])
+            self.needConvergence = False
+        except TypeError:
+            self.needConvergence = True
+
         self._convergence_finder = 'mixed'  # 'diff', 'mad'
         self._useGauLeg = False
         self.convergenceSearchFlag = False
@@ -3082,7 +3101,8 @@ class Undulator(object):
             if raycing._VERBOSITY_ > 10:
                 print("G = {0}".format(
                     [self.gIntervals, self.quadm, mad, dimad]))
-            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary):
+#            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary):
+            if (dimad < self.gp) or (mad < self.gp):
                 break
             if self.quadm > 500000:
                 break
@@ -3095,8 +3115,9 @@ class Undulator(object):
         for j in range(jmax):
             self.quadm = int(0.5*(ph2end+ph2start))
             mad, dimad = self._get_mad()
-            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary):
+#            if (self.quadm<500 and dimad<self.gp) or (mad < self.madBoundary):
 #            if mad < 10:
+            if (dimad < self.gp) or (mad < self.gp):
                 ph2end = self.quadm
             else:
                 ph2start = self.quadm
@@ -3295,14 +3316,16 @@ class Undulator(object):
 
         """Adjusting the number of points for Gauss integration"""
         # self.gp = 1
-        self.convergenceSearchFlag = True
-        self.quadm = 0
-        tmpeEspread = self.eEspread
-        self.eEspread = 0
-        self._find_convergence_mixed()
-        self.convergenceSearchFlag = False
-        """end of Adjusting the number of points for Gauss integration"""
-        self.eEspread = tmpeEspread
+        if self.needConvergence:
+            self.convergenceSearchFlag = True
+            self.quadm = 0
+            tmpeEspread = self.eEspread
+            self.eEspread = 0
+            self._find_convergence_mixed()
+            self.convergenceSearchFlag = False
+            """end of Adjusting the number of points for Gauss integration"""
+            self.eEspread = tmpeEspread
+
         if True: #raycing._VERBOSITY_ > 10:
             print("Done with Gaussian optimization, {0} points will be used"
                   " in {1} interval{2}".format(
