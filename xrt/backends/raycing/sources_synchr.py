@@ -913,7 +913,7 @@ class SourceFromField(object):
 #        t0 = time.time()
         if gamma is None:
             gamma = np.array(self.gamma) #[0] TODO: check for consistency
-        emcg = SIE0 / SIM0 / C / 10. / gamma
+        emcg = SIE0 / SIM0 / C / 10. # / gamma
         scalarArgsTraj = [np.int32(len(self.wtGrid)),  # jend
                           self.cl_precisionF(emcg),
                           self.cl_precisionF(gamma**2)]
@@ -1092,8 +1092,10 @@ class SourceFromField(object):
 
             self.beta = [betax, betay]
             self.trajectory = [trajx, trajy, trajz]
+            print("R0 {:.16e}".format(R0))
+            print("theta {:.16e}".format(ddtheta[0]))
+            if True:  # Test of interpolation quality
 
-            if False:  # Test of interpolation quality
                 emax, tmax, pmax = np.max(w), np.max(ddtheta), np.max(ddpsi)
                 Bx2, By2, Bz2 = self._magnetic_field_periodic(self.tg)
                 betax2, betay2, betazav2, trajx2, trajy2, trajz2 =\
@@ -1115,34 +1117,38 @@ class SourceFromField(object):
                 plt.figure("dBy")
                 plt.plot(self.tg, Byt-By2)
                 plt.figure("dBetaX")
-                plt.plot(self.tg, betax-betax2)
-                plt.figure("dBetaX3")
-                plt.plot(self.tg, betax-betax3)
+                plt.plot(self.tg, betax/gamma[0]-betax2)
+#                plt.figure("dBetaX3")
+#                plt.plot(self.tg, betax-betax3)
 #                plt.figure("dBetaY")
 #                plt.plot(trajz, betay-betay2)
                 plt.figure("dX")
-                plt.plot(self.tg, trajx-trajx2)
-                plt.figure("dX3")
-                plt.plot(self.tg, trajx-trajx3)
+                plt.plot(self.tg, trajx/gamma[0]-trajx2)
+#                plt.figure("dX3")
+#                plt.plot(self.tg, trajx-trajx3)
 #                plt.figure("dY")
 #                plt.plot(trajz, trajy-trajy2)
-#                plt.figure("dY")
-#                plt.plot(trajz, trajy-trajy2)
+                plt.figure("dZ")
+                plt.plot(self.tg, (trajz+(gamma[0]**2-0.5)*self.tg)/gamma[0]**2-trajz2)
+#                plt.figure("dZ")
+                plt.plot(self.tg, trajz2-self.tg)
+
                 plt.figure("dCmplPhase")
                 plt.plot(self.tg, ucos-ucos2)
                 plt.figure("By")
                 plt.plot(self.tg, Byt)
                 plt.plot(self.tg, By2)
                 plt.figure("BetaX")
-                plt.plot(self.tg, betax)
-                plt.plot(self.tg, betax3)
+                plt.plot(self.tg, betax/gamma[0])
+                plt.plot(self.tg, betax2)
 #                plt.figure("dBetaY")
 #                plt.plot(trajz, betay-betay2)
                 plt.figure("X")
-                plt.plot(self.tg, trajx)
-                plt.plot(self.tg, trajx3)
+                plt.plot(self.tg, trajx/gamma[0])
+                plt.plot(self.tg, trajx2)
                 plt.figure("Z")
-                plt.plot(self.tg, trajz)
+                print(gamma[0])
+                plt.plot(self.tg, (trajz+(gamma[0]**2-0.5)*self.tg)/gamma[0]**2)
                 plt.plot(self.tg, trajz2)
                 plt.figure("CmplPhasemR0")
                 plt.plot(self.tg, wc*(self.tg - trajz))
@@ -1168,11 +1174,12 @@ class SourceFromField(object):
             emcg = SIE0 / SIM0 / C / 10. / gamma[0]
             scalarArgsTest = [np.int32(len(self.tg)),
                               self.cl_precisionF(emcg),
-                              self.cl_precisionF(gamma[0]**2),
+#                              self.cl_precisionF(gamma[0]**2),
                               self.cl_precisionF(betam),
                               self.cl_precisionF(R0)]
 
-            slicedROArgs = [self.cl_precisionF(w),  # Energy
+            slicedROArgs = [self.cl_precisionF(gamma),
+                            self.cl_precisionF(w),  # Energy
                             self.cl_precisionF(ddtheta),  # Theta
                             self.cl_precisionF(ddpsi)]  # Psi
 
@@ -1181,10 +1188,10 @@ class SourceFromField(object):
                                self.cl_precisionF(Bxt),  # Mangetic field
                                self.cl_precisionF(Byt),  # components on the
                                self.cl_precisionF(Bzt),  # CC grid
-                               self.cl_precisionF(betax),  # Components of the
-                               self.cl_precisionF(betay),  # velosity and
-                               self.cl_precisionF(trajx),  # trajectory of the
-                               self.cl_precisionF(trajy),  # electron on the
+                               self.cl_precisionF(betax/gamma[0]),  # Components of the
+                               self.cl_precisionF(betay/gamma[0]),  # velosity and
+                               self.cl_precisionF(trajx/gamma[0]),  # trajectory of the
+                               self.cl_precisionF(trajy/gamma[0]),  # electron on the
                                self.cl_precisionF(trajz)]  # Gauss grid
 
             slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is

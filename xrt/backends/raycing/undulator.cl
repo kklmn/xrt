@@ -631,13 +631,15 @@ float2 f_beta(float Bx, float By, float Bz,
                           Bx - beta.x*Bz);
 }
 
-float3 f_traj(float revgamma, float2 beta)
+float3 f_traj(float gamma2, float2 beta)
 {
-    float smTerm = revgamma+beta.x*beta.x+beta.y*beta.y;
+//    float smTerm = revgamma+beta.x*beta.x+beta.y*beta.y;
     return (float3)(beta.x,
                     beta.y,
+                    -0.5*(beta.x*beta.x + beta.y*beta.y));
+//                    sqrt(gamma2-1.-beta.x*beta.x-beta.y*beta.y));
 //                     sqrt(1. - smTerm));
-                    1. - 0.5*smTerm - 0.125*smTerm*smTerm); // - 0.0625*smTerm*smTerm*smTerm
+//                    1. - 0.5*smTerm - 0.125*smTerm*smTerm); // - 0.0625*smTerm*smTerm*smTerm
 }
 
 float2 next_beta_rk(float2 beta, int iBase, float rkStep, float emcg,
@@ -684,8 +686,8 @@ float8 next_traj_rk(float2 beta, float3 traj, int iBase, float rkStep,
     k4Traj = rkStep * f_traj(revgamma, beta + k3Beta);
 
     return (float8)(beta + (k1Beta + TWO*k2Beta + TWO*k3Beta + k4Beta)*REVSIX,
-                     traj + (k1Traj + TWO*k2Traj + TWO*k3Traj + k4Traj)*REVSIX,
-                     0., 0., 0.);
+                    traj + (k1Traj + TWO*k2Traj + TWO*k3Traj + k4Traj)*REVSIX,
+                    0., 0., 0.);
 }
 
 
@@ -713,7 +715,7 @@ __kernel void custom_field(const int jend,
     float revg2 = revg * revg;
     float emcg = SIE0 / SIM0 / C * revg;
 // TODO: convert to series, leave only 1/gamma2
-    float revgamma = 1. - revg2;
+//    float revgamma = revg2;
     float8 betaTraj;
     float2 eucos;
     float2 Is = zero2;
@@ -739,7 +741,7 @@ __kernel void custom_field(const int jend,
     beta0 = zero2;
     betam_int = 0;
 
-    for (j=1; j<jend; j++) {
+    for (j=0; j<jend; j++) {
         iBase = 2*(j-1)*nwt;
         rkStep = (tg[j] - tg[j-1]) / nwt;
         for (k=0; k<nwt; k++) {
@@ -765,11 +767,11 @@ __kernel void custom_field(const int jend,
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
                                     iZeroStep,
-                                    rkStep, emcg, revgamma, Bx, By, Bz);
+                                    rkStep, emcg, revg2, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234;
             traj0 += traj * rkStep;
-            betam_int += rkStep * sqrt(revgamma - beta.x*beta.x -
+            betam_int += rkStep * sqrt(1.-revg2 - beta.x*beta.x -
                                        beta.y*beta.y); } }
 
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -788,7 +790,7 @@ __kernel void custom_field(const int jend,
             iHalfStep = iBase + 2*k + 1;
             iFullStep = iBase + 2*(k + 1);
             betaTraj = next_traj_rk(beta, traj,
-            iZeroStep, rkStep, emcg, revgamma, Bx, By, Bz);
+            iZeroStep, rkStep, emcg, revg2, Bx, By, Bz);
             beta = betaTraj.s01;
             traj = betaTraj.s234; }
 
@@ -842,23 +844,17 @@ __kernel void get_trajectory(const int jend,
 {
     int j;
     float rkStep;
-    // TODO: leave only 1/gamma2
-    float revgamma = 1./gamma2;
+    float revg2 = 1./gamma2;
     float betam_int = 0;
     float2 beta, beta0;
     float3 traj, traj0;
     float8 betaTraj;
-//    float Bx4[10], By4[10], Bz4[10];
-//    int nmax = 10;
     beta = zero2;
     beta0 = zero2;
 
     for (j=0; j<jend-1; j++) {
         rkStep = tg[j+1] - tg[j];
         beta = next_beta_rk(beta, j*2, rkStep, emcg, Bx, By, Bz);
-//        for (k=0;k<nmax;k++){
-//            Bx4[k] = Bx[j+k]; By4[k] = By[j+k]; Bz4[k] = Bz[j+k];}
-//        beta = next_beta_rkn(beta, nmax, rkStep, emcg, Bx4, By4, Bz4);
         beta0 += beta * rkStep;
     }
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -870,15 +866,11 @@ __kernel void get_trajectory(const int jend,
     for (j=0; j<jend-1; j++) {
         rkStep = tg[j+1] - tg[j];
         betaTraj = next_traj_rk(beta, traj, j*2,
-                                rkStep, emcg, revgamma, Bx, By, Bz);
-//        for (k=0;k<nmax;k++){
-//            Bx4[k] = Bx[j+k]; By4[k] = By[j+k]; Bz4[k] = Bz[j+k];}
-//        betaTraj = next_traj_rkn(beta, traj, nmax, rkStep, emcg, revgamma,
-//                                 Bx4, By4, Bz4);
+                                rkStep, emcg, revg2, Bx, By, Bz);
         beta = betaTraj.s01;
         traj = betaTraj.s234;
         traj0 += traj * rkStep;
-        betam_int += rkStep*sqrt(1. - revgamma - beta.x*beta.x -
+        betam_int += rkStep*sqrt(1. - revg2 - beta.x*beta.x -
                                  beta.y*beta.y);
     }
     mem_fence(CLK_LOCAL_MEM_FENCE);
@@ -896,11 +888,7 @@ __kernel void get_trajectory(const int jend,
     for (j=0; j<jend-1; j++) {
         rkStep = tg[j+1] - tg[j];
         betaTraj = next_traj_rk(beta, traj, j*2,
-                                rkStep, emcg, revgamma, Bx, By, Bz);
-//        for (k=0;k<nmax;k++){
-//            Bx4[k] = Bx[j+k]; By4[k] = By[j+k]; Bz4[k] = Bz[j+k];}
-//        betaTraj = next_traj_rkn(beta, traj, nmax, rkStep, emcg, revgamma,
-//                                 Bx4, By4, Bz4);
+                                rkStep, emcg, revg2, Bx, By, Bz);
         beta = betaTraj.s01;
         traj = betaTraj.s234;
 
@@ -916,9 +904,9 @@ __kernel void get_trajectory(const int jend,
 
 __kernel void custom_field_filament(const int jend,
                                         const float emcg,
-                                        const float gamma2,
                                         const float betazav,
                                         const float R0,
+                                        __global float* gamma2,
                                         __global float* w,
                                         __global float* ddphi,
                                         __global float* ddpsi,
@@ -938,9 +926,9 @@ __kernel void custom_field_filament(const int jend,
     unsigned int ii = get_global_id(0);
     int j;
 
-    float ucos, sinucos, cosucos, wR0, krel, LR, LRS, drs;
+    float ucos, sinucos, cosucos, krel, LR, LRS, drs;
     float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
-    float revg2 = 1./gamma2;
+    float revg2 = 1./gamma2[ii];
     float smTerm;
 
     float2 eucos;
@@ -957,13 +945,12 @@ __kernel void custom_field_filament(const int jend,
     n /= length(n);
 
     if (R0>0) {
-        wR0 = R0;
         n.x = tan(ddphi[ii]);
         n.y = tan(ddpsi[ii]);
         n.z = 1.;
         n /= length(n);
-        r0 = wR0 * n; }
-        sinr0z = sincos(wc * r0.z, &cosr0z);
+        r0 = R0 * n; 
+        sinr0z = sincos(wc * r0.z, &cosr0z);}
 
     for (j=0; j<jend; j++) {
         traj.x = trajx[j];
