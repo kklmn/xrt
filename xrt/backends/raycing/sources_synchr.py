@@ -667,18 +667,18 @@ class SourceFromField(object):
         """Adjusting the number of points for numerical integration"""
         if self.needConvergence:
             # self.gp = 1
-    
+
             self.quadm = 0
             tmpeEspread = self.eEspread
             self.eEspread = 0
 
             self.convergenceSearchFlag = True
-    
+
             if self.convergence_finder == 'mad':
                 convRes, stats = self._find_convergence_thrsh_mad(testMode=False)
             else:
                 convRes, stats = self._find_convergence_mixed(testMode=False)
-    
+
             self.convergenceSearchFlag = False
 
             """end of Adjusting the number of points for numerical integration"""
@@ -903,7 +903,7 @@ class SourceFromField(object):
         if self.cl_ctx is None:
             return self._build_trajectory_conv(Bx, By, Bz, gamma)
         else:
-            return self._build_trajectory_CL(Bx, By, Bz, gamma)            
+            return self._build_trajectory_CL(Bx, By, Bz, gamma)
 
     def _build_trajectory_CL(self, Bx, By, Bz, gamma=None):
 #        t0 = time.time()
@@ -1196,8 +1196,8 @@ class SourceFromField(object):
                 clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
                 slicedRWArgs, None, NRAYS)
         else:
-            
-            ab = 0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2) 
+
+            ab = 0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
 
             scalarArgs.extend([np.int32(len(self.tg)),  # jend
                                self.cl_precisionF(betam),
@@ -1233,7 +1233,9 @@ class SourceFromField(object):
 
         integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
         if self.convergenceSearchFlag:
-            return np.abs(np.sqrt(integralField) * 0.5 * self.dstep)
+            return (np.abs(np.sqrt(integralField) * 0.5 * self.dstep),
+                    Is_local * 0.5 * self.dstep,
+                    Ip_local * 0.5 * self.dstep)
         else:
             return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
                     np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
@@ -1520,10 +1522,10 @@ class SourceFromField(object):
                       "Specify it by giving eMin and eMax in the constructor.")
         nrep = 0
         rep_condition = True
-#        while length < self.nrays:
+
         while rep_condition:
             seeded += mcRays
-            # start_time = time.time()
+
             if self.filamentBeam or fixedEnergy:
                 rE = rsE * np.ones(mcRays)
             else:
@@ -1730,7 +1732,7 @@ class SourceFromField(object):
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         bor = Beam(copyFrom=bo)
-        if wave is not None:
+        if wave is not None and self.R0 is None:
             bor.x[:] = dxR
             bor.y[:] = 0
             bor.z[:] = dzR
@@ -4341,7 +4343,7 @@ class Undulator(object):
                 x = wave.xDiffr + shiftX
                 y = wave.yDiffr
                 z = wave.zDiffr + shiftZ
-                rDiffr = (x**2 + y**2 + z**2)**0.5
+                rDiffr = np.sqrt((x**2 + y**2 + z**2))
                 rTheta = x / rDiffr
                 rPsi = z / rDiffr
                 if self.filamentBeam:
@@ -4414,8 +4416,8 @@ class Undulator(object):
                     dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
 
             if wave is not None:
-                wave.rDiffr = ((wave.xDiffr - dxR)**2 + wave.yDiffr**2 +
-                               (wave.zDiffr - dzR)**2)**0.5
+                wave.rDiffr = np.sqrt(((wave.xDiffr - dxR)**2 + wave.yDiffr**2 +
+                               (wave.zDiffr - dzR)**2))
                 wave.path[:] = 0
                 wave.a[:] = (wave.xDiffr - dxR) / wave.rDiffr
                 wave.b[:] = wave.yDiffr / wave.rDiffr
@@ -4526,7 +4528,7 @@ class Undulator(object):
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         bor = Beam(copyFrom=bo)
-        if wave is not None:
+        if wave is not None and self.R0 is None:
             bor.x[:] = dxR
             bor.y[:] = 0
             bor.z[:] = dzR
