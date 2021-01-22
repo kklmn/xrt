@@ -1012,7 +1012,7 @@ __kernel void custom_field(const int jend,
     float emcg = EMC / gamma[ii];
     float emc2 = EMC*EMC;
 
-    float betam = 1. - 0.5*revg2 + betazav*emc2*revg2;
+    float betam = 1. + (betazav*emc2 - 0.5)*revg2;
 
     float smTerm;
 

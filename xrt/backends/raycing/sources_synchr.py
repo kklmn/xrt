@@ -478,7 +478,7 @@ class SourceFromField(object):
         k = m_start
         pltout = []
         dIout = []
-
+        # TODO: two points for CL, one for numpy
         sE = self.E_max * np.ones(2)
         sTheta_max = self.Theta_max * np.ones(2)
         sPsi_max = self.Psi_max * np.ones(2)
@@ -716,31 +716,45 @@ class SourceFromField(object):
 
     def _sp(self, dim, emcg, w, gamma, ddphi, ddpsi, Bx, By, Bz,
             betax, betay, betam, trajx, trajy, trajz, R0=None):
-        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
+#        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
-        if dim == 0:
-            wS = w
-            ddphiS = ddphi
-            ddpsiS = ddpsi
-        elif dim == 1:
-            wS = w[:, np.newaxis]
-            ddphiS = ddphi[:, np.newaxis]
-            ddpsiS = ddpsi[:, np.newaxis]
-            if lengamma > 1:
-                gS = gamma[:, np.newaxis]
-        elif dim == 3:
-            wS = w[:, :, :, np.newaxis]
-            ddphiS = ddphi[:, :, :, np.newaxis]
-            ddpsiS = ddpsi[:, :, :, np.newaxis]
-            if lengamma > 1:
-                gS = gamma[:, :, :, np.newaxis]
+#        if dim == 0:
+        wS = w
+        ddphiS = ddphi
+        ddpsiS = ddpsi
+#        elif dim == 1:
+#            wS = w[:, np.newaxis]
+#            ddphiS = ddphi[:, np.newaxis]
+#            ddpsiS = ddpsi[:, np.newaxis]
+#            if lengamma > 1:
+#                gS = gamma[:, np.newaxis]
+#        elif dim == 3:
+#            wS = w[:, :, :, np.newaxis]
+#            ddphiS = ddphi[:, :, :, np.newaxis]
+#            ddpsiS = ddpsi[:, :, :, np.newaxis]
+#            if lengamma > 1:
+#                gS = gamma[:, :, :, np.newaxis]
 
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
+        revgamma2 = 1./gS**2
 
-        wc = wS * E2WC / betam
-        rloc = np.array([trajx, trajy, trajz])
+        if self.filamentBeam:
+            wc = wS * E2WC / betam
+            betax_ = betax
+            betay_ = betay
+            trajx_ = trajx
+            trajy_ = trajy
+            trajz_ = trajz
+        else:
+            wc = wS*E2WC/(1. + (betam*EMC**2 - 0.5)*revgamma2)
+            betax_ = emcg*betax
+            betay_ = emcg*betay
+            trajx_ = emcg*trajx
+            trajy_ = emcg*trajy
+            trajz_ = self.tg*(1.-0.5*revgamma2) + EMC**2*revgamma2*trajz
+        rloc = np.array([trajx_, trajy_, trajz_])
 
         if R0 is not None:
             R0 = np.expand_dims(R0, axis=1)
@@ -752,8 +766,8 @@ class SourceFromField(object):
             drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
 
             LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
-            sinzloc = np.sin(wc * (self.tg - trajz))
-            coszloc = np.cos(wc * (self.tg - trajz))
+            sinzloc = np.sin(wc * (self.tg - trajz_))
+            coszloc = np.cos(wc * (self.tg - trajz_))
 
             sindrs = np.sin(wc * LRS)
             cosdrs = np.cos(wc * LRS)
@@ -763,8 +777,8 @@ class SourceFromField(object):
             eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
                        cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
         else:
-            phz = wc*(self.tg - dirz*trajz)
-            phxy = wc*(dirx*trajx + diry*trajy)
+            phz = wc*(self.tg - dirz*trajz_)
+            phxy = wc*(dirx*trajx_ + diry*trajy_)
             sinphz, cosphz = np.sin(phz), np.cos(phz)
             sinphxy, cosphxy = np.sin(phxy), np.cos(phxy)
             eucosx = sinphz*cosphxy - cosphz*sinphxy
@@ -778,18 +792,18 @@ class SourceFromField(object):
             diry = direction[1, :]
             dirz = direction[2, :]
 
-        smTerm = 1./gS**2 + betax**2 + betay**2
+        smTerm = 1./gS**2 + betax_**2 + betay_**2
         betaz = 1 - 0.5*smTerm + 0.125*smTerm**2
 
-        betaPx = betay*Bz - betaz*By
-        betaPy = -betax*Bz + betaz*Bx
-        betaPz = betax*By - betay*Bx
+        betaPx = betay_*Bz - betaz*By
+        betaPy = -betax_*Bz + betaz*Bx
+        betaPz = betax_*By - betay_*Bx
 
-        rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
+        rkrel = 1./(1. - dirx*betax_ - diry*betay_ - dirz*betaz)
 
         eucos *= self.ag * rkrel**2
-        bnx = dirx - betax
-        bny = diry - betay
+        bnx = dirx - betax_
+        bny = diry - betay_
         bnz = dirz - betaz
 
         dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
@@ -807,26 +821,41 @@ class SourceFromField(object):
         Bsr = np.complex(0)
         Bpr = np.complex(0)
 
+        gamma_ = gamma[0] if self.filamentBeam else gamma
         dirx = ddphi
         diry = ddpsi
         dirz = 1. - 0.5*(ddphi**2 + ddpsi**2)
-        revgamma2 = 1./gamma**2
+        revgamma2 = 1./gamma_**2
 
-        wc = w * E2WC / betam
+        wc = w * E2WC / (1. + (betam*EMC**2 - 0.5)*revgamma2) if\
+            self.filamentBeam else w * E2WC / betam
 
         if R0 is not None:
             sinr0z, cosr0z = np.sin(wc*R0[2, :]), np.cos(wc*R0[2, :])
 
         for i in range(len(self.tg)):
-            rloc = np.array([trajx[i], trajy[i], trajz[i]])
+            if self.filamentBeam:
+                betax_ = betax[i]
+                betay_ = betay[i]
+                trajx_ = trajx[i]
+                trajy_ = trajy[i]
+                trajz_ = trajz[i] 
+            else:
+                betax_ = emcg*betax[i]
+                betay_ = emcg*betay[i]
+                trajx_ = emcg*trajx[i]
+                trajy_ = emcg*trajy[i]
+                trajz_ = self.tg[i]*(1.-0.5*revgamma2) +\
+                    EMC**2*revgamma2*trajz[i]
+            rloc = np.array([trajx_, trajy_, trajz_])
             dr = R0 - np.expand_dims(rloc, 1)
             dist = np.linalg.norm(dr, axis=0)
 
             if R0 is not None:
                 drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
                 LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
-                sinzloc = np.sin(wc * (self.tg[i] - trajz[i]))
-                coszloc = np.cos(wc * (self.tg[i] - trajz[i]))
+                sinzloc = np.sin(wc * (self.tg[i] - trajz_))
+                coszloc = np.cos(wc * (self.tg[i] - trajz_))
                 sindrs = np.sin(wc * LRS)
                 cosdrs = np.cos(wc * LRS)
                 eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
@@ -834,8 +863,8 @@ class SourceFromField(object):
                 eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
                            cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
             else:
-                phz = wc*(self.tg[i] - dirz*trajz[i])
-                phxy = wc*(dirx*trajx[i] + diry*trajy[i])
+                phz = wc*(self.tg[i] - dirz*trajz_)
+                phxy = wc*(dirx*trajx_ + diry*trajy_)
                 sinphz, cosphz = np.sin(phz), np.cos(phz)
                 sinphxy, cosphxy = np.sin(phxy), np.cos(phxy)
                 eucosx = sinphz*cosphxy - cosphz*sinphxy
@@ -849,17 +878,17 @@ class SourceFromField(object):
                 diry = direction[1, :]
                 dirz = direction[2, :]
 
-            smTerm = revgamma2 + betax[i]**2 + betay[i]**2
+            smTerm = revgamma2 + betax_**2 + betay_**2
             betaz = 1. - 0.5*smTerm + 0.125*smTerm**2
 
-            betaPx = betay[i]*Bz[i] - betaz*By[i]
-            betaPy = -betax[i]*Bz[i] + betaz*Bx[i]
-            betaPz = betax[i]*By[i] - betay[i]*Bx[i]
-            rkrel = 1./(1. - dirx*betax[i] - diry*betay[i] - dirz*betaz)
+            betaPx = betay_*Bz[i] - betaz*By[i]
+            betaPy = -betax_*Bz[i] + betaz*Bx[i]
+            betaPz = betax_*By[i] - betay_*Bx[i]
+            rkrel = 1./(1. - dirx*betax_ - diry*betay_ - dirz*betaz)
             eucos *= self.ag[i] * rkrel**2
 
-            bnx = dirx - betax[i]
-            bny = diry - betay[i]
+            bnx = dirx - betax_
+            bny = diry - betay_
             bnz = dirz - betaz
 
             dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
@@ -945,8 +974,12 @@ class SourceFromField(object):
             return emcg*np.array((beta[1]*B[2]-B[1], B[0] - beta[0]*B[2]))
 
         def f_traj(beta):
-            smTerm = 1./gamma**2 + beta[0]**2 + beta[1]**2
-            return np.array((beta[0], beta[1], 1.-0.5*smTerm-0.125*smTerm**2))
+            if self.filamentBeam:
+                smTerm = 1./gamma**2 + beta[0]**2 + beta[1]**2
+                betaz = 1.-0.5*smTerm-0.125*smTerm**2
+            else:
+                betaz = -0.5*(beta[0]**2 + beta[1]**2)
+            return np.array((beta[0], beta[1], betaz))
 
         def next_beta_rk(iB, beta):
             k1beta = rkStep * f_beta([Bx[iB], By[iB], Bz[iB]],
@@ -996,13 +1029,19 @@ class SourceFromField(object):
             rkStep = self.wtGrid[i+1] - self.wtGrid[i]
             beta_next, traj_next = next_traj_rk(2*i, beta_next, traj_next)
             traj0 += rkStep * traj_next
-            betam_int += rkStep * np.sqrt(
-                    1. - 1./gamma**2 - beta_next[0]**2 - beta_next[1]**2)
+            if self.filamentBeam:
+                betam_int += rkStep * np.sqrt(
+                        1. - 1./gamma**2 - beta_next[0]**2 - beta_next[1]**2)
+            else:
+                betam_int +=  beta_next[0]**2 + beta_next[1]**2
 
         traj0 /= -(self.wtGrid[-1] - self.wtGrid[0])
         beta_next = np.copy(beta0)
         traj_next = np.copy(traj0)
-        betam_int /= -(self.wtGrid[-1] - self.wtGrid[0])
+        if self.filamentBeam:
+            betam_int /= -(self.wtGrid[-1] - self.wtGrid[0])
+        else:
+            betam_int *= -0.5/(len(self.wtGrid)-1)
 
         betax = [beta0[0]]
         betay = [beta0[1]]
@@ -1196,7 +1235,6 @@ class SourceFromField(object):
                 clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
                 slicedRWArgs, None, NRAYS)
         else:
-
             ab = 0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
 
             scalarArgs.extend([np.int32(len(self.tg)),  # jend
@@ -1260,47 +1298,53 @@ class SourceFromField(object):
         else:
             Bx, By, Bz = self._magnetic_field_periodic()
 
-        if self.filamentBeam:
-            if self.customFieldData is not None and not self.periodicTest:
-                betax, betay, betazav, trajx, trajy, trajz =\
-                    self.build_trajectory(Bx, By, Bz, gamma[0])
+        
+        if self.customFieldData is not None and not self.periodicTest:
+            betax, betay, betazav, trajx, trajy, trajz =\
+                self.build_trajectory(Bx, By, Bz, gamma[0])
 #                betax3, betay3, betazav3, trajx3, trajy3, trajz3 =\
 #                    self.build_trajectory_conv(Bx, By, Bz, gamma[0])
-                Bxt, Byt, Bzt = self._magnetic_field(self.tg)
-            else:
-                betax, betay, betazav, trajx, trajy, trajz =\
-                    self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
-                Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
+            Bxt, Byt, Bzt = self._magnetic_field(self.tg)
 
-            self.beta = [betax, betay]
-            self.trajectory = [trajx, trajy, trajz]
+        else:
+            betax, betay, betazav, trajx, trajy, trajz =\
+                self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
+            Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
-            betam = betazav[-1]
-            ab = 0.5 / np.pi / betam
-            emcg = SIE0 / SIM0 / C / 10. / gamma[0]
+        self.beta = [betax, betay]
+        self.trajectory = [trajx, trajy, trajz]
 
-            if self.R0:
-                R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
-                R0n = np.linalg.norm(R0v, axis=0)
-                R0v *= R0/R0n
-            else:
-                R0v=None
+        betam = betazav[-1]
+        ab = 0.5 / np.pi / betam if self.filamentBeam else\
+            0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
+        emcg = SIE0 / SIM0 / C / 10. / gamma[0]
 
-            if NRAYS > 1:
-                Is_local, Ip_local = self._sp_sum(
-                        emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
-                        betax, betay, betam, trajx, trajy, trajz, R0v)
-            else:
-                dim = len(np.array(w).shape)
-                Is_local, Ip_local = self._sp(
-                        dim, emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
-                        betax, betay, betam, trajx, trajy, trajz, R0v)
+        if self.R0:
+            R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
+            R0n = np.linalg.norm(R0v, axis=0)
+            R0v *= R0/R0n
+        else:
+            R0v=None
+
+        if NRAYS > 1:  # sum along the integration grid
+            Is_local, Ip_local = self._sp_sum(
+                    emcg, w, gamma, ddtheta, ddpsi, Bxt, Byt, Bzt,
+                    betax, betay, betam, trajx, trajy, trajz, R0v)
+        else:  # only used for convergence estimation. dim always = 0
+            dim = len(np.array(w).shape)
+            Is_local, Ip_local = self._sp(
+                    dim, emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
+                    betax, betay, betam, trajx, trajy, trajz, R0v)
+
+
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
 
         integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
         if self.convergenceSearchFlag:
-            return np.abs(np.sqrt(integralField) * 0.5 * self.dstep)
+            return (np.abs(np.sqrt(integralField) * 0.5 * self.dstep),
+                    Is_local * 0.5 * self.dstep,
+                    Ip_local * 0.5 * self.dstep)
         else:
             return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
                     np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
