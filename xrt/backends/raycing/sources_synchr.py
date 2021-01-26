@@ -1120,7 +1120,6 @@ class SourceFromField(object):
         self.trajectory = [trajx, trajy, trajz]
 
         betam = betazav[-1]
-#        print("betam py", betam)
         ab = 0.5 / np.pi / betam
         emcg = EMC / gamma[0]
 
@@ -1206,6 +1205,7 @@ class SourceFromField(object):
 
 #            wuAv = C * 10. * betazav[-1] / E2W  # beta.z average
         if self.filamentBeam:
+            print(w[0]*E2WC/betam)
             scalarArgsTest = [np.int32(len(self.tg)),
                               self.cl_precisionF(emcg),
                               self.cl_precisionF(1./gamma[0]**2),
@@ -1321,8 +1321,8 @@ class SourceFromField(object):
 
         if self.R0:
             R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
-            R0n = np.linalg.norm(R0v, axis=0)
-            R0v *= R0/R0n
+#            R0n = np.linalg.norm(R0v, axis=0)  # Only for spherical screen
+            R0v *= R0  # /R0n
         else:
             R0v=None
 
@@ -3945,8 +3945,8 @@ class Undulator(object):
 
         if self.R0:
             R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
-            R0n = np.linalg.norm(R0v, axis=0)
-            R0v *= self.R0*np.pi*2/self.L0/R0n
+#            R0n = np.linalg.norm(R0v, axis=0)  # Only for spherical screen
+            R0v *= self.R0*np.pi*2/self.L0  # /R0n
 
         else:
             R0v=None

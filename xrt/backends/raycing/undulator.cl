@@ -238,7 +238,7 @@ __kernel void undulator_nf(const float R0,
     nloc.y = tan(ddpsi[ii]);
     nloc.z = 1.;
 
-    nloc /= length(nloc);
+//    nloc /= length(nloc); // Only for the spherical screen
 
     r0 = R0 * nloc;
     sinr0z = sincos(wwu * r0.z, &cosr0z);
@@ -845,7 +845,7 @@ __kernel void custom_field_filament(const int jend,
 
     float ucos, sinucos, cosucos, krel, LR, LRS, drs;
     float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
-    float smTerm;
+    float smTerm, rdrz;
 
     float2 eucos;
     float2 Is = (float2)(0., 0.);
@@ -856,13 +856,13 @@ __kernel void custom_field_filament(const int jend,
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
-    n /= length(n);
+//    n /= length(n);
 
     if (R0>0) {
         n.x = tan(ddphi[ii]);
         n.y = tan(ddpsi[ii]);
         n.z = 1.;
-        n /= length(n);
+//        n /= length(n);  // Only for the spherical screen
         r0 = R0 * n;
         sinr0z = sincos(wc * r0.z, &cosr0z);}
 
@@ -878,9 +878,10 @@ __kernel void custom_field_filament(const int jend,
 //        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
         if (R0 > 0) {
             dr = r0 - traj;
-            drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
+            rdrz = 1./dr.z;
+            drs = (dr.x*dr.x+dr.y*dr.y)*rdrz;
 
-            LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
+            LRS = 0.5*drs - 0.125*drs*drs*rdrz + 0.0625*drs*drs*drs*rdrz*rdrz;
             LR = length(dr);
 
             sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
@@ -1014,7 +1015,7 @@ __kernel void custom_field(const int jend,
 
     float betam = 1. + (betazav*emc2 - 0.5)*revg2;
 
-    float smTerm;
+    float smTerm, rdrz;
 
     float2 eucos;
     float2 Is = (float2)(0., 0.);
@@ -1027,13 +1028,13 @@ __kernel void custom_field(const int jend,
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
     n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
-    n /= length(n);
+//    n /= length(n);
 
     if (R0>0) {
         n.x = tan(ddphi[ii]);
         n.y = tan(ddpsi[ii]);
         n.z = 1.;
-        n /= length(n);
+//        n /= length(n);  // Only for the spherical screen
         r0 = R0 * n;
         sinr0z = sincos(wc * r0.z, &cosr0z);}
 
@@ -1049,9 +1050,10 @@ __kernel void custom_field(const int jend,
 //        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
         if (R0 > 0) {
             dr = r0 - traj;
-            drs = (dr.x*dr.x+dr.y*dr.y)/(dr.z);
+            rdrz = 1./dr.z;
+            drs = (dr.x*dr.x+dr.y*dr.y)*rdrz;
 
-            LRS = 0.5*drs - 0.125*drs*drs + 0.0625*drs*drs*drs;
+            LRS = 0.5*drs - 0.125*drs*drs*rdrz + 0.0625*drs*drs*drs*rdrz*rdrz;
             LR = length(dr);
 
             sinzloc = sincos(wc * (tg[j]-traj.z), &coszloc);
