@@ -260,7 +260,7 @@ __kernel void undulator_nf(const float R0,
             sinzloc = sincos(wwu *zloc*(1-betam), &coszloc);
             sindrs = sincos(wwu *(drs + QUAR * zterm * revg), &cosdrs);
 
-            LR = dr.z + drs; // - 0.125*drs*drs;
+            LR = dr.z + drs; // - 0.5*drs*drs/dr.z;
 
             eucos.x = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
                        cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;

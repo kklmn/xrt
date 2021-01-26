@@ -762,10 +762,10 @@ class SourceFromField(object):
             dist = np.linalg.norm(dr, axis=0)
             sinr0z = np.sin(wc*R0[2, :])
             cosr0z = np.cos(wc*R0[2, :])
+            rdrz = 1./dr[2, :]
+            drs = (dr[0, :]**2+dr[1, :]**2)*rdrz
 
-            drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
-
-            LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
+            LRS = 0.5*drs - 0.125*drs**2*rdrz + 0.0625*drs**3*rdrz**2
             sinzloc = np.sin(wc * (self.tg - trajz_))
             coszloc = np.cos(wc * (self.tg - trajz_))
 
@@ -852,8 +852,9 @@ class SourceFromField(object):
             dist = np.linalg.norm(dr, axis=0)
 
             if R0 is not None:
-                drs = (dr[0, :]**2+dr[1, :]**2)/dr[2, :]
-                LRS = 0.5*drs - 0.125*drs**2 + 0.0625*drs**3
+                rdrz = 1./dr[2, :]
+                drs = (dr[0, :]**2+dr[1, :]**2)*rdrz
+                LRS = 0.5*drs - 0.125*drs**2*rdrz + 0.0625*drs**3*rdrz**2
                 sinzloc = np.sin(wc * (self.tg[i] - trajz_))
                 coszloc = np.cos(wc * (self.tg[i] - trajz_))
                 sindrs = np.sin(wc * LRS)
@@ -1205,7 +1206,6 @@ class SourceFromField(object):
 
 #            wuAv = C * 10. * betazav[-1] / E2W  # beta.z average
         if self.filamentBeam:
-            print(w[0]*E2WC/betam)
             scalarArgsTest = [np.int32(len(self.tg)),
                               self.cl_precisionF(emcg),
                               self.cl_precisionF(1./gamma[0]**2),
