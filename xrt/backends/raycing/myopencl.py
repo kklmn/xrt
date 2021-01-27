@@ -8,12 +8,23 @@ import numpy as np
 import os
 #import time
 from .. import raycing
+import pickle
+#import zlib
+import sys
 try:
     import pyopencl as cl
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
     isOpenCL = True
 except ImportError:
     isOpenCL = False
+
+try:
+    import zmq
+    isZMQ = True
+except ImportError:
+    isZMQ = False
+
+PYVERSION = int(sys.version[0])
 
 __fdir__ = os.path.dirname(__file__)
 _DEBUG = 20
@@ -29,6 +40,22 @@ class XRT_CL(object):
         self.set_cl(targetOpenCL, precisionOpenCL)
         self.cl_is_blocking = True
 
+    def send_zipped_pickle(self, socket, obj, flags=0, protocol=2):
+        """Pickle an object, and zip the pickle before sending it.
+           From pyzmq docs"""
+        p = pickle.dumps(obj, protocol)
+#        z = zlib.compress(p, 0)
+        return socket.send(p, flags=flags)
+    
+    def recv_zipped_pickle(self, socket, flags=0, protocol=2):
+        """inverse of send_zipped_pickle. From pyzmq docs"""
+        z = socket.recv(flags)
+        kw = {}
+        if PYVERSION > 2:  # Python 2 compatibility. Do we need it?
+            kw['encoding'] = 'bytes'
+#        p = zlib.decompress(z)
+        return pickle.loads(z, **kw)
+
     def set_cl(self, targetOpenCL=raycing.targetOpenCL,
                precisionOpenCL=raycing.precisionOpenCL):
         if (targetOpenCL == self.lastTargetOpenCL) and\
@@ -36,9 +63,25 @@ class XRT_CL(object):
             return
         self.lastTargetOpenCL = targetOpenCL
         self.lastPrecisionOpenCL = precisionOpenCL
-        if not isOpenCL:
-            raise EnvironmentError("pyopencl is not available!")
-        else:
+        try:
+            if ':' in targetOpenCL and isZMQ:
+                self.address, self.port = targetOpenCL.split(':')
+                if not self.address.startswith('tcp://'):
+                    self.address = 'tcp://' + self.address
+                print(self.address, self.port)
+                self.ZMQcontext = zmq.Context()
+                self.ZMQsocket = self.ZMQcontext.socket(zmq.REQ)
+                self.ZMQsocket.connect("{0}:{1}".format(self.address,
+                                                        self.port))
+                self.useZMQ = True
+                self.lastTargetOpenCL = targetOpenCL
+            else:
+                self.useZMQ = False
+        except:
+            self.useZMQ = False
+        print("useZMQ:", self.useZMQ)
+
+        if isOpenCL and not self.useZMQ:
             try:
                 cl_platforms = cl.get_platforms()
             except:
@@ -164,8 +207,11 @@ class XRT_CL(object):
             else:  # None
                 targetOpenCL = None
                 self.lastTargetOpenCL = targetOpenCL
+        elif not self.useZMQ:
+            raise EnvironmentError("Neither pyopencl nor ZMQ are available!")
+
         if targetOpenCL is not None:
-            if _DEBUG > 10:
+            if _DEBUG > 10 and not self.useZMQ:
                 autoStr = "Autos" if isinstance(targetOpenCL, str) else "S"
                 for idn, idv in enumerate(iDevice):
                     print("OpenCL for {0}: {1}elected device {2}: {3}".format(
@@ -179,14 +225,17 @@ class XRT_CL(object):
             else:
                 kernelsource = self.kernelsource
             if precisionOpenCL == 'auto':
-                try:
-                    for device in iDevice:
-                        if device.double_fp_config == 63:
-                            precisionOpenCL = 'float64'
-                        else:
-                            raise AttributeError
-                except AttributeError:
-                    precisionOpenCL = 'float32'
+                if self.useZMQ:
+                    precisionOpenCL = 'float64'
+                else:
+                    try:
+                        for device in iDevice:
+                            if device.double_fp_config == 63:
+                                precisionOpenCL = 'float64'
+                            else:
+                                raise AttributeError
+                    except AttributeError:
+                        precisionOpenCL = 'float32'
             if _DEBUG > 10:
                 print('precisionOpenCL = {0}'.format(precisionOpenCL))
             if precisionOpenCL == 'float64':
@@ -201,158 +250,175 @@ class XRT_CL(object):
             self.cl_queue = []
             self.cl_ctx = []
             self.cl_program = []
-            for device in iDevice:
-                cl_ctx = cl.Context(devices=[device])
-                self.cl_queue.extend([cl.CommandQueue(cl_ctx, device)])
-                self.cl_program.extend(
-                    [cl.Program(cl_ctx, kernelsource).build(
-                        options=['-I', __fdir__])])
-                self.cl_ctx.extend([cl_ctx])
-
-            self.cl_mf = cl.mem_flags
+            self.cl_mf = None
+            if not self.useZMQ:
+                for device in iDevice:
+                    cl_ctx = cl.Context(devices=[device])
+                    self.cl_queue.extend([cl.CommandQueue(cl_ctx, device)])
+                    self.cl_program.extend(
+                        [cl.Program(cl_ctx, kernelsource).build(
+                            options=['-I', __fdir__])])
+                    self.cl_ctx.extend([cl_ctx])
+                self.cl_mf = cl.mem_flags
 
     def run_parallel(self, kernelName='', scalarArgs=None,
                      slicedROArgs=None, nonSlicedROArgs=None,
                      slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0):
 
-        # t0 = time.time()
-        ka_offset = len(scalarArgs) if scalarArgs is not None else 0
-        ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
-        ns_offset = len(nonSlicedROArgs) if nonSlicedROArgs is not None else 0
-        rw_offset = len(slicedRWArgs) if slicedRWArgs is not None else 0
-        rw_pos = ka_offset + ro_offset + ns_offset
-        nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
-
-        kernel_bufs = []
-        global_size = []
-        ev_h2d = []
-        ev_run = []
-        nCU = []
-        ndstart = []
-        ndslice = []
-        ndsize = []
-        minWGS = 1e20
-
-        for ictx, ctx in enumerate(self.cl_ctx):
-            nCUw = 1
-            nCU.extend([nCUw])
-            tmpWGS = ctx.devices[0].max_work_group_size
-            if tmpWGS < minWGS:
-                minWGS = tmpWGS
-            # nCU.extend([ctx.devices[0].max_compute_units*nCUw])
-
-        totalCUs = np.sum(nCU)
-        minWGS = 256
-        divider = minWGS * totalCUs
-        n2f = np.remainder(dimension, divider)
-        needResize = False
-        # odd dimension performance fix
-        if n2f != 0 and dimension > divider:
-            oldSize = dimension
-            dimension = (np.trunc(dimension/divider) + 1) * divider
-            nDiff = int(dimension - oldSize)
-            needResize = True
-
-        work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
-        nctx = len(work_cl_ctx)
-
-        for ictx, ctx in enumerate(work_cl_ctx):
-            ev_h2d.extend([[]])
-            kernel_bufs.extend([[]])
-            if scalarArgs is not None:
-                kernel_bufs[ictx].extend(scalarArgs)
-            ndstart.extend([sum(ndsize)])
-
-            if dimension > 1:
-                if ictx < nctx - 1:
-                    ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
+        if self.useZMQ:
+            outgoing_dict = {'kernelName': kernelName, 
+                             'scalarArgs': scalarArgs,
+                             'slicedROArgs': slicedROArgs,
+                             'nonSlicedROArgs': nonSlicedROArgs,
+                             'slicedRWArgs': slicedRWArgs,
+                             'nonSlicedRWArgs': nonSlicedRWArgs,
+                             'dimension': dimension}
+#            self.ZMQsocket.send_pyobj(outgoing_dict, protocol=0)
+            self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
+            #  Get the reply.
+            ret = self.recv_zipped_pickle(self.ZMQsocket)
+#            message = self.ZMQsocket.recv_multipart()
+#            dataType = self.cl_precisionC if len(message) < 3 else self.cl_precisionF
+#            ret = [np.frombuffer(arr, dtype=dataType) for arr in message]
+#            print(kernelName, [len(arr) for arr in ret])
+        else:
+            ka_offset = len(scalarArgs) if scalarArgs is not None else 0
+            ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
+            ns_offset = len(nonSlicedROArgs) if nonSlicedROArgs is not None else 0
+            rw_offset = len(slicedRWArgs) if slicedRWArgs is not None else 0
+            rw_pos = ka_offset + ro_offset + ns_offset
+            nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
+    
+            kernel_bufs = []
+            global_size = []
+            ev_h2d = []
+            ev_run = []
+            nCU = []
+            ndstart = []
+            ndslice = []
+            ndsize = []
+            minWGS = 1e20
+    
+            for ictx, ctx in enumerate(self.cl_ctx):
+                nCUw = 1
+                nCU.extend([nCUw])
+                tmpWGS = ctx.devices[0].max_work_group_size
+                if tmpWGS < minWGS:
+                    minWGS = tmpWGS
+                # nCU.extend([ctx.devices[0].max_compute_units*nCUw])
+    
+            totalCUs = np.sum(nCU)
+            minWGS = 256
+            divider = minWGS * totalCUs
+            n2f = np.remainder(dimension, divider)
+            needResize = False
+            # odd dimension performance fix
+            if n2f != 0 and dimension > divider:
+                oldSize = dimension
+                dimension = (np.trunc(dimension/divider) + 1) * divider
+                nDiff = int(dimension - oldSize)
+                needResize = True
+    
+            work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
+            nctx = len(work_cl_ctx)
+    
+            for ictx, ctx in enumerate(work_cl_ctx):
+                ev_h2d.extend([[]])
+                kernel_bufs.extend([[]])
+                if scalarArgs is not None:
+                    kernel_bufs[ictx].extend(scalarArgs)
+                ndstart.extend([sum(ndsize)])
+    
+                if dimension > 1:
+                    if ictx < nctx - 1:
+                        ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
+                    else:
+                        ndsize.extend([dimension-ndstart[ictx]])
+                    ndslice.extend([slice(ndstart[ictx],
+                                          ndstart[ictx]+ndsize[ictx])])
                 else:
-                    ndsize.extend([dimension-ndstart[ictx]])
-                ndslice.extend([slice(ndstart[ictx],
-                                      ndstart[ictx]+ndsize[ictx])])
-            else:
-                ndslice.extend([0])
-# In case each photon has an array of input/output data we define a second
-# dimension
-            if slicedROArgs is not None and dimension > 1:
-                for iarg, arg in enumerate(slicedROArgs):
-                    newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
-                        else arg
-                    secondDim = np.int(len(newArg) / dimension)
-                    iSlice = slice(int(ndstart[ictx]*secondDim),
-                                   int((ndstart[ictx]+ndsize[ictx])*secondDim))
-                    kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
-
-            if nonSlicedROArgs is not None:
-                for iarg, arg in enumerate(nonSlicedROArgs):
-                    kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
-
+                    ndslice.extend([0])
+    # In case each photon has an array of input/output data we define a second
+    # dimension
+                if slicedROArgs is not None and dimension > 1:
+                    for iarg, arg in enumerate(slicedROArgs):
+                        newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                            else arg
+                        secondDim = np.int(len(newArg) / dimension)
+                        iSlice = slice(int(ndstart[ictx]*secondDim),
+                                       int((ndstart[ictx]+ndsize[ictx])*secondDim))
+                        kernel_bufs[ictx].extend([cl.Buffer(
+                            self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
+                            self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
+    
+                if nonSlicedROArgs is not None:
+                    for iarg, arg in enumerate(nonSlicedROArgs):
+                        kernel_bufs[ictx].extend([cl.Buffer(
+                            self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
+                            self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
+    
+                if slicedRWArgs is not None:
+                    for iarg, arg in enumerate(slicedRWArgs):
+                        newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                            else arg
+                        secondDim = np.int(len(newArg) / dimension)
+                        iSlice = slice(int(ndstart[ictx]*secondDim),
+                                       int((ndstart[ictx]+ndsize[ictx])*secondDim))
+                        kernel_bufs[ictx].extend([cl.Buffer(
+                            self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
+                            self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
+                    global_size.extend([(np.int(ndsize[ictx]),)])
+                if nonSlicedRWArgs is not None:
+                    for iarg, arg in enumerate(nonSlicedRWArgs):
+                        kernel_bufs[ictx].extend([cl.Buffer(
+                            self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
+                            self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
+                    global_size.extend([np.array([1]).shape])
+    
+            local_size = None
+            for ictx, ctx in enumerate(work_cl_ctx):
+                kernel = getattr(self.cl_program[ictx], kernelName)
+                ev_run.extend([kernel(
+                    self.cl_queue[ictx],
+                    global_size[ictx],
+                    local_size,
+                    *kernel_bufs[ictx])])
+    
+            for iev, ev in enumerate(ev_run):
+                status = cl.command_execution_status.to_string(
+                    ev.command_execution_status)
+                if _DEBUG > 20:
+                    print("ctx status {0} {1}".format(iev, status))
+    
+            ret = ()
+    
             if slicedRWArgs is not None:
-                for iarg, arg in enumerate(slicedRWArgs):
-                    newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
-                        else arg
-                    secondDim = np.int(len(newArg) / dimension)
-                    iSlice = slice(int(ndstart[ictx]*secondDim),
-                                   int((ndstart[ictx]+ndsize[ictx])*secondDim))
-                    kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
-                global_size.extend([(np.int(ndsize[ictx]),)])
+                for ictx, ctx in enumerate(work_cl_ctx):
+                    for iarg, arg in enumerate(slicedRWArgs):
+                        newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                            else arg
+                        secondDim = np.int(len(newArg) / dimension)
+                        iSlice = slice(int(ndstart[ictx]*secondDim),
+                                       int((ndstart[ictx]+ndsize[ictx])*secondDim))
+                        cl.enqueue_copy(self.cl_queue[ictx],
+                                        slicedRWArgs[iarg][iSlice],
+                                        kernel_bufs[ictx][iarg + rw_pos],
+                                        is_blocking=self.cl_is_blocking)
+                if needResize:
+                    for arg in slicedRWArgs:
+                        arg = arg[:oldSize]
+                ret += tuple(slicedRWArgs)
+    
             if nonSlicedRWArgs is not None:
-                for iarg, arg in enumerate(nonSlicedRWArgs):
-                    kernel_bufs[ictx].extend([cl.Buffer(
-                        self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
-                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
-                global_size.extend([np.array([1]).shape])
-
-        local_size = None
-        for ictx, ctx in enumerate(work_cl_ctx):
-            kernel = getattr(self.cl_program[ictx], kernelName)
-            ev_run.extend([kernel(
-                self.cl_queue[ictx],
-                global_size[ictx],
-                local_size,
-                *kernel_bufs[ictx])])
-
-        for iev, ev in enumerate(ev_run):
-            status = cl.command_execution_status.to_string(
-                ev.command_execution_status)
-            if _DEBUG > 20:
-                print("ctx status {0} {1}".format(iev, status))
-
-        ret = ()
-
-        if slicedRWArgs is not None:
-            for ictx, ctx in enumerate(work_cl_ctx):
-                for iarg, arg in enumerate(slicedRWArgs):
-                    newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
-                        else arg
-                    secondDim = np.int(len(newArg) / dimension)
-                    iSlice = slice(int(ndstart[ictx]*secondDim),
-                                   int((ndstart[ictx]+ndsize[ictx])*secondDim))
-                    cl.enqueue_copy(self.cl_queue[ictx],
-                                    slicedRWArgs[iarg][iSlice],
-                                    kernel_bufs[ictx][iarg + rw_pos],
-                                    is_blocking=self.cl_is_blocking)
-            if needResize:
-                for arg in slicedRWArgs:
-                    arg = arg[:oldSize]
-            ret += tuple(slicedRWArgs)
-
-        if nonSlicedRWArgs is not None:
-            for ictx, ctx in enumerate(work_cl_ctx):
-                for iarg, arg in enumerate(nonSlicedRWArgs):
-                    cl.enqueue_copy(self.cl_queue[ictx],
-                                    nonSlicedRWArgs[iarg],
-                                    kernel_bufs[ictx][iarg + nsrw_pos],
-                                    is_blocking=self.cl_is_blocking)
-            if needResize:
-                for arg in nonSlicedRWArgs:
-                    arg = arg[:oldSize]
-            ret += tuple(nonSlicedRWArgs)
+                for ictx, ctx in enumerate(work_cl_ctx):
+                    for iarg, arg in enumerate(nonSlicedRWArgs):
+                        cl.enqueue_copy(self.cl_queue[ictx],
+                                        nonSlicedRWArgs[iarg],
+                                        kernel_bufs[ictx][iarg + nsrw_pos],
+                                        is_blocking=self.cl_is_blocking)
+                if needResize:
+                    for arg in nonSlicedRWArgs:
+                        arg = arg[:oldSize]
+                ret += tuple(nonSlicedRWArgs)
 #        print("Total CL execution time:", time.time() - t0, "s")
         return ret
