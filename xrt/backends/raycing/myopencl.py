@@ -277,10 +277,6 @@ class XRT_CL(object):
             self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
             #  Get the reply.
             ret = self.recv_zipped_pickle(self.ZMQsocket)
-#            message = self.ZMQsocket.recv_multipart()
-#            dataType = self.cl_precisionC if len(message) < 3 else self.cl_precisionF
-#            ret = [np.frombuffer(arr, dtype=dataType) for arr in message]
-#            print(kernelName, [len(arr) for arr in ret])
         else:
             ka_offset = len(scalarArgs) if scalarArgs is not None else 0
             ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
