@@ -1460,7 +1460,7 @@ class BendingMagnet(SourceBase):
     def prefix_save_name(self):
         return '3-BM-xrt'
 
-    def build_I_map(self, dde, ddtheta, ddpsi):
+    def build_I_map(self, dde, ddtheta, ddpsi, harmonic=None, dg=None):
         if self.needReset:
             self.reset()
         np.seterr(invalid='ignore')
