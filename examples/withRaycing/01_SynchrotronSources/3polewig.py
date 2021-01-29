@@ -407,13 +407,13 @@ if sourceType == 'u':
 #         gIntervals=15,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
          # 77 is ok for 0.5eV
-         gp = 1e-2,
+         gp = 1e-6,
 #         gp=1e-6,  # Precision of the integration.
 #        targetOpenCL=(0, 0),
-        targetOpenCL='GPU',
+        targetOpenCL='CPU',
 #        precisionOpenCL='float32',
         #taper = [0 ,10],
-        distE='BW', # useGauLeg=False,
+#        distE='BW', # useGauLeg=False,
         customField = CFfileName,
         xPrimeMax = (screenMaxX+abs(screenOffsetX))/5.,
         zPrimeMax = screenMaxZ/5.,

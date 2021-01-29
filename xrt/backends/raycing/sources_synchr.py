@@ -1266,10 +1266,9 @@ class IntegratedSource(SourceBase):
         k = m_start
         pltout = []
         dIout = []
-        NS = 2 if self.cl_ctx else 1
-        sE = self.E_max * np.ones(NS)
-        sTheta_max = self.Theta_max * np.ones(NS)
-        sPsi_max = self.Psi_max * np.ones(NS)
+        sE = self.E_max * np.ones(1)
+        sTheta_max = self.Theta_max * np.ones(1)
+        sPsi_max = self.Psi_max * np.ones(1)
 
         for m in range(stat_step):
             k += m_step
@@ -1875,7 +1874,7 @@ class SourceFromField(IntegratedSource):
         self.spl_kw = {'kind': 'cubic',
                        'bounds_error': False,
                        'fill_value': 'extrapolate'}
-
+        self.periodicTest = False
         self._customField = customField
         if customField is not None:
             if isinstance(customField, (tuple, list)):
@@ -1987,18 +1986,18 @@ class SourceFromField(IntegratedSource):
 
     def _sp(self, dim, emcg, w, gamma, ddphi, ddpsi, Bx, By, Bz,
             betax, betay, betam, trajx, trajy, trajz, R0=None):
-#        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
+        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
-#        if dim == 0:
-        wS = w
-        ddphiS = ddphi
-        ddpsiS = ddpsi
-#        elif dim == 1:
-#            wS = w[:, np.newaxis]
-#            ddphiS = ddphi[:, np.newaxis]
-#            ddpsiS = ddpsi[:, np.newaxis]
-#            if lengamma > 1:
-#                gS = gamma[:, np.newaxis]
+        if dim == 0:
+            wS = w
+            ddphiS = ddphi
+            ddpsiS = ddpsi
+        elif dim == 1:
+            wS = w[:, np.newaxis]
+            ddphiS = ddphi[:, np.newaxis]
+            ddpsiS = ddpsi[:, np.newaxis]
+            if lengamma > 1:
+                gS = gamma[:, np.newaxis]
 #        elif dim == 3:
 #            wS = w[:, :, :, np.newaxis]
 #            ddphiS = ddphi[:, :, :, np.newaxis]
@@ -2080,10 +2079,10 @@ class SourceFromField(IntegratedSource):
         dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
         dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
 
-        Bsr = np.sum(eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
-        Bpr = np.sum(eucos*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+        Bsr = np.sum(eucos*emcg*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
+        Bpr = np.sum(eucos*emcg*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
 
-        return Bsr*emcg, Bpr*emcg
+        return Bsr, Bpr
 
 #    @profile
     def _sp_sum(self, emcg, w, gamma, ddphi, ddpsi, Bx, By, Bz,
@@ -2279,8 +2278,8 @@ class SourceFromField(IntegratedSource):
                     traj + (k1traj + 2*k2traj + 2*k3traj + k4traj)/6.)
 
         if gamma is None:
-            gamma = np.array(self.gamma) #[0] TODO: check for consistency
-        emcg = SIE0 / SIM0 / C / 10. / gamma
+            gamma = np.array(self.gamma)
+        emcg = SIE0 / SIM0 / C / 10. / gamma if self.filamentBeam else 1.
         beta_next = np.zeros(2)
         beta0 = np.zeros(2)
         betam_int = 0
@@ -2337,7 +2336,7 @@ class SourceFromField(IntegratedSource):
 
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
         if gamma is None:
-            gamma = np.array(self.gamma)
+            gamma = self.gamma
         gamma2 = gamma**2
         betam = 1. - (1. + 0.5 * self.Kx**2 + 0.5*self.Ky**2) / 2. / gamma2
 
@@ -2377,11 +2376,11 @@ class SourceFromField(IntegratedSource):
 
         if self.customFieldData is not None:
             betax, betay, betazav, trajx, trajy, trajz =\
-                self.build_trajectory(Bx, By, Bz, gamma[0])
+                self.build_trajectory(Bx, By, Bz)
             Bxt, Byt, Bzt = self._magnetic_field(self.tg)
         else:
             betax, betay, betazav, trajx, trajy, trajz =\
-                self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
+                self.build_trajectory_periodic(Bx, By, Bz)
             Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
         self.beta = [betax, betay]
@@ -2389,11 +2388,10 @@ class SourceFromField(IntegratedSource):
 
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam
-        emcg = EMC / gamma[0]
 
         if self.filamentBeam:
             scalarArgsTest = [np.int32(len(self.tg)),
-                              self.cl_precisionF(emcg),
+                              self.cl_precisionF(EMC/gamma[0]),
                               self.cl_precisionF(1./gamma[0]**2),
                               self.cl_precisionF(R0),
                               self.cl_precisionF(w[0] * E2WC / betam)]
@@ -2432,8 +2430,8 @@ class SourceFromField(IntegratedSource):
                             self.cl_precisionF(ddtheta),  # Theta
                             self.cl_precisionF(ddpsi)]  # Psi
 
-            nonSlicedROArgs = [self.tg,  # Integration grid
-                               self.ag,   # Integration weights
+            nonSlicedROArgs = [self.cl_precisionF(self.tg),  # Integration grid
+                               self.cl_precisionF(self.ag),   # Integration weights
                                self.cl_precisionF(Bxt),  # Mangetic field
                                self.cl_precisionF(Byt),  # components on the
                                self.cl_precisionF(Bzt),  # CC grid
@@ -2485,14 +2483,14 @@ class SourceFromField(IntegratedSource):
 
         if self.customFieldData is not None and not self.periodicTest:
             betax, betay, betazav, trajx, trajy, trajz =\
-                self.build_trajectory(Bx, By, Bz, gamma[0])
+                self.build_trajectory(Bx, By, Bz)
 #                betax3, betay3, betazav3, trajx3, trajy3, trajz3 =\
 #                    self.build_trajectory_conv(Bx, By, Bz, gamma[0])
             Bxt, Byt, Bzt = self._magnetic_field(self.tg)
 
         else:
             betax, betay, betazav, trajx, trajy, trajz =\
-                self.build_trajectory_periodic(Bx, By, Bz, gamma[0])
+                self.build_trajectory_periodic(Bx, By, Bz)
             Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
         self.beta = [betax, betay]
@@ -2501,7 +2499,7 @@ class SourceFromField(IntegratedSource):
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam if self.filamentBeam else\
             0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
-        emcg = SIE0 / SIM0 / C / 10. / gamma[0]
+        emcg = SIE0 / SIM0 / C / 10. / gamma
 
         if self.R0:
             R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
@@ -2510,14 +2508,14 @@ class SourceFromField(IntegratedSource):
         else:
             R0v=None
 
-        if NRAYS > 1:  # sum along the integration grid
+        if NRAYS > 10:  # sum along the integration grid in a loop
             Is_local, Ip_local = self._sp_sum(
                     emcg, w, gamma, ddtheta, ddpsi, Bxt, Byt, Bzt,
                     betax, betay, betam, trajx, trajy, trajz, R0v)
-        else:  # only used for convergence estimation. dim always = 0
+        else:  # Convergence only
             dim = len(np.array(w).shape)
             Is_local, Ip_local = self._sp(
-                    dim, emcg, w, gamma[0], ddtheta, ddpsi, Bxt, Byt, Bzt,
+                    dim, emcg, w, gamma, ddtheta, ddpsi, Bxt, Byt, Bzt,
                     betax, betay, betam, trajx, trajy, trajz, R0v)
 
 
@@ -2526,90 +2524,11 @@ class SourceFromField(IntegratedSource):
 
         integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
         if self.convergenceSearchFlag:
-            return (np.abs(np.sqrt(integralField) * 0.5 * self.dstep),
-                    Is_local * 0.5 * self.dstep,
-                    Ip_local * 0.5 * self.dstep)
+            return np.abs(np.sqrt(integralField) * 0.5 * self.dstep)
         else:
             return (Amp2Flux * 0.25 * self.dstep**2 * ab**2 * integralField,
                     np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
                     np.sqrt(Amp2Flux) * Ip_local * 0.5 * self.dstep * ab)
-
-    def _comparePeriodic(self, w, ddtheta, ddpsi, gamma, betazav):
-        emax, tmax, pmax = np.max(w), np.max(ddtheta), np.max(ddpsi)
-        Bx2, By2, Bz2 = self._magnetic_field_periodic(self.tg)
-        betax2, betay2, betazav2, trajx2, trajy2, trajz2 =\
-            self.build_trajectory_periodic(Bx2, By2, Bz2, gamma[0])
-
-        n0 = np.array([np.tan(tmax), np.tan(pmax), 1.])
-        n0 /= np.linalg.norm(n0)
-        r0 = np.expand_dims(self.R0 * n0, axis=1)
-
-        dr = r0 - np.array(self.trajectory)
-        dr2 = (r0 - np.array([trajx2, trajy2, trajz2]))
-        wc = emax * E2WC / betazav[-1]
-        wwu = emax / self.wu
-        ucos = wc*(self.tg + dr[2, :]+ np.sqrt(dr[0, :]**2+dr[1, :]**2+
-                   dr[2, :]**2))
-        ucos2 = wwu*np.pi*2/self.L0*(self.tg+dr2[2, :] +
-                                     np.sqrt(dr2[0, :]**2+dr2[1, :]**2+
-                                             dr2[2, :]**2))
-
-        from matplotlib import pyplot as plt
-        def traj_rays(trajArr):
-            return self.tg*(1.-0.5/gamma[0]**2) + trajArr*emcg**2
-        plt.figure("dBy")
-        plt.plot(self.tg, Byt-By2)
-        plt.figure("dBetaX")
-        plt.plot(self.tg, betax*emcg-betax2)
-#                plt.figure("dBetaX3")
-#                plt.plot(self.tg, betax-betax3)
-#                plt.figure("dBetaY")
-#                plt.plot(trajz, betay-betay2)
-        plt.figure("dX")
-        plt.plot(self.tg, trajx*emcg-trajx2)
-#                plt.figure("dX3")
-#                plt.plot(self.tg, trajx-trajx3)
-#                plt.figure("dY")
-#                plt.plot(trajz, trajy-trajy2)
-        plt.figure("dZ")
-#                plt.plot(self.tg, (trajz+(gamma[0]**2-0.5)*self.tg)/gamma[0]**2-trajz2)
-#                plt.figure("dZ")
-        plt.plot(self.tg, traj_rays(trajz)-trajz2)
-
-        plt.figure("dCmplPhase")
-        plt.plot(self.tg, ucos-ucos2)
-        plt.figure("By")
-        plt.plot(self.tg, Byt)
-        plt.plot(self.tg, By2)
-        plt.figure("BetaX")
-        plt.plot(self.tg, betax*emcg)
-        plt.plot(self.tg, betax2)
-#                plt.figure("dBetaY")
-#                plt.plot(trajz, betay-betay2)
-        plt.figure("X")
-        plt.plot(self.tg, trajx*emcg)
-        plt.plot(self.tg, trajx2)
-        plt.figure("Z")
-#                print(gamma[0])
-#                plt.plot(self.tg, (trajz+(gamma[0]**2-0.5)*self.tg)/gamma[0]**2)
-        plt.plot(self.tg, traj_rays(trajz))
-        plt.plot(self.tg, trajz2)
-        plt.figure("CmplPhasemR0")
-        plt.plot(self.tg, wc*(self.tg - traj_rays(trajz)))
-        plt.plot(self.tg, wwu*np.pi*2/self.L0*(self.tg - trajz2))
-        plt.figure("CmplPhase")
-        plt.plot(self.tg, ucos)
-        plt.plot(self.tg, ucos2)
-        plt.figure("sinCmplPhase")
-        plt.plot(self.tg, np.sin(ucos))
-        plt.plot(self.tg, np.sin(ucos2))
-        plt.figure("cosCmplPhase")
-        plt.plot(self.tg, np.cos(ucos))
-        plt.plot(self.tg, np.cos(ucos2))
-#                plt.figure("dY")
-#                plt.plot(trajz, trajy-trajy2)
-
-        plt.show()
 
 
 class Undulator(IntegratedSource):
@@ -2935,7 +2854,7 @@ class Undulator(IntegratedSource):
 
 #    @profile
     def _sp(self, dim, ww1, w, wu, gamma, ddphi, ddpsi, R0=None):
-#        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
+        lengamma = 1 if len(np.array(gamma).shape) == 0 else len(gamma)
         gS = gamma
         if dim == 0:
             ww1S = ww1
@@ -2948,8 +2867,8 @@ class Undulator(IntegratedSource):
             wuS = wu[:, np.newaxis]
             ddphiS = ddphi[:, np.newaxis]
             ddpsiS = ddpsi[:, np.newaxis]
-#            if lengamma > 1:
-#                gS = gamma[:, np.newaxis]
+            if lengamma > 1:
+                gS = gamma[:, np.newaxis]
 #        elif dim == 3:
 #            ww1S = ww1[:, :, :, np.newaxis]
 #            wS, wuS = w[:, :, :, np.newaxis], wu[:, :, :, np.newaxis]
@@ -2961,13 +2880,21 @@ class Undulator(IntegratedSource):
         taperC = 1
         alphaS = 0
 
-        dI = np.arange(0.5*self.dstep - PI*self.Np, PI*self.Np, self.dstep)
-        tg = (dI[:, None] + 0.5*self.dstep*self.tg_n).ravel()
-        sinx = np.tile(self.sintg, self.Np)
-        cosx = np.tile(self.costg, self.Np)
-        sinxph = np.tile(self.sintgph, self.Np)
-        cosxph = np.tile(self.costgph, self.Np)
-        ag = np.tile(self.ag, self.Np)
+        if (self.R0 is not None) or (self.taper is not None):
+            dI = np.arange(0.5*self.dstep - PI*self.Np, PI*self.Np, self.dstep)
+            tg = (dI[:, None] + 0.5*self.dstep*self.tg_n).ravel()
+            ag = np.tile(self.ag, self.Np)
+            sinx = np.tile(self.sintg, self.Np)
+            cosx = np.tile(self.costg, self.Np)
+            sinxph = np.tile(self.sintgph, self.Np)
+            cosxph = np.tile(self.costgph, self.Np)
+        else:
+            tg = self.tg
+            ag = self.ag
+            sinx = self.sintg
+            cosx = self.costg
+            sinxph = self.sintgph
+            cosxph = self.costgph
 
         sin2x = 2*sinx*cosx
         sin2xph = 2*sinxph*cosxph
@@ -3044,8 +2971,8 @@ class Undulator(IntegratedSource):
         dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
         dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
 
-        Bsr = np.sum(eucos*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
-        Bpr = np.sum(eucos*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+        Bsr = np.sum(eucos*wuS*revgamma*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
+        Bpr = np.sum(eucos*wuS*revgamma*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
 
         return Bsr, Bpr
 
@@ -3085,10 +3012,12 @@ class Undulator(IntegratedSource):
                     ucos = ww1S*zloc +\
                         wwuS*revgamma*\
                         (-self.Ky*dirx*(self.sintg[i] + alphaS/wuS*
-                                        (1 - self.costg[i] - zloc*self.sintg[i])) +
+                                        (1 - self.costg[i] -
+                                         zloc*self.sintg[i])) +
                          self.Kx*diry*self.sintg[i] + 0.125*revgamma*
                          (self.Kx**2 * sin2xph[i] + self.Ky**2 * (sin2x[i] -
-                          2*alphaS/wuS*(zloc**2 + self.costg[i]**2 + zloc*sin2x[i]))))
+                          2*alphaS/wuS*(zloc**2 + self.costg[i]**2 +
+                                        zloc*sin2x[i]))))
                     eucos = np.exp(1j*ucos)
                 elif R0 is not None:
                     zterm = 0.5*(self.Ky**2*sin2x[i] +
@@ -3166,6 +3095,7 @@ class Undulator(IntegratedSource):
         #        np.seterr(invalid='ignore')
         #        np.seterr(divide='ignore')
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
+
         gamma = self.gamma
         if self.eEspread > 0:
             if dgamma is not None:
@@ -3187,20 +3117,20 @@ class Undulator(IntegratedSource):
             ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
 
         if self.R0:
-            R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
+            R0v = np.array((np.tan(ddtheta),
+                            np.tan(ddpsi),
+                            np.ones_like(ddpsi)))
 #            R0n = np.linalg.norm(R0v, axis=0)  # TODO: Only for spherical screen
             R0v *= self.R0*np.pi*2/self.L0  # /R0n
-
         else:
             R0v=None
 
-        if NRAYS > 1:
+        if NRAYS > 10:
             if self.filamentBeam:
                 gamma = self.gamma
             Is_local, Ip_local = self._sp_sum(
                     ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
-        else:
-#            if (self.taper is not None) or (self.R0 is not None):
+        else:  # Convergence only
             dim = len(np.array(w).shape)
             Is_local, Ip_local = self._sp(
                 dim, ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
