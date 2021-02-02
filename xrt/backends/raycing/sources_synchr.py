@@ -354,7 +354,7 @@ class SourceBase:
         self._reset_limits()
         self._reset_integration_grid()
 
-        if self.filamentBeam:
+        if self.filamentBeam and not hasattr(self, 'dimExy'):
             rMax = self.nrays
             rE = np.random.uniform(self.E_min, self.E_max, rMax)
             rTheta = np.random.uniform(self.Theta_min, self.Theta_max, rMax)
@@ -373,6 +373,7 @@ class SourceBase:
             (self.Theta_max - self.Theta_min) *\
             (self.Psi_max - self.Psi_min)
         self.fluxConst = self.Imax * self.xzE
+#        print(self.Imax, self.xzE, self.fluxConst, self.nrepmax)
 
     def build_I_map(self):
         """Used to calculate the intensity. To be redefined in the subclass"""
@@ -1979,8 +1980,8 @@ class SourceFromField(IntegratedSource):
         self.B0y = K2B * self.Ky / self.L0
         self.B0z = 0
         z = 2*np.pi*z/self.L0
-        Bx = self.B0x*np.sin(z)
-        By = self.B0y*np.sin(z + self.phase)
+        Bx = self.B0x*np.sin(z + self.phase)
+        By = self.B0y*np.sin(z)
         Bz = self.B0z*np.ones_like(Bx)
         return Bx, By, Bz
 
@@ -2612,22 +2613,25 @@ class Undulator(IntegratedSource):
         else:
             self.taper = None
 
-        self.Kx = Kx
-        self.Ky = Ky
-
-        if self.Kx == 0 and self.Ky == 0:
-            if K > 0:
-                self._Ky = K
-            elif B0y > 0:
+        if Kx == 0 and Ky == 0:
+            if abs(K) > 0:
+                Ky = K
+            elif abs(B0y) > 0:
                     self.B0y = B0y
-            elif B0x > 0:
+            elif abs(B0x) > 0:
                     self.B0x = B0x
             else:
                 self.K = 1
                 raise("Please define either K or B0!")
 
+        self.Kx = Kx
+        self.Ky = Ky
+
         if self.Kx == 0 and B0x > 0:
             self.B0x = B0x
+
+#        self.B0x = K2B * self.Kx / self.L0
+#        self.B0y = K2B * self.Ky / self.L0
 
         self.xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
         self.zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
@@ -2636,14 +2640,14 @@ class Undulator(IntegratedSource):
             self.zPrimeMaxAutoReduce = True
 
         if xPrimeMaxAutoReduce:
-            K0 = self.Ky if self.Ky > 0 else self.Kx
+            K0 = self.Ky if abs(self.Ky) > 0 else self.Kx
             xPrimeMaxTmp = K0 / self.gamma
             if self._xPrimeMax > xPrimeMaxTmp:
                 print("Reducing xPrimeMax from {0} down to {1} mrad".format(
                       self._xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
                 self._xPrimeMax = xPrimeMaxTmp
         if zPrimeMaxAutoReduce:
-            K0 = self.Kx if self.Kx > 0 else self.Ky
+            K0 = self.Kx if abs(self.Kx) > 0 else self.Ky
             zPrimeMaxTmp = K0 / self.gamma
             if self._zPrimeMax > zPrimeMaxTmp:
                 print("Reducing zPrimeMax from {0} down to {1} mrad".format(
@@ -3169,6 +3173,7 @@ class Undulator(IntegratedSource):
 
         wu = PI / self.L0 / gamma2 *\
             (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
+#        wu = 2*PI / self.L0 / E2WC * np.ones_like(gamma)
         ww1 = w * ((1. + 0.5 * self.Kx**2 + 0.5 * self.Ky**2) +
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
