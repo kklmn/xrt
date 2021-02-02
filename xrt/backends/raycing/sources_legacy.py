@@ -26,7 +26,7 @@ try:
         SRWLPartBeam, SRWLWfr
     isSRW = True
 except:
-    raise
+#    raise
     isSRW = False
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out
