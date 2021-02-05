@@ -1294,45 +1294,64 @@ class IntegratedSource(SourceBase):
 
         return mad, dIMAD
 
-    def _find_convergence_thrsh_mad(self, testMode=False):
+    def test_convergence(self, nMax=500000, interactive=True, autoStop=True):
         def _mad(vin):
             med = np.median(vin)
             return np.median(np.abs(vin - med))
 
-        m_start = 5
-        m_step = 1
-        stat_step = 20
+        self.convergenceSearchFlag = True
+        self.needReset = False
+        self._reset_limits()
+        mStart = 3
+        mStep = 1
+        statStep = 20
         m = 0
-        k = m_start
+        k = mStart
         converged = False
-        overStep = 120 if testMode else 0
+        overStep = 120
         postConv = 0
         pltout = []
         dIout = []
         Iold = 0
-        sE = self.E_max * np.ones(3)
-        sTheta_max = self.Theta_max * np.ones(3)
-        sPsi_max = self.Psi_max * np.ones(3)
+        sE = self.E_max * np.ones(1)
+        sTheta_max = self.Theta_max * np.ones(1)
+        sPsi_max = self.Psi_max * np.ones(1)
 
-        if testMode:
-            statOut = []
-            dIOut = []
-            xm = []
+        statOut = []
+        dIOut = []
+        xm = []
+        from matplotlib import pyplot as plt
+        fig = plt.figure(figsize=(8,5))
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('Total nodes', fontsize=14)
+#        ax.set_ylabel('Electric field amplitude', fontsize=24)
+        ax.set_ylabel('MAD I', fontsize=14)
+        madLine, = ax.semilogy([], [], label='MAD Amp')
+
+        ax2 = ax.twinx()
+        ax2.set_xlabel('Total nodes', fontsize=14)
+        ax2.set_ylabel('Median dI/I', fontsize=14)
+        relmadLine, = ax2.semilogy([], [], 'g')
+
+        fig2 = plt.figure(figsize=(8,5))
+        axt = fig2.add_subplot(111)
+        axt.set_xlabel('Total nodes', fontsize=14)
+        axt.set_ylabel('Electric field amplitude', fontsize=14)
+        ampLine, = axt.semilogy([], [], label='Amp')
 
         while True:
             m += 1
             if m % 1000 == 0:
-                m_step *= 2
+                mStep *= 2
                 if True: #raycing._VERBOSITY_ > 10:
                     print("INSUFFICIENT CONVERGENCE RANGE:", k, "NODES")
-                    print("INCREASING CONVERGENCE STEP. NEW STEP", m_step)
+                    print("INCREASING CONVERGENCE STEP. NEW STEP", mStep)
 
-            k += m_step
+            k += mStep
             self.quadm = k
             self._build_integration_grid()
-            if testMode:
-                xm.append(k*self.gIntervals)
-            Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0][0]
+            xm.append(k*self.gIntervals)
+            Inew = self.build_I_map(sE, sTheta_max, sPsi_max)[0]
             pltout.append(Inew)
             dIout.append(np.abs(Inew-Iold)/Inew)
             if m == 1:
@@ -1340,36 +1359,59 @@ class IntegratedSource(SourceBase):
                 continue
             Iold = Inew
 
+            ampLine.set_xdata(xm)
+            ampLine.set_ydata(pltout)
+            new_y_max = np.ceil(np.log10(max(pltout)))
+            new_y_min = np.floor(np.log10(min(pltout)))
+            axt.set_ylim([10**new_y_min, 10**new_y_max])
+            axt.set_xlim([0, xm[-1]+5])
+            fig2.canvas.draw()
+            plt.pause(0.001)
+
             if converged:
                 postConv += 1
-            if m > stat_step:
-                mad = _mad(np.abs(np.array(pltout))[m-stat_step:m])
-                dIMAD = np.median(dIout[m-stat_step:m])
+            if m > statStep:
+                mad = _mad(np.abs(np.array(pltout))[m-statStep:m])
+                dIMAD = np.median(dIout[m-statStep:m])
 
-                if testMode:
-                    statOut.append(mad)
-                    dIOut.append(dIMAD)
+                statOut.append(mad)
+                dIOut.append(dIMAD)
 
-                if ((dIMAD < self.gp and m < 1000) or mad < self.madBoundary) and not\
-                        converged:
+                if ((dIMAD < self.gp) or (mad < self.gp)) and not converged:
                     convPoint = k*self.gIntervals
                     if True: #raycing._VERBOSITY_ > 10:
                         print("CONVERGENCE THRESHOLD REACHED AT", convPoint)
                     converged = True
-            if m > self.maxIntegrationSteps or postConv > overStep:
-                if converged:
-                    if raycing._VERBOSITY_ > 10:
-                        print("SUCCESSFULLY CONVERGED AT", convPoint)
-                else:
+                    ax.axvline(x=convPoint, color='r')
+                    axt.axvline(x=convPoint, color='r')
+                new_y_max = np.ceil(np.log10(max(statOut)))
+                new_y_min = np.floor(np.log10(min(statOut)))
+                ax.set_ylim([10**new_y_min, 10**new_y_max])
+                ax.set_xlim([0, xm[-1]+5])
+                madLine.set_xdata(xm[statStep:])
+                madLine.set_ydata(statOut)
+                relmadLine.set_xdata(xm[statStep:])
+                relmadLine.set_ydata(dIOut)
+
+                new_y_max = np.ceil(np.log10(max(dIOut)))
+                new_y_min = np.floor(np.log10(min(dIOut)))
+                ax2.set_ylim([10**new_y_min, 10**new_y_max])
+
+                fig.canvas.draw()
+                plt.pause(0.001)
+
+            if xm[-1] > nMax or postConv > overStep:
+#                if converged:
+#                    if raycing._VERBOSITY_ > 10:
+#                        print("SUCCESSFULLY CONVERGED AT", convPoint)
+#                else:
 #                    if raycing._VERBOSITY_ > 10:
 #                        print("PROBLEM WITH CONVERGENCE. USING MAX NNODES")
-                    raise("PROBLEM WITH CONVERGENCE. PLEASE INCREASE maxIntegrationSteps")
+#                    raise("PROBLEM WITH CONVERGENCE. PLEASE INCREASE maxIntegrationSteps")
                 break
-        if testMode:
-            return converged, (np.array(xm), np.array(pltout), np.array(statOut),
-                   np.array(dIOut))
-        else:
-            return converged, (0,)
+
+        plt.show()
+
 
     def _reset_integration_grid(self):
         """Adjusting the integration grid length"""
