@@ -1304,7 +1304,7 @@ class IntegratedSource(SourceBase):
         self._reset_limits()
         mStart = 3
         mStep = 1
-        statStep = 20
+        statStep = 5
         m = 0
         k = mStart
         converged = False
@@ -1326,11 +1326,13 @@ class IntegratedSource(SourceBase):
         ax.set_xlabel('Total nodes', fontsize=14)
 #        ax.set_ylabel('Electric field amplitude', fontsize=24)
         ax.set_ylabel('MAD I', fontsize=14)
+        ax.tick_params(axis='y', labelcolor='b')
         madLine, = ax.semilogy([], [], label='MAD Amp')
 
         ax2 = ax.twinx()
         ax2.set_xlabel('Total nodes', fontsize=14)
         ax2.set_ylabel('Median dI/I', fontsize=14)
+        ax2.tick_params(axis='y', labelcolor='g')
         relmadLine, = ax2.semilogy([], [], 'g')
 
         fig2 = plt.figure(figsize=(8,5))
@@ -1410,6 +1412,13 @@ class IntegratedSource(SourceBase):
 #                    raise("PROBLEM WITH CONVERGENCE. PLEASE INCREASE maxIntegrationSteps")
                 break
 
+        convRes, stats = self._find_convergence_mixed()
+        ax.axvline(x=self.quadm*self.gIntervals, color='m', linestyle='--')
+        axt.axvline(x=self.quadm*self.gIntervals, color='m', linestyle='--')
+        fig.canvas.draw()
+        plt.pause(0.001)
+        fig2.canvas.draw()
+        plt.pause(0.001)
         plt.show()
 
 
