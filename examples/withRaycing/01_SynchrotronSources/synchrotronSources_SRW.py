@@ -306,6 +306,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "08 Mar 2016"
 
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
+sys.path.append(r"D:\SRW-master\env\work\srw_python")
 import time
 import numpy as np
 print(os.path.join('..', '..', '..'))
@@ -335,15 +336,15 @@ suffix = ''
 isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
 limitsFSM0Z = 'symmetric'
-E0 = 66920  # eV
-R0 = 5000.  # Distance to the screen [mm]
+E0 = 6920  # eV
+R0 = 25000.  # Distance to the screen [mm]
 bins = 512  # Number of bins in the plot histogram
 ppb = 1  # Number of pixels per histogram bin
 
 if sourceType == 'u':
-    whose = '_xrt'
+#    whose = '_xrt'
     whose = '_SRW'
-    pprefix = '1'+sourceType+whose+"_66920" #+"_rp1e-5"
+    pprefix = '1'+sourceType+whose+"_6920" #+"_rp1e-5"
     Source = rs.UndulatorSRW
 #    Source = rs.Undulator if isInternalSource else rs.UndulatorUrgent
     Kmax = 1.92
@@ -361,12 +362,12 @@ if sourceType == 'u':
          uniformRayDensity=True,
          filamentBeam=True,  # Single wavefront
          R0=R0,   # Near Field.
-         gIntervals=2,  # Number of the integration intervals. Should be
+#         gIntervals=2,  # Number of the integration intervals. Should be
 #         gNodes = 996,
         # increased for the near field and custom magnetic field cases.
          gp=1e-2,  # Precision of the integration.
 #        targetOpenCL=(0, 0),
-#        targetOpenCL='CPU',
+        targetOpenCL='CPU',
 #        precisionOpenCL='float32',
         distE='BW',
         #taper = [0 ,10],

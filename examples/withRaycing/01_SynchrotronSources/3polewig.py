@@ -306,6 +306,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "08 Mar 2016"
 import os, sys; 
 sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
+sys.path.append(r"D:\SRW-master\env\work\srw_python")
 #sys.path.append(r'G:\xrt_dev\xrt-master')  # analysis:ignore
 import time
 import numpy as np
@@ -357,7 +358,7 @@ print(CH)
 #E0 = 5
 #E0 = 0.62
 R0 = 6000.  # Distance to the screen [mm]
-bins = 256  # Number of bins in the plot histogram
+bins = 512  # Number of bins in the plot histogram
 ppb = 1  # Number of pixels per histogram bin
 screenMaxX = 80
 screenMaxZ = 40
@@ -375,7 +376,6 @@ focus = 1800
 scrPosRel = 3600
 
 isSpherical = False
-
 #CFfileName = "p05Tp1Tnarrow_4col.txt"
 #CFfileName = "NarrowCenter_p2Tp4T_4col.txt"
 
@@ -385,9 +385,10 @@ CFfileName = "NarrowMags_p1Tp2T_4col.txt"
 #CFfileName = "../01_SynchrotronSources/10000Points_BzMeasured_4col.txt"
 if sourceType == 'u':
     whose = '_xrt' if isInternalSource else '_urgent'
-    pprefix = '3PW_{0}_{1}mm'
+    pprefix = '3PW_{0}_{1}mm_SRW_'
 #    Source = rs.Undulator if isInternalSource else rs.UndulatorUrgent
-    Source = rs.SourceFromField
+#    Source = rs.SourceFromField
+    Source = rs.SourceFromFieldSRW
     Kmax = 1.92
     kwargs = dict(
         eE=2.9, eI=0.22,  # Parameters of the synchrotron ring [GeV], [Ampere]
@@ -407,13 +408,14 @@ if sourceType == 'u':
 #         gIntervals=15,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
          # 77 is ok for 0.5eV
-         gp = 1e-6,
+         gp = 1e-3,
 #         gp=1e-6,  # Precision of the integration.
 #        targetOpenCL=(0, 0),
         targetOpenCL='CPU',
 #        precisionOpenCL='float32',
         #taper = [0 ,10],
 #        distE='BW', # useGauLeg=False,
+        eN=1, nx=bins*xScale, nz=bins*zScale,
         customField = CFfileName,
         xPrimeMax = (screenMaxX+abs(screenOffsetX))/5.,
         zPrimeMax = screenMaxZ/5.,
@@ -508,7 +510,7 @@ def run_process(beamLine):
 #        kw['fixedEnergy'] = E0
 
 #    if 'wave' in what and Source == rs.Undulator:
-    if 'wave' in what and Source == rs.SourceFromField:
+    if 'wave' in what: # and Source == rs.SourceFromField:
         if isSpherical:
             wave1 = beamLine.fsm1.prepare_wave(
                 beamLine.source, beamLine.scrPhis, beamLine.scrThetas)
@@ -630,18 +632,18 @@ def define_plots(beamLine):
     plots.append(plot)
     plotsE.append(plot)
     ax = plot.xaxis
-    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins*xScale)
+    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins)
     if isSpherical:
         beamLine.scrThetas = edges / ax.factor
     else:
         beamLine.fsmExpX = edges / ax.factor #(edges[:-1] + edges[1:]) * 0.5 / ax.factor
     ax = plot.yaxis
-    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins*zScale)
+    edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins)
     if isSpherical:
         beamLine.scrPhis = edges / ax.factor
     else:
         beamLine.fsmExpZ = edges / ax.factor #(edges[:-1] + edges[1:]) * 0.5 / ax.factor
-
+    print(beamLine.fsmExpX.shape, beamLine.fsmExpZ.shape)
 
     xaxis = xrtp.XYCAxis(xAx, xAxU,  limits=xlimitsZoom, 
                          bins=bins*xScale, ppb=ppb)
@@ -657,13 +659,13 @@ def define_plots(beamLine):
     plots.append(plot)
     plotsE.append(plot)
     ax = plot.xaxis
-    edges = np.linspace(xlimitsZoom[0], xlimitsZoom[1], ax.bins*zScale)
+    edges = np.linspace(xlimitsZoom[0], xlimitsZoom[1], ax.bins)
     if isSpherical:
         beamLine.scrThetaszoom = edges / ax.factor
     else:
         beamLine.fsmExpXzoom = edges / ax.factor #(edges[:-1] + edges[1:]) * 0.5 / ax.factor
     ax = plot.yaxis
-    edges = np.linspace(zlimitsZoom[0], zlimitsZoom[1], ax.bins*zScale)
+    edges = np.linspace(zlimitsZoom[0], zlimitsZoom[1], ax.bins)
     if isSpherical:
         beamLine.scrPhiszoom = edges / ax.factor
     else:

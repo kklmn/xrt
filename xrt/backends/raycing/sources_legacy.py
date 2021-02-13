@@ -15,18 +15,18 @@ from multiprocessing import Pool, cpu_count
 import gzip
 from .. import raycing
 from .sources_beams import Beam
-from .sources_synchr import Undulator
+from .sources_synchr import Undulator, SourceFromField
 from .physconsts import M0C2, K2B, SIE0, SIC, PI, PI2, CHeVcm, FINE_STR
-basepath = os.path.dirname(raycing.__file__)
-SRWPATH = os.path.abspath(os.path.join(basepath,'SRW'))
-sys.path.append(SRWPATH)
+#basepath = os.path.dirname(raycing.__file__)
+#SRWPATH = os.path.abspath(os.path.join(basepath,'SRW'))
+#sys.path.append(SRWPATH)
 
 try:
     from srwlib import SRWLMagFldH, SRWLMagFldU, SRWLMagFldC, array, srwl,\
-        SRWLPartBeam, SRWLWfr
+        SRWLPartBeam, SRWLWfr, SRWLMagFld3D
     isSRW = True
 except:
-#    raise
+    raise
     isSRW = False
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out
@@ -853,109 +853,57 @@ class BendingMagnetWS(WigglerWS):
         return '3-BM-{0}'.format(self.code_name())
 
 
-class UndulatorSRW(Undulator):
-    def __init__(self, *args, **kwargs):
-        super(UndulatorSRW, self).__init__(*args, **kwargs)
-            #***********Undulator
-        self.periodm = self.period*1e-3 #Period Length [m]
-        self.R0m = self.R0 * 1e-3
-        self.phBx = 0 #Initial Phase of the Horizontal field component
-        self.phBy = 0 #Initial Phase of the Vertical field component
-        self.sBx = -1 #Symmetry of the Horizontal field component vs Longitudinal position
-        self.sBy = 1 #Symmetry of the Vertical field component vs Longitudinal position
-        self.xcID = 0 #Transverse Coordinates of Undulator Center [m]
-        self.ycID = 0
-        self.zcID = 0 #Longitudinal Coordinate of Undulator Center [m]
-        print(self.B0y, self.B0x, self.Ky, self.Kx)
-#        sys.exit()
-        if self.Kx==0:
-            fld = [SRWLMagFldH(1, 'v', self.B0y, self.phBy, self.sBy, 3)]
-        else:
-            fld = [SRWLMagFldH(1, 'v', self.B0y, self.phBy, self.sBy, 3),
-                   SRWLMagFldH(1, 'h', self.B0x, self.phBx, self.sBx, 3)]
+class GenericSourceSRW:
+    """Base class for SRW sources"""
 
-
-        self.und = SRWLMagFldU(fld, self. periodm, self.n) #Ellipsoidal Undulator
-        self.magFldCnt = SRWLMagFldC([self.und],
-                                     array('d', [self.xcID]),
-                                     array('d', [self.ycID]),
-                                     array('d', [self.zcID])) #Container of all Field Elements
-
-        #***********Electron Beam
-        self.elecBeam = SRWLPartBeam()
-        self.elecBeam.Iavg = self.eI #Average Current [A]
-        self.elecBeam.partStatMom1.x = 0. #Initial Transverse Coordinates (initial Longitudinal Coordinate will be defined later on) [m]
-        self.elecBeam.partStatMom1.y = 0.
-        self.elecBeam.partStatMom1.z = -0.5*self.periodm*(self.n + 4.) #Initial Longitudinal Coordinate (set before the ID)
-        self.elecBeam.partStatMom1.xp = 0 #Initial Relative Transverse Velocities
-        self.elecBeam.partStatMom1.yp = 0
-        self.elecBeam.partStatMom1.gamma = self.gamma #3./0.51099890221e-03 #Relative Energy
-
-        #***********Precision
-        self.meth = 1 #SR calculation method: 0- "manual", 1- "auto-undulator", 2- "auto-wiggler"
-        self.relPrec = self.gp #relative precision
-        self.zStartInteg = 0 #longitudinal position to start integration (effective if < zEndInteg)
-        self.zEndInteg = 0 #longitudinal position to finish integration (effective if > zStartInteg)
-        self.npTraj = 20000
-        self.sampFactNxNyForProp = 0 #sampling factor for adjusting nx, ny (effective if > 0)
-        self.arPrecPar = [self.meth, self.relPrec, self.zStartInteg,
-                          self.zEndInteg, self.npTraj, 0,
-                          self.sampFactNxNyForProp]
-        self.dimExy = (self.eN-1, (self.nx-1)//2, (self.nz-1)//2) # Number of points along the E, x, z grids
-        
-        self.reset()
-
-    def _reset_integration_grid(self):
+    def _prepare_container(self):
         pass
 
+    def _reset_integration_grid(self):
+        self.dimExy = (self.eN-1, (self.nx-1)//2, (self.nz-1)//2) # Number of points along the E, x, z grids
+
+
     def build_I_map(self, w, ddphi, ddpsi, dh=None, dg=None):
-#        if self.needReset():
-#            self._reset_limits()
-        print(self.dimExy)        
+        self._prepare_container()
+
+        relPrec = self.gp #relative precision
+        zStartInteg = 0 #longitudinal position to start integration (effective if < zEndInteg)
+        zEndInteg = 0 #longitudinal position to finish integration (effective if > zStartInteg)
+        npTraj = 20000
+        sampFactNxNyForProp = 0 #sampling factor for adjusting nx, ny (effective if > 0)
+        arPrecPar = [self.calcMeth, relPrec, zStartInteg, zEndInteg, npTraj,
+                     self.useTerm, sampFactNxNyForProp]
+        elecBeam = SRWLPartBeam()
+        elecBeam.Iavg = self.eI #Average Current [A]
+        elecBeam.partStatMom1.x = 0. #Initial Transverse Coordinates (initial Longitudinal Coordinate will be defined later on) [m]
+        elecBeam.partStatMom1.y = 0.
+        elecBeam.partStatMom1.z = self.zMin #Initial Longitudinal Coordinate (set before the ID)
+        elecBeam.partStatMom1.xp = 0 #Initial Relative Transverse Velocities
+        elecBeam.partStatMom1.yp = 0
+        elecBeam.partStatMom1.gamma = self.gamma #3./0.51099890221e-03 #Relative Energy
+
+        R0m = self.R0*1e-3
+
         wfr2 = SRWLWfr() #For intensity distribution at fixed photon energy
         wfr2.allocate(*self.dimExy) #Numbers of points vs Photon Energy, Horizontal and Vertical Positions
-        wfr2.mesh.zStart = self.R0m #25. #Longitudinal Position [m] at which SR has to be calculated
+        wfr2.mesh.zStart = R0m #25. #Longitudinal Position [m] at which SR has to be calculated
 
         wfr2.mesh.eStart = np.min(w) #Initial Photon Energy [eV]
         wfr2.mesh.eFin = np.max(w) #Final Photon Energy [eV]
-        wfr2.mesh.xStart = self.R0m * np.tan(np.min(ddphi)) #-0.001 #Initial Horizontal Position [m]
-        wfr2.mesh.xFin = self.R0m * np.tan(np.max(ddphi)) #Final Horizontal Position [m]
-        wfr2.mesh.yStart = self.R0m * np.tan(np.min(ddpsi)) #Initial Vertical Position [m]
-        wfr2.mesh.yFin = self.R0m * np.tan(np.max(ddpsi)) #Final Vertical Position [m]
-#        print(wfr2.mesh.eStart, wfr2.mesh.eFin, wfr2.mesh.xStart, wfr2.mesh.xFin,
-#              wfr2.mesh.yStart, wfr2.mesh.yFin)
-#        print wfr2.mesh.xStart, wfr2.mesh.xFin, wfr2.mesh.yStart, wfr2.mesh.yFin
-        wfr2.partBeam = self.elecBeam
-        srwl.CalcElecFieldSR(wfr2, 0, self.magFldCnt, self.arPrecPar)
-        Is_local = np.complex128(np.array(wfr2.arEx[::2]) + 1j*np.array(wfr2.arEx[1::2]))
-        Ip_local = np.complex128(np.array(wfr2.arEy[::2]) + 1j*np.array(wfr2.arEy[1::2]))
+        wfr2.mesh.xStart = R0m * np.tan(np.min(ddphi)) #-0.001 #Initial Horizontal Position [m]
+        wfr2.mesh.xFin = R0m * np.tan(np.max(ddphi)) #Final Horizontal Position [m]
+        wfr2.mesh.yStart = R0m * np.tan(np.min(ddpsi)) #Initial Vertical Position [m]
+        wfr2.mesh.yFin = R0m * np.tan(np.max(ddpsi)) #Final Vertical Position [m]
+        wfr2.partBeam = elecBeam
+        srwl.CalcElecFieldSR(wfr2, 0, self.magFldCnt, arPrecPar)
+        Is_local = np.complex128(np.array(wfr2.arEx[::2]) + 1j*np.array(wfr2.arEx[1::2]))*1e-3
+        Ip_local = np.complex128(np.array(wfr2.arEy[::2]) + 1j*np.array(wfr2.arEy[1::2]))*1e-3
 
-        print("Is_MAX", np.max(np.abs(Is_local)))
-        # char* pInt, SRWLWfr* pWfr, char polar, char intType, char depType, double e, double x, double y, double* pMeth, void* pFldTrj
-        # intType 0- Single-Elec. Intensity; 1- Multi-Elec. Intensity; 2- Single-Elec. Flux; 3- Multi-Elec. Flux; 4- Single-Elec. Rad. Phase; 5- Re(E); 6- Im(E); 7- Time or Photon Energy Integrated Intensity; 8-"Single-Electron" Mutual Intensity (i.e. E(r)E*(r'))
-        #1D spectrum
-        #arI1 = array('f', [0]*wfr1.mesh.ne)
-        #srwl.CalcIntFromElecField(arI1, wfr1, 6, 0, 0, wfr1.mesh.eStart, wfr1.mesh.xStart, wfr1.mesh.yStart)
-        #arI2x = array('f', [0]*wfr2.mesh.nx) #array to take 1D intensity data (vs X)
-        #srwl.CalcIntFromElecField(arI2x, wfr2, 6, 0, 1, wfr2.mesh.eStart, 0, 0)
-        # depType
-    		#if(RadExtract.PlotType == 0) return ExtractSingleElecIntensity1DvsE(RadExtract);
-        #if(RadExtract.PlotType == 1) return ExtractSingleElecIntensity1DvsX(RadExtract);
-    		#else if(RadExtract.PlotType == 2) return ExtractSingleElecIntensity1DvsZ(RadExtract);
-    		#else if(RadExtract.PlotType == 3) return ExtractSingleElecIntensity2DvsXZ(RadExtract);
-    		#else if(RadExtract.PlotType == 4) return ExtractSingleElecIntensity2DvsEX(RadExtract);
-    		#else if(RadExtract.PlotType == 5) return ExtractSingleElecIntensity2DvsEZ(RadExtract);
-    		#else return ExtractSingleElecIntensity3D(RadExtract);
-        #2D map
-
-        bwFact = 0.001 if self.distE == 'BW' else 1./w
+        bwFact = 0.001 if self.distE == 'BW' else 1./w[0]
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
-#        arI2 = array('d', [0]*wfr2.mesh.nx*wfr2.mesh.ny*wfr2.mesh.ne) #"flat" array to take 2D intensity data
-#        srwl.CalcIntFromElecField(arI2, wfr2, 6, 0, 6, 0, 0, 0)
-#        srwl.CalcIntFromElecField(arI2, wfr2, 6, 0, 3, wfr2.mesh.eStart, 0, 0)
-#        print("Is_MAX_ar2", np.max(np.abs(arI2)))
-#        print(np.abs(Is_local)**2+np.abs(Ip_local**2))
-        self.Imax = np.max(Amp2Flux*(np.abs(Is_local)**2+np.abs(Ip_local**2)))*1.2
+
+        integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
+        self.Imax = Amp2Flux*1.2*np.max(integralField)
         self.nrepmax = 1
         """Preparing to calculate the total flux integral"""
         self.xzE = (self.E_max - self.E_min) *\
@@ -963,6 +911,57 @@ class UndulatorSRW(Undulator):
             (self.Psi_max - self.Psi_min)
         self.fluxConst = self.Imax * self.xzE
 
-        return (Amp2Flux*(np.abs(Is_local)**2+np.abs(Ip_local**2)),
+        return (Amp2Flux*integralField,
                 np.sqrt(Amp2Flux)*Is_local,
                 np.sqrt(Amp2Flux)*Ip_local)
+
+
+class UndulatorSRW(GenericSourceSRW, Undulator):
+
+    def _prepare_container(self):
+#        phBx = 0 #Initial Phase of the Horizontal field component
+#        phBy = 0 #Initial Phase of the Vertical field component
+        sBx = -1 #Symmetry of the Horizontal field component vs Longitudinal position
+        sBy = 1 #Symmetry of the Vertical field component vs Longitudinal position
+
+        if self.Kx==0:
+            fld = [SRWLMagFldH(1, 'v', self.B0y, 0, sBy, 3)]
+        else:
+            fld = [SRWLMagFldH(1, 'v', self.B0y, 0, sBy, 3),
+                   SRWLMagFldH(1, 'h', self.B0x, self.phase, sBx, 3)]
+
+
+        und = SRWLMagFldU(fld, self.period*1e-3, self.n) #Ellipsoidal Undulator
+        self.magFldCnt = SRWLMagFldC([und],
+                                     [self.center[0]*1e-3],
+                                     [self.center[1]*1e-3],
+                                     [self.center[2]*1e-3]) #Container of all Field Elements
+
+        self.calcMeth = 1  # SR calculation method: 0- "manual", 1- "auto-undulator", 2- "auto-wiggler"
+        self.useTerm = 0  # Use "terminating terms" (i.e. asymptotic expansions at zStartInteg and zEndInteg) or not (1 or 0 respectively)
+        self.zMin = -0.5e-3*self.period*(self.n + 4.)
+
+
+class SourceFromFieldSRW(GenericSourceSRW, SourceFromField):
+
+    def _prepare_container(self):
+        fieldInterpMeth = 4
+
+        self.magFldCnt = SRWLMagFldC() #Container
+        self.magFldCnt.allocate(1) #Magnetic Field consists of 1 part
+
+        dataz = self.customFieldData[:, 0]        
+        Bx, By, Bz = self._magnetic_field(grid=dataz)
+
+        self.magFldCnt.arMagFld[0] = SRWLMagFld3D(
+                np.array(Bx), -1*np.array(By), np.array(Bz),
+                1, 1, len(dataz), 0, 0,
+                0.001*(dataz[-1]-dataz[0]), 1)
+
+        self.magFldCnt.arMagFld[0].interp = fieldInterpMeth
+        self.magFldCnt.arXc[0] = self.center[0]*1e-3
+        self.magFldCnt.arYc[0] = self.center[1]*1e-3
+        self.magFldCnt.arZc[0] = self.center[2]*1e-3
+        self.calcMeth = 0  # SR calculation method: 0- "manual", 1- "auto-undulator", 2- "auto-wiggler"
+        self.useTerm = 1  # Use "terminating terms" (i.e. asymptotic expansions at zStartInteg and zEndInteg) or not (1 or 0 respectively)
+        self.zMin = dataz[0]*1e-3
