@@ -150,15 +150,16 @@ def start_jobs():
     if noTimer:
         print("The job is running... ")
         while True:
-            msg = '{0} of {1}'.format(
-                runCardVals.iteration+1, runCardVals.repeats)
+            sys.stdout.flush()
+            res = dispatch_jobs()
+            tFromStart = time.time() - runCardVals.tstart
+            msg = '{0} of {1} in {2:.1f} s'.format(
+                runCardVals.iteration, runCardVals.repeats, tFromStart)
             if os.name == 'posix':
                 sys.stdout.write("\r\x1b[K " + msg)
             else:
                 sys.stdout.write("\r  ")
                 print(msg+' ')
-            sys.stdout.flush()
-            res = dispatch_jobs()
             if res:
                 return
     else:
@@ -265,10 +266,6 @@ def one_iteration():
             if (runCardVals.iteration >= runCardVals.repeats) or \
                     runCardVals.stop_event.is_set():
                 continue
-            tFromStart = time.time() - runCardVals.tstart
-            plot.textStatus.set_text(
-                "{0} of {1} in {2:.1f} s (right click to stop)".format(
-                    runCardVals.iteration+1, runCardVals.repeats, tFromStart))
 
             plot.nRaysAll += outList[13]
             if runCardVals.backend.startswith('shadow'):
@@ -304,7 +301,13 @@ def one_iteration():
 
             if runCardVals.iteration == 0:  # needed for multiprocessing
                 plot.set_axes_limits(*outList.pop())
+
+            tFromStart = time.time() - runCardVals.tstart
+            plot.textStatus.set_text(
+                "{0} of {1} in {2:.1f} s (right click to stop)".format(
+                    runCardVals.iteration+1, runCardVals.repeats, tFromStart))
 #            aqueue.task_done()
+
         if len(outList) > 0:
             runCardVals.iteration += 1
     for p in processes:
