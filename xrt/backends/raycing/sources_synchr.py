@@ -567,7 +567,7 @@ class SourceBase:
         return Es, Ep
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
-                            harmonic=None):
+                            harmonic=None, dgamma=None):
         """Returns the Stokes parameters in the shape (energy, theta, psi,
         [harmonic]), with *theta* being the horizontal mesh angles and *psi*
         the vertical mesh angles. Each one of the input parameters is a 1D
@@ -2221,7 +2221,7 @@ class SourceFromField(IntegratedSource):
             Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
         return Bsr*emcg, Bpr*emcg
 
-    def build_I_map(self, w, ddtheta, ddpsi, dg=None):
+    def build_I_map(self, w, ddtheta, ddpsi, dh=None, dg=None):
         if self.needReset:
             self.reset()
         useCL = False
@@ -2810,17 +2810,19 @@ class Undulator(IntegratedSource):
         # Need to recalculate the integration parameters
 
     def report_E1(self):
-        if raycing._VERBOSITY_ > 10:
-            wu = PI / self.L0 / self.gamma2 * \
-                (2*self.gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
+        wu = PI / self.L0 / self.gamma2 * \
+            (2*self.gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
 
-            E1 = 2*wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
+        E1 = 2*wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
+        if raycing._VERBOSITY_ > 10:
+
             print("E1 = {0}".format(E1))
             print("E3 = {0}".format(3*E1))
             print("B0 = {0}".format(self.B0y))
             if self.taper is not None:
                 print("dB/dx/B = {0}".format(
                     -PI * self.gap * self.taper / self.L0 * 1e3))
+        self.E1 = E1
 
     def prefix_save_name(self):
         if self.Kx > 0:

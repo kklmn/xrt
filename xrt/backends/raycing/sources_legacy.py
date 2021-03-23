@@ -26,7 +26,8 @@ try:
         SRWLPartBeam, SRWLWfr, SRWLMagFld3D
     isSRW = True
 except:
-    raise
+    print("SRW not found")
+#    raise
     isSRW = False
 
 _DEBUG = 20  # if non-zero, some diagnostics is printed out
@@ -899,7 +900,7 @@ class GenericSourceSRW:
         Is_local = np.complex128(np.array(wfr2.arEx[::2]) + 1j*np.array(wfr2.arEx[1::2]))*1e-3
         Ip_local = np.complex128(np.array(wfr2.arEy[::2]) + 1j*np.array(wfr2.arEy[1::2]))*1e-3
 
-        bwFact = 0.001 if self.distE == 'BW' else 1./w[0]
+        bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
 
         integralField = np.abs(Is_local)**2 + np.abs(Ip_local)**2
