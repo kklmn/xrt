@@ -158,12 +158,34 @@ class SourceBase:
         self._eMax = float(eMax)
 
         # Beam size and divergence conversion
-        xPrimeMax = raycing.auto_units_angle(xPrimeMax) * 1e3 if\
-            isinstance(xPrimeMax, raycing.basestring) else xPrimeMax
-        zPrimeMax = raycing.auto_units_angle(zPrimeMax) * 1e3 if\
-            isinstance(zPrimeMax, raycing.basestring) else zPrimeMax
-        self._xPrimeMax = xPrimeMax * 1e-3  # if xPrimeMax else None
-        self._zPrimeMax = zPrimeMax * 1e-3  # if zPrimeMax else None
+        if isinstance(xPrimeMax, (tuple, list)):
+            # if units are not provided, we expect mrad here
+            xPrimeMax = [raycing.auto_units_angle(xPrimeMax[0],
+                                                  defaultFactor=1e-3),
+                         raycing.auto_units_angle(xPrimeMax[-1],
+                                                  defaultFactor=1e-3)]
+            self._xPrimeMin, self._xPrimeMax = min(xPrimeMax), max(xPrimeMax)
+        elif isinstance(xPrimeMax, raycing.basestring):
+            self._xPrimeMax = abs(raycing.auto_units_angle(xPrimeMax))
+            self._xPrimeMin = -self._xPrimeMax
+        else:
+            self._xPrimeMax = abs(xPrimeMax) * 1e-3
+            self._xPrimeMin = -self._xPrimeMax
+
+
+        if isinstance(zPrimeMax, (tuple, list)):
+            # if units are not provided, we expect mrad here
+            zPrimeMax = [raycing.auto_units_angle(zPrimeMax[0],
+                                                  defaultFactor=1e-3),
+                         raycing.auto_units_angle(zPrimeMax[-1],
+                                                  defaultFactor=1e-3)]
+            self._zPrimeMin, self._zPrimeMax = min(zPrimeMax), max(zPrimeMax)
+        elif isinstance(zPrimeMax, raycing.basestring):
+            self._zPrimeMax = abs(raycing.auto_units_angle(zPrimeMax))
+            self._zPrimeMin = -self._zPrimeMax
+        else:
+            self._zPrimeMax = abs(zPrimeMax) * 1e-3
+            self._zPrimeMin = -self._zPrimeMax
 
         self._betaX = betaX * 1e3 if betaX else None  # input in m
         self._betaZ = betaZ * 1e3 if betaX else None  # input in m
@@ -206,6 +228,22 @@ class SourceBase:
         self.nz = 2*nz + 1
 
         self.needReset = True
+
+    @property
+    def pitch(self):
+        return self.pitch
+
+    @pitch.setter
+    def pitch(self, pitch):
+        self.pitch = raycing.auto_units_angle(pitch)
+
+    @property
+    def yaw(self):
+        return self.yaw
+
+    @yaw.setter
+    def yaw(self, yaw):
+        self.yaw = raycing.auto_units_angle(yaw)
 
     @property
     def eSigmaX(self):
@@ -289,7 +327,19 @@ class SourceBase:
 
     @xPrimeMax.setter
     def xPrimeMax(self, xPrimeMax):
-        self._xPrimeMax = xPrimeMax * 1e-3  # convert from mrad to rad
+        if isinstance(xPrimeMax, (tuple, list)):
+            # if units are not provided, we expect mrad here
+            xPrimeMax = [raycing.auto_units_angle(xPrimeMax[0],
+                                                  defaultFactor=1e-3),
+                         raycing.auto_units_angle(xPrimeMax[-1],
+                                                  defaultFactor=1e-3)]
+            self._xPrimeMin, self._xPrimeMax = min(xPrimeMax), max(xPrimeMax)
+        elif isinstance(xPrimeMax, raycing.basestring):
+            self._xPrimeMax = abs(raycing.auto_units_angle(xPrimeMax))
+            self._xPrimeMin = -self._xPrimeMax
+        else:
+            self._xPrimeMax = abs(xPrimeMax) * 1e-3
+            self._xPrimeMin = -self._xPrimeMax
 
     @property
     def zPrimeMax(self):
@@ -297,7 +347,19 @@ class SourceBase:
 
     @zPrimeMax.setter
     def zPrimeMax(self, zPrimeMax):
-        self._zPrimeMax = zPrimeMax * 1e-3  # convert from mrad to rad
+        if isinstance(zPrimeMax, (tuple, list)):
+            # if units are not provided, we expect mrad here
+            zPrimeMax = [raycing.auto_units_angle(zPrimeMax[0],
+                                                  defaultFactor=1e-3),
+                         raycing.auto_units_angle(zPrimeMax[-1],
+                                                  defaultFactor=1e-3)]
+            self._zPrimeMin, self._zPrimeMax = min(zPrimeMax), max(zPrimeMax)
+        elif isinstance(zPrimeMax, raycing.basestring):
+            self._zPrimeMax = abs(raycing.auto_units_angle(zPrimeMax))
+            self._zPrimeMin = -self._zPrimeMax
+        else:
+            self._zPrimeMax = abs(zPrimeMax) * 1e-3
+            self._zPrimeMin = -self._zPrimeMax
 
     @property
     def eE(self):
@@ -323,14 +385,19 @@ class SourceBase:
 
     def _reset_limits(self):
         if not self._xPrimeMax:
-            print("No Theta range specified, using default 1 mrad")
+            print("No Theta range specified, using default +/- 1 mrad")
             self._xPrimeMax = 1e-3
+            self._xPrimeMin = -1e-3
+        if not self._zPrimeMax:
+            print("No Psi range specified, using default +/- 1 mrad")
+            self._zPrimeMax = 1e-3
+            self._zPrimeMin = -1e-3
 
         # Limits corrected for divergence
-        print(self._xPrimeMax, self.dxprime)
-        self.Theta_min = -float(self._xPrimeMax+self.dxprime)
+#        print(self._xPrimeMax, self.dxprime)
+        self.Theta_min = float(self._xPrimeMin-self.dxprime)
         self.Theta_max = float(self._xPrimeMax+self.dxprime)
-        self.Psi_min = -float(self._zPrimeMax+self.dzprime)
+        self.Psi_min = float(self._zPrimeMin-self.dzprime)
         self.Psi_max = float(self._zPrimeMax+self.dzprime)
         self.E_min = float(min(self.eMin, self.eMax))
         self.E_max = float(max(self.eMin, self.eMax))
@@ -1478,10 +1545,14 @@ class BendingMagnet(SourceBase):
 
         if self.isMPW:  # xPrimeMaxAutoReduce
             xPrimeMaxTmp = self.K / self.gamma
-            if self._xPrimeMax > xPrimeMaxTmp:
+            if abs(self._xPrimeMax) > xPrimeMaxTmp:
                 print("Reducing xPrimeMax from {0} down to {1} mrad".format(
                       self.xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
                 self._xPrimeMax = xPrimeMaxTmp
+            if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
+                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
+                      self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
+                self._xPrimeMin = np.sign(self._xPrimeMin) * xPrimeMaxTmp
 
     @property
     def B0(self):
@@ -2440,10 +2511,12 @@ class SourceFromField(IntegratedSource):
 
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam
+        print("R0=",R0)
 
         if self.filamentBeam:
+            emcg0 = EMC/gamma[0]
             scalarArgsTest = [np.int32(len(self.tg)),
-                              self.cl_precisionF(EMC/gamma[0]),
+                              self.cl_precisionF(emcg0),
                               self.cl_precisionF(1./gamma[0]**2),
                               self.cl_precisionF(R0),
                               self.cl_precisionF(w[0] * E2WC / betam)]
@@ -2470,6 +2543,13 @@ class SourceFromField(IntegratedSource):
             Is_local, Ip_local = self.ucl.run_parallel(
                 clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
                 slicedRWArgs, None, NRAYS)
+
+            self.beta[0] *= emcg0
+            self.beta[1] *= emcg0
+            self.trajectory[0] *= emcg0
+            self.trajectory[1] *= emcg0
+            smtrm = 1./gamma[0]**2 + self.beta[0]**2 + self.beta[1]**2
+            self.trajectory[2]
         else:
             ab = 0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
 
@@ -2691,19 +2771,27 @@ class Undulator(IntegratedSource):
             self.zPrimeMaxAutoReduce = True
 
         if xPrimeMaxAutoReduce:
-            K0 = self.Ky if abs(self.Ky) > 0 else self.Kx
+            K0 = self.Ky if abs(self.Ky) > 0 else 2.
             xPrimeMaxTmp = K0 / self.gamma
-            if self._xPrimeMax > xPrimeMaxTmp:
+            if abs(self._xPrimeMax) > abs(xPrimeMaxTmp):
                 print("Reducing xPrimeMax from {0} down to {1} mrad".format(
                       self._xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
                 self._xPrimeMax = xPrimeMaxTmp
+            if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
+                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
+                      self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
+                self._xPrimeMin = np.sign(self._xPrimeMin) * xPrimeMaxTmp
         if zPrimeMaxAutoReduce:
-            K0 = self.Kx if abs(self.Kx) > 0 else self.Ky
+            K0 = self.Kx if abs(self.Kx) > 0 else 2.
             zPrimeMaxTmp = K0 / self.gamma
-            if self._zPrimeMax > zPrimeMaxTmp:
+            if abs(self._zPrimeMax) > abs(zPrimeMaxTmp):
                 print("Reducing zPrimeMax from {0} down to {1} mrad".format(
                       self._zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
                 self._zPrimeMax = zPrimeMaxTmp
+            if abs(self._zPrimeMin) > abs(zPrimeMaxTmp):
+                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
+                      self._zPrimeMin * 1e3, zPrimeMaxTmp * 1e3))
+                self._zPrimeMin = np.sign(self._zPrimeMin) * zPrimeMaxTmp
 
     @property
     def period(self):
