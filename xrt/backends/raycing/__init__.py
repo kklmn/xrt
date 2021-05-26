@@ -140,7 +140,7 @@ __module__ = "raycing"
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 
-_DEBUG_ = False  # If False, exceptions inside the module are ignored
+_DEBUG_ = True  # If False, exceptions inside the module are ignored
 _VERBOSITY_ = 10   # [0-100] Regulates the level of diagnostics printout
 
 try:  # for Python 3 compatibility:
@@ -697,25 +697,27 @@ def get_output(plot, beamsReturnedBy_run_process):
         locAccepted, locAcceptedE, locSeeded, locSeededI
 
 
-def auto_units_angle(angle):
+def auto_units_angle(angle, defaultFactor=1.):
     if isinstance(angle, basestring):
         if len(re.findall("auto", angle)) > 0:
             return angle
         elif len(re.findall("mrad", angle)) > 0:
-            return eval(angle.split("m")[0].strip())*1e-3
+            return float(angle.split("m")[0].strip())*1e-3
         elif len(re.findall("urad", angle)) > 0:
-            return eval(angle.split("u")[0].strip())*1e-6
+            return float(angle.split("u")[0].strip())*1e-6
         elif len(re.findall("nrad", angle)) > 0:
-            return eval(angle.split("n")[0].strip())*1e-9
+            return float(angle.split("n")[0].strip())*1e-9
         elif len(re.findall("rad", angle)) > 0:
-            return eval(angle.split("r")[0].strip())
+            return float(angle.split("r")[0].strip())
         elif len(re.findall("deg", angle)) > 0:
-            return np.radians(eval(angle.split("d")[0].strip()))
+            return np.radians(float(angle.split("d")[0].strip()))
         else:
             print("Could not identify the units")
             return angle
-    else:
+    elif angle is None:
         return angle
+    else:
+        return angle * defaultFactor
 
 
 def append_to_flow(meth, bOut, frame):

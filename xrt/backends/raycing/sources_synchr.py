@@ -135,8 +135,8 @@ class SourceBase:
                 bl.oesDict[self.name] = [self, 0]
 
         self.center = center  # 3D point in global system
-        self.pitch = raycing.auto_units_angle(pitch)
-        self.yaw = raycing.auto_units_angle(yaw)
+        self._pitch = raycing.auto_units_angle(pitch)
+        self._yaw = raycing.auto_units_angle(yaw)
         self.nrays = np.long(nrays)
 
         self.R0 = R0
@@ -231,19 +231,19 @@ class SourceBase:
 
     @property
     def pitch(self):
-        return self.pitch
+        return self._pitch
 
     @pitch.setter
     def pitch(self, pitch):
-        self.pitch = raycing.auto_units_angle(pitch)
+        self._pitch = raycing.auto_units_angle(pitch)
 
     @property
     def yaw(self):
-        return self.yaw
+        return self._yaw
 
     @yaw.setter
     def yaw(self, yaw):
-        self.yaw = raycing.auto_units_angle(yaw)
+        self._yaw = raycing.auto_units_angle(yaw)
 
     @property
     def eSigmaX(self):
@@ -2511,7 +2511,6 @@ class SourceFromField(IntegratedSource):
 
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam
-        print("R0=",R0)
 
         if self.filamentBeam:
             emcg0 = EMC/gamma[0]
@@ -2544,12 +2543,6 @@ class SourceFromField(IntegratedSource):
                 clKernel, scalarArgsTest, slicedROArgs, nonSlicedROArgs,
                 slicedRWArgs, None, NRAYS)
 
-            self.beta[0] *= emcg0
-            self.beta[1] *= emcg0
-            self.trajectory[0] *= emcg0
-            self.trajectory[1] *= emcg0
-            smtrm = 1./gamma[0]**2 + self.beta[0]**2 + self.beta[1]**2
-            self.trajectory[2]
         else:
             ab = 0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
 
