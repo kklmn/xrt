@@ -34,7 +34,7 @@ class SourceBase:
     def __init__(self, bl=None, name='GenericSource', center=(0, 0, 0),
                  nrays=raycing.nrays,
                  eE=6.0, eI=0.1, eEspread=0., eSigmaX=None, eSigmaZ=None,
-                 eEpsilonX=1., eEpsilonZ=0.01, betaX=20., betaZ=5.,
+                 eEpsilonX=1., eEpsilonZ=0.01, betaX=9., betaZ=2.,
                  eMin=5000., eMax=15000., distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, R0=None,
                  uniformRayDensity=False, filamentBeam=False,
@@ -899,6 +899,7 @@ class SourceBase:
             else:
                 seededI += Intensity.sum() * self.xzE
             tmp_max = np.max(Intensity)
+
             if tmp_max > self.Imax:
                 self.Imax = tmp_max
                 self.fluxConst = self.Imax * self.xzE
@@ -1734,7 +1735,6 @@ class BendingMagnet(SourceBase):
                 if raycing._VERBOSITY_ > 10:
                     imax = np.argmax(Intensity)
                     print(self.Imax, imax, rE[imax], rTheta[imax], rPsi[imax])
-
             if self.uniformRayDensity:
                 I_pass = slice(None)
                 npassed = mcRays
@@ -2240,11 +2240,11 @@ class SourceFromField(IntegratedSource):
                 trajy_ = emcg*trajy[i]
                 trajz_ = self.tg[i]*(1.-0.5*revgamma2) +\
                     EMC**2*revgamma2*trajz[i]
-            rloc = np.array([trajx_, trajy_, trajz_])
-            dr = R0 - np.expand_dims(rloc, 1)
-            dist = np.linalg.norm(dr, axis=0)
 
             if R0 is not None:
+                rloc = np.array([trajx_, trajy_, trajz_])
+                dr = R0 - np.expand_dims(rloc, 1)
+                dist = np.linalg.norm(dr, axis=0)
                 rdrz = 1./dr[2, :]
                 drs = (dr[0, :]**2+dr[1, :]**2)*rdrz
                 LRS = 0.5*drs - 0.125*drs**2*rdrz + 0.0625*drs**3*rdrz**2

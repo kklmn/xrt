@@ -21,7 +21,7 @@ __constant float PI =  (float)3.1415926535897932384626433832795;
 
 //__constant float E2W = 1.51926751475e15;
 //__constant float E2W = 1519267514747457.9195337718065469;
-//__constant float C = 2.99792458e11;
+__constant float C = 2.99792458e11;
 __constant float E2WC = 5067.7309392068091;
 __constant float SIE0 = 1.602176565e-19;
 __constant float SIM0 = 9.10938291e-31;
@@ -280,10 +280,10 @@ __kernel void undulator_nf(const float R0,
             krel = 1. - dot(n, beta);
             nnb = cross(n, cross((n - beta), betaP))/(krel*krel);
     //velocity field
-    //            nnb = nnb + (n - beta)*(1 - beta*beta)*C / (krel*krel*R0);
+            nnb = nnb + (n - beta)*(1 - beta*beta)*C / (krel*krel*R0);
     //            }
     //        else
-    //            nnb = (n - beta) * w[ii];
+//                nnb = (n - beta) * w[ii];
 
             Is += (ag[j] * nnb.x) * eucos;
             Ip += (ag[j] * nnb.y) * eucos;}}
@@ -1076,7 +1076,7 @@ __kernel void custom_field(const int jend,
 
         krel = 1. - dot(n, betaC);
         nnb = cross(n, cross((n - betaC), betaP))/(krel*krel);
-
+        //nnb = nnb + (n - betaC)*(1 - betaC*betaC)*C / (krel*krel*R0);
         Is += (ag[j] * nnb.x) * eucos;
         Ip += (ag[j] * nnb.y) * eucos; }
 
