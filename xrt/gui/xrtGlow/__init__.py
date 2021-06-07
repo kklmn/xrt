@@ -3232,7 +3232,7 @@ class xrtGlWidget(qt.QGLWidget):
                 gbT.b = nv[1] * np.ones_like(zv)
                 gbT.c = nv[2] * np.ones_like(zv)
 
-                if thickness > 0:
+                if thickness > 0 and not isClosedSurface:
                     gbB = rsources.Beam(copyFrom=gbT)
                     if isinstance(oe, roes.LauePlate):
                         gbB.z[:] = gbT.z - thickness
@@ -3259,15 +3259,16 @@ class xrtGlWidget(qt.QGLWidget):
                     dC = cShift * iSurf
                     self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
                                         gbT.a, gbT.b, gbT.c, dC)
-                    if thickness > 0 and\
-                            not isinstance(oe, roes.DoubleParaboloidLens):
+                    if thickness > 0 \
+                            and not isinstance(oe, roes.DoubleParaboloidLens)\
+                            and not isClosedSurface:
                         self.plotCurvedMesh(gbB.x, gbB.y, gbB.z,
                                             gbB.a, gbB.b, gbB.c, dC)
 
     # Side faces
         if isinstance(oe, roes.Plate):
             self.setMaterial('semiSi')
-        if thickness > 0:
+        if thickness > 0 and not isClosedSurface:
             deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
             for ie, yPos in enumerate(yLimits):
                 for i in range(localTiles[0]):
