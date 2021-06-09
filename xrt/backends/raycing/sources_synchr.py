@@ -1081,6 +1081,8 @@ class IntegratedSource(SourceBase):
     """Base class for the Sources with numerically integrated amplitudes.
     Not to be called explicitly."""
 
+    hiddenParams = ['gIntervals']
+
     def __init__(self, *args, **kwargs):
         """
         *gp*: float
@@ -1088,15 +1090,6 @@ class IntegratedSource(SourceBase):
             significant digit). Undulator model converges down to 1e-6 and
             below. Custom field calculation may require setting the precision
             of 1e-3.
-
-        *gIntervals*: int
-            Integral of motion is divided by gIntervals to reduce the order of
-            Gauss-Legendre quadrature. Default value of 1 is usually enough for
-            a conventional undulator. For extreme cases (wigglers, near field,
-            wide angles) this value can be set to the order of few hundreds to
-            achieve the convergence of the integral. Large values can
-            significantly increase the calculation time and RAM consumption
-            especially if OpenCL is not used.
 
         *gNodes*: int
             Number of integration nodes in each of the integration intervals.
@@ -1185,6 +1178,17 @@ class IntegratedSource(SourceBase):
                     self.cl_program = self.ucl.cl_program
                     self.cl_mf = self.ucl.cl_mf
                     self.cl_is_blocking = self.ucl.cl_is_blocking
+
+    @property
+    def gNodes(self):
+        return self.quadm
+
+    @gNodes.setter
+    def gNodes(self, gNodes):
+        self.quadm = int(gNodes)
+        self._build_integration_grid()
+
+        # Need to recalculate the integration parameters
 
     def _clenshaw_curtis(self, n):
         """
@@ -1489,6 +1493,9 @@ class IntegratedSource(SourceBase):
         plt.pause(0.001)
         plt.show()
 
+    def _build_integration_grid(self):
+        """To be redefined in subclasses"""
+        pass
 
     def _reset_integration_grid(self):
         """Adjusting the integration grid length"""
@@ -2506,14 +2513,21 @@ class SourceFromField(IntegratedSource):
                 self.build_trajectory_periodic(Bx, By, Bz)
             Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
-        self.beta = [betax, betay]
-        self.trajectory = [trajx, trajy, trajz]
+        emcg0 = EMC/gamma[0]
+
+        if self.filamentBeam:
+            self.beta = [betax, betay]
+            self.trajectory = [trajx, trajy, trajz]
+        else:
+            self.beta = [betax*emcg0, betay*emcg0]
+            self.trajectory = [trajx*emcg0,
+                               trajy*emcg0,
+                               self.tg*(1.-0.5/gamma[0]**2) + trajz*EMC**2/gamma[0]**2]
 
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam
 
         if self.filamentBeam:
-            emcg0 = EMC/gamma[0]
             scalarArgsTest = [np.int32(len(self.tg)),
                               self.cl_precisionF(emcg0),
                               self.cl_precisionF(1./gamma[0]**2),
