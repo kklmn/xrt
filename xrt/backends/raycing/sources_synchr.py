@@ -634,7 +634,8 @@ class SourceBase:
         return Es, Ep
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
-                            harmonic=None, dgamma=None):
+                            harmonic=None,
+                            eSpreadSigmas=3.5, eSpreadNSamples=36):
         """Returns the Stokes parameters in the shape (energy, theta, psi,
         [harmonic]), with *theta* being the horizontal mesh angles and *psi*
         the vertical mesh angles. Each one of the input parameters is a 1D
@@ -666,7 +667,7 @@ class SourceBase:
         else:
             iharmonic = None
         if self.eEspread > 0:
-            spr = np.linspace(-3.5, 3.5, 36)
+            spr = np.linspace(-eSpreadSigmas, eSpreadSigmas, eSpreadNSamples)
             dgamma = self.gamma * spr * self.eEspread
             wspr = np.exp(-0.5 * spr**2)
             wspr /= wspr.sum()
@@ -729,8 +730,10 @@ class SourceBase:
                 print("************* Warning ****************************")
                 print("Your xPrimeMax is too small!")
                 print("It must be bigger than theta.max()")
-                if self.xPrimeMaxAutoReduce:
-                    print("You probably need to set xPrimeMaxAutoReduce=False")
+                if hasattr(self, 'xPrimeMaxAutoReduce'):
+                    if self.xPrimeMaxAutoReduce:
+                        print("You probably need to set "
+                              "xPrimeMaxAutoReduce=False")
                 print("**************************************************")
             if Sz > len(psi)//4:  # ±2σ
                 print("************* Warning ************************")
@@ -741,8 +744,10 @@ class SourceBase:
                 print("************* Warning ****************************")
                 print("Your zPrimeMax is too small!")
                 print("It must be bigger than psi.max()")
-                if self.zPrimeMaxAutoReduce:
-                    print("You probably need to set zPrimeMaxAutoReduce=False")
+                if hasattr(self, 'zPrimeMaxAutoReduce'):
+                    if self.zPrimeMaxAutoReduce:
+                        print("You probably need to set "
+                              "zPrimeMaxAutoReduce=False")
                 print("**************************************************")
             for ie, ee in enumerate(energy):
                 if harmonic is None:
@@ -2017,7 +2022,7 @@ class SourceFromField(IntegratedSource):
                 fname = customField
                 kwargs = {}
             if fname:
-                self.customFieldData = self._read_custom_field(fname, kwargs)
+                self.customFieldData = self.read_custom_field(fname, kwargs)
         else:  # Test with periodic field
             self.Kx = 0.
             self.Ky = 4.4 #17.274 #1.7
@@ -2052,7 +2057,7 @@ class SourceFromField(IntegratedSource):
                 fname = customField
                 kwargs = {}
             if fname:
-                self.customFieldData = self._read_custom_field(fname, kwargs)
+                self.customFieldData = self.read_custom_field(fname, kwargs)
         else:
             self.customFieldData = None
         self.needReset = True
@@ -2060,12 +2065,12 @@ class SourceFromField(IntegratedSource):
     def prefix_save_name(self):
         return '5-SFF-xrt'
 
-    def _read_custom_field(self, fname, kwargs={}):
+    def read_custom_field(self, fname, kwargs={}):
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             from pandas import read_excel
             data = read_excel(fname, **kwargs).values
         else:
-            data = np.loadtxt(fname)
+            data = np.loadtxt(fname, **kwargs)
         return data
 
     def _magnetic_field(self, grid=None):
@@ -3459,7 +3464,3 @@ class Undulator(IntegratedSource):
         sigmaP_r2 = self.get_sigmaP_r2(E, onlyOddHarmonics, with0eSpread)
         return ((self.dxprime**2 + sigmaP_r2)**0.5,
                 (self.dzprime**2 + sigmaP_r2)**0.5)
-
-
-
-
