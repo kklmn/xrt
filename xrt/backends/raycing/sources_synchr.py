@@ -2312,10 +2312,9 @@ class SourceFromField(IntegratedSource):
             if w.shape[0] > 1:
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
-            return self._build_I_map_custom_field_conv(w, ddtheta, ddpsi, dg)
+            return self._build_I_map_custom_field_conv(w, ddtheta, ddpsi, dh, dg)
         else:
-            return self._build_I_map_custom_field_CL(w, ddtheta, ddpsi, dg)
-
+            return self._build_I_map_custom_field_CL(w, ddtheta, ddpsi, dh, dg)
 
     def _build_integration_grid(self):
         quad_rule = np.polynomial.legendre.leggauss if self._useGauLeg else\
@@ -2323,7 +2322,7 @@ class SourceFromField(IntegratedSource):
         tg_n, ag_n = quad_rule(self.quadm)
 
         if isinstance(self.customFieldData, (float, int)) or\
-                self.customFieldData is None:  # TODO: this is not correct
+                self.customFieldData is None:  # TODO: this is not 100% correct
             dataz = [-0.5*self.L0*self.Np, 0.5*self.L0*self.Np]
         else:
             dataz = self.customFieldData[:, 0]
@@ -2491,15 +2490,16 @@ class SourceFromField(IntegratedSource):
 
     def _build_I_map_custom_field_CL(self, w, ddtheta, ddpsi,
                                   harmonic=None, dgamma=None):
-
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
+
         if self.eEspread > 0:
             if dgamma is not None:
                 gamma += dgamma
             else:
                 sz = 1 if self.filamentBeam else NRAYS
                 gamma += gamma * self.eEspread * np.random.normal(size=sz)
+
         gamma = gamma * np.ones(NRAYS, dtype=self.cl_precisionF)
         scalarArgs = []  # R0
         R0 = self.R0 if self.R0 is not None else 0
@@ -2537,7 +2537,7 @@ class SourceFromField(IntegratedSource):
                               self.cl_precisionF(emcg0),
                               self.cl_precisionF(1./gamma[0]**2),
                               self.cl_precisionF(R0),
-                              self.cl_precisionF(w[0] * E2WC / betam)]
+                              self.cl_precisionF(w[0]*E2WC/betam)]
 
             slicedROArgs = [self.cl_precisionF(ddtheta),  # Theta
                             self.cl_precisionF(ddpsi)]  # Psi
@@ -2605,8 +2605,8 @@ class SourceFromField(IntegratedSource):
                     np.sqrt(Amp2Flux) * Is_local * 0.5 * self.dstep * ab,
                     np.sqrt(Amp2Flux) * Ip_local * 0.5 * self.dstep * ab)
 
-    def _build_I_map_custom_field_conv(self, w, ddtheta, ddpsi, dgamma=None):
-
+    def _build_I_map_custom_field_conv(self, w, ddtheta, ddpsi, harmonic=None,
+                                       dgamma=None):
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:
