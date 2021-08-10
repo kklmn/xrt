@@ -1050,7 +1050,7 @@ class Undulator(object):
                     print('install it as `pip install openpyxl`')
                     raise e
         else:
-            data = np.loadtxt(fname)
+            data = np.loadtxt(fname, **kwargs)
 
         datalen4 = data.shape[0] // 10
         minBx = data[datalen4:-datalen4, 1].min()
@@ -1347,7 +1347,8 @@ class Undulator(object):
         return Es, Ep
 
     def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
-                            harmonic=None):
+                            harmonic=None,
+                            eSpreadSigmas=3.5, eSpreadNSamples=36):
         """Returns the Stokes parameters in the shape (energy, theta, psi,
         [harmonic]), with *theta* being the horizontal mesh angles and *psi*
         the vertical mesh angles. Each one of the input parameters is a 1D
@@ -1379,7 +1380,7 @@ class Undulator(object):
         else:
             iharmonic = None
         if self.eEspread > 0:
-            spr = np.linspace(-3.5, 3.5, 36)
+            spr = np.linspace(-eSpreadSigmas, eSpreadSigmas, eSpreadNSamples)
             dgamma = self.gamma * spr * self.eEspread
             wspr = np.exp(-0.5 * spr**2)
             wspr /= wspr.sum()
