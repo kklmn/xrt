@@ -785,7 +785,7 @@ class SourceBase:
 
         *fixedEnergy* is either None or a value in eV. If *fixedEnergy* is
         specified, the energy band is not 0.1%BW relative to *fixedEnergy*, as
-        probably axpected but is given by (eMax - eMin) of the constructor.
+        probably expected but is given by (eMax - eMin) of the constructor.
 
         *wave* and *accuBeam* are used in wave diffraction. *wave* is a Beam
         object and determines the positions of the wave samples. It must be

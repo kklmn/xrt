@@ -244,7 +244,8 @@ def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
 
     *eigenN* sets the number of returned eigen modes. If None, the number of
     modes is inferred from the shape of the field stack *U* and is equal to the
-    number of macroelectrons (repeats).
+    number of macroelectrons (repeats). If given as a 2-tuple, *eigenN* refers
+    to the number of eigenvalues and eigenvectors separately.
 
     if *maxRepeats* are given, the stack is sliced up to that number. This
     option is introduced in order not to make the eigenvalue problem too big.
@@ -255,24 +256,34 @@ def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
     locU = U if maxRepeats is None else U[:maxRepeats, :, :]
     repeats, binsx, binsz = locU.shape
     if eigenN is None:
-        eigenN = repeats
-    if repeats < eigenN:
-        raise ValueError('"repeats" must be >= {0}'.format(eigenN))
+        eigenNw, eigenNv = repeats, repeats
+    elif isinstance(eigenN, (tuple, list)):
+        eigenNw, eigenNv = eigenN[:2]
+        if eigenNw is None:
+            eigenNw = repeats
+        if eigenNv is None:
+            eigenNv = repeats
+    else:
+        eigenNw, eigenNv = eigenN, eigenN
+    minEigenNw = min(eigenNw, eigenNv)
+    maxEigenNw = max(eigenNw, eigenNv)
+    if repeats < minEigenNw:
+        raise ValueError('"repeats" must be >= {0}'.format(minEigenNw))
     k = binsx * binsz
     D = np.array(locU).reshape((repeats, k), order='F').T
     DTD = np.dot(D.T.conjugate(), D)
     DTD /= np.diag(DTD).sum()
-    kwargs = dict(eigvals=(repeats-eigenN, repeats-1))
+    kwargs = dict(eigvals=(repeats-maxEigenNw, repeats-1))
     wPCA, vPCA = spl.eigh(DTD, **kwargs)
-    outPCA = np.zeros((k, eigenN), dtype=np.complex128)
-    for i in range(eigenN):
+    outPCA = np.zeros((k, eigenNv), dtype=np.complex128)
+    for i in range(eigenNv):
         mPCA = np.outer(vPCA[:, -1-i], vPCA[:, -1-i].T.conjugate())
         vv = np.dot(D, mPCA)[:, 0]
         if normalize:
             outPCA[:, -1-i] = vv / np.dot(vv, vv.conj())**0.5
         else:
             outPCA[:, -1-i] = vv
-    if (eigenN is None) and normalize:
+    if eigenNv == repeats and normalize:
         rE = np.dot(np.dot(vPCA, np.diag(wPCA)), np.conj(vPCA.T))
         print("diff DTD--decomposed(DTD) = {0}".format(np.abs(DTD-rE).sum()))
     return wPCA, outPCA

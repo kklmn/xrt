@@ -636,7 +636,7 @@ class xrtGlow(qt.QWidget):
                  'Aperture frame size, %'],
                 ['For OEs that do not have thickness',
                  'For OEs that have thickness, e.g. plates or lenses',
-                 None],
+                 ''],
                 [self.customGlWidget.oeThickness,
                  self.customGlWidget.oeThicknessForce,
                  self.customGlWidget.slitThicknessFraction])):
@@ -3152,30 +3152,19 @@ class xrtGlWidget(qt.QGLWidget):
         nsIndex = int(is2ndXtal)
         if is2ndXtal:
             xLimits = list(oe.limPhysX2)
-#            xLimits = list(oe.limOptX2) if\
-#                oe.limOptX2 is not None else oe.limPhysX2
-            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-                if oe.footprint is not None:
-                    xLimits = oe.footprint[nsIndex][:, 0]
             yLimits = list(oe.limPhysY2)
-#            yLimits = list(oe.limOptY2) if\
-#                oe.limOptY2 is not None else oe.limPhysY2
-            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-                if oe.footprint is not None:
-                    yLimits = oe.footprint[nsIndex][:, 1]
         else:
             xLimits = list(oe.limPhysX)
-#            xLimits = list(oe.limOptX) if\
-#                oe.limOptX is not None else oe.limPhysX
-            if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-                if oe.footprint is not None:
-                    xLimits = oe.footprint[nsIndex][:, 0]
             yLimits = list(oe.limPhysY)
-#            yLimits = list(oe.limOptY) if\
-#                oe.limOptY is not None else oe.limPhysY
-            if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-                if oe.footprint is not None:
-                    yLimits = oe.footprint[nsIndex][:, 1]
+
+        isClosedSurface = False
+        if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+            isClosedSurface = isinstance(oe, roes.SurfaceOfRevolution)
+            if oe.footprint is not None:
+                xLimits = oe.footprint[nsIndex][:, 0]
+        if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+            if oe.footprint is not None:
+                yLimits = oe.footprint[nsIndex][:, 1]
         localTiles = np.array(self.tiles)
 
         if oe.shape == 'round':
@@ -3186,17 +3175,20 @@ class xrtGlWidget(qt.QGLWidget):
             xLimits = [0, 1.]
             yLimits = [0, 2*np.pi]
             localTiles[1] *= 3
+        if isClosedSurface:
+            # the limits are in parametric coordinates
+            xLimits = yLimits  # s
+            yLimits = [0, 2*np.pi]  # phi
+            localTiles[1] *= 3
 
+        deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
         for i in range(localTiles[0]):
-            deltaX = (xLimits[1] - xLimits[0]) /\
-                float(localTiles[0])
             xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                   xLimits[0] + (i+1)*deltaX,
                                   self.surfCPOrder) + oe.dx
 
+            deltaY = (yLimits[1] - yLimits[0]) / float(localTiles[1])
             for k in range(localTiles[1]):
-                deltaY = (yLimits[1] - yLimits[0]) /\
-                    float(localTiles[1])
                 yGridOe = np.linspace(yLimits[0] + k*deltaY,
                                       yLimits[0] + (k+1)*deltaY,
                                       self.surfCPOrder)
@@ -3219,8 +3211,11 @@ class xrtGlWidget(qt.QGLWidget):
                 xv = np.copy(xv)
                 yv = np.copy(yv)
                 zv = np.zeros_like(xv)
+                if isinstance(oe, roes.SurfaceOfRevolution):
+                    # at z=0 (axis of rotation) phi is undefined, therefore:
+                    zv -= 100.
 
-                if oe.isParametric:
+                if oe.isParametric and not isClosedSurface:
                     xv, yv, zv = oe.xyz_to_param(xv, yv, zv)
 
                 zv = local_z(xv, yv)
@@ -3237,7 +3232,7 @@ class xrtGlWidget(qt.QGLWidget):
                 gbT.b = nv[1] * np.ones_like(zv)
                 gbT.c = nv[2] * np.ones_like(zv)
 
-                if thickness > 0:
+                if thickness > 0 and not isClosedSurface:
                     gbB = rsources.Beam(copyFrom=gbT)
                     if isinstance(oe, roes.LauePlate):
                         gbB.z[:] = gbT.z - thickness
@@ -3264,21 +3259,21 @@ class xrtGlWidget(qt.QGLWidget):
                     dC = cShift * iSurf
                     self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
                                         gbT.a, gbT.b, gbT.c, dC)
-                    if thickness > 0 and\
-                            not isinstance(oe, roes.DoubleParaboloidLens):
+                    if thickness > 0 \
+                            and not isinstance(oe, roes.DoubleParaboloidLens)\
+                            and not isClosedSurface:
                         self.plotCurvedMesh(gbB.x, gbB.y, gbB.z,
                                             gbB.a, gbB.b, gbB.c, dC)
 
     # Side faces
         if isinstance(oe, roes.Plate):
             self.setMaterial('semiSi')
-        if thickness > 0:
+        if thickness > 0 and not isClosedSurface:
+            deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
             for ie, yPos in enumerate(yLimits):
                 for i in range(localTiles[0]):
                     if oe.shape == 'round':
                         continue
-                    deltaX = (xLimits[1] - xLimits[0]) /\
-                        float(localTiles[0])
                     xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                           xLimits[0] + (i+1)*deltaX,
                                           self.surfCPOrder) + oe.dx
@@ -3325,9 +3320,8 @@ class xrtGlWidget(qt.QGLWidget):
             for ie, xPos in enumerate(xLimits):
                 if ie == 0 and oe.shape == 'round':
                     continue
+                deltaY = (yLimits[1] - yLimits[0]) / float(localTiles[1])
                 for i in range(localTiles[1]):
-                    deltaY = (yLimits[1] - yLimits[0]) /\
-                        float(localTiles[1])
                     yGridOe = np.linspace(yLimits[0] + i*deltaY,
                                           yLimits[0] + (i+1)*deltaY,
                                           self.surfCPOrder)

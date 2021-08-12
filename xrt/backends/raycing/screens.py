@@ -165,7 +165,7 @@ class Screen(object):
         raycing.append_to_flow(self.expose, [blo], inspect.currentframe())
         return blo
 
-    def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None):
+    def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None, condition=None):
         """Creates the beam arrays used in wave diffraction calculations.
         *prevOE* is the diffracting element: a descendant from
         :class:`~xrt.backends.raycing.oes.OE`,
@@ -175,6 +175,17 @@ class Screen(object):
         *phi* and *theta* arrays for a hemispheric screen. The two arrays are
         generally of different 1D shapes. They are used to create a 2D mesh by
         ``meshgrid``.
+
+        *condition*: a callable defined in the user script with two flattened
+            meshgrid arrays as inputs and outputs. Can be used to select wave
+            samples. An example:
+
+            .. code-block:: python
+
+                def condition(d1s, d2s):
+                    cond = d1s**2 + d2s**2 <= pinholeDia**2 / 4  # in a pinhole
+                    return d1s[cond], d2s[cond]
+
         """
         if rw is None:
             from . import waves as rw
@@ -189,6 +200,8 @@ class Screen(object):
                 dS = 1.
         else:
             dS = 1.
+        if condition is not None:
+            d1s, d2s = condition(d1s, d2s)
         nrays = len(d1s)
 
         if isinstance(self, HemisphericScreen):

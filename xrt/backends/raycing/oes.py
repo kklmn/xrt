@@ -158,6 +158,7 @@ def flatten(x):
 class DicedOE(OE):
     """Base class for a diced optical element. It implements a flat diced
     mirror."""
+
     def __init__(self, *args, **kwargs):
         """
         *dxFacet*, *dyFacet*: float
@@ -1169,11 +1170,11 @@ class EllipticalMirrorParam(OE):
         self.reset_pq(self.p, self.q, self.f1, self.f2)
 
     def _to_global(self, lb):
-        if self.extraPitch or self.extraRoll or self.extraYaw:
-            raycing.rotate_beam(
-                lb, rotationSequence='-'+self.extraRotationSequence,
-                pitch=self.extraPitch, roll=self.extraRoll,
-                yaw=self.extraYaw, skip_xyz=True)
+        # if self.extraPitch or self.extraRoll or self.extraYaw:
+        #     raycing.rotate_beam(
+        #         lb, rotationSequence='-'+self.extraRotationSequence,
+        #         pitch=self.extraPitch, roll=self.extraRoll,
+        #         yaw=self.extraYaw, skip_xyz=True)
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
                             yaw=self.yaw, skip_xyz=True)
@@ -1883,6 +1884,7 @@ class DoubleParaboloidLens(ParaboloidFlatLens):
 class DoubleParabolicCylinderLens(ParabolicCylinderFlatLens):
     """Implements a refractive lens or a stack of lenses (CRL) with two equal
     parabolic cylinders from both sides."""
+
     def local_z2(self, x, y):
         return self.local_z1(x, y)
 
@@ -1903,6 +1905,7 @@ class SurfaceOfRevolution(OE):
     """Base class for parametric surfaces of revolution. The parameterization
     implements cylindrical coordinates, where *s* is *y* (along the beamline),
     and *phi* and *r* are polar coordinates in planes normal to *s*."""
+
     def get_surface_limits(self):
         self.isParametric = True
         OE.get_surface_limits(self)

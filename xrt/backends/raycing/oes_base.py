@@ -1041,21 +1041,23 @@ class OE(object):
 
     def local_to_global(self, lb, returnBeam=False, **kwargs):
         dx, dy, dz = 0, 0, 0
+        extraAnglesSign = 1.  # only for pitch and yaw
         if isinstance(self, DCM):
             is2ndXtal = kwargs.get('is2ndXtal', False)
-            if not is2ndXtal:
-                pitch = self.pitch + self.bragg
-                roll = self.roll + self.positionRoll + self.cryst1roll
-                yaw = self.yaw
-                dx = self.dx
-            else:
+            if is2ndXtal:
                 pitch = -self.pitch - self.bragg + self.cryst2pitch +\
                     self.cryst2finePitch
-                roll = self.roll + self.cryst2roll - np.pi + self.positionRoll
+                roll = self.roll + self.cryst2roll + self.positionRoll
                 yaw = -self.yaw
                 dx = -self.dx
                 dy = self.cryst2longTransl
                 dz = -self.cryst2perpTransl
+                extraAnglesSign = -1.
+            else:
+                pitch = self.pitch + self.bragg
+                roll = self.roll + self.positionRoll + self.cryst1roll
+                yaw = self.yaw
+                dx = self.dx
         else:
             pitch = self.pitch
             roll = self.roll + self.positionRoll
@@ -1071,11 +1073,14 @@ class OE(object):
         if self.extraPitch or self.extraRoll or self.extraYaw:
             raycing.rotate_beam(
                 lb, rotationSequence='-'+self.extraRotationSequence,
-                pitch=self.extraPitch, roll=self.extraRoll,
-                yaw=self.extraYaw, **kwargs)
+                pitch=extraAnglesSign*self.extraPitch, roll=self.extraRoll,
+                yaw=extraAnglesSign*self.extraYaw, **kwargs)
 
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw, **kwargs)
+        if isinstance(self, DCM):
+            if is2ndXtal:
+                raycing.rotate_beam(lb, roll=np.pi)
 
         if self.isParametric:
             s, phi, r = self.xyz_to_param(lb.x, lb.y, lb.z)
@@ -1557,14 +1562,18 @@ class OE(object):
 # lb is truly local coordinates whereas vlb is in virgin local coordinates:
         if local_n is None:
             local_n = self.local_n
+        extraAnglesSign = 1.  # only for pitch and yaw
+        if is2ndXtal:
+            raycing.rotate_beam(lb, good, roll=-np.pi)
+            extraAnglesSign = -1.  # only for pitch and yaw
         raycing.rotate_beam(
             lb, good, rotationSequence=self.rotationSequence,
             pitch=-pitch, roll=-roll, yaw=-yaw)
         if self.extraPitch or self.extraRoll or self.extraYaw:
             raycing.rotate_beam(
                 lb, good, rotationSequence=self.extraRotationSequence,
-                pitch=-self.extraPitch, roll=-self.extraRoll,
-                yaw=-self.extraYaw)
+                pitch=-extraAnglesSign*self.extraPitch, roll=-self.extraRoll,
+                yaw=-extraAnglesSign*self.extraYaw)
         if dx:
             lb.x[good] -= dx
         if dy:
@@ -2034,11 +2043,13 @@ class OE(object):
         if self.extraPitch or self.extraRoll or self.extraYaw:
             raycing.rotate_beam(
                 vlb, good, rotationSequence='-'+self.extraRotationSequence,
-                pitch=self.extraPitch, roll=self.extraRoll,
-                yaw=self.extraYaw)
+                pitch=extraAnglesSign*self.extraPitch, roll=self.extraRoll,
+                yaw=extraAnglesSign*self.extraYaw)
         raycing.rotate_beam(vlb, good,
                             rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw)
+        if is2ndXtal:
+            raycing.rotate_beam(vlb, good, roll=np.pi)
         self.footprint.extend([np.hstack((np.min(np.vstack((
             lb.x[good], lb.y[good], lb.z[good])), axis=1),
             np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
@@ -2212,7 +2223,7 @@ class DCM(OE):
         self._reflect_local(
             good2, lo2, gb2,
             -self.pitch - self.bragg + self.cryst2pitch + self.cryst2finePitch,
-            self.roll + self.cryst2roll - np.pi + self.positionRoll, -self.yaw,
+            self.roll + self.cryst2roll + self.positionRoll, -self.yaw,
             -self.dx, self.cryst2longTransl, -self.cryst2perpTransl,
             local_z=self.local_z2, local_n=self.local_n2,
             fromVacuum=fromVacuum2, material=self.material2, is2ndXtal=True)
