@@ -15,7 +15,7 @@ from multiprocessing import Pool, cpu_count
 import gzip
 from .. import raycing
 from .sources_beams import Beam
-from .sources_synchr import Undulator, SourceFromField
+from .sources_synchr2 import Undulator, SourceFromField
 from .physconsts import M0C2, K2B, SIE0, SIC, PI, PI2, CHeVcm, FINE_STR
 #basepath = os.path.dirname(raycing.__file__)
 #SRWPATH = os.path.abspath(os.path.join(basepath,'SRW'))
@@ -26,7 +26,7 @@ try:
         SRWLPartBeam, SRWLWfr, SRWLMagFld3D
     isSRW = True
 except:
-    print("SRW not found")
+#    print("SRW not found")
 #    raise
     isSRW = False
 
