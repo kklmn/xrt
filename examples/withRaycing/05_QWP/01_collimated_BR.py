@@ -107,7 +107,7 @@ def define_plots(beamLine):
     plot = xrtp.XYCPlot(
         'beamFSM2', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-15, 15]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[25, 55]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[65, 95]),
         ePos=1, title=beamLine.fsm2.name+'_E')
     plot.caxis.fwhmFormatStr = fwhmFormatStrE
     plot.caxis.limits = eLimits
@@ -120,7 +120,7 @@ def define_plots(beamLine):
     plot = xrtp.XYCPlot(
         'beamFSM2', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-15, 15]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[25, 55]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[65, 95]),
         caxis=xrtp.XYCAxis('degree of polarization', '',
                            data=raycing.get_polarization_degree,
                            limits=[0, 1]),
@@ -133,7 +133,7 @@ def define_plots(beamLine):
     plot = xrtp.XYCPlot(
         'beamFSM2', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-15, 15]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[25, 55]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[65, 95]),
         caxis=xrtp.XYCAxis('circular polarization rate', '',
                            data=raycing.get_circular_polarization_rate,
                            limits=[-1, 1]),
@@ -146,7 +146,7 @@ def define_plots(beamLine):
     plot = xrtp.XYCPlot(
         'beamFSM2', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-15, 15]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[25, 55]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[65, 95]),
         caxis=xrtp.XYCAxis('ratio of ellipse axes', '',
                            data=raycing.get_ratio_ellipse_axes,
                            limits=[-1, 1]),
@@ -159,7 +159,7 @@ def define_plots(beamLine):
     plot = xrtp.XYCPlot(
         'beamFSM2', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-15, 15]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[25, 55]),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[65, 95]),
         caxis=xrtp.XYCAxis('angle of polarization ellipse', 'rad',
                            data=raycing.get_polarization_psi,
                            limits=[-math.pi/2, math.pi/2]),
