@@ -141,7 +141,10 @@ def start_jobs():
     for plot in _plots:
         if plot.persistentName:
             plot.restore_plots()
-        plot.fig.canvas.set_window_title(plot.title)
+        try:
+            plot.fig.canvas.manager.set_window_title(plot.title)
+        except AttributeError:
+            pass
 
     runCardVals.iteration = np.long(0)
     noTimer = len(_plots) == 0 or\
@@ -374,7 +377,10 @@ def on_finish():
                 saved = runCardVals.savedResults[aSavedResult]
                 plot.clean_plots()
                 saved.restore(plot)
-                plot.fig.canvas.set_window_title(plot.title)
+                try:
+                    plot.fig.canvas.manager.set_window_title(plot.title)
+                except AttributeError:
+                    pass
                 for runCardVals.passNo in [1, 2]:
                     plot.plot_plots()
                     plot.save('_norm' + str(runCardVals.passNo))
