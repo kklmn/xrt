@@ -609,5 +609,6 @@ from .sources_beams import Beam, copy_beam, rotate_coherency_matrix,\
 from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
     CollimatedMeshSource, shrink_source, make_energy, make_polarization,\
     GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam
-from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS
-from .sources_synchr import BendingMagnet, Wiggler, Undulator
+from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
+    UndulatorSRW, SourceFromFieldSRW
+from .sources_synchr2 import BendingMagnet, Wiggler, Undulator, SourceFromField
