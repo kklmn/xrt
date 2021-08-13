@@ -388,6 +388,7 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
     for_one_alpha(siCrystal, -5., hkl)
     for_one_alpha(siCrystal, 5., hkl)
 
+
 def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
                                 legendPos1=4, legendPos2=1, Rcurvmm=None,
                                 alphas=[0]):
@@ -400,7 +401,9 @@ def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
 
     if isOpenCL:
         import xrt.backends.raycing.myopencl as mcl
-        matCL = mcl.XRT_CL(r'materials.cl', targetOpenCL='CPU')
+        matCL = mcl.XRT_CL(r'materials.cl',
+                           # targetOpenCL='CPU'
+                           )
     else:
         matCL = None
 
@@ -429,9 +432,9 @@ def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
         ax = fig.add_subplot(111)
 
         curS, curP = crystal.get_amplitude(E, gamma0, gammah, hns0)
-        curSD, curPD = crystal.get_amplitude(E, gamma0, gammah, hns0,
+        curSD, curPD = crystal.get_amplitude_TT(E, gamma0, gammah, hns0,
                                              ucl=matCL, alphaAsym=alpha,
-                                             useTT=True, Rcurvmm=Rcurv)
+                                             Rcurvmm=Rcurv)
 
 # phases:
 #        ax2 = ax.twinx()
@@ -719,6 +722,7 @@ def compare_reflectivity():
                      os.path.join(dataDir, "Rh2mrad_p.xf1f2.gz"),
                      2e-3, '@ 2 mrad')
 
+
 def compare_reflectivity_coated():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, strOnly, refs, refp, theta, reprAngle):
@@ -727,7 +731,7 @@ def compare_reflectivity_coated():
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (keV)')
         ax.set_ylabel('reflectivity')
-        ax.set_xlim(100, 4e4)
+        # ax.set_xlim(100, 4e4)
         ax.set_ylim(1e-7, 2)
         fig.suptitle(stripe.name + ' ' + reprAngle, fontsize=16)
         x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
@@ -771,18 +775,17 @@ def compare_reflectivity_coated():
                       substrate=mSi, surfaceRoughness=20,
                       substRoughness=20, name='30 nm Rh on Si')
     cCSiO2 = rm.Coated(coating=mC, cThickness=200,
-                       substrate=mSiO2, surfaceRoughness=10,
-                       substRoughness=10, name='20 nm Diamond on Quartz')
+                        substrate=mSiO2, surfaceRoughness=10,
+                        substRoughness=10, name='20 nm Diamond on Quartz')
     for_one_material(cRhSi, mRh,
                      os.path.join(dataDir, "RhSi_s_rough2.CXRO.gz"),
                      os.path.join(dataDir, "RhSi_p_rough2.CXRO.gz"),
                      4e-3, '@ 4 mrad,\nRMS roughness 2 nm')
 
     for_one_material(cCSiO2, mC,
-                     os.path.join(dataDir, "CSiO2_s_rough1.CXRO.gz"),
-                     os.path.join(dataDir, "CSiO2_p_rough1.CXRO.gz"),
-                     np.radians(0.2), '@ 0.2 deg,\nRMS roughness 1 nm')
-
+                      os.path.join(dataDir, "CSiO2_s_rough1.CXRO.gz"),
+                      os.path.join(dataDir, "CSiO2_p_rough1.CXRO.gz"),
+                      np.radians(0.2), '@ 0.2 deg,\nRMS roughness 1 nm')
 
 
 def compare_reflectivity_slab():
@@ -905,6 +908,7 @@ def compare_reflectivity_multilayer():
 #                     u'Depth graded multilayer \n 40 × [27 Å Si + 18 Å W]'
 #                     u' to [54 Å Si + 36 Å W] multilayer @ 8.05 keV',
 #                     '-antigraded')
+
 
 def compare_reflectivity_multilayer_interdiffusion():
     """A comparison subroutine used in the module test suit."""
@@ -1086,81 +1090,81 @@ def run_tests():
 
 #Compare the calculated rocking curves of Si crystals with those calculated by
 #XCrystal and XInpro (parts of XOP):
-#    compare_rocking_curves('111')
-#    compare_rocking_curves('333')
-#    compare_rocking_curves('111', t=0.007)  # t is thickness in mm
-#    compare_rocking_curves('333', t=0.007)
-#    compare_rocking_curves('111', t=0.100)
-#    compare_rocking_curves('333', t=0.100)
-#    compare_rocking_curves('111', t=0.007, geom='Bragg transmitted')
-#    compare_rocking_curves('333', t=0.007, geom='Bragg transmitted')
-#    compare_rocking_curves('111', t=0.100, geom='Bragg transmitted')
-#    compare_rocking_curves('333', t=0.100, geom='Bragg transmitted')
-#    compare_rocking_curves('111', t=0.007, geom='Laue reflected')
-#    compare_rocking_curves('333', t=0.007, geom='Laue reflected')
-#    compare_rocking_curves('111', t=0.100, geom='Laue reflected')
-#    compare_rocking_curves('333', t=0.100, geom='Laue reflected')
-#    compare_rocking_curves('111', t=0.007, geom='Laue transmitted')
-#    compare_rocking_curves('333', t=0.007, geom='Laue transmitted')
-#    compare_rocking_curves('111', t=0.100, geom='Laue transmitted')
-#    compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
+    compare_rocking_curves('111')
+    # compare_rocking_curves('333')
+    # compare_rocking_curves('111', t=0.007)  # t is thickness in mm
+    # compare_rocking_curves('333', t=0.007)
+    # compare_rocking_curves('111', t=0.100)
+    # compare_rocking_curves('333', t=0.100)
+    compare_rocking_curves('111', t=0.007, geom='Bragg transmitted')
+    # compare_rocking_curves('333', t=0.007, geom='Bragg transmitted')
+    # compare_rocking_curves('111', t=0.100, geom='Bragg transmitted')
+    # compare_rocking_curves('333', t=0.100, geom='Bragg transmitted')
+    # compare_rocking_curves('111', t=0.007, geom='Laue reflected')
+    # compare_rocking_curves('333', t=0.007, geom='Laue reflected')
+    # compare_rocking_curves('111', t=0.100, geom='Laue reflected')
+    # compare_rocking_curves('333', t=0.100, geom='Laue reflected')
+    # compare_rocking_curves('111', t=0.007, geom='Laue transmitted')
+    # compare_rocking_curves('333', t=0.007, geom='Laue transmitted')
+    # compare_rocking_curves('111', t=0.100, geom='Laue transmitted')
+    # compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
 
 # Compare rocking curves for bent Si crystals with those calculated by
 #XCrystal_Bent (Takagi-Taupin):
-#    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=np.inf, alphas=[30])
-#    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=np.inf, alphas=[30])
-#    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=50*1e3,
-#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
-#    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=50*1e3,
-#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+                          Rcurvmm=np.inf, alphas=[30])
+    # compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+    #                       Rcurvmm=np.inf, alphas=[30])
+    # compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+    #                       Rcurvmm=50*1e3,
+    #                       alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+    # compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+    #                       Rcurvmm=50*1e3,
+    #                       alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
 
 
 #check that Bragg transmitted and Laue transmitted give the same results if the
 #beam path is equal:
-#    beamPath = 0.1  # mm
-#    compare_Bragg_Laue('111', beamPath=beamPath)
-#    compare_Bragg_Laue('333', beamPath=beamPath)
+    beamPath = 0.1  # mm
+    compare_Bragg_Laue('111', beamPath=beamPath)
+    compare_Bragg_Laue('333', beamPath=beamPath)
 
 #Compare the calculated reflectivities of Si, Pt, SiO_2 with those by Xf1f2
 #(part of XOP):
-#    compare_reflectivity()
+    compare_reflectivity()
 
-#    compare_reflectivity_coated()
-
-#Compare the calculated reflectivities of W slab with those by Mlayer
-#(part of XOP):
-#    compare_reflectivity_slab()
+    compare_reflectivity_coated()
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
-#    compare_reflectivity_multilayer()
+    compare_reflectivity_slab()
+
+#Compare the calculated reflectivities of W slab with those by Mlayer
+#(part of XOP):
+    # compare_reflectivity_multilayer()
     compare_reflectivity_multilayer_interdiffusion()
-#    compare_dTheta()
+    # compare_dTheta()
 
 #Compare the calculated absorption coefficient with that by XCrossSec
 #(part of XOP):
-#    compare_absorption_coeff()
+    compare_absorption_coeff()
 
 #Compare the calculated transmittivity with that by XPower
 #(part of XOP):
-#    compare_transmittivity()
+    compare_transmittivity()
 
 #Play with Si crystal:
-#    crystalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=100.)
-#    print(2 * crystalSi.get_a()/math.sqrt(3.))  # 2dSi111
-#    print('Si111 d-spacing = {0:.6f}'.format(crystalSi.d))
-#    print(crystalSi.get_Bragg_offset(8600, 8979))
-#
-#    crystalDiamond = rm.CrystalDiamond((1, 1, 1), 2.0592872, elements='C')
-#    E = 9000.
-#    print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for s-polarization'.
-#          format(E, crystalDiamond.get_Darwin_width(E) * 1e6))
-#    print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for p-polarization'.
-#          format(E, crystalDiamond.get_Darwin_width(E, polarization='p')*1e6))
+    crystalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=100.)
+    print(2 * crystalSi.get_a()/math.sqrt(3.))  # 2dSi111
+    print('Si111 d-spacing = {0:.6f}'.format(crystalSi.d))
+    print(crystalSi.get_Bragg_offset(8600, 8979))
+
+    crystalDiamond = rm.CrystalDiamond((1, 1, 1), 2.0592872, elements='C')
+    E = 9000.
+    print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for s-polarization'.
+          format(E, crystalDiamond.get_Darwin_width(E) * 1e6))
+    print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for p-polarization'.
+          format(E, crystalDiamond.get_Darwin_width(E, polarization='p')*1e6))
 
     plt.show()
     print("finished")
