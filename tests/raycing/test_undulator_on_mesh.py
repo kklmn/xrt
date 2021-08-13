@@ -118,7 +118,7 @@ def main(case, icalc, plot):
     axplot(urgentEnergy*1e-3, fluxU, label='Urgent')
     # end UrgentUndulator
 
-    ax.set_ylim(1e9, 4e13)
+    # ax.set_ylim(1e9, 4e13)
     ax.legend()
     fig.savefig(u'flux_case{0}_xrt_UrgentICALC{1}.png'.format(case, icalc))
 
@@ -134,17 +134,17 @@ if __name__ == '__main__':
     # ICALC=2 non-zero emittance, infinite N
     # ICALC=3 zero emittance, finite N
 
-#    main(case=1, icalc=3, plot='lin-y')
-#    main(case=1, icalc=2, plot='lin-y')
-#    main(case=1, icalc=1, plot='lin-y')
+    # main(case=1, icalc=3, plot='lin-y')
+    # main(case=1, icalc=2, plot='lin-y')
+    # main(case=1, icalc=1, plot='lin-y')
 
-#    main(case=2, icalc=3, plot='lin-y')
-#    main(case=2, icalc=2, plot='lin-y')
-#    main(case=2, icalc=1, plot='lin-y')
+    main(case=2, icalc=3, plot='lin-y')
+    # main(case=2, icalc=2, plot='lin-y')
+    # main(case=2, icalc=1, plot='lin-y')
 
-#    main(case=3, icalc=3, plot='log-y')
-#    main(case=3, icalc=2, plot='log-y')
-    main(case=3, icalc=1, plot='log-y')
+    # main(case=3, icalc=3, plot='log-y')
+    # main(case=3, icalc=2, plot='log-y')
+    # main(case=3, icalc=1, plot='log-y')
 
     print("Done in {0} s".format(time.time()-t0))
     plt.show()

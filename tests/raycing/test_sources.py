@@ -61,12 +61,11 @@ def visualize(source, data, title, saveName=None, sign=1):
         ax1Dt = plt.axes(rect_1Dx, sharey=ax2D)
         plt.setp(ax1DE.get_xticklabels() + ax1Dt.get_yticklabels(),
                  visible=False)
-        dE = source.energies[1] - source.energies[0]
+        dE = energies[1] - energies[0]
         dt = ts[1] - ts[0]
-        ax1DE.plot(
-            source.energies, np.sum(what, axis=1)*dt, 'r')
+        ax1DE.plot(energies, np.sum(what, axis=1)*dt, 'r')
 #            ax1DE.set_yscale('log')
-        ax1Dt.plot(np.sum(what/source.energies[:, None]*dE, axis=0), ts, 'r')
+        ax1Dt.plot(np.sum(what/energies[:, None]*dE, axis=0), ts, 'r')
 #            ax1Dt.set_xscale('log')
         ax1DE.set_ylim(bottom=0)
         ax1DE.set_yticks(np.array([0, 2, 4, 6, 8])*1e16)
@@ -89,8 +88,18 @@ def visualize(source, data, title, saveName=None, sign=1):
             va='center')
         return fig, ax2D, ax1DE, ax1Dt
 
-    xs = source.xs * 1e3  # from rad to mrad
-    zs = source.zs * 1e3  # from rad to mrad
+
+    if hasattr(source, 'xs'):
+        xs = source.xs * 1e3  # from rad to mrad
+        zs = source.zs * 1e3  # from rad to mrad
+        energies = source.energies
+    else:
+        xs = np.mgrid[source.Theta_min:source.Theta_max + 0.5*source.dTheta:
+                      source.dTheta] * 1e3
+        zs = np.mgrid[source.Psi_min:source.Psi_max + 0.5*source.dPsi:
+                      source.dPsi] * 1e3
+        energies = np.mgrid[source.E_min:source.E_max + 0.5*source.dE:
+                            source.dE]
     xSlice = 0
     zSlice = 0
     if 'xrt' in source.prefix_save_name() or\
@@ -106,11 +115,9 @@ def visualize(source, data, title, saveName=None, sign=1):
 
     figX, ax2EX, ax1EX, ax1XX = one_fig(data[:, :, zSlice], xs, 'x', 'z')
     figZ, ax2EZ, ax1EZ, ax1ZZ = one_fig(data[:, xSlice, :], zs, 'z', 'x')
-    dE = source.energies[1] - source.energies[0]
-    integralEvsX = \
-        np.sum(data[:, :, zSlice]/source.energies[:, None], axis=0)*dE
-    integralEvsZ = \
-        np.sum(data[:, xSlice, :]/source.energies[:, None], axis=0)*dE
+    dE = energies[1] - energies[0]
+    integralEvsX = np.sum(data[:, :, zSlice]/energies[:, None], axis=0)*dE
+    integralEvsZ = np.sum(data[:, xSlice, :]/energies[:, None], axis=0)*dE
 
     maxIntegral = max(np.max(integralEvsX), np.max(integralEvsZ))
     ax1XX.set_xlim(maxIntegral*(sign-1)*0.5, maxIntegral)
@@ -138,7 +145,12 @@ def visualize3D(source, data, isZplane=True, saveName=None):
         """Example showing how to view a 3D numpy array in mayavi2.
         """
         def set_labelE(ind):
-            return '{0:.0f} eV'.format(source.energies[ind])
+            if hasattr(source, 'energies'):
+                energies = source.energies
+            else:
+                energies = np.mgrid[source.E_min:source.E_max + 0.5*source.dE:
+                                    source.dE]
+            return '{0:.0f} eV'.format(energies[ind])
 
         def move_view(obj, evt):
             labelE.text = set_labelE(ipwX.ipw.slice_index)
@@ -257,11 +269,11 @@ def test_synchrotron_source(SourceClass, **kwargs):
 
     source = SourceClass(**kwargs)
 
-#    if source.prefix_save_name().startswith('srw'):
-#        import pickle
-#        pickleName = 'srw-und-non0em.pickle'
-#        with open(pickleName, 'rb') as f:
-#            I0, l1, l2, l3 = pickle.load(f)[0:4]
+    # if source.prefix_save_name().startswith('srw'):
+    #     import pickle
+    #     pickleName = 'srw-und-non0em.pickle'
+    #     with open(pickleName, 'rb') as f:
+    #         I0, l1, l2, l3 = pickle.load(f)[0:4]
 
     print('started')
     I0, l1, l2, l3 = source.intensities_on_mesh()
@@ -271,29 +283,29 @@ def test_synchrotron_source(SourceClass, **kwargs):
     print('calculations took {0:.1f} s'.format(tstop - tstart))
 
 ##for long calculations like srw:
-#    if source.prefix_save_name().startswith('srw'):
-#        import pickle
-#        pickleName = source.prefix_save_name()+'.pickle'
-#        with open(pickleName, 'wb') as f:
-#            pickle.dump((I0, l1, l2, l3, tstop-tstart), f, protocol=2)
+    # if source.prefix_save_name().startswith('srw'):
+    #     import pickle
+    #     pickleName = source.prefix_save_name()+'.pickle'
+    #     with open(pickleName, 'wb') as f:
+    #         pickle.dump((I0, l1, l2, l3, tstop-tstart), f, protocol=2)
 
 ##visualize in 2D:
     visualize(source, I0, r'$I_0$', 'I0')
-#    visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
-#    visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
-#    visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
-#    sign = -1
-#    if hasattr(source, 'Kx'):
-#        if source.Kx > 0:
-#            sign = 1
-#    visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
+    # visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
+    # visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
+    # visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
+    # sign = -1
+    # if hasattr(source, 'Kx'):
+    #     if source.Kx > 0:
+    #         sign = 1
+    # visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
 ##select only one visualize3D at a time:
     # visualize3D(source, I0, isZplane=False, saveName='Itot')
-#    visualize3D(source, I0*(1+l1)/2., isZplane=False, saveName='IsPol')
-#    visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
-#    visualize3D(source, I0*l2/2., saveName='IspRe')
-#    visualize3D(source, I0*l3/2., saveName='IspIm')
+    # visualize3D(source, I0*(1+l1)/2., isZplane=False, saveName='IsPol')
+    # visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
+    # visualize3D(source, I0*l2/2., saveName='IspRe')
+    # visualize3D(source, I0*l3/2., saveName='IspIm')
 #
 if __name__ == '__main__':
     """Uncomment the block you want to test."""
