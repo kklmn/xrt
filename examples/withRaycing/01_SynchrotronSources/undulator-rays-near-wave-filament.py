@@ -1,4 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
+"Select rays or wave, far- or near-field, filament or normal (ensemble) beam."
+
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "08 Mar 2016"
 
@@ -21,7 +23,7 @@ E0 = 11350.
 K = 1.91988
 
 what, repeats = '-rays', 100
-#what, repeats = '-wave', 1000
+# what, repeats = '-wave', 1000
 
 suffix = what
 
@@ -36,7 +38,8 @@ ppb = 1  # Number of pixels per histogram bin
 eUnit = 'eV'
 
 prefix = 'xrt-far' + case
-#prefix = 'xrt-near' + case
+# prefix = 'xrt-near' + case
+
 filamentBeam = False
 
 kwargs = dict(

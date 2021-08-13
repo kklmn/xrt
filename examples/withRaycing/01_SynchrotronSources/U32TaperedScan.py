@@ -77,7 +77,10 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, beamLine):
-    for stepE in np.linspace(E0-dEw, E0+dEw, 161):
+    energies = np.linspace(E0-dEw, E0+dEw, 161)
+    print("starting a scan of {0} points".format(len(energies)))
+    for iE, stepE in enumerate(energies):
+        print("energy point {0} of {1}".format(iE+1, len(energies)))
         beamLine.sources[0].E_max = stepE + 0.5
         beamLine.sources[0].E_min = stepE - 0.5
         for plot in plots:

@@ -156,13 +156,12 @@ else:
     bins = 256  # Number of bins in the plot histogram
     ppb = 1  # Number of pixels per histogram bin
 
-Source = rs.Undulator
+Source = rs.SourceFromField
 kwargs = dict(
     eE=1.5, eI=0.5, eEspread=8e-4,
     eEpsilonX=6.0, eEpsilonZ=0.06, betaX=5.66, betaZ=2.85,
-    period=84., n=36,
+    # period=84., n=36,
     xPrimeMax=xPrimeMax, zPrimeMax=zPrimeMax,
-    xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
 #    targetOpenCL='CPU',
     filamentBeam=filamentBeam)
 xlimits = [-xPrimeMax*R0*1e-3, xPrimeMax*R0*1e-3]

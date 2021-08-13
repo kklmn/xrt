@@ -189,7 +189,7 @@ def run(case):
 
 
 if __name__ == '__main__':
-#    run('Balder')
+    # run('Balder')
     run('BioMAX & NanoMAX')
-#    run('Veritas')
-#    run('Hippie')
+    # run('Veritas')
+    # run('Hippie')
