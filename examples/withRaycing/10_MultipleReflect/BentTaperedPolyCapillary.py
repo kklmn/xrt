@@ -200,7 +200,7 @@ def define_plots(beamLine):
         plots.append(plot)
 
     #    for i in beamLine.firstInLayer:
-        capillariesToShow = 0, (layers-1)/2, layers-1
+        capillariesToShow = 0, (layers-1)//2, layers-1
     #    print(capillariesToShow)
         for i in capillariesToShow:
             beamLocal = 'beamCapillaryLocalN{0:02d}'.format(i)
