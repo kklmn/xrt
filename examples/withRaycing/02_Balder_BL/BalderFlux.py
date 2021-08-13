@@ -38,13 +38,14 @@ def run(case):
         eN=2000, nx=20, nz=10)
     kwargs['distE'] = 'BW'
     source = rs.Wiggler(myBalder, **kwargs)
+    source.reset()
     E = np.mgrid[source.E_min:(source.E_max + 0.5*source.dE):source.dE]
 
     I0 = source.intensities_on_mesh()[0]
     flux = I0.sum(axis=(1, 2)) * source.dTheta * source.dPsi
 
     fig = plt.figure(figsize=(10, 6))
-    fig.suptitle(u'Integrated {0} beam flux into {1}×{2} mrad²'.format(
+    fig.suptitle(u'Integrated {0} beam flux into {1:.3f}×{2:.3f} mrad²'.format(
         case, accHor, accVer), fontsize=14)
 #    fig.subplots_adjust(right=0.88)
     ax = fig.add_subplot(111)
