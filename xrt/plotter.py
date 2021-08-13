@@ -784,7 +784,10 @@ class XYCPlot(object):
         if useQtWidget:
             self.canvas = MyQtFigCanvas(figure=self.fig, xrtplot=self)
 
-        self.fig.canvas.set_window_title(self.title)
+        try:
+            self.fig.canvas.manager.set_window_title(self.title)
+        except AttributeError:
+            pass
 
         if plt.get_backend().lower() in (
                 x.lower() for x in mpl.rcsetup.non_interactive_bk):
