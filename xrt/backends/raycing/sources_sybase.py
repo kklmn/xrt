@@ -646,6 +646,8 @@ class SourceBase:
            narrow.
 
         """
+        if self.needReset:
+            self.reset()
         if isinstance(energy, str):  # i.e. if 'auto'
             energy = np.mgrid[self.E_min:self.E_max + 0.5*self.dE:self.dE]
 
