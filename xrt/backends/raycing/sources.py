@@ -611,4 +611,4 @@ from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
     GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam
 from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
     UndulatorSRW, SourceFromFieldSRW
-from .sources_synchr2 import BendingMagnet, Wiggler, Undulator, SourceFromField
+from .sources_synchr import BendingMagnet, Wiggler, Undulator, SourceFromField
