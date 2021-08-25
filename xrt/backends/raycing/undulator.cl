@@ -222,7 +222,7 @@ __kernel void undulator_nf(const float R0,
     int j, np;
 
     float2 eucos;
-    float ucos, sinucos, cosucos, krel, LR, zloc, zterm, Kys, Kxsph, drs;
+    float krel, LR, zloc, zterm, Kys, Kxsph, drs;
     float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
     float2 Is = zero2;
     float2 Ip = zero2;

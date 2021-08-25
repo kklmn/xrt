@@ -13,6 +13,7 @@ import pickle
 import sys
 try:
     import pyopencl as cl
+    cl.get_platforms()
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
     isOpenCL = True
 except ImportError:
@@ -79,7 +80,7 @@ class XRT_CL(object):
                 self.useZMQ = False
         except:
             self.useZMQ = False
-        print("useZMQ:", self.useZMQ)
+#        print("useZMQ:", self.useZMQ)
 
         if isOpenCL and not self.useZMQ:
             try:
