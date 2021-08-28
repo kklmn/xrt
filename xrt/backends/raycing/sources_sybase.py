@@ -36,10 +36,6 @@ class SourceBase:
                  uniformRayDensity=False, filamentBeam=False,
                  pitch=0, yaw=0, eN=51, nx=25, nz=25):
         u"""
-        .. warning::
-            If you change any undulator parameter outside of the constructor,
-            invoke ``your_undulator_instance.reset()``.
-
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
             `sources` list.
@@ -1368,7 +1364,23 @@ class IntegratedSource(SourceBase):
 
         return mad, dIMAD
 
-    def test_convergence(self, nMax=500000, interactive=True, autoStop=True):
+    def test_convergence(self, nMax=500000, withPlots=True, overStep=100):
+        u"""
+        This function evaluates the length of the integration grid required for
+        convergence.
+
+        *nMax*: int
+            Maximum number of nodes.
+        *withPlots*: bool
+            Enables visualization.
+        *overStep*: int
+            Defines the number of extra points to calculate when the
+            convergence is found. If None, calculation will proceed
+            till *nMax*.
+
+
+        """
+
         def _mad(vin):
             med = np.median(vin)
             return np.median(np.abs(vin - med))
@@ -1382,7 +1394,6 @@ class IntegratedSource(SourceBase):
         m = 0
         k = mStart
         converged = False
-        overStep = 120
         postConv = 0
         pltout = []
         dIout = []
@@ -1394,33 +1405,37 @@ class IntegratedSource(SourceBase):
         statOut = []
         dIOut = []
         xm = []
-        from matplotlib import pyplot as plt
-        fig = plt.figure(figsize=(8,5))
-        ax = fig.add_subplot(111)
-        ax.set_xlabel('Total nodes', fontsize=14)
-#        ax.set_ylabel('Electric field amplitude', fontsize=24)
-        ax.set_ylabel('MAD I', fontsize=14)
-        ax.tick_params(axis='y', labelcolor='b')
-        madLine, = ax.semilogy([], [], label='MAD Amp')
-
-        ax2 = ax.twinx()
-        ax2.set_xlabel('Total nodes', fontsize=14)
-        ax2.set_ylabel('Median dI/I', fontsize=14)
-        ax2.tick_params(axis='y', labelcolor='g')
-        relmadLine, = ax2.semilogy([], [], 'g')
-
-        fig2 = plt.figure(figsize=(8,5))
-        axt = fig2.add_subplot(111)
-        axt.set_xlabel('Total nodes', fontsize=14)
-        axt.set_ylabel('Electric field amplitude', fontsize=14)
-        ampLine, = axt.semilogy([], [], label='Amp')
+        
+        outQuad = 0
+        outInt = 0
+        if withPlots:
+            from matplotlib import pyplot as plt
+            fig = plt.figure(figsize=(8,5))
+            ax = fig.add_subplot(111)
+            ax.set_xlabel('Total nodes', fontsize=14)
+    #        ax.set_ylabel('Electric field amplitude', fontsize=24)
+            ax.set_ylabel('MAD I', fontsize=14)
+            ax.tick_params(axis='y', labelcolor='b')
+            madLine, = ax.semilogy([], [], label='MAD Amp')
+    
+            ax2 = ax.twinx()
+            ax2.set_xlabel('Total nodes', fontsize=14)
+            ax2.set_ylabel('Median dI/I', fontsize=14)
+            ax2.tick_params(axis='y', labelcolor='g')
+            relmadLine, = ax2.semilogy([], [], 'g')
+    
+            fig2 = plt.figure(figsize=(8,5))
+            axt = fig2.add_subplot(111)
+            axt.set_xlabel('Total nodes', fontsize=14)
+            axt.set_ylabel('Electric field amplitude', fontsize=14)
+            ampLine, = axt.semilogy([], [], label='Amp')
 
         while True:
             m += 1
             if m % 1000 == 0:
                 mStep *= 2
                 if True: #raycing._VERBOSITY_ > 10:
-                    print("INSUFFICIENT CONVERGENCE RANGE:", k, "NODES")
+#                    print("INSUFFICIENT CONVERGENCE RANGE:", k, "NODES")
                     print("INCREASING CONVERGENCE STEP. NEW STEP", mStep)
 
             k += mStep
@@ -1435,14 +1450,15 @@ class IntegratedSource(SourceBase):
                 continue
             Iold = Inew
 
-            ampLine.set_xdata(xm)
-            ampLine.set_ydata(pltout)
-            new_y_max = np.ceil(np.log10(max(pltout)))
-            new_y_min = np.floor(np.log10(min(pltout)))
-            axt.set_ylim([10**new_y_min, 10**new_y_max])
-            axt.set_xlim([0, xm[-1]+5])
-            fig2.canvas.draw()
-            plt.pause(0.001)
+            if withPlots:
+                ampLine.set_xdata(xm)
+                ampLine.set_ydata(pltout)
+                new_y_max = np.ceil(np.log10(max(pltout)))
+                new_y_min = np.floor(np.log10(min(pltout)))
+                axt.set_ylim([10**new_y_min, 10**new_y_max])
+                axt.set_xlim([0, xm[-1]+5])
+                fig2.canvas.draw()
+                plt.pause(0.001)
 
             if converged:
                 postConv += 1
@@ -1455,45 +1471,65 @@ class IntegratedSource(SourceBase):
 
                 if ((dIMAD < self.gp) or (mad < self.gp)) and not converged:
                     convPoint = k*self.gIntervals
+                    outQuad = k
+                    outInt = self.gIntervals
                     if True: #raycing._VERBOSITY_ > 10:
-                        print("CONVERGENCE THRESHOLD REACHED AT", convPoint)
+                        print("CONVERGENCE THRESHOLD REACHED AT {0} NODES, {1} INTERVALS.".format(
+                                k, self.gIntervals))
+                        print("INTEGRATION GRID LENGTH IS {} POINTS".format(
+                                convPoint))
                     converged = True
-                    ax.axvline(x=convPoint, color='r')
-                    axt.axvline(x=convPoint, color='r')
-                new_y_max = np.ceil(np.log10(max(statOut)))
-                new_y_min = np.floor(np.log10(min(statOut)))
-                ax.set_ylim([10**new_y_min, 10**new_y_max])
-                ax.set_xlim([0, xm[-1]+5])
-                madLine.set_xdata(xm[statStep:])
-                madLine.set_ydata(statOut)
-                relmadLine.set_xdata(xm[statStep:])
-                relmadLine.set_ydata(dIOut)
+                    if withPlots:
+                        ax.axvline(x=convPoint, color='r',
+                                   label='True convergence: {0} nodes, {1} intervals'.format(
+                                           self.quadm, self.gIntervals))
+                        axt.axvline(x=convPoint, color='r',
+                                    label='True convergence: {0} nodes, {1} intervals'.format(
+                                           self.quadm, self.gIntervals))
+                if withPlots:
+                    new_y_max = np.ceil(np.log10(max(statOut)))
+                    new_y_min = np.floor(np.log10(min(statOut)))
+                    ax.set_ylim([10**new_y_min, 10**new_y_max])
+                    ax.set_xlim([0, xm[-1]+5])
+                    madLine.set_xdata(xm[statStep:])
+                    madLine.set_ydata(statOut)
+                    relmadLine.set_xdata(xm[statStep:])
+                    relmadLine.set_ydata(dIOut)
+                    new_y_max = np.ceil(np.log10(max(dIOut)))
+                    new_y_min = np.floor(np.log10(min(dIOut)))
+                    ax2.set_ylim([10**new_y_min, 10**new_y_max])
+                    fig.canvas.draw()
+                    plt.pause(0.001)
 
-                new_y_max = np.ceil(np.log10(max(dIOut)))
-                new_y_min = np.floor(np.log10(min(dIOut)))
-                ax2.set_ylim([10**new_y_min, 10**new_y_max])
-
-                fig.canvas.draw()
-                plt.pause(0.001)
-
-            if xm[-1] > nMax or postConv > overStep:
-#                if converged:
-#                    if raycing._VERBOSITY_ > 10:
-#                        print("SUCCESSFULLY CONVERGED AT", convPoint)
-#                else:
-#                    if raycing._VERBOSITY_ > 10:
-#                        print("PROBLEM WITH CONVERGENCE. USING MAX NNODES")
-#                    raise("PROBLEM WITH CONVERGENCE. PLEASE INCREASE maxIntegrationSteps")
+            if xm[-1] > nMax:
+                if not converged:
+                    print("PROBLEM WITH CONVERGENCE. INCREASE nMax.")
                 break
 
+            if overStep is not None:
+                if postConv > overStep:
+                    break
+
         convRes, stats = self._find_convergence_mixed()
-        ax.axvline(x=self.quadm*self.gIntervals, color='m', linestyle='--')
-        axt.axvline(x=self.quadm*self.gIntervals, color='m', linestyle='--')
-        fig.canvas.draw()
-        plt.pause(0.001)
-        fig2.canvas.draw()
-        plt.pause(0.001)
-        plt.show()
+        print("CONVERGENCE TEST COMPLETED.")
+        self.needReset = True
+        if withPlots:
+            ax.axvline(x=self.quadm*self.gIntervals, color='m',
+                       linestyle='--',
+                       label='Auto-finder: {0} nodes, {1} intervals'.format(
+                               self.quadm, self.gIntervals))
+            axt.axvline(x=self.quadm*self.gIntervals, color='m',
+                       linestyle='--',
+                       label='Auto-finder: {0} nodes, {1} intervals'.format(
+                               self.quadm, self.gIntervals))
+            ax.legend()
+            axt.legend()
+            fig.canvas.draw()
+            plt.pause(0.001)
+            fig2.canvas.draw()
+            plt.pause(0.001)
+            plt.show()
+        return converged, outQuad, outInt
 
     def _build_integration_grid(self):
         """To be redefined in subclasses"""

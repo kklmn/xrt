@@ -149,14 +149,8 @@ point, :math:`\mathbf{r} = [\frac{K_y}{\gamma}\sin(\omega_u t'),
 trajectory, :math:`\beta_m = 1-\frac{1}{2\gamma^2}-\frac{K_x^2}{4\gamma^2}-
 \frac{K_y^2}{4\gamma^2}`.
 
-We directly calculate the integral using the Gauss-Legendre method. The
-integration grid is generated around the center of each undulator period. Most
-typical cases with reasonably narrow solid angles require around 10 integration
-points per period for satisfactory convergence.
-
 Configurations with non-equivalent undulator periods i.e. tapered undulator
-require integration over full undulator length, therefore the size of the
-integration grid is multiplied by the number of periods. Similar approach is
+require integration over full undulator length, similar approach is
 used for the near field calculations, where the undulator extension is taken
 into account and the phase component in the integral is taken in its initial
 form :math:`i\omega (t' + R(t')/c)`.
@@ -177,6 +171,32 @@ system of differential equations
 using the classical Runge-Kutta method. Integration step is varied in order to
 provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of
 the Gauss-Legendre grid.
+
+For the Undulator and custom field models we directly calculate the integral
+using the `Clenshaw-Curtis quadrature
+<https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`, it proves
+to converge as quickly as previously used Gauss-Legendre method, but the nodes
+and weights calcuation is performed significantly faster. The size
+of the integration grid is evaluated at the points of slowest convergence 
+(highest energy, maximum angular deviation i.e. the corner of the plot) before
+the start of intensity map calculation and then applied to all points.
+This approach creates certain computational overhead for the on-axis/low energy
+parts of the distibution, but enables efficient parallelization and gives
+significant overall gain in performance. Initial evaluation typically takes
+just a few seconds, but might get much longer for custom magnetic fields and
+near edge calculations. If such heavy task is repeated many times for the given
+angular and energy limits it might make sense to note the evaluated size of
+the grid during the first run or call the :meth:`test_convergence` method once,
+and then use the fixed grid by defining the *gNodes* at the init. 
+Note also that the grid size will be automatically re-evaluated if any of the
+limits/electron energy/undulator deflection parameter or period length are
+redefined dynamically in the script.
+Typical convergence threshold is defined by machine precizion multiplied by the
+size of the integration grid. Default integration parameters proved to work
+very well in most cases, but may fail if the angular and/or energy limits are
+unreasonably wide. If in doubt, check the convergence
+with :meth:`test_convergence`.
+
 
 .. _undulator-source-size:
 
