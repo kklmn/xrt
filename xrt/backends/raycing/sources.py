@@ -162,11 +162,11 @@ calculation of the velocity and coordinate is nesessary. For that we solve the
 system of differential equations
 
     .. math::
-        \begin{bmatrix}{\ddot{x}\\ \ddot{y}\\ \ddot{z}}\end{bmatrix} &=
+        \begin{bmatrix}\ddot{x}\\ \ddot{y}\\ \ddot{z}\end{bmatrix} &=
         \frac{e^{-}}{\gamma m_{e} c}
-        \begin{bmatrix}{\beta_{y}B_{z}-B_{y}\\
+        \begin{bmatrix}\beta_{y}B_{z}-B_{y}\\
         -\beta_{x}B_{z}+B_{x}\\
-        -\beta_{y}B_{x}+\beta_{x}B_{y}}\end{bmatrix}
+        -\beta_{y}B_{x}+\beta_{x}B_{y}\end{bmatrix}
 
 using the classical Runge-Kutta method. Integration step is varied in order to
 provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of
