@@ -174,7 +174,7 @@ the Gauss-Legendre grid.
 
 For the Undulator and custom field models we directly calculate the integral
 using the `Clenshaw-Curtis quadrature
-<https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`, it proves
+<https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_, it proves
 to converge as quickly as previously used Gauss-Legendre method, but the nodes
 and weights calcuation is performed significantly faster. The size
 of the integration grid is evaluated at the points of slowest convergence 
