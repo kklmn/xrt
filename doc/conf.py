@@ -78,7 +78,7 @@ def load_res():
     repo_url = "https://github.com/kklmn/xrt.git"
     git_clone(repo_url, repo_dir)
 
-    for dd in ["_images", "_static", "_templates", "_themes"]:
+    for dd in ["_images", "_videos", "_static", "_templates", "_themes"]:
         try:
             shutil.move(os.path.join(repo_dir, "doc", dd), __fdir__)
         except shutil.Error:

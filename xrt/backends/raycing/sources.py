@@ -157,7 +157,7 @@ form :math:`i\omega (t' + R(t')/c)`.
 
 For the custom field configuratiuons, where the magnetic field components
 are tabulated as functions of longitudinal coordinate
-:math:`\textbf{B}=(B_{x}(z), B_{y}(z), B_{z}(z))`, preliminary numerical
+:math:`\textbf{B}=[B_{x}(z), B_{y}(z), B_{z}(z))]`, preliminary numerical
 calculation of the velocity and coordinate is nesessary. For that we solve the
 system of differential equations
 
@@ -197,6 +197,11 @@ very well in most cases, but may fail if the angular and/or energy limits are
 unreasonably wide. If in doubt, check the convergence
 with :meth:`test_convergence`.
 
+Test video 
+
+.. video:: _videos/im.mp4
+   :controls:
+   :loop:
 
 .. _undulator-source-size:
 

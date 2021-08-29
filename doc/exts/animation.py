@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 __copyright__ = u'2016 Konstantin Klementiev, MIT License'
-__date__ = "04 Aug 2017"
+__date__ = "29 Aug 2021"
 
 import os
 import shutil
 from docutils import nodes
-from docutils.parsers.rst import directives, states
-from docutils.parsers.rst import Directive
+from docutils.parsers.rst import directives, states, Directive
 from PIL import Image
 
 
@@ -154,6 +153,48 @@ class AnimationHoverDirective(AnimationDirective):
     aclass = "thumbnailhover"
 
 
+class VideoDirective(Directive):
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = True
+    option_spec = {'autoplay': directives.flag,
+                   'controls': directives.flag,                   
+                   'loop': directives.flag,                   
+                   'width': directives.length_or_unitless,
+                   'height': directives.length_or_unitless}
+    has_content = True
+    aclass = "video"
+
+    def run(self):
+        if not lapp.builder.format.startswith('html'):
+            return [nodes.raw('', '')]
+        self.assert_has_content()
+        uri = self.content[0]
+        imdest = os.path.join(lapp.outdir, '_videos')
+        if not os.path.exists(imdest):
+            os.mkdir(imdest)
+        if uri.endswith('.*'):
+            uri = uri[:-1] + 'mp4'
+        shutil.copy2(uri, imdest)
+
+        width = self.options.get('width', None)
+        height = self.options.get('height', None)
+        sizeStr = ''
+        if width:
+            sizeStr += ' width="{0}"'.format(width)
+        if height:
+            sizeStr += ' height="{0}"'.format(height)
+
+        flagStr = ' '.join([flag for flag in ('autoplay', 'controls', 'loop')
+                            if flag in self.options])
+
+        # Chromium browsers do not allow autoplay in most cases.
+        # However, muted autoplay is always allowed.
+        text = '<video src="{0}" muted {1} {2}></video>'.format(
+            uri, sizeStr, flagStr)
+        return [nodes.raw('', text, format='html')]
+
+
 def setup(app):
     global lapp
     lapp = app
@@ -171,4 +212,5 @@ def setup(app):
     app.add_directive('imagezoom', AnimationDirective)
     app.add_directive('animationhover', AnimationHoverDirective)
     app.add_directive('imagezoomhover', AnimationHoverDirective)
-    return {'version': '0.1'}   # identifies the version of our extension
+    app.add_directive('video', VideoDirective)
+    return {'version': '1.1'}   # identifies the version of our extension
