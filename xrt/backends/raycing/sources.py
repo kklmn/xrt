@@ -168,9 +168,7 @@ system of differential equations
         -\beta_{x}B_{z}+B_{x}\\
         -\beta_{y}B_{x}+\beta_{x}B_{y}\end{bmatrix}
 
-using the classical Runge-Kutta method. Integration step is varied in order to
-provide the values of :math:`\beta` and :math:`\textbf{r}` in the knots of
-the Gauss-Legendre grid.
+using the classical Runge-Kutta fourth-order method.
 
 For the Undulator and custom field models we directly calculate the integral
 using the `Clenshaw-Curtis quadrature
