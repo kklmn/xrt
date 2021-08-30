@@ -1410,26 +1410,22 @@ class IntegratedSource(SourceBase):
         outInt = 0
         if withPlots:
             from matplotlib import pyplot as plt
-            fig = plt.figure(figsize=(8,5))
-            ax = fig.add_subplot(111)
-            ax.set_xlabel('Total nodes', fontsize=14)
-    #        ax.set_ylabel('Electric field amplitude', fontsize=24)
-            ax.set_ylabel('MAD I', fontsize=14)
-            ax.tick_params(axis='y', labelcolor='b')
-            madLine, = ax.semilogy([], [], label='MAD Amp')
-    
-            ax2 = ax.twinx()
-            ax2.set_xlabel('Total nodes', fontsize=14)
-            ax2.set_ylabel('Median dI/I', fontsize=14)
-            ax2.tick_params(axis='y', labelcolor='g')
-            relmadLine, = ax2.semilogy([], [], 'g')
-    
-            fig2 = plt.figure(figsize=(8,5))
-            axt = fig2.add_subplot(111)
-            axt.set_xlabel('Total nodes', fontsize=14)
-            axt.set_ylabel('Electric field amplitude', fontsize=14)
-            ampLine, = axt.semilogy([], [], label='Amp')
+            fig = plt.figure(figsize=(8, 6))
 
+            ax0 = fig.add_axes([0.1, 0.65, 0.8, 0.3])
+            ax0.xaxis.set_visible(False)
+            ax0.set_ylabel('Relative intensity $I$', color='C0')
+            ampLine, = ax0.semilogy([], [], 'C0')
+
+            ax1 = fig.add_axes([0.1, 0.1, 0.8, 0.55])
+            ax1.set_xlabel('Number of nodes')
+            ax1.set_ylabel('Median absolute deviation of $I$', color='C1')
+            madLine, = ax1.semilogy([], [], 'C1')
+    
+            ax2 = ax1.twinx()
+            ax2.set_ylabel('Median $dI/I$', color='C2')
+            relmadLine, = ax2.semilogy([], [], 'C2')
+    
         while True:
             m += 1
             if m % 1000 == 0:
@@ -1455,10 +1451,8 @@ class IntegratedSource(SourceBase):
                 ampLine.set_ydata(pltout)
                 new_y_max = np.ceil(np.log10(max(pltout)))
                 new_y_min = np.floor(np.log10(min(pltout)))
-                axt.set_ylim([10**new_y_min, 10**new_y_max])
-                axt.set_xlim([0, xm[-1]+5])
-                fig2.canvas.draw()
-                plt.pause(0.001)
+                ax0.set_xlim([0, xm[-1]+5])
+                ax0.set_ylim([10**(new_y_min+0.1), 10**new_y_max])
 
             if converged:
                 postConv += 1
@@ -1474,29 +1468,31 @@ class IntegratedSource(SourceBase):
                     outQuad = k
                     outInt = self.gIntervals
                     if True: #raycing._VERBOSITY_ > 10:
-                        print("CONVERGENCE THRESHOLD REACHED AT {0} NODES, {1} INTERVALS.".format(
-                                k, self.gIntervals))
+                        print("CONVERGENCE THRESHOLD REACHED AT "
+                              "{0} NODES, {1} INTERVALS.".format(
+                                  k, self.gIntervals))
                         print("INTEGRATION GRID LENGTH IS {} POINTS".format(
                                 convPoint))
                     converged = True
                     if withPlots:
-                        ax.axvline(x=convPoint, color='r',
-                                   label='True convergence: {0} nodes, {1} intervals'.format(
-                                           self.quadm, self.gIntervals))
-                        axt.axvline(x=convPoint, color='r',
-                                    label='True convergence: {0} nodes, {1} intervals'.format(
-                                           self.quadm, self.gIntervals))
+                        label = 'True convergence: {0} nodes, {1} interval{2}'\
+                            .format(self.quadm, self.gIntervals,
+                                     '' if self.gIntervals==1 else 's')
+                        axvlineDict = dict(x=convPoint, color='r', label=label)
+                        ax0.axvline(**axvlineDict)
+                        ax1.axvline(**axvlineDict)
                 if withPlots:
                     new_y_max = np.ceil(np.log10(max(statOut)))
                     new_y_min = np.floor(np.log10(min(statOut)))
-                    ax.set_ylim([10**new_y_min, 10**new_y_max])
-                    ax.set_xlim([0, xm[-1]+5])
+                    ax1.set_xlim([0, xm[-1]+5])
+                    ax1.set_ylim([10**new_y_min, 10**(new_y_max-0.1)])
                     madLine.set_xdata(xm[statStep:])
                     madLine.set_ydata(statOut)
                     relmadLine.set_xdata(xm[statStep:])
                     relmadLine.set_ydata(dIOut)
                     new_y_max = np.ceil(np.log10(max(dIOut)))
                     new_y_min = np.floor(np.log10(min(dIOut)))
+                    ax2.set_xlim([0, xm[-1]+5])
                     ax2.set_ylim([10**new_y_min, 10**new_y_max])
                     fig.canvas.draw()
                     plt.pause(0.001)
@@ -1514,21 +1510,14 @@ class IntegratedSource(SourceBase):
         print("CONVERGENCE TEST COMPLETED.")
         self.needReset = True
         if withPlots:
-            ax.axvline(x=self.quadm*self.gIntervals, color='m',
-                       linestyle='--',
-                       label='Auto-finder: {0} nodes, {1} intervals'.format(
-                               self.quadm, self.gIntervals))
-            axt.axvline(x=self.quadm*self.gIntervals, color='m',
-                       linestyle='--',
-                       label='Auto-finder: {0} nodes, {1} intervals'.format(
-                               self.quadm, self.gIntervals))
-            ax.legend()
-            axt.legend()
+            label='Auto-finder: {0} nodes, {1} interval{2}'.format(
+                self.quadm, self.gIntervals, '' if self.gIntervals==1 else 's')
+            axvlineDict = dict(x=self.quadm*self.gIntervals, color='m',
+                               linestyle='--', label=label)
+            ax0.axvline(**axvlineDict)
+            ax1.axvline(**axvlineDict)
+            ax1.legend()
             fig.canvas.draw()
-            plt.pause(0.001)
-            fig2.canvas.draw()
-            plt.pause(0.001)
-            plt.show()
         return converged, outQuad, outInt
 
     def _build_integration_grid(self):
