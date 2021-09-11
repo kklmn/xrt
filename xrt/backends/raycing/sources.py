@@ -174,12 +174,12 @@ For the Undulator and custom field models we directly calculate the integral
 using the `Clenshaw-Curtis quadrature
 <https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_, it proves
 to converge as quickly as previously used Gauss-Legendre method, but the nodes
-and weights calcuation is performed significantly faster. The size
+and weights calculation is performed significantly faster. The size
 of the integration grid is evaluated at the points of slowest convergence 
 (highest energy, maximum angular deviation i.e. the corner of the plot) before
 the start of intensity map calculation and then applied to all points.
 This approach creates certain computational overhead for the on-axis/low energy
-parts of the distibution, but enables efficient parallelization and gives
+parts of the distribution, but enables efficient parallelization and gives
 significant overall gain in performance. Initial evaluation typically takes
 just a few seconds, but might get much longer for custom magnetic fields and
 near edge calculations. If such heavy task is repeated many times for the given
@@ -189,17 +189,14 @@ and then use the fixed grid by defining the *gNodes* at the init.
 Note also that the grid size will be automatically re-evaluated if any of the
 limits/electron energy/undulator deflection parameter or period length are
 redefined dynamically in the script.
-Typical convergence threshold is defined by machine precizion multiplied by the
+
+Typical convergence threshold is defined by machine precision multiplied by the
 size of the integration grid. Default integration parameters proved to work
 very well in most cases, but may fail if the angular and/or energy limits are
 unreasonably wide. If in doubt, check the convergence
-with :meth:`test_convergence`.
-
-Test video 
-
-.. video:: _videos/im.mp4
-   :controls:
-   :loop:
+with :meth:`test_convergence`. See also
+:ref:`a convergence study <test_undulator>` that justifies our automatic grid
+evaluation.
 
 .. _undulator-source-size:
 
