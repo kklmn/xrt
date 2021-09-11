@@ -713,8 +713,8 @@ class SourceBase:
             from scipy.ndimage.filters import gaussian_filter
             Sx = self.dxprime / (theta[1] - theta[0])
             Sz = self.dzprime / (psi[1] - psi[0])
-#            print(self.dxprime, theta[-1] - theta[0], Sx, len(theta))
-#            print(self.dzprime, psi[-1] - psi[0], Sz, len(psi))
+            # print(self.dxprime, theta[-1] - theta[0], Sx, len(theta))
+            # print(self.dzprime, psi[-1] - psi[0], Sz, len(psi))
             if Sx > len(theta)//4:  # ±2σ
                 print("************* Warning ***********************")
                 print("Your theta mesh is too narrow!")
@@ -1165,7 +1165,6 @@ class IntegratedSource(SourceBase):
             if not isOpenCL:
                 print("pyopencl is not available!")
             else:
-                print("1", targetOpenCL)
                 self.ucl = mcl.XRT_CL(
                     r'undulator.cl', targetOpenCL, precisionOpenCL)
                 if self.ucl.lastTargetOpenCL is not None:
@@ -1179,7 +1178,10 @@ class IntegratedSource(SourceBase):
 
     @property
     def gNodes(self):
-        return self.quadm
+        try:
+            return self.quadm
+        except AttributeError as e:
+            raise Exception('First run the method test_convergence()!') from e
 
     @gNodes.setter
     def gNodes(self, gNodes):
@@ -1388,7 +1390,7 @@ class IntegratedSource(SourceBase):
         self.convergenceSearchFlag = True
         self.needReset = False
         self._reset_limits()
-        mStart = 3
+        mStart = 10
         mStep = 1
         statStep = 5
         m = 0
@@ -1425,6 +1427,8 @@ class IntegratedSource(SourceBase):
             ax2 = ax1.twinx()
             ax2.set_ylabel('Median $dI/I$', color='C2')
             relmadLine, = ax2.semilogy([], [], 'C2')
+        else:
+            fig = None
     
         while True:
             m += 1
@@ -1448,11 +1452,12 @@ class IntegratedSource(SourceBase):
 
             if withPlots:
                 ampLine.set_xdata(xm)
-                ampLine.set_ydata(pltout)
-                new_y_max = np.ceil(np.log10(max(pltout)))
-                new_y_min = np.floor(np.log10(min(pltout)))
+                relInt = np.array(pltout)
+                relInt /= relInt.max()
+                ampLine.set_ydata(relInt)
+                new_y_min = np.floor(np.log10(relInt.min()))
                 ax0.set_xlim([0, xm[-1]+5])
-                ax0.set_ylim([10**(new_y_min+0.1), 10**new_y_max])
+                ax0.set_ylim([10**(new_y_min+0.1), 1.1])
 
             if converged:
                 postConv += 1
@@ -1518,7 +1523,8 @@ class IntegratedSource(SourceBase):
             ax1.axvline(**axvlineDict)
             ax1.legend()
             fig.canvas.draw()
-        return converged, outQuad, outInt
+            plt.pause(0.1)
+        return converged, outQuad, outInt, fig
 
     def _build_integration_grid(self):
         """To be redefined in subclasses"""
