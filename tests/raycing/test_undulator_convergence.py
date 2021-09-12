@@ -43,6 +43,8 @@ from xrt.backends.raycing.physconsts import K2B
 
 saveFrameImages = False
 saveVideo = True
+if saveVideo:
+    import cv2  # pip install opencv-python
 
 
 def flux_through_aperture(energy, theta, psi, I0):
@@ -173,7 +175,6 @@ def main():
     ns = np.linspace(8, gnMax, gnMax-7, dtype=int)
     if saveVideo:
         frames = []
-        import cv2  # pip install opencv-python
     for nord, n in enumerate(ns):
         if n % 2 != 0:
             continue
