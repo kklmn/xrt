@@ -159,10 +159,11 @@ For the custom field configuratiuons, where the magnetic field components
 are tabulated as functions of longitudinal coordinate
 :math:`\textbf{B}=[B_{x}(z), B_{y}(z), B_{z}(z))]`, preliminary numerical
 calculation of the velocity and coordinate is nesessary. For that we solve the
-system of differential equations
+system of differential equations in the trajectory coordinate :math:`s`:
 
     .. math::
-        \begin{bmatrix}\ddot{x}\\ \ddot{y}\\ \ddot{z}\end{bmatrix} &=
+        \frac{d^2}{ds^2}
+        \begin{bmatrix}x\\ y\\ z\end{bmatrix} &=
         \frac{e^{-}}{\gamma m_{e} c}
         \begin{bmatrix}\beta_{y}B_{z}-B_{y}\\
         -\beta_{x}B_{z}+B_{x}\\
