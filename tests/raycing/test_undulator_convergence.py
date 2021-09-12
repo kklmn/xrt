@@ -29,9 +29,8 @@ The flux distribution vs number of nodes:
        
 """
 
-"""Select one of the 3 functions at the end of main()"""
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "11 Sep 2021"
+__date__ = "12 Sep 2021"
 import numpy as np
 # import matplotlib
 # matplotlib.use("Agg")
@@ -184,7 +183,7 @@ def main():
         flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
         imap = I0[-1, :, :]
         im.set_data(imap.T/np.max(imap))
-        nPanel.set_text(r'{0} nodes'.format(n))
+        nPanel.set_text(r'{0} nodes'.format(n*source.gIntervals))
         fPanel.set_text(r'{0:.5e}  ph/s/0.1%bw'.format(flux[0]))
         fig.canvas.draw()
         if saveFrameImages:
