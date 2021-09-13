@@ -44,6 +44,7 @@ from xrt.backends.raycing.physconsts import K2B
 saveFrameImages = False
 saveVideo = True
 if saveVideo:
+    frames = []
     import cv2  # pip install opencv-python
 
 
@@ -173,8 +174,6 @@ def main():
         ha='right', va='top')
 
     ns = np.linspace(8, gnMax, gnMax-7, dtype=int)
-    if saveVideo:
-        frames = []
     for nord, n in enumerate(ns):
         if n % 2 != 0:
             continue
