@@ -3,6 +3,16 @@
 Version history
 ---------------
 
+already available at GitHub:
+    - Introduce reliable grid optimization for the amplitude integral of
+      :ref:`undulator sources <undulator-grid>`. Substitute Gauss-Legendre with
+      Clenshaw-Curtis integration. Add :ref:`a convergence study
+      <test_undulator>` that justifies the automatic grid evaluation.
+
+    - Enable closed surfaces in xrtGlow.
+
+    - Bug fixes.
+
 1.3.5 (19 Nov 2020):
     - Bug fixes.
 
