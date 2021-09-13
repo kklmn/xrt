@@ -507,18 +507,19 @@ class SourceFromField(IntegratedSource):
                        'fill_value': 'extrapolate'}
         self.periodicTest = False
         self._customField = customField
+        self.deviceLength = 0
         if customField is not None:
             if isinstance(customField, (tuple, list)):
                 fname = customField[0]
-                kwargs = customField[1]
+                readkw = customField[1]
             elif isinstance(customField, np.ndarray):
                 self.customFieldData = customField
                 fname = None
             else:
                 fname = customField
-                kwargs = {}
+                readkw = {}
             if fname:
-                self.customFieldData = self.read_custom_field(fname, kwargs)
+                self.customFieldData = self.read_custom_field(fname, readkw)
         else:  # Test with periodic field
             self.Kx = 0.
             self.Ky = 4.4 #17.274 #1.7
@@ -567,7 +568,20 @@ class SourceFromField(IntegratedSource):
             data = read_excel(fname, **kwargs).values
         else:
             data = np.loadtxt(fname, **kwargs)
+        z = data[:, 0]
+        B = np.abs(data[:, 1:]).max(axis=1)
+        self.deviceLength = self._fwhm(z, B)
         return data
+
+    def _fwhm(self, z, a):
+        dz = z[1] - z[0]
+        args = np.argwhere(a >= a.max()*0.5)
+        return z[np.max(args)] - z[np.min(args)] + dz
+
+    def get_SIGMA(self, E, onlyOddHarmonics=True):
+        sigma_r2 = 2 * CHeVcm/E*10 * self.deviceLength / PI2**2
+        return ((self.dx**2 + sigma_r2)**0.5,
+                (self.dz**2 + sigma_r2)**0.5)
 
     def _magnetic_field(self, grid=None):
         dataz = self.customFieldData[:, 0]

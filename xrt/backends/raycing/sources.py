@@ -171,6 +171,8 @@ system of differential equations in the trajectory coordinate :math:`s`:
 
 using the classical Runge-Kutta fourth-order method.
 
+.. _undulator-grid:
+
 For the Undulator and custom field models we directly calculate the integral
 using the `Clenshaw-Curtis quadrature
 <https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_, it proves
