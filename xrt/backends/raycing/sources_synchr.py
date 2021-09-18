@@ -1268,23 +1268,18 @@ class Undulator(IntegratedSource):
 
         if Kx == 0 and Ky == 0:
             if abs(K) > 0:
-                Ky = K
-            elif abs(B0y) > 0:
-                    self.B0y = B0y
-            elif abs(B0x) > 0:
-                    self.B0x = B0x
-            else:
+                self.Kx = 0
+                self.K = K
+            elif B0x == 0 and B0y == 0:
+                self.Kx = 0
                 self.K = 1
                 raise("Please define either K or B0!")
-
-        self.Kx = Kx
-        self.Ky = Ky
-
-        if self.Kx == 0 and B0x > 0:
-            self.B0x = B0x
-
-#        self.B0x = K2B * self.Kx / self.L0
-#        self.B0y = K2B * self.Ky / self.L0
+            else:
+                self.B0y = B0y
+                self.B0x = B0x
+        else:
+            self.Kx = Kx
+            self.Ky = Ky
 
         self.xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
         self.zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
@@ -1547,7 +1542,7 @@ class Undulator(IntegratedSource):
         taperC = 1
         alphaS = 0
 
-        if (self.R0 is not None) or (self.taper is not None):
+        if (R0 is not None) or (self.taper is not None):
             dI = np.arange(0.5*self.dstep - PI*self.Np, PI*self.Np, self.dstep)
             tg = (dI[:, None] + 0.5*self.dstep*self.tg_n).ravel()
             ag = np.tile(self.ag, self.Np)
@@ -1584,8 +1579,9 @@ class Undulator(IntegratedSource):
                   2*alphaS/wuS*(tg**2 + cosx**2 + tg*sin2x))))
             eucos = np.exp(1j*ucos)
         elif R0 is not None:
-            sinr0z = np.sin(wwuS*R0)
-            cosr0z = np.cos(wwuS*R0)
+            sinr0z = np.sin(wwuS*R0[-1])
+            cosr0z = np.cos(wwuS*R0[-1])
+
             zterm = 0.5*(self.Ky**2*sin2x +
                          self.Kx**2*sin2xph)*revgamma
             rloc = np.array([self.Ky*sinx*revgamma,
@@ -1663,9 +1659,10 @@ class Undulator(IntegratedSource):
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
         Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
+
         if R0 is not None:
-            sinr0z = np.sin(R0)
-            cosr0z = np.cos(R0)
+            sinr0z = np.sin(R0[-1])
+            cosr0z = np.cos(R0[-1])
 
         for Nperiod in range(Nmx):
             if raycing._VERBOSITY_ > 80 and (self.taper is not None or\
@@ -1716,7 +1713,8 @@ class Undulator(IntegratedSource):
 
                 else:
                     ucos = ww1S*self.tg[i] + wwuS*revgamma*\
-                        (-self.Ky*ddphiS*self.sintg[i] + self.Kx*ddpsiS*self.sintgph[i] +
+                        (-self.Ky*ddphiS*self.sintg[i] +
+                         self.Kx*ddpsiS*self.sintgph[i] +
                          0.125*revgamma*(self.Ky**2 * sin2x[i] +
                                        self.Kx**2 * sin2xph[i]))
                     eucos = np.exp(1j*ucos)
@@ -1728,7 +1726,8 @@ class Undulator(IntegratedSource):
                 betaPx = -self.Ky*(alphaS*self.costg[i] + taperC*self.sintg[i])
                 betaPy = self.Kx*self.sintgph[i]
                 betaPz = 0.5*revgamma*\
-                    (self.Ky**2 * taperC*(alphaS*self.costg[i]**2 + taperC*sin2x[i])+
+                    (self.Ky**2 * taperC*(alphaS*self.costg[i]**2 +
+                                          taperC*sin2x[i])+
                      self.Kx**2 * sin2xph[i])
 
                 rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
