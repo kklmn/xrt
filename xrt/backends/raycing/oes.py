@@ -1164,6 +1164,9 @@ class EllipticalMirrorParam(OE):
             Focal points in the global coordinate system. Alternatives for,
             correspondingly, *p* and *q*.
 
+        *pAxis*: 3-sequence
+            Used with *p*, the *p* arm direction in global coordinates,
+            defaults to the global Y axis.
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
@@ -1272,8 +1275,8 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
     positive value. Alternatively, instead of *p* one can specify *f1*
     (3-sequence) as a 3D point in the global coordinate system and instead of
     *q* -- *f2*. If *p* or *q* is supplied, the paraboloid axis isassumed to be
-    along the beamline (its Y axis). For a more general case, specify *f1* or
-    *f2*.
+    along the global Y axis, otherwise supply *parabolaAxis* as a vector in
+    global coordinates.
 
     If *isCylindrical* is True, the figure is an
     parabolical cylinder, otherwise it is a paraboloid of revolution around the
@@ -1281,9 +1284,9 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
 
     .. warning::
 
-        If you want to change any of *p*, *q*, *f1* or *f2* after the creation
-        of the OE, you must invoke the method :meth:`reset_pq` to recalculate
-        the paraboloid parameters.
+        If you want to change any of *p*, *q*, *f1*, *f2* or *parabolaAxis*
+        after the creation of the OE, you must invoke the method
+        :meth:`reset_pq` to recalculate the paraboloid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
 
@@ -1299,13 +1302,17 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
             Focal points in the global coordinate system. Alternatives for,
             correspondingly, *p* and *q*. Only one of them must be given.
 
+        *parabolaAxis*: 3-sequence
+            Used with *p* or *q*, the parabola axis in global coordinates,
+            defaults to the global Y axis.
+
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.reset_pq(self.p, self.q, self.f1, self.f2)
+        self.reset_pq(self.p, self.q, self.f1, self.f2, self.parabolaAxis)
 
-    def reset_pq(self, p=None, q=None, f1=None, f2=None):
+    def reset_pq(self, p=None, q=None, f1=None, f2=None, parabolaAxis=None):
         """This method allows re-assignment of *p*, *q* and *pitch* from
         outside of the constructor.
         """
@@ -1316,14 +1323,12 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         if f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
             axis = [c-f for c, f in zip(self.center, f1)]
-            norm = sum([a**2 for a in axis])**0.5
         elif f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, f2)))**0.5
             axis = [c-f for c, f in zip(self.center, f2)]
-            norm = sum([a**2 for a in axis])**0.5
         else:
-            axis = [0, 1, 0]
-            norm = 1.
+            axis = parabolaAxis if parabolaAxis else [0, 1, 0]
+        norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
         absPitch = abs(np.arcsin(sintheta))
 
@@ -1356,6 +1361,7 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         self.f2 = kwargs.pop('f2', None)
         self.p = kwargs.pop('p', None)  # source-to-mirror
         self.q = kwargs.pop('q', None)  # mirror-to-focus
+        self.parabolaAxis = kwargs.pop('parabolaAxis', None)
         self.isCylindrical = kwargs.pop('isCylindrical', False)
         return kwargs
 
