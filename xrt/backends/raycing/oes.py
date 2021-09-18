@@ -1119,17 +1119,18 @@ class EllipticalMirrorParam(OE):
     positive) or as *f1* and *f2* points in the global coordinate system
     (3-sequences). Any combination of (*p* or *f1*) and (*q* or *f2*) is
     allowed. If *p* is supplied, not *f1*, the incoming optical axis is assumed
-    to be along the beamline (Y axis). For a general orientation of the ellipse
-    axes *f1* should rather be supplied.
+    to be along the global Y axis. For a general orientation of the ellipse
+    axes *f1* or *pAxis* -- the *p* arm direction in global coordinates --
+    should be supplied.
 
     If *isCylindrical* is True, the figure is an elliptical cylinder, otherwise
     it is an ellipsoid of revolution around the major axis.
 
     .. warning::
 
-        If you want to change any of *p*, *q*, *f1* or *f2* after the creation
-        of the OE, you must invoke the method :meth:`reset_pq` to recalculate
-        the ellipsoid parameters.
+        If you want to change any of *p*, *q*, *f1*, *f2* or *pAxis* after the
+        creation of the OE, you must invoke the method :meth:`reset_pq` to
+        recalculate the ellipsoid parameters.
 
     The usage is exemplified in `test_param_mirror.py`.
 
@@ -1167,7 +1168,7 @@ class EllipticalMirrorParam(OE):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.reset_pq(self.p, self.q, self.f1, self.f2)
+        self.reset_pq(self.p, self.q, self.f1, self.f2, self.pAxis)
 
     def _to_global(self, lb):
         # if self.extraPitch or self.extraRoll or self.extraYaw:
@@ -1184,7 +1185,7 @@ class EllipticalMirrorParam(OE):
         """Compatibility method. To pass pitch is not needed any longer."""
         self.reset_pq(p, q)
 
-    def reset_pq(self, p=None, q=None, f1=None, f2=None):
+    def reset_pq(self, p=None, q=None, f1=None, f2=None, pAxis=None):
         """This method allows re-assignment of *p*, *q*, *pitch*, *f1* and *f2*
         from outside of the constructor.
         """
@@ -1195,10 +1196,9 @@ class EllipticalMirrorParam(OE):
         if f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, f1)))**0.5
             axis = [c-f for c, f in zip(self.center, f1)]
-            norm = sum([a**2 for a in axis])**0.5
         else:
-            axis = [0, 1, 0]
-            norm = 1.
+            axis = pAxis if pAxis else [0, 1, 0]
+        norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
         absPitch = abs(np.arcsin(sintheta))
         if p is not None:
@@ -1223,6 +1223,7 @@ class EllipticalMirrorParam(OE):
         self.f2 = kwargs.pop('f2', None)
         self.p = kwargs.pop('p', 1000)  # source-to-mirror
         self.q = kwargs.pop('q', 1000)  # mirror-to-focus
+        self.pAxis = kwargs.pop('pAxis', None)
         self.isCylindrical = kwargs.pop('isCylindrical', False)
         return kwargs
 
