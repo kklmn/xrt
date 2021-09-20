@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev"
-__date__ = "20 Feb 2020"
+__date__ = "20 Sep 2021"
 import sys
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import numpy as np
@@ -20,14 +20,15 @@ pitch = 2e-3
 lim = [-0.5, 0.5]
 limZoom = [-1, 1]
 
-inclination = 0
+inclination = 0  # pitch of the source
 #inclination = 2.5e-3
+
 globalRoll = 0
-#globalRoll = np.pi/2
-#globalRoll = np.pi/4
+# globalRoll = np.pi/2
+# globalRoll = np.pi/4
 
 case = 'elliptical'
-#case = 'parabolical'
+# case = 'parabolical'
 
 
 def build_beamline(nrays=1e5):
@@ -49,11 +50,12 @@ def build_beamline(nrays=1e5):
             dx=1, dz=1, distx='flat', distz='flat',
             distxprime=None, distzprime=None))
         Mirror = roe.ParabolicalMirrorParam
-        dp = q * np.sin(2*pitch)
-        di = q * np.sin(inclination)
-        kwMirror = dict(f2=[mirrorCenter[0] + dp*np.sin(globalRoll),
-                            mirrorCenter[1] + q,
-                            mirrorCenter[2] + dp*np.cos(globalRoll) + di])
+        dqs = q * np.sin(2*pitch+inclination)
+        dqc = q * np.cos(2*pitch+inclination)
+        kwMirror = dict(f2=[mirrorCenter[0] + dqs*np.sin(globalRoll),
+                            mirrorCenter[1] + dqc,
+                            mirrorCenter[2] + dqs*np.cos(globalRoll)])
+
     rs.GeometricSource(
         beamLine, 'GeometricSource', sourceCenter, **kw)
     beamLine.fsm1 = rsc.Screen(beamLine, 'beforeMirror', mirrorCenter)
@@ -99,11 +101,9 @@ def main():
 
     for i, dy in enumerate(beamLine.fsm2dY):
         if i == len(beamLine.fsm2dY) // 2:
-            limits = limZoom
-            unit = 'fm'
+            limits, unit = limZoom, 'fm'
         else:
-            limits = lim
-            unit = u'mm'
+            limits, unit = lim, u'mm'
         xaxis = xrtp.XYCAxis(r'$x$', unit, limits=limits)
         yaxis = xrtp.XYCAxis(r'$z$', unit, limits=limits)
         plot = xrtp.XYCPlot('beamFSM2-{0:d}'.format(i+1),
