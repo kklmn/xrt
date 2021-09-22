@@ -436,7 +436,7 @@ class SourceBase:
 
     def build_I_map(self):
         """Used to calculate the intensity. To be redefined in the subclass"""
-        pass
+        raise NotImplementedError
 
     def real_photon_source_sizes(
             self, energy='auto', theta='auto', psi='auto', method='rms'):
