@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """This script launches xrtQook."""
 __author__ = "Roman Chernikov, Konstantin Klementiev"
