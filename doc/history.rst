@@ -3,11 +3,28 @@
 Version history
 ---------------
 
-already available at GitHub:
-    - Introduce reliable grid optimization for the amplitude integral of
-      :ref:`undulator sources <undulator-grid>`. Substitute Gauss-Legendre with
-      Clenshaw-Curtis integration. Add :ref:`a convergence study
-      <test_undulator>` that justifies the automatic grid evaluation.
+1.4.0 (22 Sep 2021):
+    - Major update for the synchrotron sources module:
+
+      - Custom synchrotron sources calculation extended for non-periodic cases,
+        including bending magnets.
+
+      - Multiple performance optimizations, Gauss-Legendre grid replaced with
+        Clenshaw-Curtis. 
+ 
+      - Extended functionality to estimate and visualize convergence.
+
+      - Added pure NumPy implementation for near field model and custom
+        magnetic structures.
+
+      - Added setters and getters, doing reset() is no longer required after
+        post-init update of parameters.
+
+      - Added asymmetric angular limits.
+
+      - Angular limits get automatically extended to account for
+        divergence/emittance, important if used with the slits/apertures
+        matching angular acceptance.
 
     - Enable closed surfaces in xrtGlow.
 
