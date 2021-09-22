@@ -4,7 +4,7 @@ Version history
 ---------------
 
 1.4.0 (22 Sep 2021):
-    - Major update for the synchrotron sources module:
+    - Major update for the :ref:`undulator sources <undulator-grid>` module:
 
       - Custom synchrotron sources calculation extended for non-periodic cases,
         including bending magnets.
@@ -12,7 +12,8 @@ Version history
       - Multiple performance optimizations, Gauss-Legendre grid replaced with
         Clenshaw-Curtis. 
  
-      - Extended functionality to estimate and visualize convergence.
+      - Extended functionality to :ref:`estimate and visualize convergence
+        <test_undulator>`.
 
       - Added pure NumPy implementation for near field model and custom
         magnetic structures.
