@@ -157,7 +157,8 @@ view of xrtQook. OpenGL is required for xrtGlow.
 Python 2 and 3
 --------------
 
-The code can run in both Python branches without any modification.
+The code should run in both Python branches without any modification, although
+compatibility with Python 2 is not checked any longer.
 
 Get xrt
 -------
@@ -179,7 +180,7 @@ For getting help and/or reporting a bug please use `GitHub xrt Issues
 
 setup(
     name='xrt',
-    version='1.3.5',
+    version='1.4.0',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '

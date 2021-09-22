@@ -146,7 +146,8 @@ Features of xrt
 Python 2 and 3
 --------------
 
-The code can run in both Python branches without any modification.
+The code should run in both Python branches without any modification, although
+compatibility with Python 2 is not checked any longer.
 
 Dependencies
 ------------
@@ -211,10 +212,11 @@ acknowledged for supplied cases. Hamed Tarawneh (MAX IV Laboratory) has
 initiated the custom field undulator project and supplied tables of magnetic
 field. Bernard Kozioziemski (LLNL) has pointed to the importance of considering
 the *total* absorption cross-section (not just photoelectric absorption) in the
-cases of light materials at high energy. Emilio Heredia (CLS) is thanked for
-valuable suggestions on GUI. Tim May (CLS) is acknowledged for inspiring the
-custom magnetic field calculation development, providing field tables and
-comparing the results with other codes.
+cases of light materials at high energy. He also did deep tests of the mosaic
+crystal model. Emilio Heredia (CLS) is thanked for valuable suggestions on GUI.
+Tim May (CLS) is acknowledged for inspiring the custom magnetic field
+calculation development, providing field tables and comparing the results with
+other codes.
 
 """
 
