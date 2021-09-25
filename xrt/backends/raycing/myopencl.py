@@ -16,7 +16,7 @@ try:
     cl.get_platforms()
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
     isOpenCL = True
-except ImportError:
+except Exception:
     isOpenCL = False
 
 try:
