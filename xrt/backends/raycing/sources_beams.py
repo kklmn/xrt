@@ -44,7 +44,8 @@ class Beam(object):
                  xyzOnly=False, bl=None):
         self.listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
                             'filamentDX', 'filamentDZ', 'filamentDtheta',
-                            'filamentDpsi', 'state', 'a', 'b', 'c', 'path',
+                            'filamentDpsi', 'filamentDgamma',
+                            'state', 'a', 'b', 'c', 'path',
                             'E', 'Jss', 'Jpp', 'Jsp', 'elevationD',
                             'elevationX', 'elevationY', 'elevationZ', 's',
                             'phi', 'r', 'theta', 'order', 'accepted',
@@ -99,6 +100,7 @@ class Beam(object):
                 self.sourceSIGMAz = 0.
                 self.filamentDtheta = 0.
                 self.filamentDpsi = 0.
+                self.filamentDgamma = 0.
                 self.filamentDX = 0.
                 self.filamentDZ = 0.
                 self.state = np.zeros(nrays, dtype=np.int)

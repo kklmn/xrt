@@ -1288,6 +1288,7 @@ class IntegratedSource(SourceBase):
         seededI = 0.
         np.seterr(invalid='warn')
         np.seterr(divide='warn')
+        dgamma = None
         if self.filamentBeam:
             if accuBeam is None:
                 rsE = np.random.random_sample() * \
@@ -1296,12 +1297,15 @@ class IntegratedSource(SourceBase):
                 rZ = self.dz * np.random.standard_normal()
                 dtheta = self.dxprime * np.random.standard_normal()
                 dpsi = self.dzprime * np.random.standard_normal()
+                if self.eEspread > 0:
+                    dgamma = self.eEspread * np.random.normal()
             else:
                 rsE = accuBeam.E[0]
                 rX = accuBeam.filamentDX
                 rZ = accuBeam.filamentDZ
                 dtheta = accuBeam.filamentDtheta
                 dpsi = accuBeam.filamentDpsi
+                dgamma = accuBeam.filamentDgamma
                 seeded = accuBeam.seeded
                 seededI = accuBeam.seededI
 
@@ -1360,7 +1364,7 @@ class IntegratedSource(SourceBase):
                 rndg = np.random.rand(mcRays)
                 rPsi = rndg * (self.Psi_max - self.Psi_min) + self.Psi_min
 
-            Intensity, mJs, mJp = self.build_I_map(rE, rTheta, rPsi)
+            Intensity, mJs, mJp = self.build_I_map(rE, rTheta, rPsi, dg=dgamma)
 
             if self.uniformRayDensity:
                 seededI += mcRays * self.xzE
