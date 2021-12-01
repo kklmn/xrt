@@ -578,8 +578,18 @@ class SourceFromField(IntegratedSource):
         args = np.argwhere(a >= a.max()*0.5)
         return z[np.max(args)] - z[np.min(args)] + dz
 
+    def get_sigma_r02(self, E):  # linear size
+        """Squared sigma_{r0} as by Walker and by Ellaume and
+        Tanaka and Kitamura J. Synchrotron Rad. 16 (2009) 380–386 (see the
+        text after Eq(23))"""
+        return 2 * CHeVcm/E*10 * self.deviceLength / PI2**2
+
+    def get_sigmaP_r02(self, E):  # angular size
+        """Squared sigmaP_{r0}"""
+        return CHeVcm/E*10 / (2 * self.deviceLength)
+
     def get_SIGMA(self, E, onlyOddHarmonics=True):
-        sigma_r2 = 2 * CHeVcm/E*10 * self.deviceLength / PI2**2
+        sigma_r2 = self.get_sigma_r02(E)
         return ((self.dx**2 + sigma_r2)**0.5,
                 (self.dz**2 + sigma_r2)**0.5)
 
@@ -1821,7 +1831,6 @@ class Undulator(IntegratedSource):
                     np.sqrt(Amp2Flux) * ab * Ip_local * 0.5 * self.dstep)
 
     def _build_I_map_CL(self, w, ddtheta, ddpsi, harmonic, dgamma=None):
-
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
         if self.eEspread > 0:

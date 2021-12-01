@@ -1009,6 +1009,7 @@ class IntegratedSource(SourceBase):
             else:
                 ph2start = self.quadm
         self.quadm = ph2end
+        print("Done estimating convergence")
 
         if testMode:
             return converged, (np.array(xm), np.array(pltout),
@@ -1298,7 +1299,8 @@ class IntegratedSource(SourceBase):
                 dtheta = self.dxprime * np.random.standard_normal()
                 dpsi = self.dzprime * np.random.standard_normal()
                 if self.eEspread > 0:
-                    dgamma = self.eEspread * np.random.normal()
+                    dgamma = self.gamma * self.eEspread * \
+                        np.random.standard_normal()
             else:
                 rsE = accuBeam.E[0]
                 rX = accuBeam.filamentDX
@@ -1506,6 +1508,7 @@ class IntegratedSource(SourceBase):
             bo.filamentDpsi = dpsi
             bo.filamentDX = rX
             bo.filamentDZ = rZ
+            bo.filamentDgamma = dgamma
 
         norm = (bo.a**2 + bo.b**2 + bo.c**2)**0.5
         bo.a /= norm
