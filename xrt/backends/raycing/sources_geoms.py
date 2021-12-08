@@ -531,11 +531,11 @@ class GaussianBeam(object):
         wave.Jsp *= amp2
 
         wave.a[:] = wave.xDiffr
+        wave.c[:] = wave.zDiffr
         with np.errstate(divide='ignore'):
             wave.b[:] = 1/invR
         wave.b[invR == 0] = 1e20
         wave.b[:] = (wave.b**2 - wave.a**2 - wave.c**2)**0.5
-        wave.c[:] = wave.zDiffr
 # normalize (a,b,c):
         norm = (wave.a**2 + wave.b**2 + wave.c**2)**0.5
         wave.a /= norm

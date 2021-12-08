@@ -284,21 +284,36 @@ class RectangularAperture(object):
         :class:`~xrt.backends.raycing.oes.OE`,
         :class:`~xrt.backends.raycing.apertures.RectangularAperture` or
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
-        *nrays* of samples are randomly distributed over the slit area.
+        *nrays*: if int, specifies the number of randomly distributed samples
+        over the slit area; if 2-tuple of ints, specifies (nx, ny) sizes of a
+        uniform mesh of samples.
         """
         if rw is None:
             from . import waves as rw
 
-        nrays = int(nrays)
-        wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
-        xy = np.random.rand(nrays, 2)
+        if isinstance(nrays, int):
+            nsamples = nrays
+        elif isinstance(nrays, (list, tuple)):
+            nsamples = nrays[0] * nrays[1]
+        else:
+            raise ValueError('wrong type of `nrays`!')
+
+        wave = rs.Beam(nrays=nsamples, forceState=1, withAmplitudes=True)
         dX = self.limOptX[1] - self.limOptX[0]
         dZ = self.limOptY[1] - self.limOptY[0]
-        wave.x[:] = xy[:, 0] * dX + self.limOptX[0]
-        wave.z[:] = xy[:, 1] * dZ + self.limOptY[0]
         wave.area = dX * dZ
-        wave.dS = wave.area / nrays
+        wave.dS = wave.area / nsamples
         wave.toOE = self
+        if isinstance(nrays, int):
+            xy = np.random.rand(nrays, 2)
+            wave.x[:] = xy[:, 0] * dX + self.limOptX[0]
+            wave.z[:] = xy[:, 1] * dZ + self.limOptY[0]
+        elif isinstance(nrays, (list, tuple)):
+            x = np.linspace(*self.limOptX, nrays[0])
+            z = np.linspace(*self.limOptY, nrays[1])
+            X, Z = np.meshgrid(x, z)
+            wave.x[:] = X.ravel()
+            wave.z[:] = Z.ravel()
 
         glo = rs.Beam(copyFrom=wave)
         self.local_to_global(glo)

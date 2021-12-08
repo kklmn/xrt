@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "12 Apr 2016"
+__date__ = "4 Oct 2021"
 import numpy as np
 import pickle
 from .. import raycing
@@ -23,6 +23,25 @@ allArguments = ('bl', 'name', 'center', 'pitch', 'yaw', 'nrays',
                 'targetOpenCL', 'precisionOpenCL')
 
 
+class BeamProxy(object):
+    """An empty object to attach fields to it. With a simple instance of
+    object() this is impossible but doable with an empty class."""
+    basicAttrs = ['x', 'y', 'z', 'a', 'b', 'c', 'state', 'E', 'path',
+                  'Es', 'Ep', 'Jss', 'Jpp', 'Jsp']
+    # farAttrs = ['a', 'b', 'c', 'state', 'E', 'path',
+    #             'Es', 'Ep', 'Jss', 'Jpp', 'Jsp']
+
+    def __init__(self, copyFrom=None):
+        if copyFrom is None:
+            return
+        for attr in self.basicAttrs:
+            setattr(self, attr, np.copy(getattr(copyFrom, attr)))
+
+    # def filter_by_index(self, indarr):
+    #     for attr in self.farAttrs:
+    #         setattr(self, attr, np.copy(getattr(self, attr))[indarr])
+
+
 class Beam(object):
     """Container for the beam arrays. *x, y, z* give the starting points.
     *a, b, c* give normalized vectors of ray directions (the source must take
@@ -39,20 +58,22 @@ class Beam(object):
     *s*, *phi*, *r* arrays store the impact points in the parametric
     coordinates.
     """
+    listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
+                   'filamentDX', 'filamentDZ', 'filamentDtheta',
+                   'filamentDpsi', 'filamentDgamma',
+                   'state', 'a', 'b', 'c', 'path',
+                   'E', 'Jss', 'Jpp', 'Jsp', 'elevationD',
+                   'elevationX', 'elevationY', 'elevationZ', 's',
+                   'phi', 'r', 'theta', 'order', 'accepted',
+                   'acceptedE', 'seeded', 'seededI', 'Es', 'Ep',
+                   # 'area',
+                   'nRefl']
+
     def __init__(self, nrays=raycing.nrays, copyFrom=None, forceState=False,
                  withNumberOfReflections=False, withAmplitudes=False,
                  xyzOnly=False, bl=None):
-        self.listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
-                            'filamentDX', 'filamentDZ', 'filamentDtheta',
-                            'filamentDpsi', 'filamentDgamma',
-                            'state', 'a', 'b', 'c', 'path',
-                            'E', 'Jss', 'Jpp', 'Jsp', 'elevationD',
-                            'elevationX', 'elevationY', 'elevationZ', 's',
-                            'phi', 'r', 'theta', 'order', 'accepted',
-                            'acceptedE', 'seeded', 'seededI', 'Es', 'Ep',
-                            # 'area',
-                            'nRefl']
-        if type(copyFrom) == type(self):
+        # if type(copyFrom) == type(self):
+        if hasattr(copyFrom, 'a') and hasattr(copyFrom, 'x'):
             try:
                 for attr in self.listOfAttrs:
                     if hasattr(copyFrom, attr):
