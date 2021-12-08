@@ -3,29 +3,36 @@
 Version history
 ---------------
 
+Future release, already available at GitHub (8 Dec 2021):
+    - Propagation of individual source modes, as waves, hybrid waves
+      (partially as rays and then as waves) and only rays.
+      See :ref:`Coherent mode decomposition and propagation <modes>`.
+
+    - Minor bug fixes.
+
 1.4.0 (22 Sep 2021):
     - Major update for the :ref:`undulator sources <undulator-grid>` module:
 
-      - Custom synchrotron sources calculation extended for non-periodic cases,
-        including bending magnets.
+    - Custom synchrotron sources calculation extended for non-periodic cases,
+      including bending magnets.
 
-      - Multiple performance optimizations, Gauss-Legendre grid replaced with
-        Clenshaw-Curtis. 
+    - Multiple performance optimizations, Gauss-Legendre grid replaced with
+      Clenshaw-Curtis. 
  
-      - Extended functionality to :ref:`estimate and visualize convergence
-        <test_undulator>`.
+    - Extended functionality to :ref:`estimate and visualize convergence
+      <test_undulator>`.
 
-      - Added pure NumPy implementation for near field model and custom
-        magnetic structures.
+    - Added pure NumPy implementation for near field model and custom
+      magnetic structures.
 
-      - Added setters and getters, doing reset() is no longer required after
-        post-init update of parameters.
+    - Added setters and getters, doing reset() is no longer required after
+      post-init update of parameters.
 
-      - Added asymmetric angular limits.
+    - Added asymmetric angular limits.
 
-      - Angular limits get automatically extended to account for
-        divergence/emittance, important if used with the slits/apertures
-        matching angular acceptance.
+    - Angular limits get automatically extended to account for
+      divergence/emittance, important if used with the slits/apertures
+      matching angular acceptance.
 
     - Enable closed surfaces in xrtGlow.
 

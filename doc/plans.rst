@@ -3,8 +3,6 @@
 Plans
 -----
 
-- propagation of individual source modes, both as waves and rays
-
 - full propagation through the beamline completely within OpenCL
 
 - models of isotropic fluorescence beams, including proper quantum fluorescence

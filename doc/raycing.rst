@@ -36,4 +36,6 @@ Raycing backend
 
 .. automodule:: xrt.backends.raycing.waves
 
+.. automodule:: xrt.backends.raycing.modes
+
 .. automodule:: test_waves
