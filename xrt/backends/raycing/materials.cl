@@ -1,5 +1,5 @@
 //__author__ = "Konstantin Klementiev, Roman Chernikov"
-//__date__ = "22 Jan 2016"
+//__date__ = "19 Dec 2021"
 
 #define PRIVATELAYERS 1000
 #ifdef cl_khr_fp64
@@ -600,6 +600,96 @@ float4 get_amplitude_graded_multilayer_internal(const int npairs,
     return (float4)(ri_si, ri_pi);
 }
 
+float4 get_amplitude_graded_multilayer_internal_tran(
+        const int npairs,
+        const float dsi,
+        float2 rvt_si,
+        float2 rvt_pi,
+        float2 tvt_si,
+        float2 tvt_pi,
+        float2 rbs_si,
+        float2 rbs_pi,
+        float2 tbs_si,
+        float2 tbs_pi,
+        float2 rsv_si,
+        float2 rsv_pi,
+        float2 tsv_si,
+        float2 tsv_pi,
+        float2 rbt_si,
+        float2 rbt_pi,
+        float2 tbt_si,
+        float2 tbt_pi,
+        float2 rtb_si,
+        float2 rtb_pi,
+        float2 ttb_si,
+        float2 ttb_pi,
+        float2 qti,
+        float2 qbi,
+        float2 qsi,
+        __global float* dti,
+		__global float* dbi)  {
+    int i;
+    float2 rij_s, rij_p, tij_s, tij_p;
+    float2 rj_s, rj_p, tj_s, tj_p;
+    float2 ri_si, ri_pi, ti_si, ti_pi;
+	float2 iQT, p1i, p2i, rj2i, tj1i;
+
+    rj_s = rsv_si;
+    rj_p = rsv_pi;
+    tj_s = tsv_si;
+    tj_p = tsv_pi;
+
+    for (i=2*npairs;i>0;i--)
+    {
+        if (i%2 == 0) {
+            if (i == 0) {  // topmost layer
+                rij_s = rvt_si;
+                rij_p = rvt_pi;
+                tij_s = tvt_si;
+                tij_p = tvt_pi;
+                iQT = qti * dti[i/2];
+            } else if (i == 2*npairs) {  // substrate
+                rij_s = rbs_si;
+                rij_p = rbs_pi;
+                tij_s = tbs_si;
+                tij_p = tbs_pi;
+                iQT = qsi * dsi;
+            } else {
+                rij_s = rbt_si;
+                rij_p = rbt_pi;
+                tij_s = tbt_si;
+                tij_p = tbt_pi;
+                iQT = qti * dti[i/2];
+            }
+        } else {
+            rij_s = rtb_si;
+            rij_p = rtb_pi;
+            tij_s = ttb_si;
+            tij_p = ttb_pi;
+            iQT = qbi * dbi[i/2];
+        }
+        p1i = exp_c(prod_c(0.5*cmpi1, iQT));
+        p2i = prod_c(p1i, p1i);
+
+        rj2i = prod_c(rj_s, p2i);
+        tj1i = prod_c(tj_s, p1i);
+        ri_si = div_c((rij_s + rj2i), (cmp1 + prod_c(rij_s, rj2i)));
+        ti_si = div_c(prod_c(tij_s, tj1i), (cmp1 + prod_c(rij_s, rj2i)));
+        
+        rj2i = prod_c(rj_p, p2i);
+        tj1i = prod_c(tj_p, p1i);
+        ri_pi = div_c((rij_p + rj2i), (cmp1 + prod_c(rij_p, rj2i)));
+        ti_pi = div_c(prod_c(tij_p, tj1i), (cmp1 + prod_c(rij_p, rj2i)));
+
+        rj_s = ri_si;
+        rj_p = ri_pi;
+        tj_s = ti_si;
+        tj_p = ti_pi;
+    }
+
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+    return (float4)(ti_si, ti_pi);
+}
 
 __kernel void get_amplitude(const int4 hkl,
                             const float factDW,
@@ -679,6 +769,52 @@ __kernel void get_amplitude_graded_multilayer(const int npairs,
     mem_fence(CLK_LOCAL_MEM_FENCE);
     ri_s[ii] = amplitudes.s01;
     ri_p[ii] = amplitudes.s23;
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+}
+
+__kernel void get_amplitude_graded_multilayer_tran(
+        const int npairs,
+        const float dsi,
+        __global float2* rvt_s,
+        __global float2* rvt_p,
+        __global float2* tvt_s,
+        __global float2* tvt_p,
+        __global float2* rbs_s,
+        __global float2* rbs_p,
+        __global float2* tbs_s,
+        __global float2* tbs_p,
+        __global float2* rsv_s,
+        __global float2* rsv_p,
+        __global float2* tsv_s,
+        __global float2* tsv_p,
+        __global float2* rbt_s,
+        __global float2* rbt_p,
+        __global float2* tbt_s,
+        __global float2* tbt_p,
+        __global float2* rtb_s,
+        __global float2* rtb_p,
+        __global float2* ttb_s,
+        __global float2* ttb_p,
+        __global float2* qt_glo,
+        __global float2* qb_glo,
+        __global float2* qs_glo,
+        __global float* dti,
+        __global float* dbi,
+        __global float2* ti_s,
+        __global float2* ti_p)  {
+    unsigned int ii = get_global_id(0);
+    float4 amplitudes;
+    amplitudes = get_amplitude_graded_multilayer_internal_tran(
+        npairs, dsi,
+        rvt_s[ii], rvt_p[ii], tvt_s[ii], tvt_p[ii],
+        rbs_s[ii], rbs_p[ii], tbs_s[ii], tbs_p[ii],
+        rsv_s[ii], rsv_p[ii], tsv_s[ii], tsv_p[ii],
+        rbt_s[ii], rbt_p[ii], tbt_s[ii], tbt_p[ii],
+        rtb_s[ii], rtb_p[ii], ttb_s[ii], ttb_p[ii],
+        qt_glo[ii], qb_glo[ii], qs_glo[ii], dti, dbi);
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+    ti_s[ii] = amplitudes.s01;
+    ti_p[ii] = amplitudes.s23;
     mem_fence(CLK_LOCAL_MEM_FENCE);
 }
 

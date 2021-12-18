@@ -215,7 +215,7 @@ therefore is given without comparison.
 Slab, multilayer and coating reflectivity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The phase difference between s- and p-polarized rays is given without
+Here, the phase difference between s- and p-polarized rays is given without
 comparison.
 
 .. imagezoom:: _images/SlabReflW.*
@@ -231,6 +231,22 @@ comparison.
    :loc: upper-right-corner
 
 .. imagezoom:: _images/MirrorRefl20nmDiamondOnQuartz_0.2deg_RMSroughness1nm.*
+
+.. _tests_ml_tran:
+
+.. note::
+
+    At low energy, the result strongly depends on the used tabulation.
+    'xrt-Henke' below overplots the curves calculated by Mlayer and REFLEC that
+    use the tabulation by Henke. 'xrt-Chantler' is significantly different.
+
+.. note::
+
+    Mlayer/XOP does not calculate multilayers in transmission.
+
+.. imagezoom:: _images/MultilayerScCr.*
+.. imagezoom:: _images/MultilayerScCr-transmitted.*
+   :loc: upper-right-corner
 
 Transmittivity of materials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -262,9 +278,51 @@ import numpy as np
 import matplotlib as mpl
 mpl.rcParams['backend'] = 'Qt5Agg'
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerBase
+import pickle
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
+import xrt.backends.raycing as raycing
+
+raycing._VERBOSITY_ = 1000
+
+
+class BlackLineObjectsHandler(HandlerBase):
+    def create_artists(self, legend, orig_handle,
+                       x0, y0, width, height, fontsize, trans):
+        l1 = plt.Line2D([x0, x0+width], [0.5*height, 0.5*height],
+                        linestyle=orig_handle[0].get_linestyle(), color='k')
+        return [l1]
+
+
+class TwoLineObjectsHandler(HandlerBase):
+    def create_artists(self, legend, orig_handle,
+                       x0, y0, width, height, fontsize, trans):
+        l1 = plt.Line2D([x0, x0+width], [0.7*height, 0.7*height],
+                        linestyle=orig_handle[0].get_linestyle(),
+                        color=orig_handle[0].get_color())
+        if orig_handle[1]:
+            l2 = plt.Line2D([x0, x0+width], [0.3*height, 0.3*height],
+                            linestyle=orig_handle[1].get_linestyle(),
+                            color=orig_handle[1].get_color())
+            return [l1, l2]
+        else:
+            return [l1]
+
+
+class TwoScatterObjectsHandler(HandlerBase):
+    def create_artists(self, legend, orig_handle,
+                       x0, y0, width, height, fontsize, trans):
+        l1 = plt.Line2D([x0+0.2*width], [0.5*height],
+                        marker=orig_handle[0].get_paths()[0],
+                        color=orig_handle[0].get_edgecolors()[0],
+                        markerfacecolor='none')
+        l2 = plt.Line2D([x0+0.8*width], [0.5*height],
+                        marker=orig_handle[1].get_paths()[0],
+                        color=orig_handle[1].get_edgecolors()[0],
+                        markerfacecolor='none')
+        return [l1, l2]
 
 
 def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
@@ -836,81 +894,176 @@ def compare_reflectivity_slab():
                      u'slab, t = 25 Å, @ 10 keV')
 
 
-def compare_reflectivity_multilayer():
+def compare_multilayer():
     """A comparison subroutine used in the module test suit."""
 #    cl_list = None
-    try:
-        import pyopencl as cl
-        os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-        isOpenCL = True
-    except ImportError:
-        isOpenCL = False
+    # wantOpenCL = True
+    wantOpenCL = False
 
-    if isOpenCL:
-        import xrt.backends.raycing.myopencl as mcl
-        matCL = mcl.XRT_CL(r'materials.cl')
-#        cl_list = matCL.cl_ctx[0], matCL.cl_queue[0], matCL.cl_program[0]
+    if wantOpenCL:
+        try:
+            import pyopencl as cl
+            os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+            isOpenCL = True
+        except ImportError:
+            isOpenCL = False
+
+        if isOpenCL:
+            import xrt.backends.raycing.myopencl as mcl
+            matCL = mcl.XRT_CL(r'materials.cl')
+    #        cl_list = matCL.cl_ctx[0], matCL.cl_queue[0], matCL.cl_program[0]
+        else:
+            matCL = None
     else:
         matCL = None
 
-    def for_one_material(ml, refs, E, label, flabel=''):
+    def compare(xrtMLs, refDatas, E, title, flabel=''):
+        refxs, refss, refps, refphs = [], [], [], []
+        refLabels = [rd[1] for rd in refDatas]
+        for refData in refDatas:
+            refFile = refData[0]
+            if refFile.endswith('.npy'):
+                data = np.load(refFile, allow_pickle=True)
+                # print([key for key in data.item()])
+                refx = data.item()['Angle']
+                refs = data.item()['Ang, TRANSMITTANCE s-pol']
+                refp = data.item()['Ang, TRANSMITTANCE p-pol']
+                refph = np.radians(data.item()[
+                    'Ang, PHASE DIFFERENCE DELTA-(S-P)'])
+            else:
+                res = np.loadtxt(refFile, unpack=True)
+                refx, refs = res[:2]
+                refp = res[2] if len(res) > 2 else None
+                if len(res) > 4:
+                    refph = (res[3] - res[4]) * np.pi
+                else:
+                    refph = None
+            refxs.append(refx)
+            refss.append(refs)
+            refps.append(refp)
+            refphs.append(refph)
+
         fig = plt.figure(figsize=(8, 6), dpi=100)
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
-        ax.set_ylabel('reflectivity')
+        if 'trans' in xrtMLs[0][0].geom:
+            ax.set_ylabel('transmittivity')
+        else:
+            ax.set_ylabel('reflectivity')
         ax.set_xlim(theta[0], theta[-1])
-        fig.suptitle(label, fontsize=14)
-        x, R2s = np.loadtxt(refs, unpack=True)
-        p1, = ax.plot(x, R2s, '-k', label='s Mlayer')
-        refl = ml.get_amplitude(E, np.sin(np.deg2rad(theta)), ucl=matCL)
-        rs, rp = refl[0], refl[1]
-        p3, = ax.plot(theta, abs(rs)**2, '-r', lw=1)
-        p4, = ax.plot(theta, abs(rp)**2, '--r')
-        l1 = ax.legend([p3, p4], ['s', 'p'], loc=3)
-        ax.legend([p1, p3], ['Mlayer/XOP', 'xrt'], loc=1)
+        fig.suptitle(title, fontsize=12)
+
+        xrtData = []
+        xrtLines = []
+        xrtLabels = [xd[1] for xd in xrtMLs]
+        for iml, ml in enumerate(xrtMLs):
+            refl = ml[0].get_amplitude(E, np.sin(np.radians(theta)), ucl=matCL)
+            rs, rp = refl[0], refl[1]
+            xrtData.append((rs, rp))
+            c = 'C{0}'.format(iml)
+            p1, = ax.plot(theta, abs(rs)**2, '-', color=c, lw=2, zorder=100)
+            p2, = ax.plot(theta, abs(rp)**2, '--', color=c, lw=2, zorder=100)
+            xrtLines.append((p1, p2))
+
+        refLines = []
+        for iref, (refx, refs, refp) in enumerate(zip(refxs, refss, refps)):
+            c = 'C{0}'.format(iref+len(xrtMLs))
+            pS, = ax.plot(refx, refs, '-', lw=2, color=c)
+            if refp is not None:
+                pP, = ax.plot(refx, refp, '--', lw=2, color=c)
+                refLines.append((pS, pP))
+            else:
+                refLines.append((pS, None))
+
+        l1 = ax.legend([(p1,), (p2,)], ['s', 'p'], loc='upper right',
+                       handler_map={tuple: BlackLineObjectsHandler()})
+
+        ax.legend(xrtLines+refLines, xrtLabels+refLabels, loc='lower left',
+                  title=ax.get_ylabel(),
+                  handler_map={tuple: TwoLineObjectsHandler()})
         ax.add_artist(l1)
-        ylim = ax.get_ylim()
-        ax.set_ylim([ylim[0], 1])
+        ax.set_ylim([0, None])
+
 # phases:
         ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(theta, phi, 'c', lw=1, yunits=math.pi, zorder=0)
+        ax2.set_ylabel(r'$\phi_s - \phi_p$')  # , color='c')
+        xrtLinesPh = []
+        for iml, (rs, rp) in enumerate(xrtData):
+            c = 'C{0}'.format(iml)
+            phi = np.unwrap(np.angle(rs * rp.conj()))
+            p9, = ax2.plot(theta, phi, color=c, yunits=math.pi, alpha=0.5,
+                           zorder=90)
+            xrtLinesPh.append(p9)
+        refLinesPh = []
+        for iref, (refx, refph) in enumerate(zip(refxs, refphs)):
+            c = 'C{0}'.format(iref+len(xrtMLs))
+            if refph is not None:
+                pH, = ax2.plot(refx, refph, color=c, yunits=math.pi, alpha=0.5)
+                refLinesPh.append(pH)
         formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
         ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
         ax2.set_xlim(theta[0], theta[-1])
 
         ax2.set_zorder(-1)
         ax.patch.set_visible(False)  # hide the 'canvas'
+        ax2.legend(xrtLinesPh+refLinesPh, xrtLabels+refLabels,
+                   loc='lower right', title='phase difference')
 
-        fname = 'Multilayer' + ml.tLayer.name + ml.bLayer.name
+        ml = xrtMLs[0][0]
+        fname = 'Multilayer{0}{1}'.format(ml.tLayer.name, ml.bLayer.name)
         fig.savefig(fname + flabel)
 
     dataDir = os.path.join('', 'XOP-Reflectivities')
-    theta = np.linspace(0, 1.6, 801)  # degrees
-    mSi = rm.Material('Si', rho=2.33)
-    mW = rm.Material('W', rho=19.3)
 
-    mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi)
-    for_one_material(mL, os.path.join(dataDir, "WSi45A04.mlayer.gz"), 8050,
-                     u'40 × [27 Å Si + 18 Å W] multilayer @ 8.05 keV')
+    theta = np.linspace(35, 40, 511)  # degrees
+    E0 = 398.0
+    mScH = rm.Material('Sc', rho=2.98, table='Henke')
+    mCrH = rm.Material('Cr', rho=7.18, table='Henke')
+    mScC = rm.Material('Sc', rho=2.98, table='Chantler')
+    mCrC = rm.Material('Cr', rho=7.18, table='Chantler')
 
-    mL = rm.Multilayer(mSi, 27*2, mW, 18*2, 40, mSi, 27, 18, 2)
-    for_one_material(mL, os.path.join(dataDir, "WSi45_100A40.mlayer.gz"), 8050,
-                     u'Depth graded multilayer \n 40 × [54 Å Si + 36 Å W]'
-                     u' to [27 Å Si + 18 Å W] @ 8.05 keV', '-graded')
+    # mLH = rm.Multilayer(mScH, 12.8, mCrH, 12.8, 200, mScH)
+    # mLC = rm.Multilayer(mScC, 12.8, mCrC, 12.8, 200, mScC)
+    # compare(
+    #     ((mLH, 'xrt-Henke'), (mLC, 'xrt-Chantler')),
+    #     [(os.path.join(dataDir, "ScCr_ML_reflection_REFLEC.npy"), 'REFLEC'),
+    #      (os.path.join(dataDir, "mLScCr-spph.mlayer.gz"), 'Mlayer/XOP')],
+    #     E0, u'200 × [12.8 Å Sc + 12.8 Å Cr] / Sc multilayer @ 398 eV')
 
-#    mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi, 27*2, 18*2, 2)
-#    for_one_material(mL, os.path.join(dataDir, "WSi100_45A40.mlayer.gz"), 8050,
-#                     u'Depth graded multilayer \n 40 × [27 Å Si + 18 Å W]'
-#                     u' to [54 Å Si + 36 Å W] multilayer @ 8.05 keV',
-#                     '-antigraded')
+    mLH = rm.Multilayer(mScH, 12.8, mCrH, 12.8, 200, mScH, substThickness=13.0,
+                        geom='transmitted')
+    mLC = rm.Multilayer(mScC, 12.8, mCrC, 12.8, 200, mScC, substThickness=13.0,
+                        geom='transmitted')
+    compare(
+        ((mLH, 'xrt-Henke'), (mLC, 'xrt-Chantler')),
+        [(os.path.join(dataDir, "ScCr_ML_transmission_REFLEC.npy"), 'REFLEC')],
+        E0, u'200 × [12.8 Å Sc + 12.8 Å Cr] / 13 Å Sc multilayer @ 398 eV',
+        '-transmitted')
+
+    # theta = np.linspace(0, 1.6, 801)  # degrees
+    # mSi = rm.Material('Si', rho=2.33)
+    # mW = rm.Material('W', rho=19.3)
+
+    # mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi)
+    # compare([(mL, 'xrt')],
+    #         [(os.path.join(dataDir, "WSi45A04.mlayer.gz"), 'Mlayer/XOP')],
+    #         8050, u'40 × [27 Å Si + 18 Å W] multilayer @ 8.05 keV')
+
+    # mL = rm.Multilayer(mSi, 27*2, mW, 18*2, 40, mSi, 27, 18, 2)
+    # compare([(mL, 'xrt')],
+    #         [(os.path.join(dataDir, "WSi45_100A40.mlayer.gz"), 'Mlayer/XOP')],
+    #         8050, u'Depth graded multilayer \n 40 × [54 Å Si + 36 Å W]'
+    #         u' to [27 Å Si + 18 Å W] @ 8.05 keV', '-graded')
+
+    # mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi, 27*2, 18*2, 2)
+    # compare([(mL, 'xrt')],
+    #         [(os.path.join(dataDir, "WSi100_45A40.mlayer.gz"), 'Mlayer/XOP')],
+    #         8050, u'Depth graded multilayer \n 40 × [27 Å Si + 18 Å W]'
+    #         u' to [54 Å Si + 36 Å W] multilayer @ 8.05 keV', '-antigraded')
 
 
-def compare_reflectivity_multilayer_interdiffusion():
+def compare_multilayer_interdiffusion():
     """A comparison subroutine used in the module test suit."""
 #    cl_list = None
     try:
@@ -1090,13 +1243,13 @@ def run_tests():
 
 #Compare the calculated rocking curves of Si crystals with those calculated by
 #XCrystal and XInpro (parts of XOP):
-    compare_rocking_curves('111')
+    # compare_rocking_curves('111')
     # compare_rocking_curves('333')
     # compare_rocking_curves('111', t=0.007)  # t is thickness in mm
     # compare_rocking_curves('333', t=0.007)
     # compare_rocking_curves('111', t=0.100)
     # compare_rocking_curves('333', t=0.100)
-    compare_rocking_curves('111', t=0.007, geom='Bragg transmitted')
+    # compare_rocking_curves('111', t=0.007, geom='Bragg transmitted')
     # compare_rocking_curves('333', t=0.007, geom='Bragg transmitted')
     # compare_rocking_curves('111', t=0.100, geom='Bragg transmitted')
     # compare_rocking_curves('333', t=0.100, geom='Bragg transmitted')
@@ -1111,8 +1264,8 @@ def run_tests():
 
 # Compare rocking curves for bent Si crystals with those calculated by
 #XCrystal_Bent (Takagi-Taupin):
-    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-                          Rcurvmm=np.inf, alphas=[30])
+    # compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+    #                       Rcurvmm=np.inf, alphas=[30])
     # compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
     #                       Rcurvmm=np.inf, alphas=[30])
     # compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
@@ -1125,46 +1278,46 @@ def run_tests():
 
 #check that Bragg transmitted and Laue transmitted give the same results if the
 #beam path is equal:
-    beamPath = 0.1  # mm
-    compare_Bragg_Laue('111', beamPath=beamPath)
-    compare_Bragg_Laue('333', beamPath=beamPath)
+    # beamPath = 0.1  # mm
+    # compare_Bragg_Laue('111', beamPath=beamPath)
+    # compare_Bragg_Laue('333', beamPath=beamPath)
 
 #Compare the calculated reflectivities of Si, Pt, SiO_2 with those by Xf1f2
 #(part of XOP):
-    compare_reflectivity()
+    # compare_reflectivity()
 
-    compare_reflectivity_coated()
-
-#Compare the calculated reflectivities of W slab with those by Mlayer
-#(part of XOP):
-    compare_reflectivity_slab()
+    # compare_reflectivity_coated()
 
 #Compare the calculated reflectivities of W slab with those by Mlayer
 #(part of XOP):
-    # compare_reflectivity_multilayer()
-    compare_reflectivity_multilayer_interdiffusion()
+    # compare_reflectivity_slab()
+
+#Compare the calculated reflectivities of W slab with those by Mlayer
+#(part of XOP):
+    compare_multilayer()
+    # compare_multilayer_interdiffusion()
     # compare_dTheta()
 
 #Compare the calculated absorption coefficient with that by XCrossSec
 #(part of XOP):
-    compare_absorption_coeff()
+    # compare_absorption_coeff()
 
 #Compare the calculated transmittivity with that by XPower
 #(part of XOP):
-    compare_transmittivity()
+    # compare_transmittivity()
 
 #Play with Si crystal:
-    crystalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=100.)
-    print(2 * crystalSi.get_a()/math.sqrt(3.))  # 2dSi111
-    print('Si111 d-spacing = {0:.6f}'.format(crystalSi.d))
-    print(crystalSi.get_Bragg_offset(8600, 8979))
+    # crystalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=100.)
+    # print(2 * crystalSi.get_a()/math.sqrt(3.))  # 2dSi111
+    # print('Si111 d-spacing = {0:.6f}'.format(crystalSi.d))
+    # print(crystalSi.get_Bragg_offset(8600, 8979))
 
-    crystalDiamond = rm.CrystalDiamond((1, 1, 1), 2.0592872, elements='C')
-    E = 9000.
-    print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for s-polarization'.
-          format(E, crystalDiamond.get_Darwin_width(E) * 1e6))
-    print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for p-polarization'.
-          format(E, crystalDiamond.get_Darwin_width(E, polarization='p')*1e6))
+    # crystalDiamond = rm.CrystalDiamond((1, 1, 1), 2.0592872, elements='C')
+    # E = 9000.
+    # print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for s-polarization'.
+    #       format(E, crystalDiamond.get_Darwin_width(E) * 1e6))
+    # print(u'Darwin width at E={0:.0f} eV is {1:.5f} µrad for p-polarization'.
+    #       format(E, crystalDiamond.get_Darwin_width(E, polarization='p')*1e6))
 
     plt.show()
     print("finished")

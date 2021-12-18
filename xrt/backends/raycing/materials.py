@@ -130,6 +130,7 @@ class Element(object):
     a chemical element. It can also report other atomic data listed in
     ``AtomicData.dat`` file adopted from XOP [XOP]_.
     """
+
     def __init__(self, elem=None, table='Chantler'):
         u"""
         *elem*: str or int
@@ -152,6 +153,7 @@ class Element(object):
             raise NameError('Wrong element')
         self.f0coeffs = self.read_f0_Kissel()
         self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
+        self.table = table
         self.mass = read_atomic_data(self.Z)
 
     def read_f0_Kissel(self):
@@ -260,6 +262,7 @@ class Material(object):
     :class:`Material` serves for getting reflectivity, transmittivity,
     refractive index and absorption coefficient of a material specified by its
     chemical formula and density."""
+
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
                  t=None, table='Chantler total', efficiency=None,
                  efficiencyFile=None, name=''):
@@ -416,7 +419,7 @@ class Material(object):
 
         .. math::
 
-            \mu = \Im(n)/\lambda.
+            \mu = 2 \Im(n) k.
         """
         return abs((self.get_refractive_index(E)).imag) * E / CHBAR * 2e8
 
@@ -530,6 +533,7 @@ class EmptyMaterial(object):
     This class provides an empty (i.e. without reflectivity) 'grating'
     material. For other kinds of empty materials just use None.
     """
+
     def __init__(self, kind='grating'):
         self.kind = kind
         self.geom = ''
@@ -547,14 +551,15 @@ class Multilayer(object):
 
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
-                 idThickness=0., power=2., substRoughness=0, name=''):
+                 idThickness=0., power=2., substRoughness=0,
+                 substThickness=np.inf, name='', geom='reflected'):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
             material.
 
-        *tThickness* and *bThickness*: float
-            The thicknesses of the layers in Å. If the multilayer is depth
+        *tThickness* and *bThickness*: float in Å
+            The thicknesses of the layers. If the multilayer is depth
             graded, *tThickness* and *bThickness* are at the top and
             *tThicknessLow* and *bThicknessLow* are at the substrate. If you
             need laterally graded thicknesses, modify `get_t_thickness` and/or
@@ -573,10 +578,15 @@ class Multilayer(object):
         *nPairs*: int
             The number of layer pairs.
 
-        *idThickness*: float
+        *idThickness*: float in Å
             RMS thickness :math:`\\sigma_{j,j-1}` of the
-            interdiffusion/roughness interface in Å.
+            interdiffusion/roughness interface.
 
+        *substThickness*: float in Å
+            Is only relevant in transmission if *substrate* is present.
+
+        *geom*: str
+            Either 'transmitted' or 'reflected'.
 
         """
         self.tLayer = tLayer
@@ -591,9 +601,10 @@ class Multilayer(object):
         # self.tb = tThicknessTop/self.d
         # self.dLow = float(tThicknessLow + bThicknessLow)
         self.kind = 'multilayer'
-        self.geom = 'Bragg reflected'
+        self.geom = geom
         self.idThickness = idThickness
         self.subRough = substRoughness
+        self.substThickness = substThickness
         if name:
             self.name = name
         else:
@@ -711,8 +722,7 @@ class Multilayer(object):
 
         .. math::
 
-            Q_j = \sqrt{Q^2 - 8k^2\delta_j + i8k^2\beta_j},
-
+            Q_j = \sqrt{Q^2 - 8k^2\delta_j + i8k^2\beta_j}, \quad
             Q = 2k\sin{\theta_0}
 
         and :math:`\delta_j` and :math:`\beta_j` are parts of the refractive
@@ -735,7 +745,6 @@ class Multilayer(object):
         where :math:`k_{j,z}` is longitudinal component of the wave vector
         in j-th layer [Nevot-Croce]_.
 
-
         The above formulas refer to *s* polarization. The *p* part differs at
         the interface:
 
@@ -748,9 +757,29 @@ class Multilayer(object):
         and thus the *p* polarization part requires a separate recursive
         chain.
 
+        .. _descr_ml_tran:
+
+        In transmission, the recursion is the following:
+
+        .. math::
+
+            T_{N+1} = \frac{t_{N, N+1}t_{N+1, N+2}p_{N+1}}
+            {1 + r_{N, N+1} r_{N+1, N+2} p_N^2}, \quad
+            T_j = \frac{T_{j+1}t_{j-1, j}p_j}{1 + r_{j-1, j} R_{j+1} p_j^2},
+
+        where the layer :math:`N+2` is vacuum and the interface
+        transmittivities for the two polarizations are equal to:
+
+        .. math::
+
+            t^s_{j, j+1} = \frac{2Q_j}{Q_j + Q_{j+1}}, \quad
+            t^p_{j, j+1} = \frac{2Q_j\frac{n_{j+1}}{n_j}}
+            {Q_j\frac{n_{j+1}}{n_j} + Q_{j+1}\frac{n_{j}}{n_{j+1}}}
+
         .. [Nevot-Croce] L. Nevot and P. Croce, Rev. Phys. Appl. **15**,
             (1980) 761
         """
+
         k = E / CHBAR
         nt = self.tLayer.get_refractive_index(E).conjugate() if self.tLayer else 1.  # analysis:ignore
         nb = self.bLayer.get_refractive_index(E).conjugate() if self.bLayer else 1.  # analysis:ignore
@@ -764,75 +793,139 @@ class Multilayer(object):
         Qs = (Q2 + (ns-1)*k28)**0.5
         id2 = self.idThickness**2
 
+        roughvt = np.exp(-0.5 * Q * Qt * id2)
+        rvt_s = np.complex128((Q-Qt) / (Q+Qt) * roughvt)
+        rvt_p = np.complex128((Q*nt - Qt/nt) / (Q*nt + Qt/nt) * roughvt)
+        if 'tran' in self.geom:
+            tvt_s = np.complex128(2*Q / (Q+Qt) * roughvt)
+            tvt_p = np.complex128(2*Q*nt / (Q*nt + Qt/nt) * roughvt)
+
         roughtb = np.exp(-0.5 * Qt * Qb * id2)
         rtb_s = np.complex128((Qt-Qb) / (Qt+Qb) * roughtb)
         rtb_p = np.complex128((Qt/nt*nb - Qb/nb*nt) / (Qt/nt*nb + Qb/nb*nt) *
                               roughtb)
         rbt_s = -rtb_s
         rbt_p = -rtb_p
-
-        roughvt = np.exp(-0.5 * Q * Qt * id2)
-        rvt_s = np.complex128((Q-Qt) / (Q+Qt) * roughvt)
-        rvt_p = np.complex128((Q*nt - Qt/nt) / (Q*nt + Qt/nt) * roughvt)
+        if 'tran' in self.geom:
+            ttb_s = np.complex128(2*Qt / (Qt+Qb) * roughtb)
+            ttb_p = np.complex128(2*Qt/nt*nb / (Qt/nt*nb + Qb/nb*nt) * roughtb)
+            tbt_s = np.complex128(2*Qb / (Qt+Qb) * roughtb)
+            tbt_p = np.complex128(2*Qb/nb*nt / (Qt/nt*nb + Qb/nb*nt) * roughtb)
 
         rmsbs = id2 if self.tLayer else self.subRough**2
         roughbs = np.exp(-0.5 * Qb * Qs * rmsbs)
         rbs_s = np.complex128((Qb-Qs) / (Qb+Qs) * roughbs)
         rbs_p = np.complex128((Qb/nb*ns - Qs/ns*nb) / (Qb/nb*ns + Qs/ns*nb) *
                               roughbs)
-        rj_s, rj_p = rbs_s, rbs_p  # bottom layer to substrate
+        if 'tran' in self.geom:
+            tbs_s = np.complex128(2*Qb / (Qb+Qs) * roughbs)
+            tbs_p = np.complex128(2*Qb/nb*ns / (Qb/nb*ns + Qs/ns*nb) * roughbs)
+
+        rsv_s = np.complex128((Qs-Q) / (Qs+Q) * roughbs)
+        rsv_p = np.complex128((Qs/ns - Q*ns) / (Qs/ns + Q*ns) * roughbs)
+        if 'tran' in self.geom:
+            tsv_s = np.complex128(2*Qs / (Qs+Q) * roughbs)
+            tsv_p = np.complex128(2*Qs/ns / (Qs/ns + Q*ns) * roughbs)
+
+        if 'refl' in self.geom:
+            rj_s, rj_p = rbs_s, rbs_p  # bottom layer to substrate
+            extraLayer = 0
+        elif 'tran' in self.geom:
+            rj_s, rj_p = rsv_s, rsv_p  # substrate to vacuum
+            tj_s, tj_p = tsv_s, tsv_p  # substrate to vacuum
+            extraLayer = 1
+
         ri_s = np.zeros_like(rj_s)
         ri_p = np.zeros_like(rj_p)
+        if 'tran' in self.geom:
+            ti_s = np.zeros_like(rj_s)
+            ti_p = np.zeros_like(rj_p)
         t0 = time.time()
         if ucl is None:
-            for i in reversed(range(2*self.nPairs)):
+            for i in reversed(range(2*self.nPairs+extraLayer)):  # + substrate
                 if i % 2 == 0:
                     if i == 0:  # topmost layer
                         rij_s, rij_p = rvt_s, rvt_p
+                        if 'tran' in self.geom:
+                            tij_s, tij_p = tvt_s, tvt_p
+                        iQT = Qt * self.get_t_thickness(x, y, i//2)
+                    elif i == 2*self.nPairs:  # substrate, only if 'tran'
+                        rij_s, rij_p = rbs_s, rbs_p
+                        tij_s, tij_p = tbs_s, tbs_p
+                        iQT = Qs * self.substThickness
                     else:
                         rij_s, rij_p = rbt_s, rbt_p
-                    p2i = np.complex128(
-                        np.exp(1j*Qt*self.get_t_thickness(x, y, i//2)))
+                        if 'tran' in self.geom:
+                            tij_s, tij_p = tbt_s, tbt_p
+                        iQT = Qt * self.get_t_thickness(x, y, i//2)
                 else:
                     rij_s, rij_p = rtb_s, rtb_p
-                    p2i = np.complex128(
-                        np.exp(1j*Qb*self.get_b_thickness(x, y, i//2)))
-                ri_s = (rij_s + rj_s*p2i) / (1 + rij_s*rj_s*p2i)
-                ri_p = (rij_p + rj_p*p2i) / (1 + rij_p*rj_p*p2i)
+                    if 'tran' in self.geom:
+                        tij_s, tij_p = ttb_s, ttb_p
+                    iQT = Qb * self.get_b_thickness(x, y, i//2)
+                p1i = np.complex128(np.exp(0.5j*iQT))
+                p2i = p1i**2
+
+                rj2i_s = rj_s * p2i
+                rj2i_p = rj_p * p2i
+                ri_s = (rij_s + rj2i_s) / (1 + rij_s*rj2i_s)
+                ri_p = (rij_p + rj2i_p) / (1 + rij_p*rj2i_p)
+                if 'tran' in self.geom:
+                    ti_s = tij_s * tj_s * p1i / (1 + rij_s*rj2i_s)
+                    ti_p = tij_p * tj_p * p1i / (1 + rij_p*rj2i_p)
+                    tj_s, tj_p = ti_s, ti_p
                 rj_s, rj_p = ri_s, ri_p
             t2 = time.time()
             if raycing._VERBOSITY_ > 10:
                 print('ML reflection calculated with CPU in {} s'.format(
                       t2-t0))
         else:
-            scalarArgs = [np.int32(self.nPairs)]
-
-            slicedROArgs = [rbs_s, rbs_p,
-                            rtb_s, rtb_p,
-                            rvt_s, rvt_p,
-                            Qt, Qb]
-
             nonSlicedROArgs = [np.float64(self.dti), np.float64(self.dbi)]
 
-            slicedRWArgs = [ri_s,
-                            ri_p]
-
             try:
-                iterator = iter(E)
+                iterator = iter(E)  # analysis:ignore
             except TypeError:  # not iterable
                 E *= np.ones_like(beamInDotNormal)
-            try:
-                iterator = iter(beamInDotNormal)  # analysis:ignore
-            except TypeError:  # not iterable
-                beamInDotNormal *= np.ones_like(E)
-            ri_s, ri_p = ucl.run_parallel(
-                'get_amplitude_graded_multilayer', scalarArgs, slicedROArgs,
-                nonSlicedROArgs, slicedRWArgs, None, len(E))
+
+            if 'refl' in self.geom:
+                scalarArgs = [np.int32(self.nPairs)]
+                slicedROArgs = [rbs_s, rbs_p,
+                                rtb_s, rtb_p,
+                                rvt_s, rvt_p,
+                                Qt, Qb]
+                slicedRWArgs = [ri_s, ri_p]
+                ri_s, ri_p = ucl.run_parallel(
+                    'get_amplitude_graded_multilayer',
+                    scalarArgs, slicedROArgs,
+                    nonSlicedROArgs, slicedRWArgs, None, len(E))
+            elif 'tran' in self.geom:
+                scalarArgs = [np.int32(self.nPairs),
+                              np.float64(self.substThickness)]
+                slicedROArgs = [
+                        rvt_s, rvt_p, tvt_s, tvt_p,
+                        rbs_s, rbs_p, tbs_s, tbs_p,
+                        rsv_s, rsv_p, tsv_s, tsv_p,
+                        rbt_s, rbt_p, tbt_s, tbt_p,
+                        rtb_s, rtb_p, ttb_s, ttb_p,
+                        Qt, Qb, Qs]
+                slicedRWArgs = [ti_s, ti_p]
+                ti_s, ti_p = ucl.run_parallel(
+                    'get_amplitude_graded_multilayer_tran',
+                    scalarArgs, slicedROArgs,
+                    nonSlicedROArgs, slicedRWArgs, None, len(E))
             t2 = time.time()
             if raycing._VERBOSITY_ > 10:
                 print('ML reflection calculated with OCL in {} s'.format(
                       t2-t0))
-        return ri_s, ri_p
+
+        if 'refl' in self.geom:
+            # n.real (i.e. delta) may be > 0, which is a problem of tabulation
+            nn = nt[0] if isinstance(nt, np.ndarray) else nt
+            if (nn - 1) > 0:  # e.g. for n[Sc][Henke] at 398eV
+                return ri_s.conjugate(), ri_p.conjugate()
+            return ri_s, ri_p
+        elif 'tran' in self.geom:
+            return ti_s, ti_p
 
 
 class GradedMultilayer(Multilayer):
@@ -1694,7 +1787,7 @@ class Crystal(Material):
             raise ValueError(
                 "one of 'beamInDotNormal' or 'alpha' must be given")
         if beamInDotNormal is not None:
-#            beamInDotNormal[beamInDotNormal > 1] = 1 - 1e-16
+            # beamInDotNormal[beamInDotNormal > 1] = 1 - 1e-16
             alpha = np.arcsin(beamInDotNormal) - thetaB
         if alpha is not None:
             beamInDotNormal = np.sin(thetaB + alpha)
@@ -1717,6 +1810,7 @@ class CrystalFcc(Crystal):
         \end{array} \right.
 
     """
+
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         anomalousPart = self.elements[0].get_f1f2(E)
         F0 = 4 * (self.elements[0].Z+anomalousPart) * self.factDW
@@ -1739,6 +1833,7 @@ class CrystalDiamond(CrystalFcc):
         F_{hkl}^{\rm diamond} = F_{hkl}^{fcc}\left(1 + e^{i\frac{\pi}{2}
         (h + k + l)}\right).
     """
+
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         diamondToFcc = 1 + np.exp(0.5j * PI * sum(self.hkl))
         F0, Fhkl, Fhkl_ = super(CrystalDiamond, self).get_structure_factor(
@@ -1751,6 +1846,7 @@ class CrystalSi(CrystalDiamond):
     A derivative class from :class:`CrystalDiamond` that defines the crystal
     d-spacing as a function of temperature.
     """
+
     def __init__(self, *args, **kwargs):
         """
         *tK*: float
@@ -1845,6 +1941,7 @@ class CrystalFromCell(Crystal):
         >>>     atoms=[4]*2, atomsXYZ=[[1./3, 2./3, 0.25], [2./3, 1./3, 0.75]])
 
     """
+
     def __init__(self, name='', hkl=[1, 1, 1],
                  a=5.430710, b=None, c=None, alpha=90, beta=90, gamma=90,
                  atoms=[14]*8,
@@ -1915,6 +2012,7 @@ class CrystalFromCell(Crystal):
 
 
         """
+
         self.name = name
         self.hkl = hkl
         h, k, l = hkl

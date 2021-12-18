@@ -47,7 +47,7 @@ class XRT_CL(object):
         p = pickle.dumps(obj, protocol)
 #        z = zlib.compress(p, 0)
         return socket.send(p, flags=flags)
-    
+
     def recv_zipped_pickle(self, socket, flags=0, protocol=2):
         """inverse of send_zipped_pickle. From pyzmq docs"""
         z = socket.recv(flags)
@@ -267,7 +267,7 @@ class XRT_CL(object):
                      slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0):
 
         if self.useZMQ:
-            outgoing_dict = {'kernelName': kernelName, 
+            outgoing_dict = {'kernelName': kernelName,
                              'scalarArgs': scalarArgs,
                              'slicedROArgs': slicedROArgs,
                              'nonSlicedROArgs': nonSlicedROArgs,
@@ -285,7 +285,7 @@ class XRT_CL(object):
             rw_offset = len(slicedRWArgs) if slicedRWArgs is not None else 0
             rw_pos = ka_offset + ro_offset + ns_offset
             nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
-    
+
             kernel_bufs = []
             global_size = []
             ev_h2d = []
@@ -295,7 +295,7 @@ class XRT_CL(object):
             ndslice = []
             ndsize = []
             minWGS = 1e20
-    
+
             for ictx, ctx in enumerate(self.cl_ctx):
                 nCUw = 1
                 nCU.extend([nCUw])
@@ -303,7 +303,7 @@ class XRT_CL(object):
                 if tmpWGS < minWGS:
                     minWGS = tmpWGS
                 # nCU.extend([ctx.devices[0].max_compute_units*nCUw])
-    
+
             totalCUs = np.sum(nCU)
             minWGS = 256
             divider = minWGS * totalCUs
@@ -315,17 +315,17 @@ class XRT_CL(object):
                 dimension = (np.trunc(dimension/divider) + 1) * divider
                 nDiff = int(dimension - oldSize)
                 needResize = True
-    
+
             work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
             nctx = len(work_cl_ctx)
-    
+
             for ictx, ctx in enumerate(work_cl_ctx):
                 ev_h2d.extend([[]])
                 kernel_bufs.extend([[]])
                 if scalarArgs is not None:
                     kernel_bufs[ictx].extend(scalarArgs)
                 ndstart.extend([sum(ndsize)])
-    
+
                 if dimension > 1:
                     if ictx < nctx - 1:
                         ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
@@ -347,13 +347,13 @@ class XRT_CL(object):
                         kernel_bufs[ictx].extend([cl.Buffer(
                             self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
-    
+
                 if nonSlicedROArgs is not None:
                     for iarg, arg in enumerate(nonSlicedROArgs):
                         kernel_bufs[ictx].extend([cl.Buffer(
                             self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
-    
+
                 if slicedRWArgs is not None:
                     for iarg, arg in enumerate(slicedRWArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
@@ -371,7 +371,7 @@ class XRT_CL(object):
                             self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
                     global_size.extend([np.array([1]).shape])
-    
+
             local_size = None
             for ictx, ctx in enumerate(work_cl_ctx):
                 kernel = getattr(self.cl_program[ictx], kernelName)
@@ -380,15 +380,15 @@ class XRT_CL(object):
                     global_size[ictx],
                     local_size,
                     *kernel_bufs[ictx])])
-    
+
             for iev, ev in enumerate(ev_run):
                 status = cl.command_execution_status.to_string(
                     ev.command_execution_status)
                 if _DEBUG > 20:
                     print("ctx status {0} {1}".format(iev, status))
-    
+
             ret = ()
-    
+
             if slicedRWArgs is not None:
                 for ictx, ctx in enumerate(work_cl_ctx):
                     for iarg, arg in enumerate(slicedRWArgs):
@@ -405,7 +405,7 @@ class XRT_CL(object):
                     for arg in slicedRWArgs:
                         arg = arg[:oldSize]
                 ret += tuple(slicedRWArgs)
-    
+
             if nonSlicedRWArgs is not None:
                 for ictx, ctx in enumerate(work_cl_ctx):
                     for iarg, arg in enumerate(nonSlicedRWArgs):
