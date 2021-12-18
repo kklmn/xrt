@@ -3,10 +3,15 @@
 Version history
 ---------------
 
-Future release, already available at GitHub (8 Dec 2021):
+Future release, already available at GitHub (18 Dec 2021):
     - Propagation of individual source modes, as waves, hybrid waves
       (partially as rays and then as waves) and only rays.
       See :ref:`Coherent mode decomposition and propagation <modes>`.
+
+    - :class:`~xrt.backends.raycing.materials.Multilayer` can now be used in
+      transmission. See :ref:`the mathematical description <descr_ml_tran>`,
+      :ref:`a few comparative test curves <tests_ml_tran>` and a test script
+      ``tests/test_multilayer_transmission.py``.
 
     - Minor bug fixes.
 
