@@ -201,22 +201,35 @@ doi:10.5281/zenodo.1252468 <https://doi.org/10.5281/zenodo.1252468>`_.
 Acknowledgments
 ---------------
 
-Josep Nicolás and Jordi Juanhuix (synchrotron Alba) are acknowledged for
-discussion and for their Matlab codes used as examples at early stages of the
-project. Summer students of DESY Andrew Geondzhian and Victoria Kabanova are
-acknowledged for their help in coding the classes of synchrotron sources. Rami
-Sankari and Alexei Preobrajenski (MAX IV Laboratory) are thanked for
-discussion, testing and comparing with external codes. Hasan Yavaş, Jozef
-Bednarčik, Dmitri Novikov and Alexey Zozulya (DESY Photon Science) are
-acknowledged for supplied cases. Hamed Tarawneh (MAX IV Laboratory) has
-initiated the custom field undulator project and supplied tables of magnetic
-field. Bernard Kozioziemski (LLNL) has pointed to the importance of considering
-the *total* absorption cross-section (not just photoelectric absorption) in the
-cases of light materials at high energy. He also did deep tests of the mosaic
-crystal model. Emilio Heredia (CLS) is thanked for valuable suggestions on GUI.
-Tim May (CLS) is acknowledged for inspiring the custom magnetic field
-calculation development, providing field tables and comparing the results with
-other codes.
+* Josep Nicolás and Jordi Juanhuix (synchrotron Alba) are acknowledged for
+  discussion and for their Matlab codes used as examples at early stages of the
+  project.
+
+* Andrew Geondzhian and Victoria Kabanova (summer students at DESY) are
+  acknowledged for their help in coding the classes of synchrotron sources.
+
+* Rami Sankari and Alexei Preobrajenski (MAX IV Laboratory) are thanked for
+  discussion, testing and comparing with external codes.
+
+* Hasan Yavaş, Jozef Bednarčik, Dmitri Novikov and Alexey Zozulya (DESY Photon
+  Science) are acknowledged for supplied cases.
+
+* Hamed Tarawneh (MAX IV Laboratory) has initiated the custom field undulator
+  project and supplied tables of magnetic field.
+
+* Bernard Kozioziemski (LLNL) has pointed to the importance of considering
+  the *total* absorption cross-section (not just photoelectric absorption) in
+  the cases of light materials at high energy. He also did deep tests of the
+  mosaic crystal model.
+
+* Emilio Heredia (CLS) is thanked for valuable suggestions on GUI.
+
+* Tim May (CLS) is acknowledged for inspiring the custom magnetic field
+  calculation development, providing field tables and comparing the results
+  with other codes.
+
+* Louisa Pickworth (MAX IV Laboratory) has provided curves from other codes for
+  testing reflectivity/transmittivity of multilayers.
 
 """
 
