@@ -2,7 +2,6 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Aug 2021"
 import sys
-#import pickle
 import numpy as np
 from scipy import special
 from scipy.interpolate import interp1d
@@ -23,6 +22,7 @@ class BendingMagnet(SourceBase):
     Bending magnet source. The computation is reasonably fast and thus a GPU
     is not required and is not implemented.
     """
+
     def __init__(self, *args, **kwargs):
         u"""
         *B0*: float
@@ -349,7 +349,7 @@ class BendingMagnet(SourceBase):
                                       self.bl.statusSignal[2]
                             self.bl.statusSignal[0].emit(
                                 (ptg, self.bl.statusSignal[3]))
-                except:
+                except Exception:
                     pass
             if self.filamentBeam:
                 nrep += 1
@@ -483,20 +483,21 @@ class Wiggler(BendingMagnet):
 
 
 class SourceFromField(IntegratedSource):
-    """Dedicated class for the sources based on custom field table."""
+    """Dedicated class for the sources based on a custom field table."""
+
     def __init__(self, *args, **kwargs):
         """
         *customField*: float or str or tuple(fileName, kwargs) or numpy array.
             If float, adds a constant longitudinal field.
-            If str or tuple, expects table of field
-            samples given as an Excel file or as text file. If given
-            as a tuple or list, the 2nd member is a key word dictionary for
-            reading Excel by :meth:`pandas.read_excel()` or reading text file
-            by :meth:`numpy.loadtxt()`, e.g. ``dict(skiprows=4)`` for skipping
-            the file header. The file must contain the columns with
-            longitudinal coordinate in mm, {B_hor,} B_ver {, B_long}, all in T.
-            The field can be provided as a numpy array with the same structure
-            as the table from file.
+            If str or tuple, expects table of field samples given as an Excel
+            file or as text file. If given as a tuple or list, the 2nd member
+            is a key word dictionary for reading Excel by
+            :meth:`pandas.read_excel()` or reading text file by
+            :meth:`numpy.loadtxt()`, e.g. ``dict(skiprows=4)`` for skipping the
+            file header. The file must contain the columns with longitudinal
+            coordinate in mm, {B_hor,} B_ver {, B_long}, all in T. The field
+            can be provided as a numpy array with the same structure as the
+            table from file.
 
         """
         customField = kwargs.pop('customField', None)
@@ -522,12 +523,12 @@ class SourceFromField(IntegratedSource):
                 self.customFieldData = self.read_custom_field(fname, readkw)
         else:  # Test with periodic field
             self.Kx = 0.
-            self.Ky = 4.4 #17.274 #1.7
+            self.Ky = 4.4  # 17.274 #1.7
             self.phase = 0
-            self.L0 = 53.96 #100 #10.
-            self.Np = 41 #70 #30
+            self.L0 = 53.96  # 100 #10.
+            self.Np = 41  # 70 #30
             self.quadm = 50
-            self.gIntervals = 2 #*self.Np
+            self.gIntervals = 2  # *self.Np
             self.wtGrid = np.linspace(-self.L0*self.Np*0.5,
                                       self.L0*self.Np*0.5,
                                       1000*self.Np)  # 1000 points per period
@@ -697,10 +698,10 @@ class SourceFromField(IntegratedSource):
             sindrs = np.sin(wc * LRS)
             cosdrs = np.cos(wc * LRS)
 
-            eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
-                       cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
-            eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
-                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
+            eucosx = (-sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
+                      cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs)
+            eucosy = (-sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
+                      cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs)
         else:
             phz = wc*(self.tg - dirz*trajz_)
             phxy = wc*(dirx*trajx_ + diry*trajy_)
@@ -784,10 +785,10 @@ class SourceFromField(IntegratedSource):
                 coszloc = np.cos(wc * (self.tg[i] - trajz_))
                 sindrs = np.sin(wc * LRS)
                 cosdrs = np.cos(wc * LRS)
-                eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
-                           cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
-                eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
-                           cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
+                eucosx = (-sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
+                          cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs)
+                eucosy = (-sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
+                          cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs)
             else:
                 phz = wc*(self.tg[i] - dirz*trajz_)
                 phxy = wc*(dirx*trajx_ + diry*trajy_)
@@ -832,7 +833,8 @@ class SourceFromField(IntegratedSource):
             if w.shape[0] > 1:
                 useCL = True
         if (self.cl_ctx is None) or not useCL:
-            return self._build_I_map_custom_field_conv(w, ddtheta, ddpsi, dh, dg)
+            return \
+                self._build_I_map_custom_field_conv(w, ddtheta, ddpsi, dh, dg)
         else:
             return self._build_I_map_custom_field_CL(w, ddtheta, ddpsi, dh, dg)
 
@@ -841,7 +843,7 @@ class SourceFromField(IntegratedSource):
             self._clenshaw_curtis
         tg_n, ag_n = quad_rule(self.quadm)
 
-        if isinstance(self.customFieldData, (float, int)) or\
+        if isinstance(self.customFieldData, (float, int)) or \
                 self.customFieldData is None:  # TODO: this is not 100% correct
             dataz = [-0.5*self.L0*self.Np, 0.5*self.L0*self.Np]
         else:
@@ -916,8 +918,7 @@ class SourceFromField(IntegratedSource):
             return beta + (k1beta + 2*k2beta + 2*k3beta + k4beta)/6.
 
         def next_traj_rk(iB, beta, traj):
-            k1beta = rkStep * f_beta([Bx[iB], By[iB], Bz[iB]],
-                                        beta)
+            k1beta = rkStep * f_beta([Bx[iB], By[iB], Bz[iB]], beta)
             k1traj = rkStep * f_traj(beta)
             k2beta = rkStep * f_beta([Bx[iB+1], By[iB+1], Bz[iB+1]],
                                      beta + 0.5*k1beta)
@@ -956,7 +957,7 @@ class SourceFromField(IntegratedSource):
                 betam_int += rkStep * np.sqrt(
                         1. - 1./gamma**2 - beta_next[0]**2 - beta_next[1]**2)
             else:
-                betam_int +=  beta_next[0]**2 + beta_next[1]**2
+                betam_int += beta_next[0]**2 + beta_next[1]**2
 
         traj0 /= -(self.wtGrid[-1] - self.wtGrid[0])
         beta_next = np.copy(beta0)
@@ -992,24 +993,24 @@ class SourceFromField(IntegratedSource):
         if gamma is None:
             gamma = self.gamma
         gamma2 = gamma**2
-        betam = 1. - (1. + 0.5 * self.Kx**2 + 0.5*self.Ky**2) / 2. / gamma2
+        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) / 2. / gamma2
 
-        self.wu = PI  / self.L0 / gamma2 * \
+        self.wu = PI / self.L0 / gamma2 * \
             (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
 
         z = 2*np.pi*self.tg/self.L0
         tgw = self.L0 / 2. / np.pi
         betax = self.Ky / gamma * np.cos(z)
-        betay =-self.Kx / gamma * np.cos(z + self.phase)
+        betay = -self.Kx / gamma * np.cos(z + self.phase)
         trajx = tgw * self.Ky / gamma * np.sin(z)
-        trajy =-tgw * self.Kx / gamma * np.sin(z + self.phase)
-        trajz = tgw * (betam * z - 0.125 / gamma**2 *
-                 (self.Ky**2 * np.sin(2*z) +
-                  self.Kx**2 * np.sin(2*(z + self.phase))))
+        trajy = -tgw * self.Kx / gamma * np.sin(z + self.phase)
+        trajz = tgw * (betam*z - 0.125/gamma**2 *
+                       (self.Ky**2 * np.sin(2*z) +
+                        self.Kx**2 * np.sin(2*(z + self.phase))))
         return betax, betay, [betam], trajx, trajy, trajz
 
-    def _build_I_map_custom_field_CL(self, w, ddtheta, ddpsi,
-                                  harmonic=None, dgamma=None):
+    def _build_I_map_custom_field_CL(
+            self, w, ddtheta, ddpsi, harmonic=None, dgamma=None):
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
         gamma = self.gamma
 
@@ -1045,9 +1046,9 @@ class SourceFromField(IntegratedSource):
             self.trajectory = [trajx, trajy, trajz]
         else:
             self.beta = [betax*emcg0, betay*emcg0]
-            self.trajectory = [trajx*emcg0,
-                               trajy*emcg0,
-                               self.tg*(1.-0.5/gamma[0]**2) + trajz*EMC**2/gamma[0]**2]
+            self.trajectory = [
+                trajx*emcg0, trajy*emcg0,
+                self.tg*(1.-0.5/gamma[0]**2) + trajz*EMC**2/gamma[0]**2]
 
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam
@@ -1063,7 +1064,7 @@ class SourceFromField(IntegratedSource):
                             self.cl_precisionF(ddpsi)]  # Psi
 
             nonSlicedROArgs = [self.cl_precisionF(self.tg),  # Integration grid
-                               self.cl_precisionF(self.ag),   # Integration weights
+                               self.cl_precisionF(self.ag),  # Intn weights
                                self.cl_precisionF(Bxt),  # Mangetic field
                                self.cl_precisionF(Byt),  # components on the
                                self.cl_precisionF(Bzt),  # CC grid
@@ -1095,7 +1096,7 @@ class SourceFromField(IntegratedSource):
                             self.cl_precisionF(ddpsi)]  # Psi
 
             nonSlicedROArgs = [self.cl_precisionF(self.tg),  # Integration grid
-                               self.cl_precisionF(self.ag),   # Integration weights
+                               self.cl_precisionF(self.ag),  # Intn weights
                                self.cl_precisionF(Bxt),  # Mangetic field
                                self.cl_precisionF(Byt),  # components on the
                                self.cl_precisionF(Bzt),  # CC grid
@@ -1144,7 +1145,6 @@ class SourceFromField(IntegratedSource):
         else:
             Bx, By, Bz = self._magnetic_field_periodic()
 
-
         if self.customFieldData is not None and not self.periodicTest:
             betax, betay, betazav, trajx, trajy, trajz =\
                 self.build_trajectory(Bx, By, Bz)
@@ -1166,11 +1166,12 @@ class SourceFromField(IntegratedSource):
         emcg = SIE0 / SIM0 / C / 10. / gamma
 
         if self.R0:
-            R0v = np.array((np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
+            R0v = np.array(
+                (np.tan(ddtheta), np.tan(ddpsi), np.ones_like(ddpsi)))
 #            R0n = np.linalg.norm(R0v, axis=0)  # Only for spherical screen
             R0v *= R0  # /R0n
         else:
-            R0v=None
+            R0v = None
 
         if NRAYS > 10:  # sum along the integration grid in a loop
             Is_local, Ip_local = self._sp_sum(
@@ -1181,7 +1182,6 @@ class SourceFromField(IntegratedSource):
             Is_local, Ip_local = self._sp(
                     dim, emcg, w, gamma, ddtheta, ddpsi, Bxt, Byt, Bzt,
                     betax, betay, betam, trajx, trajy, trajz, R0v)
-
 
         bwFact = 0.001 if self.distE == 'BW' else 1./w
         Amp2Flux = FINE_STR * bwFact * self.eI / SIE0
@@ -1197,9 +1197,10 @@ class SourceFromField(IntegratedSource):
 
 class Undulator(IntegratedSource):
     u"""
-    Undulator source. The computation is volumnous and thus decent GPU is
+    Undulator source. The computation is volumnous and thus a decent GPU is
     highly recommended.
     """
+
     def __init__(self, *args, **kwargs):
         """
         *period*, *n*:
@@ -1231,7 +1232,6 @@ class Undulator(IntegratedSource):
             keep them True.
 
 
-
         """
         period = kwargs.pop('period', 50)
         n = kwargs.pop('n', 50)
@@ -1253,7 +1253,7 @@ class Undulator(IntegratedSource):
         if targetE is not None:
             self._targetE = targetE
             Ky = np.sqrt(targetE[1] * 8 * PI * self.gamma2 /
-                        period / targetE[0] / E2WC - 2)
+                         period / targetE[0] / E2WC - 2)
             if raycing._VERBOSITY_ > 10:
                 print("K = {0}".format(Ky))
             if np.isnan(Ky):
@@ -1348,7 +1348,7 @@ class Undulator(IntegratedSource):
     def targetE(self, targetE):
         self._targetE = targetE
         Ky = np.sqrt(targetE[1] * 8 * PI * self.gamma2 /
-                    self.L0 / targetE[0] / E2WC - 2)
+                     self.L0 / targetE[0] / E2WC - 2)
         Kx = 0
         if raycing._VERBOSITY_ > 10:
             print("K = {0}".format(Ky))
@@ -1448,7 +1448,7 @@ class Undulator(IntegratedSource):
     def tuning_curves(self, energy, theta, psi, harmonics, Ks):
         """Calculates *tuning curves* -- maximum flux of given *harmomonics* at
         given K values (*Ks*). The flux is calculated through the aperture
-        defined by *theta* and *psi* opening angles.
+        defined by *theta* and *psi* opening angles (1D arrays).
 
         Returns two 2D arrays: energy positions and flux values. The rows
         correspond to *Ks*, the colums correspond to *harmomonics*.
@@ -1580,13 +1580,12 @@ class Undulator(IntegratedSource):
         if self.taper is not None:
             alphaS = self.taper/E2WC
             taperC = 1 - alphaS*tg/wuS
-            ucos = ww1S*tg +\
-                wwuS*revgamma*\
-                (-self.Ky*dirx*(sinx + alphaS/wuS*
-                                (1 - cosx - tg*sinx)) +
-                 self.Kx*diry*sinx + 0.125*revgamma*
-                 (self.Kx**2 * sin2xph + self.Ky**2 * (sin2x -
-                  2*alphaS/wuS*(tg**2 + cosx**2 + tg*sin2x))))
+            ucos = ww1S*tg + \
+                wwuS*revgamma*(
+                    -self.Ky*dirx*(sinx + alphaS/wuS*(1 - cosx - tg*sinx)) +
+                    self.Kx*diry*sinx + 0.125*revgamma*(
+                        self.Kx**2 * sin2xph + self.Ky**2 *
+                        (sin2x - 2*alphaS/wuS*(tg**2 + cosx**2 + tg*sin2x))))
             eucos = np.exp(1j*ucos)
         elif R0 is not None:
             sinr0z = np.sin(wwuS*R0[-1])
@@ -1605,13 +1604,13 @@ class Undulator(IntegratedSource):
 
             sinzloc = np.sin(wwuS * tg*(1.-betam))
             coszloc = np.cos(wwuS * tg*(1.-betam))
-            sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
-            cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
+            sindrs = np.sin(wwuS * (drs + 0.25 * zterm * revgamma))
+            cosdrs = np.cos(wwuS * (drs + 0.25 * zterm * revgamma))
 
-            eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
-                       cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs
-            eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
-                       cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs
+            eucosx = (-sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
+                      cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs)
+            eucosy = (-sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
+                      cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs)
             eucos = eucosx + 1j*eucosy
 
             direction = dr/dist
@@ -1619,10 +1618,9 @@ class Undulator(IntegratedSource):
             diry = direction[1, :]
             dirz = direction[2, :]
         else:
-            ucos = ww1S*tg + wwuS*revgamma*\
-                (-self.Ky*ddphiS*sinx + self.Kx*ddpsiS*sinxph +
-                 0.125*revgamma*(self.Ky**2 * sin2x +
-                               self.Kx**2 * sin2xph))
+            ucos = ww1S*tg + wwuS*revgamma*(
+                -self.Ky*ddphiS*sinx + self.Kx*ddpsiS*sinxph +
+                0.125*revgamma*(self.Ky**2 * sin2x + self.Kx**2 * sin2xph))
             eucos = np.exp(1j*ucos)
 
         betax = taperC*self.Ky*revgamma*cosx
@@ -1631,9 +1629,9 @@ class Undulator(IntegratedSource):
 
         betaPx = -self.Ky*(alphaS*cosx + taperC*sinx)
         betaPy = self.Kx*sinxph
-        betaPz = 0.5*revgamma*\
-            (self.Ky**2 * taperC*(alphaS*cosx**2 + taperC*sin2x)+
-             self.Kx**2 * sin2xph)
+        betaPz = 0.5*revgamma*(
+            self.Ky**2 * taperC*(alphaS*cosx**2 + taperC*sin2x) +
+            self.Kx**2 * sin2xph)
 
         rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
         eucos *= ag * rkrel**2
@@ -1644,8 +1642,10 @@ class Undulator(IntegratedSource):
         dirDotBetaP = dirx*betaPx + diry*betaPy + dirz*betaPz
         dirDotDmB = dirx*bnx + diry*bny + dirz*bnz
 
-        Bsr = np.sum(eucos*wuS*revgamma*(bnx*dirDotBetaP - betaPx*dirDotDmB), axis=dim)
-        Bpr = np.sum(eucos*wuS*revgamma*(bny*dirDotBetaP - betaPy*dirDotDmB), axis=dim)
+        Bsr = np.sum(eucos*wuS*revgamma*(bnx*dirDotBetaP - betaPx*dirDotDmB),
+                     axis=dim)
+        Bpr = np.sum(eucos*wuS*revgamma*(bny*dirDotBetaP - betaPy*dirDotDmB),
+                     axis=dim)
 
         return Bsr, Bpr
 
@@ -1675,7 +1675,7 @@ class Undulator(IntegratedSource):
             cosr0z = np.cos(R0[-1])
 
         for Nperiod in range(Nmx):
-            if raycing._VERBOSITY_ > 80 and (self.taper is not None or\
+            if raycing._VERBOSITY_ > 80 and (self.taper is not None or
                                              R0 is not None):
                 print("Period {} out of {}".format(Nperiod+1, Nmx))
             for i in range(len(self.tg)):
@@ -1684,11 +1684,11 @@ class Undulator(IntegratedSource):
                     alphaS = self.taper/E2WC
                     taperC = 1. - alphaS*zloc/wuS
                     ucos = ww1S*zloc +\
-                        wwuS*revgamma*\
-                        (-self.Ky*dirx*(self.sintg[i] + alphaS/wuS*
+                        wwuS*revgamma *\
+                        (-self.Ky*dirx*(self.sintg[i] + alphaS/wuS *
                                         (1 - self.costg[i] -
                                          zloc*self.sintg[i])) +
-                         self.Kx*diry*self.sintg[i] + 0.125*revgamma*
+                         self.Kx*diry*self.sintg[i] + 0.125*revgamma *
                          (self.Kx**2 * sin2xph[i] + self.Ky**2 * (sin2x[i] -
                           2*alphaS/wuS*(zloc**2 + self.costg[i]**2 +
                                         zloc*sin2x[i]))))
@@ -1703,17 +1703,17 @@ class Undulator(IntegratedSource):
                     dr = R0 - np.expand_dims(rloc, 1)
                     dist = np.linalg.norm(dr, axis=0)
 
-                    drs = 0.5*(dr[0, :]**2+dr[1, :]**2)/dr[2, :];
+                    drs = 0.5*(dr[0, :]**2+dr[1, :]**2) / dr[2, :]
 
                     sinzloc = np.sin(wwuS * zloc*(1.-betam))
                     coszloc = np.cos(wwuS * zloc*(1.-betam))
-                    sindrs = np.sin(wwuS *(drs + 0.25 * zterm * revgamma))
-                    cosdrs = np.cos(wwuS *(drs + 0.25 * zterm * revgamma))
+                    sindrs = np.sin(wwuS * (drs + 0.25*zterm*revgamma))
+                    cosdrs = np.cos(wwuS * (drs + 0.25*zterm*revgamma))
 
-                    eucosx = -sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -\
-                               cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs;
-                    eucosy = -sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +\
-                               cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs;
+                    eucosx = (-sinr0z*sinzloc*cosdrs - sinr0z*coszloc*sindrs -
+                              cosr0z*sinzloc*sindrs + cosr0z*coszloc*cosdrs)
+                    eucosy = (-sinr0z*sinzloc*sindrs + sinr0z*coszloc*cosdrs +
+                              cosr0z*sinzloc*cosdrs + cosr0z*coszloc*sindrs)
                     eucos = eucosx + 1j*eucosy
 
                     direction = dr/dist
@@ -1722,11 +1722,11 @@ class Undulator(IntegratedSource):
                     dirz = direction[2, :]
 
                 else:
-                    ucos = ww1S*self.tg[i] + wwuS*revgamma*\
+                    ucos = ww1S*self.tg[i] + wwuS*revgamma *\
                         (-self.Ky*ddphiS*self.sintg[i] +
                          self.Kx*ddpsiS*self.sintgph[i] +
                          0.125*revgamma*(self.Ky**2 * sin2x[i] +
-                                       self.Kx**2 * sin2xph[i]))
+                                         self.Kx**2 * sin2xph[i]))
                     eucos = np.exp(1j*ucos)
 
                 betax = taperC*self.Ky*revgamma*self.costg[i]
@@ -1735,9 +1735,9 @@ class Undulator(IntegratedSource):
 
                 betaPx = -self.Ky*(alphaS*self.costg[i] + taperC*self.sintg[i])
                 betaPy = self.Kx*self.sintgph[i]
-                betaPz = 0.5*revgamma*\
-                    (self.Ky**2 * taperC*(alphaS*self.costg[i]**2 +
-                                          taperC*sin2x[i])+
+                betaPz = 0.5*revgamma *\
+                    (self.Ky**2 * taperC*(
+                        alphaS*self.costg[i]**2 + taperC*sin2x[i]) +
                      self.Kx**2 * sin2xph[i])
 
                 rkrel = 1./(1. - dirx*betax - diry*betay - dirz*betaz)
@@ -1796,10 +1796,10 @@ class Undulator(IntegratedSource):
             R0v = np.array((np.tan(ddtheta),
                             np.tan(ddpsi),
                             np.ones_like(ddpsi)))
-#            R0n = np.linalg.norm(R0v, axis=0)  # TODO: Only for spherical screen
+            # R0n = np.linalg.norm(R0v, axis=0)  # TODO: Only for spher. screen
             R0v *= self.R0*np.pi*2/self.L0  # /R0n
         else:
-            R0v=None
+            R0v = None
 
         if NRAYS > 10:
             if self.filamentBeam:
@@ -1857,7 +1857,7 @@ class Undulator(IntegratedSource):
         scalarArgs = [self.cl_precisionF(0.)]
 
         if self.R0 is not None:
-            scalarArgs = [self.cl_precisionF(self.R0*np.pi*2/self.L0)] #,  # R0
+            scalarArgs = [self.cl_precisionF(self.R0*np.pi*2/self.L0)]
         elif self.taper:
             scalarArgs = [self.cl_precisionF(self.taper)]
 
@@ -1866,7 +1866,6 @@ class Undulator(IntegratedSource):
                            np.int32(len(self.tg))])  # jend
         if (self.taper is not None) or (self.R0 is not None):
             scalarArgs.extend([np.int32(self.Np)])
-
 
         slicedROArgs = [self.cl_precisionF(gamma),  # gamma
                         self.cl_precisionF(wu),  # Wund
@@ -1877,7 +1876,7 @@ class Undulator(IntegratedSource):
 
         nonSlicedROArgs = [self.cl_precisionF(self.tg),  # Integration grid
                            self.cl_precisionF(self.ag),  # Integration weights
-                           self.cl_precisionF(self.sintg), # Move outside
+                           self.cl_precisionF(self.sintg),  # Move outside
                            self.cl_precisionF(self.costg),
                            self.cl_precisionF(self.sintgph),
                            self.cl_precisionF(self.costgph)]

@@ -176,19 +176,19 @@ using the classical Runge-Kutta fourth-order method.
 For the Undulator and custom field models we directly calculate the integral
 using the `Clenshaw-Curtis quadrature
 <https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_, it proves
-to converge as quickly as previously used Gauss-Legendre method, but the nodes
-and weights calculation is performed significantly faster. The size
-of the integration grid is evaluated at the points of slowest convergence 
-(highest energy, maximum angular deviation i.e. the corner of the plot) before
+to converge as quickly as the previously used Gauss-Legendre method, but the
+nodes and weights are calculated significantly faster. The size
+of the integration grid is evaluated at the points of slowest convergence
+(highest energy, maximum angular deviation i.e. a corner of the plot) before
 the start of intensity map calculation and then applied to all points.
 This approach creates certain computational overhead for the on-axis/low energy
-parts of the distribution, but enables efficient parallelization and gives
+parts of the distribution but enables efficient parallelization and gives
 significant overall gain in performance. Initial evaluation typically takes
 just a few seconds, but might get much longer for custom magnetic fields and
 near edge calculations. If such heavy task is repeated many times for the given
 angular and energy limits it might make sense to note the evaluated size of
 the grid during the first run or call the :meth:`test_convergence` method once,
-and then use the fixed grid by defining the *gNodes* at the init. 
+and then use the fixed grid by defining the *gNodes* at the init.
 Note also that the grid size will be automatically re-evaluated if any of the
 limits/electron energy/undulator deflection parameter or period length are
 redefined dynamically in the script.
@@ -259,10 +259,16 @@ application example :ref:`here <example-undulator-sizes>`.
 .. autoclass:: BendingMagnetWS()
    :members: __init__
 
+.. autoclass:: SourceBase()
+   :members: __init__, real_photon_source_sizes,
+             multi_electron_stack, intensities_on_mesh
+.. autoclass:: IntegratedSource()
+   :members: __init__, test_convergence, shine
+
 .. autoclass:: Undulator()
-   :members: __init__, get_SIGMA, get_SIGMAP,
-             real_photon_source_sizes, multi_electron_stack,
-             intensities_on_mesh, power_vs_K, tuning_curves
+   :members: __init__, get_SIGMA, get_SIGMAP, power_vs_K, tuning_curves
+.. autoclass:: SourceFromField()
+   :members: __init__
 .. autoclass:: Wiggler()
    :members: __init__
 .. autoclass:: BendingMagnet()
@@ -623,15 +629,15 @@ undulator field at zero energy spread and emittance.
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "03 Jul 2016"
 __all__ = ('GeometricSource', 'MeshSource', 'BendingMagnet', 'Wiggler',
            'Undulator')
 
-from .sources_beams import Beam, copy_beam, rotate_coherency_matrix,\
-    defaultEnergy
+from .sources_beams import Beam, BeamProxy,\
+    copy_beam, rotate_coherency_matrix, defaultEnergy
 from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
     CollimatedMeshSource, shrink_source, make_energy, make_polarization,\
     GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam
 from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
     UndulatorSRW, SourceFromFieldSRW
 from .sources_synchr import BendingMagnet, Wiggler, Undulator, SourceFromField
+from .sources_sybase import SourceBase, IntegratedSource

@@ -3,7 +3,6 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Aug 2021"
 import os
 import sys
-#import pickle
 import numpy as np
 from scipy import special
 import inspect
@@ -21,6 +20,7 @@ except ImportError:
     isOpenCL = False
 
 # _DEBUG replaced with raycing._VERBOSITY_
+
 
 class SourceBase:
     """Base class for the Synchrotron Sources. Not to be called explicitly."""
@@ -163,7 +163,6 @@ class SourceBase:
         else:
             self._xPrimeMax = abs(xPrimeMax) * 1e-3
             self._xPrimeMin = -self._xPrimeMax
-
 
         if isinstance(zPrimeMax, (tuple, list)):
             # if units are not provided, we expect mrad here
@@ -395,10 +394,10 @@ class SourceBase:
         self.E_max = float(max(self.eMin, self.eMax))
 
         try:  # Left here for compatibility
-            self.dE = (self.E_max - self.E_min) / float(self.eN - 1)
-            self.dTheta = (self.Theta_max - self.Theta_min) / float(self.nx - 1)
-            self.dPsi = (self.Psi_max - self.Psi_min) / float(self.nz - 1)
-        except:
+            self.dE = (self.E_max - self.E_min) / float(self.eN-1)
+            self.dTheta = (self.Theta_max - self.Theta_min) / float(self.nx-1)
+            self.dPsi = (self.Psi_max - self.Psi_min) / float(self.nz-1)
+        except Exception:
             pass
 
     def _reset_integration_grid(self):
@@ -768,7 +767,8 @@ class SourceBase:
 
 
 class IntegratedSource(SourceBase):
-    """Base class for the Sources with numerically integrated amplitudes.
+    """Base class for the Sources with numerically integrated amplitudes:
+    :class:`SourceFromField` and :class:`Undulator`.
     Not to be called explicitly."""
 
     hiddenParams = ['gIntervals']
@@ -786,38 +786,48 @@ class IntegratedSource(SourceBase):
             If not provided at init, will be defined automatically.
 
         *targetOpenCL*:  None, str, 2-tuple or tuple of 2-tuples
-            assigns the device(s) for OpenCL accelerated calculations. Accepts
-            the following values:
+            assigns the device(s) for OpenCL accelerated calculations. None,
+            if pyopencl is not wanted. Ignored if pyopencl is not installed.
+            Accepts the following values:
+
             1) a tuple (iPlatform, iDevice) of indices in the
-            lists cl.get_platforms() and platform.get_devices(), see the
-            section :ref:`calculations_on_GPU`. None, if pyopencl is not
-            wanted. Ignored if pyopencl is not installed.
-            2) a tuple of tuples ((iP1, iD1),..,(iPn, iDn)) to assign specific
-            devices from one or multiple platforms.
+               lists ``cl.get_platforms()`` and ``platform.get_devices()``, see
+               the section :ref:`calculations_on_GPU`.
+
+            2) a tuple of tuples ((iP1, iD1), ..., (iPn, iDn)) to assign
+               specific devices from one or multiple platforms.
+
             3) int iPlatform - assigns all devices found at the given platform.
+
             4) 'GPU' - lets the program scan the system and select all found
-            GPUs.
+               GPUs.
+
             5) 'CPU' - similar to 'GPU'. If one CPU exists in multiple
-            platforms the program tries to select the vendor-specific driver.
+               platforms the program tries to select the vendor-specific
+               driver.
+
             6) 'other' - similar to 'GPU', used for Intel PHI and other OpenCL-
-            capable accelerator boards.
+               capable accelerator boards.
+
             7) 'all' - lets the program scan the system and assign all found
-            devices. Not recommended, since the performance will be limited by
-            the slowest device.
+               devices. Not recommended, since the performance will be limited
+               by the slowest device.
+
             8) 'auto' - lets the program scan the system and make an assignment
-            according to the priority list: 'GPU', 'other', 'CPU' or None if no
-            devices were found. Used by default.
+               according to the priority list: 'GPU', 'other', 'CPU' or None if
+               no devices were found. Used by default.
+
             9) 'SERVER_ADRESS:PORT' - calculations will be run on remote
-            server. See corresponding example.
+               server. See ``tests/raycing/RemoteOpenCLCalculation``.
 
-            .. warning::
-                A good graphics or dedicated accelerator card is highly
-                recommended! Special cases as wigglers by the undulator code,
-                near field, wide angles and tapering are hardly doable on CPU.
+        .. warning::
+           A good graphics or dedicated accelerator card is highly
+           recommended! Special cases as wigglers by the undulator code,
+           near field, wide angles and tapering are hardly doable on CPU.
 
-            .. note::
-                Consider the :ref:`warnings and tips <usage_GPU_warnings>` on
-                using xrt with GPUs.
+        .. note::
+           Consider the :ref:`warnings and tips <usage_GPU_warnings>` on
+           using xrt with GPUs.
 
         *precisionOpenCL*: 'float32' or 'float64', only for GPU.
             Single precision (float32) should be enough in most cases. The
@@ -831,7 +841,8 @@ class IntegratedSource(SourceBase):
         gIntervals = kwargs.pop('gIntervals', 2)
         gNodes = kwargs.pop('gNodes', None)
         targetOpenCL = kwargs.pop('targetOpenCL', raycing.targetOpenCL)
-        precisionOpenCL = kwargs.pop('precisionOpenCL', raycing.precisionOpenCL)
+        precisionOpenCL = kwargs.pop(
+            'precisionOpenCL', raycing.precisionOpenCL)
 
         super(IntegratedSource, self).__init__(*args, **kwargs)
         # Integration routine-related init
@@ -843,7 +854,7 @@ class IntegratedSource(SourceBase):
             self.needConvergence = True
         self.gp = gp
         self.madBoundary = 20
-        self.convergence_finder = 'mixed' #, "mad"
+        self.convergence_finder = 'mixed'  # , "mad"
         self._useGauLeg = False
         self.maxIntegrationSteps = 9000  # Up to 511000 nodes
         self.convergenceSearchFlag = False
@@ -913,7 +924,7 @@ class IntegratedSource(SourceBase):
         if n % 2 == 1:
             weights = np.concatenate([w, w[::-1]])
         else:
-            weights = np.concatenate([w, w[len(w) - 2 :: -1]])
+            weights = np.concatenate([w, w[len(w)-2::-1]])
 
         return (points, weights)
 
@@ -961,8 +972,8 @@ class IntegratedSource(SourceBase):
                     break
                 continue
         if testMode:
-            return converged, (np.array(xm), np.array(pltout), np.array(statOut),
-                   np.array(statOut))
+            return converged, (np.array(xm), np.array(pltout),
+                               np.array(statOut), np.array(statOut))
         else:
             return converged, (0,)
 
@@ -979,7 +990,7 @@ class IntegratedSource(SourceBase):
         # PHASE 1: Find convergence, very rough and fast
         print("Phase 1. Exponential / rough")
         step_stat = 5
-        while m<10000:
+        while m < 10000:
             m += 1
             self.quadm = int(2**m)
             mad, dimad = self._get_mad()
@@ -1100,7 +1111,7 @@ class IntegratedSource(SourceBase):
         statOut = []
         dIOut = []
         xm = []
-        
+
         outQuad = 0
         outInt = 0
         if withPlots:
@@ -1116,19 +1127,19 @@ class IntegratedSource(SourceBase):
             ax1.set_xlabel('Number of nodes')
             ax1.set_ylabel('Median absolute deviation of $I$', color='C1')
             madLine, = ax1.semilogy([], [], 'C1')
-    
+
             ax2 = ax1.twinx()
             ax2.set_ylabel('Median $dI/I$', color='C2')
             relmadLine, = ax2.semilogy([], [], 'C2')
         else:
             fig = None
-    
+
         while True:
             m += 1
             if m % 1000 == 0:
                 mStep *= 2
-                if True: #raycing._VERBOSITY_ > 10:
-#                    print("INSUFFICIENT CONVERGENCE RANGE:", k, "NODES")
+                if True:  # raycing._VERBOSITY_ > 10:
+                    # print("INSUFFICIENT CONVERGENCE RANGE:", k, "NODES")
                     print("INCREASING CONVERGENCE STEP. NEW STEP", mStep)
 
             k += mStep
@@ -1165,7 +1176,7 @@ class IntegratedSource(SourceBase):
                     convPoint = k*self.gIntervals
                     outQuad = k
                     outInt = self.gIntervals
-                    if True: #raycing._VERBOSITY_ > 10:
+                    if True:  # raycing._VERBOSITY_ > 10:
                         print("CONVERGENCE THRESHOLD REACHED AT "
                               "{0} NODES, {1} INTERVALS.".format(
                                   k, self.gIntervals))
@@ -1175,7 +1186,7 @@ class IntegratedSource(SourceBase):
                     if withPlots:
                         label = 'True convergence: {0} nodes, {1} interval{2}'\
                             .format(self.quadm, self.gIntervals,
-                                     '' if self.gIntervals==1 else 's')
+                                    '' if self.gIntervals == 1 else 's')
                         axvlineDict = dict(x=convPoint, color='r', label=label)
                         ax0.axvline(**axvlineDict)
                         ax1.axvline(**axvlineDict)
@@ -1208,8 +1219,9 @@ class IntegratedSource(SourceBase):
         print("CONVERGENCE TEST COMPLETED.")
         self.needReset = True
         if withPlots:
-            label='Auto-finder: {0} nodes, {1} interval{2}'.format(
-                self.quadm, self.gIntervals, '' if self.gIntervals==1 else 's')
+            label = 'Auto-finder: {0} nodes, {1} interval{2}'.format(
+                self.quadm, self.gIntervals,
+                '' if self.gIntervals == 1 else 's')
             axvlineDict = dict(x=self.quadm*self.gIntervals, color='m',
                                linestyle='--', label=label)
             ax0.axvline(**axvlineDict)
@@ -1254,7 +1266,7 @@ class IntegratedSource(SourceBase):
 
         *wave* and *accuBeam* are used in wave diffraction. *wave* is a Beam
         object and determines the positions of the wave samples. It must be
-        obtained by a previous `prepare_wave` run. *accuBeam* is only needed
+        obtained by a previous ``prepare_wave`` run. *accuBeam* is only needed
         with *several* repeats of diffraction integrals when the parameters of
         the filament beam must be preserved for all the repeats.
 
@@ -1416,8 +1428,9 @@ class IntegratedSource(SourceBase):
                 dzR = np.random.normal(0, bot.sourceSIGMAz, npassed)
 
             if wave is not None:
-                wave.rDiffr = np.sqrt(((wave.xDiffr - dxR)**2 + wave.yDiffr**2 +
-                               (wave.zDiffr - dzR)**2))
+                wave.rDiffr = np.sqrt(
+                    ((wave.xDiffr - dxR)**2 + wave.yDiffr**2 +
+                     (wave.zDiffr - dzR)**2))
                 wave.path[:] = 0
                 wave.a[:] = (wave.xDiffr - dxR) / wave.rDiffr
                 wave.b[:] = wave.yDiffr / wave.rDiffr
@@ -1428,7 +1441,7 @@ class IntegratedSource(SourceBase):
                 bot.a[:] = rTheta[I_pass]
                 bot.c[:] = rPsi[I_pass]
 
-                if True: #not self.full:
+                if True:  # not self.full:
                     if self.filamentBeam:
                         bot.a[:] += dtheta
                         bot.c[:] += dpsi
@@ -1484,7 +1497,7 @@ class IntegratedSource(SourceBase):
                                           self.bl.statusSignal[2]
                                 self.bl.statusSignal[0].emit(
                                     (ptg, self.bl.statusSignal[3]))
-                    except:
+                    except Exception:
                         pass
             if self.filamentBeam:
                 nrep += 1
