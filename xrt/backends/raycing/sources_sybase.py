@@ -94,11 +94,6 @@ class SourceBase:
                 angles. Use this source only with reasonably small *xPrimeMax*
                 and *zPrimeMax*!
 
-            .. warning::
-                If you change these parameters outside of the constructor,
-                interpret them in *rad*; in the constructor they are given in
-                *mrad*. This awkwardness is kept for version compatibility.
-
         *uniformRayDensity*: bool
             If True, the radiation is sampled uniformly but with varying
             amplitudes, otherwise with the density proportional to intensity
