@@ -8,16 +8,17 @@ __date__ = "01 Nov 2017"
 #    from matplotlib.backends import qt4_compat
 #    qt_compat = qt4_compat
 
-QtName = None
-try:
-    import PyQt5
-    QtName = "PyQt5"
-except ImportError:
+QtImports = 'PyQt5', 'PyQt4', 'PySide2', 'PySide6'
+
+for QtImport in QtImports:
     try:
-        import PyQt4
-        QtName = "PyQt4"
+        __import__(QtImport)
+        QtName = QtImport
+        break
     except ImportError:
-        raise ImportError("Cannot import any PyQt package!")
+        QtName = None
+else:
+    raise ImportError("Cannot import any PyQt package!")
 
 starImport = False  # star import doesn't work with mock import needed for rtfd
 
@@ -29,15 +30,17 @@ if QtName == "PyQt4":
     if starImport:
         from PyQt4.QtGui import *
         from PyQt4.QtCore import *
+        Signal = pyqtSignal
     else:
         from PyQt4.QtCore import (
-            pyqtSignal, SIGNAL, QUrl, QObject, QTimer, QProcess,
+            SIGNAL, QUrl, QObject, QTimer, QProcess,
             QThread, QT_VERSION_STR, PYQT_VERSION_STR)
         from PyQt4.QtGui import QSortFilterProxyModel
         try:
             from PyQt4.QtCore import Signal
         except ImportError:
             from PyQt4.QtCore import pyqtSignal as Signal
+    import PyQt4.QtCore
     locals().update(vars(PyQt4.QtCore.Qt))
 
     from PyQt4.QtOpenGL import QGLWidget
@@ -68,6 +71,7 @@ elif QtName == "PyQt5":
             from PyQt5.QtCore import Signal
         except ImportError:
             from PyQt5.QtCore import pyqtSignal as Signal
+    import PyQt5.QtCore
     locals().update(vars(PyQt5.QtCore.Qt))
 
     from PyQt5.QtOpenGL import QGLWidget
@@ -77,6 +81,35 @@ elif QtName == "PyQt5":
         import PyQt5.QtWebEngineWidgets as QtWeb
     except ImportError:
         import PyQt5.QtWebKitWidgets as QtWeb
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as\
+        FigCanvas
+elif QtName == "PySide2":
+    from PySide2 import QtGui, QtCore
+    import PySide2.QtWidgets as myQtGUI
+
+    if starImport:
+        from PySide2.QtGui import *
+        from PySide2.QtCore import *
+        from PySide2.QtWidgets import *
+    else:
+        from PySide2.QtCore import (
+            QUrl, QObject, QTimer, QProcess, QThread, QSortFilterProxyModel)
+        try:
+            from PySide2.QtCore import Signal
+        except ImportError:
+            from PySide2.QtCore import pyqtSignal as Signal
+    import PySide2.QtCore
+    QT_VERSION_STR = PySide2.QtCore.qVersion()
+    PYQT_VERSION_STR = PySide2.__version__
+    locals().update(vars(PySide2.QtCore.Qt))
+
+    from PySide2.QtOpenGL import QGLWidget
+    from PySide2.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
+                              QSqlQueryModel)
+    try:
+        import PySide2.QtWebEngineWidgets as QtWeb
+    except ImportError:
+        import PySide2.QtWebKitWidgets as QtWeb
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as\
         FigCanvas
 else:

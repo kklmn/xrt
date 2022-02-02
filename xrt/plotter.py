@@ -146,7 +146,7 @@ def versiontuple(v):
 
 if hasQt:
     class MyQtFigCanvas(qt.FigCanvas):
-        windowClosed = qt.pyqtSignal(int)
+        windowClosed = qt.Signal(int)
 
         def __init__(self, figure, xrtplot):
             super(MyQtFigCanvas, self).__init__(figure)

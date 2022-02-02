@@ -142,7 +142,7 @@ except AttributeError:
 
 
 class SphinxWorker(qt.QObject):
-    html_ready = qt.pyqtSignal()
+    html_ready = qt.Signal()
 
     def prepare(self, doc=None, docName=None, docArgspec=None,
                 docNote=None, img_path=""):
@@ -163,7 +163,7 @@ class SphinxWorker(qt.QObject):
 
 
 class XrtQook(qt.QWidget):
-    statusUpdate = qt.pyqtSignal(tuple)
+    statusUpdate = qt.Signal(tuple)
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
 
@@ -429,7 +429,8 @@ class XrtQook(qt.QWidget):
         self.toolBar.addAction(tutorAction)
 #        self.toolBar.addAction(aboutAction)
         bbl = qt.QShortcut(self)
-        bbl.setKey(qt.Key_F4)
+        # bbl.setKey(qt.Key_F4)
+        bbl.setKey("F4")
         bbl.activated.connect(self.catchViewer)
         amt = qt.QShortcut(self)
         amt.setKey(qt.CTRL + qt.Key_E)
@@ -2081,7 +2082,10 @@ class XrtQook(qt.QWidget):
                     if rootModel.model() != self.beamModel:
                         child0 = rootModel.appendRow(child0)
                     else:
-                        rootModel.appendRow([child0, None, None, None])
+                        rootModel.appendRow(
+                            [child0, qt.QStandardItem("None"),
+                             qt.QStandardItem("None"),
+                             qt.QStandardItem("None")])
                 elif itemType == "value":
                     child0 = self.addValue(rootModel, itemTag)
                     if self.ntab == 1:
@@ -2277,6 +2281,8 @@ class XrtQook(qt.QWidget):
             itemTxt = str(item.text())
             for ii in range(item.rowCount()):
                 child0 = item.child(ii, 0)
+                if child0 is None:
+                    continue
                 child1 = item.child(ii, 1)
                 if str(child0.text()) == '_object':
                     view.setRowHidden(child0.index().row(), item.index(), True)
@@ -2333,7 +2339,9 @@ class XrtQook(qt.QWidget):
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
                                 combo.setEditable(True)
-                                combo.setInsertPolicy(2)
+                                # combo.setInsertPolicy(2)
+                                combo.setInsertPolicy(
+                                    qt.QComboBox.InsertAtCurrent)
                         elif len(re.findall("wave", paramName.lower())) > 0:
                             if item.text() == 'parameters':  # input beam
                                 combo = qt.QComboBox()
@@ -2364,18 +2372,22 @@ class XrtQook(qt.QWidget):
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
                                 combo.setEditable(True)
-                                combo.setInsertPolicy(2)
+                                # combo.setInsertPolicy(2)
+                                combo.setInsertPolicy(
+                                    qt.QComboBox.InsertAtCurrent)
 
                         elif paramName == "bl" or\
                                 paramName == "beamLine":
                             combo = self.addEditableCombo(
                                 self.beamLineModel, value)
-                            combo.setInsertPolicy(2)
+                            # combo.setInsertPolicy(2)
+                            combo.setInsertPolicy(qt.QComboBox.InsertAtCurrent)
                             view.setIndexWidget(child1.index(), combo)
                         elif paramName == "plots":
                             combo = self.addEditableCombo(
                                 self.plotModel, value)
-                            combo.setInsertPolicy(2)
+                            # combo.setInsertPolicy(2)
+                            combo.setInsertPolicy(qt.QComboBox.InsertAtCurrent)
                             view.setIndexWidget(child1.index(), combo)
                         elif any(paraStr in paramName.lower() for paraStr in
                                  ['material', 'tlayer', 'blayer', 'coating',
@@ -2524,7 +2536,8 @@ class XrtQook(qt.QWidget):
             model.appendRow(newItem)
         combo.setCurrentIndex(combo.findText(value))
         combo.setEditable(True)
-        combo.setInsertPolicy(1)
+        # combo.setInsertPolicy(1)
+        combo.setInsertPolicy(qt.QComboBox.InsertAtTop)
         return combo
 
     def addStandardCombo(self, model, value):
@@ -3875,10 +3888,10 @@ if __name__ == '__main__':
 
 
 class PropagationConnect(qt.QObject):
-    propagationProceed = qt.pyqtSignal(tuple)
-    rayPathReady = qt.pyqtSignal(list)
-    finished = qt.pyqtSignal()
-    emergencyRetrace = qt.pyqtSignal()
+    propagationProceed = qt.Signal(tuple)
+    rayPathReady = qt.Signal(list)
+    finished = qt.Signal()
+    emergencyRetrace = qt.Signal()
 
     def propagateFlowThread(self, blRef, startFrom):
         try:

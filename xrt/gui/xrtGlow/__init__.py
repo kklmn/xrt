@@ -126,26 +126,26 @@ class xrtGlow(qt.QWidget):
         self.setLayout(mainLayout)
         self.customGlWidget.oesList = self.oesList
         toggleHelp = qt.QShortcut(self)
-        toggleHelp.setKey(qt.Key_F1)
+        toggleHelp.setKey("F1")
         toggleHelp.activated.connect(self.openHelpDialog)
 #        toggleHelp.activated.connect(self.customGlWidget.toggleHelp)
         fastSave = qt.QShortcut(self)
-        fastSave.setKey(qt.Key_F5)
+        fastSave.setKey("F5")
         fastSave.activated.connect(partial(self.saveScene, '_xrtScnTmp_.npy'))
         fastLoad = qt.QShortcut(self)
-        fastLoad.setKey(qt.Key_F6)
+        fastLoad.setKey("F6")
         fastLoad.activated.connect(partial(self.loadScene, '_xrtScnTmp_.npy'))
         startMovie = qt.QShortcut(self)
-        startMovie.setKey(qt.Key_F7)
+        startMovie.setKey("F7")
         startMovie.activated.connect(self.startRecordingMovie)
         toggleScreen = qt.QShortcut(self)
-        toggleScreen.setKey(qt.Key_F3)
+        toggleScreen.setKey("F3")
         toggleScreen.activated.connect(self.customGlWidget.toggleVScreen)
         self.dockToQook = qt.QShortcut(self)
-        self.dockToQook.setKey(qt.Key_F4)
+        self.dockToQook.setKey("F4")
         self.dockToQook.activated.connect(self.toggleDock)
         tiltScreen = qt.QShortcut(self)
-        tiltScreen.setKey(qt.CTRL + qt.Key_T)
+        tiltScreen.setKey("Ctrl+T")
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
     def closeEvent(self, event):
@@ -236,7 +236,7 @@ class xrtGlow(qt.QWidget):
         rotationLayout = qt.QVBoxLayout()
         fixedViewsLayout = qt.QHBoxLayout()
 #        rotModeCB = qt.QCheckBox('Use Eulerian rotation')
-#        rotModeCB.setCheckState(2)
+#        rotModeCB.setCheckState(qt.Checked)
 #        rotModeCB.stateChanged.connect(self.checkEulerian)
 #        rotationLayout.addWidget(rotModeCB, 0, 0)
 
@@ -721,7 +721,7 @@ class xrtGlow(qt.QWidget):
                 child = qt.QStandardItem("")
                 child.setEditable(False)
                 child.setCheckable(True)
-                child.setCheckState(2 if i < 2 else 0)
+                child.setCheckState(qt.Checked if i < 2 else qt.Unchecked)
                 headerRow.append(child)
             newModel.invisibleRootItem().appendRow(headerRow)
         newModel.itemChanged.connect(self.updateRaysList)
@@ -809,7 +809,7 @@ class xrtGlow(qt.QWidget):
             newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
                                  (segMode == 1 and iCol > 0) else False)
             if newItem.isCheckable():
-                newItem.setCheckState(2 if iCol < 2 else 0)
+                newItem.setCheckState(qt.Checked if iCol < 2 else qt.Unchecked)
             newItem.setEditable(False)
             newRow.append(newItem)
         return newRow
@@ -1737,9 +1737,9 @@ class xrtGlow(qt.QWidget):
 
 
 class xrtGlWidget(qt.QGLWidget):
-    rotationUpdated = qt.pyqtSignal(np.ndarray)
-    scaleUpdated = qt.pyqtSignal(np.ndarray)
-    histogramUpdated = qt.pyqtSignal(tuple)
+    rotationUpdated = qt.Signal(np.ndarray)
+    scaleUpdated = qt.Signal(np.ndarray)
+    histogramUpdated = qt.Signal(tuple)
 
     def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els, signal):
         qt.QGLWidget.__init__(self, parent)
