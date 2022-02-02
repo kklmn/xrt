@@ -208,9 +208,9 @@ class xrtGlow(qt.QWidget):
             axEdit.setText("{0:.2f}".format(value))
             axEdit.setValidator(scaleValidator)
             axEdit.editingFinished.connect(
-                partial(self.updateScaleFromQLE, axSlider))
+                partial(self.updateScaleFromQLE, axEdit, axSlider))
             axSlider.valueChanged.connect(
-                partial(self.updateScale, iaxis, axEdit))
+                partial(self.updateScale, axSlider, iaxis, axEdit))
             self.zoomSliders.append(axSlider)
             self.zoomEditors.append(axEdit)
 
@@ -252,9 +252,9 @@ class xrtGlow(qt.QWidget):
             axSlider.setRange(-180, 180, 0.01)
             axSlider.setValue(0)
             axEdit.editingFinished.connect(
-                partial(self.updateRotationFromQLE, axSlider))
+                partial(self.updateRotationFromQLE, axEdit, axSlider))
             axSlider.valueChanged.connect(
-                partial(self.updateRotation, iaxis, axEdit))
+                partial(self.updateRotation, axSlider, iaxis, axEdit))
             self.rotationSliders.append(axSlider)
             self.rotationEditors.append(axEdit)
 
@@ -315,13 +315,13 @@ class xrtGlow(qt.QWidget):
             axSlider.setValue(val)
             axEdit = qt.QLineEdit()
             opacityValidator.setRange(rstart, rend, 5)
-            self.updateOpacity(iaxis, axEdit, val)
+            self.updateOpacity(None, iaxis, axEdit, val)
 
             axEdit.setValidator(opacityValidator)
             axEdit.editingFinished.connect(
-                partial(self.updateOpacityFromQLE, axSlider))
+                partial(self.updateOpacityFromQLE, axEdit, axSlider))
             axSlider.valueChanged.connect(
-                partial(self.updateOpacity, iaxis, axEdit))
+                partial(self.updateOpacity, axSlider, iaxis, axEdit))
             self.opacitySliders.append(axSlider)
             self.opacityEditors.append(axEdit)
 
@@ -406,7 +406,7 @@ class xrtGlow(qt.QWidget):
                 self.customGlWidget.colorMin if icSel == 0 else
                 self.customGlWidget.colorMax))
             selQLE.editingFinished.connect(
-                partial(self.updateColorSelFromQLE, icSel))
+                partial(self.updateColorSelFromQLE, selQLE, icSel))
             selQLE.setMaximumWidth(80)
             self.colorControls.append(selQLE)
 
@@ -422,7 +422,7 @@ class xrtGlow(qt.QWidget):
         selSlider.setRange(self.customGlWidget.colorMin,
                            self.customGlWidget.colorMax, rStep)
         selSlider.setValue(rValue)
-        selSlider.sliderMoved.connect(self.updateColorSel)
+        selSlider.sliderMoved.connect(partial(self.updateColorSel, selSlider))
         self.colorControls.append(selSlider)
         colorLayout.addWidget(selSlider)
 
@@ -432,7 +432,8 @@ class xrtGlow(qt.QWidget):
         cutValidator = qt.QDoubleValidator()
         cutValidator.setRange(0, 1, 3)
         axEdit.setValidator(cutValidator)
-        axEdit.editingFinished.connect(self.updateCutoffFromQLE)
+        axEdit.editingFinished.connect(
+            partial(self.updateCutoffFromQLE, axEdit))
         axLabel.setMinimumWidth(144)
         layout.addWidget(axLabel)
         axEdit.setMaximumWidth(48)
@@ -446,7 +447,8 @@ class xrtGlow(qt.QWidget):
         explValidator = qt.QDoubleValidator()
         explValidator.setRange(-1000, 1000, 3)
         explEdit.setValidator(explValidator)
-        explEdit.editingFinished.connect(self.updateExplosionDepth)
+        explEdit.editingFinished.connect(
+            partial(self.updateExplosionDepth, explEdit))
         explLabel.setMinimumWidth(144)
         layout.addWidget(explLabel)
         explEdit.setMaximumWidth(48)
@@ -502,9 +504,9 @@ class xrtGlow(qt.QWidget):
             axSlider.setRange(0, 10, 0.01)
             axSlider.setValue(0.9)
             axEdit.editingFinished.connect(
-                partial(self.updateGridFromQLE, axSlider))
+                partial(self.updateGridFromQLE, axEdit, axSlider))
             axSlider.valueChanged.connect(
-                partial(self.updateGrid, iaxis, axEdit))
+                partial(self.updateGrid, axSlider, iaxis, axEdit))
             self.gridSliders.append(axSlider)
             self.gridEditors.append(axEdit)
 
@@ -577,9 +579,9 @@ class xrtGlow(qt.QWidget):
 
             axEdit.setValidator(projectionValidator)
             axEdit.editingFinished.connect(
-                partial(self.updateProjectionOpacityFromQLE, axSlider))
+                partial(self.updateProjectionOpacityFromQLE, axEdit, axSlider))
             axSlider.valueChanged.connect(
-                partial(self.updateProjectionOpacity, iaxis, axEdit))
+                partial(self.updateProjectionOpacity, axSlider, iaxis, axEdit))
             self.projectionOpacitySliders.append(axSlider)
             self.projectionOpacityEditors.append(axEdit)
 
@@ -647,7 +649,7 @@ class xrtGlow(qt.QWidget):
             if defv is not None:
                 tEdit.setText(str(defv))
             tEdit.editingFinished.connect(
-                partial(self.updateThicknessFromQLE, it))
+                partial(self.updateThicknessFromQLE, tEdit, it))
 
             layout = qt.QHBoxLayout()
             tLabel.setMinimumWidth(145)
@@ -661,7 +663,7 @@ class xrtGlow(qt.QWidget):
         axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
         axSlider.setRange(1, 20, 0.5)
         axSlider.setValue(5)
-        axSlider.valueChanged.connect(self.updateFontSize)
+        axSlider.valueChanged.connect(partial(self.updateFontSize, axSlider))
 
         layout = qt.QHBoxLayout()
         layout.addWidget(axLabel)
@@ -690,7 +692,8 @@ class xrtGlow(qt.QWidget):
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit(str(defv))
             axEdit.setValidator(oeTileValidator)
-            axEdit.editingFinished.connect(partial(self.updateTileFromQLE, ia))
+            axEdit.editingFinished.connect(
+                partial(self.updateTileFromQLE, axEdit, ia))
 
             layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(100)
@@ -1110,8 +1113,8 @@ class xrtGlow(qt.QWidget):
         except:  # analysis:ignore
             pass
 
-    def updateColorSel(self, position):
-        slider = self.sender()
+    def updateColorSel(self, slider, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1134,9 +1137,9 @@ class xrtGlow(qt.QWidget):
         except:  # analysis:ignore
             pass
 
-    def updateColorSelFromQLE(self, icSel):
+    def updateColorSelFromQLE(self, editor, icSel):
         try:
-            editor = self.sender()
+            # editor = self.sender()
             txt = str(editor.text())
             value = float(txt)
             extents = list(self.paletteWidget.span.extents)
@@ -1185,8 +1188,8 @@ class xrtGlow(qt.QWidget):
                 break
         self.projLinePanel.setEnabled(anyOf)
 
-    def updateRotation(self, iax, editor, position):
-        slider = self.sender()
+    def updateRotation(self, slider, iax, editor, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1204,13 +1207,13 @@ class xrtGlow(qt.QWidget):
             slider.setValue(value)
             editor.setText("{0:.2f}".format(value))
 
-    def updateRotationFromQLE(self, slider):
-        editor = self.sender()
+    def updateRotationFromQLE(self, editor, slider):
+        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
-    def updateScale(self, iax, editor, position):
-        slider = self.sender()
+    def updateScale(self, slider, iax, editor, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1229,13 +1232,13 @@ class xrtGlow(qt.QWidget):
             slider.setValue(value)
             editor.setText("{0:.2f}".format(value))
 
-    def updateScaleFromQLE(self, slider):
-        editor = self.sender()
+    def updateScaleFromQLE(self, editor, slider):
+        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
-    def updateFontSize(self, position):
-        slider = self.sender()
+    def updateFontSize(self, slider, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1333,8 +1336,8 @@ class xrtGlow(qt.QWidget):
         else:
             pass
 
-    def updateGrid(self, iax, editor, position):
-        slider = self.sender()
+    def updateGrid(self, slider, iax, editor, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1345,8 +1348,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.aPos[iax] = np.float32(position)
             self.customGlWidget.glDraw()
 
-    def updateGridFromQLE(self, slider):
-        editor = self.sender()
+    def updateGridFromQLE(self, editor, slider):
+        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
@@ -1624,9 +1627,9 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
-    def updateCutoffFromQLE(self):
+    def updateCutoffFromQLE(self, editor):
         try:
-            editor = self.sender()
+            # editor = self.sender()
             value = float(re.sub(',', '.', str(editor.text())))
             extents = list(self.paletteWidget.span.extents)
             self.customGlWidget.cutoffI = np.float32(value)
@@ -1638,9 +1641,9 @@ class xrtGlow(qt.QWidget):
         except:  # analysis:ignore
             pass
 
-    def updateExplosionDepth(self):
+    def updateExplosionDepth(self, editor):
         try:
-            editor = self.sender()
+            # editor = self.sender()
             value = float(re.sub(',', '.', str(editor.text())))
             self.customGlWidget.depthScaler = np.float32(value)
             if self.customGlWidget.virtScreen is not None:
@@ -1649,8 +1652,8 @@ class xrtGlow(qt.QWidget):
         except:  # analysis:ignore
             pass
 
-    def updateOpacity(self, iax, editor, position):
-        slider = self.sender()
+    def updateOpacity(self, slider, iax, editor, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1670,8 +1673,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.pointSize = np.float32(position)
         self.customGlWidget.glDraw()
 
-    def updateOpacityFromQLE(self, slider):
-        editor = self.sender()
+    def updateOpacityFromQLE(self, editor, slider):
+        # editor = self.sender()
         value = float(str(editor.text()))
         slider.setValue(value)
         self.customGlWidget.glDraw()
@@ -1682,8 +1685,8 @@ class xrtGlow(qt.QWidget):
             slider.setValue(op)
             editor.setText("{0:.2f}".format(op))
 
-    def updateThicknessFromQLE(self, ia):
-        editor = self.sender()
+    def updateThicknessFromQLE(self, editor, ia):
+        # editor = self.sender()
         value = float(str(editor.text())) if editor.text() else None
         if ia == 0:
             self.customGlWidget.oeThickness = value
@@ -1695,14 +1698,14 @@ class xrtGlow(qt.QWidget):
             return
         self.customGlWidget.glDraw()
 
-    def updateTileFromQLE(self, ia):
-        editor = self.sender()
+    def updateTileFromQLE(self, editor, ia):
+        # editor = self.sender()
         value = float(str(editor.text()))
         self.customGlWidget.tiles[ia] = np.int(value)
         self.customGlWidget.glDraw()
 
-    def updateProjectionOpacity(self, iax, editor, position):
-        slider = self.sender()
+    def updateProjectionOpacity(self, slider, iax, editor, position):
+        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1722,8 +1725,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.pointProjectionSize = np.float32(position)
         self.customGlWidget.glDraw()
 
-    def updateProjectionOpacityFromQLE(self, slider):
-        editor = self.sender()
+    def updateProjectionOpacityFromQLE(self, editor, slider):
+        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
         self.customGlWidget.glDraw()

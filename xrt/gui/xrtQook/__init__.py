@@ -368,13 +368,12 @@ class XrtQook(qt.QWidget):
                  'Add Material', 'Add Plot'],
                 [rsources, roes, rapts, rscreens, rmats, None],
                 [self.addElement]*4 + [self.addMaterial, self.addPlot],
-                ['add{0:1d}'.format(i+1) for i in range(6)]):
+                ['add{0:1d}.png'.format(i+1) for i in range(6)]):
             amenuButton = qt.QToolButton()
-            amenuButton.setIcon(qt.QIcon(os.path.join(
-                self.iconsDir, '{}.png'.format(aicon))))
+            amenuButton.setIcon(qt.QIcon(os.path.join(self.iconsDir, aicon)))
             amenuButton.setToolTip(menuName)
 
-            tmenu = qt.QMenu()
+            tmenu = qt.QMenu(amenuButton)
             if amodule is not None:
                 if hasattr(amodule, '__allSectioned__'):
                     for sec, elnames in list(amodule.__allSectioned__.items()):
@@ -393,7 +392,7 @@ class XrtQook(qt.QWidget):
                     subAction = qt.QAction(self)
                     subAction.setText(beamType)
                     subAction.hovered.connect(partial(
-                        self.populateBeamsMenu, beamType))
+                        self.populateBeamsMenu, subAction, beamType))
                     tmenu.addAction(subAction)
             amenuButton.setMenu(tmenu)
             amenuButton.setPopupMode(qt.QToolButton.InstantPopup)
@@ -457,8 +456,8 @@ class XrtQook(qt.QWidget):
                     self.blViewer.move(100, 100)
                 self.blViewer.parentRef = self
 
-    def populateBeamsMenu(self, beamType):
-        sender = self.sender()
+    def populateBeamsMenu(self, sender, beamType):
+        # sender = self.sender()
         subMenu = qt.QMenu(self)
         for ibeam in range(self.rootBeamItem.rowCount()):
             if beamType[:5] in str(self.rootBeamItem.child(
@@ -2509,7 +2508,8 @@ class XrtQook(qt.QWidget):
                             if combo.staticMetaObject.className() ==\
                                     'QListWidget':
                                 combo.clicked.connect(
-                                    partial(self.processListWidget, child1))
+                                    partial(
+                                        self.processListWidget, combo, child1))
                             elif combo.staticMetaObject.className() ==\
                                     'QComboBox':
                                 combo.currentIndexChanged['QString'].connect(
@@ -2518,11 +2518,10 @@ class XrtQook(qt.QWidget):
         else:
             pass
 
-    def processListWidget(self, item):
-        iWidget = self.sender()
+    def processListWidget(self, combo, item):
         chItemText = "("
-        for rState in range(iWidget.count()):
-            if int(iWidget.item(rState).checkState()) == 2:
+        for rState in range(combo.count()):
+            if int(combo.item(rState).checkState()) == 2:
                 chItemText += str(rState+1) + ","
         else:
             chItemText += ")"
@@ -2817,9 +2816,10 @@ class XrtQook(qt.QWidget):
             if beamName not in outBeams:
                 self.beamModel.takeRow(ibm)
 
-    def updateBeamlineBeams(self, item):
-        sender = self.sender()
-        if sender is not None:
+    def updateBeamlineBeams(self, item=None):
+        # sender = self.sender()
+        # if sender is not None:
+        if True:
             if item is None:  # Create empty beam dict
                 beamsDict = OrderedDict()
                 for ib in range(self.rootBeamItem.rowCount()):
@@ -3823,68 +3823,6 @@ if __name__ == '__main__':
         self.experimentalMode = not self.experimentalMode
         self.progressBar.setFormat("Experimental Mode {}abled".format(
             "en" if self.experimentalMode else "dis"))
-
-#    def aboutCode(self):
-#        import platform
-#        from ...version import __version__ as xrtversion
-##        if use_pyside:
-##            Qt_version = qt.__version__
-##            PyQt_version = PySide.__version__
-##        else:
-#        Qt_version = qt.QT_VERSION_STR
-#        PyQt_version = qt.PYQT_VERSION_STR
-#
-#        msgBox = qt.QMessageBox()
-#        msgBox.setWindowIcon(qt.QIcon(
-#            os.path.join(self.xrtQookDir, '_icons', 'xrQt1.ico')))
-#        msgBox.setWindowTitle("About xrtQook")
-#        msgBox.setIconPixmap(qt.QPixmap(
-#            os.path.join(self.xrtQookDir, '_icons', 'logo-xrtQt.png')))
-#        msgBox.setTextFormat(qt.RichText)
-#        msgBox.setText("Beamline layout manipulation and automated code\
-# generation tool for the <a href='http://xrt.rtfd.io'>xrt ray tracing\
-# package</a>.\nFor a quick start see this short \
-# <a href='http://xrt.rtfd.io/qook_tutorial.html'>tutorial</a>.")
-#        locos = platform.platform(terse=True)
-#        if 'Linux' in locos:
-#            locos = " ".join(platform.linux_distribution())
-#        infText = """Created by:\
-#\nRoman Chernikov (Canadian Light Source)\
-#\nKonstantin Klementiev (MAX IV Laboratory)\
-#\nLicensed under the terms of the MIT License\nMarch 2016\
-#\n\nYour system:\n{0}\nPython {1}\nQt {2}\n{3} {4}""".format(
-#                locos, platform.python_version(),
-#                Qt_version, qt.QtName, PyQt_version)
-#        if isOpenCL:
-#            vercl = cl.VERSION
-#            if isinstance(vercl, (list, tuple)):
-#                vercl = '.'.join(map(str, vercl))
-#        else:
-#            vercl = 'not found'
-#        infText += '\npyopencl {}'.format(vercl)
-#        if gl.isOpenGL:
-#            infText += '\n{0} {1}'.format(gl.__name__, gl.__version__)
-#        infText += '\nxrt {0} in {1}'.format(xrtversion, path_to_xrt)
-#        msgBox.setInformativeText(infText)
-#        msgBox.setStandardButtons(qt.QMessageBox.Ok)
-#        msgBox.exec_()
-#
-#    def closeEvent(self, event):
-#        ret = qt.QMessageBox.question(
-#            self, 'Exit',
-#            "Do you want to save Beamline Layout before exit?",
-#            qt.QMessageBox.Yes | qt.QMessageBox.No | qt.QMessageBox.Cancel,
-#            qt.QMessageBox.Cancel)
-#
-#        if ret == qt.QMessageBox.Yes:
-#            if self.exportLayout():
-#                event.accept()
-#            else:
-#                event.ignore()
-#        elif ret == qt.QMessageBox.Cancel:
-#            event.ignore()
-#        else:
-#            event.accept()
 
 
 class PropagationConnect(qt.QObject):
