@@ -1816,12 +1816,10 @@ class XYCPlotWithNumerOfReflections(XYCPlot):
     def update_user_elements(self):
         if not hasattr(self, 'ax1dHistE'):
             return
-        if not hasattr(self, 'textUser'):
-            self.textUser = []
+        if hasattr(self, 'textUser'):
+            self.clean_user_elements()
         else:
-            self.ax1dHistE.texts[:] = [t for t in self.ax1dHistE.texts
-                                       if t not in self.textUser]
-            del self.textUser[:]
+            self.textUser = []
         bins = self.caxis.total1D.nonzero()[0]
         self.ax1dHistE.yaxis.set_major_locator(MaxNLocator(integer=True))
         yPrev = -1e3
@@ -1846,8 +1844,10 @@ class XYCPlotWithNumerOfReflections(XYCPlot):
 
     def clean_user_elements(self):
         if hasattr(self, 'textUser'):
-            self.ax1dHistE.texts[:] = [t for t in self.ax1dHistE.texts
-                                       if t not in self.textUser]
+            for text in reversed(self.ax1dHistE.texts):
+                if text in self.textUser:
+                    self.ax1dHistE.texts.remove(text)
+                del text
             del self.textUser[:]
 
 
