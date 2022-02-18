@@ -150,10 +150,12 @@ class mySlider(QSlider):
         if step == 0:
             return
         self.scale = 1. / step
-        QSlider.setRange(self, start / step, end / step)
+        # QSlider.setRange(self, int(start/step), int(end/step))
+        super(mySlider, self).setRange(int(start/step), int(end/step))
 
     def setValue(self, value):
-        QSlider.setValue(self, int(value*self.scale))
+        # QSlider.setValue(self, int(value*self.scale))
+        super(mySlider, self).setValue(int(value*self.scale))
 
 
 try:
