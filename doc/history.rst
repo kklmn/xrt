@@ -13,6 +13,9 @@ Future release, already available at GitHub (18 Dec 2021):
       :ref:`a few comparative test curves <tests_ml_tran>` and a test script
       ``tests/test_multilayer_transmission.py``.
 
+    - Added elliptical Gaussian beam, see
+      `here <https://github.com/kklmn/xrt/issues/96>`_.
+
     - Minor bug fixes.
 
 1.4.0 (22 Sep 2021):
