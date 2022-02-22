@@ -135,6 +135,7 @@ def make_polarization(polarization, bo, nrays=raycing.nrays):
 class GeometricSource(object):
     """Implements a geometric source - a source with the ray origin,
     divergence and energy sampled with the given distribution laws."""
+
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), nrays=raycing.nrays,
         distx='normal', dx=0.32, disty=None, dy=0, distz='normal', dz=0.018,
@@ -379,6 +380,7 @@ class GaussianBeam(object):
     It *must* be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
@@ -391,8 +393,9 @@ class GaussianBeam(object):
         *center*: tuple of 3 floats
             3D point in global system
 
-        *w0*: float
-            Gaussian beam waist size.
+        *w0*: float or 2-sequence
+            Gaussian beam waist size. If a 2-sequence, the sizes refer to
+            the horizontal and the vertical axes.
 
         *distE*: 'normal', 'flat', 'lines', None
 
@@ -429,6 +432,9 @@ class GaussianBeam(object):
 
         self.center = center  # 3D point in global system
         self.w0 = w0
+        if raycing.is_sequence(self.w0):
+            if len(self.w0) != 2:
+                raise ValueError('wrong length of w0')
         self.distE = distE
         if self.distE == 'lines':
             self.energies = np.array(energies)
@@ -446,11 +452,18 @@ class GaussianBeam(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.yaw = raycing.auto_units_angle(yaw)
 
-    def w(self, y, E=None, yR=None):
+    def rayleigh_range(self, E, w0=None):
+        if w0 is None:
+            w0 = self.w0[0] if raycing.is_sequence(self.w0) else self.w0
+        k = E / CHBAR * 1e7  # mm^-1
+        return k/2 * w0**2
+
+    def w(self, y, E=None, yR=None, w0=None):
+        if w0 is None:
+            w0 = self.w0[0] if raycing.is_sequence(self.w0) else self.w0
         if yR is None:
-            k = E / CHBAR * 1e7  # mm^-1
-            yR = k/2 * self.w0**2
-        return self.w0 * (1 + (y/yR)**2)**0.5
+            yR = self.rayleigh_range(E, w0)
+        return w0 * (1 + (y/yR)**2)**0.5
 
     def shine(self, toGlobal=True, wave=None, accuBeam=None):
         u"""
@@ -498,15 +511,33 @@ class GaussianBeam(object):
         else:
             gouy = 0
         k = wave.E / CHBAR * 1e7  # mm^-1
-        yR = k/2 * self.w0**2
-        invR = wave.yDiffr / (wave.yDiffr**2 + yR**2)
-        psi = (gouy + 1) * np.arctan2(wave.yDiffr, yR)
-        w = self.w(wave.yDiffr, yR=yR)
-        phi = np.arctan2(wave.zDiffr, wave.xDiffr)
-        rSquare = wave.xDiffr**2 + wave.zDiffr**2
-        amp = (2/np.pi)**0.5 / w * np.exp(
-            -rSquare/w**2 + 1j*k*(wave.yDiffr + 0.5*rSquare*invR) - 1j*psi)
+        if raycing.is_sequence(self.w0):
+            amp = (2/np.pi)**0.5 * np.exp(1j*k*wave.yDiffr)
+            for iw, w0 in enumerate(self.w0):
+                yR = k/2 * w0**2
+                invR = wave.yDiffr / (wave.yDiffr**2 + yR**2)
+                psi = (gouy + 1) * np.arctan2(wave.yDiffr, yR) * 0.5
+                w = self.w(wave.yDiffr, yR=yR, w0=w0)
+                if iw == 0:
+                    wx = w
+                    rSquare = wave.xDiffr**2
+                elif iw == 1:
+                    wz = w
+                    rSquare = wave.zDiffr**2
+                amp *= w**(-0.5) * np.exp(
+                    -rSquare/w**2 + 0.5j*k*rSquare*invR - 1j*psi)
+        else:
+            yR = k/2 * self.w0**2
+            invR = wave.yDiffr / (wave.yDiffr**2 + yR**2)
+            psi = (gouy + 1) * np.arctan2(wave.yDiffr, yR)
+            w = self.w(wave.yDiffr, yR=yR)
+            wx = wz = w
+            rSquare = wave.xDiffr**2 + wave.zDiffr**2
+            amp = (2/np.pi)**0.5 / w * np.exp(
+                -rSquare/w**2 + 1j*k*(wave.yDiffr + 0.5*rSquare*invR) - 1j*psi)
+
         if self.vortex is not None:
+            phi = np.arctan2(wave.zDiffr, wave.xDiffr)
             clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
             amp *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
             if p > 0:
@@ -516,10 +547,10 @@ class GaussianBeam(object):
             clp = (2**(m+n)*np.math.factorial(m)*np.math.factorial(n))**(-0.5)
             amp *= clp
             if m > 0:
-                hm = sp.special.eval_hermite(m, 2**0.5*wave.xDiffr/w)
+                hm = sp.special.eval_hermite(m, 2**0.5*wave.xDiffr/wx)
                 amp *= hm
             if n > 0:
-                hn = sp.special.eval_hermite(n, 2**0.5*wave.zDiffr/w)
+                hn = sp.special.eval_hermite(n, 2**0.5*wave.zDiffr/wz)
                 amp *= hn
 
         amp *= wave.dS**0.5
@@ -560,6 +591,7 @@ class LaguerreGaussianBeam(GaussianBeam):
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+
     def __init__(self, *args, **kwargs):
         """
         *vortex*: None or tuple(l, p)
@@ -570,6 +602,8 @@ class LaguerreGaussianBeam(GaussianBeam):
         """
         vortex = kwargs.pop('vortex', None)
         GaussianBeam.__init__(self, *args, **kwargs)
+        if raycing.is_sequence(self.w0):
+            raise ValueError('w0 must be a value, not a sequence')
         self.vortex = vortex
 
 
@@ -579,6 +613,7 @@ class HermiteGaussianBeam(GaussianBeam):
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+
     def __init__(self, *args, **kwargs):
         """
         *TEM*: None or tuple(m, n)
@@ -596,6 +631,7 @@ class MeshSource(object):
     """Implements a point source representing a rectangular angular mesh of
     rays. Primarily, it is meant for internal usage for matching the maximum
     divergence to the optical sizes of optical elements."""
+
     def __init__(
         self, bl=None, name='', center=(0, 0, 0),
         minxprime=-1e-4, maxxprime=1e-4,
@@ -728,6 +764,7 @@ class NESWSource(MeshSource):
     Used internally for matching the maximum divergence to the optical sizes of
     optical elements.
     """
+
     def shine(self, toGlobal=True):
         u"""
         Returns the source. If *toGlobal* is True, the output is in the global
@@ -765,6 +802,7 @@ class CollimatedMeshSource(object):
     """Implements a source representing a mesh of collimated rays. Is similar
     to :class:`MeshSource`.
     """
+
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), dx=1., dz=1., nx=11, nz=11,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,

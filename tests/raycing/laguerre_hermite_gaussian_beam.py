@@ -269,6 +269,7 @@ else:
 
 E0 = 9000.  # eV
 w0 = 15e-3  # mm, waist size of the amplitude (not of intensity!)
+# w0 = 30e-3, 15e-3  # mm, waist sizes for elliptical Gaussian beam
 
 # screen positions:
 if True:  # short test
@@ -395,7 +396,37 @@ def main():
     xrtr.run_ray_tracing(
         plots, repeats=1, updateEvery=1, beamLine=beamLine, processes=1)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+def plot_w():
+    import matplotlib.pyplot as plt
+
+    beamLine = build_beamline()
+    E = beamLine.source.energies[0]
+    y = np.linspace(-50, 50, 201) * 1e3
+
+    fig = plt.figure(figsize=(7, 6))
+    ax = fig.add_subplot(111)
+    ax.set_xlabel(u'$y$ (m)')
+    ax.set_ylabel(u'$w$ (µm)')
+    # ax.set_xlim([0, 1])
+    # ax.set_ylim([energy[0], energy[-1]])
+
+    w0s = w0 if raycing.is_sequence(w0) else [w0]
+    for w0i, color in zip(w0s, ['C0', 'C1']):
+        w = beamLine.source.w(y, E=E, w0=w0i)
+        yR = beamLine.source.rayleigh_range(E, w0=w0i)
+        ax.plot(y*1e-3, w*1e3, color=color,
+                label='$w_0$={0:.0f} µm'.format(w0i*1e3))
+        ax.plot(y*1e-3, -w*1e3, color=color)
+        ax.axvline(yR*1e-3, linestyle='--', color=color)
+        ax.axvline(-yR*1e-3, linestyle='--', color=color)
+
+    ax.legend()
+
+    fig.savefig('gaussian_beam_profile.png')
+    plt.show()
+
+
 if __name__ == '__main__':
+    # plot_w()
     main()
