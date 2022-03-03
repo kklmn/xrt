@@ -6,6 +6,7 @@ import re
 import sys
 import os
 import os.path as osp
+import shutil
 
 #  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
 #  It's definitely not the optimal solution, but it works.
@@ -30,24 +31,34 @@ except (ImportError, KeyError):
     except (ImportError, KeyError):
         isSpyderConsole = False
 
-isSphinx = True
 CONFDIR = osp.dirname(osp.abspath(__file__))
-CSS_PATH = osp.join(CONFDIR, '_static')
+DOCDIR = os.path.expanduser(os.path.join('~', '.xrt', 'doc'))
+
+shutil.rmtree(osp.join(DOCDIR, '_images'))
+shutil.copytree(osp.join(CONFDIR, '_images'), osp.join(DOCDIR, '_images'))
+shutil.rmtree(osp.join(DOCDIR, '_themes'))
+shutil.copytree(osp.join(CONFDIR, '_themes'), osp.join(DOCDIR, '_themes'))
+shutil.copy2(osp.join(CONFDIR, 'conf.py'), osp.join(DOCDIR, 'conf.py'))
+
+CSS_PATH = osp.join(DOCDIR, '_static')
 CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
 JS_PATH = CSS_PATH
+
 xrtQookPageName = 'xrtQookPage'
-xrtQookPage = 'file:///' + osp.join(CONFDIR, xrtQookPageName+'.html')
+xrtQookPage = 'file:///' + osp.join(DOCDIR, xrtQookPageName+'.html')
 xrtQookPage = re.sub('\\\\', '/', xrtQookPage)
 
 from . import qt
 shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
+
 
 try:
     from xml.sax.saxutils import escape
     from docutils.utils import SystemMessage
     from sphinx.application import Sphinx
     import codecs
-except:
+    isSphinx = True
+except Exception:
     isSphinx = False
 
 
@@ -65,18 +76,15 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
     """
     Largely modified Spyder's sphinxify.
     """
-#    if not img_path:
-#        img_path = os.path.join(CONFDIR, "_images")
     if img_path:
         if os.name == 'nt':
             img_path = img_path.replace('\\', '/')
         leading = '/' if os.name.startswith('posix') else ''
         docstring = docstring.replace('_images', leading+img_path)
 
-    srcdir = osp.join(CONFDIR, '_sources')
+    srcdir = osp.join(DOCDIR, '_sources')
     if not os.path.exists(srcdir):
         os.makedirs(srcdir)
-#    srcdir = encoding.to_unicode_from_fs(srcdir)
     base_name = osp.join(srcdir, xrtQookPageName)
     rst_name = base_name + '.rst'
 
@@ -101,10 +109,11 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
     confoverrides = {'html_context': context,
                      'extensions': ['sphinx.ext.mathjax']}
 
-    doctreedir = osp.join(CONFDIR, 'doctrees')
-    sphinx_app = Sphinx(srcdir, CONFDIR, CONFDIR, doctreedir, buildername,
+    doctreedir = osp.join(DOCDIR, 'doctrees')
+    sphinx_app = Sphinx(srcdir, DOCDIR, DOCDIR, doctreedir, buildername,
                         confoverrides, status=None, warning=None,
                         freshenv=True, warningiserror=False, tags=None)
+
     try:
         sphinx_app.build(None, [rst_name])
     except SystemMessage:
