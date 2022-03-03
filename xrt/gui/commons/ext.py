@@ -32,7 +32,7 @@ except (ImportError, KeyError):
         isSpyderConsole = False
 
 CONFDIR = osp.dirname(osp.abspath(__file__))
-DOCDIR = os.path.expanduser(os.path.join('~', '.xrt', 'doc'))
+DOCDIR = osp.expanduser(osp.join('~', '.xrt', 'doc'))
 
 shutil.rmtree(osp.join(DOCDIR, '_images'))
 shutil.copytree(osp.join(CONFDIR, '_images'), osp.join(DOCDIR, '_images'))
@@ -83,7 +83,7 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
         docstring = docstring.replace('_images', leading+img_path)
 
     srcdir = osp.join(DOCDIR, '_sources')
-    if not os.path.exists(srcdir):
+    if not osp.exists(srcdir):
         os.makedirs(srcdir)
     base_name = osp.join(srcdir, xrtQookPageName)
     rst_name = base_name + '.rst'
