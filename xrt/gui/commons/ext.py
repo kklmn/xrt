@@ -34,9 +34,15 @@ except (ImportError, KeyError):
 CONFDIR = osp.dirname(osp.abspath(__file__))
 DOCDIR = osp.expanduser(osp.join('~', '.xrt', 'doc'))
 
-shutil.rmtree(osp.join(DOCDIR, '_images'))
+try:
+    shutil.rmtree(osp.join(DOCDIR, '_images'))
+except FileNotFoundError:
+    pass
 shutil.copytree(osp.join(CONFDIR, '_images'), osp.join(DOCDIR, '_images'))
-shutil.rmtree(osp.join(DOCDIR, '_themes'))
+try:
+    shutil.rmtree(osp.join(DOCDIR, '_themes'))
+except FileNotFoundError:
+    pass
 shutil.copytree(osp.join(CONFDIR, '_themes'), osp.join(DOCDIR, '_themes'))
 shutil.copy2(osp.join(CONFDIR, 'conf.py'), osp.join(DOCDIR, 'conf.py'))
 
