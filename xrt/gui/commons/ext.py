@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "3 Mar 2022"
+__date__ = "4 Mar 2022"
 
 import re
 import sys
@@ -33,16 +33,11 @@ except (ImportError, KeyError):
 
 CONFDIR = osp.dirname(osp.abspath(__file__))
 DOCDIR = osp.expanduser(osp.join('~', '.xrt', 'doc'))
-
 try:
-    shutil.rmtree(osp.join(DOCDIR, '_images'))
+    shutil.rmtree(DOCDIR)
 except FileNotFoundError:
     pass
 shutil.copytree(osp.join(CONFDIR, '_images'), osp.join(DOCDIR, '_images'))
-try:
-    shutil.rmtree(osp.join(DOCDIR, '_themes'))
-except FileNotFoundError:
-    pass
 shutil.copytree(osp.join(CONFDIR, '_themes'), osp.join(DOCDIR, '_themes'))
 shutil.copy2(osp.join(CONFDIR, 'conf.py'), osp.join(DOCDIR, 'conf.py'))
 
@@ -56,7 +51,6 @@ xrtQookPage = re.sub('\\\\', '/', xrtQookPage)
 
 from . import qt
 shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
-
 
 try:
     from xml.sax.saxutils import escape
