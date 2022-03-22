@@ -772,6 +772,9 @@ class OE(object):
         2: reflected outside of working area ("out"),
         3: transmitted without intersection ("over"),
         -NN: lost (absorbed) at OE#NN - OE numbering starts from 1 !!!
+
+        Note, *x*, *y*, *z* are local Cartesian coordinates, even for a
+        parametric OE.
         """
         if is2ndXtal:
             surfPhysX = self.surfPhysX2
