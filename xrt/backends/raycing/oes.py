@@ -238,13 +238,13 @@ class DicedOE(OE):
         else:
             return cn
 
-    def rays_good(self, x, y, is2ndXtal=False):
+    def rays_good(self, x, y, z, is2ndXtal=False):
         """Returns *state* value as inherited from :class:`OE`. The rays that
         fall inside the gaps are additionally considered as lost."""
 # =1: good (intersected)
 # =2: reflected outside of working area, =3: transmitted without intersection,
 # =-NN: lost (absorbed) at OE#NN - OE numbering starts from 1 !!!
-        locState = OE.rays_good(self, x, y, is2ndXtal)
+        locState = OE.rays_good(self, x, y, z, is2ndXtal)
         fx, fy, cn = self.local_z(x, y, skipReturnZ=True)
         inGaps = (abs(fx) > self.dxFacet/2) | (abs(fy) > self.dyFacet/2)
         locState[inGaps] = self.lostNum
@@ -328,6 +328,7 @@ class JohannCylinder(OE):
 
 class JohanssonCylinder(JohannCylinder):
     """Ground-bent (Johansson) reflective crystal."""
+
     def local_n(self, x, y):
         """Determines the normal vectors of OE at (*x*, *y*) position: of the
         atomic planes and of the surface."""
@@ -414,6 +415,7 @@ class JohannToroid(OE):
 
 class JohanssonToroid(JohannToroid):
     """Ground-2D-bent (Johansson) reflective optical element."""
+
     def local_n(self, x, y):
         """Determines the normal vectors of OE at (*x*, *y*) position: of the
         atomic planes and of the surface."""
@@ -442,6 +444,7 @@ class GeneralBraggToroid(JohannToroid):
     """Ground-2D-bent reflective optical element with 4 independent radii:
     meridional and sagittal for the surface (*Rm* and *Rs*) and the atomic
     planes (*RmBragg* and *RsBragg*)."""
+
     def pop_kwargs(self, **kwargs):
         kw = JohannToroid.pop_kwargs(self, **kwargs)
         self.RmBragg = kw.pop('RmBragg', self.Rm)  # R Bragg meridional
@@ -459,6 +462,7 @@ class GeneralBraggToroid(JohannToroid):
 
 class DicedJohannToroid(DicedOE, JohannToroid):
     """A diced version of :class:`JohannToroid`."""
+
     def __init__(self, *args, **kwargs):
         kwargs = self.pop_kwargs(**kwargs)
         DicedOE.__init__(self, *args, **kwargs)
@@ -475,6 +479,7 @@ class DicedJohannToroid(DicedOE, JohannToroid):
 
 class DicedJohanssonToroid(DicedJohannToroid, JohanssonToroid):
     """A diced version of :class:`JohanssonToroid`."""
+
     def facet_center_n(self, x, y):
         return JohanssonToroid.local_n(self, x, y)
 
@@ -491,6 +496,7 @@ class DicedJohanssonToroid(DicedJohannToroid, JohanssonToroid):
 
 class LauePlate(OE):
     """A flat Laue plate. The thickness is defined in its *material* part."""
+
     def local_n(self, x, y):
         a, b, c = 0, 0, 1
         if self.alpha:
@@ -576,6 +582,7 @@ class BentLaueCylinder(OE):
 
 class GroundBentLaueCylinder(BentLaueCylinder):
     """Ground-bent reflective optical element in Laue geometry."""
+
     def local_n(self, x, y):
         """Determines the normal vectors of OE at (*x*, *y*) position: of the
         atomic planes and of the surface."""
@@ -638,6 +645,7 @@ class BentLaueSphere(BentLaueCylinder):
 
 class MirrorOnTripodWithTwoXStages(OE, rst.Tripod, rst.TwoXStages):
     """Combines a simple mirror with a tripod support + two X-stages."""
+
     def __init__(self, *args, **kwargs):
         r"""
         *jack1*, *jack2*, *jack3*: 3-lists
@@ -720,6 +728,7 @@ SimpleVCM = BentFlatMirror
 
 class VCM(SimpleVCM, MirrorOnTripodWithTwoXStages):
     """Implements Vertically Collimating Mirror on support."""
+
     def __init__(self, *args, **kwargs):
         kwargs, argsT = rst.Tripod.pop_kwargs(self, **kwargs)
         kwargs, argsX = rst.TwoXStages.pop_kwargs(self, **kwargs)
@@ -1419,6 +1428,7 @@ class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
 
 class DCMOnTripodWithOneXStage(DCM, rst.Tripod, rst.OneXStage):
     """Combines a DCM with a tripod support + one X-stage."""
+
     def __init__(self, *args, **kwargs):
         r"""
         *jack1*, *jack2*, *jack3*: 3-lists
@@ -1931,6 +1941,7 @@ class NormalFZP(OE):
     .. warning::
 
         Do not forget to specify ``kind='FZP'`` in the material!"""
+
     def __init__(self, *args, **kwargs):
         r"""
         *f*: float
@@ -1993,7 +2004,7 @@ class NormalFZP(OE):
     def rays_good_gn(self, x, y, z):
         """Returns *state* value as inherited from :class:`OE`. The rays that
         fall inside the opaque zones are additionally considered as lost."""
-        locState = OE.rays_good(self, x, y)
+        locState = OE.rays_good(self, x, y, z)
         r = np.sqrt(x**2 + y**2)
         i = (self.r_to_i(r)).astype(int)
         good = ((i % 2 == int(self.isCentralZoneBlack)) & (r < self.rn[-1]) &
@@ -2017,6 +2028,7 @@ class GeneralFZPin0YZ(OE):
     .. warning::
 
         Do not forget to specify ``kind='FZP'`` in the material!"""
+
     def __init__(self, *args, **kwargs):
         """
         *f1* and *f2*: 3- or 4-sequence or str
@@ -2077,7 +2089,7 @@ class GeneralFZPin0YZ(OE):
             self.phaseShift /= np.pi
 
     def rays_good_gn(self, x, y, z):
-        locState = super(GeneralFZPin0YZ, self).rays_good(x, y)
+        locState = super(GeneralFZPin0YZ, self).rays_good(x, y, z)
         good = locState == 1
         if isinstance(self.f1, str):
             d1 = y[good] * np.cos(self.grazingAngle)

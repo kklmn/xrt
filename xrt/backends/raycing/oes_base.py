@@ -765,7 +765,7 @@ class OE(object):
         else:
             material.kind = 'mirror'
 
-    def rays_good(self, x, y, is2ndXtal=False):
+    def rays_good(self, x, y, z, is2ndXtal=False):
         """Returns *state* value for a ray with the given intersection point
         (*x*, *y*) with the surface of OE:
         1: good (intersected)
@@ -1109,34 +1109,56 @@ class OE(object):
         :class:`~xrt.backends.raycing.oes.OE`,
         :class:`~xrt.backends.raycing.apertures.RectangularAperture` or
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
-        *nrays* of samples are randomly distributed over the surface within
-        ``self.limPhysX`` limits.
+        *nrays*: if int, specifies the number of randomly distributed samples
+        the surface within ``self.limPhysX`` limits; if 2-tuple of ints,
+        specifies (nx, ny) sizes of a uniform mesh of samples.
         """
         if rw is None:
             from . import waves as rw
 
-        nrays = int(nrays)
-        lb = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
-        xy = np.random.rand(nrays, 2)
-        if shape == 'auto':
-            shape = self.shape
-        if shape.startswith('ro'):  # round
-            dR = (self.limPhysX[1] - self.limPhysX[0]) / 2
-            r = xy[:, 0]**0.5 * dR
-            phi = xy[:, 1] * 2*np.pi
-            x = r * np.cos(phi)
-            y = r * np.sin(phi)
+        if isinstance(nrays, int):
+            nsamples = nrays
+        elif isinstance(nrays, (list, tuple)):
+            nsamples = nrays[0] * nrays[1]
+        else:
+            raise ValueError('wrong type of `nrays`!')
+
+        lb = rs.Beam(nrays=nsamples, forceState=1, withAmplitudes=True)
+        if isinstance(nrays, int):
+            xy = np.random.rand(nrays, 2)
+            if shape == 'auto':
+                shape = self.shape
+            if shape.startswith('ro'):  # round
+                dR = (self.limPhysX[1] - self.limPhysX[0]) / 2
+                r = xy[:, 0]**0.5 * dR
+                phi = xy[:, 1] * 2*np.pi
+                x = r * np.cos(phi)
+                y = r * np.sin(phi)
+                if area == 'auto':
+                    area = np.pi * dR**2
+            elif shape.startswith('re'):  # rect
+                dX = self.limPhysX[1] - self.limPhysX[0]
+                dY = self.limPhysY[1] - self.limPhysY[0]
+                x = xy[:, 0] * dX + self.limPhysX[0]
+                y = xy[:, 1] * dY + self.limPhysY[0]
+                if area == 'auto':
+                    area = dX * dY
+            else:
+                raise ValueError("unknown shape!")
+        elif isinstance(nrays, (list, tuple)):
+            if shape.startswith('ro'):  # round
+                raise ValueError("must be rectangular")
+            xx = np.linspace(*self.limPhysX, nrays[0])
+            yy = np.linspace(*self.limPhysY, nrays[1])
+            X, Y = np.meshgrid(xx, yy)
+            x = X.ravel()
+            y = Y.ravel()
             if area == 'auto':
-                area = np.pi * dR**2
-        elif shape.startswith('re'):  # rect
-            dX = self.limPhysX[1] - self.limPhysX[0]
-            dY = self.limPhysY[1] - self.limPhysY[0]
-            x = xy[:, 0] * dX + self.limPhysX[0]
-            y = xy[:, 1] * dY + self.limPhysY[0]
-            if area == 'auto':
+                dX = self.limPhysX[1] - self.limPhysX[0]
+                dY = self.limPhysY[1] - self.limPhysY[0]
                 area = dX * dY
         else:
-            raise ValueError("unknown shape!")
+            raise ValueError('wrong type of `nrays`!')
 
 # this works even for a parametric case because we prepare rays started at the
 # center of the previous oe and directed towards this oe (self). The found
@@ -1630,19 +1652,15 @@ class OE(object):
 # state:
 # the distortion part has moved from here to find_dz
         if self.isParametric:
-            # z_distorted = self.local_r_distorted(lb.x[good], lb.y[good])
             tX, tY, tZ = self.param_to_xyz(lb.x[good], lb.y[good], lb.z[good])
         else:
-            # z_distorted = self.local_z_distorted(lb.x[good], lb.y[good])
             tX, tY, tZ = lb.x[good], lb.y[good], lb.z[good]
-#        if z_distorted is not None:
-#            lb.z[good] += z_distorted
 
         if self.use_rays_good_gn:
             lb.state[good], gNormal = self.rays_good_gn(tX, tY, tZ)
         else:
             gNormal = None
-            lb.state[good] = self.rays_good(tX, tY, is2ndXtal)
+            lb.state[good] = self.rays_good(tX, tY, tZ, is2ndXtal)
         if _lost is not None:
             lb.state[np.where(good)[0][_lost]] = self.lostNum
 
