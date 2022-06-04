@@ -250,6 +250,7 @@ class Element(object):
             raise ValueError(
                 ('E={0} is out of the data table range ' +
                  '[{1}, {2}]!!! Use another table.').format(
+                    E if isinstance(E, (int, float)) else
                     E[np.where((E < self.E[0]) | (E > self.E[-1]))], self.E[0],
                     self.E[-1]))
         f1 = np.interp(E, self.E, self.f1)
@@ -1172,12 +1173,12 @@ class Crystal(Material):
 
     def get_epsilon_h(self, E, b=1., polarization='s'):
         r"""Calculates the relative spectral width :math:`epsilon_h` as
-        (Shvyd'ko)
+        (Shvyd'ko, Eq.2119)
 
         .. math::
 
             \epsilon_h = epsilon_h^{(s)}/\sqrt{|b|},
-            \epsilon_h^{(s)}/\sqrt{|b|} = \frac{4r_e d_h^2}{\pi V}|CF_h|.
+            \epsilon_h^{(s)} = \frac{4r_e d_h^2}{\pi V}|CF_h|.
 
         """
         F0, Fhkl, Fhkl_, _, _, _ = self.get_F_chi(E, 0.5/self.d)
