@@ -1044,6 +1044,9 @@ class Crystal(Material):
                 Therefore, there is no continuous transition mosaic-to-perfect
                 crystal at a continuously reduced mosaicity parameter.
 
+            .. note::
+                The mosaic case in implemented only in the reflection geometry.
+
             See the tests :ref:`here <tests_mosaic>`.
 
             .. [SanchezDelRioMosaic] M. Sánchez del Río et al.,
