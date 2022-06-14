@@ -1295,7 +1295,10 @@ class OE(object):
             tMin, tMax = self._set_t(y, b, surfPhysY)
         else:
             tMin, tMax = self._set_t(z, c, defSize=raycing.maxDepthOfOE)
-#        tMin[tMin < 0] = 0
+        # this line is important for cases when the previous reflection points
+        # (the ray heads) are close, e.g. in Montel mirror without setting
+        # physical surface limits:
+        tMin[tMin < -10*raycing.zEps] = -10*raycing.zEps
         elevation = None
         if isMulti:
             tMin[:] = 0
