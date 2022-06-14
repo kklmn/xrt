@@ -1033,6 +1033,7 @@ class XYCPlot(object):
             np.zeros((2, 2, 3)), aspect=self.aspect, interpolation='nearest',
             origin='lower', figure=self.fig)
         self.contours2D = None
+        self.contours2DLabels = None
 
         self.oe = oe
         self.oeSurfaceLabels = []
@@ -1442,12 +1443,16 @@ class XYCPlot(object):
 
         if self.contourLevels is not None:
             if self.contours2D is not None:
-                for c in self.contours2D.collections:
+                for contour in self.contours2D.collections:
                     try:
-                        self.ax2dHist.collections.remove(c)
+                        contour.remove()
                     except ValueError:
                         pass
-                self.ax2dHist.artists = []
+                for label in self.contours2DLabels:
+                    try:
+                        label.remove()
+                    except ValueError:
+                        pass
             dx = float(self.xaxis.limits[1]-self.xaxis.limits[0]) /\
                 self.xaxis.bins
             dy = float(self.yaxis.limits[1]-self.yaxis.limits[0]) /\
@@ -1475,7 +1480,7 @@ class XYCPlot(object):
                     self.contours2D = self.ax2dHist.contour(
                         X, Y, Z, levels=contourLevels,
                         colors=self.contourColors)
-                    self.ax2dHist.clabel(
+                    self.contours2DLabels = self.ax2dHist.clabel(
                         self.contours2D, fmt=self.contourFmt, inline=True,
                         fontsize=10)
 
@@ -1719,8 +1724,12 @@ class XYCPlot(object):
             self.textDy.set_text('')
         self.clean_user_elements()
         if self.contours2D is not None:
-            self.contours2D.collections = []
-            self.ax2dHist.collections = []
+            for contour in self.contours2D.collections:
+                contour.remove()
+            for label in self.contours2DLabels:
+                label.remove()
+            for artist in self.ax2dHist.collections:
+                artist.remove()
 
         self.plot_plots()
 
