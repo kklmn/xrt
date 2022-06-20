@@ -179,8 +179,8 @@ hueMax = 10.
 
 targetOpenCL = 'auto'
 precisionOpenCL = 'auto'
-#targetOpenCL = (0, 0)
-#precisionOpenCL = 'float32'
+# targetOpenCL = (0, 0)
+# precisionOpenCL = 'float32'
 
 allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
                  'a', 'b', 'path', 'phase_shift', 'reflection_number', 'order',
@@ -768,8 +768,10 @@ def set_name(elementClass, name):
     if name not in [None, 'None', '']:
         elementClass.name = name
     elif not hasattr(elementClass, 'name'):
-        elementClass.name = '{0}{1}'.format(elementClass.__class__.__name__,
-                                            elementClass.ordinalNum)
+        elementClass.name = '{0}{1}'.format(
+            elementClass.__class__.__name__,
+            elementClass.ordinalNum if hasattr(elementClass, 'ordinalNum')
+            else '')
 
 
 class BeamLine(object):

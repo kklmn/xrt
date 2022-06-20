@@ -1,33 +1,27 @@
 # -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev"
-__date__ = "18 Jun 2022"
+__date__ = "20 Jun 2022"
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path as mplPath
 import matplotlib.patches as patches
 
+import sys
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
+import xrt.backends.raycing.apertures as rapts
 
-def main(dx, dz, px, pz, nx, nz):
-    """dx, dz are opening sizes, px, pz are pitch steps (periods),
-    nx and nz are counted from the central hole in -ve and +ve directions,
-    so (2*nx+1)*(2*nz+1) rectangular holes in total."""
+ap = rapts.GridAperture(dx=0.1, dz=0.1, px=0.15, pz=0.15, nx=7, nz=7)
+# ap = rapts.SiemensStar(nSpokes=24, r=0.1)
+# ap = rapts.SiemensStar(nSpokes=9, rx=0.1, rz=0.08, vortex=2, vortexNradial=9)
 
-    # 4 corners + the 1st corner to close the path + nan to disconnect patches
-    cellx = np.array([dx, -dx, -dx, dx, dx, np.nan])*0.5
-    cellz = np.array([dz, dz, -dz, -dz, dz, np.nan])*0.5
 
-    xc = np.linspace(-1, 1, 2*nx+1) * px * nx
-    zc = np.linspace(-1, 1, 2*nz+1) * pz * nz
-    xm, zm = np.meshgrid(xc, zc)
-    xi = (xm.ravel(order='F') + cellx[:, np.newaxis]).ravel(order='F')
-    zi = (zm.ravel(order='F') + cellz[:, np.newaxis]).ravel(order='F')
-    vertices = np.column_stack((xi, zi))
+def main():
+    vertices = ap.opening
 
-    ntest = 250
-    xmax, zmax = (px*nx+dx*0.75), (pz*nz+dz*0.75)
-    xtest = np.linspace(-xmax, xmax, ntest)
-    ztest = np.linspace(-zmax, zmax, ntest)
+    ntest = 75
+    xtest = np.linspace(*ap.limOptX, ntest)
+    ztest = np.linspace(*ap.limOptY, ntest)
     xtestm, ztestm = np.meshgrid(xtest, ztest)
     xtestm = xtestm.ravel()
     ztestm = ztestm.ravel()
@@ -41,13 +35,13 @@ def main(dx, dz, px, pz, nx, nz):
     ax.set_aspect(1)
     ax.set_xlabel('x (mm)')
     ax.set_ylabel('z (mm)')
-    # patch = patches.PathPatch(footprint, facecolor='orange', lw=2)
-    # ax.add_patch(patch)
+    patch = patches.PathPatch(footprint, facecolor='orange', lw=2)
+    ax.add_patch(patch)
     ax.scatter(xtestm, ztestm, s=2, c=color)
-    ax.set_xlim(-xmax, xmax)
-    ax.set_ylim(-zmax, zmax)
+    ax.set_xlim(*ap.limOptX)
+    ax.set_ylim(*ap.limOptY)
     plt.show()
 
 
 if __name__ == '__main__':
-    main(0.1, 0.1, 0.15, 0.15, 7, 7)
+    main()

@@ -29,6 +29,11 @@ size that lets the whole beam through.
 .. autoclass:: xrt.backends.raycing.apertures.PolygonalAperture()
    :members: __init__
 
+.. autoclass:: xrt.backends.raycing.apertures.GridAperture()
+   :members: __init__
+
+.. autoclass:: xrt.backends.raycing.apertures.SiemensStar()
+   :members: __init__
 """
 
 import numpy as np
@@ -42,15 +47,18 @@ from .physconsts import CHBAR
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Nov 2019"
 __all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
-           'DoubleSlit', 'PolygonalAperture')
+           'DoubleSlit', 'PolygonalAperture', 'GridAperture', 'SiemensStar')
 
-allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
-                'alarmLevel', 'r', 'shadeFraction')
+# allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
+#                 'alarmLevel', 'r', 'shadeFraction',
+#                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
+#                 'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial')
 
 
 class RectangularAperture(object):
     """Implements an aperture or an obstacle as a combination of straight
     edges."""
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
                  opening=[-10, 10, -10, 10], x='auto', z='auto',
@@ -98,11 +106,6 @@ class RectangularAperture(object):
                 self.ordinalNum = len(bl.slits)
                 self.lostNum = -self.ordinalNum - 1000
         raycing.set_name(self, name)
-#        if name not in [None, 'None', '']:
-#            self.name = name
-#        elif not hasattr(self, 'name'):
-#            self.name = '{0}{1}'.format(self.__class__.__name__,
-#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -364,6 +367,7 @@ class RectangularAperture(object):
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
     """Implements a set of coplanar apertures with a Z actuator."""
+
     def __init__(self, bl, name, center, apertures, centerZs, dXs, dZs,
                  x='auto', z='auto', alarmLevel=None):
         """
@@ -398,11 +402,6 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
                 self.ordinalNum = len(bl.slits)
                 self.lostNum = -self.ordinalNum - 1000
         raycing.set_name(self, name)
-#        if name not in [None, 'None', '']:
-#            self.name = name
-#        elif not hasattr(self, 'name'):
-#            self.name = '{0}{1}'.format(self.__class__.__name__,
-#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -474,6 +473,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
 class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
+
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None):
         """ A round aperture aperture.
@@ -499,11 +499,6 @@ class RoundAperture(object):
                 self.ordinalNum = len(bl.slits)
                 self.lostNum = -self.ordinalNum - 1000
         raycing.set_name(self, name)
-#        if name not in [None, 'None', '']:
-#            self.name = name
-#        elif not hasattr(self, 'name'):
-#            self.name = '{0}{1}'.format(self.__class__.__name__,
-#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -703,12 +698,13 @@ class RoundBeamStop(RoundAperture):
 class DoubleSlit(RectangularAperture):
     """Implements an aperture or an obstacle with a combination of horizontal
     and/or vertical edge(s)."""
+
     def __init__(self, *args, **kwargs):
         """Same parameters as in :class:`RectangularAperture` and additionally
         *shadeFraction* as a value from 0 to 1.
         """
         self.shadeFraction = kwargs.pop('shadeFraction', 0.5)
-        super(DoubleSlit, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
@@ -774,6 +770,7 @@ class DoubleSlit(RectangularAperture):
 class PolygonalAperture(object):
     """Implements an aperture or an obstacle defined as a set of polygon
     vertices."""
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  opening=None, x='auto', z='auto', alarmLevel=None):
         """
@@ -812,11 +809,7 @@ class PolygonalAperture(object):
             bl.slits.append(self)
             self.ordinalNum = len(bl.slits)
             self.lostNum = -self.ordinalNum - 1000
-        if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
-        else:
-            self.name = name
+        raycing.set_name(self, name)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -846,10 +839,10 @@ class PolygonalAperture(object):
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
-        self.limOptX = [np.min(self.vertices[:, 0]),
-                        np.max(self.vertices[:, 0])]
-        self.limOptY = [np.min(self.vertices[:, 1]),
-                        np.max(self.vertices[:, 1])]
+        self.limOptX = [np.nanmin(self.vertices[:, 0]),
+                        np.nanmax(self.vertices[:, 0])]
+        self.limOptY = [np.nanmin(self.vertices[:, 1]),
+                        np.nanmax(self.vertices[:, 1])]
 
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
@@ -945,20 +938,82 @@ class PolygonalAperture(object):
         return wave
 
 
+class GridAperture(PolygonalAperture):
+    """Implements a grid of rectangular apertures.
+    See `tests/raycing/test_polygonal_aperture.py`"""
+
+    def __init__(self, bl=None, name='', center=[0, 0, 0],
+                 x='auto', z='auto', alarmLevel=None,
+                 dx=0.5, dz=0.5, px=1.0, pz=1.0, nx=7, nz=7):
+        """
+        *dx* and *dz*: float
+            Opening sizes (horizontal and vertical).
+
+        *px* and *pz*: float
+            Pitch steps (periods).
+
+        *nx* and *nz*: int
+            The number of grid openings, counted from the central hole in -ve
+            and +ve directions, making (2*nx+1)*(2*nz+1) rectangular holes in
+            total.
+
+
+        """
+        # 4 corners + the 1st one to close the path + nan to disconnect patches
+        cellx = np.array([dx, -dx, -dx, dx, dx, np.nan]) * 0.5
+        cellz = np.array([dz, dz, -dz, -dz, dz, np.nan]) * 0.5
+
+        xc = np.linspace(-1, 1, 2*nx+1) * px * nx
+        zc = np.linspace(-1, 1, 2*nz+1) * pz * nz
+        xm, zm = np.meshgrid(xc, zc)
+        xi = (xm.ravel(order='F') + cellx[:, np.newaxis]).ravel(order='F')
+        zi = (zm.ravel(order='F') + cellz[:, np.newaxis]).ravel(order='F')
+        opening = np.column_stack((xi, zi))
+
+        super().__init__(bl=bl, name=name, center=center, opening=opening,
+                         x=x, z=z, alarmLevel=alarmLevel)
+
+
 class SiemensStar(PolygonalAperture):
-    def __init__(self, *args, **kwargs):
-        nSpokes = kwargs.pop('nSpokes', 25)
-        slitRx = kwargs.pop('rX', 0.1)
-        slitRz = kwargs.pop('rZ', 0.1)
-        phi0 = kwargs.pop('phi0', 0)
-        vortex = kwargs.pop('vortex', 0)
-        vortexNr = kwargs.pop('vortexNradial', 7)
-        star = np.linspace(0, 2*np.pi, nSpokes*2, endpoint=False) - phi0
+    """Implements a Siemens Star pattern.
+    See `tests/raycing/test_polygonal_aperture.py`"""
+
+    def __init__(self, bl=None, name='', center=[0, 0, 0],
+                 x='auto', z='auto', alarmLevel=None, nSpokes=9,
+                 r=0, rx=0, rz=0, phi0=0, vortex=0, vortexNradial=7):
+        """
+        *nSpokes*: int
+            The number of spoke openings.
+
+        *r* or (*rx* and *rz*): float
+            The radius of spokes or ellipse semiaxes.
+
+        *phi0*: float
+            The angle of rotation of the star. At 0 (default), the center of
+            the top spoke is vertical.
+
+        *vortex*: float
+            Lets the spokes bend. At =1, they bend by one spoke position.
+
+        *vortexNradial*: int
+            Used with non-zero *vortex*. The number of segments in the bent
+            spokes.
+
+
+        """
+        if r:
+            slitRx = r
+            slitRz = slitRx
+        else:
+            slitRx = rx
+            slitRz = rz
+        star = (np.linspace(0, 2*np.pi, nSpokes*2, endpoint=False) -
+                np.pi/nSpokes/2 - phi0)
         if vortex:
             xstack = []
             ystack = []
-            for ir in reversed(range(vortexNr)):
-                fr = (ir+1.) / vortexNr
+            for ir in reversed(range(vortexNradial)):
+                fr = (ir+1.) / vortexNradial
                 dphi = 2*np.pi * vortex / nSpokes * fr
                 starX = (fr * slitRx * np.sin(star+dphi)).reshape((nSpokes, 2))
                 starY = (fr * slitRz * np.cos(star+dphi)).reshape((nSpokes, 2))
@@ -975,6 +1030,7 @@ class SiemensStar(PolygonalAperture):
         ystack.append(np.zeros((nSpokes, 1)))
         starXs = np.hstack(xstack)
         starYs = np.hstack(ystack)
-        kwargs['opening'] = list(zip(starXs.flatten(), starYs.flatten()))
+        opening = list(zip(starXs.flatten(), starYs.flatten()))
 
-        super(SiemensStar, self).__init__(*args, **kwargs)
+        super().__init__(bl=bl, name=name, center=center, opening=opening,
+                         x=x, z=z, alarmLevel=alarmLevel)
