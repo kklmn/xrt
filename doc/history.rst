@@ -16,6 +16,9 @@ Future release, already available at GitHub (18 Dec 2021):
     - Added elliptical Gaussian beam, see
       `here <https://github.com/kklmn/xrt/issues/96>`_.
 
+    - Added special apertures: GridAperture and SiemensStar, see
+      `here <https://github.com/kklmn/xrt/issues/115>`_.
+
     - Minor bug fixes.
 
 1.4.0 (22 Sep 2021):
