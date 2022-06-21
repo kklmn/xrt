@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__date__ = "4 Oct 2021"
+__date__ = "21 Jun 2022"
+
 import numpy as np
 import pickle
 from .. import raycing
@@ -80,7 +81,8 @@ class Beam(object):
                         setattr(self, attr, np.copy(getattr(copyFrom, attr)))
 #                if not withNumberOfReflections and hasattr(self, 'nRefl'):
 #                    delattr(self, 'nRefl')
-            except:
+            except Exception as e:
+                print(e)
                 print("Can't copy beam from", copyFrom)
                 copyFrom = None
         elif isinstance(copyFrom, raycing.basestring):
@@ -100,13 +102,16 @@ class Beam(object):
                             try:
                                 setattr(self, key, bl.oesDict[getattr(
                                     self, key)][0])
-                            except:
-                                print("OEs cannot be resolved. This can cause errors in wave propagation routine.")  # analysis:ignore
+                            except Exception as e:
+                                print(e)
+                                print("OEs cannot be resolved. This can cause "
+                                      "errors in wave propagation routine.")
                                 continue
                         else:
                             print(getattr(self, key), "cannot be resolved. Please provide the beamLine instance.")  # analysis:ignore
 
-            except:
+            except Exception as e:
+                print(e)
                 print("Can't load beam object from", copyFrom)
                 copyFrom = None
                 raise
@@ -153,7 +158,8 @@ class Beam(object):
             if hasattr(self, key):
                 try:
                     outputDict[key] = getattr(self, key).name
-                except:
+                except Exception as e:
+                    print(e)
                     continue
 
         if str(fformat).lower() in ['npy', 'np', 'numpy']:  # numpy compress
@@ -161,15 +167,17 @@ class Beam(object):
                 if not fileName.endswith('npy'):
                     fileName += '.npy'
                 np.save(fileName, outputDict)
-            except:
+            except Exception as e:
+                print(e)
                 print("Can't save the beam to", str(fileName))
-        elif str(fformat).lower()in ['mat', 'matlab']:  # Matlab *.mat
+        elif str(fformat).lower() in ['mat', 'matlab']:  # Matlab *.mat
             try:
                 import scipy.io as io
                 if not fileName.endswith('mat'):
                     fileName += '.mat'
                 io.savemat(fileName, outputDict)
-            except:
+            except Exception as e:
+                print(e)
                 print("Can't save the beam to", str(fileName))
         else:  # pickle
             try:
@@ -178,7 +186,8 @@ class Beam(object):
                 f = open(fileName, 'wb')
                 pickle.dump(outputDict, f, protocol=2)
                 f.close()
-            except:
+            except Exception as e:
+                print(e)
                 print("Can't save the beam to", str(fileName))
 
     def concatenate(self, beam):

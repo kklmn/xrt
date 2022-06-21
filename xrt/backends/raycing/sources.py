@@ -16,6 +16,7 @@ This way is appropriate for incoherent addition of rays, in which the
 components of the coherency matrix of different rays are simply added.
 
 .. autoclass:: Beam
+   :members: export_beam, concatenate
 .. autoclass:: GeometricSource()
    :members: __init__
 .. autoclass:: MeshSource()
@@ -31,6 +32,7 @@ components of the coherency matrix of different rays are simply added.
 .. autofunction:: make_energy
 .. autofunction:: make_polarization
 .. autofunction:: rotate_coherency_matrix
+.. autofunction:: copy_beam
 .. autofunction:: shrink_source
 
 .. _own-synchrotron-sources:
