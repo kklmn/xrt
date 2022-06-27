@@ -42,7 +42,7 @@ modify them in the module or externally as in the xrt_logo.py example.
 """
 from __future__ import unicode_literals
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "16 Mar 2017"
+__date__ = "27 Jun 2022"
 
 import os
 import copy
@@ -1212,9 +1212,13 @@ class XYCPlot(object):
                     yTextPos = max(r[2], self.yaxis.limits[0])
                 else:
                     yTextPos = r[2]
+                # osl = self.ax2dHist.text(
+                #     (r[0]+r[1]) * 0.5, yTextPos, surf, ha='center',
+                #     va='top', color='w')
                 osl = self.ax2dHist.text(
-                    (r[0]+r[1]) * 0.5, yTextPos, surf, ha='center',
-                    va='top', color='w')
+                    r[1], yTextPos, surf, ha='right', va='bottom', color='w',
+                    # fontweight='bold',
+                    alpha=0.5)
                 self.oeSurfaceLabels.append(osl)
 
     def plot_hist1d(self, what_axis_char):
@@ -1329,12 +1333,18 @@ class XYCPlot(object):
             histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
             histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
             if axis.fwhmFormatStr is not None:
+                xFWHM = [histFWHMlow, histFWHMhigh]
+                yFWHM = [xxMaxHalf, xxMaxHalf]
                 if orientation[0] == 'h':
-                    graph.plot([histFWHMlow, histFWHMhigh],
-                               [xxMaxHalf, xxMaxHalf], '+', color='grey')
+                    if hasattr(graph, 'histFWHMmarks'):
+                        graph.histFWHMmarks.set_data(xFWHM, yFWHM)
+                    else:
+                        graph.plot(xFWHM, yFWHM, '+', color='grey')
                 elif orientation[0] == 'v':
-                    graph.plot([xxMaxHalf, xxMaxHalf],
-                               [histFWHMlow, histFWHMhigh], '+', color='grey')
+                    if hasattr(graph, 'histFWHMmarks'):
+                        graph.histFWHMmarks.set_data(yFWHM, xFWHM)
+                    else:
+                        graph.plot(yFWHM, xFWHM, '+', color='grey')
         else:
             histFWHMlow = 0
             histFWHMhigh = 0
