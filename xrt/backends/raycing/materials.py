@@ -150,7 +150,7 @@ class Element(object):
             self.name = elementsList[elem]
             self.Z = elem
         else:
-            raise NameError('Wrong element')
+            raise NameError('Wrong chemical element')
         self.f0coeffs = self.read_f0_Kissel()
         self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
         self.table = table
