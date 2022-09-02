@@ -714,7 +714,7 @@ def auto_units_angle(angle, defaultFactor=1.):
         else:
             print("Could not identify the units")
             return angle
-    elif angle is None or isinstance(angle, list):
+    elif angle is None or isinstance(angle, (list, tuple)):
         return angle
     else:
         return angle * defaultFactor
