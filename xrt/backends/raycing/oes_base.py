@@ -627,7 +627,9 @@ class OE(object):
             dz2[ind], x2[ind], y2[ind], z2[ind] = self.find_dz(
                 local_f, t2[ind], x[ind], y[ind], z[ind],
                 a[ind], b[ind], c[ind], invertNormal, derivOrder)
-            # swapping using duble slicing:
+            # swapping using double slicing:
+            # stackoverflow.com/questions/1687566/why-does-an
+            # -assignment-for-double-sliced-numpy-arrays-not-work
             swap = np.sign(dz2[ind]) == np.sign(dz1[ind])
             t1[np.where(ind)[0][swap]] = t[swap]
             dz1[np.where(ind)[0][swap]] = dz[swap]
@@ -1510,14 +1512,15 @@ class OE(object):
         norm = lb.Jss[goodN] + lb.Jpp[goodN]
         norm[norm == 0] = 1.
         Q = (Qs*lb.Jss[goodN] + Qp*lb.Jpp[goodN]) / norm
-        delta = np.arcsin(np.abs(beamInDotNormal)) - thetaB
+        beamInDotNormalAbs = np.abs(beamInDotNormal)
+        delta = np.arcsin(beamInDotNormalAbs) - thetaB
         w = np.exp(-0.5*delta**2 / mat.mosaicity**2) / (SQRT2PI*mat.mosaicity)
         rate = w*Q  # in cm^-1
         rate[rate <= 1e-3] = 1e-3
         length = np.random.exponential(10./rate, size=len(Qs))  # in mm
         if mat.t:
-            through = length*beamInDotNormal > mat.t
-            length[through] = mat.t / beamInDotNormal[through]
+            through = length*beamInDotNormalAbs > mat.t
+            length[through] = mat.t / beamInDotNormalAbs[through]
         else:
             through = None
         lb.x[goodN] += lb.olda * length
@@ -1867,7 +1870,7 @@ class OE(object):
                         pointOnFan * lb.y
                     lb.y = pointOutY
 
-                    if matSur.t is not None:
+                    if matSur.t:
                         tmpR = self.R
                         self.R -= matSur.t
                         lb.z = -self.local_z(lb.x, lb.y) - matSur.t
@@ -1883,6 +1886,13 @@ class OE(object):
                         lb.olda = np.array(lb.a[goodN])
                         lb.oldb = np.array(lb.b[goodN])
                         lb.oldc = np.array(lb.c[goodN])
+                        lb.oldJss = np.array(lb.Jss[goodN])
+                        lb.oldJpp = np.array(lb.Jpp[goodN])
+                        lb.oldJsp = np.array(lb.Jsp[goodN])
+                        if hasattr(lb, 'Es'):
+                            lb.oldEs = np.array(lb.Es[goodN])
+                            lb.oldEp = np.array(lb.Ep[goodN])
+
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
@@ -2026,21 +2036,30 @@ class OE(object):
                 length, through = self._mosaic_length(
                     matSur, beamInDotSurfaceNormal, lb, goodN)
                 n = matSur.get_refractive_index(lb.E[goodN])
-                if through is not None:
-                    lb.a[goodN][through] = lb.olda[through]
-                    lb.b[goodN][through] = lb.oldb[through]
-                    lb.c[goodN][through] = lb.oldc[through]
+                if through is not None:  # if mat.t
+                    # using double slicing, see
+                    # stackoverflow.com/questions/1687566/why-does-an
+                    # -assignment-for-double-sliced-numpy-arrays-not-work
+                    lb.a[np.where(goodN)[0][through]] = lb.olda[through]
+                    lb.b[np.where(goodN)[0][through]] = lb.oldb[through]
+                    lb.c[np.where(goodN)[0][through]] = lb.oldc[through]
                     att = np.exp(-abs(n.imag) * lb.E[goodN] / CHBAR * 2e8 *
-                                 tMax[goodN] * 0.1)
-                    lb.Jss[goodN][through] *= att[through]
-                    lb.Jpp[goodN][through] *= att[through]
-                    lb.Jsp[goodN][through] *= att[through]
+                                 length * 0.1)
+                    lb.Jss[np.where(goodN)[0][through]] =\
+                        lb.oldJss[through] * att[through]
+                    lb.Jpp[np.where(goodN)[0][through]] = \
+                        lb.oldJpp[through] * att[through]
+                    lb.Jsp[np.where(goodN)[0][through]] = \
+                        lb.oldJsp[through] * att[through]
+                    if hasattr(lb, 'Es'):
+                        lb.Es[np.where(goodN)[0][through]] = lb.oldEs[through]
+                        lb.Ep[np.where(goodN)[0][through]] = lb.oldEp[through]
                 if hasattr(lb, 'Es'):
                     nk = n.real * lb.E[goodN] / CHBAR * 1e8  # [1/cm]
                     mPh = np.exp(1j * nk * 0.2*length)  # *2: in and out
                     if through is not None:
                         mPh[through] =\
-                            (att**0.5 * np.exp(1j * nk * 0.1*length))[through]
+                            (att**0.5 * np.exp(1j*nk*0.1*length))[through]
                     lb.Es[goodN] *= mPh
                     lb.Ep[goodN] *= mPh
 

@@ -1035,20 +1035,21 @@ class Crystal(Material):
             [SanchezDelRioMosaic]_. This concept has three main parts: (i) a
             random distribution of the crystallite normals results in a
             distribution in the reflected directions, (ii) the secondary
-            extinction results in a mean free path distribution in the new ray
+            extinction results in a mean free path distribution of the new ray
             origins and (iii) the reflectivity is calculated following the work
             [BaconLowde]_.
 
             In the above stage (ii), the impact points are sampled according to
-            the secondary extinction distribution. Those rays that go over the
-            crystal thickness retain the original direction and also get some
-            attenuation. Their x,y,z coordinates (the ray heads) do not lie on
-            the crystal surface (!) but represent the sampled impact points
-            (also partly lying behind the crystal), so to plot them in a 2D XY
-            plot becomes useless. You can still use them to study the secondary
-            extinction effect: try to plot YZ or XZ to see the depth. The rest
-            of the rays (those sampled within the crystal depth) get reflected
-            and also attenuated depending on the penetration depth.
+            the secondary extinction distribution. For a thin crystal (when *t*
+            is specified) those rays that go over the crystal thickness retain
+            the original incoming direction and their x, y, z coordinates (the
+            ray heads) are put on the back crystal surface. These rays are also
+            attenuated by the mosaic crystal. Note again that the impact points
+            do not lie on the front crystal surface, so to plot them in a 2D XY
+            plot becomes useless. You can still plot them as YZ or XZ to study
+            the secondary extinction depth. The remaining rays (those sampled
+            within the crystal depth) get reflected and also attenuated
+            depending on the penetration depth.
 
             .. note::
                 The amplitude calculation in the mosaic case is implemented
