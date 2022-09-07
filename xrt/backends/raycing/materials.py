@@ -1039,6 +1039,17 @@ class Crystal(Material):
             origins and (iii) the reflectivity is calculated following the work
             [BaconLowde]_.
 
+            In the above stage (ii), the impact points are sampled according to
+            the secondary extinction distribution. Those rays that go over the
+            crystal thickness retain the original direction and also get some
+            attenuation. Their x,y,z coordinates (the ray heads) do not lie on
+            the crystal surface (!) but represent the sampled impact points
+            (also partly lying behind the crystal), so to plot them in a 2D XY
+            plot becomes useless. You can still use them to study the secondary
+            extinction effect: try to plot YZ or XZ to see the depth. The rest
+            of the rays (those sampled within the crystal depth) get reflected
+            and also attenuated depending on the penetration depth.
+
             .. note::
                 The mosaicity is assumed large compared with the Darwin width.
                 Therefore, there is no continuous transition mosaic-to-perfect

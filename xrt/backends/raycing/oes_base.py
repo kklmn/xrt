@@ -1831,10 +1831,8 @@ class OE(object):
                         xOut0 = lb.x + (yOut02 - lb.y)*lb.a/lb.b
                         xOutH = lb.x + (yOutH2 - lb.y)*a_out/b_out
                         print "xOut0, xOutH", xOut0, xOutH
-                        zOut0 = yOut02**2/2./(self.R - matSur.t) +\
-                            matSur.t
-                        zOutH = yOut02**2/2./(self.R - matSur.t) +\
-                            matSur.t
+                        zOut0 = yOut02**2/2./(self.R - matSur.t) + matSur.t
+                        zOutH = yOut02**2/2./(self.R - matSur.t) + matSur.t
                         print "zOut0, zOutH", zOut0, zOutH
                     """
 
