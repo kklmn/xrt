@@ -1051,12 +1051,15 @@ class Crystal(Material):
             and also attenuated depending on the penetration depth.
 
             .. note::
+                The amplitude calculation in the mosaic case is implemented
+                only in the reflection geometry. The transmitted beam can still
+                be studied by ray-tracing as we split the beam in our modeling
+                of secondary extinction, see the previous paragraph.
+
+            .. note::
                 The mosaicity is assumed large compared with the Darwin width.
                 Therefore, there is no continuous transition mosaic-to-perfect
                 crystal at a continuously reduced mosaicity parameter.
-
-            .. note::
-                The mosaic case in implemented only in the reflection geometry.
 
             See the tests :ref:`here <tests_mosaic>`.
 
