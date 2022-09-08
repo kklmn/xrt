@@ -6,18 +6,17 @@ xrtQook -- a GUI for creating a beamline
 ----------------------------------------
 
 The main interface to xrt is through a python script. Many examples of such
-scripts can be found in the supplied folder ‘examples’. The script imports the
-modules of xrt, instantiates beamline parts, such as synchrotron or geometric
-sources, various optical elements, apertures and screens, specifies required
-materials for reflection, refraction or diffraction, defines plots and sets job
-parameters.
+scripts can be found in the supplied folders `examples` and `tests`. The script
+imports the modules of xrt, instantiates beamline parts, such as synchrotron or
+geometric sources, various optical elements, apertures and screens, specifies
+required materials for reflection, refraction or diffraction, defines plots and
+sets job parameters.
 
-The Qt tool :mod:`xrtQook` takes these ingredients and prepares a ready to use
-script that can be run within the tool itself or in an external Python context.
-:mod:`xrtQook` features a parallelly updated help panel that provides a
-complete list of parameters for the used classes, also including those from the
-parental classes. :mod:`xrtQook` writes/reads the recipes of beamlines
-into/from xml files.
+The Qt tool :mod:`xrtQook` takes these ingredients as GUI elements and prepares
+a ready to use script that can be run within the tool itself or in an external
+Python context. :mod:`xrtQook` has a parallelly updated help panel that
+provides a complete list of parameters for the used objects. :mod:`xrtQook`
+writes/reads the recipes of beamlines into/from xml files.
 
 In the present version, :mod:`xrtQook` does not provide automated generation of
 *scans* and does not create *wave propagation* sequences. For these two tasks,

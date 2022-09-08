@@ -1,8 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
-u"""Package xrt (XRayTracer) is a python software library for ray tracing and
-wave propagation in x-ray regime. It is primarily meant for modeling
-synchrotron sources, beamlines and beamline elements. Includes a GUI for
-creating a beamline and interactively viewing it in 3D.
+u"""
+Package xrt is a python software library for ray tracing and wave propagation
+in x-ray regime. It is primarily meant for modeling synchrotron sources,
+beamlines and beamline elements. Includes a GUI for creating a beamline and
+interactively viewing it in 3D.
 
 +----------------+---------------+-----------+
 |     |Itot|     |   |vcmSi-P|   | |VortexB| |
@@ -34,7 +35,9 @@ Features of xrt
   such as thin lens or paraxial. The optical surfaces may have :ref:`figure
   errors, analytical or measured<warping>`. In wave propagation, partially
   coherent radiation is treated by incoherent addition of coherently diffracted
-  fields generated per electron.
+  fields generated per electron. Propagation of :ref:`individual coherent
+  source modes<modes>` is possible as waves, hybrid waves (i.e. partially as
+  rays and then as waves) and only rays.
 
 * *Publication quality graphics*. 1D and 2D position histograms are
   *simultaneously* coded by hue and brightness. Typically, colors represent
@@ -61,36 +64,33 @@ Features of xrt
   throughout the series.
 
 * :ref:`Synchrotron sources <synchrotron-sources>`. Bending magnet, wiggler,
-  undulator and elliptic undulator are calculated internally within xrt. There
-  is also a legacy approach to sampling synchrotron sources using the codes
-  `ws` and `urgent` which are parts of XOP package. Please look the section
-  :ref:`comparison-synchrotron-sources` for the comparison between the
-  implementations. If the photon source is one of the synchrotron sources, the
-  total flux in the beam is reported not just in number of rays but in physical
-  units of ph/s. The total power or absorbed power can be opted instead of flux
-  and is reported in W. The power density can be visualized by isolines. The
-  magnetic gap of undulators can be :ref:`tapered <tapering_comparison>`.
-  Undulators can be calculated in :ref:`near field <near_field_comparison>`.
-  :ref:`Custom magnetic field <undulator_custom>` is also possible. Undulators
-  can be :ref:`calculated on GPU <calculations_on_GPU>`, with a high gain in
-  computation speed, which is important for tapering and near field
-  calculations.
+  undulator and elliptic undulator are calculated internally within xrt.
+  Please look the section :ref:`comparison-synchrotron-sources` for the
+  comparison with other popular codes. If the photon source is one of the
+  synchrotron sources, the total flux in the beam is reported not just in
+  number of rays but in physical units of ph/s. The total power or absorbed
+  power can be opted instead of flux and is reported in W. The power density
+  can be visualized by isolines. The magnetic gap of undulators can be
+  :ref:`tapered <tapering_comparison>`. Undulators can be calculated in
+  :ref:`near field <near_field_comparison>`. :ref:`Custom magnetic field
+  <undulator_custom>` is also possible. Undulators can be :ref:`calculated on
+  GPU <calculations_on_GPU>`, with a high gain in computation speed, which is
+  important for tapering and near field calculations.
 
 * *Shapes*. There are several predefined shapes of optical elements implemented
-  as python classes. The inheritance mechanism simplifies creation of other
-  shapes. The user specifies methods for the surface height and the surface
-  normal. For asymmetric crystals, the normal to the atomic planes can be
-  additionally given. The surface and the normals are defined either in local
-  (x, y) coordinates or in user-defined parametric coordinates. Parametric
+  as python classes. The python inheritance mechanism simplifies creation of
+  other shapes: the user specifies methods for surface height and surface
+  normal. The surface and the normal are defined either in local Cartesian
+  coordinates or in user-defined parametric coordinates. Parametric
   representation enables closed shapes such as capillaries or wave guides. It
-  also enables exact solutions for complex shapes (e.g. a logarithmic spiral)
-  without any expansion. The methods of finding the intersections of rays with
-  the surface are very robust and can cope with pathological cases as sharp
-  surface kinks. Notice that the search for intersection points does not
-  involve any approximation and has only numerical inaccuracy which is set by
-  default as 1 fm. Any surface can be combined with a (differently and variably
-  oriented) crystal structure and/or (variable) grating vector. Surfaces can be
-  faceted.
+  also enables exact solutions for complex shapes (e.g. a logarithmic spiral or
+  an ellipsoid) without any expansion. The methods of finding the intersections
+  of rays with the surface are very robust and can cope with pathological cases
+  such as sharp surface kinks. Notice that the search for intersection points
+  does not involve any approximation and has only numerical inaccuracy which is
+  set by default as 1 fm. Any surface can be combined with a (differently and
+  variably oriented) crystal structure and/or (variable) grating vector.
+  Surfaces can be faceted.
 
 * *Energy dispersive elements*. Implemented are :meth:`crystals in dynamical
   diffraction <xrt.backends.raycing.materials.Crystal.get_amplitude>`,
@@ -142,12 +142,6 @@ Features of xrt
   `tests` and also this documentation for the tests of
   :ref:`undulators <mesh-methods>`, :ref:`optical elements <test_oes>`,
   :ref:`materials <test_materials>` and :ref:`wave propagation <test_waves>`.
-
-Python 2 and 3
---------------
-
-The code should run in both Python branches without any modification, although
-compatibility with Python 2 is not checked any longer.
 
 Dependencies
 ------------
