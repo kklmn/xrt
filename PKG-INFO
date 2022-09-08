@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: xrt
-Version: 1.4.0
+Version: 1.5.0
 Summary: Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI for creating a beamline and viewing it in 3D.
 Home-page: http://xrt.readthedocs.io
 Author: Konstantin Klementiev, Roman Chernikov
@@ -20,10 +20,10 @@ Description-Content-Type: text/x-rst
 License-File: LICENSE.txt
 
 
-Package xrt (XRayTracer) is a python software library for ray tracing and wave
-propagation in x-ray regime. It is primarily meant for modeling synchrotron
-sources, beamlines and beamline elements. Includes a GUI for creating a
-beamline and interactively viewing it in 3D.
+Package xrt is a python software library for ray tracing and wave propagation
+in x-ray regime. It is primarily meant for modeling synchrotron sources,
+beamlines and beamline elements. Includes a GUI for creating a beamline and
+interactively viewing it in 3D.
 
 Features of xrt
 ---------------
@@ -33,6 +33,8 @@ Features of xrt
   lens or paraxial. The optical surfaces may have figure errors, analytical or
   measured. In wave propagation, partially coherent radiation is treated by
   incoherent addition of coherently diffracted fields generated per electron.
+  Propagation of _individual_ coherent source modes is possible as waves,
+  hybrid waves (i.e. partially as rays and then as waves) and only rays.
 
 * *Publication quality graphics*. 1D and 2D position histograms are
   *simultaneously* coded by hue and brightness. Typically, colors represent
@@ -58,13 +60,11 @@ Features of xrt
   throughout the series.
 
 * *Synchrotron sources*. Bending magnet, wiggler, undulator and elliptic
-  undulator are calculated internally within xrt. There is also a legacy
-  approach to sampling synchrotron sources using the codes `ws` and `urgent`
-  which are parts of XOP package. Please look the section "Comparison of
-  synchrotron source codes" for the comparison between the implementations. If
-  the photon source is one of the synchrotron sources, the total flux in the
-  beam is reported not just in number of rays but in physical units of ph/s.
-  The total power or absorbed power can be opted instead of flux and is
+  undulator are calculated internally within xrt. Please look the section
+  "Comparison of synchrotron source codes" for the comparison other popular
+  codes. If the photon source is one of the synchrotron sources, the total flux
+  in the beam is reported not just in number of rays but in physical units of
+  ph/s. The total power or absorbed power can be opted instead of flux and is
   reported in W. The power density can be visualized by isolines. The magnetic
   gap of undulators can be tapered. Undulators can be calculated in near field.
   Custom magnetic field is also possible. Undulators can be calculated on GPU,
@@ -72,20 +72,19 @@ Features of xrt
   near field calculations.
 
 * *Shapes*. There are several predefined shapes of optical elements implemented
-  as python classes. The inheritance mechanism simplifies creation of other
-  shapes. The user specifies methods for the surface height and the surface
-  normal. For asymmetric crystals, the normal to the atomic planes can be
-  additionally given. The surface and the normals are defined either in local
-  (x, y) coordinates or in user-defined parametric coordinates. Parametric
+  as python classes. The python inheritance mechanism simplifies creation of
+  other shapes: the user specifies methods for surface height and surface
+  normal. The surface and the normal are defined either in local Cartesian
+  coordinates or in user-defined parametric coordinates. Parametric
   representation enables closed shapes such as capillaries or wave guides. It
-  also enables exact solutions for complex shapes (e.g. a logarithmic spiral)
-  without any expansion. The methods of finding the intersections of rays with
-  the surface are very robust and can cope with pathological cases as sharp
-  surface kinks. Notice that the search for intersection points does not
-  involve any approximation and has only numerical inaccuracy which is set by
-  default as 1 fm. Any surface can be combined with a (differently and variably
-  oriented) crystal structure and/or (variable) grating vector. Surfaces can be
-  faceted.
+  also enables exact solutions for complex shapes (e.g. a logarithmic spiral or
+  an ellipsoid) without any expansion. The methods of finding the intersections
+  of rays with the surface are very robust and can cope with pathological cases
+  such as sharp surface kinks. Notice that the search for intersection points
+  does not involve any approximation and has only numerical inaccuracy which is
+  set by default as 1 fm. Any surface can be combined with a (differently and
+  variably oriented) crystal structure and/or (variable) grating vector.
+  Surfaces can be faceted.
 
 * *Energy dispersive elements*. Implemented are crystals in dynamical
   diffraction, gratings (also with efficiency calculations), Fresnel zone
@@ -134,17 +133,16 @@ xrtQook -- a GUI for creating scripts
 -------------------------------------
 
 The main interface to xrt is through a python script. Many examples of such
-scripts can be found in the supplied folder 'examples'. The script imports the
-modules of xrt, instantiates beamline parts, such as synchrotron or geometric
-sources, various optical elements, apertures and screens, specifies required
-materials for reflection, refraction or diffraction, defines plots and sets job
-parameters.
+scripts can be found in the supplied folders 'examples' and 'tests'. The script
+imports the modules of xrt, instantiates beamline parts, such as synchrotron or
+geometric sources, various optical elements, apertures and screens, specifies
+required materials for reflection, refraction or diffraction, defines plots and
+sets job parameters.
 
-The Qt tool xrtQook takes these ingredients and prepares a ready to use script
-that can be run within the tool itself or in an external Python context.
-xrtQook features a parallelly updated help panel that, unlike the main
-documentation, provides a complete list of parameters for the used classes,
-also including those from the parental classes. xrtQook writes/reads the
+The Qt tool xrtQook takes these ingredients as GUI elements and prepares a
+ready to use script that can be run within the tool itself or in an external
+Python context. xrtQook has a parallelly updated help panel that provides a
+complete list of parameters for the used objects. xrtQook writes/reads the
 recipes of beamlines into/from xml files.
 
 xrtGlow -- an interactive 3D beamline viewer
@@ -169,12 +167,6 @@ GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
 (these are search key words), pytools and pyopencl. PyQt4 or PyQt5 are needed
 for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
 view of xrtQook. OpenGL is required for xrtGlow.
-
-Python 2 and 3
---------------
-
-The code should run in both Python branches without any modification, although
-compatibility with Python 2 is not checked any longer.
 
 Get xrt
 -------
