@@ -3,21 +3,21 @@
 Version history
 ---------------
 
-Future release, already available at GitHub (18 Dec 2021):
+1.5.0 (8 Sep 2022):
     - Propagation of individual source modes, as waves, hybrid waves
       (partially as rays and then as waves) and only rays.
       See :ref:`Coherent mode decomposition and propagation <modes>`.
 
     - :class:`~xrt.backends.raycing.materials.Multilayer` can now be used in
       transmission. See :ref:`the mathematical description <descr_ml_tran>`,
-      :ref:`a few comparative test curves <tests_ml_tran>` and a test script
+      :ref:`a few comparative test curves <tests_ml_tran>` and the test script
       ``tests/test_multilayer_transmission.py``.
 
     - Added elliptical Gaussian beam, see
       `here <https://github.com/kklmn/xrt/issues/96>`_.
 
-    - Added special apertures: GridAperture and SiemensStar, see
-      `here <https://github.com/kklmn/xrt/issues/115>`_.
+    - Ray-tracing of mosaic crystals in reflected and transmitted geometry.
+      See the test script ``tests/test_mosaic_xtal_thin.py``.
 
     - Minor bug fixes.
 
