@@ -513,7 +513,7 @@ def iterate_rk():
         plt.savefig("z"+suffix+'.png')
 
         fig = plt.figure(9)
-        ax = fig.gca(projection='3d')
+        ax = fig.add_subplot(projection='3d')
         ax.plot(np.array(ztgrid[:-1]) / tgwmm / 1e3,
                 np.array(xgrid[:-1]) / tgwmm * 1e3,
                 np.array(ygrid[:-1]) / tgwmm * 1e3,

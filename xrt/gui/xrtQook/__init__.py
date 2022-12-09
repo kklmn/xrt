@@ -46,6 +46,10 @@ import numpy as np  # analysis:ignore , really needed
 import time
 from datetime import date
 import inspect
+if sys.version_info < (3, 1):
+    from inspect import getargspec
+else:
+    from inspect import getfullargspec as getargspec
 import re
 import xml.etree.ElementTree as ET
 from functools import partial
@@ -633,7 +637,7 @@ class XrtQook(qt.QWidget):
         self.runTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         for name, obj in inspect.getmembers(xrtrun):
             if inspect.isfunction(obj) and name == "run_ray_tracing":
-                if inspect.getargspec(obj)[3] is not None:
+                if getargspec(obj)[3] is not None:
                     runStr = '{0}.{1}'.format(xrtrun.__name__, name)
                     self.addObject(self.runTree, self.rootRunItem, runStr)
                     for arg, argVal in self.getParams(runStr):
@@ -681,14 +685,13 @@ class XrtQook(qt.QWidget):
                 for namef, objf in inspect.getmembers(obj):
                     if (inspect.ismethod(objf) or
                         inspect.isfunction(objf)) and\
-                       namef == "__init__" and\
-                       inspect.getargspec(objf)[3] is not None:
+                       namef == "__init__" and getargspec(objf)[3] is not None:
                         self.addObject(self.tree,
                                        self.rootBLItem,
                                        '{0}.{1}'.format(
                                            raycing.__name__, name))
-                        for arg, argVal in zip(inspect.getargspec(objf)[0][1:],
-                                               inspect.getargspec(objf)[3]):
+                        for arg, argVal in zip(getargspec(objf)[0][1:],
+                                               getargspec(objf)[3]):
                             self.addParam(elprops, arg, argVal)
 
         # self.showDoc(self.rootBLItem.index())
@@ -1382,7 +1385,7 @@ class XrtQook(qt.QWidget):
             for parent in (inspect.getmro(objRef))[:-1]:
                 for namef, objf in inspect.getmembers(parent):
                     if inspect.ismethod(objf) or inspect.isfunction(objf):
-                        argSpec = inspect.getargspec(objf)
+                        argSpec = getargspec(objf)
                         if namef == "__init__" and argSpec[3] is not None:
                             for arg, argVal in zip(argSpec[0][1:],
                                                    argSpec[3]):
@@ -1410,15 +1413,17 @@ class XrtQook(qt.QWidget):
                                         uArgs[arg] = argVal
 #                                        args.append(arg)
 #                                        argVals.append(argVal)
+                        attr = 'varkw' if hasattr(argSpec, 'varkw') else \
+                            'keywords'
                         if namef == "__init__" and\
                                 str(argSpec.varargs) == 'None' and\
-                                str(argSpec.keywords) == 'None':
+                                str(getattr(argSpec, attr)) == 'None':
                             break  # To prevent the parent class __init__
                 else:
                     continue
                 break
         elif inspect.ismethod(objRef) or inspect.isfunction(objRef):
-            argList = inspect.getargspec(objRef)
+            argList = getargspec(objRef)
             if argList[3] is not None:
                 if objRef.__name__ == 'run_ray_tracing':
                     uArgs = OrderedDict(zip(argList[0], argList[3]))
@@ -1600,10 +1605,10 @@ class XrtQook(qt.QWidget):
                     for namef, objf in inspect.getmembers(obj):
                         if inspect.ismethod(objf) or inspect.isfunction(objf):
                             if namef == "__init__" and\
-                                    inspect.getargspec(objf)[3] is not None:
+                                    getargspec(objf)[3] is not None:
                                 for arg, arg_def in zip(
-                                        inspect.getargspec(objf)[0][1:],
-                                        inspect.getargspec(objf)[3]):
+                                        getargspec(objf)[0][1:],
+                                        getargspec(objf)[3]):
                                     # child0 = qt.QStandardItem(str(arg))
                                     # child0.setFlags(self.paramFlag)
                                     if len(re.findall("axis",
@@ -1627,8 +1632,7 @@ class XrtQook(qt.QWidget):
                                                         inspect.isfunction(
                                                             objf2)):
                                                         argsList =\
-                                                            inspect.getargspec(
-                                                                objf2)
+                                                            getargspec(objf2)
                                                         if namef2 ==\
                                                             "__init__" and\
                                                             argsList[3] is\
@@ -3029,7 +3033,7 @@ class XrtQook(qt.QWidget):
                         if str(mItem.text()) == 'parameters':
                             for iep, arg_def in\
                                 zip(range(mItem.rowCount()),
-                                    inspect.getargspec(methodObj)[3]):
+                                    getargspec(methodObj)[3]):
                                 paraname = str(mItem.child(
                                     iep, 0).text())
                                 paravalue = self.parametrize(str(mItem.child(
@@ -3536,7 +3540,7 @@ if __name__ == '__main__':
                                 mItem = pItem.child(imet, 0)
                                 for iep, arg_def in\
                                     zip(range(mItem.rowCount()),
-                                        inspect.getargspec(methodObj)[3]):
+                                        getargspec(methodObj)[3]):
                                     paraname = str(mItem.child(iep, 0).text())
                                     paravalue = str(mItem.child(iep, 1).text())
                                     if paravalue != str(arg_def):
@@ -3610,11 +3614,10 @@ if __name__ == '__main__':
                             if (inspect.ismethod(objf) or
                                     inspect.isfunction(objf)):
                                 if namef == "__init__" and\
-                                        inspect.getargspec(
-                                        objf)[3] is not None:
+                                        getargspec(objf)[3] is not None:
                                     obj = objf
             for iepm, arg_def in zip(range(tItem.rowCount()-1),
-                                     inspect.getargspec(obj)[3]):
+                                     getargspec(obj)[3]):
                 iep = iepm + 1
                 if tItem.child(iep, 0).text() != '_object':
                     pItem = tItem.child(iep, 0)
@@ -3633,12 +3636,11 @@ if __name__ == '__main__':
                                         if (inspect.ismethod(objfAx) or
                                                 inspect.isfunction(objfAx)):
                                             if namefAx == "__init__" and\
-                                                inspect.getargspec(
+                                                getargspec(
                                                     objfAx)[3] is not None:
                                                 objAx = objfAx
-                        for ieaxm, arg_defAx in zip(
-                            range(pItem.rowCount()-1),
-                                inspect.getargspec(objAx)[3]):
+                        for ieaxm, arg_defAx in zip(range(pItem.rowCount()-1),
+                                                    getargspec(objAx)[3]):
                             ieax = ieaxm + 1
                             paraname = pItem.child(ieax, 0).text()
                             paravalue = pItem.child(ieax, 1).text()

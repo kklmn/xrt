@@ -71,6 +71,9 @@ def build_beamline(nrays=1e5):
 
 def run_process(beamLine, shineOnly1stSource=False):
     beamSource = beamLine.sources[0].shine()
+    xprime = beamSource.a / beamSource.b
+    zprime = beamSource.c / beamSource.b
+    print(xprime.max()-xprime.min(), zprime.max()-zprime.min())
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     beamEMglobal, beamEMlocal = beamLine.ellMirror.reflect(beamSource)
     outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1,

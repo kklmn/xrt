@@ -8,7 +8,6 @@ from scipy import ndimage
 
 
 def plot_NOM_2D(fname):
-
     xL, yL, zL = np.loadtxt(fname+'.dat', unpack=True)
     nX = (yL == yL[0]).sum()
     nY = (xL == xL[0]).sum()
@@ -31,7 +30,7 @@ def plot_NOM_2D(fname):
     ax2D.set_ylabel('y (mm)')
     ax2D.imshow(
         z, aspect='auto', cmap='jet', extent=extent,
-#        interpolation='nearest',
+        # interpolation='nearest',
         interpolation='none',
         origin='lower', figure=fig)
 
@@ -62,28 +61,28 @@ def plot_NOM_2D(fname):
     ax2D.annotate('', (0, 0), (-0.03, 0), size=10,
                   xycoords="axes fraction",
                   arrowprops=dict(alpha=1, fc='r', ec='r', headwidth=10,
-                                  frac=0.4))
+                                  headlength=0.4))
     ax2D.annotate('', (0, 0.5), (-0.03, 0.5), size=10,
                   xycoords="axes fraction",
                   arrowprops=dict(alpha=1, fc='g', ec='g', headwidth=10,
-                                  frac=0.4))
+                                  headlength=0.4))
     ax2D.annotate('', (0, 1), (-0.03, 1), size=10,
                   xycoords="axes fraction",
                   arrowprops=dict(alpha=1, fc='b', ec='b', headwidth=10,
-                                  frac=0.4))
+                                  headlength=0.4))
 
     ax2D.annotate('', (0, 0), (0, -0.06), size=10,
                   xycoords="axes fraction",
                   arrowprops=dict(alpha=1, fc='y', ec='y', headwidth=10,
-                                  frac=0.4))
+                                  headlength=0.4))
     ax2D.annotate('', (0.5, 0), (0.5, -0.06), size=10,
                   xycoords="axes fraction",
                   arrowprops=dict(alpha=1, fc='c', ec='c', headwidth=10,
-                                  frac=0.4))
+                                  headlength=0.4))
     ax2D.annotate('', (1, 0), (1, -0.06), size=10,
                   xycoords="axes fraction",
                   arrowprops=dict(alpha=1, fc='m', ec='m', headwidth=10,
-                                  frac=0.4))
+                                  headlength=0.4))
 
     b, a = np.gradient(z)
     dx = x[1] - x[0]
@@ -109,7 +108,7 @@ def plot_NOM_2D(fname):
     splineA = ndimage.spline_filter(a.T)
     splineB = ndimage.spline_filter(b.T)
 
-    nrays = 1e3
+    nrays = 1000
     xnew = np.random.uniform(x[0], x[-1], nrays)
     ynew = np.random.uniform(y[0], y[-1], nrays)
     coords = np.array([(xnew-x[0]) / (x[-1]-x[0]) * (nX-1),
@@ -119,10 +118,9 @@ def plot_NOM_2D(fname):
     anew = ndimage.map_coordinates(splineA, coords, prefilter=True)
     bnew = ndimage.map_coordinates(splineB, coords, prefilter=True)
 
-    ax2D.scatter(xnew, ynew, c=znew, marker='o', color='gray', s=50,
-                 cmap='jet')
+    ax2D.scatter(xnew, ynew, c=znew, marker='o', s=50, cmap='jet')
     ax2D.quiver(xnew, ynew, -anew, -bnew, edgecolor='gray', color='gray',
-#                headaxislength=5,
+                # headaxislength=5,
                 scale=200, lw=0.2)
 
     fig.savefig(fname+'.png')
@@ -146,7 +144,7 @@ def plot_NOM_3D(fname):
     zmax = abs(z).max()
 
     fig = plt.figure()
-    ax = fig.gca(projection='3d')
+    ax = fig.add_subplot(projection='3d')
     surf = ax.plot_surface(x, y, z, rstride=1, cstride=1, cmap=cm.coolwarm,
                            linewidth=0, antialiased=False, alpha=0.5)
     ax.set_zlim(-zmax, zmax)
@@ -156,19 +154,19 @@ def plot_NOM_3D(fname):
     fig.colorbar(surf, shrink=0.5, aspect=5)
 
     splineZ = ndimage.spline_filter(z.T)
-    nrays = 1e3
+    nrays = 1000
     xnew = np.random.uniform(x1D[0], x1D[-1], nrays)
     ynew = np.random.uniform(y1D[0], y1D[-1], nrays)
     coords = np.array([(xnew-x1D[0]) / (x1D[-1]-x1D[0]) * (nX-1),
                        (ynew-y1D[0]) / (y1D[-1]-y1D[0]) * (nY-1)])
     znew = ndimage.map_coordinates(splineZ, coords, prefilter=True)
-    ax.scatter(xnew, ynew, znew, c=znew, marker='o', color='gray', s=50,
-               cmap=cm.coolwarm)
+    ax.scatter(xnew, ynew, znew, c=znew, marker='o', s=50, cmap=cm.coolwarm)
 
     fig.savefig(fname+'_3d.png')
     plt.show()
 
+
 if __name__ == '__main__':
     fname = 'mock_surface'
     plot_NOM_2D(fname)
-#    plot_NOM_3D(fname)
+    # plot_NOM_3D(fname)
