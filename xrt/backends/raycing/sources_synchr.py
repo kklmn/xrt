@@ -683,7 +683,8 @@ class SourceFromField(IntegratedSource):
         rloc = np.array([trajx_, trajy_, trajz_])
 
         if R0 is not None:
-            R0 = np.expand_dims(R0, axis=1)
+            if len(R0.shape) < 2:
+                R0 = np.expand_dims(R0, 1)
             dr = R0 - rloc
             dist = np.linalg.norm(dr, axis=0)
             sinr0z = np.sin(wc*R0[2, :])
@@ -776,7 +777,9 @@ class SourceFromField(IntegratedSource):
 
             if R0 is not None:
                 rloc = np.array([trajx_, trajy_, trajz_])
-                dr = R0 - np.expand_dims(rloc, 1)
+                if len(rloc.shape) < 2:
+                    rloc = np.expand_dims(rloc, 1)
+                dr = R0 - rloc
                 dist = np.linalg.norm(dr, axis=0)
                 rdrz = 1./dr[2, :]
                 drs = (dr[0, :]**2+dr[1, :]**2)*rdrz
@@ -1700,7 +1703,8 @@ class Undulator(IntegratedSource):
                     rloc = np.array([self.Ky*self.sintg[i]*revgamma,
                                      self.Kx*self.sintgph[i]*revgamma,
                                      betam*zloc-0.25*zterm*revgamma])
-                    dr = R0 - np.expand_dims(rloc, 1)
+
+                    dr = R0 - rloc
                     dist = np.linalg.norm(dr, axis=0)
 
                     drs = 0.5*(dr[0, :]**2+dr[1, :]**2) / dr[2, :]
@@ -1728,7 +1732,7 @@ class Undulator(IntegratedSource):
                          0.125*revgamma*(self.Ky**2 * sin2x[i] +
                                          self.Kx**2 * sin2xph[i]))
                     eucos = np.exp(1j*ucos)
-
+#                print("eucos.shape", eucos.shape)
                 betax = taperC*self.Ky*revgamma*self.costg[i]
                 betay = -self.Kx*revgamma*self.costgph[i]
                 betaz = 1. - 0.5*(revgamma2 + betax*betax + betay*betay)
@@ -1802,8 +1806,8 @@ class Undulator(IntegratedSource):
             R0v = None
 
         if NRAYS > 10:
-            if self.filamentBeam:
-                gamma = self.gamma
+#            if self.filamentBeam:
+#                gamma = self.gamma * np.ones(NRAYS)
             Is_local, Ip_local = self._sp_sum(
                     ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
         else:  # Convergence only
