@@ -2,3 +2,5 @@ numpy
 scipy
 spyder
 matplotlib
+sphinx>=6.0.0
+pyparsing>=3.0.0
