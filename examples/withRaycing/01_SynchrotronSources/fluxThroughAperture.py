@@ -6,7 +6,7 @@ Undulator radiation through rectangular aperture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The images below are produced by
-\examples\withRaycing\01_SynchrotronSources\fluxThroughAperture.py.
+``\examples\withRaycing\01_SynchrotronSources\fluxThroughAperture.py``.
 
 This example illustrates the sampling concepts explained in Section
 :ref:`Sampling strategies <sampling-strategies>`.
