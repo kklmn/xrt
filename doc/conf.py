@@ -232,6 +232,8 @@ else:
     html_static_path = ['_static']
 html_theme_options["body_min_width"] = '96%'
 
+toc_object_entries = False
+
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 #html_last_updated_fmt = '%b %d, %Y'

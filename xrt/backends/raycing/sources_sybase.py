@@ -426,7 +426,6 @@ class SourceBase:
             (self.Theta_max - self.Theta_min) *\
             (self.Psi_max - self.Psi_min)
         self.fluxConst = self.Imax * self.xzE
-#        print(self.Imax, self.xzE, self.fluxConst, self.nrepmax)
 
     def build_I_map(self):
         """Used to calculate the intensity. To be redefined in the subclass"""
@@ -619,13 +618,19 @@ class SourceBase:
         Ep = res[2].reshape(sh)
         return Es, Ep
 
-    def intensities_on_mesh(self, energy='auto', theta='auto', psi='auto',
-                            harmonic=None,
-                            eSpreadSigmas=3.5, eSpreadNSamples=36):
+    def intensities_on_mesh(
+            self, energy='auto', theta='auto', psi='auto', harmonic=None,
+            eSpreadSigmas=3.5, eSpreadNSamples=36, mode='constant'):
         """Returns the Stokes parameters in the shape (energy, theta, psi,
         [harmonic]), with *theta* being the horizontal mesh angles and *psi*
-        the vertical mesh angles. Each one of the input parameters is a 1D
-        array of an individually selectable length.
+        the vertical mesh angles. Each one of the input arrays is a 1D array of
+        an individually selectable length. Energy spread is sampled by a normal
+        distribution and the resulting field values are averaged over it.
+        *eSpreadSigmas* is sigma value of the distribution; *eSpreadNSamples*
+        sets the number of samples. The resulted transverse field is convolved
+        with angular spread by means of scipy.ndimage.filters.gaussian_filter.
+        *mode* is a synonymous parameter of that filter that controls its
+        behaviour at the borders.
 
         .. note::
            We do not provide any internal mesh optimization, as mesh functions
@@ -707,7 +712,9 @@ class SourceBase:
             from scipy.ndimage.filters import gaussian_filter
             Sx = self.dxprime / (theta[1] - theta[0])
             Sz = self.dzprime / (psi[1] - psi[0])
+            # print("self.dxprime, theta[-1] - theta[0], Sx, len(theta)")
             # print(self.dxprime, theta[-1] - theta[0], Sx, len(theta))
+            # print("self.dzprime, psi[-1] - psi[0], Sz, len(psi)")
             # print(self.dzprime, psi[-1] - psi[0], Sz, len(psi))
             if Sx > len(theta)//4:  # ±2σ
                 print("************* Warning ***********************")
@@ -737,22 +744,27 @@ class SourceBase:
                         print("You probably need to set "
                               "zPrimeMaxAutoReduce=False")
                 print("**************************************************")
+            # mode = 'reflect'  # default in gaussian_filter
             for ie, ee in enumerate(energy):
                 if harmonic is None:
-                    s0[ie, :, :] = gaussian_filter(s0[ie, :, :], [Sx, Sz])
-                    s1[ie, :, :] = gaussian_filter(s1[ie, :, :], [Sx, Sz])
-                    s2[ie, :, :] = gaussian_filter(s2[ie, :, :], [Sx, Sz])
-                    s3[ie, :, :] = gaussian_filter(s3[ie, :, :], [Sx, Sz])
+                    s0[ie, :, :] = gaussian_filter(
+                        s0[ie, :, :], [Sx, Sz], mode=mode)
+                    s1[ie, :, :] = gaussian_filter(
+                        s1[ie, :, :], [Sx, Sz], mode=mode)
+                    s2[ie, :, :] = gaussian_filter(
+                        s2[ie, :, :], [Sx, Sz], mode=mode)
+                    s3[ie, :, :] = gaussian_filter(
+                        s3[ie, :, :], [Sx, Sz], mode=mode)
                 else:
                     for ih, hh in enumerate(harmonic):
                         s0[ie, :, :, ih] = gaussian_filter(
-                            s0[ie, :, :, ih], [Sx, Sz])
+                            s0[ie, :, :, ih], [Sx, Sz], mode=mode)
                         s1[ie, :, :, ih] = gaussian_filter(
-                            s1[ie, :, :, ih], [Sx, Sz])
+                            s1[ie, :, :, ih], [Sx, Sz], mode=mode)
                         s2[ie, :, :, ih] = gaussian_filter(
-                            s2[ie, :, :, ih], [Sx, Sz])
+                            s2[ie, :, :, ih], [Sx, Sz], mode=mode)
                         s3[ie, :, :, ih] = gaussian_filter(
-                            s3[ie, :, :, ih], [Sx, Sz])
+                            s3[ie, :, :, ih], [Sx, Sz], mode=mode)
 
         with np.errstate(divide='ignore'):
             return (s0,
@@ -973,7 +985,8 @@ class IntegratedSource(SourceBase):
             return converged, (0,)
 
     def _find_convergence_mixed(self, testMode=False):
-        print("Estimating convergence")
+        if raycing._VERBOSITY_ > 0:
+            print("Estimating convergence")
         mstart = 3
         m = mstart
         quad_int_error = self.gp * 10.
@@ -983,7 +996,8 @@ class IntegratedSource(SourceBase):
             pltout = []
             statOut = []
         # PHASE 1: Find convergence, very rough and fast
-        print("Phase 1. Exponential / rough")
+        if raycing._VERBOSITY_ > 0:
+            print("Phase 1. Exponential / rough")
         step_stat = 5
         while m < 10000:
             m += 1
@@ -1005,7 +1019,8 @@ class IntegratedSource(SourceBase):
         ph2start = int(2**(m-1))
         ph2end = self.quadm
         jmax = int(np.log2((ph2end-ph2start) / (4*step_stat)))
-        print("Phase 2. Bisection / precize. {} steps".format(jmax))
+        if raycing._VERBOSITY_ > 0:
+            print("Phase 2. Bisection / precize. {} steps".format(jmax))
         for j in range(jmax):
             self.quadm = int(0.5*(ph2end+ph2start))
             mad, dimad = self._get_mad()
@@ -1015,7 +1030,8 @@ class IntegratedSource(SourceBase):
             else:
                 ph2start = self.quadm
         self.quadm = ph2end
-        print("Done estimating convergence")
+        if raycing._VERBOSITY_ > 0:
+            print("Done estimating convergence")
 
         if testMode:
             return converged, (np.array(xm), np.array(pltout),
@@ -1241,7 +1257,7 @@ class IntegratedSource(SourceBase):
             self.convergenceSearchFlag = False
             self.eEspread = tmpeEspread
         self._build_integration_grid()
-        if raycing._VERBOSITY_ > 10:
+        if raycing._VERBOSITY_ > 0:
             print("Done with integration optimization, {0} points will be used"
                   " in {1} interval{2}".format(
                       self.quadm, self.gIntervals,

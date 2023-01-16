@@ -294,8 +294,8 @@ class RectangularAperture(object):
         if rw is None:
             from . import waves as rw
 
-        if isinstance(nrays, int):
-            nsamples = nrays
+        if isinstance(nrays, (int, float)):
+            nsamples = int(nrays)
         elif isinstance(nrays, (list, tuple)):
             nsamples = nrays[0] * nrays[1]
         else:
@@ -307,8 +307,8 @@ class RectangularAperture(object):
         wave.area = dX * dZ
         wave.dS = wave.area / nsamples
         wave.toOE = self
-        if isinstance(nrays, int):
-            xy = np.random.rand(nrays, 2)
+        if isinstance(nrays, (int, float)):
+            xy = np.random.rand(nsamples, 2)
             wave.x[:] = xy[:, 0] * dX + self.limOptX[0]
             wave.z[:] = xy[:, 1] * dZ + self.limOptY[0]
         elif isinstance(nrays, (list, tuple)):

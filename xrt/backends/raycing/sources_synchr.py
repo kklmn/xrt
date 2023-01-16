@@ -1427,13 +1427,12 @@ class Undulator(IntegratedSource):
         self.needReset = True
         # Need to recalculate the integration parameters
 
-    def report_E1(self):
+    def report_E1(self, verbosity=raycing._VERBOSITY_):
         wu = PI / self.L0 / self.gamma2 * \
             (2*self.gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
 
         E1 = 2*wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
-        if raycing._VERBOSITY_ > 10:
-
+        if verbosity > 10:
             print("E1 = {0}".format(E1))
             print("E3 = {0}".format(3*E1))
             print("B0 = {0}".format(self.B0y))

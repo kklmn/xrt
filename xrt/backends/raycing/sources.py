@@ -2,6 +2,87 @@
 r"""
 Sources
 -------
+.. _sampling-strategies:
+
+Sampling strategies
+^^^^^^^^^^^^^^^^^^^
+
+There are three main strategies for creating samples of optical sources,
+depending on study purpose, implemented in xrt.
+
+1. Monte Carlo sampling by intensity, or *ray* generation. This is the default
+mode of all synchrotron sources in xrt and is the best sampling strategy for
+ray tracing or hybrid wave propagation (when the wave part starts at a
+downstream optical element). Technically it is done by the
+`acceptance-rejection method
+<https://en.wikipedia.org/wiki/Rejection_sampling>`_. In this method, the
+optical field is calculated in a 3D space – energy and two transverse angles –
+for a set of uniformly random values of these three variables within the
+predefined ranges. The transverse angles also get normally distributed angular
+shifts within the emittance distribution, independently for each ray. The
+acceptance random variable is uniformly sampled in the range from zero to the
+intensity maximum for each field sample, and the sample is accepted if the
+acceptance variable is below the sample intensity, otherwise it is rejected.
+The sampling continues until the requested number of samples is reached. The
+resulted space density of the samples (rays) is proportional to the field
+intensity. Simultaneously, this sampling gives the value of total flux as the
+product of the acceptance ratio times the 3D sample volume times the intensity
+maximum.
+
+2. Uniform Monte Carlo sampling, or *wave* generation. This mode is necessary
+for wave propagation when it starts right from the source. The 3D calculation
+space – energy and two transverse angles – is sampled uniformly. This way of
+sampling is still possible to use for ray tracing, and it is even faster at the
+source as no samples are rejected, but it is less efficient at the downstream
+part of the beamline as a significant part of the samples (or even a majority
+of them) is of low intensity. The main usage pattern of this sampling is,
+however, for single electron (or *macro electrons*) field propagation (enabled
+by the source option *filamentBeam=True*), when all wave samples are attributed
+to the same electron with a single displacement within emittance distribution
+and a single shift of gamma (relative electron energy) within energy spread
+distribution. The flux is a sum of all intensities times the 3D sample volume
+over the number of samples.
+
+3. Grid sampling. This is frequently a quick method for studying synchrotron
+sources in reciprocal space and energy that must be used with care as it is
+full of pitfalls. Grid samples can be obtained by `intensities_on_mesh()`
+method of the synchrotron source. Three aspects must be considered when making
+a grid. (i) For a sharp field distribution, e.g. for an undulator at zero
+emittance and zero electron beam energy spread, the sharp field rings may
+interfere with the grid (form moiré patterns) and result in false fringes in
+spectral flux density. In such cases, the grid has to be very finely spaced.
+(ii) When the electron beam emittance is non-zero, the calculated field values
+have to be convolved with the electron beam divergence; this convolution is
+done inside `intensities_on_mesh()`. Due to the edge effects of the
+convolution, the grid borders of the thickness of the doubled electron beam
+divergence must be discarded from the field arrays returned by
+`intensities_on_mesh()` and therefore these grid margins have to be added
+beforehand. (iii) The number of energy spread samples must be set sufficient
+for the used energy spread value, see the end of the next paragraph.
+
+Electron beam energy spread is treated differently in the above three sampling
+strategies. In ray sampling, every ray gets its gamma sample (relative electron
+energy) of the normal energy spread distribution. In wave sampling, energy
+spread is sampled once for all wave samples when in filamentBeam regime and
+individually per wave sample otherwise. In grid sampling, a new grid dimension
+is introduced internally that contains samples of gamma within energy spread
+distribution with subsequent averaging over that dimension. Notice that a wide
+energy spread distribution (that can be a case for linacs) may require more
+energy spread samples (the parameter *eSpreadNSamples* of
+`intensities_on_mesh()`) than the default number 36 that is usually good for
+energy spread sigma of 0.1%. Because of this new dimension, the grid may become
+too large to fit into RAM, which might force the user to invoke the method
+`intensities_on_mesh()` in a loop that scans over individual photon energies.
+
+Electron beam real space size is also treated differently in the above three
+sampling strategies. In ray sampling, every ray gets its transverse origin
+shift in the source plane within emittance distribution. In wave sampling, the
+wave source position is sampled once for all wave samples when in filamentBeam
+regime and individually per wave sample otherwise. In grid sampling, real space
+electron beam size is totally ignored.
+
+See the example :ref:`Undulator radiation through rectangular aperture
+<through-aperture>`, where several calculation methods are compared.
 
 Geometric sources
 ^^^^^^^^^^^^^^^^^
