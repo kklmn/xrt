@@ -23,7 +23,7 @@ if on_rtd:
                     'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
                     'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets',
                     'PyQt5.QtSql',
-                    'matplotlib', 'matplotlib.backends.backend_qt5agg',
+                    'matplotlib.backends.backend_qt5agg',
                     'PySide', 'PySide.QtCore',
                     'spyder', 'spyder.widgets', 'spyderlib.widgets',
                     'cv2']
