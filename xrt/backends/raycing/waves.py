@@ -617,7 +617,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
             secondDim = oeLocal.y
         elif hasattr(oe, 'propagate'):  # aperture
             secondDim = oeLocal.z
-        elif hasattr(oe, 'build_I_map'):  # source
+        elif hasattr(oe, 'shine'):  # source
             secondDim = oeLocal.z
         else:
             raise ValueError('Unknown diffracting element!')
