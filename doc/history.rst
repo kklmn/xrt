@@ -3,6 +3,13 @@
 Version history
 ---------------
 
+Available at GitHub (16 Jan 2023):
+    - Add :ref:`docs <sampling-strategies>` on sampling strategies of
+      syncrotron sources. Add an example
+      :ref:`Undulator radiation through rectangular aperture <through-aperture>`
+      that illustrates various sampling methods.
+
+
 1.5.0 (8 Sep 2022):
     - Propagation of individual source modes, as waves, hybrid waves
       (partially as rays and then as waves) and only rays.

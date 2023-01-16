@@ -41,7 +41,7 @@ dl.field-list > dd {
 }
 
 dl.field-list > dt:after {
-    content: ":";
+    content: "";
 }
 
 div.document {
