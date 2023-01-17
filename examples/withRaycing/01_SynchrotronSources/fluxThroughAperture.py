@@ -235,14 +235,15 @@ def grid_method(kind):
     psi = np.arange(npsi)*dpsi
     theta -= theta[-1]*0.5
     psi -= psi[-1]*0.5
+    whereTheta = (-thetaMax-1e-12 < theta) & (theta < thetaMax+1e-12)
+    wherePsi = (-psiMax-1e-12 < psi) & (psi < psiMax+1e-12)
+
     source = rs.Undulator(**undulatorKwargs)
     flux = np.zeros_like(energy)
     for ie, e in enumerate(energy):
         print(u'energy {0:.1f} eV, {1} of {2}'.format(e, ie+1, len(energy)))
         I0, l1, l2, l3 = source.intensities_on_mesh(
             [e], theta, psi, eSpreadNSamples=eSpreadNSamples)
-        whereTheta = (-thetaMax-1e-12 < theta) & (theta < thetaMax+1e-12)
-        wherePsi = (-psiMax-1e-12 < psi) & (psi < psiMax+1e-12)
         # print(I0[:, :, wherePsi].shape, psi[wherePsi].shape)
         flux[ie] = np.trapz(np.trapz(I0[:, :, wherePsi], psi[wherePsi])
                             [:, whereTheta], theta[whereTheta])
