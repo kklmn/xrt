@@ -620,17 +620,25 @@ class SourceBase:
 
     def intensities_on_mesh(
             self, energy='auto', theta='auto', psi='auto', harmonic=None,
-            eSpreadSigmas=3.5, eSpreadNSamples=36, mode='constant'):
-        """Returns the Stokes parameters in the shape (energy, theta, psi,
-        [harmonic]), with *theta* being the horizontal mesh angles and *psi*
-        the vertical mesh angles. Each one of the input arrays is a 1D array of
-        an individually selectable length. Energy spread is sampled by a normal
-        distribution and the resulting field values are averaged over it.
-        *eSpreadSigmas* is sigma value of the distribution; *eSpreadNSamples*
-        sets the number of samples. The resulted transverse field is convolved
-        with angular spread by means of scipy.ndimage.filters.gaussian_filter.
-        *mode* is a synonymous parameter of that filter that controls its
-        behaviour at the borders.
+            eSpreadSigmas=3.5, eSpreadNSamples=36, mode='constant',
+            resultKind='Stokes'):
+        """Returns
+        Stokes parameters (as a 4-list of arrays, when resultKind == 'Stokes')
+        or intensities and OAM (Orbital Angular Momentum) matrix elements (as
+        [Is, Ip, OAMs, OAMp, Es, Ep], when resultKind == 'vortex')in the shape
+        (energy, theta, psi, [harmonic]), with *theta* being the horizontal
+        mesh angles and *psi* the vertical mesh angles. Each one of the input
+        arrays is a 1D array of an individually selectable length. Energy
+        spread is sampled by a normal distribution and the resulting field
+        values are averaged over it. *eSpreadSigmas* is sigma value of the
+        distribution; *eSpreadNSamples* sets the number of samples. The
+        resulted transverse field is convolved with angular spread by means of
+        scipy.ndimage.filters.gaussian_filter. *mode* is a synonymous parameter
+        of that filter that controls its behaviour at the borders.
+
+        .. note::
+           This method provides incoherent averaging over angular and energy
+           spread of electron beam. The photon beam phase is lost here!
 
         .. note::
            We do not provide any internal mesh optimization, as mesh functions
@@ -641,6 +649,8 @@ class SourceBase:
            narrow.
 
         """
+        assert resultKind in ('Stokes', 'vortex')
+
         if self.needReset:
             self.reset()
         if isinstance(energy, str):  # i.e. if 'auto'
@@ -686,26 +696,61 @@ class SourceBase:
         res = self.build_I_map(xE, xTheta, xPsi, xH, xG)
         Es = res[1].reshape(sh)
         Ep = res[2].reshape(sh)
+
+        Is = (Es*np.conj(Es)).real.astype(float)
+        Ip = (Ep*np.conj(Ep)).real.astype(float)
+        if resultKind == 'Stokes':
+            Isp = Es*np.conj(Ep).astype(complex)
+        elif resultKind == 'vortex':
+            dEsdtheta, dEsdpsi = np.gradient(Es, theta, psi, axis=(1, 2))
+            dEpdtheta, dEpdpsi = np.gradient(Ep, theta, psi, axis=(1, 2))
+
+            # lsy = 1j*(dEsdtheta*psi[:] - dEsdpsi*theta[:, None])
+            # lpy = 1j*(dEpdtheta*psi[:] - dEpdpsi*theta[:, None])
+            # https://stackoverflow.com/a/62655664/2696065
+            thetaShape = np.swapaxes(dEsdpsi, dEsdpsi.ndim-1, 1).shape
+            theta_brc = np.broadcast_to(theta, thetaShape)
+            theta_brc = np.swapaxes(theta_brc, dEsdpsi.ndim-1, 1)
+
+            psiShape = np.swapaxes(dEsdtheta, dEsdtheta.ndim-1, 2).shape
+            psi_brc = np.broadcast_to(psi, psiShape)
+            psi_brc = np.swapaxes(psi_brc, dEsdtheta.ndim-1, 2)
+
+            lsy = 1j*(dEsdtheta*psi_brc - dEsdpsi*theta_brc)
+            lpy = 1j*(dEpdtheta*psi_brc - dEpdpsi*theta_brc)
+            OAMs = (Es.conj()*lsy).real.astype(float)
+            OAMp = (Ep.conj()*lpy).real.astype(float)
+
         if ispread:
             if iharmonic:
                 ws = wspr[np.newaxis, np.newaxis, np.newaxis, np.newaxis, :]
             else:
                 ws = wspr[np.newaxis, np.newaxis, np.newaxis, :]
-            Is = ((Es*np.conj(Es)).real * ws).sum(axis=ispread)
-            Ip = ((Ep*np.conj(Ep)).real * ws).sum(axis=ispread)
-            Isp = (Es*np.conj(Ep) * ws).sum(axis=ispread)
-        else:
-            Is = (Es*np.conj(Es)).real
-            Ip = (Ep*np.conj(Ep)).real
-            Isp = Es*np.conj(Ep)
-        self.Is = Is.astype(float)
-        self.Ip = Ip.astype(float)
-        self.Isp = Isp.astype(complex)
+            Is = (Is * ws).sum(axis=ispread)
+            Ip = (Ip * ws).sum(axis=ispread)
+            if resultKind == 'Stokes':
+                Isp = (Isp * ws).sum(axis=ispread)
+            elif resultKind == 'vortex':
+                OAMs = (OAMs * ws).sum(axis=ispread)
+                OAMp = (OAMp * ws).sum(axis=ispread)
+                Es = (Es * ws).sum(axis=ispread)
+                Ep = (Ep * ws).sum(axis=ispread)
 
-        s0 = self.Is + self.Ip
-        s1 = self.Is - self.Ip
-        s2 = 2. * np.real(self.Isp)
-        s3 = -2. * np.imag(self.Isp)
+        self.Is = Is
+        self.Ip = Ip
+        if resultKind == 'Stokes':
+            self.Isp = Isp
+
+        if resultKind == 'Stokes':
+            s0 = Is + Ip
+            s1 = Is - Ip
+            s2 = 2. * np.real(Isp)
+            s3 = -2. * np.imag(Isp)
+            ss = [s0, s1, s2, s3]
+        elif resultKind == 'vortex':
+            ss = [Is, Ip, OAMs, OAMp, Es, Ep]
+        else:
+            raise ValueError("Unknown resultKind {0}".format(resultKind))
 
         if (self.dxprime > 0 or self.dzprime > 0) and \
                 len(theta) > 1 and len(psi) > 1:
@@ -747,30 +792,23 @@ class SourceBase:
             # mode = 'reflect'  # default in gaussian_filter
             for ie, ee in enumerate(energy):
                 if harmonic is None:
-                    s0[ie, :, :] = gaussian_filter(
-                        s0[ie, :, :], [Sx, Sz], mode=mode)
-                    s1[ie, :, :] = gaussian_filter(
-                        s1[ie, :, :], [Sx, Sz], mode=mode)
-                    s2[ie, :, :] = gaussian_filter(
-                        s2[ie, :, :], [Sx, Sz], mode=mode)
-                    s3[ie, :, :] = gaussian_filter(
-                        s3[ie, :, :], [Sx, Sz], mode=mode)
+                    for arr in ss:
+                        arr[ie, :, :] = gaussian_filter(
+                            arr[ie, :, :], [Sx, Sz], mode=mode)
                 else:
                     for ih, hh in enumerate(harmonic):
-                        s0[ie, :, :, ih] = gaussian_filter(
-                            s0[ie, :, :, ih], [Sx, Sz], mode=mode)
-                        s1[ie, :, :, ih] = gaussian_filter(
-                            s1[ie, :, :, ih], [Sx, Sz], mode=mode)
-                        s2[ie, :, :, ih] = gaussian_filter(
-                            s2[ie, :, :, ih], [Sx, Sz], mode=mode)
-                        s3[ie, :, :, ih] = gaussian_filter(
-                            s3[ie, :, :, ih], [Sx, Sz], mode=mode)
+                        for arr in ss:
+                            arr[ie, :, :, ih] = gaussian_filter(
+                                arr[ie, :, :, ih], [Sx, Sz], mode=mode)
 
-        with np.errstate(divide='ignore'):
-            return (s0,
-                    np.where(s0, s1 / s0, s0),
-                    np.where(s0, s2 / s0, s0),
-                    np.where(s0, s3 / s0, s0))
+        if resultKind == 'Stokes':
+            with np.errstate(divide='ignore'):
+                return [s0,
+                        np.where(s0, s1/s0, s0),
+                        np.where(s0, s2/s0, s0),
+                        np.where(s0, s3/s0, s0)]
+        elif resultKind == 'vortex':
+            return ss
 
 
 class IntegratedSource(SourceBase):
