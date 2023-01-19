@@ -33,8 +33,8 @@ See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
 
 from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "25 Jun 2017"
-__version__ = "1.3"
+__date__ = "18 Jan 2023"
+__version__ = "1.4"
 
 _DEBUG_ = False  # If False, exceptions inside the module are ignored
 redStr = ':red:`{0}`'
@@ -68,7 +68,7 @@ except cl.LogicError:
 import platform as pythonplatform
 import webbrowser
 
-from ..commons import ext
+from ..commons import ext  # analysis:ignore
 
 sys.path.append(os.path.join('..', '..', '..'))
 import xrt  #analysis:ignore
@@ -80,7 +80,7 @@ from ...backends.raycing import oes as roes  # analysis:ignore
 from ...backends.raycing import apertures as rapts  # analysis:ignore
 from ...backends.raycing import oes as roes  # analysis:ignore
 from ...backends.raycing import run as rrun  # analysis:ignore
-from ...version import __version__ as xrtversion
+from ...version import __version__ as xrtversion  # analysis:ignore
 from ... import plotter as xrtplot  # analysis:ignore
 from ... import runner as xrtrun  # analysis:ignore
 from ..commons import qt  # analysis:ignore
@@ -1028,7 +1028,8 @@ class XrtQook(qt.QWidget):
                 u'<h3> Properties: </h3> </div>\n'
         for dName, dVal in zip(dNames, dVals):
             argDocStr += u'*{0}*: {1}\n\n'.format(dName, dVal)
-        retValStr = re.findall(r"Returned values:.*", objP.__doc__)
+        retValStr = '' if objP.__doc__ is None else \
+            re.findall(r"Returned values:.*", objP.__doc__)
         if len(retValStr) > 0:
             argDocStr += u'.. raw:: html\n\n   <div class="title"> '\
                 u'<h3> Returns: </h3> </div>\n'
@@ -1094,6 +1095,10 @@ class XrtQook(qt.QWidget):
         else:
             vercl = isOpenStatus
         strOpenCL = r'pyopencl {}'.format(vercl)
+        if ext.isSphinx:
+            strSphinx = 'Sphinx {0}'.format(ext.sphinx.__version__)
+        else:
+            strSphinx = 'Sphinx '+redStr.format('not found')
         strXrt = 'xrt {0} in {1}'.format(
             xrtversion, path_to_xrt).replace('\\', '\\\\')
         if type(self.xrt_pypi_version) is tuple:
@@ -1124,10 +1129,11 @@ class XrtQook(qt.QWidget):
     Qt {3}, {4} {5}\n
     {6}\n
     {7}\n
-    {8} """.format(
+    {8}\n
+    {9} """.format(
             'tutorial',
             locos, pythonplatform.python_version(), Qt_version, qt.QtName,
-            PyQt_version, strOpenGL, strOpenCL, strXrt)
+            PyQt_version, strOpenGL, strOpenCL, strSphinx, strXrt)
         self.showTutorial(txt, "xrtQook")
 
     def showDescrByTab(self, tab):
@@ -1430,7 +1436,11 @@ class XrtQook(qt.QWidget):
                 else:
                     isMethod = True
                     uArgs = OrderedDict(zip(argList[0][1:], argList[3]))
-        moduleObj = eval(objRef.__module__)
+        try:
+            moduleObj = eval(objRef.__module__)
+        except NameError:
+            import importlib
+            moduleObj = importlib.import_module(objRef.__module__)
         if hasattr(moduleObj, 'allArguments') and not isMethod:
             for argName in moduleObj.allArguments:
                 if str(argName) in uArgs.keys():
@@ -3495,7 +3505,16 @@ if __name__ == '__main__':
                 for ieph in range(tItem.rowCount()):
                     if tItem.child(ieph, 0).text() == '_object':
                         elstr = str(tItem.child(ieph, 1).text())
-                        ieinit = elstr + "(" + ieinit
+                        klass = eval(elstr)
+                        if klass.__module__.startswith('xrt'):
+                            ieinit = elstr + "(" + ieinit
+                        else:
+                            if 'import {0}'.format(klass.__module__) not in\
+                                    codeHeader:
+                                codeHeader += 'import {0}\n'.format(
+                                    klass.__module__)
+                            ieinit = "{0}.{1}({2}".format(
+                                klass.__module__, klass.__name__, ieinit)
 
                 for ieph in range(tItem.rowCount()):
                     if tItem.child(ieph, 0).text() == 'properties':
@@ -3507,10 +3526,10 @@ if __name__ == '__main__':
                             paravalue = str(pItem.child(iep, 1).text())
                             if paraname == 'center':
                                 if paravalue.startswith('['):
-                                    paravalue = re.findall('\[(.*)\]',
+                                    paravalue = re.findall(r'\[(.*)\]',
                                                            paravalue)[0]
                                 elif paravalue.startswith('('):
-                                    paravalue = re.findall('\((.*)\)',
+                                    paravalue = re.findall(r'\((.*)\)',
                                                            paravalue)[0]
                                 cCoord = [self.getVal(c.strip()) for c in
                                           str.split(paravalue, ',')]

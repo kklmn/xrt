@@ -25,7 +25,7 @@ if on_rtd:
                     'PyQt5.QtSql',
                     'matplotlib.backends.backend_qt5agg',
                     'PySide', 'PySide.QtCore',
-                    'spyder', 'spyder.widgets', 'spyderlib.widgets',
+                    'spyder.widgets', 'spyderlib.widgets',
                     'cv2']
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
@@ -118,7 +118,8 @@ mpl.use('agg')
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = ['sphinx.ext.autodoc', 'sphinx.ext.pngmath']
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'animation']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax',
+              'sphinxcontrib.jquery', 'animation']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

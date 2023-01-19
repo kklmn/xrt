@@ -56,6 +56,7 @@ try:
     from xml.sax.saxutils import escape
     from docutils.utils import SystemMessage
     from sphinx.application import Sphinx
+    import sphinx
     import codecs
     isSphinx = True
 except Exception:
@@ -107,7 +108,8 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
     doc_file.close()
 
     confoverrides = {'html_context': context,
-                     'extensions': ['sphinx.ext.mathjax']}
+                     'extensions': ['sphinx.ext.mathjax',
+                                    'sphinxcontrib.jquery']}
 
     doctreedir = osp.join(DOCDIR, 'doctrees')
     sphinx_app = Sphinx(srcdir, DOCDIR, DOCDIR, doctreedir, buildername,

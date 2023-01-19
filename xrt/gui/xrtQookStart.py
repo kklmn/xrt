@@ -8,6 +8,17 @@ import os
 sys.path.append(os.path.join('..', '..'))
 import xrt.gui.xrtQook as xQ
 
+# # An example of adding custom classes of optical elements, here a class
+# # CustomToroidMirror from module customOEs.
+# # Copy this file to a writable folder and uncomment the following lines.
+# # The module customOEs must be importable from that folder or just be there.
+# # Then run this python file to start xrtQook.
+
+# import xrt.backends.raycing.oes as roe
+# from customOEs import CustomToroidMirror
+# roe.CustomToroidMirror = CustomToroidMirror
+# roe.__allSectioned__['My custom OEs'] = ('CustomToroidMirror',)
+
 
 if __name__ == '__main__':
     if any('spyder' in name.lower() for name in os.environ):
@@ -18,11 +29,11 @@ if __name__ == '__main__':
 
     # If xrtQook looks too small, one can play with scaling:
     # either with "auto" factor or with a manually set factor.
-#    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" # "1" is "yes", not factor
-#    os.environ["QT_SCALE_FACTOR"] = "1.5"
+    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" # "1" is "yes", not factor
+    # os.environ["QT_SCALE_FACTOR"] = "1.5"
 
     args = sys.argv
-#    args.append("--disable-web-security")
+    # args.append("--disable-web-security")
     app = xQ.qt.QApplication(args)
 
     ex = xQ.XrtQook()

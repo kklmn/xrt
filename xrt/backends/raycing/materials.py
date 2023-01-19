@@ -603,6 +603,8 @@ class Multilayer(object):
         # self.dLow = float(tThicknessLow + bThicknessLow)
         self.kind = 'multilayer'
         self.geom = geom
+        if not self.geom:
+            self.geom = 'reflected'
         self.idThickness = idThickness
         self.subRough = substRoughness
         self.substThickness = substThickness
