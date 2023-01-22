@@ -3,13 +3,16 @@
 Version history
 ---------------
 
-Available at GitHub (19 Jan 2023):
+Available at GitHub (22 Jan 2023):
     - Add :ref:`docs <sampling-strategies>` on sampling strategies of
       syncrotron sources. Add an example
       :ref:`Undulator radiation through rectangular aperture <through-aperture>`
       that illustrates various sampling methods.
 
     - Add user classes of optical elements to xrtQook.
+
+    - Add an example :ref:`Orbital Angular Momentum of helical undulator
+      ratiation <OAM-HelicalU>`.
 
 1.5.0 (8 Sep 2022):
     - Propagation of individual source modes, as waves, hybrid waves

@@ -7,5 +7,4 @@ Gallery of plots and scripts 1. Synchrotron sources
 
 .. automodule:: examples.withRaycing.01_SynchrotronSources.fluxThroughAperture
 
-
-
+.. automodule:: examples.withRaycing.01_SynchrotronSources.undulatorVortex
