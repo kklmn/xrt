@@ -191,12 +191,12 @@ html_theme = 'mytheme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "rightsidebar": False,
-#    "stickysidebar": True,
-    "collapsiblesidebar": True,
-#    "max_width": 20,
-#    "externalrefs": True,
-#    "roottarget": "index"
+    # "rightsidebar": False,
+    # "stickysidebar": True,
+    # "collapsiblesidebar": True,
+    # "max_width": 20,
+    # "externalrefs": True,
+    # "roottarget": "index"
     }
 
 # Add any paths that contain custom themes here, relative to this directory.
