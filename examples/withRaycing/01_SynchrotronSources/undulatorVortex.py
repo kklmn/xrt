@@ -76,11 +76,11 @@ correct incoherent averaging. The image brightness represents intensity.
 .. |U48Esh4-ff| imagezoom:: _images/U48-ff-Es-OAM-transverse-image-935-1220.000eV.png
    :loc: upper-right-corner
 
-As expected, vorticity approximately equals the harmonic number plus one in the
-perfect case of zero emittance and zero energy spread. This pattern is quite
-strongly affected by electron beam energy spread. Emittance plays a much lesser
-role as the used angular acceptance is much bigger than the electron beam
-angular distributions (360 µrad vs 5.8 and 2.0 µrad rms).
+As expected, vorticity approximately equals the harmonic number minus one in
+the perfect case of zero emittance and zero energy spread. This pattern is
+quite strongly affected by electron beam energy spread. Emittance plays a much
+lesser role as the used angular acceptance is much bigger than the electron
+beam angular distributions (360 µrad vs 5.8 and 2.0 µrad rms).
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "22 Jan 2023"
