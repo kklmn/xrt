@@ -105,8 +105,8 @@ def build_beamline(nrays=mynrays):
             name='SiemensStar',
             center=[0, R0, 0],
             nSpokes=nSpokes,
-            rX=slitDx,
-            rZ=slitDz,
+            rx=slitDx,
+            rz=slitDz,
             phi0 = 0.5*np.pi/nSpokes)
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', [0, R0, 0])

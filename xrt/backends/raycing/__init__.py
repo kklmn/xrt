@@ -130,7 +130,7 @@ from __future__ import print_function
 import types
 import sys
 import numpy as np
-from itertools import compress
+# from itertools import compress
 from collections import OrderedDict
 import re
 import copy
@@ -917,7 +917,7 @@ class BeamLine(object):
                 if isinstance(oe._pitch, (list, tuple)):
                     alignE = float(oe._pitch[-1])
                 autoPitch = True
-            except:
+            except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
 
@@ -926,7 +926,7 @@ class BeamLine(object):
                 if isinstance(oe._bragg, (list, tuple)):
                     alignE = float(oe._bragg[-1])
                 autoBragg = True
-            except:
+            except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
 
@@ -950,7 +950,7 @@ class BeamLine(object):
                     if self.flowSource == 'Qook':
                         field[0] = fNorm
                         setattr(inBeam, fieldName, field)
-                except:
+                except Exception:
                     print("Cannot find direction for automatic alignment.")
                     raise
             dirNorm = np.sqrt(inBeam.a[0]**2 + inBeam.b[0]**2 + inBeam.c[0]**2)
@@ -1056,12 +1056,12 @@ class BeamLine(object):
                     signal.emit((float(iseg+1)/float(totalStages), signalStr))
                     self.statusSignal =\
                         [signal, iseg+1, totalStages, signalStr]
-            except:
+            except Exception:
                 pass
 
             try:
                 outBeams = segment[1](segOE, **fArgs)
-            except:
+            except Exception:
                 if _DEBUG_:
                     raise
                 else:
@@ -1089,7 +1089,8 @@ class BeamLine(object):
         try:
             from ...gui import xrtGlow as xrtglow
         except ImportError:
-            print("cannot import xrtGlow")
+            print("Cannot import xrtGlow. "
+                  "If you run your script from an IDE, don't.")
             return
 
         from .run import run_process
@@ -1107,25 +1108,25 @@ class BeamLine(object):
             if scale:
                 try:
                     self.blViewer.updateScaleFromGL(scale)
-                except:
+                except Exception:
                     pass
             if centerAt:
                 try:
                     self.blViewer.centerEl(centerAt)
-                except:
+                except Exception:
                     pass
             if colorAxis:
                 try:
                     colorCB = self.blViewer.colorControls[0]
                     colorCB.setCurrentIndex(colorCB.findText(colorAxis))
-                except:
+                except Exception:
                     pass
             if colorAxisLimits:
                 try:
                     self.blViewer.customGlWidget.colorMin,\
                         self.blViewer.customGlWidget.colorMax = colorAxisLimits
                     self.blViewer.changeColorAxis(None, newLimits=True)
-                except:
+                except Exception:
                     pass
 
             self.blViewer.show()
@@ -1160,7 +1161,7 @@ class BeamLine(object):
                             str(segment[0]))
                         signal.emit((float(iseg+1) / float(totalStages),
                                      signalStr))
-                except:
+                except Exception:
                     if _DEBUG_:
                         raise
                     else:
@@ -1225,7 +1226,7 @@ class BeamLine(object):
                         beamDict[gBeamName] = self.beamsDict[gBeamName]
                         rayPath.append([outputBeamMatch[tmpBeamName],
                                         tmpBeamName, oeStr, gBeamName])
-                except:
+                except Exception:
                     if _DEBUG_:
                         raise
                     else:
@@ -1237,7 +1238,7 @@ class BeamLine(object):
                 try:
                     signalStr = "Calculating trajectory, %p% done."
                     signal.emit((float(itBeam+1)/float(totalBeams), signalStr))
-                except:
+                except Exception:
                     if _DEBUG_:
                         raise
                     else:
