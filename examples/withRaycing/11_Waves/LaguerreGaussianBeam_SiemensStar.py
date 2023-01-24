@@ -46,7 +46,7 @@ def build_beamline():
         beamLine, 'Laguerre-Gaussian', w0=w0, vortex=(lVortex, pVortex),
         energies=(E0,))
     beamLine.slit = ra.SiemensStar(
-        bl=beamLine, center=[0, 0.1, 0], nSpokes=nSpokes, rX=w0, rZ=w0,
+        bl=beamLine, center=[0, 0.1, 0], nSpokes=nSpokes, rx=w0, rz=w0,
         phi0=0.5*np.pi/nSpokes, vortex=0)
     beamLine.fsmFar = rsc.Screen(beamLine, 'FSM', [0, 0, 0])
     return beamLine

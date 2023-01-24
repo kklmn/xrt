@@ -1121,16 +1121,16 @@ class OE(object):
         if rw is None:
             from . import waves as rw
 
-        if isinstance(nrays, int):
-            nsamples = nrays
+        if isinstance(nrays, (int, float)):
+            nsamples = int(nrays)
         elif isinstance(nrays, (list, tuple)):
             nsamples = nrays[0] * nrays[1]
         else:
             raise ValueError('wrong type of `nrays`!')
 
         lb = rs.Beam(nrays=nsamples, forceState=1, withAmplitudes=True)
-        if isinstance(nrays, int):
-            xy = np.random.rand(nrays, 2)
+        if isinstance(nrays, (int, float)):
+            xy = np.random.rand(nsamples, 2)
             if shape == 'auto':
                 shape = self.shape
             if shape.startswith('ro'):  # round

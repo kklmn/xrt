@@ -554,7 +554,7 @@ def create_fig(rect2d, cap, scanAxis, axisLabel, scanAxisFactor,
         axi = fig1.add_axes(recti, aspect='auto', sharey=sharey)
         sharey = axi
         axi.locator_params(axis='x', nbins=5)
-        orderText = r'{0}$^{{\rm{1}}}$ order'.format(
+        orderText = r'{0}$^{{\rm {1}}}$ order'.format(
             o, 'st' if o == 1 else 'nd' if o == 2 else 'rd' if o == 3
             else 'th')
         axi.text(0.01, 0.5, orderText, rotation='vertical',
