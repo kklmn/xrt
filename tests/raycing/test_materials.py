@@ -284,7 +284,7 @@ import pickle
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing as raycing
-
+from xrt.backends.raycing.pyTTE_x import TakagiTaupin, TTcrystal, TTscan, Quantity
 raycing._VERBOSITY_ = 1000
 
 
@@ -671,7 +671,8 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
                            )
     else:
         matCL = None
-
+        
+        
     """A comparison subroutine used in the module test suit."""
     def for_one_R(crystal, alphaDeg, hkl, t, R):
 
@@ -698,8 +699,28 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
 
         curSDpt, curPDpt = crystal.get_amplitude_pytte(E, gamma0, gammah, hns0,
                                                        ucl=matCL, alphaAsym=alpha,
-                                                       Rcurvmm=Rcurv,
-                                                       tolerance=1e-5)
+                                                       Rcurvmm=Rcurv)
+
+        pyTTE = True
+        if pyTTE:
+            geotag = 0 if geom.startswith('B') else np.pi*0.5
+#            print(Rcurv)
+            ttx = TTcrystal(crystal = 'Si', hkl=crystal.hkl, thickness = Quantity(t*1e3,'um'), 
+                            debye_waller = 1, xrt_crystal=crystal, Rx=Quantity(Rcurv, 'mm'),
+                            asymmetry = Quantity(alpha+geotag, 'rad'))
+            tts = TTscan(constant=Quantity(E[0],'eV'),
+                         scan=Quantity(theta-thetaCenter, 'rad'),
+                         polarization='sigma')
+#            ttp = TTscan(constant=Quantity(E[0],'eV'),
+#                         scan=Quantity(theta-thetaCenter, 'rad'),
+#                         polarization='pi')
+            
+            scan_tt_s=TakagiTaupin(ttx, tts)
+#            scan_tt_p=TakagiTaupin(ttx, ttp)        
+    
+            if __name__ == '__main__':
+                scan_vector, R, T, curSD = scan_tt_s.run()
+#                scan_vector, R, T, curPD = scan_tt_p.run()
 
 # phases:
 #        ax2 = ax.twinx()
@@ -740,6 +761,12 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
 #            p8, = ax.plot((theta - thetaCenter) * convFactor,
 #                          abs(curP)**2, '-c', linewidth=2)
 
+        if pyTTE:
+            p11, = ax.plot((theta - thetaCenter) * convFactor,
+                           abs(curSD)**2, 'g', linewidth=2)
+    #        p12, = ax.plot((theta - thetaCenter) * convFactor,
+    #                       abs(curPD)**2, '--r')
+
         p13, = ax.plot((theta - thetaCenter) * convFactor,
                        abs(curSDpt)**2, 'b', linewidth=2)
 #        p14, = ax.plot((theta - thetaCenter) * convFactor,
@@ -754,6 +781,10 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
 
         plotList = [p7, p13]
         curveList = ['xrt perfect', 'xrt pyTTE']
+        if pyTTE:
+            plotList.append(p11)
+            curveList.append('pyTTE')
+
 
         legendPostmp = legendPos2 if alphaDeg > 0 else legendPos2+1
         ax.legend(plotList, curveList, loc=legendPostmp)
@@ -764,13 +795,13 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
 
         fig.savefig(fname + '.png')
 
-    E0 = 30000. if geom.startswith('L') else 7000.
+    E0 = 30000. if geom.startswith('L') or hkl =='333' else 15000.
 #    convFactor = 180 / np.pi * 3600.  # arcsec
     convFactor = 1e6
     for radius in Rcurvmm:
         if hkl == '111':  # Si111
             if geom.startswith('Bragg'):
-                dtheta = np.linspace(-200, 200, 1000) * 1e-6
+                dtheta = np.linspace(min(-2e6/radius, -100), 100, 2000) * 1e-6
             else:
                 dtheta = np.linspace(-150, 100, 1000) * 1e-6
                 #                dtheta = np.linspace(-5-np.abs(alphas[0])*2*50e3/radius,
@@ -1437,22 +1468,26 @@ def run_tests():
 #                           Rcurvmm=np.inf, alphas=[30])
     # compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
     #                       Rcurvmm=np.inf, alphas=[30])
-    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-                           Rcurvmm=50*1e3,
-                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+#    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
+#                           Rcurvmm=50*1e3,
+#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
 #    compare_rocking_curves_bent('111', t=1.0, geom='Bragg reflected',
 #                           Rcurvmm=1e3,
 #                           alphas=[0, 4, 8, 12])
 
-    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-                           Rcurvmm=50*1e3,
-                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
-    compare_crystal_bending('111', t=0.5, geom='Bragg reflected',
+#    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
+#                           Rcurvmm=50*1e3,
+#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
+    compare_crystal_bending('111', t=1., geom='Bragg reflected',
                             Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
+#                            Rcurvmm=[np.inf, 1e5]) #, 1e4, 1e3])
 
-    compare_crystal_bending('111', t=0.5, geom='Laue reflected',
-                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3],
-                            alphas=[5.])
+#    compare_crystal_bending('333', t=1.5, geom='Bragg reflected',
+#                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
+
+#    compare_crystal_bending('111', t=0.5, geom='Laue reflected',
+#                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3],
+#                            alphas=[5.])
 
 #check that Bragg transmitted and Laue transmitted give the same results if the
 #beam path is equal:
