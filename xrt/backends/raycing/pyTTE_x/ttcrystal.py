@@ -239,10 +239,10 @@ class TTcrystal:
         except:
             raise KeyError('At least one of the required keywords crystal, hkl, or thickness is missing!')
 
-#        try:
-#            self.xrt_crystal = kwargs['xrt_crystal']
-#        except:
-#            raise "No XRT"
+        try:
+            self.xrt_crystal = kwargs['xrt_crystal']
+        except:
+            raise "No XRT"
 
         #Optional keywords       
         for k in ['asymmetry','in_plane_rotation']:
@@ -307,8 +307,7 @@ class TTcrystal:
             manual anisotropic elastic matrices    -> clear
 
         Input:
-            crystal_str = string representation of the crystal in compliance with xraylib.
-            REDEFINED: dictionary containing crystal name, d, a, b, c, alpha, beta, gamma.
+            crystal_str = string representation of the crystal in compliance with xraylib
         '''
 
         #Check whether the crystal_str is valid and available in xraylib
@@ -320,16 +319,13 @@ class TTcrystal:
 #        else:
 #            raise ValueError('Input argument crystal_str is not type str!')
 
-#        self.crystal_data = {
-#                'name': 'Si', 
-#                'a': 5.430710,
-#                'b': 5.430710,
-#                'c': 5.430710,
-#                'd': 3.13542188,   
-#                'alpha': 90.0, 
-#                'beta': 90.0, 
-#                'gamma': 90.0}
-        self.crystal_data = crystal_str
+        # xrt.materials.CrystalSi ONLY
+        self.crystal_data = {
+                'name': 'Si', 
+                'a': self.xrt_crystal.get_a(),
+                'b': self.xrt_crystal.get_a(),
+                'c': self.xrt_crystal.get_a(),
+                'alpha': 90.0, 'beta': 90.0, 'gamma': 90.0}
 
         #calculate the direct and reciprocal primitive vectors 
         self.direct_primitives, self.reciprocal_primitives = crystal_vectors(self.crystal_data)
@@ -641,8 +637,7 @@ class TTcrystal:
             
         #d-spacing of the reflection
 #        d = Quantity(xraylib.Crystal_dSpacing(self.crystal_data,*self.hkl),'A')
-#        d = self.xrt_crystal.d
-        d = self.crystal_data['d']
+        d = self.xrt_crystal.d
 
         wavelength = 2*d*np.sin(bragg_angle.in_units('rad'))
 
@@ -672,8 +667,7 @@ class TTcrystal:
             
         #d-spacing of the reflection
 #        d = Quantity(xraylib.Crystal_dSpacing(self.crystal_data,*self.hkl),'A')
-#        d = self.xrt_crystal.d
-        d = self.crystal_data['d']
+        d = self.xrt_crystal.d
 
         wavelength = HC_CONST/bragg_energy
 
@@ -734,14 +728,12 @@ class TTcrystal:
                 Ry = self.Ry.in_units(self._jacobian_length_unit)
             else:
                 Ry = None
-
             if self.deformation_model[0] == 'anisotropic':
                 if self.deformation_model[1] == 'fixed_shape': 
                     self.displacement_jacobian = anisotropic_plate_fixed_shape(Rx, Ry, self.S.in_units('GPa^-1'),
                                                                                self.thickness.in_units(self._jacobian_length_unit))[0]
                     self.djparams = anisotropic_plate_fixed_shape(Rx, Ry, self.S.in_units('GPa^-1'),
                                                                   self.thickness.in_units(self._jacobian_length_unit))[-1]
-
                 else:
                     self.displacement_jacobian = anisotropic_plate_fixed_torques(Rx, Ry, self.S.in_units('GPa^-1'),
                                                                                  self.thickness.in_units(self._jacobian_length_unit))[0]
