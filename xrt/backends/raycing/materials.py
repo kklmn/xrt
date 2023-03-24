@@ -1558,7 +1558,7 @@ class Crystal(Material):
 
         """
 
-        Rcurv = Rcurvmm*1e3  # [um]
+        Rcurv = Rcurvmm*1e3 if Rcurvmm != np.inf else 1e18  # [um]
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         
         if hasattr(self, 'get_a'):
@@ -1641,12 +1641,16 @@ class Crystal(Material):
         beta = abs(beamInDotHNormal) - 0.5*h/k
 
         # For solving ksi = Dh/D0 
-        c0 = 0.5e4*k*chi0*(1/abs(beamInDotNormal)+1/beamOutDotNormal)
+#        c0 = 0.5e4*k*chi0*(1/abs(beamInDotNormal)+1/beamOutDotNormal)
+#        ch = 0.5e4*k*chih/beamOutDotNormal
+#        cb = 0.5e4*k*chih_/abs(beamInDotNormal)
+
+        c0 = 0.5e4*k*chi0*(-1/beamInDotNormal+1/beamOutDotNormal)
         ch = 0.5e4*k*chih/beamOutDotNormal
-        cb = 0.5e4*k*chih_/abs(beamInDotNormal)
+        cb = -0.5e4*k*chih_/beamInDotNormal
 
         # For solving Y = D0 
-        g0 = 0.5e4*k*chi0/abs(beamInDotNormal)  # passed into both kernels but used only by Laue
+        g0 = -0.5e4*k*chi0/beamInDotNormal  # passed into both kernels but used only by Laue
         # gb = 0.5*k*chih_/beamInDotNormal  # Same as cb
         
         theta = np.arcsin(abs(beamInDotHNormal))

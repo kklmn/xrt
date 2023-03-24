@@ -1432,6 +1432,8 @@ __kernel void get_amplitudes_pytte(const float c1,
         cot_a0 = 0;}
     else {
         cot_a0 = cos_a0/sin_a0;}
+    
+    if (geometry==1) {cot_a0=1/cot_a0;};
 
     float4 scap = (float4)(sin_p*cos_ah, sin_p*sin_ah,
                            cos_p*cos_ah, cos_p*sin_ah);
@@ -1481,8 +1483,9 @@ __kernel void get_amplitudes_pytte(const float c1,
             };
             if (rke > 0) {
                 zstep *= min(0.9*sqrt(sqrt(tol/rke)), 4.0);
-            };
-    
+            } else {
+                zstep *= 4.0;
+            }    
             if (z+zstep < -t) {
                 zstep = -t-z;
             };
