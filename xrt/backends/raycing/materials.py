@@ -1661,7 +1661,7 @@ class Crystal(Material):
         
         nzrays = np.where((dtheta > tminCL) & (dtheta < tmaxCL))[0]  #
 
-        startSteps = 10000  # Best guess value
+        startSteps = 500000  # Best guess value
 
         bLength = len(nzrays)
         t001 = time.time()
