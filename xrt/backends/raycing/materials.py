@@ -86,6 +86,14 @@ else:
     unicode = unicode
     basestring = basestring
 
+try:
+    from .pyTTE_x import TTcrystal, Quantity
+    isPyTTE = True
+#    print("Importing pyTTE")
+except ImportError:
+    isPyTTE = False
+#    print("pyTTE not found")
+
 elementsList = (
     'none', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
     'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V',
@@ -1508,6 +1516,196 @@ class Crystal(Material):
         polFactor = np.cos(2. * thetaB)
         curveP = for_one_polarization(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
+
+    def get_amplitude_pytte(self, E, beamInDotNormal, beamOutDotNormal=None,
+                      beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
+                      Rcurvmm=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
+                      background='zero', limExtend=1.5):
+        r"""
+        Calculates complex amplitude reflectivity for s- and
+        p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
+        on [pytte code](ttps://github.com/aripekka/pyTTE),
+        [https://arxiv.org/abs/2006.04952](https://arxiv.org/abs/2006.04952)
+
+        *alphaAsymm*: float
+            Angle of asymmetry in radians.
+            
+        *Rcurvmm*: float
+            Radius of curvature in mm. Positive for concave bend.
+            
+        *ucl*: 
+            instance of XRT_CL class, defines the OpenCL device and precision
+            of calculation. Calculations should run fine in single precision,
+            float32. See XRT_CL.
+        
+        *tolerance*: float
+            Precision tolerance for RK adaptive step algorithm.
+            
+        *maxSteps*: int
+            Emergency exit to avoid kernel freezing if the step gets too small.
+            
+        *background*: string
+            Defines how to calculate amplitudes outside the
+            integration region. Can be either 'zeros' (default) or 'plain' -
+            filled with values for plain crystal.
+
+        *limExtend*: float
+            Automatic estimation of integration region is often
+            too optimistic. This parameter extends the range where integration
+            will be applied. Calculation can take longer when the range is
+            too wide.
+
+
+        """
+
+        Rcurv = Rcurvmm*1e3  # [um]
+        geotag = 0 if self.geom.startswith('B') else np.pi*0.5
+        
+        if hasattr(self, 'get_a'):
+            pytte_dict = {
+                    'name': 'Si',  # TODO: Use element-based name compatible with pytte
+                    'a': self.get_a(),  # this one works only with CrystalSi
+                    'b': self.get_a(),  # TODO: use real value
+                    'c': self.get_a(),  # TODO: use real value
+                    'd': self.d,   
+                    'alpha': 90.0,  # TODO: use real value 
+                    'beta': 90.0,  # TODO: use real value 
+                    'gamma': 90.0}  # TODO: use real value
+        elif hasattr(self, 'a'):
+            pytte_dict = {
+                    'name': 'Si',  # TODO: Use element-based name compatible with pytte
+                    'a': self.a,  # this one works only with CrystalSi
+                    'b': self.b,  # TODO: use real value
+                    'c': self.c,  # TODO: use real value
+                    'd': self.d,   
+                    'alpha': self.alpha,  # TODO: use real value 
+                    'beta': self.beta,  # TODO: use real value 
+                    'gamma': self.gamma}  # TODO: use real value
+        else:
+            raise("")
+        thickness = 1. if self.t is None else self.t
+
+        # Instantiating pytte TTCrystal to calculate displacement vectors
+        ttx = TTcrystal(crystal = pytte_dict, hkl=self.hkl,
+                        thickness = Quantity(thickness*1e3,'um'), 
+                        debye_waller = 1, xrt_crystal=self,
+                        Rx=Quantity(Rcurv, 'um'),
+                        asymmetry = Quantity(alphaAsym+geotag, 'rad'))
+        djparams = ttx.djparams
+
+        # Step 1. Evaluating the boundaries where the amplitudes are calculated        
+        NRAYS = len(E)
+        tminCL = np.zeros(NRAYS, dtype=ucl.cl_precisionF)
+        tmaxCL = np.zeros_like(tminCL)
+        if hasattr(self, 'get_d') and xd is not None and yd is not None:
+            crystd = self.get_d(xd, yd)
+        else:
+            crystd = self.d
+            
+        h = 2*np.pi / crystd  # in inverse um
+        thetaB = self.get_Bragg_angle(E)  # variation of d ignored in polFactor
+
+        F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/crystd)
+        chcbmod = np.sqrt(np.abs(chih*chih_))
+
+        alpha0 = thetaB + alphaAsym
+        alphah = thetaB - alphaAsym
+
+        gamma_term = np.sin(alphah)/np.sin(alpha0)
+        k_bragg = 0.5*h / beamInDotHNormal       
+
+        b_const_term = -0.5*k_bragg*(1 + gamma_term)*np.real(chi0)  # gamma0/gammah in pytte notation
+        scalarArgs = [ucl.cl_precisionF(djparams[0]),
+                      ucl.cl_precisionF(djparams[1]),
+                      ucl.cl_precisionF(djparams[2]),  # InvR1 in 1/um
+                      ucl.cl_precisionF(alphaAsym),
+                      ucl.cl_precisionF(thickness*1e3),  # From mm to um
+                      ucl.cl_precisionF(h*1e4)]  # h = 2*np.pi/d From 1/A to 1/um
+        slicedROArgs = [ucl.cl_precisionF(b_const_term*1e4), # From 1/A to 1/um
+                        ucl.cl_precisionF(thetaB),
+                        ucl.cl_precisionF(chcbmod)]
+        slicedRWArgs = [tminCL, tmaxCL]
+
+        tminCL, tmaxCL = ucl.run_parallel(
+            'estimate_bent_width', scalarArgs, slicedROArgs,
+            None, slicedRWArgs, None, dimension=NRAYS)
+                
+        tmid = 0.5*(tmaxCL+tminCL)
+        thw = 0.5*(tmaxCL-tminCL)
+        tminCL = tmid - limExtend*thw  # Initial estimate is often over-optimistic
+        tmaxCL = tmid + limExtend*thw  # Increasing the range
+
+        # Step 2. Working with real angles
+        waveLength = CH / E  # the word "lambda" is reserved. in Angstrom [1e-7mm]
+        k = PI2 / waveLength  # in inverse Angstrom [1e7 1/mm]
+        beta = abs(beamInDotHNormal) - 0.5*h/k
+
+        # For solving ksi = Dh/D0 
+        c0 = 0.5e4*k*chi0*(1/abs(beamInDotNormal)+1/beamOutDotNormal)
+        ch = 0.5e4*k*chih/beamOutDotNormal
+        cb = 0.5e4*k*chih_/abs(beamInDotNormal)
+
+        # For solving Y = D0 
+        g0 = 0.5e4*k*chi0/abs(beamInDotNormal)  # passed into both kernels but used only by Laue
+        # gb = 0.5*k*chih_/beamInDotNormal  # Same as cb
+        
+        theta = np.arcsin(abs(beamInDotHNormal))
+        alpha0 = theta+alphaAsym
+        alphah = theta-alphaAsym        
+
+        dtheta = theta - thetaB
+        
+        nzrays = np.where((dtheta > tminCL) & (dtheta < tmaxCL))[0]  #
+
+        startSteps = 10000  # Best guess value
+
+        bLength = len(nzrays)
+        t001 = time.time()
+        amp_s = np.zeros(bLength, dtype=ucl.cl_precisionC)
+        amp_p = np.zeros(bLength, dtype=ucl.cl_precisionC)
+        npoints = np.zeros(bLength, dtype=ucl.cl_precisionF)  # Convergence monitor
+        hgammah = h*1e4/beamOutDotNormal[nzrays]
+        scalarArgs = [ucl.cl_precisionF(djparams[0]),  # C1
+                      ucl.cl_precisionF(djparams[1]),  # C2
+                      ucl.cl_precisionF(djparams[2]),  # InvR1
+                      ucl.cl_precisionF(alphaAsym),
+                      ucl.cl_precisionF(thickness*1e3),
+                      ucl.cl_precisionF(tolerance), # RK Adaptive step control                     
+                      np.int32(maxSteps), 
+                      np.int32(startSteps),
+                      np.int32(geotag)
+                      ]
+        slicedROArgs = [ucl.cl_precisionF(hgammah),
+                        ucl.cl_precisionF(hgammah*beta[nzrays]),  # To compensate for precision loss
+                        ucl.cl_precisionF(thetaB[nzrays]),
+                        ucl.cl_precisionF(alpha0[nzrays]),
+                        ucl.cl_precisionF(alphah[nzrays]),
+                        ucl.cl_precisionC(c0[nzrays]),
+                        ucl.cl_precisionC(ch[nzrays]),
+                        ucl.cl_precisionC(cb[nzrays]),
+                        ucl.cl_precisionC(g0[nzrays])]
+
+        slicedRWArgs = [amp_s, amp_p, npoints]
+
+        amp_s, amp_p, npoints = ucl.run_parallel(
+            'get_amplitudes_pytte', scalarArgs, slicedROArgs,
+            None, slicedRWArgs, None, dimension=bLength, complexity=startSteps) 
+
+#        from matplotlib import pyplot as plt
+#        plt.figure("npoints")
+#        plt.plot(dtheta[nzrays], npoints)
+#        plt.savefig("npoints.png")
+        if background.startswith('zero'):
+            curveS = np.zeros(NRAYS, dtype=np.complex128)
+            curveP = np.zeros_like(curveS)
+        else:
+            curveS, curveP = self.get_amplitude(E, beamInDotNormal, 
+                                            beamOutDotNormal, beamInDotHNormal)
+        norm=np.sqrt(np.abs(beamOutDotNormal)/np.abs(beamInDotNormal))
+        curveS[nzrays] = amp_s*norm[nzrays]
+        curveP[nzrays] = amp_p*norm[nzrays]
+        print("Amplitude calculation for", bLength, "points takes", time.time()-t001, "s")
+        return curveS, curveP
 
     def get_amplitude_TT(self, E, beamInDotNormal, beamOutDotNormal=None,
                          beamInDotHNormal=None, alphaAsym=None,

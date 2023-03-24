@@ -6,7 +6,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "19 Mar 2017"
 import numpy as np
 import os
-#import time
+import time
 from .. import raycing
 import pickle
 #import zlib
@@ -38,6 +38,9 @@ class XRT_CL(object):
         self.cl_filename = filename
         self.lastTargetOpenCL = None
         self.lastPrecisionOpenCL = None
+        self.autoTune = True  # TODO: to be set in set_cl
+        self.targetTimePerRun = 1.
+
         self.set_cl(targetOpenCL, precisionOpenCL)
         self.cl_is_blocking = True
 
@@ -47,7 +50,7 @@ class XRT_CL(object):
         p = pickle.dumps(obj, protocol)
 #        z = zlib.compress(p, 0)
         return socket.send(p, flags=flags)
-
+    
     def recv_zipped_pickle(self, socket, flags=0, protocol=2):
         """inverse of send_zipped_pickle. From pyzmq docs"""
         z = socket.recv(flags)
@@ -252,6 +255,7 @@ class XRT_CL(object):
             self.cl_ctx = []
             self.cl_program = []
             self.cl_mf = None
+            self.run_parallel = self.run_parallel_max
             if not self.useZMQ:
                 for device in iDevice:
                     cl_ctx = cl.Context(devices=[device])
@@ -261,23 +265,34 @@ class XRT_CL(object):
                             options=['-I', __fdir__])])
                     self.cl_ctx.extend([cl_ctx])
                 self.cl_mf = cl.mem_flags
+                if self.autoTune and len(self.cl_ctx) < 2 and\
+                    os.name.endswith('nt'):
+                        self.run_parallel = self.run_parallel_desktop
 
-    def run_parallel(self, kernelName='', scalarArgs=None,
+    def run_parallel_max(self, kernelName='', scalarArgs=None,
                      slicedROArgs=None, nonSlicedROArgs=None,
-                     slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0):
+                     slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0,
+                     complexity=0):
+
+#        print("Complexity", complexity, "; Dimension", dimension)
 
         if self.useZMQ:
-            outgoing_dict = {'kernelName': kernelName,
+            outgoing_dict = {'kernelName': kernelName, 
                              'scalarArgs': scalarArgs,
                              'slicedROArgs': slicedROArgs,
                              'nonSlicedROArgs': nonSlicedROArgs,
                              'slicedRWArgs': slicedRWArgs,
                              'nonSlicedRWArgs': nonSlicedRWArgs,
-                             'dimension': dimension}
+                             'dimension': dimension,
+                             'complexity': complexity}
 #            self.ZMQsocket.send_pyobj(outgoing_dict, protocol=0)
+#            print(outgoing_dict)
             self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
             #  Get the reply.
             ret = self.recv_zipped_pickle(self.ZMQsocket)
+#            print(ret)
+#            if hasattr(ret, 'status'):
+#                raise 'Error on server side'
         else:
             ka_offset = len(scalarArgs) if scalarArgs is not None else 0
             ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
@@ -285,7 +300,7 @@ class XRT_CL(object):
             rw_offset = len(slicedRWArgs) if slicedRWArgs is not None else 0
             rw_pos = ka_offset + ro_offset + ns_offset
             nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
-
+    
             kernel_bufs = []
             global_size = []
             ev_h2d = []
@@ -295,7 +310,7 @@ class XRT_CL(object):
             ndslice = []
             ndsize = []
             minWGS = 1e20
-
+    
             for ictx, ctx in enumerate(self.cl_ctx):
                 nCUw = 1
                 nCU.extend([nCUw])
@@ -303,7 +318,7 @@ class XRT_CL(object):
                 if tmpWGS < minWGS:
                     minWGS = tmpWGS
                 # nCU.extend([ctx.devices[0].max_compute_units*nCUw])
-
+    
             totalCUs = np.sum(nCU)
             minWGS = 256
             divider = minWGS * totalCUs
@@ -315,17 +330,17 @@ class XRT_CL(object):
                 dimension = (np.trunc(dimension/divider) + 1) * divider
                 nDiff = int(dimension - oldSize)
                 needResize = True
-
+    
             work_cl_ctx = self.cl_ctx if dimension > totalCUs else [self.cl_ctx[0]]
             nctx = len(work_cl_ctx)
-
+    
             for ictx, ctx in enumerate(work_cl_ctx):
                 ev_h2d.extend([[]])
                 kernel_bufs.extend([[]])
                 if scalarArgs is not None:
                     kernel_bufs[ictx].extend(scalarArgs)
                 ndstart.extend([sum(ndsize)])
-
+    
                 if dimension > 1:
                     if ictx < nctx - 1:
                         ndsize.extend([np.floor(dimension*nCU[ictx]/totalCUs)])
@@ -347,13 +362,13 @@ class XRT_CL(object):
                         kernel_bufs[ictx].extend([cl.Buffer(
                             self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
-
+    
                 if nonSlicedROArgs is not None:
                     for iarg, arg in enumerate(nonSlicedROArgs):
                         kernel_bufs[ictx].extend([cl.Buffer(
                             self.cl_ctx[ictx], self.cl_mf.READ_ONLY |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
-
+    
                 if slicedRWArgs is not None:
                     for iarg, arg in enumerate(slicedRWArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
@@ -371,7 +386,7 @@ class XRT_CL(object):
                             self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
                     global_size.extend([np.array([1]).shape])
-
+    
             local_size = None
             for ictx, ctx in enumerate(work_cl_ctx):
                 kernel = getattr(self.cl_program[ictx], kernelName)
@@ -380,15 +395,15 @@ class XRT_CL(object):
                     global_size[ictx],
                     local_size,
                     *kernel_bufs[ictx])])
-
+    
             for iev, ev in enumerate(ev_run):
                 status = cl.command_execution_status.to_string(
                     ev.command_execution_status)
                 if _DEBUG > 20:
                     print("ctx status {0} {1}".format(iev, status))
-
+    
             ret = ()
-
+    
             if slicedRWArgs is not None:
                 for ictx, ctx in enumerate(work_cl_ctx):
                     for iarg, arg in enumerate(slicedRWArgs):
@@ -405,7 +420,7 @@ class XRT_CL(object):
                     for arg in slicedRWArgs:
                         arg = arg[:oldSize]
                 ret += tuple(slicedRWArgs)
-
+    
             if nonSlicedRWArgs is not None:
                 for ictx, ctx in enumerate(work_cl_ctx):
                     for iarg, arg in enumerate(nonSlicedRWArgs):
@@ -417,5 +432,202 @@ class XRT_CL(object):
                     for arg in nonSlicedRWArgs:
                         arg = arg[:oldSize]
                 ret += tuple(nonSlicedRWArgs)
+#        print("Total CL execution time:", time.time() - t0, "s")
+        return ret
+
+    def run_parallel_desktop(self, kernelName='', scalarArgs=None,
+                     slicedROArgs=None, nonSlicedROArgs=None,
+                     slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0,
+                     complexity=0):
+
+#        print("Running in GUI-friendly GPGPU mode")
+#        print("Complexity", int(complexity), "; Dimension", dimension)
+
+        if self.useZMQ:
+            outgoing_dict = {'kernelName': kernelName, 
+                             'scalarArgs': scalarArgs,
+                             'slicedROArgs': slicedROArgs,
+                             'nonSlicedROArgs': nonSlicedROArgs,
+                             'slicedRWArgs': slicedRWArgs,
+                             'nonSlicedRWArgs': nonSlicedRWArgs,
+                             'dimension': dimension,
+                             'complexity': complexity}
+#            self.ZMQsocket.send_pyobj(outgoing_dict, protocol=0)
+            self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
+            #  Get the reply.
+            ret = self.recv_zipped_pickle(self.ZMQsocket)
+        else:
+            ka_offset = len(scalarArgs) if scalarArgs is not None else 0
+            ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
+            ns_offset = len(nonSlicedROArgs) if nonSlicedROArgs is not None else 0
+            rw_offset = len(slicedRWArgs) if slicedRWArgs is not None else 0
+            rw_pos = ka_offset + ro_offset + ns_offset
+            nsrw_pos = ka_offset + ro_offset + ns_offset + rw_offset
+    
+            kernel_bufs = []
+            global_size = []
+            ev_h2d = []
+            ev_run = []
+            nCU = []
+            ndstart = []
+            ndslice = []
+            ndsize = []
+            minWGS = 1e20
+    
+            for ictx, ctx in enumerate(self.cl_ctx):
+                nCUw = 1
+                nCU.extend([nCUw])
+                tmpWGS = ctx.devices[0].max_work_group_size
+                if tmpWGS < minWGS:
+                    minWGS = tmpWGS
+    
+            totalCUs = np.sum(nCU)
+            minWGS = 256
+            divider = minWGS * totalCUs
+            n2f = np.remainder(dimension, divider)
+            needResize = False
+            # odd dimension performance fix
+            if n2f != 0 and dimension > divider:
+                oldSize = dimension
+                dimension = (np.trunc(dimension/divider) + 1) * divider
+                nDiff = int(dimension - oldSize)
+                needResize = True
+          
+            nsRObuf = []
+            nsRWbuf = []
+            
+            if nonSlicedROArgs is not None:
+                for arg in nonSlicedROArgs:
+                    nsRObuf.extend([cl.Buffer(
+                        self.cl_ctx[0], self.cl_mf.READ_ONLY |
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
+
+            if nonSlicedRWArgs is not None:
+                for arg in nonSlicedRWArgs:
+                    nsRWbuf.extend([cl.Buffer(
+                        self.cl_ctx[0], self.cl_mf.READ_WRITE |
+                        self.cl_mf.COPY_HOST_PTR, hostbuf=arg)])
+                global_size.extend([np.array([1]).shape])
+    
+            ret = ()
+
+            # new variable - number of chunks
+            startM = 128 if complexity < 1000 else 32
+            chunksize = int(minWGS*startM)
+            ndstart = 0
+            isFirstRun = True
+
+            while ndstart < dimension:
+                kernel_bufs = []
+                global_size = []
+                ev_run = []
+                nCU = []
+                t0 = time.time()
+
+                if scalarArgs is not None:
+                    kernel_bufs.extend(scalarArgs)
+    
+                if dimension > 1:
+                    if ndstart + chunksize < dimension:
+                        ndsize = chunksize
+                    else:
+                        ndsize = dimension - ndstart
+#                    ndslice = slice(ndstart, ndstart + ndsize)
+                else:
+                    break
+
+    # In case each photon has an array of input/output data we define a second
+    # dimension
+                if slicedROArgs is not None and dimension > 1:
+                    for iarg, arg in enumerate(slicedROArgs):
+                        newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                            else arg
+                        secondDim = np.int(len(newArg) / dimension)
+                        iSlice = slice(int(ndstart*secondDim),
+                                       int((ndstart+ndsize)*secondDim))
+                        kernel_bufs.extend([cl.Buffer(
+                            self.cl_ctx[0], self.cl_mf.READ_ONLY |
+                            self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
+    
+                if nonSlicedROArgs is not None:
+                    for buf in nsRObuf:
+                        kernel_bufs.extend([buf])
+    
+                if slicedRWArgs is not None:
+                    for iarg, arg in enumerate(slicedRWArgs):
+                        newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                            else arg
+                        secondDim = np.int(len(newArg) / dimension)
+                        iSlice = slice(int(ndstart*secondDim),
+                                       int((ndstart+ndsize)*secondDim))
+                        kernel_bufs.extend([cl.Buffer(
+                            self.cl_ctx[0], self.cl_mf.READ_WRITE |
+                            self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
+                    global_size.extend([(np.int(ndsize),)])
+
+                if nonSlicedRWArgs is not None:
+                    for buf in nsRWbuf:
+                        kernel_bufs.extend([buf])
+                    global_size.extend([np.array([1]).shape])
+                t1 = time.time()
+    
+                local_size = None
+                kernel = getattr(self.cl_program[0], kernelName)
+
+                ev_run.extend([kernel(
+                    self.cl_queue[0],
+                    global_size[0],
+                    local_size,
+                    *kernel_bufs)])
+        
+                for iev, ev in enumerate(ev_run):
+                    status = cl.command_execution_status.to_string(
+                        ev.command_execution_status)
+                    if _DEBUG > 20:
+                        print("ctx status {0} {1}".format(iev, status))
+        
+                if slicedRWArgs is not None:
+                    for iarg, arg in enumerate(slicedRWArgs):
+                        newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
+                            else arg
+                        secondDim = np.int(len(newArg) / dimension)
+                        iSlice = slice(int(ndstart*secondDim),
+                                       int((ndstart+ndsize)*secondDim))
+                        cl.enqueue_copy(self.cl_queue[0],
+                                        slicedRWArgs[iarg][iSlice],
+                                        kernel_bufs[iarg + rw_pos],
+                                        is_blocking=self.cl_is_blocking)
+                    if needResize:
+                        for arg in slicedRWArgs:
+                            arg = arg[:oldSize]
+#                    ret += tuple(slicedRWArgs)
+        
+                if nonSlicedRWArgs is not None:
+                    for iarg, arg in enumerate(nonSlicedRWArgs):
+                        cl.enqueue_copy(self.cl_queue[0],
+                                        nonSlicedRWArgs[iarg],
+                                        kernel_bufs[iarg + nsrw_pos],
+                                        is_blocking=self.cl_is_blocking)
+                    if needResize:
+                        for arg in nonSlicedRWArgs:
+                            arg = arg[:oldSize]
+#                    ret += tuple(nonSlicedRWArgs)
+
+                ndstart += chunksize
+                if complexity > 0:
+                    pStat = 100*ndstart/dimension if dimension>ndstart else 100
+                    print("{:.2f}% done".format(pStat))
+                t1 = time.time()
+                if isFirstRun:
+                    tpr = t1 - t0
+                    chunksize = int(minWGS * np.ceil(
+                            self.targetTimePerRun * startM / tpr))
+                    isFirstRun = False
+
+        if slicedRWArgs is not None:
+            ret += tuple(slicedRWArgs)
+
+        if nonSlicedRWArgs is not None:
+            ret += tuple(nonSlicedRWArgs)
 #        print("Total CL execution time:", time.time() - t0, "s")
         return ret
