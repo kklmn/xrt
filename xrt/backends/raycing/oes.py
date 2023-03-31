@@ -581,7 +581,7 @@ class BentLaueCylinder(OE):
 
 
 class BentLaueAnticlastic(OE):
-    """Elliptically bent reflective optical element in Laue geometry. The
+    """Parabolically bent reflective optical element in Laue geometry. The
         element may be synclastic if both radii have the same sign."""
 
 #    cl_plist = ("crossSectionInt", "R")
