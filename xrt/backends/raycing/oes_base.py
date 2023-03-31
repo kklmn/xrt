@@ -1969,11 +1969,17 @@ class OE(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormalOld)
                     elif matSur.useTT:
+                        if 'R' in self.__dict__.keys():
+                            Ry = self.R
+                        elif 'Rm' in self.__dict__.keys():
+                            Ry = self.Rm
+                        else:
+                            Ry = None
                         refl = matSur.get_amplitude_pytte(
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             alphaAsym=self.alpha,
-                            Rcurvmm=self.R if 'R' in self.__dict__.keys()
+                            Ry=Ry, Rx=self.Rs if 'Rs' in self.__dict__.keys()
                             else None,
                             ucl=self.ucl)
                     else:

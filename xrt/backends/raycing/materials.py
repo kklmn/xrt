@@ -1519,7 +1519,7 @@ class Crystal(Material):
 
     def get_amplitude_pytte(self, E, beamInDotNormal, beamOutDotNormal=None,
                       beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
-                      Rcurvmm=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
+                      Ry=None, Rx=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
                       background='zero', limExtend=1.5):
         r"""
         Calculates complex amplitude reflectivity for s- and
@@ -1530,8 +1530,11 @@ class Crystal(Material):
         *alphaAsymm*: float
             Angle of asymmetry in radians.
             
-        *Rcurvmm*: float
-            Radius of curvature in mm. Positive for concave bend.
+        *Ry*: float
+            Meridional radius of curvature in mm. Positive for concave bend.
+
+        *Rx*: float
+            Sagittal radius of curvature in mm. Positive for concave bend.
             
         *ucl*: 
             instance of XRT_CL class, defines the OpenCL device and precision
@@ -1558,7 +1561,9 @@ class Crystal(Material):
 
         """
 
-        Rcurv = Rcurvmm*1e3 if Rcurvmm != np.inf else 1e18  # [um]
+        # WARNING! x and y in xrt correspond to y and x in pytte!
+        Ryum = Ry*1e3 if Ry not in [np.inf, None] else np.inf  # [um] Meridional
+        Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         dh0tag = 0 if self.geom.endswith('reflected') else 1
         
@@ -1590,9 +1595,11 @@ class Crystal(Material):
         ttx = TTcrystal(crystal = pytte_dict, hkl=self.hkl,
                         thickness = Quantity(thickness*1e3,'um'), 
                         debye_waller = 1, xrt_crystal=self,
-                        Rx=Quantity(Rcurv, 'um'),
+                        Rx=Quantity(Ryum, 'um'),
+                        Ry=Quantity(Rxum, 'um'),
                         asymmetry = Quantity(alphaAsym+geotag, 'rad'))
         djparams = ttx.djparams
+        print("Ry, Rx, c1, c2, invR1", Ry, Rx, djparams)
 
         # Step 1. Evaluating the boundaries where the amplitudes are calculated        
         NRAYS = len(E)

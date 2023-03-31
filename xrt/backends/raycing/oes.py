@@ -581,7 +581,8 @@ class BentLaueCylinder(OE):
 
 
 class BentLaueAnticlastic(OE):
-    """Spherically bent reflective optical element in Laue geometry."""
+    """Elliptically bent reflective optical element in Laue geometry. The
+        element may be synclastic if both radii have the same sign."""
 
 #    cl_plist = ("crossSectionInt", "R")
 #    cl_local_z = """
@@ -607,6 +608,7 @@ class BentLaueAnticlastic(OE):
             Sagittal radius. Can be given as (*p*, *q*) for automatic
             calculation based the "Coddington" equations.
 
+
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
@@ -616,8 +618,10 @@ class BentLaueAnticlastic(OE):
             self.Rs = self.get_rsag_from_Coddington(self.Rs[0], self.Rs[1])
 
     def __pop_kwargs(self, **kwargs):
-        self.Rm = kwargs.pop('Rm', 1.0e4)
-        self.Rs = kwargs.pop('Rs', -1.0e4)
+        Rm = kwargs.pop('Rm', 1.0e4)
+        self.Rm = np.inf if Rm is None else Rm
+        Rs = kwargs.pop('Rs', -1.0e4)
+        self.Rs = np.inf if Rs is None else Rs
         return kwargs
 
     def local_z(self, x, y):
