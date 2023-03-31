@@ -498,7 +498,7 @@ def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
                                              Rcurvmm=Rcurv)
         curSDpt, curPDpt = crystal.get_amplitude_pytte(E, gamma0, gammah, hns0,
                                                        ucl=matCL, alphaAsym=alpha,
-                                                       Rcurvmm=Rcurv,
+                                                       Ry=Rcurv,
                                                        tolerance=1e-6)
 
 # phases:
@@ -699,7 +699,7 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
 
         curSDpt, curPDpt = crystal.get_amplitude_pytte(E, gamma0, gammah, hns0,
                                                        ucl=matCL, alphaAsym=alpha,
-                                                       Rcurvmm=Rcurv)
+                                                       Ry=Rcurv)
 
         pyTTE = True
         if pyTTE:
