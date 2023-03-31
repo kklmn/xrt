@@ -1754,6 +1754,19 @@ class OE(object):
                 if isAsymmetric:
                     beamInDotSurfaceNormal = lb.a[goodN]*oeNormal[-3] +\
                         lb.b[goodN]*oeNormal[-2] + lb.c[goodN]*oeNormal[-1]
+                    # The following code will consider finite thickness of
+                    # the Laue crystal
+                    if material is not None:
+                        if matSur.kind in ['crystal'] and \
+                            matSur.geom.startswith('Laue'):
+                                thMax = -matSur.t / beamInDotSurfaceNormal
+                                dpth = np.random.rand(len(lb.a[goodN])) * thMax
+                                lb.x[goodN] += lb.a[goodN] * dpth
+                                lb.y[goodN] += lb.b[goodN] * dpth
+                                lb.z[goodN] += lb.c[goodN] * dpth
+                                deepNormal = list(local_n(lb.x[goodN],
+                                                          lb.y[goodN]))
+                                oeNormal[0:3] = deepNormal[0:3]
                 else:
                     beamInDotSurfaceNormal = beamInDotNormal
 
@@ -1956,7 +1969,7 @@ class OE(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormalOld)
                     elif matSur.useTT:
-                        refl = matSur.get_amplitude_TT(
+                        refl = matSur.get_amplitude_pytte(
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             alphaAsym=self.alpha,

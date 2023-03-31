@@ -580,6 +580,87 @@ class BentLaueCylinder(OE):
         return self.local_n_cylinder(x, y, self.R, self.alpha)
 
 
+class BentLaueAnticlastic(OE):
+    """Spherically bent reflective optical element in Laue geometry."""
+
+#    cl_plist = ("crossSectionInt", "R")
+#    cl_local_z = """
+#    float local_z(float8 cl_plist, int i, float x, float y)
+#    {
+#        if (cl_plist.s0 == 0)
+#        {
+#            return cl_plist.s1 - sqrt(cl_plist.s1*cl_plist.s1 - x*x -y*y);
+#        }
+#        else
+#        {
+#          return 0.5 * (y * y + x * x) / cl_plist.s1;
+#        }
+#    }"""
+
+    def __init__(self, *args, **kwargs):
+        """
+        *Rm*: float or 2-tuple.
+            Meridional bending radius. Can be given as (*p*, *q*) for automatic
+            calculation based the "Coddington" equations.
+
+        *Rs*: float or 2-tuple.
+            Sagittal radius. Can be given as (*p*, *q*) for automatic
+            calculation based the "Coddington" equations.
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        OE.__init__(self, *args, **kwargs)
+        if isinstance(self.Rm, (tuple, list)):
+            self.Rm = self.get_Rmer_from_Coddington(self.Rm[0], self.Rm[1])
+        if isinstance(self.Rs, (tuple, list)):
+            self.Rs = self.get_rsag_from_Coddington(self.Rs[0], self.Rs[1])
+
+    def __pop_kwargs(self, **kwargs):
+        self.Rm = kwargs.pop('Rm', 1.0e4)
+        self.Rs = kwargs.pop('Rs', -1.0e4)
+        return kwargs
+
+    def local_z(self, x, y):
+        return 0.5*x**2 / self.Rs + 0.5*y**2 / self.Rm
+
+    def local_n(self, x, y):
+        """Determines the normal vector of OE at (x, y) position."""
+        a = -x / self.Rs  # -dz/dx
+        b = -y / self.Rm  # -dz/dy
+        c = 1.
+
+        norm = np.sqrt(a**2 + b**2 + 1)
+        a /= norm
+        b /= norm
+        c /= norm
+
+        sinpitch = -b
+        cospitch = np.sqrt(1 - b**2)
+
+        sinroll = -a
+        cosroll = np.sqrt(1 - a**2)
+
+        aB = np.zeros_like(a)
+#        bB = c
+#        cB = -b
+        bB = np.ones_like(a)
+        cB = np.zeros_like(a)
+        if self.alpha:
+            bB, cB = raycing.rotate_x(bB, cB, self.cosalpha, -self.sinalpha)
+
+#        if self.alpha:  from BentLaueCylinder
+#            b, c = raycing.rotate_x(b, c, -self.sinalpha, -self.cosalpha)
+#        else:
+#            b, c = c, -b
+
+        bB, cB = raycing.rotate_x(bB, cB, cospitch, sinpitch)
+        aB, cB = raycing.rotate_y(aB, cB, cosroll, sinroll)
+
+        normB = (bB**2 + cB**2 + aB**2)**0.5
+
+        return [aB/normB, bB/normB, cB/normB, a/norm, b/norm, c/norm]
+
+
 class GroundBentLaueCylinder(BentLaueCylinder):
     """Ground-bent reflective optical element in Laue geometry."""
 
@@ -1564,6 +1645,94 @@ class Plate(DCM):
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())
         return gb, lb1, lb2
+
+
+class BentLauePlate(Plate):
+    """Elliptically bent reflective optical element in Laue geometry with finite
+    thickness."""
+
+#    cl_plist = ("crossSectionInt", "R")
+#    cl_local_z = """
+#    float local_z(float8 cl_plist, int i, float x, float y)
+#    {
+#        if (cl_plist.s0 == 0)
+#        {
+#            return cl_plist.s1 - sqrt(cl_plist.s1*cl_plist.s1 - x*x -y*y);
+#        }
+#        else
+#        {
+#          return 0.5 * (y * y + x * x) / cl_plist.s1;
+#        }
+#    }"""
+
+    def __init__(self, *args, **kwargs):
+        """
+        *Rm*: float or 2-tuple.
+            Meridional bending radius. Can be given as (*p*, *q*) for automatic
+            calculation based the "Coddington" equations.
+
+        *Rs*: float or 2-tuple.
+            Sagittal radius. Can be given as (*p*, *q*) for automatic
+            calculation based the "Coddington" equations.
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        OE.__init__(self, *args, **kwargs)
+        if isinstance(self.Rm, (tuple, list)):
+            self.Rm = self.get_Rmer_from_Coddington(self.Rm[0], self.Rm[1])
+        if isinstance(self.Rs, (tuple, list)):
+            self.Rs = self.get_rsag_from_Coddington(self.Rs[0], self.Rs[1])
+
+    def __pop_kwargs(self, **kwargs):
+        self.Rm = kwargs.pop('Rm', 1.0e4)
+        self.Rs = kwargs.pop('Rs', -1.0e4)
+        return kwargs
+
+    def local_z1(self, x, y):
+        return 0.5*x**2 / self.Rs + 0.5*y**2 / self.Rm
+
+    def local_z2(self, x, y):
+        return self.local_z1(x, y)
+
+    def local_n1(self, x, y):
+        """Determines the normal vector of OE at (x, y) position."""
+        a = -x / self.Rs  # -dz/dx
+        b = -y / self.Rm  # -dz/dy
+        c = 1.
+
+        norm = np.sqrt(a**2 + b**2 + 1)
+        a /= norm
+        b /= norm
+        c /= norm
+
+        sinpitch = -b
+        cospitch = np.sqrt(1 - b**2)
+
+        sinroll = -a
+        cosroll = np.sqrt(1 - a**2)
+
+        aB = np.zeros_like(a)
+#        bB = c
+#        cB = -b
+        bB = np.ones_like(a)
+        cB = np.zeros_like(a)
+        if self.alpha:
+            bB, cB = raycing.rotate_x(bB, cB, self.cosalpha, -self.sinalpha)
+
+#        if self.alpha:  from BentLaueCylinder
+#            b, c = raycing.rotate_x(b, c, -self.sinalpha, -self.cosalpha)
+#        else:
+#            b, c = c, -b
+
+        bB, cB = raycing.rotate_x(bB, cB, cospitch, sinpitch)
+        aB, cB = raycing.rotate_y(aB, cB, cosroll, sinroll)
+
+        normB = (bB**2 + cB**2 + aB**2)**0.5
+
+        return [aB/normB, bB/normB, cB/normB, a/norm, b/norm, c/norm]
+
+    def local_n2(self, x, y):
+        return self.local_n1(x, y)
 
 
 class ParaboloidFlatLens(Plate):

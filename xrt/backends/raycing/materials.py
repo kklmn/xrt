@@ -1560,6 +1560,7 @@ class Crystal(Material):
 
         Rcurv = Rcurvmm*1e3 if Rcurvmm != np.inf else 1e18  # [um]
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
+        dh0tag = 0 if self.geom.endswith('reflected') else 1
         
         if hasattr(self, 'get_a'):
             pytte_dict = {
@@ -1661,7 +1662,7 @@ class Crystal(Material):
         
         nzrays = np.where((dtheta > tminCL) & (dtheta < tmaxCL))[0]  #
 
-        startSteps = 500000  # Best guess value
+        startSteps = 500000 if ucl.lastPrecisionOpenCL=='float64' else 2000000
 
         bLength = len(nzrays)
         t001 = time.time()
@@ -1677,7 +1678,8 @@ class Crystal(Material):
                       ucl.cl_precisionF(tolerance), # RK Adaptive step control                     
                       np.int32(maxSteps), 
                       np.int32(startSteps),
-                      np.int32(geotag)
+                      np.int32(geotag),
+                      np.int32(dh0tag)
                       ]
         slicedROArgs = [ucl.cl_precisionF(hgammah),
                         ucl.cl_precisionF(hgammah*beta[nzrays]),  # To compensate for precision loss
@@ -1690,7 +1692,7 @@ class Crystal(Material):
                         ucl.cl_precisionC(g0[nzrays])]
 
         slicedRWArgs = [amp_s, amp_p, npoints]
-
+        print('Calculating bent crystal reflectivity')
         amp_s, amp_p, npoints = ucl.run_parallel(
             'get_amplitudes_pytte', scalarArgs, slicedROArgs,
             None, slicedRWArgs, None, dimension=bLength, complexity=startSteps) 
@@ -1705,7 +1707,8 @@ class Crystal(Material):
         else:
             curveS, curveP = self.get_amplitude(E, beamInDotNormal, 
                                             beamOutDotNormal, beamInDotHNormal)
-        norm=np.sqrt(np.abs(beamOutDotNormal)/np.abs(beamInDotNormal))
+        norm=np.ones_like(beamInDotNormal) if dh0tag else\
+            np.sqrt(np.abs(beamOutDotNormal)/np.abs(beamInDotNormal))
         curveS[nzrays] = amp_s*norm[nzrays]
         curveP[nzrays] = amp_p*norm[nzrays]
         print("Amplitude calculation for", bLength, "points takes", time.time()-t001, "s")
@@ -1742,7 +1745,7 @@ class Crystal(Material):
 #                            (1. - beamOutDotNormal**2) * HH *\
 #                            np.cos(alphaAsym) / Rcurv
                 else:
-                    Bm = np.sin(asymmAngle) *\
+                    Bm = np.tan(asymmAngle) *\
                         (1. + gamma_0h * (1. + self.nuPoisson)) / gamma_0h
 #  Calculating reflectivities in Laue geometry is still experimental
 #  Use at your own risk

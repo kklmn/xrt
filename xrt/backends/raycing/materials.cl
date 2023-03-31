@@ -1405,6 +1405,7 @@ __kernel void get_amplitudes_pytte(const float c1,
                                    const int stmax,
                                    const int jmax,
                                    const int geometry,
+                                   const int td,
                                    __global float *hgh_global,
                                    __global float *hgh_beta_global,
                                    __global float *thetaB,
@@ -1491,8 +1492,13 @@ __kernel void get_amplitudes_pytte(const float c1,
             };
         }
         mem_fence(CLK_LOCAL_MEM_FENCE);
-        ampS_out[ii] = prod_c(d0h.s01, d0h.s23);  // dh sigma
-        ampP_out[ii] = prod_c(d0h.s45, d0h.s67);  // dh pi
+        if (td==0) { // Diffracted
+            ampS_out[ii] = prod_c(d0h.s01, d0h.s23);  // dh sigma
+            ampP_out[ii] = prod_c(d0h.s45, d0h.s67);  // dh pi
+        } else {  //Transmitted
+            ampS_out[ii] = d0h.s23;  // dh sigma
+            ampP_out[ii] = d0h.s67;  // dh pi                
+        }
 
     } else {  // Bragg
         zstep = t / (float)jmax;
