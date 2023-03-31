@@ -36,6 +36,7 @@ eLims = [34850, 35100]
 #Rbend = 10.0e3  # Underbend
 #Rbend = 1e6  # (Almost) Plain crystal
 Rbend = [3e3, 5e3, 10e3, 1e6]
+Rs = -5e3
 precision='float64'
 
 crystalSi01 = rmats.CrystalSi(
@@ -71,16 +72,19 @@ def build_beamline():
 #        limPhysX=[-5.0, 5.0],
 #        limPhysY=[-5.0, 5.0])
 
-    beamLine.lauePlate01 = roes.BentLaueCylinder(
+#    beamLine.lauePlate01 = roes.BentLaueCylinder(
+    beamLine.lauePlate01 = roes.BentLaueAnticlastic(
         bl=beamLine,
-        R=Rbend,
+        Rm=Rbend,
+        Rs=None,
 #        R=(5000, 3000),
         center=[-10, 5000, 0],
         pitch=1.8891209547313612,
         alpha="15deg",
-        material=crystalSi01,
-#        targetOpenCL='auto',
-#        precisionOpenCL='float64',
+#        material=crystalSi01,
+        material=crystalSi02,
+        targetOpenCL='auto',
+        precisionOpenCL=precision,
         limPhysX=[-5.0, 5.0],
         limPhysY=[-5.0, 5.0])
 
@@ -105,9 +109,10 @@ def build_beamline():
 #        limPhysX=[-5.0, 5.0],
 #        limPhysY=[-5.0, 5.0])
 
-    beamLine.lauePlate02 = roes.BentLaueCylinder(
+    beamLine.lauePlate02 = roes.BentLaueAnticlastic(
         bl=beamLine,
-        R=Rbend,
+        Rm=Rbend,
+        Rs=Rs,
 #        R=(5000, 3000),
         center=[10, 5000, 0],
         pitch=1.8891209547313612,
@@ -166,7 +171,7 @@ rrun.run_process = run_process
 def define_plots():
     plots = []
 
-    title01 = r"01 - Geometric Model"
+    title01 = r"03 - 1D Elliptical"
     plot01 = xrtplot.XYCPlot(
         beam=r"screen01beamLocal01",
         xaxis=xrtplot.XYCAxis(
@@ -182,7 +187,7 @@ def define_plots():
         )
     plots.append(plot01)
 
-    title02=r"02 - Takagi-Taupin Model"
+    title02=r"04 - 2D {}".format('Anticlastic' if Rs<0 else 'Synclastic')
     plot02 = xrtplot.XYCPlot(
         beam=r"screen02beamLocal01",
         xaxis=xrtplot.XYCAxis(
@@ -202,10 +207,12 @@ def define_plots():
 
 def plot_generator(plots, beamLine):
     for radius in Rbend:
-        beamLine.lauePlate01.R = radius
-        beamLine.lauePlate02.R = radius
-        for plot in plots:
-            plot.saveName=plot.title+'_R{:.1f}m.png'.format(radius/1000)
+        beamLine.lauePlate01.Rm = radius
+        beamLine.lauePlate02.Rm = radius
+        plots[0].saveName=plots[0].title+'_Rm{0:.1f}m.png'.format(
+                    radius/1000)
+        plots[1].saveName=plots[1].title+'_Rm{0:.1f}m_Rs{1:.1f}m.png'.format(
+                    radius/1000, Rs/1000 if Rs is not None else 0)
 
         yield
 
