@@ -1766,7 +1766,15 @@ class OE(object):
                                 lb.z[goodN] += lb.c[goodN] * dpth
                                 deepNormal = list(local_n(lb.x[goodN],
                                                           lb.y[goodN]))
-                                oeNormal[0:3] = deepNormal[0:3]
+
+                                oeNormal[0:3] = deepNormal[0:3]                               
+                                beamInDotNormal = lb.a[goodN]*oeNormal[0] +\
+                                    lb.b[goodN]*oeNormal[1] + lb.c[goodN]*oeNormal[2]
+                                lb.theta = np.zeros_like(lb.x)
+                                beamInDotNormal[beamInDotNormal < -1] = -1
+                                beamInDotNormal[beamInDotNormal > 1] = 1
+                                lb.theta[goodN] = np.arccos(beamInDotNormal) - np.pi/2
+
                 else:
                     beamInDotSurfaceNormal = beamInDotNormal
 
