@@ -320,13 +320,14 @@ class TTcrystal:
 #            raise ValueError('Input argument crystal_str is not type str!')
 
         # xrt.materials.CrystalSi ONLY
-        self.crystal_data = {
-                'name': 'Si', 
-                'a': self.xrt_crystal.get_a(),
-                'b': self.xrt_crystal.get_a(),
-                'c': self.xrt_crystal.get_a(),
-                'alpha': 90.0, 'beta': 90.0, 'gamma': 90.0}
-
+#        self.crystal_data = {
+#                'name': 'Si', 
+#                'a': self.xrt_crystal.get_a(),
+#                'b': self.xrt_crystal.get_a(),
+#                'c': self.xrt_crystal.get_a(),
+#                'alpha': 90.0, 'beta': 90.0, 'gamma': 90.0}
+        self.crystal_data = crystal_str
+        print(self.crystal_data)
         #calculate the direct and reciprocal primitive vectors 
         self.direct_primitives, self.reciprocal_primitives = crystal_vectors(self.crystal_data)
 
