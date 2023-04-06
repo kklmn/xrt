@@ -89,6 +89,15 @@ from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
 
+try:
+    from ...backends.raycing import materialsclasses as mtlcls
+    from ...backends.raycing import compoundsclasses as cpdcls
+    from ...backends.raycing import crystalclasses as xtlcls
+    pdfMats = True
+except ImportError:
+    pdfMats = False
+    raise("no predef mats")
+
 
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
@@ -387,6 +396,25 @@ class XrtQook(qt.QWidget):
                                     amodule, elname, afunction, smenu)
                         else:  # as single entry itself
                             self._addAction(amodule, sec, afunction, tmenu)
+                    if menuName.endswith('Material'):
+                        pdmmenu = tmenu.addMenu(self.tr("Predefined"))
+                        for mlibname, mlib in zip(
+                                ['Elemental', 'Compounds', 'Crystals'],
+                                [mtlcls, cpdcls, xtlcls]):
+                            pdflmenu = pdmmenu.addMenu(self.tr(mlibname))
+                            for ssec, snames in list(
+                                    mlib.__allSectioned__.items()):
+                                if isinstance(snames, (tuple, list)):
+                                    pdfsmenu = pdflmenu.addMenu(ssec)
+                                    for sname in snames:
+                                        self._addAction(
+                                                mlib, sname, self.addMaterial,
+                                                pdfsmenu)
+                                else:
+                                    self._addAction(
+                                            mlib, ssec, self.addMaterial,
+                                            pdflmenu)
+
                 else:  # only with __all__
                     for elname in amodule.__all__:
                         self._addAction(amodule, elname, afunction, tmenu)
@@ -1397,7 +1425,7 @@ class XrtQook(qt.QWidget):
                                                    argSpec[3]):
                                 if arg == 'bl':
                                     argVal = self.rootBLItem.text()
-                                if arg not in args and arg not in hpList:
+                                if arg not in uArgs and arg not in hpList:
                                     uArgs[arg] = argVal
 #                                    args.append(arg)
 #                                    argVals.append(argVal)
@@ -1415,7 +1443,7 @@ class XrtQook(qt.QWidget):
                                         argVal = kwline[1].strip("\' ")
                                     else:
                                         argVal = "None"
-                                    if arg not in args and arg not in hpList:
+                                    if arg not in uArgs and arg not in hpList:
                                         uArgs[arg] = argVal
 #                                        args.append(arg)
 #                                        argVals.append(argVal)
@@ -2740,6 +2768,18 @@ class XrtQook(qt.QWidget):
                         self._addAction(rmats, mName, self.addMaterial, smenu)
                 else:  # as single entry itself
                     self._addAction(rmats, sec, self.addMaterial, matMenu)
+            pdmmenu = matMenu.addMenu(self.tr("Predefined"))
+            for mlibname, mlib in zip(['Elemental', 'Compounds', 'Crystals'],
+                                      [mtlcls, cpdcls, xtlcls]):
+                pdflmenu = pdmmenu.addMenu(self.tr(mlibname))
+                for ssec, snames in list(mlib.__allSectioned__.items()):
+                    if isinstance(snames, (tuple, list)):
+                        pdfsmenu = pdflmenu.addMenu(ssec)
+                        for sname in snames:
+                            self._addAction(mlib, sname, self.addMaterial,
+                                            pdfsmenu)
+                    else:
+                        self._addAction(mlib, ssec, self.addMaterial, pdflmenu)
         else:  # only with __all__
             for mName in rmats.__all__:
                 self._addAction(rmats, mName, self.addMaterial, matMenu)
