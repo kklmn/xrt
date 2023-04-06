@@ -16,11 +16,11 @@ __allSectioned__ = collections.OrderedDict([
     ('Hexagonal',
         ('Be', 'Graphite', 'Beryl', 'AlphaQuartz', 'Sapphire', 'Titanium')),
     ('Tetragonal',
-        ('PET')),
+        ('PET',)),
     ('Orthorhombic',
         ('KAP', 'RbAP', 'TlAP', 'KTP')),
     ('Monoclinic',
-        ('Muscovite')),
+        ('Muscovite',)),
     ('Trigonal',
         ('LiNbO3', 'AlphaAlumina'))])
 
