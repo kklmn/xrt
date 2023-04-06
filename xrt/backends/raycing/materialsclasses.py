@@ -1,5 +1,5 @@
 from . import materials as rmat
-
+import collections
 
 __all__ = (
     'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
@@ -10,6 +10,26 @@ __all__ = (
     'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu',
     'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
     'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U')
+
+__allSectioned__ = collections.OrderedDict([
+    ('H-Ne',
+        ('H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne')),
+    ('Na-Ar',
+        ('Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar')),
+    ('K-Kr',
+        ('K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni',
+         'Cu', 'Zn', 'Ga', 'Ge''As', 'Se', 'Br', 'Kr')),
+    ('Rb-Xe',
+        ('Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd',
+         'Ag', 'Cd''In', 'Sn', 'Sb', 'Te', 'I', 'Xe')),
+    ('Cs-Lu',
+        ('Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd',
+         'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu')),
+    ('Hf-Bi',
+        ('Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl',
+         'Pb', 'Bi')),
+    ('Po-U',
+        ('Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U'))])
 
 
 class H(rmat.Material):
@@ -601,7 +621,7 @@ class Po(rmat.Material):
 
 
 class At(rmat.Material):
-    def __init__(self, name='Astatine', elements='At', rho=-1.000e+00,
+    def __init__(self, name='Astatine', elements='At', rho=8.91e+00,
                  *args, **kwargs):
         super().__init__(name=name, rho=rho, elements=elements,
                          *args, **kwargs)
@@ -615,7 +635,7 @@ class Rn(rmat.Material):
 
 
 class Fr(rmat.Material):
-    def __init__(self, name='Francium', elements='Fr', rho=-1.000e+00,
+    def __init__(self, name='Francium', elements='Fr', rho=2.48e+00,
                  *args, **kwargs):
         super().__init__(name=name, rho=rho, elements=elements,
                          *args, **kwargs)

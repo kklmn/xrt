@@ -1,7 +1,31 @@
 from . import materials as rmat
+import collections
+
+__all__ = ('Si', 'SiNIST', 'Si2', 'Ge', 'Diamond', 'GaAs', 'GaSb', 'GaP',
+           'InAs', 'InP', 'InSb', 'SiC', 'NaCl', 'CsF', 'LiF', 'KCl', 'CsCl',
+           'Be', 'Graphite', 'PET', 'Beryl', 'KAP', 'RbAP', 'TlAP',
+           'Muscovite', 'AlphaQuartz', 'Copper', 'LiNbO3', 'Platinum',
+           'Gold', 'Sapphire', 'LaB6', 'LaB6NIST', 'KTP', 'AlphaAlumina',
+           'Aluminum', 'Iron', 'Titanium')
+
+__allSectioned__ = collections.OrderedDict([
+    ('Cubic',
+        ('Si', 'Ge', 'Diamond', 'GaAs', 'GaSb', 'GaP', 'InAs', 'InP', 'InSb',
+         'SiC', 'NaCl', 'CsF', 'LiF', 'KCl', 'CsCl', 'Copper', 'Platinum',
+         'Gold', 'LaB6', 'Aluminum', 'Iron')),
+    ('Hexagonal',
+        ('Be', 'Graphite', 'Beryl', 'AlphaQuartz', 'Sapphire', 'Titanium')),
+    ('Tetragonal',
+        ('PET')),
+    ('Orthorhombic',
+        ('KAP', 'RbAP', 'TlAP', 'KTP')),
+    ('Monoclinic',
+        ('Muscovite')),
+    ('Trigonal',
+        ('LiNbO3', 'AlphaAlumina'))])
 
 
-class Si(rmat.CrystalFromCell):
+class Si(rmat.CrystalDiamond):
     '''System: Cubic
        Structure: ZincBlende
        R.W.G. Wyckoff, Crystal Structures, Interscience Publ. 1965, 1, p.26
@@ -11,25 +35,12 @@ class Si(rmat.CrystalFromCell):
 
 
        '''
-    def __init__(self, name='Si',
-                 atoms=[14, 14, 14, 14, 14, 14, 14, 14],
-                 atomsXYZ=[[0.0, 0.0, 0.0],
-                           [0.0, 0.5, 0.5],
-                           [0.5, 0.0, 0.5],
-                           [0.5, 0.5, 0.0],
-                           [0.25, 0.25, 0.25],
-                           [0.25, 0.75, 0.75],
-                           [0.75, 0.25, 0.75],
-                           [0.75, 0.75, 0.25]],
-                 a=5.4307, b=5.4307, c=5.4307,
-                 alpha=90.0, beta=90.0, gamma=90.0,
+    def __init__(self, name='Si', elements='Si', a=5.4307,
                  *args, **kwargs):
-        super().__init__(name=name,
-                         a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
-                         *args, **kwargs)
+        super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
 
 
-class SiNIST(rmat.CrystalFromCell):
+class SiNIST(rmat.CrystalDiamond):
     '''System: Cubic
        Structure: ZincBlende
        NIST Standard Reference Material 640c (Silicon Powder)
@@ -39,25 +50,12 @@ class SiNIST(rmat.CrystalFromCell):
 
 
        '''
-    def __init__(self, name='Si_NIST',
-                 atoms=[14, 14, 14, 14, 14, 14, 14, 14],
-                 atomsXYZ=[[0.0, 0.0, 0.0],
-                           [0.0, 0.5, 0.5],
-                           [0.5, 0.0, 0.5],
-                           [0.5, 0.5, 0.0],
-                           [0.25, 0.25, 0.25],
-                           [0.25, 0.75, 0.75],
-                           [0.75, 0.25, 0.75],
-                           [0.75, 0.75, 0.25]],
-                 a=5.4311946, b=5.4311946, c=5.4311946,
-                 alpha=90.0, beta=90.0, gamma=90.0,
+    def __init__(self, name='Si_NIST', elements='Si', a=5.4311946,
                  *args, **kwargs):
-        super().__init__(name=name,
-                         a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
-                         *args, **kwargs)
+        super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
 
 
-class Si2(rmat.CrystalFromCell):
+class Si2(rmat.CrystalDiamond):
     '''System: Cubic
        Structure: ZincBlende
        R.W.G. Wyckoff, Crystal Structures, Interscience Publ. 1965, 1, p.26
@@ -67,25 +65,12 @@ class Si2(rmat.CrystalFromCell):
 
 
        '''
-    def __init__(self, name='Si2',
-                 atoms=[14, 14, 14, 14, 14, 14, 14, 14],
-                 atomsXYZ=[[-0.125, -0.125, -0.125],
-                           [-0.125, 0.375, 0.375],
-                           [0.375, -0.125, 0.375],
-                           [0.375, 0.375, -0.125],
-                           [0.125, 0.125, 0.125],
-                           [0.125, 0.625, 0.625],
-                           [0.625, 0.125, 0.625],
-                           [0.625, 0.625, 0.125]],
-                 a=5.4307, b=5.4307, c=5.4307,
-                 alpha=90.0, beta=90.0, gamma=90.0,
+    def __init__(self, name='Si2', elements='Si', a=5.4307,
                  *args, **kwargs):
-        super().__init__(name=name,
-                         a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
-                         *args, **kwargs)
+        super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
 
 
-class Ge(rmat.CrystalFromCell):
+class Ge(rmat.CrystalDiamond):
     '''System: Cubic
        Structure: ZincBlende
        R.W.G. Wyckoff, Crystal Structures, Interscience Publ. 1965, 1, p.26
@@ -95,25 +80,12 @@ class Ge(rmat.CrystalFromCell):
 
 
        '''
-    def __init__(self, name='Ge',
-                 atoms=[32, 32, 32, 32, 32, 32, 32, 32],
-                 atomsXYZ=[[0.0, 0.0, 0.0],
-                           [0.0, 0.5, 0.5],
-                           [0.5, 0.0, 0.5],
-                           [0.5, 0.5, 0.0],
-                           [0.25, 0.25, 0.25],
-                           [0.25, 0.75, 0.75],
-                           [0.75, 0.25, 0.75],
-                           [0.75, 0.75, 0.25]],
-                 a=5.65735, b=5.65735, c=5.65735,
-                 alpha=90.0, beta=90.0, gamma=90.0,
+    def __init__(self, name='Ge', elements='Ge', a=5.65735,
                  *args, **kwargs):
-        super().__init__(name=name,
-                         a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
-                         *args, **kwargs)
+        super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
 
 
-class Diamond(rmat.CrystalFromCell):
+class Diamond(rmat.CrystalDiamond):
     '''System: Cubic
        Structure: ZincBlende
        R.W.G. Wyckoff, Crystal Structures, Interscience Publ. 1965, 1, p.26
@@ -123,22 +95,9 @@ class Diamond(rmat.CrystalFromCell):
 
 
        '''
-    def __init__(self, name='Diamond',
-                 atoms=[6, 6, 6, 6, 6, 6, 6, 6],
-                 atomsXYZ=[[0.0, 0.0, 0.0],
-                           [0.0, 0.5, 0.5],
-                           [0.5, 0.0, 0.5],
-                           [0.5, 0.5, 0.0],
-                           [0.25, 0.25, 0.25],
-                           [0.25, 0.75, 0.75],
-                           [0.75, 0.25, 0.75],
-                           [0.75, 0.75, 0.25]],
-                 a=3.56679, b=3.56679, c=3.56679,
-                 alpha=90.0, beta=90.0, gamma=90.0,
+    def __init__(self, name='Diamond', elements='C', a=3.56679,
                  *args, **kwargs):
-        super().__init__(name=name,
-                         a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
-                         *args, **kwargs)
+        super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
 
 
 class GaAs(rmat.CrystalFromCell):

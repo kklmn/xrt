@@ -289,7 +289,16 @@ class Material(object):
     """
     :class:`Material` serves for getting reflectivity, transmittivity,
     refractive index and absorption coefficient of a material specified by its
-    chemical formula and density."""
+    chemical formula and density.
+
+    We have added a set of predefined elemental materials and common
+    compounds based on [NIST table of X-Ray Mass Attenuation Coefficients]
+    (https://physics.nist.gov/PhysRefData/XrayMassCoef/tab1.html) and
+    [CXRO Table of Densities of Common Materials]
+    (https://henke.lbl.gov/cgi-bin/density.pl).
+
+
+    """
 
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
                  t=None, table='Chantler total', efficiency=None,
