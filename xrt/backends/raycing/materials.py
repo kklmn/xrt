@@ -124,6 +124,7 @@ elementsNames = ('none', 'Hydrogen', 'Helium', 'Lithium', 'Beryllium', 'Boron',
                  'Radon', 'Francium', 'Radium', 'Actinium', 'Thorium',
                  'Protactinium', 'Uranium')
 
+
 def read_atomic_data(elem):
     u"""
     Reads atomic data from ``AtomicData.dat`` file adopted from XOP [XOP]_.
@@ -1015,7 +1016,7 @@ class Crystal(Material):
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
 
-    hiddenParams = ['nuPoisson', 'calcBorrmann', 'useTT']
+    hiddenParams = ['nuPoisson', 'calcBorrmann']
 
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
@@ -1062,9 +1063,8 @@ class Crystal(Material):
 
         *useTT*: bool
             Specifies whether the reflectivity will by calculated by analytical
-            formula or by solution of the Takagi-Taupin equations (so far only
-            for the Laue geometry). Must be set to 'True' in order to calculate
-            the reflectivity of bent crystals.
+            formula or by solution of the Takagi-Taupin equations. Must be set
+            to 'True' in order to calculate the reflectivity of bent crystals.
 
         *mosaicity*: float, radians
             The sigma of the normal distribution of the crystallite normals.
@@ -1545,10 +1545,11 @@ class Crystal(Material):
         curveP = for_one_polarization(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
-    def get_amplitude_pytte(self, E, beamInDotNormal, beamOutDotNormal=None,
-                      beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
-                      Ry=None, Rx=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
-                      background='zero', limExtend=1.5):
+    def get_amplitude_pytte(
+            self, E, beamInDotNormal, beamOutDotNormal=None,
+            beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
+            Ry=None, Rx=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
+            autoLimits=True):
         r"""
         Calculates complex amplitude reflectivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
@@ -1575,16 +1576,12 @@ class Crystal(Material):
         *maxSteps*: int
             Emergency exit to avoid kernel freezing if the step gets too small.
 
-        *background*: string
-            Defines how to calculate amplitudes outside the
-            integration region. Can be either 'zeros' (default) or 'plain' -
-            filled with values for plain crystal.
-
-        *limExtend*: float
-            Automatic estimation of integration region is often
-            too optimistic. This parameter extends the range where integration
-            will be applied. Calculation can take longer when the range is
-            too wide.
+        *autoLimits*: bool
+            If True, the algorithm will try to automatically determine the
+            angular range where reflectivity will be calculated by numeric
+            integration. Useful for ray-tracing applications where angle of
+            incidence can be too far from Bragg condition, and integration
+            might take unnesessarily long time.
 
 
         """
@@ -1594,59 +1591,36 @@ class Crystal(Material):
         Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         dh0tag = 0 if self.geom.endswith('reflected') else 1
+        alphaAsym = 0 if alphaAsym is None else alphaAsym
+
+        if beamOutDotNormal is None:
+            beamOutDotNormal = -beamInDotNormal
+        if beamInDotHNormal is None:  # Bragg
+            beamInDotHNormal = beamInDotNormal
 
         classname = type(self).__name__
-        if isinstance(self, CrystalSi):  # Specific case of CrystalSi
-            pytte_dict = {
-                    'name': 'Si',
-                    'a': self.get_a(),
-                    'b': self.get_a(),
-                    'c': self.get_a(),
-                    'd': self.d,
-                    'alpha': 90.0,
-                    'beta': 90.0,
-                    'gamma': 90.0}
-        elif (isinstance(self, CrystalDiamond) and  # Known cubic structures
-              classname in ['GaAs', 'Ge', 'Si']):
-            pytte_dict = {
-                    'name': classname,
-                    'a': self.a,
-                    'b': self.a,
-                    'c': self.a,
-                    'd': self.d,
-                    'alpha': 90.0,
-                    'beta': 90.0,
-                    'gamma': 90.0}
-        elif (isinstance(self, CrystalFromCell) and  # Other known structures
-              classname in ['Copper', 'AlphaQuartz', 'Be', 'Beryl', 'LiF',
-                            'Sapphire']):
-            pytte_dict = {
-                    'name': classname,
-                    'a': self.a,
-                    'b': self.b,
-                    'c': self.c,
-                    'd': self.d,
-                    'alpha': np.degrees(self.alpha),
-                    'beta': np.degrees(self.beta),
-                    'gamma': np.degrees(self.gamma)}
-        else:
-            raise("Elastic constants for this kind of crystal not available")
         thickness = 1. if self.t is None else self.t
 
         # Instantiating pytte TTCrystal to calculate displacement vectors
-        ttx = TTcrystal(crystal=pytte_dict, hkl=self.hkl,
+        ttx = TTcrystal(crystal=classname, hkl=self.hkl,
                         thickness=Quantity(thickness*1e3, 'um'),
                         debye_waller=1, xrt_crystal=self,
                         Rx=Quantity(Ryum, 'um'),
                         Ry=Quantity(Rxum, 'um'),
                         asymmetry=Quantity(alphaAsym+geotag, 'rad'))
         djparams = ttx.djparams
-#        print("Ry, Rx, c1, c2, invR1", Ry, Rx, djparams)
 
         # Step 1. Evaluating the boundaries where the amplitudes are calculated
-        NRAYS = len(E)
-        tminCL = np.zeros(NRAYS, dtype=ucl.cl_precisionF)
-        tmaxCL = np.zeros_like(tminCL)
+
+        if isinstance(E, np.ndarray):
+            NRAYS = len(E)
+            beamInDotNormal *= np.ones_like(E)
+        else:
+            NRAYS = len(beamInDotNormal)
+            E *= np.ones_like(beamInDotNormal)
+
+        tmaxCL = np.ones(NRAYS, dtype=ucl.cl_precisionF)*np.pi
+        tminCL = -tmaxCL
         if hasattr(self, 'get_d') and xd is not None and yd is not None:
             crystd = self.get_d(xd, yd)
         else:
@@ -1656,36 +1630,36 @@ class Crystal(Material):
         thetaB = self.get_Bragg_angle(E)  # variation of d ignored in polFactor
 
         F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/crystd)
-        chcbmod = np.sqrt(np.abs(chih*chih_))
-
-        alpha0 = thetaB + alphaAsym
-        alphah = thetaB - alphaAsym
-
-        gamma_term = np.sin(alphah)/np.sin(alpha0)
-        k_bragg = 0.5*h / beamInDotHNormal
-
-        b_const_term = -0.5*k_bragg*(1 + gamma_term)*np.real(chi0)  # gamma0/gammah in pytte notation
-        scalarArgs = [ucl.cl_precisionF(djparams[0]),
-                      ucl.cl_precisionF(djparams[1]),
-                      ucl.cl_precisionF(djparams[2]),  # InvR1 in 1/um
-                      ucl.cl_precisionF(alphaAsym),
-                      ucl.cl_precisionF(thickness*1e3),  # From mm to um
-                      ucl.cl_precisionF(h*1e4)]  # h = 2*np.pi/d From 1/A to 1/um
-        slicedROArgs = [ucl.cl_precisionF(b_const_term*1e4),  # From 1/A to 1/um
-                        ucl.cl_precisionF(thetaB),
-                        ucl.cl_precisionF(chcbmod)]
-        slicedRWArgs = [tminCL, tmaxCL]
-
-        tminCL, tmaxCL = ucl.run_parallel(
-            'estimate_bent_width', scalarArgs, slicedROArgs,
-            None, slicedRWArgs, None, dimension=NRAYS)
-
-        tmid = 0.5*(tmaxCL+tminCL)
-        thw = 0.5*(tmaxCL-tminCL)
-        tminCL = tmid - limExtend*thw  # Initial estimate is often over-optimistic
-        tmaxCL = tmid + limExtend*thw  # Increasing the range
+        if autoLimits:
+            chcbmod = np.sqrt(np.abs(chih*chih_))
+            alpha0 = thetaB + alphaAsym
+            alphah = thetaB - alphaAsym
+            gamma_term = np.sin(alphah)/np.sin(alpha0)
+            k_bragg = 0.5*h / abs(beamInDotHNormal)
+            b_const_term = -0.5*k_bragg*(1 + gamma_term)*np.real(chi0)  # gamma0/gammah in pytte notation
+            scalarArgs = [ucl.cl_precisionF(djparams[0]),
+                          ucl.cl_precisionF(djparams[1]),
+                          ucl.cl_precisionF(djparams[2]),  # InvR1 in 1/um
+                          ucl.cl_precisionF(alphaAsym),
+                          ucl.cl_precisionF(thickness*1e3),  # From mm to um
+                          ucl.cl_precisionF(h*1e4)]  # h = 2*np.pi/d From 1/A to 1/um
+            slicedROArgs = [ucl.cl_precisionF(b_const_term*1e4),  # From 1/A to 1/um
+                            ucl.cl_precisionF(thetaB),
+                            ucl.cl_precisionF(chcbmod)]
+            slicedRWArgs = [tminCL, tmaxCL]
+    
+            tminCL, tmaxCL = ucl.run_parallel(
+                'estimate_bent_width', scalarArgs, slicedROArgs,
+                None, slicedRWArgs, None, dimension=NRAYS)
+    
+            limExtend = 3 if (abs(Ryum)>1e9 and abs(Rxum)>1e9) else 1.5
+            tmid = 0.5*(tmaxCL+tminCL)
+            thw = 0.5*(tmaxCL-tminCL)
+            tminCL = tmid - limExtend*thw  # Initial estimate is too narrow
+            tmaxCL = tmid + limExtend*thw  # Increasing the range
 
         # Step 2. Working with real angles
+
         waveLength = CH / E  # wavelength in Angstrom [1e-7mm]
         k = PI2 / waveLength  # in inverse Angstrom [1e7 1/mm]
         beta = abs(beamInDotHNormal) - 0.5*h/k
@@ -1708,7 +1682,6 @@ class Crystal(Material):
         alphah = theta-alphaAsym
 
         dtheta = theta - thetaB
-
         nzrays = np.where((dtheta > tminCL) & (dtheta < tmaxCL))[0]  #
 
         startSteps = 2000000
@@ -1751,7 +1724,8 @@ class Crystal(Material):
         plt.figure("npoints")
         plt.plot(dtheta[nzrays], npoints)
         plt.savefig("npoints.png")
-        if background.startswith('zero'):
+
+        if True:  # background.startswith('zero'):
             curveS = np.zeros(NRAYS, dtype=np.complex128)
             curveP = np.zeros_like(curveS)
         else:
@@ -2122,6 +2096,11 @@ class CrystalDiamond(CrystalFcc):
             self.a = a
             kwargs['d'] = a / sqrthkl2
             kwargs.pop('a')
+        self.b = self.a
+        self.c = self.a
+        self.alpha = np.pi/2.
+        self.beta = np.pi/2.
+        self.gamma = np.pi/2.
         super(CrystalDiamond, self).__init__(*args, **kwargs)
 
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):

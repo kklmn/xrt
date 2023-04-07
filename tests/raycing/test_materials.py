@@ -701,7 +701,7 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
                                                        ucl=matCL, alphaAsym=alpha,
                                                        Ry=Rcurv)
 
-        pyTTE = True
+        pyTTE = False
         if pyTTE:
             geotag = 0 if geom.startswith('B') else np.pi*0.5
 #            print(Rcurv)
@@ -1478,9 +1478,9 @@ def run_tests():
 #    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
 #                           Rcurvmm=50*1e3,
 #                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
-    compare_crystal_bending('111', t=1., geom='Bragg reflected',
-                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
-#                            Rcurvmm=[np.inf, 1e5]) #, 1e4, 1e3])
+    compare_crystal_bending('111', t=0.3, geom='Bragg reflected',
+#                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
+                            Rcurvmm=[np.inf]) #, 1e4, 1e3])
 
 #    compare_crystal_bending('333', t=1.5, geom='Bragg reflected',
 #                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
