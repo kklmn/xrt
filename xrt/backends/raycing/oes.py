@@ -95,11 +95,12 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DicedJohannToroid', 'DicedJohanssonToroid', 'LauePlate',
            'BentLaueCylinder', 'GroundBentLaueCylinder', 'BentLaueSphere',
            'BentFlatMirror', 'ToroidMirror',
-           'EllipticalMirrorParam', 'ParabolicalMirrorParam',
+           'EllipticalMirrorParam', 'ParabolicalMirrorParam', 'ConicalMirror',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
-           'SurfaceOfRevolution', 'NormalFZP',
+           'SurfaceOfRevolution', 'ParaboloidMirrorLens',
+           'EllipsoidMirrorLens', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
            'VLSLaminarGrating')
 import collections
@@ -108,7 +109,8 @@ __allSectioned__ = collections.OrderedDict([
         ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution')),
     ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
-         'ParabolicalMirrorParam')),
+         'ParabolicalMirrorParam', 'ConicalMirror', 'ParaboloidMirrorLens',
+         'EllipsoidMirrorLens')),
     ('Crystal optics',
         ('JohannCylinder', 'JohanssonCylinder', 'JohannToroid',
          'JohanssonToroid', 'GeneralBraggToroid', 'DicedJohannToroid',
@@ -1396,6 +1398,47 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         return [a, bNew, cNew]
 
 
+class ConicalMirror(OE):
+    """Conical mirror with base parallel to the side of the cone"""
+
+    def __init__(self, *args, **kwargs):
+        r"""
+        *L0*: float
+            Distance from the center of the mirror to the vertex of the cone.
+
+        *theta*: float
+            Half-angle of the cone in radians.
+
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        self.tt = np.tan(self.theta)
+        self.t2t = np.tan(2*self.theta)
+        self.redfocus = np.cos(self.theta)**2 /\
+            (1./self.tt-1./self.t2t)
+        OE.__init__(self, *args, **kwargs)
+
+    def __pop_kwargs(self, **kwargs):
+        self.L0 = kwargs.pop('L0', 1000.)  # distance to the cone vertex
+        self.theta = raycing.auto_units_angle(kwargs.pop('theta', np.pi/6.))
+        return kwargs
+
+    def local_z(self, x, y):
+        sqroot = np.sqrt(0.25*self.t2t**2*(y - self.L0)**2 -
+                         self.redfocus*self.t2t*x**2)
+        z = -0.5*self.t2t*(y-self.L0)-np.sign(self.t2t)*sqroot
+        return z
+
+    def local_n(self, x, y):
+        sqroot = np.sign(self.t2t)*np.sqrt(0.25*self.t2t**2*(y - self.L0)**2 -
+                                           self.redfocus*x*x*self.t2t)
+        a = -x*self.redfocus*self.t2t/sqroot  # -dz/dx
+        b = .5*self.t2t + 0.25*self.t2t**2*(y-self.L0)/sqroot  # -dz/dy
+        c = 1.
+        norm = (a**2 + b**2 + 1.)**0.5
+        return [a/norm, b/norm, c/norm]
+
+
 class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
     """Creates a DCM with a horizontally focusing 2nd crystal."""
 
@@ -1932,6 +1975,88 @@ class SurfaceOfRevolution(OE):
 
     def param_to_xyz(self, s, phi, r):
         return r * np.sin(phi), s, r * np.cos(phi)  # x, y, z
+
+
+class ParaboloidMirrorLens(SurfaceOfRevolution):
+    """Paraboloid of revolution a.k.a. Mirror Lens. By default will be oriented
+    for focusing. Set yaw to 180deg for collimation."""
+
+    def __init__(self, *args, **kwargs):
+        r"""
+        *q*: float
+            Distance from the center of the element to focus.
+
+        *r0*: float
+            Radius at the center of the element.
+
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        self.focus = -0.5*(self.q-(self.q**2+self.r0**2)**0.5)
+        self.s0 = self.focus+self.q
+        super(ParaboloidMirrorLens, self).__init__(*args, **kwargs)
+
+    def __pop_kwargs(self, **kwargs):
+        self.q = kwargs.pop('q', 500.)  # Distance to parabola focus
+        self.r0 = kwargs.pop('r0', 2.5)
+        return kwargs
+
+    def local_r(self, s, phi):
+        return 2*np.sqrt((self.s0-s)*self.focus)
+
+    def local_n(self, s, phi):
+        a = -np.sin(phi)
+        b = -np.sqrt(self.focus/(self.s0-s))
+        c = -np.cos(phi)
+        norm = np.sqrt(a**2 + b**2 + c**2)
+        return a/norm, b/norm, c/norm
+
+
+class EllipsoidMirrorLens(SurfaceOfRevolution):
+    """Ellipsoid of revolution a.k.a. Mirror Lens. Do not forget to set
+    reasonable limPhysY."""
+
+    def __init__(self, *args, **kwargs):
+        r"""
+        *ellipseA*: float
+            Semi-major axis, half of source-to-sample distance.
+
+        *ellipseB*: float
+            Semi-minor axis. Do not confuse with the size of the actual
+            capillary!
+
+        *workingDistance*: float
+            Distance between the end face of the capillary and focus. Mind the
+            length of the optical element for proper positioning.
+
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        super(EllipsoidMirrorLens, self).__init__(*args, **kwargs)
+        self.ctd = self.ellipseA - self.workingDistance -\
+            0.5*np.abs(self.limPhysY[-1]-self.limPhysY[0])
+
+    def __pop_kwargs(self, **kwargs):
+        self.ellipseA = kwargs.pop('ellipseA', 10000)  # Semi-major axis
+        self.ellipseB = kwargs.pop('ellipseB', 2.5)  # Semi-minor axis
+        self.workingDistance = kwargs.pop('workingDistance', 17.)
+        return kwargs
+
+    def local_r(self, s, phi):
+        r = self.ellipseB * np.sqrt(abs(1 - (self.ctd+s)**2 /
+                                        self.ellipseA**2))
+        return r
+
+    def local_n(self, s, phi):
+        A2s2 = np.array(self.ellipseA**2 - (self.ctd+s)**2)
+        A2s2[A2s2 <= 0] = 1e22
+        nr = -self.ellipseB / self.ellipseA * (self.ctd+s) / np.sqrt(A2s2)
+        norm = np.sqrt(nr**2 + 1.)
+        b = nr / norm
+        a = -np.sin(phi) / norm
+        c = -np.cos(phi) / norm
+        norm = np.sqrt(a**2 + b**2 + c**2)
+        return a/norm, b/norm, c/norm
 
 
 class NormalFZP(OE):
