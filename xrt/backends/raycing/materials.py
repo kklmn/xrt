@@ -1016,12 +1016,12 @@ class Crystal(Material):
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
 
-    hiddenParams = ['nuPoisson', 'calcBorrmann']
+#    hiddenParams = ['nuPoisson', 'calcBorrmann']
 
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler', name='',
-                 nuPoisson=0., calcBorrmann=None, useTT=False, mosaicity=0):
+                 volumetricDiffraction=False, useTT=False, mosaicity=0):
         u"""
         *hkl*: sequence
             hkl indices.
@@ -1045,21 +1045,14 @@ class Crystal(Material):
             This parameter is explained in the description of the parent class
             :class:`Material`.
 
-        *nuPoisson*: float
-            Poisson's ratio. Used to calculate the properties of bent crystals.
-
-        *calcBorrmann*: str
-            Controls the origin of the ray leaving the crystal. Can be 'None',
-            'uniform', 'Bessel' or 'TT'. If 'None', the point of reflection
-            is located on the surface of incidence. In all other cases the
-            coordinate of the exit point is sampled according to the
-            corresponding distribution: 'uniform' is a fast approximation for
-            thick crystals, 'Bessel' is exact solution for the flat crystals,
-            'TT' is exact solution of Takagi-Taupin equations for bent and flat
-            crystals ('TT' requires *targetOpenCL* in the Optical Element to be
-            not 'None' and *useTT* in the :class:`Crystal` to be 'True'. Not
-            recommended for crystals thicker than 100 µm due to heavy
-            computational load).
+        *volumetricDiffraction*: bool
+            By default the diffracted ray originates in the point of incidence
+            on the surface of the crystal in both Bragg and Laue case. When
+            volumetricDiffraction is enabled, the point of diffraction is
+            generated randomly along the transmitted beam path, effectively
+            broadening the meridional beam profile in plain Laue crystal. If
+            the crystal is bent, local deformation of the diffracting plane is
+            taken into account, creating the polychromatic focusing effect.
 
         *useTT*: bool
             Specifies whether the reflectivity will by calculated by analytical
@@ -1125,8 +1118,7 @@ class Crystal(Material):
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
-        self.nuPoisson = nuPoisson
-        self.calcBorrmann = calcBorrmann
+        self.volumetricDiffraction = volumetricDiffraction
         self.useTT = useTT
         self.mosaicity = mosaicity
 
@@ -1245,6 +1237,7 @@ class Crystal(Material):
             polFactor = np.abs(np.cos(2. * theta0))
         return 4 * self.chiToFd2 * polFactor * np.abs(Fhkl) / abs(b)**0.5
 
+    """
     def get_Borrmann_out(self, goodN, oeNormal, lb, a_out, b_out, c_out,
                          alphaAsym=None, Rcurvmm=None, ucl=None, useTT=False):
 
@@ -1390,6 +1383,7 @@ class Crystal(Material):
             totalX = 0.5*np.ones(bLength)
 
         return totalX
+    """
 
     def get_amplitude(self, E, beamInDotNormal, beamOutDotNormal=None,
                       beamInDotHNormal=None, xd=None, yd=None):
@@ -1553,7 +1547,7 @@ class Crystal(Material):
         r"""
         Calculates complex amplitude reflectivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
-        on [pytte code](ttps://github.com/aripekka/pyTTE),
+        on modified [pytte code](https://github.com/aripekka/pyTTE),
         [https://arxiv.org/abs/2006.04952](https://arxiv.org/abs/2006.04952)
 
         *alphaAsymm*: float
@@ -1720,10 +1714,10 @@ class Crystal(Material):
             'get_amplitudes_pytte', scalarArgs, slicedROArgs,
             None, slicedRWArgs, None, dimension=bLength, complexity=startSteps)
 
-        from matplotlib import pyplot as plt
-        plt.figure("npoints")
-        plt.plot(dtheta[nzrays], npoints)
-        plt.savefig("npoints.png")
+#        from matplotlib import pyplot as plt
+#        plt.figure("npoints")
+#        plt.plot(dtheta[nzrays], npoints)
+#        plt.savefig("npoints.png")
 
         if True:  # background.startswith('zero'):
             curveS = np.zeros(NRAYS, dtype=np.complex128)
@@ -2137,7 +2131,7 @@ class CrystalSi(CrystalDiamond):
         kwargs['elements'] = 'Si'
         kwargs['hkl'] = self.hkl
 # Mechanics of Materials, 23 (1996), p.314
-        kwargs['nuPoisson'] = 0.22
+#        kwargs['nuPoisson'] = 0.22
         super(CrystalSi, self).__init__(*args, **kwargs)
 
     def dl_l(self, t=None):
