@@ -23,30 +23,44 @@ import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 
-showIn3D = False
-#showIn3D = True
+#showIn3D = False
+showIn3D = True
 
-nrays=250000
+nrays = 50000
 bins = 256
 ppb = 1
-lims=[-5, 5]
-eLims = [34850, 35100]
+xtallims = [-5, 5]
+thickness = 4
+sourceDx, sourceDz = 0.5, 0.1
+sourceDxPrime, sourceDzPrime = 0, 0
+E0, dE = 35000, 30
+eLims = [E0-dE, E0+dE]
+eLimsSource = np.linspace(E0-dE, E0+dE, 7)
+#eLims = [34850, 35100]
+pLaueSCM, qLaueSCM  = 10000., 60000
 #Rbend = 3.00e3  # Overbend
 #Rbend = 5.00e3  # Optimal bend
-#Rbend = 10.0e3  # Underbend
+Rbend = -30.0e3  # Underbend
 #Rbend = 1e6  # (Almost) Plain crystal
-Rbend = [3e3, 5e3, 10e3, 1e6]
+#Rbend = [10e3, 20e3, 40e3, 1e6]
+#Rbend = [3e3, 5e3, 10e3, 1e6]
 precision='float64'
 
 crystalSi01 = rmats.CrystalSi(
-    t=1.0,
+    t=thickness,
     geom=r"Laue reflected",
     name=r"Si111")
 
+alpha = np.radians(45)
+thetaB = crystalSi01.get_Bragg_angle(E0)
+pitch = np.pi/2+thetaB+alpha
+
+
 crystalSi02 = rmats.CrystalSi(
-    t=1.0,
+    t=thickness,
     geom=r"Laue reflected",
     name=r"Si111tt",
+    volumetricDiffraction=True,
     useTT=True)
 
 
@@ -57,10 +71,15 @@ def build_beamline():
         bl=beamLine,
         nrays=nrays,
         center=[-10, 0, 0],
-        dxprime=0.0001,
-        dzprime=0.0001,
-        energies=eLims,
-        distE='flat')
+        dx=sourceDx,
+        dz=sourceDz,
+        distx='flat',
+        distz='flat',
+        dxprime=sourceDxPrime,
+        dzprime=sourceDzPrime,
+        energies=eLimsSource,
+        distE='lines',
+        )
 
 #    beamLine.lauePlate01 = roes.LauePlate(
 #        bl=beamLine,
@@ -74,53 +93,65 @@ def build_beamline():
     beamLine.lauePlate01 = roes.BentLaueCylinder(
         bl=beamLine,
         R=Rbend,
-#        R=(5000, 3000),
-        center=[-10, 5000, 0],
-        pitch=1.8891209547313612,
-        alpha="15deg",
+#        R=(pLaueSCM, qLaueSCM),
+        center=[-10, pLaueSCM, 0],
+        pitch=pitch, # 1.8891209547313612,
+        alpha=alpha,
         material=crystalSi01,
 #        targetOpenCL='auto',
 #        precisionOpenCL='float64',
         limPhysX=[-5.0, 5.0],
         limPhysY=[-5.0, 5.0])
 
+    beamLine.Mirror01 = roes.OE(
+        bl=beamLine,
+        center=[-10, pLaueSCM + 500, 'auto'],
+        pitch=-thetaB,
+        positionRoll=np.pi,
+        limPhysX=[-5.0, 5.0],
+        limPhysY=[-400.0, 400.0])
+
     beamLine.screen01 = rscreens.Screen(
         bl=beamLine,
-        center=[-10, 10000, 'auto'])
+        center=[-10, pLaueSCM+qLaueSCM, 'auto'])
 
     beamLine.geometricSource02 = rsources.GeometricSource(
         bl=beamLine,
         nrays=nrays,
         center=[10, 0, 0],
-        dxprime=0.0001,
-        dzprime=0.0001,
-        energies=eLims,
-        distE='flat')
-
-#    beamLine.lauePlate02 = roes.LauePlate(
-#        bl=beamLine,
-#        center=[10, 5000, 0],
-#        pitch=[35000],
-#        material=crystalSi01,
-#        limPhysX=[-5.0, 5.0],
-#        limPhysY=[-5.0, 5.0])
+        dx=sourceDx,
+        dz=sourceDz,
+        distx='flat',
+        distz='flat',
+        dxprime=sourceDxPrime,
+        dzprime=sourceDzPrime,
+        energies=eLimsSource,
+        distE='lines')
 
     beamLine.lauePlate02 = roes.BentLaueCylinder(
         bl=beamLine,
         R=Rbend,
-#        R=(5000, 3000),
-        center=[10, 5000, 0],
-        pitch=1.8891209547313612,
-        alpha="15deg",
+#        R=(pLaueSCM, qLaueSCM),
+        center=[10, pLaueSCM, 0],
+        pitch=pitch,
+        alpha=alpha,
         material=crystalSi02,
         targetOpenCL='auto',
         precisionOpenCL=precision,
         limPhysX=[-5.0, 5.0],
         limPhysY=[-5.0, 5.0])
 
+    beamLine.Mirror02 = roes.OE(
+        bl=beamLine,
+        center=[10, pLaueSCM + 500, 'auto'],
+        pitch=-thetaB,
+        positionRoll=np.pi,
+        limPhysX=[-5.0, 5.0],
+        limPhysY=[-400.0, 400.0])
+
     beamLine.screen02 = rscreens.Screen(
         bl=beamLine,
-        center=[10, 10000, 'auto'])
+        center=[10, pLaueSCM+qLaueSCM, 'auto'])
 
 
     return beamLine
@@ -132,26 +163,36 @@ def run_process(beamLine):
     lauePlate01beamGlobal01, lauePlate01beamLocal01 = beamLine.lauePlate01.reflect(
         beam=geometricSource01beamGlobal01)
 
-    screen01beamLocal01 = beamLine.screen01.expose(
+    mirror01beamGlobal01, mirror01beamLocal01 = beamLine.Mirror01.reflect(
         beam=lauePlate01beamGlobal01)
+
+    screen01beamLocal01 = beamLine.screen01.expose(
+        beam=mirror01beamGlobal01)
 
     geometricSource02beamGlobal01 = beamLine.geometricSource02.shine()
 
     lauePlate02beamGlobal01, lauePlate02beamLocal01 = beamLine.lauePlate02.reflect(
         beam=geometricSource02beamGlobal01)
 
-    screen02beamLocal01 = beamLine.screen02.expose(
+    mirror02beamGlobal01, mirror02beamLocal01 = beamLine.Mirror02.reflect(
         beam=lauePlate02beamGlobal01)
+
+    screen02beamLocal01 = beamLine.screen02.expose(
+        beam=mirror02beamGlobal01)
 
     outDict = {
         'geometricSource01beamGlobal01': geometricSource01beamGlobal01,
         'lauePlate01beamGlobal01': lauePlate01beamGlobal01,
         'lauePlate01beamLocal01': lauePlate01beamLocal01,
+        'mirror01beamGlobal01': mirror01beamGlobal01,
+        'mirror01beamLocal01': mirror01beamLocal01,
         'screen01beamLocal01': screen01beamLocal01,
 
         'geometricSource02beamGlobal01': geometricSource02beamGlobal01,
         'lauePlate02beamGlobal01': lauePlate02beamGlobal01,
         'lauePlate02beamLocal01': lauePlate02beamLocal01,
+        'mirror02beamGlobal01': mirror02beamGlobal01,
+        'mirror02beamLocal01': mirror02beamLocal01,
         'screen02beamLocal01': screen02beamLocal01}
 
     if showIn3D:
@@ -170,9 +211,9 @@ def define_plots():
     plot01 = xrtplot.XYCPlot(
         beam=r"screen01beamLocal01",
         xaxis=xrtplot.XYCAxis(
-            label=r"x", bins=bins, ppb=ppb, limits=lims),
+            label=r"x", bins=bins, ppb=ppb, limits=xtallims),
         yaxis=xrtplot.XYCAxis(
-            label=r"z", bins=bins, ppb=ppb, limits=lims),
+            label=r"z", bins=bins, ppb=ppb, limits=xtallims),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
             unit=r"eV", bins=bins, ppb=ppb, limits=eLims),
@@ -186,9 +227,9 @@ def define_plots():
     plot02 = xrtplot.XYCPlot(
         beam=r"screen02beamLocal01",
         xaxis=xrtplot.XYCAxis(
-            label=r"x", bins=bins, ppb=ppb, limits=lims),
+            label=r"x", bins=bins, ppb=ppb, limits=xtallims),
         yaxis=xrtplot.XYCAxis(
-            label=r"z", bins=bins, ppb=ppb, limits=lims),
+            label=r"z", bins=bins, ppb=ppb, limits=xtallims),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
             unit=r"eV", bins=bins, ppb=ppb, limits=eLims),
