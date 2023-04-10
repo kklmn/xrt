@@ -154,7 +154,9 @@ class GeometricSource(object):
         *nrays*: int
 
         *distx*, *disty*, *distz*, *distxprime*, *distzprime*:
-            'normal', 'flat', 'annulus' or None.
+            Linear (*distx*, *disty*, *distz*) and
+            angular (*distxprime*, *distzprime*) source distributions.
+            Accepted values: 'normal', 'flat', 'annulus' or None.
             If is None, the corresponding arrays remain with the values got at
             the instantiation of :class:`Beam`.
             'annulus' sets a uniform distribution for (x and z) or for (xprime
@@ -162,7 +164,9 @@ class GeometricSource(object):
             the pair.
 
         *dx*, *dy*, *dz*, *dxprime*, *dzprime*: float
-            for normal distribution is sigma or (sigma, cut_limit), for flat
+            Linear (*dx*, *dy*, *dz*) and
+            angular (*dxprime*, *dzprime*) source sizes.
+            For normal distribution is sigma or (sigma, cut_limit), for flat
             is full width or tuple (min, max), for annulus is tuple
             (rMin, rMax), otherwise is ignored.
 
