@@ -11,7 +11,7 @@ CRYSTALS = {
             'Be'          : {'system' : 'hexagonal', 'C11' :  2.923, 'C12' :  0.267, 'C13' :  0.140, 'C33' :   3.364, 'C55' :  1.625},
             'Beryl'       : {'system' : 'hexagonal', 'C11' :  2.800, 'C12' :  0.990, 'C13' :  0.670, 'C33' :   2.480, 'C55' :  0.658},
             'Copper'      : {'system' :     'cubic', 'C11' :  1.683, 'C12' :  1.221, 'C44' :  0.757},
-            'Diamond'     : {'system' :     'cubic', 'C11' :  10.70, 'C12' :  1.25, 'C44' :  5.77},
+            'Diamond'     : {'system' :     'cubic', 'C11' :  10.79, 'C12' :  1.24, 'C44' :  5.78},  # From H. J. McSkimin and P. Andreatch Jr. https://doi.org/10.1063/1.1661636 
 
             'GaAs'        : {'system' :     'cubic', 'C11' : 1.1877, 'C12' : 0.5372, 'C44' : 0.5944},
             'Ge'          : {'system' :     'cubic', 'C11' : 1.2835, 'C12' : 0.4823, 'C44' : 0.6666},
