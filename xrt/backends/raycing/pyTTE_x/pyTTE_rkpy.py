@@ -303,7 +303,10 @@ class TakagiTaupin:
 #        d   = Quantity(xraylib.Crystal_dSpacing(crystal,*hkl),'A') #spacing of Bragg planes
         d = Quantity(self.crystal_object.xrt_crystal.d,'A')
 #        V   = Quantity(crystal['volume'],'A^3')                    #volume of unit cell
-        V = Quantity(self.crystal_object.xrt_crystal.get_a()**3,'A^3')
+        if hasattr(self.crystal_object, 'a'):
+            V = Quantity(self.crystal_object.xrt_crystal.a**3,'A^3')
+        elif hasattr(self.crystal_object, 'get_a'):
+            V = Quantity(self.crystal_object.xrt_crystal.get_a()**3,'A^3')
 #        print("d", d, "V", V)
         r_e = Quantity(2.81794033e-15,'m')                         #classical electron radius
         h   = 2*np.pi/d                                            #length of reciprocal lattice vector
@@ -752,7 +755,7 @@ class TakagiTaupin:
 
                 return diffraction, forward_diffraction, np.complex(res[0]*res[1]*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step]))))
 
-        n_cores = 4 #multiprocess.cpu_count()
+        n_cores = max(multiprocess.cpu_count()-1, 1)
 
         output_log = print_and_log('\nCalculating the TT-curve using ' + str(n_cores) + ' cores.', output_log)     
 
