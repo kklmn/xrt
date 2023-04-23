@@ -330,7 +330,7 @@ def global_to_virgin_local(bl, beam, lo, center=None, part=None):
     origin of *beam*. The beam arrays can be sliced by *part* indexing array.
     *bl* is an instance of :class:`BeamLine`"""
     if part is None:
-        part = np.ones(beam.x.shape, dtype=np.bool)
+        part = np.ones(beam.x.shape, dtype=bool)
     if center is None:
         center = [0, 0, 0]
     lo.x[part] = beam.x[part] - center[0]
@@ -368,7 +368,7 @@ def virgin_local_to_global(bl, vlb, center=None, part=None,
     origin of *beam*. The beam arrays can be sliced by *part* indexing array.
     *bl* is an instance of :class:`BeamLine`"""
     if part is None:
-        part = np.ones(vlb.x.shape, dtype=np.bool)
+        part = np.ones(vlb.x.shape, dtype=bool)
     a0, b0 = bl.sinAzimuth, bl.cosAzimuth
     if a0 != 0:
         if not skip_abc:
@@ -603,7 +603,7 @@ def get_output(plot, beamsReturnedBy_run_process):
     nrays = len(beam.x)
 
     locAlive = (beamState > 0).sum()
-    part = np.zeros(nrays, dtype=np.bool)
+    part = np.zeros(nrays, dtype=bool)
     locGood = 0
     locOut = 0
     locOver = 0

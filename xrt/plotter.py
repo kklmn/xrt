@@ -928,8 +928,8 @@ class XYCPlot(object):
                 xTextPosDx, yTextPosDx, ' ',
                 transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
 
-        self.nRaysAll = np.long(0)
-        self.nRaysAllRestored = np.long(-1)
+        self.nRaysAll = np.int64(0)
+        self.nRaysAllRestored = np.int64(-1)
         self.intensity = 0.
         transform = self.ax1dHistX.transAxes
         self.textGoodrays = None
@@ -947,7 +947,7 @@ class XYCPlot(object):
             self.textNrays = mplTxt(
                 xTextPos, yTextPosNrays, ' ', transform=transform, ha='left',
                 va='top')
-            self.nRaysNeeded = np.long(0)
+            self.nRaysNeeded = np.int64(0)
             if self.rayFlag != 2:
                 self.textGoodrays = mplTxt(
                     xTextPos, yTextPosGoodrays, ' ', transform=transform,
@@ -962,14 +962,14 @@ class XYCPlot(object):
             # =-NN: lost (absorbed) at OE#NN-OE numbering starts from 1 !!!
             #       If NN>1000 then
             # the slit with ordinal number NN-1000 is meant.
-            self.nRaysAlive = np.long(0)
-            self.nRaysGood = np.long(0)
-            self.nRaysOut = np.long(0)
-            self.nRaysOver = np.long(0)
-            self.nRaysDead = np.long(0)
-            self.nRaysAccepted = np.long(0)
+            self.nRaysAlive = np.int64(0)
+            self.nRaysGood = np.int64(0)
+            self.nRaysOut = np.int64(0)
+            self.nRaysOver = np.int64(0)
+            self.nRaysDead = np.int64(0)
+            self.nRaysAccepted = np.int64(0)
             self.nRaysAcceptedE = 0.
-            self.nRaysSeeded = np.long(0)
+            self.nRaysSeeded = np.int64(0)
             self.nRaysSeededI = 0.
             self.textNrays = mplTxt(
                 xTextPos, yTextPosNraysR, ' ', transform=transform, ha='left',
@@ -1692,11 +1692,11 @@ class XYCPlot(object):
 
         except AttributeError:
             pass
-        self.nRaysAll = np.long(0)
-        self.nRaysAllRestored = np.long(-1)
-        self.nRaysAccepted = np.long(0)
+        self.nRaysAll = np.int64(0)
+        self.nRaysAllRestored = np.int64(-1)
+        self.nRaysAccepted = np.int64(0)
         self.nRaysAcceptedE = 0.
-        self.nRaysSeeded = np.long(0)
+        self.nRaysSeeded = np.int64(0)
         self.nRaysSeededI = 0.
         self.intensity = 0.
         self.cidp = self.fig.canvas.mpl_connect(
@@ -1707,15 +1707,15 @@ class XYCPlot(object):
                 self.textDE.set_text('')
         self.textNrays.set_text('')
         if self.backend == 'shadow':
-            self.nRaysNeeded = np.long(0)
+            self.nRaysNeeded = np.int64(0)
             if self.textGoodrays is not None:
                 self.textGoodrays.set_text('')
         if self.backend == 'raycing':
-            self.nRaysAlive = np.long(0)
-            self.nRaysGood = np.long(0)
-            self.nRaysOut = np.long(0)
-            self.nRaysOver = np.long(0)
-            self.nRaysDead = np.long(0)
+            self.nRaysAlive = np.int64(0)
+            self.nRaysGood = np.int64(0)
+            self.nRaysOut = np.int64(0)
+            self.nRaysOver = np.int64(0)
+            self.nRaysDead = np.int64(0)
             if self.textGood is not None:
                 self.textGood.set_text('')
             if self.textOut is not None:

@@ -2233,8 +2233,8 @@ class GeneralFZPin0YZ(OE):
         if self.minHalfLambda is None:
             self.minHalfLambda = halfLambda.min()
         halfLambda -= self.minHalfLambda + self.phaseShift - phi*self.vorticity
-        zone = np.ones_like(x, dtype=np.int) * (self.N+2)
-        zone[good] = np.floor(halfLambda).astype(np.int)
+        zone = np.ones_like(x, dtype=np.int32) * (self.N+2)
+        zone[good] = np.floor(halfLambda).astype(np.int32)
 #        N = 0
 #        while N < self.N:
 #            if (zone == (N+1)).sum() == 0:

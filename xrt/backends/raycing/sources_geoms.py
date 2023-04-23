@@ -218,7 +218,7 @@ class GeometricSource(object):
 #            self.name = name
 
         self.center = center  # 3D point in global system
-        self.nrays = np.long(nrays)
+        self.nrays = np.int64(nrays)
 
         self.distx = distx
         self.dx = dx

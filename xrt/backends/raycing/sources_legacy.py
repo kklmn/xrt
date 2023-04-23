@@ -644,7 +644,7 @@ class UndulatorUrgent(object):
         global system."""
         bo = None
         length = 0
-        seeded = np.long(0)
+        seeded = np.int64(0)
         seededI = 0.
         while length < self.nrays:
             bot = Beam(self.nrays)  # beam-out

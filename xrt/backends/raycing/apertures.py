@@ -196,7 +196,7 @@ class RectangularAperture(object):
         lo.z[good] += lo.c[good] * path
         lo.path[good] += path
 
-        badIndices = np.zeros(len(beam.x), dtype=np.bool)
+        badIndices = np.zeros(len(beam.x), dtype=bool)
         for akind, d in zip(self.kind, self.opening):
             if akind.startswith('l'):
                 badIndices[good] = badIndices[good] | (lo.x[good] < d)
@@ -549,7 +549,7 @@ class RoundAperture(object):
         lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
         lo.path[good] += path
 
-        badIndices = np.zeros(len(beam.x), dtype=np.bool)
+        badIndices = np.zeros(len(beam.x), dtype=bool)
         badIndices[good] = lo.r > self.r
         beam.state[badIndices] = self.lostNum
         lo.state[good] = beam.state[good]
@@ -671,7 +671,7 @@ class RoundBeamStop(RoundAperture):
         lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
         lo.path[good] += path
 
-        badIndices = np.zeros(len(beam.x), dtype=np.bool)
+        badIndices = np.zeros(len(beam.x), dtype=bool)
         badIndices[good] = lo.r < self.r
         beam.state[badIndices] = self.lostNum
         lo.state[good] = beam.state[good]
@@ -727,7 +727,7 @@ class DoubleSlit(RectangularAperture):
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
         lo.path[good] += path
-        badIndices = np.zeros(len(beam.x), dtype=np.bool)
+        badIndices = np.zeros(len(beam.x), dtype=bool)
         for akind, d in zip(self.kind, self.opening):
             if akind.startswith('l'):
                 badIndices[good] = badIndices[good] | (lo.x[good] < d)

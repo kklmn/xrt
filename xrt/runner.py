@@ -146,7 +146,7 @@ def start_jobs():
         except AttributeError:
             pass
 
-    runCardVals.iteration = np.long(0)
+    runCardVals.iteration = np.int64(0)
     noTimer = len(_plots) == 0 or\
         (plt.get_backend().lower() in (x.lower() for x in
                                        mpl.rcsetup.non_interactive_bk))

@@ -349,8 +349,10 @@ class xrtGlow(qt.QWidget):
         self.paletteWidget.setSizePolicy(qt.QSizePolicy.Maximum,
                                          qt.QSizePolicy.Maximum)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
-            self.mplAx, self.updateColorSelFromMPL, drawtype='box',
-            useblit=True, rectprops=dict(alpha=0.4, facecolor='white'),
+            self.mplAx, self.updateColorSelFromMPL,
+            # drawtype='box',
+            useblit=True,
+            # rectprops=dict(alpha=0.4, facecolor='white'),
             button=1, interactive=True)
 
         layout = qt.QHBoxLayout()
@@ -1701,7 +1703,7 @@ class xrtGlow(qt.QWidget):
     def updateTileFromQLE(self, editor, ia):
         # editor = self.sender()
         value = float(str(editor.text()))
-        self.customGlWidget.tiles[ia] = np.int(value)
+        self.customGlWidget.tiles[ia] = np.int32(value)
         self.customGlWidget.glDraw()
 
     def updateProjectionOpacity(self, slider, iax, editor, position):
@@ -2879,7 +2881,7 @@ class xrtGlWidget(qt.QGLWidget):
             else:
                 decimalX = 0
 
-            gridX = np.arange(np.int(allLimits[:, iAx][0]/step)*step,
+            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
                               allLimits[:, iAx][1], step)
             gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
                 gridX[1:]
@@ -2889,7 +2891,7 @@ class xrtGlWidget(qt.QGLWidget):
             if self.fineGridEnabled:
                 fineStep = step * 0.2
                 fineGrid = np.arange(
-                    np.int(allLimits[:, iAx][0]/fineStep)*fineStep,
+                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
                     allLimits[:, iAx][1], fineStep)
                 fineGrid = fineGrid if\
                     fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
