@@ -1,7 +1,7 @@
 from . import materials as rmat
 import collections
 
-__all__ = ('Si', 'SiNIST', 'Si2', 'Ge', 'Diamond', 'GaAs', 'GaSb', 'GaP',
+__all__ = ('Si', 'Ge', 'Diamond', 'GaAs', 'GaSb', 'GaP',
            'InAs', 'InP', 'InSb', 'SiC', 'NaCl', 'CsF', 'LiF', 'KCl', 'CsCl',
            'Be', 'Graphite', 'PET', 'Beryl', 'KAP', 'RbAP', 'TlAP',
            'Muscovite', 'AlphaQuartz', 'Copper', 'LiNbO3', 'Platinum',
@@ -32,6 +32,7 @@ class Si(rmat.CrystalDiamond):
        The ZincBlende structure is defined by atom A located at (0 0 0)
        and atom B at (1/4 1/4 1/4) of the fcc lattice. Ex: Si(a=5.4309)
        Ge(a=5.657)  Diamond(a=3.56)  GaAs  GaP  InAs InP  InSb  SiC...
+       Warning: This definition is different from xrt materials.CrystalSi
 
 
        '''

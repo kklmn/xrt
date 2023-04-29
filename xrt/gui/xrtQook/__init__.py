@@ -340,7 +340,7 @@ class XrtQook(qt.QWidget):
         runScriptAction.triggered.connect(self.execCode)
 
         glowAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, 'eyeglasses7_128.png')),
+            qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),  #'eyeglasses7_128.png')),
             'Enable xrtGlow Live Update',
             self)
         if gl.isOpenGL:

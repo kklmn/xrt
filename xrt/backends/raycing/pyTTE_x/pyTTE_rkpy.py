@@ -24,13 +24,13 @@ class TakagiTaupin:
     Parameters
     ----------
         TTcrystal_object : TTcrystal or str
-            An existing TTcrystal instance for crystal parameters or a path to 
-            a file where they are defined. For any other types the crystal 
+            An existing TTcrystal instance for crystal parameters or a path to
+            a file where they are defined. For any other types the crystal
             parameters are not set.
 
-        TTscan_object : TTscan or str 
-            An existing TTscan instance for scan parameters or a path to a file 
-            where they are defined. For any other types the scan parameters are 
+        TTscan_object : TTscan or str
+            An existing TTscan instance for scan parameters or a path to a file
+            where they are defined. For any other types the scan parameters are
             not set.
 
     Attributes
@@ -44,25 +44,25 @@ class TakagiTaupin:
         solution : dict
             Stores the result of the TakagiTaupin.run(). Has the following keys:
 
-                scan : Quantity of type energy or angle  
+                scan : Quantity of type energy or angle
                     The scanned energy or angle points.
 
                 beta : Numpy array
                     The scanned points given in terms of deviation from the
-                    kinematical Bragg condition i.e. 
+                    kinematical Bragg condition i.e.
                         beta = h*(sin theta - lambda/2*d_h)
 
                 bragg_energy : Quantity of type energy
                     Energy of incident photons at beta = 0
-                
+
                 bragg_angle : Quantity of type angle
                     Angle between the incident beam and the diffraction planes
                     at beta = 0
-                
+
                 geometry : str
-                    Either 'bragg' for reflection geometry or 'laue' for 
+                    Either 'bragg' for reflection geometry or 'laue' for
                     transmission geometry
-                
+
                 reflectivity : Numpy array (present if geometry == 'bragg')
                     The reflectivity of the crystal for each scan point.
 
@@ -76,25 +76,25 @@ class TakagiTaupin:
                     The forward diffracted (transmitted beam) for each scan point.
 
                 output_type : str
-                    'intensity' if output reflectivity/diffractivity/transmission 
-                    are given in terms of wave intensities or 'photon_flux' if 
-                    in terms of photon fluxes. 
+                    'intensity' if output reflectivity/diffractivity/transmission
+                    are given in terms of wave intensities or 'photon_flux' if
+                    in terms of photon fluxes.
 
                 crystal_parameters : str
                     String representation of self.crystal_object
 
                 scan_parameters : str
                     String representation of self.scan_object
-                    
+
                 solver_output_log : str
                     Logged stdout output of self.run().
 
-    '''    
+    '''
 
 
     ##############################
     # Methods for initialization #
-    ##############################    
+    ##############################
 
     def __init__(self, TTcrystal_object = None, TTscan_object = None):
 
@@ -113,14 +113,14 @@ class TakagiTaupin:
 
         Parameters
         ----------
-        
+
         TTcrystal_object : TTcrystal or str
-            An existing TTcrystal instance for crystal parameters or a path to 
-            a file where they are defined. For any other types the crystal 
+            An existing TTcrystal instance for crystal parameters or a path to
+            a file where they are defined. For any other types the crystal
             parameters are not set and the solution is not cleared.
         '''
 
-        if isinstance(TTcrystal_object, TTcrystal): 
+        if isinstance(TTcrystal_object, TTcrystal):
             self.crystal_object = TTcrystal_object
             self.solution       = None
         elif type(TTcrystal_object) == str:
@@ -142,10 +142,10 @@ class TakagiTaupin:
 
         Parameters
         ----------
-        
+
         TTscan_object : TTscan or str
-            An existing TTscan instance for scan parameters or a path to a file 
-            where they are defined. For any other types the scan parameters are 
+            An existing TTscan instance for scan parameters or a path to a file
+            where they are defined. For any other types the scan parameters are
             not set and the solution is not cleared.
         '''
 
@@ -165,22 +165,22 @@ class TakagiTaupin:
 
     ####################################
     # Auxiliary methods for TT solving #
-    ####################################    
+    ####################################
 
     @staticmethod
     def calculate_structure_factors(crystal, hkl, energy, debye_waller):
         '''
         Calculates the structure factors F_0 F_h and F_bar{h}.
-        
+
         Parameters
         ----------
-        
+
         crystal : dict
             Dictionary returned by xraylib's Crystal_GetCrystal()
 
         hkl : list of ints
             3 element list containing the Miller indeces of the reflection
-            
+
         energy : Quantity instance of type energy.
             Energy of photons. energy.values be a single number or an array
 
@@ -189,16 +189,16 @@ class TakagiTaupin:
         '''
 
         energy_in_keV = energy.in_units('keV')
-        
+
         #preserve the original shape and reshape energy to 1d array
         orig_shape = energy_in_keV.shape
         energy_in_keV = energy_in_keV.reshape(-1)
 
         F0 = np.zeros(energy_in_keV.shape, dtype=np.complex)
         Fh = np.zeros(energy_in_keV.shape, dtype=np.complex)
-        Fb = np.zeros(energy_in_keV.shape, dtype=np.complex)        
+        Fb = np.zeros(energy_in_keV.shape, dtype=np.complex)
 
-#        for i in range(energy_in_keV.size):    
+#        for i in range(energy_in_keV.size):
 #            F0[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i], 0, 0, 0, 1.0, 1.0)
 #            Fh[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i],  hkl[0],  hkl[1],  hkl[2], debye_waller, 1.0)
 #            Fb[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i], -hkl[0], -hkl[1], -hkl[2], debye_waller, 1.0)
@@ -220,22 +220,22 @@ class TakagiTaupin:
         #In the Bragg (reflection) geometry#
 
         scan.value : 1D Numpy array
-                    
+
         reflectivity : 1D Numpy array
-            
+
         transmission : 1D Numpy array
-        
-        
+
+
         #In the Laue (transmission) geometry#
 
         scan.value : 1D Numpy array
-            
+
         diffraction : 1D Numpy array
-        
+
         forward_diffraction : 1D Numpy array
 
         '''
-        
+
 
         #Check that the required scan parameters are in place
         if self.crystal_object is None:
@@ -249,27 +249,27 @@ class TakagiTaupin:
         def print_and_log(printable, log_string):
             '''
             Prints the input in stdout and appends it to log_string.
-    
+
             Parameters
             ----------
             printable
                 Object to be printed
             log_string
-                String to append the stdout to.                
-    
+                String to append the stdout to.
+
             Returns
             -------
             new_log_string
                 String that was printed on the screen appended to log_string
-    
+
             '''
             print_str = str(printable)
             print(print_str)
-            return log_string + print_str + '\n'            
+            return log_string + print_str + '\n'
 
         output_log = ''
         verbose_output = True
-                
+
         startmsg = '\nSolving the 1D Takagi-Taupin equation for '\
                  + self.crystal_object.crystal_data['name']\
                  + '(' + str(self.crystal_object.hkl[0]) + ','\
@@ -279,7 +279,7 @@ class TakagiTaupin:
 
         output_log = print_and_log(startmsg,output_log)
         output_log = print_and_log('-' * len(startmsg) + '\n',output_log)
-        
+
         ################################################
         #Calculate the constants needed by TT-equations#
         ################################################
@@ -303,9 +303,9 @@ class TakagiTaupin:
 #        d   = Quantity(xraylib.Crystal_dSpacing(crystal,*hkl),'A') #spacing of Bragg planes
         d = Quantity(self.crystal_object.xrt_crystal.d,'A')
 #        V   = Quantity(crystal['volume'],'A^3')                    #volume of unit cell
-        if hasattr(self.crystal_object, 'a'):
+        if hasattr(self.crystal_object.xrt_crystal, 'a'):
             V = Quantity(self.crystal_object.xrt_crystal.a**3,'A^3')
-        elif hasattr(self.crystal_object, 'get_a'):
+        elif hasattr(self.crystal_object.xrt_crystal, 'get_a'):
             V = Quantity(self.crystal_object.xrt_crystal.get_a()**3,'A^3')
 #        print("d", d, "V", V)
         r_e = Quantity(2.81794033e-15,'m')                         #classical electron radius
@@ -322,23 +322,23 @@ class TakagiTaupin:
             else:
                 output_log = print_and_log('Given energy below the backscattering energy!',output_log)
                 output_log = print_and_log('Setting theta to 90 deg.',output_log)
-                
+
                 theta_bragg = Quantity(90, 'deg')
 
 
         if scan_points[0] == 'automatic':
-            
+
             ################################################
             #Estimate the optimal scan limits automatically#
             ################################################
-            
-            F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(self.crystal_object.xrt_crystal, 
-                                                                  hkl, 
-                                                                  energy_bragg, 
+
+            F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(self.crystal_object.xrt_crystal,
+                                                                  hkl,
+                                                                  energy_bragg,
                                                                   debye_waller)
 
             #conversion factor from crystal structure factor to susceptibility
-            cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1') 
+            cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1')
 
             chi0 = np.conj(cte*F0)
             chih = np.conj(cte*Fh)
@@ -362,8 +362,8 @@ class TakagiTaupin:
 
                 def_min = h_um*(  sin_phi*cos_alphah*u_jac[0][0]
                                 + sin_phi*sin_alphah*u_jac[0][1]
-                                + cos_phi*cos_alphah*u_jac[1][0] 
-                                + cos_phi*sin_alphah*u_jac[1][1])            
+                                + cos_phi*cos_alphah*u_jac[1][0]
+                                + cos_phi*sin_alphah*u_jac[1][1])
                 def_max = def_min
 
                 for i in range(1,z.size):
@@ -371,8 +371,8 @@ class TakagiTaupin:
 
                     deform = h_um*(  sin_phi*cos_alphah*u_jac[0][0]
                                    + sin_phi*sin_alphah*u_jac[0][1]
-                                   + cos_phi*cos_alphah*u_jac[1][0] 
-                                   + cos_phi*sin_alphah*u_jac[1][1])            
+                                   + cos_phi*cos_alphah*u_jac[1][0]
+                                   + cos_phi*sin_alphah*u_jac[1][1])
                     if deform < def_min:
                         def_min = deform
                     if deform > def_max:
@@ -387,7 +387,7 @@ class TakagiTaupin:
             else:
                 darwin_width_term = np.sqrt(2*np.sqrt(np.abs(chih*chib)))*h*np.cos(theta_bragg.in_units('rad'))
 
-            k_bragg = 2*np.pi*energy_bragg/hc 
+            k_bragg = 2*np.pi*energy_bragg/hc
             b_const_term = -0.5*k_bragg*(1 + gamma0/gammah)*np.real(chi0)
 
             beta_min = b_const_term - Quantity(def_max,'um^-1') - 2*darwin_width_term
@@ -399,7 +399,7 @@ class TakagiTaupin:
                 energy_max = beta_max*energy_bragg/(h*np.sin(theta_bragg.in_units('rad')))
 
                 output_log = print_and_log('Using automatically determined scan limits:',output_log)
-                output_log = print_and_log('E min: ' + str(energy_min.in_units('meV')) + ' meV',output_log)                
+                output_log = print_and_log('E min: ' + str(energy_min.in_units('meV')) + ' meV',output_log)
                 output_log = print_and_log('E max: ' + str(energy_max.in_units('meV')) + ' meV\n',output_log)
 
                 scan = Quantity(np.linspace(energy_min.in_units('meV'),energy_max.in_units('meV'),scan_points[1]),'meV')
@@ -419,14 +419,14 @@ class TakagiTaupin:
                     theta_max = Quantity(np.arcsin(sin_th_max),'rad')-theta_bragg
 
                 output_log = print_and_log('Using automatically determined scan limits:',output_log)
-                output_log = print_and_log('Theta min: ' + str(theta_min.in_units('urad')) + ' urad',output_log)                
+                output_log = print_and_log('Theta min: ' + str(theta_min.in_units('urad')) + ' urad',output_log)
                 output_log = print_and_log('Theta max: ' + str(theta_max.in_units('urad')) + ' urad\n',output_log)
 
                 scan = Quantity(np.linspace(theta_min.in_units('urad'),theta_max.in_units('urad'),scan_points[1]),'urad')
                 scan_steps = scan.value.size
                 scan_shape = scan.value.shape
-        else:            
-            #Use the scan limits given by the user            
+        else:
+            #Use the scan limits given by the user
             scan = scan_points[1]
             scan_steps = scan.value.size
             scan_shape = scan.value.shape
@@ -446,7 +446,7 @@ class TakagiTaupin:
         #Incidence and exit angles
         alpha0 = theta+phi
         alphah = theta-phi
-        
+
         #Direction parameters
         gamma0 = np.ones(scan_shape)/np.sin(alpha0.in_units('rad'))
         gammah = np.ones(scan_shape)/np.sin(alphah.in_units('rad'))
@@ -471,41 +471,41 @@ class TakagiTaupin:
             output_log = print_and_log('Energy          : ' + str(energy_bragg.in_units('keV')) + ' keV',output_log)
             output_log = print_and_log('Bragg angle     : ' + str(theta_bragg.in_units('deg')) + ' deg',output_log)
             output_log = print_and_log('Incidence angle : ' + str((theta_bragg+phi).in_units('deg')) + ' deg',output_log)
-            output_log = print_and_log('Exit angle      : ' + str((theta_bragg-phi).in_units('deg')) + ' deg\n',output_log)    
+            output_log = print_and_log('Exit angle      : ' + str((theta_bragg-phi).in_units('deg')) + ' deg\n',output_log)
 
-        #Compute susceptibilities       
-        F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(self.crystal_object.xrt_crystal, 
-                                                              hkl, 
-                                                              energy, 
+        #Compute susceptibilities
+        F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(self.crystal_object.xrt_crystal,
+                                                              hkl,
+                                                              energy,
                                                               debye_waller)
 
         #conversion factor from crystal structure factor to susceptibility
-        cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1') 
+        cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1')
 
         chi0 = np.conj(cte*F0)
         chih = np.conj(cte*Fh)
         chib = np.conj(cte*Fb)
-        if verbose_output:       
-            output_log = print_and_log('Structure factors',output_log) 
-            output_log = print_and_log('F0   : '+ str(np.mean(F0)),output_log)         
-            output_log = print_and_log('Fh   : '+ str(np.mean(Fh)),output_log)         
-            output_log = print_and_log('Fb   : '+ str(np.mean(Fb))+'\n',output_log)         
-            output_log = print_and_log('Susceptibilities',output_log) 
-            output_log = print_and_log('chi0 : '+ str(np.mean(chi0)),output_log)         
-            output_log = print_and_log('chih : '+ str(np.mean(chih)),output_log)         
-            output_log = print_and_log('chib : '+ str(np.mean(chib))+'\n',output_log)         
-            output_log = print_and_log('(Mean F and chi values for energy scan)\n',output_log)                 
+        if verbose_output:
+            output_log = print_and_log('Structure factors',output_log)
+            output_log = print_and_log('F0   : '+ str(np.mean(F0)),output_log)
+            output_log = print_and_log('Fh   : '+ str(np.mean(Fh)),output_log)
+            output_log = print_and_log('Fb   : '+ str(np.mean(Fb))+'\n',output_log)
+            output_log = print_and_log('Susceptibilities',output_log)
+            output_log = print_and_log('chi0 : '+ str(np.mean(chi0)),output_log)
+            output_log = print_and_log('chih : '+ str(np.mean(chih)),output_log)
+            output_log = print_and_log('chib : '+ str(np.mean(chib))+'\n',output_log)
+            output_log = print_and_log('(Mean F and chi values for energy scan)\n',output_log)
 
         ######################
         #COEFFICIENTS FOR TTE#
         ######################
 
-        #For solving ksi = Dh/D0 
+        #For solving ksi = Dh/D0
         c0 = 0.5*k*chi0*(gamma0+gammah)*np.ones(scan_shape)
         ch = 0.5*k*C*chih*gammah*np.ones(scan_shape)
         cb = 0.5*k*C*chib*gamma0*np.ones(scan_shape)
 
-        #For solving Y = D0 
+        #For solving Y = D0
         g0 = 0.5*k*chi0*gamma0*np.ones(scan_shape)
         gb = 0.5*k*C*chib*gamma0*np.ones(scan_shape)
 
@@ -515,7 +515,7 @@ class TakagiTaupin:
         beta_term1 = np.sin(theta.in_units('rad')).astype(np.float64)
         beta_term2 = wavelength.in_units('nm').astype(np.float64)
         beta_term3 = (2*d.in_units('nm')).astype(np.float64)
-        
+
         beta = h*gammah*(beta_term1 - beta_term2/beta_term3).astype(np.float)
 
         #############
@@ -524,7 +524,7 @@ class TakagiTaupin:
 
         #Define ODEs and their Jacobians
         if geometry == 'bragg':
-            output_log = print_and_log('Transmission in the Bragg case not implemented!',output_log) 
+            output_log = print_and_log('Transmission in the Bragg case not implemented!',output_log)
             reflectivity = np.zeros(scan_shape)
             transmission = -np.ones(scan_shape)
         else:
@@ -557,10 +557,10 @@ class TakagiTaupin:
                     k4 = h * f(z + 4*h/5, y + 44*k1/45 - 56*k2/15 + 32*k3/9)
                     k5 = h * f(z + 8*h/9, y + 19372*k1/6561 - 25360*k2/2187 + 64448*k3/6561 - 212*k4/729)
                     k6 = h * f(z + h, y + 9017*k1/3168 -355*k2/33 + 46732*k3/5247 + 49*k4/176 - 5103*k5/18656)
-                    y_new_5 = y + 35*k1/384 + 500*k3/1113 + 125*k4/192 - 2187*k5/6784 + 11*k6/84        
+                    y_new_5 = y + 35*k1/384 + 500*k3/1113 + 125*k4/192 - 2187*k5/6784 + 11*k6/84
                     k7 = h * f(z + h, y_new_5)
                     y_new_4 = y + 5179*k1/57600 + 7571*k3/16695 + 393*k4/640 - 92097*k5/339200 + 187*k6/2100 + k7/40
-            
+
                     error = np.abs(y_new_4 - y_new_5)
                     if error <= tol:
                         y = y_new_5
@@ -568,12 +568,12 @@ class TakagiTaupin:
                         z += h
                         z_full.append(z)
                         n_steps += 1
-    
+
                     if error > 0:
                         h *= min(0.9 * (tol / error) ** 0.25, 4.0)  # Update step size
                     else:
                         h *= 4.0
-    
+
                     if z + h > 0:
                         h = -z
                     total_evaluations += 1
@@ -594,27 +594,27 @@ class TakagiTaupin:
                     k4 = h * f(z + 4*h/5, y + 44*k1/45 - 56*k2/15 + 32*k3/9, f2r, f2i)
                     k5 = h * f(z + 8*h/9, y + 19372*k1/6561 - 25360*k2/2187 + 64448*k3/6561 - 212*k4/729, f2r, f2i)
                     k6 = h * f(z + h, y + 9017*k1/3168 -355*k2/33 + 46732*k3/5247 + 49*k4/176 - 5103*k5/18656, f2r, f2i)
-                    y_new_5 = y + 35*k1/384 + 500*k3/1113 + 125*k4/192 - 2187*k5/6784 + 11*k6/84        
+                    y_new_5 = y + 35*k1/384 + 500*k3/1113 + 125*k4/192 - 2187*k5/6784 + 11*k6/84
                     k7 = h * f(z + h, y_new_5, f2r, f2i)
                     y_new_4 = y + 5179*k1/57600 + 7571*k3/16695 + 393*k4/640 - 92097*k5/339200 + 187*k6/2100 + k7/40
-            
+
                     if geometry == 'bragg':
                         error = np.abs(y_new_4 - y_new_5)
                     else:
                         error = max(np.abs(y_new_4[0] - y_new_5[0]),
-                                    np.abs(y_new_4[1] - y_new_5[1])) 
+                                    np.abs(y_new_4[1] - y_new_5[1]))
                     if error < tol:
                         y = y_new_5
 #                        y_full.append(y)
                         z += h
 #                        z_full.append(z)
                         n_steps += 1
-    
+
                     if error > 0:
                         h *= min(0.9 * (tol / error) ** 0.25, 4.0)  # Update step size
                     else:
                         h *= 4.0
-    
+
                     if z + h < z1:
                         h = z1-z
                     total_evaluations += 1
@@ -665,7 +665,7 @@ class TakagiTaupin:
                     x = -z*cot_alpha0
                     duh_dsh = h*(sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness)
                                 +sin_phi*sin_alphah*(-invR1*x + coef2*(z+0.5*thickness))
-                                +cos_phi*cos_alphah*invR1*x 
+                                +cos_phi*cos_alphah*invR1*x
                                 +cos_phi*sin_alphah*coef1*(z+0.5*thickness)
                                 )
                     return gammah_step*duh_dsh
@@ -675,15 +675,15 @@ class TakagiTaupin:
                     u_jac = displacement_jacobian(x,z)
                     duh_dsh = h*(sin_phi*cos_alphah*u_jac[0][0]
                                 +sin_phi*sin_alphah*u_jac[0][1]
-                                +cos_phi*cos_alphah*u_jac[1][0] 
+                                +cos_phi*cos_alphah*u_jac[1][0]
                                 +cos_phi*sin_alphah*u_jac[1][1]
                                 )
                     return gammah_step*duh_dsh
             else:
-                #Non-bent crystal 
-                def strain_term(z): 
+                #Non-bent crystal
+                def strain_term(z):
                     return 0
-            
+
             if geometry == 'bragg':
                 def ksiprime(z, ksi):
                     return 1j*(cb_step*ksi*ksi+(c0_step+beta_step+strain_term(z))*ksi+ch_step)
@@ -705,59 +705,59 @@ class TakagiTaupin:
 
 #                r=ode(TTE,TTE_jac)
 
-#            r.set_integrator('zvode',method='bdf',with_jacobian=True, 
+#            r.set_integrator('zvode',method='bdf',with_jacobian=True,
 #                             min_step=self.scan_object.integration_step.in_units('um'),
 #                             max_step=thickness,nsteps=2500000)
-        
+
             #Update the solving process
             lock.acquire()
             steps_calculated.value = steps_calculated.value + 1
             if verbose_output:
-                sys.stdout.write('\rSolving...%0.2f%%' % (100*(steps_calculated.value)/scan_steps,))  
+                sys.stdout.write('\rSolving...%0.2f%%' % (100*(steps_calculated.value)/scan_steps,))
             sys.stdout.flush()
-            lock.release()            
+            lock.release()
 
             if geometry == 'bragg':
                 if self.scan_object.start_depth is not None:
                     start_depth = self.scan_object.start_depth.in_units('um')
                     if start_depth > 0 or start_depth < -thickness:
                         output_log = print_and_log('Warning! The given starting depth ' + str(start_depth)\
-                                                   + 'um is outside the crystal!', output_log) 
+                                                   + 'um is outside the crystal!', output_log)
 #                    r.set_initial_value(0,start_depth)
 #                else:
 #                    r.set_initial_value(0,-thickness)
 
 #                res=r.integrate(0)
-                
+
                 res = calculate_bragg_transmission(ksiprime, d0prime)
 #                print(res[1])
-                
+
                 if self.scan_object.output_type == 'photon_flux':
                     reflectivity = np.abs(res[0])**2*gamma0[step]/gammah[step]
                 else:
                     reflectivity = np.abs(res[0])**2
 
                 transmission = np.abs(res[1])**2
-                    
-                return reflectivity, transmission, np.complex(res[0])*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step]))) 
+
+                return reflectivity, transmission, np.complex(res[0])*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step])))
             else:
                 if self.scan_object.start_depth is not None:
-                    output_log = print_and_log('Warning! The alternative start depth is negleted in the Laue case.', output_log) 
+                    output_log = print_and_log('Warning! The alternative start depth is negleted in the Laue case.', output_log)
 #                r.set_initial_value([0,1],0)
 #                res=r.integrate(-thickness)
                 res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
                 if self.scan_object.output_type == 'photon_flux':
                     diffraction = np.abs(res[0]*res[1])**2*gamma0[step]/np.abs(gammah[step])
-                else:                    
+                else:
                     diffraction = np.abs(res[0]*res[1])**2
-                    
+
                 forward_diffraction = np.abs(res[1])**2
 
                 return diffraction, forward_diffraction, np.complex(res[0]*res[1]*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step]))))
 
         n_cores = max(multiprocess.cpu_count()-1, 1)
 
-        output_log = print_and_log('\nCalculating the TT-curve using ' + str(n_cores) + ' cores.', output_log)     
+        output_log = print_and_log('\nCalculating the TT-curve using ' + str(n_cores) + ' cores.', output_log)
 
         #Solve the equation
 #        sys.stdout.write('Solving...0%')
@@ -781,16 +781,16 @@ class TakagiTaupin:
         sys.stdout.write('\r\nDone. Calculation time is {}s\n'.format(time.time()-t0))
         sys.stdout.flush()
 
-        if geometry == 'bragg':    
+        if geometry == 'bragg':
             reflectivity = output[:,0]
             transmission = output[:,1]
             complex_amps = np.squeeze(np.array(output[:, 2]))
             self.solution = {'scan' : scan,
                              'beta' : beta,
                              'bragg_energy' : energy_bragg,
-                             'bragg_angle'  : theta_bragg,                             
-                             'geometry' : 'bragg', 
-                             'reflectivity' : reflectivity, 
+                             'bragg_angle'  : theta_bragg,
+                             'geometry' : 'bragg',
+                             'reflectivity' : reflectivity,
                              'transmission': transmission,
                              'output_type' : self.scan_object.output_type,
                              'crystal_parameters' : str(self.crystal_object),
@@ -799,16 +799,16 @@ class TakagiTaupin:
                             }
 
             return scan.value, reflectivity, transmission, complex_amps
-        else:    
+        else:
             diffraction = output[:,0]
-            forward_diffraction = output[:,1]      
+            forward_diffraction = output[:,1]
             complex_amps = np.squeeze(np.array(output[:, 2]))
-            self.solution = {'scan' : scan, 
+            self.solution = {'scan' : scan,
                              'beta' : beta,
                              'bragg_energy' : energy_bragg,
                              'bragg_angle'  : theta_bragg,
-                             'geometry' : 'laue', 
-                             'diffraction' : diffraction, 
+                             'geometry' : 'laue',
+                             'diffraction' : diffraction,
                              'forward_diffraction': forward_diffraction,
                              'output_type' : self.scan_object.output_type,
                              'crystal_parameters' : str(self.crystal_object),
@@ -837,7 +837,7 @@ class TakagiTaupin:
             if self.solution['output_type'] == 'photon_flux':
                 plt.ylabel('Reflectivity in terms of photon flux')
             else:
-                plt.ylabel('Reflectivity in terms of wave intensity')                
+                plt.ylabel('Reflectivity in terms of wave intensity')
 
             plt.title('Takagi-Taupin solution in the Bragg case')
         else:
@@ -852,30 +852,30 @@ class TakagiTaupin:
             if self.solution['output_type'] == 'photon_flux':
                 plt.ylabel('Photon flux w.r.t incident')
             else:
-                plt.ylabel('Intensity w.r.t incident')         
+                plt.ylabel('Intensity w.r.t incident')
 
             plt.legend()
             plt.title('Takagi-Taupin solution in the Laue case')
-            
+
         plt.show()
 
     def save(self, path, include_header = True):
         '''
         Saves the solution to a file.
-        
+
         Parameters
         ----------
-        
+
         path : str
             Path of the save file
-            
+
         include_header : bool, optional
-            Determines if the metadata is included in the header. The default 
+            Determines if the metadata is included in the header. The default
             is True.
 
         Returns
         -------
-        
+
         None.
 
         '''
@@ -888,7 +888,7 @@ class TakagiTaupin:
         #Build the data matrix
         data = []
         data.append(self.solution['scan'].value.reshape(-1))
-        
+
         if self.solution['geometry'] == 'bragg':
             data.append(self.solution['reflectivity'].reshape(-1))
         else:
@@ -901,13 +901,13 @@ class TakagiTaupin:
             header = str(self) + '\n' + 'SOLVER OUTPUT LOG\n'\
                      + '-----------------\n' + self.solution['solver_output_log'] + '\n'
 
-            header = header + 'SOLUTION\n' + '--------\n' 
+            header = header + 'SOLUTION\n' + '--------\n'
             header = header + 'Scan (' + self.solution['scan'].units() + ') '
 
             if self.solution['geometry'] == 'bragg':
-                header =  header + 'Reflectivity'                
+                header =  header + 'Reflectivity'
             else:
-                header =  header + 'Diffraction Forward-diffraction'                
+                header =  header + 'Diffraction Forward-diffraction'
         else:
             header = ''
 

@@ -8,20 +8,23 @@ Created on Tue Apr 25 10:26:54 2023
 import sys; sys.path.append(r'..\..\..')
 import os
 import re
+import uuid
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
-    QTreeWidget, QTreeWidgetItem, QPushButton, QMenu, QComboBox, QFileDialog,\
-    QSplitter
+    QPushButton, QMenu, QComboBox, QFileDialog,\
+    QSplitter, QTreeView, QMessageBox
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 import matplotlib.colors as mcolors
 from xrt.backends.raycing.pyTTE_x.elastic_tensors import CRYSTALS
-from xrt.backends.raycing.pyTTE_x import TakagiTaupin, TTcrystal, TTscan, Quantity
-from xrt.backends.raycing import materials as rmat
+from xrt.backends.raycing.pyTTE_x import TTcrystal, TTscan, Quantity
+from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy import TakagiTaupin
 from xrt.backends.raycing import crystalclasses as rxtl
 
 try:
@@ -32,7 +35,8 @@ try:
 except ImportError:
     isOpenCL = False
 
-hklre = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
+HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
+SCAN_LENGTH = 1000
 
 
 class PlotWidget(QWidget):
@@ -41,22 +45,21 @@ class PlotWidget(QWidget):
 
         try:
             self.setWindowIcon(QIcon(os.path.join(
-                    r'..\..\..\xrt\gui\xrtQook\_icons', 'xbcc.ico')))
+                    r'..\..\..\xrt\gui\xrtQook\_icons', 'xbcc.png')))
         except:
             # icon not found. who cares?
             pass
         self.layout = QHBoxLayout()
-#        self.mainSplitter = QSplitter()
-#        self.layout.addWidget(self.mainSplitter)
-        self.setLayout(self.layout)
+        self.mainSplitter = QSplitter(Qt.Horizontal, self)
 
         # Create a QVBoxLayout for the plot and the toolbar
+        plot_widget = QWidget(self)
         self.plot_layout = QVBoxLayout()
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.axes = self.figure.add_subplot(111)
-        self.plot_lines = []
+        self.plot_lines = {}
 
         # Add the Matplotlib toolbar to the QVBoxLayout
         self.toolbar = NavigationToolbar(self.canvas, self)
@@ -65,24 +68,27 @@ class PlotWidget(QWidget):
         # Add the canvas to the QVBoxLayout
         self.plot_layout.addWidget(self.canvas)
 
-        # Add the QVBoxLayout to the main QHBoxLayout
-        self.layout.addLayout(self.plot_layout)
-#        self.mainSplitter.addWidget(self.plot_layout)
+        plot_widget.setLayout(self.plot_layout)
+        self.mainSplitter.addWidget(plot_widget)
 
+        tree_widget = QWidget(self)
         self.tree_layout = QVBoxLayout()
-        self.tree_widget = QTreeWidget()
-        self.tree_widget.setColumnCount(2)
-        self.tree_widget.setHeaderLabels(['Name', 'Value'])
-        self.tree_widget.setAlternatingRowColors(True)
-        self.tree_widget.itemChanged.connect(self.on_tree_item_changed)
-        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tree_widget.customContextMenuRequested.connect(
+        self.model = QStandardItemModel()
+        self.model.setHorizontalHeaderLabels(["Name", "Value"])
+        self.model.itemChanged.connect(self.on_tree_item_changed)
+
+        self.tree_view = QTreeView(self)
+        self.tree_view.setModel(self.model)
+
+        self.tree_view.setAlternatingRowColors(True)
+        self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_view.customContextMenuRequested.connect(
                 self.show_context_menu)
 
-        self.add_plot_button = QPushButton("Add new plot")
+        self.add_plot_button = QPushButton("Add curve")
         self.add_plot_button.clicked.connect(self.add_plot)
 
-        self.export_button = QPushButton("Export")
+        self.export_button = QPushButton("Export curve")
         self.export_button.clicked.connect(self.export_curve)
 
         # Create a QHBoxLayout for the buttons and add them to the main layout
@@ -90,18 +96,20 @@ class PlotWidget(QWidget):
         self.buttons_layout.addWidget(self.add_plot_button)
         self.buttons_layout.addWidget(self.export_button)
         self.tree_layout.addLayout(self.buttons_layout)
-        self.tree_layout.addWidget(self.tree_widget)
+        self.tree_layout.addWidget(self.tree_view)
 
-        self.layout.addLayout(self.tree_layout)
-#        self.mainSplitter.addWidget(self.tree_layout)
+        tree_widget.setLayout(self.tree_layout)
+        self.mainSplitter.addWidget(tree_widget)
+        self.layout.addWidget(self.mainSplitter)
+        self.setLayout(self.layout)
 
-        if isOpenCL:
-            self.matCL = mcl.XRT_CL(r'materials.cl',
-#                                   precisionOpenCL='float32',
-                                    precisionOpenCL='float64'
-                                    )
-        else:
-            self.matCL = None
+#        if isOpenCL:
+#            self.matCL = mcl.XRT_CL(r'materials.cl',
+#                                    # precisionOpenCL='float32',
+#                                    precisionOpenCL='float64'
+#                                    )
+#        else:
+#            self.matCL = None
 
         self.allCrystals = []
         for ck in CRYSTALS.keys():
@@ -123,7 +131,15 @@ class PlotWidget(QWidget):
                             'deg': r' $\degree$',
                             'arcsec': r' arcsec'}
 
+        self.allBackends = ['auto', 'pyTTE']
+        if isOpenCL:
+            self.allBackends.append('xrtCL FP32')
+            self.allBackends.append('xrtCL FP64')
+
         self.add_plot()
+        self.resize(1200, 700)
+        self.mainSplitter.setSizes([700, 500])
+        self.tree_view.resizeColumnToContents(0)
 
     def add_plot(self):
         theta, curS, curP = self.calculate_amplitudes(
@@ -134,93 +150,80 @@ class PlotWidget(QWidget):
                             "0.",  # Asymmetry
                             "inf",  # Bending radius
                             "9000",  # Energy
-                            np.array([-100, 100])*1e-6)
+                            np.array([-100, 100])*1e-6,
+                            "auto")
         line_s = Line2D(theta*1e6, curS)
         line_p = Line2D(theta*1e6, curP, linestyle='--')
-        self.plot_lines.append((line_s, line_p))
         self.axes.add_line(line_s)
         self.axes.add_line(line_p)
         self.xlabel_base = r'$\theta-\theta_B$, '
         self.axes.set_xlabel(self.xlabel_base+r'$\mu$rad')
-        plot_number = len(self.plot_lines)
+        plot_uuid = uuid.uuid4()
+        self.plot_lines[plot_uuid] = (line_s, line_p)
         plot_name = "Si111 flat"
         line_s.set_label(plot_name+" $\sigma$")
         line_p.set_label(plot_name+" $\pi$")
         line_s.set_color('red')
         line_p.set_color('red')
         lgs = []
-        for lt in self.plot_lines:
+        for lt in self.plot_lines.values():
             for l in lt:
                 lgs.append(l.get_label())
 
-        plot_item = QTreeWidgetItem(self.tree_widget, [plot_name, ""])
-        plot_item.setData(1, Qt.UserRole, plot_number - 1)
+        plot_item = QStandardItem(plot_name)
         plot_item.setFlags(plot_item.flags() | Qt.ItemIsEditable)
         plot_item.curves = np.copy((theta, curS, curP))
+        plot_item.plot_index = plot_uuid
+        self.model.appendRow(plot_item)
 
-        p01CrystalItem = QTreeWidgetItem(plot_item, ["Crystal", "Si"])
-        p01CrystalCB = QComboBox()
-        p01CrystalCB.addItems(self.allCrystals)
-        p01CrystalCB.setCurrentText("Si")
-        self.tree_widget.setItemWidget(p01CrystalItem, 1, p01CrystalCB)
-        p01CrystalCB.currentTextChanged.connect(
-                lambda text, item=p01CrystalItem: item.setText(1, text))
+        for iname, ival, icb in [("Crystal", "Si", self.allCrystals),  # 0
+                                 ("Geometry", "Bragg reflected",  # 1
+                                  self.allGeometries),
+                                 ("hkl", "1, 1, 1", None),  # 2
+                                 ("Thickness, mm", "1.", None),  # 3
+                                 ("Asymmetry Angle, deg", "0.", None),  # 4
+                                 ("Bending Radius, m", "inf", None),  # 5
+                                 ("Separator", "", None),  # 6
+                                 ("Energy, eV", "9000", None),  # 7
+                                 ("Scan Range", "-100, 100", None),  # 8
+                                 ("Scan Units", "urad",
+                                  list(self.allUnits.keys())),  # 9
+                                 ("Detuning Curve", "false",
+                                  ["true", "false"]),  # 10
+                                 ("Calculation Backend", "auto",
+                                  self.allBackends),  # 11
+                                 ("Separator", "", None),  # 12
+                                 ("Curve Color", "red", self.allColors)  # 13
+                                 ]:
 
-        p02GeometryItem = QTreeWidgetItem(plot_item, ["Geometry",
-                                                      "Bragg reflected"])
-        p02GeometryCB = QComboBox()
-        p02GeometryCB.addItems(self.allGeometries)
-        p02GeometryCB.setCurrentIndex(0)
-        self.tree_widget.setItemWidget(p02GeometryItem, 1, p02GeometryCB)
-        p02GeometryCB.currentTextChanged.connect(
-                lambda text, item=p02GeometryItem: item.setText(1, text))
+            if iname == "Separator":
+                sep_item = QStandardItem()
+                sep_item.setFlags(Qt.ItemIsEnabled)
+                sep_item.setBackground(QBrush(Qt.lightGray))
+                sep_item2 = QStandardItem()
+                sep_item2.setFlags(Qt.ItemIsEnabled)
+                sep_item2.setBackground(QBrush(Qt.lightGray))
+                plot_item.appendRow([sep_item, sep_item2])
+            else:
+                item_name = QStandardItem(iname)
+                item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
+                item_value = QStandardItem(str(ival))
+                item_value.setFlags(item_value.flags() | Qt.ItemIsEditable)
+                plot_item.appendRow([item_name, item_value])
 
-        p03hklItem = QTreeWidgetItem(plot_item, ["hkl", "1, 1, 1"])
-        p03hklItem.setFlags(p03hklItem.flags() | Qt.ItemIsEditable)
+            if iname == "Scan Range":
+                item_value.limRads = np.array([-100, 100])*1e-6
 
-        p04ThicknessItem = QTreeWidgetItem(plot_item, ["Thickness, mm", "1."])
-        p04ThicknessItem.setFlags(p04ThicknessItem.flags() | Qt.ItemIsEditable)
+            if icb is not None:
+                cb = QComboBox()
+                cb.addItems(icb)
+                cb.setCurrentText(ival)
+                self.tree_view.setIndexWidget(item_value.index(), cb)
+                cb.currentTextChanged.connect(
+                        lambda text, item=item_value: item.setText(text))
 
-        p05Asymmetry = QTreeWidgetItem(plot_item,
-                                       ["Asymmetry Angle, deg", "0."])
-        p05Asymmetry.setFlags(p05Asymmetry.flags() | Qt.ItemIsEditable)
-
-        p06Radius = QTreeWidgetItem(plot_item, ["Bending Radius, m", "inf"])
-        p06Radius.setFlags(p06Radius.flags() | Qt.ItemIsEditable)
-        if not isOpenCL:
-            p06Radius.setDisabled(True)
-
-        p07Energy = QTreeWidgetItem(plot_item, ["Energy, eV", "9000"])
-        p07Energy.setFlags(p07Energy.flags() | Qt.ItemIsEditable)
-
-        p08ThetaRange = QTreeWidgetItem(plot_item, ["Scan Range", "-100, 100"])
-        p08ThetaRange.setFlags(p08ThetaRange.flags() | Qt.ItemIsEditable)
-        p08ThetaRange.limRads = np.array([-100, 100])*1e-6
-
-        p09ThetaUnitsItem = QTreeWidgetItem(plot_item, ["Scan Units", "urad"])
-        p09ThetaUnitsCB = QComboBox()
-        p09ThetaUnitsCB.addItems(list(self.allUnits.keys()))
-        p09ThetaUnitsCB.setCurrentText("urad")
-        self.tree_widget.setItemWidget(p09ThetaUnitsItem, 1, p09ThetaUnitsCB)
-        p09ThetaUnitsCB.currentTextChanged.connect(
-                lambda text, item=p09ThetaUnitsItem: item.setText(1, text))
-
-        convItem = QTreeWidgetItem(plot_item, ["Convolution",
-                                               "false"])
-        convBox = QComboBox()
-        convBox.addItems(["true", "false"])
-        convBox.setCurrentText("false")
-        self.tree_widget.setItemWidget(convItem, 1, convBox)
-        convBox.currentTextChanged.connect(
-                lambda text, item=convItem: item.setText(1, text))
-
-        color_item = QTreeWidgetItem(plot_item, ["Curve Color", "red"])
-        color_combobox = QComboBox()
-        color_combobox.addItems(self.allColors)
-        color_combobox.setCurrentText("red")
-        self.tree_widget.setItemWidget(color_item, 1, color_combobox)
-        color_combobox.currentTextChanged.connect(
-                lambda text, item=color_item: item.setText(1, text))
+        plot_index = self.model.indexFromItem(plot_item)
+        self.tree_view.expand(plot_index)
 
         self.axes.legend(lgs)
         self.axes.relim()
@@ -228,23 +231,23 @@ class PlotWidget(QWidget):
         self.canvas.draw()
 
     def update_all_units(self, new_units):
-        for index in range(self.tree_widget.topLevelItemCount()):
-            plot_item = self.tree_widget.topLevelItem(index)
-            units_item = plot_item.child(8)
-            units_combo = self.tree_widget.itemWidget(units_item, 1)
+        for index in range(self.model.rowCount()):
+            plot_item = self.model.item(index)
+            units_item = plot_item.child(9, 1)
+            units_combo = self.tree_view.indexWidget(units_item.index())
 
             if units_combo.currentText() != new_units:
                 units_combo.setCurrentText(new_units)
 
-    def on_tree_item_changed(self, item, column):
-        if column == 0:
-            plot_index = item.data(1, Qt.UserRole)
+    def on_tree_item_changed(self, item):
+        if item.index().column() == 0:
+            plot_index = item.plot_index
             if plot_index is not None:
                 lines = self.plot_lines[plot_index]
-                lines[0].set_label(item.text(0)+" $\sigma$")
-                lines[1].set_label(item.text(0)+" $\pi$")
+                lines[0].set_label(item.text()+" $\sigma$")
+                lines[1].set_label(item.text()+" $\pi$")
                 lgs = []
-                for lt in self.plot_lines:
+                for lt in self.plot_lines.values():
                     for l in lt:
                         lgs.append(l.get_label())
                 self.axes.legend(lgs)
@@ -252,55 +255,60 @@ class PlotWidget(QWidget):
         else:
             parent = item.parent()
             if parent:
-                plot_index = parent.data(1, Qt.UserRole)
+                plot_index = parent.plot_index
                 line_s, line_p = self.plot_lines[plot_index]
-                param_name = item.text(0)
-                param_value = item.text(1)
-                convFactor = self.allUnits[parent.child(8).text(1)]
+                param_name = parent.child(item.index().row(), 0).text()
+                param_value = item.text()
+                convFactor = self.allUnits[parent.child(9, 1).text()]
 
-                allParams = [parent.child(i).text(1) for i in range(7)]
+                allParams = [parent.child(i, 1).text() for i in range(6)]
+                allParams.append(parent.child(7, 1).text())  # Energy
                 allParams.append(
-                        self.parse_limits(parent.child(7).text(1))*convFactor)
+                        self.parse_limits(
+                                parent.child(8, 1).text())*convFactor)
+                allParams.append(parent.child(11, 1).text())  # Backend
 
                 theta, curS, curP = np.copy(parent.curves)
-                isConvolution = parent.child(9).text(1).endswith('true')
+                isConvolution = parent.child(10, 1).text().endswith("true")
 
-                if param_name not in ['Scan Range', 'Scan Units',
-                                      'Curve Color', 'Convolution']:
+                if param_name not in ["Scan Range", "Scan Units",
+                                      "Curve Color", "Detuning Curve"]:
                     theta, curS, curP = self.calculate_amplitudes(*allParams)
                     parent.curves = np.copy((theta, curS, curP))
-                elif param_name.endswith('Range'):
-                    convFactor = self.allUnits[parent.child(8).text(1)]
+                elif param_name.endswith("Range"):
+                    convFactor = self.allUnits[parent.child(9, 1).text()]
                     newLims = self.parse_limits(param_value)*convFactor
-                    oldLims = parent.child(7).limRads
+                    oldLims = parent.child(8, 1).limRads
                     if np.sum(np.abs(newLims-oldLims)) > 1e-14:
-                        parent.child(7).limRads = newLims
+                        parent.child(8, 1).limRads = newLims
                         allParams[7] = newLims
                         theta, curS, curP =\
                             self.calculate_amplitudes(*allParams)
                         parent.curves = np.copy((theta, curS, curP))
                     else:  # Only the units changed
                         theta = np.linspace(min(newLims)/convFactor,
-                                            max(newLims)/convFactor, 1000)
+                                            max(newLims)/convFactor,
+                                            SCAN_LENGTH)
                         line_s.set_xdata(theta)
                         line_p.set_xdata(theta)
+#                        self.axes.set_xlim(min(theta), max(theta))
                         self.axes.relim()
                         self.axes.autoscale_view()
                         self.canvas.draw()
                         return
-                elif param_name.endswith('Units'):
+                elif param_name.endswith("Units"):
                     convFactor = self.allUnits[param_value]
                     self.axes.set_xlabel(
                             self.xlabel_base+self.allUnitsStr[param_value])
-                    newLims = parent.child(7).limRads/convFactor
-                    parent.child(7).setText(1, '{0}, {1}'.format(newLims[0],
+                    newLims = parent.child(8, 1).limRads/convFactor
+                    parent.child(8, 1).setText("{0}, {1}".format(newLims[0],
                                                                  newLims[1]))
                     self.update_all_units(param_value)
-                elif param_name.endswith('Color'):
+                elif param_name.endswith("Color"):
                     line_s.set_color(param_value)
                     line_p.set_color(param_value)
                     lgs = []
-                    for lt in self.plot_lines:
+                    for lt in self.plot_lines.values():
                         for l in lt:
                             lgs.append(l.get_label())
                     self.axes.legend(lgs)
@@ -318,67 +326,103 @@ class PlotWidget(QWidget):
                         pltCurvP = curP
                     line_s.set_ydata(pltCurvS)
                     line_p.set_ydata(pltCurvP)
+#                    self.axes.set_xlim(min(theta)/convFactor,
+#                                       max(theta)/convFactor)
                     self.axes.relim()
                     self.axes.autoscale_view()
                     self.canvas.draw()
 
-    def show_context_menu(self, position):
-        item = self.tree_widget.itemAt(position)
-        if item and item.parent() is None:
-            menu = QMenu(self.tree_widget)
-            delete_action = menu.addAction("Delete plot")
-            delete_action.triggered.connect(lambda: self.delete_plot(item))
-            menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+    def show_context_menu(self, point):
+        index = self.tree_view.indexAt(point)
+        if not index.isValid():
+            return
+
+        item = self.model.itemFromIndex(index)
+        if item.parent() is not None:  # Ignore child items
+            return
+
+        context_menu = QMenu(self.tree_view)
+        delete_action = context_menu.addAction("Delete plot")
+        delete_action.triggered.connect(lambda: self.delete_plot(item))
+        context_menu.exec_(self.tree_view.viewport().mapToGlobal(point))
 
     def delete_plot(self, item):
-        # TODO: implement deletion
-        plot_index = item.data(1, Qt.UserRole)
-        line = self.plot_lines[plot_index]
+        plot_index = item.plot_index
+        lines = self.plot_lines[plot_index]
 
-        self.axes.lines.remove(line)
+        for line in lines:
+            self.axes.lines.remove(line)
         self.plot_lines.pop(plot_index)
-        self.tree_widget.takeTopLevelItem(
-                self.tree_widget.indexOfTopLevelItem(item))
 
-        for i, line in enumerate(self.plot_lines[plot_index:]):
-            line.set_label(f"name{(plot_index + i + 1):02d}")
-            self.tree_widget.topLevelItem(plot_index + i).setText(
-                    0, line.get_label())
+        row = item.row()
+        self.model.removeRow(row)
 
-        self.axes.legend([l.get_label() for l in self.plot_lines])
+        lgs = []
+        for lt in self.plot_lines.values():
+            for l in lt:
+                lgs.append(l.get_label())
+        self.axes.legend(lgs)
+        self.axes.relim()
+        self.axes.autoscale_view()
         self.canvas.draw()
 
     def export_curve(self):
-        selected_item = self.tree_widget.currentItem()
-        if selected_item is None or selected_item.parent() is not None:
+        selected_indexes = self.tree_view.selectedIndexes()
+        if not selected_indexes:
+            QMessageBox.warning(
+                    self, "Warning", "No plot selected for export.")
             return
 
-        plot_index = selected_item.data(1, Qt.UserRole)
-        if plot_index is not None:
-            line = self.plot_lines[plot_index]
+        selected_index = selected_indexes[0]
+        while selected_index.parent().isValid():
+            selected_index = selected_index.parent()
+        root_item = self.model.itemFromIndex(selected_index)
+        theta, curvS, curvP = root_item.curves
+        units = root_item.child(9, 1).text()
+        convFactor = self.allUnits[units]
 
-            options = QFileDialog.Options()
-            options |= QFileDialog.DontUseNativeDialog
-            file_name, _ = QFileDialog.getSaveFileName(
-                    self, "Save Curve", "",
-                    "Text Files (*.txt);;All Files (*)", options=options)
+        fileName = root_item.text()
 
-            if file_name:
-                x, y = line.get_data()
-                data = np.column_stack((x, y))
-                np.savetxt(file_name, data, fmt='%.6f',
-                           delimiter='\t', header="X\tY", comments='')
-
-    def calculate_sine(self, amplitude, frequency, phase, x=None):
-        if x is None:
-            x = np.linspace(0, 2 * np.pi, 100)
-        y_sin = amplitude * np.sin(frequency * x + phase)
-        y_cos = amplitude * np.cos(frequency * x + phase)
-        return x, y_sin, y_cos
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+        file_name, _ = QFileDialog.getSaveFileName(
+                self, "Save File", fileName,
+                "Text Files (*.txt);;All Files (*)", options=options)
+        if file_name:
+            with open(file_name, "w") as f:
+                f.write(f"#dtheta,{units}\tsigma\tpi\n")
+                for i in range(len(theta)):
+                    f.write(f"{theta[i]/convFactor:.8e}\t{curvS[i]:.8e}\t{curvP[i]:.8e}\n")
 
     def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
-                             asymmetry,  radius, energy, x=None):
-        useTT = False if radius == 'inf' else True
+                             asymmetry,  radius, energy, limits, backendStr):
+        useTT = False
+        if backendStr == "auto":
+            if radius == "inf":
+                backend = "xrt"
+            elif geometry.startswith("B") and geometry.endswith("mitted"):
+                backend = "pytte"
+            elif isOpenCL:
+                useTT = True
+                backend = "xrtCL"
+                precision = "float64"
+                if geometry.startswith("B"):
+                    precision = "float32"
+            else:
+                backend = "pytte"
+        elif backendStr == "pyTTE":
+            backend = "pytte"
+        elif backendStr == "xrtCL FP32":
+            backend = "xrtCL"
+            precision = "float32"
+            useTT = True
+        elif backendStr == "xrtCL FP64":
+            backend = "xrtCL"
+            precision = "float64"
+            useTT = True
+        else:
+            return
+
         hklList = self.parse_hkl(hkl)
         crystalClass = getattr(rxtl, crystal)
         crystalInstance = crystalClass(hkl=hklList, t=float(thickness),
@@ -388,20 +432,10 @@ class PlotWidget(QWidget):
         E = float(energy)
         theta0 = crystalInstance.get_Bragg_angle(E)
         alpha = np.radians(float(asymmetry))
-        if x is None:
-            theta = np.linspace(-100, 100, 1000)*1e-6 + theta0
+        if limits is None:
+            theta = np.linspace(-100, 100, SCAN_LENGTH)*1e-6 + theta0
         else:
-            theta = np.linspace(x[0], x[-1], 1000) + theta0
-#        s0 = (np.zeros_like(theta), np.cos(theta+alpha), -np.sin(theta+alpha))
-#        sh = (np.zeros_like(theta), np.cos(theta-alpha), np.sin(theta-alpha))
-#        if geometry.startswith('Bragg'):
-#            n = (0, 0, 1)  # outward surface normal
-#        else:
-#            n = (0, -1, 0)  # outward surface normal
-#        hn = (0, np.sin(alpha), np.cos(alpha))  # outward Bragg normal
-#        hns0x = sum(i*j for i, j in zip(hn, s0))
-#        gamma0x = sum(i*j for i, j in zip(n, s0))
-#        gammahx = sum(i*j for i, j in zip(n, sh))
+            theta = np.linspace(limits[0], limits[-1], SCAN_LENGTH) + theta0
 
         if geometry.startswith("B"):
             gamma0 = -np.sin(theta+alpha)
@@ -412,10 +446,30 @@ class PlotWidget(QWidget):
         hns0 = np.sin(alpha)*np.cos(theta+alpha) -\
             np.cos(alpha)*np.sin(theta+alpha)
 
-        if useTT:
+        if backend == "xrtCL":
+            self.matCL = mcl.XRT_CL(r'materials.cl',
+                                    precisionOpenCL=precision)
             ampS, ampP = crystalInstance.get_amplitude_pytte(
                     E, gamma0, gammah, hns0, ucl=self.matCL, alphaAsym=alpha,
                     Ry=float(radius)*1000.)
+        elif backend == "pytte":
+            geotag = 0 if geometry.startswith('B') else np.pi*0.5
+            ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
+                            thickness=Quantity(float(thickness), 'mm'),
+                            debye_waller=1, xrt_crystal=crystalInstance,
+                            Rx=Quantity(float(radius), 'm'),
+                            asymmetry=Quantity(alpha+geotag, 'rad'))
+            tts = TTscan(constant=Quantity(E, 'eV'),
+                         scan=Quantity(theta-theta0, 'rad'),
+                         polarization='sigma')
+            ttp = TTscan(constant=Quantity(E, 'eV'),
+                         scan=Quantity(theta-theta0, 'rad'),
+                         polarization='pi')
+
+            scan_tt_s = TakagiTaupin(ttx, tts)
+            scan_tt_p = TakagiTaupin(ttx, ttp)
+            scan_vector, Rs, Ts, ampS = scan_tt_s.run()
+            scan_vector, Rp, Tp, ampP = scan_tt_p.run()
         else:
             ampS, ampP = crystalInstance.get_amplitude(E, gamma0, gammah, hns0)
 
@@ -425,7 +479,7 @@ class PlotWidget(QWidget):
         return np.array([float(pp) for pp in limstr.split(',')])
 
     def parse_hkl(self, hklstr):
-        matches = re.findall(hklre, hklstr)
+        matches = re.findall(HKLRE, hklstr)
         hklval = []
         for match in matches:
             for group in match:
