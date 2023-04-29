@@ -9,11 +9,13 @@ import sys; sys.path.append(r'..\..\..')
 import os
 import re
 import uuid
+import time
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
     QPushButton, QMenu, QComboBox, QFileDialog,\
-    QSplitter, QTreeView, QMessageBox
-from PyQt5.QtCore import Qt
+    QSplitter, QTreeView, QMessageBox, QProgressBar
+from PyQt5.QtCore import Qt, QThread
+from PyQt5.QtCore import pyqtSignal as Signal
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -39,7 +41,18 @@ HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,
 SCAN_LENGTH = 1000
 
 
+def parse_hkl(hklstr):
+    matches = re.findall(HKLRE, hklstr)
+    hklval = []
+    for match in matches:
+        for group in match:
+            if group != '':
+                hklval.append(int(group))
+    return hklval
+
 class PlotWidget(QWidget):
+#    statusUpdate = Signal(tuple)
+
     def __init__(self):
         super().__init__()
 
@@ -49,6 +62,7 @@ class PlotWidget(QWidget):
         except:
             # icon not found. who cares?
             pass
+#        self.statusUpdate.connect(self.updateProgressBar)
         self.layout = QHBoxLayout()
         self.mainSplitter = QSplitter(Qt.Horizontal, self)
 
@@ -97,6 +111,11 @@ class PlotWidget(QWidget):
         self.buttons_layout.addWidget(self.export_button)
         self.tree_layout.addLayout(self.buttons_layout)
         self.tree_layout.addWidget(self.tree_view)
+        self.progressBar = QProgressBar()
+        self.progressBar.setTextVisible(True)
+        self.progressBar.setRange(0, 100)
+        self.progressBar.setAlignment(Qt.AlignCenter)
+        self.tree_layout.addWidget(self.progressBar)
 
         tree_widget.setLayout(self.tree_layout)
         self.mainSplitter.addWidget(tree_widget)
@@ -163,8 +182,8 @@ class PlotWidget(QWidget):
         plot_name = "Si111 flat"
         line_s.set_label(plot_name+" $\sigma$")
         line_p.set_label(plot_name+" $\pi$")
-        line_s.set_color('red')
-        line_p.set_color('red')
+        line_s.set_color('blue')
+        line_p.set_color('blue')
         lgs = []
         for lt in self.plot_lines.values():
             for l in lt:
@@ -193,7 +212,7 @@ class PlotWidget(QWidget):
                                  ("Calculation Backend", "auto",
                                   self.allBackends),  # 11
                                  ("Separator", "", None),  # 12
-                                 ("Curve Color", "red", self.allColors)  # 13
+                                 ("Curve Color", "blue", self.allColors)  # 13
                                  ]:
 
             if iname == "Separator":
@@ -273,8 +292,10 @@ class PlotWidget(QWidget):
 
                 if param_name not in ["Scan Range", "Scan Units",
                                       "Curve Color", "Detuning Curve"]:
-                    theta, curS, curP = self.calculate_amplitudes(*allParams)
-                    parent.curves = np.copy((theta, curS, curP))
+#                    theta, curS, curP = self.calculate_amplitudes(*allParams)
+#                    parent.curves = np.copy((theta, curS, curP))
+                    allParams.append(parent.row())
+                    self.calculate_amps_in_thread(*allParams)
                 elif param_name.endswith("Range"):
                     convFactor = self.allUnits[parent.child(9, 1).text()]
                     newLims = self.parse_limits(param_value)*convFactor
@@ -282,9 +303,11 @@ class PlotWidget(QWidget):
                     if np.sum(np.abs(newLims-oldLims)) > 1e-14:
                         parent.child(8, 1).limRads = newLims
                         allParams[7] = newLims
-                        theta, curS, curP =\
-                            self.calculate_amplitudes(*allParams)
-                        parent.curves = np.copy((theta, curS, curP))
+                        allParams.append(parent.row())
+                        self.calculate_amps_in_thread(*allParams)
+#                        theta, curS, curP =\
+#                            self.calculate_amplitudes(*allParams)
+#                        parent.curves = np.copy((theta, curS, curP))
                     else:  # Only the units changed
                         theta = np.linspace(min(newLims)/convFactor,
                                             max(newLims)/convFactor,
@@ -423,7 +446,7 @@ class PlotWidget(QWidget):
         else:
             return
 
-        hklList = self.parse_hkl(hkl)
+        hklList = parse_hkl(hkl)
         crystalClass = getattr(rxtl, crystal)
         crystalInstance = crystalClass(hkl=hklList, t=float(thickness),
                                        geom=geometry,
@@ -475,17 +498,181 @@ class PlotWidget(QWidget):
 
         return theta - theta0, abs(ampS)**2, abs(ampP)**2
 
+    def calculate_amps_in_thread(self, crystal, geometry, hkl, thickness,
+                                 asymmetry,  radius, energy, limits,
+                                 backendStr, plot_nr):
+        self.amps_calculator = AmpCalculator(crystal, geometry, hkl, thickness,
+                                        asymmetry,  radius, energy, limits,
+                                        backendStr, plot_nr)
+        self.amps_calculator.progress.connect(self.updateProgressBar)
+        self.amps_calculator.result.connect(self.on_calculation_result)
+        self.amps_calculator.finished.connect(self.on_calculation_finished)
+        self.amps_calculator.start()
+
     def parse_limits(self, limstr):
         return np.array([float(pp) for pp in limstr.split(',')])
 
-    def parse_hkl(self, hklstr):
-        matches = re.findall(HKLRE, hklstr)
-        hklval = []
-        for match in matches:
-            for group in match:
-                if group != '':
-                    hklval.append(int(group))
-        return hklval
+    def on_calculation_result(self, res_tuple):
+        theta, curS, curP, plot_nr = res_tuple
+
+        plot_item = self.model.item(plot_nr)
+        plot_item.curves = np.copy((theta, curS, curP))
+
+        isConvolution = plot_item.child(10, 1).text().endswith("true")
+        convFactor = self.allUnits[plot_item.child(9, 1).text()]
+
+        line_s, line_p = self.plot_lines[plot_item.plot_index]
+
+        line_s.set_xdata(theta/convFactor)
+        line_p.set_xdata(theta/convFactor)
+        if isConvolution:
+            pltCurvS = np.convolve(curS, curS, 'same') / curS.sum()
+            pltCurvP = np.convolve(curP, curP, 'same') / curP.sum()
+        else:
+            pltCurvS = curS
+            pltCurvP = curP
+        line_s.set_ydata(pltCurvS)
+        line_p.set_ydata(pltCurvP)
+#                    self.axes.set_xlim(min(theta)/convFactor,
+#                                       max(theta)/convFactor)
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.canvas.draw()
+
+    def on_calculation_finished(self):
+#        print("All done")
+        pass
+
+    def updateProgressBar(self, dataTuple):
+        if int(dataTuple[1]) < 100:
+            updStr = r"{0}, {1}% done".format(dataTuple[0], int(dataTuple[1]))
+        else:
+            updStr = r"{}".format(dataTuple[0])
+        self.progressBar.setValue(int(dataTuple[1]))
+        self.progressBar.setFormat(updStr)
+
+
+class AmpCalculator(QThread):
+    progress = Signal(tuple)
+    result = Signal(tuple)
+
+    def __init__(self, crystal, geometry, hkl, thickness,
+                 asymmetry,  radius, energy, limits, backendStr, plot_nr):
+        super(AmpCalculator, self).__init__()
+        self.crystal = crystal
+        self.geometry = geometry
+        self.hkl = hkl
+        self.thickness = thickness
+        self.asymmetry = asymmetry
+        self.radius = radius
+        self.energy = energy
+        self.limits = limits
+        self.backendStr = backendStr
+        self.plot_nr = plot_nr
+
+    def run(self):
+        self.progress.emit(("Starting", 0))
+        useTT = False
+        backend = "xrt"
+        precision = "float64"
+
+        if self.backendStr == "auto":
+            if self.radius == "inf":
+                backend = "xrt"
+            elif self.geometry == "Bragg transmitted":
+                backend = "pytte"
+            elif isOpenCL:
+                useTT = True
+                backend = "xrtCL"
+                precision = "float64"
+                if self.geometry.startswith("B"):
+                    precision = "float32"
+            else:
+                backend = "pytte"
+        elif self.backendStr == "pyTTE":
+            backend = "pytte"
+        elif self.backendStr == "xrtCL FP32":
+            self.progress.emit(("Calculating on GPU", 0))
+            backend = "xrtCL"
+            precision = "float32"
+            useTT = True
+            if self.geometry.startswith("Laue"):
+                self.progress.emit(
+                        ("Calculations in Laue geometry require FP64", 0))
+        elif self.backendStr == "xrtCL FP64":
+            self.progress.emit(("Calculating on GPU", 0))
+            backend = "xrtCL"
+            precision = "float64"
+            useTT = True
+        else:
+            return
+
+        if backend == "xrtCL" and self.geometry == "Bragg transmitted":
+            self.progress.emit(
+                    ("Bragg transmitted not supported in OpenCL", 100))
+            return
+
+        hklList = parse_hkl(self.hkl)
+        crystalClass = getattr(rxtl, self.crystal)
+        crystalInstance = crystalClass(hkl=hklList, t=float(self.thickness),
+                                       geom=self.geometry,
+                                       useTT=useTT)
+
+        E = float(self.energy)
+        theta0 = crystalInstance.get_Bragg_angle(E)
+        alpha = np.radians(float(self.asymmetry))
+        if self.limits is None:
+            theta = np.linspace(-100, 100, SCAN_LENGTH)*1e-6 + theta0
+        else:
+            theta = np.linspace(
+                    self.limits[0], self.limits[-1], SCAN_LENGTH) + theta0
+
+        if self.geometry.startswith("B"):
+            gamma0 = -np.sin(theta+alpha)
+            gammah = np.sin(theta-alpha)
+        else:
+            gamma0 = -np.cos(theta+alpha)
+            gammah = -np.cos(theta-alpha)
+        hns0 = np.sin(alpha)*np.cos(theta+alpha) -\
+            np.cos(alpha)*np.sin(theta+alpha)
+
+        if backend == "xrtCL":
+            matCL = mcl.XRT_CL(r'materials.cl',
+                               precisionOpenCL=precision)
+            ampS, ampP = crystalInstance.get_amplitude_pytte(
+                    E, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
+                    Ry=float(self.radius)*1000., signal=self.progress)
+        elif backend == "pytte":
+            t0 = time.time()
+            self.progress.emit(("Calculating on CPU", 0))
+            geotag = 0 if self.geometry.startswith('B') else np.pi*0.5
+            ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
+                            thickness=Quantity(float(self.thickness), 'mm'),
+                            debye_waller=1, xrt_crystal=crystalInstance,
+                            Rx=Quantity(float(self.radius), 'm'),
+                            asymmetry=Quantity(alpha+geotag, 'rad'))
+            tts = TTscan(constant=Quantity(E, 'eV'),
+                         scan=Quantity(theta-theta0, 'rad'),
+                         polarization='sigma')
+            ttp = TTscan(constant=Quantity(E, 'eV'),
+                         scan=Quantity(theta-theta0, 'rad'),
+                         polarization='pi')
+
+            scan_tt_s = TakagiTaupin(ttx, tts)
+            scan_tt_p = TakagiTaupin(ttx, ttp)
+            scan_vector, Rs, Ts, ampS = scan_tt_s.run()
+            self.progress.emit(("Calculating on CPU", 50))
+            scan_vector, Rp, Tp, ampP = scan_tt_p.run()
+            self.progress.emit(("Calculation completed in {:.3f}s".format(
+                    time.time()-t0), 100))
+            if self.geometry.endswith("mitted"):
+                ampS = np.sqrt(Ts)
+                ampP = np.sqrt(Tp)
+        else:
+            ampS, ampP = crystalInstance.get_amplitude(E, gamma0, gammah, hns0)
+            self.progress.emit(("Ready", 100))
+        self.result.emit((theta-theta0, abs(ampS)**2, abs(ampP)**2,
+                         self.plot_nr))
 
 
 if __name__ == '__main__':

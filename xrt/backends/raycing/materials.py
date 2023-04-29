@@ -1543,7 +1543,7 @@ class Crystal(Material):
             self, E, beamInDotNormal, beamOutDotNormal=None,
             beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
             Ry=None, Rx=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
-            autoLimits=True):
+            autoLimits=True, signal=None):
         r"""
         Calculates complex amplitude reflectivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
@@ -1712,7 +1712,8 @@ class Crystal(Material):
         print('Calculating bent crystal reflectivity')
         amp_s, amp_p, npoints = ucl.run_parallel(
             'get_amplitudes_pytte', scalarArgs, slicedROArgs,
-            None, slicedRWArgs, None, dimension=bLength, complexity=startSteps)
+            None, slicedRWArgs, None, dimension=bLength, complexity=startSteps,
+            signal=signal)
 
 #        from matplotlib import pyplot as plt
 #        plt.figure("npoints")
@@ -1729,6 +1730,8 @@ class Crystal(Material):
             np.sqrt(np.abs(beamOutDotNormal)/np.abs(beamInDotNormal))
         curveS[nzrays] = amp_s*norm[nzrays]
         curveP[nzrays] = amp_p*norm[nzrays]
+        if signal is not None:
+            signal.emit(("Calculation completed in {:.3f}s".format(time.time()-t001), 100))
         print("Amplitude calculation for", bLength, "points takes", time.time()-t001, "s")
         return curveS, curveP
 
