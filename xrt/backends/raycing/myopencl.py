@@ -266,15 +266,15 @@ class XRT_CL(object):
                     self.cl_ctx.extend([cl_ctx])
                 self.cl_mf = cl.mem_flags
                 if self.autoTune and len(self.cl_ctx) < 2 and\
-                    os.name.endswith('nt'):
-                        self.run_parallel = self.run_parallel_desktop
+                        os.name.endswith('nt'):
+                    self.run_parallel = self.run_parallel_desktop
 
     def run_parallel_max(self, kernelName='', scalarArgs=None,
-                     slicedROArgs=None, nonSlicedROArgs=None,
-                     slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0,
-                     complexity=0, signal=None):
+                         slicedROArgs=None, nonSlicedROArgs=None,
+                         slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0,
+                         complexity=0, signal=None):
 
-#        print("Complexity", complexity, "; Dimension", dimension)
+        #        print("Complexity", complexity, "; Dimension", dimension)
 
         if self.useZMQ:
             outgoing_dict = {'kernelName': kernelName,
@@ -436,12 +436,12 @@ class XRT_CL(object):
         return ret
 
     def run_parallel_desktop(self, kernelName='', scalarArgs=None,
-                     slicedROArgs=None, nonSlicedROArgs=None,
-                     slicedRWArgs=None, nonSlicedRWArgs=None, dimension=0,
-                     complexity=0, signal=None):
+                             slicedROArgs=None, nonSlicedROArgs=None,
+                             slicedRWArgs=None, nonSlicedRWArgs=None,
+                             dimension=0, complexity=0, signal=None):
 
-#        print("Running in GUI-friendly GPGPU mode")
-#        print("Complexity", int(complexity), "; Dimension", dimension)
+        #        print("Running in GUI-friendly GPGPU mode")
+        #        print("Complexity", int(complexity), "; Dimension", dimension)
 
         if self.useZMQ:
             outgoing_dict = {'kernelName': kernelName,
@@ -466,11 +466,11 @@ class XRT_CL(object):
 
             kernel_bufs = []
             global_size = []
-            ev_h2d = []
+#            ev_h2d = []
             ev_run = []
             nCU = []
             ndstart = []
-            ndslice = []
+#            ndslice = []
             ndsize = []
             minWGS = 1e20
 
@@ -616,14 +616,15 @@ class XRT_CL(object):
 
                 ndstart += chunksize
                 if complexity > 0:
-                    pStat = 100*ndstart/dimension if dimension>ndstart else 100
+                    pStat = 100 * ndstart / dimension if dimension > ndstart\
+                        else 100
                     pStatStr = "{:.2f}% done".format(pStat)
                     if signal is not None:
                         signal.emit((pStatStr, pStat))
                     print(pStatStr)
                 t1 = time.time()
                 if isFirstRun:
-                    tpr = t1 - t0
+                    tpr = t1 - t0 if t1 > t0 else .1  # protection for div by 0
                     chunksize = int(minWGS * np.ceil(
                             self.targetTimePerRun * startM / tpr))
                     isFirstRun = False
