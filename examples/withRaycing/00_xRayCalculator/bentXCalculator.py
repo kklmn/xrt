@@ -14,10 +14,10 @@ import multiprocessing
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
     QPushButton, QMenu, QComboBox, QFileDialog,\
-    QSplitter, QTreeView, QMessageBox, QProgressBar
+    QSplitter, QTreeView, QMessageBox, QProgressBar, QCheckBox
 from PyQt5.QtCore import Qt, QThread, QObject, pyqtSlot, QTimer
 from PyQt5.QtCore import pyqtSignal as Signal
-from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush
+from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush, QPixmap, QColor
 
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -146,12 +146,15 @@ class PlotWidget(QWidget):
 
         self.allCrystals = []
         for ck in CRYSTALS.keys():
-            if not ck.startswith("prototype"):
+            if ck in rxtl.__all__:
                 self.allCrystals.append(ck)
 
         self.allColors = []
-        for color in mcolors.TABLEAU_COLORS.keys():
-            self.allColors.append(color.split(":")[-1])
+        self.allIcons = {}
+        for color, colorCode in mcolors.TABLEAU_COLORS.items():
+            colorName = color.split(":")[-1]
+            self.allColors.append(colorName)
+            self.allIcons[colorName] = self.create_colored_icon(colorCode)
 
         self.allGeometries = ['Bragg reflected', 'Bragg transmitted',
                               'Laue reflected', 'Laue transmitted']
@@ -174,6 +177,11 @@ class PlotWidget(QWidget):
         self.mainSplitter.setSizes([700, 500])
         self.tree_view.resizeColumnToContents(0)
 
+    def create_colored_icon(self, color):
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(QColor(color))
+        return QIcon(pixmap)
+
     def add_plot(self):
         plot_uuid = uuid.uuid4()
         line_s = Line2D([], [])
@@ -189,8 +197,18 @@ class PlotWidget(QWidget):
         plot_item = QStandardItem()
         plot_item.setFlags(plot_item.flags() | Qt.ItemIsEditable)
         plot_item.plot_index = plot_uuid
-        self.model.appendRow(plot_item)
+
+        cbk_item = QStandardItem()
+        self.model.appendRow([plot_item, cbk_item])
         plot_number = plot_item.row()
+
+        checkbox = QCheckBox("Visible")
+        checkbox.setCheckState(Qt.Checked)  # Start with the checkbox checked
+
+        checkbox.stateChanged.connect(
+                lambda state, index=plot_uuid: self.on_cbk_state_changed(
+                        index, state))
+        self.tree_view.setIndexWidget(cbk_item.index(), checkbox)
 
         calcParams = []
 
@@ -254,7 +272,16 @@ class PlotWidget(QWidget):
 
             if icb is not None:
                 cb = QComboBox()
-                cb.addItems(icb)
+                if ii == 13:
+                    model = QStandardItemModel()
+                    cb.setModel(model)
+                    for color in icb:
+                        item = QStandardItem(color)
+                        item.setIcon(self.allIcons[color])
+                        model.appendRow(item)
+                    plot_item.setIcon(self.allIcons[str(newValue)])
+                else:
+                    cb.addItems(icb)
                 cb.setCurrentText(newValue)
                 self.tree_view.setIndexWidget(item_value.index(), cb)
                 cb.currentTextChanged.connect(
@@ -264,14 +291,14 @@ class PlotWidget(QWidget):
                 calcParams.append(newValue)
 
             if ii == 0:
-                plot_name = newValue
+                plot_name = newValue + "["
             elif ii == 2:
                 for hkl in parse_hkl(newValue):
                     plot_name += str(hkl)
-                plot_name += "flat"
+                plot_name += "] flat"
             if ii == 13:
-                line_s.set_color(newValue)
-                line_p.set_color(newValue)
+                line_s.set_color("tab:"+newValue)
+                line_p.set_color("tab:"+newValue)
 
         plot_item.setText(plot_name)
         line_s.set_label(plot_name+" $\sigma$")
@@ -342,7 +369,7 @@ class PlotWidget(QWidget):
                 allParams.append(parent.child(11, 1).text())  # Backend
 
                 theta, curS, curP = np.copy(parent.curves)
-                isConvolution = parent.child(10, 1).text().endswith("true")
+#                isConvolution = parent.child(10, 1).text().endswith("true")
 
                 if param_name not in ["Scan Range", "Scan Units",
                                       "Curve Color", "DCM Rocking Curve"]:
@@ -377,8 +404,9 @@ class PlotWidget(QWidget):
                                                                  newLims[1]))
                     self.update_all_units(param_value)
                 elif param_name.endswith("Color"):
-                    line_s.set_color(param_value)
-                    line_p.set_color(param_value)
+                    line_s.set_color("tab:"+param_value)
+                    line_p.set_color("tab:"+param_value)
+                    parent.setIcon(self.allIcons[param_value])
                     lgs = []
                     for lt in self.plot_lines.values():
                         for l in lt:
@@ -386,23 +414,9 @@ class PlotWidget(QWidget):
                     self.axes.legend(lgs)
                     self.canvas.draw()
                     return
-
-#                if param_name not in {"Curve Color", "Scan Units"}:
-#                    line_s.set_xdata(theta/convFactor)
-#                    line_p.set_xdata(theta/convFactor)
-#                    if isConvolution:
-#                        pltCurvS = np.convolve(curS, curS, 'same') / curS.sum()
-#                        pltCurvP = np.convolve(curP, curP, 'same') / curP.sum()
-#                    else:
-#                        pltCurvS = curS
-#                        pltCurvP = curP
-#                    line_s.set_ydata(pltCurvS)
-#                    line_p.set_ydata(pltCurvP)
-##                    self.axes.set_xlim(min(theta)/convFactor,
-##                                       max(theta)/convFactor)
-#                    self.axes.relim()
-#                    self.axes.autoscale_view()
-#                    self.canvas.draw()
+                else:
+                    self.on_calculation_result((theta, curS, curP,
+                                                parent.row()))
 
     def show_context_menu(self, point):
         index = self.tree_view.indexAt(point)
@@ -555,6 +569,9 @@ class PlotWidget(QWidget):
         backend = "xrt"
         precision = "float64"
 
+        if float(radius) == 0:
+            radius = "inf"
+
         if backendStr == "auto":
             if radius == "inf":
                 backend = "xrt"
@@ -594,7 +611,7 @@ class PlotWidget(QWidget):
 
         E = float(energy)
         theta0 = crystalInstance.get_Bragg_angle(E)
-        alpha = np.radians(float(asymmetry))
+        phi = np.radians(float(asymmetry))
         if limits is None:
             theta = np.linspace(-100, 100, SCAN_LENGTH)*1e-6 + theta0
         else:
@@ -602,13 +619,13 @@ class PlotWidget(QWidget):
                     limits[0], limits[-1], SCAN_LENGTH) + theta0
 
         if geometry.startswith("B"):
-            gamma0 = -np.sin(theta+alpha)
-            gammah = np.sin(theta-alpha)
+            gamma0 = -np.sin(theta+phi)
+            gammah = np.sin(theta-phi)
         else:
-            gamma0 = -np.cos(theta+alpha)
-            gammah = -np.cos(theta-alpha)
-        hns0 = np.sin(alpha)*np.cos(theta+alpha) -\
-            np.cos(alpha)*np.sin(theta+alpha)
+            gamma0 = -np.cos(theta+phi)
+            gammah = -np.cos(theta-phi)
+        hns0 = np.sin(phi)*np.cos(theta+phi) -\
+            np.cos(phi)*np.sin(theta+phi)
 
         if backend == "xrtCL" and geometry == "Bragg transmitted":
             self.statusUpdate.emit(
@@ -618,7 +635,7 @@ class PlotWidget(QWidget):
         if backend == "xrtCL":
             self.amps_calculator = AmpCalculator(
                     crystalInstance, theta-theta0, E, gamma0, gammah, hns0,
-                    alpha, radius, precision, plot_nr)
+                    phi, radius, precision, plot_nr)
             self.amps_calculator.progress.connect(self.update_progress_bar)
             self.amps_calculator.result.connect(self.on_calculation_result)
 #            self.amps_calculator.finished.connect(self.on_calculation_finished)
@@ -635,7 +652,7 @@ class PlotWidget(QWidget):
                             thickness=Quantity(float(thickness), 'mm'),
                             debye_waller=1, xrt_crystal=crystalInstance,
                             Rx=Quantity(float(radius), 'm'),
-                            asymmetry=Quantity(alpha+geotag, 'rad'))
+                            asymmetry=Quantity(phi+geotag, 'rad'))
             tts = TTscan(constant=Quantity(E, 'eV'),
                          scan=Quantity(theta-theta0, 'rad'),
                          polarization='sigma')
@@ -722,6 +739,11 @@ class PlotWidget(QWidget):
     def on_calculation_finished(self):
 #        print("All done")
         pass
+
+    def on_cbk_state_changed(self, plot_index, state):
+        for line in self.plot_lines[plot_index]:
+            line.set_visible(state == Qt.Checked)
+        self.canvas.draw()
 
     def update_progress_bar(self, dataTuple):
         if int(dataTuple[1]) < 100:

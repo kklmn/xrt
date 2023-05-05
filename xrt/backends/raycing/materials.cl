@@ -1434,7 +1434,7 @@ __kernel void get_amplitudes_pytte(const float c1,
     else {
         cot_a0 = cos_a0/sin_a0;}
     
-    if (geometry==1) {cot_a0=1/cot_a0;};
+//    if (geometry==1) {cot_a0=1/cot_a0;};
 
     float4 scap = (float4)(sin_p*cos_ah, sin_p*sin_ah,
                            cos_p*cos_ah, cos_p*sin_ah);

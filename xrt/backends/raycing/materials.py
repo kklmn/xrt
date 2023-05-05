@@ -1585,7 +1585,7 @@ class Crystal(Material):
         Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         dh0tag = 0 if self.geom.endswith('reflected') else 1
-        alphaAsym = 0 if alphaAsym is None else alphaAsym
+        alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag
 
         if beamOutDotNormal is None:
             beamOutDotNormal = -beamInDotNormal
@@ -1601,7 +1601,7 @@ class Crystal(Material):
                         debye_waller=1, xrt_crystal=self,
                         Rx=Quantity(Ryum, 'um'),
                         Ry=Quantity(Rxum, 'um'),
-                        asymmetry=Quantity(alphaAsym+geotag, 'rad'))
+                        asymmetry=Quantity(alphaAsym, 'rad'))
         djparams = ttx.djparams
 
         # Step 1. Evaluating the boundaries where the amplitudes are calculated
@@ -1641,12 +1641,12 @@ class Crystal(Material):
                             ucl.cl_precisionF(thetaB),
                             ucl.cl_precisionF(chcbmod)]
             slicedRWArgs = [tminCL, tmaxCL]
-    
+
             tminCL, tmaxCL = ucl.run_parallel(
                 'estimate_bent_width', scalarArgs, slicedROArgs,
                 None, slicedRWArgs, None, dimension=NRAYS)
-    
-            limExtend = 3 if (abs(Ryum)>1e9 and abs(Rxum)>1e9) else 1.5
+
+            limExtend = 3 if (abs(Ryum) > 1e9 and abs(Rxum) > 1e9) else 1.5
             tmid = 0.5*(tmaxCL+tminCL)
             thw = 0.5*(tmaxCL-tminCL)
             tminCL = tmid - limExtend*thw  # Initial estimate is too narrow
@@ -1685,14 +1685,14 @@ class Crystal(Material):
         amp_s = np.zeros(bLength, dtype=ucl.cl_precisionC)
         amp_p = np.zeros(bLength, dtype=ucl.cl_precisionC)
 
-        npoints = np.zeros(bLength, dtype=ucl.cl_precisionF)  # Convergence monitor
+        npoints = np.zeros(bLength, dtype=ucl.cl_precisionF)
         hgammah = h*1e4/beamOutDotNormal[nzrays]
         scalarArgs = [ucl.cl_precisionF(djparams[0]),  # C1
                       ucl.cl_precisionF(djparams[1]),  # C2
                       ucl.cl_precisionF(djparams[2]),  # InvR1
                       ucl.cl_precisionF(alphaAsym),
                       ucl.cl_precisionF(thickness*1e3),
-                      ucl.cl_precisionF(tolerance), # RK Adaptive step control
+                      ucl.cl_precisionF(tolerance),  # RK Adaptive step control
                       np.int32(maxSteps),
                       np.int32(startSteps),
                       np.int32(geotag),
@@ -1731,8 +1731,10 @@ class Crystal(Material):
         curveS[nzrays] = amp_s*norm[nzrays]
         curveP[nzrays] = amp_p*norm[nzrays]
         if signal is not None:
-            signal.emit(("Calculation completed in {:.3f}s".format(time.time()-t001), 100))
-        print("Amplitude calculation for", bLength, "points takes", time.time()-t001, "s")
+            signal.emit(("Calculation completed in {:.3f}s".format(
+                    time.time()-t001), 100))
+        print("Amplitude calculation for", bLength, "points takes",
+              time.time()-t001, "s")
         return curveS, curveP
 
     """
