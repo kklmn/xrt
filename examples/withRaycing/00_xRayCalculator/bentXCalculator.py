@@ -15,9 +15,10 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
     QPushButton, QMenu, QComboBox, QFileDialog,\
     QSplitter, QTreeView, QMessageBox, QProgressBar, QCheckBox
-from PyQt5.QtCore import Qt, QThread, QObject, pyqtSlot, QTimer
+from PyQt5.QtCore import Qt, QThread, QTimer
 from PyQt5.QtCore import pyqtSignal as Signal
-from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush, QPixmap, QColor
+from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
+    QPixmap, QColor
 
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -28,7 +29,8 @@ from matplotlib.lines import Line2D
 import matplotlib.colors as mcolors
 from xrt.backends.raycing.pyTTE_x.elastic_tensors import CRYSTALS
 from xrt.backends.raycing.pyTTE_x import TTcrystal, TTscan, Quantity
-from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin, CalculateAmplitudes #, integrate_single_scan_step
+from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
+    CalculateAmplitudes  # , integrate_single_scan_step
 from xrt.backends.raycing import crystalclasses as rxtl
 
 try:
@@ -467,7 +469,7 @@ class PlotWidget(QWidget):
         units = root_item.child(9, 1).text()
         convFactor = self.allUnits[units]
 
-        fileName = root_item.text()
+        fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
 
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly
@@ -736,9 +738,9 @@ class PlotWidget(QWidget):
         self.axes.autoscale_view()
         self.canvas.draw()
 
-    def on_calculation_finished(self):
+#    def on_calculation_finished(self):
 #        print("All done")
-        pass
+#        pass
 
     def on_cbk_state_changed(self, plot_index, state):
         for line in self.plot_lines[plot_index]:
