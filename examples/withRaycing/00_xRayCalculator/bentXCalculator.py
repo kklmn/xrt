@@ -87,7 +87,13 @@ class PlotWidget(QWidget):
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.axes = self.figure.add_subplot(111)
+        self.ax2 = self.axes.twinx()
+        self.axes.set_ylabel('Amplitude', color='k')
+        self.axes.tick_params(axis='y', labelcolor='k')
+        self.ax2.set_ylabel('Phase', color='b')
+        self.ax2.tick_params(axis='y', labelcolor='b')
         self.figure.tight_layout()
+
         self.plot_lines = {}
 
         # Add the Matplotlib toolbar to the QVBoxLayout
@@ -114,6 +120,7 @@ class PlotWidget(QWidget):
         self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_view.customContextMenuRequested.connect(
                 self.show_context_menu)
+        self.tree_view.clicked.connect(self.on_item_clicked)
 
         self.add_plot_button = QPushButton("Add curve")
         self.add_plot_button.clicked.connect(self.add_plot)
@@ -188,13 +195,15 @@ class PlotWidget(QWidget):
         plot_uuid = uuid.uuid4()
         line_s = Line2D([], [])
         line_p = Line2D([], [], linestyle='--')
+        line_phase = Line2D([], [], linestyle=':')
 #        line_s = Line2D(theta*1e6, curS)
 #        line_p = Line2D(theta*1e6, curP, linestyle='--')
         self.axes.add_line(line_s)
         self.axes.add_line(line_p)
+        self.ax2.add_line(line_phase)
         self.xlabel_base = r'$\theta-\theta_B$, '
         self.axes.set_xlabel(self.xlabel_base+r'$\mu$rad')
-        self.plot_lines[plot_uuid] = (line_s, line_p)
+        self.plot_lines[plot_uuid] = (line_s, line_p, line_phase)
         previousPlot = None
         plot_item = QStandardItem()
         plot_item.setFlags(plot_item.flags() | Qt.ItemIsEditable)
@@ -204,13 +213,20 @@ class PlotWidget(QWidget):
         self.model.appendRow([plot_item, cbk_item])
         plot_number = plot_item.row()
 
-        checkbox = QCheckBox("Visible")
-        checkbox.setCheckState(Qt.Checked)  # Start with the checkbox checked
+#        checkbox = QCheckBox("Visible")
+#        checkbox.setCheckState(Qt.Checked)  # Start with the checkbox checked
 
-        checkbox.stateChanged.connect(
-                lambda state, index=plot_uuid: self.on_cbk_state_changed(
-                        index, state))
-        self.tree_view.setIndexWidget(cbk_item.index(), checkbox)
+#        cb = QComboBox()
+#        cb.addItems(['sigma pi', 'sigma', 'pi', 'phase', 'hide'])
+#        cb.setCurrentText('sigma+pi')
+#        self.tree_view.setIndexWidget(plot_item.index(), cb)
+#        cb.currentTextChanged.connect(
+#                lambda text, item=plot_item: item.setText(text))
+
+#        checkbox.stateChanged.connect(
+#                lambda state, index=plot_uuid: self.on_cbk_state_changed(
+#                        index, state))
+#        self.tree_view.setIndexWidget(cbk_item.index(), checkbox)
 
         calcParams = []
 
@@ -231,7 +247,9 @@ class PlotWidget(QWidget):
                       ("Calculation Backend", "auto",
                        self.allBackends),  # 11
                       ("Separator", "", None),  # 12
-                      ("Curve Color", "blue", self.allColors)  # 13
+                      ("Curve Color", "blue", self.allColors),  # 13
+                      ("Curve Type", "sigma pi", ["sigma pi", "sigma", "pi",
+                                                  "phase", "hide all"])
                       ]
 
         if plot_number > 0:
@@ -289,7 +307,7 @@ class PlotWidget(QWidget):
                 cb.currentTextChanged.connect(
                         lambda text, item=item_value: item.setText(text))
 
-            if ii not in [6, 8, 9, 10, 12, 13]:
+            if ii not in [6, 8, 9, 10, 12, 13, 14]:
                 calcParams.append(newValue)
 
             if ii == 0:
@@ -301,15 +319,13 @@ class PlotWidget(QWidget):
             if ii == 13:
                 line_s.set_color("tab:"+newValue)
                 line_p.set_color("tab:"+newValue)
+                line_phase.set_color("tab:"+newValue)
 
         plot_item.setText(plot_name)
         line_s.set_label(plot_name+" $\sigma$")
         line_p.set_label(plot_name+" $\pi$")
-        lgs = []
-        for lt in self.plot_lines.values():
-            for l in lt:
-                lgs.append(l.get_label())
-        self.axes.legend(lgs)
+        line_phase.set_label(plot_name+" $\phi_\sigma - \phi_\pi$")
+        self.add_legend()
 
         plot_index = self.model.indexFromItem(plot_item)
         self.tree_view.expand(plot_index)
@@ -317,20 +333,6 @@ class PlotWidget(QWidget):
         calcParams.append(plot_number)
 
         self.calculate_amps_in_thread(*calcParams)
-#            "Si",  # Crystal
-#            "Bragg reflected",  # Geometry
-#            "1, 1, 1",  # hkl
-#            "1.",  # Thickness
-#            "0.",  # Asymmetry
-#            "inf",  # Bending radius
-#            "9000",  # Energy
-#            np.array([-100, 100])*1e-6,
-#            "auto",
-#            plot_number)
-
-#        self.axes.relim()
-#        self.axes.autoscale_view()
-#        self.canvas.draw()
 
     def update_all_units(self, new_units):
         for index in range(self.model.rowCount()):
@@ -348,17 +350,14 @@ class PlotWidget(QWidget):
                 lines = self.plot_lines[plot_index]
                 lines[0].set_label(item.text()+" $\sigma$")
                 lines[1].set_label(item.text()+" $\pi$")
-                lgs = []
-                for lt in self.plot_lines.values():
-                    for l in lt:
-                        lgs.append(l.get_label())
-                self.axes.legend(lgs)
+                lines[2].set_label(item.text()+" $\phi_\sigma - \phi_\pi$")
+                self.add_legend()
                 self.canvas.draw()
         else:
             parent = item.parent()
             if parent:
                 plot_index = parent.plot_index
-                line_s, line_p = self.plot_lines[plot_index]
+                line_s, line_p, line_phase = self.plot_lines[plot_index]
                 param_name = parent.child(item.index().row(), 0).text()
                 param_value = item.text()
                 convFactor = self.allUnits[parent.child(9, 1).text()]
@@ -374,7 +373,8 @@ class PlotWidget(QWidget):
 #                isConvolution = parent.child(10, 1).text().endswith("true")
 
                 if param_name not in ["Scan Range", "Scan Units",
-                                      "Curve Color", "DCM Rocking Curve"]:
+                                      "Curve Color", "DCM Rocking Curve",
+                                      "Curve Type"]:
                     allParams.append(parent.row())  # plot number
                     self.calculate_amps_in_thread(*allParams)
                 elif param_name.endswith("Range"):
@@ -392,11 +392,11 @@ class PlotWidget(QWidget):
                                             SCAN_LENGTH)
                         line_s.set_xdata(theta)
                         line_p.set_xdata(theta)
+                        line_phase.set_xdata(theta)
                         self.axes.set_xlim(min(theta), max(theta))
-                        self.axes.relim()
-                        self.axes.autoscale_view()
+                        self.rescale_axes()
                         self.canvas.draw()
-                        return
+#                        return
                 elif param_name.endswith("Units"):
                     convFactor = self.allUnits[param_value]
                     self.axes.set_xlabel(
@@ -405,17 +405,17 @@ class PlotWidget(QWidget):
                     parent.child(8, 1).setText("{0}, {1}".format(newLims[0],
                                                                  newLims[1]))
                     self.update_all_units(param_value)
+                    self.update_title(parent)
+                    self.canvas.draw()
                 elif param_name.endswith("Color"):
                     line_s.set_color("tab:"+param_value)
                     line_p.set_color("tab:"+param_value)
+                    line_phase.set_color("tab:"+param_value)
                     parent.setIcon(self.allIcons[param_value])
-                    lgs = []
-                    for lt in self.plot_lines.values():
-                        for l in lt:
-                            lgs.append(l.get_label())
-                    self.axes.legend(lgs)
+                    self.update_title_color(parent)
+                    self.add_legend()
                     self.canvas.draw()
-                    return
+#                    return
                 else:
                     self.on_calculation_result((theta, curS, curP,
                                                 parent.row()))
@@ -438,21 +438,39 @@ class PlotWidget(QWidget):
         plot_index = item.plot_index
         lines = self.plot_lines[plot_index]
 
-        for line in lines:
-            self.axes.lines.remove(line)
+#        for line in lines:
+        self.axes.lines.remove(lines[0])
+        self.axes.lines.remove(lines[1])
+        self.ax2.lines.remove(lines[2])
         self.plot_lines.pop(plot_index)
 
         row = item.row()
         self.model.removeRow(row)
+        self.add_legend()
 
-        lgs = []
-        for lt in self.plot_lines.values():
-            for l in lt:
-                lgs.append(l.get_label())
-        self.axes.legend(lgs)
+        self.canvas.draw()
+
+    def rescale_axes(self):
+        self.axes.set_autoscalex_on(True)
+        self.axes.set_autoscaley_on(True)
+        self.ax2.set_autoscalex_on(True)
+        self.ax2.set_autoscaley_on(True)
         self.axes.relim()
         self.axes.autoscale_view()
-        self.canvas.draw()
+        self.ax2.relim()
+        self.ax2.autoscale_view()
+
+    def add_legend(self):
+        if self.axes.get_legend() is not None:
+            self.axes.get_legend().remove()
+        lgs = []
+        lns = []
+        for lt in self.plot_lines.values():
+            for l in lt:
+                if l.get_visible():
+                    lns.append(l)
+                    lgs.append(l.get_label())
+        self.axes.legend(lns, lgs)
 
     def export_curve(self):
         selected_indexes = self.tree_view.selectedIndexes()
@@ -466,6 +484,8 @@ class PlotWidget(QWidget):
             selected_index = selected_index.parent()
         root_item = self.model.itemFromIndex(selected_index)
         theta, curvS, curvP = root_item.curves
+        absCurvS = abs(curvS)**2
+        absCurvP = abs(curvP)**2
         units = root_item.child(9, 1).text()
         convFactor = self.allUnits[units]
 
@@ -480,7 +500,7 @@ class PlotWidget(QWidget):
             with open(file_name, "w") as f:
                 f.write(f"#dtheta,{units}\tsigma\tpi\n")
                 for i in range(len(theta)):
-                    f.write(f"{theta[i]/convFactor:.8e}\t{curvS[i]:.8e}\t{curvP[i]:.8e}\n")
+                    f.write(f"{theta[i]/convFactor:.8e}\t{absCurvS[i]:.8e}\t{absCurvP[i]:.8e}\n")
 
     def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
                              asymmetry,  radius, energy, limits, backendStr):
@@ -560,8 +580,8 @@ class PlotWidget(QWidget):
             scan_vector, Rp, Tp, ampP = scan_tt_p.run()
         else:
             ampS, ampP = crystalInstance.get_amplitude(E, gamma0, gammah, hns0)
-
-        return theta - theta0, abs(ampS)**2, abs(ampP)**2
+#        return theta - theta0, abs(ampS)**2, abs(ampP)**2
+        return theta - theta0, ampS, ampP
 
     def calculate_amps_in_thread(self, crystal, geometry, hkl, thickness,
                                  asymmetry,  radius, energy, limits,
@@ -605,6 +625,8 @@ class PlotWidget(QWidget):
         else:
             return
 
+        plot_item = self.model.item(plot_nr)
+
         hklList = parse_hkl(hkl)
         crystalClass = getattr(rxtl, crystal)
         crystalInstance = crystalClass(hkl=hklList, t=float(thickness),
@@ -613,6 +635,7 @@ class PlotWidget(QWidget):
 
         E = float(energy)
         theta0 = crystalInstance.get_Bragg_angle(E)
+        plot_item.thetaB = theta0
         phi = np.radians(float(asymmetry))
         if limits is None:
             theta = np.linspace(-100, 100, SCAN_LENGTH)*1e-6 + theta0
@@ -645,9 +668,10 @@ class PlotWidget(QWidget):
         elif backend == "pytte":
             self.t0 = time.time()
             self.statusUpdate.emit(("Calculating on CPU", 0))
-            plot_item = self.model.item(plot_nr)
-            plot_item.curves = np.copy((theta-theta0, np.zeros_like(theta),
-                                        np.zeros_like(theta)))
+            plot_item.curves = np.copy((theta-theta0,
+                                        np.zeros(len(theta), dtype=np.complex),
+                                        np.zeros(len(theta),
+                                                 dtype=np.complex)))
             plot_item.curProgress = 0
             geotag = 0 if geometry.startswith('B') else np.pi*0.5
             ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
@@ -682,8 +706,10 @@ class PlotWidget(QWidget):
         else:
             ampS, ampP = crystalInstance.get_amplitude(E, gamma0, gammah, hns0)
             self.statusUpdate.emit(("Ready", 100))
+#            self.on_calculation_result(
+#                    (theta-theta0, abs(ampS)**2, abs(ampP)**2, plot_nr))
             self.on_calculation_result(
-                    (theta-theta0, abs(ampS)**2, abs(ampP)**2, plot_nr))
+                    (theta-theta0, ampS, ampP, plot_nr))
 
     def check_progress(self, progress_queue):
         progress = None
@@ -718,33 +744,98 @@ class PlotWidget(QWidget):
         plot_item.curves = np.copy((theta, curS, curP))
 
         isConvolution = plot_item.child(10, 1).text().endswith("true")
-        convFactor = self.allUnits[plot_item.child(9, 1).text()]
+        unitsStr = plot_item.child(9, 1).text()
+        convFactor = self.allUnits[unitsStr]
 
-        line_s, line_p = self.plot_lines[plot_item.plot_index]
+        line_s, line_p, line_phase = self.plot_lines[plot_item.plot_index]
 
         line_s.set_xdata(theta/convFactor)
         line_p.set_xdata(theta/convFactor)
+        line_phase.set_xdata(theta/convFactor)
+
+        pltCurvPh = np.angle(curS * curP.conj())
+        absCurS = abs(curS)**2
+        absCurP = abs(curP)**2
+
         if isConvolution:
-            pltCurvS = np.convolve(curS, curS, 'same') / curS.sum()
-            pltCurvP = np.convolve(curP, curP, 'same') / curP.sum()
+            pltCurvS = np.convolve(absCurS, absCurS, 'same') / curS.sum()
+            pltCurvP = np.convolve(absCurP, absCurP, 'same') / curP.sum()
         else:
-            pltCurvS = curS
-            pltCurvP = curP
+            pltCurvS = absCurS
+            pltCurvP = absCurP
+
+        plot_item.fwhm = self.get_fwhm(theta, absCurS)
+
         line_s.set_ydata(pltCurvS)
         line_p.set_ydata(pltCurvP)
+        line_phase.set_ydata(pltCurvPh)
+
+        if plot_item.child(14, 1).text() == "sigma pi":
+            line_s.set_visible(True)
+            line_p.set_visible(True)
+            line_phase.set_visible(False)
+        elif plot_item.child(14, 1).text() == "sigma":
+            line_s.set_visible(True)
+            line_p.set_visible(False)
+            line_phase.set_visible(False)
+        elif plot_item.child(14, 1).text() == "pi":
+            line_s.set_visible(False)
+            line_p.set_visible(True)
+            line_phase.set_visible(False)
+        elif plot_item.child(14, 1).text() == "phase":
+            line_s.set_visible(False)
+            line_p.set_visible(False)
+            line_phase.set_visible(True)
+        else:
+            line_s.set_visible(False)
+            line_p.set_visible(False)
+            line_phase.set_visible(False)
+
         self.axes.set_xlim(min(theta)/convFactor,
                            max(theta)/convFactor)
-        self.axes.relim()
-        self.axes.autoscale_view()
+
+        self.rescale_axes()
+        self.update_title(plot_item)
+        self.update_title_color(plot_item)
+
+        self.add_legend()
         self.canvas.draw()
 
-#    def on_calculation_finished(self):
-#        print("All done")
-#        pass
+    def get_fwhm(self, theta, curve):
+        topHalf = np.where(curve >= 0.5*np.max(curve))[0]
+        fwhm = np.abs(theta[topHalf[0]] - theta[topHalf[-1]])
+        return fwhm
 
-    def on_cbk_state_changed(self, plot_index, state):
-        for line in self.plot_lines[plot_index]:
-            line.set_visible(state == Qt.Checked)
+    def on_item_clicked(self, index):
+        while index.parent().isValid():
+            index = index.parent()
+
+        plot_item = self.model.itemFromIndex(index)
+        self.update_title(plot_item)
+        self.update_title_color(plot_item)
+        self.canvas.draw()
+
+#    def on_cbk_state_changed(self, plot_index, state):
+#        for line in self.plot_lines[plot_index]:
+#            line.set_visible(state == Qt.Checked)
+#        self.canvas.draw()
+
+    def update_title(self, item):
+        unitsStr = item.child(9, 1).text()
+        convFactor = self.allUnits[unitsStr]
+        if hasattr(item, "fwhm"):
+            self.axes.set_title(
+                    r"$\theta_B$ = {0:.3f}{1}, FWHM$_\sigma$ = {2:.3f} {3}".format(
+                    np.degrees(item.thetaB),
+                    self.allUnitsStr["deg"],
+                    item.fwhm/convFactor,
+                    self.allUnitsStr[unitsStr]))
+        self.canvas.draw()
+
+    def update_title_color(self, item):
+        cur_color = item.child(13, 1).text()
+        title2 = self.ax2.set_title("-----", loc='left', pad=10, weight='bold')
+        title2.set_color("tab:"+cur_color)
         self.canvas.draw()
 
     def update_progress_bar(self, dataTuple):
@@ -781,7 +872,9 @@ class AmpCalculator(QThread):
                 self.energy, self.gamma0, self.gammah, self.hns0,
                 ucl=matCL, alphaAsym=self.alpha,
                 Ry=float(self.radius)*1000., signal=self.progress)
-        self.result.emit((self.dtheta, abs(ampS)**2, abs(ampP)**2,
+#        self.result.emit((self.dtheta, abs(ampS)**2, abs(ampP)**2,
+#                          self.plot_nr))
+        self.result.emit((self.dtheta, ampS, ampP,
                           self.plot_nr))
 
 

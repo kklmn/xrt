@@ -714,4 +714,5 @@ class CalculateAmplitudes:
         ampsP = self.integrate_single_scan_step(*args)
         args[3] = 1.  # Calculating for Sigma polarization
         ampsS = self.integrate_single_scan_step(*args)
-        return self.args[-2], abs(ampsS)**2, abs(ampsP)**2, self.args[-1]
+#        return self.args[-2], abs(ampsS)**2, abs(ampsP)**2, self.args[-1]
+        return self.args[-2], ampsS, ampsP, self.args[-1]
