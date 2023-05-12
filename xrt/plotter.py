@@ -1325,7 +1325,10 @@ class XYCPlot(object):
         if extent is not None:
             graph.images[0].set_extent(extent)
 
-        del graph.lines[:]  # otherwise it accumulates the FWHM lines
+        # del graph.lines[:]  # otherwise it accumulates the FWHM lines
+        for line in graph.lines:
+            line.remove()
+
         if axis.max1D > 0:
             args = np.argwhere(xx >= xxMaxHalf)
             iHistFWHMlow = np.min(args)
