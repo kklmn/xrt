@@ -254,6 +254,7 @@ class XRT_CL(object):
             self.cl_queue = []
             self.cl_ctx = []
             self.cl_program = []
+#            self.devices = []
             self.cl_mf = None
             self.run_parallel = self.run_parallel_max
             if not self.useZMQ:

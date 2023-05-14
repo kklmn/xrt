@@ -42,7 +42,6 @@ except ImportError:
     isOpenCL = False
 
 HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
-SCAN_LENGTH = 1000
 
 
 def parse_hkl(hklstr):
@@ -59,6 +58,23 @@ def run_calculation(params, progress_queue):
     calculation = CalculateAmplitudes(*params)
     result = calculation.run()
     progress_queue.put((result))
+
+
+def raise_warning(text, infoText):
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Warning)
+    msg.setText(text)
+    msg.setInformativeText(infoText)
+    msg.setWindowTitle(text)
+    proceed_button = msg.addButton('Proceed', QMessageBox.AcceptRole)
+    cancel_button = msg.addButton(QMessageBox.Cancel)
+    msg.exec_()
+
+    # Check which button was clicked
+    if msg.clickedButton() == proceed_button:
+        return True
+    elif msg.clickedButton() == cancel_button:
+        return False
 
 
 class PlotWidget(QWidget):
@@ -128,7 +144,6 @@ class PlotWidget(QWidget):
         self.export_button = QPushButton("Export curve")
         self.export_button.clicked.connect(self.export_curve)
 
-        # Create a QHBoxLayout for the buttons and add them to the main layout
         self.buttons_layout = QHBoxLayout()
         self.buttons_layout.addWidget(self.add_plot_button)
         self.buttons_layout.addWidget(self.export_button)
@@ -144,14 +159,6 @@ class PlotWidget(QWidget):
         self.mainSplitter.addWidget(tree_widget)
         self.layout.addWidget(self.mainSplitter)
         self.setLayout(self.layout)
-
-#        if isOpenCL:
-#            self.matCL = mcl.XRT_CL(r'materials.cl',
-#                                    # precisionOpenCL='float32',
-#                                    precisionOpenCL='float64'
-#                                    )
-#        else:
-#            self.matCL = None
 
         self.allCrystals = []
         for ck in CRYSTALS.keys():
@@ -179,7 +186,14 @@ class PlotWidget(QWidget):
         self.allBackends = ['auto', 'pyTTE']
         if isOpenCL:
             self.allBackends.append('xrtCL FP32')
-            self.allBackends.append('xrtCL FP64')
+            self.matCL = mcl.XRT_CL(r'materials.cl',
+                                    precisionOpenCL='float32')
+            for ctx in self.matCL.cl_ctx:
+                for device in ctx.devices:
+                    if device.double_fp_config == 63:
+                        self.isFP64 = True
+            if self.isFP64:
+                self.allBackends.append('xrtCL FP64')
 
         self.add_plot()
         self.resize(1200, 700)
@@ -191,13 +205,23 @@ class PlotWidget(QWidget):
         pixmap.fill(QColor(color))
         return QIcon(pixmap)
 
+    def add_legend(self):
+        if self.axes.get_legend() is not None:
+            self.axes.get_legend().remove()
+        lgs = []
+        lns = []
+        for lt in self.plot_lines.values():
+            for l in lt:
+                if l.get_visible():
+                    lns.append(l)
+                    lgs.append(l.get_label())
+        self.axes.legend(lns, lgs)
+
     def add_plot(self):
         plot_uuid = uuid.uuid4()
         line_s = Line2D([], [])
         line_p = Line2D([], [], linestyle='--')
         line_phase = Line2D([], [], linestyle=':')
-#        line_s = Line2D(theta*1e6, curS)
-#        line_p = Line2D(theta*1e6, curP, linestyle='--')
         self.axes.add_line(line_s)
         self.axes.add_line(line_p)
         self.ax2.add_line(line_phase)
@@ -213,21 +237,6 @@ class PlotWidget(QWidget):
         self.model.appendRow([plot_item, cbk_item])
         plot_number = plot_item.row()
 
-#        checkbox = QCheckBox("Visible")
-#        checkbox.setCheckState(Qt.Checked)  # Start with the checkbox checked
-
-#        cb = QComboBox()
-#        cb.addItems(['sigma pi', 'sigma', 'pi', 'phase', 'hide'])
-#        cb.setCurrentText('sigma+pi')
-#        self.tree_view.setIndexWidget(plot_item.index(), cb)
-#        cb.currentTextChanged.connect(
-#                lambda text, item=plot_item: item.setText(text))
-
-#        checkbox.stateChanged.connect(
-#                lambda state, index=plot_uuid: self.on_cbk_state_changed(
-#                        index, state))
-#        self.tree_view.setIndexWidget(cbk_item.index(), checkbox)
-
         calcParams = []
 
         initParams = [("Crystal", "Si", self.allCrystals),  # 0
@@ -240,16 +249,17 @@ class PlotWidget(QWidget):
                       ("Separator", "", None),  # 6
                       ("Energy, eV", "9000", None),  # 7
                       ("Scan Range", "-100, 100", None),  # 8
+                      ("Scan Points", "500", None),  # 9
                       ("Scan Units", "urad",
-                       list(self.allUnits.keys())),  # 9
+                       list(self.allUnits.keys())),  # 10
                       ("DCM Rocking Curve", "false",
-                       ["true", "false"]),  # 10
+                       ["true", "false"]),  # 11
                       ("Calculation Backend", "auto",
-                       self.allBackends),  # 11
-                      ("Separator", "", None),  # 12
-                      ("Curve Color", "blue", self.allColors),  # 13
+                       self.allBackends),  # 12
+                      ("Separator", "", None),  # 13
+                      ("Curve Color", "blue", self.allColors),  # 14
                       ("Curve Type", "sigma pi", ["sigma pi", "sigma", "pi",
-                                                  "phase", "hide all"])
+                                                  "phase", "hide all"])  # 15
                       ]
 
         if plot_number > 0:
@@ -258,9 +268,9 @@ class PlotWidget(QWidget):
         for ii, (iname, ival, icb) in enumerate(initParams):
             newValue = ival
             if previousPlot is not None:
-                if ii not in [5, 6, 11, 12, 13]:
+                if ii not in [5, 6, 12, 13, 14]:
                     newValue = previousPlot.child(ii, 1).text()
-                elif ii == 13:
+                elif iname == "Curve Color":
                     prevValue = previousPlot.child(ii, 1).text()
                     prevIndex = self.allColors.index(prevValue)
                     if prevIndex + 1 == len(self.allColors):
@@ -283,16 +293,9 @@ class PlotWidget(QWidget):
                 item_value.setFlags(item_value.flags() | Qt.ItemIsEditable)
                 plot_item.appendRow([item_name, item_value])
 
-            if ii == 9:
-                convFactor = self.allUnits[newValue]
-                newLims = self.parse_limits(
-                        plot_item.child(8, 1).text())*convFactor
-                plot_item.child(8, 1).limRads = newLims
-                calcParams.append(newLims)
-
             if icb is not None:
                 cb = QComboBox()
-                if ii == 13:
+                if iname == "Curve Color":
                     model = QStandardItemModel()
                     cb.setModel(model)
                     for color in icb:
@@ -307,16 +310,29 @@ class PlotWidget(QWidget):
                 cb.currentTextChanged.connect(
                         lambda text, item=item_value: item.setText(text))
 
-            if ii not in [6, 8, 9, 10, 12, 13, 14]:
+            if ii < 6:  # Remaining params will be added individually below
                 calcParams.append(newValue)
 
-            if ii == 0:
+            if iname == "Crystal":
                 plot_name = newValue + "["
-            elif ii == 2:
+            elif iname == "hkl":
                 for hkl in parse_hkl(newValue):
                     plot_name += str(hkl)
                 plot_name += "] flat"
-            if ii == 13:
+            elif iname.startswith("Energy"):
+                calcParams.append(float(newValue))
+            elif iname == "Scan Points":
+                calcParams.append(self.get_scan_points(plot_item))
+            elif iname == "Scan Units":
+                convFactor = self.allUnits[newValue]
+                newLims = self.parse_limits(
+                        self.get_scan_range(plot_item))*convFactor
+                self.get_range_item(plot_item).limRads = newLims
+                calcParams.append(newLims)
+            elif iname.endswith("Backend"):
+                calcParams.append(newValue)
+
+            if iname == "Curve Color":
                 line_s.set_color("tab:"+newValue)
                 line_p.set_color("tab:"+newValue)
                 line_phase.set_color("tab:"+newValue)
@@ -334,14 +350,46 @@ class PlotWidget(QWidget):
 
         self.calculate_amps_in_thread(*calcParams)
 
-    def update_all_units(self, new_units):
-        for index in range(self.model.rowCount()):
-            plot_item = self.model.item(index)
-            units_item = plot_item.child(9, 1)
-            units_combo = self.tree_view.indexWidget(units_item.index())
+    def get_fwhm(self, theta, curve):
+        topHalf = np.where(curve >= 0.5*np.max(curve))[0]
+        fwhm = np.abs(theta[topHalf[0]] - theta[topHalf[-1]])
+        return fwhm
 
-            if units_combo.currentText() != new_units:
-                units_combo.setCurrentText(new_units)
+    def get_energy(self, item):
+        try:
+            return float(item.child(7, 1).text())
+        except ValueError:
+            return 9000.
+
+    def get_scan_range(self, item):
+        return item.child(8, 1).text()
+
+    def get_range_item(self, item):
+        return item.child(8, 1)
+
+    def get_scan_points(self, item):
+        try:
+            return int(float(item.child(9, 1).text()))
+        except ValueError:
+            return 500
+
+    def get_units(self, item):
+        return item.child(10, 1).text()
+
+    def get_units_item(self, item):
+        return item.child(10, 1)
+
+    def get_convolution(self, item):
+        return item.child(11, 1).text().endswith("true")
+
+    def get_backend(self, item):
+        return item.child(12, 1).text()
+
+    def get_color(self, item):
+        return item.child(14, 1).text()
+
+    def get_scan_type(self, item):
+        return item.child(15, 1).text()
 
     def on_tree_item_changed(self, item):
         if item.index().column() == 0:
@@ -360,17 +408,17 @@ class PlotWidget(QWidget):
                 line_s, line_p, line_phase = self.plot_lines[plot_index]
                 param_name = parent.child(item.index().row(), 0).text()
                 param_value = item.text()
-                convFactor = self.allUnits[parent.child(9, 1).text()]
+                convFactor = self.allUnits[self.get_units(parent)]
 
                 allParams = [parent.child(i, 1).text() for i in range(6)]
-                allParams.append(parent.child(7, 1).text())  # Energy
+                allParams.append(self.get_energy(parent))
+                allParams.append(self.get_scan_points(parent))
                 allParams.append(
                         self.parse_limits(
-                                parent.child(8, 1).text())*convFactor)
-                allParams.append(parent.child(11, 1).text())  # Backend
+                                self.get_scan_range(parent))*convFactor)
+                allParams.append(self.get_backend(parent))
 
                 theta, curS, curP = np.copy(parent.curves)
-#                isConvolution = parent.child(10, 1).text().endswith("true")
 
                 if param_name not in ["Scan Range", "Scan Units",
                                       "Curve Color", "DCM Rocking Curve",
@@ -378,32 +426,32 @@ class PlotWidget(QWidget):
                     allParams.append(parent.row())  # plot number
                     self.calculate_amps_in_thread(*allParams)
                 elif param_name.endswith("Range"):
-                    convFactor = self.allUnits[parent.child(9, 1).text()]
+                    convFactor = self.allUnits[self.get_units(parent)]
                     newLims = self.parse_limits(param_value)*convFactor
-                    oldLims = parent.child(8, 1).limRads
+                    oldLims = self.get_range_item(parent).limRads
                     if np.sum(np.abs(newLims-oldLims)) > 1e-14:
-                        parent.child(8, 1).limRads = newLims
-                        allParams[7] = newLims
+                        self.get_range_item(parent).limRads = newLims
+                        allParams[8] = newLims
                         allParams.append(parent.row())
                         self.calculate_amps_in_thread(*allParams)
                     else:  # Only the units changed
                         theta = np.linspace(min(newLims)/convFactor,
                                             max(newLims)/convFactor,
-                                            SCAN_LENGTH)
+                                            self.get_scan_points(parent))
                         line_s.set_xdata(theta)
                         line_p.set_xdata(theta)
                         line_phase.set_xdata(theta)
                         self.axes.set_xlim(min(theta), max(theta))
                         self.rescale_axes()
                         self.canvas.draw()
-#                        return
+
                 elif param_name.endswith("Units"):
                     convFactor = self.allUnits[param_value]
                     self.axes.set_xlabel(
                             self.xlabel_base+self.allUnitsStr[param_value])
-                    newLims = parent.child(8, 1).limRads/convFactor
-                    parent.child(8, 1).setText("{0}, {1}".format(newLims[0],
-                                                                 newLims[1]))
+                    newLims = self.get_range_item(parent).limRads/convFactor
+                    self.get_range_item(parent).setText("{0}, {1}".format(
+                            newLims[0], newLims[1]))
                     self.update_all_units(param_value)
                     self.update_title(parent)
                     self.canvas.draw()
@@ -415,7 +463,7 @@ class PlotWidget(QWidget):
                     self.update_title_color(parent)
                     self.add_legend()
                     self.canvas.draw()
-#                    return
+
                 else:
                     self.on_calculation_result((theta, curS, curP,
                                                 parent.row()))
@@ -438,7 +486,6 @@ class PlotWidget(QWidget):
         plot_index = item.plot_index
         lines = self.plot_lines[plot_index]
 
-#        for line in lines:
         self.axes.lines.remove(lines[0])
         self.axes.lines.remove(lines[1])
         self.ax2.lines.remove(lines[2])
@@ -460,18 +507,6 @@ class PlotWidget(QWidget):
         self.ax2.relim()
         self.ax2.autoscale_view()
 
-    def add_legend(self):
-        if self.axes.get_legend() is not None:
-            self.axes.get_legend().remove()
-        lgs = []
-        lns = []
-        for lt in self.plot_lines.values():
-            for l in lt:
-                if l.get_visible():
-                    lns.append(l)
-                    lgs.append(l.get_label())
-        self.axes.legend(lns, lgs)
-
     def export_curve(self):
         selected_indexes = self.tree_view.selectedIndexes()
         if not selected_indexes:
@@ -486,7 +521,7 @@ class PlotWidget(QWidget):
         theta, curvS, curvP = root_item.curves
         absCurvS = abs(curvS)**2
         absCurvP = abs(curvP)**2
-        units = root_item.child(9, 1).text()
+        units = self.get_units(root_item)
         convFactor = self.allUnits[units]
 
         fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
@@ -503,7 +538,8 @@ class PlotWidget(QWidget):
                     f.write(f"{theta[i]/convFactor:.8e}\t{absCurvS[i]:.8e}\t{absCurvP[i]:.8e}\n")
 
     def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
-                             asymmetry,  radius, energy, limits, backendStr):
+                             asymmetry,  radius, energy, npoints, limits,
+                             backendStr):  # Left here for debug purpose only
         useTT = False
         if backendStr == "auto":
             if radius == "inf":
@@ -537,13 +573,13 @@ class PlotWidget(QWidget):
                                        geom=geometry,
                                        useTT=useTT)
 
-        E = float(energy)
-        theta0 = crystalInstance.get_Bragg_angle(E)
+        theta0 = crystalInstance.get_Bragg_angle(energy)
         alpha = np.radians(float(asymmetry))
+
         if limits is None:
-            theta = np.linspace(-100, 100, SCAN_LENGTH)*1e-6 + theta0
+            theta = np.linspace(-100, 100, npoints)*1e-6 + theta0
         else:
-            theta = np.linspace(limits[0], limits[-1], SCAN_LENGTH) + theta0
+            theta = np.linspace(limits[0], limits[-1], npoints) + theta0
 
         if geometry.startswith("B"):
             gamma0 = -np.sin(theta+alpha)
@@ -558,33 +594,33 @@ class PlotWidget(QWidget):
             matCL = mcl.XRT_CL(r'materials.cl',
                                precisionOpenCL=precision)
             ampS, ampP = crystalInstance.get_amplitude_pytte(
-                    E, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
+                    energy, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
                     Ry=float(radius)*1000.)
-        elif backend == "pytte":
-            geotag = 0 if geometry.startswith('B') else np.pi*0.5
-            ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
-                            thickness=Quantity(float(thickness), 'mm'),
-                            debye_waller=1, xrt_crystal=crystalInstance,
-                            Rx=Quantity(float(radius), 'm'),
-                            asymmetry=Quantity(alpha+geotag, 'rad'))
-            tts = TTscan(constant=Quantity(E, 'eV'),
-                         scan=Quantity(theta-theta0, 'rad'),
-                         polarization='sigma')
-            ttp = TTscan(constant=Quantity(E, 'eV'),
-                         scan=Quantity(theta-theta0, 'rad'),
-                         polarization='pi')
+#        elif backend == "pytte":
+#            geotag = 0 if geometry.startswith('B') else np.pi*0.5
+#            ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
+#                            thickness=Quantity(float(thickness), 'mm'),
+#                            debye_waller=1, xrt_crystal=crystalInstance,
+#                            Rx=Quantity(float(radius), 'm'),
+#                            asymmetry=Quantity(alpha+geotag, 'rad'))
+#            tts = TTscan(constant=Quantity(E, 'eV'),
+#                         scan=Quantity(theta-theta0, 'rad'),
+#                         polarization='sigma')
+#            amps_calculator = TakagiTaupin(ttx, tts)
+#            integrationParams = amps_calculator.prepare_arrays()
 
-            scan_tt_s = TakagiTaupin(ttx, tts)
-            scan_tt_p = TakagiTaupin(ttx, ttp)
-            scan_vector, Rs, Ts, ampS = scan_tt_s.run()
-            scan_vector, Rp, Tp, ampP = scan_tt_p.run()
+#            scan_tt_s = TakagiTaupin(ttx, tts)
+#            scan_tt_p = TakagiTaupin(ttx, ttp)
+#            scan_vector, Rs, Ts, ampS = scan_tt_s.run()
+#            scan_vector, Rp, Tp, ampP = scan_tt_p.run()
         else:
-            ampS, ampP = crystalInstance.get_amplitude(E, gamma0, gammah, hns0)
+            ampS, ampP = crystalInstance.get_amplitude(
+                    energy, gamma0, gammah, hns0)
 #        return theta - theta0, abs(ampS)**2, abs(ampP)**2
         return theta - theta0, ampS, ampP
 
     def calculate_amps_in_thread(self, crystal, geometry, hkl, thickness,
-                                 asymmetry,  radius, energy, limits,
+                                 asymmetry, radius, energy, npoints, limits,
                                  backendStr, plot_nr):
 
         useTT = False
@@ -602,21 +638,34 @@ class PlotWidget(QWidget):
             elif isOpenCL:
                 useTT = True
                 backend = "xrtCL"
-                precision = "float64"
+                if self.isFP64:
+                    precision = "float64"
+                else:
+                    precision = "float32"
                 if geometry.startswith("B"):
                     precision = "float32"
             else:
                 backend = "pytte"
         elif backendStr == "pyTTE":
             backend = "pytte"
+            if not raise_warning(
+                    "Long Processing Time",
+                    "The selected calculation mode may take a significant "
+                    "amount of time to complete."):
+                self.statusUpdate.emit(("Calculation cancelled", 100))
+                return
         elif backendStr == "xrtCL FP32":
             self.statusUpdate.emit(("Calculating on GPU", 0))
             backend = "xrtCL"
             precision = "float32"
             useTT = True
-#            if geometry.startswith("Laue"):
-#                self.progress.emit(
-#                        ("Calculations in Laue geometry require FP64", 0))
+            if geometry.startswith("Laue"):
+                if not raise_warning(
+                        "Insifficient Precision",
+                        "Calculating Laue in FP32 may cause problems with "
+                        "convergence"):
+                    self.statusUpdate.emit(("Calculation cancelled", 100))
+                    return
         elif backendStr == "xrtCL FP64":
             self.statusUpdate.emit(("Calculating on GPU", 0))
             backend = "xrtCL"
@@ -633,15 +682,15 @@ class PlotWidget(QWidget):
                                        geom=geometry,
                                        useTT=useTT)
 
-        E = float(energy)
-        theta0 = crystalInstance.get_Bragg_angle(E)
+#        E = float(energy)
+        theta0 = crystalInstance.get_Bragg_angle(energy)
         plot_item.thetaB = theta0
         phi = np.radians(float(asymmetry))
         if limits is None:
-            theta = np.linspace(-100, 100, SCAN_LENGTH)*1e-6 + theta0
+            theta = np.linspace(-100, 100, npoints)*1e-6 + theta0
         else:
             theta = np.linspace(
-                    limits[0], limits[-1], SCAN_LENGTH) + theta0
+                    limits[0], limits[-1], npoints) + theta0
 
         if geometry.startswith("B"):
             gamma0 = -np.sin(theta+phi)
@@ -659,8 +708,8 @@ class PlotWidget(QWidget):
 
         if backend == "xrtCL":
             self.amps_calculator = AmpCalculator(
-                    crystalInstance, theta-theta0, E, gamma0, gammah, hns0,
-                    phi, radius, precision, plot_nr)
+                    crystalInstance, theta-theta0, energy, gamma0, gammah,
+                    hns0, phi, radius, precision, plot_nr)
             self.amps_calculator.progress.connect(self.update_progress_bar)
             self.amps_calculator.result.connect(self.on_calculation_result)
 #            self.amps_calculator.finished.connect(self.on_calculation_finished)
@@ -679,7 +728,7 @@ class PlotWidget(QWidget):
                             debye_waller=1, xrt_crystal=crystalInstance,
                             Rx=Quantity(float(radius), 'm'),
                             asymmetry=Quantity(phi+geotag, 'rad'))
-            tts = TTscan(constant=Quantity(E, 'eV'),
+            tts = TTscan(constant=Quantity(energy, 'eV'),
                          scan=Quantity(theta-theta0, 'rad'),
                          polarization='sigma')
             isRefl = geometry.endswith("flected")
@@ -689,11 +738,10 @@ class PlotWidget(QWidget):
             progress_queue = multiprocessing.Manager().Queue()
             self.tasks = []
 
-            for step in range(SCAN_LENGTH):
+            for step in range(npoints):
                 args = integrationParams[:6]
                 args += [vec_arg[step] for vec_arg in integrationParams[6:]]
                 args += [isRefl, step, plot_nr]
-#                print(len(args), args)
 
                 task = self.pool.apply_async(run_calculation,
                                              args=(args, progress_queue))
@@ -704,10 +752,9 @@ class PlotWidget(QWidget):
                     lambda: self.check_progress(progress_queue))
             self.timer.start(200)  # Adjust the interval as needed
         else:
-            ampS, ampP = crystalInstance.get_amplitude(E, gamma0, gammah, hns0)
+            ampS, ampP = crystalInstance.get_amplitude(
+                    energy, gamma0, gammah, hns0)
             self.statusUpdate.emit(("Ready", 100))
-#            self.on_calculation_result(
-#                    (theta-theta0, abs(ampS)**2, abs(ampP)**2, plot_nr))
             self.on_calculation_result(
                     (theta-theta0, ampS, ampP, plot_nr))
 
@@ -743,9 +790,8 @@ class PlotWidget(QWidget):
         plot_item = self.model.item(plot_nr)
         plot_item.curves = np.copy((theta, curS, curP))
 
-        isConvolution = plot_item.child(10, 1).text().endswith("true")
-        unitsStr = plot_item.child(9, 1).text()
-        convFactor = self.allUnits[unitsStr]
+        isConvolution = self.get_convolution(plot_item)
+        convFactor = self.allUnits[self.get_units(plot_item)]
 
         line_s, line_p, line_phase = self.plot_lines[plot_item.plot_index]
 
@@ -770,19 +816,20 @@ class PlotWidget(QWidget):
         line_p.set_ydata(pltCurvP)
         line_phase.set_ydata(pltCurvPh)
 
-        if plot_item.child(14, 1).text() == "sigma pi":
+        scanType = self.get_scan_type(plot_item)
+        if scanType == "sigma pi":
             line_s.set_visible(True)
             line_p.set_visible(True)
             line_phase.set_visible(False)
-        elif plot_item.child(14, 1).text() == "sigma":
+        elif scanType == "sigma":
             line_s.set_visible(True)
             line_p.set_visible(False)
             line_phase.set_visible(False)
-        elif plot_item.child(14, 1).text() == "pi":
+        elif scanType == "pi":
             line_s.set_visible(False)
             line_p.set_visible(True)
             line_phase.set_visible(False)
-        elif plot_item.child(14, 1).text() == "phase":
+        elif scanType == "phase":
             line_s.set_visible(False)
             line_p.set_visible(False)
             line_phase.set_visible(True)
@@ -801,11 +848,6 @@ class PlotWidget(QWidget):
         self.add_legend()
         self.canvas.draw()
 
-    def get_fwhm(self, theta, curve):
-        topHalf = np.where(curve >= 0.5*np.max(curve))[0]
-        fwhm = np.abs(theta[topHalf[0]] - theta[topHalf[-1]])
-        return fwhm
-
     def on_item_clicked(self, index):
         while index.parent().isValid():
             index = index.parent()
@@ -815,26 +857,30 @@ class PlotWidget(QWidget):
         self.update_title_color(plot_item)
         self.canvas.draw()
 
-#    def on_cbk_state_changed(self, plot_index, state):
-#        for line in self.plot_lines[plot_index]:
-#            line.set_visible(state == Qt.Checked)
-#        self.canvas.draw()
+    def update_all_units(self, new_units):
+        for index in range(self.model.rowCount()):
+            plot_item = self.model.item(index)
+            units_item = self.get_units_item(plot_item)
+            units_combo = self.tree_view.indexWidget(units_item.index())
+
+            if units_combo.currentText() != new_units:
+                units_combo.setCurrentText(new_units)
 
     def update_title(self, item):
-        unitsStr = item.child(9, 1).text()
+        unitsStr = self.get_units(item)
         convFactor = self.allUnits[unitsStr]
         if hasattr(item, "fwhm"):
             self.axes.set_title(
-                    r"$\theta_B$ = {0:.3f}{1}, FWHM$_\sigma$ = {2:.3f} {3}".format(
-                    np.degrees(item.thetaB),
-                    self.allUnitsStr["deg"],
-                    item.fwhm/convFactor,
-                    self.allUnitsStr[unitsStr]))
+                r"$\theta_B$ = {0:.3f}{1}, FWHM$_\sigma$ = {2:.3f} {3}".format(
+                        np.degrees(item.thetaB),
+                        self.allUnitsStr["deg"],
+                        item.fwhm/convFactor,
+                        self.allUnitsStr[unitsStr]))
         self.canvas.draw()
 
     def update_title_color(self, item):
-        cur_color = item.child(13, 1).text()
-        title2 = self.ax2.set_title("-----", loc='left', pad=10, weight='bold')
+        cur_color = self.get_color(item)
+        title2 = self.ax2.set_title("-----", loc='left', pad=2, weight='bold')
         title2.set_color("tab:"+cur_color)
         self.canvas.draw()
 
