@@ -997,9 +997,10 @@ class BeamLine(object):
                     braggT += -mat.get_dtheta(alignE)
                 else:
                     alphaT = 0 if oe.alpha is None else oe.alpha
-                    braggT += -mat.get_dtheta(alignE, alphaT)
                     if mat.geom.startswith('Laue'):
                         lauePitch = 0.5 * np.pi
+                    else:
+                        braggT += -mat.get_dtheta(alignE, alphaT)
                 loBeam = copy.deepcopy(inBeam)  # Beam(copyFrom=inBeam)
                 global_to_virgin_local(self, inBeam, loBeam, center=oe.center)
                 rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),
