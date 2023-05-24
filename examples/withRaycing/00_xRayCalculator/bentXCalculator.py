@@ -32,6 +32,7 @@ from xrt.backends.raycing.pyTTE_x import TTcrystal, TTscan, Quantity
 from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
     CalculateAmplitudes  # , integrate_single_scan_step
 from xrt.backends.raycing import crystalclasses as rxtl
+from xrt.backends.raycing.physconsts import CH
 
 try:
     import pyopencl as cl
@@ -93,12 +94,13 @@ class PlotWidget(QWidget):
         self.layout = QHBoxLayout()
         self.mainSplitter = QSplitter(Qt.Horizontal, self)
 
-        proc_nr = max(multiprocessing.cpu_count()-2, 1)
-        self.pool = multiprocessing.Pool(processes=proc_nr)
+        self.proc_nr = max(multiprocessing.cpu_count()-2, 1)
 
         # Create a QVBoxLayout for the plot and the toolbar
         plot_widget = QWidget(self)
         self.plot_layout = QVBoxLayout()
+
+        self.poolsDict = {}
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
@@ -177,13 +179,20 @@ class PlotWidget(QWidget):
         self.allUnits = {'urad': 1e-6,
                          'mrad': 1e-3,
                          'deg': np.pi/180.,
-                         'arcsec': np.pi/180./3600.}
+                         'arcsec': np.pi/180./3600.,
+                         'eV': 1}
         self.allUnitsStr = {'urad': r' $\mu$rad',
                             'mrad': r' mrad',
                             'deg': r' $\degree$',
-                            'arcsec': r' arcsec'}
+                            'arcsec': r' arcsec',
+                            'eV': r'eV'}
 
         self.allBackends = ['auto', 'pyTTE']
+
+        self.xlabel_base_angle = r'$\theta-\theta_B$, '
+        self.xlabel_base_e = r'$E - E_B$, '
+        self.axes.set_xlabel(self.xlabel_base_angle+r'$\mu$rad')
+
         if isOpenCL:
             self.allBackends.append('xrtCL FP32')
             self.matCL = mcl.XRT_CL(r'materials.cl',
@@ -225,19 +234,17 @@ class PlotWidget(QWidget):
         self.axes.add_line(line_s)
         self.axes.add_line(line_p)
         self.ax2.add_line(line_phase)
-        self.xlabel_base = r'$\theta-\theta_B$, '
-        self.axes.set_xlabel(self.xlabel_base+r'$\mu$rad')
         self.plot_lines[plot_uuid] = (line_s, line_p, line_phase)
         previousPlot = None
         plot_item = QStandardItem()
         plot_item.setFlags(plot_item.flags() | Qt.ItemIsEditable)
         plot_item.plot_index = plot_uuid
+        plot_item.skipRecalculation = False
+        plot_item.prevUnits = "angle"
 
         cbk_item = QStandardItem()
         self.model.appendRow([plot_item, cbk_item])
         plot_number = plot_item.row()
-
-        calcParams = []
 
         initParams = [("Crystal", "Si", self.allCrystals),  # 0
                       ("Geometry", "Bragg reflected",  # 1
@@ -310,27 +317,16 @@ class PlotWidget(QWidget):
                 cb.currentTextChanged.connect(
                         lambda text, item=item_value: item.setText(text))
 
-            if ii < 6:  # Remaining params will be added individually below
-                calcParams.append(newValue)
-
             if iname == "Crystal":
                 plot_name = newValue + "["
             elif iname == "hkl":
                 for hkl in parse_hkl(newValue):
                     plot_name += str(hkl)
                 plot_name += "] flat"
-            elif iname.startswith("Energy"):
-                calcParams.append(float(newValue))
-            elif iname == "Scan Points":
-                calcParams.append(self.get_scan_points(plot_item))
             elif iname == "Scan Units":
+                lims = self.parse_limits(self.get_range_item(plot_item).text())
                 convFactor = self.allUnits[newValue]
-                newLims = self.parse_limits(
-                        self.get_scan_range(plot_item))*convFactor
-                self.get_range_item(plot_item).limRads = newLims
-                calcParams.append(newLims)
-            elif iname.endswith("Backend"):
-                calcParams.append(newValue)
+                self.get_range_item(plot_item).limRads = lims*convFactor
 
             if iname == "Curve Color":
                 line_s.set_color("tab:"+newValue)
@@ -346,13 +342,11 @@ class PlotWidget(QWidget):
         plot_index = self.model.indexFromItem(plot_item)
         self.tree_view.expand(plot_index)
 
-        calcParams.append(plot_number)
+        self.calculate_amps_in_thread(plot_item)
 
-        self.calculate_amps_in_thread(*calcParams)
-
-    def get_fwhm(self, theta, curve):
+    def get_fwhm(self, xaxis, curve):
         topHalf = np.where(curve >= 0.5*np.max(curve))[0]
-        fwhm = np.abs(theta[topHalf[0]] - theta[topHalf[-1]])
+        fwhm = np.abs(xaxis[topHalf[0]] - xaxis[topHalf[-1]])
         return fwhm
 
     def get_energy(self, item):
@@ -362,7 +356,7 @@ class PlotWidget(QWidget):
             return 9000.
 
     def get_scan_range(self, item):
-        return item.child(8, 1).text()
+        return item.child(8, 1).limRads  # item.child(8, 1).text()
 
     def get_range_item(self, item):
         return item.child(8, 1)
@@ -410,51 +404,59 @@ class PlotWidget(QWidget):
                 param_value = item.text()
                 convFactor = self.allUnits[self.get_units(parent)]
 
-                allParams = [parent.child(i, 1).text() for i in range(6)]
-                allParams.append(self.get_energy(parent))
-                allParams.append(self.get_scan_points(parent))
-                allParams.append(
-                        self.parse_limits(
-                                self.get_scan_range(parent))*convFactor)
-                allParams.append(self.get_backend(parent))
-
-                theta, curS, curP = np.copy(parent.curves)
+                xaxis, curS, curP = np.copy(parent.curves)
 
                 if param_name not in ["Scan Range", "Scan Units",
                                       "Curve Color", "DCM Rocking Curve",
                                       "Curve Type"]:
-                    allParams.append(parent.row())  # plot number
-                    self.calculate_amps_in_thread(*allParams)
+                    self.calculate_amps_in_thread(parent)
+
                 elif param_name.endswith("Range"):
-                    convFactor = self.allUnits[self.get_units(parent)]
-                    newLims = self.parse_limits(param_value)*convFactor
-                    oldLims = self.get_range_item(parent).limRads
-                    if np.sum(np.abs(newLims-oldLims)) > 1e-14:
-                        self.get_range_item(parent).limRads = newLims
-                        allParams[8] = newLims
-                        allParams.append(parent.row())
-                        self.calculate_amps_in_thread(*allParams)
-                    else:  # Only the units changed
-                        theta = np.linspace(min(newLims)/convFactor,
-                                            max(newLims)/convFactor,
-                                            self.get_scan_points(parent))
-                        line_s.set_xdata(theta)
-                        line_p.set_xdata(theta)
-                        line_phase.set_xdata(theta)
-                        self.axes.set_xlim(min(theta), max(theta))
-                        self.rescale_axes()
-                        self.canvas.draw()
+                    if parent.skipRecalculation:
+                        parent.skipRecalculation = False
+                    else:
+                        rItem = self.get_range_item(parent)
+                        units = self.get_units(parent)
+                        convFactor = self.allUnits[units]
+                        limits = self.parse_limits(param_value)
+                        if units == "eV":
+                            rItem.limRads = self.e2theta(limits, parent)
+                        else:
+                            rItem.limRads = limits*convFactor
+                        self.calculate_amps_in_thread(parent)
 
                 elif param_name.endswith("Units"):
                     convFactor = self.allUnits[param_value]
+                    limRads = self.get_range_item(parent).limRads
+                    if param_value == "eV":
+                        xlabel_base = self.xlabel_base_e
+                        newLims = self.theta2e(limRads, parent)
+                        newUnits = "energy"
+                    else:
+                        xlabel_base = self.xlabel_base_angle
+                        newLims = limRads/convFactor
+                        newUnits = "angle"
+                    if parent.prevUnits == newUnits:
+                        parent.skipRecalculation = True
+                    parent.prevUnits = newUnits
+                    xLimMin, xLimMax = min(newLims), max(newLims)
                     self.axes.set_xlabel(
-                            self.xlabel_base+self.allUnitsStr[param_value])
-                    newLims = self.get_range_item(parent).limRads/convFactor
+                            xlabel_base+self.allUnitsStr[param_value])
                     self.get_range_item(parent).setText("{0}, {1}".format(
-                            newLims[0], newLims[1]))
+                            xLimMin, xLimMax))
+
+                    xaxis = np.linspace(xLimMin, xLimMax,
+                                        self.get_scan_points(parent))
+                    line_s.set_xdata(xaxis)
+                    line_p.set_xdata(xaxis)
+                    line_phase.set_xdata(xaxis)
+                    self.axes.set_xlim(xLimMin, xLimMax)
+                    self.rescale_axes()
+
                     self.update_all_units(param_value)
                     self.update_title(parent)
                     self.canvas.draw()
+
                 elif param_name.endswith("Color"):
                     line_s.set_color("tab:"+param_value)
                     line_p.set_color("tab:"+param_value)
@@ -465,8 +467,20 @@ class PlotWidget(QWidget):
                     self.canvas.draw()
 
                 else:
-                    self.on_calculation_result((theta, curS, curP,
+                    self.on_calculation_result((xaxis, curS, curP,
                                                 parent.row()))
+
+    def theta2e(self, theta, plot_item):
+        thetaIn = plot_item.thetaB + theta
+        E0 = self.get_energy(plot_item)
+        d = plot_item.d
+        return 0.5*CH/d/np.sin(thetaIn) - E0
+
+    def e2theta(self, energy, plot_item):
+        E0 = self.get_energy(plot_item)
+        eIn = E0 + energy
+        d = plot_item.d
+        return np.arcsin(0.5*CH/d/eIn) - plot_item.thetaB
 
     def show_context_menu(self, point):
         index = self.tree_view.indexAt(point)
@@ -619,9 +633,24 @@ class PlotWidget(QWidget):
 #        return theta - theta0, abs(ampS)**2, abs(ampP)**2
         return theta - theta0, ampS, ampP
 
-    def calculate_amps_in_thread(self, crystal, geometry, hkl, thickness,
-                                 asymmetry, radius, energy, npoints, limits,
-                                 backendStr, plot_nr):
+#    def calculate_amps_in_thread(self, crystal, geometry, hkl, thickness,
+#                                 asymmetry, radius, energy, npoints, limits,
+#                                 backendStr, plot_nr):
+    def calculate_amps_in_thread(self, plot_item):
+        crystal = plot_item.child(0, 1).text()
+        geometry = plot_item.child(1, 1).text()
+        hkl = plot_item.child(2, 1).text()
+        thickness = plot_item.child(3, 1).text()
+        asymmetry = plot_item.child(4, 1).text()
+        radius = plot_item.child(5, 1).text()
+
+        energy = self.get_energy(plot_item)
+
+        npoints = self.get_scan_points(plot_item)
+        units = self.get_units(plot_item)
+
+        backendStr = self.get_backend(plot_item)
+        plot_nr = plot_item.row()
 
         useTT = False
         backend = "xrt"
@@ -674,23 +703,30 @@ class PlotWidget(QWidget):
         else:
             return
 
-        plot_item = self.model.item(plot_nr)
-
         hklList = parse_hkl(hkl)
         crystalClass = getattr(rxtl, crystal)
         crystalInstance = crystalClass(hkl=hklList, t=float(thickness),
                                        geom=geometry,
                                        useTT=useTT)
 
-#        E = float(energy)
         theta0 = crystalInstance.get_Bragg_angle(energy)
         plot_item.thetaB = theta0
+        plot_item.d = getattr(crystalInstance, 'd')
         phi = np.radians(float(asymmetry))
-        if limits is None:
-            theta = np.linspace(-100, 100, npoints)*1e-6 + theta0
+
+        if units == "eV":
+            tLimits = self.get_scan_range(plot_item)
+            limits = self.theta2e(tLimits, plot_item)
+            xenergy = np.linspace(
+                    min(limits), max(limits), npoints) + energy
+            theta = theta0 * np.ones_like(xenergy)
+            xaxis = xenergy - energy
         else:
+            limits = self.get_scan_range(plot_item)
+            xenergy = energy
             theta = np.linspace(
-                    limits[0], limits[-1], npoints) + theta0
+                    min(limits), max(limits), npoints) + theta0
+            xaxis = theta - theta0
 
         if geometry.startswith("B"):
             gamma0 = -np.sin(theta+phi)
@@ -708,19 +744,19 @@ class PlotWidget(QWidget):
 
         if backend == "xrtCL":
             self.amps_calculator = AmpCalculator(
-                    crystalInstance, theta-theta0, energy, gamma0, gammah,
+                    crystalInstance, xaxis, xenergy, gamma0, gammah,
                     hns0, phi, radius, precision, plot_nr)
             self.amps_calculator.progress.connect(self.update_progress_bar)
             self.amps_calculator.result.connect(self.on_calculation_result)
-#            self.amps_calculator.finished.connect(self.on_calculation_finished)
             self.amps_calculator.start()
         elif backend == "pytte":
             self.t0 = time.time()
             self.statusUpdate.emit(("Calculating on CPU", 0))
-            plot_item.curves = np.copy((theta-theta0,
-                                        np.zeros(len(theta), dtype=np.complex),
+            plot_item.curves = np.copy((xaxis,
                                         np.zeros(len(theta),
-                                                 dtype=np.complex)))
+                                                 dtype=np.complex128),
+                                        np.zeros(len(theta),
+                                                 dtype=np.complex128)))
             plot_item.curProgress = 0
             geotag = 0 if geometry.startswith('B') else np.pi*0.5
             ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
@@ -728,23 +764,30 @@ class PlotWidget(QWidget):
                             debye_waller=1, xrt_crystal=crystalInstance,
                             Rx=Quantity(float(radius), 'm'),
                             asymmetry=Quantity(phi+geotag, 'rad'))
-            tts = TTscan(constant=Quantity(energy, 'eV'),
-                         scan=Quantity(theta-theta0, 'rad'),
-                         polarization='sigma')
+            if units == 'eV':
+                tts = TTscan(constant=Quantity(theta0, 'rad'),
+                             scan=Quantity(xaxis, 'eV'),
+                             polarization='sigma')
+            else:
+                tts = TTscan(constant=Quantity(energy, 'eV'),
+                             scan=Quantity(xaxis, 'rad'),
+                             polarization='sigma')
             isRefl = geometry.endswith("flected")
             amps_calculator = TakagiTaupin(ttx, tts)
             integrationParams = amps_calculator.prepare_arrays()
 
             progress_queue = multiprocessing.Manager().Queue()
+            self.poolsDict[plot_nr] = multiprocessing.Pool(
+                    processes=self.proc_nr)
             self.tasks = []
-
+            a0i = 8 if units == 'eV' else 6
             for step in range(npoints):
-                args = integrationParams[:6]
-                args += [vec_arg[step] for vec_arg in integrationParams[6:]]
+                args = integrationParams[:a0i]
+                args += [vec_arg[step] for vec_arg in integrationParams[a0i:]]
                 args += [isRefl, step, plot_nr]
 
-                task = self.pool.apply_async(run_calculation,
-                                             args=(args, progress_queue))
+                task = self.poolsDict[plot_nr].apply_async(
+                        run_calculation, args=(args, progress_queue))
                 self.tasks.append(task)
 
             self.timer = QTimer()
@@ -753,10 +796,10 @@ class PlotWidget(QWidget):
             self.timer.start(200)  # Adjust the interval as needed
         else:
             ampS, ampP = crystalInstance.get_amplitude(
-                    energy, gamma0, gammah, hns0)
+                    xenergy, gamma0, gammah, hns0)
             self.statusUpdate.emit(("Ready", 100))
             self.on_calculation_result(
-                    (theta-theta0, ampS, ampP, plot_nr))
+                    (xaxis, ampS, ampP, plot_nr))
 
     def check_progress(self, progress_queue):
         progress = None
@@ -774,12 +817,15 @@ class PlotWidget(QWidget):
             progressPercentage = 100*plot_item.curProgress/float(len(theta))
             self.statusUpdate.emit(("Calculating on CPU",
                                     progressPercentage))
-
-        if not any(task.ready() is False for task in self.tasks):
-            self.statusUpdate.emit(("Calculation completed in {:.3f}s".format(
-                    time.time()-self.t0), 100))
-            self.timer.stop()
-#            self.pool.close()
+            if plot_item.curProgress >= len(theta):
+                self.statusUpdate.emit((
+                        "Calculation completed in {:.3f}s".format(
+                                time.time()-self.t0), 100))
+                self.timer.stop()
+                self.poolsDict[plot_nr].close()
+#        if not any(task.ready() is False for task in self.tasks):
+#            self.statusUpdate.emit(("Calculation completed in {:.3f}s".format(
+#                    time.time()-self.t0), 100))
 
     def parse_limits(self, limstr):
         return np.array([float(pp) for pp in limstr.split(',')])
@@ -810,7 +856,7 @@ class PlotWidget(QWidget):
             pltCurvS = absCurS
             pltCurvP = absCurP
 
-        plot_item.fwhm = self.get_fwhm(theta, absCurS)
+        plot_item.fwhm = self.get_fwhm(theta, pltCurvS)
 
         line_s.set_ydata(pltCurvS)
         line_p.set_ydata(pltCurvP)
@@ -897,11 +943,11 @@ class AmpCalculator(QThread):
     progress = Signal(tuple)
     result = Signal(tuple)
 
-    def __init__(self, crystal, dtheta, energy, gamma0, gammah, hns0,
+    def __init__(self, crystal, xaxis, energy, gamma0, gammah, hns0,
                  alpha, radius, precision, plot_nr):
         super(AmpCalculator, self).__init__()
         self.crystalInstance = crystal
-        self.dtheta = dtheta
+        self.xaxis = xaxis
         self.energy = energy
         self.gamma0 = gamma0
         self.gammah = gammah
@@ -920,7 +966,7 @@ class AmpCalculator(QThread):
                 Ry=float(self.radius)*1000., signal=self.progress)
 #        self.result.emit((self.dtheta, abs(ampS)**2, abs(ampP)**2,
 #                          self.plot_nr))
-        self.result.emit((self.dtheta, ampS, ampP,
+        self.result.emit((self.xaxis, ampS, ampP,
                           self.plot_nr))
 
 

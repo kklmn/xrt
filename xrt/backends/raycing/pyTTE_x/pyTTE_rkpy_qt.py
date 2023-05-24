@@ -506,10 +506,6 @@ class TakagiTaupin():
                     djparams,
                     phi.in_units('rad'),
                     Cpol,
-#                    alpha0.in_units('rad') if scan_type == 'energy' else
-#                    alpha0.in_units('rad')[step],
-#                    alphah.in_units('rad') if scan_type == 'energy' else
-#                    alphah.in_units('rad')[step],
                     thickness,
                     geometry,
                     alpha0.in_units('rad'),
