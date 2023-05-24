@@ -12,6 +12,7 @@ import uuid
 import time
 import multiprocessing
 import numpy as np
+import copy
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
     QPushButton, QMenu, QComboBox, QFileDialog,\
     QSplitter, QTreeView, QMessageBox, QProgressBar, QCheckBox
@@ -259,8 +260,8 @@ class PlotWidget(QWidget):
                       ("Scan Points", "500", None),  # 9
                       ("Scan Units", "urad",
                        list(self.allUnits.keys())),  # 10
-                      ("DCM Rocking Curve", "false",
-                       ["true", "false"]),  # 11
+                      ("DCM Rocking Curve", "none",
+                       ["none", "auto"]),  # 11
                       ("Calculation Backend", "auto",
                        self.allBackends),  # 12
                       ("Separator", "", None),  # 13
@@ -374,7 +375,7 @@ class PlotWidget(QWidget):
         return item.child(10, 1)
 
     def get_convolution(self, item):
-        return item.child(11, 1).text().endswith("true")
+        return item.child(11, 1).text()  #.endswith("true")
 
     def get_backend(self, item):
         return item.child(12, 1).text()
@@ -404,7 +405,7 @@ class PlotWidget(QWidget):
                 param_value = item.text()
                 convFactor = self.allUnits[self.get_units(parent)]
 
-                xaxis, curS, curP = np.copy(parent.curves)
+                xaxis, curS, curP = copy.copy(parent.curves)
 
                 if param_name not in ["Scan Range", "Scan Units",
                                       "Curve Color", "DCM Rocking Curve",
@@ -535,8 +536,20 @@ class PlotWidget(QWidget):
         theta, curvS, curvP = root_item.curves
         absCurvS = abs(curvS)**2
         absCurvP = abs(curvP)**2
+
+        crystal = root_item.child(0, 1).text()
+        geometry = root_item.child(1, 1).text()
+        hkl = root_item.child(2, 1).text()
+        thck = float(root_item.child(3, 1).text())
+        asymmetry = float(root_item.child(4, 1).text())
+        radius = root_item.child(5, 1).text()
+        radiusStr = radius if radius == "inf" else radius + "m"
+        energy = self.get_energy(root_item)
+        thetaB = np.degrees(float(root_item.thetaB))
+
         units = self.get_units(root_item)
         convFactor = self.allUnits[units]
+        xaxis = "dE" if units == 'eV' else "dtheta"
 
         fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
 
@@ -547,9 +560,13 @@ class PlotWidget(QWidget):
                 "Text Files (*.txt);;All Files (*)", options=options)
         if file_name:
             with open(file_name, "w") as f:
-                f.write(f"#dtheta,{units}\tsigma\tpi\n")
+                f.write(f"# Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n")
+                f.write(f"# Asymmetry: {asymmetry:.8g}deg\tRbend: {radiusStr}\n")
+                f.write(f"# Energy: {energy}eV\tTheta_B: {thetaB:.8g}deg\n")
+                f.write(f"# Geometry: {geometry}\n\n")
+                f.write(f"# {xaxis}({units})\tsigma\tpi\n")
                 for i in range(len(theta)):
-                    f.write(f"{theta[i]/convFactor:.8e}\t{absCurvS[i]:.8e}\t{absCurvP[i]:.8e}\n")
+                    f.write(f"{theta[i]/convFactor:.8g}\t{absCurvS[i]:.8e}\t{absCurvP[i]:.8e}\n")
 
     def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
                              asymmetry,  radius, energy, npoints, limits,
@@ -834,7 +851,7 @@ class PlotWidget(QWidget):
         theta, curS, curP, plot_nr = res_tuple
 
         plot_item = self.model.item(plot_nr)
-        plot_item.curves = np.copy((theta, curS, curP))
+        plot_item.curves = copy.copy((theta, curS, curP))
 
         isConvolution = self.get_convolution(plot_item)
         convFactor = self.allUnits[self.get_units(plot_item)]
@@ -849,7 +866,7 @@ class PlotWidget(QWidget):
         absCurS = abs(curS)**2
         absCurP = abs(curP)**2
 
-        if isConvolution:
+        if isConvolution == "auto":
             pltCurvS = np.convolve(absCurS, absCurS, 'same') / curS.sum()
             pltCurvP = np.convolve(absCurP, absCurP, 'same') / curP.sum()
         else:
