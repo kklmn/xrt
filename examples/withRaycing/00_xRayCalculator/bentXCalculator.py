@@ -198,12 +198,14 @@ class PlotWidget(QWidget):
             self.allBackends.append('xrtCL FP32')
             self.matCL = mcl.XRT_CL(r'materials.cl',
                                     precisionOpenCL='float32')
-            for ctx in self.matCL.cl_ctx:
-                for device in ctx.devices:
-                    if device.double_fp_config == 63:
-                        self.isFP64 = True
-            if self.isFP64:
-                self.allBackends.append('xrtCL FP64')
+            self.isFP64 = False
+            if hasattr(self.matCL, 'cl_ctx'):
+                for ctx in self.matCL.cl_ctx:
+                    for device in ctx.devices:
+                        if device.double_fp_config == 63:
+                            self.isFP64 = True
+                if self.isFP64:
+                    self.allBackends.append('xrtCL FP64')
 
         self.add_plot()
         self.resize(1200, 700)
