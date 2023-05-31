@@ -1493,19 +1493,20 @@ class Crystal(Material):
                 return ra / np.sqrt(abs(b))
             t = self.t * 1e7
             l = t * delta * k02 / 2. / kHs
-            if self.geom.startswith('Bragg'):
-                if self.geom.endswith('transmitted'):
-                    ra = 1 / (np.cos(l) - 1j * alpha * np.sin(l) / delta) *\
-                        np.exp(1j * k02 * t * (chi0 - alpha*b) / 2 / k0s)
-                else:
-                    ra = chih * polFactor / (alpha + 1j*delta / np.tan(l))
-            else:  # Laue
-                if self.geom.endswith('transmitted'):
-                    ra = (np.cos(l) + 1j * alpha * np.sin(l) / delta) *\
-                        np.exp(1j * k02 * t * (chi0 - alpha*b) / 2 / k0s)
-                else:
-                    ra = chih * polFactor * np.sin(l) / delta *\
-                        np.exp(1j * k02 * t * (chi0 - alpha*b) / 2 / k0s)
+            with np.errstate(over='ignore'):
+                if self.geom.startswith('Bragg'):
+                    if self.geom.endswith('transmitted'):
+                        ra = 1 / (np.cos(l) - 1j * alpha * np.sin(l) / delta) \
+                            * np.exp(1j * k02 * t * (chi0 - alpha*b) / 2 / k0s)
+                    else:
+                        ra = chih * polFactor / (alpha + 1j*delta / np.tan(l))
+                else:  # Laue
+                    if self.geom.endswith('transmitted'):
+                        ra = (np.cos(l) + 1j * alpha * np.sin(l) / delta) *\
+                            np.exp(1j * k02 * t * (chi0 - alpha*b) / 2 / k0s)
+                    else:
+                        ra = chih * polFactor * np.sin(l) / delta *\
+                            np.exp(1j * k02 * t * (chi0 - alpha*b) / 2 / k0s)
             if not self.geom.endswith('transmitted'):
                 ra /= np.sqrt(abs(b))
             return ra

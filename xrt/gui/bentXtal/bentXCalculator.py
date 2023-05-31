@@ -5,8 +5,7 @@ Created on Tue Apr 25 10:26:54 2023
 @author: Roman Chernikov, Konstantin Klementiev, GPT-4
 """
 
-import sys; sys.path.append(r'..\..\..')
-import os
+import os, sys; sys.path.append(os.path.join(*['..']*3))  # analysis:ignore
 import re
 import uuid
 import time
@@ -86,9 +85,9 @@ class PlotWidget(QWidget):
         super().__init__()
 
         try:
-            self.setWindowIcon(QIcon(os.path.join(
-                    r'..\..\..\xrt\gui\xrtQook\_icons', 'xbcc.png')))
-        except:
+            self.setWindowIcon(QIcon(
+                os.path.join('..', 'xrtQook', '_icons', 'xbcc.png')))
+        except Exception:
             # icon not found. who cares?
             pass
         self.statusUpdate.connect(self.update_progress_bar)
@@ -337,9 +336,9 @@ class PlotWidget(QWidget):
                 line_phase.set_color("tab:"+newValue)
 
         plot_item.setText(plot_name)
-        line_s.set_label(plot_name+" $\sigma$")
-        line_p.set_label(plot_name+" $\pi$")
-        line_phase.set_label(plot_name+" $\phi_\sigma - \phi_\pi$")
+        line_s.set_label(plot_name+r" $\sigma$")
+        line_p.set_label(plot_name+r" $\pi$")
+        line_phase.set_label(plot_name+r" $\phi_\sigma - \phi_\pi$")
         self.add_legend()
 
         plot_index = self.model.indexFromItem(plot_item)
@@ -377,7 +376,7 @@ class PlotWidget(QWidget):
         return item.child(10, 1)
 
     def get_convolution(self, item):
-        return item.child(11, 1).text()  #.endswith("true")
+        return item.child(11, 1).text()  # .endswith("true")
 
     def get_backend(self, item):
         return item.child(12, 1).text()
@@ -393,9 +392,9 @@ class PlotWidget(QWidget):
             plot_index = item.plot_index
             if plot_index is not None:
                 lines = self.plot_lines[plot_index]
-                lines[0].set_label(item.text()+" $\sigma$")
-                lines[1].set_label(item.text()+" $\pi$")
-                lines[2].set_label(item.text()+" $\phi_\sigma - \phi_\pi$")
+                lines[0].set_label(item.text()+r" $\sigma$")
+                lines[1].set_label(item.text()+r" $\pi$")
+                lines[2].set_label(item.text()+r" $\phi_\sigma - \phi_\pi$")
                 self.add_legend()
                 self.canvas.draw()
         else:
