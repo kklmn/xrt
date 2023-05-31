@@ -910,7 +910,7 @@ class xrtGlow(qt.QWidget):
             histImage = np.zeros((size, size, 3))
             colorMin = self.customGlWidget.colorMin
             colorMax = self.customGlWidget.colorMax
-            hMax = np.float(np.max(histArray[0]))
+            hMax = np.float64(np.max(histArray[0]))
             intensity = np.float64(np.array(histArray[0]) / hMax)
             histVals = np.int32(intensity * (size-1))
             for col in range(size):
