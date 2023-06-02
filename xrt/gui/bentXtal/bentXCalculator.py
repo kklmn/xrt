@@ -12,9 +12,11 @@ import time
 import multiprocessing
 import numpy as np
 import copy
+from functools import partial
+
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
     QPushButton, QMenu, QComboBox, QFileDialog,\
-    QSplitter, QTreeView, QMessageBox, QProgressBar, QCheckBox
+    QSplitter, QTreeView, QMessageBox, QProgressBar, QLabel, QFrame
 from PyQt5.QtCore import Qt, QThread, QTimer
 from PyQt5.QtCore import pyqtSignal as Signal
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
@@ -27,6 +29,7 @@ from matplotlib.backends.backend_qt5agg import \
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 import matplotlib.colors as mcolors
+
 from xrt.backends.raycing.pyTTE_x.elastic_tensors import CRYSTALS
 from xrt.backends.raycing.pyTTE_x import TTcrystal, TTscan, Quantity
 from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
@@ -81,6 +84,57 @@ def raise_warning(text, infoText):
 class PlotWidget(QWidget):
     statusUpdate = Signal(tuple)
 
+    allCrystals = []
+    for ck in CRYSTALS.keys():
+        if ck in rxtl.__all__:
+            allCrystals.append(ck)
+
+    allColors = []
+    for color in mcolors.TABLEAU_COLORS.keys():
+        colorName = color.split(":")[-1]
+        allColors.append(colorName)
+
+    allGeometries = ['Bragg reflected', 'Bragg transmitted',
+                     'Laue reflected', 'Laue transmitted']
+
+    allUnits = {'urad': 1e-6,
+                'mrad': 1e-3,
+                'deg': np.pi/180.,
+                'mdeg': 1e-3*np.pi/180.,
+                'arcsec': np.pi/180./3600.,
+                'eV': 1}
+
+    allUnitsStr = {'urad': r'µrad',
+                   'mrad': r'mrad',
+                   'deg': r'°',
+                   'mdeg': r'm°',
+                   'arcsec': r'arcsec',
+                   'eV': r'eV'}
+
+    allBackends = ['auto', 'pyTTE']
+
+    allCurves = {'σ': '-', 'π': '--', 'σ*σ': '.-', 'π*π': '*--', 'Δφ': ':'}
+
+    initParams = [
+        # (param name, param value, copy from previous, param data (optional))
+        ("Separator Structure", "Crystal Structure", False, '#dddddd'),  # 0
+        ("Crystal", "Si", True, allCrystals),  # 1
+        ("Geometry", "Bragg reflected", True, allGeometries),  # 2
+        ("hkl", "1, 1, 1", True),  # 3
+        ("Thickness (mm)", "1.", True),  # 4
+        ("Asymmetry \u2220 (°)", "0.", True),  # 5
+        ("Bending R (m)", "inf", False),  # 6
+        ("Separator Scan", "Scan", False, '#dddddd'),  # 7
+        ("Energy (eV)", "9000", True),  # 8
+        ("Scan Range", "-80, 120", True),  # 9
+        ("Scan Units", "urad", True, list(allUnits.keys())),  # 10
+        ("Scan Points", "500", True),  # 11
+        ("Calc Backend", "auto", False, allBackends),  # 12
+        ("Separator Plot", "Plot", False, '#dddddd'),  # 13
+        ("Curve Color", "blue", False, allColors),  # 14
+        ("Curves", ['σ', ], True, allCurves)  # 15
+        ]
+
     def __init__(self):
         super().__init__()
 
@@ -100,13 +154,18 @@ class PlotWidget(QWidget):
         plot_widget = QWidget(self)
         self.plot_layout = QVBoxLayout()
 
+        self.allIcons = {}
+        for colorName, colorCode in zip(
+                self.allColors, mcolors.TABLEAU_COLORS.values()):
+            self.allIcons[colorName] = self.create_colored_icon(colorCode)
+
         self.poolsDict = {}
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.axes = self.figure.add_subplot(111)
         self.ax2 = self.axes.twinx()
-        self.axes.set_ylabel('Amplitude', color='k')
+        self.axes.set_ylabel('|Amplitude|²', color='k')
         self.axes.tick_params(axis='y', labelcolor='k')
         self.ax2.set_ylabel('Phase', color='b')
         self.ax2.tick_params(axis='y', labelcolor='b')
@@ -127,12 +186,14 @@ class PlotWidget(QWidget):
         tree_widget = QWidget(self)
         self.tree_layout = QVBoxLayout()
         self.model = QStandardItemModel()
-#        self.model.setHorizontalHeaderLabels(["Name", "Value"])
-        self.model.setHorizontalHeaderLabels(["", ""])
         self.model.itemChanged.connect(self.on_tree_item_changed)
 
         self.tree_view = QTreeView(self)
         self.tree_view.setModel(self.model)
+
+        # self.model.setHorizontalHeaderLabels(["Name", "Value"])
+        # self.model.setHorizontalHeaderLabels(["", ""])
+        self.tree_view.setHeaderHidden(True)
 
         self.tree_view.setAlternatingRowColors(True)
         self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -162,41 +223,13 @@ class PlotWidget(QWidget):
         self.layout.addWidget(self.mainSplitter)
         self.setLayout(self.layout)
 
-        self.allCrystals = []
-        for ck in CRYSTALS.keys():
-            if ck in rxtl.__all__:
-                self.allCrystals.append(ck)
-
-        self.allColors = []
-        self.allIcons = {}
-        for color, colorCode in mcolors.TABLEAU_COLORS.items():
-            colorName = color.split(":")[-1]
-            self.allColors.append(colorName)
-            self.allIcons[colorName] = self.create_colored_icon(colorCode)
-
-        self.allGeometries = ['Bragg reflected', 'Bragg transmitted',
-                              'Laue reflected', 'Laue transmitted']
-        self.allUnits = {'urad': 1e-6,
-                         'mrad': 1e-3,
-                         'deg': np.pi/180.,
-                         'arcsec': np.pi/180./3600.,
-                         'eV': 1}
-        self.allUnitsStr = {'urad': r' $\mu$rad',
-                            'mrad': r' mrad',
-                            'deg': r' $\degree$',
-                            'arcsec': r' arcsec',
-                            'eV': r'eV'}
-
-        self.allBackends = ['auto', 'pyTTE']
-
-        self.xlabel_base_angle = r'$\theta-\theta_B$, '
-        self.xlabel_base_e = r'$E - E_B$, '
-        self.axes.set_xlabel(self.xlabel_base_angle+r'$\mu$rad')
+        self.xlabel_base_angle = r'$\theta-\theta_B$'
+        self.xlabel_base_e = r'$E - E_B$'
+        self.axes.set_xlabel('{0} (µrad)'.format(self.xlabel_base_angle))
 
         if isOpenCL:
             self.allBackends.append('xrtCL FP32')
-            self.matCL = mcl.XRT_CL(r'materials.cl',
-                                    precisionOpenCL='float32')
+            self.matCL = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32')
             self.isFP64 = False
             if hasattr(self.matCL, 'cl_ctx'):
                 for ctx in self.matCL.cl_ctx:
@@ -207,8 +240,8 @@ class PlotWidget(QWidget):
                     self.allBackends.append('xrtCL FP64')
 
         self.add_plot()
-        self.resize(1200, 700)
-        self.mainSplitter.setSizes([700, 500])
+        self.resize(1100, 700)
+        self.mainSplitter.setSizes([700, 400])
         self.tree_view.resizeColumnToContents(0)
 
     def create_colored_icon(self, color):
@@ -226,119 +259,129 @@ class PlotWidget(QWidget):
                 if l.get_visible():
                     lns.append(l)
                     lgs.append(l.get_label())
-        self.axes.legend(lns, lgs)
+        leg = self.axes.legend(lns, lgs)
+        for text in leg.get_texts():
+            if 'Δφ' in text.get_text():
+                text.set_color('b')
 
     def add_plot(self):
         plot_uuid = uuid.uuid4()
-        line_s = Line2D([], [])
-        line_p = Line2D([], [], linestyle='--')
-        line_phase = Line2D([], [], linestyle=':')
-        self.axes.add_line(line_s)
-        self.axes.add_line(line_p)
-        self.ax2.add_line(line_phase)
-        self.plot_lines[plot_uuid] = (line_s, line_p, line_phase)
+        plots = []
+        for k, v in self.allCurves.items():
+            if v[0] in Line2D.markers:
+                kw = dict(linestyle=v[1:], marker=v[0])
+            else:
+                kw = dict(linestyle=v)
+            line = Line2D([], [], label=k, **kw)
+            plots.append(line)
+            if k == 'Δφ':
+                self.ax2.add_line(line)
+            else:
+                self.axes.add_line(line)
+        self.plot_lines[plot_uuid] = plots
+
         previousPlot = None
         plot_item = QStandardItem()
         plot_item.setFlags(plot_item.flags() | Qt.ItemIsEditable)
         plot_item.plot_index = plot_uuid
         plot_item.skipRecalculation = False
         plot_item.prevUnits = "angle"
+        plot_item.fwhms = [None for label in self.allCurves]
 
         cbk_item = QStandardItem()
+        cbk_item.setFlags(Qt.NoItemFlags)
         self.model.appendRow([plot_item, cbk_item])
         plot_number = plot_item.row()
-
-        initParams = [("Crystal", "Si", self.allCrystals),  # 0
-                      ("Geometry", "Bragg reflected",  # 1
-                       self.allGeometries),
-                      ("hkl", "1, 1, 1", None),  # 2
-                      ("Thickness, mm", "1.", None),  # 3
-                      ("Asymmetry Angle, deg", "0.", None),  # 4
-                      ("Bending Radius, m", "inf", None),  # 5
-                      ("Separator", "", None),  # 6
-                      ("Energy, eV", "9000", None),  # 7
-                      ("Scan Range", "-100, 100", None),  # 8
-                      ("Scan Points", "500", None),  # 9
-                      ("Scan Units", "urad",
-                       list(self.allUnits.keys())),  # 10
-                      ("DCM Rocking Curve", "none",
-                       ["none", "auto"]),  # 11
-                      ("Calculation Backend", "auto",
-                       self.allBackends),  # 12
-                      ("Separator", "", None),  # 13
-                      ("Curve Color", "blue", self.allColors),  # 14
-                      ("Curve Type", "sigma pi", ["sigma pi", "sigma", "pi",
-                                                  "phase", "hide all"])  # 15
-                      ]
 
         if plot_number > 0:
             previousPlot = self.model.item(plot_number-1)
 
-        for ii, (iname, ival, icb) in enumerate(initParams):
-            newValue = ival
+        for ii, params in enumerate(self.initParams):
+            iname, ival, copyFromPrev = params[0:3]
+            idata = params[3] if len(params) > 3 else None
             if previousPlot is not None:
-                if ii not in [5, 6, 12, 13, 14]:
-                    newValue = previousPlot.child(ii, 1).text()
-                elif iname == "Curve Color":
-                    prevValue = previousPlot.child(ii, 1).text()
-                    prevIndex = self.allColors.index(prevValue)
-                    if prevIndex + 1 == len(self.allColors):
-                        newValue = self.allColors[0]
+                if copyFromPrev:
+                    if iname == "Curves":
+                        modelIndex = self.model.indexFromItem(
+                            previousPlot.child(ii, 1))
+                        w = self.tree_view.indexWidget(modelIndex)
+                        ival = w.getActive()
                     else:
-                        newValue = self.allColors[prevIndex+1]
+                        ival = previousPlot.child(ii, 1).text()
+                else:
+                    if iname == "Curve Color":
+                        prevValue = previousPlot.child(ii, 1).text()
+                        prevIndex = self.allColors.index(prevValue)
+                        if prevIndex + 1 == len(self.allColors):
+                            ival = self.allColors[0]
+                        else:
+                            ival = self.allColors[prevIndex+1]
 
-            if iname == "Separator":
+            if iname.startswith("Separator"):
                 sep_item = QStandardItem()
-                sep_item.setFlags(Qt.ItemIsEnabled)
-                sep_item.setBackground(QBrush(Qt.lightGray))
+                sep_item.setText(ival)
+                sep_item.setFlags(Qt.NoItemFlags)
+                sep_item.setBackground(QBrush(QColor(idata)))
                 sep_item2 = QStandardItem()
-                sep_item2.setFlags(Qt.ItemIsEnabled)
-                sep_item2.setBackground(QBrush(Qt.lightGray))
+                sep_item2.setFlags(Qt.NoItemFlags)
+                sep_item2.setBackground(QBrush(QColor(idata)))
                 plot_item.appendRow([sep_item, sep_item2])
+                lab = QLabel()
+                self.tree_view.setIndexWidget(sep_item2.index(), lab)
             else:
                 item_name = QStandardItem(iname)
                 item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
-                item_value = QStandardItem(str(newValue))
-                item_value.setFlags(item_value.flags() | Qt.ItemIsEditable)
-                plot_item.appendRow([item_name, item_value])
+                if iname.startswith("Curves"):
+                    item_value = QStandardItem()
+                    item_value.setFlags(item_value.flags())
+                    w = StateButtons(self.tree_view, list(idata.keys()), ival)
+                    w.statesActive.connect(partial(
+                        self.on_tree_item_changed, item_value))
+                    plot_item.appendRow([item_name, item_value])
+                    self.tree_view.setIndexWidget(item_value.index(), w)
+                else:
+                    item_value = QStandardItem(str(ival))
+                    item_value.setFlags(item_value.flags() | Qt.ItemIsEditable)
+                    item_value.prevValue = str(ival)
+                    plot_item.appendRow([item_name, item_value])
 
-            if icb is not None:
+            if isinstance(idata, list):
                 cb = QComboBox()
+                cb.setMaxVisibleItems(25)
                 if iname == "Curve Color":
                     model = QStandardItemModel()
                     cb.setModel(model)
-                    for color in icb:
+                    for color in idata:
                         item = QStandardItem(color)
                         item.setIcon(self.allIcons[color])
                         model.appendRow(item)
-                    plot_item.setIcon(self.allIcons[str(newValue)])
+                    plot_item.setIcon(self.allIcons[str(ival)])
                 else:
-                    cb.addItems(icb)
-                cb.setCurrentText(newValue)
+                    cb.addItems(idata)
+                cb.setCurrentText(ival)
                 self.tree_view.setIndexWidget(item_value.index(), cb)
-                cb.currentTextChanged.connect(
-                        lambda text, item=item_value: item.setText(text))
+                # cb.currentTextChanged.connect(
+                #         lambda text, item=item_value: item.setText(text))
+                cb.currentTextChanged.connect(partial(
+                    self.setItemData, iname, item_value))
 
             if iname == "Crystal":
-                plot_name = newValue + "["
+                plot_name = ival
             elif iname == "hkl":
-                for hkl in parse_hkl(newValue):
-                    plot_name += str(hkl)
-                plot_name += "] flat"
+                nameList = [str(ind) for ind in parse_hkl(ival)]
+                plot_name += "[{0}] flat".format(''.join(nameList))
+                item_value.prevList = nameList
             elif iname == "Scan Units":
                 lims = self.parse_limits(self.get_range_item(plot_item).text())
-                convFactor = self.allUnits[newValue]
+                convFactor = self.allUnits[ival]
                 self.get_range_item(plot_item).limRads = lims*convFactor
 
             if iname == "Curve Color":
-                line_s.set_color("tab:"+newValue)
-                line_p.set_color("tab:"+newValue)
-                line_phase.set_color("tab:"+newValue)
+                color = "tab:" + ival
+                for line in plots:
+                    line.set_color(color)
 
         plot_item.setText(plot_name)
-        line_s.set_label(plot_name+r" $\sigma$")
-        line_p.set_label(plot_name+r" $\pi$")
-        line_phase.set_label(plot_name+r" $\phi_\sigma - \phi_\pi$")
         self.add_legend()
 
         plot_index = self.model.indexFromItem(plot_item)
@@ -346,71 +389,154 @@ class PlotWidget(QWidget):
 
         self.calculate_amps_in_thread(plot_item)
 
+    def findIndexFromText(self, text):
+        for i, initParam in enumerate(self.initParams):
+            if initParam[0].startswith(text):
+                return i
+        print(f'Could not find index of "{text}"!')
+
+    def setItemData(self, iname, item, txt):
+        if iname == "Crystal":
+            parent = item.parent()
+            if item.text() in parent.text():
+                newText = parent.text().replace(item.text(), txt)
+                parent.setText(newText)
+        item.setText(txt)
+
     def get_fwhm(self, xaxis, curve):
         topHalf = np.where(curve >= 0.5*np.max(curve))[0]
-        fwhm = np.abs(xaxis[topHalf[0]] - xaxis[topHalf[-1]])
-        return fwhm
+        return np.abs(xaxis[topHalf[0]] - xaxis[topHalf[-1]])
 
     def get_energy(self, item):
+        ind = self.findIndexFromText("Energy")
         try:
-            return float(item.child(7, 1).text())
+            return float(item.child(ind, 1).text())
         except ValueError:
-            return 9000.
-
-    def get_scan_range(self, item):
-        return item.child(8, 1).limRads  # item.child(8, 1).text()
+            return float(self.initParams[ind][1])
 
     def get_range_item(self, item):
-        return item.child(8, 1)
+        ind = self.findIndexFromText("Scan Range")
+        return item.child(ind, 1)
+
+    def get_scan_range(self, item):
+        return self.get_range_item(item).limRads
 
     def get_scan_points(self, item):
+        ind = self.findIndexFromText("Scan Points")
         try:
-            return int(float(item.child(9, 1).text()))
+            return int(item.child(ind, 1).text())
         except ValueError:
-            return 500
-
-    def get_units(self, item):
-        return item.child(10, 1).text()
+            return int(self.initParams[ind][1])
 
     def get_units_item(self, item):
-        return item.child(10, 1)
+        ind = self.findIndexFromText("Scan Units")
+        return item.child(ind, 1)
 
-    def get_convolution(self, item):
-        return item.child(11, 1).text()  # .endswith("true")
+    def get_units(self, item):
+        return self.get_units_item(item).text()
 
     def get_backend(self, item):
-        return item.child(12, 1).text()
+        ind = self.findIndexFromText("Calc")
+        return item.child(ind, 1).text()
 
     def get_color(self, item):
-        return item.child(14, 1).text()
+        ind = self.findIndexFromText("Curve Color")
+        return item.child(ind, 1).text()
 
-    def get_scan_type(self, item):
-        return item.child(15, 1).text()
+    def get_curve_types(self, item):
+        ind = self.findIndexFromText("Curves")
+        modelIndex = self.model.indexFromItem(item.child(ind, 1))
+        w = self.tree_view.indexWidget(modelIndex)
+        layout = w.layout()
+        return [layout.itemAt(i).widget().isChecked()
+                for i in range(layout.count())]
 
     def on_tree_item_changed(self, item):
         if item.index().column() == 0:
             plot_index = item.plot_index
             if plot_index is not None:
-                lines = self.plot_lines[plot_index]
-                lines[0].set_label(item.text()+r" $\sigma$")
-                lines[1].set_label(item.text()+r" $\pi$")
-                lines[2].set_label(item.text()+r" $\phi_\sigma - \phi_\pi$")
-                self.add_legend()
+                self.update_legend(item)
                 self.canvas.draw()
         else:
             parent = item.parent()
             if parent:
                 plot_index = parent.plot_index
-                line_s, line_p, line_phase = self.plot_lines[plot_index]
+                lines = self.plot_lines[plot_index]
                 param_name = parent.child(item.index().row(), 0).text()
                 param_value = item.text()
                 convFactor = self.allUnits[self.get_units(parent)]
 
                 xaxis, curS, curP = copy.copy(parent.curves)
 
+                if param_name == "hkl":
+                    if ',' not in param_value:
+                        hklList = list(param_value)
+                    else:
+                        hklList = [s.strip() for s in param_value.split(',')]
+                    try:
+                        test = [int(i) for i in hklList]  # analysis:ignore
+                        legit = True
+                    except Exception:
+                        legit = False
+                    if len(hklList) == 3 and legit:
+                        item.setText(', '.join(hklList))
+                        hklName = ''.join(hklList)
+                        prevName = ''.join(item.prevList)
+                        if prevName in parent.text():
+                            newText = parent.text().replace(prevName, hklName)
+                            parent.setText(newText)
+                        item.prevList = hklList
+                    else:
+                        item.setText(', '.join(item.prevList))
+                elif (param_name.startswith("Thick") or
+                      param_name.startswith("Asymm") or
+                      param_name.startswith("Energy")):
+                    try:
+                        test = float(param_value)  # analysis:ignore
+                        legit = True
+                        item.prevValue = param_value
+                    except Exception:
+                        legit = False
+                        item.setText(item.prevValue)
+                        return
+                elif param_name.startswith("Scan Range"):
+                    try:
+                        test = [float(i) for i in param_value.split(',')]
+                        legit = True
+                        item.prevValue = param_value
+                    except Exception:
+                        legit = False
+                        item.setText(item.prevValue)
+                        return
+                elif param_name.startswith("Scan Points"):
+                    try:
+                        test = int(param_value)  # analysis:ignore
+                        legit = True
+                        item.prevValue = param_value
+                    except Exception:
+                        legit = False
+                        item.setText(item.prevValue)
+                        return
+                elif param_name.startswith("Bending"):
+                    if param_value.startswith('inf'):
+                        if 'bent' in parent.text():
+                            newText = parent.text().replace('bent', 'flat')
+                            parent.setText(newText)
+                            item.prevValue = 'inf'
+                    else:
+                        try:
+                            test = float(param_value)  # analysis:ignore
+                            legit = True
+                            item.prevValue = param_value
+                        except Exception:
+                            legit = False
+                            item.setText(item.prevValue)
+                        if 'flat' in parent.text():
+                            newText = parent.text().replace('flat', 'bent')
+                            parent.setText(newText)
+
                 if param_name not in ["Scan Range", "Scan Units",
-                                      "Curve Color", "DCM Rocking Curve",
-                                      "Curve Type"]:
+                                      "Curve Color", "Curves"]:
                     self.calculate_amps_in_thread(parent)
 
                 elif param_name.endswith("Range"):
@@ -442,29 +568,27 @@ class PlotWidget(QWidget):
                         parent.skipRecalculation = True
                     parent.prevUnits = newUnits
                     xLimMin, xLimMax = min(newLims), max(newLims)
-                    self.axes.set_xlabel(
-                            xlabel_base+self.allUnitsStr[param_value])
-                    self.get_range_item(parent).setText("{0}, {1}".format(
-                            xLimMin, xLimMax))
+                    self.axes.set_xlabel('{0} ({1})'.format(
+                            xlabel_base, self.allUnitsStr[param_value]))
+                    self.get_range_item(parent).setText(
+                        "{0:.4g}, {1:.4g}".format(xLimMin, xLimMax))
 
                     xaxis = np.linspace(xLimMin, xLimMax,
                                         self.get_scan_points(parent))
-                    line_s.set_xdata(xaxis)
-                    line_p.set_xdata(xaxis)
-                    line_phase.set_xdata(xaxis)
+                    for line in lines:
+                        line.set_xdata(xaxis)
                     self.axes.set_xlim(xLimMin, xLimMax)
                     self.rescale_axes()
 
                     self.update_all_units(param_value)
-                    self.update_title(parent)
+                    self.update_legend(parent)
+                    self.update_thetaB(parent)
                     self.canvas.draw()
 
                 elif param_name.endswith("Color"):
-                    line_s.set_color("tab:"+param_value)
-                    line_p.set_color("tab:"+param_value)
-                    line_phase.set_color("tab:"+param_value)
+                    for line in lines:
+                        line.set_color("tab:"+param_value)
                     parent.setIcon(self.allIcons[param_value])
-                    self.update_title_color(parent)
                     self.add_legend()
                     self.canvas.draw()
 
@@ -495,16 +619,20 @@ class PlotWidget(QWidget):
 
         context_menu = QMenu(self.tree_view)
         delete_action = context_menu.addAction("Delete plot")
-        delete_action.triggered.connect(lambda: self.delete_plot(item))
+        delete_action.triggered.connect(partial(self.delete_plot, item))
         context_menu.exec_(self.tree_view.viewport().mapToGlobal(point))
 
     def delete_plot(self, item):
         plot_index = item.plot_index
         lines = self.plot_lines[plot_index]
 
-        self.axes.lines.remove(lines[0])
-        self.axes.lines.remove(lines[1])
-        self.ax2.lines.remove(lines[2])
+        # self.axes.lines has become immutable in matplotlib >= 3.7
+        # self.axes.lines.remove(lines[0])
+        # self.axes.lines.remove(lines[1])
+        # self.ax2.lines.remove(lines[2])
+        for line in lines:
+            line.remove()
+
         self.plot_lines.pop(plot_index)
 
         row = item.row()
@@ -526,8 +654,7 @@ class PlotWidget(QWidget):
     def export_curve(self):
         selected_indexes = self.tree_view.selectedIndexes()
         if not selected_indexes:
-            QMessageBox.warning(
-                    self, "Warning", "No plot selected for export.")
+            QMessageBox.warning(self, "Warning", "No plot selected for export")
             return
 
         selected_index = selected_indexes[0]
@@ -538,12 +665,18 @@ class PlotWidget(QWidget):
         absCurvS = abs(curvS)**2
         absCurvP = abs(curvP)**2
 
-        crystal = root_item.child(0, 1).text()
-        geometry = root_item.child(1, 1).text()
-        hkl = root_item.child(2, 1).text()
-        thck = float(root_item.child(3, 1).text())
-        asymmetry = float(root_item.child(4, 1).text())
-        radius = root_item.child(5, 1).text()
+        ind = self.findIndexFromText("Crystal")
+        crystal = root_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Geometry")
+        geometry = root_item.child(ind, 1).text()
+        ind = self.findIndexFromText("hkl")
+        hkl = root_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Thickness")
+        thck = float(root_item.child(ind, 1).text())
+        ind = self.findIndexFromText("Asymmetry")
+        asymmetry = float(root_item.child(ind, 1).text())
+        ind = self.findIndexFromText("Bending")
+        radius = root_item.child(ind, 1).text()
         radiusStr = radius if radius == "inf" else radius + "m"
         energy = self.get_energy(root_item)
         thetaB = np.degrees(float(root_item.thetaB))
@@ -655,12 +788,18 @@ class PlotWidget(QWidget):
 #                                 asymmetry, radius, energy, npoints, limits,
 #                                 backendStr, plot_nr):
     def calculate_amps_in_thread(self, plot_item):
-        crystal = plot_item.child(0, 1).text()
-        geometry = plot_item.child(1, 1).text()
-        hkl = plot_item.child(2, 1).text()
-        thickness = plot_item.child(3, 1).text()
-        asymmetry = plot_item.child(4, 1).text()
-        radius = plot_item.child(5, 1).text()
+        ind = self.findIndexFromText("Crystal")
+        crystal = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Geometry")
+        geometry = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("hkl")
+        hkl = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Thickness")
+        thickness = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Asymmetry")
+        asymmetry = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Bending")
+        radius = plot_item.child(ind, 1).text()
 
         energy = self.get_energy(plot_item)
 
@@ -810,7 +949,7 @@ class PlotWidget(QWidget):
 
             self.timer = QTimer()
             self.timer.timeout.connect(
-                    lambda: self.check_progress(progress_queue))
+                partial(self.check_progress, progress_queue))
             self.timer.start(200)  # Adjust the interval as needed
         else:
             ampS, ampP = crystalInstance.get_amplitude(
@@ -850,75 +989,63 @@ class PlotWidget(QWidget):
 
     def on_calculation_result(self, res_tuple):
         theta, curS, curP, plot_nr = res_tuple
+        curS2 = abs(curS)**2
+        curP2 = abs(curP)**2
 
         plot_item = self.model.item(plot_nr)
         plot_item.curves = copy.copy((theta, curS, curP))
-
-        isConvolution = self.get_convolution(plot_item)
+        unitsStr = self.get_units(plot_item)
         convFactor = self.allUnits[self.get_units(plot_item)]
+        curveTypes = self.get_curve_types(plot_item)
+        lines = self.plot_lines[plot_item.plot_index]
 
-        line_s, line_p, line_phase = self.plot_lines[plot_item.plot_index]
+        showPhase = False
+        fwhms = []
+        for curveType, line, label in zip(curveTypes, lines, self.allCurves):
+            line.set_xdata(theta/convFactor)
+            if label == 'σ':
+                ydata = curS2
+            elif label == 'π':
+                ydata = curP2
+            elif label == 'σ*σ':
+                ydata = np.convolve(curS2, curS2, 'same') / curS2.sum()
+            elif label == 'π*π':
+                ydata = np.convolve(curP2, curP2, 'same') / curP2.sum()
+            elif label == 'Δφ':
+                showPhase = curveType
+                ydata = np.angle(curS * curP.conj())
 
-        line_s.set_xdata(theta/convFactor)
-        line_p.set_xdata(theta/convFactor)
-        line_phase.set_xdata(theta/convFactor)
+            if label != 'Δφ':
+                fwhm = self.get_fwhm(theta, ydata)
+            else:
+                fwhm = None
+            fwhms.append(fwhm)
+            if fwhm is not None:
+                unit = self.allUnitsStr[unitsStr]
+                sp = '' if unit == '°' else ' '
+                t = '' if fwhm is None else\
+                    ": {0:.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
+                line.set_label("{0} {1}{2}".format(plot_item.text(), label, t))
 
-        pltCurvPh = np.angle(curS * curP.conj())
-        absCurS = abs(curS)**2
-        absCurP = abs(curP)**2
+            line.set_ydata(ydata)
+            line.set_visible(curveType)
+        plot_item.fwhms = fwhms
+        self.axes.set_xlim(min(theta)/convFactor, max(theta)/convFactor)
 
-        if isConvolution == "auto":
-            pltCurvS = np.convolve(absCurS, absCurS, 'same') / curS.sum()
-            pltCurvP = np.convolve(absCurP, absCurP, 'same') / curP.sum()
-        else:
-            pltCurvS = absCurS
-            pltCurvP = absCurP
-
-        plot_item.fwhm = self.get_fwhm(theta, pltCurvS)
-
-        line_s.set_ydata(pltCurvS)
-        line_p.set_ydata(pltCurvP)
-        line_phase.set_ydata(pltCurvPh)
-
-        scanType = self.get_scan_type(plot_item)
-        if scanType == "sigma pi":
-            line_s.set_visible(True)
-            line_p.set_visible(True)
-            line_phase.set_visible(False)
-        elif scanType == "sigma":
-            line_s.set_visible(True)
-            line_p.set_visible(False)
-            line_phase.set_visible(False)
-        elif scanType == "pi":
-            line_s.set_visible(False)
-            line_p.set_visible(True)
-            line_phase.set_visible(False)
-        elif scanType == "phase":
-            line_s.set_visible(False)
-            line_p.set_visible(False)
-            line_phase.set_visible(True)
-        else:
-            line_s.set_visible(False)
-            line_p.set_visible(False)
-            line_phase.set_visible(False)
-
-        self.axes.set_xlim(min(theta)/convFactor,
-                           max(theta)/convFactor)
-
+        self.ax2.set_visible(showPhase)
         self.rescale_axes()
-        self.update_title(plot_item)
-        self.update_title_color(plot_item)
+        self.update_thetaB(plot_item)
 
         self.add_legend()
         self.canvas.draw()
 
     def on_item_clicked(self, index):
         while index.parent().isValid():
-            index = index.parent()
-
+            index = index.parent()  # of plot_item
+        if index.column() == 1:  # the empty cell near the plot title
+            return
         plot_item = self.model.itemFromIndex(index)
-        self.update_title(plot_item)
-        self.update_title_color(plot_item)
+        self.update_thetaB(plot_item)
         self.canvas.draw()
 
     def update_all_units(self, new_units):
@@ -930,23 +1057,25 @@ class PlotWidget(QWidget):
             if units_combo.currentText() != new_units:
                 units_combo.setCurrentText(new_units)
 
-    def update_title(self, item):
-        unitsStr = self.get_units(item)
-        convFactor = self.allUnits[unitsStr]
-        if hasattr(item, "fwhm"):
-            self.axes.set_title(
-                r"$\theta_B$ = {0:.3f}{1}, FWHM$_\sigma$ = {2:.3f} {3}".format(
-                        np.degrees(item.thetaB),
-                        self.allUnitsStr["deg"],
-                        item.fwhm/convFactor,
-                        self.allUnitsStr[unitsStr]))
-        self.canvas.draw()
+    def update_legend(self, item):
+        plot_index = item.plot_index
+        for line, label, fwhm in zip(
+                self.plot_lines[plot_index], self.allCurves.keys(),
+                item.fwhms):
+            convFactor = self.allUnits[self.get_units(item)]
+            unitsStr = self.get_units(item)
+            unit = self.allUnitsStr[unitsStr]
+            sp = '' if unit == '°' else ' '
+            tt = '' if fwhm is None else\
+                ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
+            line.set_label("{0} {1}{2}".format(item.text(), label, tt))
+        self.add_legend()
 
-    def update_title_color(self, item):
-        cur_color = self.get_color(item)
-        title2 = self.ax2.set_title("-----", loc='left', pad=2, weight='bold')
-        title2.set_color("tab:"+cur_color)
-        self.canvas.draw()
+    def update_thetaB(self, item):
+        ind = self.findIndexFromText("Separator Plot")
+        modelIndex = self.model.indexFromItem(item.child(ind, 1))
+        self.tree_view.indexWidget(modelIndex).setText(
+            '&nbsp;θ<sub>B</sub> = {0:.3f}°'.format(np.degrees(item.thetaB)))
 
     def update_progress_bar(self, dataTuple):
         if int(dataTuple[1]) < 100:
@@ -986,6 +1115,71 @@ class AmpCalculator(QThread):
 #                          self.plot_nr))
         self.result.emit((self.xaxis, ampS, ampP,
                           self.plot_nr))
+
+
+class StateButtons(QFrame):
+    statesActive = Signal(list)
+
+    def __init__(self, parent, names, active=None):
+        """
+        *names*: a list of any objects that will be displayed as str(object),
+
+        *active*: a subset of names that will be displayed as checked,
+
+        The signal *statesActive* is emitted on pressing a button. It sends a
+        list of selected names, as a subset of *names*.
+        """
+
+        super().__init__(parent)
+        self.names = names
+        self.buttons = []
+        layout = QHBoxLayout()
+        styleSheet = """
+        QPushButton {
+            border-style: outset;
+            border-width: 2px;
+            border-radius: 5px;
+            border-color: lightsalmon;}
+        QPushButton:checked {
+            border-style: inset;
+            border-width: 2px;
+            border-radius: 5px;
+            border-color: lightgreen;}
+        QPushButton:hover {
+            border-style: solid;
+            border-width: 2px;
+            border-radius: 5px;
+            border-color: lightblue;}
+        """
+        for name in names:
+            strName = str(name)
+            but = QPushButton(strName)
+            but.setCheckable(True)
+
+            bbox = but.fontMetrics().boundingRect(strName)
+            but.setFixedSize(bbox.width()+12, bbox.height()+4)
+            # but.setToolTip("go to the key frame")
+            but.clicked.connect(self.buttonClicked)
+            but.setStyleSheet(styleSheet)
+
+            self.buttons.append(but)
+            layout.addWidget(but)
+        self.setLayout(layout)
+
+        self.setActive(active)
+
+    def getActive(self):
+        return [name for (button, name) in
+                zip(self.buttons, self.names) if button.isChecked()]
+
+    def setActive(self, active):
+        if not isinstance(active, (list, tuple)):
+            return
+        for button, name in zip(self.buttons, self.names):
+            button.setChecked(name in active)
+
+    def buttonClicked(self, checked):
+        self.statesActive.emit(self.getActive())
 
 
 if __name__ == '__main__':
