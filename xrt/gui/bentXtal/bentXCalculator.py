@@ -914,7 +914,7 @@ class PlotWidget(QWidget):
         elif backend == "pytte":
             self.t0 = time.time()
             self.statusUpdate.emit(("Calculating on CPU", 0))
-            plot_item.curves = np.copy((xaxis,
+            plot_item.curves = copy.copy((xaxis,
                                         np.zeros(len(theta),
                                                  dtype=np.complex128),
                                         np.zeros(len(theta),
