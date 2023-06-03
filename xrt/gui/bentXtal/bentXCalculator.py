@@ -254,15 +254,20 @@ class PlotWidget(QWidget):
             self.axes.get_legend().remove()
         lgs = []
         lns = []
-        for lt in self.plot_lines.values():
-            for l in lt:
-                if l.get_visible():
-                    lns.append(l)
-                    lgs.append(l.get_label())
+        showPhase = False
+        for plots in self.plot_lines.values():
+            for line in plots:
+                if line.get_visible():
+                    lns.append(line)
+                    if line.axes is self.ax2:
+                        showPhase = True
+                    lgs.append(line.get_label())
         leg = self.axes.legend(lns, lgs)
         for text in leg.get_texts():
             if 'Δφ' in text.get_text():
                 text.set_color('b')
+
+        self.ax2.set_visible(showPhase)
 
     def add_plot(self):
         plot_uuid = uuid.uuid4()
@@ -999,7 +1004,6 @@ class PlotWidget(QWidget):
         curveTypes = self.get_curve_types(plot_item)
         lines = self.plot_lines[plot_item.plot_index]
 
-        showPhase = False
         fwhms = []
         for curveType, line, label in zip(curveTypes, lines, self.allCurves):
             line.set_xdata(theta/convFactor)
@@ -1012,7 +1016,6 @@ class PlotWidget(QWidget):
             elif label == 'π*π':
                 ydata = np.convolve(curP2, curP2, 'same') / curP2.sum()
             elif label == 'Δφ':
-                showPhase = curveType
                 ydata = np.angle(curS * curP.conj())
 
             if label != 'Δφ':
@@ -1032,7 +1035,6 @@ class PlotWidget(QWidget):
         plot_item.fwhms = fwhms
         self.axes.set_xlim(min(theta)/convFactor, max(theta)/convFactor)
 
-        self.ax2.set_visible(showPhase)
         self.rescale_axes()
         self.update_thetaB(plot_item)
 
