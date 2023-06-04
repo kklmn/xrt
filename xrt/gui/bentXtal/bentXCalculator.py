@@ -286,9 +286,8 @@ class PlotWidget(QWidget):
         from xrt.version import __version__ as xrtversion  # analysis:ignore
         strXrt = 'xrt {0} in {1}'.format(xrtversion, path_to_xrt)
 
-        QMessageBox.about(
-            self, "About xrt bentXCalculator",
-            """<b>bentXCalculator(Qt)</b> v {0}
+        title = "About xrt bentXCalculator"
+        txt = """<b>bentXCalculator(Qt)</b> v {0}
             <ul>
             <li>{1[0]}
             <li>{1[1]}
@@ -306,7 +305,16 @@ class PlotWidget(QWidget):
                 __version__, __author__.split(','), __license__,
                 locos, platform.python_version(),
                 QT_VERSION_STR, QtName, PYQT_VERSION_STR,
-                strXrt))
+                strXrt)
+
+        msg = QMessageBox()
+        msg.setStyleSheet("QLabel{min-width: 300px;}")
+        msg.setIconPixmap(QPixmap(os.path.join(
+            '..', 'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
+                256, Qt.SmoothTransformation))
+        msg.setText(txt)
+        msg.setWindowTitle(title)
+        msg.exec_()
 
     def create_colored_icon(self, color):
         pixmap = QPixmap(16, 16)
