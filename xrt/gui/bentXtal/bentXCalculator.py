@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 25 10:26:54 2023
-
-@author: Roman Chernikov, Konstantin Klementiev, GPT-4
-"""
+__author__ = "Roman Chernikov, Konstantin Klementiev, GPT-4"
+__date__ = "4 Jun 2023"
+__version__ = "1.0.0"
+__license__ = "MIT license"
 
 import os, sys; sys.path.append(os.path.join(*['..']*3))  # analysis:ignore
 import re
@@ -17,13 +16,19 @@ from datetime import datetime
 
 from scipy.interpolate import UnivariateSpline
 
+QtName = "PyQt5"
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
-    QPushButton, QMenu, QComboBox, QFileDialog,\
+    QPushButton, QMenu, QComboBox, QFileDialog, QToolButton,\
     QSplitter, QTreeView, QMessageBox, QProgressBar, QLabel, QFrame
 from PyQt5.QtCore import Qt, QThread, QTimer
 from PyQt5.QtCore import pyqtSignal as Signal
+from PyQt5.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
+
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
     QPixmap, QColor
+
+import matplotlib as mpl
+from matplotlib.backend_tools import ToolBase
 
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -39,6 +44,8 @@ from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
     CalculateAmplitudes  # , integrate_single_scan_step
 from xrt.backends.raycing import crystalclasses as rxtl
 from xrt.backends.raycing.physconsts import CH
+path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
 
 try:
     import pyopencl as cl
@@ -179,6 +186,15 @@ class PlotWidget(QWidget):
         # Add the Matplotlib toolbar to the QVBoxLayout
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.plot_layout.addWidget(self.toolbar)
+        self.aboutButton = QToolButton(self)
+        icon = QIcon()
+        icon.addPixmap(QPixmap(os.path.join(os.path.dirname(mpl.__file__),
+                               'mpl-data', 'images', 'help_large.png')),
+                       QIcon.Normal, QIcon.Off)
+        # adding icon to the toolbutton
+        self.aboutButton.setIcon(icon)
+        self.aboutButton.clicked.connect(self.about)
+        self.toolbar.addWidget(self.aboutButton)
 
         # Add the canvas to the QVBoxLayout
         self.plot_layout.addWidget(self.canvas)
@@ -246,6 +262,51 @@ class PlotWidget(QWidget):
         self.resize(1100, 700)
         self.mainSplitter.setSizes([700, 400])
         self.tree_view.resizeColumnToContents(0)
+
+    def about(self):
+        # https://stackoverflow.com/a/69325836/2696065
+        def isWin11():
+            return True if sys.getwindowsversion().build > 22000 else False
+
+        import platform
+        locos = platform.platform(terse=True)
+        if 'Linux' in locos:
+            try:
+                locos = " ".join(platform.linux_distribution())
+            except AttributeError:  # no platform.linux_distribution in py3.8
+                try:
+                    import distro
+                    locos = " ".join(distro.linux_distribution())
+                except ImportError:
+                    print("do 'pip install distro' for a better view of Linux"
+                          " distro string")
+        elif 'Windows' in locos:
+            if isWin11:
+                locos = 'Winows 11'
+        from xrt.version import __version__ as xrtversion  # analysis:ignore
+        strXrt = 'xrt {0} in {1}'.format(xrtversion, path_to_xrt)
+
+        QMessageBox.about(
+            self, "About xrt bentXCalculator",
+            """<b>bentXCalculator(Qt)</b> v {0}
+            <ul>
+            <li>{1[0]}
+            <li>{1[1]}
+            <li>{1[2]}
+            </ul>
+            <p>Open source, {2}.
+            <p>Available on PyPI and GitHub as part of xrt<p>
+            <p>Your system:
+            <ul>
+            <li>{3}
+            <li>Python {4}
+            <li>Qt {5}, {6} {7}
+            <li>{8}
+            </ul>""".format(
+                __version__, __author__.split(','), __license__,
+                locos, platform.python_version(),
+                QT_VERSION_STR, QtName, PYQT_VERSION_STR,
+                strXrt))
 
     def create_colored_icon(self, color):
         pixmap = QPixmap(16, 16)
