@@ -14,6 +14,8 @@ import numpy as np
 import copy
 from functools import partial
 
+from scipy.interpolate import UnivariateSpline
+
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
     QPushButton, QMenu, QComboBox, QFileDialog,\
     QSplitter, QTreeView, QMessageBox, QProgressBar, QLabel, QFrame
@@ -408,9 +410,18 @@ class PlotWidget(QWidget):
                 parent.setText(newText)
         item.setText(txt)
 
-    def get_fwhm(self, xaxis, curve):
-        topHalf = np.where(curve >= 0.5*np.max(curve))[0]
-        return np.abs(xaxis[topHalf[0]] - xaxis[topHalf[-1]])
+    def get_fwhm(self, x, y):
+        # simple implementation, quantized by dx:
+        # topHalf = np.where(y >= 0.5*np.max(y))[0]
+        # return np.abs(x[topHalf[0]] - x[topHalf[-1]])
+
+        # a better implementation, weakly dependent on dx size
+        try:
+            spline = UnivariateSpline(x, y - y.max()*0.5, s=0)
+            roots = spline.roots()
+            return max(roots) - min(roots)
+        except ValueError:
+            return 0.
 
     def get_energy(self, item):
         ind = self.findIndexFromText("Energy")
