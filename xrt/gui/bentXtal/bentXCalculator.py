@@ -309,6 +309,7 @@ class PlotWidget(QWidget):
 
         msg = QMessageBox()
         msg.setStyleSheet("QLabel{min-width: 300px;}")
+        msg.setWindowIcon(self.windowIcon())
         msg.setIconPixmap(QPixmap(os.path.join(
             '..', 'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
                 256, Qt.SmoothTransformation))
