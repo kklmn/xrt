@@ -13,6 +13,7 @@ import multiprocessing
 import numpy as np
 import copy
 from functools import partial
+from datetime import datetime
 
 from scipy.interpolate import UnivariateSpline
 
@@ -677,9 +678,6 @@ class PlotWidget(QWidget):
         while selected_index.parent().isValid():
             selected_index = selected_index.parent()
         root_item = self.model.itemFromIndex(selected_index)
-        theta, curvS, curvP = root_item.curves
-        absCurvS = abs(curvS)**2
-        absCurvP = abs(curvP)**2
 
         ind = self.findIndexFromText("Crystal")
         crystal = root_item.child(ind, 1).text()
@@ -701,6 +699,8 @@ class PlotWidget(QWidget):
         convFactor = self.allUnits[units]
         xaxis = "dE" if units == 'eV' else "dtheta"
 
+        theta = root_item.curves[0]
+
         fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
 
         options = QFileDialog.Options()
@@ -709,14 +709,27 @@ class PlotWidget(QWidget):
                 self, "Save File", fileName,
                 "Text Files (*.txt);;All Files (*)", options=options)
         if file_name:
-            with open(file_name, "w") as f:
-                f.write(f"# Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n")
-                f.write(f"# Asymmetry: {asymmetry:.8g}deg\tRbend: {radiusStr}\n")
-                f.write(f"# Energy: {energy}eV\tTheta_B: {thetaB:.8g}deg\n")
-                f.write(f"# Geometry: {geometry}\n\n")
-                f.write(f"# {xaxis}({units})\tsigma\tpi\n")
-                for i in range(len(theta)):
-                    f.write(f"{theta[i]/convFactor:.8g}\t{absCurvS[i]:.8e}\t{absCurvP[i]:.8e}\n")
+            lines = self.plot_lines[root_item.plot_index]
+            names = self.allCurves.keys()
+            outLines, outNames = [theta/convFactor], [f"{xaxis}({units})"]
+            for line, name in zip(lines, names):
+                if line.get_visible():
+                # if True:
+                    outLines.append(line.get_ydata())
+                    outNames.append(name)
+            what = "Transmittivity" if geometry.endswith("mitted") else \
+                "Reflectivity"
+            now = datetime.now()
+            nowStr = now.strftime("%d/%m/%Y %H:%M:%S")
+            header = \
+                f"{what} calculated by xrt bentXCalculator on {nowStr}\n"\
+                f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
+                f"Asymmetry: {asymmetry:.8g}°\tRbend: {radiusStr}\n"\
+                f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
+                f"Geometry: {geometry}\n"
+            header += "\t".join(outNames)
+            np.savetxt(file_name, np.array(outLines).T, fmt='%#.7g',
+                       delimiter='\t', header=header, encoding='utf-8')
 
     def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
                              asymmetry,  radius, energy, npoints, limits,
