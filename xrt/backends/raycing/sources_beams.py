@@ -117,7 +117,7 @@ class Beam(object):
                 raise
         elif copyFrom is None:
             # coordinates of starting points
-            nrays = np.long(nrays)
+            nrays = np.int64(nrays)
             self.x = np.zeros(nrays)
             self.y = np.zeros(nrays)
             self.z = np.zeros(nrays)
@@ -129,7 +129,7 @@ class Beam(object):
                 self.filamentDgamma = 0.
                 self.filamentDX = 0.
                 self.filamentDZ = 0.
-                self.state = np.zeros(nrays, dtype=np.int)
+                self.state = np.zeros(nrays, dtype=np.int32)
                 # components of direction
                 self.a = np.zeros(nrays)
                 self.b = np.ones(nrays)

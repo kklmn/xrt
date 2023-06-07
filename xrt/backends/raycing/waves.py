@@ -550,10 +550,10 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     wave.c[:] = wave.zDiffr / wave.rDiffr
     wave.path[:] = 0.
     wave.fromOE = fromOE
-    wave.beamReflRays = np.long(0)
+    wave.beamReflRays = np.int64(0)
     wave.beamReflSumJ = 0.
     wave.beamReflSumJnl = 0.
-    wave.diffract_repeats = np.long(0)
+    wave.diffract_repeats = np.int64(0)
     return wave
 
 

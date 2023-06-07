@@ -159,11 +159,11 @@ class BendingMagnet(SourceBase):
 
         bo = None
         length = 0
-        seeded = np.long(0)
+        seeded = np.int64(0)
         seededI = 0.
         np.seterr(invalid='warn')
         np.seterr(divide='warn')
-        mcRays = np.long(self.nrays * 1.2) if not self.uniformRayDensity else\
+        mcRays = np.int64(self.nrays * 1.2) if not self.uniformRayDensity else\
             self.nrays
         if self.filamentBeam:
             if accuBeam is None:
@@ -367,7 +367,7 @@ class BendingMagnet(SourceBase):
             bo.seeded = seeded
             bo.seededI = seededI
         if length > self.nrays and not self.filamentBeam:
-            bo.filter_by_index(slice(0, np.long(self.nrays)))
+            bo.filter_by_index(slice(0, np.int64(self.nrays)))
         if self.filamentBeam:
             bo.filamentDtheta = dtheta
             bo.filamentDpsi = dpsi

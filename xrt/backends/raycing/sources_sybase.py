@@ -124,7 +124,7 @@ class SourceBase:
         self.center = center  # 3D point in global system
         self._pitch = raycing.auto_units_angle(pitch)
         self._yaw = raycing.auto_units_angle(yaw)
-        self.nrays = np.long(nrays)
+        self.nrays = np.int64(nrays)
 
         self.R0 = R0
         self.distE = distE
@@ -1346,7 +1346,7 @@ class IntegratedSource(SourceBase):
                 print("Rays generation")
         bo = None
         length = 0
-        seeded = np.long(0)
+        seeded = np.int64(0)
         seededI = 0.
         np.seterr(invalid='warn')
         np.seterr(divide='warn')
