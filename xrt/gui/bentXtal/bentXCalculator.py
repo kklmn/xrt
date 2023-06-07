@@ -1205,7 +1205,7 @@ class AmpCalculator(QThread):
                            precisionOpenCL=self.precision)
         ampS, ampP = self.crystalInstance.get_amplitude_pytte(
                 self.energy, self.gamma0, self.gammah, self.hns0,
-                ucl=matCL, alphaAsym=self.alpha,
+                ucl=matCL, alphaAsym=self.alpha, autoLimits=False,
                 Ry=float(self.radius)*1000., signal=self.progress)
 #        self.result.emit((self.dtheta, abs(ampS)**2, abs(ampP)**2,
 #                          self.plot_nr))
