@@ -789,7 +789,7 @@ class OE(object):
             surfOptX = self.surfOptX
             surfOptY = self.surfOptY
 
-        locState = np.ones(x.size, dtype=np.int)
+        locState = np.ones(x.size, dtype=np.int32)
         if isinstance(self.shape, raycing.basestring):
             if self.shape.startswith('re'):
                 if surfOptX is not None:
@@ -1984,18 +1984,19 @@ class OE(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormalOld)
                     elif matSur.useTT:
-                        if 'R' in self.__dict__.keys():
+                        if hasattr(self, 'R'):
                             Ry = self.R
-                        elif 'Rm' in self.__dict__.keys():
+                        elif hasattr(self, 'Rm'):
                             Ry = self.Rm
+                            if 'Johansson' in self.__class__.__name__:
+                                Ry *= 2
                         else:
                             Ry = None
                         refl = matSur.get_amplitude_pytte(
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             alphaAsym=self.alpha,
-                            Ry=Ry, Rx=self.Rs if 'Rs' in self.__dict__.keys()
-                            else None,
+                            Ry=Ry, Rx=self.Rs if hasattr(self, 'Rs') else None,
                             ucl=self.ucl)
                     else:
                         refl = matSur.get_amplitude(
