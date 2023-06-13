@@ -30,28 +30,32 @@ nrays = 50000
 bins = 256
 ppb = 1
 xtallims = [-5, 5]
-thickness = 4
-sourceDx, sourceDz = 0.5, 0.1
+plotlims = [-5, 5]
+thickness = 0.5
+sourceDx, sourceDz = 0.5, 0.5
 sourceDxPrime, sourceDzPrime = 0, 0
-E0, dE = 35000, 30
+#sourceDxPrime, sourceDzPrime = 0, 0
+E0, dE = 30000, 50
 eLims = [E0-dE, E0+dE]
 eLimsSource = np.linspace(E0-dE, E0+dE, 7)
 #eLims = [34850, 35100]
-pLaueSCM, qLaueSCM  = 10000., 60000
+pLaueSCM, qLaueSCM  = 5000., 25000
 #Rbend = 3.00e3  # Overbend
-#Rbend = 5.00e3  # Optimal bend
-Rbend = -30.0e3  # Underbend
+Rbend = 5.00e3  # Optimal bend
+#Rbend = 60.0e3  # Underbend
 #Rbend = 1e6  # (Almost) Plain crystal
 #Rbend = [10e3, 20e3, 40e3, 1e6]
-#Rbend = [3e3, 5e3, 10e3, 1e6]
+#Rbend = [3e3, 5e3, 10e3, 20e3, 40e3, 1e6]
 precision='float64'
+targetOpenCL=None
+#targetOpenCL=(0, 0)
 
 crystalSi01 = rmats.CrystalSi(
     t=thickness,
     geom=r"Laue reflected",
     name=r"Si111")
 
-alpha = np.radians(45)
+alpha = np.radians(-35)
 thetaB = crystalSi01.get_Bragg_angle(E0)
 pitch = np.pi/2+thetaB+alpha
 
@@ -61,7 +65,7 @@ crystalSi02 = rmats.CrystalSi(
     geom=r"Laue reflected",
     name=r"Si111tt",
     volumetricDiffraction=True,
-    useTT=True)
+    useTT=False)
 
 
 def build_beamline():
@@ -77,8 +81,10 @@ def build_beamline():
         distz='flat',
         dxprime=sourceDxPrime,
         dzprime=sourceDzPrime,
-        energies=eLimsSource,
-        distE='lines',
+        energies=eLims,
+        distE='flat',
+#        energies=eLimsSource,
+#        distE='lines',
         )
 
 #    beamLine.lauePlate01 = roes.LauePlate(
@@ -100,8 +106,8 @@ def build_beamline():
         material=crystalSi01,
 #        targetOpenCL='auto',
 #        precisionOpenCL='float64',
-        limPhysX=[-5.0, 5.0],
-        limPhysY=[-5.0, 5.0])
+        limPhysX=xtallims,
+        limPhysY=xtallims)
 
     beamLine.Mirror01 = roes.OE(
         bl=beamLine,
@@ -109,7 +115,7 @@ def build_beamline():
         pitch=-thetaB,
         positionRoll=np.pi,
         limPhysX=[-5.0, 5.0],
-        limPhysY=[-400.0, 400.0])
+        limPhysY=[-40.0, 40.0])
 
     beamLine.screen01 = rscreens.Screen(
         bl=beamLine,
@@ -125,21 +131,30 @@ def build_beamline():
         distz='flat',
         dxprime=sourceDxPrime,
         dzprime=sourceDzPrime,
-        energies=eLimsSource,
-        distE='lines')
+        energies=eLims,
+        distE='flat',
+#        energies=eLimsSource,
+#        distE='lines'
+        )
 
-    beamLine.lauePlate02 = roes.BentLaueCylinder(
+#    beamLine.lauePlate02 = roes.BentLaueCylinder(
+#        bl=beamLine,
+#        R=Rbend,
+    beamLine.lauePlate02 = roes.BentLaue2D(
         bl=beamLine,
-        R=Rbend,
+        Rm=-28060,
+#        Rs=None,
+        Rs=370,
+
 #        R=(pLaueSCM, qLaueSCM),
         center=[10, pLaueSCM, 0],
         pitch=pitch,
         alpha=alpha,
         material=crystalSi02,
-        targetOpenCL='auto',
+        targetOpenCL=targetOpenCL,
         precisionOpenCL=precision,
-        limPhysX=[-5.0, 5.0],
-        limPhysY=[-5.0, 5.0])
+        limPhysX=xtallims,
+        limPhysY=xtallims)
 
     beamLine.Mirror02 = roes.OE(
         bl=beamLine,
@@ -147,7 +162,7 @@ def build_beamline():
         pitch=-thetaB,
         positionRoll=np.pi,
         limPhysX=[-5.0, 5.0],
-        limPhysY=[-400.0, 400.0])
+        limPhysY=[-40.0, 40.0])
 
     beamLine.screen02 = rscreens.Screen(
         bl=beamLine,
@@ -211,9 +226,9 @@ def define_plots():
     plot01 = xrtplot.XYCPlot(
         beam=r"screen01beamLocal01",
         xaxis=xrtplot.XYCAxis(
-            label=r"x", bins=bins, ppb=ppb, limits=xtallims),
+            label=r"x", bins=bins, ppb=ppb, limits=plotlims),
         yaxis=xrtplot.XYCAxis(
-            label=r"z", bins=bins, ppb=ppb, limits=xtallims),
+            label=r"z", bins=bins, ppb=ppb, limits=plotlims),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
             unit=r"eV", bins=bins, ppb=ppb, limits=eLims),
@@ -223,13 +238,13 @@ def define_plots():
         )
     plots.append(plot01)
 
-    title02=r"02 - Takagi-Taupin Model"
+    title02=r"02 - Takagi-Taupin Model Flux"
     plot02 = xrtplot.XYCPlot(
         beam=r"screen02beamLocal01",
         xaxis=xrtplot.XYCAxis(
-            label=r"x", bins=bins, ppb=ppb, limits=xtallims),
+            label=r"x", bins=bins, ppb=ppb, limits=plotlims),
         yaxis=xrtplot.XYCAxis(
-            label=r"z", bins=bins, ppb=ppb, limits=xtallims),
+            label=r"z", bins=bins, ppb=ppb, limits=plotlims),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
             unit=r"eV", bins=bins, ppb=ppb, limits=eLims),
@@ -264,6 +279,7 @@ def main():
         plots=plots,
         backend=r"raycing",
         repeats=4,
+#        processes=10,
         generator=plot_generator,
         beamLine=beamLine)
 

@@ -1540,6 +1540,25 @@ class Crystal(Material):
         curveP = for_one_polarization(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
+    def set_OE_properties(self, alpha=0, Rm=None, Rs=None):
+
+        Rmum = Rm*1e3 if Rm not in [np.inf, None] else np.inf  # [um] Meridional
+        Rsum = Rs*1e3 if Rs not in [np.inf, None] else np.inf  # [um] Sagittal
+        geotag = 0 if self.geom.startswith('B') else np.pi*0.5
+        alpha = 0 if alpha is None else alpha+geotag
+
+        classname = type(self).__name__
+        thickness = 1. if self.t is None else self.t
+
+        # Instantiating pytte TTCrystal to calculate displacement vectors
+        ttx = TTcrystal(crystal=classname, hkl=self.hkl,
+                        thickness=Quantity(thickness*1000, 'um'),
+                        debye_waller=1, xrt_crystal=self,
+                        Rx=Quantity(Rmum, 'um'),
+                        Ry=Quantity(Rsum, 'um'),
+                        asymmetry=Quantity(alpha, 'rad'))
+        self.djparams = ttx.djparams
+
     def get_amplitude_pytte(
             self, E, beamInDotNormal, beamOutDotNormal=None,
             beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
@@ -1581,29 +1600,21 @@ class Crystal(Material):
 
         """
 
-        # WARNING! x and y in xrt correspond to y and x in pytte!
-        Ryum = Ry*1e3 if Ry not in [np.inf, None] else np.inf  # [um] Meridional
-        Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal
-        geotag = 0 if self.geom.startswith('B') else np.pi*0.5
-        dh0tag = 0 if self.geom.endswith('reflected') else 1
-        alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag
-
         if beamOutDotNormal is None:
             beamOutDotNormal = -beamInDotNormal
         if beamInDotHNormal is None:  # Bragg
             beamInDotHNormal = beamInDotNormal
 
-        classname = type(self).__name__
         thickness = 1. if self.t is None else self.t
+        dh0tag = 0 if self.geom.endswith('reflected') else 1
 
-        # Instantiating pytte TTCrystal to calculate displacement vectors
-        ttx = TTcrystal(crystal=classname, hkl=self.hkl,
-                        thickness=Quantity(thickness*1e3, 'um'),
-                        debye_waller=1, xrt_crystal=self,
-                        Rx=Quantity(Ryum, 'um'),
-                        Ry=Quantity(Rxum, 'um'),
-                        asymmetry=Quantity(alphaAsym, 'rad'))
-        djparams = ttx.djparams
+        if not hasattr(self, 'djparams'):
+            self.set_OE_properties(alphaAsym, Ry, Rx)
+
+        geotag = 0 if self.geom.startswith('B') else np.pi*0.5
+        alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag
+        Ryum = Ry*1e3 if Ry not in [np.inf, None] else np.inf  # [um] Meridional
+        Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal
 
         # Step 1. Evaluating the boundaries where the amplitudes are calculated
 
@@ -1632,9 +1643,9 @@ class Crystal(Material):
             gamma_term = np.sin(alphah)/np.sin(alpha0)
             k_bragg = 0.5*h / abs(beamInDotHNormal)
             b_const_term = -0.5*k_bragg*(1 + gamma_term)*np.real(chi0)  # gamma0/gammah in pytte notation
-            scalarArgs = [ucl.cl_precisionF(djparams[0]),
-                          ucl.cl_precisionF(djparams[1]),
-                          ucl.cl_precisionF(djparams[2]),  # InvR1 in 1/um
+            scalarArgs = [ucl.cl_precisionF(self.djparams[0]),
+                          ucl.cl_precisionF(self.djparams[1]),
+                          ucl.cl_precisionF(self.djparams[2]),  # InvR1 in 1/um
                           ucl.cl_precisionF(alphaAsym),
                           ucl.cl_precisionF(thickness*1e3),  # From mm to um
                           ucl.cl_precisionF(h*1e4)]  # h = 2*np.pi/d From 1/A to 1/um
@@ -1688,9 +1699,9 @@ class Crystal(Material):
 
         npoints = np.zeros(bLength, dtype=ucl.cl_precisionF)
         hgammah = h*1e4/beamOutDotNormal[nzrays]
-        scalarArgs = [ucl.cl_precisionF(djparams[0]),  # C1
-                      ucl.cl_precisionF(djparams[1]),  # C2
-                      ucl.cl_precisionF(djparams[2]),  # InvR1
+        scalarArgs = [ucl.cl_precisionF(self.djparams[0]),  # C1
+                      ucl.cl_precisionF(self.djparams[1]),  # C2
+                      ucl.cl_precisionF(self.djparams[2]),  # InvR1
                       ucl.cl_precisionF(alphaAsym),
                       ucl.cl_precisionF(thickness*1e3),
                       ucl.cl_precisionF(tolerance),  # RK Adaptive step control

@@ -539,6 +539,10 @@ class BentLaueCylinder(OE):
         OE.__init__(self, *args, **kwargs)
         if isinstance(self.R, (tuple, list)):
             self.R = self.get_Rmer_from_Coddington(self.R[0], self.R[1])
+        try:
+            self.material.set_OE_properties(self.alpha, self.R, None)
+        except:
+            raise
 
     def __pop_kwargs(self, **kwargs):
         self.R = kwargs.pop('R', 1.0e4)
@@ -573,16 +577,67 @@ class BentLaueCylinder(OE):
             bB, cB = raycing.rotate_x(b, c, -self.sinalpha, -self.cosalpha)
         else:
             bB, cB = c, -b
+#        print("local_n", [a, bB, cB])
         return [a, bB, cB, a, b, c]
 
     def local_n(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
         return self.local_n_cylinder(x, y, self.R, self.alpha)
 
+    def local_n_depth(self, x, y, z):
 
-class BentLaueAnticlastic(OE):
+        a = -x*0  # -dz/dx
+        b = -y / self.R  # -dz/dy
+        c = 1.
+
+        norm = np.sqrt(a**2 + b**2 + 1)
+        a /= norm
+        b /= norm
+        c /= norm
+
+        plane_h = np.array([np.zeros_like(x),
+                            np.cos(self.alpha)*np.ones_like(x),
+                            -np.sin(self.alpha)*np.ones_like(x)])
+#        print(plane_h.shape)
+#        displacement_pytte = [-xg*zg*invR2 + 0.5*coef3*zg**2,
+#                              -yg*zg*invR1 + 0.5*coef2*zg**2,
+#                              0.5*invR2*xg**2+0.5*invR1*yg**2+0.5*coef1*zg**2]
+
+#        displacement_pp = [-nu*x*z*invR1,
+#                           -y*z*invR1,
+#                           (y**2-nu*x**2+nu*z**2)*invR1*0.5]
+
+        if hasattr(self.material, 'djparams'):
+            coef1, coef2, invR1, coef3, invR2 = self.material.djparams
+            duh_dx = np.einsum('ij,ij->j', plane_h, np.array([-z*invR2,
+                                                              np.zeros_like(x),
+                                                              x*invR2])*1e3)
+            duh_dy = np.einsum('ij,ij->j', plane_h, np.array([np.zeros_like(x),
+                                                              -z*invR1,
+                                                              y*invR1])*1e3)
+            duh_dz = np.einsum('ij,ij->j', plane_h, np.array([-x*invR2+z*coef3,
+                                                              -y*invR1+z*coef2,
+                                                              z*coef1])*1e3)
+        else:  # debug only, using Si and anticlastic bending
+            nu = 0.22
+            duh_dx = np.dot(plane_h, np.array([np.zeros_like(x),
+                                               np.zeros_like(x),
+                                               np.zeros_like(x)]))
+            duh_dy = np.dot(plane_h, np.array([np.zeros_like(x),
+                                               -z/self.R, y/self.R]))
+            duh_dz = np.dot(plane_h, np.array([np.zeros_like(x),
+                                               -y/self.R,
+                                               nu*z/self.R]))
+        hprime = plane_h - np.array([duh_dx, duh_dy, duh_dz])
+        hnorm = np.linalg.norm(hprime, axis=0)
+        hprime /= hnorm
+
+        return [hprime[0, :], hprime[1, :], hprime[2, :], a, b, c]
+
+
+class BentLaue2D(OE):
     """Parabolically bent reflective optical element in Laue geometry. The
-        element may be synclastic if both radii have the same sign."""
+        element may be syn/anticlastic if both radii have the same/opp sign."""
 
 #    cl_plist = ("crossSectionInt", "R")
 #    cl_local_z = """
@@ -616,6 +671,10 @@ class BentLaueAnticlastic(OE):
             self.Rm = self.get_Rmer_from_Coddington(self.Rm[0], self.Rm[1])
         if isinstance(self.Rs, (tuple, list)):
             self.Rs = self.get_rsag_from_Coddington(self.Rs[0], self.Rs[1])
+        try:
+            self.material.set_OE_properties(self.alpha, self.Rm, self.Rs)
+        except:
+            raise
 
     def __pop_kwargs(self, **kwargs):
         Rm = kwargs.pop('Rm', 1.0e4)
@@ -626,6 +685,54 @@ class BentLaueAnticlastic(OE):
 
     def local_z(self, x, y):
         return 0.5*x**2 / self.Rs + 0.5*y**2 / self.Rm
+
+    def local_n_depth(self, x, y, z):
+
+        a = -x / self.Rs  # -dz/dx
+        b = -y / self.Rm  # -dz/dy
+        c = 1.
+
+        norm = np.sqrt(a**2 + b**2 + 1)
+        a /= norm
+        b /= norm
+        c /= norm
+
+        plane_h = np.array([np.zeros_like(x),
+                            np.cos(self.alpha)*np.ones_like(x),
+                            -np.sin(self.alpha)*np.ones_like(x)])
+
+#        displacement_pytte = [-xg*zg*invR2 + 0.5*coef3*zg**2,
+#                              -yg*zg*invR1 + 0.5*coef2*zg**2,
+#                              0.5*invR2*xg**2+0.5*invR1*yg**2+0.5*coef1*zg**2]
+
+#        displacement_pp = [-nu*x*z*invR1,
+#                           -y*z*invR1,
+#                           (y**2-nu*x**2+nu*z**2)*invR1*0.5]
+
+        if hasattr(self.material, 'djparams'):
+            coef1, coef2, invR1, coef3, invR2 = self.material.djparams
+            duh_dx = np.einsum('ij,ij->j', plane_h, np.array([-z*invR2,
+                                                              np.zeros_like(x),
+                                                              x*invR2])*1e3)
+            duh_dy = np.einsum('ij,ij->j', plane_h, np.array([np.zeros_like(x),
+                                                              -z*invR1,
+                                                              y*invR1])*1e3)
+            duh_dz = np.einsum('ij,ij->j', plane_h, np.array([-x*invR2+z*coef3,
+                                                              -y*invR1+z*coef2,
+                                                              z*coef1])*1e3)
+        else:  # debug only, using Si and anticlastic bending
+            nu = 0.22
+            duh_dx = np.dot(plane_h, np.array([-z*nu/self.Rm, x*0,
+                                               -x*nu/self.Rm]))
+            duh_dy = np.dot(plane_h, np.array([x*0, -z/self.Rm, y/self.Rm]))
+            duh_dz = np.dot(plane_h, np.array([-x*nu/self.Rm,
+                                               -y/self.Rm,
+                                               nu*z/self.Rm]))
+        hprime = plane_h - np.array([duh_dx, duh_dy, duh_dz])
+        hnorm = np.linalg.norm(hprime, axis=0)
+        hprime /= hnorm
+
+        return [hprime[0, :], hprime[1, :], hprime[2, :], a, b, c]
 
     def local_n(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
@@ -662,7 +769,8 @@ class BentLaueAnticlastic(OE):
 
         normB = (bB**2 + cB**2 + aB**2)**0.5
 
-        return [aB/normB, bB/normB, cB/normB, a/norm, b/norm, c/norm]
+#        return [aB/normB, bB/normB, cB/normB, a/norm, b/norm, c/norm]
+        return [a/norm, b/norm, c/norm, a/norm, b/norm, c/norm]
 
 
 class GroundBentLaueCylinder(BentLaueCylinder):
@@ -2281,7 +2389,7 @@ class GeneralFZPin0YZ(OE):
         if self.minHalfLambda is None:
             self.minHalfLambda = halfLambda.min()
         halfLambda -= self.minHalfLambda + self.phaseShift - phi*self.vorticity
-        zone = np.ones_like(x, dtype=np.int32) * (self.N+2)
+        zone = np.ones_like(x, dtype=np.int) * (self.N+2)
         zone[good] = np.floor(halfLambda).astype(np.int)
 #        N = 0
 #        while N < self.N:

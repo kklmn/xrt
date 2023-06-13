@@ -789,7 +789,7 @@ class OE(object):
             surfOptX = self.surfOptX
             surfOptY = self.surfOptY
 
-        locState = np.ones(x.size, dtype=np.int32)
+        locState = np.ones(x.size, dtype=np.int)
         if isinstance(self.shape, raycing.basestring):
             if self.shape.startswith('re'):
                 if surfOptX is not None:
@@ -1768,8 +1768,10 @@ class OE(object):
                                         lb.x[goodN] += lb.a[goodN] * dpth
                                         lb.y[goodN] += lb.b[goodN] * dpth
                                         lb.z[goodN] += lb.c[goodN] * dpth
-                                        deepNormal = list(local_n(lb.x[goodN],
-                                                                  lb.y[goodN]))
+                                        deepNormal = list(self.local_n_depth(
+                                                lb.x[goodN],
+                                                lb.y[goodN],
+                                                lb.z[goodN]))
                                         oeNormal[0:3] = deepNormal[0:3]
                                         beamInDotNormal =\
                                             lb.a[goodN]*oeNormal[0] +\
@@ -1984,19 +1986,18 @@ class OE(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormalOld)
                     elif matSur.useTT:
-                        if hasattr(self, 'R'):
+                        if 'R' in self.__dict__.keys():
                             Ry = self.R
-                        elif hasattr(self, 'Rm'):
+                        elif 'Rm' in self.__dict__.keys():
                             Ry = self.Rm
-                            if 'Johansson' in self.__class__.__name__:
-                                Ry *= 2
                         else:
                             Ry = None
                         refl = matSur.get_amplitude_pytte(
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             alphaAsym=self.alpha,
-                            Ry=Ry, Rx=self.Rs if hasattr(self, 'Rs') else None,
+                            Ry=Ry, Rx=self.Rs if 'Rs' in self.__dict__.keys()
+                            else None,
                             ucl=self.ucl)
                     else:
                         refl = matSur.get_amplitude(
