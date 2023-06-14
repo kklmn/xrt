@@ -133,16 +133,17 @@ class PlotWidget(QWidget):
         ("hkl", "1, 1, 1", True),  # 3
         ("Thickness (mm)", "1.", True),  # 4
         ("Asymmetry \u2220 (°)", "0.", True),  # 5
-        ("Bending R (m)", "inf", False),  # 6
-        ("Separator Scan", "Scan", False, '#dddddd'),  # 7
-        ("Energy (eV)", "9000", True),  # 8
-        ("Scan Range", "-80, 120", True),  # 9
-        ("Scan Units", "urad", True, list(allUnits.keys())),  # 10
-        ("Scan Points", "500", True),  # 11
-        ("Calc Backend", "auto", False, allBackends),  # 12
-        ("Separator Plot", "Plot", False, '#dddddd'),  # 13
-        ("Curve Color", "blue", False, allColors),  # 14
-        ("Curves", ['σ', ], True, allCurves)  # 15
+        ("Bending Rm (m)", "inf", False),  # 6
+        ("Bending Rs (m)", "inf", False),  # 7
+        ("Separator Scan", "Scan", False, '#dddddd'),  # 8
+        ("Energy (eV)", "9000", True),  # 9
+        ("Scan Range", "-80, 120", True),  # 10
+        ("Scan Units", "urad", True, list(allUnits.keys())),  # 11
+        ("Scan Points", "500", True),  # 12
+        ("Calc Backend", "auto", False, allBackends),  # 13
+        ("Separator Plot", "Plot", False, '#dddddd'),  # 14
+        ("Curve Color", "blue", False, allColors),  # 15
+        ("Curves", ['σ', ], True, allCurves)  # 16
         ]
 
     def __init__(self):
@@ -759,9 +760,12 @@ class PlotWidget(QWidget):
         thck = float(root_item.child(ind, 1).text())
         ind = self.findIndexFromText("Asymmetry")
         asymmetry = float(root_item.child(ind, 1).text())
-        ind = self.findIndexFromText("Bending")
-        radius = root_item.child(ind, 1).text()
-        radiusStr = radius if radius == "inf" else radius + "m"
+        ind = self.findIndexFromText("Bending Rm")
+        Rm = root_item.child(ind, 1).text()
+        RmStr = Rm if Rm == "inf" else Rm + "m"
+        ind = self.findIndexFromText("Bending Rs")
+        Rs = root_item.child(ind, 1).text()
+        RsStr = Rs if Rs == "inf" else Rs + "m"
         energy = self.get_energy(root_item)
         thetaB = np.degrees(float(root_item.thetaB))
 
@@ -794,7 +798,7 @@ class PlotWidget(QWidget):
             header = \
                 f"{what} calculated by xrt bentXCalculator on {nowStr}\n"\
                 f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
-                f"Asymmetry: {asymmetry:.8g}°\tRbend: {radiusStr}\n"\
+                f"Asymmetry: {asymmetry:.8g}°\tRm: {RmStr}\tRs: {RsStr}\n"\
                 f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
                 f"Geometry: {geometry}\n"
             header += "\t".join(outNames)
@@ -897,8 +901,10 @@ class PlotWidget(QWidget):
         thickness = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Asymmetry")
         asymmetry = plot_item.child(ind, 1).text()
-        ind = self.findIndexFromText("Bending")
-        radius = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Bending Rm")
+        Rm = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("Bending Rs")
+        Rs = plot_item.child(ind, 1).text()
 
         energy = self.get_energy(plot_item)
 
@@ -912,11 +918,13 @@ class PlotWidget(QWidget):
         backend = "xrt"
         precision = "float64"
 
-        if float(radius) == 0:
-            radius = "inf"
+        if float(Rm) == 0:
+            Rm = "inf"
+        if float(Rs) == 0:
+            Rs = "inf"
 
         if backendStr == "auto":
-            if radius == "inf":
+            if Rm == Rs == "inf":
                 backend = "xrt"
             elif geometry == "Bragg transmitted":
                 backend = "pytte"
@@ -1001,7 +1009,7 @@ class PlotWidget(QWidget):
         if backend == "xrtCL":
             self.amps_calculator = AmpCalculator(
                     crystalInstance, xaxis, xenergy, gamma0, gammah,
-                    hns0, phi, radius, precision, plot_nr)
+                    hns0, phi, Rm, Rs, precision, plot_nr)
             self.amps_calculator.progress.connect(self.update_progress_bar)
             self.amps_calculator.result.connect(self.on_calculation_result)
             self.amps_calculator.start()
@@ -1009,16 +1017,17 @@ class PlotWidget(QWidget):
             self.t0 = time.time()
             self.statusUpdate.emit(("Calculating on CPU", 0))
             plot_item.curves = copy.copy((xaxis,
-                                        np.zeros(len(theta),
-                                                 dtype=np.complex128),
-                                        np.zeros(len(theta),
-                                                 dtype=np.complex128)))
+                                         np.zeros(len(theta),
+                                                  dtype=np.complex128),
+                                         np.zeros(len(theta),
+                                                  dtype=np.complex128)))
             plot_item.curProgress = 0
             geotag = 0 if geometry.startswith('B') else np.pi*0.5
             ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
                             thickness=Quantity(float(thickness), 'mm'),
                             debye_waller=1, xrt_crystal=crystalInstance,
-                            Rx=Quantity(float(radius), 'm'),
+                            Rx=Quantity(float(Rm), 'm'),
+                            Ry=Quantity(float(Rs), 'm'),
                             asymmetry=Quantity(phi+geotag, 'rad'))
             if units == 'eV':
                 tts = TTscan(constant=Quantity(theta0, 'rad'),
@@ -1187,7 +1196,7 @@ class AmpCalculator(QThread):
     result = Signal(tuple)
 
     def __init__(self, crystal, xaxis, energy, gamma0, gammah, hns0,
-                 alpha, radius, precision, plot_nr):
+                 alpha, Rm, Rs, precision, plot_nr):
         super(AmpCalculator, self).__init__()
         self.crystalInstance = crystal
         self.xaxis = xaxis
@@ -1196,7 +1205,8 @@ class AmpCalculator(QThread):
         self.gammah = gammah
         self.hns0 = hns0
         self.alpha = alpha
-        self.radius = radius
+        self.Rm = Rm
+        self.Rs = Rs
         self.precision = precision
         self.plot_nr = plot_nr
 
@@ -1206,7 +1216,9 @@ class AmpCalculator(QThread):
         ampS, ampP = self.crystalInstance.get_amplitude_pytte(
                 self.energy, self.gamma0, self.gammah, self.hns0,
                 ucl=matCL, alphaAsym=self.alpha, autoLimits=False,
-                Ry=float(self.radius)*1000., signal=self.progress)
+                Ry=float(self.Rm)*1000.,
+                Rx=float(self.Rs)*1000.,
+                signal=self.progress)
 #        self.result.emit((self.dtheta, abs(ampS)**2, abs(ampP)**2,
 #                          self.plot_nr))
         self.result.emit((self.xaxis, ampS, ampP,
