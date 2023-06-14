@@ -769,8 +769,8 @@ class BentLaue2D(OE):
 
         normB = (bB**2 + cB**2 + aB**2)**0.5
 
-#        return [aB/normB, bB/normB, cB/normB, a/norm, b/norm, c/norm]
-        return [a/norm, b/norm, c/norm, a/norm, b/norm, c/norm]
+        return [aB/normB, bB/normB, cB/normB, a/norm, b/norm, c/norm]
+#        return [a/norm, b/norm, c/norm, a/norm, b/norm, c/norm]
 
 
 class GroundBentLaueCylinder(BentLaueCylinder):
