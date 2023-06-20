@@ -1021,7 +1021,8 @@ class Crystal(Material):
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler', name='',
-                 volumetricDiffraction=False, useTT=False, mosaicity=0):
+                 volumetricDiffraction=False, useTT=False, nu=None,
+                 mosaicity=0):
         u"""
         *hkl*: sequence
             hkl indices.
@@ -1120,6 +1121,7 @@ class Crystal(Material):
         self.t = t  # in mm
         self.volumetricDiffraction = volumetricDiffraction
         self.useTT = useTT
+        self.nu = nu
         self.mosaicity = mosaicity
 
 #    def get_amplitude_Authie(self, E, gamma0, gammah, beamInDotHNormal):
@@ -1551,12 +1553,20 @@ class Crystal(Material):
         thickness = 1. if self.t is None else self.t
 
         # Instantiating pytte TTCrystal to calculate displacement vectors
-        ttx = TTcrystal(crystal=classname, hkl=self.hkl,
-                        thickness=Quantity(thickness*1000, 'um'),
-                        debye_waller=1, xrt_crystal=self,
-                        Rx=Quantity(Rmum, 'um'),
-                        Ry=Quantity(Rsum, 'um'),
-                        asymmetry=Quantity(alpha, 'rad'))
+        ttcrystal_kwargs = {'crystal': classname,
+                            'hkl': self.hkl,
+                            'thickness': Quantity(thickness*1000, 'um'),
+                            'debye_waller': 1,
+                            'xrt_crystal': self,
+                            'Rx': Quantity(Rmum, 'um'),
+                            'Ry': Quantity(Rsum, 'um'),
+                            'asymmetry': Quantity(alpha, 'rad')}
+
+        if self.nu is not None:  # Using isotropic model
+            ttcrystal_kwargs['nu'] = self.nu
+            ttcrystal_kwargs['E'] = Quantity(1, 'Pa')
+
+        ttx = TTcrystal(**ttcrystal_kwargs)
         self.djparams = ttx.djparams
 
     def get_amplitude_pytte(

@@ -3,7 +3,8 @@ from numpy import array, finfo, cos, sin, arctan2, isinf
 from .elastic_tensors import rotate_elastic_matrix
 from .rotation_matrix import inplane_rotation
 
-def isotropic_plate(R1,R2,nu,thickness):
+
+def isotropic_plate(R1, R2, nu, thickness):
     '''
     Creates a function for computing the Jacobian of the displacement field
     for an isotropic plate.
@@ -55,7 +56,7 @@ def isotropic_plate(R1,R2,nu,thickness):
             R1 = 'inf'
             R2 = 'inf'
         else:
-            R1 = -R2/nu #anticlastic bending
+            R1 = -R2/nu  # anticlastic bending
             invR1 = 1.0/R1
 
     elif R2 is None:
@@ -66,7 +67,7 @@ def isotropic_plate(R1,R2,nu,thickness):
             R1 = 'inf'
             R2 = 'inf'
         else:
-            R2 = -R1/nu #anticlastic bending
+            R2 = -R1/nu  # anticlastic bending
             invR2 = 1.0/R2
 
     else:
@@ -82,18 +83,19 @@ def isotropic_plate(R1,R2,nu,thickness):
         else:
             invR2 = 1/R2
 
-    def jacobian(x,z):
+    def jacobian(x, z):
         ux_x = -(z+0.5*thickness)*invR1
         ux_z = -x*invR1
 
         uz_x = x*invR1
         uz_z = nu/(1-nu)*(invR1+invR2)*(z+0.5*thickness)
 
-        return [[ux_x,ux_z],[uz_x,uz_z]]
+        return [[ux_x, ux_z], [uz_x, uz_z]]
 
-    return jacobian, R1, R2
+    return jacobian, R1, R2, [nu/(1-nu)*(invR1+invR2), 0, invR1, 0, invR2]
 
-def anisotropic_plate_fixed_torques(R1,R2,S,thickness):
+
+def anisotropic_plate_fixed_torques(R1, R2, S, thickness):
     '''
     Creates a function for computing the Jacobian of the displacement field
     for an anisotropic plate with fixed torques.
@@ -140,63 +142,62 @@ def anisotropic_plate_fixed_torques(R1,R2,S,thickness):
     S = array(S)
 
     if R1 is None:
-        m1 = 0 #no torque about y-axis
+        m1 = 0  # no torque about y-axis
 
         if R2 is None or isinf(float(R2)):
-            #If both bending radii are set to None, or R2 = inf when m1 = 0, it
-            #it implies that there no torques acting on the wafer
+            # If both bending radii are set to None, or R2 = inf when m1 = 0,
+            # it implies that there no torques acting on the wafer
             m2 = 0
             R1 = 'inf'
             R2 = 'inf'
         else:
-            m2 = -1.0/(S[1,1] * R2)
-            R1 = -1.0/(S[0,1] * m2) #anticlastic reaction
+            m2 = -1.0/(S[1, 1] * R2)
+            R1 = -1.0/(S[0, 1] * m2)  # anticlastic reaction
 
     elif R2 is None:
-        m2 = 0 #no torque about x-axis
+        m2 = 0  # no torque about x-axis
         if isinf(float(R1)):
             m1 = 0
             R1 = 'inf'
             R2 = 'inf'
         else:
-            m1 = -1.0/(S[0,0] * R1)
-            R2 = -1.0/(S[1,0] * m1) #anticlastic reaction
+            m1 = -1.0/(S[0, 0] * R1)
+            R2 = -1.0/(S[1, 0] * m1)  # anticlastic reaction
     else:
         if isinf(float(R1)):
-            R1 = 'inf' #for output
+            R1 = 'inf'  # for output
             invR1 = 0
         else:
             invR1 = 1/R1
 
         if isinf(float(R2)):
-            R2 = 'inf' #for output
+            R2 = 'inf'  # for output
             invR2 = 0
         else:
             invR2 = 1/R2
 
-        m_divider = S[1,1]*S[0,0] - S[0,1]*S[0,1]
-        m1 = (S[0,1]*invR2 - S[1,1]*invR1)/m_divider
-        m2 = (S[0,1]*invR1 - S[0,0]*invR2)/m_divider
+        m_divider = S[1, 1]*S[0, 0] - S[0, 1]*S[0, 1]
+        m1 = (S[0, 1]*invR2 - S[1, 1]*invR1)/m_divider
+        m2 = (S[0, 1]*invR1 - S[0, 0]*invR2)/m_divider
 
-    #Coefficients for the Jacobian
-    coef1 = S[0,0]*m1 + S[0,1]*m2
-    coef2 = S[4,0]*m1 + S[4,1]*m2
-    coef3 = S[2,0]*m1 + S[2,1]*m2
+    # Coefficients for the Jacobian
+    coef1 = S[0, 0]*m1 + S[0, 1]*m2
+    coef2 = S[4, 0]*m1 + S[4, 1]*m2
+    coef3 = S[2, 0]*m1 + S[2, 1]*m2
 
-    def jacobian(x,z):
-#        print("torque")
+    def jacobian(x, z):
         ux_x = coef1*(z+0.5*thickness)
         ux_z = coef1*x + coef2*(z+0.5*thickness)
 
         uz_x = -coef1*x
         uz_z = coef3*(z+0.5*thickness)
 
-        return [[ux_x,ux_z],[uz_x,uz_z]]
+        return [[ux_x, ux_z], [uz_x, uz_z]]
 
-    return jacobian, R1, R2, [coef1, coef2, invR1, coef3, invR2]
+    return jacobian, R1, R2, [coef3, coef2, invR1, coef1, invR2]  # TODO coef1
 
 
-def anisotropic_plate_fixed_shape(R1,R2,S,thickness):
+def anisotropic_plate_fixed_shape(R1, R2, S, thickness):
     '''
     Creates a function for computing the Jacobian of the displacement field
     for an anisotropic plate with fixed shape.
