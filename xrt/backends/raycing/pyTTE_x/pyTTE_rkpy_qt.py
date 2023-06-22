@@ -664,11 +664,11 @@ class CalculateAmplitudes:
             def strain_term(z):
                 x = -z*cot_alpha0
                 duh_dsh = h_um*(
-                        sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness) +
+                        sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness*0) +
                         sin_phi*sin_alphah*(-invR1*x +
-                                            coef2*(z+0.5*thickness)) +
+                                            coef2*(z+0.5*thickness*0)) +
                         cos_phi*cos_alphah*invR1*x +
-                        cos_phi*sin_alphah*coef1*(z+0.5*thickness))
+                        cos_phi*sin_alphah*coef1*(z+0.5*thickness*0))
                 return gammah_step*duh_dsh
         else:
             # Non-bent crystal

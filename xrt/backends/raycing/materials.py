@@ -1562,9 +1562,10 @@ class Crystal(Material):
                             'Ry': Quantity(Rsum, 'um'),
                             'asymmetry': Quantity(alpha, 'rad')}
 
-        if self.nu is not None:  # Using isotropic model
-            ttcrystal_kwargs['nu'] = self.nu
-            ttcrystal_kwargs['E'] = Quantity(1, 'Pa')
+        if hasattr(self, 'nu'):
+            if self.nu is not None:  # Using isotropic model
+                ttcrystal_kwargs['nu'] = self.nu
+                ttcrystal_kwargs['E'] = Quantity(1, 'Pa')
 
         ttx = TTcrystal(**ttcrystal_kwargs)
         self.djparams = ttx.djparams

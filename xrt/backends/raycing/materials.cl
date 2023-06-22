@@ -1172,7 +1172,7 @@ float strain_term(float z,
                   float4 scap    // sinphi*cosa, sinphi*sina, cosphi*cosa, cosphi*sina
                   ) {
     float xR1 = -z*coeffs.s2*coeffs.s3;
-    float zt2 = z+HALF*thickness;
+    float zt2 = z; //+HALF*thickness;
     float duh_dsh = zt2*(scap.s1*coeffs.s1 - scap.s0*coeffs.s2 + scap.s3*coeffs.s0)
                 + xR1*(scap.s2 - scap.s1);
 //    float duh_dsh = -scap.s0*coeffs.s2*zt2 + scap.s1*(-xR1 + coeffs.s1*zt2)
@@ -1441,7 +1441,7 @@ __kernel void get_amplitudes_pytte(const float c1,
 
     float cz1 = scap.s1*c2 - scap.s0*ir1 + scap.s3*c1;
     float cz0 = hgh_global[ii]*(cz1 + ir1*cot_a0*(scap.s1 - scap.s2));
-    float cz2 = HALF*t*cz1;
+    float cz2 = HALF*t*cz1*0;
 
     float2 strain_z0 = c0_global[ii] + (float2)(hgh_beta_global[ii] + hgh_global[ii]*cz2, 0);
     float2 strain_z = strain_z0;
