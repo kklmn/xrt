@@ -78,6 +78,7 @@ class XRT_CL(object):
                 self.ZMQsocket.connect("{0}:{1}".format(self.address,
                                                         self.port))
                 self.useZMQ = True
+                print("connected")
                 self.lastTargetOpenCL = targetOpenCL
             else:
                 self.useZMQ = False
@@ -229,7 +230,7 @@ class XRT_CL(object):
             else:
                 kernelsource = self.kernelsource
             if precisionOpenCL == 'auto':
-                if self.useZMQ:
+                if self.useZMQ:  # TODO: server can work with 32-bit tasks now
                     precisionOpenCL = 'float64'
                 else:
                     try:
@@ -291,9 +292,9 @@ class XRT_CL(object):
             self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
             #  Get the reply.
             ret = self.recv_zipped_pickle(self.ZMQsocket)
-#            print(ret)
-#            if hasattr(ret, 'status'):
-#                raise 'Error on server side'
+
+            if "ERROR" in ret:
+                print("Remote server returned error:\n", ret[1])
         else:
             ka_offset = len(scalarArgs) if scalarArgs is not None else 0
             ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
@@ -457,6 +458,8 @@ class XRT_CL(object):
             self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
             #  Get the reply.
             ret = self.recv_zipped_pickle(self.ZMQsocket)
+            if "ERROR" in ret:
+                print("Remote server returned error:\n", ret[1])
         else:
             ka_offset = len(scalarArgs) if scalarArgs is not None else 0
             ro_offset = len(slicedROArgs) if slicedROArgs is not None else 0
