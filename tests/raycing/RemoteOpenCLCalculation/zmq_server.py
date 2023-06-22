@@ -11,6 +11,7 @@ import os; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.myopencl as mcl
+from xrt.backends.raycing.oes import OE
 import pickle
 
 raycing._VERBOSITY_ = 80
@@ -39,6 +40,8 @@ undulatorKernels = ['undulator', 'undulator_taper', 'undulator_nf',
                     'undulator_full', 'undulator_nf_full',
                     'get_trajectory_filament', 'custom_field_filament',
                     'get_trajectory', 'custom_field']
+oesKernels = ['reflect_crystal']
+
 
 targetOpenCL = 'GPU'
 
@@ -53,10 +56,10 @@ sourceCL64 = mcl.XRT_CL(r'undulator.cl', precisionOpenCL='float64',
 waveCL = mcl.XRT_CL(r'diffract.cl', precisionOpenCL='float64',
                     targetOpenCL=targetOpenCL)
 
-# oeCL32 = mcl.XRT_CL(r'OE.cl', precisionOpenCL='float32',
-#                        targetOpenCL=targetOpenCL)
-# oeCL64 = mcl.XRT_CL(r'OE.cl', precisionOpenCL='float64',
-#                        targetOpenCL=targetOpenCL)
+OE32 = OE(precisionOpenCL='float32', targetOpenCL=targetOpenCL)
+OE64 = OE(precisionOpenCL='float64', targetOpenCL=targetOpenCL)
+oeCL32 = OE32.ucl
+oeCL64 = OE64.ucl
 
 
 port = "15560"
@@ -77,8 +80,10 @@ while True:
             elif isinstance(arg, np.float32):
                 precision = 32
                 break
-            else:  # np.float64
+            elif isinstance(arg, np.float64):
                 break
+            else:
+                continue
     else:
         print("ERROR: not a kernel")
         reply = ("ERROR", "not a kernel")
@@ -91,6 +96,8 @@ while True:
             xrtClContext = sourceCL32 if precision == 32 else sourceCL64
         elif kName in materialsKernels:
             xrtClContext = matCL32 if precision == 32 else matCL64
+        elif kName in oesKernels:
+            xrtClContext = oeCL32 if precision == 32 else oeCL64
         else:
             print("ERROR: unknown kernel:", kName)
             reply = ("ERROR", "unknown kernel: "+kName)
