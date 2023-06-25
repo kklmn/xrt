@@ -908,7 +908,7 @@ class xrtGlow(qt.QWidget):
             histImage = np.zeros((size, size, 3))
             colorMin = self.customGlWidget.colorMin
             colorMax = self.customGlWidget.colorMax
-            hMax = np.float(np.max(histArray[0]))
+            hMax = np.float64(np.max(histArray[0]))
             intensity = np.float64(np.array(histArray[0]) / hMax)
             histVals = np.int32(intensity * (size-1))
             for col in range(size):
@@ -1701,7 +1701,7 @@ class xrtGlow(qt.QWidget):
     def updateTileFromQLE(self, editor, ia):
         # editor = self.sender()
         value = float(str(editor.text()))
-        self.customGlWidget.tiles[ia] = np.int(value)
+        self.customGlWidget.tiles[ia] = np.int32(value)
         self.customGlWidget.glDraw()
 
     def updateProjectionOpacity(self, slider, iax, editor, position):
@@ -2879,7 +2879,7 @@ class xrtGlWidget(qt.QGLWidget):
             else:
                 decimalX = 0
 
-            gridX = np.arange(np.int(allLimits[:, iAx][0]/step)*step,
+            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
                               allLimits[:, iAx][1], step)
             gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
                 gridX[1:]
@@ -2889,7 +2889,7 @@ class xrtGlWidget(qt.QGLWidget):
             if self.fineGridEnabled:
                 fineStep = step * 0.2
                 fineGrid = np.arange(
-                    np.int(allLimits[:, iAx][0]/fineStep)*fineStep,
+                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
                     allLimits[:, iAx][1], fineStep)
                 fineGrid = fineGrid if\
                     fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
@@ -4078,7 +4078,7 @@ class xrtGlWidget(qt.QGLWidget):
             local_n = getattr(oe, 'local_n{}'.format(zExt))
             normals = local_n(0, 0)
             if len(normals) > 3:
-                crPlaneZ = np.array(normals[:3], dtype=np.float)
+                crPlaneZ = np.array(normals[:3], dtype=float)
                 crPlaneZ /= np.linalg.norm(crPlaneZ)
                 if material not in [None, 'None']:
                     if hasattr(material, 'hkl'):
@@ -4094,8 +4094,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         if crPlaneZ is not None:  # Adding asymmetric crystal orientation
             asAlpha = np.arccos(crPlaneZ[2])
-            acpX = np.array([0., 0., 1.], dtype=np.float) if asAlpha == 0 else\
-                np.cross(np.array([0., 0., 1.], dtype=np.float), crPlaneZ)
+            acpX = np.array([0., 0., 1.], dtype=float) if asAlpha == 0 else\
+                np.cross(np.array([0., 0., 1.], dtype=float), crPlaneZ)
             acpX /= np.linalg.norm(acpX)
 
             cb.a[3] = acpX[0]

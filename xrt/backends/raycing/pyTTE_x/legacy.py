@@ -139,9 +139,9 @@ def takagitaupin(scantype,scan,constant,polarization,crystal_str,hkl,asymmetry,t
 
     #Compute susceptibilities
     if is_escan:
-        F0 = np.zeros(escan.shape,dtype=np.complex)
-        Fh = np.zeros(escan.shape,dtype=np.complex)
-        Fb = np.zeros(escan.shape,dtype=np.complex)
+        F0 = np.zeros(escan.shape,dtype=np.complex128)
+        Fh = np.zeros(escan.shape,dtype=np.complex128)
+        Fb = np.zeros(escan.shape,dtype=np.complex128)
 
         for ii in range(escan.size):    
             F0[ii] = 0 # xraylib.Crystal_F_H_StructureFactor(crystal, (E0+escan[ii])*1e-6, 0, 0, 0, 1.0, 1.0)

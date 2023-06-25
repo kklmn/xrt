@@ -194,9 +194,9 @@ class TakagiTaupin:
         orig_shape = energy_in_keV.shape
         energy_in_keV = energy_in_keV.reshape(-1)
 
-        F0 = np.zeros(energy_in_keV.shape, dtype=np.complex)
-        Fh = np.zeros(energy_in_keV.shape, dtype=np.complex)
-        Fb = np.zeros(energy_in_keV.shape, dtype=np.complex)
+        F0 = np.zeros(energy_in_keV.shape, dtype=np.complex128)
+        Fh = np.zeros(energy_in_keV.shape, dtype=np.complex128)
+        Fb = np.zeros(energy_in_keV.shape, dtype=np.complex128)
 
 #        for i in range(energy_in_keV.size):
 #            F0[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i], 0, 0, 0, 1.0, 1.0)
@@ -516,7 +516,7 @@ class TakagiTaupin:
         beta_term2 = wavelength.in_units('nm').astype(np.float64)
         beta_term3 = (2*d.in_units('nm')).astype(np.float64)
 
-        beta = h*gammah*(beta_term1 - beta_term2/beta_term3).astype(np.float)
+        beta = h*gammah*(beta_term1 - beta_term2/beta_term3).astype(np.float64)
 
         #############
         #INTEGRATION#
@@ -539,7 +539,7 @@ class TakagiTaupin:
 
         def rkdpa(f, f2r=None, f2i=None, y0=0, tol=1e-6, max_steps=100000):
 
-            h = thickness / np.float(max_steps)  # Initial step size
+            h = thickness / np.float64(max_steps)  # Initial step size
             total_evaluations = 0
             n_steps = 0
 
@@ -739,7 +739,8 @@ class TakagiTaupin:
 
                 transmission = np.abs(res[1])**2
 
-                return reflectivity, transmission, np.complex(res[0])*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step])))
+                return reflectivity, transmission, np.complex128(
+                    res[0])*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step])))
             else:
                 if self.scan_object.start_depth is not None:
                     output_log = print_and_log('Warning! The alternative start depth is negleted in the Laue case.', output_log)
@@ -753,7 +754,8 @@ class TakagiTaupin:
 
                 forward_diffraction = np.abs(res[1])**2
 
-                return diffraction, forward_diffraction, np.complex(res[0]*res[1]*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step]))))
+                return diffraction, forward_diffraction, np.complex128(
+                    res[0]*res[1]*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step]))))
 
         n_cores = max(multiprocess.cpu_count()-1, 1)
 

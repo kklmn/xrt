@@ -789,7 +789,7 @@ class OE(object):
             surfOptX = self.surfOptX
             surfOptY = self.surfOptY
 
-        locState = np.ones(x.size, dtype=np.int)
+        locState = np.ones(x.size, dtype=np.int32)
         if isinstance(self.shape, raycing.basestring):
             if self.shape.startswith('re'):
                 if surfOptX is not None:

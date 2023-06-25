@@ -358,7 +358,7 @@ class XRT_CL(object):
                     for iarg, arg in enumerate(slicedROArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
                             else arg
-                        secondDim = np.int(len(newArg) / dimension)
+                        secondDim = np.int32(len(newArg) / dimension)
                         iSlice = slice(int(ndstart[ictx]*secondDim),
                                        int((ndstart[ictx]+ndsize[ictx])*secondDim))
                         kernel_bufs[ictx].extend([cl.Buffer(
@@ -375,13 +375,13 @@ class XRT_CL(object):
                     for iarg, arg in enumerate(slicedRWArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
                             else arg
-                        secondDim = np.int(len(newArg) / dimension)
+                        secondDim = np.int32(len(newArg) / dimension)
                         iSlice = slice(int(ndstart[ictx]*secondDim),
                                        int((ndstart[ictx]+ndsize[ictx])*secondDim))
                         kernel_bufs[ictx].extend([cl.Buffer(
                             self.cl_ctx[ictx], self.cl_mf.READ_WRITE |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
-                    global_size.extend([(np.int(ndsize[ictx]),)])
+                    global_size.extend([(np.int32(ndsize[ictx]),)])
                 if nonSlicedRWArgs is not None:
                     for iarg, arg in enumerate(nonSlicedRWArgs):
                         kernel_bufs[ictx].extend([cl.Buffer(
@@ -411,7 +411,7 @@ class XRT_CL(object):
                     for iarg, arg in enumerate(slicedRWArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
                             else arg
-                        secondDim = np.int(len(newArg) / dimension)
+                        secondDim = np.int32(len(newArg) / dimension)
                         iSlice = slice(int(ndstart[ictx]*secondDim),
                                        int((ndstart[ictx]+ndsize[ictx])*secondDim))
                         cl.enqueue_copy(self.cl_queue[ictx],
@@ -547,7 +547,7 @@ class XRT_CL(object):
                     for iarg, arg in enumerate(slicedROArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
                             else arg
-                        secondDim = np.int(len(newArg) / dimension)
+                        secondDim = np.int32(len(newArg) / dimension)
                         iSlice = slice(int(ndstart*secondDim),
                                        int((ndstart+ndsize)*secondDim))
                         kernel_bufs.extend([cl.Buffer(
@@ -562,13 +562,13 @@ class XRT_CL(object):
                     for iarg, arg in enumerate(slicedRWArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
                             else arg
-                        secondDim = np.int(len(newArg) / dimension)
+                        secondDim = np.int32(len(newArg) / dimension)
                         iSlice = slice(int(ndstart*secondDim),
                                        int((ndstart+ndsize)*secondDim))
                         kernel_bufs.extend([cl.Buffer(
                             self.cl_ctx[0], self.cl_mf.READ_WRITE |
                             self.cl_mf.COPY_HOST_PTR, hostbuf=newArg[iSlice])])
-                    global_size.extend([(np.int(ndsize),)])
+                    global_size.extend([(np.int32(ndsize),)])
 
                 if nonSlicedRWArgs is not None:
                     for buf in nsRWbuf:
@@ -595,7 +595,7 @@ class XRT_CL(object):
                     for iarg, arg in enumerate(slicedRWArgs):
                         newArg = np.concatenate([arg, arg[:nDiff]]) if needResize\
                             else arg
-                        secondDim = np.int(len(newArg) / dimension)
+                        secondDim = np.int32(len(newArg) / dimension)
                         iSlice = slice(int(ndstart*secondDim),
                                        int((ndstart+ndsize)*secondDim))
                         cl.enqueue_copy(self.cl_queue[0],

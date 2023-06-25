@@ -185,9 +185,9 @@ class TakagiTaupin():
         orig_shape = energy_in_eV.shape
         energy_in_eV = energy_in_eV.reshape(-1)
 
-        F0 = np.zeros(energy_in_eV.shape, dtype=np.complex)
-        Fh = np.zeros(energy_in_eV.shape, dtype=np.complex)
-        Fb = np.zeros(energy_in_eV.shape, dtype=np.complex)
+        F0 = np.zeros(energy_in_eV.shape, dtype=np.complex128)
+        Fh = np.zeros(energy_in_eV.shape, dtype=np.complex128)
+        Fb = np.zeros(energy_in_eV.shape, dtype=np.complex128)
 
         d = crystal.d
         F0, Fh, Fb = crystal.get_F_chi(energy_in_eV, 0.5/d)[:3]
@@ -485,7 +485,7 @@ class TakagiTaupin():
         beta_term2 = wavelength.in_units('nm').astype(np.float64)
         beta_term3 = (2*d.in_units('nm')).astype(np.float64)
 
-        beta = h*gammah*(beta_term1 - beta_term2/beta_term3).astype(np.float)
+        beta = h*gammah*(beta_term1 - beta_term2/beta_term3).astype(np.float64)
 
         ###############
         # INTEGRATION #
@@ -548,7 +548,7 @@ class CalculateAmplitudes:
 
         def rkdpa(f, f2r=None, f2i=None, y0=0, tol=1e-6, max_steps=1000000):
 
-            h = thickness / np.float(max_steps)  # Initial step size
+            h = thickness / np.float64(max_steps)  # Initial step size
             total_evaluations = 0
             n_steps = 0
 
@@ -697,12 +697,12 @@ class CalculateAmplitudes:
             else:
                 res = calculate_bragg_transmission(ksiprime, d0prime)
                 outAmp = res[1]
-            return np.complex(outAmp) *\
+            return np.complex128(outAmp) *\
                 np.sqrt(np.abs(gamma0_step/np.abs(gammah_step)))
         else:
             res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
             outAmp = res[0]*res[1] if isRefl else res[1]
-            return np.complex(outAmp*np.sqrt(np.abs(
+            return np.complex128(outAmp*np.sqrt(np.abs(
                         gamma0_step/np.abs(gammah_step))))
 
     def run(self):
