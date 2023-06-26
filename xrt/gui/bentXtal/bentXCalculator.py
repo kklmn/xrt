@@ -57,6 +57,7 @@ except ImportError:
 
 HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
 
+targetOpenCL = 'auto'
 
 def parse_hkl(hklstr):
     matches = re.findall(HKLRE, hklstr)
@@ -249,15 +250,18 @@ class PlotWidget(QWidget):
 
         if isOpenCL:
             self.allBackends.append('xrtCL FP32')
-            self.matCL = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32')
+            self.matCL = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
+                                    targetOpenCL=targetOpenCL)
             self.isFP64 = False
             if hasattr(self.matCL, 'cl_ctx'):
                 for ctx in self.matCL.cl_ctx:
                     for device in ctx.devices:
                         if device.double_fp_config == 63:
                             self.isFP64 = True
-                if self.isFP64:
-                    self.allBackends.append('xrtCL FP64')
+                if ":" in targetOpenCL:
+                    self.isFP64 = True
+            if self.isFP64:
+                self.allBackends.append('xrtCL FP64')
 
         self.add_plot()
         self.resize(1100, 700)
@@ -860,7 +864,8 @@ class PlotWidget(QWidget):
 
         if backend == "xrtCL":
             matCL = mcl.XRT_CL(r'materials.cl',
-                               precisionOpenCL=precision)
+                               precisionOpenCL=precision,
+                               targetOpenCL=targetOpenCL)
             ampS, ampP = crystalInstance.get_amplitude_pytte(
                     energy, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
                     Ry=float(radius)*1000.)
@@ -1212,7 +1217,8 @@ class AmpCalculator(QThread):
 
     def run(self):
         matCL = mcl.XRT_CL(r'materials.cl',
-                           precisionOpenCL=self.precision)
+                           precisionOpenCL=self.precision,
+                           targetOpenCL=targetOpenCL)
         ampS, ampP = self.crystalInstance.get_amplitude_pytte(
                 self.energy, self.gamma0, self.gammah, self.hns0,
                 ucl=matCL, alphaAsym=self.alpha, autoLimits=False,
