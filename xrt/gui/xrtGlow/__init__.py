@@ -349,8 +349,10 @@ class xrtGlow(qt.QWidget):
         self.paletteWidget.setSizePolicy(qt.QSizePolicy.Maximum,
                                          qt.QSizePolicy.Maximum)
         self.paletteWidget.span = mpl.widgets.RectangleSelector(
-            self.mplAx, self.updateColorSelFromMPL, drawtype='box',
-            useblit=True, rectprops=dict(alpha=0.4, facecolor='white'),
+            self.mplAx, self.updateColorSelFromMPL,
+            # drawtype='box',
+            useblit=True,
+            # rectprops=dict(alpha=0.4, facecolor='white'),
             button=1, interactive=True)
 
         layout = qt.QHBoxLayout()
