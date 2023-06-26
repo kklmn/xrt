@@ -33,6 +33,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
+TT = True
 
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
@@ -42,14 +43,16 @@ elif crystalMaterial == 'Ge':
 else:
     raise
 orders = (1, 4, 8, 12)
-crystals = [rm.CrystalDiamond((i, i, i), d111/i, elements=crystalMaterial)
+#crystals = [rm.CrystalDiamond((i, i, i), d111/i, elements=crystalMaterial)
+#            for i in orders]
+crystals = [rm.CrystalSi(hkl=(i, i, i), useTT=TT)
             for i in orders]
-crystalsMask = (0, 1, 0, 0)
+crystalsMask = (1, 0, 0, 0)
 #numiters = [40, 2560, 1280, 5120]  # @crysals
-numiters = [40, 40, 80, 120]  # @crysals
+numiters = [40, 40, 80, 120] #, 40, 80, 120]  # @crysals
 
 R = 500.  # mm
-isJohansson = True
+isJohansson = False
 
 if isJohansson:
     Rm = R
@@ -96,7 +99,9 @@ def build_beamline(nrays=raycing.nrays):
     beamLine.analyzer = Cylinder(
         beamLine, analyzerName, surface=('',), Rm=Rm,
         limPhysX=(-dxCrystal/2, dxCrystal/2),
-        limPhysY=(-dyCrystal/2, dyCrystal/2))
+        limPhysY=(-dyCrystal/2, dyCrystal/2),
+        targetOpenCL='auto' if TT else None, precisionOpenCL='float32' 
+        )
     beamLine.detector = rsc.Screen(beamLine, 'Detector')
     return beamLine
 
@@ -396,7 +401,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                             filename = '{0}-{1}-{2:.0f}-{3}-{4}'.format(
                                 bentName, crystalLabel, thetaDegree,
                                 plot.title, sourcename)
-                            plot.saveName = filename + '.png'
+                            plot.saveName = filename + '{}.png'.format('_TT32' if TT else '')
 #                            plot.persistentName = filename + '.pickle'
                         if showIn3D:
                             beamLine.glowFrameName = \
@@ -461,7 +466,7 @@ def main():
     args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
             plotDetE]
     xrtr.run_ray_tracing(plots, generator=plot_generator, generatorArgs=args,
-                         beamLine=beamLine, processes='half')
+                         beamLine=beamLine, processes=1 if TT else 'half')
 
 
 if __name__ == '__main__':

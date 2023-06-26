@@ -3239,7 +3239,7 @@ class xrtGlWidget(qt.QGLWidget):
 
                 if thickness > 0 and not isClosedSurface:
                     gbB = rsources.Beam(copyFrom=gbT)
-                    if isinstance(oe, roes.LauePlate):
+                    if isinstance(oe, (roes.LauePlate, roes.BentLaue2D)):
                         gbB.z[:] = gbT.z - thickness
                         gbB.a = -gbT.a
                         gbB.b = -gbT.b
@@ -3297,11 +3297,18 @@ class xrtGlWidget(qt.QGLWidget):
 
                     gridZ = None
                     for zTop in edgeZ:
-                        gridZ = np.linspace(-thickness, zTop,
-                                            self.surfCPOrder) if\
-                            gridZ is None else np.concatenate((
-                                gridZ, np.linspace(-thickness, zTop,
-                                                   self.surfCPOrder)))
+                        if isinstance(oe, (roes.LauePlate, roes.BentLaue2D)):
+                            gridZ = np.linspace(zTop-thickness, zTop,
+                                                self.surfCPOrder) if\
+                                gridZ is None else np.concatenate((
+                                    gridZ, np.linspace(zTop-thickness, zTop,
+                                                       self.surfCPOrder)))    
+                        else:
+                            gridZ = np.linspace(-thickness, zTop,
+                                                self.surfCPOrder) if\
+                                gridZ is None else np.concatenate((
+                                    gridZ, np.linspace(-thickness, zTop,
+                                                       self.surfCPOrder)))
 
                     gridX = np.repeat(edgeX, len(edgeZ))
                     gridY = np.ones_like(gridX) * yPos
@@ -3350,11 +3357,18 @@ class xrtGlWidget(qt.QGLWidget):
                     zN = 0
                     gridZ = None
                     for zTop in edgeZ:
-                        gridZ = np.linspace(-thickness, zTop,
-                                            self.surfCPOrder) if\
-                            gridZ is None else np.concatenate((
-                                gridZ, np.linspace(-thickness, zTop,
-                                                   self.surfCPOrder)))
+                        if isinstance(oe, (roes.LauePlate, roes.BentLaue2D)):
+                            gridZ = np.linspace(zTop-thickness, zTop,
+                                                self.surfCPOrder) if\
+                                gridZ is None else np.concatenate((
+                                    gridZ, np.linspace(zTop-thickness, zTop,
+                                                       self.surfCPOrder)))
+                        else:
+                            gridZ = np.linspace(-thickness, zTop,
+                                                self.surfCPOrder) if\
+                                gridZ is None else np.concatenate((
+                                    gridZ, np.linspace(-thickness, zTop,
+                                                       self.surfCPOrder)))
 
                     gridY = np.repeat(edgeY, len(edgeZ))
                     if oe.shape == 'round':
@@ -4066,7 +4080,7 @@ class xrtGlWidget(qt.QGLWidget):
             local_n = getattr(oe, 'local_n{}'.format(zExt))
             normals = local_n(0, 0)
             if len(normals) > 3:
-                crPlaneZ = np.array(normals[:3], dtype=np.float)
+                crPlaneZ = np.array(normals[:3], dtype=float)
                 crPlaneZ /= np.linalg.norm(crPlaneZ)
                 if material not in [None, 'None']:
                     if hasattr(material, 'hkl'):
@@ -4082,8 +4096,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         if crPlaneZ is not None:  # Adding asymmetric crystal orientation
             asAlpha = np.arccos(crPlaneZ[2])
-            acpX = np.array([0., 0., 1.], dtype=np.float) if asAlpha == 0 else\
-                np.cross(np.array([0., 0., 1.], dtype=np.float), crPlaneZ)
+            acpX = np.array([0., 0., 1.], dtype=float) if asAlpha == 0 else\
+                np.cross(np.array([0., 0., 1.], dtype=float), crPlaneZ)
             acpX /= np.linalg.norm(acpX)
 
             cb.a[3] = acpX[0]

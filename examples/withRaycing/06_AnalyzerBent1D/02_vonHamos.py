@@ -29,6 +29,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
+tt = True
 
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
@@ -38,9 +39,12 @@ elif crystalMaterial == 'Ge':
 else:
     raise
 
-crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial)
+#crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial)
+#crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial, useTT=tt)
+crystal = rm.CrystalSi(hkl=(4, 4, 4), useTT=tt)
 #numiter = 640
 numiter = 40
+
 
 Rm = 1e9  # meridional radius, mm
 Rs = 1000  # tmp sagittal radius, mm
@@ -107,6 +111,7 @@ def build_beamline(nrays=2e5):
         limPhysX=(-dxCrystal/2, dxCrystal/2),
         limPhysY=(-dyCrystal/2*3, dyCrystal/2*3),
         Rm=Rm, Rs=Rs, shape='rect',
+        targetOpenCL='auto', precisionOpenCL='float32',
         **facetKWargs)
     beamLine.detector = rsc.Screen(beamLine, 'Detector', z=(0, 0, 1))
 #    beamLine.s1h = ra.RectangularAperture(
@@ -360,7 +365,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
         for plot in plots:
             filename = '{0}{1}-{2}-{3}'.format(
                 analyzerName, thetaDegree, plot.title, sourcename)
-            plot.saveName = filename + '.png'
+            plot.saveName = filename + '{}.png'.format("_TT32" if tt else "")
 #            plot.persistentName = filename + '.pickle'
         if showIn3D:
             beamLine.glowFrameName = \
@@ -392,7 +397,7 @@ def main():
     args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes='half')
+        beamLine=beamLine, processes=1)
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

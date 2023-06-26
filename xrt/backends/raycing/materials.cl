@@ -22,6 +22,27 @@ __constant float avogadro = 6.02214199e23;  // atoms/mol
 __constant float TWO = (float)2.;
 __constant float ONE = (float)1.;
 
+//__constant float QUAR = 0.25;
+//__constant float HALF = 0.5;
+//__constant float TWO = 2.;
+//__constant float SIX = 6.;
+__constant float REVSIX = 1./6.;
+__constant float REV24 = 1./24.;
+__constant float REV720 = 1./720.;
+__constant float REV1440 = 1./1440.;
+
+__constant float cx_dp[6] = {0.2, 0.3, 0.8, 8./9., 1., 1.};
+__constant float c_out_dp[7] = {35./384., 0, 500./1113., 125./192., -2187./6784., 11./84., 0};
+__constant float c_out_dp4[7] = {5179./57600., 0.0, 7571./16695., 393./640., -92097./339200., 187./2100., 1./40.};
+__constant float cy_dp[6][6] = {
+        {0.2, 0, 0, 0, 0, 0},
+        {3./40.,	9./40., 0, 0, 0, 0},
+        {44./45., -56./15., 32./9., 0, 0, 0},
+        {19372./6561., -25360./2187., 64448./6561.,-212./729., 0, 0},
+        {9017./3168., -355./33., 46732./5247., 49./176.,-5103./18656., 0},
+        {35./384., 0, 500./1113., 125./192.,-2187./6784., 11./84.}};
+
+
 float get_f0(float qOver4pi, int iN, __global float* f0cfs) {
     float res = f0cfs[iN*11+5];
     for (int i=0;i<5;i++)
@@ -632,7 +653,7 @@ float4 get_amplitude_graded_multilayer_internal_tran(
     float2 rij_s, rij_p, tij_s, tij_p;
     float2 rj_s, rj_p, tj_s, tj_p;
     float2 ri_si, ri_pi, ti_si, ti_pi;
-	float2 iQT, p1i, p2i, rj2i, tj1i;
+	 float2 iQT, p1i, p2i, rj2i, tj1i;
 
     rj_s = rsv_si;
     rj_p = rsv_pi;
@@ -668,7 +689,7 @@ float4 get_amplitude_graded_multilayer_internal_tran(
             tij_p = ttb_pi;
             iQT = qbi * dbi[i/2];
         }
-        p1i = exp_c(prod_c(0.5*cmpi1, iQT));
+        p1i = exp_c(prod_c(HALF*cmpi1, iQT));
         p2i = prod_c(p1i, p1i);
 
         rj2i = prod_c(rj_s, p2i);
@@ -1140,6 +1161,377 @@ __kernel void tt_bragg_plain(
 //    if (ii==0) printf("Finally writing Dh=%v2g from Dht[%i]\n", Dht[cnt_loc+nLayers-1], cnt_loc+nLayers-1);
     Dh[ii] = Dht[cnt_loc+nLayers-1];
     D0[ii] = D0t[cnt_loc+nLayers-1];
+}
+
+// Below is heavily refactored and optimized code inherited from pyTTE
+// https://github.com/aripekka/pyTTE
+
+float strain_term(float z,
+                  float thickness,
+                  float4 coeffs,  // coeff1, coeff2, invR1, cot_alpha0
+                  float4 scap    // sinphi*cosa, sinphi*sina, cosphi*cosa, cosphi*sina
+                  ) {
+    float xR1 = -z*coeffs.s2*coeffs.s3;
+    float zt2 = z; //+HALF*thickness;
+    float duh_dsh = zt2*(scap.s1*coeffs.s1 - scap.s0*coeffs.s2 + scap.s3*coeffs.s0)
+                + xR1*(scap.s2 - scap.s1);
+//    float duh_dsh = -scap.s0*coeffs.s2*zt2 + scap.s1*(-xR1 + coeffs.s1*zt2)
+//                + scap.s2*xR1 + scap.s3*coeffs.s0*zt2;
+    return duh_dsh; // h*gammah moved to beta sum, level up
+}
+
+float4 ksi_prime(float Cpol,
+                float4 ksi,
+                float2 c0_strain,
+                float2 cb_step,
+                float2 ch_step) {
+
+    float2 ksi2_sigma = prod_c(ksi.xy, ksi.xy);
+    float2 ksi2_pi = prod_c(ksi.zw, ksi.zw);
+    float2 ksi_sigma = prod_c(c0_strain, ksi.xy) + prod_c(cb_step, ksi2_sigma) + ch_step;
+    float2 ksi_pi = prod_c(c0_strain, ksi.zw) + prod_c(cb_step*Cpol, ksi2_pi) + ch_step*Cpol;
+    return (float4)(-ksi_sigma.y, ksi_sigma.x, -ksi_pi.y, ksi_pi.x);
+}
+
+float8 d0h_prime(float Cpol,
+                float8 d0h,
+                float2 c0_strain,
+                float2 cb_step,
+                float2 ch_step,
+                float2 g0_step) {
+
+    float2 dh2_sigma = prod_c(d0h.s01, d0h.s01);
+    float2 dh_out_sigma = prod_c(cb_step, dh2_sigma) + prod_c(c0_strain, d0h.s01) + ch_step;
+    float2 d0_out_sigma = prod_c(g0_step+prod_c(cb_step, d0h.s01), d0h.s23);
+
+    float2 dh2_pi = prod_c(d0h.s45, d0h.s45);
+    float2 dh_out_pi = prod_c(cb_step*Cpol, dh2_pi) + ch_step*Cpol + prod_c(c0_strain, d0h.s45);
+    float2 d0_out_pi = prod_c(g0_step+prod_c(cb_step*Cpol, d0h.s45), d0h.s67);
+
+    return (float8)(-dh_out_sigma.y, dh_out_sigma.x,
+                    d0_out_sigma.y, -d0_out_sigma.x,
+                    -dh_out_pi.y, dh_out_pi.x,
+                    d0_out_pi.y, -d0_out_pi.x);
+}
+
+float4 ksi_next_rk4(
+                float zstep,
+                float Cpol,
+                float4 ksi,
+                float2 ksi_z,
+                float2 ksi_h,
+                float2 cb,
+                float2 ch) {
+
+    float4 k1, k2, k3, k4;
+
+    k1 = ksi_prime(Cpol, ksi, ksi_z, cb, ch);
+    k2 = ksi_prime(Cpol, ksi + zstep*k1*HALF, ksi_z+ksi_h, cb, ch);
+    k3 = ksi_prime(Cpol, ksi + zstep*k2*HALF, ksi_z+ksi_h, cb, ch);
+    k4 = ksi_prime(Cpol, ksi + zstep*k3, ksi_z + TWO*ksi_h, cb, ch);
+
+    return (float4)(ksi + zstep*(k1 + TWO*k2 + TWO*k3 + k4)*REVSIX);
+}
+
+float4 ksi_next_rkdp(
+                float z,
+                float zstep,
+                float cz0,
+                float *rk_error,
+                float Cpol,
+                float4 ksi,
+                float2 strain_z0,
+                float2 cb,
+                float2 ch) {
+
+    float4 k1, k2, k3, k4, k5, k6, k7, ksi_new4, ksi_new5;
+    float2 strain_z;
+    float err_sigma, err_pi;
+
+    strain_z = strain_z0 + (float2)(cz0*(z), 0);
+    k1 = zstep * ksi_prime(Cpol, ksi, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep/5), 0);
+    k2 = zstep * ksi_prime(Cpol, ksi + k1/5, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+3*zstep/10), 0);
+    k3 = zstep * ksi_prime(Cpol, ksi + 3*k1/40 + 9*k2/40, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+4*zstep/5), 0);
+    k4 = zstep * ksi_prime(Cpol, ksi + 44*k1/45 - 56*k2/15 + 32*k3/9, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+8*zstep/9), 0);
+    k5 = zstep * ksi_prime(Cpol, ksi + 19372*k1/6561 - 25360*k2/2187 + 64448*k3/6561 - 212*k4/729, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    k6 = zstep * ksi_prime(Cpol, ksi + 9017*k1/3168 - 355*k2/33 + 46732*k3/5247 + 49*k4/176 - 5103*k5/18656, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    ksi_new5 = ksi + 35*k1/384 + 500*k3/1113 + 125*k4/192 - 2187*k5/6784 + 11*k6/84;
+    k7 = zstep * ksi_prime(Cpol, ksi_new5, strain_z, cb, ch);
+    ksi_new4 = ksi + 5179*k1/57600 + 7571*k3/16695 + 393*k4/640 - 92097*k5/339200 + 187*k6/2100 + k7/40;
+
+    err_sigma = fabs(abs_c(ksi_new4.s01) - abs_c(ksi_new5.s01));
+    err_pi = fabs(abs_c(ksi_new4.s23) - abs_c(ksi_new5.s23));
+    *rk_error = max(err_sigma, err_pi);
+
+    return ksi_new5;
+}
+
+float8 d0h_next_rk4(float zstep,
+                float Cpol,
+                float8 d0h,
+                float2 strain_z,
+                float2 strain_h,
+                float2 cb,
+                float2 ch,
+                float2 g0) {
+
+    float halfStep = HALF * zstep;
+    float8 k1, k2, k3, k4;
+
+    k1 = d0h_prime(Cpol, d0h, strain_z, cb, ch, g0);
+    k2 = d0h_prime(Cpol, d0h + zstep*k1*HALF, strain_z+strain_h, cb, ch, g0);
+    k3 = d0h_prime(Cpol, d0h + zstep*k2*HALF, strain_z+strain_h, cb, ch, g0);
+    k4 = d0h_prime(Cpol, d0h + zstep*k3, strain_z + TWO*strain_h, cb, ch, g0);
+
+    return (float8)(d0h + zstep*(k1 + TWO*k2 + TWO*k3 + k4)*REVSIX);
+}
+
+float8 d0h_next_rkdp(
+                float z,
+                float zstep,
+                float cz0,
+                float *rk_error,
+                float Cpol,
+                float8 d0h,
+                float2 strain_z0,
+                float2 cb,
+                float2 ch,
+                float2 g0) {
+
+    float8 k1, k2, k3, k4, k5, k6, k7, d0h_new4, d0h_new5;
+    float2 strain_z;
+    float err_sigma, err_pi;
+
+    strain_z = strain_z0 + (float2)(cz0*(z), 0);
+    k1 = zstep * d0h_prime(Cpol, d0h, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep/5), 0);
+    k2 = zstep * d0h_prime(Cpol, d0h + k1/5, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+3*zstep/10), 0);
+    k3 = zstep * d0h_prime(Cpol, d0h + 3*k1/40 + 9*k2/40, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+4*zstep/5), 0);
+    k4 = zstep * d0h_prime(Cpol, d0h + 44*k1/45 - 56*k2/15 + 32*k3/9, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+8*zstep/9), 0);
+    k5 = zstep * d0h_prime(Cpol, d0h + 19372*k1/6561 - 25360*k2/2187 + 64448*k3/6561 - 212*k4/729, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    k6 = zstep * d0h_prime(Cpol, d0h + 9017*k1/3168 - 355*k2/33 + 46732*k3/5247 + 49*k4/176 - 5103*k5/18656, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    d0h_new5 = d0h + 35*k1/384 + 500*k3/1113 + 125*k4/192 - 2187*k5/6784 + 11*k6/84;
+    k7 = zstep * d0h_prime(Cpol, d0h_new5, strain_z, cb, ch, g0);
+    d0h_new4 = d0h + 5179*k1/57600 + 7571*k3/16695 + 393*k4/640 - 92097*k5/339200 + 187*k6/2100 + k7/40;
+
+    err_sigma = fabs(abs_c(d0h_new4.s01) - abs_c(d0h_new5.s01));
+    err_pi = fabs(abs_c(d0h_new4.s45) - abs_c(d0h_new5.s45));
+    *rk_error = max(err_sigma, err_pi);
+
+    return d0h_new5;
+}
+
+__kernel void estimate_bent_width(const float c1,
+                                 const float c2,
+                                 const float ir1,
+                                 const float phi,
+                                 const float t,
+                                 const float h,
+                                 __global float *beta_const,
+                                 __global float *thetaB,
+                                 __global float *chcb_mod_global,
+
+                                 __global float *thmin,                                 
+                                 __global float *thmax                                
+                                 ){
+
+    float dwt, sin_p, cos_p, sin_a0, cos_a0, sin_ah, cos_ah, cot_a0, zstep, deform;
+    float sintb, costb;
+    unsigned int ii = get_global_id(0);
+    
+    sin_p = sincos(phi, &cos_p);        
+    sin_a0 = sincos(thetaB[ii]+phi, &cos_a0);
+    sin_ah = sincos(thetaB[ii]-phi, &cos_ah);
+    
+    if (sin_a0 == 0) {
+        cot_a0 = 0;} 
+    else {
+        cot_a0 = cos_a0/sin_a0;}     
+    
+    zstep = t / 1000.;
+    
+    float4 coeffs = (float4)(c1, c2, ir1, cot_a0);
+    float4 scap = (float4)(sin_p*cos_ah, sin_p*sin_ah,
+                           cos_p*cos_ah, cos_p*sin_ah);        
+
+    float sin2tb = sin(2*thetaB[ii]);
+    sintb = sincos(thetaB[ii], &costb);
+
+    float def_min = 1e16;
+    float def_max = -1e16;
+
+    float z = -t;
+    for (int j=0; j<10001; j++) {
+        deform = h * strain_term(z, t, coeffs, scap);
+        if (deform < def_min) {def_min = deform;}
+        if (deform > def_max) {def_max = deform;}
+        z += zstep;
+    }
+
+    float chcb_mod = chcb_mod_global[ii];
+
+    if (sin2tb > sqrt(2*chcb_mod)) {dwt = 2*chcb_mod*h*costb/sin2tb;}
+    else {dwt = sqrt(2*chcb_mod)*h*costb;}
+
+    float beta_min = beta_const[ii] - def_max - 2*dwt;
+    float beta_max = beta_const[ii] - def_min + 2*dwt;
+    
+    float sinthmin = sintb + beta_min/h;
+    float sinthmax = sintb + beta_max/h;
+    
+    thmin[ii] = asin(sinthmin)-thetaB[ii];
+    if (sinthmax > 1) {thmax[ii]=asin(PI-sinthmin)-thetaB[ii];}
+    else {thmax[ii]=asin(sinthmax)-thetaB[ii];}
+    mem_fence(CLK_LOCAL_MEM_FENCE);
+}
+
+__kernel void get_amplitudes_pytte(const float c1,
+                                   const float c2,
+                                   const float ir1,
+                                   const float phi,
+                                   const float t,
+                                   const float tol,
+                                   const int stmax,
+                                   const int jmax,
+                                   const int geometry,
+                                   const int td,
+                                   __global float *hgh_global,
+                                   __global float *hgh_beta_global,
+                                   __global float *thetaB,
+                                   __global float *alpha0,
+                                   __global float *alphah,
+                                   __global float2 *c0_global,  
+                                   __global float2 *ch_global,
+                                   __global float2 *cb_global,
+                                   __global float2 *g0_global,
+                                   __global float2 *ampS_out,
+                                   __global float2 *ampP_out,
+                                   __global float *np_glo
+                                   ) {
+
+    unsigned int ii = get_global_id(0);
+    unsigned int j;
+    float sin_a0, cos_a0, cot_a0, sin_p, cos_p, sin_ah, cos_ah, zstep;
+    float Cpol = cos(2*thetaB[ii]);
+
+    sin_a0 = sincos(alpha0[ii], &cos_a0);
+    sin_ah = sincos(alphah[ii], &cos_ah);
+    sin_p = sincos(phi, &cos_p);
+
+    if (sin_a0 == 0) {
+        cot_a0 = 0;}
+    else {
+        cot_a0 = cos_a0/sin_a0;}
+    
+//    if (geometry==1) {cot_a0=1/cot_a0;};
+
+    float4 scap = (float4)(sin_p*cos_ah, sin_p*sin_ah,
+                           cos_p*cos_ah, cos_p*sin_ah);
+
+    float cz1 = scap.s1*c2 - scap.s0*ir1 + scap.s3*c1;
+    float cz0 = hgh_global[ii]*(cz1 + ir1*cot_a0*(scap.s1 - scap.s2));
+    float cz2 = HALF*t*cz1*0;
+
+    float2 strain_z0 = c0_global[ii] + (float2)(hgh_beta_global[ii] + hgh_global[ii]*cz2, 0);
+    float2 strain_z = strain_z0;
+
+//  Fixed step RK4
+//    float2 strain_h = (float2)(HALF*zstep*cz0, 0);
+//
+//    for (j=0; j<jmax; j++) {
+//        strain_z = strain_z0 + (float2)(cz0*(double)z, 0);
+//        d0h = d0h_next_rk4(zstep, Cpol, d0h, strain_z, strain_h, cb, ch, g0);
+//        z = z + zstep;
+//    }
+//
+//    for (j=0; j<jmax; j++) {
+////        ksi_z = c0_step+(float2)(hgh_beta_step+hgh*strain_term_z, 0);
+//        strain_z = strain_z_z0 + (float2)(cz0*(double)z, 0);
+//        ksi = ksi_next_rk4(zstep, Cpol, ksi, strain_z, strain_h, cb, ch);
+//        z = z + zstep;
+//        }
+
+
+    float rke = 0;
+    unsigned int np = 0;
+    unsigned int tsteps = 0;
+
+    if (geometry==1) {  // Laue. Moving condition outside of the loop is faster
+        zstep = -t / (float)jmax;
+        float8 d0h_new;
+        float8 d0h = (float8)(0, 0, 1, 0, 0, 0, 1, 0);  // Sigma dhd0, Pi dhd0
+        float z = 0;
+
+        while ((z > -t)&&(tsteps<stmax)) {
+            tsteps += 1;
+            d0h_new = d0h_next_rkdp(z, zstep, cz0, &rke, Cpol, d0h, strain_z0, 
+                                    cb_global[ii], ch_global[ii], g0_global[ii]);
+            if (rke < tol) {
+                d0h = d0h_new;
+                z = z + zstep;
+                np += 1;
+            };
+            if (rke > 0) {
+                zstep *= min(0.9*sqrt(sqrt(tol/rke)), 4.0);
+            } else {
+                zstep *= 4.0;
+            }    
+            if (z+zstep < -t) {
+                zstep = -t-z;
+            };
+        }
+        mem_fence(CLK_LOCAL_MEM_FENCE);
+        if (td==0) { // Diffracted
+            ampS_out[ii] = prod_c(d0h.s01, d0h.s23);  // dh sigma
+            ampP_out[ii] = prod_c(d0h.s45, d0h.s67);  // dh pi
+        } else {  //Transmitted
+            ampS_out[ii] = d0h.s23;  // dh sigma
+            ampP_out[ii] = d0h.s67;  // dh pi                
+        }
+
+    } else {  // Bragg
+        zstep = t / (float)jmax;
+        float4 ksi_new;
+        float4 ksi = (float4)(0, 0, 0, 0);
+        float z = -t;
+    
+        while ((z < 0)&&(tsteps<stmax)) {
+            tsteps += 1;
+            ksi_new = ksi_next_rkdp(z, zstep, cz0, &rke, Cpol, ksi, strain_z0,
+                                    cb_global[ii], ch_global[ii]);
+            if (rke < tol) {
+                ksi = ksi_new;
+                z = z + zstep;
+                np += 1;
+            };
+            if (rke > 0) {
+                zstep *= min(0.9*sqrt(sqrt(tol/rke)), 4.0);
+            } else {
+                zstep *= 4.0;
+            }
+    
+            if (z+zstep > 0) {
+                zstep = -z;
+            };
+    
+        }
+        mem_fence(CLK_LOCAL_MEM_FENCE);
+        ampS_out[ii] = ksi.xy;  // sigma
+        ampP_out[ii] = ksi.zw;  // pi
+    }
+
+    np_glo[ii] = (float)np;
 }
 
 __kernel void tt_bragg_plain_bent(

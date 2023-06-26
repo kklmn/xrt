@@ -745,8 +745,8 @@ class SourceFromField(IntegratedSource):
     def _sp_sum(self, emcg, w, gamma, ddphi, ddpsi, Bx, By, Bz,
                 betax, betay, betam, trajx, trajy, trajz, R0=None):
 
-        Bsr = np.complex(0)
-        Bpr = np.complex(0)
+        Bsr = np.complex128(0)
+        Bpr = np.complex128(0)
 
         gamma_ = gamma[0] if self.filamentBeam else gamma
         dirx = ddphi
@@ -1664,8 +1664,8 @@ class Undulator(IntegratedSource):
         betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2)*0.5*revgamma2
         wwuS = wS/wuS
 
-        Bsr = np.complex(0)
-        Bpr = np.complex(0)
+        Bsr = np.complex128(0)
+        Bpr = np.complex128(0)
 
         dirx = ddphiS
         diry = ddpsiS
