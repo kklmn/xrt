@@ -123,9 +123,11 @@ class TakagiTaupin():
                 self.solution = None
             except Exception as e:
                 print(e)
-                print('Error initializing TTcrystal from file! Crystal not set.')
+                print('Error initializing TTcrystal from file! '
+                      'Crystal not set.')
         else:
-            print('ERROR! Not an instance of TTcrystal or None! Crystal not set.')
+            print('ERROR! Not an instance of TTcrystal or None! '
+                  'Crystal not set.')
 
     def set_scan(self, TTscan_object):
         '''
@@ -298,7 +300,7 @@ class TakagiTaupin():
             energy_bragg = scan_constant
             if not (hc/(2*d*energy_bragg)).in_units('1') > 1:
                 theta_bragg = Quantity(np.arcsin((hc/(
-                        2*d*energy_bragg)).in_units('1')), 'rad')
+                    2*d*energy_bragg)).in_units('1')), 'rad')
             else:
                 theta_bragg = Quantity(90, 'deg')
 
@@ -309,10 +311,10 @@ class TakagiTaupin():
             ##################################################
 
             F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(
-                    self.crystal_object.xrt_crystal,
-                    hkl,
-                    energy_bragg,
-                    debye_waller)
+                self.crystal_object.xrt_crystal,
+                hkl,
+                energy_bragg,
+                debye_waller)
 
             # conversion factor from crystal structure factor to susceptibility
             cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1')
@@ -328,7 +330,7 @@ class TakagiTaupin():
             if displacement_jacobian is not None:
                 z = np.linspace(0, -thickness.in_units('um'), 1000)
                 x = -z*np.cos((theta_bragg+phi).in_units('rad'))/np.sin(
-                        (theta_bragg+phi).in_units('rad'))
+                    (theta_bragg+phi).in_units('rad'))
 
                 sin_phi = np.sin(phi.in_units('rad'))
                 cos_phi = np.cos(phi.in_units('rad'))
@@ -360,8 +362,8 @@ class TakagiTaupin():
                 def_max = 0.0
 
             # expand the range by the backscatter Darwin width
-            if np.sin(2*theta_bragg.in_units('rad') > np.sqrt(
-                    2*np.sqrt(np.abs(chih*chib)))):
+            if np.sin(2*theta_bragg.in_units('rad')) > \
+                    np.sqrt(2*np.sqrt(np.abs(chih*chib))):
                 darwin_width_term = 2*np.sqrt(np.abs(chih*chib)) /\
                     np.sin(2*theta_bragg.in_units('rad')) *\
                     h*np.cos(theta_bragg.in_units('rad'))
@@ -373,9 +375,9 @@ class TakagiTaupin():
             b_const_term = -0.5*k_bragg*(1 + gamma0/gammah)*np.real(chi0)
 
             beta_min = b_const_term - Quantity(
-                    def_max, 'um^-1') - 2*darwin_width_term
+                def_max, 'um^-1') - 2*darwin_width_term
             beta_max = b_const_term - Quantity(
-                    def_min, 'um^-1') + 2*darwin_width_term
+                def_min, 'um^-1') + 2*darwin_width_term
 
             # convert beta limits to scan vectors
             if scan_type == 'energy':
@@ -385,14 +387,14 @@ class TakagiTaupin():
                     (h*np.sin(theta_bragg.in_units('rad')))
 
                 output_log = print_and_log(
-                        'Using automatically determined scan limits:',
-                        output_log)
+                    'Using automatically determined scan limits:',
+                    output_log)
                 output_log = print_and_log(
-                        'E min: ' + str(energy_min.in_units('meV')) + ' meV',
-                        output_log)
+                    'E min: ' + str(energy_min.in_units('meV')) + ' meV',
+                    output_log)
                 output_log = print_and_log(
-                        'E max: ' + str(energy_max.in_units('meV')) + ' meV\n',
-                        output_log)
+                    'E max: ' + str(energy_max.in_units('meV')) + ' meV\n',
+                    output_log)
 
                 scan = Quantity(np.linspace(energy_min.in_units('meV'),
                                             energy_max.in_units('meV'),
@@ -405,16 +407,16 @@ class TakagiTaupin():
                 sin_th_max = np.sin(theta_bragg.in_units('rad')) +\
                     (beta_max/h).in_units('1')
                 theta_min = Quantity(
-                        np.arcsin(sin_th_min), 'rad') - theta_bragg
+                    np.arcsin(sin_th_min), 'rad') - theta_bragg
 
                 # This avoids taking arcsin of values over 1
                 if sin_th_max > 1:
                     # Mirror the theta range w.t.r. 90 deg
                     theta_max = Quantity(
-                            np.pi - np.arcsin(sin_th_min), 'rad') - theta_bragg
+                        np.pi - np.arcsin(sin_th_min), 'rad') - theta_bragg
                 else:
                     theta_max = Quantity(
-                            np.arcsin(sin_th_max), 'rad') - theta_bragg
+                        np.arcsin(sin_th_max), 'rad') - theta_bragg
 
                 scan = Quantity(np.linspace(theta_min.in_units('urad'),
                                             theta_max.in_units('urad'),
@@ -455,8 +457,8 @@ class TakagiTaupin():
         Cpol = np.cos(2*theta_bragg.in_units('rad'))
         # Compute susceptibilities
         F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(
-                self.crystal_object.xrt_crystal,
-                hkl, energy, debye_waller)
+            self.crystal_object.xrt_crystal,
+            hkl, energy, debye_waller)
 
         # conversion factor from crystal structure factor to susceptibility
         cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1')
@@ -502,23 +504,23 @@ class TakagiTaupin():
         thickness = thickness.in_units('um')
 
         integrationParams = [
-                    h_um,
-                    djparams,
-                    phi.in_units('rad'),
-                    Cpol,
-                    thickness,
-                    geometry,
-                    alpha0.in_units('rad'),
-                    alphah.in_units('rad'),
-                    c0,
-                    cb,
-                    ch,
-                    beta,
-                    g0,
-                    gb,
-                    gammah,
-                    gamma0
-                    ]
+            h_um,
+            djparams,
+            phi.in_units('rad'),
+            Cpol,
+            thickness,
+            geometry,
+            alpha0.in_units('rad'),
+            alphah.in_units('rad'),
+            c0,
+            cb,
+            ch,
+            beta,
+            g0,
+            gb,
+            gammah,
+            gamma0
+        ]
         return integrationParams
 
 
@@ -664,11 +666,11 @@ class CalculateAmplitudes:
             def strain_term(z):
                 x = -z*cot_alpha0
                 duh_dsh = h_um*(
-                        sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness*0) +
-                        sin_phi*sin_alphah*(-invR1*x +
-                                            coef2*(z+0.5*thickness*0)) +
-                        cos_phi*cos_alphah*invR1*x +
-                        cos_phi*sin_alphah*coef1*(z+0.5*thickness*0))
+                    sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness*0) +
+                    sin_phi*sin_alphah*(-invR1*x +
+                                        coef2*(z+0.5*thickness*0)) +
+                    cos_phi*cos_alphah*invR1*x +
+                    cos_phi*sin_alphah*coef1*(z+0.5*thickness*0))
                 return gammah_step*duh_dsh
         else:
             # Non-bent crystal
@@ -703,7 +705,7 @@ class CalculateAmplitudes:
             res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
             outAmp = res[0]*res[1] if isRefl else res[1]
             return np.complex128(outAmp*np.sqrt(np.abs(
-                        gamma0_step/np.abs(gammah_step))))
+                gamma0_step/np.abs(gammah_step))))
 
     def run(self):
         args = list(self.args[:-2])  # Calculating for Pi polarization first
