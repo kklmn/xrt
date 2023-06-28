@@ -455,9 +455,14 @@ class PlotWidget(QWidget):
                 plot_name += "[{0}] flat".format(''.join(nameList))
                 item_value.prevList = nameList
             elif iname == "Scan Units":
-                lims = self.parse_limits(self.get_range_item(plot_item).text())
-                convFactor = self.allUnits[ival]
-                self.get_range_item(plot_item).limRads = lims*convFactor
+                if ival == 'eV':
+                    self.get_range_item(plot_item).limRads = copy.copy(
+                        self.get_range_item(previousPlot).limRads)
+                else:
+                    lims = self.parse_limits(
+                        self.get_range_item(plot_item).text())
+                    convFactor = self.allUnits[ival]
+                    self.get_range_item(plot_item).limRads = lims*convFactor
 
             if iname == "Curve Color":
                 color = "tab:" + ival
@@ -1135,7 +1140,7 @@ class PlotWidget(QWidget):
                 unit = self.allUnitsStr[unitsStr]
                 sp = '' if unit == '°' else ' '
                 t = '' if fwhm is None else\
-                    ": {0:.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
+                    ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
                 line.set_label("{0} {1}{2}".format(plot_item.text(), label, t))
 
             line.set_ydata(ydata)
