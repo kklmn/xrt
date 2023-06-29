@@ -538,7 +538,7 @@ class XRT_CL(object):
                 if scalarArgs is not None:
                     kernel_bufs.extend(scalarArgs)
 
-                if dimension > 1:
+                if dimension > 0:
                     if ndstart + chunksize < dimension:
                         ndsize = chunksize
                     else:
