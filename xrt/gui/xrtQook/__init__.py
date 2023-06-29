@@ -1132,10 +1132,13 @@ class XrtQook(qt.QWidget):
         if type(self.xrt_pypi_version) is tuple:
             pypi_ver, cur_ver = self.xrt_pypi_version
             if cur_ver < pypi_ver:
-                strXrt += \
-                    ', **version {0} is available from** PyPI_'.format(pypi_ver)
-            else:
-                strXrt += ', this is the latest version at PyPI_'
+                strXrt += ', **version {0} is available from** PyPI_'\
+                    .format(pypi_ver)
+            elif cur_ver == pypi_ver:
+                strXrt += ', this is the latest version on PyPI_'
+            elif cur_ver > pypi_ver:
+                strXrt += ', this version is ahead of version {0} on PyPI_'\
+                    .format(pypi_ver)
 
         txt = u"""
 .. image:: _images/qookSplash2.gif
@@ -1145,7 +1148,7 @@ class XrtQook(qt.QWidget):
 .. _PyPI: https://pypi.org/project/xrt
 
 | xrtQook is a qt-based GUI for beamline layout manipulation and automated code generation.
-| See a brief `startup tutorial <{0}>`_, `the documentation <http://xrt.rtfd.io>`_ and check the latest updates `at GitHub <https://github.com/kklmn/xrt>`_.
+| See a brief `startup tutorial <{0}>`_, `the documentation <http://xrt.rtfd.io>`_ and check the latest updates on `GitHub <https://github.com/kklmn/xrt>`_.
 
 :Created by:
     Roman Chernikov (`Canadian Light Source <http://www.lightsource.ca>`_)\n
