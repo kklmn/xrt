@@ -1113,6 +1113,9 @@ class Crystal(Material):
         self.V = V
         self.chiToF = -R0 / PI / self.V  # minus!
         self.chiToFd2 = abs(self.chiToF) * self.d**2
+        if len(geom) < 6:
+            geom = geom.strip()+" reflected"
+            print(geom)
         self.geom = geom
         self.geometry = 2*int(geom.startswith('Bragg')) +\
             int(geom.endswith('transmitted'))
