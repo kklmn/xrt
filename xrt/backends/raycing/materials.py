@@ -1630,6 +1630,11 @@ class Crystal(Material):
         Ryum = Ry*1e3 if Ry not in [np.inf, None] else np.inf  # [um] Meridional
         Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal
 
+        if all(np.isinf([Ryum, Rxum])):
+            return self.get_amplitude(
+                E, beamInDotNormal, beamOutDotNormal,
+                beamInDotHNormal, xd, yd)
+
         # Step 1. Evaluating the boundaries where the amplitudes are calculated
 
         if isinstance(E, np.ndarray):

@@ -608,8 +608,12 @@ class BentLaueCylinder(OE):
         if not all([hasattr(self, v) for v in
                     ['_R', '_material', '_alpha']]):
             return
-        if hasattr(self.material, 'set_OE_properties'):
-            self.material.set_OE_properties(self.alpha, self.R, None)
+        if raycing.is_sequence(self.material):
+            matSur = self.material[self.curSurface]
+        else:
+            matSur = self.material
+        if hasattr(matSur, 'set_OE_properties'):
+            matSur.set_OE_properties(self.alpha, self.R, None)
 
     def __pop_kwargs(self, **kwargs):
         self.R = kwargs.pop('R', 1.0e4)
@@ -781,8 +785,12 @@ class BentLaue2D(OE):
         if not all([hasattr(self, v) for v in
                     ['_Rm', '_Rs', '_material', '_alpha']]):
             return
-        if hasattr(self.material, 'set_OE_properties'):
-            self.material.set_OE_properties(self.alpha, self.Rm, self.Rs)
+        if raycing.is_sequence(self.material):
+            matSur = self.material[self.curSurface]
+        else:
+            matSur = self.material
+        if hasattr(matSur, 'set_OE_properties'):
+            matSur.set_OE_properties(self.alpha, self.Rm, self.Rs)
 
     def __pop_kwargs(self, **kwargs):
         self.Rm = kwargs.pop('Rm', 1.0e4)
