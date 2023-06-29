@@ -16,18 +16,25 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
+useTT = False
+tOCL = "auto"
 
-prefix = '01_BentLaueSCM'
+prefix = '01_BentLaueSCM_{}'.format("withTT" if useTT else "geom")
 
-energies = [9e3, 1.6e4, 2.5e4, 3.6e4]
-radii = [1e3, 5e3, 25e3, 125e3, np.inf]
-dEOverE = [8e-2, 1.5e-2, 0.4e-2, 1.2e-3, 4e-4]  # @ radii
-ddEOverE = [1, 1.25, 2.5, 3.]  # @ energies
+#energies = [9e3, 1.6e4, 2.5e4, 3.6e4]
+energies = [1.6e4, 3.6e4]
+#radii = [1e3, 5e3, 25e3, 125e3, np.inf]
+radii = [1e3, 25e3, np.inf]
+#dEOverE = [8e-2, 1.5e-2, 0.4e-2, 1.2e-3, 4e-4]  # @ radii
+dEOverE = [8e-2, 0.4e-2, 4e-4]  # @ radii
+#ddEOverE = [1, 1.25, 2.5, 3.]  # @ energies
+ddEOverE = [1.25, 3.]  # @ energies
 #polarization = ['hor', 'vert', '+45', '-45', 'right', 'left', None]
 polarization = 'hor',
+asymmetries = [0, np.pi/12, np.pi/6]
 
 #crystalDiamond = rm.CrystalDiamond((1,1,1), 2.0592872, elements='C',
-siCrystal = rm.CrystalSi(hkl=(1, 1, 1), geom='Laue', t=0.2)
+siCrystal = rm.CrystalSi(hkl=(1, 1, 1), geom='Laue', t=0.2, useTT=useTT)
 pLaueSCM = 1000.
 qLaueSCM = 100.
 limitsFSM = -8, 8
@@ -36,10 +43,11 @@ limitsFSM = -8, 8
 def build_beamline():
     beamLine = raycing.BeamLine(height=0)
     rs.GeometricSource(beamLine, 'GeometricSource', dx=3., dz=3.,
-                       dxprime=1.6e-4, distzprime=None)
+                       dxprime=1.6e-4, distzprime=None, nrays=250000)
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, pLaueSCM - 100, 0))
     beamLine.laueSCM = roe.BentLaueCylinder(
-        beamLine, 'LaueSCM', (0, pLaueSCM, 0), material=(siCrystal,))
+        beamLine, 'LaueSCM', (0, pLaueSCM, 0), material=(siCrystal,),
+        targetOpenCL=tOCL if useTT else None, precisionOpenCL='float64')
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', [0, pLaueSCM + qLaueSCM, 0])
     return beamLine
 
@@ -86,7 +94,7 @@ def define_plots(beamLine):
         ePos=1, title=beamLine.fsm2.name+'_E')
     plot2.caxis.invertAxis = True
     plot2.textPanel = plot2.fig.text(
-        0.88, 0.8, '', transform=plot2.fig.transFigure, size=14, color='r',
+        0.8, 0.75, '', transform=plot2.fig.transFigure, size=14, color='r',
         ha='center')
     plots.append(plot2)
 
@@ -99,7 +107,7 @@ def plot_generator(plots, beamLine):
         suffix = polar
         if suffix is None:
             suffix = 'none'
-        for iradius in range(5):
+        for iradius in range(len(radii)):
             radius = radii[iradius]
             beamLine.laueSCM.R = radius
             if radius == np.inf:
@@ -121,37 +129,39 @@ def plot_generator(plots, beamLine):
                 if plots:
                     plots[-1].yaxis.limits = fsm2z + limitsFSM[0], \
                         fsm2z + limitsFSM[1]
-                alpha = 0  # asymmetry angle:
-                pitch = np.pi/2 + theta0 + alpha
-                beamLine.laueSCM.pitch = pitch
-                beamLine.laueSCM.set_alpha(alpha)
-                for distE in 'flat', :  # 'lines':
-                    if distE == 'flat':
-                        beamLine.sources[0].energies = eAxisMin, eAxisMax
-                        sourcename = 'flat'
-                    elif distE == 'lines':
-                        beamLine.sources[0].energies = energy,
-                        sourcename = 'line'
-                    beamLine.sources[0].distE = distE
-                    for plot in plots:
-                        plot.caxis.offset = energy
-                        plot.caxis.limits = [eAxisMin, eAxisMax]
-                        fileName = '{0}_{1}_{2}_R={3}_{4:02.0f}keV_{5}'.\
-                            format(prefix, plot.title, suffix, radiusStr1,
-                                   energy * 1e-3, sourcename)
-                        plot.saveName = fileName + '.png'
-#                        plot.persistentName = fileName + '.pickle'
-                        try:
-                            plot.textPanel.set_text(
-                                u'{0}\n$R=${1}\n'.format('', radiusStr2))
-                        except:
-                            pass
-                    if showIn3D:
-                        beamLine.glowFrameName =\
-                            '{0}_{1}_R={2}_{3:02.0f}keV_{4}.jpg'.format(
-                                prefix, suffix, radiusStr1, energy*1e-3,
-                                sourcename)
-                    yield
+#                alpha = 0  # asymmetry angle:
+                for alpha in asymmetries:
+                    pitch = np.pi/2 + theta0 + alpha
+                    beamLine.laueSCM.pitch = pitch
+                    beamLine.laueSCM.alpha = alpha
+                    for distE in 'flat', :  # 'lines':
+                        if distE == 'flat':
+                            beamLine.sources[0].energies = eAxisMin, eAxisMax
+                            sourcename = 'flat'
+                        elif distE == 'lines':
+                            beamLine.sources[0].energies = energy,
+                            sourcename = 'line'
+                        beamLine.sources[0].distE = distE
+                        for plot in plots[-1:]:
+                            plot.caxis.offset = energy
+                            plot.caxis.limits = [eAxisMin, eAxisMax]
+                            fileName = '{0}_{1}_{2}_R={3}_{4:02.0f}keV_a={6:02.0f}deg_{5}'.\
+                                format(prefix, plot.title, suffix, radiusStr1,
+                                       energy * 1e-3, sourcename, np.degrees(alpha))
+                            plot.saveName = fileName + '.png'
+    #                        plot.persistentName = fileName + '.pickle'
+                            try:
+                                plot.textPanel.set_text(
+                                    u'{0}\n$R=${1} α={2:02.0f}°\n'.format(
+                                            '', radiusStr2, np.degrees(alpha)))
+                            except:
+                                pass
+                        if showIn3D:
+                            beamLine.glowFrameName =\
+                                '{0}_{1}_R={2}_{3:02.0f}keV_{4}.jpg'.format(
+                                    prefix, suffix, radiusStr1, energy*1e-3,
+                                    sourcename)
+                        yield
 
 
 def main():
@@ -162,8 +172,10 @@ def main():
         return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
-        plots, repeats=360, generator=plot_generator,
-        beamLine=beamLine, processes='half')
+        plots, repeats=20, generator=plot_generator,
+        beamLine=beamLine,
+        processes=1 if useTT else 'half'
+        )
 
 
 if __name__ == '__main__':
