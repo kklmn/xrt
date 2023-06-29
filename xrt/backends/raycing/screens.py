@@ -70,7 +70,9 @@ class Screen(object):
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
-        self.set_orientation(x, z)
+        self.x = x
+        self.z = z
+#        self.set_orientation(x, z)
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -83,18 +85,58 @@ class Screen(object):
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([coord == 'auto' for coord in self.center]):
-            self._center = copy.copy(self.center)
+#        if any([coord == 'auto' for coord in self.center]):
+#            self._center = copy.copy(self.center)
         self.compressX = compressX
         self.compressZ = compressZ
 
-    def set_orientation(self, x=None, z=None):
+    @property
+    def center(self):
+        return self._center if self._centerVal is None else self._centerVal
+
+    @center.setter
+    def center(self, center):
+        if any([x == 'auto' for x in center]):
+            self._center = copy.copy(center)
+            self._centerVal = None
+            self._centerInit = center
+        else:
+            self._centerVal = center
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = copy.copy(x)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def z(self):
+        return self._z
+
+    @z.setter
+    def z(self, z):
+        self._z = copy.copy(z)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
-        if isinstance(x, raycing.basestring):
-            x = None
-        if isinstance(z, raycing.basestring):
-            z = None
-        self.x, self.y, self.z = raycing.xyz_from_xz(self.bl, x, z)
+        if not all([hasattr(self, v) for v in ['_x', '_z']]):
+            return
+        if isinstance(self._x, raycing.basestring):
+            self._x = None
+        if isinstance(self._z, raycing.basestring):
+            self._z = None
+        self._x, self.y, self._z = raycing.xyz_from_xz(
+                self.bl, self._x, self._z)
+
+    def set_orientation(self, x=None, z=None):
+        """Compatibility method. All calculations moved to setters."""
+        self._set_orientation()
 
     def local_to_global(self, x=0, y=0, z=0):
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
@@ -311,7 +353,10 @@ class HemisphericScreen(Screen):
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
-        self.set_orientation(x, z)
+        self.x = x
+        self.z = z
+
+#        self.set_orientation(x, z)
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -324,30 +369,36 @@ class HemisphericScreen(Screen):
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([coord == 'auto' for coord in self.center]):
-            self._center = copy.copy(self.center)
+#        if any([coord == 'auto' for coord in self.center]):
+#            self._center = copy.copy(self.center)
         self.R = R
         self.phiOffset = phiOffset
         self.thetaOffset = thetaOffset
 
-    def set_orientation(self, x=None, z=None):
+    def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
-        if x is not None:
-            if isinstance(x, (list, tuple, np.ndarray)):
-                norm = sum([xc**2 for xc in x])**0.5
-                self.x = [xc/norm for xc in x]
+        if not all([hasattr(self, v) for v in ['_x', '_z']]):
+            return
+        if self._x is not None:
+            if isinstance(self._x, (list, tuple, np.ndarray)):
+                norm = sum([xc**2 for xc in self._x])**0.5
+                self._x = [xc/norm for xc in self._x]
             else:
-                self.x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
-        if z is not None:
-            if isinstance(z, (list, tuple, np.ndarray)):
-                norm = sum([zc**2 for zc in z])**0.5
-                self.z = [zc/norm for zc in z]
+                self._x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
+        if self._z is not None:
+            if isinstance(self._z, (list, tuple, np.ndarray)):
+                norm = sum([zc**2 for zc in self._z])**0.5
+                self._z = [zc/norm for zc in self._z]
             else:
-                self.z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
-        xdotz = np.dot(self.x, self.z)
+                self._z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
+        xdotz = np.dot(self._x, self._z)
         if abs(xdotz) > 1e-8:
             print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
-        self.y = np.cross(self.z, self.x)
+        self.y = np.cross(self._z, self._x)
+
+    def set_orientation(self, x=None, z=None):
+        """Compatibility method. All calculations moved to setters."""
+        self._set_orientation()
 
     def local_to_global(self, phi, theta):
         thetaO = theta + self.thetaOffset

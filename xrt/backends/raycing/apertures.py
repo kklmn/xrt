@@ -49,16 +49,15 @@ __date__ = "1 Nov 2019"
 __all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
            'DoubleSlit', 'PolygonalAperture', 'GridAperture', 'SiemensStar')
 
-# allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
-#                 'alarmLevel', 'r', 'shadeFraction',
-#                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
-#                 'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial')
+allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
+                'alarmLevel', 'r', 'shadeFraction',
+                'dx', 'dz', 'px', 'pz', 'nx', 'nz',
+                'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial')
 
 
 class RectangularAperture(object):
     """Implements an aperture or an obstacle as a combination of straight
     edges."""
-
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
                  opening=[-10, 10, -10, 10], x='auto', z='auto',
@@ -106,15 +105,23 @@ class RectangularAperture(object):
                 self.ordinalNum = len(bl.slits)
                 self.lostNum = -self.ordinalNum - 1000
         raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([xc == 'auto' for xc in self.center]):
-            self._center = copy.copy(self.center)
-        self.set_orientation(x, z)
+#        if any([xc == 'auto' for xc in self.center]):
+#            self._center = copy.copy(self.center)
+#        self.set_orientation(x, z)
+        self.x = x
+        self.z = z
+
         if isinstance(kind, str):
             self.kind = (kind,)
             self.opening = [opening, ]
@@ -133,9 +140,50 @@ class RectangularAperture(object):
         self.shape = 'rect'
         self.spotLimits = []
 
-    def set_orientation(self, x=None, z=None):
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = copy.copy(x)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def z(self):
+        return self._z
+
+    @z.setter
+    def z(self, z):
+        self._z = copy.copy(z)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def center(self):
+        return self._center if self._centerVal is None else self._centerVal
+
+    @center.setter
+    def center(self, center):
+        if any([x == 'auto' for x in center]):
+            self._center = copy.copy(center)
+            self._centerVal = None
+            self._centerInit = copy.copy(center)
+        else:
+            self._centerVal = center
+
+    def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
-        self.xyz = raycing.xyz_from_xz(self.bl, x, z)
+        if not all([hasattr(self, v) for v in ['_x', '_z']]):
+            return
+        self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
+
+    def set_orientation(self, x=None, z=None):
+        """Compatibility method. All calculations moved to setters."""
+#        self._x = x
+#        self._z = z
+        self._set_orientation()
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
@@ -196,7 +244,7 @@ class RectangularAperture(object):
         lo.z[good] += lo.c[good] * path
         lo.path[good] += path
 
-        badIndices = np.zeros(len(beam.x), dtype=bool)
+        badIndices = np.zeros(len(beam.x), dtype=np.bool)
         for akind, d in zip(self.kind, self.opening):
             if akind.startswith('l'):
                 badIndices[good] = badIndices[good] | (lo.x[good] < d)
@@ -287,36 +335,21 @@ class RectangularAperture(object):
         :class:`~xrt.backends.raycing.oes.OE`,
         :class:`~xrt.backends.raycing.apertures.RectangularAperture` or
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
-        *nrays*: if int, specifies the number of randomly distributed samples
-        over the slit area; if 2-tuple of ints, specifies (nx, ny) sizes of a
-        uniform mesh of samples.
+        *nrays* of samples are randomly distributed over the slit area.
         """
         if rw is None:
             from . import waves as rw
 
-        if isinstance(nrays, (int, float)):
-            nsamples = int(nrays)
-        elif isinstance(nrays, (list, tuple)):
-            nsamples = nrays[0] * nrays[1]
-        else:
-            raise ValueError('wrong type of `nrays`!')
-
-        wave = rs.Beam(nrays=nsamples, forceState=1, withAmplitudes=True)
+        nrays = int(nrays)
+        wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
+        xy = np.random.rand(nrays, 2)
         dX = self.limOptX[1] - self.limOptX[0]
         dZ = self.limOptY[1] - self.limOptY[0]
+        wave.x[:] = xy[:, 0] * dX + self.limOptX[0]
+        wave.z[:] = xy[:, 1] * dZ + self.limOptY[0]
         wave.area = dX * dZ
-        wave.dS = wave.area / nsamples
+        wave.dS = wave.area / nrays
         wave.toOE = self
-        if isinstance(nrays, (int, float)):
-            xy = np.random.rand(nsamples, 2)
-            wave.x[:] = xy[:, 0] * dX + self.limOptX[0]
-            wave.z[:] = xy[:, 1] * dZ + self.limOptY[0]
-        elif isinstance(nrays, (list, tuple)):
-            x = np.linspace(*self.limOptX, nrays[0])
-            z = np.linspace(*self.limOptY, nrays[1])
-            X, Z = np.meshgrid(x, z)
-            wave.x[:] = X.ravel()
-            wave.z[:] = Z.ravel()
 
         glo = rs.Beam(copyFrom=wave)
         self.local_to_global(glo)
@@ -367,7 +400,6 @@ class RectangularAperture(object):
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
     """Implements a set of coplanar apertures with a Z actuator."""
-
     def __init__(self, bl, name, center, apertures, centerZs, dXs, dZs,
                  x='auto', z='auto', alarmLevel=None):
         """
@@ -402,15 +434,22 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
                 self.ordinalNum = len(bl.slits)
                 self.lostNum = -self.ordinalNum - 1000
         raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([xc == 'auto' for xc in self.center]):
-            self._center = copy.copy(self.center)
-        self.set_orientation(x, z)
+#        if any([xc == 'auto' for xc in self.center]):
+#            self._center = copy.copy(self.center)
+#        self.set_orientation(x, z)
+        self.x = x
+        self.z = z
         self.zActuator = center[2]
         self.z0 = center[2]
         self.apertures = apertures
@@ -473,7 +512,6 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
 class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
-
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None):
         """ A round aperture aperture.
@@ -499,15 +537,22 @@ class RoundAperture(object):
                 self.ordinalNum = len(bl.slits)
                 self.lostNum = -self.ordinalNum - 1000
         raycing.set_name(self, name)
+#        if name not in [None, 'None', '']:
+#            self.name = name
+#        elif not hasattr(self, 'name'):
+#            self.name = '{0}{1}'.format(self.__class__.__name__,
+#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([xc == 'auto' for xc in self.center]):
-            self._center = copy.copy(self.center)
-        self.set_orientation(x, z)
+#        if any([xc == 'auto' for xc in self.center]):
+#            self._center = copy.copy(self.center)
+#        self.set_orientation(x, z)
+        self.x = x
+        self.z = z
         self.r = r
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
@@ -519,9 +564,50 @@ class RoundAperture(object):
         self.shape = 'round'
         self.spotLimits = []
 
-    def set_orientation(self, x=None, z=None):
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = copy.copy(x)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def z(self):
+        return self._z
+
+    @z.setter
+    def z(self, z):
+        self._z = copy.copy(z)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def center(self):
+        return self._center if self._centerVal is None else self._centerVal
+
+    @center.setter
+    def center(self, center):
+        if any([x == 'auto' for x in center]):
+            self._center = copy.copy(center)
+            self._centerVal = None
+            self._centerInit = copy.copy(center)
+        else:
+            self._centerVal = center
+
+    def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
-        self.xyz = raycing.xyz_from_xz(self.bl, x, z)
+        if not all([hasattr(self, v) for v in ['_x', '_z']]):
+            return
+        self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
+
+    def set_orientation(self, x=None, z=None):
+        """Compatibility method. All calculations moved to setters."""
+#        self._x = x
+#        self._z = z
+        self._set_orientation()
 
     def get_divergence(self, source):
         """Gets the full divergence given the aperture radius."""
@@ -549,7 +635,7 @@ class RoundAperture(object):
         lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
         lo.path[good] += path
 
-        badIndices = np.zeros(len(beam.x), dtype=bool)
+        badIndices = np.zeros(len(beam.x), dtype=np.bool)
         badIndices[good] = lo.r > self.r
         beam.state[badIndices] = self.lostNum
         lo.state[good] = beam.state[good]
@@ -671,7 +757,7 @@ class RoundBeamStop(RoundAperture):
         lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
         lo.path[good] += path
 
-        badIndices = np.zeros(len(beam.x), dtype=bool)
+        badIndices = np.zeros(len(beam.x), dtype=np.bool)
         badIndices[good] = lo.r < self.r
         beam.state[badIndices] = self.lostNum
         lo.state[good] = beam.state[good]
@@ -698,13 +784,12 @@ class RoundBeamStop(RoundAperture):
 class DoubleSlit(RectangularAperture):
     """Implements an aperture or an obstacle with a combination of horizontal
     and/or vertical edge(s)."""
-
     def __init__(self, *args, **kwargs):
         """Same parameters as in :class:`RectangularAperture` and additionally
         *shadeFraction* as a value from 0 to 1.
         """
         self.shadeFraction = kwargs.pop('shadeFraction', 0.5)
-        super().__init__(*args, **kwargs)
+        super(DoubleSlit, self).__init__(*args, **kwargs)
 
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
@@ -727,7 +812,7 @@ class DoubleSlit(RectangularAperture):
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
         lo.path[good] += path
-        badIndices = np.zeros(len(beam.x), dtype=bool)
+        badIndices = np.zeros(len(beam.x), dtype=np.bool)
         for akind, d in zip(self.kind, self.opening):
             if akind.startswith('l'):
                 badIndices[good] = badIndices[good] | (lo.x[good] < d)
@@ -770,7 +855,6 @@ class DoubleSlit(RectangularAperture):
 class PolygonalAperture(object):
     """Implements an aperture or an obstacle defined as a set of polygon
     vertices."""
-
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  opening=None, x='auto', z='auto', alarmLevel=None):
         """
@@ -809,17 +893,22 @@ class PolygonalAperture(object):
             bl.slits.append(self)
             self.ordinalNum = len(bl.slits)
             self.lostNum = -self.ordinalNum - 1000
-        raycing.set_name(self, name)
+        if name in [None, 'None', '']:
+            self.name = '{0}{1}'.format(self.__class__.__name__,
+                                        self.ordinalNum)
+        else:
+            self.name = name
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.name] = [self, 1]
 
         self.center = center
-        if any([xc == 'auto' for xc in self.center]):
-            self._center = self.center
-        self.set_orientation(x, z)
-
+#        if any([xc == 'auto' for xc in self.center]):
+#            self._center = self.center
+#        self.set_orientation(x, z)
+        self.x = x
+        self.z = z
         self.opening = opening
         self.vertices = np.array(self.opening)
         self.alarmLevel = alarmLevel
@@ -833,9 +922,50 @@ class PolygonalAperture(object):
             self.set_optical_limits()
         self.shape = 'polygon'
 
-    def set_orientation(self, x=None, z=None):
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        self._x = copy.copy(x)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def z(self):
+        return self._z
+
+    @z.setter
+    def z(self, z):
+        self._z = copy.copy(z)
+        self._set_orientation()
+#        self.update_orientation_quaternion()
+
+    @property
+    def center(self):
+        return self._center if self._centerVal is None else self._centerVal
+
+    @center.setter
+    def center(self, center):
+        if any([x == 'auto' for x in center]):
+            self._center = copy.copy(center)
+            self._centerVal = None
+            self._centerInit = copy.copy(center)
+        else:
+            self._centerVal = center
+
+    def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
-        self.xyz = raycing.xyz_from_xz(self.bl, x, z)
+        if not all([hasattr(self, v) for v in ['_x', '_z']]):
+            return
+        self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
+
+    def set_orientation(self, x=None, z=None):
+        """Compatibility method. All calculations moved to setters."""
+#        self._x = x
+#        self._z = z
+        self._set_orientation()
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""

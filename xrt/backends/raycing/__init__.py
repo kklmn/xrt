@@ -774,10 +774,35 @@ def set_name(elementClass, name):
             else '')
 
 
+def vec_to_quat(vec, alpha):
+    """ Quaternion from vector and angle"""
+
+    return np.insert(vec*np.sin(alpha*0.5), 0, np.cos(alpha*0.5))
+
+
+def multiply_quats(qf, qt):
+    """Multiplication of quaternions"""
+
+    return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
+            qf[0]*qt[1]+qf[1]*qt[0]+qf[2]*qt[3]-qf[3]*qt[2],
+            qf[0]*qt[2]-qf[1]*qt[3]+qf[2]*qt[0]+qf[3]*qt[1],
+            qf[0]*qt[3]+qf[1]*qt[2]-qf[2]*qt[1]+qf[3]*qt[0]]
+
+
+def quat_vec_rotate(vec, q):
+    """Rotate vector by a quaternion"""
+
+    qn = np.copy(q)
+    qn[1:] *= -1
+    return multiply_quats(multiply_quats(
+        q, vec_to_quat(vec, np.pi*0.25)), qn)[1:]
+
+
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
     direction and height."""
+
     class aBeam(object):
         def __init__(self):
             for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
@@ -800,6 +825,7 @@ class BeamLine(object):
 
 
         """
+
         self.azimuth = azimuth
 #        self.sinAzimuth = np.sin(azimuth)  # a0
 #        self.cosAzimuth = np.cos(azimuth)  # b0
@@ -964,6 +990,7 @@ class BeamLine(object):
                 beam.c[0] /= dirNorm
 
         if any(autoCenter):
+            centerList = copy.copy(oe.center)
             bStartC = np.array([inBeam.x[0], inBeam.y[0], inBeam.z[0]])
             bStartDir = np.array([inBeam.a[0], inBeam.b[0], inBeam.c[0]])
 
@@ -978,7 +1005,8 @@ class BeamLine(object):
                     if np.linalg.norm(newCenter - bStartC) > 0:
                         break
             for dim in autoCoord:
-                oe.center[dim] = newCenter[dim]
+                centerList[dim] = newCenter[dim]
+            oe.center = centerList
             if _VERBOSITY_ > 0:
                 print(oe.name, "center:", oe.center)
 
@@ -1001,6 +1029,7 @@ class BeamLine(object):
                         lauePitch = 0.5 * np.pi
                     else:
                         braggT += -mat.get_dtheta(alignE, alphaT)
+
                 loBeam = copy.deepcopy(inBeam)  # Beam(copyFrom=inBeam)
                 global_to_virgin_local(self, inBeam, loBeam, center=oe.center)
                 rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),

@@ -5,6 +5,7 @@ import time
 import numpy as np
 import inspect
 import copy
+from scipy.spatial.transform import Rotation as scprot
 
 import matplotlib as mpl
 from .. import raycing
@@ -256,36 +257,30 @@ class OE(object):
         self.shouldCheckCenter = shouldCheckCenter
 
         self.center = center
-        if any([x == 'auto' for x in self.center]):
-            self._center = copy.copy(self.center)
+#        if any([x == 'auto' for x in self.center]):
+#            self._center = copy.copy(self.center)
         if (bl is not None) and self.shouldCheckCenter:
             self.checkCenter()
 
-        self.pitch = raycing.auto_units_angle(pitch)
-        if isinstance(self.pitch, (raycing.basestring, list, tuple)):
-            self._pitch = copy.copy(self.pitch)
-        self.roll = raycing.auto_units_angle(roll)
-        self.yaw = raycing.auto_units_angle(yaw)
+        self.pitch = pitch
+        self.roll = roll
+        self.yaw = yaw
         self.rotationSequence = rotationSequence
-        self.positionRoll = raycing.auto_units_angle(positionRoll)
+        self.positionRoll = positionRoll
 
-        self.extraPitch = raycing.auto_units_angle(extraPitch)
-        self.extraRoll = raycing.auto_units_angle(extraRoll)
-        self.extraYaw = raycing.auto_units_angle(extraYaw)
+        self.extraPitch = extraPitch
+        self.extraRoll = extraRoll
+        self.extraYaw = extraYaw
         self.extraRotationSequence = extraRotationSequence
         self.alarmLevel = alarmLevel
 
         self.surface = surface
         self.material = material
-        self.set_alpha(raycing.auto_units_angle(alpha))
+        self.alpha = alpha
         self.curSurface = 0
         self.dx = 0
         self.limPhysX = limPhysX
         self.limPhysY = limPhysY
-        if self.limPhysX is None:
-            self.limPhysX = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
-        if self.limPhysY is None:
-            self.limPhysY = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
         self.limOptX = limOptX
         self.limOptY = limOptY
         self.isParametric = isParametric
@@ -293,10 +288,7 @@ class OE(object):
 
         self.shape = shape
         self.gratingDensity = gratingDensity
-        if self.gratingDensity is not None and material is None and \
-                not hasattr(self, 'get_grating_area_fraction'):
-            self.material = EmptyMaterial()
-        self.order = 1 if order is None else order
+        self.order = order
         self.get_surface_limits()
         self.cl_ctx = None
         self.ucl = None
@@ -335,16 +327,207 @@ class OE(object):
                     self.cl_mf = self.ucl.cl_mf
                     self.cl_is_blocking = self.ucl.cl_is_blocking
 
-    def set_alpha(self, alpha):
+    @property
+    def center(self):
+        return self._center if self._centerVal is None else self._centerVal
+
+    @center.setter
+    def center(self, center):
+        if any([x == 'auto' for x in center]):
+            self._center = copy.copy(center)
+            self._centerVal = None
+            self._centerInit = copy.copy(center)  # For glow auto-recognition
+        else:
+            self._centerVal = center
+#            if not hasattr(self, '_center'):
+#                self._center = None
+
+    @property
+    def pitch(self):
+        # _pitch can only contain unprocessed input for auto-calculation
+        # _pitchVal is None before auto-calculation, a number after it
+        return self._pitch if self._pitchVal is None else self._pitchVal
+
+    @pitch.setter
+    def pitch(self, pitch):
+        pitch = raycing.auto_units_angle(pitch)
+        if isinstance(pitch, (raycing.basestring, list, tuple)):
+            self._pitch = copy.copy(pitch)
+            self._pitchVal = None
+            self._pitchInit = copy.copy(pitch)  # For glow auto-recognition
+        else:  # also after auto-calculation
+            self._pitchVal = pitch
+            self.update_orientation_quaternion()
+
+        if hasattr(self, '_reset_pq'):
+            self._reset_pq()
+
+        if hasattr(self, '_RPQ'):
+            if self._RPQ is not None:
+                self._R = self.get_Rmer_from_Coddington(self._RPQ[0],
+                                                        self._RPQ[1])
+        if hasattr(self, '_rPQ'):
+            if self._rPQ is not None:
+                self._r = self.get_rsag_from_Coddington(self._rPQ[0],
+                                                        self._rPQ[1])
+        if hasattr(self, '_RmPQ'):
+            if self._RmPQ is not None:
+                self._Rm = self.get_Rmer_from_Coddington(self._RmPQ[0],
+                                                         self._RmPQ[1])
+        if hasattr(self, '_RsPQ'):
+            if self._RsPQ is not None:
+                self._Rs = self.get_rsag_from_Coddington(self._RsPQ[0],
+                                                         self._RsPQ[1])
+
+    @property
+    def roll(self):
+        return self._roll
+
+    @roll.setter
+    def roll(self, roll):
+        self._roll = raycing.auto_units_angle(roll)
+        self.update_orientation_quaternion()
+        if hasattr(self, '_reset_pq'):
+            self._reset_pq()
+
+    @property
+    def yaw(self):
+        return self._yaw
+
+    @yaw.setter
+    def yaw(self, yaw):
+        self._yaw = raycing.auto_units_angle(yaw)
+        self.update_orientation_quaternion()
+        if hasattr(self, '_reset_pq'):
+            self._reset_pq()
+
+    @property
+    def extraPitch(self):
+        return self._extraPitch
+
+    @extraPitch.setter
+    def extraPitch(self, extraPitch):
+        self._extraPitch = raycing.auto_units_angle(extraPitch)
+        self.update_orientation_quaternion()
+
+    @property
+    def extraRoll(self):
+        return self._extraRoll
+
+    @extraRoll.setter
+    def extraRoll(self, extraRoll):
+        self._extraRoll = raycing.auto_units_angle(extraRoll)
+        self.update_orientation_quaternion()
+
+    @property
+    def extraYaw(self):
+        return self._extraYaw
+
+    @extraYaw.setter
+    def extraYaw(self, extraYaw):
+        self._extraYaw = raycing.auto_units_angle(extraYaw)
+        self.update_orientation_quaternion()
+
+    @property
+    def positionRoll(self):
+        return self._positionRoll
+
+    @positionRoll.setter
+    def positionRoll(self, positionRoll):
+        self._positionRoll = raycing.auto_units_angle(positionRoll)
+        self.update_orientation_quaternion()
+        if hasattr(self, '_reset_pq'):
+            self._reset_pq()
+
+    @property
+    def limPhysX(self):
+        return self._limPhysX
+
+    @limPhysX.setter
+    def limPhysX(self, limPhysX):
+        if limPhysX is None:
+            self._limPhysX = [-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE]
+        else:
+            self._limPhysX = limPhysX
+
+    @property
+    def limPhysY(self):
+        return self._limPhysY
+
+    @limPhysY.setter
+    def limPhysY(self, limPhysY):
+        if limPhysY is None:
+            self._limPhysY = [-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE]
+        else:
+            self._limPhysY = limPhysY
+
+    @property
+    def gratingDensity(self):
+        return self._gratingDensity
+
+    @gratingDensity.setter
+    def gratingDensity(self, gratingDensity):
+        self._gratingDensity = gratingDensity
+        if gratingDensity is not None and self.material is None and \
+                not hasattr(self, 'get_grating_area_fraction'):
+            self.material = EmptyMaterial()
+        if hasattr(self, 'reset'):
+            self.reset()
+
+    @property
+    def order(self):
+        return self._order
+
+    @order.setter
+    def order(self, order):
+        self._order = 1 if order is None else order
+
+    @property
+    def alpha(self):
+        return self._alpha
+
+    @alpha.setter
+    def alpha(self, alpha):
         """Sets the asymmetry angle *alpha* for a crystal OE. It calculates
         cos(alpha) and sin(alpha) which are then used for rotating the normal
         to the crystal planes."""
+        self._alpha = raycing.auto_units_angle(alpha)
+        if self.alpha is not None:
+            self.cosalpha = np.cos(self.alpha)
+            self.sinalpha = np.sin(self.alpha)
+            self.tanalpha = self.sinalpha / self.cosalpha
+
+    def set_alpha(self, alpha):
+        """Same as alpha.setter, left for compatibility"""
         self.alpha = alpha
-        if alpha is None:
-            return
-        self.cosalpha = np.cos(alpha)
-        self.sinalpha = np.sin(alpha)
-        self.tanalpha = self.sinalpha / self.cosalpha
+
+    def update_orientation_quaternion(self):
+        """Will be used with xrtGlow for fast orientation tracking"""
+        try:  # Experimental
+            if all([hasattr(self, angle) for angle in ['pitch', 'roll', 'yaw'
+                    'extraPitch', 'extraRoll', 'extraYaw', 'positionRoll']]):
+                rotAx = {'x': self.pitch,
+                         'y': self.roll+self.positionRoll,
+                         'z': self.yaw}
+                extraRotAx = {'x': self.extraPitch,
+                              'y': self.extraRoll,
+                              'z': self.extraYaw}
+                rotSeq = self.rotationSequence(slice(1, None, 2))
+                extraRotSeq = self.extraRotationSequence(slice(1, None, 2))
+                rotation = (scprot.from_euler(
+                        rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
+                extraRot = (scprot.from_euler(
+                    extraRotSeq,
+                    [extraRotAx[i] for i in extraRotSeq])).as_quat()
+                self.orientationQuat = raycing.multiply_quats(rotation,
+                                                              extraRot)
+        except:
+            pass
+
+    def _update_bounding_box(self):
+        pass
 
     def checkCenter(self, misalignmentTolerated=raycing.misalignmentTolerated):
         """Checks whether the oe center lies on the original beam line. If the
@@ -373,12 +556,24 @@ class OE(object):
 
     def get_Rmer_from_Coddington(self, p, q, pitch=None):
         if pitch is None:
-            pitch = self.pitch
+            if hasattr(self, '_pitchVal'):
+                if self._pitchVal is not None:
+                    pitch = self._pitchVal
+                else:
+                    return None
+            else:
+                return None
         return 2 * p * q / (p+q) / np.sin(abs(pitch))
 
     def get_rsag_from_Coddington(self, p, q, pitch=None):
         if pitch is None:
-            pitch = self.pitch
+            if hasattr(self, '_pitchVal'):
+                if self._pitchVal is not None:
+                    pitch = self._pitchVal
+                else:
+                    return None
+            else:
+                return None
         return 2 * p * q / (p+q) * np.sin(abs(pitch))
 
     def local_z(self, x, y):
@@ -1119,6 +1314,7 @@ class OE(object):
         the surface within ``self.limPhysX`` limits; if 2-tuple of ints,
         specifies (nx, ny) sizes of a uniform mesh of samples.
         """
+
         if rw is None:
             from . import waves as rw
 
@@ -1865,8 +2061,10 @@ class OE(object):
 #                        xOut0 = lb.x + (yOut02 - lb.y)*lb.a/lb.b
 #                        xOutH = lb.x + (yOutH2 - lb.y)*a_out/b_out
 #                        print "xOut0, xOutH", xOut0, xOutH
-#                        zOut0 = yOut02**2/2./(self.R - matSur.t) + matSur.t
-#                        zOutH = yOut02**2/2./(self.R - matSur.t) + matSur.t
+#                        zOut0 = yOut02**2/2./(self.R - matSur.t) +\
+#                            matSur.t
+#                        zOutH = yOut02**2/2./(self.R - matSur.t) +\
+#                            matSur.t
 #                        print "zOut0, zOutH", zOut0, zOutH
 #                    """
 #
@@ -2174,33 +2372,98 @@ class DCM(OE):
         self.energyMax = rs.defaultEnergy + 5.
 
     def __pop_kwargs(self, **kwargs):
-        self.bragg = raycing.auto_units_angle(kwargs.pop('bragg', 0))
-        if isinstance(self.bragg, (raycing.basestring, list, tuple)):
-            self._bragg = copy.copy(self.bragg)
-        self.cryst1roll = raycing.auto_units_angle(kwargs.pop('cryst1roll', 0))
-        self.cryst2roll = raycing.auto_units_angle(kwargs.pop('cryst2roll', 0))
-        self.cryst2pitch = raycing.auto_units_angle(
-            kwargs.pop('cryst2pitch', 0))
-        self.cryst2finePitch = raycing.auto_units_angle(
-            kwargs.pop('cryst2finePitch', 0))
+        self.bragg = kwargs.pop('bragg', 0)
+        self.cryst1roll = kwargs.pop('cryst1roll', 0)
+        self.cryst2roll = kwargs.pop('cryst2roll', 0)
+        self.cryst2pitch = kwargs.pop('cryst2pitch', 0)
+        self.cryst2finePitch = kwargs.pop('cryst2finePitch', 0)
         self.cryst2perpTransl = kwargs.pop('cryst2perpTransl', 0)
         self.cryst2longTransl = kwargs.pop('cryst2longTransl', 0)
         self.limPhysX2 = kwargs.pop(
             'limPhysX2', [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE])
-        if self.limPhysX2 is None:
-            self.limPhysX2 = [-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE]
         self.limPhysY2 = kwargs.pop(
             'limPhysY2', [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE])
-        if self.limPhysY2 is None:
-            self.limPhysY2 = [-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE]
         self.limOptX2 = kwargs.pop('limOptX2', None)
         self.limOptY2 = kwargs.pop('limOptY2', None)
         self.material = kwargs.get('material', None)
         self.material2 = kwargs.pop('material2', None)
         self.fixedOffset = kwargs.pop('fixedOffset', None)
         return kwargs
+
+    @property
+    def bragg(self):
+        return self._bragg if self._braggVal is None else self._braggVal
+
+    @bragg.setter
+    def bragg(self, bragg):
+        bragg = raycing.auto_units_angle(bragg)
+        if isinstance(bragg, (raycing.basestring, list, tuple)):
+            self._bragg = copy.copy(bragg)
+            self._braggVal = None
+            self._braggInit = copy.copy(bragg)  # For glow auto-recognition
+        else:
+            self._braggVal = raycing.auto_units_angle(bragg)
+            self.update_orientation_quaternion()
+
+    @property
+    def cryst1roll(self):
+        return self._cryst1roll
+
+    @cryst1roll.setter
+    def cryst1roll(self, cryst1roll):
+        self._cryst1roll = raycing.auto_units_angle(cryst1roll)
+        self.update_orientation_quaternion()
+
+    @property
+    def cryst2roll(self):
+        return self._cryst2roll
+
+    @cryst2roll.setter
+    def cryst2roll(self, cryst2roll):
+        self._cryst2roll = raycing.auto_units_angle(cryst2roll)
+        self.update_orientation_quaternion()
+
+    @property
+    def cryst2pitch(self):
+        return self._cryst2pitch
+
+    @cryst2pitch.setter
+    def cryst2pitch(self, cryst2pitch):
+        self._cryst2pitch = raycing.auto_units_angle(cryst2pitch)
+        self.update_orientation_quaternion()
+
+    @property
+    def cryst2finePitch(self):
+        return self._cryst2finePitch
+
+    @cryst2finePitch.setter
+    def cryst2finePitch(self, cryst2finePitch):
+        self._cryst2finePitch = raycing.auto_units_angle(cryst2finePitch)
+        self.update_orientation_quaternion()
+
+    @property
+    def limPhysX2(self):
+        return self._limPhysX2
+
+    @limPhysX2.setter
+    def limPhysX2(self, limPhysX2):
+        if limPhysX2 is None:
+            self._limPhysX2 = [-raycing.maxHalfSizeOfOE,
+                               raycing.maxHalfSizeOfOE]
+        else:
+            self._limPhysX2 = limPhysX2
+
+    @property
+    def limPhysY2(self):
+        return self._limPhysY2
+
+    @limPhysY2.setter
+    def limPhysY2(self, limPhysY2):
+        if limPhysY2 is None:
+            self._limPhysY2 = [-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE]
+        else:
+            self._limPhysY2 = limPhysY2
 
     def get_surface_limits(self):
         """Returns surface_limits."""
