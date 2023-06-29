@@ -1086,7 +1086,7 @@ class xrtGlow(qt.QWidget):
         slider.setValue(center)
         self.mplFig.canvas.draw()
         self.paletteWidget.span.active_handle = None
-        self.paletteWidget.span.to_draw.set_visible(False)
+        # self.paletteWidget.span.to_draw.set_visible(False)
         self.customGlWidget.glDraw()
 
     def updateColorSelFromMPL(self, eclick, erelease):
@@ -1933,8 +1933,10 @@ class xrtGlWidget(qt.QGLWidget):
         if self.newColorAxis:
             newColorMax = -1e20
             newColorMin = 1e20
-#            self.selColorMax = newColorMax
-#            self.selColorMin = newColorMin
+            if self.selColorMin is None:
+                self.selColorMin = newColorMin
+            if self.selColorMax is None:
+                self.selColorMax = newColorMax
         else:
             newColorMax = self.colorMax
             newColorMin = self.colorMin
