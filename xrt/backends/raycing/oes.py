@@ -2009,8 +2009,12 @@ class Plate(DCM):
                 materials = material,
             for mat in materials:
                 if not mat.kind.startswith("plate"):
+                    try:
+                        name = self.name
+                    except AttributeError:
+                        name = self.__class__.__name__
                     print('Warning: material of {0} is not of kind "plate"!'.
-                          format(self.name))
+                          format(name))
 
         if hasattr(self, '_nCRLlist'):
             self.nCRL = self._nCRLlist
