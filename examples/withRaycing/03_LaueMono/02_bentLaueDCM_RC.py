@@ -147,8 +147,8 @@ def plot_generator(plots, beamLine):
                 alpha = 0  # -theta0
                 pitch = math.pi/2 + theta0 + alpha
                 beamLine.laueDCM1.pitch = pitch
-                beamLine.laueDCM1.set_alpha(alpha)
-                beamLine.laueDCM2.set_alpha(alpha)
+                beamLine.laueDCM1.alpha = alpha
+                beamLine.laueDCM2.alpha = alpha
                 beamLine.laueDCM2.center[1] = pLaueDCM + fixedExit *\
                     math.cos(theta0 - alpha) / math.tan(2. * theta0)
                 for distE in 'flat', :  # 'lines':

@@ -17,8 +17,8 @@ except ImportError:
 if isOpenCL:
     import xrt.backends.raycing.myopencl as mcl
     matCL = mcl.XRT_CL(r'materials.cl',
-                           precisionOpenCL='float32',
-#                       precisionOpenCL='float64',
+                       precisionOpenCL='float32',
+                       # precisionOpenCL='float64',
                        # targetOpenCL='CPU'
                        )
 else:

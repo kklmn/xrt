@@ -189,7 +189,7 @@ def define_plots(beamLine):
         'beamDetector', (1,), aspect='auto',
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal,
                            fwhmFormatStr='%.2f'),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=limYCrystal,
                            fwhmFormatStr='%.2f'),
         title='det_E')
     plotDetE.caxis.fwhmFormatStr = fwhmFormatStrE
@@ -204,7 +204,7 @@ def define_plots(beamLine):
         'beamDetector', (1,), aspect='auto',
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal,
                            fwhmFormatStr='%.2f'),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm',
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=limYCrystal,
                            fwhmFormatStr='%.2f'),
         caxis=xrtp.XYCAxis('degree of polarization', '',
                            data=raycing.get_polarization_degree,
@@ -293,12 +293,12 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                 offsetE = round(E0, 2)
                 for alphaDegree in alphasDegree:
                     alpha = np.radians(alphaDegree)
-                    beamLine.analyzer.set_alpha(alpha)
+                    beamLine.analyzer.alpha = alpha
                     p = 2. * R * math.cos(theta + alpha)
                     sin2Theta = math.sin(2 * theta)
                     cos2Theta = math.cos(2 * theta)
                     yDet = p + lCrystDet * cos2Theta
-                    zDet = lCrystDet * sin2Theta
+                    zDet = -lCrystDet * sin2Theta
                     pdp = 2. * R * math.cos(theta + alpha + dyCrystal/6/R)
                     beamLine.sources[0].dxprime = dxCrystal / pdp
                     beamLine.sources[0].dzprime = dyCrystal * \
@@ -380,7 +380,6 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                                 if (dzFlat == 0) or (dEFlat == 0)\
                                     or np.isnan(dzFlat) or \
                                         np.isnan(dEFlat):
-                                    print(dzFlat, dEFlat)
                                     raise
                             elif isource == 1:
                                 dzLine = plotDetE.dy
@@ -426,8 +425,8 @@ def main():
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)
-    args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
-            plotDetE]
+    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE,
+            beamLine]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
         beamLine=beamLine, processes='half')

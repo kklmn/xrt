@@ -33,7 +33,6 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
-TT = True
 
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
@@ -43,16 +42,14 @@ elif crystalMaterial == 'Ge':
 else:
     raise
 orders = (1, 4, 8, 12)
-#crystals = [rm.CrystalDiamond((i, i, i), d111/i, elements=crystalMaterial)
-#            for i in orders]
-crystals = [rm.CrystalSi(hkl=(i, i, i), useTT=TT)
+crystals = [rm.CrystalDiamond((i, i, i), d111/i, elements=crystalMaterial)
             for i in orders]
-crystalsMask = (1, 0, 0, 0)
+crystalsMask = (0, 1, 0, 0)
 #numiters = [40, 2560, 1280, 5120]  # @crysals
-numiters = [40, 40, 80, 120] #, 40, 80, 120]  # @crysals
+numiters = [40, 40, 80, 120]  # @crysals
 
 R = 500.  # mm
-isJohansson = False
+isJohansson = True
 
 if isJohansson:
     Rm = R
@@ -99,9 +96,7 @@ def build_beamline(nrays=raycing.nrays):
     beamLine.analyzer = Cylinder(
         beamLine, analyzerName, surface=('',), Rm=Rm,
         limPhysX=(-dxCrystal/2, dxCrystal/2),
-        limPhysY=(-dyCrystal/2, dyCrystal/2),
-        targetOpenCL='auto' if TT else None, precisionOpenCL='float32' 
-        )
+        limPhysY=(-dyCrystal/2, dyCrystal/2))
     beamLine.detector = rsc.Screen(beamLine, 'Detector')
     return beamLine
 
@@ -314,7 +309,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                 offsetE = round(E0, 2)
                 for alphaDegree in alphasDegree:
                     alpha = np.radians(alphaDegree)
-                    beamLine.analyzer.set_alpha(alpha)
+                    beamLine.analyzer.alpha = alpha
 #                    b = math.sin(theta - alpha) / math.sin(theta + alpha)
                     p = 2. * R * math.sin(theta + alpha)
                     q = 2. * R * math.sin(theta - alpha)
@@ -401,7 +396,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                             filename = '{0}-{1}-{2:.0f}-{3}-{4}'.format(
                                 bentName, crystalLabel, thetaDegree,
                                 plot.title, sourcename)
-                            plot.saveName = filename + '{}.png'.format('_TT32' if TT else '')
+                            plot.saveName = filename + '.png'
 #                            plot.persistentName = filename + '.pickle'
                         if showIn3D:
                             beamLine.glowFrameName = \
@@ -466,7 +461,7 @@ def main():
     args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
             plotDetE]
     xrtr.run_ray_tracing(plots, generator=plot_generator, generatorArgs=args,
-                         beamLine=beamLine, processes=1 if TT else 'half')
+                         beamLine=beamLine, processes='half')
 
 
 if __name__ == '__main__':

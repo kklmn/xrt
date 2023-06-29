@@ -1482,11 +1482,11 @@ class EllipticalMirrorParam(OE):
     Values of the ellipse's semi-major and semi-minor axes lengths can be
     accessed after init at *ellipseA* and *ellipseB* respectively.
 
-    .. warning::
+    .. note::
 
-        If you want to change any of *p*, *q*, *f1*, *f2* or *pAxis* after the
-        creation of the OE, you must invoke the method :meth:`reset_pq` to
-        recalculate the ellipsoid parameters.
+        Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
+        attributes of this mirror object; the ellipsoid parameters parameters
+        will be recalculated automatically.
 
     The usage is exemplified in `test_param_mirror.py`.
 
@@ -1698,11 +1698,11 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
     parabolical cylinder, otherwise it is a paraboloid of revolution around the
     major axis.
 
-    .. warning::
+    .. note::
 
-        If you want to change any of *p*, *q*, *f1*, *f2* or *parabolaAxis*
-        after the creation of the OE, you must invoke the method
-        :meth:`reset_pq` to recalculate the paraboloid parameters.
+        Any of *p*, *q*, *f1*, *f2* or *parabolaAxis* can be set as instance
+        attributes of this mirror object; the ellipsoid parameters parameters
+        will be recalculated automatically.
 
     The usage is exemplified in `test_param_mirror.py`.
 
