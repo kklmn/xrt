@@ -800,7 +800,7 @@ class TTcrystal:
         elif self.Rx is not None and self.Rx.value == float('inf') and \
                 self.Ry is not None and self.Ry.value == float('inf'):
             self.displacement_jacobian = None
-            self.djparams = [0, 0, 0]
+            self.djparams = [0]*5
         else:
             if self.Rx is not None:
                 Rx = self.Rx.in_units(self._jacobian_length_unit)

@@ -2185,9 +2185,9 @@ class OE(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormalOld)
                     elif matSur.useTT:
-                        if 'R' in self.__dict__.keys():
+                        if '_R' in self.__dict__.keys():
                             Ry = self.R
-                        elif 'Rm' in self.__dict__.keys():
+                        elif '_Rm' in self.__dict__.keys():
                             Ry = self.Rm
                         else:
                             Ry = None
