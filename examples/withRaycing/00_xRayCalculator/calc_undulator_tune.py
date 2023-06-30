@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 import xrt.backends.raycing.sources as rs
 
-print("please wait...")
 source = rs.Undulator(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
                       betaX=9.539, betaZ=1.982, period=18.5, n=108, K=0.52,
                       eEspread=0*8e-4, distE='BW', gIntervals=2)
+print("please wait...")
 
 energy = np.linspace(2000, 30000, 5601)
 theta = np.linspace(-1, 1, 11) * 30e-6  # 60 µrad opening

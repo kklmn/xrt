@@ -5,10 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xrt.backends.raycing.sources as rs
 
-print("please wait...")
 source = rs.Undulator(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
                       betaX=9., betaZ=2., period=19.3, n=101, K=0.52,
                       eEspread=0*1e-3, distE='BW')
+print("please wait...")
 
 energy = np.linspace(1000, 31000, 1501)
 theta = np.linspace(-1, 1, 21) * 30e-6

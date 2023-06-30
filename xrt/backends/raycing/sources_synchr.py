@@ -1462,8 +1462,8 @@ class Undulator(IntegratedSource):
         tunesE, tunesF = [], []
         tmpKy = self.Ky
         for iK, K in enumerate(Ks):
-            if raycing._VERBOSITY_ > 10:
-                print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
+            if raycing._VERBOSITY_ >= 10:
+                print("Calculation {1} of {2}, K={0}".format(K, iK+1, len(Ks)))
             self.Ky = K
             I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
             flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
@@ -1497,8 +1497,8 @@ class Undulator(IntegratedSource):
         tmpKy = self.Ky
         powers = []
         for iK, K in enumerate(Ks):
-            if raycing._VERBOSITY_ > 10:
-                print("K={0}, {1} of {2}".format(K, iK+1, len(Ks)))
+            if raycing._VERBOSITY_ >= 10:
+                print("Calculation {1} of {2}, K={0}".format(K, iK+1, len(Ks)))
             self.Ky = K
             I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
             if self.distE == 'BW':
