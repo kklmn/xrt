@@ -12,6 +12,7 @@ import time
 #import matplotlib
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
+raycing._VERBOSITY_ = 80
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.run as rr
@@ -162,7 +163,7 @@ kwargs = dict(
     eEpsilonX=6.0, eEpsilonZ=0.06, betaX=5.66, betaZ=2.85,
     # period=84., n=36,
     xPrimeMax=xPrimeMax, zPrimeMax=zPrimeMax,
-#    targetOpenCL='CPU',
+    # targetOpenCL='CPU',
     filamentBeam=filamentBeam)
 xlimits = [-xPrimeMax*R0*1e-3, xPrimeMax*R0*1e-3]
 zlimits = [-zPrimeMax*R0*1e-3, zPrimeMax*R0*1e-3]
@@ -429,6 +430,7 @@ def plotPCA():
 
     print("Done")
     plt.show()
+
 
 if __name__ == '__main__':
     main()

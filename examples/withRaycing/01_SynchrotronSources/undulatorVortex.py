@@ -2,7 +2,7 @@
 r"""
 .. _OAM-HelicalU:
 
-Orbital Angular Momentum of helical undulator ratiation
+Orbital Angular Momentum of helical undulator radiation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The images below are produced by
@@ -182,6 +182,7 @@ def plot_results():
     ax2.legend(loc=(0.22, 0.68))
 
     fig.savefig(prefix+"-flux-vorticity.png")
+    plt.show()
 
 
 def intensity_in_transverse_plane(ie, theta, psi, I0):
@@ -290,10 +291,9 @@ def grid_method():
     xprime = (undulatorKwargs['eEpsilonX']*1e-9/undulatorKwargs['betaX'])**0.5
     zprime = (undulatorKwargs['eEpsilonZ']*1e-9/undulatorKwargs['betaZ'])**0.5
     print(xprime, zprime)
-    raise
     marginFactorX = 6*xprime/thetaMax + 1  # ±3σ
     marginFactorZ = 6*zprime/psiMax + 1  # ±3σ
-    print(marginFactorX, marginFactorZ)
+    # print(marginFactorX, marginFactorZ)
     ntheta = int(ntheta*marginFactorX)
     npsi = int(npsi*marginFactorZ)
 
@@ -351,7 +351,7 @@ def grid_method():
     with open(outName, 'wb') as f:
         pickle.dump(dump, f, protocol=2)
 
-    plot_flux(energy, flux)
+    plot_flux(energy, flux, vEs)
     # colored_intensity_in_transverse_plane(energy, theta, psi, I0stack)
     plt.show()
 
