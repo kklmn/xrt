@@ -3,7 +3,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
-#import matplotlib as mpl
+# import matplotlib as mpl
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
@@ -16,24 +16,25 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
-useTT = False
+useTT = False  # elastically distorted crystal reflectivity or ideal crystal
 tOCL = "auto"
 
 prefix = '01_BentLaueSCM_{}'.format("withTT" if useTT else "geom")
 
-#energies = [9e3, 1.6e4, 2.5e4, 3.6e4]
+# energies = [9e3, 1.6e4, 2.5e4, 3.6e4]
 energies = [1.6e4, 3.6e4]
-#radii = [1e3, 5e3, 25e3, 125e3, np.inf]
+# radii = [1e3, 5e3, 25e3, 125e3, np.inf]
 radii = [1e3, 25e3, np.inf]
-#dEOverE = [8e-2, 1.5e-2, 0.4e-2, 1.2e-3, 4e-4]  # @ radii
+# dEOverE = [8e-2, 1.5e-2, 0.4e-2, 1.2e-3, 4e-4]  # @ radii
 dEOverE = [8e-2, 0.4e-2, 4e-4]  # @ radii
-#ddEOverE = [1, 1.25, 2.5, 3.]  # @ energies
+# ddEOverE = [1, 1.25, 2.5, 3.]  # @ energies
 ddEOverE = [1.25, 3.]  # @ energies
-#polarization = ['hor', 'vert', '+45', '-45', 'right', 'left', None]
+# polarization = ['hor', 'vert', '+45', '-45', 'right', 'left', None]
 polarization = 'hor',
-asymmetries = [0, np.pi/12, np.pi/6]
+# asymmetries = [0, np.pi/12, np.pi/6]
+asymmetries = [0, np.pi/12]
 
-#crystalDiamond = rm.CrystalDiamond((1,1,1), 2.0592872, elements='C',
+# crystalDiamond = rm.CrystalDiamond((1,1,1), 2.0592872, elements='C',
 siCrystal = rm.CrystalSi(hkl=(1, 1, 1), geom='Laue', t=0.2, useTT=useTT)
 pLaueSCM = 1000.
 qLaueSCM = 100.
@@ -46,7 +47,8 @@ def build_beamline():
                        dxprime=1.6e-4, distzprime=None, nrays=250000)
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, pLaueSCM - 100, 0))
     beamLine.laueSCM = roe.BentLaueCylinder(
-        beamLine, 'LaueSCM', (0, pLaueSCM, 0), material=(siCrystal,),
+        beamLine, 'LaueSCM', (0, pLaueSCM, 0), material=siCrystal,
+        # Note: with precisionOpenCL='float32' may not converge!
         targetOpenCL=tOCL if useTT else None, precisionOpenCL='float64')
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', [0, pLaueSCM + qLaueSCM, 0])
     return beamLine
@@ -147,7 +149,7 @@ def plot_generator(plots, beamLine):
                             plot.caxis.limits = [eAxisMin, eAxisMax]
                             fileName = '{0}_{1}_{2}_R={3}_{4:02.0f}keV_a={6:02.0f}deg_{5}'.\
                                 format(prefix, plot.title, suffix, radiusStr1,
-                                       energy * 1e-3, sourcename, np.degrees(alpha))
+                                       energy*1e-3, sourcename, np.degrees(alpha))
                             plot.saveName = fileName + '.png'
     #                        plot.persistentName = fileName + '.pickle'
                             try:
