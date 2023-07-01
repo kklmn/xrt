@@ -1959,7 +1959,7 @@ class DCMOnTripodWithOneXStage(DCM, rst.Tripod, rst.OneXStage):
 
 
 class Plate(DCM):
-    """Implements a body with two surfaces. Is derived from :class:`DCM`
+    """Implements a body with two surfaces. It is derived from :class:`DCM`
     because it also has two interfaces but the parameters referring to the 2nd
     crystal should be ignored."""
 
@@ -2016,13 +2016,13 @@ class Plate(DCM):
             else:
                 materials = material,
             for mat in materials:
-                if not mat.kind.startswith("plate"):
+                if mat.kind not in "plate lens FZP":
                     try:
                         name = self.name
                     except AttributeError:
                         name = self.__class__.__name__
-                    print('Warning: material of {0} is not of kind "plate"!'.
-                          format(name))
+                    print('Warning: material of {0} is not of kind {1}!'.
+                          format(name, "plate or lens or FZP"))
 
         if hasattr(self, '_nCRLlist'):
             self.nCRL = self._nCRLlist
