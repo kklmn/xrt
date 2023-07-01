@@ -1654,7 +1654,10 @@ class Crystal(Material):
         thetaB = self.get_Bragg_angle(E)  # variation of d ignored in polFactor
 
         F0, Fhkl, Fhkl_, chi0, chih, chih_ = self.get_F_chi(E, 0.5/crystd)
-        if autoLimits:
+        checkLimits = autoLimits
+        if hasattr(self, 'auto_PyTTE_Limits'):
+            checkLimits = self.auto_PyTTE_Limits
+        if checkLimits:
             chcbmod = np.sqrt(np.abs(chih*chih_))
             alpha0 = thetaB + alphaAsym
             alphah = thetaB - alphaAsym
