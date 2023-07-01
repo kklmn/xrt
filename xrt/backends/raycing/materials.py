@@ -61,7 +61,7 @@ import time
 # import struct
 import pickle
 import numpy as np
-from scipy.special import jn as besselJn
+# from scipy.special import jn as besselJn
 from .. import raycing
 
 from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO, SQRT2PI
@@ -1546,7 +1546,6 @@ class Crystal(Material):
         return curveS, curveP  # , phi.real
 
     def set_OE_properties(self, alpha=0, Rm=None, Rs=None):
-
         Rmum = Rm*1e3 if Rm not in [np.inf, None] else np.inf  # [um] Meridional
         Rsum = Rs*1e3 if Rs not in [np.inf, None] else np.inf  # [um] Sagittal
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
@@ -2115,23 +2114,34 @@ class CrystalDiamond(CrystalFcc):
         F_{hkl}^{\rm diamond} = F_{hkl}^{fcc}\left(1 + e^{i\frac{\pi}{2}
         (h + k + l)}\right).
     """
+
     def __init__(self, *args, **kwargs):
-        hkl = kwargs.get('hkl', (1, 1, 1))
-        sqrthkl2 = (sum(i**2 for i in hkl))**0.5
-        d = kwargs.get('d')
-        a = kwargs.get('a')
-        if d is not None:
-            self.a = d * sqrthkl2
-        elif a is not None:
-            self.a = a
-            kwargs['d'] = a / sqrthkl2
-            kwargs.pop('a')
-        self.b = self.a
-        self.c = self.a
-        self.alpha = np.pi/2.
-        self.beta = np.pi/2.
-        self.gamma = np.pi/2.
+        """"Add extra attributes needed for TT bent crystal calculation"""
+        if 'name' not in kwargs:
+            kwargs['name'] = 'Diamond'
+
+        a = None
+        if 'a' in kwargs:
+            a = kwargs.pop('a')
+            if 'hkl' in kwargs:
+                hkl = kwargs['hkl']
+            elif len(args) > 0:
+                hkl = args[0]
+            else:
+                raise ValueError('unknown hkl')
+            sqrthkl2 = (sum(i**2 for i in hkl))**0.5
+            d = a / sqrthkl2
+            if len(args) > 1:
+                args[1] = d
+            else:
+                kwargs['d'] = d
+
         super(CrystalDiamond, self).__init__(*args, **kwargs)
+        if a is None:
+            sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
+            a = self.d * sqrthkl2
+        self.a = self.b = self.c = a
+        self.alpha = self.beta = self.gamma = np.pi*0.5
 
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         diamondToFcc = 1 + np.exp(0.5j * PI * sum(self.hkl))
