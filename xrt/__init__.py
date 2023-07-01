@@ -23,9 +23,16 @@ interactively viewing it in 3D.
    :alt: &ensp;Vortex beam with <i>l</i>=1 and <i>p</i>=1. Colored by phase.
    :loc: upper-right-corner
 
-.. automodule:: xrt.gui.xrtQook
+.. tabs::
 
-.. automodule:: xrt.gui.xrtGlow
+   .. tab:: xrtQook
+       .. automodule:: xrt.gui.xrtQook
+
+   .. tab:: xrtGlow
+       .. automodule:: xrt.gui.xrtGlow
+
+   .. tab:: xrtBentXtal
+       .. automodule:: xrt.gui.xrtBentXtal
 
 Features of xrt
 ---------------
