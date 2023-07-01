@@ -249,10 +249,7 @@ class TTcrystal:
                 'At least one of the required keywords crystal, hkl, or '
                 'thickness is missing!')
 
-        try:
-            self.xrt_crystal = kwargs['xrt_crystal']
-        except:
-            raise "No XRT"
+        self.xrt_crystal = kwargs['xrt_crystal']
 
         # Optional keywords
         for k in ['asymmetry', 'in_plane_rotation']:
@@ -358,8 +355,8 @@ class TTcrystal:
                     'beta': np.degrees(self.xrt_crystal.beta),
                     'gamma': np.degrees(self.xrt_crystal.gamma)}
             else:
-                raise ("Elastic constants for this kind of crystal not "
-                       "available")
+                raise NotImplementedError(
+                    "Elastic constants for this kind of crystal not available")
 
         # calculate the direct and reciprocal primitive vectors
         self.direct_primitives, self.reciprocal_primitives = crystal_vectors(
