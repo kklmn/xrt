@@ -644,6 +644,7 @@ class BentLaueCylinder(OE):
         if alpha:
             bB, cB = raycing.rotate_x(b, c, -self.sinalpha, -self.cosalpha)
         else:
+            # bB, cB = raycing.rotate_x(b, c, 0, -1)
             bB, cB = c, -b
         return [a, bB, cB, a, b, c]
 

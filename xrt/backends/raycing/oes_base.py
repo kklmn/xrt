@@ -1744,9 +1744,11 @@ class OE(object):
 
         def _get_asymmetric_reflection_grating(
                 _gNormal, _oeNormal, _beamInDotSurfaceNormal,
-                xd=None, yd=None):
+                _beamInDotNormal, xd=None, yd=None):
             normalDotSurfNormal = _oeNormal[0]*_oeNormal[-3] +\
                 _oeNormal[1]*_oeNormal[-2] + _oeNormal[2]*_oeNormal[-1]
+            bdn = _beamInDotNormal.sum() / len(_beamInDotNormal)
+            sgbdn = 1 if bdn < 0 else -1
             # note:
             # _oeNormal[0:3] is n_B
             # _oeNormal[-3:] is n_s
@@ -1765,7 +1767,7 @@ class OE(object):
                 (_oeNormal[0]-normalDotSurfNormal*_oeNormal[-3]) * wHd,
                 (_oeNormal[1]-normalDotSurfNormal*_oeNormal[-2]) * wHd,
                 (_oeNormal[2]-normalDotSurfNormal*_oeNormal[-1]) * wHd),
-                order='F')
+                order='F') * sgbdn
             if matSur.geom.endswith('Fresnel'):
                 if isinstance(self.order, int):
                     locOrder = self.order
@@ -2020,7 +2022,7 @@ class OE(object):
                 if useAsymmetricNormal:
                     a_out, b_out, c_out = _get_asymmetric_reflection_grating(
                         gNormal, oeNormal, beamInDotSurfaceNormal,
-                        lb.x[goodN], lb.y[goodN])
+                        beamInDotNormal, lb.x[goodN], lb.y[goodN])
                 else:
                     a_out = lb.a[goodN] - oeNormal[0]*2*beamInDotNormal
                     b_out = lb.b[goodN] - oeNormal[1]*2*beamInDotNormal
@@ -2185,19 +2187,31 @@ class OE(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormalOld)
                     elif matSur.useTT:
-                        if '_R' in self.__dict__.keys():
-                            Ry = self.R
-                        elif '_Rm' in self.__dict__.keys():
-                            Ry = self.Rm
-                        else:
-                            Ry = None
+                        Ry = self.R if hasattr(self, 'R') else self.Rm \
+                            if hasattr(self, 'Rm') else None
+                        lcname = self.__class__.__name__.lower()
+                        if 'johansson' in lcname or 'ground' in lcname:
+                            Ry *= 2
+                        Rx = self.Rs if hasattr(self, 'Rs') else None
                         refl = matSur.get_amplitude_pytte(
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             alphaAsym=self.alpha,
-                            Ry=Ry, Rx=self.Rs if 'Rs' in self.__dict__.keys()
-                            else None,
-                            ucl=self.ucl)
+                            Ry=Ry, Rx=Rx, ucl=self.ucl)
+
+                        # if '_R' in self.__dict__.keys():
+                        #     Ry = self.R
+                        # elif '_Rm' in self.__dict__.keys():
+                        #     Ry = self.Rm
+                        # else:
+                        #     Ry = None
+                        # refl = matSur.get_amplitude_pytte(
+                        #     lb.E[goodN], beamInDotSurfaceNormal,
+                        #     beamOutDotSurfaceNormal, beamInDotNormal,
+                        #     alphaAsym=self.alpha,
+                        #     Ry=Ry, Rx=self.Rs if 'Rs' in self.__dict__.keys()
+                        #     else None,
+                        #     ucl=self.ucl)
                     else:
                         refl = matSur.get_amplitude(
                             lb.E[goodN], beamInDotSurfaceNormal,
