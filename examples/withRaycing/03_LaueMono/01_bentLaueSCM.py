@@ -144,7 +144,7 @@ def plot_generator(plots, beamLine):
                             beamLine.sources[0].energies = energy,
                             sourcename = 'line'
                         beamLine.sources[0].distE = distE
-                        for plot in plots[-1:]:
+                        for plot in plots:
                             plot.caxis.offset = energy
                             plot.caxis.limits = [eAxisMin, eAxisMax]
                             fileName = '{0}_{1}_{2}_R={3}_{4:02.0f}keV_a={6:02.0f}deg_{5}'.\
