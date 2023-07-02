@@ -398,10 +398,6 @@ class HemisphericScreen(Screen):
             print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
         self.y = np.cross(self._z, self._x)
 
-    def set_orientation(self, x=None, z=None):
-        """Compatibility method. All calculations moved to setters."""
-        self._set_orientation()
-
     def local_to_global(self, phi, theta):
         thetaO = theta + self.thetaOffset
         phiO = phi + self.phiOffset
