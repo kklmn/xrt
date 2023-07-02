@@ -136,6 +136,8 @@ class Screen(object):
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
+        self._x = copy.copy(x)
+        self._z = copy.copy(z)
         self._set_orientation()
 
     def local_to_global(self, x=0, y=0, z=0):
