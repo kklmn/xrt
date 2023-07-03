@@ -22,7 +22,7 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
    :members: __init__
 
 .. autoclass:: Crystal(Material)
-   :members: __init__, get_Darwin_width, get_amplitude,
+   :members: __init__, get_Darwin_width, get_amplitude, get_amplitude_pytte,
              get_dtheta_symmetric_Bragg, get_dtheta, get_dtheta_regular,
              get_refractive_correction
 
@@ -1580,8 +1580,8 @@ class Crystal(Material):
         r"""
         Calculates complex amplitude reflectivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
-        on modified [pytte code](https://github.com/aripekka/pyTTE),
-        [https://arxiv.org/abs/2006.04952](https://arxiv.org/abs/2006.04952)
+        on modified `PyTEE code <https://github.com/aripekka/pyTTE>`_,
+        `https://arxiv.org/abs/2006.04952 <https://arxiv.org/abs/2006.04952>`_
 
         *alphaAsymm*: float
             Angle of asymmetry in radians.

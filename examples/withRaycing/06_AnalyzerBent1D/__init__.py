@@ -3,7 +3,7 @@ r"""
 Comparison of 1D-bent crystal analyzers
 ---------------------------------------
 
-Files in ``\examples\withRaycing\06_AnalyzerBent1D``
+Files in ``/examples/withRaycing/06_AnalyzerBent1D``
 
 Rowland circle based analyzers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -149,6 +149,39 @@ crystal analyzer. As expected, the beam is fully polarized at 45° Bragg angle
    visible not only in terms of efficiency but also in terms of energy
    resolution.
 
+.. _JohanssonTT:
+
+Johansson analyzer with elastically deformed crystal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Example in ``/examples/withRaycing/06_AnalyzerBent1D/01B_BentTT.py``
+
+A Johansson 1D ground-bent analyzer is studied here by ray tracing with two
+ways of reflectivity calculations: for a perfect crystal and for an elastically
+deformed crystal. The latter option is based on modified
+[pytte code](https://github.com/aripekka/pyTTE).
+For higher reflection indices, the deviation from perfect crystal reflectivity
+becomes increasingly pronounced.
+
++----------+---------------------+---------------------+---------------------+
+| study    |     flat source     |     line source     |       7 lines       |
++==========+=====================+=====================+=====================+
+| perfect  |      |jp_flat|      |      |jp_line|      |      |jp_7lin|      |
+| crystal  |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+| deformed |      |jd_flat|      |      |jd_line|      |      |jd_7lin|      |
+| crystal  |                     |                     |                     |
++----------+---------------------+---------------------+---------------------+
+
+.. |jp_flat| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-flat.*
+.. |jp_line| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-line.*
+.. |jp_7lin| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-7lin.*
+   :loc: upper-right-corner
+.. |jd_flat| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-flat_TT.*
+.. |jd_line| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-line_TT.*
+.. |jd_7lin| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-7lin_TT.*
+   :loc: upper-right-corner
+
 .. _VonHamos:
 
 Von Hamos analyzer
@@ -163,7 +196,7 @@ a given sample setup. In particular, the escape direction can be kept in back
 scattering (relatively to the sample), see the figure below. In the latter case
 the mechanical model is more complex and includes three translations and two
 rotations. In the figure below, the crystal is sagittally curved around the
-source–detector line. The detector plane is perpendicular to the sketch.
+source-detector line. The detector plane is perpendicular to the sketch.
 Left: the classical setup [vH]_ with 2 translations.
 Right: the setup with an invariant escape direction.
 
@@ -177,7 +210,7 @@ curved with Rs = 250 mm. The width of segmented facets was taken equal to 5 mm
 
 .. [vH] L. von Hámos, *Röntgenspektroskopie und Abbildung mittels gekrümmter
    Kristallreflektoren II. Beschreibung eines fokussierenden Spektrographen mit
-   punktgetreuer Spaltabbildung*, Annalen der Physik **411** (1934) 252–260
+   punktgetreuer Spaltabbildung*, Annalen der Physik **411** (1934) 252-260
 
 .. [vH_SLS] J. Szlachetko, M. Nachtegaal, E. de Boni, M. Willimann,
    O. Safonova, J. Sa, G. Smolentsev, M. Szlachetko, J. A. van Bokhoven,
@@ -254,7 +287,7 @@ Comparison of Rowland circle based and von Hamos analyzers
 An additional case was also included here: when a Johann crystal is rotated by
 90⁰ around the sample-to-crystal line, it becomes a von Hamos crystal that has
 to be put at a correct distance corresponding to the 1 m sagittal radius. This
-case is labelled as “Johann as von Hamos”.
+case is labelled as "Johann as von Hamos".
 
 In comparing with a von Hamos spectrometer, one should realize its strongest
 advantage – inherent energy dispersive operation without a need for energy
