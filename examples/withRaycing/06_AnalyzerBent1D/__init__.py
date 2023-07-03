@@ -159,7 +159,7 @@ Example in ``/examples/withRaycing/06_AnalyzerBent1D/01B_BentTT.py``
 A Johansson 1D ground-bent analyzer is studied here by ray tracing with two
 ways of reflectivity calculations: for a perfect crystal and for an elastically
 deformed crystal. The latter option is based on modified
-[pytte code](https://github.com/aripekka/pyTTE).
+`pyTTE code <https://github.com/aripekka/pyTTE>`_.
 For higher reflection indices, the deviation from perfect crystal reflectivity
 becomes increasingly pronounced.
 
