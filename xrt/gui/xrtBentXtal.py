@@ -35,7 +35,7 @@ __date__ = "4 Jun 2023"
 __version__ = "1.0.0"
 __license__ = "MIT license"
 
-import os, sys; sys.path.append(os.path.join(*['..']*3))  # analysis:ignore
+import os, sys; sys.path.append(os.path.join(*['..']*2))  # analysis:ignore
 import re
 import uuid
 import time
