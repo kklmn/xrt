@@ -1580,7 +1580,7 @@ class Crystal(Material):
         r"""
         Calculates complex amplitude reflectivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
-        on modified `PyTEE code <https://github.com/aripekka/pyTTE>`_,
+        on modified `PyTTE code <https://github.com/aripekka/pyTTE>`_,
         `https://arxiv.org/abs/2006.04952 <https://arxiv.org/abs/2006.04952>`_
 
         *alphaAsymm*: float
