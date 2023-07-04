@@ -8,9 +8,8 @@ saved. Then a single line source is ray-traced and provides the width of *z*
 distribution. From these 3 numbers we calculate energy resolution and, as a
 check, ray-trace a third source with 7 energy lines with a spacing equal to the
 previously calculated energy resolution. The source sizes, axis limits, number
-of iterations etc. were determined experimentally and are given by lists in the
-upper part of the script. The outputs are the plots and a text file with the
-resulted energy resolutions."""
+of iterations etc. were determined experimentally and are given in the upper
+part of the script."""
 __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
@@ -29,7 +28,9 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
-tt = True
+useTT = False
+if showIn3D:
+    useTT = False
 
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
@@ -39,30 +40,30 @@ elif crystalMaterial == 'Ge':
 else:
     raise
 
-#crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial)
-#crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial, useTT=tt)
-crystal = rm.CrystalSi(hkl=(4, 4, 4), useTT=tt)
-#numiter = 640
-numiter = 40
+# crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial,
+#                             useTT=useTT)
+crystal = rm.CrystalSi(hkl=(4, 4, 4), t=0.1, useTT=useTT)
+# if useTT:
+#     crystal.auto_PyTTE_Limits = False
 
+numiter = 256
+nprocesses = 4  # if not useTT
 
 Rm = 1e9  # meridional radius, mm
-Rs = 1000  # tmp sagittal radius, mm
-#Rs = 250  # tmp sagittal radius, mm
+# Rs = 1000  # tmp sagittal radius, mm
+Rs = 250.  # tmp sagittal radius, mm
 dphi = 0
 
 beamV = 0.1/2.35  # vertical beam size
 beamH = 0.1/2.35  # horizontal beam size
 
+isDiced = False
+
 yAxesLim = 20
 
 dxCrystal = 100.
-dyCrystal = 100.
-#dyCrystal = 50.
-#dxCrystal = 300.
-#dyCrystal = 70.
+dyCrystal = 50.
 
-isDiced = False
 yAxisLim = 32  # Mythen length = 64 mm
 yAxisLine = 0.4
 if isDiced:
@@ -70,14 +71,15 @@ if isDiced:
     facetKWargs = {'dxFacet': 1-0.05, 'dyFacet': 50.,
                    'dxGap': 0.05, 'dyGap': 0.}
     Toroid = roe.DicedJohannToroid
-    analyzerName = crystalMaterial + 'vonHamosDiced'
+    analyzerName = crystalMaterial + 'vonHamos-{0:.0f}mmDiced'.format(
+        facetKWargs['dxFacet'])
 else:
     xAxisLim = 5
     facetKWargs = {}
     Toroid = roe.JohannToroid
     analyzerName = crystalMaterial + 'vonHamos'
 
-thetaDegree = 40
+thetaDegree = 60.
 
 if isDiced:
     dphi = np.arcsin((facetKWargs['dxFacet'] + facetKWargs['dxGap']) / Rs)
@@ -101,7 +103,7 @@ else:
     raise
 
 
-def build_beamline(nrays=2e5):
+def build_beamline(nrays=1e6):
     beamLine = raycing.BeamLine(azimuth=0, height=0)
     rs.GeometricSource(
         beamLine, 'GeometricSource', nrays=nrays, dx=beamH, dy=0,
@@ -111,7 +113,7 @@ def build_beamline(nrays=2e5):
         limPhysX=(-dxCrystal/2, dxCrystal/2),
         limPhysY=(-dyCrystal/2*3, dyCrystal/2*3),
         Rm=Rm, Rs=Rs, shape='rect',
-        targetOpenCL='auto', precisionOpenCL='float32',
+        targetOpenCL='auto' if useTT else None, precisionOpenCL='float32',
         **facetKWargs)
     beamLine.detector = rsc.Screen(beamLine, 'Detector', z=(0, 0, 1))
 #    beamLine.s1h = ra.RectangularAperture(
@@ -249,10 +251,10 @@ def define_plots(beamLine):
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', fwhmFormatStr='%.3f'),
         yaxis=xrtp.XYCAxis(r'$z$', 'mm', fwhmFormatStr='%.3f'),
         title='det_E')
-    plotDetE.xaxis.limits = 'symmetric'
-    plotDetE.yaxis.limits = 'symmetric'
-#    plotDetE.xaxis.limits = -xAxisLim, xAxisLim
-#    plotDetE.yaxis.limits = -yAxisLim, yAxisLim
+    # plotDetE.xaxis.limits = 'symmetric'
+    # plotDetE.yaxis.limits = 'symmetric'
+    plotDetE.xaxis.limits = -xAxisLim, xAxisLim
+    plotDetE.yaxis.limits = -yAxisLim, yAxisLim
     plotDetE.caxis.fwhmFormatStr = fwhmFormatStrE
     plotDetE.textPanel = plotDetE.fig.text(
         0.88, 0.8, '', transform=plotDetE.fig.transFigure, size=14, color='r',
@@ -314,13 +316,10 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                     continue
                 plot.caxis.offset = int(round(offsetE, -2))
                 plot.caxis.limits = [eAxisMin, eAxisMax]
-            tt = r'{0}{1}$\theta = {2:.0f}^\circ$'.format(
+            txt = r'{0}{1}$\theta = {2:.0f}^\circ$'.format(
                 crystalLabel, '\n', thetaDegree)
             for plot in plots:
-                try:
-                    plot.textPanel.set_text(tt)
-                except AttributeError:
-                    pass
+                plot.textPanel.set_text(txt)
             if isource == -1:
                 beamLine.sources[0].distE = 'normal'
                 beamLine.sources[0].energies = E0, eAxisFlat/2.355
@@ -340,14 +339,11 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 #            xrtr.set_repeats(2560*16L)
             for plot in plotsDetector:
                 plot.xaxis.limits = -6, 6
-            tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
-                  '\delta E = ${3:.3f} eV').format(
-                crystalLabel, '\n', thetaDegree, dELine)
+            txt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
+                   '\delta E = ${3:.3f} eV').format(
+                       crystalLabel, '\n', thetaDegree, dELine)
             for plot in plots:
-                try:
-                    plot.textPanel.set_text(tt)
-                except AttributeError:
-                    pass
+                plot.textPanel.set_text(txt)
             beamLine.sources[0].distE = 'lines'
             sourcename = '7lin'
             for plot in plotsDetector:
@@ -363,14 +359,14 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                 plot.caxis.limits = [eAxisMin, eAxisMax]
 
         for plot in plots:
-            filename = '{0}{1}-{2}-{3}'.format(
+            filename = '{0}{1:.0f}-{2}-{3}'.format(
                 analyzerName, thetaDegree, plot.title, sourcename)
-            plot.saveName = filename + '{}.png'.format("_TT32" if tt else "")
+            plot.saveName = filename + '{}.png'.format("_TT" if useTT else "")
 #            plot.persistentName = filename + '.pickle'
         if showIn3D:
             beamLine.glowFrameName = \
-                '{0}{1}-{2}-{3}.jpg'.format(analyzerName, thetaDegree, isource,
-                                            sourcename)
+                '{0}{1:.0f}-{2}-{3}.jpg'.format(
+                    analyzerName, thetaDegree, isource, sourcename)
         yield
 
         if not showIn3D:
@@ -397,7 +393,8 @@ def main():
     args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes=1)
+        beamLine=beamLine,
+        processes=1 if useTT else nprocesses)
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

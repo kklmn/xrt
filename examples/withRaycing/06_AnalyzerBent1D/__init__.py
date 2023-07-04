@@ -9,23 +9,23 @@ Rowland circle based analyzers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This study compares simply bent and ground-bent spectrometers utilizing Bragg
-and Laue crystals. The bending is cylindrical (one-dimensional).
+and Laue analyzing crystals. The bending is cylindrical (one-dimensional).
 
 .. imagezoom:: _images/BraggLaue.*
 
 :Conditions: Rowland circle diameter = 1 m, 70v × 200h µm² unpolarized
    fluorescence source, crystal size = 100meridional × 20saggittal mm².
 
-The energy resolution was calculated as described in `the CDR of a diced
+Energy resolution was calculated as described in `the CDR of a diced
 Johansson-like spectrometer at Alba/CLÆSS beamline
 <http://www.cells.es/Beamlines/CLAESS/EXD-BL22-FA-0001v4.0.pdf>`_. This
-requires two images: 1) of a flat energy distribution source and 2) of a
-monochromatic source. The image is energy dispersive in the diffraction plane,
-which can be used in practice with a position sensitive detector or with a slit
-scan in front of a bulk detector. From these two images the energy resolution
-*δE* was calculated and then 3) a verifying image was ray-traced for a source
-of 7 energy lines evenly spaced with the found step *δE*. Such images are shown
-for the four crystal geometries at a particular Bragg angle:
+calculation requires two images: 1) of a flat energy distribution source and
+2) of a monochromatic source. The images are dispersive in the diffraction
+plane, which can be used in practice with a position sensitive detector or with
+a slit scan in front of a bulk detector. From these two images energy
+resolution *δE* was calculated and then 3) a verifying image was ray-traced for
+a source of 7 energy lines evenly spaced with the found step *δE*. Such images
+are shown for the four crystal geometries at a particular Bragg angle:
 
 +----------+---------------------+---------------------+---------------------+
 | geometry |     flat source     |     line source     |       7 lines       |
@@ -127,7 +127,8 @@ crystal analyzer. As expected, the beam is fully polarized at 45° Bragg angle
    for a single energy, as opposed to simply bent crystals which have different
    parts reflecting the rays of different energies.
 2) When the crystal is close to the source (small θ for Bragg and large θ for
-   Laue), the images are distorted, even for the ground-bent crystals.
+   Laue spectrometers), the images are distorted, even for the ground-bent
+   crystals.
 3) The Bragg case requires small pixel size in the meridional direction (~10 µm
    for 1-m-diameter Rowland circle) for a good spatial resolution but can
    profit from its compactness. The Laue case requires a big detector of a size
@@ -158,10 +159,10 @@ Example in ``/examples/withRaycing/06_AnalyzerBent1D/01B_BentTT.py``
 
 A Johansson 1D ground-bent analyzer is studied here by ray tracing with two
 ways of reflectivity calculations: for a perfect crystal and for an elastically
-deformed crystal. The latter option is based on modified
-`pyTTE code <https://github.com/aripekka/pyTTE>`_.
-For higher reflection indices, the deviation from perfect crystal reflectivity
-becomes increasingly pronounced.
+deformed crystal by means of :ref:`the Takagi-Taupin equations <useTT>`. For
+higher reflection indices, the deviation from perfect crystal reflectivity
+becomes increasingly pronounced. Notice here an increased flux value and
+decreased energy resolution for the latter case.
 
 +----------+---------------------+---------------------+---------------------+
 | study    |     flat source     |     line source     |       7 lines       |
@@ -171,6 +172,9 @@ becomes increasingly pronounced.
 +----------+---------------------+---------------------+---------------------+
 | deformed |      |jd_flat|      |      |jd_line|      |      |jd_7lin|      |
 | crystal  |                     |                     |                     |
+|          |                     |                     |                     |
+| (Takagi- |                     |                     |                     |
+| Taupin)  |                     |                     |                     |
 +----------+---------------------+---------------------+---------------------+
 
 .. |jp_flat| imagezoom:: _images/1D-02gb-Si10,10,0-54-det_E-flat.*
@@ -190,13 +194,13 @@ Von Hamos analyzer
 A von Hamos spectrometer has axial symmetry around the axis connecting the
 source and the detector. The analyzing crystal is cylindrically bent with the
 radius equal to the crystal-to-axis distance. In this scheme, the emission
-escape direction depends on the Bragg angle (energy). In practice, the
-spectrometer axis is adapted such that the escape direction is appropriate for
-a given sample setup. In particular, the escape direction can be kept in back
-scattering (relatively to the sample), see the figure below. In the latter case
-the mechanical model is more complex and includes three translations and two
-rotations. In the figure below, the crystal is sagittally curved around the
-source-detector line. The detector plane is perpendicular to the sketch.
+escape direction depends on Bragg angle (energy). In practice, the spectrometer
+axis is adapted such that the escape direction is appropriate for a given
+sample setup. If the emission escape direction is kept fixed relatively to the
+sample, the mechanical model becomes more complex and includes three
+translations and two rotations. In the figure below, the crystal is sagittally
+curved around the source-detector line. The detector plane is perpendicular to
+the sketch.
 Left: the classical setup [vH]_ with 2 translations.
 Right: the setup with an invariant escape direction.
 
@@ -206,7 +210,8 @@ Right: the setup with an invariant escape direction.
 The geometrical parameters for the von Hamos spectrometer were taken from
 [vH_SLS]_: a diced 100 (sagittal) × 50 (meridional) mm² Si(444) crystal is
 curved with Rs = 250 mm. The width of segmented facets was taken equal to 5 mm
-(as in [vH_SLS]_) and 1 mm together with a continuously bent case.
+(as in [vH_SLS]_) and 1 mm together with a continuously bent case. The crystal
+thickness = 100 µm.
 
 .. [vH] L. von Hámos, *Röntgenspektroskopie und Abbildung mittels gekrümmter
    Kristallreflektoren II. Beschreibung eines fokussierenden Spektrographen mit
@@ -222,23 +227,28 @@ curved with Rs = 250 mm. The width of segmented facets was taken equal to 5 mm
 
 The calculation of energy resolution requires two detector images: 1) of a flat
 energy distribution source and 2) of a monochromatic source. From these two
-images the energy resolution *δE* was calculated and then 3) a verifying image
-was ray-traced for a source of 7 energy lines evenly spaced with the found step
+images, energy resolution *δE* was calculated and then 3) a verifying image was
+ray-traced for a source of 7 energy lines evenly spaced with the found step
 *δE*. Such images are shown for different dicing sizes at a particular Bragg
-angle.
+angle. In addition to perfect crystal reflectivity calculations, elastically
+deformed crystal reflectivity was calculated by means of
+:ref:`the Takagi-Taupin equations <useTT>` (labelled TT).
 
-+---------+--------------------+--------------------+--------------------+
-| crystal |     flat source    |     line source    |       7 lines      |
-+=========+====================+====================+====================+
-| diced   |                    |                    |                    |
-| 5 mm    |     |vH5_flat|     |     |vH5_line|     |     |vH5_7lin|     |
-+---------+--------------------+--------------------+--------------------+
-| diced   |                    |                    |                    |
-| 1 mm    |     |vH1_flat|     |     |vH1_line|     |     |vH1_7lin|     |
-+---------+--------------------+--------------------+--------------------+
-| not     |                    |                    |                    |
-| diced   |     |vHc_flat|     |     |vHc_line|     |     |vHc_7lin|     |
-+---------+--------------------+--------------------+--------------------+
++----------+--------------------+--------------------+--------------------+
+| crystal  |     flat source    |     line source    |       7 lines      |
++==========+====================+====================+====================+
+| diced    |                    |                    |                    |
+| 5 mm     |     |vH5_flat|     |     |vH5_line|     |     |vH5_7lin|     |
++----------+--------------------+--------------------+--------------------+
+| diced    |                    |                    |                    |
+| 1 mm     |     |vH1_flat|     |     |vH1_line|     |     |vH1_7lin|     |
++----------+--------------------+--------------------+--------------------+
+| not      |                    |                    |                    |
+| diced    |     |vHc_flat|     |     |vHc_line|     |     |vHc_7lin|     |
++----------+--------------------+--------------------+--------------------+
+| not      |                    |                    |                    |
+| diced TT |     |vHT_flat|     |     |vHT_line|     |     |vHT_7lin|     |
++----------+--------------------+--------------------+--------------------+
 
 .. |vH5_flat| imagezoom:: _images/SivonHamos-5mmDiced60-det_E-flat.*
 .. |vH5_line| imagezoom:: _images/SivonHamos-5mmDiced60-det_E-line.*
@@ -253,6 +263,11 @@ angle.
 .. |vHc_flat| imagezoom:: _images/SivonHamos-notDiced60-det_E-flat.*
 .. |vHc_line| imagezoom:: _images/SivonHamos-notDiced60-det_E-line.*
 .. |vHc_7lin| imagezoom:: _images/SivonHamos-notDiced60-det_E-7lin.*
+   :loc: upper-right-corner
+
+.. |vHT_flat| imagezoom:: _images/SivonHamos-notDiced60-det_E-flat_TT.*
+.. |vHT_line| imagezoom:: _images/SivonHamos-notDiced60-det_E-line_TT.*
+.. |vHT_7lin| imagezoom:: _images/SivonHamos-notDiced60-det_E-7lin_TT.*
    :loc: upper-right-corner
 
 With the coloring by stripe (crystal facet) number, the image below explains
@@ -270,7 +285,6 @@ increase the detector image.
 
 .. |vH5_line_stripes| imagezoom:: _images/SivonHamos-5mmDiced60-det_stripes-line.*
 .. |vH1_line_stripes| imagezoom:: _images/SivonHamos-1mmDiced60-det_stripes-line.*
-
 
 The efficiency of a von Hamos spectrometer is significantly lower as compared
 to Johann and Johansson crystals. The reason for the lower efficiency can be
