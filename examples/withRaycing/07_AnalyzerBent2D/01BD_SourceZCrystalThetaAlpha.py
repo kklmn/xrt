@@ -23,8 +23,8 @@ The images for flat and line sources were used to calculate energy resolution
 the lines equal to *δE*.
 
 In addition to perfect crystal reflectivity calculations, elastically deformed
-crystal reflectivity was calculated by means of the Takagi-Taupin equations
-(labelled TT), which is applicable only to non-diced crystals.
+crystal reflectivity was calculated by means of
+:ref:`the Takagi-Taupin equations <useTT>` (labelled TT).
 
 +--------------+--------------------+--------------------+--------------------+
 |   crystal    |    flat source     |    line source     |      7 lines       |
