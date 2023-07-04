@@ -14,42 +14,59 @@ source-detector line. Such bending gives a family of Rowland circles all going
 through the source and the detector.
 
 The conditions are equal to those in the previous section. The crystal size is
-100 × 100 mm\ :sup:`2`; the crystal facets of the diced version are
-1.4meridional × 2.1saggittal mm\ :sup:`2` with 50 µm gaps.
+100 × 100 mm\ :sup:`2`. The crystal facets of the diced version are
+1.4meridional × 2.1sagittal mm\ :sup:`2` with 50 µm gaps. The non-diced
+crystals are 350 µm thick.
 
 The images for flat and line sources were used to calculate energy resolution
 *δE*. After this, a 7-line source is created with the energy spacing between
 the lines equal to *δE*.
 
-+-----------+---------------------+---------------------+---------------------+
-|  crystal  |     flat source     |     line source     |       7 lines       |
-+===========+=====================+=====================+=====================+
-| Johann    |      |nb_flat|      |      |nb_line|      |      |nb_7lin|      |
-+-----------+---------------------+---------------------+---------------------+
-| Johansson |      |ng_flat|      |      |ng_line|      |      |ng_7lin|      |
-+-----------+---------------------+---------------------+---------------------+
-| Johann    |                     |                     |                     |
-| diced     |      |db_flat|      |      |db_line|      |      |db_7lin|      |
-+-----------+---------------------+---------------------+---------------------+
-| Johansson |                     |                     |                     |
-| diced     |      |dg_flat|      |      |dg_line|      |      |dg_7lin|      |
-+-----------+---------------------+---------------------+---------------------+
+In addition to perfect crystal reflectivity calculations, elastically deformed
+crystal reflectivity was calculated by means of the Takagi-Taupin equations
+(labelled TT), which is applicable only to non-diced crystals.
 
-.. |nb_flat| imagezoom:: _images/2D-01b-Si444-60.0-det_E-flat.*
-.. |nb_line| imagezoom:: _images/2D-01b-Si444-60.0-det_E-line.*
-.. |nb_7lin| imagezoom:: _images/2D-01b-Si444-60.0-det_E-7lin.*
++--------------+--------------------+--------------------+--------------------+
+|   crystal    |    flat source     |    line source     |      7 lines       |
++==============+====================+====================+====================+
+| Johann       |     |nb_flat|      |     |nb_line|      |     |nb_7lin|      |
++--------------+--------------------+--------------------+--------------------+
+| Johann TT    |     |tb_flat|      |     |tb_line|      |     |tb_7lin|      |
++--------------+--------------------+--------------------+--------------------+
+| Johansson    |     |ng_flat|      |     |ng_line|      |     |ng_7lin|      |
++--------------+--------------------+--------------------+--------------------+
+| Johansson TT |     |tg_flat|      |     |tg_line|      |     |tg_7lin|      |
++--------------+--------------------+--------------------+--------------------+
+| Johann       |                    |                    |                    |
+| diced        |     |db_flat|      |     |db_line|      |     |db_7lin|      |
++--------------+--------------------+--------------------+--------------------+
+| Johansson    |                    |                    |                    |
+| diced        |     |dg_flat|      |     |dg_line|      |     |dg_7lin|      |
++--------------+--------------------+--------------------+--------------------+
+
+.. |nb_flat| imagezoom:: _images/2D-01b-Si444-60-det_E-flat.*
+.. |nb_line| imagezoom:: _images/2D-01b-Si444-60-det_E-line.*
+.. |nb_7lin| imagezoom:: _images/2D-01b-Si444-60-det_E-7lin.*
    :loc: upper-right-corner
-.. |ng_flat| imagezoom:: _images/2D-02gb-Si444-60.0-det_E-flat.*
-.. |ng_line| imagezoom:: _images/2D-02gb-Si444-60.0-det_E-line.*
-.. |ng_7lin| imagezoom:: _images/2D-02gb-Si444-60.0-det_E-7lin.*
+.. |tb_flat| imagezoom:: _images/2D-01b-Si444-60-det_E-flat_TT.*
+.. |tb_line| imagezoom:: _images/2D-01b-Si444-60-det_E-line_TT.*
+.. |tb_7lin| imagezoom:: _images/2D-01b-Si444-60-det_E-7lin_TT.*
    :loc: upper-right-corner
-.. |db_flat| imagezoom:: _images/2D-03bd-Si444-60.0-det_E-flat.*
-.. |db_line| imagezoom:: _images/2D-03bd-Si444-60.0-det_E-line.*
-.. |db_7lin| imagezoom:: _images/2D-03bd-Si444-60.0-det_E-7lin.*
+.. |ng_flat| imagezoom:: _images/2D-02gb-Si444-60-det_E-flat.*
+.. |ng_line| imagezoom:: _images/2D-02gb-Si444-60-det_E-line.*
+.. |ng_7lin| imagezoom:: _images/2D-02gb-Si444-60-det_E-7lin.*
    :loc: upper-right-corner
-.. |dg_flat| imagezoom:: _images/2D-04gbd-Si444-60.0-det_E-flat.*
-.. |dg_line| imagezoom:: _images/2D-04gbd-Si444-60.0-det_E-line.*
-.. |dg_7lin| imagezoom:: _images/2D-04gbd-Si444-60.0-det_E-7lin.*
+.. |tg_flat| imagezoom:: _images/2D-02gb-Si444-60-det_E-flat_TT.*
+.. |tg_line| imagezoom:: _images/2D-02gb-Si444-60-det_E-line_TT.*
+.. |tg_7lin| imagezoom:: _images/2D-02gb-Si444-60-det_E-7lin_TT.*
+   :loc: upper-right-corner
+.. |db_flat| imagezoom:: _images/2D-03bd-Si444-60-det_E-flat.*
+.. |db_line| imagezoom:: _images/2D-03bd-Si444-60-det_E-line.*
+.. |db_7lin| imagezoom:: _images/2D-03bd-Si444-60-det_E-7lin.*
+   :loc: upper-right-corner
+.. |dg_flat| imagezoom:: _images/2D-04gbd-Si444-60-det_E-flat.*
+.. |dg_line| imagezoom:: _images/2D-04gbd-Si444-60-det_E-line.*
+.. |dg_7lin| imagezoom:: _images/2D-04gbd-Si444-60-det_E-7lin.*
    :loc: upper-right-corner
 
 Notice the energy distribution over the crystal area: the sagittal bending
@@ -57,31 +74,33 @@ makes it uniform in the sagittal direction (here horizontal) and the
 ground-bent technology makes it uniform also in the meridional direction
 (here vertical):
 
-+-----------+----------------------------+----------------------------+
-|  crystal  |      footprint image       |    zoomed in footprint     |
-+===========+============================+============================+
-| Johann    |          |nb_out|          |          |nb_in|           |
-+-----------+----------------------------+----------------------------+
-| Johansson |          |ng_out|          |          |ng_in|           |
-+-----------+----------------------------+----------------------------+
-| Johann    |                            |                            |
-| diced     |          |db_out|          |          |db_in|           |
-+-----------+----------------------------+----------------------------+
-| Johansson |                            |                            |
-| diced     |          |dg_out|          |          |dg_in|           |
-+-----------+----------------------------+----------------------------+
++--------------+----------------------------+----------------------------+
+|   crystal    |      footprint image       |    zoomed in footprint     |
++==============+============================+============================+
+| Johann       |          |nb_out|          |                            |
++--------------+----------------------------+----------------------------+
+| Johann TT    |          |tb_out|          |                            |
++--------------+----------------------------+----------------------------+
+| Johansson    |          |ng_out|          |                            |
++--------------+----------------------------+----------------------------+
+| Johansson TT |          |tg_out|          |                            |
++--------------+----------------------------+----------------------------+
+| Johann       |                            |                            |
+| diced        |          |db_out|          |          |db_in|           |
++--------------+----------------------------+----------------------------+
+| Johansson    |                            |                            |
+| diced        |          |dg_out|          |          |dg_in|           |
++--------------+----------------------------+----------------------------+
 
-.. |nb_out| imagezoom:: _images/2D-01b-Si444-60.0-xtal_E-7lin.*
-.. |ng_out| imagezoom:: _images/2D-02gb-Si444-60.0-xtal_E-7lin.*
-.. |db_out| imagezoom:: _images/2D-03bd-Si444-60.0-xtal_E-7lin.*
-.. |dg_out| imagezoom:: _images/2D-04gbd-Si444-60.0-xtal_E-7lin.*
-.. |nb_in| imagezoom:: _images/2D-01b-Si444-60.0-xtal_E_zoom-7lin.*
+.. |nb_out| imagezoom:: _images/2D-01b-Si444-60-xtal_E-7lin.*
+.. |tb_out| imagezoom:: _images/2D-01b-Si444-60-xtal_E-7lin_TT.*
+.. |ng_out| imagezoom:: _images/2D-02gb-Si444-60-xtal_E-7lin.*
+.. |tg_out| imagezoom:: _images/2D-02gb-Si444-60-xtal_E-7lin_TT.*
+.. |db_out| imagezoom:: _images/2D-03bd-Si444-60-xtal_E-7lin.*
+.. |dg_out| imagezoom:: _images/2D-04gbd-Si444-60-xtal_E-7lin.*
+.. |db_in| imagezoom:: _images/2D-03bd-Si444-60-xtal_E_zoom-7lin.*
    :loc: upper-right-corner
-.. |ng_in| imagezoom:: _images/2D-02gb-Si444-60.0-xtal_E_zoom-7lin.*
-   :loc: upper-right-corner
-.. |db_in| imagezoom:: _images/2D-03bd-Si444-60.0-xtal_E_zoom-7lin.*
-   :loc: upper-right-corner
-.. |dg_in| imagezoom:: _images/2D-04gbd-Si444-60.0-xtal_E_zoom-7lin.*
+.. |dg_in| imagezoom:: _images/2D-04gbd-Si444-60-xtal_E_zoom-7lin.*
    :loc: upper-right-corner
 
 """
@@ -121,6 +140,9 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
+useTT = False
+if showIn3D:
+    useTT = False
 
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
@@ -129,14 +151,19 @@ elif crystalMaterial == 'Ge':
     d111 = 3.2662725  # Ge
 else:
     raise
+
+isDiced = True
+
 orders = (1, 4, 8, 12)
-crystals = [rm.CrystalDiamond((i, i, i), d111/i) for i in orders]
+crystals = [rm.CrystalDiamond((i, i, i), d111/i,
+                              t=1.5 if isDiced else 0.35,
+                              useTT=useTT)
+            for i in orders]
 crystalsMask = (0, 1, 0, 0)  # 0=don't execute; 1=execute
-#numiters = [24, 360, 1280, 5120]  # @crysals
-numiters = [24, 24, 48, 120]  # @crysals
+numiters = [16, 64, 256, 576]  # @crysals
+nprocesses = 4
 
 R = 500.  # mm
-isDiced = True
 isJohansson = True
 
 if isJohansson:
@@ -179,7 +206,7 @@ else:  # diced
     facetKWargs = {'dxFacet': 2.1, 'dyFacet': 1.4, 'dxGap': 0.05,
                    'dyGap': 0.05}
     if not isJohansson:
-        bentName = '03bd'
+        bentName = '2D-03bd'
         Toroid = roe.DicedJohannToroid
         analyzerName = 'DicedJohannAnalyzer'
         eAxesFlat = [[2.0e-2, 1.9e-2, 1.8e-2, 1.6e-2],
@@ -189,7 +216,7 @@ else:  # diced
                      [4.0e-4, 3.0e-4, 3.0e-4, 3.0e-4]]
         yAxesLine = [1, 0.5, 0.5, 0.5]  # @crysals
     else:  # Johansson
-        bentName = '04gbd'
+        bentName = '2D-04gbd'
         Toroid = roe.DicedJohanssonToroid
         analyzerName = 'DicedJohanssonAnalyzer'
         eAxesFlat = [[1.5e-2, 1.0e-2, 1.0e-2, 1.0e-2],
@@ -204,7 +231,7 @@ thetaMask = 0, 0, 0, 1, 0
 alphasDegree = 0.,  # degree
 
 
-def build_beamline(nrays=raycing.nrays):
+def build_beamline(nrays=1e6):
     beamLine = raycing.BeamLine(azimuth=0, height=0)
     rs.GeometricSource(
         beamLine, 'GeometricSource', nrays=nrays, dx=beamH, dy=0,
@@ -213,7 +240,8 @@ def build_beamline(nrays=raycing.nrays):
         beamLine, analyzerName, surface=('',),
         limPhysX=(-dxCrystal/2, dxCrystal/2),
         limPhysY=(-dyCrystal/2, dyCrystal/2),
-        Rm=Rm, shape='rect', **facetKWargs)
+        Rm=Rm, shape='rect', **facetKWargs,
+        targetOpenCL='auto' if useTT else None, precisionOpenCL='float32')
     beamLine.detector = rsc.Screen(beamLine, 'Detector', x=(1, 0, 0))
     return beamLine
 
@@ -515,7 +543,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                             plot.yaxis.limits = [-yAxisLim, yAxisLim]
                         xrtr.set_repeats(numiter)
                         if isource == 0:  # flat
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             eAxisFlat = eAxesFlat[ithetaDegree][icrystal]
                             eAxisMin = E0 * (1. - eAxisFlat)
                             eAxisMax = E0 * (1. + eAxisFlat)
@@ -568,14 +596,15 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                                 plot.caxis.limits = [eAxisMin, eAxisMax]
 
                         for plot in plots:
-                            filename = '{0}-{1}-{2}-{3}-{4}'.format(
+                            filename = '{0}-{1}-{2:.0f}-{3}-{4}{5}'.format(
                                 bentName, crystalLabel, thetaDegree,
-                                plot.title, sourcename)
+                                plot.title, sourcename,
+                                '_TT' if useTT else '')
                             plot.saveName = filename + '.png'
 #                            plot.persistentName = filename + '.pickle'
                         if showIn3D:
                             beamLine.glowFrameName = \
-                                '{0}-{1}-{2}-{3}-{4}.jpg'.format(
+                                '{0}-{1}-{2:.0f}-{3}-{4}.jpg'.format(
                                     bentName, crystalLabel, thetaDegree,
                                     isource, sourcename)
                         yield
@@ -631,10 +660,8 @@ def main():
             plotDetE]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
-        beamLine=beamLine, processes='half')
+        beamLine=beamLine, processes=1 if useTT else nprocesses)
 
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
 if __name__ == '__main__':
     main()
