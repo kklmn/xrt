@@ -293,7 +293,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                 offsetE = round(E0, 2)
                 for alphaDegree in alphasDegree:
                     alpha = np.radians(alphaDegree)
-                    beamLine.analyzer.set_alpha(alpha)
+                    beamLine.analyzer.alpha = alpha
                     p = 2. * R * math.cos(theta + alpha)
                     sin2Theta = math.sin(2 * theta)
                     cos2Theta = math.cos(2 * theta)
