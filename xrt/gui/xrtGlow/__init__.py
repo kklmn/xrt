@@ -5,13 +5,13 @@ u"""
 xrtGlow -- an interactive 3D beamline viewer
 --------------------------------------------
 
-The beamline created in xrtQook can be interactively viewed in an OpenGL based
-widget xrtGlow. It visualizes beams, footprints, surfaces, apertures and
-screens. The brightness represents intensity and the color represents an
-auxiliary user-selected distribution, typically energy. A virtual screen can be
-put at any position and dragged by mouse with simultaneous observation of the
-beam distribution on it. See two example screenshots below (click to expand and
-read the captions).
+The beamline created in xrtQook or in a python script can be interactively
+viewed in an OpenGL based widget xrtGlow. It visualizes beams, footprints,
+surfaces, apertures and screens. The brightness represents intensity and the
+color represents an auxiliary user-selected distribution, typically energy.
+A virtual screen can be put at any position and dragged by mouse with
+simultaneous observation of the beam distribution on it. See two example
+screenshots below (click to expand and read the captions).
 
 The primary purpose of xrtGlow is to demonstrate the alignment correctness
 given the fact that xrtQook can automatically calculate several positional and

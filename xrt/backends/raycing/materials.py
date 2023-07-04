@@ -1055,10 +1055,26 @@ class Crystal(Material):
             the crystal is bent, local deformation of the diffracting plane is
             taken into account, creating the polychromatic focusing effect.
 
+        .. _useTT:
+
         *useTT*: bool
-            Specifies whether the reflectivity will by calculated by analytical
-            formula or by solution of the Takagi-Taupin equations. Must be set
-            to 'True' in order to calculate the reflectivity of bent crystals.
+            Specifies whether the reflectivity is calculated by analytical
+            formula (*useTT* is False) or by solution of the Takagi-Taupin
+            equations (when *useTT* is True). The latter case is based on PyTTE
+            code [PyTTE1]_ [PyTTE2]_ that was adapted to running the
+            calculations on GPUs.
+
+            .. [PyTTE1] https://github.com/aripekka/pyTTE
+
+            .. [PyTTE2] A.-P. Honkanen, S. Huotari, IUCrJ 8 (2021) 102-115.
+               doi:10.1107/S2052252520014165
+
+            .. warning::
+                You need a good graphics card to run these calculations!
+                The corresponding optical element, that utilizes the present
+                crystal material class, must specify *targetOpenCL* (typically,
+                'auto') and *precisionOpenCL* (in most cases 'float32' is
+                sufficient).
 
         *mosaicity*: float, radians
             The sigma of the normal distribution of the crystallite normals.
