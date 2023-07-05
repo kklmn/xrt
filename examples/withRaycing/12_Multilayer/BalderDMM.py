@@ -85,8 +85,8 @@ def build_beamline(nrays=1e4, hkl=(1, 1, 1), stripe='Si',
         limPhysX=(-12, 12), limPhysY=(-150, 150),
         cryst2perpTransl=20, cryst2longTransl=100,
         limPhysX2=(-12, 12), limPhysY2=(-200, 200),
-#        targetOpenCL='auto',
-        targetOpenCL='CPU',
+        targetOpenCL='auto',
+        # targetOpenCL='CPU',
         alarmLevel=0.05)
 
     beamLine.BSBlock = ra.RectangularAperture(

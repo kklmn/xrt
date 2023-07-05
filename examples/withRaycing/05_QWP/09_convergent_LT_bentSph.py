@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""An example of using xrt with raycing backend."""
 __author__ = "Konstantin Klementiev"
-__date__ = "08 Mar 2016"
+__date__ = "01 Jul 2023"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import math
 import numpy as np
@@ -19,16 +18,18 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
+useTT = False  # elastically distorted crystal reflectivity or ideal crystal
+tOCL = "auto"
 
 E0 = 9000.
 eLimits = E0, E0+2.5
-prefix = '09_conv_LT_bentSph'
+prefix = '09_conv_LT_bentSph_{}'.format("withTT" if useTT else "geom")
 
 crystalDiamond = rm.CrystalDiamond((1, 1, 1), 2.0592872, elements='C',
-                                   geom='Laue transmitted', t=0.05)
-#crystalDiamond = rm.CrystalDiamond(
-#    (3,1,1), 2.0592872*(3./11)**0.5, elements='C',
-#    geom='Laue transmitted', t=0.05)
+                                   geom='Laue transmitted', t=0.3,
+                                   useTT=useTT)
+if useTT:
+    crystalDiamond.auto_PyTTE_Limits = False
 theta0 = math.asin(rm.ch / (2 * crystalDiamond.d * (E0+1.2)))
 
 yDCM = 21000.
@@ -78,7 +79,10 @@ def build_beamline(nrays=raycing.nrays):
 
     beamLine.qwp = roe.BentLaueSphere(
         beamLine, 'QWP', (0, yQWP, zFlatMirror), roll=math.pi/4,
-        material=(crystalDiamond,), R=3000.)
+        material=(crystalDiamond,), R=3000.,
+        # Note: with precisionOpenCL='float32' may not converge!
+        targetOpenCL=tOCL if useTT else None, precisionOpenCL='float64'
+        )
     beamLine.qwp.pitch = theta0 + math.pi/2
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', (0, ySample, zFlatMirror))
@@ -165,22 +169,22 @@ def define_plots(beamLine):
     plot.caxis.limits = eLimits
     plot.caxis.offset = offsetE
     plot.textPanel = plot.fig.text(
-        0.88, 0.8, '', transform=plot.fig.transFigure,
-        size=14, color='r', ha='center')
-    plots.append(plot)
-
-    plot = xrtp.XYCPlot(
-        'beamFSM2', (1,),
-        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.15, 0.15]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[-0.15, 0.15]),
-        caxis=xrtp.XYCAxis('degree of polarization', '',
-                           data=raycing.get_polarization_degree,
-                           limits=[0, 1]),
-        ePos=1, title=beamLine.fsm2.name+'_DegreeOfPol')
-    plot.textPanel = plot.fig.text(
         0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
         ha='center')
     plots.append(plot)
+
+    # plot = xrtp.XYCPlot(
+    #     'beamFSM2', (1,),
+    #     xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-0.15, 0.15]),
+    #     yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[-0.15, 0.15]),
+    #     caxis=xrtp.XYCAxis('degree of polarization', '',
+    #                        data=raycing.get_polarization_degree,
+    #                        limits=[0, 1]),
+    #     ePos=1, title=beamLine.fsm2.name+'_DegreeOfPol')
+    # plot.textPanel = plot.fig.text(
+    #     0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
+    #     ha='center')
+    # plots.append(plot)
 
     plot = xrtp.XYCPlot(
         'beamFSM2', (1,),
@@ -190,6 +194,7 @@ def define_plots(beamLine):
                            data=raycing.get_circular_polarization_rate,
                            limits=[-1, 1]),
         ePos=1, title=beamLine.fsm2.name+'_CircPolRate')
+    plot.caxis.fwhmFormatStr = '%.2f'
     plot.textPanel = plot.fig.text(
         0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
         ha='center')
@@ -203,6 +208,7 @@ def define_plots(beamLine):
                            data=raycing.get_ratio_ellipse_axes,
                            limits=[-1, 1]),
         ePos=1, title=beamLine.fsm2.name+'_PolAxesRatio')
+    plot.caxis.fwhmFormatStr = '%.2f'
     plot.textPanel = plot.fig.text(
         0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
         ha='center')
@@ -231,6 +237,7 @@ def define_plots(beamLine):
                            data=raycing.get_phase_shift,
                            limits=[-1, 1]),  # limits are in units of pi!
         ePos=1, title=beamLine.fsm2.name+'_PhaseShift')
+    plot.caxis.fwhmFormatStr = '%.2f'
     formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
     plot.ax1dHistE.yaxis.set_major_formatter(formatter)
     plot.textPanel = plot.fig.text(
@@ -244,8 +251,11 @@ def plot_generator(plots, beamLine):
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 
-    crystalDiamond.t = 0.5  # in mm
-    posTheta = np.logspace(0, 13, 14, base=2)
+    crystalDiamond.t = 0.3  # in mm
+    if useTT:
+        posTheta = np.logspace(0, 10, 11, base=2)
+    else:
+        posTheta = np.logspace(0, 13, 14, base=2)
     departureTheta = np.hstack((-posTheta[::-1], 0, posTheta))
     Rnominal = ySample - yQWP
 
@@ -254,8 +264,10 @@ def plot_generator(plots, beamLine):
         suffix = polar
         if suffix is None:
             suffix = 'none'
-        sq2 = math.sqrt(2)
-        for radiusFactor in [2, sq2, 1, 1/sq2, 0.5, np.inf]:
+#        sq2 = math.sqrt(2)
+#        for radiusFactor in [2, sq2, 1, 1/sq2, 0.5, np.inf]:
+#        for radiusFactor in (-1, 1, np.inf):
+        for radiusFactor in -1, :
             radius = radiusFactor * Rnominal
             beamLine.qwp.R = radius
             for iTheta, dTheta in enumerate(departureTheta):
@@ -271,7 +283,7 @@ def plot_generator(plots, beamLine):
                     else:
                         fileName = '{0}_{1}_{2}_R={3:05.0f}mm_{4:02d}.png'.\
                             format(prefix, plot.title, suffix, radius,
-                                    iTheta)
+                                   iTheta)
                     plot.saveName = fileName
 #                    plot.persistentName = fileName + '.pickle'
                     try:
@@ -307,9 +319,10 @@ def main():
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(
         plots, repeats=24, generator=plot_generator,
-        beamLine=beamLine, globalNorm=True, processes='half')
+        beamLine=beamLine, globalNorm=True,
+        processes=1 if useTT else 'half'
+        )
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
 if __name__ == '__main__':
     main()

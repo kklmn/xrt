@@ -102,7 +102,7 @@ __date__ = "16 Mar 2017"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import pickle
 import numpy as np
-#import matplotlib as mpl
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -236,7 +236,7 @@ kw['distE'] = 'lines'
 polarization = 'horizontal'
 visualizeCrossSection = True
 
-cmap = cm.get_cmap('jet')
+cmap = mpl.colormaps['jet']
 fName = os.path.join(cwd, prefix + suffix)
 pickleName = fName + '.pickle'
 

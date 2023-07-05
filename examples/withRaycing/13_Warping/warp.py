@@ -124,7 +124,7 @@ betaX = 9.539
 betaZ = 1.982
 
 what = 'rays'
-#what = 'wave'
+# what = 'wave'
 
 if what == 'rays':
     prefix = 'rays-'
@@ -132,7 +132,7 @@ if what == 'rays':
     nrays = 1e5
     repeats = 10
 elif what == 'wave':
-    is0emittance = False
+    is0emittance = True
     nrays = 1e6
     if is0emittance:
         prefix = 'wave-0emit-'
@@ -272,8 +272,9 @@ def see_the_bump():
                  fontsize=14)
     rect_2D = [0.15, 0.08, 0.75, 0.8]
     ax = plt.axes(rect_2D)
-    ax.contour(xi, yi, zi.T, 15, linewidths=0.5, colors='k')
-    c = ax.contourf(xi, yi, zi.T, 15, cmap=plt.cm.jet)
+    ax.contour(xi, yi, zi.T, levels=15, linewidths=0.5, colors='k')
+    c = ax.contourf(xi, yi, zi.T, levels=15,
+                    cmap=plt.cm.jet, vmin=-50, vmax=25)
     cbar = fig.colorbar(c)  # draw colorbar
     cbar.ax.set_ylabel(u'z (nm)')
 
@@ -288,7 +289,8 @@ def see_the_bump():
     ax.set_ylabel(u'y (mm)')
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.scatter(x, y, c=z, marker='o', color='gray', s=50)
+    ax.scatter(x, y, c=z*1e6, marker='o', s=50,
+               cmap=plt.cm.jet, vmin=-50, vmax=25)
     ax.quiver(x, y, a, -b, edgecolor='w', color='w', headaxislength=5,
               scale=6e-5, lw=0.8)
 
@@ -421,5 +423,5 @@ def main():
 
 
 if __name__ == '__main__':
-#    see_the_bump()
+    # see_the_bump()
     main()

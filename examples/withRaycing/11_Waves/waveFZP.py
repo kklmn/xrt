@@ -37,7 +37,7 @@ __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import pickle
-#import matplotlib as mpl
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -61,7 +61,7 @@ thinnestZone = 30e-6  # in mm
 maxOrder = 3
 maxDisplayOrder = 3
 visualizeCrossSection = True
-cmap = cm.get_cmap('jet')
+cmap = mpl.colormaps['jet']
 
 prefix = '1-LE-FZP_{0:.0f}nm'.format(thinnestZone*1e6)
 energies = np.linspace(50, 250, 101)
@@ -201,7 +201,7 @@ def create_fig(rect2d, scanAxis, axisLabel, scanAxisFactor, maxOrder):
         axi = fig1.add_axes(recti, aspect='auto', sharey=sharey)
         sharey = axi if o > 0 else None
         axi.locator_params(axis='x', nbins=3)
-        orderText = r'{0}$^{{\rm{1}}}$ order'.format(
+        orderText = r'{0}$^{{\rm {1}}}$ order'.format(
             o, 'st' if o == 1 else 'nd' if o == 2 else 'rd' if o == 3
             else 'th')
         axi.text(0.98, 0.5, orderText, rotation='vertical',
@@ -296,7 +296,7 @@ def visualize_efficiency():
                           '-', lw=0.5, color=cmap(float(iE)/(elen-1)))
                 iaxr.set_xlim(z[o, 0]*f, z[o, -1]*f)
 
-        figr.savefig(prefix + '-orders-r{0}.png'.format(suffix))
+        # figr.savefig(prefix + '-orders-r{0}.png'.format(suffix))
 
     plt.show()
 

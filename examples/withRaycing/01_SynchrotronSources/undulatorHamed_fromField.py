@@ -9,7 +9,7 @@ import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:igno
 import numpy as np
 import pickle
 import time
-#import matplotlib
+import matplotlib as mpl
 #matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
 raycing._VERBOSITY_ = 80
@@ -365,8 +365,7 @@ def main():
 
 def plotPCA():
     import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
-    cmap = cm.get_cmap('cubehelix')
+    cmap = mpl.colormaps['cubehelix']
 
     pickleName = '{0}-{1}repeats.pickle'.format(prefix, repeats)
     with open(pickleName, 'rb') as f:

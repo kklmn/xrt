@@ -30,9 +30,9 @@ __date__ = "21 Jan 2018"
 import numpy as np
 import scipy.linalg as spl
 from scipy.signal import argrelextrema
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import matplotlib.cm as cm
 
 
 def calc_1D_coherent_fraction(U, axisName, axis, p=0):
@@ -320,7 +320,7 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
     dY = dX * fxz
     dpi = 100
 
-    cmap = cm.get_cmap('cubehelix')
+    cmap = mpl.colormaps['cubehelix']
 #    cmap = None  # default to rc image.cmap value
 
     extent = limx + limz
