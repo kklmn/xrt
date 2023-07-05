@@ -1868,7 +1868,11 @@ class XYCPlotWithNumerOfReflections(XYCPlot):
         if hasattr(self, 'textUser'):
             for text in reversed(self.ax1dHistE.texts):
                 if text in self.textUser:
-                    self.ax1dHistE.texts.remove(text)
+                    # self.ax1dHistE.texts.remove(text)
+                    try:
+                        text.remove()
+                    except ValueError:
+                        pass
                 del text
             del self.textUser[:]
 
