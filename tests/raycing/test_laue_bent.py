@@ -25,7 +25,7 @@ crystalSi01 = rmats.CrystalSi(
     t=0.1,
     hkl=[1, 1, 1],
     useTT=True,
-    calcBorrmann='TT',
+    # calcBorrmann='TT',
     geom=r"Laue reflected")
 
 
@@ -55,7 +55,7 @@ def build_beamline():
         R=1e4,
         crossSection='parabolic',
         material=crystalSi01,
-        targetOpenCL='CPU')
+        targetOpenCL='auto')
 
     beamLine.screen01 = rscreens.Screen(
         bl=beamLine,

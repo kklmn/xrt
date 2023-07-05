@@ -1073,8 +1073,9 @@ class Crystal(Material):
                 You need a good graphics card to run these calculations!
                 The corresponding optical element, that utilizes the present
                 crystal material class, must specify *targetOpenCL* (typically,
-                'auto') and *precisionOpenCL* (in most cases 'float32' is
-                sufficient).
+                'auto') and *precisionOpenCL* (in Bragg cases 'float32' is
+                typically sufficient and 'float64' is typically needed in Laue
+                cases).
 
         *mosaicity*: float, radians
             The sigma of the normal distribution of the crystallite normals.

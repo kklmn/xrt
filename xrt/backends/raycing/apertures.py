@@ -894,8 +894,9 @@ class PolygonalAperture(object):
             self.ordinalNum = len(bl.slits)
             self.lostNum = -self.ordinalNum - 1000
         if name in [None, 'None', '']:
-            self.name = '{0}{1}'.format(self.__class__.__name__,
-                                        self.ordinalNum)
+            self.name = '{0}{1}'.format(
+                self.__class__.__name__,
+                self.ordinalNum if bl is not None else '')
         else:
             self.name = name
 

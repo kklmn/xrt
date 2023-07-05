@@ -88,7 +88,8 @@ def main(case, icalc, plot):
     dpsi = psi[1] - psi[0]
     source = rs.Undulator(**kwargs)
     print('please wait...')
-    I0x, l1, l2, l3 = source.intensities_on_mesh(energy, theta, psi)
+    I0x, l1, l2, l3 = source.intensities_on_mesh(energy, theta, psi,
+                                                 eSpreadNSamples=13)
     whereTheta = np.argwhere(abs(theta) <= angleMaxX)
     wherePsi = np.argwhere(abs(psi) <= angleMaxZ)
     fluxX = I0x[:,
@@ -103,20 +104,20 @@ def main(case, icalc, plot):
                             unpack=True)
         axplot(eS*1e-3, fS, label='Spectra')
 
-    # UrgentUndulator
-    import xrt.backends.raycing as raycing
-    beamLine = raycing.BeamLine(azimuth=0, height=0)
-    kwargs = kwargsCommon.copy()
-    kwargs.update(kwargsURGENT)
-    sourceU = rs.UndulatorUrgent(beamLine, **kwargs)
-    I0u, l1, l2, l3 = sourceU.intensities_on_mesh()
-    # add the other 3 quadrants, except the x=0 and z=0 lines:
-    I0u = np.concatenate((I0u[:, :0:-1, :], I0u), axis=1)
-    I0u = np.concatenate((I0u[:, :, :0:-1], I0u), axis=2)
-    fluxU = I0u.sum(axis=(1, 2)) * sourceU.dx * sourceU.dz
-    urgentEnergy = sourceU.Es
-    axplot(urgentEnergy*1e-3, fluxU, label='Urgent')
-    # end UrgentUndulator
+    # # UrgentUndulator
+    # import xrt.backends.raycing as raycing
+    # beamLine = raycing.BeamLine(azimuth=0, height=0)
+    # kwargs = kwargsCommon.copy()
+    # kwargs.update(kwargsURGENT)
+    # sourceU = rs.UndulatorUrgent(beamLine, **kwargs)
+    # I0u, l1, l2, l3 = sourceU.intensities_on_mesh()
+    # # add the other 3 quadrants, except the x=0 and z=0 lines:
+    # I0u = np.concatenate((I0u[:, :0:-1, :], I0u), axis=1)
+    # I0u = np.concatenate((I0u[:, :, :0:-1], I0u), axis=2)
+    # fluxU = I0u.sum(axis=(1, 2)) * sourceU.dx * sourceU.dz
+    # urgentEnergy = sourceU.Es
+    # axplot(urgentEnergy*1e-3, fluxU, label='Urgent')
+    # # end UrgentUndulator
 
     # ax.set_ylim(1e9, 4e13)
     ax.legend()
@@ -138,9 +139,9 @@ if __name__ == '__main__':
     # main(case=1, icalc=2, plot='lin-y')
     # main(case=1, icalc=1, plot='lin-y')
 
-    main(case=2, icalc=3, plot='lin-y')
+    # main(case=2, icalc=3, plot='lin-y')
     # main(case=2, icalc=2, plot='lin-y')
-    # main(case=2, icalc=1, plot='lin-y')
+    main(case=2, icalc=1, plot='lin-y')
 
     # main(case=3, icalc=3, plot='log-y')
     # main(case=3, icalc=2, plot='log-y')
