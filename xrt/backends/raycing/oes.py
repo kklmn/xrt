@@ -664,11 +664,11 @@ class BentLaueCylinder(OE):
 
     def local_n_depth(self, x, y, z):
 
-        a = -x*0  # -dz/dx
+        a = -x*0.  # -dz/dx
         b = -y / self.R  # -dz/dy
         c = 1.
 
-        norm = np.sqrt(a**2 + b**2 + 1)
+        norm = np.sqrt(a**2 + b**2 + 1.)
         a /= norm
         b /= norm
         c /= norm
@@ -821,7 +821,7 @@ class BentLaue2D(OE):
         b = -y / self.Rm  # -dz/dy
         c = 1.
 
-        norm = np.sqrt(a**2 + b**2 + 1)
+        norm = np.sqrt(a**2 + b**2 + 1.)
         a /= norm
         b /= norm
         c /= norm
@@ -888,6 +888,7 @@ class BentLaue2D(OE):
 #        cB = -b
         bB = np.ones_like(a)
         cB = np.zeros_like(a)
+
         if self.alpha:
             bB, cB = raycing.rotate_x(bB, cB, self.cosalpha, -self.sinalpha)
 
@@ -895,9 +896,8 @@ class BentLaue2D(OE):
 #            b, c = raycing.rotate_x(b, c, -self.sinalpha, -self.cosalpha)
 #        else:
 #            b, c = c, -b
-
+        aB, cB = raycing.rotate_y(aB, cB, cosroll, -sinroll)
         bB, cB = raycing.rotate_x(bB, cB, cospitch, sinpitch)
-        aB, cB = raycing.rotate_y(aB, cB, cosroll, sinroll)
 
         normB = (bB**2 + cB**2 + aB**2)**0.5
 
