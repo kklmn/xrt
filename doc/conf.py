@@ -142,7 +142,7 @@ rst_epilog = """
 """.format(', '.join(xrtelem.__all__),
            ', '.join(sort_compounds('name')),
            ', '.join(sort_crystals('volume')))
-print(rst_epilog)
+
 # -- General configuration ----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

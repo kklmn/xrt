@@ -1,7 +1,4 @@
-"""
-Predefined Materials: Crystals
-------------------------------
-
+r"""
 The module :mod:`~xrt.backends.raycing.materials_crystals` contains predefined
 classes for most commonly used crystals. Lattice parameters, atomic positions
 and references have been semi-automatically parsed from XOP/DABAX [XOP]_

@@ -1,7 +1,4 @@
 r"""
-Predefined Materials: Elemental
--------------------------------
-
 The module :mod:`~xrt.backends.raycing.materials_elemental` contains predefined
 classes for elemental materials. Most atomic densities have been adopted from
 the `NIST table of X-Ray Mass Attenuation Coefficients

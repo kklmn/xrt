@@ -40,9 +40,27 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
    :members: __init__
 .. autoclass:: MonoCrystal(CrystalFromCell)
    :members: __init__
+
+Predefined Materials
+--------------------
+
+.. tabs::
+
+   .. tab:: Crystals
+
+      .. automodule:: xrt.backends.raycing.materials_crystals
+
+   .. tab:: Compounds
+
+      .. automodule:: xrt.backends.raycing.materials_compounds
+
+    .. tab:: Elemental
+
+      .. automodule:: xrt.backends.raycing.materials_elemental
+
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "16 Mar 2017"
+__date__ = "6 Jul 2023"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'GradedMultilayer',
            'Coated', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
