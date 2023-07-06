@@ -54,7 +54,7 @@ Predefined Materials
 
       .. automodule:: xrt.backends.raycing.materials_compounds
 
-    .. tab:: Elemental
+   .. tab:: Elemental
 
       .. automodule:: xrt.backends.raycing.materials_elemental
 
