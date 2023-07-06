@@ -112,6 +112,7 @@ mpl.use('agg')
 import xrt.backends.raycing.materials_elemental as xrtelem
 import xrt.backends.raycing.materials_compounds as xrtcomp
 import xrt.backends.raycing.materials_crystals as xrtxtal
+import xrt.backends.raycing.pyTTE_x.elastic_tensors as xrtxelt
 
 
 def sort_compounds(method):
@@ -128,11 +129,13 @@ def sort_compounds(method):
 
 
 def sort_crystals(method):
+    elxs = xrtxelt.CRYSTALS
     if method == 'volume':
         res = sorted([(cname, getattr(xrtxtal, cname)(hkl=[1, 1, 1]).V)
                       for cname in xrtxtal.__all__],
                      key=lambda mat: mat[1])
-        return ['{0[0]} ({0[1]:.4g})'.format(tup) for tup in res]
+        return ['{1}{0[0]}{1} ({0[1]:.4g})'.format(
+            tup, '**' if tup[0] in elxs else '') for tup in res]
 
 
 rst_epilog = """

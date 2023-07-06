@@ -14,7 +14,7 @@ The crystals inherit from :class:`.Crystal` and can use its methods to
 calculate diffraction amplitudes, the Darwin width, extinction depth etc.
 
 The following crystal classes are defined in this module (sorted by cell
-volume in Å³):
+volume in Å³), marked in bold are those with available elastic constants:
 
    | |xtalall|
 
