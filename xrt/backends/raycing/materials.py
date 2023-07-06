@@ -2160,7 +2160,8 @@ class CrystalDiamond(CrystalFcc):
             elif len(args) > 0:
                 hkl = args[0]
             else:
-                raise ValueError('unknown hkl')
+                hkl = [1, 1, 1]
+                kwargs['hkl'] = hkl
             sqrthkl2 = (sum(i**2 for i in hkl))**0.5
             d = a / sqrthkl2
             if len(args) > 1:

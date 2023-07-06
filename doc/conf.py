@@ -131,7 +131,7 @@ def sort_compounds(method):
 def sort_crystals(method):
     elxs = xrtxelt.CRYSTALS
     if method == 'volume':
-        res = sorted([(cname, getattr(xrtxtal, cname)(hkl=[1, 1, 1]).V)
+        res = sorted([(cname, getattr(xrtxtal, cname)().V)
                       for cname in xrtxtal.__all__],
                      key=lambda mat: mat[1])
         return ['{1}{0[0]}{1} ({0[1]:.4g})'.format(

@@ -8,7 +8,7 @@ instantiate its class:
 .. code-block:: python
 
     import xrt.backends.raycing.materials_crystals as xcryst
-    myInSbXtal = xcryst.InSb()
+    myInSbXtal = xcryst.InSb(hkl=(4, 4, 0))  # default hkl=(1, 1, 1)
 
 The crystals inherit from :class:`.Crystal` and can use its methods to
 calculate diffraction amplitudes, the Darwin width, extinction depth etc.
