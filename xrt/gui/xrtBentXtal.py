@@ -52,7 +52,6 @@ from PyQt5.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
 
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
     QPixmap, QColor
-
 import matplotlib as mpl
 from matplotlib.backend_tools import ToolBase
 
@@ -70,8 +69,8 @@ from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
     CalculateAmplitudes  # , integrate_single_scan_step
 from xrt.backends.raycing import materials_crystals as rxtl
 from xrt.backends.raycing.physconsts import CH
-path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__)))))
+path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))))
 
 try:
     import pyopencl as cl
@@ -342,7 +341,7 @@ class PlotWidget(QWidget):
         msg.setStyleSheet("QLabel{min-width: 300px;}")
         msg.setWindowIcon(self.windowIcon())
         msg.setIconPixmap(QPixmap(os.path.join(
-            '..', 'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
+            'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
                 256, Qt.SmoothTransformation))
         msg.setText(txt)
         msg.setWindowTitle(title)
