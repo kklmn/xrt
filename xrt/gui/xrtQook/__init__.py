@@ -90,9 +90,9 @@ if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
 
 try:
-    from ...backends.raycing import materialsclasses as mtlcls
-    from ...backends.raycing import compoundsclasses as cpdcls
-    from ...backends.raycing import crystalclasses as xtlcls
+    from ...backends.raycing import materials_elemental as mtlcls
+    from ...backends.raycing import materials_compounds as cpdcls
+    from ...backends.raycing import materials_crystals as xtlcls
     pdfMats = True
 except ImportError:
     pdfMats = False

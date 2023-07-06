@@ -292,13 +292,6 @@ class Material(object):
     refractive index and absorption coefficient of a material specified by its
     chemical formula and density.
 
-    We have added a set of predefined elemental materials and common
-    compounds based on [NIST table of X-Ray Mass Attenuation Coefficients]
-    (https://physics.nist.gov/PhysRefData/XrayMassCoef/tab1.html) and
-    [CXRO Table of Densities of Common Materials]
-    (https://henke.lbl.gov/cgi-bin/density.pl).
-
-
     """
 
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
@@ -1046,6 +1039,8 @@ class Crystal(Material):
             This parameter is explained in the description of the parent class
             :class:`Material`.
 
+        .. _volumetricDiffraction:
+
         *volumetricDiffraction*: bool
             By default the diffracted ray originates in the point of incidence
             on the surface of the crystal in both Bragg and Laue case. When
@@ -1597,8 +1592,7 @@ class Crystal(Material):
         r"""
         Calculates complex amplitude reflectivity for s- and
         p-polarizations (:math:`\gamma = s, p`) in Bragg and Laue cases, based
-        on modified `PyTTE code <https://github.com/aripekka/pyTTE>`_,
-        `https://arxiv.org/abs/2006.04952 <https://arxiv.org/abs/2006.04952>`_
+        on modified `PyTTE code <https://github.com/aripekka/pyTTE>`_
 
         *alphaAsymm*: float
             Angle of asymmetry in radians.

@@ -35,6 +35,8 @@ elements with various geometries.
 .. autoclass:: LauePlate(OE)
 .. autoclass:: BentLaueCylinder(OE)
    :members: __init__
+.. autoclass:: BentLaue2D(OE)
+   :members: __init__
 .. autoclass:: GroundBentLaueCylinder(BentLaueCylinder)
 .. autoclass:: BentLaueSphere(BentLaueCylinder)
 .. autoclass:: BentFlatMirror(OE)
@@ -51,6 +53,8 @@ elements with various geometries.
 .. .. autoclass:: ParabolicMirror(OE)
 .. autoclass:: EllipticalMirrorParam(OE)
 .. autoclass:: ParabolicalMirrorParam(EllipticalMirrorParam)
+.. autoclass:: ConicalMirror(OE)
+   :members: __init__
 .. autoclass:: DCM(OE)
    :members: __init__, double_reflect
 .. autoclass:: DCMwithSagittalFocusing(DCM)
@@ -65,6 +69,10 @@ elements with various geometries.
 .. autoclass:: DoubleParaboloidLens(ParaboloidFlatLens)
 .. autoclass:: DoubleParabolicCylinderLens(ParabolicCylinderFlatLens)
 .. autoclass:: SurfaceOfRevolution(OE)
+.. autoclass:: ParaboloidCapillaryMirror(SurfaceOfRevolution)
+   :members: __init__
+.. autoclass:: EllipsoidCapillaryMirror(SurfaceOfRevolution)
+   :members: __init__
 .. autoclass:: NormalFZP(OE)
    :members: __init__, rays_good
 .. autoclass:: GeneralFZPin0YZ(OE)
@@ -520,7 +528,9 @@ class LauePlate(OE):
 
 
 class BentLaueCylinder(OE):
-    """Simply bent reflective optical element in Laue geometry (duMond)."""
+    """Simply bent reflective optical element in Laue geometry (duMond).
+    This element supports volumetric diffraction model, if corresponding
+    parameter is enabled in the assigned *material*."""
 
     cl_plist = ("crossSectionInt", "R")
     cl_local_z = """
@@ -707,8 +717,13 @@ class BentLaueCylinder(OE):
 
 
 class BentLaue2D(OE):
-    """Parabolically bent reflective optical element in Laue geometry. The
-        element may be syn/anticlastic if radii have same/opposite sign."""
+    """Parabolically bent reflective optical element in Laue geometry.
+    Meridional and sagittal radii (Rm, Rs) can be defined independently and
+    have same or opposite sign, representing concave (+, +), convex (-, -) or
+    saddle (+, -) shaped profile.
+    This element supports volumetric diffraction model, if corresponding
+    parameter is enabled in the assigned *material*.
+    """
 
 #    cl_plist = ("crossSectionInt", "R")
 #    cl_local_z = """
@@ -727,12 +742,10 @@ class BentLaue2D(OE):
     def __init__(self, *args, **kwargs):
         """
         *Rm*: float or 2-tuple.
-            Meridional bending radius. Can be given as (*p*, *q*) for automatic
-            calculation based the "Coddington" equations.
+            Meridional bending radius.
 
         *Rs*: float or 2-tuple.
-            Sagittal radius. Can be given as (*p*, *q*) for automatic
-            calculation based the "Coddington" equations.
+            Sagittal radius.
 
 
         """
