@@ -178,7 +178,7 @@ class PlotWidget(QWidget):
 
         try:
             self.setWindowIcon(QIcon(
-                os.path.join('..', 'xrtQook', '_icons', 'xbcc.png')))
+                os.path.join('xrtQook', '_icons', 'xbcc.png')))
         except Exception:
             # icon not found. who cares?
             pass
