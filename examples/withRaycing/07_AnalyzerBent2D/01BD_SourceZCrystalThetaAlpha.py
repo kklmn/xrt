@@ -533,8 +533,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                     beamLine.analyzer.pitch = theta + alpha
                     beamLine.analyzer.Rs = Rs
                     beamLine.detector.center = 0, yDet, zDet
-                    beamLine.detector.set_orientation(
-                        z=(0, -sin2Theta, cos2Theta))
+                    beamLine.detector.z = 0, -sin2Theta, cos2Theta
 
                     dELine = 0
                     dzLine = 0

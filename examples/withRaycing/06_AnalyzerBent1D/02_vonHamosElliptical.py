@@ -312,7 +312,7 @@ def align_spectrometer_Rs(beamLine, theta, Rs):
     beamLine.analyzer.center = 0, p, 0
     beamLine.analyzer.pitch = theta
     beamLine.detector.center = 0, yDet, zDet
-    beamLine.detector.set_orientation(z=(0, cosTheta, sinTheta))
+    beamLine.detector.z = 0, cosTheta, sinTheta
 
     beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
     beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p / 4
@@ -331,7 +331,7 @@ def align_spectrometer_Rs(beamLine, theta, Rs):
 #    beamLine.analyzer.Rs = Rs
 #    beamLine.analyzer.pitch = theta
 #    beamLine.detector.center = 0, yDet, zDet
-#    beamLine.detector.set_orientation(z=(0, cosTheta, sinTheta))
+#    beamLine.detector.z = 0, cosTheta, sinTheta
 #
 #    beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
 #    beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p

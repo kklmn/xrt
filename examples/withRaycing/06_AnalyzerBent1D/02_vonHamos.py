@@ -47,7 +47,7 @@ crystal = rm.CrystalSi(hkl=(4, 4, 4), t=0.1, useTT=useTT)
 #     crystal.auto_PyTTE_Limits = False
 
 numiter = 256
-nprocesses = 4  # if not useTT
+nprocesses = 'half'  # if not useTT
 
 Rm = 1e9  # meridional radius, mm
 # Rs = 1000  # tmp sagittal radius, mm
@@ -150,7 +150,7 @@ def align_spectrometer_Rs(beamLine, theta, Rs):
     beamLine.analyzer.center = 0, p, 0
     beamLine.analyzer.pitch = theta
     beamLine.detector.center = 0, yDet, zDet
-    beamLine.detector.set_orientation(z=(0, cosTheta, sinTheta))
+    beamLine.detector.z = 0, cosTheta, sinTheta
 
     beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
     beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p
@@ -169,7 +169,7 @@ def align_spectrometer_Rs(beamLine, theta, Rs):
 #    beamLine.analyzer.Rs = Rs
 #    beamLine.analyzer.pitch = theta
 #    beamLine.detector.center = 0, yDet, zDet
-#    beamLine.detector.set_orientation(z=(0, cosTheta, sinTheta))
+#    beamLine.detector.z = 0, cosTheta, sinTheta
 #
 #    beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
 #    beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p

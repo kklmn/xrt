@@ -78,7 +78,8 @@ def align_beamline(beamLine, E):
     cos2theta, sin2theta = np.cos(2*bragg), np.sin(2*bragg)
     beamLine.apertureDiff.center = [0, xtalPos + slitDist*cos2theta,
                                     slitDist*sin2theta]
-    beamLine.apertureDiff.set_orientation('auto', [0, -sin2theta, cos2theta])
+    beamLine.apertureDiff.x = 'auto'
+    beamLine.apertureDiff.z = [0, -sin2theta, cos2theta]
 
 
 def run_process(beamLine):

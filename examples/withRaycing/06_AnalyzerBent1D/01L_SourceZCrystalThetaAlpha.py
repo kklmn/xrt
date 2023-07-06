@@ -306,8 +306,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                     beamLine.analyzer.center = 0, p, 0
                     beamLine.analyzer.pitch = math.pi/2 - theta - alpha
                     beamLine.detector.center = 0, yDet, zDet
-                    beamLine.detector.set_orientation(
-                        z=(0, sin2Theta, cos2Theta))
+                    beamLine.detector.z = 0, sin2Theta, cos2Theta
 
                     dELine, dzLine, dEFlat, dzFlat = 0, 0, 0, 1
                     for isource in np.arange(3):
