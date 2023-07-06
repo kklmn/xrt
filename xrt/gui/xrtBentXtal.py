@@ -321,7 +321,6 @@ class PlotWidget(QWidget):
             <ul>
             <li>{1[0]}
             <li>{1[1]}
-            <li>{1[2]}
             </ul>
             <p>Open source, {2}
             <p>Available on PyPI and GitHub as part of xrt<p>
