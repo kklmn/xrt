@@ -3,7 +3,7 @@ u"""
 .. _glow:
 
 xrtGlow -- an interactive 3D beamline viewer
---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The beamline created in xrtQook or in a python script can be interactively
 viewed in an OpenGL based widget xrtGlow. It visualizes beams, footprints,

@@ -3,7 +3,7 @@ u"""
 .. _qook:
 
 xrtQook -- a GUI for creating a beamline
-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The main interface to xrt is through a python script. Many examples of such
 scripts can be found in the supplied folders `examples` and `tests`. The script

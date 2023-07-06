@@ -3,7 +3,7 @@ u"""
 .. _xrtBentXtal:
 
 xrtBentXtal -- a GUI for bent crystal calculations
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In addition to ray tracing applications with perfect and bent crystals, xrt has
 a GUI widget xrtBentXtal to calculate reflectivity curves of bent crystals with
