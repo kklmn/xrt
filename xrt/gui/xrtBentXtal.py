@@ -26,7 +26,7 @@ to memory constraints.
 """
 
 __author__ = "Roman Chernikov, Konstantin Klementiev, GPT-4"
-__date__ = "4 Jun 2023"
+__date__ = "6 Jul 2023"
 __version__ = "1.0.0"
 __license__ = "MIT license"
 
@@ -311,7 +311,7 @@ class PlotWidget(QWidget):
                     print("do 'pip install distro' for a better view of Linux"
                           " distro string")
         elif 'Windows' in locos:
-            if isWin11:
+            if isWin11():
                 locos = 'Winows 11'
         from xrt.version import __version__ as xrtversion  # analysis:ignore
         strXrt = 'xrt {0} in {1}'.format(xrtversion, path_to_xrt)
@@ -323,7 +323,7 @@ class PlotWidget(QWidget):
             <li>{1[1]}
             <li>{1[2]}
             </ul>
-            <p>Open source, {2}.
+            <p>Open source, {2}
             <p>Available on PyPI and GitHub as part of xrt<p>
             <p>Your system:
             <ul>

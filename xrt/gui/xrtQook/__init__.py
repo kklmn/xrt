@@ -1097,6 +1097,10 @@ class XrtQook(qt.QWidget):
         self.descrEdit.setFocus()
 
     def showWelcomeScreen(self):
+        # https://stackoverflow.com/a/69325836/2696065
+        def isWin11():
+            return True if sys.getwindowsversion().build > 22000 else False
+
         Qt_version = qt.QT_VERSION_STR
         PyQt_version = qt.PYQT_VERSION_STR
         locos = pythonplatform.platform(terse=True)
@@ -1110,6 +1114,9 @@ class XrtQook(qt.QWidget):
                 except ImportError:
                     print("do 'pip install distro' for a better view of Linux"
                           " distro string")
+        elif 'Windows' in locos:
+            if isWin11():
+                locos = 'Winows 11'
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
             if not bool(gl.glutBitmapCharacter):
