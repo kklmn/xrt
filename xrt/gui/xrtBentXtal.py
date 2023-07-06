@@ -25,7 +25,7 @@ to memory constraints.
 
 """
 
-__author__ = "Roman Chernikov, Konstantin Klementiev, GPT-4"
+__author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "6 Jul 2023"
 __version__ = "1.0.0"
 __license__ = "MIT license"
