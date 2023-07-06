@@ -312,7 +312,7 @@ class PlotWidget(QWidget):
                           " distro string")
         elif 'Windows' in locos:
             if isWin11():
-                locos = 'Winows 11'
+                locos = 'Windows 11'
         from xrt.version import __version__ as xrtversion  # analysis:ignore
         strXrt = 'xrt {0} in {1}'.format(xrtversion, path_to_xrt)
 

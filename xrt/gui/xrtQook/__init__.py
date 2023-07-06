@@ -1116,7 +1116,7 @@ class XrtQook(qt.QWidget):
                           " distro string")
         elif 'Windows' in locos:
             if isWin11():
-                locos = 'Winows 11'
+                locos = 'Windows 11'
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
             if not bool(gl.glutBitmapCharacter):
