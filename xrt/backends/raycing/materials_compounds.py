@@ -1,5 +1,5 @@
 r"""
-The module :mod:`~xrt.backends.raycing.materials_crystals` contains predefined
+The module :mod:`~xrt.backends.raycing.materials_compounds` contains predefined
 classes for compound materials found at the
 `CXRO Table of Densities of Common Materials
 <https://henke.lbl.gov/cgi-bin/density.pl>`_.
