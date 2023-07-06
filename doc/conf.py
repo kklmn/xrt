@@ -112,14 +112,37 @@ mpl.use('agg')
 import xrt.backends.raycing.materials_elemental as xrtelem
 import xrt.backends.raycing.materials_compounds as xrtcomp
 import xrt.backends.raycing.materials_crystals as xrtxtal
+
+
+def sort_compounds(method):
+    if method == 'density':
+        res = sorted([(cname, getattr(xrtcomp, cname)().rho)
+                      for cname in xrtcomp.__all__],
+                     key=lambda mat: mat[1])
+        return ['{0[0]} ({0[1]:.3g})'.format(tup) for tup in res]
+    elif method == 'name':
+        res = sorted([(cname, getattr(xrtcomp, cname)().name)
+                      for cname in xrtcomp.__all__],
+                     key=lambda mat: mat[1])
+        return ['{0[0]} ({0[1]})'.format(tup) for tup in res]
+
+
+def sort_crystals(method):
+    if method == 'volume':
+        res = sorted([(cname, getattr(xrtxtal, cname)(hkl=[1, 1, 1]).V)
+                      for cname in xrtxtal.__all__],
+                     key=lambda mat: mat[1])
+        return ['{0[0]} ({0[1]:.4g})'.format(tup) for tup in res]
+
+
 rst_epilog = """
 .. |elemall| replace:: {0}
 .. |compall| replace:: {1}
 .. |xtalall| replace:: {2}
 """.format(', '.join(xrtelem.__all__),
-           ', '.join(xrtcomp.__all__),
-           ', '.join(xrtxtal.__all__))
-
+           ', '.join(sort_compounds('name')),
+           ', '.join(sort_crystals('volume')))
+print(rst_epilog)
 # -- General configuration ----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

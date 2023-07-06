@@ -35,7 +35,8 @@ refractive index etc.
     please use :mod:`~xrt.backends.raycing.materials_crystals`.
 
 The following elemental classes are defined in this module:
- | |elemall|
+
+   | |elemall|
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
@@ -124,7 +125,7 @@ class N(rmat.Material):
                          *args, **kwargs)
 
 
-class O(rmat.Material):
+class O(rmat.Material):  # analysis:ignore
     def __init__(self, name='Oxygen', elements='O', rho=1.332e-03,
                  *args, **kwargs):
         super().__init__(name=name, rho=rho, elements=elements,
@@ -439,7 +440,7 @@ class Te(rmat.Material):
                          *args, **kwargs)
 
 
-class I(rmat.Material):
+class I(rmat.Material):  # analysis:ignore
     def __init__(self, name='Iodine', elements='I', rho=4.930e+00,
                  *args, **kwargs):
         super().__init__(name=name, rho=rho, elements=elements,
@@ -717,5 +718,3 @@ class U(rmat.Material):
                  *args, **kwargs):
         super().__init__(name=name, rho=rho, elements=elements,
                          *args, **kwargs)
-
-

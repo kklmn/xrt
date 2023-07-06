@@ -13,11 +13,13 @@ instantiate its class:
     import xrt.backends.raycing.materials_crystals as xcryst
     myInSbXtal = xcryst.InSb()
 
-The crystals inherit from :class:`.Crystal` and can use its methods to calculate
-diffraction amplitudes, the Darwin width, extinction depth etc.
+The crystals inherit from :class:`.Crystal` and can use its methods to
+calculate diffraction amplitudes, the Darwin width, extinction depth etc.
 
-The following crystal classes are defined in this module:
- | |xtalall|
+The following crystal classes are defined in this module (sorted by cell
+volume in Å³):
+
+   | |xtalall|
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
@@ -61,6 +63,7 @@ class Si(rmat.CrystalDiamond):
 
 
        '''
+
     def __init__(self, name='Si', elements='Si', a=5.4307,
                  *args, **kwargs):
         super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
@@ -76,6 +79,7 @@ class SiNIST(rmat.CrystalDiamond):
 
 
        '''
+
     def __init__(self, name='Si_NIST', elements='Si', a=5.4311946,
                  *args, **kwargs):
         super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
@@ -91,6 +95,7 @@ class Si2(rmat.CrystalDiamond):
 
 
        '''
+
     def __init__(self, name='Si2', elements='Si', a=5.4307,
                  *args, **kwargs):
         super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
@@ -106,6 +111,7 @@ class Ge(rmat.CrystalDiamond):
 
 
        '''
+
     def __init__(self, name='Ge', elements='Ge', a=5.65735,
                  *args, **kwargs):
         super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
@@ -121,6 +127,7 @@ class Diamond(rmat.CrystalDiamond):
 
 
        '''
+
     def __init__(self, name='Diamond', elements='C', a=3.56679,
                  *args, **kwargs):
         super().__init__(a=a, name=name, elements=elements, *args, **kwargs)
@@ -136,6 +143,7 @@ class GaAs(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='GaAs',
                  atoms=[31, 31, 31, 31, 33, 33, 33, 33],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -164,6 +172,7 @@ class GaSb(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='GaSb',
                  atoms=[31, 31, 31, 31, 51, 51, 51, 51],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -192,6 +201,7 @@ class GaP(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='GaP',
                  atoms=[31, 31, 31, 31, 15, 15, 15, 15],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -220,6 +230,7 @@ class InAs(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='InAs',
                  atoms=[49, 49, 49, 49, 33, 33, 33, 33],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -248,6 +259,7 @@ class InP(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='InP',
                  atoms=[49, 49, 49, 49, 15, 15, 15, 15],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -276,6 +288,7 @@ class InSb(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='InSb',
                  atoms=[49, 49, 49, 49, 51, 51, 51, 51],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -304,6 +317,7 @@ class SiC(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='SiC',
                  atoms=[14, 14, 14, 14, 6, 6, 6, 6],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -332,6 +346,7 @@ class NaCl(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='NaCl',
                  atoms=[11, 11, 11, 11, 17, 17, 17, 17],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -360,6 +375,7 @@ class CsF(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='CsF',
                  atoms=[55, 55, 55, 55, 9, 9, 9, 9],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -388,6 +404,7 @@ class LiF(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='LiF',
                  atoms=[3, 3, 3, 3, 9, 9, 9, 9],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -416,6 +433,7 @@ class KCl(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='KCl',
                  atoms=[19, 19, 19, 19, 17, 17, 17, 17],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -444,6 +462,7 @@ class CsCl(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='CsCl',
                  atoms=[55, 17],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -466,6 +485,7 @@ class Be(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Be',
                  atoms=[4, 4],
                  atomsXYZ=[[0.333333, 0.666667, 0.25],
@@ -488,6 +508,7 @@ class Graphite(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Graphite',
                  atoms=[6, 6, 6, 6],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -511,6 +532,7 @@ class PET(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='PET',
                  atoms=[6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 8, 8, 8, 8, 8, 8, 8, 8],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -546,6 +568,7 @@ class Beryl(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Beryl',
                  atoms=[13, 13, 13, 13, 4, 4, 4, 4, 4, 4, 14, 14, 14, 14, 14,
                         14, 14, 14, 14, 14, 14, 14, 8, 8, 8, 8, 8, 8, 8, 8, 8,
@@ -624,6 +647,7 @@ class KAP(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='KAP',
                  atoms=[19, 19, 19, 19, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
                         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -695,6 +719,7 @@ class RbAP(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='RbAP',
                  atoms=[37, 37, 37, 37, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
                         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -766,6 +791,7 @@ class TlAP(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='TlAP',
                  atoms=[81, 81, 81, 81, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
                         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -840,6 +866,7 @@ class Muscovite(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Muscovite',
                  atoms=[19, 19, 19, 19, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14,
                         14, 14, 14, 14, 14, 14, 13, 13, 13, 13, 13, 13, 13, 13,
@@ -965,6 +992,7 @@ class AlphaQuartz(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='AlphaQuartz',
                  atoms=[14, 14, 14, 8, 8, 8, 8, 8, 8],
                  atomsXYZ=[[0.4697, 0.0, 0.0],
@@ -994,6 +1022,7 @@ class Copper(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Copper',
                  atoms=[29, 29, 29, 29],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1016,6 +1045,7 @@ class LiNbO3(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='LiNbO3',
                  atoms=[3, 3, 3, 3, 3, 3, 41, 41, 41, 41, 41, 41, 8, 8, 8, 8,
                         8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
@@ -1066,6 +1096,7 @@ class Platinum(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Platinum',
                  atoms=[78, 78, 78, 78],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1089,6 +1120,7 @@ class Gold(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Gold',
                  atoms=[79, 79, 79, 79],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1105,11 +1137,13 @@ class Gold(rmat.CrystalFromCell):
 
 class Sapphire(rmat.CrystalFromCell):
     '''System: Hexagonal
-       Yuri Shvyd ko X-ray Optics High Energy Resolution Applications, Springer p.337
-       Sapphire, Alpha-Al2O3, rhombohedral lattice, space group R-3c (D3d,6)
+       Yuri Shvyd'ko X-ray Optics High Energy Resolution Applications, Springer
+       p.337 Sapphire, Alpha-Al2O3, rhombohedral lattice, space group R-3c
+       (D3d,6)
 
 
        '''
+
     def __init__(self, name='Sapphire',
                  atoms=[13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 8, 8,
                         8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
@@ -1158,6 +1192,7 @@ class LaB6(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='LaB6',
                  atoms=[57, 5, 5, 5, 5, 5, 5],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1182,6 +1217,7 @@ class LaB6NIST(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='LaB6_NIST',
                  atoms=[57, 5, 5, 5, 5, 5, 5],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1207,6 +1243,7 @@ class KTP(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='KTP',
                  atoms=[22, 22, 22, 22, 22, 22, 22, 22, 15, 15, 15, 15, 15, 15,
                         15, 15, 19, 19, 19, 19, 19, 19, 19, 19, 8, 8, 8, 8,
@@ -1292,6 +1329,7 @@ class AlphaAlumina(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='AlphaAlumina',
                  atoms=[13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 8, 8,
                         8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
@@ -1343,6 +1381,7 @@ class Aluminum(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Aluminum',
                  atoms=[13, 13, 13, 13],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1367,6 +1406,7 @@ class Iron(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Iron',
                  atoms=[26, 26, 26, 26],
                  atomsXYZ=[[0.0, 0.0, 0.0],
@@ -1391,6 +1431,7 @@ class Titanium(rmat.CrystalFromCell):
 
 
        '''
+
     def __init__(self, name='Titanium',
                  atoms=[22, 22],
                  atomsXYZ=[[0.333333, 0.666667, 0.25],

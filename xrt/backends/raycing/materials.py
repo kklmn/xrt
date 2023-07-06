@@ -311,7 +311,7 @@ class Material(object):
             use via its method :meth:`assign_auto_material_kind`.
 
         *rho*: float
-            Density in g/cm\ :sup:`3`.
+            Density in g/cm³.
 
         *t*: float
             Thickness in mm, required only for 'thin mirror'.
@@ -1024,8 +1024,8 @@ class Crystal(Material):
             Interatomic spacing in Å.
 
         *V*: float
-            Unit cell volume in Å\ :sup:`3`. If not given, is calculated from
-            *d* assuming a cubic symmetry.
+            Unit cell volume in Å³. If not given, is calculated from *d*
+            assuming a cubic symmetry.
 
         *factDW*: float
             Debye-Waller factor applied to the structure factor.

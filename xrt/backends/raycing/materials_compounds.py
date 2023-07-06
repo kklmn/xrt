@@ -28,8 +28,10 @@ refractive index etc.
     if they occur naturally as crystals. To calculate diffraction on crystals
     please use :mod:`~xrt.backends.raycing.materials_crystals`.
 
-The following compound classes are defined in this module:
- | |compall|
+The following compound classes are defined in this module (sorted by chemical
+formula):
+
+   | |compall|
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
@@ -745,7 +747,7 @@ class VanadiumNitride(rmat.Material):
 
 
 class Vacuum(rmat.Material):
-    def __init__(self, name='H',
+    def __init__(self, name=' ',
                  elements=['H'],
                  quantities=[1],
                  rho=0, *args, **kwargs):
@@ -852,5 +854,3 @@ class CVDDiamond(rmat.Material):
         super().__init__(
            name=name, rho=rho, elements=elements, quantities=quantities,
            *args, **kwargs)
-
-
