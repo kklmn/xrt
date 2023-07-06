@@ -1,32 +1,39 @@
 """
 Predefined Materials: Compounds
----------
+-------------------------------
 
-Module :mod:`~xrt.backends.raycing.materials_compounds`
-
-This module contains predefined classes for compound materials found at the
+The module :mod:`~xrt.backends.raycing.materials_crystals` contains predefined
+classes for compound materials found at the
 `CXRO Table of Densities of Common Materials
 <https://henke.lbl.gov/cgi-bin/density.pl>`_.
-Air composition and density are given as in [Cox]_
+Air composition and density are given as in [Cox]_.
 
-    .. [Cox] Cox, Arthur N., ed. (2000), Allen's Astrophysical Quantities
-    (Fourth ed.), AIP Press, pp. 258–259, ISBN 0-387-98746-0
+.. [Cox] Cox, Arthur N., ed. (2000), Allen's Astrophysical Quantities
+   (Fourth ed.), AIP Press, pp. 258–259, ISBN 0-387-98746-0
 
-To use the compound material in the xrt script simply import the library and
-instantiate the class:
+To use a compound material in a script, simply import the module and
+instantiate its class:
 
 .. code-block:: python
 
     import xrt.backends.raycing.materials_compounds as xcomp
-    Kapton = xcomp.Polyimide()
+    kapton = xcomp.Polyimide()
+
+The compound materials inherit from :class:`.Material` and can use its methods
+to calculate reflection or transmission amplitudes, absorption coefficient,
+refractive index etc.
 
 .. note::
-    Compound materials inherit from :class:`Material`, which means they do not
-    provide crystal diffraction amplitudes even if they occur naturally as
-    crystals. To calculate diffraction on crystals please use
-    :mod:`~xrt.backends.raycing.materials_crystals`.
-"""
+    The compound materials do not provide crystal diffraction amplitudes even
+    if they occur naturally as crystals. To calculate diffraction on crystals
+    please use :mod:`~xrt.backends.raycing.materials_crystals`.
 
+The following compound classes are defined in this module:
+ | |compall|
+
+"""
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "6 Jul 2017"
 
 from . import materials as rmat
 import collections

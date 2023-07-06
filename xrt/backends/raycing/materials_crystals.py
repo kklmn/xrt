@@ -1,22 +1,27 @@
 """
 Predefined Materials: Crystals
----------
+------------------------------
 
-Module :mod:`~xrt.backends.raycing.materials_crystals`
-
-This module contains predefined classes for most commonly used crystals.
-Lattice parameters, atomic positions and references have been
-semi-automatically parsed from XOP/DABAX [XOP]_ ``Crystals.dat``.
-To use the crystal in the xrt script simply import the library and instantiate
-the class:
+The module :mod:`~xrt.backends.raycing.materials_crystals` contains predefined
+classes for most commonly used crystals. Lattice parameters, atomic positions
+and references have been semi-automatically parsed from XOP/DABAX [XOP]_
+``Crystals.dat``. To use a crystal in a script simply import the module and
+instantiate its class:
 
 .. code-block:: python
 
     import xrt.backends.raycing.materials_crystals as xcryst
-    MyInSbCrystal = xcryst.InSb()
+    myInSbXtal = xcryst.InSb()
 
+The crystals inherit from :class:`.Crystal` and can use its methods to calculate
+diffraction amplitudes, the Darwin width, extinction depth etc.
+
+The following crystal classes are defined in this module:
+ | |xtalall|
 
 """
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "6 Jul 2017"
 
 from . import materials as rmat
 import collections

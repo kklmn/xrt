@@ -95,7 +95,6 @@ def load_res():
 
     shutil.rmtree(repo_dir, onerror=onerror)
 
-
 # import Cloud
 #import cloud_sptheme as csp
 
@@ -109,6 +108,17 @@ sys.path.append(os.path.abspath('exts'))
 #autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
 import matplotlib as mpl
 mpl.use('agg')
+
+import xrt.backends.raycing.materials_elemental as xrtelem
+import xrt.backends.raycing.materials_compounds as xrtcomp
+import xrt.backends.raycing.materials_crystals as xrtxtal
+rst_epilog = """
+.. |elemall| replace:: {0}
+.. |compall| replace:: {1}
+.. |xtalall| replace:: {2}
+""".format(', '.join(xrtelem.__all__),
+           ', '.join(xrtcomp.__all__),
+           ', '.join(xrtxtal.__all__))
 
 # -- General configuration ----------------------------------------------------
 

@@ -1,39 +1,45 @@
-"""
+r"""
 Predefined Materials: Elemental
----------
+-------------------------------
 
-Module :mod:`~xrt.backends.raycing.materials_elemental`
-
-This module contains predefined classes for elemental materials.
-Most atomic densities have been adopted from the
-`NIST table of X-Ray Mass Attenuation Coefficients
+The module :mod:`~xrt.backends.raycing.materials_elemental` contains predefined
+classes for elemental materials. Most atomic densities have been adopted from
+the `NIST table of X-Ray Mass Attenuation Coefficients
 <https://physics.nist.gov/PhysRefData/XrayMassCoef/tab1.html>`_.
-Densities for Fr and At given according to [Lavrukhina, Pozdnyakov]_
+Densities for Fr and At given according to [Lavrukhina_Pozdnyakov]_.
 
-    .. [Lavrukhina, Pozdnyakov] Lavrukhina, Avgusta Konstantinovna; Pozdnyakov,
-    Aleksandr Aleksandrovich (1970). Analytical Chemistry of Technetium,
-    Promethium, Astatine, and Francium. Translated by R. Kondor.
-    Ann Arbor–Humphrey Science Publishers. p. 269. ISBN 978-0-250-39923-9
+.. [Lavrukhina_Pozdnyakov] Lavrukhina, A. K. and Pozdnyakov, A. A. (1970).
+   Analytical Chemistry of Technetium, Promethium, Astatine, and Francium.
+   Translated by R. Kondor. Ann Arbor–Humphrey Science Publishers.
+   p. 269. ISBN 978-0-250-39923-9
 
 .. note::
-    Densities are given for the phase state at ambient conditions, i.e.
-    Nitrogen gas N\ :sub:`2`\
+    Densities are given for the phase state at ambient conditions, e.g.
+    Nitrogen as N\ :sub:`2` gas.
 
-
-To use the elemental material in the xrt script simply import the library and
-instantiate the class:
+To use an elemental material in a script simply import the module and
+instantiate its class:
 
 .. code-block:: python
 
     import xrt.backends.raycing.materials_elemental as xmat
-    NitrogenGas = xmat.N()
+    nitrogenGas = xmat.N()
+
+The elemental materials inherit from :class:`.Material` and can use its methods
+to calculate reflection or transmission amplitudes, absorption coefficient,
+refractive index etc.
 
 .. note::
-    Elemental materials inherit from :class:`Material`, which means they do not
-    provide crystal diffraction amplitudes even if they occur naturally as
-    crystals. To calculate diffraction on crystals please use
-    :mod:`~xrt.backends.raycing.materials_crystals`.
+    The elemental materials do not provide crystal diffraction amplitudes even
+    if they occur naturally as crystals. To calculate diffraction on crystals
+    please use :mod:`~xrt.backends.raycing.materials_crystals`.
+
+The following elemental classes are defined in this module:
+ | |elemall|
+
 """
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "6 Jul 2017"
 
 from . import materials as rmat
 import collections
