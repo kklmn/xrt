@@ -22,6 +22,12 @@ Raycing backend
 
 .. automodule:: test_materials
 
+.. automodule:: xrt.backends.raycing.materials_elemental
+
+.. automodule:: xrt.backends.raycing.materials_compounds
+
+.. automodule:: xrt.backends.raycing.materials_crystals
+
 .. .. automodule:: xrt.backends.raycing.stages
 .. .. autoclass:: xrt.backends.raycing.stages.Tripod()
 ..    :members: __init__, set_jacks, get_orientation
