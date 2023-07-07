@@ -23,6 +23,8 @@ interactively viewing it in 3D.
    :alt: &ensp;Vortex beam with <i>l</i>=1 and <i>p</i>=1. Colored by phase.
    :loc: upper-right-corner
 
+.. _guis:
+
 GUIs
 ----
 

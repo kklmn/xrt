@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 u"""
-.. _glow:
-
 xrtGlow -- an interactive 3D beamline viewer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

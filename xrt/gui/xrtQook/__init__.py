@@ -1,7 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
 u"""
-.. _qook:
-
 xrtQook -- a GUI for creating a beamline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

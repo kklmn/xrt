@@ -41,6 +41,8 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 .. autoclass:: MonoCrystal(CrystalFromCell)
    :members: __init__
 
+.. _predefmats:
+
 Predefined Materials
 --------------------
 
