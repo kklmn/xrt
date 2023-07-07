@@ -309,8 +309,9 @@ this figure should be greater than ~10\ :sup:`4` for a good resulting quality.
 Coherence signatures
 ~~~~~~~~~~~~~~~~~~~~
 
-A standard way to define coherence properties is via *mutual intensity J* and
-*complex degree of coherence j* (DoC,  normalized *J*):
+A standard way to define coherence properties is via *mutual intensity J*
+(another common name is *cross-spectral density*) and *complex degree of
+coherence j* (DoC,  normalized *J*):
 
     .. math::
         J(x_1, y_1, x_2, y_2) \equiv J_{12} =
@@ -380,18 +381,13 @@ method above.
       of solving this huge eigenvalue problem of (N\ :sub:`x`\ ×N\ :sub:`y`)²
       size, we solve a typically smaller matrix :math:`D^{+}D` of the size
       *r*\ ².
-   c) The biggest *r* eigenvalues of :math:`J_{12}` are equal to those of
-      :math:`D^{+}D` [proof to present in the coming paper]. To find the
-      primary (biggest) eigenvalue is the main objective of the modal analysis
-      (item 2 above); PCA can provide it much easier due to the smaller size of
-      the problem.
-   d) Also the *eigen modes* of :math:`J_{12}=DD^{+}` can be found by PCA via
-      the eigenvectors :math:`v`'s of :math:`D^{+}D`. The matrix
-      :math:`Dv_iv_i^{+}` is of the size of :math:`D` and has all the columns
-      proportional to each other [proof to present in the coming paper]. These
-      columns are the *i*\ th principal components for the corresponding
-      columns of :math:`D`. Being normalized, all the columns become equal and
-      give the *i*\ th eigenvector of :math:`J_{12}`.
+   c) The eigenvalues of matrices :math:`DD^{+}` and :math:`D^{+}D` are the
+      same, plus zeroes for the bigger matrix.
+   d) Their eigenvectors (being *eigenmodes* for :math:`DD^{+}` and *principal
+      components* for :math:`D^{+}D`) corresponding to the same eigenvalue are
+      transformed to each other with a factor :math:`D` or :math:`D^{+}`, after
+      which transformation they must be additionally normalized [the proof is a
+      one line matrix equation].
 
    Finally, PCA gives exactly the same information as the direct modal analysis
    (method No 2 above) but is cheaper to calculate by many orders of magnitude.
