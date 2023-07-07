@@ -7,7 +7,7 @@ Module :mod:`~xrt.backends.raycing.screens` defines a flat screen and a
 hemispheric screen that intercept a beam and give its image.
 
 .. autoclass:: xrt.backends.raycing.screens.Screen()
-   :members: __init__, expose, prepare_wave, set_orientation
+   :members: __init__, expose, prepare_wave
 
 .. autoclass:: xrt.backends.raycing.screens.HemisphericScreen()
    :members: __init__
@@ -31,8 +31,8 @@ _DEBUG = 20
 
 
 class Screen(object):
-    """Flat screen for beam visualization.
-    """
+    """Flat screen for beam visualization."""
+
     def __init__(self, bl=None, name='', center=[0, 0, 0], x='auto', z='auto',
                  compressX=None, compressZ=None):
         """
@@ -50,11 +50,8 @@ class Screen(object):
             Normalized 3D vectors in the global system which determine the
             local x and z axes lying in the screen plane. If *x* is 'auto', it
             is horizontal and perpendicular to the beam line. If *z* is 'auto',
-            it is vertical.
-
-            .. warning::
-                If you change *x* and/or *z* outside of the constructor, you
-                must invoke the method :meth:`set_orientation`.
+            it is vertical. Both *x* and *z* can also be set as instance
+            attributes.
 
         *compressX, compressZ*: float
             Multiplicative compression coefficients for the corresponding axes.
@@ -70,9 +67,9 @@ class Screen(object):
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
-        self.x = x
-        self.z = z
-#        self.set_orientation(x, z)
+        self._x = x
+        self._z = z
+        self._set_orientation()
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -125,8 +122,6 @@ class Screen(object):
 
     def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
-        if not all([hasattr(self, v) for v in ['_x', '_z']]):
-            return
         if isinstance(self._x, raycing.basestring):
             self._x = None
         if isinstance(self._z, raycing.basestring):
@@ -327,8 +322,8 @@ class Screen(object):
 
 
 class HemisphericScreen(Screen):
-    """Hemispheric screen for beam visualization.
-    """
+    """Hemispheric screen for beam visualization."""
+
     def __init__(self, bl=None, name='', center=[0, 0, 0], R=1000.,
                  x='auto', z='auto', phiOffset=0, thetaOffset=0):
         u"""
@@ -338,11 +333,8 @@ class HemisphericScreen(Screen):
             with the beamline's *y*; if *z* (the polar axis) is 'auto', it is
             coincides with the beamline's *x*. The equator plane is then
             vertical. The polar angle θ is counted from -π/2 to π/2 with 0 at
-            the equator and π/2 at the polar axis direction.
-
-            .. warning::
-                If you change *x* and/or *z* outside of the constructor, you
-                must invoke the method :meth:`set_orientation`.
+            the equator and π/2 at the polar axis direction. Both *x* and *z*
+            can also be set as instance attributes.
 
         *R*: float
             Radius of the hemisphere in mm.
@@ -355,10 +347,10 @@ class HemisphericScreen(Screen):
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
-        self.x = x
-        self.z = z
+        self._x = x
+        self._z = z
+        self._set_orientation()
 
-#        self.set_orientation(x, z)
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -379,20 +371,18 @@ class HemisphericScreen(Screen):
 
     def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
-        if not all([hasattr(self, v) for v in ['_x', '_z']]):
-            return
-        if self._x is not None:
-            if isinstance(self._x, (list, tuple, np.ndarray)):
-                norm = sum([xc**2 for xc in self._x])**0.5
-                self._x = [xc/norm for xc in self._x]
-            else:
-                self._x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
-        if self._z is not None:
-            if isinstance(self._z, (list, tuple, np.ndarray)):
-                norm = sum([zc**2 for zc in self._z])**0.5
-                self._z = [zc/norm for zc in self._z]
-            else:
-                self._z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
+        if isinstance(self._x, (list, tuple, np.ndarray)):
+            norm = sum([xc**2 for xc in self._x])**0.5
+            self._x = [xc/norm for xc in self._x]
+        else:
+            self._x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
+
+        if isinstance(self._z, (list, tuple, np.ndarray)):
+            norm = sum([zc**2 for zc in self._z])**0.5
+            self._z = [zc/norm for zc in self._z]
+        else:
+            self._z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
+
         xdotz = np.dot(self._x, self._z)
         if abs(xdotz) > 1e-8:
             print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))

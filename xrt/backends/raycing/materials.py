@@ -40,9 +40,27 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
    :members: __init__
 .. autoclass:: MonoCrystal(CrystalFromCell)
    :members: __init__
+
+Predefined Materials
+--------------------
+
+.. tabs::
+
+   .. tab:: Crystals
+
+      .. automodule:: xrt.backends.raycing.materials_crystals
+
+   .. tab:: Compounds
+
+      .. automodule:: xrt.backends.raycing.materials_compounds
+
+   .. tab:: Elemental
+
+      .. automodule:: xrt.backends.raycing.materials_elemental
+
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "16 Mar 2017"
+__date__ = "6 Jul 2023"
 __all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'GradedMultilayer',
            'Coated', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
@@ -1071,6 +1089,13 @@ class Crystal(Material):
                 'auto') and *precisionOpenCL* (in Bragg cases 'float32' is
                 typically sufficient and 'float64' is typically needed in Laue
                 cases).
+
+        *nu*: float
+            Poisson's ratio. Can be used for calculation of reflectivity
+            in bent isotropic crystals with [PyTTE1]_. Not required for plain
+            crystals or for crystals with predefined compliance matrix, see
+            :mod:`~xrt.backends.raycing.materials_crystals`. If
+            provided, overrides existing compliance matrix.
 
         *mosaicity*: float, radians
             The sigma of the normal distribution of the crystallite normals.
@@ -2142,7 +2167,8 @@ class CrystalDiamond(CrystalFcc):
             elif len(args) > 0:
                 hkl = args[0]
             else:
-                raise ValueError('unknown hkl')
+                hkl = [1, 1, 1]
+                kwargs['hkl'] = hkl
             sqrthkl2 = (sum(i**2 for i in hkl))**0.5
             d = a / sqrthkl2
             if len(args) > 1:

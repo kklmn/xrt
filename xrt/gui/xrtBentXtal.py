@@ -3,7 +3,7 @@ u"""
 .. _xrtBentXtal:
 
 xrtBentXtal -- a GUI for bent crystal calculations
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In addition to ray tracing applications with perfect and bent crystals, xrt has
 a GUI widget xrtBentXtal to calculate reflectivity curves of bent crystals with
@@ -25,8 +25,8 @@ to memory constraints.
 
 """
 
-__author__ = "Roman Chernikov, Konstantin Klementiev, GPT-4"
-__date__ = "4 Jun 2023"
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "6 Jul 2023"
 __version__ = "1.0.0"
 __license__ = "MIT license"
 
@@ -52,7 +52,6 @@ from PyQt5.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
 
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
     QPixmap, QColor
-
 import matplotlib as mpl
 from matplotlib.backend_tools import ToolBase
 
@@ -70,8 +69,8 @@ from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
     CalculateAmplitudes  # , integrate_single_scan_step
 from xrt.backends.raycing import materials_crystals as rxtl
 from xrt.backends.raycing.physconsts import CH
-path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__)))))
+path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))))
 
 try:
     import pyopencl as cl
@@ -178,7 +177,7 @@ class PlotWidget(QWidget):
 
         try:
             self.setWindowIcon(QIcon(
-                os.path.join('..', 'xrtQook', '_icons', 'xbcc.png')))
+                os.path.join('xrtQook', '_icons', 'xbcc.png')))
         except Exception:
             # icon not found. who cares?
             pass
@@ -312,8 +311,8 @@ class PlotWidget(QWidget):
                     print("do 'pip install distro' for a better view of Linux"
                           " distro string")
         elif 'Windows' in locos:
-            if isWin11:
-                locos = 'Winows 11'
+            if isWin11():
+                locos = 'Windows 11'
         from xrt.version import __version__ as xrtversion  # analysis:ignore
         strXrt = 'xrt {0} in {1}'.format(xrtversion, path_to_xrt)
 
@@ -322,9 +321,8 @@ class PlotWidget(QWidget):
             <ul>
             <li>{1[0]}
             <li>{1[1]}
-            <li>{1[2]}
             </ul>
-            <p>Open source, {2}.
+            <p>Open source, {2}
             <p>Available on PyPI and GitHub as part of xrt<p>
             <p>Your system:
             <ul>
@@ -342,7 +340,7 @@ class PlotWidget(QWidget):
         msg.setStyleSheet("QLabel{min-width: 300px;}")
         msg.setWindowIcon(self.windowIcon())
         msg.setIconPixmap(QPixmap(os.path.join(
-            '..', 'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
+            'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
                 256, Qt.SmoothTransformation))
         msg.setText(txt)
         msg.setWindowTitle(title)

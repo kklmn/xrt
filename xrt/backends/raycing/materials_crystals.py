@@ -1,7 +1,4 @@
-"""
-Predefined Materials: Crystals
-------------------------------
-
+r"""
 The module :mod:`~xrt.backends.raycing.materials_crystals` contains predefined
 classes for most commonly used crystals. Lattice parameters, atomic positions
 and references have been semi-automatically parsed from XOP/DABAX [XOP]_
@@ -11,13 +8,13 @@ instantiate its class:
 .. code-block:: python
 
     import xrt.backends.raycing.materials_crystals as xcryst
-    myInSbXtal = xcryst.InSb()
+    myInSbXtal = xcryst.InSb(hkl=(3, 1, 1))  # default hkl=(1, 1, 1)
 
 The crystals inherit from :class:`.Crystal` and can use its methods to
 calculate diffraction amplitudes, the Darwin width, extinction depth etc.
 
 The following crystal classes are defined in this module (sorted by cell
-volume in Å³):
+volume in Å³), marked in bold are those with available elastic constants:
 
    | |xtalall|
 

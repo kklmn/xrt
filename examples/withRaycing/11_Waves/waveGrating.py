@@ -465,9 +465,8 @@ def plot_generator(plots, plotsR, beamLine):
             drho = beamLine.bg.get_grating_area_fraction()
             beamLine.bg.area = dx * dz / np.sin(pitchn) * drho
             thetaOffset = pitchn
-            beamLine.fsm.set_orientation(
-                x=(0, -np.sin(thetaOffset), np.cos(thetaOffset)),
-                z=(0, np.cos(thetaOffset), np.sin(thetaOffset)))
+            beamLine.fsm.x = 0, -np.sin(thetaOffset), np.cos(thetaOffset)
+            beamLine.fsm.z = 0, np.cos(thetaOffset), np.sin(thetaOffset)
             beamLine.bg.pitch = pitchn
         else:
             thetaOffset = pitch

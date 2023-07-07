@@ -477,7 +477,7 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
                 offsetE = round(E0, 3)
                 for alphaDegree in alphasDegree:
                     alpha = np.radians(alphaDegree)
-                    beamLine.analyzer.set_alpha(alpha)
+                    beamLine.analyzer.alpha = alpha
 #                    b = math.sin(theta - alpha) / math.sin(theta + alpha)
                     p = 2. * R * math.sin(theta + alpha)
                     q = 2. * R * math.sin(theta - alpha)
@@ -494,8 +494,7 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
                     beamLine.analyzer.pitch = theta + alpha
                     beamLine.analyzer.Rs = Rs
                     beamLine.detector.center = 0, yDet, zDet
-                    beamLine.detector.set_orientation(
-                        z=(0, -sin2Theta, cos2Theta))
+                    beamLine.detector.z = 0, -sin2Theta, cos2Theta
 
                     dELine = 0
                     dzLine = 0

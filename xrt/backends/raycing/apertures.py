@@ -58,6 +58,7 @@ allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
 class RectangularAperture(object):
     """Implements an aperture or an obstacle as a combination of straight
     edges."""
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
                  opening=[-10, 10, -10, 10], x='auto', z='auto',
@@ -85,11 +86,8 @@ class RectangularAperture(object):
             Normalized 3D vectors in the global system which determine the
             local x and z axes lying in the aperture plane. If *x* is 'auto',
             it is horizontal and normal to the beam line. If *z* is 'auto', it
-            is vertical.
-
-            .. warning::
-                If you change *x* and/or *z* outside of the constructor, you
-                must invoke the method :meth:`set_orientation`.
+            is vertical. Both *x* and *z* can also be set as instance
+            attributes.
 
         *alarmLevel*: float or None.
             Allowed fraction of number of rays absorbed at the aperture
@@ -118,9 +116,9 @@ class RectangularAperture(object):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = copy.copy(self.center)
-#        self.set_orientation(x, z)
-        self.x = x
-        self.z = z
+        self._x = x
+        self._z = z
+        self._set_orientation()
 
         if isinstance(kind, str):
             self.kind = (kind,)
@@ -175,14 +173,16 @@ class RectangularAperture(object):
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
-        if not all([hasattr(self, v) for v in ['_x', '_z']]):
-            return
+        if isinstance(self._x, raycing.basestring):
+            self._x = None
+        if isinstance(self._z, raycing.basestring):
+            self._z = None
         self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
-#        self._x = x
-#        self._z = z
+        self._x = x
+        self._z = z
         self._set_orientation()
 
     def set_optical_limits(self):
@@ -400,6 +400,7 @@ class RectangularAperture(object):
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
     """Implements a set of coplanar apertures with a Z actuator."""
+
     def __init__(self, bl, name, center, apertures, centerZs, dXs, dZs,
                  x='auto', z='auto', alarmLevel=None):
         """
@@ -419,11 +420,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
             Normalized 3D vectors in the global system which determine the
             local x and z axes lying in the aperture plane. If *x* is 'auto',
             it is horizontal and normal to the beam line. If *z* is 'auto', it
-            is vertical.
-
-            .. warning::
-                If you change *x* and/or *z* outside of the constructor, you
-                must invoke the method :meth:`set_orientation`.
+            is vertical. Both *x* and *z* can also be set as instance
+            attributes.
 
 
         """
@@ -447,9 +445,10 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = copy.copy(self.center)
-#        self.set_orientation(x, z)
-        self.x = x
-        self.z = z
+        self._x = x
+        self._z = z
+        self._set_orientation()
+
         self.zActuator = center[2]
         self.z0 = center[2]
         self.apertures = apertures
@@ -512,6 +511,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
 class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
+
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None):
         """ A round aperture aperture.
@@ -522,11 +522,8 @@ class RoundAperture(object):
             Normalized 3D vectors in the global system which determine the
             local x and z axes lying in the aperture plane. If *x* is 'auto',
             it is horizontal and normal to the beam line. If *z* is 'auto', it
-            is vertical.
-
-            .. warning::
-                If you change *x* and/or *z* outside of the constructor, you
-                must invoke the method :meth:`set_orientation`.
+            is vertical. Both *x* and *z* can also be set as instance
+            attributes.
 
 
         """
@@ -550,9 +547,10 @@ class RoundAperture(object):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = copy.copy(self.center)
-#        self.set_orientation(x, z)
-        self.x = x
-        self.z = z
+        self._x = x
+        self._z = z
+        self._set_orientation()
+
         self.r = r
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
@@ -599,14 +597,16 @@ class RoundAperture(object):
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
-        if not all([hasattr(self, v) for v in ['_x', '_z']]):
-            return
+        if isinstance(self._x, raycing.basestring):
+            self._x = None
+        if isinstance(self._z, raycing.basestring):
+            self._z = None
         self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
-#        self._x = x
-#        self._z = z
+        self._x = x
+        self._z = z
         self._set_orientation()
 
     def get_divergence(self, source):
@@ -784,6 +784,7 @@ class RoundBeamStop(RoundAperture):
 class DoubleSlit(RectangularAperture):
     """Implements an aperture or an obstacle with a combination of horizontal
     and/or vertical edge(s)."""
+
     def __init__(self, *args, **kwargs):
         """Same parameters as in :class:`RectangularAperture` and additionally
         *shadeFraction* as a value from 0 to 1.
@@ -855,6 +856,7 @@ class DoubleSlit(RectangularAperture):
 class PolygonalAperture(object):
     """Implements an aperture or an obstacle defined as a set of polygon
     vertices."""
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  opening=None, x='auto', z='auto', alarmLevel=None):
         """
@@ -875,11 +877,8 @@ class PolygonalAperture(object):
             Normalized 3D vectors in the global system which determine the
             local x and z axes lying in the aperture plane. If *x* is 'auto',
             it is horizontal and normal to the beam line. If *z* is 'auto', it
-            is vertical.
-
-            .. warning::
-                If you change *x* and/or *z* outside of the constructor, you
-                must invoke the method :meth:`set_orientation`.
+            is vertical. Both *x* and *z* can also be set as instance
+            attributes.
 
         *alarmLevel*: float or None.
             Allowed fraction of number of rays absorbed at the aperture
@@ -907,9 +906,10 @@ class PolygonalAperture(object):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = self.center
-#        self.set_orientation(x, z)
-        self.x = x
-        self.z = z
+        self._x = x
+        self._z = z
+        self._set_orientation()
+
         self.opening = opening
         self.vertices = np.array(self.opening)
         self.alarmLevel = alarmLevel
@@ -958,14 +958,16 @@ class PolygonalAperture(object):
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
-        if not all([hasattr(self, v) for v in ['_x', '_z']]):
-            return
+        if isinstance(self._x, raycing.basestring):
+            self._x = None
+        if isinstance(self._z, raycing.basestring):
+            self._z = None
         self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
-#        self._x = x
-#        self._z = z
+        self._x = x
+        self._z = z
         self._set_orientation()
 
     def set_optical_limits(self):
