@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jan 26 00:01:09 2021
+OpenCL Server
+---------
 
-@author: roman
+Server for remote OpenCL calculations.
 """
+
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "6 Jul 2023"
 
 import zmq
 import sys
@@ -13,6 +17,7 @@ import xrt.backends.raycing as raycing
 import xrt.backends.raycing.myopencl as mcl
 from xrt.backends.raycing.oes import OE
 import pickle
+from datetime import datetime
 
 raycing._VERBOSITY_ = 80
 PYVERSION = int(sys.version[0])
@@ -72,6 +77,7 @@ while True:
     message = recv_zipped_pickle(socket)
     precision = 64
     reply = None
+    dtstr = datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
 
     if 'scalarArgs' in message.keys():
         for arg in message['scalarArgs']:
@@ -85,7 +91,7 @@ while True:
             else:
                 continue
     else:
-        print("ERROR: not a kernel")
+        print(dtstr, "ERROR: not a kernel")
         reply = ("ERROR", "not a kernel")
 
     if 'kernelName' in message.keys():
@@ -99,20 +105,23 @@ while True:
         elif kName in oesKernels:
             xrtClContext = oeCL32 if precision == 32 else oeCL64
         else:
-            print("ERROR: unknown kernel:", kName)
+            print(dtstr, "ERROR: unknown kernel:", kName)
             reply = ("ERROR", "unknown kernel: "+kName)
     else:
-        print("ERROR: not a kernel")
+        print(dtstr, "ERROR: not a kernel")
         reply = ("ERROR", "not a kernel")
 
     if reply is None:
         try:
-            print("Calculating {0} in {1}-bit precision".format(
-                    kName, precision))
+            dtstr = datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
+            print("{2} Calculating '{0}' in {1}-bit".format(kName, precision,
+                                                            dtstr))
             reply = xrtClContext.run_parallel(**message)
-            print("calculations complete. sending back results")
+            dtstr = datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
+            print(dtstr, "Calculations complete. Sending back results")
         except:
-            print("ERROR: error while calculating a kernel")
+            dtstr = datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
+            print(dtstr, "ERROR: error while calculating a kernel")
             reply = ("ERROR", "error while calculating a kernel")
 
     send_zipped_pickle(socket, reply, protocol=2)
