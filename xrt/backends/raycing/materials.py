@@ -1090,6 +1090,13 @@ class Crystal(Material):
                 typically sufficient and 'float64' is typically needed in Laue
                 cases).
 
+        *nu*: float
+            Poisson's ratio. Can be used for calculation of reflectivity
+            in bent isotropic crystals with [PyTTE1]_. Not required for plain
+            crystals or for crystals with predefined compliance matrix,
+            :mod:`~xrt.backends.raycing.materials_crystals`. If
+            provided, overrides existing compliance matrix.
+
         *mosaicity*: float, radians
             The sigma of the normal distribution of the crystallite normals.
 
