@@ -26,7 +26,7 @@ if on_rtd:
                     'matplotlib.backends.backend_qt5agg',
                     'PySide', 'PySide.QtCore',
                     'spyder.widgets', 'spyderlib.widgets',
-                    'cv2']
+                    'cv2', 'zmq']
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 __fdir__ = os.path.dirname(os.path.abspath(__file__))
