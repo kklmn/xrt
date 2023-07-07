@@ -187,8 +187,10 @@ setup(
     keywords='',
     # python_requires=,
     zip_safe=False,  # True: build zipped egg, False: unzipped
-    packages=['xrt', 'xrt.backends', 'xrt.backends.raycing', 'xrt.gui',
-              'xrt.gui.commons', 'xrt.gui.xrtGlow', 'xrt.gui.xrtQook'],
+    packages=[
+        'xrt',
+        'xrt.backends', 'xrt.backends.raycing', 'xrt.backends.raycing.pyTTE_x',
+        'xrt.gui', 'xrt.gui.commons', 'xrt.gui.xrtGlow', 'xrt.gui.xrtQook'],
     package_data={
         'xrt.backends.raycing': ['data/*.npz', 'data/*.dat', '*.cl'],
         'xrt': ['*.cl, *.ico'],
@@ -200,6 +202,7 @@ setup(
     scripts=['xrt/gui/xrtQookStart.pyw', 'xrt/gui/xrtQookStart.py'],
     install_requires=['numpy>=1.8.0', 'scipy>=0.17.0', 'matplotlib>=2.0.0',
                       'sphinx>=1.6.2', 'sphinxcontrib-jquery', 'distro',
+                      'colorama',
                       # 'openpyxl',
                       ],
     classifiers=['Development Status :: 5 - Production/Stable',
