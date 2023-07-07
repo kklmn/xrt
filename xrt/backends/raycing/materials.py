@@ -1093,7 +1093,7 @@ class Crystal(Material):
         *nu*: float
             Poisson's ratio. Can be used for calculation of reflectivity
             in bent isotropic crystals with [PyTTE1]_. Not required for plain
-            crystals or for crystals with predefined compliance matrix,
+            crystals or for crystals with predefined compliance matrix, see
             :mod:`~xrt.backends.raycing.materials_crystals`. If
             provided, overrides existing compliance matrix.
 
