@@ -26,7 +26,7 @@ Available on GitHub (7 Jul 2023):
     - Add user classes of optical elements to xrtQook.
 
     - Add an example :ref:`Orbital Angular Momentum of helical undulator
-      ratiation <OAM-HelicalU>`.
+      radiation <OAM-HelicalU>`.
 
     - Use `python properties
       <https://docs.python.org/3/library/functions.html#property>`_
