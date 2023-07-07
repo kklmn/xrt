@@ -27,7 +27,8 @@ supports all acceleration scenarios:
 Script Components
 ~~~~~~~~~~~~~~~~~
 
-The GPU accelerator script is comprised of two files:
+The GPU accelerator script is comprised of two files located at
+``tests\raycing\RemoteOpenCLCalculation``:
 
 1. ``zmq_server.py``: The server script is the main component, responsible for
    receiving data and getting kernel names from the client. It listens on a
@@ -81,6 +82,13 @@ from datetime import datetime
 raycing._VERBOSITY_ = 80
 PYVERSION = int(sys.version[0])
 
+# Please specify here the OpenCL device installed on the server
+targetOpenCL = 'GPU'
+
+# Replace 'localhost' with queue manager address if not on the same machine
+# if qmAddress is None, the server will work in standalone mode
+qmAddress = 'localhost'
+
 
 def send_zipped_pickle(socket, obj, flags=0, protocol=2):
     """pickle an object and zip the pickle before sending it"""
@@ -107,9 +115,6 @@ undulatorKernels = ['undulator', 'undulator_taper', 'undulator_nf',
                     'get_trajectory', 'custom_field']
 oesKernels = ['reflect_crystal']
 
-# Please specify here the OpenCL device installed on the server
-targetOpenCL = 'GPU'
-
 
 def main():
     matCL32 = mcl.XRT_CL(
@@ -132,9 +137,10 @@ def main():
     context = zmq.Context()
     socket = context.socket(zmq.REP)
 
-    # Replace 'localhost' with queue manager address if not on the same machine
-    # Replace 'localhost' with '*' for standalone mode
-    socket.connect("tcp://localhost:%s" % port)
+    if qmAddress is None:
+        socket.bind("tcp://*:%s" % port)
+    else:
+        socket.connect("tcp://%s:%s" % qmAddress, port)
 
     while True:
         # message = socket.recv_pyobj()  # Python 3 only
