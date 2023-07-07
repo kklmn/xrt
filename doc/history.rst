@@ -3,7 +3,23 @@
 Version history
 ---------------
 
-Available at GitHub (22 Jan 2023):
+Available on GitHub (7 Jul 2023):
+    - Enable calculations of elastically deformed crystals on GPUs. Based on
+      PyTTE code [PyTTE1]_ [PyTTE2]_. Used both in ray tracing and
+      :ref:`xrtBentXtal GUI <guis>` -- a GUI for comparative GPU-based bent
+      crystal calculations.
+
+    - Add :ref:`predefined material classes <predefmats>` in three categorees:
+      crystals, compounds and elemental. Several crystal classes also include
+      elastic constants needed to calculate bent crystal reflectivity.
+
+    - Use `python properties
+      <https://docs.python.org/3/library/functions.html#property>`_
+      in OEs, screens, apertures etc. to transparently set instance properties.
+
+    - Extend the :ref:`examples of 1D- and 2D-bent crystal analyzers
+      <JohanssonTT>` with elastically deformed crystal reflectivity.
+
     - Add :ref:`docs <sampling-strategies>` on sampling strategies of
       syncrotron sources. Add an example
       :ref:`Undulator radiation through rectangular aperture <through-aperture>`
@@ -13,6 +29,8 @@ Available at GitHub (22 Jan 2023):
 
     - Add an example :ref:`Orbital Angular Momentum of helical undulator
       ratiation <OAM-HelicalU>`.
+
+    - Bug fixes.
 
 1.5.0 (8 Sep 2022):
     - Propagation of individual source modes, as waves, hybrid waves
@@ -24,7 +42,7 @@ Available at GitHub (22 Jan 2023):
       :ref:`a few comparative test curves <tests_ml_tran>` and the test script
       ``tests/test_multilayer_transmission.py``.
 
-    - Added elliptical Gaussian beam, see
+    - Add elliptical Gaussian beam, see
       `here <https://github.com/kklmn/xrt/issues/96>`_.
 
     - Ray-tracing of mosaic crystals in reflected and transmitted geometry.
@@ -39,8 +57,8 @@ Available at GitHub (22 Jan 2023):
       including bending magnets.
 
     - Multiple performance optimizations, Gauss-Legendre grid replaced with
-      Clenshaw-Curtis. 
- 
+      Clenshaw-Curtis.
+
     - Extended functionality to :ref:`estimate and visualize convergence
       <test_undulator>`.
 
@@ -101,7 +119,7 @@ Available at GitHub (22 Jan 2023):
     - Minor bug fixes and updates.
 
 1.3.0 (25 Mar 2018):
-    - Addition of :ref:`xrtGlow <glow>` -- a 3D beamline viewer.
+    - Addition of :ref:`xrtGlow <guis>` -- a 3D beamline viewer.
 
     - Almost all old examples can now be viewed in xrtGlow as well, just select
       a proper value for the switch `showIn3D`. Those example scripts having a
@@ -128,7 +146,7 @@ Available at GitHub (22 Jan 2023):
       for 1D and 2D analysis of coherence and functions for 1D plotting of
       degree of coherence and 2D plotting of eigen modes. Reworked analysis of
       coherence in :ref:`SoftiMAX` example.
-    
+
     - Added electron energy spread dependence to the linear and angular sizes
       of undulator source. See the :ref:`formulation <undulator-source-size>`
       and an :ref:`application example<example-undulator-sizes>`.
@@ -187,7 +205,7 @@ Available at GitHub (22 Jan 2023):
     - Several minor bug fixes and updates.
 
 1.1.0 (26 Mar 2016):
-    - :ref:`xrtQook <qook>` -- a GUI for creating scripts. Tested with Python 2
+    - :ref:`xrtQook <guis>` -- a GUI for creating scripts. Tested with Python 2
       and 3, PyQt4, PyQt5 and PySide, Windows and Linux.
 
     - The examples have been restructured such that the creation of plots and
