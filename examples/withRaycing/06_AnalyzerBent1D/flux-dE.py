@@ -166,16 +166,15 @@ def plot_res_eff():
         t, int(round(e))) for t, e in zip(thetaDegrees, E0s)]
     legBragg = ax1.legend(lines[::block], labelThetas,
                           title='Bragg angle, Si444', numpoints=1, loc=(1, 0))
-    for line in legBragg.get_lines():
-        line._legmarker.set_marker([(4, 3), (-4, 3), (-4, -3), (4, -3)])
-#        line._legmarker.set_marker('.')
-#        raise
+    for i in range(len(legBragg.get_lines())):
+        legBragg.legend_handles[i].set_marker(
+            [(4, 3), (-4, 3), (-4, -3), (4, -3)])
 
     leg = ax1.legend(lines[:block], labels[:block], title='crystal type',
                      numpoints=1, loc=(1, 0.5))
-    for line in leg.get_lines():
-        line._legmarker.set_markerfacecolor('gray')
-        line._legmarker.set_markeredgecolor('gray')
+    for i in range(len(leg.get_lines())):
+        leg.legend_handles[i].set_markerfacecolor('gray')
+        leg.legend_handles[i].set_markeredgecolor('gray')
     ax1.add_artist(legBragg)
 
     if band == 'narrow':
