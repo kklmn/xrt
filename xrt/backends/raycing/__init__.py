@@ -136,6 +136,9 @@ import re
 import copy
 import inspect
 
+import colorama
+colorama.init()
+
 __module__ = "raycing"
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
@@ -383,10 +386,10 @@ def virgin_local_to_global(bl, vlb, center=None, part=None,
         vlb.z[part] += center[2]
 
 
-def xyz_from_xz(bl, x=None, z=None):
+def xyz_from_xz(obj, x=None, z=None):
     if isinstance(x, basestring) and isinstance(z, basestring):
         return 'auto'
-
+    bl = obj.bl
     if isinstance(x, (list, tuple, np.ndarray)):
         norm = sum([xc**2 for xc in x])**0.5
         retx = [xc/norm for xc in x]
@@ -401,7 +404,9 @@ def xyz_from_xz(bl, x=None, z=None):
 
     xdotz = np.dot(retx, retz)
     if abs(xdotz) > 1e-8:
-        print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
+        print('{0}x and z must be orthogonal, got xz={1:.4e} for {2}{3}'
+              .format(colorama.Back.RED, xdotz, obj.name,
+                      colorama.Style.RESET_ALL))
     rety = np.cross(retz, retx)
     return [retx, rety, retz]
 
@@ -1199,6 +1204,7 @@ class BeamLine(object):
 
                 try:
                     methStr = str(segment[1])
+
                     oeStr = segment[0]
                     segOE = self.oesDict[oeStr][0]
                     if segOE is None:  # Protection from non-initialized OEs
@@ -1210,8 +1216,10 @@ class BeamLine(object):
                         tmpBeamName = segment[2]['beam']
                         beamDict[tmpBeamName] = copy.deepcopy(
                             self.beamsDict[tmpBeamName])
+
                     if 'beamGlobal' in segment[3].keys():
                         outputBeamMatch[segment[3]['beamGlobal']] = oeStr
+
                     if len(re.findall('raycing.sou',
                                       str(type(segOE)).lower())):
                         gBeamName = segment[3]['beamGlobal']
@@ -1224,8 +1232,10 @@ class BeamLine(object):
                         gBeamName = '{}toGlobal'.format(
                             segment[3]['beamLocal'])
                         beamDict[gBeamName] = gBeam
-                        rayPath.append([outputBeamMatch[tmpBeamName],
-                                        tmpBeamName, oeStr, gBeamName])
+                        if tmpBeamName in outputBeamMatch:
+                            # if no good rays, the condition is False
+                            rayPath.append([outputBeamMatch[tmpBeamName],
+                                            tmpBeamName, oeStr, gBeamName])
                     elif len(re.findall(('double'), methStr)) +\
                             len(re.findall(('multiple'), methStr)) > 0:
                         lBeam1Name = segment[3]['beamLocal1']
@@ -1256,9 +1266,9 @@ class BeamLine(object):
                         beamDict[gBeamName] = self.beamsDict[gBeamName]
                         rayPath.append([outputBeamMatch[tmpBeamName],
                                         tmpBeamName, oeStr, gBeamName])
-                except Exception:
+                except Exception as e:
                     if _DEBUG_:
-                        raise
+                        raise e
                     else:
                         continue
 

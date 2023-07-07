@@ -177,7 +177,7 @@ class RectangularAperture(object):
             self._x = None
         if isinstance(self._z, raycing.basestring):
             self._z = None
-        self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
+        self.xyz = raycing.xyz_from_xz(self, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
@@ -601,7 +601,7 @@ class RoundAperture(object):
             self._x = None
         if isinstance(self._z, raycing.basestring):
             self._z = None
-        self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
+        self.xyz = raycing.xyz_from_xz(self, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
@@ -962,7 +962,7 @@ class PolygonalAperture(object):
             self._x = None
         if isinstance(self._z, raycing.basestring):
             self._z = None
-        self.xyz = raycing.xyz_from_xz(self.bl, self._x, self._z)
+        self.xyz = raycing.xyz_from_xz(self, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
