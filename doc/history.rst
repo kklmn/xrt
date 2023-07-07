@@ -15,10 +15,6 @@ Available on GitHub (7 Jul 2023):
 
     - All OpenCL tasks can be run on a :ref:`remote GPU server <oclserver>`.
 
-    - Use `python properties
-      <https://docs.python.org/3/library/functions.html#property>`_
-      in OEs, screens, apertures etc. to transparently set object attributes.
-
     - Extend the :ref:`examples of 1D- and 2D-bent crystal analyzers
       <JohanssonTT>` with elastically deformed crystal reflectivity.
 
@@ -31,6 +27,10 @@ Available on GitHub (7 Jul 2023):
 
     - Add an example :ref:`Orbital Angular Momentum of helical undulator
       ratiation <OAM-HelicalU>`.
+
+    - Use `python properties
+      <https://docs.python.org/3/library/functions.html#property>`_
+      in OEs, screens, apertures etc. to transparently set object attributes.
 
     - Bug fixes.
 
