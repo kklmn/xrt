@@ -58,7 +58,7 @@ Ensure that the *client* Python script is configured to connect to the correct
 server address and port:
 
 for standalone server:
-``targetOpenCL="GPU_SERVER_ADDRESS:15560"``
+``targetOpenCL="GPU_SERVER_ADDRESS:15559"``
 
 for queue manager:
 ``targetOpenCL="QUEUE_MANAGER_ADDRESS:15559"``
@@ -133,14 +133,15 @@ def main():
     oeCL32 = OE32.ucl
     oeCL64 = OE64.ucl
 
-    port = "15560"
     context = zmq.Context()
     socket = context.socket(zmq.REP)
+
+    port = "15559" if qmAddress is None else "15560"
 
     if qmAddress is None:
         socket.bind("tcp://*:%s" % port)
     else:
-        socket.connect("tcp://%s:%s" % qmAddress, port)
+        socket.connect("tcp://%s:%s" % (qmAddress, port))
 
     while True:
         # message = socket.recv_pyobj()  # Python 3 only
