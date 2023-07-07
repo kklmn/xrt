@@ -28,7 +28,7 @@ Script Components
 ~~~~~~~~~~~~~~~~~
 
 The GPU accelerator script is comprised of two files located at
-``tests\raycing\RemoteOpenCLCalculation``:
+``tests/raycing/RemoteOpenCLCalculation``:
 
 1. ``zmq_server.py``: The server script is the main component, responsible for
    receiving data and getting kernel names from the client. It listens on a
@@ -55,13 +55,9 @@ Start the server script, either as a standalone process or in conjunction with
 the queue manager, based on your specific requirements.
 
 Ensure that the *client* Python script is configured to connect to the correct
-server address and port:
+server (or queue manager) address and port:
 
-for standalone server:
 ``targetOpenCL="GPU_SERVER_ADDRESS:15559"``
-
-for queue manager:
-``targetOpenCL="QUEUE_MANAGER_ADDRESS:15559"``
 
 
 """
