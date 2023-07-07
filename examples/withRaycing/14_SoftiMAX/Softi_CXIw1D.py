@@ -77,9 +77,9 @@ ESdZ = 0.1  # in mm EXIT SLIT SIZE
 repeats = 1
 nrays = 1e5
 
-#what = 'rays'
+# what = 'rays'
 what = 'hybrid'
-#what = 'wave'
+# what = 'wave'
 
 if what == 'rays':
     prefix = 'cxi_1D-1-rays-'
@@ -210,7 +210,7 @@ def build_beamline(azimuth=0):
         limPhysX=(-2*xShrink, 2*xShrink),
         #limPhysX=(-2*xShrink*hFactor, 2*xShrink*hFactor),
         limPhysY=(-40*yShrink, 40*yShrink), alarmLevel=0.1)
-    if what == 'rays':
+    if what == 'rays' or showIn3D:
         beamLine.pg = Grating(beamLine, 'PlaneGrating',
                               material=gratingMaterial, **gratingKW)
         beamLine.pg.material.efficiency = [(1, 0.4)]
@@ -323,7 +323,7 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
     beamLine.pg.yaw = -2 * beamLine.m1.pitch
 #    beamLine.fsmPG.center = beamLine.pg.center
     print('rho = {0}'.format(rho))
-    if what != 'rays':  # this is here because it needs pitch value
+    if what != 'rays' and not showIn3D:
         drho = beamLine.pg.get_grating_area_fraction()
         beamLine.pg.areaFraction = drho
         print(u'PG areaFraction = {0}'.format(beamLine.pg.areaFraction))
@@ -360,8 +360,8 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
 #        fixedExit + pExp*np.tan(2*pitchM5)
 
 #    beamLine.fsmExp.x = np.cos(2*pitchM4), np.sin(2*pitchM4), 0
-    beamLine.fsmExp.x = np.cos(2.0004*pitchM4), np.sin(2.0004*pitchM4), 0
-    beamLine.fsmExp.z = 0, -np.sin(2*pitchM5), np.cos(2*pitchM5)
+    # beamLine.fsmExp.x = np.cos(2.0004*pitchM4), np.sin(2.0004*pitchM4), 0
+    # beamLine.fsmExp.z = 0, -np.sin(2*pitchM5), np.cos(2*pitchM5)
 
     beamLine.fsmExpCenters = []
     for d in dFocus:
@@ -401,7 +401,7 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
                'beamM1local': beamM1local,
                'beamM2local': beamM2local,
                'beamPGlocal': beamPGlocal,
-               'beamM3local': beamM3local,
+               'beamM3global': beamM3global, 'beamM3local': beamM3local,
                'beamExitSlit': beamExitSlit,
                'beamFSM4': beamFSM4,
                'beamM4global': beamM4global, 'beamM4local': beamM4local,
@@ -622,7 +622,7 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
     return outDict
 
 
-if what == 'rays':
+if (what == 'rays') or showIn3D:
     rr.run_process = run_process_rays
 elif what.startswith('hybr'):
     rr.run_process = run_process_hybr
