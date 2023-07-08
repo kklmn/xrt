@@ -438,10 +438,11 @@ class Material(object):
     @refractiveIndex.setter
     def refractiveIndex(self, refractiveIndex):
         self._refractiveIndex = refractiveIndex
+        fname = None
         if refractiveIndex is not None:
             if isinstance(refractiveIndex, (float, complex)):
                 self._refractiveIndexVal = complex(refractiveIndex)
-            if isinstance(refractiveIndex, np.ndarray):
+            elif isinstance(refractiveIndex, np.ndarray):
                 self._refractiveIndexVal = refractiveIndex
             else:
                 fname = refractiveIndex
