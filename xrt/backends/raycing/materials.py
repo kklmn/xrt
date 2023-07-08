@@ -82,6 +82,7 @@ import time
 import pickle
 import numpy as np
 # from scipy.special import jn as besselJn
+from scipy.interpolate import interp1d
 from .. import raycing
 
 from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO, SQRT2PI
@@ -316,7 +317,7 @@ class Material(object):
 
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
                  t=None, table='Chantler total', efficiency=None,
-                 efficiencyFile=None, name=''):
+                 efficiencyFile=None, name='', refractiveIndex=None):
         r"""
         *elements*: str or sequence of str
             Contains all the constituent elements (symbols)
@@ -401,6 +402,7 @@ class Material(object):
             self.quantities = quantities
         self.elements = []
         self.mass = 0.
+        self.refractiveIndex = refractiveIndex
         if name:
             self.name = name
             autoName = False
@@ -428,6 +430,64 @@ class Material(object):
         self.efficiencyFile = efficiencyFile
         if efficiencyFile is not None:
             self.read_efficiency_file()
+
+    @property
+    def refractiveIndex(self):
+        return self._refractiveIndexVal
+
+    @refractiveIndex.setter
+    def refractiveIndex(self, refractiveIndex):
+        self._refractiveIndex = refractiveIndex
+        if refractiveIndex is not None:
+            if isinstance(refractiveIndex, (float, complex)):
+                self._refractiveIndexVal = complex(refractiveIndex)
+            if isinstance(refractiveIndex, np.ndarray):
+                self._refractiveIndexVal = refractiveIndex
+            else:
+                fname = refractiveIndex
+                kwargs = {}
+            if fname:
+                self._refractiveIndexVal = self.read_ri_file(fname, kwargs)
+        else:
+            self._refractiveIndexVal = None
+
+    def read_ri_file(self, fname, kwargs):
+        spl_kw = {'kind': 'cubic', 'bounds_error': False,
+                  'fill_value': 'extrapolate'}
+        dataDir = os.path.dirname(__file__)
+        dataFile = os.path.join(dataDir, 'data', fname)
+        if fname.endswith('.xls') or fname.endswith('.xlsx'):
+            from pandas import read_excel
+            data = read_excel(dataFile).values
+            return data
+        else:
+            # data = np.loadtxt(dataFile, skiprows=1, delimiter=',')
+            En = []
+            Ek = []
+            n = []
+            k = []
+            with open(dataFile) as f:
+                for li in f:
+                    fields = li.split(',')
+                    if fields[0].strip('\"').startswith('Photon'):
+                        continue
+                    # fields = [float(x) if len(x)>0 else 0 for x in fields]
+                    if len(fields) < 3:
+                        En.append(float(fields[0]))
+                        n.append(float(fields[-1]))
+                    else:
+                        Ek.append(float(fields[0]))
+                        k.append(float(fields[-1]))
+                        if len(fields[1].strip()) > 0:
+                            En.append(float(fields[0]))
+                            n.append(float(fields[1]))
+
+                Ek = np.array(Ek)
+                En = np.array(En)
+                k = np.array(k)
+                k = interp1d(Ek, k, **spl_kw)(En)
+                rIndex = np.array(n) + 1j*k
+            return [En, interp1d(En, rIndex, **spl_kw)]
 
     def read_efficiency_file(self):
         cols = [c[1] for c in self.efficiency]
@@ -457,6 +517,17 @@ class Material(object):
         :math:`f_i(0)` are the complex atomic scattering factor for the forward
         scattering.
         """
+        if self.refractiveIndex is not None:
+            if isinstance(self.refractiveIndex, (tuple, list)):
+                if np.min(E) > self.refractiveIndex[0][0] and\
+                        np.max(E) < self.refractiveIndex[0][-1]:
+                    return self.refractiveIndex[1](E)
+                else:
+                    print("Cannot calculate refractive index."
+                          "Energy outside of the range."
+                          "Using atomic scattering factors")
+            elif isinstance(self.refractiveIndex, complex):
+                return self.refractiveIndex
         xf = np.zeros_like(E) * 0j
         for elem, xi in zip(self.elements, self.quantities):
             xf += (elem.Z + elem.get_f1f2(E)) * xi
