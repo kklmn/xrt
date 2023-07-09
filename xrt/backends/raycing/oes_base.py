@@ -24,7 +24,7 @@ __date__ = "06 Oct 2017"
 
 __fdir__ = os.path.dirname(__file__)
 
-allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
+allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
                 'rotationSequence', 'extraRotationSequence',
                 'surface', 'material', 'material2', 'alpha',
@@ -42,7 +42,7 @@ allArguments = ('bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2',
                 'phaseShift', 'vorticity', 'grazingAngle',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
-                'targetOpenCL', 'precisionOpenCL')
+                'targetOpenCL', 'precisionOpenCL']
 
 
 def flatten(x):

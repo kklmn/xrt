@@ -1090,7 +1090,7 @@ class Coated(Multilayer):
         coating = kwargs.pop('coating', None)
         cThickness = kwargs.pop('cThickness', 0)
         surfaceRoughness = kwargs.pop('surfaceRoughness', 0)
-        super(Coated, self).__init__(
+        super().__init__(
             bLayer=coating, bThickness=cThickness,
             idThickness=surfaceRoughness, nPairs=1, *args, **kwargs)
         self.kind = 'mirror'
@@ -1214,8 +1214,7 @@ class Crystal(Material):
                Acta Crystallogr. 1, (1948) 303.
 
         """
-        super(Crystal, self).__init__(
-            elements, quantities, rho=rho, table=table, name=name)
+        super().__init__(elements, quantities, rho=rho, table=table, name=name)
         self.hkl = hkl
         self.sqrthkl2 = (sum(i**2 for i in hkl))**0.5
         self.d = d
@@ -2250,7 +2249,7 @@ class CrystalDiamond(CrystalFcc):
             else:
                 kwargs['d'] = d
 
-        super(CrystalDiamond, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if a is None:
             sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
             a = self.d * sqrthkl2
@@ -2259,7 +2258,7 @@ class CrystalDiamond(CrystalFcc):
 
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         diamondToFcc = 1 + np.exp(0.5j * PI * sum(self.hkl))
-        F0, Fhkl, Fhkl_ = super(CrystalDiamond, self).get_structure_factor(
+        F0, Fhkl, Fhkl_ = super().get_structure_factor(
             E, sinThetaOverLambda, needFhkl)
         return F0 * 2, Fhkl * diamondToFcc, Fhkl_ * diamondToFcc.conjugate()
 
@@ -2292,7 +2291,7 @@ class CrystalSi(CrystalDiamond):
         kwargs['hkl'] = self.hkl
 # Mechanics of Materials, 23 (1996), p.314
 #        kwargs['nuPoisson'] = 0.22
-        super(CrystalSi, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def dl_l(self, t=None):
         """Calculates the crystal elongation at temperature *t*. Uses the

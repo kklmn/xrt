@@ -1231,7 +1231,7 @@ class AmpCalculator(QThread):
 
     def __init__(self, crystal, xaxis, energy, gamma0, gammah, hns0,
                  alpha, Rm, Rs, precision, plot_nr):
-        super(AmpCalculator, self).__init__()
+        super().__init__()
         self.crystalInstance = crystal
         self.xaxis = xaxis
         self.energy = energy

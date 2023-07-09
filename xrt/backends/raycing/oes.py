@@ -104,11 +104,12 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'BentLaueCylinder', 'BentLaue2D', 'GroundBentLaueCylinder',
            'BentLaueSphere', 'BentFlatMirror', 'ToroidMirror',
            'EllipticalMirrorParam', 'ParabolicalMirrorParam',
+           'ConicalMirror',
+           'ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
-           'SurfaceOfRevolution', 'ParaboloidCapillaryMirror',
-           'EllipsoidCapillaryMirror', 'NormalFZP',
+           'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
            'VLSLaminarGrating')
 import collections
@@ -117,8 +118,9 @@ __allSectioned__ = collections.OrderedDict([
         ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution')),
     ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
-         'ParabolicalMirrorParam', 'ConicalMirror', 'ParaboloidMirrorLens',
-         'EllipsoidMirrorLens')),
+         'ParabolicalMirrorParam',
+         'ConicalMirror',
+         'ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror')),
     ('Crystal optics',
         ('JohannCylinder', 'JohanssonCylinder', 'JohannToroid',
          'JohanssonToroid', 'GeneralBraggToroid', 'DicedJohannToroid',
@@ -2513,7 +2515,7 @@ class ParaboloidCapillaryMirror(SurfaceOfRevolution):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        super(ParaboloidCapillaryMirror, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def q(self):
@@ -2576,7 +2578,7 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        super(EllipsoidCapillaryMirror, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def ellipseA(self):
@@ -2804,7 +2806,7 @@ class GeneralFZPin0YZ(OE):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        super(GeneralFZPin0YZ, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.use_rays_good_gn = True  # use rays_good_gn instead of rays_good
         if self.grazingAngle is None:
             self.grazingAngle = self.pitch
@@ -2888,7 +2890,7 @@ class GeneralFZPin0YZ(OE):
             self._phaseShift /= np.pi
 
     def rays_good_gn(self, x, y, z):
-        locState = super(GeneralFZPin0YZ, self).rays_good(x, y, z)
+        locState = super().rays_good(x, y, z)
         good = locState == 1
         if isinstance(self.f1, str):
             d1 = y[good] * np.cos(self.grazingAngle)
@@ -3438,14 +3440,14 @@ class OEfrom3DModel(OE):
         filename = kwargs.pop('filename', None)
         orientation = kwargs.pop('orientation', 'XYZ')
         recenter = kwargs.pop('recenter', True)
-        super(OEfrom3DModel, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.orientation = orientation
         self.recenter = recenter
         if isSTLsupported:
             self.load_STL(filename)
         else:
-            raise("numpy-stl must be installed to work with STL models")
+            raise ImportError("numpy-stl must be installed to work with STL models")
 
     def load_STL(self, filename):
         self.stl_mesh = mesh.Mesh.from_file(filename)
