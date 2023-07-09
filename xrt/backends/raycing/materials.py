@@ -73,7 +73,8 @@ __allSectioned__ = collections.OrderedDict([
     ('Crystals', ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
                   'CrystalFromCell')),  # don't include 'Crystal'
     ('Layered', ('Coated', 'Multilayer', 'GradedMultilayer')),
-    ('Advanced', ('Powder', 'CrystalHarmonics', 'MonoCrystal', 'EmptyMaterial'))
+    ('Advanced', ('Powder', 'CrystalHarmonics', 'MonoCrystal',
+                  'EmptyMaterial'))
     ])
 import sys
 import os

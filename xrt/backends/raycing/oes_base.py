@@ -93,7 +93,7 @@ class OE(object):
         limOptY=None, isParametric=False, shape='rect',
         gratingDensity=None, order=None, shouldCheckCenter=False,
             targetOpenCL=None, precisionOpenCL='float64'):
-        u"""
+        r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
             `oes` list.
@@ -523,8 +523,8 @@ class OE(object):
                     [extraRotAx[i] for i in extraRotSeq])).as_quat()
                 self.orientationQuat = raycing.multiply_quats(rotation,
                                                               extraRot)
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
     def _update_bounding_box(self):
         pass
@@ -1959,29 +1959,24 @@ class OE(object):
                         if matSur.kind in ['crystal'] and \
                             matSur.geom.startswith('Laue') and \
                                 hasattr(matSur, 'volumetricDiffraction'):
-                                    if matSur.volumetricDiffraction:
-                                        thMax = -matSur.t /\
-                                            beamInDotSurfaceNormal
-                                        dpth = np.random.rand(
-                                                len(lb.a[goodN])) * thMax
-                                        lb.x[goodN] += lb.a[goodN] * dpth
-                                        lb.y[goodN] += lb.b[goodN] * dpth
-                                        lb.z[goodN] += lb.c[goodN] * dpth
-                                        deepNormal = list(self.local_n_depth(
-                                                lb.x[goodN],
-                                                lb.y[goodN],
-                                                lb.z[goodN]))
-                                        oeNormal[0:3] = deepNormal[0:3]
-                                        beamInDotNormal =\
-                                            lb.a[goodN]*oeNormal[0] +\
-                                            lb.b[goodN]*oeNormal[1] +\
-                                            lb.c[goodN]*oeNormal[2]
-                                        lb.theta = np.zeros_like(lb.x)
-                                        beamInDotNormal[beamInDotNormal < -1] = -1
-                                        beamInDotNormal[beamInDotNormal > 1] = 1
-                                        lb.theta[goodN] =\
-                                            np.arccos(
-                                                    beamInDotNormal) - np.pi/2
+                            if matSur.volumetricDiffraction:
+                                thMax = -matSur.t / beamInDotSurfaceNormal
+                                dpth = np.random.rand(len(lb.a[goodN])) * thMax
+                                lb.x[goodN] += lb.a[goodN] * dpth
+                                lb.y[goodN] += lb.b[goodN] * dpth
+                                lb.z[goodN] += lb.c[goodN] * dpth
+                                deepNormal = list(self.local_n_depth(
+                                        lb.x[goodN], lb.y[goodN], lb.z[goodN]))
+                                oeNormal[0:3] = deepNormal[0:3]
+                                beamInDotNormal =\
+                                    lb.a[goodN]*oeNormal[0] +\
+                                    lb.b[goodN]*oeNormal[1] +\
+                                    lb.c[goodN]*oeNormal[2]
+                                lb.theta = np.zeros_like(lb.x)
+                                beamInDotNormal[beamInDotNormal < -1] = -1
+                                beamInDotNormal[beamInDotNormal > 1] = 1
+                                lb.theta[goodN] = np.arccos(beamInDotNormal)\
+                                    - np.pi/2
 
                 else:
                     beamInDotSurfaceNormal = beamInDotNormal
@@ -2475,7 +2470,7 @@ class DCM(OE):
     def limPhysY2(self, limPhysY2):
         if limPhysY2 is None:
             self._limPhysY2 = [-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE]
+                               raycing.maxHalfSizeOfOE]
         else:
             self._limPhysY2 = limPhysY2
 

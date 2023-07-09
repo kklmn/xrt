@@ -2171,7 +2171,7 @@ class ParaboloidFlatLens(Plate):
     }"""
 
     def __init__(self, *args, **kwargs):
-        u"""
+        r"""
         *focus*: float
             The focal distance of the of paraboloid in mm. The paraboloid is
             then defined by the equation:
@@ -2946,7 +2946,7 @@ class GeneralFZPin0YZ(OE):
 
 
 class BlazedGrating(OE):
-    """Implements a grating of triangular shape given by two angles. The front
+    r"""Implements a grating of triangular shape given by two angles. The front
     side of the triangle (the one looking towards the source) is at *blaze*
     angle to the base plane. The back side is at *antiblaze* angle.
 
@@ -3447,7 +3447,8 @@ class OEfrom3DModel(OE):
         if isSTLsupported:
             self.load_STL(filename)
         else:
-            raise ImportError("numpy-stl must be installed to work with STL models")
+            raise ImportError(
+                "numpy-stl must be installed to work with STL models")
 
     def load_STL(self, filename):
         self.stl_mesh = mesh.Mesh.from_file(filename)
