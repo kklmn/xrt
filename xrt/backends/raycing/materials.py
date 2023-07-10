@@ -96,8 +96,7 @@ except ImportError:
 
 ch = CH  # left here for copatibility
 chbar = CHBAR  # left here for copatibility
-spl_kw = {'kind': 'cubic', 'bounds_error': False,
-          'fill_value': 'extrapolate'}
+spl_kw = {'kind': 'cubic', 'bounds_error': False, 'fill_value': 'extrapolate'}
 
 try:  # for Python 3 compatibility:
     unicode = unicode
@@ -127,26 +126,6 @@ elementsList = (
     'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu',
     'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
     'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U')
-
-elementsNames = ('none', 'Hydrogen', 'Helium', 'Lithium', 'Beryllium', 'Boron',
-                 'Carbon', 'Nitrogen', 'Oxygen', 'Fluorine',
-                 'Neon', 'Sodium', 'Magnesium', 'Aluminum', 'Silicon',
-                 'Phosphorus', 'Sulfur', 'Chlorine', 'Argon', 'Potassium',
-                 'Calcium', 'Scandium', 'Titanium', 'Vanadium', 'Chromium',
-                 'Manganese', 'Iron', 'Cobalt', 'Nickel', 'Copper', 'Zinc',
-                 'Gallium', 'Germanium', 'Arsenic', 'Selenium', 'Bromine',
-                 'Krypton', 'Rubidium', 'Strontium', 'Yttrium', 'Zirconium',
-                 'Niobium', 'Molybdenum', 'Technetium', 'Ruthenium', 'Rhodium',
-                 'Palladium', 'Silver', 'Cadmium', 'Indium', 'Tin', 'Antimony',
-                 'Tellurium', 'Iodine', 'Xenon', 'Cesium', 'Barium',
-                 'Lanthanum', 'Cerium', 'Praseodymium', 'Neodymium',
-                 'Promethium', 'Samarium', 'Europium', 'Gadolinium', 'Terbium',
-                 'Dysprosium', 'Holmium', 'Erbium', 'Thulium', 'Ytterbium',
-                 'Lutetium', 'Hafnium', 'Tantalum', 'Tungsten', 'Rhenium',
-                 'Osmium', 'Iridium', 'Platinum', 'Gold', 'Mercury',
-                 'Thallium', 'Lead', 'Bismuth', 'Polonium', 'Astatine',
-                 'Radon', 'Francium', 'Radium', 'Actinium', 'Thorium',
-                 'Protactinium', 'Uranium')
 
 
 def read_atomic_data(elem):
@@ -464,8 +443,8 @@ class Material(object):
                         n = refractiveIndex[:, 1]
                         k = refractiveIndex[:, 2]
                         rIndex = np.complex128(n + 1j*k)
-                        self._refractiveIndexVal = [En, interp1d(En, rIndex,
-                                                                 **spl_kw)]
+                        self._refractiveIndexVal = [
+                            En, interp1d(En, rIndex, **spl_kw)]
             else:
                 fname = refractiveIndex
                 try:
@@ -560,8 +539,8 @@ class Material(object):
                         np.max(E) < self.refractiveIndex[0][-1]:
                     return self.refractiveIndex[1](E)
                 else:
-                    print("Cannot calculate refractive index."
-                          "Energy outside of the range."
+                    print("Cannot calculate refractive index. "
+                          "Energy outside of the range. "
                           "Using atomic scattering factors")
             elif isinstance(self.refractiveIndex, complex):
                 return self.refractiveIndex
@@ -1038,7 +1017,7 @@ class Multilayer(object):
                 rj_s, rj_p = ri_s, ri_p
             t2 = time.time()
             if raycing._VERBOSITY_ > 10:
-                print('ML reflection calculated with CPU in {} s'.format(
+                print('ML reflection calculated with CPU in {0:.3f} s'.format(
                       t2-t0))
         else:
             nonSlicedROArgs = [np.float64(self.dti), np.float64(self.dbi)]
@@ -1076,7 +1055,7 @@ class Multilayer(object):
                     nonSlicedROArgs, slicedRWArgs, None, len(E))
             t2 = time.time()
             if raycing._VERBOSITY_ > 10:
-                print('ML reflection calculated with OCL in {} s'.format(
+                print('ML reflection calculated with OCL in {0:.3f} s'.format(
                       t2-t0))
 
         if 'refl' in self.geom:
@@ -1398,7 +1377,7 @@ class Crystal(Material):
             Rcurv = Rcurvmm * 1e7
             if ucl is None:
                 useTT = False
-                print('OpenCL is required for bent crystals calculations.')
+                print('OpenCL is required for bent crystals calculations. ')
                 print('Emulating perfect crystal.')
         else:
             Rcurv = np.inf
@@ -1643,7 +1622,7 @@ class Crystal(Material):
 #                    raise ValueError('reflectivity contains nan!')
                 return ra / np.sqrt(abs(b))
             t = self.t * 1e7
-            l = t * delta * k02 / 2. / kHs
+            l = t * delta * k02 / 2. / kHs  # analysis:ignore
             with np.errstate(over='ignore'):
                 if self.geom.startswith('Bragg'):
                     if self.geom.endswith('transmitted'):
@@ -1887,7 +1866,7 @@ class Crystal(Material):
                         ucl.cl_precisionC(g0[nzrays])]
 
         slicedRWArgs = [amp_s, amp_p, npoints]
-        print('Calculating bent crystal reflectivity')
+        print('Calculating bent crystal reflectivity...')
         amp_s, amp_p, npoints = ucl.run_parallel(
             'get_amplitudes_pytte', scalarArgs, slicedROArgs,
             None, slicedRWArgs, None, dimension=bLength, complexity=startSteps,
@@ -1911,8 +1890,8 @@ class Crystal(Material):
         if signal is not None:
             signal.emit(("Calculation completed in {:.3f}s".format(
                     time.time()-t001), 100))
-        print("Amplitude calculation for", bLength, "points takes",
-              time.time()-t001, "s")
+        print("Amplitude calculation for {0} points takes {1:.3f} s".format(
+            bLength, time.time()-t001))
         return curveS, curveP
 
     """
@@ -2473,7 +2452,7 @@ class CrystalFromCell(Crystal):
 
         self.name = name
         self.hkl = hkl
-        h, k, l = hkl
+        h, k, l = hkl  # analysis:ignore
         self.tK = 0
         self.a = a
         self.b = a if b is None else b
