@@ -504,6 +504,9 @@ class Material(object):
                 rIndex = np.array(n) + 1j*k
 
                 return [En, interp1d(En, rIndex, **spl_kw)]
+        else:
+            print(dataPath, "not found! Using refractive index of 1")
+            return complex(1.)
 
     def read_efficiency_file(self):
         cols = [c[1] for c in self.efficiency]
