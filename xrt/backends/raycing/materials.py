@@ -96,6 +96,8 @@ except ImportError:
 
 ch = CH  # left here for copatibility
 chbar = CHBAR  # left here for copatibility
+spl_kw = {'kind': 'cubic', 'bounds_error': False,
+          'fill_value': 'extrapolate'}
 
 try:  # for Python 3 compatibility:
     unicode = unicode
@@ -393,6 +395,18 @@ class Material(object):
             annotations of graphs or other output purposes. If empty, the name
             is constructed from the *elements* and the *quantities*.
 
+        *refractiveIndex*: float or complex or numpy array or str
+            Explicitly defines the refractive index of the material. Can be
+            used for the energy ranges not covered by the tables of scattering
+            factors (IR, visible).
+            Can be set as:
+            a) float or complex value, for a constant, energy-independent
+            refractive index.
+            b) a 3-column numpy array containing Energy in eV, real and
+            imaginary parts of the complex refractive index
+            c) filename for an  *.xls or CSV table containig same columns as
+            a numpy array in b).
+
 
         """
         if isinstance(elements, basestring):
@@ -444,52 +458,73 @@ class Material(object):
             if isinstance(refractiveIndex, (float, complex)):
                 self._refractiveIndexVal = complex(refractiveIndex)
             elif isinstance(refractiveIndex, np.ndarray):
-                self._refractiveIndexVal = refractiveIndex
+                if len(refractiveIndex.shape) > 1:
+                    if refractiveIndex.shape[1] > 2:
+                        En = refractiveIndex[:, 0]
+                        n = refractiveIndex[:, 1]
+                        k = refractiveIndex[:, 2]
+                        rIndex = np.complex128(n + 1j*k)
+                        self._refractiveIndexVal = [En, interp1d(En, rIndex,
+                                                                 **spl_kw)]
             else:
                 fname = refractiveIndex
-                kwargs = {}
-            if fname:
-                self._refractiveIndexVal = self.read_ri_file(fname, kwargs)
+                try:
+                    self._refractiveIndexVal = self.read_ri_file(fname)
+                except Exception as e:
+                    print(e)
+                    self._refractiveIndexVal = None
         else:
             self._refractiveIndexVal = None
 
-    def read_ri_file(self, fname, kwargs):
-        spl_kw = {'kind': 'cubic', 'bounds_error': False,
-                  'fill_value': 'extrapolate'}
-        dataDir = os.path.dirname(__file__)
-        dataFile = os.path.join(dataDir, 'data', fname)
-        if fname.endswith('.xls') or fname.endswith('.xlsx'):
-            from pandas import read_excel
-            data = read_excel(dataFile).values
-            return data
-        else:
-            # data = np.loadtxt(dataFile, skiprows=1, delimiter=',')
-            En = []
-            Ek = []
-            n = []
-            k = []
-            with open(dataFile) as f:
-                for li in f:
-                    fields = li.split(',')
-                    if fields[0].strip('\"').startswith('Photon'):
-                        continue
-                    # fields = [float(x) if len(x)>0 else 0 for x in fields]
-                    if len(fields) < 3:
-                        En.append(float(fields[0]))
-                        n.append(float(fields[-1]))
-                    else:
-                        Ek.append(float(fields[0]))
-                        k.append(float(fields[-1]))
-                        if len(fields[1].strip()) > 0:
+    def read_ri_file(self, fname):
+        # dataDir = os.path.dirname(__file__)
+        # dataFile = os.path.join(dataDir, 'data', fname)
+        dataPath = os.path.abspath(fname)
+        if os.path.exists(dataPath):
+            En = None
+            if fname.endswith('.xls') or fname.endswith('.xlsx'):
+                from pandas import read_excel
+                data = read_excel(dataPath).values
+                if len(data.shape) > 1:
+                    if data.shape[1] > 2:
+                        En = data[:, 0]
+                        Ek = En
+                        n = data[:, 1]
+                        k = data[:, 2]
+            else:
+                # data = np.loadtxt(dataFile, skiprows=1, delimiter=',')
+                En = []
+                Ek = []
+                n = []
+                k = []
+                # Reads specific format with sparse k column
+                with open(dataPath) as f:
+                    for li in f:
+                        fields = li.split(',')
+                        # if fields[0].strip('\"').startswith('Photon'):
+                        #   continue
+                        try:
+                            tmpv = float(fields[0])
+                        except ValueError:
+                            continue
+                        if len(fields) < 3:
                             En.append(float(fields[0]))
-                            n.append(float(fields[1]))
+                            n.append(float(fields[-1]))
+                        else:
+                            Ek.append(float(fields[0]))
+                            k.append(float(fields[-1]))
+                            if len(fields[1].strip()) > 0:
+                                En.append(float(fields[0]))
+                                n.append(float(fields[1]))
 
+            if En is not None:
                 Ek = np.array(Ek)
                 En = np.array(En)
                 k = np.array(k)
                 k = interp1d(Ek, k, **spl_kw)(En)
                 rIndex = np.array(n) + 1j*k
-            return [En, interp1d(En, rIndex, **spl_kw)]
+
+                return [En, interp1d(En, rIndex, **spl_kw)]
 
     def read_efficiency_file(self):
         cols = [c[1] for c in self.efficiency]

@@ -1988,7 +1988,10 @@ class Plate(DCM):
     def __init__(self, *args, **kwargs):
         """
         *t*: float
-            Tthickness in mm.
+            Thickness in mm.
+
+        *wedgeAngle*: float
+            Relative angular misorientation of the back plane.
 
 
         """
