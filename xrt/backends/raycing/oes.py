@@ -1986,7 +1986,7 @@ class Plate(DCM):
                     'limOptY2', 'surface', 'material2', 'fixedOffset']
 
     def __init__(self, *args, **kwargs):
-        """
+        r"""
         *t*: float
             Thickness in mm.
 

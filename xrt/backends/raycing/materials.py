@@ -383,7 +383,7 @@ class Material(object):
             refractive index.
             b) a 3-column numpy array containing Energy in eV, real and
             imaginary parts of the complex refractive index
-            c) filename for an  *.xls or CSV table containig same columns as
+            c) filename for an \*.xls or CSV table containig same columns as
             a numpy array in b).
 
 

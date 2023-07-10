@@ -375,19 +375,21 @@ method above.
 3. It uses Principal Component Analysis (PCA) applied to the filament images
    :math:`E(x, y)`. It consists of the following steps.
 
-   a) Out of *r* repeats of :math:`E(x, y)` build a data matrix :math:`D` with
-      N\ :sub:`x`\ ×N\ :sub:`y` rows and *r* columns.
+   a) Out of *r* repeats of :math:`E(x, y)` build a stacked data matrix
+      :math:`D` with N\ :sub:`x`\ ×N\ :sub:`y` rows and *r* columns.
    b) The matrix :math:`J_{12}` is equal to the product :math:`DD^{+}`. Instead
       of solving this huge eigenvalue problem of (N\ :sub:`x`\ ×N\ :sub:`y`)²
-      size, we solve a typically smaller matrix :math:`D^{+}D` of the size
-      *r*\ ².
-   c) The eigenvalues of matrices :math:`DD^{+}` and :math:`D^{+}D` are the
-      same, plus zeroes for the bigger matrix.
-   d) Their eigenvectors (being *eigenmodes* for :math:`DD^{+}` and *principal
-      components* for :math:`D^{+}D`) corresponding to the same eigenvalue are
-      transformed to each other with a factor :math:`D` or :math:`D^{+}`, after
-      which transformation they must be additionally normalized [the proof is a
-      one line matrix equation].
+      size, we solve a typically smaller *covariance* matrix :math:`D^{+}D` of
+      the size *r*\ ².
+   c) The spectra of eigenvalues of matrices :math:`DD^{+}` and :math:`D^{+}D`
+      are equal, plus zeroes for the bigger matrix.
+   d) Their eigenvectors (being *eigenmodes* :math:`V_i` of :math:`DD^{+}` and
+      *principal component axes* :math:`v_i` of :math:`D^{+}D`) corresponding
+      to the same eigenvalue are transformed to each other with a factor
+      :math:`D` or :math:`D^{+}`: :math:`\tilde{V}_i = Dv_i` and
+      :math:`\tilde{v}_i = D^{+}V_i`, after which transformation they must be
+      additionally normalized (:math:`\tilde{v}_i` and :math:`\tilde{V}_i` are
+      non-normalized eigenvectors) [the proof is a one line matrix equation].
 
    Finally, PCA gives exactly the same information as the direct modal analysis
    (method No 2 above) but is cheaper to calculate by many orders of magnitude.
