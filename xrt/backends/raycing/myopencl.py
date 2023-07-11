@@ -180,16 +180,22 @@ class XRT_CL(object):
                             pass
                     iDeviceAcc.extend(AccDevices)
                 if _DEBUG > 10:
+                    green = raycing.colorama.Fore.GREEN
+                    red = raycing.colorama.Fore.RED
+                    reset = raycing.colorama.Fore.RESET
                     print("OpenCL: bulding {0} ...".format(self.cl_filename))
-                    print("OpenCL: found {0} CPU{1}".format(
+                    print("OpenCL: found {0}{1}{2} CPU{3}".format(
+                          green if len(iDeviceCPU) > 0 else red,
                           len(iDeviceCPU) if len(iDeviceCPU) > 0 else 'none',
-                          's' if len(iDeviceCPU) > 1 else ''))
-                    print("OpenCL: found {0} GPU{1}".format(
+                          reset, 's' if len(iDeviceCPU) > 1 else ''))
+                    print("OpenCL: found {0}{1}{2} GPU{3}".format(
+                          green if len(iDeviceGPU) > 0 else red,
                           len(iDeviceGPU) if len(iDeviceGPU) > 0 else 'none',
-                          's' if len(iDeviceGPU) > 1 else ''))
-                    print("OpenCL: found {0} other accelerator{1}".format(
+                          reset, 's' if len(iDeviceGPU) > 1 else ''))
+                    print("OpenCL: found {0}{1}{2} other accelerator{3}".format(
+                          green if len(iDeviceAcc) > 0 else red,
                           len(iDeviceAcc) if len(iDeviceAcc) > 0 else 'none',
-                          's' if len(iDeviceAcc) > 1 else ''))
+                          reset, 's' if len(iDeviceAcc) > 1 else ''))
 
                 if targetOpenCL.upper().startswith('GPU'):
                     iDevice.extend(iDeviceGPU)

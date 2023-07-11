@@ -90,8 +90,9 @@ class RunCardVals(object):
         except:  # analysis:ignore
             pass
         if self.lastRuns:
-            print("The last {0} run{1}".format(len(self.lastRuns),
-                  's' if len(self.lastRuns) > 1 else ''))
+            raycing.colorPrint("The last {0} run{1}".format(
+                len(self.lastRuns), 's' if len(self.lastRuns) > 1 else ''),
+                fcolor='GREEN')
         for lastRun in self.lastRuns:
             if len(lastRun) > 3:
                 print("{0}::".format(lastRun[3]))
@@ -259,7 +260,7 @@ def one_iteration():
         if runCardVals.backend.startswith('raycing'):
             runCardVals.beamLine.alarms = retry_on_eintr(alarmQueue.get)
             for alarm in runCardVals.beamLine.alarms:
-                print(alarm)
+                raycing.colorPrint(alarm, 'RED')
         outList = [0, ]
         for plot, aqueue in zip(_plots, outPlotQueues):
             outList = retry_on_eintr(aqueue.get)
@@ -343,16 +344,18 @@ def on_finish():
         plot.save()
     runCardVals.tstop = time.time()
     runCardVals.tstopLong = time.localtime()
-    print('The ray tracing with {0} iteration{1} took {2:0.1f} s'.format(
-          runCardVals.iteration, 's' if runCardVals.iteration > 1 else '',
-          runCardVals.tstop-runCardVals.tstart))
+    raycing.colorPrint('The ray tracing with {0} iteration{1} took {2:0.1f} s'
+                       .format(runCardVals.iteration,
+                               's' if runCardVals.iteration > 1 else '',
+                               runCardVals.tstop-runCardVals.tstart),
+                       fcolor="GREEN")
     runCardVals.finished_event.set()
     for plot in _plots:
         if runCardVals.globalNorm or plot.persistentName:
             plot.store_plots()
     if runCardVals.stop_event.is_set():
-        print('Interrupted by user after iteration {0}'.format(
-              runCardVals.iteration))
+        raycing.colorPrint('Interrupted by user after iteration {0}'.format(
+            runCardVals.iteration), fcolor='YELLOW')
         return
     try:
         if runCardProcs.generatorPlot is not None:

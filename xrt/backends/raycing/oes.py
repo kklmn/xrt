@@ -2040,8 +2040,9 @@ class Plate(DCM):
                         name = self.name
                     except AttributeError:
                         name = self.__class__.__name__
-                    print('Warning: material of {0} is not of kind {1}!'.
-                          format(name, "plate or lens or FZP"))
+                    raycing.colorPrint(
+                        'Warning: material of {0} is not of kind {1}!'
+                        .format(name, "plate or lens or FZP"), "YELLOW")
 
         if hasattr(self, '_nCRLlist'):
             self.nCRL = self._nCRLlist

@@ -185,11 +185,11 @@ class SourceBase:
         if (self.dx is None) and (self._betaX is not None):
             self.dx = np.sqrt(self._eEpsilonX*self._betaX)
         elif (self.dx is None) and (self._betaX is None):
-            print("Set either dx or betaX!")
+            raycing.colorPrint("Set either dx or betaX!", "RED")
         if (self.dz is None) and (self._betaZ is not None):
             self.dz = np.sqrt(self._eEpsilonZ*self._betaZ)
         elif (self.dz is None) and (self._betaZ is None):
-            print("Set either dz or betaZ!")
+            raycing.colorPrint("Set either dz or betaZ!", "RED")
 
         dxprime, dzprime = None, None
         if dxprime:
@@ -911,7 +911,7 @@ class IntegratedSource(SourceBase):
             precisionOpenCL = 'float64'
         if targetOpenCL is not None:
             if not isOpenCL:
-                print("pyopencl is not available!")
+                raycing.colorPrint("pyopencl is not available!", "RED")
             else:
                 self.ucl = mcl.XRT_CL(
                     r'undulator.cl', targetOpenCL, precisionOpenCL)
@@ -1383,8 +1383,10 @@ class IntegratedSource(SourceBase):
         if fixedEnergy:
             rsE = fixedEnergy
             if (self.E_max-self.E_min) > fixedEnergy*1.1e-3:
-                print("Warning: the bandwidth seems too big. "
-                      "Specify it by giving eMin and eMax in the constructor.")
+                raycing.colorPrint(
+                    "Warning: the bandwidth seems too big. "
+                    "Specify it by giving eMin and eMax in the constructor.",
+                    "YELLOW")
         nrep = 0
         rep_condition = True
 

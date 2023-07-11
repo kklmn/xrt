@@ -295,7 +295,7 @@ class OE(object):
         self.footprint = []
         if targetOpenCL is not None:
             if not isOpenCL:
-                print("pyopencl is not available!")
+                raycing.colorPrint("pyopencl is not available!", "RED")
             else:
                 cl_template = os.path.join(__fdir__, r'materials.cl')
                 with open(cl_template, 'r') as f:
@@ -540,8 +540,8 @@ class OE(object):
         d = b * (self.center[0]-self.bl.sources[0].center[0])\
             - a * (self.center[1]-self.bl.sources[0].center[1])
         if abs(d) > misalignmentTolerated:
-            print("Warning: {0} is off the beamline by {1}".format(
-                  self.name, d))
+            raycing.colorPrint("Warning: {0} is off the beamline by {1}"
+                               .format(self.name, d), "YELLOW")
             xc = a * b * (self.center[1]-self.bl.sources[0].center[1])\
                 + self.bl.sources[0].center[0] * b**2 + self.center[0] * a**2
             yc = a * b * (self.center[0]-self.bl.sources[0].center[0])\
@@ -712,7 +712,8 @@ class OE(object):
             ind = np.isnan(surf)
             if ind.sum() > 0:
                 if raycing._VERBOSITY_ > 0:
-                    print('{0} NaNs in the surface!!!'.format(ind.sum()))
+                    raycing.colorPrint('{0} NaNs in the surface!!!'
+                                       .format(ind.sum()), 'RED')
                 surf[ind] = 0
             dz = (z - surf) * diffSign * invertNormal
         else:
@@ -754,8 +755,8 @@ class OE(object):
                 dz1, dz2, tMin, tMax, x2, y2, z2, ind)
         if numit == raycing.maxIteration and raycing._VERBOSITY_ > 10:
             nn = ind.sum()
-            print('maxIteration is reached for {0} ray{1}!!!'.format(
-                  nn, 's' if nn > 1 else ''))
+            raycing.colorPrint('maxIteration is reached for {0} ray{1}!!!'
+                               .format(nn, 's' if nn > 1 else ''), 'RED')
         if raycing._VERBOSITY_ > 10:
             print('numit=', numit)
         return t2, x2, y2, z2, ind1
@@ -1540,8 +1541,9 @@ class OE(object):
     def _reportNaN(self, x, strName):
         nanSum = np.isnan(x).sum()
         if nanSum > 0:
-            print("{0} NaN rays in array {1} in optical element {2}!".format(
-                  nanSum, strName, self.name))
+            raycing.colorPrint(
+                "{0} NaN rays in array {1} in optical element {2}!".format(
+                    nanSum, strName, self.name), "RED")
 
     def local_n_random(self, bLength, chi):
         a = np.zeros(bLength)

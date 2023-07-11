@@ -137,7 +137,7 @@ import copy
 import inspect
 
 import colorama
-colorama.init()
+colorama.init(autoreset=True)
 
 __module__ = "raycing"
 __author__ = "Konstantin Klementiev, Roman Chernikov"
@@ -192,6 +192,18 @@ allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
                  'theta', 'phi', 'incidence_angle',
                  'elevation_d', 'elevation_x', 'elevation_y', 'elevation_z',
                  'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
+
+
+colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
+    'WHITE', 'RESET'
+
+
+def colorPrint(s, fcolor=None, bcolor=None):
+    style = getattr(colorama.Fore, fcolor) if fcolor in colors else \
+        colorama.Fore.RESET
+    style += getattr(colorama.Back, bcolor) if bcolor in colors else \
+        colorama.Back.RESET
+    print('{0}{1}'.format(style, s))
 
 
 def is_sequence(arg):
@@ -404,9 +416,8 @@ def xyz_from_xz(obj, x=None, z=None):
 
     xdotz = np.dot(retx, retz)
     if abs(xdotz) > 1e-8:
-        print('{0}x and z must be orthogonal, got xz={1:.4e} for {2}{3}'
-              .format(colorama.Back.RED, xdotz, obj.name,
-                      colorama.Style.RESET_ALL))
+        colorPrint('x and z must be orthogonal, got xz={0:.4e} for {1}'
+                   .format(xdotz, obj.name), 'RED')
     rety = np.cross(retz, retx)
     return [retx, rety, retz]
 

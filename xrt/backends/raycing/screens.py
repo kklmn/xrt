@@ -384,7 +384,8 @@ class HemisphericScreen(Screen):
 
         xdotz = np.dot(self._x, self._z)
         if abs(xdotz) > 1e-8:
-            print('x and z must be orthogonal, got xz={0:.4e}'.format(xdotz))
+            raycing.colorPrint('x and z must be orthogonal, got xz={0:.4e}'
+                               .format(xdotz), 'RED')
         self.y = np.cross(self._z, self._x)
 
     def local_to_global(self, phi, theta):

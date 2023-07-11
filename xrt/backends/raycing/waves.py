@@ -588,8 +588,8 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
     good = oeLocal.state == 1
     goodlen = good.sum()
     if goodlen < 1e2:
-        print("Not enough good rays at {0}: {1} of {2}".format(
-              oe.name, goodlen, len(oeLocal.x)))
+        raycing.colorPrint("Not enough good rays at {0}: {1} of {2}".format(
+              oe.name, goodlen, len(oeLocal.x)), "RED")
         return
 #        goodIn = beam.state == 1
 #        self.beamInRays += goodIn.sum()
