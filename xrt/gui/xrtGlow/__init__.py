@@ -3253,7 +3253,7 @@ class xrtGlWidget(qt.QGLWidget):
 
                 oe.local_to_global(gbT, is2ndXtal=is2ndXtal)
 
-                if hasattr(oe, '_nCRL'):
+                if hasattr(oe, 'centerShift'):
                     cShift = oe.centerShift
                     nSurf = oe._nCRL
                 else:
