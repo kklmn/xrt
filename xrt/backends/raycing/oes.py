@@ -2045,7 +2045,8 @@ class Plate(DCM):
                         .format(name, "plate or lens or FZP"), "YELLOW")
 
         if hasattr(self, '_nCRLlist'):
-            self.nCRL = self._nCRLlist
+            if self._nCRLlist is not None:
+                self.nCRL = self._nCRLlist
 
     @property
     def wedgeAngle(self):
@@ -2236,7 +2237,8 @@ class ParaboloidFlatLens(Plate):
     def focus(self, focus):
         self._focus = focus
         if hasattr(self, '_nCRLlist'):
-            self.nCRL = self._nCRLlist
+            if self._nCRLlist is not None:
+                self.nCRL = self._nCRLlist
 
     def __pop_kwargs(self, **kwargs):
         self.focus = kwargs.pop('focus', 1.)
@@ -2313,7 +2315,6 @@ class ParaboloidFlatLens(Plate):
         """
         if self.bl is not None:
             self.bl.auto_align(self, beam)
-
         if self.nCRL == 1:
             self.centerShift = np.zeros(3)
             return self.double_refract(beam, needLocal=needLocal,

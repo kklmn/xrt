@@ -91,7 +91,8 @@ class Beam(object):
                     import scipy.io as io
                     self.__dict__.update(io.loadmat(copyFrom))
                 elif copyFrom.endswith('npy'):
-                    self.__dict__.update(np.load(copyFrom).item())
+                    self.__dict__.update(np.load(
+                            copyFrom, allow_pickle=True).item())
                 else:
                     pickleFile = open(copyFrom, 'rb')
                     self.__dict__.update(pickle.load(pickleFile))
