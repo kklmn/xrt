@@ -3153,6 +3153,11 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnable(gl.GL_MAP2_VERTEX_3)
         gl.glEnable(gl.GL_MAP2_NORMAL)
 
+        isWedge = False
+        if isinstance(oe, roes.Plate):
+            if abs(oe.wedgeAngle) > 0:
+                isWedge = True
+
         # Top and Bottom Surfaces
         nsIndex = int(is2ndXtal)
         if is2ndXtal:
@@ -3186,6 +3191,14 @@ class xrtGlWidget(qt.QGLWidget):
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
 
+        if is2ndXtal:
+            zExt = '2'
+        else:
+            zExt = '1' if hasattr(oe, 'local_z1') else ''
+        local_z = getattr(oe, 'local_r{}'.format(zExt)) if\
+            oe.isParametric else getattr(oe, 'local_z{}'.format(zExt))
+        local_n = getattr(oe, 'local_n{}'.format(zExt))
+
         deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
         for i in range(localTiles[0]):
             xGridOe = np.linspace(xLimits[0] + i*deltaX,
@@ -3205,16 +3218,8 @@ class xrtGlWidget(qt.QGLWidget):
                 xv = xv.flatten()
                 yv = yv.flatten()
 
-                if is2ndXtal:
-                    zExt = '2'
-                else:
-                    zExt = '1' if hasattr(oe, 'local_z1') else ''
-                local_z = getattr(oe, 'local_r{}'.format(zExt)) if\
-                    oe.isParametric else getattr(oe, 'local_z{}'.format(zExt))
-                local_n = getattr(oe, 'local_n{}'.format(zExt))
-
-                xv = np.copy(xv)
-                yv = np.copy(yv)
+                xv = np.copy(xv)  # ?
+                yv = np.copy(yv)  # ?
                 zv = np.zeros_like(xv)
                 if isinstance(oe, roes.SurfaceOfRevolution):
                     # at z=0 (axis of rotation) phi is undefined, therefore:
@@ -3266,14 +3271,14 @@ class xrtGlWidget(qt.QGLWidget):
                                         gbT.a, gbT.b, gbT.c, dC)
                     if thickness > 0 \
                             and not isinstance(oe, roes.DoubleParaboloidLens)\
-                            and not isClosedSurface:
+                            and not isClosedSurface and not isWedge:
                         self.plotCurvedMesh(gbB.x, gbB.y, gbB.z,
                                             gbB.a, gbB.b, gbB.c, dC)
 
     # Side faces
         if isinstance(oe, roes.Plate):
             self.setMaterial('semiSi')
-        if thickness > 0 and not isClosedSurface:
+        if thickness > 0 and not isClosedSurface and not isWedge:
             deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
             for ie, yPos in enumerate(yLimits):
                 for i in range(localTiles[0]):

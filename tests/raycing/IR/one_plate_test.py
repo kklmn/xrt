@@ -48,6 +48,9 @@ def build_beamline():
         pitch=r"22.5deg",
         wedgeAngle='-45deg',
         t=1,
+        limPhysX=[-2, 2],
+        limPhysY=[-2, 1.4],
+        limPhysY2=[-2, 1],
         material=BK7)
 
     myTestBeamline.screen01 = rscreens.Screen(
