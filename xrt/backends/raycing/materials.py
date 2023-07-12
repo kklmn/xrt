@@ -293,7 +293,10 @@ class Material(object):
     """
     :class:`Material` serves for getting reflectivity, transmittivity,
     refractive index and absorption coefficient of a material specified by its
-    chemical formula and density.
+    chemical formula and density. See also predefined materials in modules
+    :mod:`~xrt.backends.raycing.materials_compounds` and
+    :mod:`~xrt.backends.raycing.materials_elemental`.
+
 
     """
 
@@ -2355,7 +2358,8 @@ class CrystalSi(CrystalDiamond):
 class CrystalFromCell(Crystal):
     """:class:`CrystalFromCell` builds a crystal from cell parameters and
     atomic positions which can be found e.g. in Crystals.dat of XOP [XOP]_ or
-    xraylib.
+    xraylib. See also predefined crystals in module
+    :mod:`~xrt.backends.raycing.materials_crystals`.
 
     Examples:
         >>> xtalQu = rm.CrystalFromCell(

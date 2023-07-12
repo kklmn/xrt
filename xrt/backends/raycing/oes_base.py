@@ -202,7 +202,7 @@ class OE(object):
 
             .. math::
 
-                \\rho_x = \\rho_0\\cdot(P_0 + 2 P_1 x + 3 P_2 x^2 + ...).
+                \rho_x = \rho_0\cdot(P_0 + 2 P_1 x + 3 P_2 x^2 + ...).
 
             Example: ['y', 800, 1] for the grating with constant
             spacing along the 'y' direction; ['y', 1200, 1, 1e-6, 3.1e-7] for
