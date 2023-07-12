@@ -7,7 +7,7 @@ import pickle
 from .. import raycing
 
 defaultEnergy = 9.0e3
-allArguments = ('bl', 'name', 'center', 'pitch', 'yaw', 'nrays',
+allArguments = ('bl', 'name', 'center', 'pitch', 'roll', 'yaw', 'nrays',
                 'eE', 'eI', 'eEspread', 'eSigmaX', 'eSigmaZ',
                 'eEpsilonX', 'eEpsilonZ', 'betaX', 'betaZ',
                 'distx', 'dx', 'disty', 'dy', 'distz', 'dz',

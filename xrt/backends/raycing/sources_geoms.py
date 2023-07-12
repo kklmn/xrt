@@ -142,7 +142,7 @@ class GeometricSource(object):
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', filamentBeam=False,
-            uniformRayDensity=False, pitch=0, yaw=0):
+            uniformRayDensity=False, pitch=0, roll=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -200,8 +200,8 @@ class GeometricSource(object):
             the size parameter (*dx* or *dz*) must be given as
             (sigma, cut_limit).
 
-        *pitch*, *yaw*: float
-            rotation angles around x and z axis. Useful for canted sources.
+        *pitch*, *roll*, *yaw*: float
+            rotation angles around x, y and z axes. Useful for canted sources.
 
 
         """
@@ -245,6 +245,7 @@ class GeometricSource(object):
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
         self.pitch = raycing.auto_units_angle(pitch)
+        self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
@@ -370,8 +371,9 @@ class GeometricSource(object):
             else:
                 bo.E[:] = accuBeam.E[:]
 
-        if self.pitch or self.yaw:
-            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
+        if self.pitch or self.roll or self.yaw:
+            raycing.rotate_beam(
+                bo, pitch=self.pitch, roll=self.roll, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
@@ -388,7 +390,7 @@ class GaussianBeam(object):
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
-            polarization='horizontal', pitch=0, yaw=0):
+            polarization='horizontal', pitch=0, roll=0, yaw=0):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -417,8 +419,8 @@ class GaussianBeam(object):
             tuple of 4 components of the coherency matrix:
             (Jss, Jpp, Re(Jsp), Im(Jsp)).
 
-        *pitch*, *yaw*: float
-            rotation angles around x and z axis. Useful for canted sources.
+        *pitch*, *roll*, *yaw*: float
+            rotation angles around x, y and z axes. Useful for canted sources.
 
 
         """
@@ -454,6 +456,7 @@ class GaussianBeam(object):
         self.vortex = None
         self.tem = None
         self.pitch = raycing.auto_units_angle(pitch)
+        self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
 
     def rayleigh_range(self, E, w0=None):
@@ -580,8 +583,9 @@ class GaussianBeam(object):
         bo.x[:] = wave.xDiffr
         bo.y[:] = wave.yDiffr
         bo.z[:] = wave.zDiffr
-        if self.pitch or self.yaw:
-            raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
+        if self.pitch or self.roll or self.yaw:
+            raycing.rotate_beam(
+                bo, pitch=self.pitch, roll=self.roll, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
