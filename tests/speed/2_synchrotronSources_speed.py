@@ -116,7 +116,7 @@ import time  # analysis:ignore
 import xrt.backends.raycing as raycing  # analysis:ignore
 # raycing.targetOpenCL = "CPU"
 # raycing.targetOpenCL = (0, 0)
-raycing.targetOpenCL = None
+# raycing.targetOpenCL = None
 # raycing.precisionOpenCL = 'float32'
 
 import xrt.backends.raycing.sources as rs  # analysis:ignore
