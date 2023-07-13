@@ -37,6 +37,9 @@ The following computers have been used:
 .. [8] A GPU Node with 2 NVIDIA A100 GPUs, 2×24-core AMD epyc CPUs and 512 GB
    memory (CLS)
 
+.. [9] DELL Precision WorkStation T3500, Intel Xeon W3565 @ 3.20GHz x4,
+   AMD Radeon VII, Ubuntu 22.04.2 LTS, Python 3.10.6
+
 .. note::
 
     The tests here were reduced in the number of rays/samples as compared to

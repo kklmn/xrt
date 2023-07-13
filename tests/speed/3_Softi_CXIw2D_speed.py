@@ -43,6 +43,10 @@ better convergence.
 |    +---------------+---------------+---------------+
 |    |     2×A100    |               |      11.5     |
 +----+---------------+---------------+---------------+
+|[9]_|     local     |               |      40.4     |
+|    +---------------+---------------+---------------+
+|    |     ZMQ 1Gb   |               |      48.4     |
++----+---------------+---------------+---------------+
 
 """
 r"""
@@ -91,26 +95,26 @@ OpenCL on AMD W9100 GPU: 80.4 s (total)
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "06 Apr 2017"
-#import matplotlib
-#matplotlib.use('agg')
+# import matplotlib
+# matplotlib.use('agg')
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
-import numpy as np
+import numpy as np  # analysis:ignore
 
-import xrt.backends.raycing as raycing
-#raycing.targetOpenCL = (0, 0)
-#raycing.targetOpenCL = "GPU"
-#raycing.precisionOpenCL = 'float32'
+import xrt.backends.raycing as raycing  # analysis:ignore
+# raycing.targetOpenCL = (0, 0)
+# raycing.targetOpenCL = "GPU"
+# raycing.precisionOpenCL = 'float32'
 
-import xrt.backends.raycing.sources as rs
-import xrt.backends.raycing.apertures as ra
-import xrt.backends.raycing.oes as roe
-import xrt.backends.raycing.run as rr
-import xrt.backends.raycing.materials as rm
-import xrt.plotter as xrtp
-import xrt.runner as xrtr
-import xrt.backends.raycing.screens as rsc
-import xrt.backends.raycing.waves as rw
+import xrt.backends.raycing.sources as rs  # analysis:ignore
+import xrt.backends.raycing.apertures as ra  # analysis:ignore
+import xrt.backends.raycing.oes as roe  # analysis:ignore
+import xrt.backends.raycing.run as rr  # analysis:ignore
+import xrt.backends.raycing.materials as rm  # analysis:ignore
+import xrt.plotter as xrtp  # analysis:ignore
+import xrt.runner as xrtr  # analysis:ignore
+import xrt.backends.raycing.screens as rsc  # analysis:ignore
+import xrt.backends.raycing.waves as rw  # analysis:ignore
 
 mAu = rm.Material('Au', rho=19.32)
 mRh = rm.Material('Rh', rho=12.41)
@@ -138,7 +142,7 @@ qM3sag = 12000.
 dM4ES = 2200.
 dM45 = 3200.
 pExp = 1800.
-#pFZP = 5000.
+# pFZP = 5000.
 
 pitch = np.radians(1)
 
@@ -147,7 +151,7 @@ fixedExit = 20.  # mm
 rho = 300.       # lines/mm
 blaze = np.radians(0.6)
 
-#ESradius = 0.06  # in mm EXIT SLIT RADIUS
+# ESradius = 0.06  # in mm EXIT SLIT RADIUS
 ESdX = 2.  # in mm EXIT SLIT RADIUS
 ESdZ = 0.1  # in mm EXIT SLIT RADIUS
 

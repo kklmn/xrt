@@ -24,6 +24,10 @@ around one harmonic.
 |    |   |linH|   |     1245      |      57.6     |      122      |
 |    |            |     1255      |      60.2     |      127      |
 +----+------------+---------------+---------------+---------------+
+|[9]_|   local    |     1801      |               |      30.0     |
+|    +------------+---------------+---------------+---------------+
+|    |  ZMQ 1Gb   |               |               |      182.9    |
++----+------------+---------------+---------------+---------------+
 
 """
 
@@ -105,21 +109,21 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "06 Apr 2017"
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
-import time
-#import numpy as np
-#import matplotlib
-#matplotlib.use("Agg")
-import xrt.backends.raycing as raycing
-#raycing.targetOpenCL = "CPU"
-#raycing.targetOpenCL = (0, 0)
+import time  # analysis:ignore
+# import numpy as np
+# import matplotlib
+# matplotlib.use("Agg")
+import xrt.backends.raycing as raycing  # analysis:ignore
+# raycing.targetOpenCL = "CPU"
+# raycing.targetOpenCL = (0, 0)
 raycing.targetOpenCL = None
-#raycing.precisionOpenCL = 'float32'
+# raycing.precisionOpenCL = 'float32'
 
-import xrt.backends.raycing.sources as rs
-import xrt.backends.raycing.screens as rsc
-import xrt.backends.raycing.run as rr
-import xrt.plotter as xrtp
-import xrt.runner as xrtr
+import xrt.backends.raycing.sources as rs  # analysis:ignore
+import xrt.backends.raycing.screens as rsc  # analysis:ignore
+import xrt.backends.raycing.run as rr  # analysis:ignore
+import xrt.plotter as xrtp  # analysis:ignore
+import xrt.runner as xrtr  # analysis:ignore
 
 suffix = ''
 E0 = 6900  # eV
@@ -205,7 +209,7 @@ def main():
     plots, plotsE = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
