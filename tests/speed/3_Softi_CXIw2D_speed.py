@@ -13,7 +13,8 @@ scattering paths. Such calculations are impossible in numpy and have to be
 carried out with the help of OpenCL. Even with OpenCL, these calculations are
 not feasible on low end graphics cards and therefore are not exemplified here
 on a laptop. Notice also that for the real example a larger number of samples,
-> 1·10\ :sup:`6`, should be opted for better convergence.
+> 10\ :sup:`6` (i.e. > 10\ :sup:`12` scattering paths), should be opted for
+better convergence.
 
 +--------------------+---------------+---------------+
 |       system       | OpenCL on CPU | OpenCL on GPU |
@@ -37,6 +38,10 @@ on a laptop. Notice also that for the real example a larger number of samples,
 |[6]_|Xeon E5-2650 v4|      251      |               |
 +----+---------------+---------------+---------------+
 |[7]_|Xeon Gold 6130 |      162      |               |
++----+---------------+---------------+---------------+
+|[8]_|     1×A100    |               |      17.5     |
+|    +---------------+---------------+---------------+
+|    |     2×A100    |               |      11.5     |
 +----+---------------+---------------+---------------+
 
 """
