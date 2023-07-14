@@ -1279,6 +1279,8 @@ class Undulator(IntegratedSource):
         else:
             self.taper = None
 
+        self.Kbase = True
+
         if Kx == 0 and Ky == 0:
             if abs(K) > 0:
                 self.Kx = 0
@@ -1288,6 +1290,7 @@ class Undulator(IntegratedSource):
                 self.K = 1
                 raise("Please define either K or B0!")
             else:
+                self.Kbase = False
                 self.B0y = B0y
                 self.B0x = B0x
         else:
@@ -1330,6 +1333,14 @@ class Undulator(IntegratedSource):
     @period.setter
     def period(self, period):
         self.L0 = float(period)
+        if hasattr(self, 'Kbase'):
+            if self.Kbase:
+                self._B0x = K2B * self.Kx / self.L0
+                self._B0y = K2B * self.Ky / self.L0
+            else:
+                self._Kx = self.B0x * self.L0 / K2B
+                self._Ky = self.B0y * self.L0 / K2B
+        self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1366,6 +1377,7 @@ class Undulator(IntegratedSource):
                     print("Kx = Ky = {0}".format(Kx))
         self._Kx = Kx
         self._Ky = Ky
+        self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1813,8 +1825,8 @@ class Undulator(IntegratedSource):
             R0v = None
 
         if NRAYS > 10:
-#            if self.filamentBeam:
-#                gamma = self.gamma * np.ones(NRAYS)
+            # if self.filamentBeam:
+            #     gamma = self.gamma * np.ones(NRAYS)
             Is_local, Ip_local = self._sp_sum(
                     ww1, w, wu, gamma, ddtheta, ddpsi, R0v)
         else:  # Convergence only
