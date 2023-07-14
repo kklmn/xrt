@@ -1377,6 +1377,8 @@ class Undulator(IntegratedSource):
     def Kx(self, Kx):
         self._Kx = float(Kx)
         self._B0x = K2B * Kx / self.L0
+        if hasattr(self, '_Ky'):
+            self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1389,7 +1391,8 @@ class Undulator(IntegratedSource):
         self._Ky = float(Ky)
         self._K = float(Ky)
         self._B0y = K2B * Ky / self.L0
-        self.report_E1()
+        if hasattr(self, '_Kx'):
+            self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1401,7 +1404,8 @@ class Undulator(IntegratedSource):
     def K(self, K):
         self._Ky = float(K)
         self._B0y = K2B * K / self.L0
-        self.report_E1()
+        if hasattr(self, '_Kx'):
+            self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1413,6 +1417,8 @@ class Undulator(IntegratedSource):
     def B0x(self, B0x):
         self._B0x = float(B0x)
         self._Kx = B0x * self.L0 / K2B
+        if hasattr(self, '_Ky'):
+            self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1424,6 +1430,8 @@ class Undulator(IntegratedSource):
     def B0y(self, B0y):
         self._B0y = float(B0y)
         self._Ky = B0y * self.L0 / K2B
+        if hasattr(self, '_Kx'):
+            self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
 
