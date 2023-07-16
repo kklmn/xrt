@@ -31,11 +31,11 @@ __constant float REV24 = 1./24.;
 __constant float REV720 = 1./720.;
 __constant float REV1440 = 1./1440.;
 
-__constant float cx_dp[6] = {0.2, 0.3, 0.8, 8./9., 1., 1.};
+__constant float cx_dp[6] = {1./5., 3./10., 4./5., 8./9., 1., 1.};
 __constant float c_out_dp[7] = {35./384., 0, 500./1113., 125./192., -2187./6784., 11./84., 0};
 __constant float c_out_dp4[7] = {5179./57600., 0.0, 7571./16695., 393./640., -92097./339200., 187./2100., 1./40.};
 __constant float cy_dp[6][6] = {
-        {0.2, 0, 0, 0, 0, 0},
+        {1./5., 0, 0, 0, 0, 0},
         {3./40.,	9./40., 0, 0, 0, 0},
         {44./45., -56./15., 32./9., 0, 0, 0},
         {19372./6561., -25360./2187., 64448./6561.,-212./729., 0, 0},
@@ -1250,6 +1250,45 @@ float4 ksi_next_rkdp(
 
     strain_z = strain_z0 + (float2)(cz0*(z), 0);
     k1 = zstep * ksi_prime(Cpol, ksi, strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[0]), 0);
+    k2 = zstep * ksi_prime(Cpol, ksi + k1*cy_dp[0][0], strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[1]), 0);
+    k3 = zstep * ksi_prime(Cpol, ksi + k1*cy_dp[1][0] + k2*cy_dp[1][1], strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[2]), 0);
+    k4 = zstep * ksi_prime(Cpol, ksi + k1*cy_dp[2][0] + k2*cy_dp[2][1] + k3*cy_dp[2][2], strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[3]), 0);
+    k5 = zstep * ksi_prime(Cpol, ksi + k1*cy_dp[3][0] + k2*cy_dp[3][1] + k3*cy_dp[3][2] + k4*cy_dp[3][3], strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    k6 = zstep * ksi_prime(Cpol, ksi + k1*cy_dp[4][0] + k2*cy_dp[4][1] + k3*cy_dp[4][2] + k4*cy_dp[4][3] + k5*cy_dp[4][4], strain_z, cb, ch);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    ksi_new5 = ksi + k1*cy_dp[5][0] + k3*cy_dp[5][2] + k4*cy_dp[5][3] + k5*cy_dp[5][4] + k6*cy_dp[5][5];
+    k7 = zstep * ksi_prime(Cpol, ksi_new5, strain_z, cb, ch);
+    ksi_new4 = ksi + k1*c_out_dp4[0] + k3*c_out_dp4[2] + k4*c_out_dp4[3] + k5*c_out_dp4[4] + k6*c_out_dp4[5] + k7*c_out_dp4[6];
+
+    err_sigma = fabs(abs_c(ksi_new4.s01) - abs_c(ksi_new5.s01));
+    err_pi = fabs(abs_c(ksi_new4.s23) - abs_c(ksi_new5.s23));
+    *rk_error = max(err_sigma, err_pi);
+
+    return ksi_new5;
+}
+
+float4 ksi_next_rkdp_(
+                float z,
+                float zstep,
+                float cz0,
+                float *rk_error,
+                float Cpol,
+                float4 ksi,
+                float2 strain_z0,
+                float2 cb,
+                float2 ch) {
+
+    float4 k1, k2, k3, k4, k5, k6, k7, ksi_new4, ksi_new5;
+    float2 strain_z;
+    float err_sigma, err_pi;
+
+    strain_z = strain_z0 + (float2)(cz0*(z), 0);
+    k1 = zstep * ksi_prime(Cpol, ksi, strain_z, cb, ch);
     strain_z = strain_z0 + (float2)(cz0*(z+zstep/5), 0);
     k2 = zstep * ksi_prime(Cpol, ksi + k1/5, strain_z, cb, ch);
     strain_z = strain_z0 + (float2)(cz0*(z+3*zstep/10), 0);
@@ -1310,6 +1349,46 @@ float8 d0h_next_rkdp(
 
     strain_z = strain_z0 + (float2)(cz0*(z), 0);
     k1 = zstep * d0h_prime(Cpol, d0h, strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[0]), 0);
+    k2 = zstep * d0h_prime(Cpol, d0h + k1*cy_dp[0][0], strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[1]), 0);
+    k3 = zstep * d0h_prime(Cpol, d0h + k1*cy_dp[1][0] + k2*cy_dp[1][1], strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[2]), 0);
+    k4 = zstep * d0h_prime(Cpol, d0h + k1*cy_dp[2][0] + k2*cy_dp[2][1] + k3*cy_dp[2][2], strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep*cx_dp[3]), 0);
+    k5 = zstep * d0h_prime(Cpol, d0h + k1*cy_dp[3][0] + k2*cy_dp[3][1] + k3*cy_dp[3][2] + k4*cy_dp[3][3], strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    k6 = zstep * d0h_prime(Cpol, d0h + k1*cy_dp[4][0] + k2*cy_dp[4][1] + k3*cy_dp[4][2] + k4*cy_dp[4][3] + k5*cy_dp[4][4], strain_z, cb, ch, g0);
+    strain_z = strain_z0 + (float2)(cz0*(z+zstep), 0);
+    d0h_new5 = d0h + k1*cy_dp[5][0] + k3*cy_dp[5][2] + k4*cy_dp[5][3] + k5*cy_dp[5][4] + k6*cy_dp[5][5];
+    k7 = zstep * d0h_prime(Cpol, d0h_new5, strain_z, cb, ch, g0);
+    d0h_new4 = d0h + k1*c_out_dp4[0] + k3*c_out_dp4[2] + k4*c_out_dp4[3] + k5*c_out_dp4[4] + k6*c_out_dp4[5] + k7*c_out_dp4[6];
+
+    err_sigma = fabs(abs_c(d0h_new4.s01) - abs_c(d0h_new5.s01));
+    err_pi = fabs(abs_c(d0h_new4.s45) - abs_c(d0h_new5.s45));
+    *rk_error = max(err_sigma, err_pi);
+
+    return d0h_new5;
+}
+            
+float8 d0h_next_rkdp_(
+                float z,
+                float zstep,
+                float cz0,
+                float *rk_error,
+                float Cpol,
+                float8 d0h,
+                float2 strain_z0,
+                float2 cb,
+                float2 ch,
+                float2 g0) {
+
+    float8 k1, k2, k3, k4, k5, k6, k7, d0h_new4, d0h_new5;
+    float2 strain_z;
+    float err_sigma, err_pi;
+
+    strain_z = strain_z0 + (float2)(cz0*(z), 0);
+    k1 = zstep * d0h_prime(Cpol, d0h, strain_z, cb, ch, g0);
     strain_z = strain_z0 + (float2)(cz0*(z+zstep/5), 0);
     k2 = zstep * d0h_prime(Cpol, d0h + k1/5, strain_z, cb, ch, g0);
     strain_z = strain_z0 + (float2)(cz0*(z+3*zstep/10), 0);
@@ -1330,7 +1409,7 @@ float8 d0h_next_rkdp(
     *rk_error = max(err_sigma, err_pi);
 
     return d0h_new5;
-}
+}            
 
 __kernel void estimate_bent_width(const float c1,
                                  const float c2,
