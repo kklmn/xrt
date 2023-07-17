@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: xrt
-Version: 1.5.0
+Version: 1.6.0
 Summary: Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI for creating a beamline and viewing it in 3D.
 Home-page: http://xrt.readthedocs.io
 Author: Konstantin Klementiev, Roman Chernikov
@@ -183,6 +183,4 @@ Get help
 
 For getting help and/or reporting a bug please use `GitHub xrt Issues
 <https://github.com/kklmn/xrt/issues>`_.
-
-
 
