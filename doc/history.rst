@@ -3,7 +3,7 @@
 Version history
 ---------------
 
-Available on GitHub (7 Jul 2023):
+1.6.0 (17 Jul 2023):
     - Enable calculations of elastically deformed crystals on GPUs. Based on
       PyTTE code [PyTTE1]_ [PyTTE2]_. Used both in ray tracing and
       :ref:`xrtBentXtal GUI <guis>` -- a GUI for comparative GPU-based bent
