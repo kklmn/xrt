@@ -9,7 +9,7 @@ Version history
       :ref:`xrtBentXtal GUI <guis>` -- a GUI for comparative GPU-based bent
       crystal calculations.
 
-    - Add :ref:`predefined material classes <predefmats>` in three categorees:
+    - Add :ref:`predefined material classes <predefmats>` in three categories:
       crystals, compounds and elemental. Several crystal classes also include
       elastic constants needed to calculate bent crystal reflectivity.
 
