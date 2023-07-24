@@ -5,6 +5,7 @@ from .quantity import Quantity
 from .ttscan import TTscan
 import numpy as np
 from scipy import interpolate
+from scipy.integrate import ode
 
 
 class TakagiTaupin():
@@ -682,6 +683,10 @@ class CalculateAmplitudes:
                 return 1j*(Cpol*(cb_step*ksi*ksi + ch_step) +
                            (c0_step + beta_step + strain_term(z))*ksi)
 
+            def ksiprime_jac(z, ksi):
+                return 2j*Cpol*cb_step*ksi+1j*(c0_step+beta_step +
+                                               strain_term(z))
+
             def d0prime(z, d0, ksi_r, ksi_i):
                 return -1j*(g0_step + gb_step*Cpol*(ksi_r(z) +
                                                     1j*ksi_i(z)))*d0
@@ -692,9 +697,21 @@ class CalculateAmplitudes:
                                       strain_term(z))*Y[0]),
                                 -1j*(g0_step + Cpol*gb_step*Y[0])*Y[1]])
 
+            def TTE_jac(z, Y):
+                return np.array([[2j*Cpol*cb_step*Y[0]+1j*(
+                    c0_step+beta_step+strain_term(z)), 0],
+                    [-1j*Cpol*gb_step*Y[1], -1j*(g0_step+Cpol*gb_step*Y[0])]])
         if geometry == 'bragg':
             if isRefl:
                 res, xt, yt = rkdpa(ksiprime)
+                r = ode(ksiprime, ksiprime_jac)
+                r.set_integrator(
+                    'zvode', method='bdf', with_jacobian=True,
+                    min_step=1e-10, rtol=1e-7,
+                    max_step=thickness, nsteps=2500000)
+                r.set_initial_value(0, -thickness)
+                res = r.integrate(0)
+#                res, xt, yt = rkdpa(ksiprime)
                 outAmp = res
             else:
                 res = calculate_bragg_transmission(ksiprime, d0prime)
@@ -702,7 +719,14 @@ class CalculateAmplitudes:
             return np.complex128(outAmp) *\
                 np.sqrt(np.abs(gamma0_step/np.abs(gammah_step)))
         else:
-            res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
+            r = ode(TTE, TTE_jac)
+            r.set_integrator(
+                'zvode', method='bdf', with_jacobian=True,
+                min_step=1e-10, rtol=1e-7,
+                max_step=thickness, nsteps=2500000)
+            r.set_initial_value([0, 1], 0)
+            res = r.integrate(-thickness)
+#            res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
             outAmp = res[0]*res[1] if isRefl else res[1]
             return np.complex128(outAmp*np.sqrt(np.abs(
                 gamma0_step/np.abs(gammah_step))))
@@ -712,5 +736,4 @@ class CalculateAmplitudes:
         ampsP = self.integrate_single_scan_step(*args)
         args[3] = 1.  # Calculating for Sigma polarization
         ampsS = self.integrate_single_scan_step(*args)
-#        return self.args[-2], abs(ampsS)**2, abs(ampsP)**2, self.args[-1]
         return self.args[-2], ampsS, ampsP, self.args[-1]
