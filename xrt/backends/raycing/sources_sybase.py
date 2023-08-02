@@ -12,13 +12,17 @@ from . import myopencl as mcl
 from .sources_beams import Beam
 from .physconsts import C, M0, EV2ERG, SIE0, SQ2, SQPI, CH, CHBAR
 
-try:
-    import pyopencl as cl  # analysis:ignore
-    isOpenCL = True
-    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-except ImportError:
-    isOpenCL = False
+# try:
+#     import pyopencl as cl  # analysis:ignore
+#     isOpenCL = True
+#     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+# except ImportError:
+#     isOpenCL = False
 
+if mcl.isOpenCL or mcl.isZMQ:
+    isOpenCL = True
+else:
+    isOpenCL = False
 # _DEBUG replaced with raycing._VERBOSITY_
 
 

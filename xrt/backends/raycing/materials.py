@@ -85,13 +85,18 @@ import numpy as np
 # from scipy.special import jn as besselJn
 from scipy.interpolate import interp1d
 from .. import raycing
-
+from . import myopencl as mcl
 from .physconsts import PI, PI2, CH, CHBAR, R0, AVOGADRO, SQRT2PI
 
-try:
-    import pyopencl as cl  # analysis:ignore
+# try:
+#     import pyopencl as cl  # analysis:ignore
+#     isOpenCL = True
+# except ImportError:
+#     isOpenCL = False
+
+if mcl.isOpenCL or mcl.isZMQ:
     isOpenCL = True
-except ImportError:
+else:
     isOpenCL = False
 
 ch = CH  # left here for copatibility

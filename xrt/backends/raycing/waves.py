@@ -471,12 +471,18 @@ from .. import raycing
 from . import myopencl as mcl
 from . import sources as rs
 from .physconsts import CHBAR, CH
-try:
-    import pyopencl as cl  # analysis:ignore
-    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+# try:
+#     import pyopencl as cl  # analysis:ignore
+#     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+#     isOpenCL = True
+# except ImportError:
+#     isOpenCL = False
+
+if mcl.isOpenCL or mcl.isZMQ:
     isOpenCL = True
-except ImportError:
+else:
     isOpenCL = False
+
 _DEBUG = 20
 
 

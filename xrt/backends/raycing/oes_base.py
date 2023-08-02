@@ -13,10 +13,15 @@ from . import sources as rs
 from . import myopencl as mcl
 from .physconsts import PI2, CH, CHBAR, SQRT2PI
 from .materials import EmptyMaterial
-try:
-    import pyopencl as cl  # analysis:ignore
+# try:
+#     import pyopencl as cl  # analysis:ignore
+#     isOpenCL = True
+# except ImportError:
+#     isOpenCL = False
+
+if mcl.isOpenCL or mcl.isZMQ:
     isOpenCL = True
-except ImportError:
+else:
     isOpenCL = False
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"

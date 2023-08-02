@@ -145,15 +145,23 @@ from scipy import interpolate, ndimage
 import inspect
 
 from .. import raycing
+from . import myopencl as mcl
 from . import stages as rst
 from . import sources as rs
 from .physconsts import CH
 from .oes_base import OE, DCM, allArguments
-try:
-    import pyopencl as cl  # analysis:ignore
+
+# try:
+#     import pyopencl as cl  # analysis:ignore
+#     isOpenCL = True
+# except ImportError:
+#     isOpenCL = False
+
+if mcl.isOpenCL or mcl.isZMQ:
     isOpenCL = True
-except ImportError:
+else:
     isOpenCL = False
+
 
 try:
     from stl import mesh
