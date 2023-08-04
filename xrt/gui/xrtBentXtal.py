@@ -517,16 +517,19 @@ class PlotWidget(QWidget):
 
     def get_fwhm(self, x, y):
         # simple implementation, quantized by dx:
-        # topHalf = np.where(y >= 0.5*np.max(y))[0]
-        # return np.abs(x[topHalf[0]] - x[topHalf[-1]])
+        def simple():
+            topHalf = np.where(y >= 0.5*np.max(y))[0]
+            return np.abs(x[topHalf[0]] - x[topHalf[-1]])
 
         # a better implementation, weakly dependent on dx size
         try:
             spline = UnivariateSpline(x, y - y.max()*0.5, s=0)
             roots = spline.roots()
+            if len(roots) > 1:
+                return simple()
             return max(roots) - min(roots)
         except ValueError:
-            return 0.
+            return simple()
 
     def get_energy(self, item):
         ind = self.findIndexFromText("Energy")
