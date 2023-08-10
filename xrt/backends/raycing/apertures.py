@@ -178,6 +178,7 @@ class RectangularAperture(object):
         if isinstance(self._z, raycing.basestring):
             self._z = None
         self.xyz = raycing.xyz_from_xz(self, self._x, self._z)
+        self._x, self.y, self._z = self.xyz
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
@@ -321,13 +322,27 @@ class RectangularAperture(object):
         self.set_optical_limits()
 
     def local_to_global(self, glo, returnBeam=False, **kwargs):
+        x, y, z = glo.x, glo.y, glo.z
+        xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
+        yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
+        zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        a, b, c = glo.a, glo.b, glo.c
+        aglo = a*self.x[0] + b*self.y[0] + c*self.z[0]
+        bglo = a*self.x[1] + b*self.y[1] + c*self.z[1]
+        cglo = a*self.x[2] + b*self.y[2] + c*self.z[2]
+
+        retGlo = rs.Beam(copyFrom=glo) if returnBeam else glo
+        retGlo.x, retGlo.y, retGlo.z = xglo, yglo, zglo
+        retGlo.a, retGlo.b, retGlo.c = aglo, bglo, cglo
         if returnBeam:
-            retGlo = rs.Beam(copyFrom=glo)
-            raycing.virgin_local_to_global(self.bl, retGlo,
-                                           self.center, **kwargs)
             return retGlo
-        else:
-            raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+        # if returnBeam:
+        #     retGlo = rs.Beam(copyFrom=glo)
+        #     raycing.virgin_local_to_global(self.bl, retGlo,
+        #                                    self.center, **kwargs)
+        #     return retGlo
+        # else:
+        #     raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
