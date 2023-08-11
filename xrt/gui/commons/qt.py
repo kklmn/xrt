@@ -57,6 +57,7 @@ if QtName == "PyQt4":
 elif QtName == "PyQt5":
     from PyQt5 import QtGui, QtCore
     import PyQt5.QtWidgets as myQtGUI
+    from PyQt5.QtGui import QOpenGLShaderProgram, QOpenGLShader
 
     if starImport:
         from PyQt5.QtGui import *
@@ -121,7 +122,8 @@ if not starImport:
      QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
-     QPushButton, QDialog) = (
+     QPushButton, QDialog, QRadioButton, QButtonGroup, QGridLayout,
+     QDialogButtonBox, QOpenGLWidget) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -132,7 +134,8 @@ if not starImport:
         myQtGUI.QLabel, myQtGUI.QTableView, myQtGUI.QSizePolicy,
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
-        myQtGUI.QDialog)
+        myQtGUI.QDialog, myQtGUI.QRadioButton, myQtGUI.QButtonGroup,
+        myQtGUI.QGridLayout, myQtGUI.QDialogButtonBox, myQtGUI.QOpenGLWidget)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
