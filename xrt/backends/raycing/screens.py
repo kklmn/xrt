@@ -20,7 +20,7 @@ import numpy as np
 from .. import raycing
 import inspect
 import copy
-
+import uuid
 from . import sources as rs
 from .physconsts import CHBAR
 
@@ -77,9 +77,12 @@ class Screen(object):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([coord == 'auto' for coord in self.center]):
@@ -316,7 +319,7 @@ class Screen(object):
             prevOE.shine(wave=waveOnSelf)
         else:
             rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parentId = self.name
+        waveOnSelf.parentId = self.uuid
         return waveOnSelf
 
 
@@ -357,9 +360,12 @@ class HemisphericScreen(Screen):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([coord == 'auto' for coord in self.center]):

@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 import os
 import time
+import uuid
 import numpy as np
 import inspect
 import copy
@@ -255,9 +256,12 @@ class OE(object):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.shouldCheckCenter = shouldCheckCenter
 
@@ -1153,7 +1157,7 @@ class OE(object):
             absorbedLb.absorb_intensity(beam)
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
-        lb.parentId = self.name
+        lb.parentId = self.uuid
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -1241,7 +1245,7 @@ class OE(object):
             absorbedLb = rs.Beam(copyFrom=lb)
             absorbedLb.absorb_intensity(beam)
             lbN = absorbedLb
-        lbN.parentId = self.name
+        lbN.parentId = self.uuid
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())
         return gb, lbN
@@ -2528,7 +2532,7 @@ class DCM(OE):
                 absorbedLb = rs.Beam(copyFrom=lo2)
                 absorbedLb.absorb_intensity(lo1)
                 lo2 = absorbedLb
-        lo2.parentId = self.name
+        lo2.parentId = self.uuid
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
 

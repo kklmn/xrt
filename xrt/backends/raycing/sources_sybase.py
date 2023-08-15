@@ -6,7 +6,7 @@ import sys
 import numpy as np
 from scipy import special
 import inspect
-
+import uuid
 from .. import raycing
 from . import myopencl as mcl
 from .sources_beams import Beam
@@ -121,9 +121,12 @@ class SourceBase:
                 self.ordinalNum = len(bl.sources)
         raycing.set_name(self, name)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.center = center  # 3D point in global system
         self._pitch = raycing.auto_units_angle(pitch)
@@ -1608,7 +1611,7 @@ class IntegratedSource(SourceBase):
 
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
-        bor.parentId = self.name
+        bor.parentId = self.uuid
         raycing.append_to_flow(self.shine, [bor],
                                inspect.currentframe())
         return bor

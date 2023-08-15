@@ -40,6 +40,7 @@ import numpy as np
 import inspect
 from matplotlib.path import Path as mplPath
 import copy
+import uuid
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
@@ -109,9 +110,12 @@ class RectangularAperture(object):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -394,7 +398,7 @@ class RectangularAperture(object):
             retGlo = prevOE.shine(wave=waveOnSelf)
         else:
             retGlo = rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parentId = self.name
+        waveOnSelf.parentId = self.uuid
         return retGlo, waveOnSelf
 
 
@@ -438,9 +442,12 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -540,9 +547,12 @@ class RoundAperture(object):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -723,7 +733,7 @@ class RoundAperture(object):
             prevOE.shine(wave=waveOnSelf)
         else:
             rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parentId = self.name
+        waveOnSelf.parentId = self.uuid
         return self.local_to_global(waveOnSelf, returnBeam=True), waveOnSelf
 
 
@@ -899,9 +909,12 @@ class PolygonalAperture(object):
         else:
             self.name = name
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):

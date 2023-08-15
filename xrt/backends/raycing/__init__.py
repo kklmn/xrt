@@ -761,7 +761,7 @@ def append_to_flow(meth, bOut, frame):
     for outstr, outbm in zip(list(fdoc), bOut):
         kwArgsOut[outstr.strip()] = id(outbm)
 
-    oe.bl.flow.append([oe.name, meth.__func__, kwArgsIn, kwArgsOut])
+    oe.bl.flow.append([oe.uuid, meth.__func__, kwArgsIn, kwArgsOut])
 
 
 def is_auto_align_required(oe):

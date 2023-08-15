@@ -158,7 +158,7 @@ class Beam(object):
         for key in ['fromOE', 'toOE', 'parentId']:
             if hasattr(self, key):
                 try:
-                    outputDict[key] = getattr(self, key).name
+                    outputDict[key] = getattr(self, key).uuid
                 except Exception as e:
                     print(e)
                     continue

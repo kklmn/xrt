@@ -4,7 +4,7 @@ __date__ = "03 Jul 2016"
 import numpy as np
 import scipy as sp
 import inspect
-
+import uuid
 from . import run as rr
 from .. import raycing
 from .sources_beams import Beam, defaultEnergy, allArguments
@@ -237,9 +237,12 @@ class GeometricSource(object):
             self.energies = energies
         self.energyWeights = energyWeights
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
         self.filamentBeam = filamentBeam
@@ -448,9 +451,12 @@ class GaussianBeam(object):
             self.energies = energies
         self.energyWeights = energyWeights
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
         self.vortex = None
@@ -714,9 +720,12 @@ class MeshSource(object):
             self.energies = energies
         self.energyWeights = energyWeights
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
 
@@ -843,9 +852,12 @@ class CollimatedMeshSource(object):
             self.energies = energies
         self.energyWeights = energyWeights
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = uuid.uuid4()
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
 
