@@ -189,8 +189,8 @@ class RectangularAperture(object):
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
         for akind, d in zip(self.kind, self.opening):
-            td = float(d)  # otherwise is of type 'numpy.float64' and is
-# raycing.is_sequence(d) returns True which is not expected.
+            td = float(d)  # otherwise is of type 'numpy.float64' and
+            # raycing.is_sequence(d) returns True which is unexpected.
             if akind.startswith('l'):
                 self.limOptX[0] = td
             elif akind.startswith('r'):
@@ -268,10 +268,10 @@ class RectangularAperture(object):
         goodN = lo.state > 0
         try:
             if self.spotLimits:
-                self.spotLimits[0] = min(self.spotLimits[0], lo.x[goodN].min())
-                self.spotLimits[1] = max(self.spotLimits[1], lo.x[goodN].max())
-                self.spotLimits[2] = min(self.spotLimits[2], lo.z[goodN].min())
-                self.spotLimits[3] = max(self.spotLimits[3], lo.z[goodN].max())
+                self.spotLimits = [min(self.spotLimits[0], lo.x[goodN].min()),
+                                   max(self.spotLimits[1], lo.x[goodN].max()),
+                                   min(self.spotLimits[2], lo.z[goodN].min()),
+                                   max(self.spotLimits[3], lo.z[goodN].max())]
             else:
                 self.spotLimits = [lo.x[goodN].min(), lo.x[goodN].max(),
                                    lo.z[goodN].min(), lo.z[goodN].max()]
