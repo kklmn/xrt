@@ -53,7 +53,8 @@ Increase the energy range...
 """
 
 import numpy as np
-import sys
+import sys, os, re, inspect
+from collections import OrderedDict
 sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
@@ -64,6 +65,8 @@ import xrt.backends.raycing.run as rrun
 import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
+
+experimentalModeFilter = ['propagate_wave', 'diffract', 'expose_wave']
 
 CVD = rmats.Material(
     elements=r"C",
@@ -123,7 +126,7 @@ def build_beamline():
         bl=BioXAS_Main,
         name=r"Flat-Top Wiggler",
         center=[0, 0, 0],
-        nrays=2000000,
+        nrays=20000,
         eE=2.9,
         eI=0.25,
         eEpsilonX=18.1,
@@ -327,7 +330,7 @@ def run_process(BioXAS_Main):
         'DBHR2beamLocal01': DBHR2beamLocal01,
         'JJslitsbeamLocal01': JJslitsbeamLocal01,
         'SampleScreenFootprint': SampleScreenFootprint}
-    BioXAS_Main.prepare_flow()
+#    BioXAS_Main.prepare_flow()
     return outDict
 
 
@@ -412,7 +415,43 @@ def define_plots():
 
 def main():
     BioXAS_Main = build_beamline()
-    BioXAS_Main.glow() 
+    processed = {}
+    beamIn = None
+
+    for oeRecord in BioXAS_Main.oesDict.values():
+        elObj = oeRecord[0]
+        if oeRecord[-1] == 0:  # Source
+            outBeams = elObj.shine()
+        else:
+            outBeams = elObj.defaultMethod(beam=beamIn)
+        pathtmp = 1e100
+        nearestEl = "None"
+
+        for oeuuid, oeRec1 in BioXAS_Main.oesDict.items():
+            elObj1 = oeRec1[0]
+            if oeRec1[-1] == 1 and oeuuid not in processed.keys():  # optical element
+                outBeams = elObj1.defaultMethod(beam=elObj.beamsOut['beamGlobal'])
+                if 'beamGlobal' in elObj1.beamsOut.keys():
+                    keyStr = 'beamGlobal'
+                else:
+                    keyStr = 'beamLocal'
+                goodN = np.where(elObj1.beamsOut[keyStr].state == 1)[0]
+                if len(goodN) > 0:
+#                    print(elObj1.center)
+                    path = np.linalg.norm(np.array(elObj.center)-np.array(elObj1.center))
+                    if path < pathtmp:
+                        pathtmp = path
+                        nearestEl = elObj1
+        processed[elObj1] = elObj1.beamsOut[keyStr]
+        print("nearest element:", nearestEl.center)
+
+                    
+                
+#        print(elObj.beamsOut)
+#        print(elObj, elObj.propagator, elObj.beamsOut)        
+
+
+#    BioXAS_Main.glow() 
 #    E0 = 0.5 * (BioXAS_Main.Wiggler.eMin +
 #                BioXAS_Main.Wiggler.eMax)
 #  

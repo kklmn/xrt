@@ -1614,4 +1614,5 @@ class IntegratedSource(SourceBase):
         bor.parentId = self.uuid
         raycing.append_to_flow(self.shine, [bor],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': bor}
         return bor

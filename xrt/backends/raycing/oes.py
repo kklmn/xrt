@@ -2005,6 +2005,7 @@ class Plate(DCM):
         """
         kwargs = self.__pop_kwargs(**kwargs)
         DCM.__init__(self, *args, **kwargs)
+        self.defaultMethod = self.double_refract
         self.cryst2perpTransl = -self.t
         self.cryst2pitch = self.wedgeAngle
         if isinstance(self.limPhysX, (list, tuple)):
@@ -2117,9 +2118,12 @@ class Plate(DCM):
                 absorbedLb = rs.Beam(copyFrom=lb2)
                 absorbedLb.absorb_intensity(lb1)
                 lb2 = absorbedLb
-        lb2.parent = self
+        lb2.parent = self.uuid
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': gb,
+                         'beamLocal1': lb1,
+                         'beamLocal2': lb2}
         return gb, lb1, lb2
 
 
@@ -2219,6 +2223,7 @@ class ParaboloidFlatLens(Plate):
         """
         kwargs = self.__pop_kwargs(**kwargs)
         Plate.__init__(self, *args, **kwargs)
+        self.defaultMethod = self.multiple_refract
 
     @property
     def nCRL(self):
@@ -2366,10 +2371,13 @@ class ParaboloidFlatLens(Plate):
                     absorbedLb = rs.Beam(copyFrom=llocal2)
                     absorbedLb.absorb_intensity(llocal1)
                     llocal2 = absorbedLb
-            llocal2.parent = self
+            llocal2.parent = self.uuid
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],
                                    inspect.currentframe())
+            self.beamsOut = {'beamGlobal': lglobal,
+                             'beamLocal1': llocal1,
+                             'beamLocal2': llocal2}
             return lglobal, llocal1, llocal2
 
 

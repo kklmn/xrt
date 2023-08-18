@@ -89,6 +89,7 @@ class Screen(object):
 #            self._center = copy.copy(self.center)
         self.compressX = compressX
         self.compressZ = compressZ
+        self.defaultMethod = self.expose
 
     @property
     def center(self):
@@ -204,6 +205,7 @@ class Screen(object):
         if self.compressZ:
             blo.z[:] *= self.compressZ
         raycing.append_to_flow(self.expose, [blo], inspect.currentframe())
+        self.beamsOut = {'beamLocal': blo}
         return blo
 
     def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None, condition=None):
@@ -373,6 +375,7 @@ class HemisphericScreen(Screen):
         self.R = R
         self.phiOffset = phiOffset
         self.thetaOffset = thetaOffset
+        self.defaultMethod = self.expose
 
     def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
@@ -453,4 +456,5 @@ class HemisphericScreen(Screen):
             blo.Ep *= propPhase
         raycing.append_to_flow(self.expose, [blo],
                                inspect.currentframe())
+        self.beamsOut = {'beamLocal': blo}
         return blo

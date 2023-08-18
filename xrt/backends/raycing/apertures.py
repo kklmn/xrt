@@ -141,6 +141,7 @@ class RectangularAperture(object):
             self.set_optical_limits()
         self.shape = 'rect'
         self.spotLimits = []
+        self.defaultMethod = self.propagate
 
     @property
     def x(self):
@@ -292,6 +293,7 @@ class RectangularAperture(object):
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+            self.beamsOut = {'beamLocal': lo}
             return lo
 
     def touch_beam(self, beam):
@@ -571,6 +573,7 @@ class RoundAperture(object):
         self.limPhysY = self.limOptY
         self.shape = 'round'
         self.spotLimits = []
+        self.defaultMethod = self.propagate
 
     @property
     def x(self):
@@ -665,6 +668,7 @@ class RoundAperture(object):
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+            self.beamsOut = {'beamLocal': lo}
             return lo
 
     def local_to_global(self, glo, **kwargs):
@@ -788,6 +792,7 @@ class RoundBeamStop(RoundAperture):
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+            self.beamsOut = {'beamLocal': lo}
             return lo
 
 
@@ -860,6 +865,7 @@ class DoubleSlit(RectangularAperture):
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+            self.beamsOut = {'beamLocal': lo}
             return lo
 
 
@@ -935,6 +941,7 @@ class PolygonalAperture(object):
         if opening is not None:
             self.set_optical_limits()
         self.shape = 'polygon'
+        self.defaultMethod = self.propagate
 
     @property
     def x(self):
@@ -1032,6 +1039,7 @@ class PolygonalAperture(object):
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+            self.beamsOut = {'beamLocal': lo}
             return lo
 
     def local_to_global(self, glo, **kwargs):

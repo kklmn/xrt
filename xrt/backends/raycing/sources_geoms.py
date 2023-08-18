@@ -381,6 +381,7 @@ class GeometricSource(object):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': bo}
         return bo
 
 
@@ -596,6 +597,7 @@ class GaussianBeam(object):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': bo}
         return bo
 
 
@@ -773,6 +775,7 @@ class MeshSource(object):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': bo}
         return bo
 
 
@@ -812,6 +815,7 @@ class NESWSource(MeshSource):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': bo}
         return bo
 
 
@@ -898,6 +902,7 @@ class CollimatedMeshSource(object):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': bo}
         return bo
 
 

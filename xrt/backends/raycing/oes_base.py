@@ -302,6 +302,7 @@ class OE(object):
         self.cl_ctx = None
         self.ucl = None
         self.footprint = []
+        self.defaultMethod = self.reflect
         if targetOpenCL is not None:
             if not isOpenCL:
                 raycing.colorPrint("pyopencl is not available!", "RED")
@@ -1158,6 +1159,9 @@ class OE(object):
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
         lb.parentId = self.uuid
+        gb.parentId = self.uuid
+        self.beamsOut = {'beamGlobal': gb,
+                         'beamLocal': lb}
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -1246,8 +1250,11 @@ class OE(object):
             absorbedLb.absorb_intensity(beam)
             lbN = absorbedLb
         lbN.parentId = self.uuid
+        gb.parentId = self.uuid
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())
+        self.beamsOut = {'beamGlobal': gb,
+                         'beamLocal': lbN}
         return gb, lbN
 
     def local_to_global(self, lb, returnBeam=False, **kwargs):
@@ -1461,7 +1468,7 @@ class OE(object):
             beamToSelf = rw.diffract(wave, waveOnSelf)
             nIS = True
         retGlo, retLoc = self.reflect(beamToSelf, noIntersectionSearch=nIS)
-        retLoc.parent = self.name
+        retLoc.parent = self.uuid
         return retGlo, retLoc
 
     def _set_t(self, xyz=None, abc=None, surfPhys=None,
@@ -2309,6 +2316,7 @@ class DCM(OE):
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
+        self.defaultMethod = self.double_reflect
         self.energyMin = rs.defaultEnergy - 5.
         self.energyMax = rs.defaultEnergy + 5.
 
@@ -2535,5 +2543,7 @@ class DCM(OE):
         lo2.parentId = self.uuid
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
-
+        self.beamsOut = {'beamGlobal': gb2,
+                         'beamLocal1': lo1,
+                         'beamLocal2': lo2}
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates
