@@ -289,6 +289,7 @@ class RectangularAperture(object):
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
             raycing.append_to_flow(self.propagate, [glo, lo],
                                    inspect.currentframe())
+            self.beamsOut = {'beamGlobal': glo, 'beamLocal': lo}
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],

@@ -413,48 +413,95 @@ def define_plots():
     return plots
 
 
+
 def main():
     BioXAS_Main = build_beamline()
     processed = {}
-    beamIn = None
 
-    for oeRecord in BioXAS_Main.oesDict.values():
-        elObj = oeRecord[0]
-        if oeRecord[-1] == 0:  # Source
-            outBeams = elObj.shine()
+    uuids = list(BioXAS_Main.oesDict.keys())
+    allOes = BioXAS_Main.oesDict.items()
+    processed = dict(zip(uuids, [[]]*len(uuids)))
+
+    def propagate_beam(oe, beam):
+        if hasattr(oe, 'shine'):
+            newBeam = oe.shine()
         else:
-            outBeams = elObj.defaultMethod(beam=beamIn)
-        pathtmp = 1e100
-        nearestEl = "None"
+            oe.defaultMethod(beam=beam)
+            if 'beamGlobal' in oe.beamsOut.keys():
+                newBeam = oe.beamsOut['beamGlobal']
+            else:
+                newBeam = beam
 
-        for oeuuid, oeRec1 in BioXAS_Main.oesDict.items():
-            elObj1 = oeRec1[0]
-            if oeRec1[-1] == 1 and oeuuid not in processed.keys():  # optical element
-                outBeams = elObj1.defaultMethod(beam=elObj.beamsOut['beamGlobal'])
-                if 'beamGlobal' in elObj1.beamsOut.keys():
+        pathtmp = 1e100
+        nearestEl = None
+
+        for oeuuid, oeRec in allOes:
+            elObj = oeRec[0]
+            if oeRec[-1] == 1 and (str(elObj.uuid) not in processed[oe.uuid]):
+                elObj.defaultMethod(beam=newBeam)
+                if 'beamGlobal' in elObj.beamsOut.keys():
                     keyStr = 'beamGlobal'
                 else:
                     keyStr = 'beamLocal'
-                goodN = np.where(elObj1.beamsOut[keyStr].state == 1)[0]
+                goodN = np.where(elObj.beamsOut[keyStr].state == 1)[0]
                 if len(goodN) > 0:
 #                    print(elObj1.center)
-                    path = np.linalg.norm(np.array(elObj.center)-np.array(elObj1.center))
+                    path = np.linalg.norm(np.array(oe.center)-np.array(elObj.center))
                     if path < pathtmp:
                         pathtmp = path
-                        nearestEl = elObj1
-        processed[elObj1] = elObj1.beamsOut[keyStr]
-        print("nearest element:", nearestEl.center)
+                        nearestEl = elObj
+        nextOE = nearestEl
+        if nextOE is not None:
+            print("nextOE:", nextOE.name)
+            processed[oe.uuid].append(str(nextOE.uuid))
+            processed[nextOE.uuid].append(str(nextOE.uuid))
+            propagate_beam(nextOE, newBeam)
+        else:
+            print("Done")
 
-                    
-                
+    for oeRecord in BioXAS_Main.oesDict.values():
+        if oeRecord[1] == 0:  # Source
+            propagate_beam(oeRecord[0], None)
+#        break
+
+
+
+        #        elObj = oeRecord[0]
+#        if oeRecord[-1] == 0:  # Source
+#            outBeams = elObj.shine()
+#        else:
+#            outBeams = elObj.defaultMethod(beam=beamIn)
+#        pathtmp = 1e100
+#        nearestEl = "None"
+#
+#        for oeuuid, oeRec1 in BioXAS_Main.oesDict.items():
+#            elObj1 = oeRec1[0]
+#            if oeRec1[-1] == 1 and oeuuid not in processed.keys():  # optical element
+#                outBeams = elObj1.defaultMethod(beam=elObj.beamsOut['beamGlobal'])
+#                if 'beamGlobal' in elObj1.beamsOut.keys():
+#                    keyStr = 'beamGlobal'
+#                else:
+#                    keyStr = 'beamLocal'
+#                goodN = np.where(elObj1.beamsOut[keyStr].state == 1)[0]
+#                if len(goodN) > 0:
+##                    print(elObj1.center)
+#                    path = np.linalg.norm(np.array(elObj.center)-np.array(elObj1.center))
+#                    if path < pathtmp:
+#                        pathtmp = path
+#                        nearestEl = elObj1
+#        processed[elObj1] = elObj1.beamsOut[keyStr]
+#        print("nearest element:", nearestEl.center)
+
+
+
 #        print(elObj.beamsOut)
-#        print(elObj, elObj.propagator, elObj.beamsOut)        
+#        print(elObj, elObj.propagator, elObj.beamsOut)
 
 
-#    BioXAS_Main.glow() 
+#    BioXAS_Main.glow()
 #    E0 = 0.5 * (BioXAS_Main.Wiggler.eMin +
 #                BioXAS_Main.Wiggler.eMax)
-#  
+#
 #    BioXAS_Main.alignE=E0
 
 #    plots = define_plots()
