@@ -126,7 +126,7 @@ def build_beamline():
         bl=BioXAS_Main,
         name=r"Flat-Top Wiggler",
         center=[0, 0, 0],
-        nrays=20000,
+        nrays=120000,
         eE=2.9,
         eI=0.25,
         eEpsilonX=18.1,
@@ -421,38 +421,60 @@ def main():
     uuids = list(BioXAS_Main.oesDict.keys())
     allOes = BioXAS_Main.oesDict.items()
     processed = dict(zip(uuids, [[]]*len(uuids)))
+    flow = []
+    globalPath = []
 
     def propagate_beam(oe, beam):
+        print("\nStart at", oe.name)
         if hasattr(oe, 'shine'):
             newBeam = oe.shine()
         else:
             oe.defaultMethod(beam=beam)
+
             if 'beamGlobal' in oe.beamsOut.keys():
                 newBeam = oe.beamsOut['beamGlobal']
             else:
                 newBeam = beam
 
+#            overN = np.where(newBeam.state > 1)[0]
+#            if len(overN) > 0:
+#                newBeam = beam
+
         pathtmp = 1e100
         nearestEl = None
+        
+        nCount = 0
 
         for oeuuid, oeRec in allOes:
             elObj = oeRec[0]
-            if oeRec[-1] == 1 and (str(elObj.uuid) not in processed[oe.uuid]):
+            if oeRec[-1] == 1 and (str(elObj.uuid) not in processed[oe.uuid]) and\
+                    (str(elObj.uuid) not in globalPath):
                 elObj.defaultMethod(beam=newBeam)
                 if 'beamGlobal' in elObj.beamsOut.keys():
                     keyStr = 'beamGlobal'
                 else:
                     keyStr = 'beamLocal'
-                goodN = np.where(elObj.beamsOut[keyStr].state == 1)[0]
+                goodN = np.where(elObj.beamsOut[keyStr].state > 0)[0]
                 if len(goodN) > 0:
 #                    print(elObj1.center)
+                    nCount += 1
                     path = np.linalg.norm(np.array(oe.center)-np.array(elObj.center))
                     if path < pathtmp:
                         pathtmp = path
                         nearestEl = elObj
+                else:
+                    print(elObj.name, " no good rays")
+                for autoParam in ["_center", "_pitch", "_bragg"]:
+                    if hasattr(elObj, autoParam):
+                        aParam = getattr(elObj, autoParam)
+                        naParam = autoParam.strip("_")
+                        setattr(elObj, naParam, aParam)
         nextOE = nearestEl
         if nextOE is not None:
             print("nextOE:", nextOE.name)
+            if hasattr(newBeam, 'parentId'):
+                flow.append((BioXAS_Main.oesDict[newBeam.parentId][0].name, nextOE.name))
+            globalPath.append((str(nextOE.name), str(nextOE.uuid)))
             processed[oe.uuid].append(str(nextOE.uuid))
             processed[nextOE.uuid].append(str(nextOE.uuid))
             propagate_beam(nextOE, newBeam)
@@ -462,6 +484,16 @@ def main():
     for oeRecord in BioXAS_Main.oesDict.values():
         if oeRecord[1] == 0:  # Source
             propagate_beam(oeRecord[0], None)
+
+    print("________________________")
+    print("Global Path")
+    [print(a) for a in globalPath]
+
+    print("________________________")
+    print("Flow")
+    [print(a) for a in flow]
+
+
 #        break
 
 

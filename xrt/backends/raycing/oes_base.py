@@ -1157,9 +1157,10 @@ class OE(object):
             absorbedLb = rs.Beam(copyFrom=lb)
             absorbedLb.absorb_intensity(beam)
             lb = absorbedLb
-        raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
+
         lb.parentId = self.uuid
         gb.parentId = self.uuid
+        raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
         self.beamsOut = {'beamGlobal': gb,
                          'beamLocal': lb}
         return gb, lb  # in global(gb) and local(lb) coordinates
@@ -2540,6 +2541,8 @@ class DCM(OE):
                 absorbedLb = rs.Beam(copyFrom=lo2)
                 absorbedLb.absorb_intensity(lo1)
                 lo2 = absorbedLb
+        gb2.parentId = self.uuid
+        lo1.parentId = self.uuid
         lo2.parentId = self.uuid
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())

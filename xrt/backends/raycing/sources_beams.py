@@ -3,6 +3,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "21 Jun 2022"
 
 import numpy as np
+import copy
 import pickle
 from .. import raycing
 
@@ -68,7 +69,7 @@ class Beam(object):
                    'phi', 'r', 'theta', 'order', 'accepted',
                    'acceptedE', 'seeded', 'seededI', 'Es', 'Ep',
                    # 'area',
-                   'nRefl']
+                   'nRefl', 'parentId']
 
     def __init__(self, nrays=raycing.nrays, copyFrom=None, forceState=False,
                  withNumberOfReflections=False, withAmplitudes=False,
@@ -78,7 +79,7 @@ class Beam(object):
             try:
                 for attr in self.listOfAttrs:
                     if hasattr(copyFrom, attr):
-                        setattr(self, attr, np.copy(getattr(copyFrom, attr)))
+                        setattr(self, attr, copy.copy(getattr(copyFrom, attr)))
 #                if not withNumberOfReflections and hasattr(self, 'nRefl'):
 #                    delattr(self, 'nRefl')
             except Exception as e:

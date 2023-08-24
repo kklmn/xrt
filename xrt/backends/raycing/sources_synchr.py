@@ -381,6 +381,7 @@ class BendingMagnet(SourceBase):
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+        bo.parentId = self.uuid
         self.beamsOut = {'beamGlobal': bo}
         return bo
 

@@ -2118,7 +2118,9 @@ class Plate(DCM):
                 absorbedLb = rs.Beam(copyFrom=lb2)
                 absorbedLb.absorb_intensity(lb1)
                 lb2 = absorbedLb
-        lb2.parent = self.uuid
+        gb.parentId = self.uuid
+        lb1.parentId = self.uuid
+        lb2.parentId = self.uuid
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())
         self.beamsOut = {'beamGlobal': gb,
@@ -2371,7 +2373,9 @@ class ParaboloidFlatLens(Plate):
                     absorbedLb = rs.Beam(copyFrom=llocal2)
                     absorbedLb.absorb_intensity(llocal1)
                     llocal2 = absorbedLb
-            llocal2.parent = self.uuid
+            lglobal.parentId = self.uuid
+            llocal1.parentId = self.uuid
+            llocal2.parentId = self.uuid
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],
                                    inspect.currentframe())
