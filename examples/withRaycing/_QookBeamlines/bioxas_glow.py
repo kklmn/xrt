@@ -330,12 +330,11 @@ def run_process(BioXAS_Main):
         'DBHR2beamLocal01': DBHR2beamLocal01,
         'JJslitsbeamLocal01': JJslitsbeamLocal01,
         'SampleScreenFootprint': SampleScreenFootprint}
-#    BioXAS_Main.prepare_flow()
+    BioXAS_Main.prepare_flow()
     return outDict
 
 
 rrun.run_process = run_process
-
 
 
 def define_plots():
@@ -413,7 +412,6 @@ def define_plots():
     return plots
 
 
-
 def main():
     BioXAS_Main = build_beamline()
     processed = {}
@@ -425,7 +423,7 @@ def main():
     globalPath = []
 
     def propagate_beam(oe, beam):
-        print("\nStart at", oe.name)
+#        print("\nStart at", oe.name)
         if hasattr(oe, 'shine'):
             newBeam = oe.shine()
         else:
@@ -442,7 +440,7 @@ def main():
 
         pathtmp = 1e100
         nearestEl = None
-        
+
         nCount = 0
 
         for oeuuid, oeRec in allOes:
@@ -458,7 +456,8 @@ def main():
                 if len(goodN) > 0:
 #                    print(elObj1.center)
                     nCount += 1
-                    path = np.linalg.norm(np.array(oe.center)-np.array(elObj.center))
+                    path = np.linalg.norm(np.array(oe.center) -
+                                          np.array(elObj.center))
                     if path < pathtmp:
                         pathtmp = path
                         nearestEl = elObj
@@ -471,7 +470,7 @@ def main():
                         setattr(elObj, naParam, aParam)
         nextOE = nearestEl
         if nextOE is not None:
-            print("nextOE:", nextOE.name)
+#            print("nextOE:", nextOE.name)
             if hasattr(newBeam, 'parentId'):
                 flow.append((BioXAS_Main.oesDict[newBeam.parentId][0].name, nextOE.name))
             globalPath.append((str(nextOE.name), str(nextOE.uuid)))
@@ -492,42 +491,6 @@ def main():
     print("________________________")
     print("Flow")
     [print(a) for a in flow]
-
-
-#        break
-
-
-
-        #        elObj = oeRecord[0]
-#        if oeRecord[-1] == 0:  # Source
-#            outBeams = elObj.shine()
-#        else:
-#            outBeams = elObj.defaultMethod(beam=beamIn)
-#        pathtmp = 1e100
-#        nearestEl = "None"
-#
-#        for oeuuid, oeRec1 in BioXAS_Main.oesDict.items():
-#            elObj1 = oeRec1[0]
-#            if oeRec1[-1] == 1 and oeuuid not in processed.keys():  # optical element
-#                outBeams = elObj1.defaultMethod(beam=elObj.beamsOut['beamGlobal'])
-#                if 'beamGlobal' in elObj1.beamsOut.keys():
-#                    keyStr = 'beamGlobal'
-#                else:
-#                    keyStr = 'beamLocal'
-#                goodN = np.where(elObj1.beamsOut[keyStr].state == 1)[0]
-#                if len(goodN) > 0:
-##                    print(elObj1.center)
-#                    path = np.linalg.norm(np.array(elObj.center)-np.array(elObj1.center))
-#                    if path < pathtmp:
-#                        pathtmp = path
-#                        nearestEl = elObj1
-#        processed[elObj1] = elObj1.beamsOut[keyStr]
-#        print("nearest element:", nearestEl.center)
-
-
-
-#        print(elObj.beamsOut)
-#        print(elObj, elObj.propagator, elObj.beamsOut)
 
 
 #    BioXAS_Main.glow()

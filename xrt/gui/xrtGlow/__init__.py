@@ -3233,20 +3233,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
         nsIndex = int(is2ndXtal)
         meshObj = oe.mesh3D
         lb = rsources.Beam(copyFrom=beam)
-#        good = beam.state > 0
-        good = (beam.state == 1) | (beam.state == 2)
+
+        good = (beam.state == 1)  # | (beam.state == 2)
 
         raycing.global_to_virgin_local(oe.bl, beam, lb, oe.center, good)
         raycing.rotate_beam(
             lb, good, rotationSequence=oe.rotationSequence,
             pitch=-oe.pitch, roll=-oe.roll, yaw=-oe.yaw)
-#        t1 = time.time()
+
         beamLimits = oe.footprint if hasattr(oe, 'footprint') else None
-#        print(np.array(beamLimits[nsIndex]).shape)
+
         histAlpha, hist2dRGB, beamLimits = self.build_histRGB(
                 lb, beam, beamLimits[nsIndex])
-
-        print("texture shape", hist2dRGB.shape)
 
         texture = qg.QImage(hist2dRGB, 256, 256, qg.QImage.Format_RGB888)
 #        texture.save(str(oe.name)+"_beam_hist.png")
@@ -3270,7 +3268,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beamLimits = [limits[:, 1], limits[:, 0]]
 
         flux = gb.Jss[good]+gb.Jpp[good]
-#        print(self.getColor)
+
         cData = self.getColor(gb)[good]
         cData01 = ((cData - self.colorMin) * 0.85 /
                    (self.colorMax - self.colorMin)).reshape(-1, 1)
@@ -3483,7 +3481,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            beam.colorMinMax = qg.QVector2D(self.colorMin, self.colorMax)
 
     def draw_beam(self, beam, model, view, projection, target=None):
-#        print("drawing beam", beam)
         beam.shader.bind()
         if target is None:
             beam.VAOp.bind()
@@ -3496,7 +3493,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam.shader.setAttributeBuffer("state", gl.GL_FLOAT, 0, 1)
             beam.vbo_rays_intensity.bind()
             beam.shader.setAttributeBuffer("intensity", gl.GL_FLOAT, 0, 1)
-#            print(beam.name, target, beam.vbo_rays_colorax.bufferId(), beam.targetVAOs[target].bufferId())
 
         beam.shader.setUniformValue("model", model)
         beam.shader.setUniformValue("view", view)
@@ -3507,11 +3503,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beam.shader.setUniformValue("gridMask", qg.QVector4D(1, 1, 1, 1))
         beam.shader.setUniformValue("gridProjection", qg.QVector4D(0, 0, 0, 0))
 
-        beam.shader.setUniformValue("pointSize", float(self.pointSize if target is None else self.lineWidth))
-        beam.shader.setUniformValue("opacity", float(self.pointOpacity if target is None else self.lineOpacity))
+        beam.shader.setUniformValue(
+                "pointSize",
+                float(self.pointSize if target is None else self.lineWidth))
+        beam.shader.setUniformValue(
+                "opacity",
+                float(self.pointOpacity if target is None else self.lineOpacity))
 
-        beam.shader.setUniformValue("iMax", float(self.iMax if self.globalNorm else beam.iMax))
-#        print("drawing", beam.beamLen, "points")
+        beam.shader.setUniformValue(
+                "iMax",
+                float(self.iMax if self.globalNorm else beam.iMax))
+
         if target is None:
             gl.glDrawArrays(gl.GL_POINTS, 0, beam.beamLen)
         else:
@@ -3525,10 +3527,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gridMask[dim] = 0.
                 gridProjection = [0.]*4
                 gridProjection[dim] = -self.aPos[dim]
-                beam.shader.setUniformValue("gridMask", qg.QVector4D(*gridMask))
-                beam.shader.setUniformValue("gridProjection", qg.QVector4D(*gridProjection))
-                beam.shader.setUniformValue("pointSize", float(self.pointProjectionSize if target is None else self.lineProjectionWidth))
-                beam.shader.setUniformValue("opacity", float(self.pointProjectionOpacity if target is None else self.lineProjectionOpacity))
+                beam.shader.setUniformValue(
+                        "gridMask",
+                        qg.QVector4D(*gridMask))
+                beam.shader.setUniformValue(
+                        "gridProjection",
+                        qg.QVector4D(*gridProjection))
+                beam.shader.setUniformValue(
+                        "pointSize",
+                        float(self.pointProjectionSize if target is None else self.lineProjectionWidth))
+                beam.shader.setUniformValue(
+                        "opacity",
+                        float(self.pointProjectionOpacity if target is None else self.lineProjectionOpacity))
                 if target is None:
                     gl.glDrawArrays(gl.GL_POINTS, 0, beam.beamLen)
                 else:
@@ -3607,368 +3617,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.glDraw()
 
     def populateVerticesOnly(self, segmentsModelRoot):
-        if segmentsModelRoot is None:
-            return
-        self.segmentModel = segmentsModelRoot
-        # signal = self.QookSignal
-        self.verticesArray = None
-        self.footprintsArray = None
-        self.oesToPlot = []
-        self.labelsToPlot = []
-        self.footprints = dict()
-        colorsRays = None
-        alphaRays = None
-        colorsDots = None
-        alphaDots = None
-        globalColorsDots = None
-        globalColorsRays = None
-
-        verticesArrayLost = None
-        colorsRaysLost = None
-        footprintsArrayLost = None
-        colorsDotsLost = None
-        maxLen = 1.
-        tmpMax = -1.0e12 * np.ones(3)
-        tmpMin = -1. * tmpMax
-
-        if self.newColorAxis:
-            newColorMax = -1e20
-            newColorMin = 1e20
-#            self.selColorMax = newColorMax
-#            self.selColorMin = newColorMin
-        else:
-            newColorMax = self.colorMax
-            newColorMin = self.colorMin
-
-#        totalOEs = range(segmentsModelRoot.rowCount() - 2)
-        for ioe in range(segmentsModelRoot.rowCount() - 1):
-            ioeItem = segmentsModelRoot.child(ioe + 1, 0)
-#            try:
-#                if signal is not None:
-#                    signalStr = "Plotting beams for {}, %p% done.".format(
-#                        str(ioeItem.text()))
-#                    signal.emit((float(ioe) / float(totalOEs),
-#                                 signalStr))
-#            except:
-#                pass
-            if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
-                self.oesToPlot.append(str(ioeItem.text()))
-                self.footprints[str(ioeItem.text())] = None
-            if segmentsModelRoot.child(ioe + 1, 3).checkState() == 2:
-                self.labelsToPlot.append(str(ioeItem.text()))
-
-            try:
-                startBeam = self.beamsDict[
-                    self.oesList[str(ioeItem.text())][1]]
-#                lostNum = self.oesList[str(ioeItem.text())][0].lostNum
-                # good = startBeam.state > 0
-                good = (startBeam.state == 1) | (startBeam.state == 2)
-                if len(startBeam.state[good]) > 0:
-                    for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
-                        axMin = np.min(getattr(startBeam, tAxis)[good])
-                        axMax = np.max(getattr(startBeam, tAxis)[good])
-                        if axMin < tmpMin[tmpCoord]:
-                            tmpMin[tmpCoord] = axMin
-                        if axMax > tmpMax[tmpCoord]:
-                            tmpMax[tmpCoord] = axMax
-
-                    newColorMax = max(np.max(
-                        self.getColor(startBeam)[good]),
-                        newColorMax)
-                    newColorMin = min(np.min(
-                        self.getColor(startBeam)[good]),
-                        newColorMin)
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
-                else:
-                    continue
-
-            if self.newColorAxis:
-                if newColorMin != self.colorMin:
-                    self.colorMin = newColorMin
-                    self.selColorMin = self.colorMin
-                if newColorMax != self.colorMax:
-                    self.colorMax = newColorMax
-                    self.selColorMax = self.colorMax
-
-            if ioeItem.hasChildren():
-                for isegment in range(ioeItem.rowCount()):
-                    segmentItem0 = ioeItem.child(isegment, 0)
-                    if segmentItem0.checkState() == 2:
-                        endBeam = self.beamsDict[
-                            self.oesList[str(segmentItem0.text())[3:]][1]]
-                        # good = startBeam.state > 0
-                        good = (startBeam.state == 1) | (startBeam.state == 2)
-                        if len(startBeam.state[good]) == 0:
-                            continue
-                        intensity = startBeam.Jss + startBeam.Jpp
-                        intensityAll = intensity / np.max(intensity[good])
-
-                        good = np.logical_and(good,
-                                              intensityAll >= self.cutoffI)
-                        goodC = np.logical_and(
-                            self.getColor(startBeam) <= self.selColorMax,
-                            self.getColor(startBeam) >= self.selColorMin)
-
-                        good = np.logical_and(good, goodC)
-
-                        if self.vScreenForColors and\
-                                self.globalColorIndex is not None:
-                            good = np.logical_and(good, self.globalColorIndex)
-                            globalColorsRays = np.repeat(
-                                self.globalColorArray[good], 2, axis=0) if\
-                                globalColorsRays is None else np.concatenate(
-                                    (globalColorsRays,
-                                     np.repeat(self.globalColorArray[good], 2,
-                                               axis=0)))
-                        else:
-                            if self.globalNorm:
-                                alphaMax = 1.
-                            else:
-                                if len(intensity[good]) > 0:
-                                    alphaMax = np.max(intensity[good])
-                                else:
-                                    alphaMax = 1.
-                            alphaMax = alphaMax if alphaMax != 0 else 1.
-
-                            alphaRays = np.repeat(intensity[good] / alphaMax,
-                                                  2).T\
-                                if alphaRays is None else np.concatenate(
-                                    (alphaRays.T,
-                                     np.repeat(intensity[good] / alphaMax,
-                                               2).T))
-                            colorsRays = np.repeat(np.array(self.getColor(
-                                startBeam)[good]), 2).T if\
-                                colorsRays is None else np.concatenate(
-                                    (colorsRays.T,
-                                     np.repeat(np.array(self.getColor(
-                                         startBeam)[good]), 2).T))
-                        vertices = np.array(
-                            [startBeam.x[good] - self.coordOffset[0],
-                             endBeam.x[good] - self.coordOffset[0]]).flatten(
-                                 'F')
-                        vertices = np.vstack((vertices, np.array(
-                            [startBeam.y[good] - self.coordOffset[1],
-                             endBeam.y[good] - self.coordOffset[1]]).flatten(
-                                 'F')))
-                        vertices = np.vstack((vertices, np.array(
-                            [startBeam.z[good] - self.coordOffset[2],
-                             endBeam.z[good] - self.coordOffset[2]]).flatten(
-                                 'F')))
-
-                        self.verticesArray = vertices.T if\
-                            self.verticesArray is None else\
-                            np.vstack((self.verticesArray, vertices.T))
-
-                        if self.showLostRays:
-                            try:
-                                lostNum = self.oesList[str(
-                                    segmentItem0.text())[3:]][0].lostNum
-                            except:  # analysis:ignore
-                                lostNum = 1e3
-                            lost = startBeam.state == lostNum
-                            try:
-                                lostOnes = len(startBeam.x[lost]) * 2
-                            except:  # analysis:ignore
-                                lostOnes = 0
-                            colorsRaysLost = lostOnes if colorsRaysLost is\
-                                None else colorsRaysLost + lostOnes
-                            if lostOnes > 0:
-                                verticesLost = np.array(
-                                    [startBeam.x[lost] - self.coordOffset[0],
-                                     endBeam.x[lost] -
-                                     self.coordOffset[0]]).flatten('F')
-                                verticesLost = np.vstack(
-                                    (verticesLost, np.array(
-                                        [startBeam.y[lost]-self.coordOffset[1],
-                                         endBeam.y[lost] -
-                                         self.coordOffset[1]]).flatten('F')))
-                                verticesLost = np.vstack(
-                                    (verticesLost, np.array(
-                                        [startBeam.z[lost]-self.coordOffset[2],
-                                         endBeam.z[lost] -
-                                         self.coordOffset[2]]).flatten('F')))
-                                verticesArrayLost = verticesLost.T if\
-                                    verticesArrayLost is None else\
-                                    np.vstack(
-                                        (verticesArrayLost, verticesLost.T))
-
-            if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
-                # good = startBeam.state > 0
-                good = (startBeam.state == 1) | (startBeam.state == 2)
-                if len(startBeam.state[good]) == 0:
-                    continue
-                intensity = startBeam.Jss + startBeam.Jpp
-                try:
-                    intensityAll = intensity / np.max(intensity[good])
-                    good = np.logical_and(good, intensityAll >= self.cutoffI)
-                    goodC = np.logical_and(
-                        self.getColor(startBeam) <= self.selColorMax,
-                        self.getColor(startBeam) >= self.selColorMin)
-
-                    good = np.logical_and(good, goodC)
-                except:  # analysis:ignore
-                    if _DEBUG_:
-                        raise
-                    else:
-                        continue
-                if self.vScreenForColors and self.globalColorIndex is not None:
-                    good = np.logical_and(good, self.globalColorIndex)
-                    globalColorsDots = self.globalColorArray[good] if\
-                        globalColorsDots is None else np.concatenate(
-                            (globalColorsDots, self.globalColorArray[good]))
-                else:
-                    if self.globalNorm:
-                        alphaMax = 1.
-                    else:
-                        if len(intensity[good]) > 0:
-                            alphaMax = np.max(intensity[good])
-                        else:
-                            alphaMax = 1.
-
-                    alphaMax = alphaMax if alphaMax != 0 else 1.
-                    alphaDots = intensity[good].T / alphaMax if\
-                        alphaDots is None else np.concatenate(
-                            (alphaDots.T, intensity[good].T / alphaMax))
-                    colorsDots = np.array(self.getColor(
-                        startBeam)[good]).T if\
-                        colorsDots is None else np.concatenate(
-                            (colorsDots.T, np.array(self.getColor(
-                                startBeam)[good]).T))
-
-                vertices = np.array(startBeam.x[good] - self.coordOffset[0])
-                vertices = np.vstack((vertices, np.array(
-                    startBeam.y[good] - self.coordOffset[1])))
-                vertices = np.vstack((vertices, np.array(
-                    startBeam.z[good] - self.coordOffset[2])))
-                self.footprintsArray = vertices.T if\
-                    self.footprintsArray is None else\
-                    np.vstack((self.footprintsArray, vertices.T))
-                if self.showLostRays:
-                    try:
-                        lostNum = self.oesList[str(ioeItem.text())][0].lostNum
-                    except:  # analysis:ignore
-                        lostNum = 1e3
-                    lost = startBeam.state == lostNum
-                    try:
-                        lostOnes = len(startBeam.x[lost])
-                    except:  # analysis:ignore
-                        lostOnes = 0
-                    colorsDotsLost = lostOnes if\
-                        colorsDotsLost is None else\
-                        colorsDotsLost + lostOnes
-                    if lostOnes > 0:
-                        verticesLost = np.array(startBeam.x[lost] -
-                                                self.coordOffset[0])
-                        verticesLost = np.vstack((verticesLost, np.array(
-                            startBeam.y[lost] - self.coordOffset[1])))
-                        verticesLost = np.vstack((verticesLost, np.array(
-                            startBeam.z[lost] - self.coordOffset[2])))
-                        footprintsArrayLost = verticesLost.T if\
-                            footprintsArrayLost is None else\
-                            np.vstack((footprintsArrayLost, verticesLost.T))
-
-        try:
-            if self.colorMin == self.colorMax:
-                if self.colorMax == 0:  # and self.colorMin == 0 too
-                    self.colorMin, self.colorMax = -0.1, 0.1
-                else:
-                    self.colorMin = self.colorMax * 0.99
-                    self.colorMax *= 1.01
-
-            if self.vScreenForColors and self.globalColorIndex is not None:
-                self.raysColor = globalColorsRays
-            elif colorsRays is not None:
-                colorsRays = colorFactor * (colorsRays-self.colorMin) /\
-                    (self.colorMax - self.colorMin)
-                colorsRays = np.dstack(
-                    (colorsRays,
-                     np.ones_like(alphaRays)*colorSaturation,
-                     alphaRays if self.iHSV else
-                     np.ones_like(alphaRays)))
-                colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
-                if self.globalNorm and len(alphaRays) > 0:
-                    alphaMax = np.max(alphaRays)
-                else:
-                    alphaMax = 1.
-                alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaColorRays = np.array([alphaRays / alphaMax]).T
-                self.raysColor = np.float32(np.hstack([colorsRGBRays,
-                                                       alphaColorRays]))
-            if self.showLostRays:
-                if colorsRaysLost is not None:
-                    lostColor = np.zeros((colorsRaysLost, 4))
-                    lostColor[:, 0] = 0.5
-                    lostColor[:, 3] = 0.25
-                    self.raysColor = np.float32(np.vstack((self.raysColor,
-                                                           lostColor)))
-                if verticesArrayLost is not None:
-                    self.verticesArray = np.float32(np.vstack((
-                        self.verticesArray, verticesArrayLost)))
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                pass
-
-        try:
-            if self.colorMin == self.colorMax:
-                if self.colorMax == 0:  # and self.colorMin == 0 too
-                    self.colorMin, self.colorMax = -0.1, 0.1
-                else:
-                    self.colorMin = self.colorMax * 0.99
-                    self.colorMax *= 1.01
-            if self.vScreenForColors and self.globalColorIndex is not None:
-                self.dotsColor = globalColorsDots
-            elif colorsDots is not None:
-                colorsDots = colorFactor * (colorsDots-self.colorMin) /\
-                    (self.colorMax - self.colorMin)
-                colorsDots = np.dstack(
-                    (colorsDots,
-                     np.ones_like(alphaDots)*colorSaturation,
-                     alphaDots if self.iHSV else
-                     np.ones_like(alphaDots)))
-                colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-
-                if self.globalNorm and len(alphaDots) > 0:
-                    alphaMax = np.max(alphaDots)
-                else:
-                    alphaMax = 1.
-                alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaColorDots = np.array([alphaDots / alphaMax]).T
-                self.dotsColor = np.float32(np.hstack([colorsRGBDots,
-                                                       alphaColorDots]))
-
-            if self.showLostRays:
-                if colorsDotsLost is not None:
-                    lostColor = np.zeros((colorsDotsLost, 4))
-                    lostColor[:, 0] = 0.5
-                    lostColor[:, 3] = 0.25
-                    self.dotsColor = np.float32(np.vstack((self.dotsColor,
-                                                           lostColor)))
-                if footprintsArrayLost is not None:
-                    self.footprintsArray = np.float32(np.vstack((
-                        self.footprintsArray, footprintsArrayLost)))
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                pass
-        tmpMaxLen = np.max(tmpMax - tmpMin)
-        if tmpMaxLen > maxLen:
-            maxLen = tmpMaxLen
-        self.maxLen = maxLen
-        self.newColorAxis = False
+        pass
 
     def populateVerticesArray(self, segmentsModelRoot):
         self.glDraw()
-#        for beam in self.beamsDict.values():
-#            self.init_beam(beam)
-#        self.populateVerticesOnly(segmentsModelRoot)
-#        self.populateVScreen()
-#        if self.vScreenForColors:
-#            self.populateVerticesOnly(segmentsModelRoot)
 
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
@@ -4146,28 +3798,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             [0.1, 0.1, 0.1, 1])
             gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
-
-#    def paintGL(self):
-#        tt = str(type(self.parent))
-#        if str(tt[:-2]).endswith('Glow'):
-#            self.paintGL2()
-#        else:
-#            print("CALLED FROM ELEMENTEDITOR")
-#            #        self.makeCurrent()
-#            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT | gl.GL_STENCIL_BUFFER_BIT)
-
-
     def paintGL(self):
-#        self.makeCurrent()
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT | gl.GL_STENCIL_BUFFER_BIT)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT |
+                   gl.GL_DEPTH_BUFFER_BIT |
+                   gl.GL_STENCIL_BUFFER_BIT)
         self.mModScale.setToIdentity()
         self.mModTrans.setToIdentity()
         self.mModScale.scale(*(self.scaleVec/self.maxLen))
         self.mModTrans.translate(*(self.tVec-self.coordOffset))
         self.mMod = self.mModScale*self.mModTrans
 
-#        gl.glDisable(gl.GL_BLEND)
-#        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         oeSel = None
@@ -4181,75 +3821,54 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if self.segmentModel is not None:
                 oeSelItem = self.segmentModel.child(self.selectedOE, 0)
                 oeSel = self.oesList[str(oeSelItem.text())][0]
-#                print(self.selectedOE, oeSel.name, str(oeSelItem.text()))
-#        print(self.oesList)
 
         for oeName, oeLine in self.oesList.items():
-#            print(oeName)
+
             oeToPlot = oeLine[0]
             is2ndXtal = oeLine[3]
             itemEnabled = True
-#            startBeam = self.beamsDict[oeLine[1]]
             oeItems = []
             ioe = None
             if self.segmentModel is not None:
-#        for ioe in range(self.segmentModel.rowCount() - 1):
                 oeItems = self.segmentModel.model().findItems(oeName, column=0)
-#                print(oeItems)
+
             if len(oeItems) > 0:
                 ioe = oeItems[0].index().row()
-#                print(ioe)
                 if self.segmentModel.child(ioe, 2).checkState() != 2:
-#                if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
                     itemEnabled = False
 #            if hasattr(oeToPlot, 'stl_mesh'):
 #                self.plot_oe(oeToPlot, is2ndXtal)
             if hasattr(oeToPlot, 'mesh3D') and itemEnabled:
-#                    gl.glStencilFunc(gl.GL_ALWAYS, 1, 0xff)
-#                    print(oeToPlot.name)
-#                print("drawing object", oeToPlot.name)
                 isSelected = True if oeToPlot == oeSel else False
-#                print(oeToPlot, oeSel, self.selectedOE, ioe)
                 if ioe is not None:
                     gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(ioe), 0xff)
-                oeToPlot.mesh3D.draw_surface(self.mMod, self.mView, self.mProj, is2ndXtal, isSelected=isSelected)
-#                    oeToPlot.mesh3D.drawLocalAxes(self.mMod, self.mView, self.mProj, is2ndXtal)
+                oeToPlot.mesh3D.draw_surface(self.mMod, self.mView, self.mProj,
+                                             is2ndXtal, isSelected=isSelected)
+#                    oeToPlot.mesh3D.drawLocalAxes(self.mMod, self.mView,
+#                                                  self.mProj, is2ndXtal)
 
-
-#        gl.glEnable(gl.GL_BLEND)
-#        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
         self.cBox.draw(self.mModAx, self.mView, self.mProj)
-#        gl.glEnable(gl.GL_TEXTURE_3D)
-#        gl.glEnable(gl.GL_ALPHA_TEST)
-#        gl.glAlphaFunc(gl.GL_GREATER, 0.2)
-#        gl.glBlendFunc(gl.GL_SRC_COLOR, gl.GL_CONSTANT_ALPHA)
 
         if self.segmentModel is not None:
             for ioe in range(self.segmentModel.rowCount() - 1):
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
                 beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
-                if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
-
-                    self.draw_beam(beam, self.mMod, self.mView, self.mProj)
+                # Draw footprints. This duplicates the texture-based footprints
+#                if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
+#                    self.draw_beam(beam, self.mMod, self.mView, self.mProj)
     #            if hasattr(beam, 'texture3d'):
     #                self.render_beam_3d(beam)
                 if ioeItem.hasChildren():
                     for isegment in range(ioeItem.rowCount()):
                         segmentItem0 = ioeItem.child(isegment, 0)
                         if segmentItem0.checkState() == 2:
-                            self.draw_beam(beam, self.mMod, self.mView, self.mProj, target=str(segmentItem0.text()))
+                            self.draw_beam(beam,
+                                           self.mMod, self.mView, self.mProj,
+                                           target=str(segmentItem0.text()))
 
         if self.enableAA:
             gl.glDisable(gl.GL_LINE_SMOOTH)
-
-#        gl.glEnable(gl.GL_DEPTH_TEST)
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#        gl.glDisable(gl.GL_BLEND)
-#        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-#                print(oeToPlot.name, oeToPlot.stl_mesh[0].shape)
-#            is2ndXtal = self.oesList[oeString][3]
-
 
     def paintGL_old(self):
         def makeCenterStr(centerList, prec):
@@ -5192,71 +4811,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
         gl.glDisable(gl.GL_MAP2_NORMAL)
 
-        # Contour
-#        xBound = np.linspace(xLimits[0], xLimits[1],
-#                             self.surfCPOrder*(localTiles[0]+1))
-#        yBound = np.linspace(yLimits[0], yLimits[1],
-#                             self.surfCPOrder*(localTiles[1]+1))
-#        if oe.shape == 'round':
-#            oeContour = [0]
-#            oneEdge = [0]
-#        else:
-#            oeContour = [0]*4
-#            oneEdge = [0]*4
-#            oeContour[0] = np.array([xBound,
-#                                     yBound[0]*np.ones_like(xBound)])  # bottom
-#            oeContour[1] = np.array([xBound[-1]*np.ones_like(yBound),
-#                                     yBound])  # left
-#            oeContour[2] = np.array([np.flip(xBound, 0),
-#                                     yBound[-1]*np.ones_like(xBound)])  # top
-#            oeContour[3] = np.array([xBound[0]*np.ones_like(yBound),
-#                                     np.flip(yBound, 0)])  # right
-#
-#        for ie, edge in enumerate(oeContour):
-#            if oe.shape == 'round':
-#                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
-#            else:
-#                edgeX = edge[0, :]
-#                edgeY = edge[1, :]
-#            edgeZ = np.zeros_like(edgeX)
-#
-#            if oe.isParametric:
-#                edgeX, edgeY, edgeZ = oe.xyz_to_param(edgeX, edgeY,
-#                                                      edgeZ)
-#
-#            edgeZ = local_z(edgeX, edgeY)
-#            if oe.isParametric:
-#                edgeX, edgeY, edgeZ = oe.param_to_xyz(
-#                        edgeX, edgeY, edgeZ)
-#            edgeBeam = rsources.Beam(nrays=len(edgeX))
-#            edgeBeam.x = edgeX
-#            edgeBeam.y = edgeY
-#            edgeBeam.z = edgeZ
-#
-#            oe.local_to_global(edgeBeam, is2ndXtal=is2ndXtal)
-#            oneEdge[ie] = np.vstack((edgeBeam.x - self.coordOffset[0],
-#                                     edgeBeam.y - self.coordOffset[1],
-#                                     edgeBeam.z - self.coordOffset[2])).T
-#
-#        self.oeContour[oe.name] = oneEdge
-
-#    def drawOeContour(self, oe):
-#        gl.glEnable(gl.GL_MAP1_VERTEX_3)
-#        gl.glLineWidth(self.contourWidth)
-#        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-#        cpo = self.surfCPOrder
-#        for ie in range(len(self.oeContour[oe.name])):
-#            edge = self.oeContour[oe.name][ie]
-#            nTiles = self.tiles[0] if ie in [0, 2] else self.tiles[1]
-#            nTiles = self.tiles[1]*3 if oe.shape == 'round' else nTiles
-#            for tile in range(nTiles+1):
-#                gl.glMap1f(gl.GL_MAP1_VERTEX_3,  0, 1,
-#                           self.modelToWorld(edge[tile*cpo:(tile+1)*cpo+1, :]))
-#                gl.glMapGrid1f(cpo, 0.0, 1.0)
-#                gl.glEvalMesh1(gl.GL_LINE, 0, cpo)
-#
-#        gl.glDisable(gl.GL_MAP1_VERTEX_3)
-
 #    def drawSlitEdges(self, oe):
 #        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 #        gl.glLineWidth(self.contourWidth)
@@ -6049,33 +5603,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glColor4f(1, 1, 1, 1)
         gl.glDisable(gl.GL_LINE_SMOOTH)
 
-#    def setVertexBuffer(self, data_array, dim_vertex, program, shader_str ):
-#        # slightly modified code from
-#        # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
-#        vbo = qg.QOpenGLBuffer(qg.QOpenGLBuffer.VertexBuffer)
-#        vbo.create()
-#        vbo.bind()
-#        vertices = np.array(data_array, dtype=np.float32)
-#        vbo.allocate(vertices, vertices.nbytes) #vertices.shape[0] * vertices.itemsize)
-#
-#        attr_loc = program.attributeLocation( shader_str )
-#        program.enableAttributeArray( attr_loc )
-#        program.setAttributeBuffer(attr_loc, gl.GL_FLOAT, 0, dim_vertex)
-#        vbo.release()
-#
-#        return vbo
-#
-#    def setIndexBuffer(self, data_array):
-#        # slightly modified code from
-#        # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
-#        ibo = qg.QOpenGLBuffer(qg.QOpenGLBuffer.IndexBuffer)
-#        ibo.create()
-#        ibo.bind()
-#        indices = np.array(data_array, dtype=np.ushort)
-#        ibo.allocate(indices, indices.nbytes)
-#        ibo.release()
-#        return ibo
-
     def prepareSurfaceMesh_old(self, oe):
         def getThickness(element):
 #            if self.oeThicknessForce is not None:
@@ -6290,15 +5817,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 len(yLimits))]
         oe.meshTilesLR = [[1 for j in range(localTiles[1])] for ie in range(
                 len(xLimits))]
-#        print(811)
-#        print("thickness", thickness)
-#        print()
+
         if thickness > 0 and not isClosedSurface:
             deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
             for ie, yPos in enumerate(yLimits):
-#                print(81, ie)
                 for i in range(localTiles[0]):
-#                    print(81, ie, i)
                     if oe.shape == 'round':
                         continue
                     xGridOe = np.linspace(xLimits[0] + i*deltaX,
@@ -6342,11 +5865,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     oe.local_to_global(faceBeam, is2ndXtal=is2ndXtal)
                     oe.meshTilesFB[ie][i] = faceBeam
                     updateBBox(oe, faceBeam)
-#                    self.plotCurvedMesh(faceBeam.x, faceBeam.y, faceBeam.z,
-#                                        faceBeam.a, faceBeam.b, faceBeam.c,
-#                                        [0]*3)
-#
-#            print(82)
+
             for ie, xPos in enumerate(xLimits):
                 if ie == 0 and oe.shape == 'round':
                     continue
@@ -6409,11 +5928,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                                        [0]*3)
 
     def initializeGL(self):
-        print("INIT GL")
-#        gl.glutInit()
-#        gl.glutInitDisplayMode(gl.GLUT_RGBA | gl.GLUT_DOUBLE | gl.GLUT_DEPTH | gl.GLUT_STENCIL)
-#        gl.glViewport(*self.viewPortGL)
-#        self.makeCurrent()
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glEnable(gl.GL_STENCIL_TEST)
         self.init_coord_grid()
@@ -6423,8 +5937,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glEnable(gl.GL_POINT_SMOOTH)
         gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-#        for beamname, beam in self.beamsDict.items():
-#            print(beamname)
 
         self.iMax = 1e-20
 
@@ -6436,21 +5948,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
             newColorMax = self.colorMax
             newColorMin = self.colorMin
 
-#        needTexture = True
-#        print("OEs List", self.oesList)
-#        print(self.context())
         if True: #str(tt[:-2]).endswith('Glow'):
-#            self.initializeGL2()
+
             for oeName, oeLine in self.oesList.items():
                 oeToPlot = oeLine[0]
                 is2ndXtal = oeLine[3]
                 if self.beamsDict is not None:
                     if oeLine[1] in self.beamsDict:
                         startBeam = self.beamsDict[oeLine[1]]
-
-    #            oeToPlot = self.oesList[str(ioeItem.text())][0]
-    #            is2ndXtal = self.oesList[str(ioeItem.text())][3]
-    #            startBeam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
 
                 if hasattr(oeToPlot, 'material'):  # real oes, no screens or slits (yet)
     #                t0 = time.time()
@@ -6528,17 +6033,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
             else:
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
-#        wformat = self.context().format()
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
-#        gl.glViewport(*self.viewPortGL)
-#        gl.glViewport(0, 0, widthInPixels, heightInPixels)
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
         self.mProj.setToIdentity()
         self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
         gl.glViewport(*self.viewPortGL)
-#        print(self.mProj)
 
     def populateVScreen(self):
         if any([prop is None for prop in [self.virtBeam,
@@ -6914,18 +6415,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.prevMPos[1] = mouseY
 
     def mouseDoubleClickEvent(self, mdcevent):
-#        print("double clicked at", mdcevent.localPos())
         if self.selectedOE > 0:
             oeSelItem = self.segmentModel.child(self.selectedOE, 0)
             oeSel = self.oesList[str(oeSelItem.text())][0]
-            print("mousedblclk", self)
-#            self.doneCurrent()
             self.openElViewer.emit([oeSel])
-
-
-#            elViewer = ElementEditor(self, oeSel)
-#            if (elViewer.exec_()):
-#                pass
 
     def wheelEvent(self, wEvent):
         ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
@@ -6948,18 +6441,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.vScreenSize *= 0.9
             elif ctrlOn:
                 self.cameraAngle *= 1.1
-#                self.cameraPos *= 1.1
             else:
                 self.scaleVec *= 0.9
 
         if ctrlOn:
-#            self.mView.setToIdentity()
-#            self.mView.lookAt(self.cameraPos, self.cameraTarget, self.upVec)
             self.mProj.setToIdentity()
             self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
         else:
             self.scaleUpdated.emit(self.scaleVec)
         self.glDraw()
+
 
 class xrtGlowControls(qt.QWidget):
     def __init__(self, glowWidget, arrayOfRays=None, parent=None,
@@ -9220,10 +8711,10 @@ class OEMesh3D():
     }
     '''
 
-
     def __init__(self, parentOE, parentWidget):
-        self.emptyTex = qg.QOpenGLTexture(qg.QImage(np.zeros((256, 256, 3)),
-                                  256, 256, qg.QImage.Format_RGB888))
+        self.emptyTex = qg.QOpenGLTexture(
+                qg.QImage(np.zeros((256, 256, 3)),
+                          256, 256, qg.QImage.Format_RGB888))
         self.defaultLimits = np.array([[-1.]*3, [1.]*3])
 #        print("def shape", self.defaultLimits.shape)
 #        texture.save(str(oe.name)+"_beam_hist.png")
@@ -9295,7 +8786,8 @@ class OEMesh3D():
             rotation = (scprot.from_euler(
                     rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
             extraRot = (scprot.from_euler(
-                    extraRotSeq, [extraRotAx[i] for i in extraRotSeq])).as_quat()
+                    extraRotSeq,
+                    [extraRotAx[i] for i in extraRotSeq])).as_quat()
             rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
             extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
 
@@ -9338,7 +8830,7 @@ class OEMesh3D():
         coneVertices = np.hstack((np.array([0, 0, 0, 0, 0, z]).reshape(3, 2),
                                   base)).T
         self.arrowLen = len(coneVertices)
-        print(coneVertices, coneVertices.shape)
+#        print(coneVertices, coneVertices.shape)
 
         vao = qg.QOpenGLVertexArrayObject()
         vao.create()
@@ -9355,12 +8847,12 @@ class OEMesh3D():
         shader.bind()
         vao.bind()
 
-        self.vbo_arrow = setVertexBuffer(coneVertices.copy(), 3, shader, "position")
+        self.vbo_arrow = setVertexBuffer(coneVertices.copy(), 3,
+                                         shader, "position")
         vao.release()
         shader.release()
         self.shader_arrow = shader
         self.vao_arrow = vao
-
 
     def prepareSurfaceMesh(self, is2ndXtal=False):
         def getThickness():
@@ -9380,8 +8872,8 @@ class OEMesh3D():
                 if self.oe.material is not None:
                     thickness = self.oeThickness
                     if hasattr(self.oe.material, "t"):
-                        thickness = self.oe.material.t if self.oe.material.t is not None\
-                            else thickness
+                        thickness = self.oe.material.t if\
+                            self.oe.material.t is not None else thickness
                     elif isinstance(self.oe.material, rmats.Multilayer):
                         if self.oe.material.substrate is not None:
                             if hasattr(self.oe.material.substrate, 't'):
@@ -9417,8 +8909,10 @@ class OEMesh3D():
 
         if hasattr(self.oe, 'stl_mesh'):
             self.isStl = True
-            self.vbo_vertices[nsIndex] = setVertexBuffer(self.oe.stl_mesh[0].copy(), 3, shader, "position")
-            self.vbo_normals[nsIndex] = setVertexBuffer(self.oe.stl_mesh[1].copy(), 3, shader, "normals")
+            self.vbo_vertices[nsIndex] = setVertexBuffer(
+                    self.oe.stl_mesh[0].copy(), 3, shader, "position")
+            self.vbo_normals[nsIndex] = setVertexBuffer(
+                    self.oe.stl_mesh[1].copy(), 3, shader, "normals")
             self.arrLengths[nsIndex] = len(self.oe.stl_mesh[0])
             vao.release()
             shader.release()
@@ -9427,12 +8921,9 @@ class OEMesh3D():
             self.ibo[nsIndex] = None
             return
 
-
         isPlate = isinstance(self.oe, roes.Plate)
-#        print("isPlate", isPlate)
 
         thickness = getThickness()
-#        print("thickness", thickness)
 
         self.bBox = np.zeros((3, 2))
         self.bBox[:, 0] = 1e10
@@ -9456,9 +8947,6 @@ class OEMesh3D():
             if len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, 1]
 
-#        self.bBox[:, 0] = xLimits
-#        self.bBox[:, 1] = yLimits
-
         localTiles = np.array(self.tiles)
 
         if self.oe.shape == 'round':
@@ -9475,7 +8963,8 @@ class OEMesh3D():
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
 
-        xGridOe = np.linspace(xLimits[0], xLimits[1], localTiles[0]) + self.oe.dx
+        xGridOe = np.linspace(xLimits[0], xLimits[1],
+                              localTiles[0]) + self.oe.dx
         yGridOe = np.linspace(yLimits[0], yLimits[1], localTiles[1])
 
         xv, yv = np.meshgrid(xGridOe, yGridOe)
@@ -9496,7 +8985,8 @@ class OEMesh3D():
         else:
             zExt = '1' if hasattr(self.oe, 'local_z1') else ''
         local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
-            self.oe.isParametric else getattr(self.oe, 'local_z{}'.format(zExt))
+            self.oe.isParametric else getattr(self.oe,
+                                              'local_z{}'.format(zExt))
         local_n = getattr(self.oe, 'local_n{}'.format(zExt))
 
         xv = np.copy(xv)
@@ -9523,7 +9013,8 @@ class OEMesh3D():
 #        self.bBox[:, 1] = yLimit
 
         if self.oe.shape == 'round':
-            xC, yC = rX*sideR[:, 0]*np.cos(sideR[:, -1])+cX, rY*sideR[:, 0]*np.sin(sideR[:, -1])+cY
+            xC, yC = rX*sideR[:, 0]*np.cos(sideR[:, -1]) +\
+                     cX, rY*sideR[:, 0]*np.sin(sideR[:, -1]) + cY
             zC = np.array(local_z(xC, yC))
             if self.oe.isParametric:
                 xC, yC, zC = self.oe.param_to_xyz(xC, yC, zC)
@@ -9531,7 +9022,7 @@ class OEMesh3D():
         points = np.vstack((xv, yv, zv)).T
         surfmesh = {}
 
-        triS = Delaunay(points[:,:-1])
+        triS = Delaunay(points[:, :-1])
 
         if not isPlate:
             bottomPoints = points.copy()
@@ -9546,7 +9037,8 @@ class OEMesh3D():
 
         tL = np.vstack((sideL.T, np.ones_like(zL)*thickness))
         bottomLine = zL - thickness if isPlate else -np.ones_like(zL)*thickness
-        tL = np.hstack((tL, np.vstack((np.flip(sideL.T, axis=1), -np.ones_like(zL)*thickness)))).T
+        tL = np.hstack((tL, np.vstack((np.flip(sideL.T, axis=1),
+                                       -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
         triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
@@ -9555,13 +9047,15 @@ class OEMesh3D():
 
         tR = np.vstack((sideR.T, zR))
         bottomLine = zR - thickness if isPlate else -np.ones_like(zR)*thickness
-        tR = np.hstack((tR, np.vstack((np.flip(sideR.T, axis=1), bottomLine)))).T
+        tR = np.hstack((tR, np.vstack((np.flip(sideR.T, axis=1),
+                                       bottomLine)))).T
         normsR = np.zeros((len(zR)*2, 3))
         normsR[:, 0] = 1
 
         tF = np.vstack((sideF.T, np.ones_like(zF)*thickness))
         bottomLine = zF - thickness if isPlate else -np.ones_like(zF)*thickness
-        tF = np.hstack((tF, np.vstack((np.flip(sideF.T, axis=1), bottomLine)))).T
+        tF = np.hstack((tF, np.vstack((np.flip(sideF.T, axis=1),
+                                       bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
         triFB = Delaunay(tF[:, [0, -1]])
@@ -9569,15 +9063,18 @@ class OEMesh3D():
 
         if self.oe.shape == 'round':
             tB = np.vstack((xC, yC, zC))
-            bottomLine = zC - thickness if isPlate else -np.ones_like(zC)*thickness
+            bottomLine = zC - thickness if isPlate else\
+                -np.ones_like(zC)*thickness
             tB = np.hstack((tB, np.vstack((xC, np.flip(yC), bottomLine)))).T
             normsB = np.vstack((tB[:, 0], tB[:, 1], np.zeros_like(tB[:, 0]))).T
             norms = np.linalg.norm(normsB, axis=1, keepdims=True)
             normsB /= norms
         else:
             tB = np.vstack((sideB.T, zB))
-            bottomLine = zB - thickness if isPlate else -np.ones_like(zB)*thickness
-            tB = np.hstack((tB, np.vstack((np.flip(sideB.T, axis=1), bottomLine)))).T
+            bottomLine = zB - thickness if isPlate else\
+                -np.ones_like(zB)*thickness
+            tB = np.hstack((tB, np.vstack((np.flip(sideB.T, axis=1),
+                                           bottomLine)))).T
             normsB = np.zeros((len(zB)*2, 3))
             normsB[:, 1] = 1
 
@@ -9590,28 +9087,31 @@ class OEMesh3D():
         if not isPlate:
             allSurfaces = np.vstack((allSurfaces, bottomPoints))
             allNormals = np.vstack((nv, bottomNormals))
-            allIndices = np.hstack((allIndices, triS.simplices.flatten() + indArrOffset))
+            allIndices = np.hstack((allIndices,
+                                    triS.simplices.flatten() + indArrOffset))
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
         if not (isPlate and is2ndXtal):
             if self.oe.shape == 'round':  # Side surface
-#                pass
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
                 allIndices = np.hstack((allIndices,
-                                        triLR.simplices.flatten()+indArrOffset))
+                                        triLR.simplices.flatten() +
+                                        indArrOffset))
             else:
                 allSurfaces = np.vstack((allSurfaces, tL, tF, tR, tB))
-                allNormals = np.vstack((allNormals, normsL, normsF, normsR, normsB))
+                allNormals = np.vstack((allNormals, normsL, normsF,
+                                        normsR, normsB))
                 allIndices = np.hstack((allIndices,
-                                         triLR.simplices.flatten()+indArrOffset,
-                                         triFB.simplices.flatten()+indArrOffset+len(tL),
-                                         triLR.simplices.flatten()+indArrOffset+len(tL)+len(tF),
-                                         triFB.simplices.flatten()+indArrOffset+len(tL)*2+len(tF)))
-
-        print(allSurfaces.shape, allNormals.shape, allIndices.shape, len(allSurfaces), len(points)*2)
-
+                                        triLR.simplices.flatten() +
+                                        indArrOffset,
+                                        triFB.simplices.flatten() +
+                                        indArrOffset+len(tL),
+                                        triLR.simplices.flatten() +
+                                        indArrOffset+len(tL)+len(tF),
+                                        triFB.simplices.flatten() +
+                                        indArrOffset+len(tL)*2+len(tF)))
 
         surfmesh['points'] = allSurfaces.copy()
         surfmesh['normals'] = allNormals.copy()
@@ -9626,13 +9126,16 @@ class OEMesh3D():
         self.bBox[:, 0] = np.min(surfmesh['contour'], axis=0)
         self.bBox[:, 1] = np.max(surfmesh['contour'], axis=0)
 
-
-        oldVBOpoints = self.vbo_vertices[nsIndex] if nsIndex in self.vbo_vertices.keys() else None
-        oldVBOnorms = self.vbo_normals[nsIndex] if nsIndex in self.vbo_normals.keys() else None
+        oldVBOpoints = self.vbo_vertices[nsIndex] if\
+            nsIndex in self.vbo_vertices.keys() else None
+        oldVBOnorms = self.vbo_normals[nsIndex] if\
+            nsIndex in self.vbo_normals.keys() else None
         oldIBO = self.ibo[nsIndex] if nsIndex in self.ibo.keys() else None
 
-        self.vbo_vertices[nsIndex] = setVertexBuffer(surfmesh['points'], 3, shader, "position", None, oldVBOpoints)
-        self.vbo_normals[nsIndex] = setVertexBuffer(surfmesh['normals'], 3, shader, "normals", None, oldVBOnorms)
+        self.vbo_vertices[nsIndex] = setVertexBuffer(
+                surfmesh['points'], 3, shader, "position", None, oldVBOpoints)
+        self.vbo_normals[nsIndex] = setVertexBuffer(
+                surfmesh['normals'], 3, shader, "normals", None, oldVBOnorms)
         self.ibo[nsIndex] = setIndexBuffer(surfmesh['indices'], oldIBO)
         self.arrLengths[nsIndex] = len(surfmesh['indices'])
         vao.release()
@@ -9641,22 +9144,6 @@ class OEMesh3D():
         self.vao[nsIndex] = vao
         self.z2y = qg.QMatrix4x4().rotate(90, 1, 0, 0)
         self.z2x = qg.QMatrix4x4().rotate(90, 0, 1, 0)
-
-#        vao_c = qg.QOpenGLVertexArrayObject()
-#        vao_c.create()
-#
-#        shader_c = qg.QOpenGLShaderProgram()
-#        shader_c.addShaderFromSourceCode(
-#                qt.QOpenGLShader.Vertex, self.vertex_contour)
-#        shader_c.addShaderFromSourceCode(
-#                qt.QOpenGLShader.Fragment, self.fragment_contour)
-#        shader_c.bind()
-#        vao_c.bind()
-#        self.vbo_contour[nsIndex] = setVertexBuffer(surfmesh['contour'].copy(), 3, shader_c, "position")
-#        vao_c.release()
-#        shader_c.release()
-#        self.vao_c[nsIndex] = vao_c
-#        self.shader_c[nsIndex] = shader_c
 
     def drawLocalAxes(self, mMod, mView, mProj, is2ndXtal):
         oeIndex = int(is2ndXtal)
@@ -9688,7 +9175,8 @@ class OEMesh3D():
         self.vao_arrow.release()
         shader.release()
 
-    def draw_surface(self, mMod, mView, mProj, is2ndXtal=False, isSelected=False):
+    def draw_surface(self, mMod, mView, mProj, is2ndXtal=False,
+                     isSelected=False):
 
         oeIndex = int(is2ndXtal)
 
@@ -9696,21 +9184,16 @@ class OEMesh3D():
         vao = self.vao[oeIndex]
         ibo = self.ibo[oeIndex]
 
-#        print("SVI", self.shader, self.vao, self.ibo)
-
-
         beamTexture = self.beamTexture[oeIndex] if len(self.beamTexture) > 0\
             else self.emptyTex  # what if there's no texture?
         beamLimits = self.beamLimits[oeIndex] if len(self.beamLimits) > 0\
             else self.defaultLimits
-#        print("blim shape", beamLimits.shape)
+
         oeOrientation = self.transMatrix[oeIndex]
-        arrLen = self.arrLengths[oeIndex]  #len(self.surfmesh['indices']
+        arrLen = self.arrLengths[oeIndex]
 
         shader.bind()
         vao.bind()
-
-#        print("drawing surface")
 
         shader.setUniformValue("model", mMod*oeOrientation)
         shader.setUniformValue("view", mView)
@@ -9723,19 +9206,16 @@ class OEMesh3D():
         shader.setUniformValue("texlimitsx", qg.QVector2D(*beamLimits[:, 0]))
         shader.setUniformValue("texlimitsy", qg.QVector2D(*beamLimits[:, 1]))
         shader.setUniformValue("texlimitsz", qg.QVector2D(*beamLimits[:, 2]))
-#
-#        oe.shader.setUniformValue("lightPos", qg.QVector3D(0, 0, 5.))
-#        oe.shader.setUniformValue("viewPos", self.cameraPos)
-#
-#        oe.shader.setUniformValue("light.ambient", qg.QVector3D(0.3, 0.3, 0.3))
-#        oe.shader.setUniformValue("light.diffuse", qg.QVector3D(0.6, 0.6, 0.6))
-#        oe.shader.setUniformValue("light.specular", qg.QVector3D(1., 1., 1.))
-#
-        ambient = qg.QVector4D(0.79225, 0.79225, 0.39225, 1.) if isSelected else qg.QVector4D(0.29225, 0.29225, 0.29225, 1.)
+
+        # TODO: configurable colors
+        ambient = qg.QVector4D(0.79225, 0.79225, 0.39225, 1.) if\
+            isSelected else qg.QVector4D(0.29225, 0.29225, 0.29225, 1.)
         shader.setUniformValue("frontMaterial.ambient", ambient)
-        shader.setUniformValue("frontMaterial.diffuse", qg.QVector4D(0.5*0.50754, 0.5*0.50754, 0.5*0.50754, 1.))
-#        oe.shader.setUniformValue("material.specular", qg.QVector3D(0.508273, 0.508273, 0.508273))
-        shader.setUniformValue("frontMaterial.specular", qg.QVector4D(1., 0.9, 0.8, 1.))
+        shader.setUniformValue("frontMaterial.diffuse",
+                               qg.QVector4D(0.5*0.50754, 0.5*0.50754,
+                                            0.5*0.50754, 1.))
+        shader.setUniformValue("frontMaterial.specular",
+                               qg.QVector4D(1., 0.9, 0.8, 1.))
         shader.setUniformValue("frontMaterial.shininess", 100.)
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
@@ -9758,25 +9238,6 @@ class OEMesh3D():
         vao.release()
         shader.release()
 
-#        self.shader_c.bind()
-#        self.vao_c.bind()
-#        if hasattr(self, 'surfmesh'):
-#            self.shader_c.setUniformValue("model", self.mMod*oeOrientation)
-#            self.shader_c.setUniformValue("view", self.mView)
-#            self.shader_c.setUniformValue("projection", self.mProj)
-#            self.shader_c.setUniformValue("cColor", qg.QVector4D(1., 1., 0., 1))
-#            gl.glEnable(gl.GL_LINE_SMOOTH)
-#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-#            gl.glLineWidth(3)
-#            full = len(self.surfmesh['contour'])
-#            lentb = self.surfmesh['lentb']
-##            half = full // 2
-##            print("got here")
-#            gl.glDrawArrays(gl.GL_LINE_STRIP, 0, full-lentb)
-#            gl.glDrawArrays(gl.GL_LINE_STRIP, full-lentb, lentb)
-#        self.shader_c.release()
-#        self.vao_c.release()
 
 class CoordinateBox():
 
@@ -9791,7 +9252,6 @@ class CoordinateBox():
       gl_Position = projection * view * model * vec4(position, 1.0);
     }
     '''
-
 
     fragment_source = '''
     #version 400
@@ -9817,7 +9277,6 @@ class CoordinateBox():
     }
     '''
 
-
     orig_fragment_source = '''
     #version 400
     uniform float lineOpacity;
@@ -9827,7 +9286,6 @@ class CoordinateBox():
       gl_FragColor = vec4(out_color, lineOpacity);
     }
     '''
-
 
     text_vertex_code = """
     #version 400
@@ -9908,20 +9366,44 @@ class CoordinateBox():
 #        self.prepare_grid()
 
     def make_frame(self):
-        back = np.array([[-self.parent.aPos[0], self.parent.aPos[1], -self.parent.aPos[2]],
-                         [-self.parent.aPos[0], self.parent.aPos[1], self.parent.aPos[2]],
-                         [-self.parent.aPos[0], -self.parent.aPos[1], self.parent.aPos[2]],
-                         [-self.parent.aPos[0], -self.parent.aPos[1], -self.parent.aPos[2]]])
+        back = np.array([[-self.parent.aPos[0],
+                          self.parent.aPos[1],
+                          -self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          self.parent.aPos[1],
+                          self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          -self.parent.aPos[2]]])
 
-        side = np.array([[self.parent.aPos[0], -self.parent.aPos[1], -self.parent.aPos[2]],
-                         [-self.parent.aPos[0], -self.parent.aPos[1], -self.parent.aPos[2]],
-                         [-self.parent.aPos[0], -self.parent.aPos[1], self.parent.aPos[2]],
-                         [self.parent.aPos[0], -self.parent.aPos[1], self.parent.aPos[2]]])
+        side = np.array([[self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          -self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          -self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          self.parent.aPos[2]],
+                         [self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          self.parent.aPos[2]]])
 
-        bottom = np.array([[self.parent.aPos[0], -self.parent.aPos[1], -self.parent.aPos[2]],
-                           [self.parent.aPos[0], self.parent.aPos[1], -self.parent.aPos[2]],
-                           [-self.parent.aPos[0], self.parent.aPos[1], -self.parent.aPos[2]],
-                           [-self.parent.aPos[0], -self.parent.aPos[1], -self.parent.aPos[2]]])
+        bottom = np.array([[self.parent.aPos[0],
+                            -self.parent.aPos[1],
+                            -self.parent.aPos[2]],
+                           [self.parent.aPos[0],
+                            self.parent.aPos[1],
+                            -self.parent.aPos[2]],
+                           [-self.parent.aPos[0],
+                            self.parent.aPos[1],
+                            -self.parent.aPos[2]],
+                           [-self.parent.aPos[0],
+                            -self.parent.aPos[1],
+                            -self.parent.aPos[2]]])
 
         back[:, 0] *= self.axPosModifier[0]
         side[:, 1] *= self.axPosModifier[1]
@@ -9934,8 +9416,8 @@ class CoordinateBox():
         self.precisionLabels = []
         #  Calculating regular grids in world coordinates
         limits = np.array([-1, 1])[:, np.newaxis] * np.array(self.parent.aPos)
-        allLimits = limits * self.parent.maxLen / self.parent.scaleVec - self.parent.tVec\
-            + self.parent.coordOffset
+        allLimits = limits * self.parent.maxLen / self.parent.scaleVec -\
+            self.parent.tVec + self.parent.coordOffset
         axisGridArray = []
 
         for iAx in range(3):
@@ -10005,7 +9487,6 @@ class CoordinateBox():
 #                    self.axisL[iAx][self.parent.visibleAxes[1], :] *= 1.05  # height
 #                    self.axisL[iAx][self.parent.visibleAxes[0], :] *= 1.05  # side
 
-
     def update_grid(self):
         if hasattr(self, "vbo_frame"):
             self.make_frame()
@@ -10042,7 +9523,6 @@ class CoordinateBox():
                            [0, 0, -self.parent.aPos[2]],
                            [0, 0, self.parent.aPos[2]]])*0.5
 
-
         cLineColors = np.array([[0, 0.5, 1],
                                 [0, 0.5, 1],
                                 [0, 0.9, 0],
@@ -10051,21 +9531,25 @@ class CoordinateBox():
                                 [0.8, 0, 0]])
 
         self.vaoFrame.bind()
-        self.vbo_frame = setVertexBuffer(self.halfCube, 3, self.shader, "position" )
+        self.vbo_frame = setVertexBuffer(
+                self.halfCube, 3, self.shader, "position")
         self.vaoFrame.release()
 
         self.vaoGrid.bind()
-#        print("grid size", np.float32(self.axGrid).nbytes*100)
-        self.vbo_grid = setVertexBuffer(self.axGrid, 3, self.shader, "position" , size=np.float32(self.axGrid).nbytes*100)
+        self.vbo_grid = setVertexBuffer(
+                self.axGrid, 3, self.shader, "position",
+                size=np.float32(self.axGrid).nbytes*100)  # TODO: calculate
         self.vaoGrid.release()
 
         self.vaoOrigin.bind()
-        self.vbo_origin = setVertexBuffer(cLines, 3, self.origShader, "position" )
-        self.vbo_oc = setVertexBuffer(cLineColors, 3, self.origShader, "linecolor" )
+        self.vbo_origin = setVertexBuffer(
+                cLines, 3, self.origShader, "position")
+        self.vbo_oc = setVertexBuffer(
+                cLineColors, 3, self.origShader, "linecolor")
         self.vaoOrigin.release()
 
+        # x  y  u  v
         vquad = [
-          # x   y  u  v
             0, 1, 0, 0,
             0,  0, 0, 1,
             1,  0, 1, 1,
@@ -10075,14 +9559,13 @@ class CoordinateBox():
         ]
 
         self.vaoText.bind()
-        self.vbo_Text = setVertexBuffer(vquad, 4, self.textShader, "in_pos" )
+        self.vbo_Text = setVertexBuffer(vquad, 4, self.textShader, "in_pos")
         self.vaoText.release()
 
     def populateGrid(self, grids):
         pModel = np.array(self.parent.mView.data()).reshape(4, 4)[:-1, :-1]
 #                print(pModel)
 #        self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
-##                print(self.visibleAxes)
         self.signs = np.sign(pModel)
 #                self.axPosModifier = np.ones(3)
         for iAx in range(3):
@@ -10139,8 +9622,6 @@ class CoordinateBox():
         zLines = np.vstack(
             (zAxis, zAxisB, zAxisB, axisLabelC[2])).T.flatten().reshape(
             4*zAxisB.shape[1], 3)
-
-#        print(xLines)
 
         return axisLabelC, np.float32(np.vstack((xLines, yLines, zLines)))
 
@@ -10246,16 +9727,17 @@ class CoordinateBox():
                 if iAx == self.parent.visibleAxes[1]:  # Side plane,
                     alignment = self.getAlignment(vpMat, p0,
                                                   self.parent.visibleAxes[0])
-                if iAx == self.parent.visibleAxes[0]:  # Bottom plane, left-right
+                if iAx == self.parent.visibleAxes[0]:  # Bottom plane, L-R
                     alignment = self.getAlignment(vpMat, p0,
                                                   self.parent.visibleAxes[2],
                                                   self.parent.visibleAxes[1])
-                if iAx == self.parent.visibleAxes[2]:  # Bottom plane, left-right
+                if iAx == self.parent.visibleAxes[2]:  # Bottom plane, L-R
                     alignment = self.getAlignment(vpMat, p0,
                                                   self.parent.visibleAxes[0],
                                                   self.parent.visibleAxes[1])
 
-                for tick, tText, pcs in list(zip(self.axisL[iAx].T, self.gridLabels[iAx],
+                for tick, tText, pcs in list(zip(self.axisL[iAx].T,
+                                                 self.gridLabels[iAx],
                                                  self.precisionLabels[iAx])):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
                     tickPos = (vpMat*qg.QVector4D(*tick, 1)).toVector3DAffine()
@@ -10278,12 +9760,13 @@ class CoordinateBox():
 
         for c in text:
             c = ord(c)
-            ch          = self.characters[c]
-            w, h        = ch[1][0] * scaleX, ch[1][1] * scaleY
-            xrel, yrel  = char_x + ch[2][0]*scaleX, (ch[1][1] - ch[2][1]) * scaleY
+            ch = self.characters[c]
+            w, h = ch[1][0] * scaleX, ch[1][1] * scaleY
+            xrel = char_x + ch[2][0]*scaleX
+            yrel = (ch[1][1] - ch[2][1]) * scaleY
             if c == 45:
                 yrel = ch[1][0]*scaleY
-            char_x     += (ch[3] >> 6) * scaleX
+            char_x += (ch[3] >> 6) * scaleX
             aw.append(w)
             ah.append(h)
             axrel.append(xrel)
@@ -10305,7 +9788,7 @@ class CoordinateBox():
 
         for ic, c in enumerate(text):
             c = ord(c)
-            ch          = self.characters[c]
+            ch = self.characters[c]
             mMod = qg.QMatrix4x4()
             mMod.setToIdentity()
 
@@ -10314,7 +9797,6 @@ class CoordinateBox():
             mMod.scale(aw[ic], ah[ic], 1)
             ch[0].bind()
             self.textShader.setUniformValue("model", mMod)
-#            self.textShader.setUniformValue("projection", mProj)
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
             ch[0].release()
 
@@ -10329,11 +9811,11 @@ class CoordinateBox():
         for c in range(128):
             face.load_char(chr(c), ft.FT_LOAD_RENDER)
 #            faceTexture.load_char(chr(c), ft.FT_LOAD_RENDER)
-            glyph   = face.glyph
+            glyph = face.glyph
 #            glyphT = faceTexture.glyph
-            bitmap  = glyph.bitmap
+            bitmap = glyph.bitmap
 #            bitmapT = glyphT.bitmap
-            size    = bitmap.width, bitmap.rows
+            size = bitmap.width, bitmap.rows
             bearing = glyph.bitmap_left, glyph.bitmap_top
             advance = glyph.advance.x
 
