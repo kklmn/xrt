@@ -136,7 +136,7 @@ class RectangularAperture(object):
         if opening is not None:
             self.set_optical_limits()
         self.shape = 'rect'
-        self.spotLimits = []
+        self.spotLimits = [0, 0, 0, 0]
 
     @property
     def x(self):
@@ -267,16 +267,12 @@ class RectangularAperture(object):
 
         goodN = lo.state > 0
         try:
-            if self.spotLimits:
-                self.spotLimits = [min(self.spotLimits[0], lo.x[goodN].min()),
-                                   max(self.spotLimits[1], lo.x[goodN].max()),
-                                   min(self.spotLimits[2], lo.z[goodN].min()),
-                                   max(self.spotLimits[3], lo.z[goodN].max())]
-            else:
-                self.spotLimits = [lo.x[goodN].min(), lo.x[goodN].max(),
-                                   lo.z[goodN].min(), lo.z[goodN].max()]
+            self.spotLimits = [min(self.spotLimits[0], lo.x[goodN].min()),
+                               max(self.spotLimits[1], lo.x[goodN].max()),
+                               min(self.spotLimits[2], lo.z[goodN].min()),
+                               max(self.spotLimits[3], lo.z[goodN].max())]
         except ValueError:
-            self.spotLimits = []
+            pass
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
@@ -483,7 +479,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.limPhysX = self.limOptX
         self.limPhysY = self.limOptY
         self.shape = 'rect'
-        self.spotLimits = []
+        self.spotLimits = [0, 0, 0, 0]
 
     def select_aperture(self, apertureName, targetZ):
         """Updates self.curAperture index and finds dz offset corresponding to
@@ -575,7 +571,6 @@ class RoundAperture(object):
         self.limPhysX = self.limOptX
         self.limPhysY = self.limOptY
         self.shape = 'round'
-        self.spotLimits = []
 
     @property
     def x(self):
