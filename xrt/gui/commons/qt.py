@@ -123,7 +123,7 @@ if not starImport:
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
      QPushButton, QDialog, QRadioButton, QButtonGroup, QGridLayout,
-     QDialogButtonBox, QOpenGLWidget) = (
+     QDialogButtonBox, QOpenGLWidget, QListView) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -135,7 +135,8 @@ if not starImport:
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
         myQtGUI.QDialog, myQtGUI.QRadioButton, myQtGUI.QButtonGroup,
-        myQtGUI.QGridLayout, myQtGUI.QDialogButtonBox, myQtGUI.QOpenGLWidget)
+        myQtGUI.QGridLayout, myQtGUI.QDialogButtonBox, myQtGUI.QOpenGLWidget,
+        myQtGUI.QListView)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,

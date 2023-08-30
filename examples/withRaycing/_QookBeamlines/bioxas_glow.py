@@ -330,7 +330,7 @@ def run_process(BioXAS_Main):
         'DBHR2beamLocal01': DBHR2beamLocal01,
         'JJslitsbeamLocal01': JJslitsbeamLocal01,
         'SampleScreenFootprint': SampleScreenFootprint}
-#    BioXAS_Main.prepare_flow()
+    BioXAS_Main.prepare_flow()
     return outDict
 
 
@@ -481,17 +481,17 @@ def main():
         else:
             print("Done")
 
-    for oeRecord in BioXAS_Main.oesDict.values():
-        if oeRecord[1] == 0:  # Source
-            propagate_beam(oeRecord[0], None)
-
-    print("________________________")
-    print("Global Path")
-    [print(a) for a in globalPath]
-
-    print("________________________")
-    print("Flow")
-    [print(a) for a in flow]
+#    for oeRecord in BioXAS_Main.oesDict.values():
+#        if oeRecord[1] == 0:  # Source
+#            propagate_beam(oeRecord[0], None)
+#
+#    print("________________________")
+#    print("Global Path")
+#    [print(a) for a in globalPath]
+#
+#    print("________________________")
+#    print("Flow")
+#    [print(a) for a in flow]
 
 
 #        break
@@ -530,7 +530,7 @@ def main():
 #        print(elObj, elObj.propagator, elObj.beamsOut)
 
 
-#    BioXAS_Main.glow()
+    BioXAS_Main.glow()
 #    E0 = 0.5 * (BioXAS_Main.Wiggler.eMin +
 #                BioXAS_Main.Wiggler.eMax)
 #
