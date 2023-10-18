@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "12 Mar 2017"
+__date__ = "18 Oct 2023"
 import os
 import pickle
 import numpy as np
@@ -78,9 +78,9 @@ def read_f1f2_vs_E(elZ, table):
 
 
 def main():
-#    table = 'Henke'
-    table = 'Chantler'
-#    table = 'BrCo'
+    table = 'Henke'
+    # table = 'Chantler'
+    # table = 'BrCo'
 
     fig = plt.figure(figsize=(7, 6))
     ax = fig.add_axes([0.15*6/7, 0.15, 0.7*6/7, 0.7])
@@ -91,8 +91,6 @@ def main():
     out = {}
     outnp = {}
     for element in elementsList:
-#    for element in ['Cu', 'Zn']:
-#    for element in ['Si']:
         if element == 'none':
             continue
         elZ = elementsList.index(element)
