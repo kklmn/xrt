@@ -316,8 +316,8 @@ class PlotWidget(QWidget):
         from xrt.version import __version__ as xrtversion  # analysis:ignore
         strXrt = 'xrt {0} in {1}'.format(xrtversion, path_to_xrt)
 
-        title = "About xrt bentXCalculator"
-        txt = """<b>bentXCalculator(Qt)</b> v {0}
+        title = "About xrt xrtBentXtal"
+        txt = """<b>xrtBentXtal(Qt)</b> v {0}
             <ul>
             <li>{1[0]}
             <li>{1[1]}
@@ -832,7 +832,7 @@ class PlotWidget(QWidget):
             now = datetime.now()
             nowStr = now.strftime("%d/%m/%Y %H:%M:%S")
             header = \
-                f"{what} calculated by xrt bentXCalculator on {nowStr}\n"\
+                f"{what} calculated by xrtBentXtal on {nowStr}\n"\
                 f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
                 f"Asymmetry: {asymmetry:.8g}°\tRm: {RmStr}\tRs: {RsStr}\n"\
                 f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
