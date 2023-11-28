@@ -1967,7 +1967,7 @@ class OE(object):
                     # The following code will consider finite thickness of
                     # the Laue crystal
                     if crystalVD:
-                        # Max depth for flat crystal. 
+                        # Max depth for flat crystal.
                         thMax = -matSur.t / beamInDotSurfaceNormal
                         # Point of diffraction along the path is approximated
                         # with uniform distribution.
@@ -2013,6 +2013,11 @@ class OE(object):
                     if local_g is None:
                         local_g = self.local_g
                     gNormal = np.asarray(local_g(tXN, tYN), order='F')
+                    gN = (oeNormal[-3]*gNormal[0] + oeNormal[-2]*gNormal[1] +
+                          oeNormal[-1]*gNormal[2])
+                    if not np.allclose(gN, np.zeros_like(gN)):
+                        print("Warning: local_g is not orthogonal to local_n!")
+
                 giveSign = 1 if toWhere == 4 else -1
                 lb.a[goodN], lb.b[goodN], lb.c[goodN] =\
                     self._grating_deflection(goodN, lb, gNormal, oeNormal,
