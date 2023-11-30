@@ -56,7 +56,7 @@ __all__ = ('SilverBromide', 'AluminumArsenide', 'Sapphire',
            'TantalumNitride', 'TantalumOxide', 'TitaniumNitride',
            'TitaniumSilicide', 'TantalumSilicide', 'Rutile', 'ULEGlass',
            'Uranium4Oxide', 'VanadiumNitride', 'Vacuum', 'Water',
-           'TungstenCarbide', 'Zerodur', 'ZinсOxide', 'ZinсSulfide',
+           'TungstenCarbide', 'Zerodur', 'ZincOxide', 'ZincSulfide',
            'ZirconiumNitride', 'Zirconia', 'ZirconiumSilicide', 'Air',
            'CVDDiamond',
            )
@@ -76,7 +76,7 @@ __allSectioned__ = collections.OrderedDict([
         ('TitaniumNitride', 'TitaniumSilicide', 'Rutile', 'VanadiumNitride',
          'Cromium3Oxide', 'Manganese2Oxide', 'Manganese4Oxide',
          'CobaltSilicide', 'NickelOxide', 'NickelSilicide', 'CopperIodide',
-         'ZinсOxide', 'ZinсSulfide', 'GalliumNitride', 'GalliumPhosphide',
+         'ZincOxide', 'ZincSulfide', 'GalliumNitride', 'GalliumPhosphide',
          'GalliumArsenide')),
     ('Zr-Cd',
         ('ZirconiumNitride', 'Zirconia', 'ZirconiumSilicide', 'NiobiumNitride',
@@ -783,7 +783,7 @@ class Zerodur(rmat.Material):
            *args, **kwargs)
 
 
-class ZinсOxide(rmat.Material):
+class ZincOxide(rmat.Material):
     def __init__(self, name='ZnO',
                  elements=['Zn', 'O'],
                  quantities=[1, 1],
@@ -793,7 +793,7 @@ class ZinсOxide(rmat.Material):
            *args, **kwargs)
 
 
-class ZinсSulfide(rmat.Material):
+class ZincSulfide(rmat.Material):
     def __init__(self, name='ZnS',
                  elements=['Zn', 'S'],
                  quantities=[1, 1],
