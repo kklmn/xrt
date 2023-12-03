@@ -3511,9 +3511,10 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glEnable(gl.GL_MAP2_NORMAL)
         plotVolume = False
 
+        isBeamStop = oe.isBeamStop
+
         if oe.shape == 'round':
             r = oe.r
-            isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
             if isBeamStop:
                 limits = [[0, r, 0, 2*np.pi]]
             else:
@@ -3539,20 +3540,23 @@ class xrtGlWidget(qt.QGLWidget):
                 elif akind.startswith('t'):
                     top = d
 
-            w = right - left
-            h = top - bottom
-            # wf = max(min(w, h)*0.5, 2.5)
-            wf = min(w, h) * self.slitThicknessFraction*0.01
-            limits = []
-            for akind, d in zip(oe.kind, oe.opening):
-                if akind.startswith('l'):
-                    limits.append([left-wf, left, bottom-wf, top+wf])
-                elif akind.startswith('r'):
-                    limits.append([right, right+wf, bottom-wf, top+wf])
-                elif akind.startswith('b'):
-                    limits.append([left-wf, right+wf, bottom-wf, bottom])
-                elif akind.startswith('t'):
-                    limits.append([left-wf, right+wf, top, top+wf])
+            if isBeamStop:
+                limits = [[left, right, bottom, top]]
+            else:
+                limits = []
+                w = right - left
+                h = top - bottom
+                # wf = max(min(w, h)*0.5, 2.5)
+                wf = min(w, h) * self.slitThicknessFraction*0.01
+                for akind, d in zip(oe.kind, oe.opening):
+                    if akind.startswith('l'):
+                        limits.append([left-wf, left, bottom-wf, top+wf])
+                    elif akind.startswith('r'):
+                        limits.append([right, right+wf, bottom-wf, top+wf])
+                    elif akind.startswith('b'):
+                        limits.append([left-wf, right+wf, bottom-wf, bottom])
+                    elif akind.startswith('t'):
+                        limits.append([left-wf, right+wf, top, top+wf])
 
             tiles = self.tiles[1]
 

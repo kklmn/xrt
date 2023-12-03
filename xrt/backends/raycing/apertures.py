@@ -46,13 +46,15 @@ from .physconsts import CHBAR
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Nov 2019"
-__all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
-           'DoubleSlit', 'PolygonalAperture', 'GridAperture', 'SiemensStar')
+__all__ = ('RectangularAperture', 'RectangularBeamStop', 'RoundAperture',
+           'RoundBeamStop', 'DoubleSlit', 'PolygonalAperture', 'GridAperture',
+           'SiemensStar')
 
 allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
-                'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial')
+                'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
+                'isBeamStop')
 
 
 class RectangularAperture(object):
@@ -62,7 +64,7 @@ class RectangularAperture(object):
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
                  opening=[-10, 10, -10, 10], x='auto', z='auto',
-                 alarmLevel=None):
+                 alarmLevel=None, isBeamStop=False):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -93,6 +95,11 @@ class RectangularAperture(object):
             Allowed fraction of number of rays absorbed at the aperture
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
+
+        *isBeamStop*: boolean
+            Defines whether rays should propagate inside or outside of the
+            opening limits, in other words switches between the aperture and
+            beamstop modes.
 
 
         """
@@ -127,6 +134,7 @@ class RectangularAperture(object):
             self.kind = kind
             self.opening = opening
         self.alarmLevel = alarmLevel
+        self.isBeamStop = isBeamStop
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-500, 500]
@@ -255,6 +263,8 @@ class RectangularAperture(object):
                 badIndices[good] = badIndices[good] | (lo.z[good] < d)
             elif akind.startswith('t'):
                 badIndices[good] = badIndices[good] | (lo.z[good] > d)
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
 
         lo.state[:] = beam.state
@@ -520,11 +530,20 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.limOptY[1].append(200)
 
 
+class RectangularBeamStop(RectangularAperture):
+    """Convenience class for Rectangular Beamstop, taking isBeamStop init
+    argument of the RectangularAperture True by default"""
+    def __init__(self, *args, **kwargs):
+        RectangularAperture.__init__(self, *args, **kwargs)
+        self.isBeamStop = True
+
+
 class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
 
     def __init__(self, bl=None, name='',
-                 center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None):
+                 center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None,
+                 isBeamStop=False):
         """ A round aperture aperture.
 
         *r* is the radius.
@@ -536,6 +555,10 @@ class RoundAperture(object):
             is vertical. Both *x* and *z* can also be set as instance
             attributes.
 
+        *isBeamStop*: boolean
+            Defines whether rays should propagate inside or outside of the
+            opening limits, in other words switches between the aperture and
+            beamstop modes.
 
         """
         self.bl = bl
@@ -564,6 +587,7 @@ class RoundAperture(object):
 
         self.r = r
         self.alarmLevel = alarmLevel
+        self.isBeamStop = isBeamStop
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-r, r]
@@ -647,6 +671,8 @@ class RoundAperture(object):
 
         badIndices = np.zeros(len(beam.x), dtype=bool)
         badIndices[good] = lo.r > self.r
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
         lo.state[good] = beam.state[good]
         lo.y[good] = 0.
@@ -741,54 +767,63 @@ class RoundBeamStop(RoundAperture):
     """Implements a round beamstop. Descends from RoundAperture and has the
     same parameters."""
 
-    def propagate(self, beam=None, needNewGlobal=False):
-        """Assigns the "lost" value to *beam.state* array for the rays
-        intercepted by the aperture. The "lost" value is
-        ``-self.ordinalNum - 1000.``
+    def __init__(self, *args, **kwargs):
+        RoundAperture.__init__(self, *args, **kwargs)
+        self.isBeamStop = True
 
 
-        .. Returned values: beamLocal
-        """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
-        good = beam.state > 0
-# beam in local coordinates
-        lo = rs.Beam(copyFrom=beam)
-        bl = self.bl if self.xyz == 'auto' else self.xyz
-        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
-        with np.errstate(divide='ignore'):
-            path = -lo.y[good] / lo.b[good]
-        indBad = np.where(np.isnan(path))
-        path[indBad] = 0.
-        indBad = np.where(np.isinf(path))
-        path[indBad] = 0.
-        lo.x[good] += lo.a[good] * path
-        lo.z[good] += lo.c[good] * path
-        lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
-        lo.path[good] += path
-
-        badIndices = np.zeros(len(beam.x), dtype=bool)
-        badIndices[good] = lo.r < self.r
-        beam.state[badIndices] = self.lostNum
-        lo.state[good] = beam.state[good]
-        lo.y[good] = 0.
-
-        if hasattr(lo, 'Es'):
-            propPhase = np.exp(1e7j * (lo.E[good]/CHBAR) * path)
-            lo.Es[good] *= propPhase
-            lo.Ep[good] *= propPhase
-
-        if self.alarmLevel is not None:
-            raycing.check_alarm(self, good, beam)
-        if needNewGlobal:
-            glo = rs.Beam(copyFrom=lo)
-            raycing.virgin_local_to_global(self.bl, glo, self.center, good)
-            glo.path[good] += beam.path[good]
-            return glo, lo
-        else:
-            raycing.append_to_flow(self.propagate, [lo],
-                                   inspect.currentframe())
-            return lo
+#class RoundBeamStop(RoundAperture):
+#    """Implements a round beamstop. Descends from RoundAperture and has the
+#    same parameters."""
+#
+#    def propagate(self, beam=None, needNewGlobal=False):
+#        """Assigns the "lost" value to *beam.state* array for the rays
+#        intercepted by the aperture. The "lost" value is
+#        ``-self.ordinalNum - 1000.``
+#
+#
+#        .. Returned values: beamLocal
+#        """
+#        if self.bl is not None:
+#            self.bl.auto_align(self, beam)
+#        good = beam.state > 0
+## beam in local coordinates
+#        lo = rs.Beam(copyFrom=beam)
+#        bl = self.bl if self.xyz == 'auto' else self.xyz
+#        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
+#        with np.errstate(divide='ignore'):
+#            path = -lo.y[good] / lo.b[good]
+#        indBad = np.where(np.isnan(path))
+#        path[indBad] = 0.
+#        indBad = np.where(np.isinf(path))
+#        path[indBad] = 0.
+#        lo.x[good] += lo.a[good] * path
+#        lo.z[good] += lo.c[good] * path
+#        lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
+#        lo.path[good] += path
+#
+#        badIndices = np.zeros(len(beam.x), dtype=bool)
+#        badIndices[good] = lo.r < self.r
+#        beam.state[badIndices] = self.lostNum
+#        lo.state[good] = beam.state[good]
+#        lo.y[good] = 0.
+#
+#        if hasattr(lo, 'Es'):
+#            propPhase = np.exp(1e7j * (lo.E[good]/CHBAR) * path)
+#            lo.Es[good] *= propPhase
+#            lo.Ep[good] *= propPhase
+#
+#        if self.alarmLevel is not None:
+#            raycing.check_alarm(self, good, beam)
+#        if needNewGlobal:
+#            glo = rs.Beam(copyFrom=lo)
+#            raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+#            glo.path[good] += beam.path[good]
+#            return glo, lo
+#        else:
+#            raycing.append_to_flow(self.propagate, [lo],
+#                                   inspect.currentframe())
+#            return lo
 
 
 class DoubleSlit(RectangularAperture):
@@ -840,6 +875,8 @@ class DoubleSlit(RectangularAperture):
         st = dsb + (dst - dsb) * shadeMax
         badIndices[good] = \
             badIndices[good] | ((lo.z[good] > sb) & (lo.z[good] < st))
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
 
         lo.state[good] = beam.state[good]
@@ -868,7 +905,8 @@ class PolygonalAperture(object):
     vertices."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
-                 opening=None, x='auto', z='auto', alarmLevel=None):
+                 opening=None, x='auto', z='auto', alarmLevel=None,
+                 isBeamStop=False):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -894,6 +932,11 @@ class PolygonalAperture(object):
             Allowed fraction of number of rays absorbed at the aperture
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
+
+        *isBeamStop*: boolean
+            Defines whether rays should propagate inside or outside of the
+            opening limits, in other words switches between the aperture and
+            beamstop modes.
 
 
         """
@@ -923,6 +966,7 @@ class PolygonalAperture(object):
         self.opening = opening
         self.vertices = np.array(self.opening)
         self.alarmLevel = alarmLevel
+        self.isBeamStop = isBeamStop
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-500, 500]
@@ -1010,6 +1054,8 @@ class PolygonalAperture(object):
         footprint = mplPath(self.vertices)
         badIndices = np.invert(footprint.contains_points(np.array(
                 list(zip(lo.x, lo.z)))))
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
 
         lo.state[good] = beam.state[good]
@@ -1087,7 +1133,7 @@ class GridAperture(PolygonalAperture):
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  x='auto', z='auto', alarmLevel=None,
-                 dx=0.5, dz=0.5, px=1.0, pz=1.0, nx=7, nz=7):
+                 dx=0.5, dz=0.5, px=1.0, pz=1.0, nx=7, nz=7, isBeamStop=False):
         """
         *dx* and *dz*: float
             Opening sizes (horizontal and vertical).
@@ -1114,7 +1160,8 @@ class GridAperture(PolygonalAperture):
         opening = np.column_stack((xi, zi))
 
         super().__init__(bl=bl, name=name, center=center, opening=opening,
-                         x=x, z=z, alarmLevel=alarmLevel)
+                         x=x, z=z, alarmLevel=alarmLevel,
+                         isBeamStop=isBeamStop)
 
 
 class SiemensStar(PolygonalAperture):
@@ -1123,7 +1170,8 @@ class SiemensStar(PolygonalAperture):
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  x='auto', z='auto', alarmLevel=None, nSpokes=9,
-                 r=0, rx=0, rz=0, phi0=0, vortex=0, vortexNradial=7):
+                 r=0, rx=0, rz=0, phi0=0, vortex=0, vortexNradial=7,
+                 isBeamStop=False):
         """
         *nSpokes*: int
             The number of spoke openings.
@@ -1176,4 +1224,5 @@ class SiemensStar(PolygonalAperture):
         opening = list(zip(starXs.flatten(), starYs.flatten()))
 
         super().__init__(bl=bl, name=name, center=center, opening=opening,
-                         x=x, z=z, alarmLevel=alarmLevel)
+                         x=x, z=z, alarmLevel=alarmLevel,
+                         isBeamStop=isBeamStop)

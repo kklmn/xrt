@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<Project>
+	<Beams type="prop">
+		<None type="flat"></None>
+		<geometricSource01beamGlobal01 type="flat"></geometricSource01beamGlobal01>
+		<rectangularAperture01beamLocal01 type="flat"></rectangularAperture01beamLocal01>
+		<screen01beamLocal01 type="flat"></screen01beamLocal01>
+	</Beams>
+	<Materials type="prop">
+	</Materials>
+	<beamLine type="value">
+		<properties type="prop">
+			<azimuth type="param">0.0</azimuth>
+			<height type="param">0.0</height>
+			<alignE type="param">auto</alignE>
+		</properties>
+		<_object type="object">xrt.backends.raycing.BeamLine</_object>
+		<geometricSource01 type="value">
+			<properties type="prop">
+				<bl type="param">beamLine</bl>
+				<name type="param"></name>
+				<center type="param">(0, 0, 0)</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<nrays type="param">100000</nrays>
+				<distx type="param">normal</distx>
+				<dx type="param">0.32</dx>
+				<disty type="param">None</disty>
+				<dy type="param">0</dy>
+				<distz type="param">normal</distz>
+				<dz type="param">0.018</dz>
+				<distxprime type="param">normal</distxprime>
+				<dxprime type="param">0.001</dxprime>
+				<distzprime type="param">normal</distzprime>
+				<dzprime type="param">0.0001</dzprime>
+				<distE type="param">lines</distE>
+				<energies type="param">(9000.0,)</energies>
+				<polarization type="param">horizontal</polarization>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+			</properties>
+			<_object type="object">xrt.backends.raycing.sources.GeometricSource</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<toGlobal type="param">True</toGlobal>
+					<withAmplitudes type="param">False</withAmplitudes>
+					<accuBeam type="param">None</accuBeam>
+				</parameters>
+				<_object type="object">xrt.backends.raycing.sources.GeometricSource.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">geometricSource01beamGlobal01</beamGlobal>
+				</output>
+			</shine>
+		</geometricSource01>
+		<rectangularAperture01 type="value">
+			<properties type="prop">
+				<bl type="param">beamLine</bl>
+				<name type="param"></name>
+				<center type="param">[0, 1000, 0]</center>
+				<kind type="param">['left', 'right', 'bottom', 'top']</kind>
+				<opening type="param">[-1, 1, -1, 1]</opening>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<isBeamStop type="param">False</isBeamStop>
+			</properties>
+			<_object type="object">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">geometricSource01beamGlobal01</beam>
+					<needNewGlobal type="param">False</needNewGlobal>
+				</parameters>
+				<_object type="object">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">rectangularAperture01beamLocal01</beamLocal>
+				</output>
+			</propagate>
+		</rectangularAperture01>
+		<screen01 type="value">
+			<properties type="prop">
+				<bl type="param">beamLine</bl>
+				<name type="param"></name>
+				<center type="param">[0, 2000, 0]</center>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+			</properties>
+			<_object type="object">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">geometricSource01beamGlobal01</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+				</parameters>
+				<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">screen01beamLocal01</beamLocal>
+				</output>
+			</expose>
+		</screen01>
+	</beamLine>
+	<plots type="value">
+	</plots>
+	<run_ray_tracing type="prop">
+		<_object type="object">xrt.runner.run_ray_tracing</_object>
+		<plots type="param">plots</plots>
+		<repeats type="param">1</repeats>
+		<updateEvery type="param">1</updateEvery>
+		<pickleEvery type="param">None</pickleEvery>
+		<energyRange type="param">None</energyRange>
+		<backend type="param">raycing</backend>
+		<beamLine type="param">beamLine</beamLine>
+		<threads type="param">1</threads>
+		<processes type="param">1</processes>
+		<generator type="param">None</generator>
+		<generatorArgs type="param">[]</generatorArgs>
+		<generatorKWargs type="param">auto</generatorKWargs>
+		<globalNorm type="param">0</globalNorm>
+		<afterScript type="param">None</afterScript>
+		<afterScriptArgs type="param">[]</afterScriptArgs>
+		<afterScriptKWargs type="param">{}</afterScriptKWargs>
+	</run_ray_tracing>
+<description></description>
+</Project>

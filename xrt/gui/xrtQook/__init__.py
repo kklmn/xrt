@@ -2346,6 +2346,7 @@ class XrtQook(qt.QWidget):
                             view.setIndexWidget(child1.index(), combo)
                         if len(re.findall("beam", paramName.lower())) > 0\
                                 and paramName.lower() != 'beamline'\
+                                and paramName.lower() != 'isbeamstop'\
                                 and paramName.lower() != 'filamentbeam':
                             if item.text() == 'parameters':  # input beam
                                 combo = qt.QComboBox()
