@@ -1185,7 +1185,6 @@ class Sapphire(rmat.CrystalFromCell):
 class LaB6(rmat.CrystalFromCell):
     '''System: Cubic
        C.H. Booth et al. Phys. Rev. B 63, 224302 (2001) ICSD Code 94251
-       C.H. Booth et al. Phys. Rev. B 63, 224302 (2001) ICSD Code 94251
 
 
        '''
@@ -1235,7 +1234,6 @@ class LaB6NIST(rmat.CrystalFromCell):
 class KTP(rmat.CrystalFromCell):
     '''System: Orthorhombic
        Tordjman et al. Zeitschrift fuer Kristallographie, (1974) 103-115
-       Tordjman et al. (1974)
        Data calculated with data from http://icsd.ill.fr/icsd/index.html
 
 
