@@ -1756,8 +1756,9 @@ class Crystal(Material):
         thickness = 1. if self.t is None else self.t
         dh0tag = 0 if self.geom.endswith('reflected') else 1
 
-        if not hasattr(self, 'djparams'):
-            self.set_OE_properties(alphaAsym, Ry, Rx)
+        # if not hasattr(self, 'djparams'):  # Same material can be used in
+        # different OEs with different surface curvatures
+        self.set_OE_properties(alphaAsym, Ry, Rx)
 
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag
