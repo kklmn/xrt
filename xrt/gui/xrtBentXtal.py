@@ -1060,7 +1060,7 @@ class PlotWidget(QWidget):
                                                   dtype=np.complex128)))
             plot_item.curProgress = 0
             geotag = 0 if geometry.startswith('B') else np.pi*0.5
-            ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
+            ttx = TTcrystal(crystal=crystal, hkl=crystalInstance.hkl,
                             thickness=Quantity(float(thickness), 'mm'),
                             debye_waller=1, xrt_crystal=crystalInstance,
                             Rx=Quantity(float(Rm), 'm'),

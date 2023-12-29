@@ -287,7 +287,9 @@ class TakagiTaupin():
 
         hc = Quantity(1.23984193, 'eV um')  # Planck's constant*speed of light
         d = Quantity(self.crystal_object.xrt_crystal.d, 'A')
-        if hasattr(self.crystal_object.xrt_crystal, 'a'):
+        if hasattr(self.crystal_object.xrt_crystal, 'V'):
+            V = Quantity(self.crystal_object.xrt_crystal.V, 'A^3')
+        elif hasattr(self.crystal_object.xrt_crystal, 'a'):
             V = Quantity(self.crystal_object.xrt_crystal.a**3, 'A^3')
         elif hasattr(self.crystal_object.xrt_crystal, 'get_a'):
             V = Quantity(self.crystal_object.xrt_crystal.get_a()**3, 'A^3')
