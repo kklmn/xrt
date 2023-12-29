@@ -1131,7 +1131,7 @@ class Crystal(Material):
 
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
-                 geom='Bragg reflected', table='Chantler', name='',
+                 geom='Bragg reflected', table='Chantler total', name='',
                  volumetricDiffraction=False, useTT=False, nu=None,
                  mosaicity=0):
         u"""

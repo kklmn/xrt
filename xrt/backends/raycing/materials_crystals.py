@@ -154,7 +154,7 @@ class GaAs(rmat.CrystalFromCell):
                  a=5.6537, b=5.6537, c=5.6537,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -183,7 +183,7 @@ class GaSb(rmat.CrystalFromCell):
                  a=6.09593, b=6.09593, c=6.09593,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -212,7 +212,7 @@ class GaP(rmat.CrystalFromCell):
                  a=5.4505, b=5.4505, c=5.4505,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -241,7 +241,7 @@ class InAs(rmat.CrystalFromCell):
                  a=6.036, b=6.036, c=6.036,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -270,7 +270,7 @@ class InP(rmat.CrystalFromCell):
                  a=5.8687, b=5.8687, c=5.8687,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -299,7 +299,7 @@ class InSb(rmat.CrystalFromCell):
                  a=6.4782, b=6.4782, c=6.4782,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -328,7 +328,7 @@ class SiC(rmat.CrystalFromCell):
                  a=4.348, b=4.348, c=4.348,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -357,7 +357,7 @@ class NaCl(rmat.CrystalFromCell):
                  a=5.63978, b=5.63978, c=5.63978,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -386,7 +386,7 @@ class CsF(rmat.CrystalFromCell):
                  a=6.008, b=6.008, c=6.008,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -415,7 +415,7 @@ class LiF(rmat.CrystalFromCell):
                  a=4.0263, b=4.0263, c=4.0263,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -444,7 +444,7 @@ class KCl(rmat.CrystalFromCell):
                  a=6.29294, b=6.29294, c=6.29294,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -467,7 +467,7 @@ class CsCl(rmat.CrystalFromCell):
                  a=7.02, b=7.02, c=7.02,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -490,7 +490,7 @@ class Be(rmat.CrystalFromCell):
                  a=2.2866, b=2.2866, c=3.5833,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -515,7 +515,7 @@ class Graphite(rmat.CrystalFromCell):
                  a=2.456, b=2.456, c=6.696,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -553,7 +553,7 @@ class PET(rmat.CrystalFromCell):
                  a=6.1, b=6.1, c=8.73,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -632,7 +632,7 @@ class Beryl(rmat.CrystalFromCell):
                  a=9.088, b=9.088, c=9.1896,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -704,7 +704,7 @@ class KAP(rmat.CrystalFromCell):
                  a=6.46, b=9.6, c=13.85,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -776,7 +776,7 @@ class RbAP(rmat.CrystalFromCell):
                  a=6.561, b=10.064, c=13.068,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -848,7 +848,7 @@ class TlAP(rmat.CrystalFromCell):
                  a=6.615, b=10.047, c=12.878,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -975,7 +975,7 @@ class Muscovite(rmat.CrystalFromCell):
                  a=5.189, b=8.995, c=20.097,
                  alpha=90.0, beta=95.18, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1004,7 +1004,7 @@ class AlphaQuartz(rmat.CrystalFromCell):
                  a=4.91304, b=4.91304, c=5.40463,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1029,7 +1029,7 @@ class Copper(rmat.CrystalFromCell):
                  a=3.61496, b=3.61496, c=3.61496,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1079,7 +1079,7 @@ class LiNbO3(rmat.CrystalFromCell):
                  a=5.148, b=5.148, c=13.863,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1103,7 +1103,7 @@ class Platinum(rmat.CrystalFromCell):
                  a=3.9242, b=3.9242, c=3.9242,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1127,7 +1127,7 @@ class Gold(rmat.CrystalFromCell):
                  a=4.0782, b=4.0782, c=4.0782,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1177,7 +1177,7 @@ class Sapphire(rmat.CrystalFromCell):
                  a=4.7581322, b=4.7581322, c=12.9883093,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1202,7 +1202,7 @@ class LaB6(rmat.CrystalFromCell):
                  a=4.15271, b=4.15271, c=4.15271,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1227,7 +1227,7 @@ class LaB6NIST(rmat.CrystalFromCell):
                  a=4.1569162, b=4.1569162, c=4.1569162,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1313,7 +1313,7 @@ class KTP(rmat.CrystalFromCell):
                  a=12.8146, b=10.6165, c=6.4042,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1363,7 +1363,7 @@ class AlphaAlumina(rmat.CrystalFromCell):
                  a=4.758846, b=4.758846, c=12.99306,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1388,7 +1388,7 @@ class Aluminum(rmat.CrystalFromCell):
                  a=4.04958, b=4.04958, c=4.04958,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1413,7 +1413,7 @@ class Iron(rmat.CrystalFromCell):
                  a=3.591, b=3.591, c=3.591,
                  alpha=90.0, beta=90.0, gamma=90.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
 
@@ -1436,6 +1436,6 @@ class Titanium(rmat.CrystalFromCell):
                  a=2.95, b=2.95, c=4.686,
                  alpha=90.0, beta=90.0, gamma=120.0,
                  *args, **kwargs):
-        super().__init__(name=name,
+        super().__init__(name=name, atoms=atoms, atomsXYZ=atomsXYZ,
                          a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma,
                          *args, **kwargs)
