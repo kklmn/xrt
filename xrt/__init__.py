@@ -200,9 +200,19 @@ Citing xrt
 Please cite xrt as:
 `K. Klementiev and R. Chernikov, "Powerful scriptable ray tracing package xrt",
 Proc. SPIE 9209, Advances in Computational Methods for X-Ray Optics III,
-92090A; doi:10.1117/12.2061400 <http://dx.doi.org/10.1117/12.2061400>`_.
+92090A (2014); doi:10.1117/12.2061400 <http://dx.doi.org/10.1117/12.2061400>`_.
 `Online documentation on xrt.readthedocs.io;
 doi:10.5281/zenodo.1252468 <https://doi.org/10.5281/zenodo.1252468>`_.
+
+For the new capabilities:
+1) Calculations of elastically deformed crystals on GPUs,
+2) Mode analysis and mode propagation,
+3) Modelling OAM (Orbital Angular Momentum) beams,
+please cite:
+`K. Klementiev & R. Chernikov, "New Features of xrt: Bent Crystals, Coherent
+Modes, Waves with OAM" Synchrotron Radiation News (2023) 36:5, 23-27;
+doi:10.1080/08940886.2023.2274735
+<https://doi.org/10.1080/08940886.2023.2274735>`_.
 
 Acknowledgments
 ---------------
