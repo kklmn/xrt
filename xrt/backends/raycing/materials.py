@@ -1681,7 +1681,8 @@ class Crystal(Material):
         curveP = for_one_polarization(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
-    def set_OE_properties(self, alpha=0, Rm=None, Rs=None):
+    def set_OE_properties(self, alpha=0, Rm=None, Rs=None,
+                          inPlaneRotation=None):
         Rmum = Rm*1e3 if Rm not in [np.inf, None] else np.inf  # [um] Meridional
         Rsum = Rs*1e3 if Rs not in [np.inf, None] else np.inf  # [um] Sagittal
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
@@ -1699,6 +1700,8 @@ class Crystal(Material):
                             'Rx': Quantity(Rmum, 'um'),
                             'Ry': Quantity(Rsum, 'um'),
                             'asymmetry': Quantity(alpha, 'rad')}
+        if inPlaneRotation is not None:
+            ttcrystal_kwargs['in_plane_rotation'] = inPlaneRotation
 
         if hasattr(self, 'nu'):
             if self.nu is not None:  # Using isotropic model
@@ -1710,7 +1713,8 @@ class Crystal(Material):
 
     def get_amplitude_pytte(
             self, E, beamInDotNormal, beamOutDotNormal=None,
-            beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
+            beamInDotHNormal=None, xd=None, yd=None,
+            alphaAsym=None, inPlaneRotation=None,
             Ry=None, Rx=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
             autoLimits=True, signal=None):
         r"""
@@ -1758,7 +1762,7 @@ class Crystal(Material):
 
         # if not hasattr(self, 'djparams'):  # Same material can be used in
         # different OEs with different surface curvatures
-        self.set_OE_properties(alphaAsym, Ry, Rx)
+        self.set_OE_properties(alphaAsym, Ry, Rx, inPlaneRotation)
 
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag
