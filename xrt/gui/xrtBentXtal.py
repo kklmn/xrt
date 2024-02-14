@@ -26,8 +26,8 @@ to memory constraints.
 """
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "6 Jul 2023"
-__version__ = "1.0.0"
+__date__ = "14 Feb 2024"
+__version__ = "1.0.1"
 __license__ = "MIT license"
 
 import os, sys; sys.path.append(os.path.join(*['..']*2))  # analysis:ignore
@@ -519,6 +519,8 @@ class PlotWidget(QWidget):
         # simple implementation, quantized by dx:
         def simple():
             topHalf = np.where(y >= 0.5*np.max(y))[0]
+            if len(topHalf) == 0:
+                return 0
             return np.abs(x[topHalf[0]] - x[topHalf[-1]])
 
         # a better implementation, weakly dependent on dx size
@@ -599,7 +601,7 @@ class PlotWidget(QWidget):
                         hklList = [s.strip() for s in param_value.split(',')]
                     try:
                         test = [int(i) for i in hklList]  # analysis:ignore
-                        legit = True if test != [0, 0, 0] else False
+                        legit = test != [0, 0, 0]
                     except Exception:
                         legit = False
                     if len(hklList) == 3 and legit:
@@ -617,28 +619,38 @@ class PlotWidget(QWidget):
                       param_name.startswith("Energy")):
                     try:
                         test = float(param_value)  # analysis:ignore
-                        legit = True
-                        item.prevValue = param_value
+                        if (param_name.startswith("Thick") or
+                                param_name.startswith("Energy")):
+                            legit = test > 0
+                        else:
+                            legit = True
                     except Exception:
                         legit = False
+                    if legit:
+                        item.prevValue = param_value
+                    else:
                         item.setText(item.prevValue)
                         return
                 elif param_name.startswith("Scan Range"):
                     try:
                         test = [float(i) for i in param_value.split(',')]
                         legit = True
-                        item.prevValue = param_value
                     except Exception:
                         legit = False
+                    if legit:
+                        item.prevValue = param_value
+                    else:
                         item.setText(item.prevValue)
                         return
                 elif param_name.startswith("Scan Points"):
                     try:
                         test = int(param_value)  # analysis:ignore
-                        legit = True
-                        item.prevValue = param_value
+                        legit = test > 0
                     except Exception:
                         legit = False
+                    if legit:
+                        item.prevValue = param_value
+                    else:
                         item.setText(item.prevValue)
                         return
                 elif param_name.startswith("Bending"):
@@ -650,10 +662,12 @@ class PlotWidget(QWidget):
                     else:
                         try:
                             test = float(param_value)  # analysis:ignore
-                            legit = True
-                            item.prevValue = param_value
+                            legit = test != 0
                         except Exception:
                             legit = False
+                        if legit:
+                            item.prevValue = param_value
+                        else:
                             item.setText(item.prevValue)
                         if 'flat' in parent.text():
                             newText = parent.text().replace('flat', 'bent')
@@ -1097,8 +1111,13 @@ class PlotWidget(QWidget):
                 partial(self.check_progress, progress_queue))
             self.timer.start(200)  # Adjust the interval as needed
         else:
-            ampS, ampP = crystalInstance.get_amplitude(
-                    xenergy, gamma0, gammah, hns0)
+            try:
+                ampS, ampP = crystalInstance.get_amplitude(
+                        xenergy, gamma0, gammah, hns0)
+            except ValueError as e:
+                print(e)
+                ampS = np.zeros_like(theta)
+                ampP = ampS
             self.statusUpdate.emit(("Ready", 100))
             self.on_calculation_result(
                     (xaxis, ampS, ampP, plot_nr))
