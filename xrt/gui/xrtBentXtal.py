@@ -599,7 +599,7 @@ class PlotWidget(QWidget):
                         hklList = [s.strip() for s in param_value.split(',')]
                     try:
                         test = [int(i) for i in hklList]  # analysis:ignore
-                        legit = True
+                        legit = True if test != [0, 0, 0] else False
                     except Exception:
                         legit = False
                     if len(hklList) == 3 and legit:
