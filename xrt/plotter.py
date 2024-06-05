@@ -400,7 +400,7 @@ class XYCAxis(object):
             factor = 1e-3
         elif self.unit in ['mrad', 'meV']:
             factor = 1.0e3
-        elif self.unit in [u'$\mu$rad', u'µrad', u'urad']:
+        elif self.unit in [r'$\mu$rad', u'µrad', u'urad']:
             factor = 1.0e6
         else:
             if backend == 'shadow':
@@ -408,7 +408,7 @@ class XYCAxis(object):
                     factor = 1e-2
                 elif self.unit in ['mm', ]:
                     factor = 10.
-                elif self.unit in [u'$\mu$m', u'µm', 'um']:
+                elif self.unit in [r'$\mu$m', u'µm', 'um']:
                     factor = 1.0e4
                 elif self.unit in ['nm', ]:
                     factor = 1.0e7
@@ -417,7 +417,7 @@ class XYCAxis(object):
                     factor = 1e-3
                 elif self.unit in ['mm', ]:
                     factor = 1.
-                elif self.unit in [u'$\mu$m', u'µm', 'um']:
+                elif self.unit in [r'$\mu$m', u'µm', 'um']:
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6
@@ -1294,7 +1294,7 @@ class XYCPlot(object):
             extent = None
             if (axis.limits is not None) and\
                     (not isinstance(axis.limits, str)):
-                ll = [l-axis.offset for l in axis.limits]
+                ll = [lim-axis.offset for lim in axis.limits]
                 extent = [ll[0], ll[1], 0, 1]
         elif orientation[0] == 'v':
             map2d = np.zeros((len(xx), histoPixelHeight, 3))
@@ -1311,7 +1311,7 @@ class XYCPlot(object):
             extent = None
             if (axis.limits is not None) and \
                     not (isinstance(axis.limits, str)):
-                ll = [l-axis.offset for l in axis.limits]
+                ll = [lim-axis.offset for lim in axis.limits]
                 extent = [0, 1, ll[0], ll[1]]
 
         if self.negative:
@@ -1339,21 +1339,23 @@ class XYCPlot(object):
                 xFWHM = [histFWHMlow, histFWHMhigh]
                 yFWHM = [xxMaxHalf, xxMaxHalf]
                 if orientation[0] == 'h':
-                    if hasattr(graph, 'histFWHMmarks'):
-                        graph.histFWHMmarks.set_data(xFWHM, yFWHM)
+                    if hasattr(graph, 'histFWHMmarksH'):
+                        graph.histFWHMmarksH.set_data(xFWHM, yFWHM)
                     else:
-                        graph.plot(xFWHM, yFWHM, '+', color='grey')
+                        graph.histFWHMmarksH, = graph.plot(
+                            xFWHM, yFWHM, '+', color='grey')
                 elif orientation[0] == 'v':
-                    if hasattr(graph, 'histFWHMmarks'):
-                        graph.histFWHMmarks.set_data(yFWHM, xFWHM)
+                    if hasattr(graph, 'histFWHMmarksV'):
+                        graph.histFWHMmarksV.set_data(yFWHM, xFWHM)
                     else:
-                        graph.plot(yFWHM, xFWHM, '+', color='grey')
+                        graph.histFWHMmarksV, = graph.plot(
+                            yFWHM, xFWHM, '+', color='grey')
         else:
             histFWHMlow = 0
             histFWHMhigh = 0
 
         if axis.offset:
-            ll = [l-axis.offset for l in axis.limits]
+            ll = [lim-axis.offset for lim in axis.limits]
             offsetText.set_text('{0}{1:g} {2}'.format(
                 '+' if axis.offset > 0 else '',
                 axis.offset*axis.offsetDisplayFactor, axis.offsetDisplayUnit))
@@ -1389,7 +1391,7 @@ class XYCPlot(object):
             a[a < 0] += 1
         if self.caxis.limits is None:
             return
-        eMin, eMax = [l-self.caxis.offset for l in self.caxis.limits]
+        eMin, eMax = [lim-self.caxis.offset for lim in self.caxis.limits]
         a = np.vstack((a, a))
         if self.ePos == 1:
             a = a.T
@@ -1489,7 +1491,7 @@ class XYCPlot(object):
                 self.contourMax = np.max(Z)
                 if True:  # self.contourMax > 1e-4:
                     contourLevels =\
-                        [l*self.contourMax for l in self.contourLevels]
+                        [lev*self.contourMax for lev in self.contourLevels]
                     self.contours2D = self.ax2dHist.contour(
                         X, Y, Z, levels=contourLevels,
                         colors=self.contourColors)
@@ -1797,8 +1799,8 @@ class XYCPlot(object):
                 pn = self.persistentName
             if pn.endswith('mat'):
                 import scipy.io as io
-                #if os.path.isfile(self.persistentName):
-                #    os.remove(self.persistentName)
+                # if os.path.isfile(self.persistentName):
+                #     os.remove(self.persistentName)
                 io.savemat(pn, vars(saved))
             else:
                 f = open(pn, 'wb')
