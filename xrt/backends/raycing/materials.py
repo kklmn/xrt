@@ -2316,6 +2316,8 @@ class CrystalSi(CrystalDiamond):
         kwargs['d'] = self.get_a() / self.sqrthkl2
         kwargs['elements'] = 'Si'
         kwargs['hkl'] = self.hkl
+        if 'name' not in kwargs:
+            kwargs['name'] = 'Si'
 # Mechanics of Materials, 23 (1996), p.314
 #        kwargs['nuPoisson'] = 0.22
         super().__init__(*args, **kwargs)
