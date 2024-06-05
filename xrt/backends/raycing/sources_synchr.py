@@ -1452,9 +1452,13 @@ class Undulator(IntegratedSource):
             (2*self.gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
 
         E1 = 2*wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
-        if raycing._VERBOSITY_ > 10:
+        if raycing._VERBOSITY_ >= 10:
             print("E1 = {0}".format(E1))
-            print("E3 = {0}".format(3*E1))
+            print("E3 = {0}".format(E1*3))
+            print("E5 = {0}".format(E1*5))
+            print("E7 = {0}".format(E1*7))
+            print("E9 = {0}".format(E1*9))
+            print("E11 = {0}".format(E1*11))
             print("B0 = {0}".format(self.B0y))
             if self.taper is not None:
                 print("dB/dx/B = {0}".format(
@@ -1472,8 +1476,8 @@ class Undulator(IntegratedSource):
         given K values (*Ks*). The flux is calculated through the aperture
         defined by *theta* and *psi* opening angles (1D arrays).
 
-        Returns two 2D arrays: energy positions and flux values. The rows
-        correspond to *Ks*, the colums correspond to *harmomonics*.
+        Returns two 2D arrays: energy in keV and flux values in ph/s/0.1%bw.
+        The rows correspond to *Ks*, the colums correspond to *harmomonics*.
         """
         try:
             dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
@@ -1483,10 +1487,24 @@ class Undulator(IntegratedSource):
         tmpKy = self.Ky
         for iK, K in enumerate(Ks):
             if raycing._VERBOSITY_ >= 10:
-                print("Calculation {1} of {2}, K={0}".format(K, iK+1, len(Ks)))
+                print("\nCalculation {1} of {2}, K={0:.3f}".format(
+                    K, iK+1, len(Ks)))
             self.Ky = K
-            I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
-            flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+            # all energies can be calculated at once but for big theta and psi
+            # arrays the I0 array may become too big to fit into memory:
+            # I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
+            # flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+            # therefore, energy axis is split into a loop:
+            flux = None
+            for ie, e in enumerate(energy):
+                if ie % 100 == 0:
+                    print("Calculation at E={0}, K={1:.3f}".format(e, K))
+                I0 = self.intensities_on_mesh([e], theta, psi, harmonics)[0]
+                iflux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+                if flux is None:
+                    flux = iflux
+                else:
+                    flux = np.vstack((flux, iflux))
             argm = np.argmax(flux, axis=0)
             fluxm = np.max(flux, axis=0)
             tunesE.append(energy[argm] / 1000.)
