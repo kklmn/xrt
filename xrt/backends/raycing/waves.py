@@ -603,8 +603,10 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 
     # this would be better in prepare_wave but energy is unknown there yet
     nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
-    print("Effective Fresnel number = {0:.3g}, samples per zone = {1:.3g}".
-          format(nf, spz))
+    toOEname = ' to ' + wave.toOE.name if hasattr(wave, 'toOE') else ''
+    print("Diffraction from {0}{1}:\n"
+          "Effective Fresnel number = {2:.3g}, samples per zone = {3:.3g}"
+          .format(oe.name, toOEname, nf, spz))
 
     shouldCalculateArea = False
     if not hasattr(oeLocal, 'area'):
@@ -636,7 +638,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         if hasattr(oeLocal, 'areaFraction'):
             oeLocal.area *= oeLocal.areaFraction
     if _DEBUG > 10:
-        print("The area of {0} under the beam is {1:.4g}".format(
+        print("The area of {0} under the beam is {1:.4g} mm²".format(
               oe.name, oeLocal.area))
 
     if hasattr(oe, 'rotationSequence'):  # OE
