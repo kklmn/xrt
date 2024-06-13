@@ -605,8 +605,9 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
     nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
     toOEname = ' to ' + wave.toOE.name if hasattr(wave, 'toOE') else ''
     print("Diffraction from {0}{1}:\n"
-          "Effective Fresnel number = {2:.3g}, samples per zone = {3:.3g}"
-          .format(oe.name, toOEname, nf, spz))
+          "Effective Fresnel number = {2:.3g}, {3:.3g} samples, "
+          "{4:.3g} samples per zone"
+          .format(oe.name, toOEname, nf, goodlen, spz))
 
     shouldCalculateArea = False
     if not hasattr(oeLocal, 'area'):
