@@ -263,12 +263,14 @@ For slits and screens, the two steps above are sufficient. For an optical
 element, another step is necessary.
 
 3. ``reflect`` method of the optical element is meant to take into account its
-   material properties. The intersection points are already known, as provided
-   by the previous ``prepare_wave``, which can be reported to ``reflect`` by
-   ``noIntersectionSearch=True``. Here, ``reflect`` takes the beam right before
-   the surface and propagates it to right after it. As a result of such a
-   zero-length travel, the wave gets no additional propagation phase but only a
-   complex-valued reflectivity coefficient and a new propagation direction.
+   material properties. The intersection points are already known (unless the
+   optical element is distorted, i.e. has methods `local_z_distorted` and
+   `local_n_distorted`), as provided by the previous ``prepare_wave``. This
+   fact (knowledge of the intersection points) can be reported to ``reflect``
+   by ``noIntersectionSearch=True``. Here, ``reflect`` takes the beam right
+   before the surface and propagates it to right after it. As a result of such
+   a zero-length travel, the wave gets no additional propagation phase but only
+   a complex-valued reflectivity coefficient and a new propagation direction.
 
 These three methods are enough to describe wave propagation through the
 complete beamline. The first two methods, ``prepare_wave`` and ``diffract``,
@@ -780,6 +782,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         print("diffract on {0} completed in {1:.4f} s".format(
               oe.name, time.time()-t0))
 
+    glo.createdByDiffract = True
     return glo
 
 

@@ -1110,7 +1110,8 @@ class OE(object):
             If not None, returns the absorbed intensity in local beam.
 
         *noIntersectionSearch*: bool
-            Used in wave propagation, normally should be False.
+            Used in wave propagation, normally should be False. Certainly
+            should be False if the OE is distorted.
 
 
         .. .. Returned values: beamGlobal, beamLocal
@@ -1140,7 +1141,10 @@ class OE(object):
                             pitch, self.roll+self.positionRoll, self.yaw,
                             self.dx, noIntersectionSearch=noIntersectionSearch,
                             material=self.material)
-        goodAfter = (gb.state == 1) | (gb.state == 2)
+        if hasattr(beam, 'createdByDiffract'):
+            goodAfter = gb.state == 1
+        else:
+            goodAfter = (gb.state == 1) | (gb.state == 2)
 # in global coordinate system:
         if goodAfter.sum() > 0:
             raycing.virgin_local_to_global(self.bl, gb, self.center, goodAfter)
@@ -1500,10 +1504,13 @@ class OE(object):
             tMin, tMax = self._set_t(y, b, surfPhysY)
         else:
             tMin, tMax = self._set_t(z, c, defSize=raycing.maxDepthOfOE)
+
         # this line is important for cases when the previous reflection points
         # (the ray heads) are close, e.g. in Montel mirror without setting
-        # physical surface limits:
-        tMin[tMin < -10*raycing.zEps] = -10*raycing.zEps
+        # physical surface limits. This solution is not fully studied and it
+        # may break `reflect` after `diffract` (the factor 1e6 is to play with)
+        tMin[tMin < -1e6*raycing.zEps] = -1e6*raycing.zEps
+
         elevation = None
         if isMulti:
             tMin[:] = 0
@@ -2055,9 +2062,6 @@ class OE(object):
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
-#                print('after.a', lb.a)
-#                print('after.b', lb.b)
-#                print('after.c', lb.c)
             elif toWhere == 1:  # refract
                 refractive_index = \
                     matSur.get_refractive_index(lb.E[goodN]).real
