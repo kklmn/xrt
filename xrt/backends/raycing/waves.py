@@ -271,6 +271,8 @@ element, another step is necessary.
    before the surface and propagates it to right after it. As a result of such
    a zero-length travel, the wave gets no additional propagation phase but only
    a complex-valued reflectivity coefficient and a new propagation direction.
+   Note that for paramateric or distorted OEs this last-stroke travel is not
+   zero-length but the propagation phase is properly taken into account.
 
 These three methods are enough to describe wave propagation through the
 complete beamline. The first two methods, ``prepare_wave`` and ``diffract``,

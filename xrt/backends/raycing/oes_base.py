@@ -1372,9 +1372,10 @@ class OE(object):
         else:
             raise ValueError('wrong type of `nrays`!')
 
-# this works even for a parametric case because we prepare rays started at the
-# center of the previous oe and directed towards this oe (self). The found
-# intersection points (by reflect) are exact:
+        # These are approximate samples (exact for undistorted and
+        # non-parametric cases). This works even for a parametric case because
+        # `reflect()` (that follows `diffract()`) will make it exact. Make sure
+        # that `noIntersectionSearch=False` in `reflect()`.
         z = self.local_z(x, y)
         lb.x[:] = x
         lb.y[:] = y
