@@ -214,6 +214,11 @@ class OE(object):
             a VLS grating. The length of the list determines the polynomial
             order.
 
+            .. note::
+
+                Redefining :meth:`local_g` is the most flexible way to define
+                a VLS grating.
+
         *order*: int or sequence of ints
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
 
@@ -595,7 +600,14 @@ class OE(object):
         2pi!) in 1/mm at (*x*, *y*) position. The vector must lie on the
         surface, i.e. be orthogonal to the normal. Typically is overridden in
         the derived classes or defined in Material class. Returns a 3-tuple of
-        floats or of arrays of the length of *x* and *y*."""
+        floats or of arrays of the length of *x* and *y*.
+
+        .. note::
+
+            The sign of the returned vector depends on the user's definition
+            of the diffraction order sign.
+
+        """
 
         try:
             rhoList = self.gratingDensity
