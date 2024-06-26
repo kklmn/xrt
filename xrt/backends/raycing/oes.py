@@ -3089,9 +3089,9 @@ class BlazedGrating(OE):
         for ic, coeff in enumerate(self.coeffs):
             poly += (ic+1) * coeff * coord**ic
         dy = 1. / self.rho0 / poly
-        if type(dy) == float:
-            assert dy > 0, "wrong coefficients: negative groove density"
-        return dy
+        # if type(dy) == float:
+        #     assert dy > 0, "wrong coefficients: negative groove density"
+        return abs(dy)
 
     def _get_groove(self, coord):
         poly = 0.
@@ -3335,9 +3335,9 @@ class VLSLaminarGrating(OE):
         for ic, coeff in enumerate(self.coeffs):
             poly += (ic+1) * coeff * coord**ic
         dy = 1. / self.rho0 / poly
-        if type(dy) == float:
-            assert dy > 0, "wrong coefficients: negative groove density"
-        return dy
+        # if type(dy) == float:
+        #     assert dy > 0, "wrong coefficients: negative groove density"
+        return abs(dy)
 
     def __pop_kwargs(self, **kwargs):
         self.rho0 = kwargs.pop('rho', None)
