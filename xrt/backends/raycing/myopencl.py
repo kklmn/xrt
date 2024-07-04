@@ -9,12 +9,14 @@ import os
 import time
 from .. import raycing
 import pickle
-#import zlib
+# import zlib
 import sys
 try:
+    # solves "sqlite3.ProgrammingError" by cl invoker_cache on python>=3.12.4:
+    os.environ['PYOPENCL_NO_CACHE'] = '1'
+    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
     import pyopencl as cl
     cl.get_platforms()
-    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
     isOpenCL = True
 except Exception:
     isOpenCL = False
