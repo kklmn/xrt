@@ -271,7 +271,7 @@ element, another step is necessary.
    before the surface and propagates it to right after it. As a result of such
    a zero-length travel, the wave gets no additional propagation phase but only
    a complex-valued reflectivity coefficient and a new propagation direction.
-   Note that for paramateric or distorted OEs this last-stroke travel is not
+   Note that for parametric or distorted OEs this last-stroke travel is not
    zero-length but the propagation phase is properly taken into account.
 
 These three methods are enough to describe wave propagation through the
@@ -497,6 +497,10 @@ if isOpenCL:
 else:
     waveCL = None
 
+GREEN = raycing.colorama.Fore.GREEN
+RED = raycing.colorama.Fore.RED
+RESET = raycing.colorama.Fore.RESET
+
 
 def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     """Creates the beam arrays used in wave diffraction calculations. The
@@ -610,8 +614,9 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
     toOEname = ' to ' + wave.toOE.name if hasattr(wave, 'toOE') else ''
     print("Diffraction from {0}{1}:\n"
           "Effective Fresnel number = {2:.3g}, {3:.3g} samples, "
-          "{4:.3g} samples per zone"
-          .format(oe.name, toOEname, nf, goodlen, spz))
+          "{5}{4:.3g} samples per zone{6}"
+          .format(oe.name, toOEname, nf, goodlen, spz,
+                  GREEN if spz > 1e4 else RED, RESET))
 
     shouldCalculateArea = False
     if not hasattr(oeLocal, 'area'):
