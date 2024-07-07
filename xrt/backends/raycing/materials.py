@@ -383,10 +383,11 @@ class Material(object):
             is constructed from the *elements* and the *quantities*.
 
         *refractiveIndex*: float or complex or numpy array or str
-            Explicitly defines the refractive index of the material. Can be
-            used for the energy ranges not covered by the tables of scattering
-            factors (IR, visible).
-            Can be set as:
+            Material refractive index is calculated from the tabulated
+            scattering factors by :meth:`get_refractive_index`. If the target
+            energy range is not covered by the tables of scattering factors
+            (e.g. at IR or visible energies), refractive index can be
+            externally defined by *refractiveIndex* as:
             a) float or complex value, for a constant, energy-independent
             refractive index.
             b) a 3-column numpy array containing Energy in eV, real and
