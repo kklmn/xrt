@@ -427,12 +427,16 @@ def check_alarm(self, incoming, beam):
     condition is fulfilled."""
     incomingSum = incoming.sum()
     if incomingSum > 0:
-        badSum = (beam.state == self.lostNum).sum()
+        badState = beam.state == self.lostNum
+        badSum = badState.sum()
+        badFlux = (beam.Jss[badState] + beam.Jss[badState]).sum()
+        allFlux = (beam.Jss + beam.Jss).sum()
         ratio = float(badSum)/incomingSum
+        ratioFlux = badFlux / allFlux
         if ratio > self.alarmLevel:
-            alarmStr = ('{0}{1} absorbes {2:.2%} of rays ' +
-                        'at {3:.0%} alarm level!').format(
-                'Alarm! ', self.name, ratio, self.alarmLevel)
+            alarmStr = ('{0}{1} absorbes {2:.2%} of rays or {3:.2%} of flux ' +
+                        'at {4:.0%} alarm level!').format(
+                'Alarm! ', self.name, ratio, ratioFlux, self.alarmLevel)
             self.bl.alarms.append(alarmStr)
     else:
         self.bl.alarms.append('no incident rays to {0}!'.format(self.name))
@@ -648,18 +652,20 @@ def get_output(plot, beamsReturnedBy_run_process):
 
     if hasattr(beam, 'displayAsAbsorbedPower'):
         plot.displayAsAbsorbedPower = True
+
     if isinstance(plot.xaxis.data, types.FunctionType):
         x = plot.xaxis.data(beam) * plot.xaxis.factor
     elif isinstance(plot.xaxis.data, np.ndarray):
         x = plot.xaxis.data * plot.xaxis.factor
     else:
-        raise ValueError('cannot find data for x!')
+        raise ValueError('cannot find x data for plot {0}'.format(plot.beam))
+
     if isinstance(plot.yaxis.data, types.FunctionType):
         y = plot.yaxis.data(beam) * plot.yaxis.factor
     elif isinstance(plot.yaxis.data, np.ndarray):
         y = plot.yaxis.data * plot.yaxis.factor
     else:
-        raise ValueError('cannot find data for y!')
+        raise ValueError('cannot find y data for plot {0}'.format(plot.beam))
 
     if plot.caxis.useCategory:
         cData = np.zeros_like(beamState)
