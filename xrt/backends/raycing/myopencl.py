@@ -172,8 +172,15 @@ class XRT_CL(object):
                                 pass
                     for GPUDevice in GPUdevices:
                         try:
-                            if ('graphics' in GPUDevice.name.lower() and
+                            if (_DEBUG > 10 and
+                                'graphics' in GPUDevice.name.lower() and
                                     'intel' in GPUDevice.vendor.lower()):
+                                red = raycing.colorama.Fore.RED
+                                reset = raycing.colorama.Fore.RESET
+                                print("OpenCL: {0}{1} {2} GPU is ignored as "
+                                      "inadequate{3}".format(
+                                          red, GPUDevice.vendor,
+                                          GPUDevice.name, reset))
                                 continue
                             tmpctx = cl.Context(devices=[GPUDevice])
                             if GPUDevice.double_fp_config > 0:
@@ -198,6 +205,10 @@ class XRT_CL(object):
                           green if len(iDeviceAcc) > 0 else red,
                           len(iDeviceAcc) if len(iDeviceAcc) > 0 else 'none',
                           reset, 's' if len(iDeviceAcc) > 1 else ''))
+
+                    if len(iDeviceCPU)+len(iDeviceGPU)+len(iDeviceAcc) == 0:
+                        print("{0}Calculations with OpenCL are impossible: no "
+                              "suitable devices found!{1}".format(red, reset))
 
                 if targetOpenCL.upper().startswith('GPU'):
                     iDevice.extend(iDeviceGPU)
