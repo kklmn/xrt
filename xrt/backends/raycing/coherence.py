@@ -368,7 +368,8 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
         assert v[:, -iax-1].shape[0] == len(y)*len(x)
         im = (v[:, -iax-1]).reshape(len(y), len(x))
         imA = (im.real**2 + im.imag**2).astype(float)
-        ax.imshow(imA, extent=extent, cmap=cmap, interpolation='none')
+        ax.imshow(imA, extent=extent, cmap=cmap, interpolation='none',
+                  origin='lower')
         plt.text(
             0.5, 0.95, lab.format(modeName, w[-iax-1]),
             transform=ax.transAxes, ha='center', va='top', color='w', size=10)
