@@ -47,3 +47,6 @@ etc. For example:
 - ``plot.dx``, ``plot.dy`` and ``plot.dE`` store fwhm's of the three 1D
   histograms
 - flux or power are accessed as ``plot.flux`` and ``plot.power``
+
+If you want to save plot results in a scan, you can do this in a generator, as
+explained :ref:`here <scriptingRaycing>`.
