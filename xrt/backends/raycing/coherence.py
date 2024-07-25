@@ -36,7 +36,7 @@ import matplotlib.patches as mpatches
 
 
 def calc_1D_coherent_fraction(U, axisName, axis, p=0):
-    """
+    r"""
     Calculates 1D degree of coherence (DoC). From its width in respect to the
     width of intensity distribution also infers the coherent fraction. Both
     widths are rms. The one of intensity is calculated over the whole axis, the
@@ -200,7 +200,7 @@ def calc_degree_of_transverse_coherence_4D(J):
 
 
 def calc_degree_of_transverse_coherence_PCA(U):
-    """
+    r"""
     Calculates DoTC from the field stack *U*. The field images of *U* are
     flattened to form the matrix D shaped as (repeats, nx×ny).
     DoTC = Tr(*D*\ :sup:`+`\ *DD*\ :sup:`+`\ *D*)/Tr²(*D*\ :sup:`+`\ *D*),
@@ -232,7 +232,7 @@ def calc_eigen_modes_4D(J, eigenN=4):
 
 
 def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
-    """
+    r"""
     Solves the PCA problem for the field stack *U* shaped as (repeats, nx, ny).
     The field images are flattened to form the matrix D shaped as
     (repeats, nx×ny). The eigenvalue problem is solved for the matrix
@@ -320,7 +320,8 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
     dY = dX * fxz
     dpi = 100
 
-    cmap = mpl.colormaps['cubehelix']
+    # cmap = mpl.colormaps['cubehelix']
+    cmap = mpl.colormaps['hot']
 #    cmap = None  # default to rc image.cmap value
 
     extent = limx + limz

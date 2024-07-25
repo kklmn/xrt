@@ -8,8 +8,6 @@ optical elements in :mod:`~xrt.backends.raycing.oes`, material properties
 interfaces and crystals in :mod:`~xrt.backends.raycing.materials` and screens
 in :mod:`~xrt.backends.raycing.screens`.
 
-.. _scriptingRaycing:
-
 Coordinate systems
 ------------------
 
@@ -97,6 +95,8 @@ user supplies `physical` and `optical` limits, where the latter is used to
 define the ``out`` category (for rays between `physical` and `optical` limits).
 An alarm is triggered if the fraction of dead rays exceeds a specified level.
 
+.. _scriptingRaycing:
+
 Scripting in python
 -------------------
 
@@ -116,16 +116,55 @@ The user of :mod:`~xrt.backends.raycing` must do the following:
 4) Run :func:`~xrt.runner.run_ray_tracing()` function for the created plots.
 
 Additionally, the user may define a generator that will run a loop of ray
-tracing for changing geometry (mimics a real scan) or for different material
-properties etc. The generator should modify the beamline elements and output
-file names of the plots before *yield*. After the *yield* the plots are ready
-and the generator may use their fields, e.g. *intensity* or *dE* or *dy* or
-others to prepare a scan plot. Typically, this sequence is within a loop; after
-the loop the user may prepare the final scan plot using matplotlib
-functionality. The generator is given to :func:`~xrt.runner.run_ray_tracing()`
-as a parameter.
+tracing jobs for changing geometry settings (mimics a real scan) or for
+different material properties etc. The generator should modify the beamline
+elements and output file names of the plots before *yield*. After the *yield*
+the plots are ready and the generator may use their fields, e.g. *intensity* or
+*dE* or *dy* or others to prepare a scan plot. Typically, this sequence is
+contained within a loop; after the loop the user may prepare the final scan
+plot using matplotlib functionality. The generator is passed to
+:func:`~xrt.runner.run_ray_tracing()` as a parameter.
 
-See the supplied examples."""
+Consider an example of a generator::
+
+    def energy_scan(beamLine, plots, energies):
+        flux = np.zeros_like(energies)
+        for ie, e in enumerate(energies):
+            print(f'energy {e:.1f} eV, {ie+1} of {len(energies)}')
+            beamLine.fixedEnergy = e
+            beamLine.source.eMin = e - 0.5  # defines 1 eV energy band
+            beamLine.source.eMax = e + 0.5
+            for plot in plots:
+                plot.saveName = [plot.baseName + f'-{ie}-{e:.1f}eV.png']
+
+            yield
+            # now all plots for this scan point are ready
+            flux[ie] = plot.flux
+
+        # now the whole scan is complete
+        integratedFlux = np.trapz(flux, energies)
+        print(f'total flux = {integratedFlux:.3g} ph/s')
+
+        with open("ray_tracing_c.pickle", 'wb') as f:
+            pickle.dump([energies, flux, integratedFlux], f)
+
+        plt.plot(energies, flux)
+        plt.show()
+
+... and an example of passing this generator to
+:func:`~xrt.runner.run_ray_tracing()`::
+
+    def ray_study(nrays, repeats):
+        beamLine = build_beamline(nrays)
+        plots = define_plots(beamLine)
+        energies = np.linspace(11800, 12600, 401)
+        xrtr.run_ray_tracing(
+            plots, repeats=repeats, beamLine=beamLine,
+            generator=energy_scan, generatorArgs=[beamLine, plots, energies])
+
+Find more generators in the supplied examples.
+"""
+
 from __future__ import print_function
 import types
 import sys

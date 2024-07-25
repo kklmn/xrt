@@ -308,8 +308,8 @@ __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import time
 import numpy as np
-#import matplotlib
-#matplotlib.use("Agg")
+# import matplotlib
+# matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
@@ -323,11 +323,11 @@ showIn3D = False
 sourceType = 'u'
 # one of 'mono', '1harmonic', 'smaller', 'wide'
 energyRange = '1harmonic'
-#energyRange = 'mono'
-#energyRange = 'wide'
+# energyRange = 'mono'
+# energyRange = 'wide'
 what = 'rays'
-#what = 'wave'  # only for rs.Undulator
-#suffix = '_fullLength_emittance_NF'
+# what = 'wave'  # only for rs.Undulator
+# suffix = '_fullLength_emittance_NF'
 suffix = ''
 isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
@@ -344,7 +344,7 @@ if sourceType == 'u':
     Kmax = 1.92
     kwargs = dict(
         eE=3., eI=0.5,  # Parameters of the synchrotron ring [GeV], [Ampere]
-        #eEspread=0.001,  # Energy spread of the electrons in the ring
+        # eEspread=0.001,  # Energy spread of the electrons in the ring
         period=30., n=40,  # Parameters of the undulator, period in [mm]
         K=1.45,  # Deflection parameter (ignored if targetE is not None)
         # targetE=[6940, 5, False],  # [energy [eV], harmonic]
@@ -358,11 +358,11 @@ if sourceType == 'u':
         # gIntervals=5,  # Number of the integration intervals. Should be
         # increased for the near field and custom magnetic field cases.
         # gp=1e-2,  # Precision of the integration.
-#        targetOpenCL=(0, 0),
-#        targetOpenCL='CPU',
-#        precisionOpenCL='float32',
-        #taper = [0 ,10],
-        #eEpsilonX=0.0, eEpsilonZ=0.0)  # Emittance [nmrad]
+        # targetOpenCL=(0, 0),
+        # targetOpenCL='CPU',
+        # precisionOpenCL='float32',
+        # taper = [0 ,10],
+        # eEpsilonX=0.0, eEpsilonZ=0.0)  # Emittance [nmrad]
         eEpsilonX=0.263, eEpsilonZ=0.008)  # Emittance [nmrad]
     xlimits = [-10, 10]  # Horizontal limits of the plot [mm]
     zlimits = [-10, 10]  # Vertical limits of the plot [mm]
@@ -518,7 +518,7 @@ def define_plots(beamLine):
     plotsE = []
 
     xaxis = xrtp.XYCAxis(r'$y$', 'mm', bins=256)
-    yaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits='symmetric')
+    yaxis = xrtp.XYCAxis(r'$x$', r'$\mu$m', limits='symmetric')
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
     plot = xrtp.XYCPlot(
         'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
@@ -529,7 +529,7 @@ def define_plots(beamLine):
     plotsE.append(plot)
 
     xaxis = xrtp.XYCAxis(r'$y$', 'mm', bins=256)
-    yaxis = xrtp.XYCAxis(r'$z$', '$\mu$m', limits='symmetric')
+    yaxis = xrtp.XYCAxis(r'$z$', r'$\mu$m', limits='symmetric')
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
     plot = xrtp.XYCPlot(
         'beamSource', (1,), xaxis=xaxis, yaxis=yaxis, caxis=caxis,
@@ -539,9 +539,9 @@ def define_plots(beamLine):
     plots.append(plot)
     plotsE.append(plot)
 
-    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X,
+    xaxis = xrtp.XYCAxis(r'$x$', r'$\mu$m', limits=limitsFSM0X,
                          bins=bins, ppb=ppb)
-    yaxis = xrtp.XYCAxis(r'$z$', '$\mu$m', limits=limitsFSM0Z,
+    yaxis = xrtp.XYCAxis(r'$z$', r'$\mu$m', limits=limitsFSM0Z,
                          bins=bins, ppb=ppb)
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None,
                          bins=bins, ppb=ppb)
@@ -554,7 +554,7 @@ def define_plots(beamLine):
     plotsE.append(plot)
 
     beam = 'beamFSM0'
-    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=limitsFSM0X)
+    xaxis = xrtp.XYCAxis(r'$x$', r'$\mu$m', limits=limitsFSM0X)
     yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=xPrimelimits)
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
     plot = xrtp.XYCPlot(
@@ -565,7 +565,7 @@ def define_plots(beamLine):
     plots.append(plot)
     plotsE.append(plot)
 
-    xaxis = xrtp.XYCAxis(r'$x$', '$\mu$m', limits=[-80, 80])
+    xaxis = xrtp.XYCAxis(r'$x$', r'$\mu$m', limits=[-80, 80])
     yaxis = xrtp.XYCAxis(r"$x'$", 'mrad', limits=[-0.15, 0.15])
     caxis = xrtp.XYCAxis('energy', eUnit, fwhmFormatStr=None)
     plot = xrtp.XYCPlot(
@@ -585,7 +585,7 @@ def define_plots(beamLine):
         aspect='auto', title='total flux')
     plot.caxis.fwhmFormatStr = None
     plot.saveName = prefix + '1TotalFlux' + suffix + '.png'
-    #plot.persistentName = prefix + '1TotalFlux' + suffix + '.mat'
+    # plot.persistentName = prefix + '1TotalFlux' + suffix + '.mat'
     plots.append(plot)
     plotsE.append(plot)
     ax = plot.xaxis
@@ -740,6 +740,7 @@ def main():
         xrtr.run_ray_tracing(plots, repeats=1,
                              # afterScript=afterScript, afterScriptArgs=plots,
                              beamLine=beamLine)
+
 
 if __name__ == '__main__':
     main()
