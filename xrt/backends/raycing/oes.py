@@ -1500,19 +1500,30 @@ class EllipticalMirrorParam(OE):
     coordinates in planes normal to the major axis at every point *s*. The
     polar axis is upwards.
 
+    The *center* of this OE lies on the mirror surface and its *pitch* is Rx
+    at this point.
+
+    If *isCylindrical* is True, the figure is an elliptical cylinder being flat
+    in the lateral direction, otherwise it is an ellipsoid of revolution around
+    the major axis.
+
+    If *isClosed* is True (default is False), the mirror is a complete surface
+    of revolution. Otherwise the mirror is open, i.e. only its lower half is
+    effective.
+
+    .. note::
+
+        If the mirror is a closed surface, *pitch* should still be non-zero
+        even if the major axis lies on the optical axis. A *center* must be
+        defined somewhere on the surface and *pitch* is referred to that point.
+
     The user supplies two foci either by focal distances *p* and *q* (both are
-    positive) or as *f1* and *f2* points in the global coordinate system
-    (3-sequences). Any combination of (*p* or *f1*) and (*q* or *f2*) is
-    allowed. If *p* is supplied, not *f1*, the incoming optical axis is assumed
-    to be along the global Y axis. For a general orientation of the ellipse
-    axes *f1* or *pAxis* -- the *p* arm direction in global coordinates --
-    should be supplied.
-
-    If *isCylindrical* is True, the figure is an elliptical cylinder, otherwise
-    it is an ellipsoid of revolution around the major axis.
-
-    Values of the ellipse's semi-major and semi-minor axes lengths can be
-    accessed after init at *ellipseA* and *ellipseB* respectively.
+    positive distances from the center to the focal points) or as *f1* and *f2*
+    points in the global coordinate system (3-sequences). Any combination of
+    (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is supplied, not *f1*,
+    the incoming optical axis is assumed to be along the global Y axis. For a
+    general orientation of the ellipse axes *f1* or *pAxis* -- the *p* arm
+    direction in global coordinates -- should be supplied.
 
     .. note::
 
@@ -1520,7 +1531,11 @@ class EllipticalMirrorParam(OE):
         attributes of this mirror object; the ellipsoid parameters parameters
         will be recalculated automatically.
 
-    The usage is exemplified in `test_param_mirror.py`.
+    Values of the ellipse's semi-major and semi-minor axes lengths can be
+    accessed after init as *ellipseA* and *ellipseB* respectively.
+
+    The usage is exemplified in `test_param_mirror.py` and
+    `test_ellipsoid_tube_mirror.py`.
 
     """
 
@@ -1673,6 +1688,7 @@ class EllipticalMirrorParam(OE):
         self.p = kwargs.pop('p', 1000)  # source-to-mirror
         self.q = kwargs.pop('q', 1000)  # mirror-to-focus
         self.isCylindrical = kwargs.pop('isCylindrical', False)
+        self.isClosed = kwargs.pop('isClosed', False)
         return kwargs
 
     def xyz_to_param(self, x, y, z):
@@ -1691,11 +1707,13 @@ class EllipticalMirrorParam(OE):
         r = self.ellipseB * np.sqrt(abs(1 - s**2 / self.ellipseA**2))
         if self.isCylindrical:
             r /= abs(np.cos(phi))
+        if self.isClosed:
+            return r
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)
 
     def local_n(self, s, phi):
         A2s2 = np.array(self.ellipseA**2 - s**2)
-        A2s2[A2s2 <= 0] = 1e22
+        A2s2[A2s2 <= 0] = 1e22  # this rays will be lost
         nr = -self.ellipseB / self.ellipseA * s / np.sqrt(A2s2)
         norm = np.sqrt(nr**2 + 1)
         b = nr / norm
@@ -2577,6 +2595,9 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
 
     def __init__(self, *args, **kwargs):
         r"""
+        The center is on major axis in the middle of the capillary. *pitch* is
+        zero if the capillary is on the optical axis.
+
         *ellipseA*: float
             Semi-major axis, half of source-to-sample distance.
 
@@ -2588,6 +2609,7 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
             Distance between the end face of the capillary and focus. Mind the
             length of the optical element for proper positioning.
 
+        The usage is exemplified in `test_ellipsoid_tube_mirror.py`.
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
@@ -2600,6 +2622,15 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
     @ellipseA.setter
     def ellipseA(self, ellipseA):
         self._ellipseA = ellipseA
+        self.reset_curvature()
+
+    @property
+    def ellipseB(self):
+        return self._ellipseB
+
+    @ellipseB.setter
+    def ellipseB(self, ellipseB):
+        self._ellipseB = ellipseB
         self.reset_curvature()
 
     @property
@@ -2624,12 +2655,15 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
             self._limPhysY = limPhysY
         self.reset_curvature()
 
-    def reset_curvature(self, q=None, r0=None):
-        if not all([hasattr(self, v) for v in
-                    ['_ellipseA', '_workingDistance', '_limPhysY']]):
+    def reset_curvature(self):
+        if not all([hasattr(self, v) for v in [
+                '_ellipseA', '_ellipseB', '_workingDistance', '_limPhysY']]):
             return
-        self.ctd = self.ellipseA - self.workingDistance -\
+        c = (self.ellipseA**2 - self.ellipseB**2)**0.5
+        self.ctd = c - self.workingDistance -\
             0.5*np.abs(self.limPhysY[-1]-self.limPhysY[0])
+        print('CCCCCCCC', self.ctd, self.ellipseA, self.workingDistance,
+              0.5*np.abs(self.limPhysY[-1]-self.limPhysY[0]))
 
     def __pop_kwargs(self, **kwargs):
         self.ellipseA = kwargs.pop('ellipseA', 10000)  # Semi-major axis
@@ -2638,20 +2672,18 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
         return kwargs
 
     def local_r(self, s, phi):
-        r = self.ellipseB * np.sqrt(abs(1 - (self.ctd+s)**2 /
-                                        self.ellipseA**2))
+        r = self.ellipseB * np.sqrt(abs(1 - (self.ctd+s)**2/self.ellipseA**2))
         return r
 
     def local_n(self, s, phi):
         A2s2 = np.array(self.ellipseA**2 - (self.ctd+s)**2)
-        A2s2[A2s2 <= 0] = 1e22
+        A2s2[A2s2 <= 0] = 1e22  # this rays will be lost
         nr = -self.ellipseB / self.ellipseA * (self.ctd+s) / np.sqrt(A2s2)
         norm = np.sqrt(nr**2 + 1.)
         b = nr / norm
         a = -np.sin(phi) / norm
         c = -np.cos(phi) / norm
-        norm = np.sqrt(a**2 + b**2 + c**2)
-        return a/norm, b/norm, c/norm
+        return a, b, c
 
 
 class NormalFZP(OE):
