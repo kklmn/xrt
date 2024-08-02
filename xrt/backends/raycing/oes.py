@@ -2662,8 +2662,6 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
         c = (self.ellipseA**2 - self.ellipseB**2)**0.5
         self.ctd = c - self.workingDistance -\
             0.5*np.abs(self.limPhysY[-1]-self.limPhysY[0])
-        print('CCCCCCCC', self.ctd, self.ellipseA, self.workingDistance,
-              0.5*np.abs(self.limPhysY[-1]-self.limPhysY[0]))
 
     def __pop_kwargs(self, **kwargs):
         self.ellipseA = kwargs.pop('ellipseA', 10000)  # Semi-major axis
