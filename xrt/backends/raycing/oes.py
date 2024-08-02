@@ -1503,9 +1503,9 @@ class EllipticalMirrorParam(OE):
     The *center* of this OE lies on the mirror surface and its *pitch* is Rx
     at this point.
 
-    If *isCylindrical* is True, the figure is an elliptical cylinder being flat
-    in the lateral direction, otherwise it is an ellipsoid of revolution around
-    the major axis.
+    If *isCylindrical* is True (default is False), the figure is an elliptical
+    cylinder being flat in the lateral direction, otherwise it is an ellipsoid
+    of revolution around the major axis.
 
     If *isClosed* is True (default is False), the mirror is a complete surface
     of revolution. Otherwise the mirror is open, i.e. only its lower half is
