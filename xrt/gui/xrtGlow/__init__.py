@@ -3169,7 +3169,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         isClosedSurface = False
         if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-            isClosedSurface = isinstance(oe, roes.SurfaceOfRevolution)
+            isClosedSurface = isinstance(oe, roes.SurfaceOfRevolution) or\
+                (hasattr(oe, 'isClosed') and oe.isClosed)
             if oe.footprint is not None:
                 xLimits = oe.footprint[nsIndex][:, 0]
         if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
@@ -3187,7 +3188,9 @@ class xrtGlWidget(qt.QGLWidget):
             localTiles[1] *= 3
         if isClosedSurface:
             # the limits are in parametric coordinates
-            xLimits = yLimits  # s
+            yLimitsS0, _, _ = oe.xyz_to_param(0, yLimits[0], 0)
+            yLimitsS1, _, _ = oe.xyz_to_param(0, yLimits[1], 0)
+            xLimits = [yLimitsS0, yLimitsS1]  # s
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
 
@@ -3307,7 +3310,7 @@ class xrtGlWidget(qt.QGLWidget):
                                                 self.surfCPOrder) if\
                                 gridZ is None else np.concatenate((
                                     gridZ, np.linspace(zTop-thickness, zTop,
-                                                       self.surfCPOrder)))    
+                                                       self.surfCPOrder)))
                         else:
                             gridZ = np.linspace(-thickness, zTop,
                                                 self.surfCPOrder) if\
@@ -3348,7 +3351,7 @@ class xrtGlWidget(qt.QGLWidget):
                     edgeZ = np.zeros_like(xGridOe)
 
                     if oe.shape == 'round':
-                        edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX,\
+                        edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX, \
                             rY*edgeX*np.sin(edgeY)+cY
 
                     if oe.isParametric:

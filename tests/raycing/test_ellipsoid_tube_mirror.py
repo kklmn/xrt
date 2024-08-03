@@ -19,6 +19,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = False
+
 E0, dE = 9000., 5.,
 p = 20000.
 q = p/2
@@ -67,40 +69,58 @@ def build_beamline(nrays=1e5):
     # ellipse a 15000.093749560554
     # ellipse b 53.032967157584295
 
-    beamLine.screen = rsc.Screen(beamLine, 'Movable Screen', mirrorCenter)
+    beamLine.screen = rsc.Screen(beamLine, 'Movable Screen', focalPoint)
     return beamLine
 
 
 def run_process(beamLine, shineOnly1stSource=False):
-    beamSource = beamLine.sources[0].shine()
+    if showIn3D:
+        beamSource = beamLine.sources[0].shine()
+        beamMirrorGlobal, beamMirrorlocal = beamLine.ellMirror.reflect(
+            beamSource)
+        beamScreenAfterReflection = beamLine.screen.expose(beamMirrorGlobal)
+        beamScreenAtFocus = beamLine.screen.expose(beamMirrorGlobal)
+        outDict = {
+            'beamSource': beamSource,
+            'beamMirrorlocal': beamMirrorlocal,
+            'beamScreenAfterReflection': beamScreenAfterReflection,
+            'beamScreenAtFocus': beamScreenAtFocus,
+            }
+        beamLine.prepare_flow()
+    else:
+        beamSource = beamLine.sources[0].shine()
 
-    beamLine.screen.center = [0, p, 0]
-    beamScreenBeforeReflection = beamLine.screen.expose(beamSource)
+        beamLine.screen.center = [0, p, 0]
+        beamScreenBeforeReflection = beamLine.screen.expose(beamSource)
 
-    beamMirrorGlobal, beamMirrorlocal = beamLine.ellMirror.reflect(beamSource)
-    beamScreenAfterReflection = beamLine.screen.expose(beamMirrorGlobal)
+        beamMirrorGlobal, beamMirrorlocal = beamLine.ellMirror.reflect(
+            beamSource)
+        beamScreenAfterReflection = beamLine.screen.expose(beamMirrorGlobal)
 
-    beamLine.screen.center = [0, p+q-10, 0]
-    beamScreenBeforeFocus = beamLine.screen.expose(beamMirrorGlobal)
+        beamLine.screen.center = [0, p+q-10, 0]
+        beamScreenBeforeFocus = beamLine.screen.expose(beamMirrorGlobal)
 
-    beamLine.screen.center = [0, p+q, 0]
-    beamScreenAtFocus = beamLine.screen.expose(beamMirrorGlobal)
+        beamLine.screen.center = [0, p+q, 0]
+        beamScreenAtFocus = beamLine.screen.expose(beamMirrorGlobal)
 
-    outDict = {
-        'beamSource': beamSource,
-        'beamScreenBeforeReflection': beamScreenBeforeReflection,
-        'beamMirrorlocal': beamMirrorlocal,
-        'beamScreenAfterReflection': beamScreenAfterReflection,
-        'beamScreenBeforeFocus': beamScreenBeforeFocus,
-        'beamScreenAtFocus': beamScreenAtFocus,
-        }
-
+        outDict = {
+            'beamSource': beamSource,
+            'beamScreenBeforeReflection': beamScreenBeforeReflection,
+            'beamMirrorlocal': beamMirrorlocal,
+            'beamScreenAfterReflection': beamScreenAfterReflection,
+            'beamScreenBeforeFocus': beamScreenBeforeFocus,
+            'beamScreenAtFocus': beamScreenAtFocus,
+            }
     return outDict
 rr.run_process = run_process
 
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow()
+        return
+
     plots = []
 
     plot = xrtp.XYCPlot('beamScreenBeforeReflection')
