@@ -13,6 +13,8 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
+showIn3D = False
+
 E0, dE = 9000., 5.,
 p = 10000.
 q = p/2.
@@ -79,16 +81,28 @@ def run_process(beamLine, shineOnly1stSource=False):
     outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1,
                'beamEMglobal': beamEMglobal,
                'beamEMlocal': beamEMlocal}
-    for i, dy in enumerate(beamLine.fsm2dY):
-        dqs = (q+dy) * np.sin(2*pitch+inclination)
-        dqc = (q+dy) * np.cos(2*pitch+inclination)
+    if showIn3D:
+        dqs = q * np.sin(2*pitch+inclination)
+        dqc = q * np.cos(2*pitch+inclination)
         beamLine.fsm2.center[0] = beamLine.ellMirror.center[0] +\
             dqs*np.sin(globalRoll)
         beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + dqc
         beamLine.fsm2.center[2] = beamLine.ellMirror.center[2] +\
             dqs*np.cos(globalRoll)
         beamFSM2 = beamLine.fsm2.expose(beamEMglobal)
-        outDict['beamFSM2-{0:d}'.format(i+1)] = beamFSM2
+        outDict['beamFSM2-0'] = beamFSM2
+        beamLine.prepare_flow()
+    else:
+        for i, dy in enumerate(beamLine.fsm2dY):
+            dqs = (q+dy) * np.sin(2*pitch+inclination)
+            dqc = (q+dy) * np.cos(2*pitch+inclination)
+            beamLine.fsm2.center[0] = beamLine.ellMirror.center[0] +\
+                dqs*np.sin(globalRoll)
+            beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + dqc
+            beamLine.fsm2.center[2] = beamLine.ellMirror.center[2] +\
+                dqs*np.cos(globalRoll)
+            beamFSM2 = beamLine.fsm2.expose(beamEMglobal)
+            outDict['beamFSM2-{0:d}'.format(i+1)] = beamFSM2
 
     return outDict
 rr.run_process = run_process
@@ -96,6 +110,10 @@ rr.run_process = run_process
 
 def main():
     beamLine = build_beamline()
+    if showIn3D:
+        beamLine.glow()
+        return
+
     fwhmFormatStrE = '%.2f'
     plots = []
 

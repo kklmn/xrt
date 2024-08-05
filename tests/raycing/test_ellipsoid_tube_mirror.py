@@ -24,7 +24,7 @@ showIn3D = False
 E0, dE = 9000., 5.,
 p = 20000.
 q = p/2
-tubeLengtgh = 100.
+tubeLengtgh = 10000.
 tubeRadius = 50.
 
 Mirror = roe.EllipticalMirrorParam

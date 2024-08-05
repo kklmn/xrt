@@ -1509,7 +1509,9 @@ class EllipticalMirrorParam(OE):
 
     If *isClosed* is True (default is False), the mirror is a complete surface
     of revolution. Otherwise the mirror is open, i.e. only its lower half is
-    effective.
+    effective. If you want a closed mirror, compare this OE with
+    :class:`EllipsoidCapillaryMirror` that can produce the same surface, just
+    with another meaning of *center* and *pitch* parameters.
 
     .. note::
 
@@ -1535,7 +1537,8 @@ class EllipticalMirrorParam(OE):
     accessed after init as *ellipseA* and *ellipseB* respectively.
 
     The usage is exemplified in `test_param_mirror.py` and
-    `test_ellipsoid_tube_mirror.py`.
+    `test_ellipsoid_tube_mirror.py`. Both test scripts can produce a 3D view by
+    xrtGlow if a corresponding option at the top of the script is enabled.
 
     """
 

@@ -196,7 +196,11 @@ class OE(object):
 
         *shape*: str or list of [x, y] pairs
             The shape of OE. Supported: 'rect', 'round' or a list of [x, y]
-            pairs for an arbitrary shape.
+            pairs for an arbitrary shape. *shape* refers to the geometric shape
+            of the XY projection. 'round' shape makes a circular disk, not a
+            capillary optical element. The latter can be made as a parametric
+            surface, see e.g. :class:`SurfaceOfRevolution` or
+            :class:`EllipticalMirrorParam`.
 
         *gratingDensity*: None or list
             If material *kind* = 'grating', its density can be defined as list
