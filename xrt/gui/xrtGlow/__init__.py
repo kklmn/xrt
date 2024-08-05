@@ -3178,14 +3178,6 @@ class xrtGlWidget(qt.QGLWidget):
                 yLimits = oe.footprint[nsIndex][:, 1]
         localTiles = np.array(self.tiles)
 
-        if oe.shape == 'round':
-            rX = np.abs((xLimits[1] - xLimits[0]))*0.5
-            rY = np.abs((yLimits[1] - yLimits[0]))*0.5
-            cX = (xLimits[1] + xLimits[0])*0.5
-            cY = (yLimits[1] + yLimits[0])*0.5
-            xLimits = [0, 1.]
-            yLimits = [0, 2*np.pi]
-            localTiles[1] *= 3
         if isClosedSurface:
             # the limits are in parametric coordinates
             yLimitsS0, _, _ = oe.xyz_to_param(0, yLimits[0], 0)
@@ -3193,6 +3185,15 @@ class xrtGlWidget(qt.QGLWidget):
             xLimits = [yLimitsS0, yLimitsS1]  # s
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
+        else:
+            if oe.shape == 'round':
+                rX = np.abs((xLimits[1] - xLimits[0]))*0.5
+                rY = np.abs((yLimits[1] - yLimits[0]))*0.5
+                cX = (xLimits[1] + xLimits[0])*0.5
+                cY = (yLimits[1] + yLimits[0])*0.5
+                xLimits = [0, 1.]
+                yLimits = [0, 2*np.pi]
+                localTiles[1] *= 3
 
         if is2ndXtal:
             zExt = '2'
@@ -3215,7 +3216,7 @@ class xrtGlWidget(qt.QGLWidget):
                                       self.surfCPOrder)
 
                 xv, yv = np.meshgrid(xGridOe, yGridOe)
-                if oe.shape == 'round':
+                if oe.shape == 'round' and not isClosedSurface:
                     xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
 
                 xv = xv.flatten()
@@ -3285,7 +3286,7 @@ class xrtGlWidget(qt.QGLWidget):
             deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
             for ie, yPos in enumerate(yLimits):
                 for i in range(localTiles[0]):
-                    if oe.shape == 'round':
+                    if oe.shape == 'round' and not isClosedSurface:
                         continue
                     xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                           xLimits[0] + (i+1)*deltaX,
@@ -3338,7 +3339,7 @@ class xrtGlWidget(qt.QGLWidget):
                                         [0]*3)
 
             for ie, xPos in enumerate(xLimits):
-                if ie == 0 and oe.shape == 'round':
+                if ie == 0 and oe.shape == 'round' and not isClosedSurface:
                     continue
                 deltaY = (yLimits[1] - yLimits[0]) / float(localTiles[1])
                 for i in range(localTiles[1]):
@@ -3350,7 +3351,7 @@ class xrtGlWidget(qt.QGLWidget):
                     edgeX = np.ones_like(yGridOe)*xPos
                     edgeZ = np.zeros_like(xGridOe)
 
-                    if oe.shape == 'round':
+                    if oe.shape == 'round' and not isClosedSurface:
                         edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX, \
                             rY*edgeX*np.sin(edgeY)+cY
 
@@ -3379,7 +3380,7 @@ class xrtGlWidget(qt.QGLWidget):
                                                        self.surfCPOrder)))
 
                     gridY = np.repeat(edgeY, len(edgeZ))
-                    if oe.shape == 'round':
+                    if oe.shape == 'round' and not isClosedSurface:
                         yN = (gridY-cY) / rY
                         gridX = np.repeat(edgeX, len(edgeZ))
                         xN = (gridX-cX) / rX
@@ -3410,7 +3411,7 @@ class xrtGlWidget(qt.QGLWidget):
 #                             self.surfCPOrder*(localTiles[0]+1))
 #        yBound = np.linspace(yLimits[0], yLimits[1],
 #                             self.surfCPOrder*(localTiles[1]+1))
-#        if oe.shape == 'round':
+#        if oe.shape == 'round' and not isClosedSurface:
 #            oeContour = [0]
 #            oneEdge = [0]
 #        else:
@@ -3426,7 +3427,7 @@ class xrtGlWidget(qt.QGLWidget):
 #                                     np.flip(yBound, 0)])  # right
 #
 #        for ie, edge in enumerate(oeContour):
-#            if oe.shape == 'round':
+#            if oe.shape == 'round' and not isClosedSurface:
 #                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
 #            else:
 #                edgeX = edge[0, :]
