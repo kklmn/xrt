@@ -3041,7 +3041,7 @@ class xrtGlow(qt.QWidget):
     def updateTileFromQLE(self, editor, ia):
         # editor = self.sender()
         value = float(str(editor.text()))
-        self.customGlWidget.tiles[ia] = np.int(value)
+        self.customGlWidget.tiles[ia] = np.int32(value)
         self.customGlWidget.glDraw()
 
     def updateProjectionOpacity(self, slider, iax, editor, position):
@@ -4389,7 +4389,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             else:
                 decimalX = 0
 
-            gridX = np.arange(np.int(allLimits[:, iAx][0]/step)*step,
+            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
                               allLimits[:, iAx][1], step)
             gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
                 gridX[1:]
@@ -4399,7 +4399,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if self.fineGridEnabled:
                 fineStep = step * 0.2
                 fineGrid = np.arange(
-                    np.int(allLimits[:, iAx][0]/fineStep)*fineStep,
+                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
                     allLimits[:, iAx][1], fineStep)
                 fineGrid = fineGrid if\
                     fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
@@ -8196,7 +8196,7 @@ class xrtGlowControls(qt.QWidget):
     def updateTileFromQLE(self, ia):
         editor = self.sender()
         value = float(str(editor.text()))
-        self.customGlWidget.tiles[ia] = np.int(value)
+        self.customGlWidget.tiles[ia] = np.int32(value)
         self.customGlWidget.glDraw()
 
     def updateProjectionOpacity(self, iax, editor, position):
@@ -9518,7 +9518,7 @@ class CoordinateBox():
             else:
                 decimalX = 0
 
-            gridX = np.arange(np.int(allLimits[:, iAx][0]/step)*step,
+            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
                               allLimits[:, iAx][1], step)
             gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
                 gridX[1:]
@@ -9528,7 +9528,7 @@ class CoordinateBox():
 #            if self.parent.fineGridEnabled:
 #                fineStep = step * 0.2
 #                fineGrid = np.arange(
-#                    np.int(allLimits[:, iAx][0]/fineStep)*fineStep,
+#                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
 #                    allLimits[:, iAx][1], fineStep)
 #                fineGrid = fineGrid if\
 #                    fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
