@@ -1160,13 +1160,19 @@ class SourceFromField(IntegratedSource):
                 self.build_trajectory_periodic(Bx, By, Bz)
             Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
-        self.beta = [betax, betay]
-        self.trajectory = [trajx, trajy, trajz]
-
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam if self.filamentBeam else\
             0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
         emcg = SIE0 / SIM0 / C / 10. / gamma
+
+        if self.filamentBeam:
+            self.beta = [betax, betay]
+            self.trajectory = [trajx, trajy, trajz]
+        else:
+            self.beta = [betax*emcg[0], betay*emcg[0]]
+            self.trajectory = [
+                trajx*emcg[0], trajy*emcg[0],
+                self.tg*(1.-0.5/gamma[0]**2) + trajz*EMC**2/gamma[0]**2]
 
         if self.R0:
             R0v = np.array(
