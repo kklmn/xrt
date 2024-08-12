@@ -38,7 +38,7 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 
-# import sys
+import sys
 import os
 import numpy as np
 from functools import partial
@@ -70,6 +70,10 @@ from PyQt5 import QtCore as qc
 from PyQt5 import QtGui as qg
 MAXRAYS = 100000
 
+if sys.version_info < (3, 1):
+    from inspect import getargspec
+else:
+    from inspect import getfullargspec as getargspec
 
 def setVertexBuffer(data_array, dim_vertex, program, shader_str, size=None,
                     oldVBO=None):
@@ -129,7 +133,7 @@ def getParams(obj):
         for parent in (inspect.getmro(objRef))[:-1]:
             for namef, objf in inspect.getmembers(parent):
                 if inspect.ismethod(objf) or inspect.isfunction(objf):
-                    argSpec = inspect.getargspec(objf)
+                    argSpec = getargspec(objf)
                     if namef == "__init__" and argSpec[3] is not None:
                         for arg, argVal in zip(argSpec[0][1:],
                                                argSpec[3]):
@@ -3285,7 +3289,49 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             dataColor = np.float32(raycing.get_energy(beam))
             beam.vbo_colorax = setVertexBuffer(dataColor, 1, shaderBeam, "colorAxis")
+            beamlen = np.int32(len(beam.x))
+            print(f"{beamlen=}")
+            dataIndex = np.arange(beamlen, dtype=np.float32)
+            beam.vbo_index = setVertexBuffer(dataIndex, 1, shaderBeam, "colorIndex")
 
+            msize=256
+            # print("0")            
+            texture = qg.QOpenGLTexture(qg.QOpenGLTexture.Target1D)
+            # texture = qg.QOpenGLTexture(qg.QOpenGLTexture.Target2D)
+            texture.setFormat(qg.QOpenGLTexture.RGB8_UNorm)
+            texture.setSize(msize)
+            # texture.setSize(256, 256)
+            texture.allocateStorage()
+            # texture.allocateStorage(qg.QOpenGLTexture.RGB, qg.QOpenGLTexture.UInt8)
+            # texture_data = np.zeros((beamlen, 3), dtype=np.uint8)
+            # texture_data[:, 0] = np.linspace(0, 255, beamlen)  # Red channel
+            # texture_data[:, 2] = np.linspace(255, 0, beamlen)  # Blue channel
+            # # print(texture_data.shape, np.sum(texture_data), f"{texture_data=}")
+            # texture_data = np.uint8(texture_data)
+            # textureImage = qg.QImage(texture_data, beamlen, 1, qg.QImage.Format_RGB888)
+            # texture = qg.QOpenGLTexture(textureImage)
+            # texture.bind()
+            # texture.setData(textureImage)
+            # print("1")
+            # texture.setData(0, qg.QOpenGLTexture.RGB, qg.QOpenGLTexture.UInt8, texture_data.copy(), None)
+
+
+            # texture.release()
+            hist2dRGB = np.ones((256, msize, 3), dtype=np.float64)
+            hist2dRGB[:,:,2] *= 0.5
+            hist2dRGB[:,:,1] *= 0.5
+            hist2dRGB = np.uint8(hist2dRGB[0,:,:]*255)
+            print(f"{hist2dRGB.shape=}")
+            texture.bind()
+            texture.setData(0, qg.QOpenGLTexture.RGB, qg.QOpenGLTexture.UInt8,hist2dRGB.copy(), None)
+            # textureImage = qg.QImage(hist2dRGB, 256, 256, qg.QImage.Format_RGB888)
+            # texture = qg.QOpenGLTexture(textureImage)
+            # beam.beamTexture = qg.QOpenGLTexture(texture)            
+    #        texture.save(str(oe.name)+"_beam_hist.png")
+    #        if hasattr(meshObj, 'beamTexture'):
+    #            oe.beamTexture.setData(texture)
+            beam.beamTexture = texture
+            texture.release()
             state = np.float32(np.where(((beam.state==1) | (beam.state==2)), 1., 0.))
             beam.vbo_good = setVertexBuffer(state, 1, shaderBeam, "state")
 
@@ -3425,6 +3471,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        beam.tex3d_shader.release()
 
     def init_beam(self, beam, endBeam=None):
+        # beam.beamTexture = None
         if endBeam is not None:
             if not hasattr(beam, 'targetVAOs'):
                 beam.targetVAOs = {}
@@ -3589,10 +3636,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beam.shader.setUniformValue(
                 "opacity",
                 float(self.pointOpacity if target is None else self.lineOpacity))
-
         beam.shader.setUniformValue(
                 "iMax",
                 float(self.iMax if self.globalNorm else beam.iMax))
+        beam.shader.setUniformValue(
+                "maxIndex",
+                float(len(beam.x)-1))
+        # print(beam.name, beam.beamTexture)
+        if beam.beamTexture is not None:
+            # print(beam.beamTexture)
+            beam.beamTexture.bind()
 
         if target is None:
             gl.glDrawArrays(gl.GL_POINTS, 0, beam.beamLen)
@@ -3625,6 +3678,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if self.lineProjectionWidth > 0:
                         gl.glLineWidth(self.lineProjectionWidth)
                     gl.glDrawArrays(gl.GL_LINES, 0, 2*beam.beamLen)
+
+        if beam.beamTexture is not None:
+            beam.beamTexture.bind()
 
         if target is None:
             beam.VAOp.release()
@@ -8343,18 +8399,22 @@ class Beam3D():
     attribute float colorAxis;
     attribute float state;
     attribute float intensity;
+    attribute float colorIndex;
     uniform float pointSize;
     uniform float opacity;
     uniform float iMax;
+    uniform float maxIndex;
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
     uniform vec2 colorMinMax;
     uniform vec4 gridMask;
     uniform vec4 gridProjection;
-    varying vec4 colorOut;
+    //varying vec4 colorOut;
     float hue;
     vec4 worldCoord;
+    //out vec2 texCoords;
+    out float texCoords;
 
     vec3 hsv2rgb(float h, float s, float v)
     {
@@ -8386,22 +8446,87 @@ class Beam3D():
     void main()
     {
       worldCoord = gridMask * (model * vec4(position, 1.0)) + gridProjection;
+      //texCoords = vec2(mod(colorIndex, 1024.0) / 256.0, floor(colorIndex / 1024.0) / 256.0);
+      //texCoords = colorIndex / maxIndex;
+      //texCoords = vec2(0.5, 0.6);
+      texCoords = 0.5;
       gl_Position = projection * view * worldCoord;
       gl_PointSize = pointSize;
-      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-      colorOut = vec4(hsv2rgb(hue*0.85, 0.85, 1.), opacity*state*intensity/iMax);
+      //hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+      //colorOut = vec4(hsv2rgb(hue*0.85, 0.85, 1.), opacity*state*intensity/iMax);
+
     }
     '''
 
     fragment_source = '''
     #version 400
 
-    varying vec4 colorOut;
+    vec4 colorOut;
+    //in vec2 texCoords;
+    in float texCoords;
+    //uniform sampler2D colorTexture;
+    uniform sampler1D colorTexture;
+    //out vec4 FragColor;
     void main()
     {
+      colorOut = vec4(texture(colorTexture, texCoords).rgb, 0.5);
       gl_FragColor = colorOut;
     }
     '''
+
+    # vertex_tex = '''
+    # #version 400 core
+    
+    # layout(location = 0) in vec3 position;
+    
+    # uniform mat4 model;
+    # uniform mat4 view;
+    # uniform mat4 projection;
+    
+    # out vec2 texCoords;
+    
+    # void main() {
+    #     texCoords = vec2(position.x, position.y);
+    #     gl_Position = projection * view * model * vec4(position, 1.0);
+    # }
+        
+    # '''
+
+    # fragment_tex = '''
+    # #version 400 core
+    
+    # uniform samplerBuffer colorBuffer;
+    # in float colorAxis;
+    # out vec4 FragColor;
+    
+    # vec3 hsv2rgb(float h, float s, float v) {
+    #     float C = s * v;
+    #     float X = C * (1. - abs(mod(h * 6., 2) - 1.));
+    #     float m = v - C;
+    #     float r, g, b;
+    #     if (h >= 0 && h < 0.166667) {
+    #         r = C, g = X, b = 0;
+    #     } else if (h >= 0.166667 && h < 0.333333) {
+    #         r = X, g = C, b = 0;
+    #     } else if (h >= 0.333333 && h < 0.5) {
+    #         r = 0, g = C, b = X;
+    #     } else if (h >= 0.5 && h < 0.666667) {
+    #         r = 0, g = X, b = C;
+    #     } else if (h >= 0.666667 && h < 0.833333) {
+    #         r = X, g = 0, b = C;
+    #     } else {
+    #         r = C, g = 0, b = X;
+    #     }
+    #     return vec3(r, g, b);
+    # }
+    
+    # void main() {
+    #     float hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+    #     vec3 rgb = hsv2rgb(hue * 0.85, 0.85, 1.0);
+    #     FragColor = vec4(rgb, 1.0);
+    # }
+
+    # '''
 
     vertex_3dt = '''
     #version 400
