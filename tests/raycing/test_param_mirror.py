@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev"
-__date__ = "20 Sep 2021"
+__date__ = "18 Aug 2024"
 import sys
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import numpy as np
@@ -19,11 +19,11 @@ E0, dE = 9000., 5.,
 p = 10000.
 q = p/2.
 pitch = 2e-3
-lim = [-0.5, 0.5]
+lim = [-0.25, 0.25]
 limZoom = [-1, 1]
 
 inclination = 0  # pitch of the source
-#inclination = 2.5e-3
+# inclination = 2.5e-3
 
 globalRoll = 0
 # globalRoll = np.pi/2
@@ -31,6 +31,7 @@ globalRoll = 0
 
 case = 'elliptical'
 # case = 'parabolical'
+# case = 'hyperbolic'
 
 
 def build_beamline(nrays=1e5):
@@ -57,51 +58,72 @@ def build_beamline(nrays=1e5):
         kwMirror = dict(f2=[mirrorCenter[0] + dqs*np.sin(globalRoll),
                             mirrorCenter[1] + dqc,
                             mirrorCenter[2] + dqs*np.cos(globalRoll)])
+    elif case == 'hyperbolic':  # point source, imaginary focus
+        kw.update(dict(
+            dx=0, dz=0, distxprime='flat', dxprime=1e-4,
+            distzprime='flat', dzprime=1e-4))
+        Mirror = roe.HyperbolicMirrorParam
+        kwMirror = dict(f1=sourceCenter, q=q)
+        # kwMirror = dict(f1=sourceCenter,
+        #                 f2=[0, p-q*np.cos(2*pitch), -q*np.sin(2*pitch)])
+    else:
+        raise ValueError('Unknown mirror')
 
     rs.GeometricSource(
         beamLine, 'GeometricSource', sourceCenter, **kw)
     beamLine.fsm1 = rsc.Screen(beamLine, 'beforeMirror', mirrorCenter)
-    beamLine.ellMirror = Mirror(
-        beamLine, 'EllM', mirrorCenter, rotationSequence='RyRzRx',
+    beamLine.mirror = Mirror(
+        beamLine, 'M1', mirrorCenter, rotationSequence='RyRzRx',
         pitch=pitch+inclination*np.cos(globalRoll), positionRoll=globalRoll,
         yaw=inclination*np.sin(globalRoll), **kwMirror)
 
+    if case == 'elliptical':
+        print('ellipseA', beamLine.mirror.ellipseA,
+              'ellipseB', beamLine.mirror.ellipseB)
+    if case == 'hyperbolic':
+        print('sinGamma', beamLine.mirror.sinGamma)
+        print('hyperbolaA', beamLine.mirror.hyperbolaA,
+              'hyperbolaB', beamLine.mirror.hyperbolaB)
+
+    # The screen beamLine.fsm2 will be placed at the focus of ellipse, parabola
+    # or hyperbola plus a few positions up- and downstream
     beamLine.fsm2 = rsc.Screen(beamLine, '@focus', [0, 0, 0])
-    beamLine.fsm2dY = np.linspace(-2, 2, 5) * q*0.1
+    beamLine.fsm2dY = np.linspace(-2000, 2000, 5)  # positions around focus
     return beamLine
 
 
 def run_process(beamLine, shineOnly1stSource=False):
     beamSource = beamLine.sources[0].shine()
-    xprime = beamSource.a / beamSource.b
-    zprime = beamSource.c / beamSource.b
-    print(xprime.max()-xprime.min(), zprime.max()-zprime.min())
+    # xprime = beamSource.a / beamSource.b
+    # zprime = beamSource.c / beamSource.b
+    # print(xprime.max()-xprime.min(), zprime.max()-zprime.min())
     beamFSM1 = beamLine.fsm1.expose(beamSource)
-    beamEMglobal, beamEMlocal = beamLine.ellMirror.reflect(beamSource)
+    beamMglobal, beamMlocal = beamLine.mirror.reflect(beamSource)
     outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1,
-               'beamEMglobal': beamEMglobal,
-               'beamEMlocal': beamEMlocal}
+               'beamMglobal': beamMglobal, 'beamMlocal': beamMlocal}
+
+    qsign = -1 if case == 'hyperbolic' else 1
     if showIn3D:
-        dqs = q * np.sin(2*pitch+inclination)
-        dqc = q * np.cos(2*pitch+inclination)
-        beamLine.fsm2.center[0] = beamLine.ellMirror.center[0] +\
+        dqs = qsign * q * np.sin(2*pitch+inclination)
+        dqc = qsign * q * np.cos(2*pitch+inclination)
+        beamLine.fsm2.center[0] = beamLine.mirror.center[0] +\
             dqs*np.sin(globalRoll)
-        beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + dqc
-        beamLine.fsm2.center[2] = beamLine.ellMirror.center[2] +\
+        beamLine.fsm2.center[1] = beamLine.mirror.center[1] + dqc
+        beamLine.fsm2.center[2] = beamLine.mirror.center[2] +\
             dqs*np.cos(globalRoll)
-        beamFSM2 = beamLine.fsm2.expose(beamEMglobal)
+        beamFSM2 = beamLine.fsm2.expose(beamMglobal)
         outDict['beamFSM2-0'] = beamFSM2
         beamLine.prepare_flow()
     else:
         for i, dy in enumerate(beamLine.fsm2dY):
-            dqs = (q+dy) * np.sin(2*pitch+inclination)
-            dqc = (q+dy) * np.cos(2*pitch+inclination)
-            beamLine.fsm2.center[0] = beamLine.ellMirror.center[0] +\
+            dqs = qsign * (q+dy) * np.sin(2*pitch+inclination)
+            dqc = qsign * (q+dy) * np.cos(2*pitch+inclination)
+            beamLine.fsm2.center[0] = beamLine.mirror.center[0] +\
                 dqs*np.sin(globalRoll)
-            beamLine.fsm2.center[1] = beamLine.ellMirror.center[1] + dqc
-            beamLine.fsm2.center[2] = beamLine.ellMirror.center[2] +\
+            beamLine.fsm2.center[1] = beamLine.mirror.center[1] + dqc
+            beamLine.fsm2.center[2] = beamLine.mirror.center[2] +\
                 dqs*np.cos(globalRoll)
-            beamFSM2 = beamLine.fsm2.expose(beamEMglobal)
+            beamFSM2 = beamLine.fsm2.expose(beamMglobal)
             outDict['beamFSM2-{0:d}'.format(i+1)] = beamFSM2
 
     return outDict
@@ -118,6 +140,11 @@ def main():
     plots = []
 
     plot = xrtp.XYCPlot('beamFSM1', caxis='category')
+    plots.append(plot)
+
+    xaxis = xrtp.XYCAxis(r'$x$')
+    yaxis = xrtp.XYCAxis(r'$y$')
+    plot = xrtp.XYCPlot('beamMlocal', aspect='auto', xaxis=xaxis, yaxis=yaxis)
     plots.append(plot)
 
     for i, dy in enumerate(beamLine.fsm2dY):

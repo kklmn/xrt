@@ -1843,10 +1843,11 @@ class OE(object):
             lb.z[good] -= dz
 
 # x, y, z:
-        if fromVacuum:
-            invertNormal = 1
+        if hasattr(self, 'invertNormal'):
+            invertNormal = self.invertNormal
         else:
-            invertNormal = -1
+            invertNormal = 1 if fromVacuum else -1
+
 #        mainPartForBracketing = lb.state[good] > 0
         mainPartForBracketing = lb.state[good] == 1
         tMin = np.zeros_like(lb.x)

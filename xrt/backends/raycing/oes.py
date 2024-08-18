@@ -53,6 +53,7 @@ elements with various geometries.
 .. .. autoclass:: ParabolicMirror(OE)
 .. autoclass:: EllipticalMirrorParam(OE)
 .. autoclass:: ParabolicalMirrorParam(EllipticalMirrorParam)
+.. autoclass:: HyperbolicMirrorParam(OE)
 .. autoclass:: ConicalMirror(OE)
    :members: __init__
 .. autoclass:: DCM(OE)
@@ -104,7 +105,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'BentLaueCylinder', 'BentLaue2D', 'GroundBentLaueCylinder',
            'BentLaueSphere', 'BentFlatMirror', 'ToroidMirror',
            'EllipticalMirrorParam', 'ParabolicalMirrorParam',
-           'ConicalMirror',
+           'HyperbolicMirrorParam', 'ConicalMirror',
            'ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
@@ -1520,20 +1521,21 @@ class EllipticalMirrorParam(OE):
         defined somewhere on the surface and *pitch* is referred to that point.
 
     The user supplies two foci either by focal distances *p* and *q* (both are
-    positive distances from the center to the focal points) or as *f1* and *f2*
-    points in the global coordinate system (3-sequences). Any combination of
-    (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is supplied, not *f1*,
-    the incoming optical axis is assumed to be along the global Y axis. For a
-    general orientation of the ellipse axes *f1* or *pAxis* -- the *p* arm
-    direction in global coordinates -- should be supplied.
+    positive distances from the mirror center to the focal points) or as *f1*
+    and *f2* points in the global coordinate system (3-sequences). Any
+    combination of (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is
+    supplied, not *f1*, the incoming optical axis is assumed to be along the
+    global Y axis. For a general orientation of the ellipse axes *f1* or
+    *pAxis* -- the *p* arm direction in global coordinates -- should be
+    supplied.
 
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
-        attributes of this mirror object; the ellipsoid parameters parameters
+        attributes of this mirror object; the ellipse parameters parameters
         will be recalculated automatically.
 
-    Values of the ellipse's semi-major and semi-minor axes lengths can be
+    Values of the ellipse semi-major and semi-minor axes lengths can be
     accessed after init as *ellipseA* and *ellipseB* respectively.
 
     The usage is exemplified in `test_param_mirror.py` and
@@ -1751,6 +1753,12 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
     parabolical cylinder, otherwise it is a paraboloid of revolution around the
     major axis.
 
+    If *isClosed* is True (default is False), the mirror is a complete surface
+    of revolution. Otherwise the mirror is open, i.e. only its lower half is
+    effective. If you want a closed mirror, compare this OE with
+    :class:`ParaboloidCapillaryMirror` that can produce the same surface, just
+    with another meaning of *center* and *pitch* parameters.
+
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *parabolaAxis* can be set as instance
@@ -1854,6 +1862,7 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         self.q = kwargs.pop('q', None)  # mirror-to-focus
         self.parabolaAxis = kwargs.pop('parabolaAxis', None)
         self.isCylindrical = kwargs.pop('isCylindrical', False)
+        self.isClosed = kwargs.pop('isClosed', False)
         return kwargs
 
     def local_r(self, s, phi):
@@ -1862,6 +1871,8 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         r = 2 * r2**0.5
         if self.isCylindrical:
             r /= abs(np.cos(phi))
+        if self.isClosed:
+            return r
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)
 
     def local_n(self, s, phi):
@@ -1879,6 +1890,228 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
 
 
 ParabolicMirror = ParabolicalMirrorParam
+
+
+class HyperbolicMirrorParam(OE):
+    """The hyperbolic mirror is implemented as a parametric surface. The
+    parameterization is the following: *s* - is local coordinate along the
+    major axis with origin at the hyperbola center. *phi* and *r* are local
+    polar coordinates in planes normal to the major axis at every point *s*.
+    The polar axis is upwards.
+
+    The *center* of this OE lies on the mirror surface and its *pitch* is Rx
+    at this point.
+
+    If *isCylindrical* is True (default is False), the figure is a hyperbolic
+    cylinder being flat in the lateral direction, otherwise it is a hyperboloid
+    of revolution around the major axis.
+
+    If *isClosed* is True (default is False), the mirror is a complete surface
+    of revolution. Otherwise the mirror is open, i.e. only its upper half is
+    effective.
+
+    .. note::
+
+        If the mirror is a closed surface, *pitch* should still be non-zero
+        even if the major axis lies on the optical axis. A *center* must be
+        defined somewhere on the surface and *pitch* is referred to that point.
+
+    The user supplies two foci either by focal distances *p* and *q* (both are
+    positive distances from the mirror center to the focal points) or as *f1*
+    and *f2* points in the global coordinate system (3-sequences). Any
+    combination of (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is
+    supplied, not *f1*, the incoming optical axis is assumed to be along the
+    global Y axis. For a general orientation of the hyperbola axes *f1* or
+    *pAxis* -- the *p* arm direction in global coordinates -- should be
+    supplied.
+
+    .. note::
+
+        Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
+        attributes of this mirror object; the hyperbola parameters parameters
+        will be recalculated automatically.
+
+    Values of the hyperbola semi-major and semi-minor axes lengths can be
+    accessed after init as *hyperbolaA* and *hyperbolaB* respectively.
+
+    The usage is exemplified in `test_param_mirror.py`. the test script can
+    produce a 3D view by xrtGlow if a corresponding option at the top of the
+    script is enabled.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        *p* and *q*: float
+            *p* and *q* arms of the mirror -- positive distances from the
+            mirror center to the foci.
+
+        *f1* and *f2*: 3-sequence
+            Focal points in the global coordinate system. Alternatives for,
+            correspondingly, *p* and *q*.
+
+        *pAxis*: 3-sequence
+            Used with *p*, the *p* arm direction in global coordinates,
+            defaults to the global Y axis.
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        OE.__init__(self, *args, **kwargs)
+        self.isParametric = True
+        self.invertNormal = -1
+        self._reset_pq()  # self.p, self.q, self.f1, self.f2, self.pAxis)
+
+    def _to_global(self, lb):
+        # if self.extraPitch or self.extraRoll or self.extraYaw:
+        #     raycing.rotate_beam(
+        #         lb, rotationSequence='-'+self.extraRotationSequence,
+        #         pitch=self.extraPitch, roll=self.extraRoll,
+        #         yaw=self.extraYaw, skip_xyz=True)
+        raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
+                            pitch=self.pitch, roll=self.roll+self.positionRoll,
+                            yaw=self.yaw, skip_xyz=True)
+        raycing.virgin_local_to_global(self.bl, lb, self.center, skip_xyz=True)
+
+    def reset_pqpitch(self, p=None, q=None, pitch=None):
+        """Compatibility method. To pass pitch is not needed any longer."""
+        self._reset_pq()
+
+    def reset_pq(self, p=None, q=None, f1=None, f2=None, pAxis=None):
+        """Compatibility method. All calculations moved to setters."""
+        self._reset_pq()
+
+    def _reset_pq(self):  # , p=None, q=None, f1=None, f2=None, pAxis=None):
+        """This method allows re-assignment of *p*, *q*, *pitch*, *f1* and *f2*
+        from outside of the constructor.
+        """
+        if not all([hasattr(self, v) for v in
+                    ['_p', '_q', '_f1', '_f2', '_pAxis',
+                     '_pitchVal', '_roll', '_yaw',
+                     '_positionRoll', 'rotationSequence']]):
+            return
+        lbn = rs.Beam(nrays=1)
+        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
+        self._to_global(lbn)
+        normal = lbn.a[0], lbn.b[0], lbn.c[0]
+
+        if self.f1 is not None:
+            p = (sum((x-y)**2 for x, y in zip(self.center, self.f1)))**0.5
+            axis = [c-f for c, f in zip(self.center, self.f1)]
+            self._p = p
+        else:
+            axis = self.pAxis if self.pAxis else [0, 1, 0]
+
+        norm = sum([a**2 for a in axis])**0.5
+        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
+        absPitch = abs(np.arcsin(sintheta))
+
+        if self.f2 is not None:
+            q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
+            self._q = q
+
+        # gamma is angle between the major axis and the mirror surface
+        if self.p and self.q:
+            gamma = np.arctan2((self.p + self.q) * np.sin(absPitch),
+                               (self.p - self.q) * np.cos(absPitch))
+            self.cosGamma = np.cos(gamma)
+            self.sinGamma = np.sin(gamma)
+            # (y0, z0) is the hyperbola center in local coordinates
+            self.y0 = -(self.p + self.q)/2. * np.cos(absPitch)
+            self.z0 = (self.p - self.q)/2. * np.sin(absPitch)
+            self.hyperbolaA = abs(self.p - self.q)/2.
+            self.hyperbolaB = np.sqrt(self.p*self.q) * np.sin(absPitch)
+
+    @property
+    def p(self):
+        return self._p
+
+    @p.setter
+    def p(self, p):
+        self._p = p
+        self._reset_pq()
+
+    @property
+    def q(self):
+        return self._q
+
+    @q.setter
+    def q(self, q):
+        self._q = q
+        self._reset_pq()
+
+    @property
+    def f1(self):
+        return self._f1
+
+    @f1.setter
+    def f1(self, f1):
+        self._f1 = f1
+        self._reset_pq()
+
+    @property
+    def f2(self):
+        return self._f2
+
+    @f2.setter
+    def f2(self, f2):
+        self._f2 = f2
+        self._reset_pq()
+
+    @property
+    def pAxis(self):
+        return self._pAxis
+
+    @pAxis.setter
+    def pAxis(self, pAxis):
+        self._pAxis = pAxis
+        self._reset_pq()
+
+    def __pop_kwargs(self, **kwargs):
+        self.f1 = kwargs.pop('f1', None)
+        self.f2 = kwargs.pop('f2', None)
+        self.pAxis = kwargs.pop('pAxis', None)
+        self.p = kwargs.pop('p', 1000)  # source-to-mirror
+        self.q = kwargs.pop('q', 1000)  # mirror-to-focus
+        self.isCylindrical = kwargs.pop('isCylindrical', False)
+        self.isClosed = kwargs.pop('isClosed', False)
+        return kwargs
+
+    def xyz_to_param(self, x, y, z):
+        yNew, zNew = raycing.rotate_x(y - self.y0, z - self.z0, self.cosGamma,
+                                      self.sinGamma)
+        return yNew, np.arctan2(x, zNew), np.sqrt(x**2 + zNew**2)  # s, phi, r
+
+    def param_to_xyz(self, s, phi, r):
+        x = r * np.sin(phi)
+        y = s
+        z = r * np.cos(phi)
+        yNew, zNew = raycing.rotate_x(y, z, self.cosGamma, -self.sinGamma)
+        return x, yNew + self.y0, zNew + self.z0
+
+    def local_r(self, s, phi):
+        r = self.hyperbolaB * np.sqrt(abs(s**2/self.hyperbolaA**2 - 1))
+        if self.isCylindrical:
+            r /= abs(np.cos(phi))
+        if self.isClosed:
+            return r
+        return np.where(abs(phi) < np.pi/2, r, np.ones_like(phi)*1e20)
+
+    def local_n(self, s, phi):
+        A2s2 = np.array(s**2 - self.hyperbolaA**2)
+        A2s2[A2s2 <= 0] = 1e22  # this rays will be lost
+        nr = -self.hyperbolaB / self.hyperbolaA * s / np.sqrt(A2s2)
+        norm = np.sqrt(nr**2 + 1)
+        b = nr / norm
+        if self.isCylindrical:
+            a = np.zeros_like(phi)
+            c = 1. / norm
+        else:
+            a = np.sin(phi) / norm
+            c = np.cos(phi) / norm
+        bNew, cNew = raycing.rotate_x(b, c, self.cosGamma, -self.sinGamma)
+        return [a, bNew, cNew]
+
+
+HyperbolicMirror = HyperbolicMirrorParam
 
 
 class ConicalMirror(OE):
@@ -3114,7 +3347,7 @@ class BlazedGrating(OE):
             self.sinBlaze, self.cosBlaze, self.tanBlaze =\
                 np.sin(self.blaze), np.cos(self.blaze), np.tan(self.blaze)
             self.sinAntiblaze, self.cosAntiblaze, self.tanAntiblaze =\
-                np.sin(self.antiblaze), np.cos(self.antiblaze),\
+                np.sin(self.antiblaze), np.cos(self.antiblaze), \
                 np.tan(self.antiblaze)
 
     def _get_period(self, coord):

@@ -564,6 +564,7 @@ class SourceFromField(IntegratedSource):
         return '5-SFF-xrt'
 
     def read_custom_field(self, fname, kwargs={}):
+        print(f'reading custom field from {fname}')
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             from pandas import read_excel
             data = read_excel(fname, **kwargs).values
