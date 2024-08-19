@@ -74,6 +74,8 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: EllipsoidCapillaryMirror(SurfaceOfRevolution)
    :members: __init__
+.. autoclass:: HyperboloidCapillaryMirror(SurfaceOfRevolution)
+   :members: __init__
 .. autoclass:: NormalFZP(OE)
    :members: __init__, rays_good
 .. autoclass:: GeneralFZPin0YZ(OE)
@@ -107,6 +109,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'EllipticalMirrorParam', 'ParabolicalMirrorParam',
            'HyperbolicMirrorParam', 'ConicalMirror',
            'ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
+           'HyperboloidCapillaryMirror',
            'DCM', 'DCMwithSagittalFocusing', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
@@ -120,8 +123,7 @@ __allSectioned__ = collections.OrderedDict([
     ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
          'ParabolicalMirrorParam',
-         'ConicalMirror',
-         'ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror')),
+         'ConicalMirror')),
     ('Crystal optics',
         ('JohannCylinder', 'JohanssonCylinder', 'JohannToroid',
          'JohanssonToroid', 'GeneralBraggToroid', 'DicedJohannToroid',
@@ -132,7 +134,8 @@ __allSectioned__ = collections.OrderedDict([
         ('ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
          'DoubleParaboloidLens', 'DoubleParabolicCylinderLens')),
     ('Capillary Mirrors',
-     ('ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror')),
+     ('ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
+      'HyperboloidCapillaryMirror')),
     ('Gratings and zone plates',
         ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
          'VLSLaminarGrating'))
@@ -1899,6 +1902,8 @@ class HyperbolicMirrorParam(OE):
     polar coordinates in planes normal to the major axis at every point *s*.
     The polar axis is upwards.
 
+    Unlike EllipticalMirrorParam, reflective is the *outer* surface.
+
     The *center* of this OE lies on the mirror surface and its *pitch* is Rx
     at this point.
 
@@ -1908,7 +1913,9 @@ class HyperbolicMirrorParam(OE):
 
     If *isClosed* is True (default is False), the mirror is a complete surface
     of revolution. Otherwise the mirror is open, i.e. only its upper half is
-    effective.
+    effective. If you want a closed mirror, compare this OE with
+    :class:`HyperboloidCapillaryMirror` that can produce the same surface, just
+    with another meaning of *center* and *pitch* parameters.
 
     .. note::
 
@@ -1934,9 +1941,9 @@ class HyperbolicMirrorParam(OE):
     Values of the hyperbola semi-major and semi-minor axes lengths can be
     accessed after init as *hyperbolaA* and *hyperbolaB* respectively.
 
-    The usage is exemplified in `test_param_mirror.py`. the test script can
-    produce a 3D view by xrtGlow if a corresponding option at the top of the
-    script is enabled.
+    The usage is exemplified in `test_param_mirror.py` and
+    `test_hyperboloid_tube_mirror.py`. Both test scripts can produce a 3D view
+    by xrtGlow if a corresponding option at the top of the script is enabled.
 
     """
 
@@ -1957,7 +1964,7 @@ class HyperbolicMirrorParam(OE):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.invertNormal = -1
+        self.invertNormal = -1  # the outer surface is reflective
         self._reset_pq()  # self.p, self.q, self.f1, self.f2, self.pAxis)
 
     def _to_global(self, lb):
@@ -2832,20 +2839,22 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
     def __init__(self, *args, **kwargs):
         r"""
         The center is on major axis in the middle of the capillary. *pitch* is
-        zero if the capillary is on the optical axis.
+        zero if the capillary axis is parallel to the optical axis.
 
         *ellipseA*: float
-            Semi-major axis, half of source-to-sample distance.
+            Semi-major axis.
 
         *ellipseB*: float
-            Semi-minor axis. Do not confuse with the size of the actual
-            capillary!
+            Semi-minor axis. Do not confuse with the radius of the capillary!
 
         *workingDistance*: float
-            Distance between the end face of the capillary and focus. Mind the
-            length of the optical element for proper positioning.
+            Distance between the end face of the capillary tube and the focal
+            point. Mind the length of the optical element for proper
+            positioning.
 
-        The usage is exemplified in `test_ellipsoid_tube_mirror.py`.
+        The usage is exemplified in `test_ellipsoid_tube_mirror.py`. There, one
+        can find expressions of ellipse semi-axes based on focal lengths and
+        capillary radius.
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
@@ -2917,6 +2926,108 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
         b = nr / norm
         a = -np.sin(phi) / norm
         c = -np.cos(phi) / norm
+        return a, b, c
+
+
+class HyperboloidCapillaryMirror(SurfaceOfRevolution):
+    """Hyperboloid of revolution a.k.a. Mirror Lens. Unlike
+    EllipsoidCapillaryMirror, reflective is the *outer* surface. Do not
+    forget to set reasonable limPhysY."""
+
+    def __init__(self, *args, **kwargs):
+        r"""
+        The center is on major axis in the middle of the capillary. *pitch* is
+        zero if the capillary axis is parallel to the optical axis.
+
+        *hyperbolaA*: float
+            Semi-major axis.
+
+        *hyperbolaB*: float
+            Semi-minor axis. Do not confuse with the radius of the capillary!
+
+        *workingDistance*: float
+            Distance between the imaginary focus and the front face of the
+            capillary tube. Mind the length of the optical element for proper
+            positioning.
+
+        The usage is exemplified in `test_hyperboloid_tube_mirror.py`. There,
+        one can find expressions of hyperbola semi-axes based on focal lengths
+        and capillary radius.
+
+        """
+        kwargs = self.__pop_kwargs(**kwargs)
+        self.invertNormal = -1  # the outer surface is reflective
+        super().__init__(*args, **kwargs)
+
+    @property
+    def hyperbolaA(self):
+        return self._hyperbolaA
+
+    @hyperbolaA.setter
+    def hyperbolaA(self, hyperbolaA):
+        self._hyperbolaA = hyperbolaA
+        self.reset_curvature()
+
+    @property
+    def hyperbolaB(self):
+        return self._hyperbolaB
+
+    @hyperbolaB.setter
+    def hyperbolaB(self, hyperbolaB):
+        self._hyperbolaB = hyperbolaB
+        self.reset_curvature()
+
+    @property
+    def workingDistance(self):
+        return self._workingDistance
+
+    @workingDistance.setter
+    def workingDistance(self, workingDistance):
+        self._workingDistance = workingDistance
+        self.reset_curvature()
+
+    @property
+    def limPhysY(self):
+        return self._limPhysY
+
+    @limPhysY.setter
+    def limPhysY(self, limPhysY):
+        if limPhysY is None:
+            self._limPhysY = [-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE]
+        else:
+            self._limPhysY = limPhysY
+        self.reset_curvature()
+
+    def reset_curvature(self):
+        if not all([hasattr(self, v) for v in [
+                '_hyperbolaA', '_hyperbolaB', '_workingDistance',
+                '_limPhysY']]):
+            return
+        c = (self.hyperbolaA**2 + self.hyperbolaB**2)**0.5
+        self.ctd = c + self.workingDistance +\
+            0.5*np.abs(self.limPhysY[-1]-self.limPhysY[0])
+
+    def __pop_kwargs(self, **kwargs):
+        self.hyperbolaA = kwargs.pop('hyperbolaA', 10000)  # Semi-major axis
+        self.hyperbolaB = kwargs.pop('hyperbolaB', 2.5)  # Semi-minor axis
+        self.workingDistance = kwargs.pop('workingDistance', 17.)
+        return kwargs
+
+    def local_r(self, s, phi):
+        ss = self.ctd + s
+        r = self.hyperbolaB * np.sqrt(abs(ss**2/self.hyperbolaA**2 - 1))
+        return r
+
+    def local_n(self, s, phi):
+        ss = self.ctd + s
+        A2s2 = np.array(ss**2 - self.hyperbolaA**2)
+        A2s2[A2s2 <= 0] = 1e22  # this rays will be lost
+        nr = -self.hyperbolaB / self.hyperbolaA * ss / np.sqrt(A2s2)
+        norm = np.sqrt(nr**2 + 1)
+        b = nr / norm
+        a = np.sin(phi) / norm
+        c = np.cos(phi) / norm
         return a, b, c
 
 
