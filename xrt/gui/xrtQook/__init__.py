@@ -1159,7 +1159,7 @@ class XrtQook(qt.QWidget):
 | See a brief `startup tutorial <{0}>`_, `the documentation <http://xrt.rtfd.io>`_ and check the latest updates on `GitHub <https://github.com/kklmn/xrt>`_.
 
 :Created by:
-    Roman Chernikov (`Canadian Light Source <http://www.lightsource.ca>`_)\n
+    Roman Chernikov (`NSLS-II <http://https://www.bnl.gov/nsls2/>`_)\n
     Konstantin Klementiev (`MAX IV Laboratory <https://www.maxiv.lu.se/>`_)
 :License:
     MIT License, March 2016

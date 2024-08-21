@@ -260,7 +260,7 @@ from .version import __versioninfo__, __version__, __date__
 __module__ = "xrt"
 __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory), " +\
-    "Roman Chernikov (Canadian Light Source)"
+    "Roman Chernikov (NSLS-II)"
 __email__ = "konstantin DOT klementiev AT gmail DOT com, " +\
             "rchernikov AT gmail DOT com"
 __license__ = "MIT license"
