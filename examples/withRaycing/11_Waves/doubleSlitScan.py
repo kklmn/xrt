@@ -96,7 +96,6 @@ else:
     xName = '$x$'
     zName = '$z$'
     unit = u'µm'
-    dunit = '$\mu$rad'
 
 dx = (xlimits[1] - xlimits[0]) / xBins
 xmesh = np.linspace((xlimits[0] + dx/2) / xfactor,
@@ -206,7 +205,7 @@ def plot_generator(plots, beamLine):
         beamLine.fsm1.center[1] = (R0s+dX)*1000.
         str1 = '{0} - slit at {1:.0f}m, deltaSlit {2:03.0f}mum'
         str2 = ', slitWidth {3:.0f}mum, screen at {4:.0f}m.png'
-        tt = u'$\Delta$ slit = {0:.0f} µm'.format((slitZ-slitwidth)*1e3)
+        tt = u'Δ slit = {0:.0f} µm'.format((slitZ-slitwidth)*1e3)
         for plot in plots:
             plot.ax2dHist.locator_params(axis='x', nbins=4)
             plot.xaxis.limits = xlimits

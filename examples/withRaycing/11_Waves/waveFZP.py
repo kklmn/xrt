@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""
+r"""
 .. !!! select one of the two functions to run at the very bottom !!!
 
 .. _fzpDiffraction:
