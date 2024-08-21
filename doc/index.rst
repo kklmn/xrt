@@ -10,7 +10,7 @@ xrt (XRayTracer)
 :GitHub: |GHver| |GHdate|
 :PyPI: |PPver| |PPdate| :ref:`version history <history>`, :ref:`plans <plans>`
 :License:  |GHlic|
-:Authors: Konstantin Klementiev (MAX IV Laboratory), Roman Chernikov (Canadian Light Source)
+:Authors: Konstantin Klementiev (MAX IV Laboratory), Roman Chernikov (NSLS-II)
 
 -----
 
