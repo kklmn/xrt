@@ -576,6 +576,8 @@ def run_ray_tracing(
     global runCardVals, runCardProcs, _plots
     frm = inspect.stack()[1]
     mod = inspect.getmodule(frm[0])
+    if mod is None:
+        mod = inspect.getmodule(frm)
     runfile = mod.__file__
     # patch for starting a script with processes>1 from Spyder console
     if not hasattr(mod, "__spec__"):
