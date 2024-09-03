@@ -49,6 +49,8 @@ import copy
 import pickle
 import numpy as np
 import scipy as sp
+from scipy.interpolate import UnivariateSpline
+
 import matplotlib as mpl
 from matplotlib.ticker import MaxNLocator
 from . import runner
@@ -421,7 +423,7 @@ class XYCAxis(object):
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6
-                elif self.unit in ['pm', ]:
+                elif self.unit in ['pm', 'nrad']:
                     factor = 1.0e9
                 elif self.unit in ['fm', ]:
                     factor = 1.0e12
@@ -687,7 +689,7 @@ class XYCPlot(object):
         self.beam = beam  # binary shadow image: star, mirr or screen
         if beam is None:
             self.backend = 'raycing'
-        elif '.' in beam:
+        elif 'star.' in beam or 'mirr.' in beam or 'screen.' in beam:
             self.backend = 'shadow'
         elif ('dummy' in beam) or (beam == ''):
             self.backend = 'dummy'
@@ -1329,27 +1331,31 @@ class XYCPlot(object):
         for line in graph.lines:
             line.remove()
 
+        axis.binCenters = (axis.binEdges[:-1]+axis.binEdges[1:]) * 0.5
         if axis.max1D > 0:
-            args = np.argwhere(xx >= xxMaxHalf)
-            iHistFWHMlow = np.min(args)
-            iHistFWHMhigh = np.max(args) + 1
-            histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
-            histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
+            wantDiscrete = (xx[0] > xxMaxHalf) or (xx[-1] > xxMaxHalf)
+            if not wantDiscrete:
+                try:
+                    spl = UnivariateSpline(axis.binCenters, xx-xxMaxHalf, s=0)
+                    roots = spl.roots()
+                    histFWHMlow = min(roots) - axis.offset
+                    histFWHMhigh = max(roots) - axis.offset
+                except ValueError:
+                    wantDiscrete = True
+            if wantDiscrete:
+                args = np.argwhere(xx >= xxMaxHalf)
+                iHistFWHMlow = np.min(args)
+                iHistFWHMhigh = np.max(args) + 1
+                histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
+                histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
+
             if axis.fwhmFormatStr is not None:
                 xFWHM = [histFWHMlow, histFWHMhigh]
                 yFWHM = [xxMaxHalf, xxMaxHalf]
                 if orientation[0] == 'h':
-                    if hasattr(graph, 'histFWHMmarksH'):
-                        graph.histFWHMmarksH.set_data(xFWHM, yFWHM)
-                    else:
-                        graph.histFWHMmarksH, = graph.plot(
-                            xFWHM, yFWHM, '+', color='grey')
+                    graph.plot(xFWHM, yFWHM, '+', color='grey')
                 elif orientation[0] == 'v':
-                    if hasattr(graph, 'histFWHMmarksV'):
-                        graph.histFWHMmarksV.set_data(yFWHM, xFWHM)
-                    else:
-                        graph.histFWHMmarksV, = graph.plot(
-                            yFWHM, xFWHM, '+', color='grey')
+                    graph.plot(yFWHM, xFWHM, '+', color='grey')
         else:
             histFWHMlow = 0
             histFWHMhigh = 0
@@ -1373,7 +1379,6 @@ class XYCPlot(object):
             if not isinstance(axis.limits, str):
                 graph.set_ylim(ll)
 
-        axis.binCenters = (axis.binEdges[:-1]+axis.binEdges[1:]) * 0.5
         weighted1D = axis.total1D * axis.binCenters
         xxAve = axis.total1D.sum()
         if xxAve != 0:
