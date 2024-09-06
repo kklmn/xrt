@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """This script launches xrtQook. It optionally defines custom classes of
 optical elements to be visible in xrtQook."""
