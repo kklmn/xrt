@@ -923,6 +923,9 @@ class BeamLine(object):
                 for odObjectName, odMemObject in memObject.items():
                     self.beamsDict[odObjectName] = odMemObject
                     self.beamsRevDict[id(odMemObject)] = odObjectName
+
+        print(self.beamsDict.keys())
+
         if self.flow is not None and len(self.beamsRevDict) > 0:
             for segment in self.flow:
                 for iseg in [2, 3]:

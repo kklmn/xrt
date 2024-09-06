@@ -157,9 +157,11 @@ def getParams(obj):
                                     argVal = "None"
                                 if arg not in args and arg not in hpList:
                                     uArgs[arg] = argVal
+                    attr = 'varkw' if hasattr(argSpec, 'varkw') else \
+                        'keywords'
                     if namef == "__init__" and\
                             str(argSpec.varargs) == 'None' and\
-                            str(argSpec.keywords) == 'None':
+                            str(getattr(argSpec, attr)) == 'None':
                         break  # To prevent the parent class __init__
             else:
                 continue
@@ -1299,6 +1301,8 @@ class xrtGlow(qt.QWidget):
 #        iconsDirQ = os.path.join(self.xrtQookDir, '_icons')
 
         self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
+        
+        print(arrayOfRays)
 
         if arrayOfRays is not None:
             self.blOes = arrayOfRays[2]
@@ -2136,6 +2140,7 @@ class xrtGlow(qt.QWidget):
                     self.oesList[elName].append(None)
                 self.oesList[elName].append(center)
                 self.oesList[elName].append(is2ndXtal)
+        print(self.oesList.keys())
 
     def createRow(self, text, segMode, elRec=None):
         newRow = []
@@ -2560,7 +2565,7 @@ class xrtGlow(qt.QWidget):
                 pass
         editor.setText("{0:.2f}".format(position))
         self.customGlWidget.scaleVec[iax] = np.float32(np.power(10, position))
-        self.customGlWidget.cBox.update_grid()
+#        self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
     def updateScaleFromGL(self, scale):
@@ -2584,9 +2589,9 @@ class xrtGlow(qt.QWidget):
                 position /= slider.scale
             except:  # analysis:ignore
                 pass
-        self.customGlWidget.cBox.fontScale = position
+#        self.customGlWidget.cBox.fontScale = position
 #        self.customGlWidget.cBox.makefont()
-        print(self.customGlWidget.cBox.fontScale)
+#        print(self.customGlWidget.cBox.fontScale)
         self.customGlWidget.glDraw()
 
     def updateRaysList(self, item):
@@ -3289,6 +3294,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             dataColor = np.float32(raycing.get_energy(beam))
             beam.vbo_colorax = setVertexBuffer(dataColor, 1, shaderBeam, "colorAxis")
+            """
             beamlen = np.int32(len(beam.x))
             print(f"{beamlen=}")
             dataIndex = np.arange(beamlen, dtype=np.float32)
@@ -3332,6 +3338,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
     #            oe.beamTexture.setData(texture)
             beam.beamTexture = texture
             texture.release()
+            """
             state = np.float32(np.where(((beam.state==1) | (beam.state==2)), 1., 0.))
             beam.vbo_good = setVertexBuffer(state, 1, shaderBeam, "state")
 
@@ -3639,13 +3646,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beam.shader.setUniformValue(
                 "iMax",
                 float(self.iMax if self.globalNorm else beam.iMax))
-        beam.shader.setUniformValue(
-                "maxIndex",
-                float(len(beam.x)-1))
-        # print(beam.name, beam.beamTexture)
-        if beam.beamTexture is not None:
-            # print(beam.beamTexture)
-            beam.beamTexture.bind()
+#        beam.shader.setUniformValue(
+#                "maxIndex",
+#                float(len(beam.x)-1))
+#        # print(beam.name, beam.beamTexture)
+#        if beam.beamTexture is not None:
+#            # print(beam.beamTexture)
+#            beam.beamTexture.bind()
 
         if target is None:
             gl.glDrawArrays(gl.GL_POINTS, 0, beam.beamLen)
@@ -3679,8 +3686,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         gl.glLineWidth(self.lineProjectionWidth)
                     gl.glDrawArrays(gl.GL_LINES, 0, 2*beam.beamLen)
 
-        if beam.beamTexture is not None:
-            beam.beamTexture.bind()
+#        if beam.beamTexture is not None:
+#            beam.beamTexture.bind()
 
         if target is None:
             beam.VAOp.release()
@@ -8399,22 +8406,22 @@ class Beam3D():
     attribute float colorAxis;
     attribute float state;
     attribute float intensity;
-    attribute float colorIndex;
+    //attribute float colorIndex;
     uniform float pointSize;
     uniform float opacity;
     uniform float iMax;
-    uniform float maxIndex;
+    //uniform float maxIndex;
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
     uniform vec2 colorMinMax;
     uniform vec4 gridMask;
     uniform vec4 gridProjection;
-    //varying vec4 colorOut;
+    varying vec4 colorOut;
     float hue;
     vec4 worldCoord;
-    //out vec2 texCoords;
-    out float texCoords;
+    //vec2 texCoords;
+    //out float texCoords;
 
     vec3 hsv2rgb(float h, float s, float v)
     {
@@ -8449,11 +8456,11 @@ class Beam3D():
       //texCoords = vec2(mod(colorIndex, 1024.0) / 256.0, floor(colorIndex / 1024.0) / 256.0);
       //texCoords = colorIndex / maxIndex;
       //texCoords = vec2(0.5, 0.6);
-      texCoords = 0.5;
+      //texCoords = 0.5;
       gl_Position = projection * view * worldCoord;
       gl_PointSize = pointSize;
-      //hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-      //colorOut = vec4(hsv2rgb(hue*0.85, 0.85, 1.), opacity*state*intensity/iMax);
+      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+      colorOut = vec4(hsv2rgb(hue*0.85, 0.85, 1.), opacity*state*intensity/iMax);
 
     }
     '''
@@ -8461,15 +8468,16 @@ class Beam3D():
     fragment_source = '''
     #version 400
 
-    vec4 colorOut;
+    varying vec4 colorOut;
     //in vec2 texCoords;
-    in float texCoords;
+    //in float texCoords;
     //uniform sampler2D colorTexture;
-    uniform sampler1D colorTexture;
+    //uniform sampler1D colorTexture;
     //out vec4 FragColor;
+
     void main()
     {
-      colorOut = vec4(texture(colorTexture, texCoords).rgb, 0.5);
+      //colorOut = vec4(texture(colorTexture, texCoords).rgb, 0.5);
       gl_FragColor = colorOut;
     }
     '''

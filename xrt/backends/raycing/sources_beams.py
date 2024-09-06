@@ -5,6 +5,7 @@ __date__ = "21 Jun 2022"
 import numpy as np
 import copy
 import pickle
+import uuid
 from .. import raycing
 
 defaultEnergy = 9.0e3
@@ -39,6 +40,7 @@ class BeamProxy(object):
         for attr in self.basicAttrs:
             setattr(self, attr, np.copy(getattr(copyFrom, attr)))
 
+        self.uuid = uuid.uuid4()
     # def filter_by_index(self, indarr):
     #     for attr in self.farAttrs:
     #         setattr(self, attr, np.copy(getattr(self, attr))[indarr])
@@ -75,6 +77,8 @@ class Beam(object):
                  withNumberOfReflections=False, withAmplitudes=False,
                  xyzOnly=False, bl=None):
         # if type(copyFrom) == type(self):
+        self.name = None
+        self.uuid = uuid.uuid4()
         if hasattr(copyFrom, 'a') and hasattr(copyFrom, 'x'):
             try:
                 for attr in self.listOfAttrs:
