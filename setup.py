@@ -205,6 +205,10 @@ setup(
                       'colorama',
                       # 'openpyxl',
                       ],
+    extras_require={'opencl': ['pyopencl'],
+                   'glow': ['pyopengl', 'siphash24'],
+                   'pyqt5': ['pyqt5', 'PyQtWebEngine']
+                   },
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',
