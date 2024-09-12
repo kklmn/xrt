@@ -5,6 +5,8 @@ Version history
 
 Current GitHub code:
     - Minor bug fixes.
+    
+    - Enable custom materials in xrtQook.
 
     - Add hyperbolic and hyperboloid mirrors with focusing test scripts.
 
