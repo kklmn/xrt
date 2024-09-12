@@ -3524,8 +3524,16 @@ if __name__ == '__main__':
                 for ieph in range(matItem.rowCount()):
                     if matItem.child(ieph, 0).text() == '_object':
                         elstr = str(matItem.child(ieph, 1).text())
-                        ieinit = elstr + "(" + ieinit
-                        break
+                        klass = eval(elstr)
+                        if klass.__module__.startswith('xrt'):
+                            ieinit = elstr + "(" + ieinit
+                        else:
+                            # import of custom materials
+                            importStr = 'import {0}'.format(klass.__module__)
+                            # if importStr not in codeHeader:
+                            codeHeader += importStr + '\n'
+                            ieinit = "{0}.{1}({2}".format(
+                                klass.__module__, klass.__name__, ieinit)
                 for ieph in range(matItem.rowCount()):
                     if matItem.child(ieph, 0).text() != '_object':
                         if matItem.child(ieph, 0).text() == 'properties':
@@ -3561,6 +3569,7 @@ if __name__ == '__main__':
                         if klass.__module__.startswith('xrt'):
                             ieinit = elstr + "(" + ieinit
                         else:
+                            # import of custom OEs
                             importStr = 'import {0}'.format(klass.__module__)
                             # if importStr not in codeHeader:
                             codeHeader += importStr + '\n'

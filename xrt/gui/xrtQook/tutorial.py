@@ -95,12 +95,16 @@ Using xrtQook for script generation
   .. imagezoom:: _images/qookTutor11.png
      :scale: 60 %
 
-Using custom optical elements in xrtQook
-----------------------------------------
+Using custom optical elements and/or custom materials in xrtQook
+----------------------------------------------------------------
 
 Create custom classes of optical elements in a module located in a writable
 folder. Copy xrt/gui/xrtQookStart.py starter script to that folder, edit it and
 run it. Editing is very simple: uncomment a few lines at the top of the script
 that import the custom module and enable integration with xrtQook.
+
+Similarly, prepare a module with custom material classes and import them in the
+starter script of xrtQook. The provided script has a few commented lines
+prepared for the import.
 
 """
