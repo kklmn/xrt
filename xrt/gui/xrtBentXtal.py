@@ -26,8 +26,8 @@ to memory constraints.
 """
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "6 Jul 2023"
-__version__ = "1.0.0"
+__date__ = "14 Feb 2024"
+__version__ = "1.0.1"
 __license__ = "MIT license"
 
 import os, sys; sys.path.append(os.path.join(*['..']*2))  # analysis:ignore
@@ -39,6 +39,7 @@ import numpy as np
 import copy
 from functools import partial
 from datetime import datetime
+from collections import namedtuple
 
 from scipy.interpolate import UnivariateSpline
 
@@ -159,6 +160,7 @@ class PlotWidget(QWidget):
         ("hkl", "1, 1, 1", True),  # 3
         ("Thickness (mm)", "1.", True),  # 4
         ("Asymmetry \u2220 (°)", "0.", True),  # 5
+        ("In-plane Rotation \u2220 (°)", "0.", True),  # 5a
         ("Bending Rm (m)", "inf", False),  # 6
         ("Bending Rs (m)", "inf", False),  # 7
         ("Separator Scan", "Scan", False, '#dddddd'),  # 8
@@ -171,6 +173,7 @@ class PlotWidget(QWidget):
         ("Curve Color", "blue", False, allColors),  # 15
         ("Curves", ['σ', ], True, allCurves)  # 16
         ]
+
 
     def __init__(self):
         super().__init__()
@@ -519,6 +522,8 @@ class PlotWidget(QWidget):
         # simple implementation, quantized by dx:
         def simple():
             topHalf = np.where(y >= 0.5*np.max(y))[0]
+            if len(topHalf) == 0:
+                return 0
             return np.abs(x[topHalf[0]] - x[topHalf[-1]])
 
         # a better implementation, weakly dependent on dx size
@@ -537,6 +542,13 @@ class PlotWidget(QWidget):
             return float(item.child(ind, 1).text())
         except ValueError:
             return float(self.initParams[ind][1])
+
+#    def get_ipr(self, item):
+#        ind = self.findIndexFromText("In-plane Rotation")
+#        try:
+#            return float(item.child(ind, 1).text())
+#        except ValueError:
+#            return float(self.initParams[ind][1])        
 
     def get_range_item(self, item):
         ind = self.findIndexFromText("Scan Range")
@@ -599,7 +611,7 @@ class PlotWidget(QWidget):
                         hklList = [s.strip() for s in param_value.split(',')]
                     try:
                         test = [int(i) for i in hklList]  # analysis:ignore
-                        legit = True
+                        legit = test != [0, 0, 0]
                     except Exception:
                         legit = False
                     if len(hklList) == 3 and legit:
@@ -617,28 +629,38 @@ class PlotWidget(QWidget):
                       param_name.startswith("Energy")):
                     try:
                         test = float(param_value)  # analysis:ignore
-                        legit = True
-                        item.prevValue = param_value
+                        if (param_name.startswith("Thick") or
+                                param_name.startswith("Energy")):
+                            legit = test > 0
+                        else:
+                            legit = True
                     except Exception:
                         legit = False
+                    if legit:
+                        item.prevValue = param_value
+                    else:
                         item.setText(item.prevValue)
                         return
                 elif param_name.startswith("Scan Range"):
                     try:
                         test = [float(i) for i in param_value.split(',')]
                         legit = True
-                        item.prevValue = param_value
                     except Exception:
                         legit = False
+                    if legit:
+                        item.prevValue = param_value
+                    else:
                         item.setText(item.prevValue)
                         return
                 elif param_name.startswith("Scan Points"):
                     try:
                         test = int(param_value)  # analysis:ignore
-                        legit = True
-                        item.prevValue = param_value
+                        legit = test > 0
                     except Exception:
                         legit = False
+                    if legit:
+                        item.prevValue = param_value
+                    else:
                         item.setText(item.prevValue)
                         return
                 elif param_name.startswith("Bending"):
@@ -650,10 +672,12 @@ class PlotWidget(QWidget):
                     else:
                         try:
                             test = float(param_value)  # analysis:ignore
-                            legit = True
-                            item.prevValue = param_value
+                            legit = test != 0
                         except Exception:
                             legit = False
+                        if legit:
+                            item.prevValue = param_value
+                        else:
                             item.setText(item.prevValue)
                         if 'flat' in parent.text():
                             newText = parent.text().replace('flat', 'bent')
@@ -938,6 +962,8 @@ class PlotWidget(QWidget):
         thickness = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Asymmetry")
         asymmetry = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("In-plane Rotation")
+        ipr = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Bending Rm")
         Rm = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Bending Rs")
@@ -1014,6 +1040,7 @@ class PlotWidget(QWidget):
         plot_item.thetaB = theta0
         plot_item.d = getattr(crystalInstance, 'd')
         phi = np.radians(float(asymmetry))
+        ipr_rad = np.radians(float(ipr)) 
 
         if units == "eV":
             tLimits = self.get_scan_range(plot_item)
@@ -1046,7 +1073,7 @@ class PlotWidget(QWidget):
         if backend == "xrtCL":
             self.amps_calculator = AmpCalculator(
                     crystalInstance, xaxis, xenergy, gamma0, gammah,
-                    hns0, phi, Rm, Rs, precision, plot_nr)
+                    hns0, phi, ipr_rad, Rm, Rs, precision, plot_nr)
             self.amps_calculator.progress.connect(self.update_progress_bar)
             self.amps_calculator.result.connect(self.on_calculation_result)
             self.amps_calculator.start()
@@ -1065,7 +1092,8 @@ class PlotWidget(QWidget):
                             debye_waller=1, xrt_crystal=crystalInstance,
                             Rx=Quantity(float(Rm), 'm'),
                             Ry=Quantity(float(Rs), 'm'),
-                            asymmetry=Quantity(phi+geotag, 'rad'))
+                            asymmetry=Quantity(phi+geotag, 'rad'),
+                            in_plane_rotation=Quantity(ipr_rad, 'rad'))
             if units == 'eV':
                 tts = TTscan(constant=Quantity(theta0, 'rad'),
                              scan=Quantity(xaxis, 'eV'),
@@ -1097,8 +1125,13 @@ class PlotWidget(QWidget):
                 partial(self.check_progress, progress_queue))
             self.timer.start(200)  # Adjust the interval as needed
         else:
-            ampS, ampP = crystalInstance.get_amplitude(
-                    xenergy, gamma0, gammah, hns0)
+            try:
+                ampS, ampP = crystalInstance.get_amplitude(
+                        xenergy, gamma0, gammah, hns0)
+            except ValueError as e:
+                print(e)
+                ampS = np.zeros_like(theta)
+                ampP = ampS
             self.statusUpdate.emit(("Ready", 100))
             self.on_calculation_result(
                     (xaxis, ampS, ampP, plot_nr))
@@ -1233,7 +1266,7 @@ class AmpCalculator(QThread):
     result = Signal(tuple)
 
     def __init__(self, crystal, xaxis, energy, gamma0, gammah, hns0,
-                 alpha, Rm, Rs, precision, plot_nr):
+                 alpha, ipr_rad, Rm, Rs, precision, plot_nr):
         super().__init__()
         self.crystalInstance = crystal
         self.xaxis = xaxis
@@ -1242,6 +1275,7 @@ class AmpCalculator(QThread):
         self.gammah = gammah
         self.hns0 = hns0
         self.alpha = alpha
+        self.ipr_rad = ipr_rad
         self.Rm = Rm
         self.Rs = Rs
         self.precision = precision
@@ -1253,7 +1287,9 @@ class AmpCalculator(QThread):
                            targetOpenCL=targetOpenCL)
         ampS, ampP = self.crystalInstance.get_amplitude_pytte(
                 self.energy, self.gamma0, self.gammah, self.hns0,
-                ucl=matCL, alphaAsym=self.alpha, autoLimits=False,
+                ucl=matCL, alphaAsym=self.alpha, 
+                inPlaneRotation=self.ipr_rad,
+                autoLimits=False,
                 Ry=float(self.Rm)*1000.,
                 Rx=float(self.Rs)*1000.,
                 signal=self.progress)
