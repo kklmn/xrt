@@ -3033,7 +3033,9 @@ class HyperboloidCapillaryMirror(SurfaceOfRevolution):
 
 class NormalFZP(OE):
     """Implements a circular Fresnel Zone Plate, as it is described in
-    X-Ray Data Booklet, Section 4.4.
+    X-Ray Data Booklet, Section 4.4. The zones lie on the same flat plane, they
+    have a zero thickness and have transmittivity zero and one. The optical
+    axis is the local Z axis.
 
     .. warning::
 
