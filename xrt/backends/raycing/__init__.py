@@ -1187,7 +1187,9 @@ class BeamLine(object):
         from .run import run_process
         run_process(self)
         if self.blViewer is None:
-            app = xrtglow.qt.QApplication(sys.argv)
+            app = xrtglow.qt.QApplication.instance()
+            if app is None:
+                app = xrtglow.qt.QApplication(sys.argv)
             rayPath = self.export_to_glow()
             self.blViewer = xrtglow.xrtGlow(rayPath)
             self.blViewer.generator = generator
