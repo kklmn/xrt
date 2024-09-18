@@ -203,8 +203,15 @@ setup(
     install_requires=['numpy>=1.8.0', 'scipy>=0.17.0', 'matplotlib>=2.0.0',
                       'sphinx>=1.6.2', 'sphinxcontrib-jquery', 'distro',
                       'colorama',
+                      # GPU support
+                      'pyopencl',
+                      # glow support
+                      'pyopengl', 'siphash24'
                       # 'openpyxl',
                       ],
+    extras_require={
+                    'pyqt5': ['pyqt5', 'PyQtWebEngine']
+                    },
     classifiers=['Development Status :: 5 - Production/Stable',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',
