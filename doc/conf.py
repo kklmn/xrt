@@ -11,6 +11,11 @@ import subprocess
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 if on_rtd:
+    if "html_context" not in globals():
+        html_context = {}
+    html_context["READTHEDOCS"] = True
+
+if on_rtd:
     from unittest.mock import MagicMock
 
     class Mock(MagicMock):
