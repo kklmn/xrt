@@ -17,7 +17,7 @@ xrt (XRayTracer)
 .. |DOI| image:: https://zenodo.org/badge/54989724.svg
    :target: https://zenodo.org/badge/latestdoi/54989724
 
-.. |GHver| image:: https://badge.fury.io/gh/kklmn%2Fxrt.svg
+.. |GHver| image:: https://img.shields.io/github/v/release/kklmn/xrt
    :target: https://github.com/kklmn/xrt
 
 .. |GHdate| image:: https://img.shields.io/github/last-commit/kklmn/xrt.svg
