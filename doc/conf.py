@@ -3,6 +3,9 @@
 # xrt documentation build configuration file, created by
 # sphinx-quickstart on Thu Mar 01 09:52:50 2012.
 
+import matplotlib as mpl
+mpl.use('agg')
+
 import sys
 import os
 import shutil
@@ -97,8 +100,6 @@ sys.path.insert(0, '.')
 #sys.path.append('..')
 sys.path.append(os.path.abspath('exts'))
 #autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
-import matplotlib as mpl
-mpl.use('agg')
 
 import xrt.backends.raycing.materials_elemental as xrtelem
 import xrt.backends.raycing.materials_compounds as xrtcomp
@@ -253,13 +254,15 @@ html_favicon = "_images/xrt_logo.ico"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 if on_rtd:
-#    html_theme = 'default'
-    html_static_path = []
+    # html_theme = 'default'
+    # html_static_path = []
     # for keeping Download ZIP smaller:
     load_res()  # load doc resources from a dedicated branch
 else:
+    pass
 #    html_theme = 'nature'
-    html_static_path = ['_static']
+
+html_static_path = ['_static']
 html_theme_options["body_min_width"] = '96%'
 
 toc_object_entries = False
