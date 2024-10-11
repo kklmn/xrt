@@ -10,16 +10,15 @@ import subprocess
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
-if on_rtd:
-    autodoc_mock_imports = [
-        'OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
-        'OpenGL.arrays', 'pyopencl',
-        # 'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
-        # 'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtSql',
-        'matplotlib.backends.backend_qt5agg',
-        'PySide', 'PySide.QtCore',
-        'spyder.widgets', 'spyderlib.widgets',
-        'cv2', 'zmq']
+autodoc_mock_imports = [
+    'OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
+    'OpenGL.arrays', 'pyopencl',
+    'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
+    'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtSql',
+    'matplotlib.backends.backend_qt5agg',
+    'PySide', 'PySide.QtCore',
+    'spyder.widgets', 'spyderlib.widgets',
+    'cv2', 'zmq']
 
 __fdir__ = os.path.dirname(os.path.abspath(__file__))
 
