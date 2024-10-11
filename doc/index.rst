@@ -23,7 +23,7 @@ xrt (XRayTracer)
 .. |GHdate| image:: https://img.shields.io/github/last-commit/kklmn/xrt.svg
    :target: https://github.com/kklmn/xrt
 
-.. |PPver| image:: https://badge.fury.io/py/xrt.svg
+.. |PPver| image:: https://img.shields.io/pypi/v/xrt.svg
    :target: https://pypi.org/project/xrt/
 
 .. |PPdate| image:: https://img.shields.io/github/release-date/kklmn/xrt.svg
