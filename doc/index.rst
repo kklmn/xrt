@@ -8,7 +8,7 @@ xrt (XRayTracer)
 
 :DOI: |DOI|
 :GitHub: |GHver| |GHdate|
-:PyPI: |PPver| |PPdate| :ref:`version history <history>`, :ref:`plans <plans>`
+:PyPI: |PPver| |PPdate| :ref:`version history <history>`
 :License:  |GHlic|
 :Authors: Konstantin Klementiev (MAX IV Laboratory), Roman Chernikov (NSLS-II)
 
