@@ -11,28 +11,15 @@ import subprocess
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 if on_rtd:
-    if "html_context" not in globals():
-        html_context = {}
-    html_context["READTHEDOCS"] = True
-
-if on_rtd:
-    from unittest.mock import MagicMock
-
-    class Mock(MagicMock):
-        @classmethod
-        def __getattr__(cls, name):
-            return MagicMock()
-
-    MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
-                    'OpenGL.arrays', 'pyopencl',
-                    'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
-                    'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets',
-                    'PyQt5.QtSql',
-                    'matplotlib.backends.backend_qt5agg',
-                    'PySide', 'PySide.QtCore',
-                    'spyder.widgets', 'spyderlib.widgets',
-                    'cv2', 'zmq']
-    sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+    autodoc_mock_imports = [
+        'OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
+        'OpenGL.arrays', 'pyopencl',
+        # 'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
+        # 'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtSql',
+        'matplotlib.backends.backend_qt5agg',
+        'PySide', 'PySide.QtCore',
+        'spyder.widgets', 'spyderlib.widgets',
+        'cv2', 'zmq']
 
 __fdir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -160,7 +147,9 @@ rst_epilog = """
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = ['sphinx.ext.autodoc', 'sphinx.ext.pngmath']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx_tabs.tabs',
-              'animation']
+              'animation',
+              # 'sphinx_build_compatibility.extension'
+              ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
