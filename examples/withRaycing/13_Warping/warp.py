@@ -69,7 +69,6 @@ focusing case.
 .. |warp_rtG| animation:: _images/warp_rtG
 .. |warp_rtw| animation:: _images/warp_rtw
 .. |warp_rtN| animation:: _images/warp_rtN
-   :loc: lower-left-corner
 .. |warp_wp0| animation:: _images/warp_wp0
    :loc: upper-right-corner
 .. |warp_wpG| animation:: _images/warp_wpG
