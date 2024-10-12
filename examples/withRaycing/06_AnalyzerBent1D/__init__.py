@@ -11,7 +11,8 @@ Rowland circle based analyzers
 This study compares simply bent and ground-bent spectrometers utilizing Bragg
 and Laue analyzing crystals. The bending is cylindrical (one-dimensional).
 
-.. imagezoom:: _images/BraggLaue.*
+.. imagezoom:: _images/BraggLaue.png
+   :align: center
 
 :Conditions: Rowland circle diameter = 1 m, 70v × 200h µm² unpolarized
    fluorescence source, crystal size = 100meridional × 20saggittal mm².
@@ -204,8 +205,13 @@ the sketch.
 Left: the classical setup [vH]_ with 2 translations.
 Right: the setup with an invariant escape direction.
 
-.. imagezoom:: _images/vonHamosPositionsClassic.*
-.. imagezoom:: _images/vonHamosPositionsFixedEscape.*
++---------+---------+
+|  |vHC|  |  |vHF|  |
++---------+---------+
+
+.. |vHC| imagezoom:: _images/vonHamosPositionsClassic.*
+.. |vHF| imagezoom:: _images/vonHamosPositionsFixedEscape.*
+   :loc: upper-right-corner
 
 The geometrical parameters for the von Hamos spectrometer were taken from
 [vH_SLS]_: a diced 100 (sagittal) × 50 (meridional) mm² Si(444) crystal is
@@ -294,6 +300,7 @@ energy band. Here, in the 5-mm-stripe case a bandwidth of ~12 eV uses less than
 1 mm of the crystal!
 
 .. imagezoom:: _images/SivonHamos-5mmDiced60-xtal_E_zoom-7lin.*
+   :align: center
 
 Comparison of Rowland circle based and von Hamos analyzers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -323,8 +330,13 @@ smaller solid angle collected. The left figure is with a narrow energy band
 equal to the 6-fold energy resolution. The right figure is with a wide energy
 band equal to 8·10 :sup:`-4`·E (approximate width of K β lines [Henke]_).
 
-.. imagezoom:: _images/ResolutionEfficiency1D-narrowBand.*
-.. imagezoom:: _images/ResolutionEfficiency1D-8e-4Band.*
++-------------+-------------+
+|  |resMapN|  |  |resMapW|  |
++-------------+-------------+
+
+.. |resMapN| imagezoom:: _images/ResolutionEfficiency1D-narrowBand.*
+.. |resMapW| imagezoom:: _images/ResolutionEfficiency1D-8e-4Band.*
+   :loc: upper-right-corner
 
 Finally, among the compared 1D-bent spectrometers the Johansson type is the
 best in the combination of good energy resolution and high efficiency. It is
@@ -357,11 +369,13 @@ the figure has the magnification 1:1 for the circular crystal (left part) and
 1.5:1 for the elliptical one (right part).
 
 .. imagezoom:: _images/CircularAndElliptical_vonHamos_s.*
+   :align: center
 
 The crystal is diced along the cylinder axis with 1 mm pitch. The difference in
 the circular and elliptical figures is shown below.
 
 .. imagezoom:: _images/Cylinders.*
+   :align: center
 
 The elliptical figure results in some aberrations, as seen by the monochromatic
 images below, which worsens energy resolution.

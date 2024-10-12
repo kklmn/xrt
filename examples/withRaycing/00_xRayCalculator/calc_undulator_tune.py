@@ -31,7 +31,7 @@ for tuneE, tuneF, harmonic, color in zip(tunesE, tunesF, harmonics, colors):
                color=color)
 # format the graph:
 ax = plt.gca()
-ax.set_xlabel(u'energy (eV)')
+ax.set_xlabel(u'energy (keV)')
 ax.set_ylabel(u'flux through (60 µrad)² (ph/s/0.1% bw)')
 ax.set_xlim(xlims)
 ax.set_ylim(ylims)

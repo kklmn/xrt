@@ -16,8 +16,13 @@ Shown are i) intensity downstream of the filter and its energy spectrum and
 ii) absorbed power in the filter with its energy spectrum and power density
 isolines at 85% and 95% of the maximum.
 
-.. animation:: _images/filterThicknessI
-.. animation:: _images/filterThicknessP
++------------+------------+
+|  |filtTI|  |  |filtTP|  |
++------------+------------+
+
+.. |filtTI| animation:: _images/filterThicknessI
+.. |filtTP| animation:: _images/filterThicknessP
+   :loc: upper-right-corner
 
 White-beam collimating mirror at varying pitch angle
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,8 +56,13 @@ Bending of collimating mirror
 
 Shown are i) image downstream of the DCM and ii) image at the sample.
 
-.. animation:: _images/vcmR-DCM
-.. animation:: _images/vcmR-Sample
++-----------+-----------+
+|  |vcmR1|  |  |vcmR2|  |
++-----------+-----------+
+
+.. |vcmR1| animation:: _images/vcmR-DCM
+.. |vcmR2| animation:: _images/vcmR-Sample
+   :loc: upper-right-corner
 
 Bending of focusing mirror
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,8 +78,12 @@ Both mirrors (collimating + focusing) at varying pitch angle
 The sagittal radius of the focusing toroid mirror is optimal at 2 mrad pitch
 angle.
 
-.. animation:: _images/pitch-Sample-3D
-.. animation:: _images/pitch-Sample
++---------------------+---------------------+
+|  |pitch-Sample-3D|  |  |pitch-Sample-2D|  |
++---------------------+---------------------+
+
+.. |pitch-Sample-3D| animation:: _images/pitch-Sample-3D
+.. |pitch-Sample-2D| animation:: _images/pitch-Sample
 
 .. _dmm:
 
@@ -82,6 +96,7 @@ Scanning of Double Crystal Monochromator
 
 .. |Si111| animation:: _images/Si111
 .. |Si311| animation:: _images/Si311
+   :loc: upper-right-corner
 
 Scanning of Double Multilayer Monochromator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,5 +113,6 @@ tungsten layers on top of a silicon substrate.
 
 .. |MLfp| animation:: _images/multilayer_1stML
 .. |MLexit| animation:: _images/multilayer_afterDMM
+   :loc: upper-right-corner
 """
 pass

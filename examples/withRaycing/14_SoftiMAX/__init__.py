@@ -5,6 +5,9 @@ r"""
 SoftiMAX at MAX IV
 ------------------
 
+.. imagezoom:: _images/softiMAX_layout.*
+   :align: right
+
 The images below are produced by scripts in
 ``\examples\withRaycing\14_SoftiMAX``.
 
@@ -12,10 +15,11 @@ The beamline will have two branches:
 - STXM (Scanning Transmission X-ray Microscopy) and
 - CXI (Coherent X-ray Imaging),
 
-see the scheme provided by K. Thånell.
+see the scheme provided by Karina Thånell.
 
-.. imagezoom:: _images/softiMAX_layout.*
+.. raw:: html
 
+    <div class="clearer"> </div>
 
 STXM branch
 ~~~~~~~~~~~
@@ -34,6 +38,7 @@ end (FE) slit, to M1, to M2 and to plane grating (PG) – is done with rays:
 .. |st_rFE| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-00-FE.*
 .. |st_rM1| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-01-M1local.*
 .. |st_rM2| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-02-M2local.*
+   :loc: upper-right-corner
 .. |st_rPG| imagezoom:: _images/stxm-2D-1-rays-0emit-0enSpread-monoE-02a-PGlocal.*
    :loc: upper-right-corner
 
@@ -229,6 +234,7 @@ below. This is in contrast to *ray* propagation, where the angular ray
 distribution is invariant at any position between two optical elements.
 
 .. imagezoom:: _images/cxi_waveFronts.*
+   :align: center
 
 .. rubric:: Rays, waves and hybrid
 
@@ -312,6 +318,7 @@ coherent fraction.
 
 .. |cxi-coh1-0emit| animation:: _images/cxi-coh1-0emit
 .. |cxi-coh1-non0e| animation:: _images/cxi-coh1-non0e
+   :loc: upper-right-corner
 .. |cxi-coh3-0emit| animation:: _images/cxi-coh3-0emit
 .. |cxi-coh3-non0e| animation:: _images/cxi-coh3-non0e
    :loc: upper-right-corner

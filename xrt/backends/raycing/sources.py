@@ -25,9 +25,9 @@ intensity maximum for each field sample, and the sample is accepted if the
 acceptance variable is below the sample intensity, otherwise it is rejected.
 The sampling continues until the requested number of samples is reached. The
 resulted space density of the samples (rays) is proportional to the field
-intensity. Simultaneously, this sampling gives the value of total flux as the
-product of the acceptance ratio times the 3D sample volume times the intensity
-maximum.
+intensity. Simultaneously, this sampling provides total flux as the Monte Carlo
+integration of intensity, i.e. as the product of the acceptance ratio times
+the 3D sample volume times the intensity maximum.
 
 2. Uniform Monte Carlo sampling, or *wave* generation. This mode is necessary
 for wave propagation when it starts right from the source. The 3D calculation
@@ -362,6 +362,12 @@ application example :ref:`here <example-undulator-sizes>`.
 Comparison of synchrotron source codes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. imagezoom:: _images/flux_case3_xrt_UrgentICALC1.png
+
+.. raw:: html
+
+    <div class="clearer"> </div>
+
 .. _mesh-methods:
 
 Using xrt synchrotron sources on a mesh
@@ -386,8 +392,6 @@ given in `tests/raycing/test_undulator_on_mesh.py` which produces the following
 plot (for a BESSY undulator, zero energy spread, as Urgent cannot take account
 of it):
 
-.. imagezoom:: _images/flux_case3_xrt_UrgentICALC1.png
-
 Undulator spectrum across a harmonic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -409,13 +413,15 @@ For an undulator the calculations are much more demanding and for a wide
 angular acceptance the Monte Carlo ray sampling can be extremely inefficient.
 To improve the efficiency, a reasonably small acceptance should be considered.
 
+.. imagezoom:: _images/compareUndulators.png
+
 There are several codes that can calculate undulator spectra: [Urgent]_,
 [US]_, [SPECTRA]_. There is a common problem about them that the
 energy spectrum may get *strong distortions* if calculated with a sparse
 spatial and energy mesh. SPECTRA code seems to provide the best reference for
 undulator spectra, which was used to optimize the meshes of the other codes.
 The final comparison of the resulted undulator spectra around a single
-harmonic is shown below.
+harmonic is shown on the left.
 
 .. [US] R. J. Dejus,
    *US: Program to calculate undulator spectra.* Part of XOP.
@@ -430,21 +436,27 @@ harmonic is shown below.
     them, especially on the energy mesh. Try different numbers of points and
     various energy ranges.
 
-.. imagezoom:: _images/compareUndulators.png
-
 .. _undulator_highE:
 
 Undulator spectrum at very high energies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. imagezoom:: _images/flux_BioNanoMAX.png
+
 The codes [Urgent]_ and [SPECTRA]_ result in saturation at high
-energies (see the image below) thus leading to a divergent total power
+energies (see the image on the left) thus leading to a divergent total power
 integral. The false radiation has a circular off-axis shape. To the contrary,
 xrt and [SRW]_ flux at high energies vanishes and follows the wiggler
 approximation. More discussion will follow in a future journal article about
 xrt.
 
-.. imagezoom:: _images/flux_BioNanoMAX.png
+.. [SRW] O. Chubar, P. Elleaume, *Accurate And Efficient Computation Of
+   Synchrotron Radiation In The Near Field Region*, proc. of the EPAC98
+   Conference, 22-26 June 1998, p.1177-1179.
+
+.. raw:: html
+
+    <div class="clearer"> </div>
 
 Single-electron and multi-electron undulator radiation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -456,10 +468,6 @@ images below) and two transverse angles. Notice also the duration of execution
 given below each image. The 3D mesh was the following: theta = 321 point, -0.3
 to +0.3 mrad, psi = 161 point, -0.15 to +0.15 mrad, energy: 301 point 1.5 to
 4.5 keV.
-
-.. [SRW] O. Chubar, P. Elleaume, *Accurate And Efficient Computation Of
-   Synchrotron Radiation In The Near Field Region*, proc. of the EPAC98
-   Conference, 22-26 June 1998, p.1177-1179.
 
 +-------------+------------------------+------------------------+
 |             |         SRW            |           xrt          |
@@ -495,8 +503,10 @@ to +0.3 mrad, psi = 161 point, -0.15 to +0.15 mrad, energy: 301 point 1.5 to
 Undulator spectrum with tapering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The spectrum can be broadened by tapering the magnetic gap. The figure below
-shows a comparison of xrt with [SPECTRA]_, [YAUP]_ and
+.. imagezoom:: _images/compareTaper.png
+
+The spectrum can be broadened by tapering of the magnetic gap. The figure on
+the left shows a comparison of xrt with [SPECTRA]_, [YAUP]_ and
 experimental measurements [exp_taper]_. The gap values and the taper were
 slightly varied in all three codes to reach the best match with the
 experimental curve. We had to do so because in the other codes taper is not
@@ -511,8 +521,6 @@ trustful.
    R. Chernikov and O. Müller, unpublished.
 
 The source code is in ``examples\withRaycing\01_SynchrotronSources``
-
-.. imagezoom:: _images/compareTaper.png
 
 Notice that not only the band width is affected by tapering. Also the
 transverse distribution attains inhomogeneity which varies with energy, see the
@@ -534,6 +542,7 @@ Whereas xrt gives equal results to other codes in such univariate
 distributions as flux through an aperture:
 
 .. imagezoom:: _images/compareFlux.png
+   :align: center
 
 ... and transversal distribution at a fixed energy:
 
@@ -704,8 +713,13 @@ the figures below). He calculated the sizes for a single electron field, and
 thus without emittance and energy spread. For comparison, we also sampled the
 undulator field at zero energy spread and emittance.
 
-.. imagezoom:: _images/undulatorLinearSize.png
-.. imagezoom:: _images/undulatorAngularSize.png
++---------------+----------------+
+|   |U19lin|    |    |U19ang|    |
++---------------+----------------+
+
+.. |U19lin| imagezoom:: _images/undulatorLinearSize.png
+.. |U19ang| imagezoom:: _images/undulatorAngularSize.png
+   :loc: upper-right-corner
 
 .. [Coïsson] R. Coïsson, Effective phase space widths of undulator radiation,
    Opt. Eng. **27** (1988) 250–2.

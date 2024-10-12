@@ -10,8 +10,14 @@ slit width is 10 µm, the slit separation is variable (displayed is edge-to-edge
 distance), the slit position is 90 m from the source and the screen is at 110
 m.
 
-.. animation:: _images/YoungRays
-.. animation:: _images/YoungWave
++---------------+---------------+
+|  |YoungRays|  |  |YoungWave|  |
++---------------+---------------+
+
+.. |YoungRays| animation:: _images/YoungRays
+   :alt: &ensp;in ray tracing
+.. |YoungWave| animation:: _images/YoungWave
+   :alt: &ensp;in wave propagation
 
 """
 __author__ = "Roman Chernikov", "Konstantin Klementiev"

@@ -513,10 +513,13 @@ class XYCPlot(object):
 
             .. |image_ePos1| imagezoom:: _images/ePos=1.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image_ePos2| imagezoom:: _images/ePos=2.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image_ePos0| imagezoom:: _images/ePos=0.png
                :scale: 50 %
+               :loc: upper-right-corner
 
 
         *title*: str
@@ -556,8 +559,10 @@ class XYCPlot(object):
                :scale: 50 %
             .. |image10| imagezoom:: _images/invertColorMap=1_negative=0.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image11| imagezoom:: _images/invertColorMap=1_negative=1.png
                :scale: 50 %
+               :loc: upper-right-corner
 
             Note that *negative* inverts only the colors of the graphs, not
             the white global background. Use a common graphical editor to
@@ -565,6 +570,7 @@ class XYCPlot(object):
 
             .. imagezoom:: _images/negative=1+fullNegative.png
                :scale: 50 %
+               :align: center
 
             (such a picture would nicely look on a black journal cover, e.g.
             on that of Journal of Synchrotron Radiation ;) )

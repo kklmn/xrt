@@ -117,26 +117,29 @@ sources in 2D and 3D. This is especially useful for undulators because they
 have sharp peaks, which requires a proper selection of angular and energy
 meshes.
 
-|I0_x'E|  |I0_z'E|  |IpPol|
++------------+------------+------------+
+|  |I0_x'E|  |  |I0_z'E|  |   |IpPol|  |
++------------+------------+------------+
 
 .. |I0_x'E| imagezoom:: _images/I0_x'E-1-und-xrt.png
 .. |I0_z'E| imagezoom:: _images/I0_z'E-1-und-xrt.png
 .. |IpPol| imagezoom:: _images/Itot
+   :loc: upper-right-corner
 
 The ray traced images of an undulator source (produced by
 ``\examples\withRaycing\01_SynchrotronSources\synchrotronSources.py``)
 are feature-rich. The polarization is primarily horizontal. The off-plane
 radiation has non-zero projection to the vertical polarization plane.
 
-+---------+----------------+----------------+----------------+----------------+
-| source  |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
-+=========+================+================+================+================+
-| using   |                |                |                |                |
-| Urgent  | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
-+---------+----------------+----------------+----------------+----------------+
-| internal|                |                |                |                |
-| xrt     | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
-+---------+----------------+----------------+----------------+----------------+
++--------+----------------+----------------+----------------+----------------+
+| source |   total flux   | hor. pol. flux | ver. pol. flux |  deg. of pol.  |
++========+================+================+================+================+
+| using  |                |                |                |                |
+| Urgent | |uTotalUr|     |   |uHorizUr|   |    |uVertUr|   | |uDegPolUr|    |
++--------+----------------+----------------+----------------+----------------+
+|        |                |                |                |                |
+| xrt    | |uTotalXRT|    |  |uHorizXRT|   |    |uVertXRT|  | |uDegPolXRT|   |
++--------+----------------+----------------+----------------+----------------+
 
 .. |uTotalUr| imagezoom:: _images/1u_urgent3-n-monoE-1TotalFlux.png
 .. |uHorizUr| imagezoom:: _images/1u_urgent3-n-monoE-2horizFlux.png

@@ -11,6 +11,9 @@ in :mod:`~xrt.backends.raycing.screens`.
 Coordinate systems
 ------------------
 
+.. imagezoom:: _images/axes.png
+   :align: right
+
 The following coordinate systems are considered (always right-handed):
 
 1) *The global coordinate system*. It is arbitrary (user-defined) with one
@@ -66,8 +69,6 @@ beam properties for each ray. Geometrical beam properties such as *x, y, z*
 characteristics depend on the above coordinate systems. Therefore, beams are
 usually represented by two different objects: one in the global and one in a
 local system.
-
-.. imagezoom:: _images/axes.png
 
 Units
 -----

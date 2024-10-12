@@ -28,7 +28,7 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
        along the beamline is compressed by a factor of 100.
 
 .. |glow2| imagezoom:: _images/xrtGlow2.png
-   :loc: upper-right-corner
+   :align: right
    :alt: &ensp; xrtGlow with three double-paraboloid lenses. The scaling on
        this image is isotropic. The source (on the left) is a parallel
        geometric source. The coloring is by axial divergence (red=0), showing

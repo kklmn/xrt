@@ -50,7 +50,7 @@ correct incoherent averaging. The image brightness represents intensity.
 |              |   zero emittance,      |   true emittance,      |
 |              |   zero energy spread   |   true energy spread   |
 +==============+========================+========================+
-|   |resTxt|   |       .. centered::  |U48results|               |
+|   |resTxt|   |                 |U48results|                    |
 +--------------+------------------------+------------------------+
 | 1st harmonic |      |U48Esh1-00|      |      |U48Esh1-ff|      |
 +--------------+------------------------+------------------------+
@@ -63,6 +63,7 @@ correct incoherent averaging. The image brightness represents intensity.
 
 .. |resTxt| replace:: Flux and vorticity
 .. |U48results| imagezoom:: _images/U48-flux-vorticity.png
+   :align: center
 .. |U48Esh1-00| imagezoom:: _images/U48-00-Es-OAM-transverse-image-140-352.727eV.png
 .. |U48Esh1-ff| imagezoom:: _images/U48-ff-Es-OAM-transverse-image-140-352.727eV.png
    :loc: upper-right-corner
@@ -99,7 +100,11 @@ import xrt.backends.raycing.sources as rs
 period, n = 48., 83
 Kx = Ky = 2  # E1 = 356.1 eV
 
-prefix = 'U48-ff'
+prefix = 'U48-00'  # 0 emittance, 0 eSpread
+# prefix = 'U48-f0'  # true emittance, 0 eSpread
+# prefix = 'U48-ff'  # true emittance, true eSpread
+# also comment/uncomment right parameters in undulatorKwargs
+
 thetaMax, psiMax = 180e-6, 180e-6  # rad
 energy = np.linspace(200., 1400., 1101)
 imageEnergy = [352., 621., 919., 1220.]
@@ -111,10 +116,10 @@ undulatorKwargs = dict(
     eE=3., eI=0.3,
     betaX=9., betaZ=2.,  # m
 
-    # eEpsilonX=0., eEpsilonZ=0.,
-    eEpsilonX=0.300, eEpsilonZ=0.008,  # nmrad
-    # eEspread=0.,
-    eEspread=0.001,
+    eEpsilonX=0., eEpsilonZ=0.,
+    # eEpsilonX=0.300, eEpsilonZ=0.008,  # nmrad
+    eEspread=0.,
+    # eEspread=0.001,
 
     period=period, n=n, Ky=Ky, Kx=Kx,
 
@@ -159,7 +164,7 @@ def plot_results():
     with open(outName, 'rb') as f:
         energy, fluxFF, vEssFF = pickle.load(f)[0:3]
 
-    fig = plt.figure(figsize=(6, 6))
+    fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(111)
     ax.set_xlabel(r'Energy (eV)')
     ax.set_ylabel(r'Flux (ph/s/0.1%bw)')
@@ -173,15 +178,17 @@ def plot_results():
     y = fluxFF * energy * 1e-3
     ax.plot(energy, y, label='flux, true emittance, true eSpread')
     ax.set_ylim(0, None)
-    ax.legend(loc=(0.22, 0.84))
+    ax.legend(loc=(0., 0.78))
 
-    ax2.plot(energy, vEss00, '--', label='vort, 0 emittance, 0 eSpread')
-    ax2.plot(energy, vEssF0, '--', label='vort, true emittance, 0 eSpread')
-    ax2.plot(energy, vEssFF, '--', label='vort, true emittance, true eSpread')
+    ax2.plot(energy, vEss00, '--', label='vorticity, 0 emittance, 0 eSpread')
+    ax2.plot(energy, vEssF0, '--', label='vorticity, true emittance, 0 eSpread')
+    ax2.plot(energy, vEssFF, '--', label='vorticity, true emittance, true eSpread')
     ax2.set_ylim(0, 3.7)
-    ax2.legend(loc=(0.22, 0.68))
+    ax2.legend(loc=(0., 0.56))
+    plt.tight_layout()
 
-    fig.savefig(prefix+"-flux-vorticity.png")
+    fig.savefig("flux-vorticity.png")
+    fig.savefig("flux-vorticity.pdf")
     plt.show()
 
 
@@ -191,7 +198,7 @@ def intensity_in_transverse_plane(ie, theta, psi, I0):
     ax.set_xlabel(r'θ (µrad)')
     ax.set_ylabel(r'ψ (µrad)')
     e = energy[ie]
-    ax.imshow(I0[:, :].T,
+    ax.imshow(I0[:, :].T, origin="lower",
               extent=[theta[0]*1e6, theta[-1]*1e6, psi[0]*1e6, psi[-1]*1e6])
     ax.text(0.98, 0.98, '@E={0:.1f}eV'.format(e),
             ha='right', va='top', color='white', transform=ax.transAxes)
@@ -220,7 +227,7 @@ def colored_intensity_in_transverse_plane(energy, theta, psi, I0):
     hsvI0 = np.stack((hue, sat, val), axis=3)  # (len(energy), ntheta, npsi, 3)
     rgbI0 = mpl.colors.hsv_to_rgb(hsvI0)
     rgbI0sum = rgbI0.sum(axis=0)
-    ax.imshow(np.swapaxes(rgbI0sum, 0, 1) / rgbI0sum.max(),
+    ax.imshow(np.swapaxes(rgbI0sum, 0, 1) / rgbI0sum.max(), origin="lower",
               extent=[theta[0]*1e6, theta[-1]*1e6, psi[0]*1e6, psi[-1]*1e6])
 
     hue = np.array(energy)[:, np.newaxis]
@@ -257,7 +264,7 @@ def colored_phase_in_transverse_plane(ie, theta, psi, I0, phase, vorticity,
     hue = (phase/np.pi + 1) * 0.5
     hsvI0 = np.stack((hue, sat, val), axis=2)
     rgbI0 = mpl.colors.hsv_to_rgb(hsvI0)  # (len(energy), ntheta, npsi, 3)
-    ax.imshow(np.swapaxes(rgbI0, 0, 1) / rgbI0.max(),
+    ax.imshow(np.swapaxes(rgbI0, 0, 1) / rgbI0.max(), origin="lower",
               extent=[theta[0]*1e6, theta[-1]*1e6, psi[0]*1e6, psi[-1]*1e6])
     ax.text(0, 1.01, '@E={0:.1f}eV'.format(e),
             ha='left', va='bottom', color='k', transform=ax.transAxes)
@@ -359,6 +366,7 @@ def grid_method():
 if __name__ == '__main__':
     t0 = time.time()
     # raycing._VERBOSITY_ = 100
-    grid_method()
-    # plot_results()
+
+    grid_method()  # first run this with 3 settings, see prefix
+    # plot_results()  # ... then this
     print("Done in {0} s".format(time.time()-t0))

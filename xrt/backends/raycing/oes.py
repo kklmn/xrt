@@ -3365,16 +3365,17 @@ class BlazedGrating(OE):
     that wave propagation gives the same result for the two cases, apart from a
     small vertical shift. The difference is purely esthetic.
 
-            +-----------------+--------------------+
-            |       OE        |   BlazedGrating    |
-            +=================+====================+
-            | |OE_shadowing|  | |Blazed_shadowing| |
-            +-----------------+--------------------+
+        +-----------------+--------------------+
+        |       OE        |   BlazedGrating    |
+        +=================+====================+
+        | |OE_shadowing|  | |Blazed_shadowing| |
+        +-----------------+--------------------+
 
-            .. |OE_shadowing| imagezoom:: _images/1-LEG_profile-default.png
-               :scale: 50 %
-            .. |Blazed_shadowing| imagezoom:: _images/1-LEG_profile-adhoc.png
-               :scale: 50 %
+        .. |OE_shadowing| imagezoom:: _images/1-LEG_profile-default.png
+           :scale: 50 %
+        .. |Blazed_shadowing| imagezoom:: _images/1-LEG_profile-adhoc.png
+           :loc: upper-right-corner
+           :scale: 50 %
     """
 
     def __init__(self, *args, **kwargs):

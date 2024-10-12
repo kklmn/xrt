@@ -3,6 +3,11 @@ u"""
 xrtQook -- a GUI for creating a beamline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. imagezoom:: _images/xrtQook.png
+   :align: right
+   :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
+       help panel on the right.
+
 The main interface to xrt is through a python script. Many examples of such
 scripts can be found in the supplied folders `examples` and `tests`. The script
 imports the modules of xrt, instantiates beamline parts, such as synchrotron or
@@ -22,10 +27,6 @@ the corresponding script parts have to be written manually based on the
 supplied examples and the present documentation.
 
 See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
-
-.. imagezoom:: _images/xrtQook.png
-   :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
-       help panel on the right.
 
 """
 

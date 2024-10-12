@@ -1295,7 +1295,7 @@ class Undulator(IntegratedSource):
             elif B0x == 0 and B0y == 0:
                 self.Kx = 0
                 self.K = 1
-                raise("Please define either K or B0!")
+                raise ValueError("Please define either K or B0!")
             else:
                 self.Kbase = False
                 self.B0y = B0y

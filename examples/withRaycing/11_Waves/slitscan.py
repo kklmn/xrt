@@ -43,9 +43,13 @@ because the horizontal emittance is much larger than the vertical one.
 .. |slit_w0_300| imagezoom:: _images/slit_w0_300.*
 
 .. |slit_wr_100| imagezoom:: _images/slit_wr_100.*
+   :loc: upper-right-corner
 .. |slit_wr_150| imagezoom:: _images/slit_wr_150.*
+   :loc: upper-right-corner
 .. |slit_wr_200| imagezoom:: _images/slit_wr_200.*
+   :loc: upper-right-corner
 .. |slit_wr_300| imagezoom:: _images/slit_wr_300.*
+   :loc: upper-right-corner
 
 .. |e100| imagezoom:: _images/slit_e_100.*
    :loc: upper-right-corner
