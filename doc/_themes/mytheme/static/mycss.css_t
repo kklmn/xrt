@@ -247,3 +247,7 @@ div.code-block-caption {
     color: #222;
     border: 1px solid #C6C9CB;
 }
+
+pre, div[class*="highlight-"] {
+    clear: left;
+}
