@@ -76,14 +76,16 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
 try:
     import pyopencl as cl
     import xrt.backends.raycing.myopencl as mcl
+    targetOpenCL = 'auto'
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-    isOpenCL = True
+    xrt_cl = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
+                        targetOpenCL=targetOpenCL)
+    isOpenCL = hasattr(xrt_cl, 'cl_precisionF')
 except ImportError:
     isOpenCL = False
 
 HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
 
-targetOpenCL = 'auto'
 
 def parse_hkl(hklstr):
     matches = re.findall(HKLRE, hklstr)
@@ -278,8 +280,7 @@ class PlotWidget(QWidget):
 
         if isOpenCL:
             self.allBackends.append('xrtCL FP32')
-            self.matCL = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
-                                    targetOpenCL=targetOpenCL)
+            self.matCL = xrt_cl
             self.isFP64 = False
             if hasattr(self.matCL, 'cl_ctx'):
                 for ctx in self.matCL.cl_ctx:
@@ -820,6 +821,8 @@ class PlotWidget(QWidget):
         thck = float(root_item.child(ind, 1).text())
         ind = self.findIndexFromText("Asymmetry")
         asymmetry = float(root_item.child(ind, 1).text())
+        ind = self.findIndexFromText("In-plane Rotation")
+        ipr = float(root_item.child(ind, 1).text())
         ind = self.findIndexFromText("Bending Rm")
         Rm = root_item.child(ind, 1).text()
         RmStr = Rm if Rm == "inf" else Rm + "m"
@@ -858,7 +861,8 @@ class PlotWidget(QWidget):
             header = \
                 f"{what} calculated by xrtBentXtal on {nowStr}\n"\
                 f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
-                f"Asymmetry: {asymmetry:.8g}°\tRm: {RmStr}\tRs: {RsStr}\n"\
+                f"Asymmetry: {asymmetry:.8g}°\tIn-plane rotation: {ipr:.8g}°\n"\
+                f"Rm: {RmStr}\tRs: {RsStr}\n"\
                 f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
                 f"Geometry: {geometry}\n"
             header += "\t".join(outNames)
