@@ -191,6 +191,7 @@ class Element(object):
         self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
         self.table = table
         self.mass = read_atomic_data(self.Z)
+        self.elem = elem  # For compatibility and dynamic update
 
     def read_f0_Kissel(self):
         r"""
@@ -1122,6 +1123,29 @@ class Coated(Multilayer):
             idThickness=surfaceRoughness, nPairs=1, *args, **kwargs)
         self.kind = 'mirror'
 
+    @property
+    def coating(self):
+        return self.bLayer
+    
+    @coating.setter
+    def coating(self, cmat):
+        self.bLayer = cmat
+
+    @property
+    def cThickness(self):
+        return self.bThickness
+    
+    @cThickness.setter
+    def cThickness(self, ct):
+        self.bThickness = ct
+
+    @property
+    def surfaceRoughness(self):
+        return self.idThickness
+    
+    @surfaceRoughness.setter
+    def surfaceRoughness(self, ct):
+        self.idThickness = ct
 
 class Crystal(Material):
     u"""The parent class for crystals. The descendants must define
