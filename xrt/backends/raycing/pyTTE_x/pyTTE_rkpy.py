@@ -8,7 +8,8 @@ from .ttcrystal import TTcrystal
 from .quantity import Quantity
 from .ttscan import TTscan
 import matplotlib.pyplot as plt
-import multiprocessing as multiprocess
+#import multiprocessing as multiprocess
+import multiprocess
 import numpy as np
 import time
 # import xraylib

@@ -285,6 +285,7 @@ import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing as raycing
 from xrt.backends.raycing.pyTTE_x import TakagiTaupin, TTcrystal, TTscan, Quantity
+
 raycing._VERBOSITY_ = 1000
 
 
@@ -545,7 +546,7 @@ def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
                     unpack=True, usecols=(0, 2, 3))
                 p1, = ax.plot(x, R2s, '-k', label='s XCrystal', linewidth=2)
     #            p2, = ax.plot(x, R2p, '--k', label='p XCrystal')
-    
+
             if xcb_tt:
                 x, R2s = np.loadtxt(
                     "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_tt_sigma.xcb.gz".format( # analysis:ignore
@@ -671,11 +672,11 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
                            )
     else:
         matCL = None
-        
-        
+
+
     """A comparison subroutine used in the module test suit."""
     def for_one_R(crystal, alphaDeg, hkl, t, R):
-        
+
         IPR = 0
 
         Rcurv=np.inf if R is None else R
@@ -708,7 +709,7 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
         if pyTTE:
             geotag = 0 if geom.startswith('B') else np.pi*0.5
 #            print(Rcurv)
-            ttx = TTcrystal(crystal = 'Si', hkl=crystal.hkl, thickness = Quantity(t*1e3,'um'), 
+            ttx = TTcrystal(crystal = 'Si', hkl=crystal.hkl, thickness = Quantity(t*1e3,'um'),
                             debye_waller = 1, xrt_crystal=crystal, Rx=Quantity(Rcurv, 'mm'),
                             in_plane_rotation = Quantity(IPR, 'deg'),
                             asymmetry = Quantity(alpha+geotag, 'rad'))
@@ -718,10 +719,10 @@ def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
 #            ttp = TTscan(constant=Quantity(E[0],'eV'),
 #                         scan=Quantity(theta-thetaCenter, 'rad'),
 #                         polarization='pi')
-            
+
             scan_tt_s=TakagiTaupin(ttx, tts)
-#            scan_tt_p=TakagiTaupin(ttx, ttp)        
-    
+#            scan_tt_p=TakagiTaupin(ttx, ttp)
+
             if __name__ == '__main__':
                 scan_vector, R, T, curSD = scan_tt_s.run()
 #                scan_vector, R, T, curPD = scan_tt_p.run()
