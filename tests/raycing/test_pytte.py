@@ -1,3 +1,31 @@
+# -*- coding: utf-8 -*-
+"""
+Comparison tests for pyTTE backends
+-------------------
+
+1. Original pyTTE
+pip install pyTTE xraylib multiprocess
+Solution is based on scipy.integrate.ODE zvode-bdf algorithm. Material
+properties provided by xraylib package.
+Fails on thick crystals (>1mm in case 2), requires increasing 'nsteps' to few
+millions in order to converge.
+
+2. xrt pyTTE_x CPU
+Pure python custom implementation of Dormand-Prince 4/5 adaptive algorithm.
+Based on material properties provided by xrt.raycing.materials module.
+
+3. xrt pyTTE_x OpenCL
+Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. Zero point in the
+propagation direction is shifted to to the surface of incidence, so as the
+nominal radius of curvature. This is done to provide compatibility with xrt
+raycing coordinate system, will result in a modest angular shift in the
+reflectivity peak position comparing to original pyTTE implementation.
+This is the default operation mode for xrt ray tracing.
+
+
+"""
+__author__ = "Konstantin Klementiev"
+__date__ = "12 Mar 2014"
 import numpy as np
 import os, sys;
 sys.path.append(os.path.join('..', '..'))  # analysis:ignore
@@ -89,7 +117,7 @@ case4 = {
 
 case5 = {
     "name": "Laue 2D bent",
-    "crystal": "AlphaQuartz", # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
+    "crystal": 'Si', # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
     "geometry": "Laue reflected",  # Combination of Bragg/Laue reflected/transmitted
     "hkl": [1, 1, 1],
     "thickness": 2.,  # mm
@@ -139,9 +167,10 @@ def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
     return np.abs(ampS)**2 if polarization == "sigma" else np.abs(ampP)**2
 
 
-def run_pytte_xrt_cpu(name, crystal, geometry, hkl, thickness, asymmetry,
-                      in_plane_rotation, bending_Rm, bending_Rs, energy,
-                      theta_array, polarization, precision):
+def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
+                              asymmetry, in_plane_rotation, bending_Rm,
+                              bending_Rs, energy, theta_array, polarization,
+                              precision):
 
     alpha = np.radians(asymmetry)
     geotag = 0 if geometry.startswith('B') else np.pi*0.5
@@ -204,7 +233,7 @@ if __name__ == '__main__':
         plt.figure(calcParams["name"])
         for func in [
                      run_pytte_xrt_opencl,
-                     run_pytte_xrt_cpu,
+                     run_pytte_xrt_cpu_rk45cpu,
                      run_pytte_original
                      ]:
             data = func(**calcParams)
