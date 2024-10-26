@@ -24,8 +24,9 @@ This is the default operation mode for xrt ray tracing.
 
 
 """
-__author__ = "Konstantin Klementiev"
-__date__ = "12 Mar 2014"
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "26 Oct 2024"
+
 import numpy as np
 import os, sys;
 sys.path.append(os.path.join('..', '..'))  # analysis:ignore
