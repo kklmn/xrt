@@ -12,15 +12,18 @@ millions in order to converge.
 
 2. xrt pyTTE_x CPU
 Pure python custom implementation of Dormand-Prince 4/5 adaptive algorithm.
-Based on material properties provided by xrt.raycing.materials module.
+Based on material properties provided by xrt.raycing.materials module. 
+In our implementation the nominal radius of curvature used for strain
+calculation is defined at the crystal's top surface, whereas in the original
+pyTTE, it is centered within the crystal. This difference causes a slight
+angular shift in the position of the reflectivity peak compared to the original
+pyTTE implementation. Surface-centered radius of curvature is the standard
+for the raycing backend. In this test the position of the radius of curvature
+can be defined in the TakagiTaupinX class init setting the 'strain_shift'
+argument to either 'xrt' or 'pytte'.
 
 3. xrt pyTTE_x OpenCL
-Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. Zero point in the
-propagation direction is shifted to to the surface of incidence, so as the
-nominal radius of curvature. This is done to provide compatibility with xrt
-raycing coordinate system, will result in a modest angular shift in the
-reflectivity peak position comparing to original pyTTE implementation.
-This is the default operation mode for xrt ray tracing.
+Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. 
 
 
 """
@@ -233,13 +236,14 @@ if __name__ == '__main__':
     for calcParams in [case1, case2, case3, case4, case5]:
         plt.figure(calcParams["name"])
         for func in [
-                     run_pytte_xrt_opencl,
+                     run_pytte_original,
                      run_pytte_xrt_cpu_rk45cpu,
-                     run_pytte_original
+                     run_pytte_xrt_opencl if isOpenCL else None
                      ]:
-            data = func(**calcParams)
-            plt.plot(calcParams['theta_array'], data,
-                     label=str(func.__name__).split("_")[-1])
+            if func:
+                data = func(**calcParams)
+                plt.plot(calcParams['theta_array'], data,
+                         label=str(func.__name__).split("_")[-1])
         plt.xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
         plt.ylabel('|Amplitude|²')
         plt.title(calcParams["name"])    
