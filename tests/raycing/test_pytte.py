@@ -196,7 +196,7 @@ def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
                   scan=QuantityX(theta_array, 'urad'),
                   polarization=polarization)
 
-    scan_tt_s = TakagiTaupinX(ttx, tts)
+    scan_tt_s = TakagiTaupinX(ttx, tts, strain_shift='xrt')
     scan_vector, R, T, curSD = scan_tt_s.run()
     return R if refl else T
 
@@ -240,6 +240,9 @@ if __name__ == '__main__':
             data = func(**calcParams)
             plt.plot(calcParams['theta_array'], data,
                      label=str(func.__name__).split("_")[-1])
+        plt.xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
+        plt.ylabel('|Amplitude|²')
+        plt.title(calcParams["name"])    
         plt.legend()
         plt.show(block=False)
     plt.show()

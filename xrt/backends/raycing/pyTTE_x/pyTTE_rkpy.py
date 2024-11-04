@@ -97,7 +97,7 @@ class TakagiTaupin:
     # Methods for initialization #
     ##############################
 
-    def __init__(self, TTcrystal_object=None, TTscan_object=None):
+    def __init__(self, TTcrystal_object=None, TTscan_object=None, **kwargs):
 
         self.crystal_object = None
         self.scan_object = None
@@ -105,6 +105,9 @@ class TakagiTaupin:
 
         self.set_crystal(TTcrystal_object)
         self.set_scan(TTscan_object)
+        self.strain_mod = 1.
+        if 'strain_shift' in kwargs:
+            self.strain_mod = int(kwargs['strain_shift'] == 'pytte')
 
     def set_crystal(self, TTcrystal_object):
         '''
@@ -735,11 +738,14 @@ class TakagiTaupin:
 
                 def strain_term(z):
                     x = -z*cot_alpha0
-                    duh_dsh = h*(sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness)
+                    duh_dsh = h*(sin_phi*cos_alphah*(-invR1)*
+                                 (z+0.5*thickness*self.strain_mod)
                                  + sin_phi*sin_alphah *
-                                 (-invR1*x + coef2*(z+0.5*thickness))
+                                 (-invR1*x + coef2*
+                                  (z+0.5*thickness*self.strain_mod))
                                  + cos_phi*cos_alphah*invR1*x
-                                 + cos_phi*sin_alphah*coef1*(z+0.5*thickness)
+                                 + cos_phi*sin_alphah*coef1*
+                                 (z+0.5*thickness*self.strain_mod)
                                  )
                     return gammah_step*duh_dsh
 
