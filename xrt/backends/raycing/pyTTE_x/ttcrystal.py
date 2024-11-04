@@ -8,7 +8,11 @@ from .deformation import isotropic_plate, anisotropic_plate_fixed_shape, \
 from .rotation_matrix import rotate_asymmetry, align_vector_with_z_axis, \
     inplane_rotation
 import numpy as np
-# import xraylib
+try:
+    import xraylib
+    isXrayLib = True
+except ImportError:
+    isXrayLib = False
 
 
 HC_CONST = Quantity(1.23984193, 'eV um')  # Planck's constant * speed of light
@@ -161,6 +165,12 @@ class TTcrystal:
 
     def __init__(self, filepath=None, **kwargs):
 
+
+        self.xrt_crystal = None
+        self.mat_backend = 'xrt'
+        if 'mat_backend' in kwargs and kwargs['mat_backend'] == 'xraylib' and isXrayLib:
+                self.mat_backend = kwargs['mat_backend']
+        self.strain_shift = kwargs.pop('strain_shift', 'xrt')
         params = {}
 
         if filepath is not None:
@@ -248,8 +258,8 @@ class TTcrystal:
             raise KeyError(
                 'At least one of the required keywords crystal, hkl, or '
                 'thickness is missing!')
-
-        self.xrt_crystal = kwargs['xrt_crystal']
+        if 'xrt_crystal' in kwargs:
+            self.xrt_crystal = kwargs['xrt_crystal']
 
         # Optional keywords
         for k in ['asymmetry', 'in_plane_rotation']:
@@ -322,41 +332,42 @@ class TTcrystal:
             with xraylib
         '''
 
+        if self.mat_backend == 'xraylib':
         # Check whether the crystal_str is valid and available in xraylib
-#        if type(crystal_str) == type(''):
-#            if crystal_str in xraylib.Crystal_GetCrystalsList():
-#                self.crystal_data = xraylib.Crystal_GetCrystal(crystal_str)
-#            else:
-#                raise ValueError('The given crystal_str not found in xraylib!')
-#        else:
-#            raise ValueError('Input argument crystal_str is not type str!')
+            if type(crystal_str) == type(''):
+                if crystal_str in xraylib.Crystal_GetCrystalsList():
+                    self.crystal_data = xraylib.Crystal_GetCrystal(crystal_str)
+                else:
+                    raise ValueError('The given crystal_str not found in xraylib!')
+            else:
+                raise ValueError('Input argument crystal_str is not type str!')
 
         # xrt.materials.CrystalSi ONLY
-
-        if isinstance(crystal_str, dict):
-            self.crystal_data = crystal_str
-        elif self.xrt_crystal is not None:
-            if hasattr(self.xrt_crystal, 'get_a'):  # CrystalSi
-                self.crystal_data = {
-                    'name': 'Si',
-                    'a': self.xrt_crystal.get_a(),
-                    'b': self.xrt_crystal.get_a(),
-                    'c': self.xrt_crystal.get_a(),
-                    'd': self.xrt_crystal.d,
-                    'alpha': 90.0, 'beta': 90.0, 'gamma': 90.0}
-            elif self.xrt_crystal.name in CRYSTALS.keys():
-                self.crystal_data = {
-                    'name': self.xrt_crystal.name,
-                    'a': self.xrt_crystal.a,
-                    'b': self.xrt_crystal.b,
-                    'c': self.xrt_crystal.c,
-                    'd': self.xrt_crystal.d,
-                    'alpha': np.degrees(self.xrt_crystal.alpha),
-                    'beta': np.degrees(self.xrt_crystal.beta),
-                    'gamma': np.degrees(self.xrt_crystal.gamma)}
-            else:
-                raise NotImplementedError(
-                    "Elastic constants for this kind of crystal not available")
+        else:  # xrt.Materials
+            if isinstance(crystal_str, dict):
+                self.crystal_data = crystal_str
+            elif self.xrt_crystal is not None:
+                if hasattr(self.xrt_crystal, 'get_a'):  # CrystalSi
+                    self.crystal_data = {
+                        'name': 'Si',
+                        'a': self.xrt_crystal.get_a(),
+                        'b': self.xrt_crystal.get_a(),
+                        'c': self.xrt_crystal.get_a(),
+                        'd': self.xrt_crystal.d,
+                        'alpha': 90.0, 'beta': 90.0, 'gamma': 90.0}
+                elif self.xrt_crystal.name in CRYSTALS.keys():
+                    self.crystal_data = {
+                        'name': self.xrt_crystal.name,
+                        'a': self.xrt_crystal.a,
+                        'b': self.xrt_crystal.b,
+                        'c': self.xrt_crystal.c,
+                        'd': self.xrt_crystal.d,
+                        'alpha': np.degrees(self.xrt_crystal.alpha),
+                        'beta': np.degrees(self.xrt_crystal.beta),
+                        'gamma': np.degrees(self.xrt_crystal.gamma)}
+                else:
+                    raise NotImplementedError(
+                        "Elastic constants for this kind of crystal not available")
 
         # calculate the direct and reciprocal primitive vectors
         self.direct_primitives, self.reciprocal_primitives = crystal_vectors(
@@ -708,8 +719,11 @@ class TTcrystal:
             raise ValueError('bragg_angle has to be in range (0,180) deg!')
 
         # d-spacing of the reflection
-#        d = Quantity(xraylib.Crystal_dSpacing(self.crystal_data,*self.hkl),'A')
-        d = self.xrt_crystal.d
+        if self.mat_backend == 'xraylib':
+            d = Quantity(xraylib.Crystal_dSpacing(
+                    self.crystal_data, *self.hkl), 'A')
+        else:
+            d = self.xrt_crystal.d
 
         wavelength = 2*d*np.sin(bragg_angle.in_units('rad'))
 
@@ -741,8 +755,11 @@ class TTcrystal:
             raise ValueError('bragg_energy has to be non-negative!')
 
         # d-spacing of the reflection
-#        d = Quantity(xraylib.Crystal_dSpacing(self.crystal_data,*self.hkl),'A')
-        d = self.xrt_crystal.d
+        if self.mat_backend == 'xraylib':
+            d = Quantity(xraylib.Crystal_dSpacing(
+                    self.crystal_data, *self.hkl), 'A')
+        else:
+            d = self.xrt_crystal.d
 
         wavelength = HC_CONST/bragg_energy
 

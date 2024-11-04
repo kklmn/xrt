@@ -4,26 +4,29 @@ Comparison tests for pyTTE backends
 -------------------
 
 1. Original pyTTE
-pip install pyTTE xraylib multiprocess
-Solution is based on scipy.integrate.ODE zvode-bdf algorithm. Material
-properties provided by xraylib package.
-Fails on thick crystals (>1mm in case 2), requires increasing 'nsteps' to few
-millions in order to converge.
+Requires xraylib and multiprocess packages (both can be pip-installed), xraylib
+provides the material properties. Solution of Takagi-Taupin equations relies on 
+scipy.integrate.ODE, zvode-bdf algorithm. 
+Fails on thick crystals (>1mm in case 2), requires increasing 'nsteps' in the
+integrator up to 2-3 million in order to converge.
+Calculation of transmitted intensity in Bragg geometry is not supported.
 
 2. xrt pyTTE_x CPU
 Pure python custom implementation of Dormand-Prince 4/5 adaptive algorithm.
-Based on material properties provided by xrt.raycing.materials module. 
+Material properties backend can be either 'xrt' (default) or 'xraylib',
+selectable via the TTcrystalX mat_backend init parameter. 
 In our implementation the nominal radius of curvature used for strain
-calculation is defined at the crystal's top surface, whereas in the original
+calculation is defined at the crystal's top surface, while in the original
 pyTTE, it is centered within the crystal. This difference causes a slight
 angular shift in the position of the reflectivity peak compared to the original
 pyTTE implementation. Surface-centered radius of curvature is the standard
 for the raycing backend. In this test the position of the radius of curvature
-can be defined in the TakagiTaupinX class init setting the 'strain_shift'
+can be defined in the TTcrystalX class init by setting the 'strain_shift'
 argument to either 'xrt' or 'pytte'.
 
 3. xrt pyTTE_x OpenCL
-Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. 
+Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. Calculation of
+transmitted intensity in Bragg geometry is not supported.
 
 
 """
@@ -35,7 +38,7 @@ import os, sys;
 sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.materials_crystals as rmc
-import xrt.backends.raycing as raycing
+import xrt.backends.raycing as raycing  # analysis:ignore
 from xrt.backends.raycing.pyTTE_x import TTcrystal as TTcrystalX
 from xrt.backends.raycing.pyTTE_x import TTscan as TTscanX
 from xrt.backends.raycing.pyTTE_x import Quantity as QuantityX
@@ -44,7 +47,15 @@ from pyTTE import TTcrystal, TTscan, Quantity, TakagiTaupin
 from matplotlib import pyplot as plt
 
 try:
-    import pyopencl as cl
+    import xraylib  # analysis:ignore
+    import multiprocess  # analysis:ignore
+    isXrayLib = True
+except ImportError:
+    isXrayLib = False
+    print("xraylib and multiprocess must be installed to run pyTTE")
+
+try:
+    import pyopencl as cl  # analysis:ignore
     import xrt.backends.raycing.myopencl as mcl
     targetOpenCL = 'auto'
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
@@ -53,6 +64,7 @@ try:
     isOpenCL = hasattr(xrt_cl, 'cl_precisionF')
 except ImportError:
     isOpenCL = False
+    print("pyopencl and supported GPU/CPI driver are required for OpenCL")
 
 
 case1 = {
@@ -192,15 +204,16 @@ def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
                      Rx=QuantityX(bending_Rm, 'm'),
                      Ry=QuantityX(bending_Rs, 'm'),
                      asymmetry=QuantityX(alpha+geotag, 'rad'),
-                     in_plane_rotation=QuantityX(in_plane_rotation, 'deg')
+                     in_plane_rotation=QuantityX(in_plane_rotation, 'deg'),
+#                     mat_backend='xraylib',  # Default is 'xrt'
+#                     strain_shift='pytte',  # Default is 'xrt'
                      )
 
     tts = TTscanX(constant=QuantityX(energy, 'eV'),
                   scan=QuantityX(theta_array, 'urad'),
                   polarization=polarization)
 
-#    scan_tt_s = TakagiTaupinX(ttx, tts, strain_shift='pytte')
-    scan_tt_s = TakagiTaupinX(ttx, tts, strain_shift='xrt')
+    scan_tt_s = TakagiTaupinX(ttx, tts)
     scan_vector, R, T, curSD = scan_tt_s.run()
     return R if refl else T
 
@@ -228,26 +241,29 @@ def run_pytte_original(name, crystal, geometry, hkl, thickness, asymmetry,
 
     scan_tt_s = TakagiTaupin(ttx, tts)
     scan_vector, R, T = scan_tt_s.run()
-    # multiplier = gamma0/gammah  # !!!
+
     return R if refl else T
 
 
 if __name__ == '__main__':
 
-    for calcParams in [case1, case2, case3, case4, case5]:
+    for icp, calcParams in enumerate(
+            [case1, case2, case3, case4, case5]):
         plt.figure(calcParams["name"])
-        for func in [
-                     run_pytte_original,
+        for ifunc, func in enumerate([
+                     run_pytte_original if isXrayLib else None,
                      run_pytte_xrt_cpu_rk45cpu,
                      run_pytte_xrt_opencl if isOpenCL else None
-                     ]:
+                     ]):
             if func:
                 data = func(**calcParams)
                 plt.plot(calcParams['theta_array'], data,
-                         label=str(func.__name__).split("_")[-1])
+                         label=str(func.__name__).split("_")[-1],
+                         linewidth=3-ifunc)
         plt.xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
         plt.ylabel('|Amplitude|²')
         plt.title(calcParams["name"])    
         plt.legend()
+        plt.savefig(f'{icp+1:02d} - {calcParams["name"]}.png')
         plt.show(block=False)
     plt.show()

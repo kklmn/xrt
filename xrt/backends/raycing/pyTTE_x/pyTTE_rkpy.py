@@ -12,10 +12,13 @@ import matplotlib.pyplot as plt
 import multiprocess
 import numpy as np
 import time
-# import xraylib
 import sys
 sys.path.append(r"../../../")
-
+try:
+    import xraylib
+    isXrayLib = True
+except ImportError:
+    isXrayLib = False
 
 class TakagiTaupin:
 
@@ -105,9 +108,9 @@ class TakagiTaupin:
 
         self.set_crystal(TTcrystal_object)
         self.set_scan(TTscan_object)
-        self.strain_mod = 1.
-        if 'strain_shift' in kwargs:
-            self.strain_mod = int(kwargs['strain_shift'] == 'pytte')
+        self.strain_mod = 0.
+        if hasattr(TTcrystal_object, 'strain_shift'):
+            self.strain_mod = int(TTcrystal_object.strain_shift == 'pytte')
 
     def set_crystal(self, TTcrystal_object):
         '''
@@ -195,18 +198,23 @@ class TakagiTaupin:
         # preserve the original shape and reshape energy to 1d array
         orig_shape = energy_in_keV.shape
         energy_in_keV = energy_in_keV.reshape(-1)
-
         F0 = np.zeros(energy_in_keV.shape, dtype=np.complex128)
         Fh = np.zeros(energy_in_keV.shape, dtype=np.complex128)
         Fb = np.zeros(energy_in_keV.shape, dtype=np.complex128)
 
-#        for i in range(energy_in_keV.size):
-#            F0[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i], 0, 0, 0, 1.0, 1.0)
-#            Fh[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i],  hkl[0],  hkl[1],  hkl[2], debye_waller, 1.0)
-#            Fb[i] = xraylib.Crystal_F_H_StructureFactor(crystal, energy_in_keV[i], -hkl[0], -hkl[1], -hkl[2], debye_waller, 1.0)
-        d = crystal.d
-        F0, Fh, Fb = crystal.get_F_chi(energy_in_keV*1000,
-                                       0.5/d)[:3]
+        if hasattr(crystal, 'get_F_chi'):
+            d = crystal.d
+            F0, Fh, Fb = crystal.get_F_chi(energy_in_keV*1000, 0.5/d)[:3]
+        else:  # crystal_object.mat_backend == 'xraylib':
+            for i in range(energy_in_keV.size):
+                F0[i] = xraylib.Crystal_F_H_StructureFactor(
+                        crystal, energy_in_keV[i], 0, 0, 0, 1.0, 1.0)
+                Fh[i] = xraylib.Crystal_F_H_StructureFactor(
+                        crystal, energy_in_keV[i],  hkl[0],  hkl[1],  hkl[2],
+                        debye_waller, 1.0)
+                Fb[i] = xraylib.Crystal_F_H_StructureFactor(
+                        crystal, energy_in_keV[i], -hkl[0], -hkl[1], -hkl[2],
+                        debye_waller, 1.0)
 
         return F0.reshape(orig_shape), Fh.reshape(orig_shape), Fb.reshape(orig_shape)
 
@@ -264,7 +272,7 @@ class TakagiTaupin:
 
             '''
             print_str = str(printable)
-            print(print_str)
+#            print(print_str)
             return log_string + print_str + '\n'
 
         output_log = ''
@@ -285,7 +293,10 @@ class TakagiTaupin:
         ################################################
 
         # Introduction of shorthands
-#        crystal   = self.crystal_object.crystal_data
+        if self.crystal_object.mat_backend == 'xraylib':
+            crystal = self.crystal_object.crystal_data
+        else:  # xrt.Materials
+            crystal = self.crystal_object.xrt_crystal
         hkl = self.crystal_object.hkl
         phi = self.crystal_object.asymmetry
         thickness = self.crystal_object.thickness
@@ -302,14 +313,16 @@ class TakagiTaupin:
 
         # Planck's constant * speed of light
         hc = Quantity(1.23984193, 'eV um')
-#        d   = Quantity(xraylib.Crystal_dSpacing(crystal,*hkl),'A') #spacing of Bragg planes
-        d = Quantity(self.crystal_object.xrt_crystal.d, 'A')
-#        V   = Quantity(crystal['volume'],'A^3')                    #volume of unit cell
-        if hasattr(self.crystal_object.xrt_crystal, 'a'):
-            V = Quantity(self.crystal_object.xrt_crystal.a**3, 'A^3')
-        elif hasattr(self.crystal_object.xrt_crystal, 'get_a'):
-            V = Quantity(self.crystal_object.xrt_crystal.get_a()**3, 'A^3')
-#        print("d", d, "V", V)
+        if self.crystal_object.mat_backend == 'xraylib': 
+            d   = Quantity(xraylib.Crystal_dSpacing(crystal,*hkl),'A') #spacing of Bragg planes
+            V   = Quantity(crystal['volume'],'A^3')                    #volume of unit cell
+        else:  # xrt.Materials
+            d = Quantity(crystal.d, 'A')
+            if hasattr(crystal, 'a'):
+                V = Quantity(crystal.a**3, 'A^3')
+            elif hasattr(crystal, 'get_a'):
+                V = Quantity(crystal.get_a()**3, 'A^3')
+
         r_e = Quantity(2.81794033e-15, 'm')  # classical electron radius
         h = 2*np.pi/d  # length of reciprocal lattice vector
 
@@ -338,7 +351,7 @@ class TakagiTaupin:
             ################################################
 
             F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(
-                self.crystal_object.xrt_crystal, hkl, energy_bragg,
+                crystal, hkl, energy_bragg,
                 debye_waller)
 
             # conversion factor from crystal structure factor to susceptibility
@@ -524,7 +537,7 @@ class TakagiTaupin:
 
         # Compute susceptibilities
         F0, Fh, Fb = TakagiTaupin.calculate_structure_factors(
-            self.crystal_object.xrt_crystal, hkl, energy, debye_waller)
+            crystal, hkl, energy, debye_waller)
 
         # conversion factor from crystal structure factor to susceptibility
         cte = -(r_e * (hc/energy_bragg)**2/(np.pi * V)).in_units('1')

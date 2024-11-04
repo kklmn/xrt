@@ -1777,7 +1777,9 @@ class Crystal(Material):
 
         *inPlaneRotation*: float
             Counterclockwise-positive rotation of the crystal directions around
-            the normal vector of (hkl) in radians. (see pyTTE.TTcrystal)
+            the normal vector of (hkl) in radians. (see pyTTE.TTcrystal).
+            In-plane rotation definition as vector is not supported in xrt
+            currently.
 
         *Ry*: float
             Meridional radius of curvature in mm. Positive for concave bend.
