@@ -166,7 +166,7 @@ def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
 
     ampS, ampP = crInstance.get_amplitude_pytte(
             E_in, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
-            inPlaneRotation=in_plane_rotation,
+            inPlaneRotation=np.radians(in_plane_rotation),
             Ry=bending_Rm*1e3, Rx=bending_Rs*1e3)
     return np.abs(ampS)**2 if polarization == "sigma" else np.abs(ampP)**2
 
@@ -199,6 +199,7 @@ def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
                   scan=QuantityX(theta_array, 'urad'),
                   polarization=polarization)
 
+#    scan_tt_s = TakagiTaupinX(ttx, tts, strain_shift='pytte')
     scan_tt_s = TakagiTaupinX(ttx, tts, strain_shift='xrt')
     scan_vector, R, T, curSD = scan_tt_s.run()
     return R if refl else T

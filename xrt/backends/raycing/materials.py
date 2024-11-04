@@ -1775,6 +1775,10 @@ class Crystal(Material):
         *alphaAsymm*: float
             Angle of asymmetry in radians.
 
+        *inPlaneRotation*: float
+            Counterclockwise-positive rotation of the crystal directions around
+            the normal vector of (hkl) in radians. (see pyTTE.TTcrystal)
+
         *Ry*: float
             Meridional radius of curvature in mm. Positive for concave bend.
 

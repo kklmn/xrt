@@ -759,7 +759,7 @@ class CalculateAmplitudes:
             ksip_i = interpolate.interp1d(xlong, np.imag(ylong),
                                           kind='cubic',
                                           fill_value='extrapolate')
-            d0, xt, yt = rkdpa(f1, f2r=ksip_r, f2i=ksip_i, y0=1.0)
+            d0, xt, yt = rkdpaconst(f1, f2r=ksip_r, f2i=ksip_i, y0=1.0)
 
             return [y_adapt, d0]
 
@@ -780,9 +780,8 @@ class CalculateAmplitudes:
                 duh_dsh = h_um*(
                     sin_phi*cos_alphah*(-invR1)*
                     (z+0.5*thickness*self.strain_mod) +
-                    sin_phi*sin_alphah*(-invR1*x +
-                                        coef2*
-                                        (z+0.5*thickness*self.strain_mod)) +
+                    sin_phi * sin_alphah *
+                    (-invR1*x + coef2*(z+0.5*thickness*self.strain_mod)) +
                     cos_phi*cos_alphah*invR1*x +
                     cos_phi*sin_alphah*coef1*
                     (z+0.5*thickness*self.strain_mod))
