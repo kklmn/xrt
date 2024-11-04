@@ -39,7 +39,7 @@ import numpy as np
 import copy
 from functools import partial
 from datetime import datetime
-from collections import namedtuple
+#from collections import namedtuple
 
 from scipy.interpolate import UnivariateSpline
 
@@ -54,7 +54,7 @@ from PyQt5.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
     QPixmap, QColor
 import matplotlib as mpl
-from matplotlib.backend_tools import ToolBase
+#from matplotlib.backend_tools import ToolBase
 
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -74,7 +74,7 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
 try:
-    import pyopencl as cl
+    import pyopencl as cl  # analysis:ignore
     import xrt.backends.raycing.myopencl as mcl
     targetOpenCL = 'auto'
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
@@ -549,7 +549,7 @@ class PlotWidget(QWidget):
 #        try:
 #            return float(item.child(ind, 1).text())
 #        except ValueError:
-#            return float(self.initParams[ind][1])        
+#            return float(self.initParams[ind][1])
 
     def get_range_item(self, item):
         ind = self.findIndexFromText("Scan Range")
@@ -1044,7 +1044,7 @@ class PlotWidget(QWidget):
         plot_item.thetaB = theta0
         plot_item.d = getattr(crystalInstance, 'd')
         phi = np.radians(float(asymmetry))
-        ipr_rad = np.radians(float(ipr)) 
+        ipr_rad = np.radians(float(ipr))
 
         if units == "eV":
             tLimits = self.get_scan_range(plot_item)
@@ -1291,7 +1291,7 @@ class AmpCalculator(QThread):
                            targetOpenCL=targetOpenCL)
         ampS, ampP = self.crystalInstance.get_amplitude_pytte(
                 self.energy, self.gamma0, self.gammah, self.hns0,
-                ucl=matCL, alphaAsym=self.alpha, 
+                ucl=matCL, alphaAsym=self.alpha,
                 inPlaneRotation=self.ipr_rad,
                 autoLimits=False,
                 Ry=float(self.Rm)*1000.,
