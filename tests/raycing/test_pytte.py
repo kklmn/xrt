@@ -155,11 +155,14 @@ case5 = {
 def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
                          in_plane_rotation, bending_Rm, bending_Rs, energy,
                          theta_array, polarization, precision):
+
     alpha = np.radians(asymmetry)
     crInstance = getattr(rmc, crystal)(hkl=hkl,
                                        geom=geometry,
                                        t=thickness,
                                        useTT=True)
+
+    refl = geometry.endswith("lected")
 
     thetaCenter = np.arcsin(rm.ch / (2*crInstance.d*energy))
     E_in = np.ones_like(theta_array) * energy
@@ -184,7 +187,9 @@ def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
             E_in, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
             inPlaneRotation=np.radians(in_plane_rotation),
             Ry=bending_Rm*1e3, Rx=bending_Rs*1e3)
-    return np.abs(ampS)**2 if polarization == "sigma" else np.abs(ampP)**2
+    tmod = int(refl)
+    return tmod * np.abs(ampS)**2 if polarization == "sigma" else\
+        tmod * np.abs(ampP)**2
 
 
 def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
@@ -217,7 +222,9 @@ def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
                   scan=QuantityX(theta_array, 'urad'),
                   polarization=polarization)
 
-    scan_tt_s = TakagiTaupinX(ttx, tts)
+    scan_tt_s = TakagiTaupinX(ttx, tts,
+                              # integration_backend = 'zvode',  # Default 'rk45'
+                              need_transmission=not refl)
     scan_vector, R, T, curSD = scan_tt_s.run()
     return R if refl else T
 

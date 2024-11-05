@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function
 from scipy import interpolate
-import xrt.backends.raycing.myopencl as mcl
-import xrt.backends.raycing as raycing
 from scipy.integrate import ode
 from .ttcrystal import TTcrystal
 from .quantity import Quantity
 from .ttscan import TTscan
 import matplotlib.pyplot as plt
-#import multiprocessing as multiprocess
+# import multiprocessing as multiprocess
 import multiprocess
 import numpy as np
 import time
@@ -109,8 +107,13 @@ class TakagiTaupin:
         self.set_crystal(TTcrystal_object)
         self.set_scan(TTscan_object)
         self.strain_mod = 0.
+        self.integration_backend = 'rk45'
         if hasattr(TTcrystal_object, 'strain_shift'):
             self.strain_mod = int(TTcrystal_object.strain_shift == 'pytte')
+        if 'need_transmission' in kwargs:
+            self.isReflOnly = not kwargs['need_transmission']
+        if 'integration_backend' in kwargs:
+            self.integration_backend = not kwargs['integration_backend']
 
     def set_crystal(self, TTcrystal_object):
         '''
@@ -786,7 +789,7 @@ class TakagiTaupin:
 
                 def d0prime(z, d0, ksi_r, ksi_i):
                     return -1j*(g0_step+gb_step*(ksi_r(z)+1j*ksi_i(z)))*d0
-#                r=ode(ksiprime,ksiprime_jac)
+
             else:
                 def TTE(z, Y, a1=None, a2=None):
                     return np.array([1j*(cb_step*Y[0]*Y[0]+(
@@ -798,13 +801,6 @@ class TakagiTaupin:
                         c0_step+beta_step+strain_term(z)), 0],
                         [-1j*gb_step*Y[1], -1j*(g0_step+gb_step*Y[0])]]
 
-#                r=ode(TTE,TTE_jac)
-
-#            r.set_integrator('zvode',method='bdf',with_jacobian=True,
-#                             min_step=self.scan_object.integration_step.in_units('um'),
-#                             max_step=thickness,nsteps=2500000)
-
-            # Update the solving process
             lock.acquire()
             steps_calculated.value = steps_calculated.value + 1
             if verbose_output:
@@ -814,21 +810,22 @@ class TakagiTaupin:
             lock.release()
 
             if geometry == 'bragg':
-                if self.scan_object.start_depth is not None:
-                    start_depth = self.scan_object.start_depth.in_units('um')
-                    if start_depth > 0 or start_depth < -thickness:
-                        output_log = print_and_log(
-                            'Warning! The given starting depth ' +
-                            str(start_depth)
-                            + 'um is outside the crystal!', output_log)
-#                    r.set_initial_value(0,start_depth)
-#                else:
-#                    r.set_initial_value(0,-thickness)
-
-#                res=r.integrate(0)
-
-                res = calculate_bragg_transmission(ksiprime, d0prime)
-#                print(res[1])
+                if self.isReflOnly:
+                    if self.integration_backend != 'rk45':
+                        r = ode(ksiprime, ksiprime_jac)
+                        r.set_integrator(
+                            'zvode', method='bdf', with_jacobian=True,
+                            min_step=1e-10, rtol=1e-7,
+                            max_step=thickness, nsteps=2500000)
+                        r.set_initial_value(0, -thickness)
+                        res = r.integrate(0)
+                    else:
+                        res, xt, yt = rkdpa(ksiprime)
+                    outAmp = res
+                    res = [outAmp, np.zeros_like(outAmp)]
+                else:
+                    res = calculate_bragg_transmission(ksiprime, d0prime)
+                    outAmp = res[1]
 
                 if self.scan_object.output_type == 'photon_flux':
                     reflectivity = np.abs(res[0])**2*gamma0[step]/gammah[step]
@@ -838,15 +835,19 @@ class TakagiTaupin:
                 transmission = np.abs(res[1])**2
 
                 return reflectivity, transmission, np.complex128(
-                    res[0])*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step])))
+                    outAmp)*np.sqrt(np.abs(gamma0[step]/np.abs(gammah[step])))
             else:
-                if self.scan_object.start_depth is not None:
-                    output_log = print_and_log(
-                        'Warning! The alternative start depth is negleted '
-                        'in the Laue case.', output_log)
-#                r.set_initial_value([0,1],0)
-#                res=r.integrate(-thickness)
-                res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
+                if self.integration_backend != 'rk45':
+                    r = ode(TTE, TTE_jac)
+                    r.set_integrator(
+                        'zvode', method='bdf', with_jacobian=True,
+                        min_step=1e-10, rtol=1e-7,
+                        max_step=thickness, nsteps=2500000)
+                    r.set_initial_value([0, 1], 0)
+                    res = r.integrate(-thickness)
+                else:
+                    res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
+
                 if self.scan_object.output_type == 'photon_flux':
                     diffraction = np.abs(
                         res[0]*res[1])**2*gamma0[step]/np.abs(gammah[step])
