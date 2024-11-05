@@ -13,7 +13,7 @@ Current GitHub code:
     - Add an example for applying a slope error map to a parametric mirror.
 
     - Major rebuild of the documentation on
-      `Read the Docs <http://xrt.readthedocs.io>`_. due to changed software
+      `Read the Docs <http://xrt.readthedocs.io>`_ due to changed software
       requirements on readthedocs.io.
 
 1.6.0 (17 Jul 2023):
