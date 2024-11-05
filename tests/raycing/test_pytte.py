@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
 """
 Comparison tests for pyTTE backends
--------------------
+-----------------------------------
 
 1. Original pyTTE
 Requires xraylib and multiprocess packages (both can be pip-installed), xraylib
-provides the material properties. Solution of Takagi-Taupin equations relies on 
-scipy.integrate.ODE, zvode-bdf algorithm. 
-Fails on thick crystals (>1mm in case 2), requires increasing 'nsteps' in the
+provides the material properties. Solution of Takagi-Taupin equations relies on
+scipy.integrate.ODE, zvode-bdf algorithm.
+Fails on thick crystals (> 1 mm in case 2), requires increasing 'nsteps' in the
 integrator up to 2-3 million in order to converge.
 Calculation of transmitted intensity in Bragg geometry is not supported.
 
 2. xrt pyTTE_x CPU
 Pure python custom implementation of Dormand-Prince 4/5 adaptive algorithm.
 Material properties backend can be either 'xrt' (default) or 'xraylib',
-selectable via the TTcrystalX mat_backend init parameter. 
-In our implementation the nominal radius of curvature used for strain
-calculation is defined at the crystal's top surface, while in the original
+selectable via the TTcrystalX mat_backend init parameter.
+In our implementation, the nominal radius of curvature used for strain
+calculation is defined at the crystal top surface, while in the original
 pyTTE, it is centered within the crystal. This difference causes a slight
 angular shift in the position of the reflectivity peak compared to the original
 pyTTE implementation. Surface-centered radius of curvature is the standard
-for the raycing backend. In this test the position of the radius of curvature
-can be defined in the TTcrystalX class init by setting the 'strain_shift'
-argument to either 'xrt' or 'pytte'.
+for the raycing backend of xrt. In this test the position of the radius of
+curvature can be defined in the TTcrystalX class init by setting the
+'strain_shift' argument to either 'xrt' or 'pytte'.
 
 3. xrt pyTTE_x OpenCL
 Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. Calculation of
@@ -31,11 +31,15 @@ transmitted intensity in Bragg geometry is not supported.
 
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "26 Oct 2024"
+__date__ = "5 Nov 2024"
 
 import numpy as np
+np.complex, np.float = complex, float
+
+import time
 import os, sys;
 sys.path.append(os.path.join('..', '..'))  # analysis:ignore
+
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.materials_crystals as rmc
 import xrt.backends.raycing as raycing  # analysis:ignore
@@ -78,7 +82,7 @@ case1 = {
     "bending_Rm": np.inf,  # meters
     "bending_Rs": np.inf,  # meters
     "energy": 9000,  # eV
-    "theta_array": np.linspace(-50, 150, 800),  # microrad
+    "theta_array": np.linspace(-50, 100, 800),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float32"  # Only for opencl backend. "float64" for Laue
     }
@@ -88,13 +92,13 @@ case2 = {
     "crystal": "Si", # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
     "geometry": "Bragg reflected",  # Combination of Bragg/Laue reflected/transmitted
     "hkl": [1, 1, 1],
-    "thickness": 0.75,  # mm
+    "thickness": 0.7,  # mm
     "asymmetry": 5.,  # degrees
     "in_plane_rotation": 0.,  # degrees
     "bending_Rm": 10.,  # meters
     "bending_Rs": np.inf,  # meters
     "energy": 9000.,  # eV
-    "theta_array": np.linspace(-50, 150, 800),  # microrad
+    "theta_array": np.linspace(-50, 100, 800),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float32"  # Only for opencl backend. "float64" for Laue
     }
@@ -110,7 +114,7 @@ case3 = {
     "bending_Rm": 10.,  # meters
     "bending_Rs": 10,  # meters
     "energy": 19000,  # eV
-    "theta_array": np.linspace(-150, 50, 800),  # microrad
+    "theta_array": np.linspace(-50, 50, 800),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float32"  # Only for opencl backend. "float64" for Laue
     }
@@ -126,7 +130,7 @@ case4 = {
     "bending_Rm": 10.,  # meters
     "bending_Rs": np.inf,  # meters
     "energy": 29000,  # eV
-    "theta_array": np.linspace(-100, 100, 1500),  # microrad
+    "theta_array": np.linspace(-50, 50, 1500),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
@@ -142,7 +146,7 @@ case5 = {
     "bending_Rm": 20.,  # meters
     "bending_Rs": 20,  # meters
     "energy": 60000,  # eV
-    "theta_array": np.linspace(-100, 100, 1500),  # microrad
+    "theta_array": np.linspace(-40, 100, 1500),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
@@ -205,8 +209,8 @@ def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
                      Ry=QuantityX(bending_Rs, 'm'),
                      asymmetry=QuantityX(alpha+geotag, 'rad'),
                      in_plane_rotation=QuantityX(in_plane_rotation, 'deg'),
-#                     mat_backend='xraylib',  # Default is 'xrt'
-#                     strain_shift='pytte',  # Default is 'xrt'
+                     # mat_backend='xraylib',  # Default is 'xrt'
+                     # strain_shift='pytte',  # Default is 'xrt'
                      )
 
     tts = TTscanX(constant=QuantityX(energy, 'eV'),
@@ -246,24 +250,37 @@ def run_pytte_original(name, crystal, geometry, hkl, thickness, asymmetry,
 
 
 if __name__ == '__main__':
+    t00 = time.time()
+    funcs = [run_pytte_original if isXrayLib else None,
+             run_pytte_xrt_cpu_rk45cpu,
+             run_pytte_xrt_opencl if isOpenCL else None]
+    linewidths = [2, 1.8, 1]
 
-    for icp, calcParams in enumerate(
-            [case1, case2, case3, case4, case5]):
-        plt.figure(calcParams["name"])
-        for ifunc, func in enumerate([
-                     run_pytte_original if isXrayLib else None,
-                     run_pytte_xrt_cpu_rk45cpu,
-                     run_pytte_xrt_opencl if isOpenCL else None
-                     ]):
-            if func:
-                data = func(**calcParams)
-                plt.plot(calcParams['theta_array'], data,
-                         label=str(func.__name__).split("_")[-1],
-                         linewidth=3-ifunc)
-        plt.xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
+    for icp, kw in enumerate([case1, case2, case3, case4, case5]):
+        plt.figure(icp)
+        plt.xlabel(r'$\theta-\theta_B$ (µrad)')
         plt.ylabel('|Amplitude|²')
-        plt.title(calcParams["name"])    
+        shape = 'flat' if kw["bending_Rm"] == kw["bending_Rs"] == np.inf else\
+            'bent'
+        title = "{0}, {1}-mm-thick {2}{3} at {4:.1f} keV".format(
+            kw["name"], kw["thickness"], kw["crystal"],
+            ''.join([str(m) for m in kw["hkl"]]), kw["energy"]*1e-3)
+        plt.title(title)
+
+        theta = kw['theta_array']
+        for func, lw in zip(funcs, linewidths):
+            if func:
+                t0 = time.time()
+                refl = func(**kw)
+                dt = time.time()-t0
+                label = "{0}\nt = {1:.3g} s".format(
+                    str(func.__name__).split("_")[-1], dt)
+                plt.plot(theta, refl, label=label, lw=lw, alpha=0.6)
         plt.legend()
-        plt.savefig(f'{icp+1:02d} - {calcParams["name"]}.png')
+        plt.gca().set_xlim(theta[0], theta[-1])
+        plt.gca().set_ylim(0, 1)
+        plt.savefig(f'{icp+1:02d} - {kw["name"]}.png')
         plt.show(block=False)
+
+    print("All done in {0:.1f}s".format(time.time()-t00))
     plt.show()
