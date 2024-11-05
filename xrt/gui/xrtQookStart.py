@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """This script launches xrtQook. It optionally defines custom classes of
-optical elements to be visible in xrtQook."""
+optical elements and materials to be visible in xrtQook."""
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "9 Jul 2023"
+__date__ = "12 Sep 2024"
 
 import sys
 import os
@@ -13,7 +14,8 @@ import xrt.gui.xrtQook as xQ
 CustomMirror (change to your class) from module customOEs (your module).
 Copy this file to a writable folder and uncomment the following lines.
 The module customOEs must be importable from that folder or just be there.
-Then run this python file to start xrtQook."""
+Then run this python file to start xrtQook. This works similarly with custom
+material classes, see below."""
 
 # import xrt.backends.raycing.oes as roe
 # from customOEs import CustomMirror
@@ -22,6 +24,11 @@ Then run this python file to start xrtQook."""
 # roe.allArguments.extend(['customMirrorArg1', 'customMirrorArg2'])
 # # 'customMirrorArg1', 'customMirrorArg2' ... are parameters of
 # # CustomMirror.__init__() that are described in init's docstrings.
+
+# import xrt.backends.raycing.materials as rm
+# from myMaterials import MyMultilayer
+# rm.MyMultilayer = MyMultilayer
+# rm.__allSectioned__['My custom materials'] = ('MyMultilayer',)
 
 
 if __name__ == '__main__':

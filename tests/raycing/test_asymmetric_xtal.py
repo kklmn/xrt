@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""
+r"""
 Reflection from asymmetrically cut crystal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

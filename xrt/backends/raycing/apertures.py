@@ -355,7 +355,13 @@ class RectangularAperture(object):
         wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
         xy = np.random.rand(nrays, 2)
         dX = self.limOptX[1] - self.limOptX[0]
+        if dX > 100:
+            raycing.colorPrint(
+                "The X slit dimension {0} seems too big".format(dX), "RED")
         dZ = self.limOptY[1] - self.limOptY[0]
+        if dZ > 100:
+            raycing.colorPrint(
+                "The Z slit dimension {0} seems too big".format(dZ), "RED")
         wave.x[:] = xy[:, 0] * dX + self.limOptX[0]
         wave.z[:] = xy[:, 1] * dZ + self.limOptY[0]
         wave.area = dX * dZ

@@ -157,13 +157,9 @@ def start_jobs():
             sys.stdout.flush()
             res = dispatch_jobs()
             tFromStart = time.time() - runCardVals.tstart
-            msg = '{0} of {1} in {2:.1f} s'.format(
-                runCardVals.iteration, runCardVals.repeats, tFromStart)
-            if os.name == 'posix':
-                sys.stdout.write("\r\x1b[K " + msg)
-            else:
-                sys.stdout.write("\r  ")
-                print(msg+' ')
+            raycing.colorPrint('Repeat {0} of {1} done in {2:.1f} s'.format(
+                runCardVals.iteration, runCardVals.repeats, tFromStart),
+                fcolor='YELLOW')
             if res:
                 return
     else:
@@ -559,10 +555,13 @@ def run_ray_tracing(
 
             .. |image_nonorm| imagezoom:: _images/filterFootprint2_I400mum.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image_norm1| imagezoom:: _images/filterFootprint2_I400mum_norm1.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image_norm2| imagezoom:: _images/filterFootprint2_I400mum_norm2.png
                :scale: 50 %
+               :loc: upper-right-corner
 
         *afterScript*: function object
             This function is executed at the end of the current script. For
@@ -576,6 +575,8 @@ def run_ray_tracing(
     global runCardVals, runCardProcs, _plots
     frm = inspect.stack()[1]
     mod = inspect.getmodule(frm[0])
+    if mod is None:
+        mod = inspect.getmodule(frm)
     runfile = mod.__file__
     # patch for starting a script with processes>1 from Spyder console
     if not hasattr(mod, "__spec__"):

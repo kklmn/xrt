@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Tests for Materials
 -------------------
@@ -180,18 +180,26 @@ These tests implement the diffraction setup from [SanchezDelRioMosaic]_, Fig.
 4. In our case, the source has a finite energy band to demonstrate the energy
 dispersion effect in parafocusing (cf. Figs. 5 and 6 ibid).
 
-.. imagezoom:: _images/MosaicGraphite002-screenA.*
-.. imagezoom:: _images/MosaicGraphite002-screenB.*
++----------+----------+
+|  |mosA|  |  |mosB|  |
++----------+----------+
+
+.. |mosA| imagezoom:: _images/MosaicGraphite002-screenA.*
+   :align: center
+.. |mosB| imagezoom:: _images/MosaicGraphite002-screenB.*
+   :align: center
 
 The penetration depth distribution should be compared with Fig 7 ibid.
 
 .. imagezoom:: _images/MosaicGraphite002-Z.*
+   :align: center
 
 The reflectivity curves are compared with those by XCrystal/XOP [XOP]_. The
 small differences are primarily due to small differences in the tabulations of
 the scattering factors. We use the one by Chantler [Chantler]_.
 
 .. imagezoom:: _images/MosaicGraphite002-ReflectivityS.*
+   :align: center
 
 Mirror reflectivity
 ~~~~~~~~~~~~~~~~~~~
@@ -202,12 +210,17 @@ The phase difference between s- and p-polarized rays (calculated by xrt,
 cyan line, right Y axis) is not calculated by the XOP programs and
 therefore is given without comparison.
 
-.. imagezoom:: _images/MirrorReflSi@0.5deg.*
-.. imagezoom:: _images/MirrorReflSiO2@0.5deg.*
-   :loc: upper-right-corner
++---------+---------+
+|  |mSi|  | |mSiO2| |
++---------+---------+
+|  |mRh|  |  |mPt|  |
++---------+---------+
 
-.. imagezoom:: _images/MirrorReflRh@2mrad.*
-.. imagezoom:: _images/MirrorReflPt@4mrad.*
+.. |mSi| imagezoom:: _images/MirrorReflSi@0.5deg.*
+.. |mSiO2| imagezoom:: _images/MirrorReflSiO2@0.5deg.*
+   :loc: upper-right-corner
+.. |mRh| imagezoom:: _images/MirrorReflRh@2mrad.*
+.. |mPt| imagezoom:: _images/MirrorReflPt@4mrad.*
    :loc: upper-right-corner
 
 .. _multilayer_reflectivity:
@@ -218,19 +231,26 @@ Slab, multilayer and coating reflectivity
 Here, the phase difference between s- and p-polarized rays is given without
 comparison.
 
-.. imagezoom:: _images/SlabReflW.*
-.. imagezoom:: _images/MultilayerSiW.*
-   :loc: upper-right-corner
++---------------------+---------------------+
+|        |mlW|        |       |mlSiW|       |
++---------------------+---------------------+
+|      |mlSiWg|       |   |mlSiWCXRO_id0|   |
++---------------------+---------------------+
+|   |mlSiWCXRO_id6|   |      |mlRhOnSi|     |
++---------------------+---------------------+
+|  |DiamondOnQuartz|  |                     |
++---------------------+---------------------+
 
-.. imagezoom:: _images/MultilayerSiW-graded.*
-.. imagezoom:: _images/MultilayerSiWCXRO_id0.*
+.. |mlW| imagezoom:: _images/SlabReflW.*
+.. |mlSiW| imagezoom:: _images/MultilayerSiW.*
    :loc: upper-right-corner
-
-.. imagezoom:: _images/MultilayerSiWCXRO_id6.*
-.. imagezoom:: _images/MirrorRefl30nmRhOnSi_4mrad_RMSroughness2nm.*
+.. |mlSiWg| imagezoom:: _images/MultilayerSiW-graded.*
+.. |mlSiWCXRO_id0| imagezoom:: _images/MultilayerSiWCXRO_id0.*
    :loc: upper-right-corner
-
-.. imagezoom:: _images/MirrorRefl20nmDiamondOnQuartz_0.2deg_RMSroughness1nm.*
+.. |mlSiWCXRO_id6| imagezoom:: _images/MultilayerSiWCXRO_id6.*
+.. |mlRhOnSi| imagezoom:: _images/MirrorRefl30nmRhOnSi_4mrad_RMSroughness2nm.*
+   :loc: upper-right-corner
+.. |DiamondOnQuartz| imagezoom:: _images/MirrorRefl20nmDiamondOnQuartz_0.2deg_RMSroughness1nm.*
 
 .. _tests_ml_tran:
 
@@ -238,14 +258,19 @@ comparison.
 
     At low energy, the result strongly depends on the used tabulation.
     'xrt-Henke' below overplots the curves calculated by Mlayer and REFLEC that
-    use the tabulation by Henke. 'xrt-Chantler' is significantly different.
+    use the tabulation by Henke. 'xrt-Chantler' is significantly different, and
+    it is more trustworthy.
 
 .. note::
 
     Mlayer/XOP does not calculate multilayers in transmission.
 
-.. imagezoom:: _images/MultilayerScCr.*
-.. imagezoom:: _images/MultilayerScCr-transmitted.*
++-------------+-------------+
+|  |mlScCr|   |  |mlScCrt|  |
++-------------+-------------+
+
+.. |mlScCr| imagezoom:: _images/MultilayerScCr.*
+.. |mlScCrt| imagezoom:: _images/MultilayerScCr-transmitted.*
    :loc: upper-right-corner
 
 Transmittivity of materials
@@ -256,17 +281,26 @@ to slight differences in tabulated values of the atomic scattering factors.
 
 .. imagezoom:: _images/TransmDiamond.*
 
+.. raw:: html
+
+    <div class="clearer"> </div>
+
 Absorption of materials
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The deviations at low energies due to differences in tabulated values of the
 atomic scattering factors.
 
-.. imagezoom:: _images/AbsorptionBe.*
-.. imagezoom:: _images/AbsorptionNi.*
-   :loc: upper-right-corner
++---------+---------+---------+
+|  |aBe|  |  |aNi|  |  |aAu|  |
++---------+---------+---------+
 
-.. imagezoom:: _images/AbsorptionAu.*
+.. |aBe| imagezoom:: _images/AbsorptionBe.*
+   :loc: lower-left-corner
+.. |aNi| imagezoom:: _images/AbsorptionNi.*
+   :loc: lower-left-corner
+.. |aAu| imagezoom:: _images/AbsorptionAu.*
+   :loc: lower-right-corner
 
 """
 __author__ = "Konstantin Klementiev"
@@ -284,8 +318,6 @@ import pickle
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing as raycing
-from xrt.backends.raycing.pyTTE_x import TakagiTaupin, TTcrystal, TTscan, Quantity
-
 raycing._VERBOSITY_ = 1000
 
 
@@ -446,392 +478,6 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
     for_one_alpha(siCrystal, 0., hkl)
     for_one_alpha(siCrystal, -5., hkl)
     for_one_alpha(siCrystal, 5., hkl)
-
-
-def compare_rocking_curves_bent(hkl, t=None, geom='Laue reflected', factDW=1.,
-                                legendPos1=4, legendPos2=1, Rcurvmm=None,
-                                alphas=[0]):
-    try:
-        import pyopencl as cl
-        os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-        isOpenCL = True
-    except ImportError:
-        isOpenCL = False
-
-    if isOpenCL:
-        import xrt.backends.raycing.myopencl as mcl
-        matCL = mcl.XRT_CL(r'materials.cl',
-#                           precisionOpenCL='float32',
-                           precisionOpenCL='float64',
-                           # targetOpenCL='CPU'
-                           )
-    else:
-        matCL = None
-
-    """A comparison subroutine used in the module test suit."""
-    def for_one_alpha(crystal, alphaDeg, hkl, t):
-        xcb_tt = True
-        xcb_pp = True
-
-        Rcurv=np.inf if Rcurvmm is None else Rcurvmm
-        if Rcurv==0:
-            Rcurv=np.inf
-        alpha = np.radians(alphaDeg)
-        s0 = (np.zeros_like(theta), np.cos(theta+alpha), -np.sin(theta+alpha))
-        sh = (np.zeros_like(theta), np.cos(theta-alpha), np.sin(theta-alpha))
-        if geom.startswith('Bragg'):
-            n = (0, 0, 1)  # outward surface normal
-        else:
-            n = (0, -1, 0)  # outward surface normal
-        hn = (0, np.sin(alpha), np.cos(alpha))  # outward Bragg normal
-        gamma0 = sum(i*j for i, j in zip(n, s0))
-        gammah = sum(i*j for i, j in zip(n, sh))
-        hns0 = sum(i*j for i, j in zip(hn, s0))
-
-        fig = plt.figure(figsize=(8, 6), dpi=100)
-        fig.subplots_adjust(right=0.88)
-        ax = fig.add_subplot(111)
-
-        curS, curP = crystal.get_amplitude(E, gamma0, gammah, hns0)
-        if geom.startswith('L'):
-            curSD, curPD = crystal.get_amplitude_pytte(E, gamma0, gammah, hns0,
-                                             ucl=matCL, alphaAsym=alpha,
-                                             Rcurvmm=Rcurv)
-        curSDpt, curPDpt = crystal.get_amplitude_pytte(E, gamma0, gammah, hns0,
-                                                       ucl=matCL, alphaAsym=alpha,
-                                                       Ry=Rcurv,
-                                                       tolerance=1e-6)
-
-# phases:
-#        ax2 = ax.twinx()
-#        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-#        phi = np.unwrap(np.angle(curS * curP.conj()))
-#        phiD = np.unwrap(np.angle(curSD * curPD.conj()))
-#        p9, = ax2.plot((theta-thetaCenter) * convFactor, phi, 'c', lw=1,
-#                       yunits=math.pi, zorder=0)
-#        p10, = ax2.plot((theta-thetaCenter) * convFactor, -phiD, 'm', lw=1,
-#                        yunits=math.pi, zorder=0)
-#        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-#        ax2.yaxis.set_major_formatter(formatter)
-#        for tl in ax2.get_yticklabels():
-#            tl.set_color('c')
-
-        if t is not None:
-            tt = u', t={0:.0f}µm'.format(t * 1e3)
-            tname = '{0:03d}mkm'.format(int(t * 1e3))
-            thickness = t
-        else:
-            tt = ' thick'
-            tname = 'thick'
-            thickness = 1.
-        if geom.startswith('Bragg'):
-            geomPrefix = 'b'
-        else:
-            geomPrefix = 'l'
-        if geom.endswith('transmitted'):
-            geomPrefix += 't'
-        if np.isinf(Rcurv):
-            fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ$, bending R=$\infty$, E={3:.0f}keV'.format(geom, # analysis:ignore
-                         hkl, alphaDeg, E0/1e3), fontsize=16)
-        else:
-            fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ$, bending R={3:.1f}m, E={4:.0f}keV'.format(geom, # analysis:ignore
-                         hkl, alphaDeg, Rcurv/1e3, E0/1e3), fontsize=16)
-
-        path = os.path.join('', 'XOP-RockingCurves-Bent') + os.sep
-        try:
-            if np.isinf(Rcurv) or alphaDeg == 0:
-                x, R2p, R2s = np.loadtxt(
-                    "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg.xc.gz".format( # analysis:ignore
-                        path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
-                    unpack=True, usecols=(0, 2, 3))
-                p1, = ax.plot(x, R2s, '-k', label='s XCrystal', linewidth=2)
-    #            p2, = ax.plot(x, R2p, '--k', label='p XCrystal')
-
-            if xcb_tt:
-                x, R2s = np.loadtxt(
-                    "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_tt_sigma.xcb.gz".format( # analysis:ignore
-                        path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
-                    unpack=True, usecols=(0, 3))
-                p3t, = ax.plot(x*1e3, R2s, '-b', label='s XCrystal_Bent TT')
-                x, R2p = np.loadtxt(
-                    "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_tt_pi.xcb.gz".format( # analysis:ignore
-                        path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
-                    unpack=True, usecols=(0, 3))
-        #        p4, = ax.plot(x*1e3, R2p, '--b', label='p XCrystal_Bent TT')
-            if xcb_pp:
-                x, R2s = np.loadtxt(
-                    "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_pp_sigma.xcb.gz".format( # analysis:ignore
-                        path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
-                    unpack=True, usecols=(0, 7))
-                p3p, = ax.plot(x*1e3, R2s, '-c', label='s XCrystal_Bent PP')
-                x, R2p = np.loadtxt(
-                    "{0}{1}Si{2}_E{3:-.0f}keV_t{4}_R{5:-.0f}m_a{6:-.0f}deg_pp_pi.xcb.gz".format( # analysis:ignore
-                        path, geomPrefix, hkl, E0/1e3, tname, Rcurv/1e3, alphaDeg),
-                    unpack=True, usecols=(0, 7))
-        #        p4, = ax.plot(x*1e3, R2p, '--b', label='p XCrystal_Bent TT')
-        except:
-            pass
-#        if np.isinf(Rcurv) or alphaDeg == 0:
-        p7, = ax.plot((theta - thetaCenter) * convFactor,
-                      abs(curS)**2, '-r', linewidth=2)
-#            p8, = ax.plot((theta - thetaCenter) * convFactor,
-#                          abs(curP)**2, '-c', linewidth=2)
-        if geom.startswith('L'):
-            p11, = ax.plot((theta - thetaCenter) * convFactor,
-                           abs(curSD)**2, '--g', linewidth=2)
-    #        p12, = ax.plot((theta - thetaCenter) * convFactor,
-    #                       abs(curPD)**2, '--r')
-
-        p13, = ax.plot((theta - thetaCenter) * convFactor,
-                       abs(curSDpt)**2, 'm', linewidth=2)
-#        p14, = ax.plot((theta - thetaCenter) * convFactor,
-#                       abs(curPDpt)**2, '--r')
-
-        ax.set_xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
-        if geom.endswith('transmitted'):
-            ax.set_ylabel('transmittivity')
-        else:
-            ax.set_ylabel('reflectivity')
-        ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
-
-        plotList = [p7, p13]
-        curveList = ['xrt perfect', 'xrt pyTTE']
-        if geom.startswith('L'):
-            plotList.append(p11)
-            curveList.append('xrt TT')
-
-        try:
-            if np.isinf(Rcurv) or alphaDeg == 0:
-                plotList.append(p1)
-                curveList.append('XCrystal')
-            if xcb_tt:
-                plotList.append(p3t)
-                curveList.append('XCrystal_Bent TT')
-            if xcb_pp:
-                plotList.append(p3p)
-                curveList.append('XCrystal_Bent PP')
-        except:
-            pass
-        legendPostmp = legendPos2 if alphaDeg > 0 else legendPos2+1
-        ax.legend(plotList, curveList, loc=legendPostmp)
-#        ax2.add_artist(l1)
-
-        fname = '{0}Si{1}_{2}_a{3:-.0f}_{4:-.2f}'.format(
-            geomPrefix, hkl, tname, alphaDeg, Rcurv/1e3)
-
-        fig.savefig(fname + '.png')
-
-    E0 = 50000. if geom.startswith('L') else 7000.
-#    convFactor = 180 / np.pi * 3600.  # arcsec
-    convFactor = 1e6
-    for alpha in alphas:
-        if hkl == '111':  # Si111
-            if geom.startswith('Bragg'):
-                dtheta = np.linspace(-200, 200, 1000) * 1e-6
-            else:
-                dtheta = np.linspace(-5-np.abs(alpha)*2*50e3/Rcurvmm,
-                                     5+np.abs(alpha)*2*50e3/Rcurvmm,
-                                     1000) * 1e-6
-            dSpacing = 3.13562
-            hklInd = 1, 1, 1
-        elif hkl == '333':  # Si333
-            if geom.startswith('Bragg'):
-                dtheta = np.linspace(-100, 100, 1000) * 1e-6
-            else:
-                dtheta = np.linspace(-2-np.abs(alpha)**1.2*50e3/Rcurvmm,
-                                     2+np.abs(alpha)**1.2*50e3/Rcurvmm,
-                                     1000) * 1e-6
-            dSpacing = 3.13562 / 3.
-            hklInd = 3, 3, 3
-
-#        siCrystal = rm.CrystalDiamond(hklInd, dSpacing, t=t, geom=geom,
-#                                      factDW=factDW)
-        siCrystal = rm.CrystalSi(hkl=hklInd, t=t, geom=geom, factDW=factDW)
-        thetaCenter = math.asin(rm.ch / (2*siCrystal.d*E0))
-
-        E = np.ones_like(dtheta) * E0
-        theta = dtheta + thetaCenter
-        for_one_alpha(siCrystal, alpha, hkl, t)
-
-def compare_crystal_bending(hkl, t=None, geom='Laue reflected', factDW=1.,
-                                legendPos1=4, legendPos2=1, Rcurvmm=[np.inf],
-                                alphas=[0]):
-    try:
-        import pyopencl as cl
-        os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-        isOpenCL = True
-    except ImportError:
-        isOpenCL = False
-
-    if isOpenCL:
-        import xrt.backends.raycing.myopencl as mcl
-        matCL = mcl.XRT_CL(r'materials.cl',
-                           precisionOpenCL='float32',
-#                           precisionOpenCL='float64',
-                           # targetOpenCL='CPU'
-                           )
-    else:
-        matCL = None
-
-
-    """A comparison subroutine used in the module test suit."""
-    def for_one_R(crystal, alphaDeg, hkl, t, R):
-
-        IPR = 0
-
-        Rcurv=np.inf if R is None else R
-        if Rcurv==0:
-            Rcurv=np.inf
-        alpha = np.radians(alphaDeg)
-        s0 = (np.zeros_like(theta), np.cos(theta+alpha), -np.sin(theta+alpha))
-        sh = (np.zeros_like(theta), np.cos(theta-alpha), np.sin(theta-alpha))
-        if geom.startswith('Bragg'):
-            n = (0, 0, 1)  # outward surface normal
-        else:
-            n = (0, -1, 0)  # outward surface normal
-        hn = (0, np.sin(alpha), np.cos(alpha))  # outward Bragg normal
-        gamma0 = sum(i*j for i, j in zip(n, s0))
-        gammah = sum(i*j for i, j in zip(n, sh))
-        hns0 = sum(i*j for i, j in zip(hn, s0))
-
-        fig = plt.figure(figsize=(8, 6), dpi=100)
-        fig.subplots_adjust(right=0.88)
-        ax = fig.add_subplot(111)
-
-        curS, curP = crystal.get_amplitude(E, gamma0, gammah, hns0)
-
-        curSDpt, curPDpt = crystal.get_amplitude_pytte(E, gamma0, gammah, hns0,
-                                                       ucl=matCL, alphaAsym=alpha,
-                                                       inPlaneRotation=Quantity(IPR, 'deg'),
-                                                       Ry=Rcurv)
-
-        pyTTE = True
-        if pyTTE:
-            geotag = 0 if geom.startswith('B') else np.pi*0.5
-#            print(Rcurv)
-            ttx = TTcrystal(crystal = 'Si', hkl=crystal.hkl, thickness = Quantity(t*1e3,'um'),
-                            debye_waller = 1, xrt_crystal=crystal, Rx=Quantity(Rcurv, 'mm'),
-                            in_plane_rotation = Quantity(IPR, 'deg'),
-                            asymmetry = Quantity(alpha+geotag, 'rad'))
-            tts = TTscan(constant=Quantity(E[0],'eV'),
-                         scan=Quantity(theta-thetaCenter, 'rad'),
-                         polarization='sigma')
-#            ttp = TTscan(constant=Quantity(E[0],'eV'),
-#                         scan=Quantity(theta-thetaCenter, 'rad'),
-#                         polarization='pi')
-
-            scan_tt_s=TakagiTaupin(ttx, tts)
-#            scan_tt_p=TakagiTaupin(ttx, ttp)
-
-            if __name__ == '__main__':
-                scan_vector, R, T, curSD = scan_tt_s.run()
-#                scan_vector, R, T, curPD = scan_tt_p.run()
-
-# phases:
-#        ax2 = ax.twinx()
-#        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-#        phi = np.unwrap(np.angle(curS * curP.conj()))
-#        phiD = np.unwrap(np.angle(curSD * curPD.conj()))
-#        p9, = ax2.plot((theta-thetaCenter) * convFactor, phi, 'c', lw=1,
-#                       yunits=math.pi, zorder=0)
-#        p10, = ax2.plot((theta-thetaCenter) * convFactor, -phiD, 'm', lw=1,
-#                        yunits=math.pi, zorder=0)
-#        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-#        ax2.yaxis.set_major_formatter(formatter)
-#        for tl in ax2.get_yticklabels():
-#            tl.set_color('c')
-
-        if t is not None:
-            tt = u', t={0:.0f}µm'.format(t * 1e3)
-            tname = '{0:03d}mkm'.format(int(t * 1e3))
-            thickness = t
-        else:
-            tt = ' thick'
-            tname = 'thick'
-            thickness = 1.
-        if geom.startswith('Bragg'):
-            geomPrefix = 'b'
-        else:
-            geomPrefix = 'l'
-
-        if np.isinf(Rcurv):
-            fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ$, bending R=$\infty$, E={3:.0f}keV'.format(geom, # analysis:ignore
-                         hkl, alphaDeg, E0/1e3), fontsize=16)
-        else:
-            fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ$, bending R={3:.1f}m, E={4:.0f}keV'.format(geom, # analysis:ignore
-                         hkl, alphaDeg, Rcurv/1e3, E0/1e3), fontsize=16)
-
-        p7, = ax.plot((theta - thetaCenter) * convFactor,
-                      abs(curS)**2, '-r', linewidth=2)
-#            p8, = ax.plot((theta - thetaCenter) * convFactor,
-#                          abs(curP)**2, '-c', linewidth=2)
-
-        if pyTTE:
-            p11, = ax.plot((theta - thetaCenter) * convFactor,
-                           abs(curSD)**2, 'g', linewidth=2)
-    #        p12, = ax.plot((theta - thetaCenter) * convFactor,
-    #                       abs(curPD)**2, '--r')
-
-        p13, = ax.plot((theta - thetaCenter) * convFactor,
-                       abs(curSDpt)**2, 'b', linewidth=2)
-#        p14, = ax.plot((theta - thetaCenter) * convFactor,
-#                       abs(curPDpt)**2, '--r')
-
-        ax.set_xlabel(r'$\theta-\theta_B$ ($\mu$rad)')
-        if geom.endswith('transmitted'):
-            ax.set_ylabel('transmittivity')
-        else:
-            ax.set_ylabel('reflectivity')
-        ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
-
-        plotList = [p7, p13]
-        curveList = ['xrt perfect', 'xrt pyTTE']
-        if pyTTE:
-            plotList.append(p11)
-            curveList.append('pyTTE')
-
-
-        legendPostmp = legendPos2 if alphaDeg > 0 else legendPos2+1
-        ax.legend(plotList, curveList, loc=legendPostmp)
-#        ax2.add_artist(l1)
-
-        fname = '{0}Si{1}_{2}_a{3:-.0f}_{4:-.2f}'.format(
-            geomPrefix, hkl, tname, alphaDeg, Rcurv/1e3)
-
-        fig.savefig(fname + '.png')
-
-    E0 = 30000. if geom.startswith('L') or hkl =='333' else 15000.
-#    convFactor = 180 / np.pi * 3600.  # arcsec
-    convFactor = 1e6
-    for radius in Rcurvmm:
-        if hkl == '111':  # Si111
-            if geom.startswith('Bragg'):
-                dtheta = np.linspace(min(-2e6/radius, -100), 100, 2000) * 1e-6
-            else:
-                dtheta = np.linspace(-150, 350, 2000) * 1e-6
-                #                dtheta = np.linspace(-5-np.abs(alphas[0])*2*50e3/radius,
-#                                     5+np.abs(alphas[0])*2*50e3/radius,
-#                                     1000) * 1e-6
-#            dSpacing = 3.13562
-            hklInd = 1, 1, 1
-        elif hkl == '333':  # Si333
-            if geom.startswith('Bragg'):
-                dtheta = np.linspace(-100, 100, 1000) * 1e-6
-            else:
-                dtheta = np.linspace(-2-np.abs(alphas[0])**1.2*50e3/radius,
-                                     2+np.abs(alphas[0])**1.2*50e3/radius,
-                                     1000) * 1e-6
-#            dSpacing = 3.13562 / 3.
-            hklInd = 3, 3, 3
-
-#        siCrystal = rm.CrystalDiamond(hklInd, dSpacing, t=t, geom=geom,
-#                                      factDW=factDW)
-        siCrystal = rm.CrystalSi(hkl=hklInd, t=t, geom=geom, factDW=factDW)
-        thetaCenter = math.asin(rm.ch / (2*siCrystal.d*E0))
-
-        E = np.ones_like(dtheta) * E0
-        theta = dtheta + thetaCenter
-        for_one_R(siCrystal, alphas[0], hkl, t, radius)
 
 
 def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
@@ -1466,35 +1112,6 @@ def run_tests():
     # compare_rocking_curves('333', t=0.007, geom='Laue transmitted')
     # compare_rocking_curves('111', t=0.100, geom='Laue transmitted')
     # compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
-
-# Compare rocking curves for bent Si crystals with those calculated by
-#XCrystal_Bent (Takagi-Taupin):
-#     compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=np.inf, alphas=[30])
-    # compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-    #                       Rcurvmm=np.inf, alphas=[30])
-#    compare_rocking_curves_bent('111', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=50*1e3,
-#                           alphas=[15],)
-#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
-#    compare_rocking_curves_bent('111', t=1.0, geom='Bragg reflected',
-#                           Rcurvmm=1e3,
-#                           alphas=[0, 4, 8, 12])
-
-#    compare_rocking_curves_bent('333', t=1.0, geom='Laue reflected',
-#                           Rcurvmm=50*1e3,
-#                           alphas=[-60, -45, -30, -15, 0, 15, 30, 45, 60])
-    compare_crystal_bending('111', t=0.3, geom='Bragg reflected',
-#                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
-                            Rcurvmm=[10e3], alphas=[5])
-
-#    compare_crystal_bending('333', t=1.5, geom='Bragg reflected',
-#                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3])
-
-#    compare_crystal_bending('111', t=0.5, geom='Laue reflected',
-#                            Rcurvmm=[1e4],
-##                            Rcurvmm=[np.inf, 1e5, 1e4, 1e3],
-#                            alphas=[0])
 
 #check that Bragg transmitted and Laue transmitted give the same results if the
 #beam path is equal:

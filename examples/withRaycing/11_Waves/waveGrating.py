@@ -7,6 +7,15 @@ r"""
 Diffraction from grating
 ------------------------
 
+.. imagezoom:: _images/1-LEG_E-orders-tr1.*
+   :align: right
+
+.. imagezoom:: _images/1-LEG_E-orders-x.*
+   :align: right
+
+.. imagezoom:: _images/1-LEG_E-orders-z.*
+   :align: right
+
 Various gratings described in [Boots]_ have been tested with xrt for
 diffraction efficiency. The efficiency curves in [Boots]_ were calculated by
 means of the code ``peg`` which provides almost identical results to those by
@@ -32,16 +41,6 @@ ray tracing approach. In that approach the rays were deflected according to the
 grating equation. Here, in wave propagation, the grating equation was only used
 to position the screen.
 
-.. imagezoom:: _images/1-LEG_E-orders-tr1.*
-
-\
-
-.. imagezoom:: _images/1-LEG_E-orders-x.*
-
-\
-
-.. imagezoom:: _images/1-LEG_E-orders-z.*
-
 Notice that in contrast to the conventional grating theories (also used in
 ``REFLEC``), the diffraction orders here have the sagittal dimension. And that
 dimension has diffraction fringes and a variable width, too!
@@ -60,12 +59,16 @@ rapid low-energy decrease. It seems that the detector had a pinhole that might
 cut the beam at low energies as the diffracted beam becomes wider there (see
 the transverse pictures above), which may explain lower measured efficiency.
 
-.. imagezoom:: _images/1-LEG_E-eff.*
-
-For the IMP grating ("impurity", see its properties in the figure below), the
+For the IMP grating ("impurity", see its properties in the figure), the
 difference is bigger.
 
-.. imagezoom:: _images/2-IMP_E-eff.*
++------------+------------+
+|  |greff1|  |  |greff2|  |
++------------+------------+
+
+.. |greff1| imagezoom:: _images/1-LEG_E-eff.*
+.. |greff2| imagezoom:: _images/2-IMP_E-eff.*
+   :loc: upper-right-corner
 
 We believe that ``REFLEC`` is essentially wrong at high energies. If we
 mentally translate the working terraces of a blazed grating to form a
@@ -80,8 +83,13 @@ portion of the front side behind it stay in the shadow. We compare the two
 gratings shown below, one is with 90 degree anti-blaze angle and the other is
 with *pitch* as anti-blaze angle.
 
-.. imagezoom:: _images/1-LEG_profile-adhoc.*
-.. imagezoom:: _images/1-LEG_profile-anti.*
++------------+------------+
+|  |greff3|  |  |greff4|  |
++------------+------------+
+
+.. |greff3| imagezoom:: _images/1-LEG_profile-adhoc.*
+.. |greff4| imagezoom:: _images/1-LEG_profile-anti.*
+   :loc: upper-right-corner
 
 ``REFLEC`` gives different efficiencies for these two cases (see above) whereas
 xrt cannot distinguish them. We tried to artificially remove the shadows by
@@ -91,9 +99,6 @@ high-energy efficiency, similarly to the ``REFLEC``'s behaviour.
 The factors which definitely will affect the efficiency are (1) restricted
 coherence radius and (2) roughness. Both will be added into this example in a
 later release of xrt.
-
-We are open for further discussion on the above results with interested
-scientists.
 """
 #Set proper setting for the grating and comment/uncomment one of the three main
 #invoked functions (at the very bottom).

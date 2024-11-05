@@ -69,7 +69,6 @@ focusing case.
 .. |warp_rtG| animation:: _images/warp_rtG
 .. |warp_rtw| animation:: _images/warp_rtw
 .. |warp_rtN| animation:: _images/warp_rtN
-   :loc: lower-left-corner
 .. |warp_wp0| animation:: _images/warp_wp0
    :loc: upper-right-corner
 .. |warp_wpG| animation:: _images/warp_wpG
@@ -393,7 +392,7 @@ def define_plots(beamLine):
             ePos=0, title='2-refl')
         Rstr = '{0:.1f}km'.format(R*1e-6) if R < 1e19 else 'inf'
         plotRefl.saveName = '{0}-{1}-R={2}.png'.format(prefix, iR, Rstr)
-        Rstr = '{0:.1f} km'.format(R*1e-6) if R < 1e19 else '$\infty$'
+        Rstr = '{0:.1f} km'.format(R*1e-6) if R < 1e19 else r'$\infty$'
         plotRefl.textPanel = plotRefl.ax2dHist.text(
             0.01, 0.01, 'R = {0}'.format(Rstr),
             transform=plotRefl.ax2dHist.transAxes, size=12,
@@ -423,5 +422,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # see_the_bump()
-    main()
+    see_the_bump()
+    # main()

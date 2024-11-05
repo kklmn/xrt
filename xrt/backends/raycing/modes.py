@@ -53,12 +53,10 @@ See a usage example in
 A model case of 5 macro-electrons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. imagezoom:: _images/bl-modes.*
+
 This example was made for the following beamline scheme, where the mirror M1 is
 an ideal ellipsoid providing 1:1 image of the source.
-
-|bl_scheme|
-
-.. |bl_scheme| imagezoom:: _images/bl-modes.*
 
 The eigenmode decomposition at the first slit is accurate within the machine
 precision, i.e. the total flux summed over all individual fields is equal to

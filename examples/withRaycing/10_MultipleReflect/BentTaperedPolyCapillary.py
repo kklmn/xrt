@@ -65,7 +65,7 @@ class BentCapillary(roe.OE):
 
     def xyz_to_param(self, x, y, z):
         """ *s*, *r*, *phi* are cynindrc-like coordinates of the capillary.
-        *s* is along y in inverse direction, started at the exit,
+        *s* is along y in the reverse direction, starting at the exit,
         *r* is measured from the capillary axis x0(s)
         *phi* is the polar angle measured from the z (vertical) direction."""
         s = self.f - y

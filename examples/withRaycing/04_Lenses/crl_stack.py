@@ -37,7 +37,8 @@ This graph shows the relative flux in the focused beam at 9 keV after the given
 number of double-sided lenses which give approximately equal focal distance of
 *q* = 5 m. As seen, low absorbing materials are preferred:
 
-.. imagezoom:: _images/CRL-2-Flux.*
+.. imagezoom:: _images/CRL-2-Flux.png
+   :align: center
 
 This graph shows the depth of focus as a function of the on-axis coordinate
 around the nominal focal position. For heavy materials the depth of focus is
@@ -45,12 +46,14 @@ larger due to the higher absorption of the peripherical rays of the incoming
 beam. Such lenses act effectively also as apertures thus reducing the focal
 spot at the expense of flux:
 
-.. imagezoom:: _images/CRL-2-depthOfFocus.*
+.. imagezoom:: _images/CRL-2-depthOfFocus.png
+   :align: center
 
 .. [snigirev] A. Snigirev, V. Kohn, I. Snigireva, A. Souvorov, and B. Lengeler,
    *Focusing High-Energy X Rays by Compound Refractive Lenses*, Applied
    Optics **37** (1998), 653-62.
 """
+
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"
 #import matplotlib as mpl

@@ -19,7 +19,12 @@ Each script consists of:
    energy, angles etc. and
 4) plotting.
 
-.. rubric:: Example 1a: Undulator
+Example 1a: Undulator
+~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoomhover:: _images/calc_undulator.png
+   :align: right
+
 .. code-block:: python
     :emphasize-lines: 6,7,12
 
@@ -41,14 +46,11 @@ Each script consists of:
     plt.plot(energy, flux)
     plt.show()
 
-.. imagezoomhover:: _images/calc_undulator.png
-   :width: 400
-   :height: 298
-   :loc: top: -400px; left: 400px;
+Example 1b: Undulator, tuning curves
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. rubric:: Example 1b: Undulator, tuning curves
-
-Use the method:
+.. imagezoomhover:: _images/calc_undulator_tune.png
+   :align: right
 
 .. code-block:: python
 
@@ -57,12 +59,16 @@ Use the method:
 See the script
 ``\examples\withRaycing\00_xRayCalculator\calc_undulator_tune.py``.
 
-.. imagezoomhover:: _images/calc_undulator_tune.png
-   :width: 400
-   :height: 300
-   :loc: top: -400px; left: 400px;
+.. raw:: html
 
-.. rubric:: Example 2a: Crystal reflectivity
+    <div class="clearer"> </div>
+
+Example 2a: Crystal reflectivity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoomhover:: _images/calc_crystal.png
+   :align: right
+
 .. code-block:: python
     :emphasize-lines: 6,11
 
@@ -81,22 +87,28 @@ See the script
     plt.plot(dtheta, abs(curS)**2, 'r', dtheta, abs(curP)**2, 'b')
     plt.show()
 
-.. imagezoomhover:: _images/calc_crystal.png
-   :width: 400
-   :height: 298
-   :loc: top: -400px; left: 400px;
+.. raw:: html
 
-.. rubric:: Example 2b: Crystal reflectivity: Single and double crystal
+    <div class="clearer"> </div>
+
+Example 2b: Crystal reflectivity: Single and double crystal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoomhover:: _images/calc_crystal_rocking_curve.png
 
 See the script
 ``\examples\withRaycing\00_xRayCalculator\calc_crystal_rocking_curve.py``.
 
-.. imagezoomhover:: _images/calc_crystal_rocking_curve.png
-   :width: 400
-   :height: 300
-   :loc: top: -400px; left: 400px;
+.. raw:: html
 
-.. rubric:: Example 3: Multilayer reflectivity
+    <div class="clearer"> </div>
+
+Example 3: Multilayer reflectivity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoomhover:: _images/calc_multilayer.png
+   :align: right
+
 .. code-block:: python
     :emphasize-lines: 1,2,3,7
 
@@ -111,12 +123,16 @@ See the script
     plt.plot(theta, abs(rs)**2, 'r', theta, abs(rp)**2, 'b')
     plt.show()
 
-.. imagezoomhover:: _images/calc_multilayer.png
-   :width: 400
-   :height: 298
-   :loc: top: -400px; left: 400px;
+.. raw:: html
 
-.. rubric:: Example 4: Mirror reflectivity
+    <div class="clearer"> </div>
+
+Example 4: Mirror reflectivity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoomhover:: _images/calc_mirror.png
+   :align: right
+
 .. code-block:: python
     :emphasize-lines: 1,5
 
@@ -130,12 +146,17 @@ See the script
     plt.gca().set_xlim(E[0], E[-1])
     plt.show()
 
-.. imagezoomhover:: _images/calc_mirror.png
-   :width: 400
-   :height: 298
-   :loc: top: -400px; left: 400px;
+.. raw:: html
 
-.. rubric:: Example 5: Material absorption
+    <div class="clearer"> </div>
+
+Example 5: Material absorption
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoomhover:: _images/calc_absorption.png
+   :align: right
+   :loc: lower-right-corner
+
 .. code-block:: python
     :emphasize-lines: 1,4
 
@@ -148,10 +169,9 @@ See the script
     plt.gca().set_xlim(E[0], E[-1])
     plt.show()
 
-.. imagezoomhover:: _images/calc_absorption.png
-   :width: 400
-   :height: 298
-   :loc: top: -500px; left: 400px;
+.. raw:: html
+
+    <div class="clearer"> </div>
 
 """
 pass

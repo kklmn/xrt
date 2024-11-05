@@ -16,6 +16,7 @@ import xrt.backends.raycing.screens as rsc
 
 showIn3D = False
 
+# transmittivity of FZP material is ignored, the only used propery is 'kind':
 mGold = rm.Material('Au', rho=19.3, kind='FZP')
 E0, dE = 400, 5
 
@@ -34,10 +35,11 @@ def build_beamline(nrays=1e5):
         distE='flat', energies=(E0-dE, E0+dE), polarization='horizontal')
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'DiamondFSM1', (0, 10., 0))
-#    beamLine.fzp = roe.NormalFZP(beamLine, 'FZP', [0, 10., 0], pitch=np.pi/2,
-#      material=mGold, f=2., E=E0, N=50)
+    # beamLine.fzp = roe.NormalFZP(
+    #     beamLine, 'FZP', [0, 10., 0], pitch=np.pi/2, shape='round',
+    #     material=mGold, f=2., E=E0, N=50)
     beamLine.fzp = roe.GeneralFZPin0YZ(
-        beamLine, 'FZP', [0, 10., 0], pitch=np.pi/2,
+        beamLine, 'FZP', [0, 10., 0], pitch=np.pi/2, shape='round',
         material=mGold, f1='inf', f2=(0, 0, 2.), E=E0, N=500, phaseShift=np.pi)
 
 #    source.dx = 2 * beamLine.fzp.rn[-1]

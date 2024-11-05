@@ -9,17 +9,17 @@ interactively viewing it in 3D.
 |     |Itot|     |   |vcmSi-P|   | |VortexB| |
 +----------------+---------------+-----------+
 
-.. |Itot| animation:: _images/Itot
+.. |Itot| animationhover:: _images/Itot
    :alt: &ensp;Intensity of undulator radiation on a transverse flat screen.
        The long axis is energy. One can observe two harmonics crossing the
        central line: the one at 2400 eV is odd and the one at 4800 eV is even.
 
-.. |vcmSi-P| animation:: _images/vcmSi-FootprintP
+.. |vcmSi-P| animationhover:: _images/vcmSi-FootprintP
    :alt: &ensp;Absorbed power and power density on a mirror at varying pitch
        angle.
    :loc: upper-right-corner
 
-.. |VortexB| animation:: _images/Laguerre-Gauss-ani
+.. |VortexB| animationhover:: _images/Laguerre-Gauss-ani
    :alt: &ensp;Vortex beam with <i>l</i>=1 and <i>p</i>=1. Colored by phase.
    :loc: upper-right-corner
 
@@ -260,7 +260,7 @@ from .version import __versioninfo__, __version__, __date__
 __module__ = "xrt"
 __author__ = \
     "Konstantin Klementiev (MAX IV Laboratory), " +\
-    "Roman Chernikov (Canadian Light Source)"
+    "Roman Chernikov (NSLS-II)"
 __email__ = "konstantin DOT klementiev AT gmail DOT com, " +\
             "rchernikov AT gmail DOT com"
 __license__ = "MIT license"

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __copyright__ = u'2016 Konstantin Klementiev, MIT License'
-__date__ = "29 Aug 2021"
+__date__ = "11 Oct 2024"
 
 import os
 import shutil
@@ -21,9 +21,11 @@ class AnimationDirective(Directive):
     required_arguments = 0
     optional_arguments = 0
     final_argument_whitespace = True
-    option_spec = {'alt': directives.unchanged,
-# "upper-left-corner" (def), "lower-left-corner",
-# "upper-right-corner", "lower-right-corner" or e.g."top: -500px; left: 400px;"
+    option_spec = {'alt': directives.unchanged,  # starts with "&ensp;" !!!
+                   # for loc:
+                   # "upper-left-corner", "lower-left-corner",
+                   # "upper-right-corner", "lower-right-corner"
+                   # or e.g."top: -500px; left: 400px;"
                    'loc': directives.unchanged,
                    'width': directives.length_or_unitless,
                    'height': directives.length_or_unitless,
@@ -32,6 +34,7 @@ class AnimationDirective(Directive):
                    'heightzoom': directives.length_or_unitless,
                    'scalezoom': directives.percentage,
                    'name': directives.unchanged,
+                   'align': directives.unchanged,
                    'target': directives.unchanged_required,
                    'class': directives.class_option}
     has_content = True
@@ -53,7 +56,12 @@ class AnimationDirective(Directive):
             uri = uri[:-1] + 'png'
 
         if uri.endswith('.png'):
-            im = Image.open(uri)
+            try:
+                im = Image.open(uri)
+            except FileNotFoundError:
+                uri = os.path.join(lapp.srcdir, uri).replace('\\', '/')
+                im = Image.open(os.path.join(lapp.srcdir, uri))
+
             defwidthzoom, defheightzoom = im.size
             scale = self.options.get('scale', None)
             if scale:
@@ -103,49 +111,78 @@ class AnimationDirective(Directive):
             sizezoom += ' height="{0}"'.format(heightzoom)
 #        print sizezoom
 
-        loc = self.options.get('loc', 'upper-left-corner')
-        ta = "text-align: left"
+        loc = self.options.get('loc', None)
+        align = self.options.get('align', None)
+        alignC = ''
+        if align is not None:
+            if align == 'left':
+                alignC = 'align-left'
+                if loc is None:
+                    loc = "upper-left-corner"
+            elif align == 'center':
+                alignC = 'align-center'
+                if loc is None:
+                    loc = "center"
+            elif align == 'right':
+                alignC = 'align-right'
+                if loc is None:
+                    loc = "upper-right-corner"
+            else:
+                if loc is None:
+                    loc = "upper-left-corner"
+        else:
+            alignC = 'align-left'
+            if loc is None:
+                loc = "upper-left-corner"
+
+        loctop = u'top: 0px; '
+        lochor = u'width: {}px; '.format(int(widthzoom))
+        ta = 'text-align: left; '
         if 'corner' in loc:
             if 'lower' in loc:
-                loctop = u'top: -{0}px'.format(int(heightzoom)-20)
+                # loctop = u'top: -{0}px; '.format(int(heightzoom-height//2))
+                loctop = u'bottom: -{0}px; '.format(height)
             else:
-                loctop = u'top: -{0}px'.format(height)
+                loctop = u'top: {0}px; '.format(0)
+
             if 'right' in loc:
-                locleft = u'left: -{0}px'.format(int(widthzoom)-int(width))
+                ta = 'text-align: right; '
+                lochor += u'right: {0}px; '.format(0)
             else:
-                locleft = u'left: -{0}px'.format(0)
-            locst = u'style="{0}; {1}; {2}"'.format(loctop, locleft, ta)
-        else:
-            locst = u'style="{0}; {1}"'.format(loc, ta)
+                ta = 'text-align: left; '
+                lochor += u'left: {0}px; '.format(0)
+        elif loc == "center":
+            ta = 'text-align: center ;'
+            lochor += u'left: 50%; transform: translate(-50%, 0%); '
+        locst = u'style="{0} {1} {2}"'.format(loctop, lochor, ta)
 
         alt = self.options.get('alt', '')
         if alt:
             if alt.startswith("&ensp;") or alt.startswith("&emsp;"):
-                # Unicode &ensp; or &emsp;
-#                alt = '<br />{0}'.format(alt)
                 alt = '{0}'.format(alt)
-            else: # otherwise the substitution name is passed by docutils as 'alt'
+            else:  # otherwise Silx assigns replacement alias to it
                 alt = ''
 #        self.options['uri'] = uri
         env = self.state.document.settings.env
         targetid = "animation{0}".format(env.new_serialno('animation'))
         if uri.endswith('.png'):
-            text = '<a class={6}>'\
-            '<img src="{0}" {1} />'\
-            '<span {5}>{2}'\
-            '<canvas id="{3}" {4} ></canvas>{2}'\
-            '<script>set_static("{0}", "{3}")</script></span></a>'.format(
-                uri, size, alt, targetid, sizezoom, locst, self.aclass)
+            text = '<a class="{6}">'\
+                '<img class="{7}" src="{0}" {2} />'\
+                '<span {5}>{3}<br><canvas id="{1}" {4} ></canvas><br>{3}'\
+                '<script>set_static("{0}", "{1}")</script></span></a>'\
+                .format(
+                    uri, targetid, size, alt, sizezoom, locst, self.aclass,
+                    alignC)
         else:
             text = '<a class={6}>'\
-            '<script type="text/javascript" src="{0}/s_anim.js"></script>'\
-            '<script type="text/javascript" src="{0}/b_anim.js"></script>'\
-            '<canvas id="s_{1}" {2}></canvas>'\
-            '<script>set_animation("{0}/s_packed.png", s_timeline, "s_{1}")'\
-            '</script><span {5}>{3}<canvas id="b_{1}" {4}></canvas>{3}'\
-            '<script>set_animation("{0}/b_packed.png", b_timeline, "b_{1}")'\
-            '</script></span></a>'.format(
-                uri, targetid, size, alt, sizezoom, locst, self.aclass)
+                '<script type="text/javascript" src="{0}/s_anim.js"></script>'\
+                '<script type="text/javascript" src="{0}/b_anim.js"></script>'\
+                '<canvas id="s_{1}" {2}></canvas>'\
+                '<script>set_animation("{0}/s_packed.png",s_timeline,"s_{1}")'\
+                '</script><span {5}>{3}<canvas id="b_{1}" {4}></canvas>{3}'\
+                '<script>set_animation("{0}/b_packed.png",b_timeline,"b_{1}")'\
+                '</script></span></a>'.format(
+                    uri, targetid, size, alt, sizezoom, locst, self.aclass)
         return [nodes.raw('', text, format='html')]
 
 
@@ -158,8 +195,8 @@ class VideoDirective(Directive):
     optional_arguments = 0
     final_argument_whitespace = True
     option_spec = {'autoplay': directives.flag,
-                   'controls': directives.flag,                   
-                   'loop': directives.flag,                   
+                   'controls': directives.flag,
+                   'loop': directives.flag,
                    'width': directives.length_or_unitless,
                    'height': directives.length_or_unitless}
     has_content = True
@@ -213,4 +250,4 @@ def setup(app):
     app.add_directive('animationhover', AnimationHoverDirective)
     app.add_directive('imagezoomhover', AnimationHoverDirective)
     app.add_directive('video', VideoDirective)
-    return {'version': '1.1'}   # identifies the version of our extension
+    return {'version': '2.0'}   # identifies the version of our extension

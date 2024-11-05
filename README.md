@@ -1,4 +1,4 @@
-# xrt [![GitHub version](https://badge.fury.io/gh/kklmn%2Fxrt.svg)](https://badge.fury.io/gh/kklmn%2Fxrt)
+# xrt ![GitHub version](https://img.shields.io/github/v/release/kklmn/xrt)
 
 [![DOI](https://zenodo.org/badge/54989724.svg)](https://zenodo.org/badge/latestdoi/54989724)
 

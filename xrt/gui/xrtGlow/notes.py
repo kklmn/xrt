@@ -6,6 +6,7 @@ Notes on using xrtGlow
 ----------------------
 
 .. imagezoom:: _images/xrtGlow1.png
+   :align: right
 
 - 3D glasses button is a two-state button. When it is pressed, xrtGlow will
   update its view whenever changes are made to the beamline in xrtQook. If you
@@ -53,12 +54,13 @@ Notes on using xrtGlow
      through the fixed Virtual Screen in transverse or longitudinal directions
      correspondingly.
 
+.. animation:: _images/colorBump
+   :align: left
+
 - If color gradients overlap on the Virtual Screen it can be useful to expand
   the color axis in real space by enabling the Color Bump. Do not forget that
   the resulting height distribution is artificial, does not present the real
   intersections of rays and is only used for convenience.
-
-.. animation:: _images/colorBump
 
 - Rays or footprints visualisation can be enabled/disabled either by setting
   corresponding checkboxes in the Navigation Panel for individual elements or
@@ -69,7 +71,10 @@ Notes on using xrtGlow
   rays. It is especially important if Intensity defines the Value key in HSV
   color space when dark rays can shadow the whole beam.
 
-- Convenient way to inspect the detailed beam footprint on the coordinate grid
+.. imagezoom:: _images/xrtGlow3.png
+   :align: right
+
+- A convenient way to inspect a detailed beam footprint on the coordinate grid
   is to use Projections: disable the Perspective, select only the footprint of
   interest on the Navigation Panel (or disable all and just leave the Virtual
   Screen on), enable the projection, set to zero the Projection Line Opacity
@@ -77,7 +82,7 @@ Notes on using xrtGlow
   Opacity to improve the visibility, enable the Fine Grid. Increase the number
   of rays in the source if necessary.
 
-.. imagezoom:: _images/xrtGlow3.png
+.. imagezoom:: _images/xrtGlow4.png
 
 - If you have any doubts regarding the orientation of the optical element or
   trying to identify the directions, you can plot local coordinate axes by
@@ -86,17 +91,16 @@ Notes on using xrtGlow
   Navigation panel. Orientation of the diffraction planes will be represented
   by the yellow arrow in case of the crystals with asymmetric cut.
 
-.. imagezoom:: _images/xrtGlow4.png
-
 - Depth test is disabled by default for the Points. Enable it if you do not
   want the footprints to shine through solid surfaces of the optical elements.
   Be aware that the Points may be obscured by rays in this case.
 
+.. imagezoom:: _images/xrtGlow5.png
+   :align: right
+
 - Scene checkbox 'Virtual Screen for Indexing' can be used to filter the rays
   hitting the Virtual Screen. This is convenient for retrospective analysis,
   to highlight the rays of the initial beam that reach the final point.
-
-.. imagezoom:: _images/xrtGlow5.png
 
 - Antialiasing can improve the visual quality of the scene, but it seriously
   affects the performance (depending on the number of rays / elements in the

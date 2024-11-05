@@ -28,7 +28,7 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
        along the beamline is compressed by a factor of 100.
 
 .. |glow2| imagezoom:: _images/xrtGlow2.png
-   :loc: upper-right-corner
+   :align: right
    :alt: &ensp; xrtGlow with three double-paraboloid lenses. The scaling on
        this image is isotropic. The source (on the left) is a parallel
        geometric source. The coloring is by axial divergence (red=0), showing
@@ -3169,7 +3169,8 @@ class xrtGlWidget(qt.QGLWidget):
 
         isClosedSurface = False
         if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-            isClosedSurface = isinstance(oe, roes.SurfaceOfRevolution)
+            isClosedSurface = isinstance(oe, roes.SurfaceOfRevolution) or\
+                (hasattr(oe, 'isClosed') and oe.isClosed)
             if oe.footprint is not None:
                 xLimits = oe.footprint[nsIndex][:, 0]
         if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
@@ -3177,19 +3178,22 @@ class xrtGlWidget(qt.QGLWidget):
                 yLimits = oe.footprint[nsIndex][:, 1]
         localTiles = np.array(self.tiles)
 
-        if oe.shape == 'round':
-            rX = np.abs((xLimits[1] - xLimits[0]))*0.5
-            rY = np.abs((yLimits[1] - yLimits[0]))*0.5
-            cX = (xLimits[1] + xLimits[0])*0.5
-            cY = (yLimits[1] + yLimits[0])*0.5
-            xLimits = [0, 1.]
-            yLimits = [0, 2*np.pi]
-            localTiles[1] *= 3
         if isClosedSurface:
             # the limits are in parametric coordinates
-            xLimits = yLimits  # s
+            yLimitsS0, _, _ = oe.xyz_to_param(0, yLimits[0], 0)
+            yLimitsS1, _, _ = oe.xyz_to_param(0, yLimits[1], 0)
+            xLimits = [yLimitsS0, yLimitsS1]  # s
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
+        else:
+            if oe.shape == 'round':
+                rX = np.abs((xLimits[1] - xLimits[0]))*0.5
+                rY = np.abs((yLimits[1] - yLimits[0]))*0.5
+                cX = (xLimits[1] + xLimits[0])*0.5
+                cY = (yLimits[1] + yLimits[0])*0.5
+                xLimits = [0, 1.]
+                yLimits = [0, 2*np.pi]
+                localTiles[1] *= 3
 
         if is2ndXtal:
             zExt = '2'
@@ -3212,7 +3216,7 @@ class xrtGlWidget(qt.QGLWidget):
                                       self.surfCPOrder)
 
                 xv, yv = np.meshgrid(xGridOe, yGridOe)
-                if oe.shape == 'round':
+                if oe.shape == 'round' and not isClosedSurface:
                     xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
 
                 xv = xv.flatten()
@@ -3282,7 +3286,7 @@ class xrtGlWidget(qt.QGLWidget):
             deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
             for ie, yPos in enumerate(yLimits):
                 for i in range(localTiles[0]):
-                    if oe.shape == 'round':
+                    if oe.shape == 'round' and not isClosedSurface:
                         continue
                     xGridOe = np.linspace(xLimits[0] + i*deltaX,
                                           xLimits[0] + (i+1)*deltaX,
@@ -3307,7 +3311,7 @@ class xrtGlWidget(qt.QGLWidget):
                                                 self.surfCPOrder) if\
                                 gridZ is None else np.concatenate((
                                     gridZ, np.linspace(zTop-thickness, zTop,
-                                                       self.surfCPOrder)))    
+                                                       self.surfCPOrder)))
                         else:
                             gridZ = np.linspace(-thickness, zTop,
                                                 self.surfCPOrder) if\
@@ -3335,7 +3339,7 @@ class xrtGlWidget(qt.QGLWidget):
                                         [0]*3)
 
             for ie, xPos in enumerate(xLimits):
-                if ie == 0 and oe.shape == 'round':
+                if ie == 0 and oe.shape == 'round' and not isClosedSurface:
                     continue
                 deltaY = (yLimits[1] - yLimits[0]) / float(localTiles[1])
                 for i in range(localTiles[1]):
@@ -3347,8 +3351,8 @@ class xrtGlWidget(qt.QGLWidget):
                     edgeX = np.ones_like(yGridOe)*xPos
                     edgeZ = np.zeros_like(xGridOe)
 
-                    if oe.shape == 'round':
-                        edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX,\
+                    if oe.shape == 'round' and not isClosedSurface:
+                        edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX, \
                             rY*edgeX*np.sin(edgeY)+cY
 
                     if oe.isParametric:
@@ -3376,7 +3380,7 @@ class xrtGlWidget(qt.QGLWidget):
                                                        self.surfCPOrder)))
 
                     gridY = np.repeat(edgeY, len(edgeZ))
-                    if oe.shape == 'round':
+                    if oe.shape == 'round' and not isClosedSurface:
                         yN = (gridY-cY) / rY
                         gridX = np.repeat(edgeX, len(edgeZ))
                         xN = (gridX-cX) / rX
@@ -3407,7 +3411,7 @@ class xrtGlWidget(qt.QGLWidget):
 #                             self.surfCPOrder*(localTiles[0]+1))
 #        yBound = np.linspace(yLimits[0], yLimits[1],
 #                             self.surfCPOrder*(localTiles[1]+1))
-#        if oe.shape == 'round':
+#        if oe.shape == 'round' and not isClosedSurface:
 #            oeContour = [0]
 #            oneEdge = [0]
 #        else:
@@ -3423,7 +3427,7 @@ class xrtGlWidget(qt.QGLWidget):
 #                                     np.flip(yBound, 0)])  # right
 #
 #        for ie, edge in enumerate(oeContour):
-#            if oe.shape == 'round':
+#            if oe.shape == 'round' and not isClosedSurface:
 #                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
 #            else:
 #                edgeX = edge[0, :]

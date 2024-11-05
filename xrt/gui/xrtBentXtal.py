@@ -1,9 +1,18 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 u"""
 .. _xrtBentXtal:
 
 xrtBentXtal -- a GUI for bent crystal calculations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoom:: _images/xrtBentXtal.png
+   :align: right
+   :alt: &ensp;xrtBentXtal -- a Qt widget for bent crystal calculations in xrt.
+       Shown are two reflectivity curves for a flat version of Si (10, 10, 0)
+       crystal (blue) and a bent version of it (orange). In going to higher
+       order reflexes the difference in the width of the reflection domain
+       becomes increasingly pronounced.
 
 In addition to ray tracing applications with perfect and bent crystals, xrt has
 a GUI widget xrtBentXtal to calculate reflectivity curves of bent crystals with
@@ -16,12 +25,9 @@ amplitudes in Bragg geometry, missing in the original PyTTE, though this mode
 only works for CPU-based calculations and is not suitable for ray tracing due
 to memory constraints.
 
-.. imagezoom:: _images/xrtBentXtal.png
-   :alt: &ensp;xrtBentXtal -- a Qt widget for bent crystal calculations in xrt.
-       Shown are two reflectivity curves for a flat version of Si (10, 10, 0)
-       crystal (blue) and a bent version of it (orange). In going to higher
-       order reflexes the difference in the width of the reflection domain
-       becomes increasingly pronounced.
+.. raw:: html
+
+    <div class="clearer"> </div>
 
 """
 

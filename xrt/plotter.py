@@ -49,6 +49,8 @@ import copy
 import pickle
 import numpy as np
 import scipy as sp
+from scipy.interpolate import UnivariateSpline
+
 import matplotlib as mpl
 from matplotlib.ticker import MaxNLocator
 from . import runner
@@ -400,7 +402,7 @@ class XYCAxis(object):
             factor = 1e-3
         elif self.unit in ['mrad', 'meV']:
             factor = 1.0e3
-        elif self.unit in [u'$\mu$rad', u'µrad', u'urad']:
+        elif self.unit in [r'$\mu$rad', u'µrad', u'urad']:
             factor = 1.0e6
         else:
             if backend == 'shadow':
@@ -408,7 +410,7 @@ class XYCAxis(object):
                     factor = 1e-2
                 elif self.unit in ['mm', ]:
                     factor = 10.
-                elif self.unit in [u'$\mu$m', u'µm', 'um']:
+                elif self.unit in [r'$\mu$m', u'µm', 'um']:
                     factor = 1.0e4
                 elif self.unit in ['nm', ]:
                     factor = 1.0e7
@@ -417,11 +419,11 @@ class XYCAxis(object):
                     factor = 1e-3
                 elif self.unit in ['mm', ]:
                     factor = 1.
-                elif self.unit in [u'$\mu$m', u'µm', 'um']:
+                elif self.unit in [r'$\mu$m', u'µm', 'um']:
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6
-                elif self.unit in ['pm', ]:
+                elif self.unit in ['pm', 'nrad']:
                     factor = 1.0e9
                 elif self.unit in ['fm', ]:
                     factor = 1.0e12
@@ -511,10 +513,13 @@ class XYCPlot(object):
 
             .. |image_ePos1| imagezoom:: _images/ePos=1.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image_ePos2| imagezoom:: _images/ePos=2.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image_ePos0| imagezoom:: _images/ePos=0.png
                :scale: 50 %
+               :loc: upper-right-corner
 
 
         *title*: str
@@ -554,8 +559,10 @@ class XYCPlot(object):
                :scale: 50 %
             .. |image10| imagezoom:: _images/invertColorMap=1_negative=0.png
                :scale: 50 %
+               :loc: upper-right-corner
             .. |image11| imagezoom:: _images/invertColorMap=1_negative=1.png
                :scale: 50 %
+               :loc: upper-right-corner
 
             Note that *negative* inverts only the colors of the graphs, not
             the white global background. Use a common graphical editor to
@@ -563,6 +570,7 @@ class XYCPlot(object):
 
             .. imagezoom:: _images/negative=1+fullNegative.png
                :scale: 50 %
+               :align: center
 
             (such a picture would nicely look on a black journal cover, e.g.
             on that of Journal of Synchrotron Radiation ;) )
@@ -687,7 +695,7 @@ class XYCPlot(object):
         self.beam = beam  # binary shadow image: star, mirr or screen
         if beam is None:
             self.backend = 'raycing'
-        elif '.' in beam:
+        elif 'star.' in beam or 'mirr.' in beam or 'screen.' in beam:
             self.backend = 'shadow'
         elif ('dummy' in beam) or (beam == ''):
             self.backend = 'dummy'
@@ -1294,7 +1302,7 @@ class XYCPlot(object):
             extent = None
             if (axis.limits is not None) and\
                     (not isinstance(axis.limits, str)):
-                ll = [l-axis.offset for l in axis.limits]
+                ll = [lim-axis.offset for lim in axis.limits]
                 extent = [ll[0], ll[1], 0, 1]
         elif orientation[0] == 'v':
             map2d = np.zeros((len(xx), histoPixelHeight, 3))
@@ -1311,7 +1319,7 @@ class XYCPlot(object):
             extent = None
             if (axis.limits is not None) and \
                     not (isinstance(axis.limits, str)):
-                ll = [l-axis.offset for l in axis.limits]
+                ll = [lim-axis.offset for lim in axis.limits]
                 extent = [0, 1, ll[0], ll[1]]
 
         if self.negative:
@@ -1329,31 +1337,37 @@ class XYCPlot(object):
         for line in graph.lines:
             line.remove()
 
+        axis.binCenters = (axis.binEdges[:-1]+axis.binEdges[1:]) * 0.5
         if axis.max1D > 0:
-            args = np.argwhere(xx >= xxMaxHalf)
-            iHistFWHMlow = np.min(args)
-            iHistFWHMhigh = np.max(args) + 1
-            histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
-            histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
+            wantDiscrete = (xx[0] > xxMaxHalf) or (xx[-1] > xxMaxHalf)
+            if not wantDiscrete:
+                try:
+                    spl = UnivariateSpline(axis.binCenters, xx-xxMaxHalf, s=0)
+                    roots = spl.roots()
+                    histFWHMlow = min(roots) - axis.offset
+                    histFWHMhigh = max(roots) - axis.offset
+                except ValueError:
+                    wantDiscrete = True
+            if wantDiscrete:
+                args = np.argwhere(xx >= xxMaxHalf)
+                iHistFWHMlow = np.min(args)
+                iHistFWHMhigh = np.max(args) + 1
+                histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
+                histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
+
             if axis.fwhmFormatStr is not None:
                 xFWHM = [histFWHMlow, histFWHMhigh]
                 yFWHM = [xxMaxHalf, xxMaxHalf]
                 if orientation[0] == 'h':
-                    if hasattr(graph, 'histFWHMmarks'):
-                        graph.histFWHMmarks.set_data(xFWHM, yFWHM)
-                    else:
-                        graph.plot(xFWHM, yFWHM, '+', color='grey')
+                    graph.plot(xFWHM, yFWHM, '+', color='grey')
                 elif orientation[0] == 'v':
-                    if hasattr(graph, 'histFWHMmarks'):
-                        graph.histFWHMmarks.set_data(yFWHM, xFWHM)
-                    else:
-                        graph.plot(yFWHM, xFWHM, '+', color='grey')
+                    graph.plot(yFWHM, xFWHM, '+', color='grey')
         else:
             histFWHMlow = 0
             histFWHMhigh = 0
 
         if axis.offset:
-            ll = [l-axis.offset for l in axis.limits]
+            ll = [lim-axis.offset for lim in axis.limits]
             offsetText.set_text('{0}{1:g} {2}'.format(
                 '+' if axis.offset > 0 else '',
                 axis.offset*axis.offsetDisplayFactor, axis.offsetDisplayUnit))
@@ -1371,7 +1385,6 @@ class XYCPlot(object):
             if not isinstance(axis.limits, str):
                 graph.set_ylim(ll)
 
-        axis.binCenters = (axis.binEdges[:-1]+axis.binEdges[1:]) * 0.5
         weighted1D = axis.total1D * axis.binCenters
         xxAve = axis.total1D.sum()
         if xxAve != 0:
@@ -1389,7 +1402,7 @@ class XYCPlot(object):
             a[a < 0] += 1
         if self.caxis.limits is None:
             return
-        eMin, eMax = [l-self.caxis.offset for l in self.caxis.limits]
+        eMin, eMax = [lim-self.caxis.offset for lim in self.caxis.limits]
         a = np.vstack((a, a))
         if self.ePos == 1:
             a = a.T
@@ -1489,7 +1502,7 @@ class XYCPlot(object):
                 self.contourMax = np.max(Z)
                 if True:  # self.contourMax > 1e-4:
                     contourLevels =\
-                        [l*self.contourMax for l in self.contourLevels]
+                        [lev*self.contourMax for lev in self.contourLevels]
                     self.contours2D = self.ax2dHist.contour(
                         X, Y, Z, levels=contourLevels,
                         colors=self.contourColors)
@@ -1797,8 +1810,8 @@ class XYCPlot(object):
                 pn = self.persistentName
             if pn.endswith('mat'):
                 import scipy.io as io
-                #if os.path.isfile(self.persistentName):
-                #    os.remove(self.persistentName)
+                # if os.path.isfile(self.persistentName):
+                #     os.remove(self.persistentName)
                 io.savemat(pn, vars(saved))
             else:
                 f = open(pn, 'wb')

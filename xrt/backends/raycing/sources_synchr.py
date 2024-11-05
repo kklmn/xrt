@@ -564,6 +564,7 @@ class SourceFromField(IntegratedSource):
         return '5-SFF-xrt'
 
     def read_custom_field(self, fname, kwargs={}):
+        print(f'reading custom field from {fname}')
         if fname.endswith('.xls') or fname.endswith('.xlsx'):
             from pandas import read_excel
             data = read_excel(fname, **kwargs).values
@@ -1160,13 +1161,19 @@ class SourceFromField(IntegratedSource):
                 self.build_trajectory_periodic(Bx, By, Bz)
             Bxt, Byt, Bzt = self._magnetic_field_periodic(self.tg)
 
-        self.beta = [betax, betay]
-        self.trajectory = [trajx, trajy, trajz]
-
         betam = betazav[-1]
         ab = 0.5 / np.pi / betam if self.filamentBeam else\
             0.5 / np.pi / (1. - 0.5/gamma**2 + betam*EMC**2/gamma**2)
         emcg = SIE0 / SIM0 / C / 10. / gamma
+
+        if self.filamentBeam:
+            self.beta = [betax, betay]
+            self.trajectory = [trajx, trajy, trajz]
+        else:
+            self.beta = [betax*emcg[0], betay*emcg[0]]
+            self.trajectory = [
+                trajx*emcg[0], trajy*emcg[0],
+                self.tg*(1.-0.5/gamma[0]**2) + trajz*EMC**2/gamma[0]**2]
 
         if self.R0:
             R0v = np.array(
@@ -1288,7 +1295,7 @@ class Undulator(IntegratedSource):
             elif B0x == 0 and B0y == 0:
                 self.Kx = 0
                 self.K = 1
-                raise("Please define either K or B0!")
+                raise ValueError("Please define either K or B0!")
             else:
                 self.Kbase = False
                 self.B0y = B0y
@@ -1452,9 +1459,13 @@ class Undulator(IntegratedSource):
             (2*self.gamma2 - 1. - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
 
         E1 = 2*wu*self.gamma2 / (1 + 0.5*self.Kx**2 + 0.5*self.Ky**2)
-        if raycing._VERBOSITY_ > 10:
+        if raycing._VERBOSITY_ >= 10:
             print("E1 = {0}".format(E1))
-            print("E3 = {0}".format(3*E1))
+            print("E3 = {0}".format(E1*3))
+            print("E5 = {0}".format(E1*5))
+            print("E7 = {0}".format(E1*7))
+            print("E9 = {0}".format(E1*9))
+            print("E11 = {0}".format(E1*11))
             print("B0 = {0}".format(self.B0y))
             if self.taper is not None:
                 print("dB/dx/B = {0}".format(
@@ -1472,8 +1483,8 @@ class Undulator(IntegratedSource):
         given K values (*Ks*). The flux is calculated through the aperture
         defined by *theta* and *psi* opening angles (1D arrays).
 
-        Returns two 2D arrays: energy positions and flux values. The rows
-        correspond to *Ks*, the colums correspond to *harmomonics*.
+        Returns two 2D arrays: energy in keV and flux values in ph/s/0.1%bw.
+        The rows correspond to *Ks*, the colums correspond to *harmomonics*.
         """
         try:
             dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
@@ -1483,10 +1494,24 @@ class Undulator(IntegratedSource):
         tmpKy = self.Ky
         for iK, K in enumerate(Ks):
             if raycing._VERBOSITY_ >= 10:
-                print("Calculation {1} of {2}, K={0}".format(K, iK+1, len(Ks)))
+                print("\nCalculation {1} of {2}, K={0:.3f}".format(
+                    K, iK+1, len(Ks)))
             self.Ky = K
-            I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
-            flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+            # all energies can be calculated at once but for big theta and psi
+            # arrays the I0 array may become too big to fit into memory:
+            # I0 = self.intensities_on_mesh(energy, theta, psi, harmonics)[0]
+            # flux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+            # therefore, energy axis is split into a loop:
+            flux = None
+            for ie, e in enumerate(energy):
+                if ie % 100 == 0:
+                    print("Calculation at E={0}, K={1:.3f}".format(e, K))
+                I0 = self.intensities_on_mesh([e], theta, psi, harmonics)[0]
+                iflux = I0.sum(axis=(1, 2)) * dtheta * dpsi
+                if flux is None:
+                    flux = iflux
+                else:
+                    flux = np.vstack((flux, iflux))
             argm = np.argmax(flux, axis=0)
             fluxm = np.max(flux, axis=0)
             tunesE.append(energy[argm] / 1000.)

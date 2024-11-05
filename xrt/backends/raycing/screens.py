@@ -67,15 +67,10 @@ class Screen(object):
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
+        raycing.set_name(self, name)
         self._x = x
         self._z = z
         self._set_orientation()
-        raycing.set_name(self, name)
-#        if name not in [None, 'None', '']:
-#            self.name = name
-#        elif not hasattr(self, 'name'):
-#            self.name = '{0}{1}'.format(self.__class__.__name__,
-#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -346,16 +341,10 @@ class HemisphericScreen(Screen):
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
+        raycing.set_name(self, name)
         self._x = x
         self._z = z
         self._set_orientation()
-
-        raycing.set_name(self, name)
-#        if name not in [None, 'None', '']:
-#            self.name = name
-#        elif not hasattr(self, 'name'):
-#            self.name = '{0}{1}'.format(self.__class__.__name__,
-#                                        self.ordinalNum)
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

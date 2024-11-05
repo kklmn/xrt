@@ -3,6 +3,9 @@
 # xrt documentation build configuration file, created by
 # sphinx-quickstart on Thu Mar 01 09:52:50 2012.
 
+import matplotlib as mpl
+mpl.use('agg')
+
 import sys
 import os
 import shutil
@@ -10,24 +13,15 @@ import subprocess
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
-if on_rtd:
-    from unittest.mock import MagicMock
-
-    class Mock(MagicMock):
-        @classmethod
-        def __getattr__(cls, name):
-            return MagicMock()
-
-    MOCK_MODULES = ['OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
-                    'OpenGL.arrays', 'pyopencl',
-                    'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
-                    'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets',
-                    'PyQt5.QtSql',
-                    'matplotlib.backends.backend_qt5agg',
-                    'PySide', 'PySide.QtCore',
-                    'spyder.widgets', 'spyderlib.widgets',
-                    'cv2', 'zmq']
-    sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+autodoc_mock_imports = [
+    'OpenGL', 'OpenGL.GL', 'OpenGL.GLU', 'OpenGL.GLUT',
+    'OpenGL.arrays', 'pyopencl',
+    'PyQt5', 'PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets',
+    'PyQt5.QtOpenGL', 'PyQt5.QtWebEngineWidgets', 'PyQt5.QtSql',
+    'matplotlib.backends.backend_qt5agg',
+    'PySide', 'PySide.QtCore',
+    'spyder.widgets', 'spyderlib.widgets',
+    'cv2', 'zmq']
 
 __fdir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -106,8 +100,6 @@ sys.path.insert(0, '.')
 #sys.path.append('..')
 sys.path.append(os.path.abspath('exts'))
 #autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
-import matplotlib as mpl
-mpl.use('agg')
 
 import xrt.backends.raycing.materials_elemental as xrtelem
 import xrt.backends.raycing.materials_compounds as xrtcomp
@@ -155,7 +147,9 @@ rst_epilog = """
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = ['sphinx.ext.autodoc', 'sphinx.ext.pngmath']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx_tabs.tabs',
-              'animation']
+              'animation',
+              # 'sphinx_build_compatibility.extension'
+              ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -260,13 +254,15 @@ html_favicon = "_images/xrt_logo.ico"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 if on_rtd:
-#    html_theme = 'default'
-    html_static_path = []
+    # html_theme = 'default'
+    # html_static_path = []
     # for keeping Download ZIP smaller:
     load_res()  # load doc resources from a dedicated branch
 else:
+    pass
 #    html_theme = 'nature'
-    html_static_path = ['_static']
+
+html_static_path = ['_static']
 html_theme_options["body_min_width"] = '96%'
 
 toc_object_entries = False

@@ -18,12 +18,14 @@ difference in the calculated flux between the rays and the waves.
 
 .. |mirrorWR| imagezoom:: _images/mirror-256-01flat-01-beamFSMrays_f.*
 .. |mirrorWW| imagezoom:: _images/mirror-256-01flat-02-beamFSMwave_f.*
+   :loc: upper-right-corner
 
 The flux losses are not due to the integration errors, as was proven by
 variously dense meshes. The losses are solely caused by cutting the tails, as
 proven by a wider image shown below.
 
 .. imagezoom:: _images/mirror-256wide-01flat-02-beamFSMwave_f.*
+   :align: center
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"

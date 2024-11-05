@@ -8,10 +8,11 @@ optical elements in :mod:`~xrt.backends.raycing.oes`, material properties
 interfaces and crystals in :mod:`~xrt.backends.raycing.materials` and screens
 in :mod:`~xrt.backends.raycing.screens`.
 
-.. _scriptingRaycing:
-
 Coordinate systems
 ------------------
+
+.. imagezoom:: _images/axes.png
+   :align: right
 
 The following coordinate systems are considered (always right-handed):
 
@@ -69,8 +70,6 @@ characteristics depend on the above coordinate systems. Therefore, beams are
 usually represented by two different objects: one in the global and one in a
 local system.
 
-.. imagezoom:: _images/axes.png
-
 Units
 -----
 
@@ -97,6 +96,8 @@ user supplies `physical` and `optical` limits, where the latter is used to
 define the ``out`` category (for rays between `physical` and `optical` limits).
 An alarm is triggered if the fraction of dead rays exceeds a specified level.
 
+.. _scriptingRaycing:
+
 Scripting in python
 -------------------
 
@@ -116,16 +117,55 @@ The user of :mod:`~xrt.backends.raycing` must do the following:
 4) Run :func:`~xrt.runner.run_ray_tracing()` function for the created plots.
 
 Additionally, the user may define a generator that will run a loop of ray
-tracing for changing geometry (mimics a real scan) or for different material
-properties etc. The generator should modify the beamline elements and output
-file names of the plots before *yield*. After the *yield* the plots are ready
-and the generator may use their fields, e.g. *intensity* or *dE* or *dy* or
-others to prepare a scan plot. Typically, this sequence is within a loop; after
-the loop the user may prepare the final scan plot using matplotlib
-functionality. The generator is given to :func:`~xrt.runner.run_ray_tracing()`
-as a parameter.
+tracing jobs for changing geometry settings (mimics a real scan) or for
+different material properties etc. The generator should modify the beamline
+elements and output file names of the plots before *yield*. After the *yield*
+the plots are ready and the generator may use their fields, e.g. *intensity* or
+*dE* or *dy* or others to prepare a scan plot. Typically, this sequence is
+contained within a loop; after the loop the user may prepare the final scan
+plot using matplotlib functionality. The generator is passed to
+:func:`~xrt.runner.run_ray_tracing()` as a parameter.
 
-See the supplied examples."""
+Consider an example of a generator::
+
+    def energy_scan(beamLine, plots, energies):
+        flux = np.zeros_like(energies)
+        for ie, e in enumerate(energies):
+            print(f'energy {e:.1f} eV, {ie+1} of {len(energies)}')
+            beamLine.fixedEnergy = e
+            beamLine.source.eMin = e - 0.5  # defines 1 eV energy band
+            beamLine.source.eMax = e + 0.5
+            for plot in plots:
+                plot.saveName = [plot.baseName + f'-{ie}-{e:.1f}eV.png']
+
+            yield
+            # now all plots for this scan point are ready
+            flux[ie] = plot.flux
+
+        # now the whole scan is complete
+        integratedFlux = np.trapz(flux, energies)
+        print(f'total flux = {integratedFlux:.3g} ph/s')
+
+        with open("ray_tracing_c.pickle", 'wb') as f:
+            pickle.dump([energies, flux, integratedFlux], f)
+
+        plt.plot(energies, flux)
+        plt.show()
+
+... and an example of passing this generator to
+:func:`~xrt.runner.run_ray_tracing()`::
+
+    def ray_study(nrays, repeats):
+        beamLine = build_beamline(nrays)
+        plots = define_plots(beamLine)
+        energies = np.linspace(11800, 12600, 401)
+        xrtr.run_ray_tracing(
+            plots, repeats=repeats, beamLine=beamLine,
+            generator=energy_scan, generatorArgs=[beamLine, plots, energies])
+
+Find more generators in the supplied examples.
+"""
+
 from __future__ import print_function
 import types
 import sys
@@ -427,12 +467,16 @@ def check_alarm(self, incoming, beam):
     condition is fulfilled."""
     incomingSum = incoming.sum()
     if incomingSum > 0:
-        badSum = (beam.state == self.lostNum).sum()
+        badState = beam.state == self.lostNum
+        badSum = badState.sum()
+        badFlux = (beam.Jss[badState] + beam.Jss[badState]).sum()
+        allFlux = (beam.Jss + beam.Jss).sum()
         ratio = float(badSum)/incomingSum
+        ratioFlux = badFlux / allFlux
         if ratio > self.alarmLevel:
-            alarmStr = ('{0}{1} absorbes {2:.2%} of rays ' +
-                        'at {3:.0%} alarm level!').format(
-                'Alarm! ', self.name, ratio, self.alarmLevel)
+            alarmStr = ('{0}{1} absorbes {2:.2%} of rays or {3:.2%} of flux ' +
+                        'at {4:.0%} alarm level!').format(
+                'Alarm! ', self.name, ratio, ratioFlux, self.alarmLevel)
             self.bl.alarms.append(alarmStr)
     else:
         self.bl.alarms.append('no incident rays to {0}!'.format(self.name))
@@ -648,18 +692,20 @@ def get_output(plot, beamsReturnedBy_run_process):
 
     if hasattr(beam, 'displayAsAbsorbedPower'):
         plot.displayAsAbsorbedPower = True
+
     if isinstance(plot.xaxis.data, types.FunctionType):
         x = plot.xaxis.data(beam) * plot.xaxis.factor
     elif isinstance(plot.xaxis.data, np.ndarray):
         x = plot.xaxis.data * plot.xaxis.factor
     else:
-        raise ValueError('cannot find data for x!')
+        raise ValueError('cannot find x data for plot {0}'.format(plot.beam))
+
     if isinstance(plot.yaxis.data, types.FunctionType):
         y = plot.yaxis.data(beam) * plot.yaxis.factor
     elif isinstance(plot.yaxis.data, np.ndarray):
         y = plot.yaxis.data * plot.yaxis.factor
     else:
-        raise ValueError('cannot find data for y!')
+        raise ValueError('cannot find y data for plot {0}'.format(plot.beam))
 
     if plot.caxis.useCategory:
         cData = np.zeros_like(beamState)
@@ -1142,7 +1188,9 @@ class BeamLine(object):
         from .run import run_process
         run_process(self)
         if self.blViewer is None:
-            app = xrtglow.qt.QApplication(sys.argv)
+            app = xrtglow.qt.QApplication.instance()
+            if app is None:
+                app = xrtglow.qt.QApplication(sys.argv)
             rayPath = self.export_to_glow()
             self.blViewer = xrtglow.xrtGlow(rayPath)
             self.blViewer.generator = generator

@@ -42,7 +42,7 @@ polarization ellipse becomes close to 1 or -1 and with narrow distribution.
 .. |QWPBTP| animation:: _images/QWP-1BT-PhaseShift
    :loc: upper-right-corner
 .. |QWPBTA| animation:: _images/QWP-1BT-PolAxesRatio
-   :loc: top: -208px; left: -450px;
+   :loc: upper-right-corner
 
 Collimated beam, Laue transmission case
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,7 +62,7 @@ case.
 .. |QWPLTP| animation:: _images/QWP-2LT-PhaseShift
    :loc: upper-right-corner
 .. |QWPLTA| animation:: _images/QWP-2LT-PolAxesRatio
-   :loc: top: -208px; left: -450px;
+   :loc: upper-right-corner
 
 Convergent beam, Laue transmission case
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,5 +91,7 @@ polarization plane (horizontal). Watch the circular polarization rate at
 *E* ~ 9 keV, crystal thickness = 500 µm.
 
 .. animation:: _images/QWP-4LT-conv-bent-CircPolRate
+   :align: right
+
 """
 pass

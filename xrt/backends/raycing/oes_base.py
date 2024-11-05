@@ -38,8 +38,8 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'isParametric', 'shape', 'gratingDensity', 'order',
                 'shouldCheckCenter',
                 'dxFacet', 'dyFacet', 'dxGap', 'dyGap', 'Rm',
-                'crossSection', 'Rs', 'R', 'r', 'p', 'q',
-                'isCylindrical', 'L0', 'theta', 'r0', 'ellipseA', 'ellipseB',
+                'crossSection', 'Rs', 'R', 'r', 'p', 'q', 'isCylindrical',
+                'isClosed', 'L0', 'theta', 'r0', 'ellipseA', 'ellipseB',
                 'workingDistance', 'wedgeAngle',
                 'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alarmLevel',
                 'cryst2finePitch', 'cryst2perpTransl', 'cryst2longTransl',
@@ -196,7 +196,11 @@ class OE(object):
 
         *shape*: str or list of [x, y] pairs
             The shape of OE. Supported: 'rect', 'round' or a list of [x, y]
-            pairs for an arbitrary shape.
+            pairs for an arbitrary shape. *shape* refers to the geometric shape
+            of the XY projection. 'round' shape makes a circular disk, not a
+            capillary optical element. The latter can be made as a parametric
+            surface, see e.g. :class:`SurfaceOfRevolution` or
+            :class:`EllipticalMirrorParam`.
 
         *gratingDensity*: None or list
             If material *kind* = 'grating', its density can be defined as list
@@ -213,6 +217,11 @@ class OE(object):
             spacing along the 'y' direction; ['y', 1200, 1, 1e-6, 3.1e-7] for
             a VLS grating. The length of the list determines the polynomial
             order.
+
+            .. note::
+
+                Redefining :meth:`local_g` is the most flexible way to define
+                a VLS grating.
 
         *order*: int or sequence of ints
             The order(s) of grating, FZP or Bragg-Fresnel diffraction.
@@ -595,7 +604,14 @@ class OE(object):
         2pi!) in 1/mm at (*x*, *y*) position. The vector must lie on the
         surface, i.e. be orthogonal to the normal. Typically is overridden in
         the derived classes or defined in Material class. Returns a 3-tuple of
-        floats or of arrays of the length of *x* and *y*."""
+        floats or of arrays of the length of *x* and *y*.
+
+        .. note::
+
+            The sign of the returned vector depends on the user's definition
+            of the diffraction order sign.
+
+        """
 
         try:
             rhoList = self.gratingDensity
@@ -1110,7 +1126,8 @@ class OE(object):
             If not None, returns the absorbed intensity in local beam.
 
         *noIntersectionSearch*: bool
-            Used in wave propagation, normally should be False.
+            Used in wave propagation, normally should be False. Certainly
+            should be False if the OE is distorted.
 
 
         .. .. Returned values: beamGlobal, beamLocal
@@ -1140,7 +1157,10 @@ class OE(object):
                             pitch, self.roll+self.positionRoll, self.yaw,
                             self.dx, noIntersectionSearch=noIntersectionSearch,
                             material=self.material)
-        goodAfter = (gb.state == 1) | (gb.state == 2)
+        if hasattr(beam, 'createdByDiffract'):
+            goodAfter = gb.state == 1
+        else:
+            goodAfter = (gb.state == 1) | (gb.state == 2)
 # in global coordinate system:
         if goodAfter.sum() > 0:
             raycing.virgin_local_to_global(self.bl, gb, self.center, goodAfter)
@@ -1368,9 +1388,10 @@ class OE(object):
         else:
             raise ValueError('wrong type of `nrays`!')
 
-# this works even for a parametric case because we prepare rays started at the
-# center of the previous oe and directed towards this oe (self). The found
-# intersection points (by reflect) are exact:
+        # These are approximate samples (exact for undistorted and
+        # non-parametric cases). This works even for a parametric case because
+        # `reflect()` (that follows `diffract()`) will make it exact. Make sure
+        # that `noIntersectionSearch=False` in `reflect()`.
         z = self.local_z(x, y)
         lb.x[:] = x
         lb.y[:] = y
@@ -1500,10 +1521,13 @@ class OE(object):
             tMin, tMax = self._set_t(y, b, surfPhysY)
         else:
             tMin, tMax = self._set_t(z, c, defSize=raycing.maxDepthOfOE)
+
         # this line is important for cases when the previous reflection points
         # (the ray heads) are close, e.g. in Montel mirror without setting
-        # physical surface limits:
-        tMin[tMin < -10*raycing.zEps] = -10*raycing.zEps
+        # physical surface limits. This solution is not fully studied and it
+        # may break `reflect` after `diffract` (the factor 1e6 is to play with)
+        tMin[tMin < -1e6*raycing.zEps] = -1e6*raycing.zEps
+
         elevation = None
         if isMulti:
             tMin[:] = 0
@@ -1819,10 +1843,11 @@ class OE(object):
             lb.z[good] -= dz
 
 # x, y, z:
-        if fromVacuum:
-            invertNormal = 1
+        if hasattr(self, 'invertNormal'):
+            invertNormal = self.invertNormal
         else:
-            invertNormal = -1
+            invertNormal = 1 if fromVacuum else -1
+
 #        mainPartForBracketing = lb.state[good] > 0
         mainPartForBracketing = lb.state[good] == 1
         tMin = np.zeros_like(lb.x)
@@ -2055,9 +2080,6 @@ class OE(object):
                     lb.a[goodN] = a_out
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
-#                print('after.a', lb.a)
-#                print('after.b', lb.b)
-#                print('after.c', lb.c)
             elif toWhere == 1:  # refract
                 refractive_index = \
                     matSur.get_refractive_index(lb.E[goodN]).real

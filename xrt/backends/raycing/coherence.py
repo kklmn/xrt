@@ -36,7 +36,7 @@ import matplotlib.patches as mpatches
 
 
 def calc_1D_coherent_fraction(U, axisName, axis, p=0):
-    """
+    r"""
     Calculates 1D degree of coherence (DoC). From its width in respect to the
     width of intensity distribution also infers the coherent fraction. Both
     widths are rms. The one of intensity is calculated over the whole axis, the
@@ -122,8 +122,13 @@ def plot_1D_degree_of_coherence(data1D, axisName, axis, unit="mm", fig2=None,
 
     Plot examples for one and two 1D curves:
 
-    .. imagezoom:: _images/_DOC-1D-1.*
-    .. imagezoom:: _images/_DOC-1D-2.*
+    +----------+----------+
+    |  |DOC1|  |  |DOC2|  |
+    +----------+----------+
+
+    .. |DOC1| imagezoom:: _images/_DOC-1D-1.*
+    .. |DOC2| imagezoom:: _images/_DOC-1D-2.*
+       :loc: upper-right-corner
 
     """
     Jx, Ix, Jdx, varIx, varJdx, limJd, cohFrx = data1D
@@ -200,7 +205,7 @@ def calc_degree_of_transverse_coherence_4D(J):
 
 
 def calc_degree_of_transverse_coherence_PCA(U):
-    """
+    r"""
     Calculates DoTC from the field stack *U*. The field images of *U* are
     flattened to form the matrix D shaped as (repeats, nx×ny).
     DoTC = Tr(*D*\ :sup:`+`\ *DD*\ :sup:`+`\ *D*)/Tr²(*D*\ :sup:`+`\ *D*),
@@ -232,7 +237,7 @@ def calc_eigen_modes_4D(J, eigenN=4):
 
 
 def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
-    """
+    r"""
     Solves the PCA problem for the field stack *U* shaped as (repeats, nx, ny).
     The field images are flattened to form the matrix D shaped as
     (repeats, nx×ny). The eigenvalue problem is solved for the matrix
@@ -290,7 +295,7 @@ def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
 calc_eigen_modes = calc_eigen_modes_PCA
 
 
-def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
+def plot_eigen_modes(x, y, w, v, xlabel='', ylabel='', aspect=1):
     """
     Provides 2D plots of the first 4 eigen modes in the given *x* and *y*
     coordinates. The eigen modes are specified by eigenvalues and eigenvectors
@@ -301,17 +306,24 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
 
     .. imagezoom:: _images/_Modes-2D.*
 
+    .. raw:: html
+
+       <div class="clearer"> </div>
+
     """
+    if w is None:
+        print('No eigenvalues have been supplied to `plot_eigen_modes()`')
+        return
+
     limx, limz = [x.min(), x.max()], [y.min(), y.max()]
     isSliceX, isSliceZ = False, False
     if limx[0] == limx[1]:
-        limx = [l*0.1 for l in limz]
+        limx = [lim*0.1 for lim in limz]
         isSliceX = True
     if limz[0] == limz[1]:
-        limz = [l*0.1 for l in limx]
+        limz = [lim*0.1 for lim in limx]
         isSliceZ = True
-    dlimx, dlimz = limx[1] - limx[0], limz[1] - limz[0]
-    fxz = float(dlimz)/dlimx
+    fxz = float(limz[1]-limz[0]) / (limx[1]-limx[0]) if aspect == 1 else 1
 
     xMargin = 80
     yMargin = xMargin - 30
@@ -320,13 +332,12 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
     dY = dX * fxz
     dpi = 100
 
-    cmap = mpl.colormaps['cubehelix']
+    # cmap = mpl.colormaps['cubehelix']
+    cmap = mpl.colormaps['hot']
 #    cmap = None  # default to rc image.cmap value
 
     extent = limx + limz
 
-    if w is None:
-        return
 #    norm = (abs(v[:, -4:])**2).sum(axis=0)
 #    v[:, -4:] /= norm**0.5
 
@@ -337,16 +348,16 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
 
     rect2d = [xMargin/xFigSize, (yMargin+dY+space)/yFigSize,
               dX/xFigSize, dY/yFigSize]
-    ax0 = figMs.add_axes(rect2d, aspect=1)
+    ax0 = figMs.add_axes(rect2d, aspect=aspect)
     rect2d = [(xMargin+dX+space)/xFigSize, (yMargin+dY+space)/yFigSize,
               dX/xFigSize, dY/yFigSize]
-    ax1 = figMs.add_axes(rect2d, aspect=1)
+    ax1 = figMs.add_axes(rect2d, aspect=aspect)
     rect2d = [xMargin/xFigSize, yMargin/yFigSize,
               dX/xFigSize, dY/yFigSize]
-    ax2 = figMs.add_axes(rect2d, aspect=1)
+    ax2 = figMs.add_axes(rect2d, aspect=aspect)
     rect2d = [(xMargin+dX+space)/xFigSize, yMargin/yFigSize,
               dX/xFigSize, dY/yFigSize]
-    ax3 = figMs.add_axes(rect2d, aspect=1)
+    ax3 = figMs.add_axes(rect2d, aspect=aspect)
     for ax in [ax0, ax1, ax2, ax3]:
         ax.set_xlim(extent[0], extent[1])
         ax.set_ylim(extent[2], extent[3])
@@ -368,7 +379,8 @@ def plot_eigen_modes(x, y, w, v, xlabel='', ylabel=''):
         assert v[:, -iax-1].shape[0] == len(y)*len(x)
         im = (v[:, -iax-1]).reshape(len(y), len(x))
         imA = (im.real**2 + im.imag**2).astype(float)
-        ax.imshow(imA, extent=extent, cmap=cmap, interpolation='none')
+        ax.imshow(imA, extent=extent, cmap=cmap, interpolation='none',
+                  origin='lower', aspect=aspect)
         plt.text(
             0.5, 0.95, lab.format(modeName, w[-iax-1]),
             transform=ax.transAxes, ha='center', va='top', color='w', size=10)

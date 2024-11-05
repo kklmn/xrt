@@ -3,6 +3,11 @@ u"""
 xrtQook -- a GUI for creating a beamline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. imagezoom:: _images/xrtQook.png
+   :align: right
+   :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
+       help panel on the right.
+
 The main interface to xrt is through a python script. Many examples of such
 scripts can be found in the supplied folders `examples` and `tests`. The script
 imports the modules of xrt, instantiates beamline parts, such as synchrotron or
@@ -22,10 +27,6 @@ the corresponding script parts have to be written manually based on the
 supplied examples and the present documentation.
 
 See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
-
-.. imagezoom:: _images/xrtQook.png
-   :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
-       help panel on the right.
 
 """
 
@@ -88,9 +89,9 @@ if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
 
 try:
-    from ...backends.raycing import materials_elemental as mtlcls
-    from ...backends.raycing import materials_compounds as cpdcls
-    from ...backends.raycing import materials_crystals as xtlcls
+    from ...backends.raycing import materials_elemental as rmatsel
+    from ...backends.raycing import materials_compounds as rmatsco
+    from ...backends.raycing import materials_crystals as rmatscr
     pdfMats = True
 except ImportError:
     pdfMats = False
@@ -145,6 +146,7 @@ except AttributeError:
 
     class QWebView(qt.QtWeb.QWebEngineView):
         """Web view"""
+
         def __init__(self):
             qt.QtWeb.QWebEngineView.__init__(self)
             web_page = WebPage(self)
@@ -192,7 +194,9 @@ class XrtQook(qt.QWidget):
         self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
 
-        self.xrtModules = ['rsources', 'rscreens', 'rmats', 'roes', 'rapts',
+        self.xrtModules = ['rsources', 'rscreens',
+                           'rmats', 'rmatsel', 'rmatsco', 'rmatscr',
+                           'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
         self.objectFlag = qt.ItemFlags(0)
@@ -266,7 +270,7 @@ class XrtQook(qt.QWidget):
             rels = json.loads(req.text)['releases']
             v = max([dv.LooseVersion(r) for r in rels if 'b' not in r])
             return v, dv.LooseVersion(xrtversion)
-        except:
+        except Exception:
             pass
 
     def _addAction(self, module, elname, afunction, menu):
@@ -398,7 +402,7 @@ class XrtQook(qt.QWidget):
                         pdmmenu = tmenu.addMenu(self.tr("Predefined"))
                         for mlibname, mlib in zip(
                                 ['Elemental', 'Compounds', 'Crystals'],
-                                [mtlcls, cpdcls, xtlcls]):
+                                [rmatsel, rmatsco, rmatscr]):
                             pdflmenu = pdmmenu.addMenu(self.tr(mlibname))
                             for ssec, snames in list(
                                     mlib.__allSectioned__.items()):
@@ -1040,7 +1044,7 @@ class XrtQook(qt.QWidget):
         headerDoc = objP.__doc__
 
         if not inspect.isclass(obj) and headerDoc is not None:
-            headerDocRip = re.findall('.+?(?= {4}\*)',
+            headerDocRip = re.findall(r'.+?(?= {4}\*)',
                                       headerDoc,
                                       re.S | re.U)
             if len(headerDocRip) > 0:
@@ -1156,7 +1160,7 @@ class XrtQook(qt.QWidget):
 | See a brief `startup tutorial <{0}>`_, `the documentation <http://xrt.rtfd.io>`_ and check the latest updates on `GitHub <https://github.com/kklmn/xrt>`_.
 
 :Created by:
-    Roman Chernikov (`Canadian Light Source <http://www.lightsource.ca>`_)\n
+    Roman Chernikov (`NSLS-II <http://https://www.bnl.gov/nsls2/>`_)\n
     Konstantin Klementiev (`MAX IV Laboratory <https://www.maxiv.lu.se/>`_)
 :License:
     MIT License, March 2016
@@ -1438,7 +1442,7 @@ class XrtQook(qt.QWidget):
 #                                    args.append(arg)
 #                                    argVals.append(argVal)
                         if namef == "__init__" or namef.endswith("pop_kwargs"):
-                            kwa = re.findall("(?<=kwargs\.pop).*?\)",
+                            kwa = re.findall(r"(?<=kwargs\.pop).*?\)",
                                              inspect.getsource(objf),
                                              re.S)
                             if len(kwa) > 0:
@@ -1567,24 +1571,24 @@ class XrtQook(qt.QWidget):
         methodProps = self.addProp(methodItem, 'parameters')
         self.addObject(self.tree, methodItem, name)
         for arg, argVal in self.getParams(name):
-                if arg == 'bl':
-                    argVal = self.rootBLItem.text()
-                elif 'beam' in arg:
-                    fModel0 = qt.QSortFilterProxyModel()
-                    fModel0.setSourceModel(self.beamModel)
-                    fModel0.setFilterKeyColumn(1)
-                    fModel0.setFilterRegExp('Global')
-                    fModel = qt.QSortFilterProxyModel()
-                    fModel.setSourceModel(fModel0)
-                    fModel.setFilterKeyColumn(3)
-                    regexp = self.intToRegexp(
-                        self.nameToBLPos(elstr))
-                    fModel.setFilterRegExp(regexp)
-                    lastIndex = fModel.rowCount() - 1
-                    if arg.lower() == 'accubeam':
-                        lastIndex = 0
-                    argVal = fModel.data(fModel.index(lastIndex, 0))
-                child0, child1 = self.addParam(methodProps, arg, argVal)
+            if arg == 'bl':
+                argVal = self.rootBLItem.text()
+            elif 'beam' in arg:
+                fModel0 = qt.QSortFilterProxyModel()
+                fModel0.setSourceModel(self.beamModel)
+                fModel0.setFilterKeyColumn(1)
+                fModel0.setFilterRegExp('Global')
+                fModel = qt.QSortFilterProxyModel()
+                fModel.setSourceModel(fModel0)
+                fModel.setFilterKeyColumn(3)
+                regexp = self.intToRegexp(
+                    self.nameToBLPos(elstr))
+                fModel.setFilterRegExp(regexp)
+                lastIndex = fModel.rowCount() - 1
+                if arg.lower() == 'accubeam':
+                    lastIndex = 0
+                argVal = fModel.data(fModel.index(lastIndex, 0))
+            child0, child1 = self.addParam(methodProps, arg, argVal)
 
         methodOut = self.addProp(methodItem, 'output')
         for outstr in fdoc:
@@ -1724,15 +1728,16 @@ class XrtQook(qt.QWidget):
         def parseDescr(obji):
             fdoc = obji.__doc__
             if fdoc is not None:
-                fdocRec = re.findall("\*.*?\n\n(?= *\*|\n)", fdoc, re.S | re.U)
+                fdocRec = re.findall(
+                    r"\*.*?\n\n(?= *\*|\n)", fdoc, re.S | re.U)
                 if len(fdocRec) > 0:
                     descs = [re.split(
-                        "\*\:",
+                        r"\*\:",
                         fdc.rstrip("\n")) for fdc in fdocRec]
                     for desc in descs:
                         if len(desc) == 2:
-                            descName = desc[0].strip("\*")
-                            descBody = desc[1].strip("\* ")
+                            descName = desc[0].strip(r"\*")
+                            descBody = desc[1].strip(r"\* ")
                             if descName not in argDesc.keys():
                                 argDesc[descName] = descBody
 
@@ -1749,7 +1754,7 @@ class XrtQook(qt.QWidget):
                 else:
                     for argKey in argKeys:
                         if argKey not in retArgDescs and\
-                                len(re.findall("{0}(?=[\,\s\*])".format(arg),
+                                len(re.findall(r"{0}(?=[\,\s\*])".format(arg),
                                                argKey)) > 0:
                             retArgDescs.append(argKey)
                             retArgDescVals.append(argDesc[argKey])
@@ -1867,7 +1872,7 @@ class XrtQook(qt.QWidget):
                         try:
                             del self.beamLine.beamsDict[str(
                                 iWidget.currentText())]
-                        except:
+                        except Exception:
                             print("Failed to delete", iWidget.currentText())
                             if _DEBUG_:
                                 raise
@@ -1989,9 +1994,9 @@ class XrtQook(qt.QWidget):
                                     child1.text(),
                                     itemType)
                 elif flatModel:
-                        self.confText +=\
-                            '{0}<{1} type=\"flat\"></{1}>\n'.format(
-                                self.prefixtab, despace(str(child0.text())))
+                    self.confText +=\
+                        '{0}<{1} type=\"flat\"></{1}>\n'.format(
+                            self.prefixtab, despace(str(child0.text())))
 
             self.ntab -= 1
             self.prefixtab = self.ntab * '\t'
@@ -2315,7 +2320,7 @@ class XrtQook(qt.QWidget):
         oeClassStr = str(self.getClassName(
             self.rootBLItem.child(int(intStr), 0)))
         if 'source' in oeClassStr:
-            return '^(\d+)$'
+            return r'^(\d+)$'
         elif int(intStr) < 11:
             return '^([0][0][0-{}])$'.format(int(intStr)-1)
         else:
@@ -2778,7 +2783,7 @@ class XrtQook(qt.QWidget):
                     self._addAction(rmats, sec, self.addMaterial, matMenu)
             pdmmenu = matMenu.addMenu(self.tr("Predefined"))
             for mlibname, mlib in zip(['Elemental', 'Compounds', 'Crystals'],
-                                      [mtlcls, cpdcls, xtlcls]):
+                                      [rmatsel, rmatsco, rmatscr]):
                 pdflmenu = pdmmenu.addMenu(self.tr(mlibname))
                 for ssec, snames in list(mlib.__allSectioned__.items()):
                     if isinstance(snames, (tuple, list)):
@@ -3414,7 +3419,7 @@ class XrtQook(qt.QWidget):
         print('Beam structure integrity corrupted. Retracing from the Source.')
         try:
             objThread.quit()
-        except:
+        except Exception:
             if _DEBUG_:
                 raise
             else:
@@ -3520,8 +3525,16 @@ if __name__ == '__main__':
                 for ieph in range(matItem.rowCount()):
                     if matItem.child(ieph, 0).text() == '_object':
                         elstr = str(matItem.child(ieph, 1).text())
-                        ieinit = elstr + "(" + ieinit
-                        break
+                        klass = eval(elstr)
+                        if klass.__module__.startswith('xrt'):
+                            ieinit = elstr + "(" + ieinit
+                        else:
+                            # import of custom materials
+                            importStr = 'import {0}'.format(klass.__module__)
+                            # if importStr not in codeHeader:
+                            codeHeader += importStr + '\n'
+                            ieinit = "{0}.{1}({2}".format(
+                                klass.__module__, klass.__name__, ieinit)
                 for ieph in range(matItem.rowCount()):
                     if matItem.child(ieph, 0).text() != '_object':
                         if matItem.child(ieph, 0).text() == 'properties':
@@ -3557,10 +3570,10 @@ if __name__ == '__main__':
                         if klass.__module__.startswith('xrt'):
                             ieinit = elstr + "(" + ieinit
                         else:
-                            if 'import {0}'.format(klass.__module__) not in\
-                                    codeHeader:
-                                codeHeader += 'import {0}\n'.format(
-                                    klass.__module__)
+                            # import of custom OEs
+                            importStr = 'import {0}'.format(klass.__module__)
+                            # if importStr not in codeHeader:
+                            codeHeader += importStr + '\n'
                             ieinit = "{0}.{1}({2}".format(
                                 klass.__module__, klass.__name__, ieinit)
 
@@ -3813,7 +3826,7 @@ if __name__ == '__main__':
             codeRunProcess + codePlots + codeMain + codeFooter
         for xrtAlias in self.xrtModules:
             fullModName = (eval(xrtAlias)).__name__
-            fullCode = fullCode.replace(fullModName, xrtAlias)
+            fullCode = fullCode.replace(fullModName+".", xrtAlias+".")
             codeHeader += 'import {0} as {1}\n'.format(fullModName, xrtAlias)
         fullCode = codeHeader + fullCode
         if self.glowOnly:
@@ -3910,7 +3923,7 @@ class PropagationConnect(qt.QObject):
             self.propagationProceed.emit((1, "Done"))
             self.rayPathReady.emit(rayPath)
             self.finished.emit()
-        except:
+        except Exception:
             if _DEBUG_:
                 print('Propagation impossible', startFrom)
                 raise

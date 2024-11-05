@@ -180,4 +180,7 @@ class QComboBox(StdQComboBox):
         if self.hasFocus():
             return StdQComboBox.wheelEvent(self, *args, **kwargs)
         else:
-            return self.parent().wheelEvent(*args, **kwargs)
+            try:
+                return self.parent().wheelEvent(*args, **kwargs)
+            except RuntimeError:
+                return

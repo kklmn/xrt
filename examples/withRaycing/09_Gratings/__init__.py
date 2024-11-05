@@ -57,9 +57,14 @@ at *q* = 20 m, whereas the Bragg crystal provides good energy resolution. One
 can easily study how the band width affects the focusing properties (not shown
 here).
 
-.. imagezoom:: _images/BFZPlocalFull.png
-.. imagezoom:: _images/BFZPlocal.png
-.. animation:: _images/BraggFresnel
++---------+---------+---------+
+|  |bf1|  |  |bf2|  |  |bf3|  |
++---------+---------+---------+
+
+.. |bf1| imagezoom:: _images/BFZPlocalFull.png
+.. |bf2| imagezoom:: _images/BFZPlocal.png
+.. |bf3| animation:: _images/BraggFresnel
+   :loc: upper-right-corner
 
 Generic cPGM beamline
 ~~~~~~~~~~~~~~~~~~~~~
@@ -73,14 +78,24 @@ density is 1221 mm\ :sup:`-1`\ .
 An energy scan at a given vertical slit (here, 30 µm) between M3 and M4. Shown
 are images at the slit and at the final focus 'Exp2':
 
-.. animation:: _images/FlexPES-energyScanAtSlit
-.. animation:: _images/FlexPES-energyScan
++--------------+--------------+
+|  |FlexPES1|  |  |FlexPES2|  |
++--------------+--------------+
+
+.. |FlexPES1| animation:: _images/FlexPES-energyScanAtSlit
+.. |FlexPES2| animation:: _images/FlexPES-energyScan
+   :loc: upper-right-corner
 
 A vertical slit scan at a given energy (here, 40 eV) with a final dependency of
 energy resolution and flux on the slit size:
 
-.. animation:: _images/FlexPES-slitScan
-.. imagezoom:: _images/FlexPES-dE.png
++--------------+--------------+
+|  |FlexPES3|  |  |FlexPES4|  |
++--------------+--------------+
+
+.. |FlexPES3| animation:: _images/FlexPES-slitScan
+.. |FlexPES4| imagezoom:: _images/FlexPES-dE.png
+   :loc: upper-right-corner
 
 """
 pass

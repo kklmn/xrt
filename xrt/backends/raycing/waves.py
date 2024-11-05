@@ -263,12 +263,16 @@ For slits and screens, the two steps above are sufficient. For an optical
 element, another step is necessary.
 
 3. ``reflect`` method of the optical element is meant to take into account its
-   material properties. The intersection points are already known, as provided
-   by the previous ``prepare_wave``, which can be reported to ``reflect`` by
-   ``noIntersectionSearch=True``. Here, ``reflect`` takes the beam right before
-   the surface and propagates it to right after it. As a result of such a
-   zero-length travel, the wave gets no additional propagation phase but only a
-   complex-valued reflectivity coefficient and a new propagation direction.
+   material properties. The intersection points are already known (unless the
+   optical element is distorted, i.e. has methods `local_z_distorted` and
+   `local_n_distorted`), as provided by the previous ``prepare_wave``. This
+   fact (knowledge of the intersection points) can be reported to ``reflect``
+   by ``noIntersectionSearch=True``. Here, ``reflect`` takes the beam right
+   before the surface and propagates it to right after it. As a result of such
+   a zero-length travel, the wave gets no additional propagation phase but only
+   a complex-valued reflectivity coefficient and a new propagation direction.
+   Note that for parametric or distorted OEs this last-stroke travel is not
+   zero-length but the propagation phase is properly taken into account.
 
 These three methods are enough to describe wave propagation through the
 complete beamline. The first two methods, ``prepare_wave`` and ``diffract``,
@@ -493,6 +497,10 @@ if isOpenCL:
 else:
     waveCL = None
 
+GREEN = raycing.colorama.Fore.GREEN
+RED = raycing.colorama.Fore.RED
+RESET = raycing.colorama.Fore.RESET
+
 
 def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     """Creates the beam arrays used in wave diffraction calculations. The
@@ -603,8 +611,12 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 
     # this would be better in prepare_wave but energy is unknown there yet
     nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
-    print("Effective Fresnel number = {0:.3g}, samples per zone = {1:.3g}".
-          format(nf, spz))
+    toOEname = ' to ' + wave.toOE.name if hasattr(wave, 'toOE') else ''
+    print("Diffraction from {0}{1}:\n"
+          "Effective Fresnel number = {2:.3g}, {3:.3g} samples, "
+          "{5}{4:.3g} samples per zone{6}"
+          .format(oe.name, toOEname, nf, goodlen, spz,
+                  GREEN if spz > 1e4 else RED, RESET))
 
     shouldCalculateArea = False
     if not hasattr(oeLocal, 'area'):
@@ -636,7 +648,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         if hasattr(oeLocal, 'areaFraction'):
             oeLocal.area *= oeLocal.areaFraction
     if _DEBUG > 10:
-        print("The area of {0} under the beam is {1:.4g}".format(
+        print("The area of {0} under the beam is {1:.4g} mm²".format(
               oe.name, oeLocal.area))
 
     if hasattr(oe, 'rotationSequence'):  # OE
@@ -777,6 +789,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         print("diffract on {0} completed in {1:.4f} s".format(
               oe.name, time.time()-t0))
 
+    glo.createdByDiffract = True
     return glo
 
 
