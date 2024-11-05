@@ -191,6 +191,7 @@ class Element(object):
         self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
         self.table = table
         self.mass = read_atomic_data(self.Z)
+        self.elem = elem  # For compatibility and dynamic update
 
     def read_f0_Kissel(self):
         r"""
@@ -1122,6 +1123,29 @@ class Coated(Multilayer):
             idThickness=surfaceRoughness, nPairs=1, *args, **kwargs)
         self.kind = 'mirror'
 
+    @property
+    def coating(self):
+        return self.bLayer
+    
+    @coating.setter
+    def coating(self, cmat):
+        self.bLayer = cmat
+
+    @property
+    def cThickness(self):
+        return self.bThickness
+    
+    @cThickness.setter
+    def cThickness(self, ct):
+        self.bThickness = ct
+
+    @property
+    def surfaceRoughness(self):
+        return self.idThickness
+    
+    @surfaceRoughness.setter
+    def surfaceRoughness(self, ct):
+        self.idThickness = ct
 
 class Crystal(Material):
     u"""The parent class for crystals. The descendants must define
@@ -1682,7 +1706,31 @@ class Crystal(Material):
         curveP = for_one_polarization(polFactor)  # p polarization
         return curveS, curveP  # , phi.real
 
-    def set_OE_properties(self, alpha=0, Rm=None, Rs=None):
+    def set_OE_properties(self, alpha=0, Rm=None, Rs=None,
+                          inPlaneRotation=None):
+        """
+        This function is used with get_amplitudes_pytte(), it passes the
+        curvature and asymmetry of the parent optical element to the
+        underlying pyTTE.TTcrystal. Returned elastic constants are
+        then used for reflectivity/transmittivity calculations.
+        
+        Parameters
+        ----------
+        alpha : float
+            Angle of asymmetry in radians.
+        Rm : float
+            Meridional curvature in mm.
+        Rs : float
+            Sagittal curvature in mm.
+        inPlaneRotation : float, optional
+            Angle of in-plane rotation in radians.
+
+        Returns
+        -------
+        None.
+
+        """
+
         Rmum = Rm*1e3 if Rm not in [np.inf, None] else np.inf  # [um] Meridional
         Rsum = Rs*1e3 if Rs not in [np.inf, None] else np.inf  # [um] Sagittal
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
@@ -1701,6 +1749,10 @@ class Crystal(Material):
                             'Ry': Quantity(Rsum, 'um'),
                             'asymmetry': Quantity(alpha, 'rad')}
 
+        if inPlaneRotation is not None:
+            ttcrystal_kwargs['in_plane_rotation'] =\
+                Quantity(inPlaneRotation, 'rad')
+
         if hasattr(self, 'nu'):
             if self.nu is not None:  # Using isotropic model
                 ttcrystal_kwargs['nu'] = self.nu
@@ -1711,7 +1763,8 @@ class Crystal(Material):
 
     def get_amplitude_pytte(
             self, E, beamInDotNormal, beamOutDotNormal=None,
-            beamInDotHNormal=None, xd=None, yd=None, alphaAsym=None,
+            beamInDotHNormal=None, xd=None, yd=None,
+            alphaAsym=None, inPlaneRotation=None,
             Ry=None, Rx=None, ucl=None, tolerance=1e-6, maxSteps=1e7,
             autoLimits=True, signal=None):
         r"""
@@ -1721,6 +1774,12 @@ class Crystal(Material):
 
         *alphaAsymm*: float
             Angle of asymmetry in radians.
+
+        *inPlaneRotation*: float
+            Counterclockwise-positive rotation of the crystal directions around
+            the normal vector of (hkl) in radians. (see pyTTE.TTcrystal).
+            In-plane rotation definition as vector is not supported in xrt
+            currently.
 
         *Ry*: float
             Meridional radius of curvature in mm. Positive for concave bend.
@@ -1759,7 +1818,7 @@ class Crystal(Material):
 
         # if not hasattr(self, 'djparams'):  # Same material can be used in
         # different OEs with different surface curvatures
-        self.set_OE_properties(alphaAsym, Ry, Rx)
+        self.set_OE_properties(alphaAsym, Ry, Rx, inPlaneRotation)
 
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
         alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag

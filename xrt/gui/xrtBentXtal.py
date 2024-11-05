@@ -45,6 +45,7 @@ import numpy as np
 import copy
 from functools import partial
 from datetime import datetime
+#from collections import namedtuple
 
 from scipy.interpolate import UnivariateSpline
 
@@ -59,7 +60,7 @@ from PyQt5.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
 from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
     QPixmap, QColor
 import matplotlib as mpl
-from matplotlib.backend_tools import ToolBase
+#from matplotlib.backend_tools import ToolBase
 
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -79,16 +80,18 @@ path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
 try:
-    import pyopencl as cl
+    import pyopencl as cl  # analysis:ignore
     import xrt.backends.raycing.myopencl as mcl
+    targetOpenCL = 'auto'
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-    isOpenCL = True
+    xrt_cl = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
+                        targetOpenCL=targetOpenCL)
+    isOpenCL = hasattr(xrt_cl, 'cl_precisionF')
 except ImportError:
     isOpenCL = False
 
 HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
 
-targetOpenCL = 'auto'
 
 def parse_hkl(hklstr):
     matches = re.findall(HKLRE, hklstr)
@@ -165,6 +168,7 @@ class PlotWidget(QWidget):
         ("hkl", "1, 1, 1", True),  # 3
         ("Thickness (mm)", "1.", True),  # 4
         ("Asymmetry \u2220 (°)", "0.", True),  # 5
+        ("In-plane Rotation \u2220 (°)", "0.", True),  # 5a
         ("Bending Rm (m)", "inf", False),  # 6
         ("Bending Rs (m)", "inf", False),  # 7
         ("Separator Scan", "Scan", False, '#dddddd'),  # 8
@@ -177,6 +181,7 @@ class PlotWidget(QWidget):
         ("Curve Color", "blue", False, allColors),  # 15
         ("Curves", ['σ', ], True, allCurves)  # 16
         ]
+
 
     def __init__(self):
         super().__init__()
@@ -281,8 +286,7 @@ class PlotWidget(QWidget):
 
         if isOpenCL:
             self.allBackends.append('xrtCL FP32')
-            self.matCL = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
-                                    targetOpenCL=targetOpenCL)
+            self.matCL = xrt_cl
             self.isFP64 = False
             if hasattr(self.matCL, 'cl_ctx'):
                 for ctx in self.matCL.cl_ctx:
@@ -545,6 +549,13 @@ class PlotWidget(QWidget):
             return float(item.child(ind, 1).text())
         except ValueError:
             return float(self.initParams[ind][1])
+
+#    def get_ipr(self, item):
+#        ind = self.findIndexFromText("In-plane Rotation")
+#        try:
+#            return float(item.child(ind, 1).text())
+#        except ValueError:
+#            return float(self.initParams[ind][1])
 
     def get_range_item(self, item):
         ind = self.findIndexFromText("Scan Range")
@@ -816,6 +827,8 @@ class PlotWidget(QWidget):
         thck = float(root_item.child(ind, 1).text())
         ind = self.findIndexFromText("Asymmetry")
         asymmetry = float(root_item.child(ind, 1).text())
+        ind = self.findIndexFromText("In-plane Rotation")
+        ipr = float(root_item.child(ind, 1).text())
         ind = self.findIndexFromText("Bending Rm")
         Rm = root_item.child(ind, 1).text()
         RmStr = Rm if Rm == "inf" else Rm + "m"
@@ -854,7 +867,8 @@ class PlotWidget(QWidget):
             header = \
                 f"{what} calculated by xrtBentXtal on {nowStr}\n"\
                 f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
-                f"Asymmetry: {asymmetry:.8g}°\tRm: {RmStr}\tRs: {RsStr}\n"\
+                f"Asymmetry: {asymmetry:.8g}°\tIn-plane rotation: {ipr:.8g}°\n"\
+                f"Rm: {RmStr}\tRs: {RsStr}\n"\
                 f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
                 f"Geometry: {geometry}\n"
             header += "\t".join(outNames)
@@ -958,6 +972,8 @@ class PlotWidget(QWidget):
         thickness = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Asymmetry")
         asymmetry = plot_item.child(ind, 1).text()
+        ind = self.findIndexFromText("In-plane Rotation")
+        ipr = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Bending Rm")
         Rm = plot_item.child(ind, 1).text()
         ind = self.findIndexFromText("Bending Rs")
@@ -1034,6 +1050,7 @@ class PlotWidget(QWidget):
         plot_item.thetaB = theta0
         plot_item.d = getattr(crystalInstance, 'd')
         phi = np.radians(float(asymmetry))
+        ipr_rad = np.radians(float(ipr))
 
         if units == "eV":
             tLimits = self.get_scan_range(plot_item)
@@ -1066,7 +1083,7 @@ class PlotWidget(QWidget):
         if backend == "xrtCL":
             self.amps_calculator = AmpCalculator(
                     crystalInstance, xaxis, xenergy, gamma0, gammah,
-                    hns0, phi, Rm, Rs, precision, plot_nr)
+                    hns0, phi, ipr_rad, Rm, Rs, precision, plot_nr)
             self.amps_calculator.progress.connect(self.update_progress_bar)
             self.amps_calculator.result.connect(self.on_calculation_result)
             self.amps_calculator.start()
@@ -1085,7 +1102,8 @@ class PlotWidget(QWidget):
                             debye_waller=1, xrt_crystal=crystalInstance,
                             Rx=Quantity(float(Rm), 'm'),
                             Ry=Quantity(float(Rs), 'm'),
-                            asymmetry=Quantity(phi+geotag, 'rad'))
+                            asymmetry=Quantity(phi+geotag, 'rad'),
+                            in_plane_rotation=Quantity(ipr_rad, 'rad'))
             if units == 'eV':
                 tts = TTscan(constant=Quantity(theta0, 'rad'),
                              scan=Quantity(xaxis, 'eV'),
@@ -1258,7 +1276,7 @@ class AmpCalculator(QThread):
     result = Signal(tuple)
 
     def __init__(self, crystal, xaxis, energy, gamma0, gammah, hns0,
-                 alpha, Rm, Rs, precision, plot_nr):
+                 alpha, ipr_rad, Rm, Rs, precision, plot_nr):
         super().__init__()
         self.crystalInstance = crystal
         self.xaxis = xaxis
@@ -1267,6 +1285,7 @@ class AmpCalculator(QThread):
         self.gammah = gammah
         self.hns0 = hns0
         self.alpha = alpha
+        self.ipr_rad = ipr_rad
         self.Rm = Rm
         self.Rs = Rs
         self.precision = precision
@@ -1278,7 +1297,9 @@ class AmpCalculator(QThread):
                            targetOpenCL=targetOpenCL)
         ampS, ampP = self.crystalInstance.get_amplitude_pytte(
                 self.energy, self.gamma0, self.gammah, self.hns0,
-                ucl=matCL, alphaAsym=self.alpha, autoLimits=False,
+                ucl=matCL, alphaAsym=self.alpha,
+                inPlaneRotation=self.ipr_rad,
+                autoLimits=False,
                 Ry=float(self.Rm)*1000.,
                 Rx=float(self.Rs)*1000.,
                 signal=self.progress)

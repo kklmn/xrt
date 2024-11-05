@@ -8,6 +8,18 @@ from scipy import interpolate
 from scipy.integrate import ode
 
 
+RK45CX = np.array([1./5., 3./10., 4./5., 8./9., 1., 1.], dtype=np.float64)
+RK45o5 = np.array([35./384., 0, 500./1113., 125./192., -2187./6784., 11./84., 0], dtype=np.float64)
+RK45o4 = np.array([5179./57600., 0.0, 7571./16695., 393./640.,
+          -92097./339200., 187./2100., 1./40.], dtype=np.float64)
+RK45CY = np.array([[1./5., 0, 0, 0, 0, 0],
+          [3./40.,	9./40., 0, 0, 0, 0],
+          [44./45., -56./15., 32./9., 0, 0, 0],
+          [19372./6561., -25360./2187., 64448./6561.,-212./729., 0, 0],
+          [9017./3168., -355./33., 46732./5247., 49./176.,-5103./18656., 0],
+          [35./384., 0, 500./1113., 125./192.,-2187./6784., 11./84.]],
+           dtype=np.float64)
+
 class TakagiTaupin():
 
     '''
@@ -528,8 +540,14 @@ class TakagiTaupin():
 
 
 class CalculateAmplitudes:
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.args = args
+        self.strain_mod = 0.
+        if 'strain_shift' in kwargs:
+            self.strain_mod = int(kwargs['strain_shift'] == 'pytte')
+        self.integration_backend = 'zvode'
+        if 'integration_backend' in kwargs:
+            self.integration_backend = kwargs['integration_backend']
 
     def integrate_single_scan_step(self,
                                    h_um,
@@ -642,15 +660,106 @@ class CalculateAmplitudes:
                     total_evaluations += 1
             return y, np.array(z_full), np.array(y_full)
 
+        def rkdpaconst(f, f2r=None, f2i=None, y0=0, tol=1e-6, max_steps=1000000):
+
+            h = thickness / np.float64(max_steps)  # Initial step size
+            total_evaluations = 0
+            n_steps = 0
+
+            if geometry == 'bragg' and f2r is None:
+                z = -thickness
+                z1 = 0
+                y = 0
+                y_full = [0]
+                z_full = [-thickness]
+
+                while z < z1 and n_steps < max_steps:
+                    k1 = h * f(z, y)
+                    k2 = h * f(z + h*RK45CX[0], y + k1*RK45CY[0, 0])
+                    k3 = h * f(z + h*RK45CX[1], y + k1*RK45CY[1, 0] + k2*RK45CY[1, 1])
+                    k4 = h * f(z + h*RK45CX[2], y + k1*RK45CY[2, 0] + k2*RK45CY[2, 1] + k3*RK45CY[2, 2])
+                    k5 = h * f(z + h*RK45CX[3], y + k1*RK45CY[3, 0] + k2*RK45CY[3, 1] +
+                               k3*RK45CY[3, 2] + k4*RK45CY[3, 3])
+                    k6 = h * f(z + h, y + k1*RK45CY[4, 0] + k2*RK45CY[4, 1] +
+                               k3*RK45CY[4, 2] + k4*RK45CY[4, 3] + k5*RK45CY[4, 4])
+                    y_new_5 = y + k1*RK45CY[5, 0] + k3*RK45CY[5, 2] + k4*RK45CY[5, 3] +\
+                        k5*RK45CY[5, 4] + k6*RK45CY[5, 5]
+                    k7 = h * f(z + h, y_new_5)
+                    y_new_4 = y + k1*RK45o4[0] + k3*RK45o4[2] + k4*RK45o4[3] +\
+                        k5*RK45o4[4] + k6*RK45o4[5] + k7*RK45o4[6]
+
+                    error = np.abs(y_new_4 - y_new_5)
+                    if error <= tol:
+                        y = y_new_5
+                        y_full.append(y)
+                        z += h
+                        z_full.append(z)
+                        n_steps += 1
+
+                    if error > 0:
+                        h *= min(0.9 * (tol / error) ** 0.25, 4.0)
+                    else:
+                        h *= 4.0
+
+                    if z + h > 0:
+                        h = -z
+                    total_evaluations += 1
+
+            else:
+                z = 0
+                z1 = -thickness
+                y = y0
+                h = -h
+
+                y_full = [y0]
+                z_full = [0]
+
+                while z > z1 and n_steps < max_steps:
+                    k1 = h * f(z, y, f2r, f2i)
+                    k2 = h * f(z + h*RK45CX[0], y + k1*RK45CY[0, 0], f2r, f2i)
+                    k3 = h * f(z + h*RK45CX[1], y + k1*RK45CY[1, 0] + k2*RK45CY[1, 1], f2r, f2i)
+                    k4 = h * f(z + h*RK45CX[2], y + k1*RK45CY[2, 0] + k2*RK45CY[2, 1] + k3*RK45CY[2, 2],
+                               f2r, f2i)
+                    k5 = h * f(z + h*RK45CX[3], y + k1*RK45CY[3][0] + k2*RK45CY[3][1] +
+                               k3*RK45CY[3, 2] + k4*RK45CY[3, 3], f2r, f2i)
+                    k6 = h * f(z + h, y + k1*RK45CY[4, 0] + k2*RK45CY[4, 1] +
+                               k3*RK45CY[4, 2] + k4*RK45CY[4, 3] + k5*RK45CY[4, 4],
+                               f2r, f2i)
+                    y_new_5 = y + k1*RK45CY[5, 0] + k3*RK45CY[5, 2] + k4*RK45CY[5, 3] +\
+                        k5*RK45CY[5, 4] + k6*RK45CY[5, 5]
+                    k7 = h * f(z + h, y_new_5, f2r, f2i)
+                    y_new_4 = y + k1*RK45o4[0] + k3*RK45o4[2] + k4*RK45o4[3] +\
+                        k5*RK45o4[4] + k6*RK45o4[5] + k7*RK45o4[6]
+
+                    if geometry == 'bragg':
+                        error = np.abs(y_new_4 - y_new_5)
+                    else:
+                        error = max(np.abs(y_new_4[0] - y_new_5[0]),
+                                    np.abs(y_new_4[1] - y_new_5[1]))
+                    if error < tol:
+                        y = y_new_5
+                        z += h
+                        n_steps += 1
+
+                    if error > 0:
+                        h *= min(0.9 * (tol / error) ** 0.25, 4.0)
+                    else:
+                        h *= 4.0
+
+                    if z + h < z1:
+                        h = z1-z
+                    total_evaluations += 1
+            return y, np.array(z_full), np.array(y_full)
+
         def calculate_bragg_transmission(f, f1):
-            y_adapt, xlong, ylong = rkdpa(f)
+            y_adapt, xlong, ylong = rkdpaconst(f)
             ksip_r = interpolate.interp1d(xlong, np.real(ylong),
                                           kind='cubic',
                                           fill_value='extrapolate')
             ksip_i = interpolate.interp1d(xlong, np.imag(ylong),
                                           kind='cubic',
                                           fill_value='extrapolate')
-            d0, xt, yt = rkdpa(f1, f2r=ksip_r, f2i=ksip_i, y0=1.0)
+            d0, xt, yt = rkdpaconst(f1, f2r=ksip_r, f2i=ksip_i, y0=1.0)
 
             return [y_adapt, d0]
 
@@ -669,11 +778,13 @@ class CalculateAmplitudes:
             def strain_term(z):
                 x = -z*cot_alpha0
                 duh_dsh = h_um*(
-                    sin_phi*cos_alphah*(-invR1)*(z+0.5*thickness*0) +
-                    sin_phi*sin_alphah*(-invR1*x +
-                                        coef2*(z+0.5*thickness*0)) +
+                    sin_phi*cos_alphah*(-invR1)*
+                    (z+0.5*thickness*self.strain_mod) +
+                    sin_phi * sin_alphah *
+                    (-invR1*x + coef2*(z+0.5*thickness*self.strain_mod)) +
                     cos_phi*cos_alphah*invR1*x +
-                    cos_phi*sin_alphah*coef1*(z+0.5*thickness*0))
+                    cos_phi*sin_alphah*coef1*
+                    (z+0.5*thickness*self.strain_mod))
                 return gammah_step*duh_dsh
         else:
             # Non-bent crystal
@@ -705,15 +816,16 @@ class CalculateAmplitudes:
                     [-1j*Cpol*gb_step*Y[1], -1j*(g0_step+Cpol*gb_step*Y[0])]])
         if geometry == 'bragg':
             if isRefl:
-                res, xt, yt = rkdpa(ksiprime)
-                r = ode(ksiprime, ksiprime_jac)
-                r.set_integrator(
-                    'zvode', method='bdf', with_jacobian=True,
-                    min_step=1e-10, rtol=1e-7,
-                    max_step=thickness, nsteps=2500000)
-                r.set_initial_value(0, -thickness)
-                res = r.integrate(0)
-#                res, xt, yt = rkdpa(ksiprime)
+                if self.integration_backend == 'zvode':
+                    r = ode(ksiprime, ksiprime_jac)
+                    r.set_integrator(
+                        'zvode', method='bdf', with_jacobian=True,
+                        min_step=1e-10, rtol=1e-7,
+                        max_step=thickness, nsteps=2500000)
+                    r.set_initial_value(0, -thickness)
+                    res = r.integrate(0)
+                else:
+                    res, xt, yt = rkdpaconst(ksiprime)
                 outAmp = res
             else:
                 res = calculate_bragg_transmission(ksiprime, d0prime)
@@ -721,14 +833,16 @@ class CalculateAmplitudes:
             return np.complex128(outAmp) *\
                 np.sqrt(np.abs(gamma0_step/np.abs(gammah_step)))
         else:
-            r = ode(TTE, TTE_jac)
-            r.set_integrator(
-                'zvode', method='bdf', with_jacobian=True,
-                min_step=1e-10, rtol=1e-7,
-                max_step=thickness, nsteps=2500000)
-            r.set_initial_value([0, 1], 0)
-            res = r.integrate(-thickness)
-#            res, xt, yt = rkdpa(TTE, y0=np.array([0, 1]))
+            if self.integration_backend == 'zvode':
+                r = ode(TTE, TTE_jac)
+                r.set_integrator(
+                    'zvode', method='bdf', with_jacobian=True,
+                    min_step=1e-10, rtol=1e-7,
+                    max_step=thickness, nsteps=2500000)
+                r.set_initial_value([0, 1], 0)
+                res = r.integrate(-thickness)
+            else:
+                res, xt, yt = rkdpaconst(TTE, y0=np.array([0, 1]))
             outAmp = res[0]*res[1] if isRefl else res[1]
             return np.complex128(outAmp*np.sqrt(np.abs(
                 gamma0_step/np.abs(gammah_step))))
