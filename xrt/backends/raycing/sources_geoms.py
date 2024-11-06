@@ -583,13 +583,13 @@ class GaussianBeam(object):
         bo.x[:] = wave.xDiffr
         bo.y[:] = wave.yDiffr
         bo.z[:] = wave.zDiffr
+        bo.path = (wave.xDiffr**2 + wave.yDiffr**2 + wave.zDiffr**2)**0.5
         if self.pitch or self.roll or self.yaw:
             raycing.rotate_beam(
                 bo, pitch=self.pitch, roll=self.roll, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
-        raycing.append_to_flow(self.shine, [bo],
-                               inspect.currentframe())
+        raycing.append_to_flow(self.shine, [bo], inspect.currentframe())
         return bo
 
 

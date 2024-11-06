@@ -1,50 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Tests for Materials
--------------------
+.. _tests_materials:
+
+Tests of Materials
+------------------
 
 The module compares reflectivity, transmittivity, refraction index,
-absorption coefficient etc. with those calculated by XOP.
-
-Various material properties are compared with those calculated by XCrystal/XOP
-(also used by shadow for modeling crystal optics), XInpro/XOP and others.
+absorption coefficient etc. with those calculated by XOP and other programs.
 
 Find the corresponding scripts in `tests/raycing` directory.
 
-Reflectivity of Bragg crystals
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Reflectivity of Bragg and Laue crystals
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The small amplitude differences with XOP results are due
-to slight differences in Debye-Waller factor and/or tabulated values of the
-atomic scattering factors. The phase difference between s- and p-polarized
-rays (calculated by xrt, cyan line, right Y axis) is not calculated by the
-XOP programs and therefore is given without comparison.
+The small amplitude differences with XOP results are due to slight differences
+in the tabulated values of the atomic scattering factors.
 
 +-------+--------------------+------------------+-------------------+
 |       |      α = -5°       |    symmetric     |       α = 5°      |
 +=======+====================+==================+===================+
-| thick | |bSi111_thick_-5|  | |bSi111_thick_0| | |bSi111_thick_5|  |
-|       | |bSi333_thick_-5|  | |bSi333_thick_0| | |bSi333_thick_5|  |
+| thick | |bSi333_thick_-5|  | |bSi333_thick_0| | |bSi333_thick_5|  |
 +-------+--------------------+------------------+-------------------+
-| 100 µm|   |bSi111_100_-5|  |  |bSi111_100_0|  |  |bSi111_100_5|   |
-|       |   |bSi333_100_-5|  |  |bSi333_100_0|  |  |bSi333_100_5|   |
+| 100 µm|   |bSi333_100_-5|  |  |bSi333_100_0|  |  |bSi333_100_5|   |
 +-------+--------------------+------------------+-------------------+
-| 7 µm  |   |bSi111_007_-5|  |  |bSi111_007_0|  |  |bSi111_007_5|   |
-|       |   |bSi333_007_-5|  |  |bSi333_007_0|  |  |bSi333_007_5|   |
-+-------+--------------------+------------------+-------------------+
-
-.. |bSi111_thick_-5| imagezoom:: _images/bSi111_thick_-5.*
-.. |bSi111_thick_0| imagezoom:: _images/bSi111_thick_0.*
-.. |bSi111_thick_5| imagezoom:: _images/bSi111_thick_5.*
-   :loc: upper-right-corner
-.. |bSi111_100_-5| imagezoom:: _images/bSi111_100mum_-5.*
-.. |bSi111_100_0| imagezoom:: _images/bSi111_100mum_0.*
-.. |bSi111_100_5| imagezoom:: _images/bSi111_100mum_5.*
-   :loc: upper-right-corner
-.. |bSi111_007_-5| imagezoom:: _images/bSi111_007mum_-5.*
-.. |bSi111_007_0| imagezoom:: _images/bSi111_007mum_0.*
-.. |bSi111_007_5| imagezoom:: _images/bSi111_007mum_5.*
-   :loc: upper-right-corner
 
 .. |bSi333_thick_-5| imagezoom:: _images/bSi333_thick_-5.*
 .. |bSi333_thick_0| imagezoom:: _images/bSi333_thick_0.*
@@ -54,161 +32,62 @@ XOP programs and therefore is given without comparison.
 .. |bSi333_100_0| imagezoom:: _images/bSi333_100mum_0.*
 .. |bSi333_100_5| imagezoom:: _images/bSi333_100mum_5.*
    :loc: upper-right-corner
-.. |bSi333_007_-5| imagezoom:: _images/bSi333_007mum_-5.*
-.. |bSi333_007_0| imagezoom:: _images/bSi333_007mum_0.*
-.. |bSi333_007_5| imagezoom:: _images/bSi333_007mum_5.*
-   :loc: upper-right-corner
-
-Reflectivity of Laue crystals
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The small amplitude differences with XOP results are due
-to slight differences in Debye-Waller factor and/or tabulated values of the
-atomic scattering factors. The phase difference between s- and p-polarized
-rays (calculated by xrt, cyan line, right Y axis) is not calculated by the
-XOP programs and therefore is given without comparison.
 
 +-------+--------------------+------------------+-------------------+
 |       |      α = -5°       |    symmetric     |       α = 5°      |
 +=======+====================+==================+===================+
-| 100 µm|   |lSi111_100_-5|  |  |lSi111_100_0|  |  |lSi111_100_5|   |
-|       |   |lSi333_100_-5|  |  |lSi333_100_0|  |  |lSi333_100_5|   |
+| 100 µm|   |lSi333_100_-5|  |  |lSi333_100_0|  |  |lSi333_100_5|   |
 +-------+--------------------+------------------+-------------------+
-| 7 µm  |   |lSi111_007_-5|  |  |lSi111_007_0|  |  |lSi111_007_5|   |
-|       |   |lSi333_007_-5|  |  |lSi333_007_0|  |  |lSi333_007_5|   |
-+-------+--------------------+------------------+-------------------+
-
-.. |lSi111_100_-5| imagezoom:: _images/lSi111_100mum_-5.*
-.. |lSi111_100_0| imagezoom:: _images/lSi111_100mum_0.*
-.. |lSi111_100_5| imagezoom:: _images/lSi111_100mum_5.*
-   :loc: upper-right-corner
-.. |lSi111_007_-5| imagezoom:: _images/lSi111_007mum_-5.*
-.. |lSi111_007_0| imagezoom:: _images/lSi111_007mum_0.*
-.. |lSi111_007_5| imagezoom:: _images/lSi111_007mum_5.*
-   :loc: upper-right-corner
 
 .. |lSi333_100_-5| imagezoom:: _images/lSi333_100mum_-5.*
 .. |lSi333_100_0| imagezoom:: _images/lSi333_100mum_0.*
 .. |lSi333_100_5| imagezoom:: _images/lSi333_100mum_5.*
    :loc: upper-right-corner
-.. |lSi333_007_-5| imagezoom:: _images/lSi333_007mum_-5.*
-.. |lSi333_007_0| imagezoom:: _images/lSi333_007mum_0.*
-.. |lSi333_007_5| imagezoom:: _images/lSi333_007mum_5.*
-   :loc: upper-right-corner
 
 .. _transmittivity_Bragg:
 
-Transmittivity of Bragg crystals
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Transmittivity of Bragg and Laue crystals
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The curves are basically equal only for the symmetric case. Both
 XCrystal/XOP and XInpro/XOP are different for asymmetric crystals, when they
-give too low or too high (>1) transmittivity. This is because they refer to
-intencities, not flux and therefore cannot be directly applied to rays in
-ray tracing.
+give too low or too high (>1) transmittivity.
 
 +-------+--------------------+-------------------+--------------------+
 |       |      α = -5°       |     symmetric     |        α = 5°      |
 +=======+====================+===================+====================+
-| 100 µm|  |btSi111_100_-5|  |  |btSi111_100_0|  |  |btSi111_100_5|   |
-|       |  |btSi333_100_-5|  |  |btSi333_100_0|  |  |btSi333_100_5|   |
+| 100 µm|  |btSi333_100_-5|  |  |btSi333_100_0|  |  |btSi333_100_5|   |
 +-------+--------------------+-------------------+--------------------+
-| 7 µm  |  |btSi111_007_-5|  |  |btSi111_007_0|  |  |btSi111_007_5|   |
-|       |  |btSi333_007_-5|  |  |btSi333_007_0|  |  |btSi333_007_5|   |
-+-------+--------------------+-------------------+--------------------+
-
-.. |btSi111_100_-5| imagezoom:: _images/btSi111_100mum_-5.*
-.. |btSi111_100_0| imagezoom:: _images/btSi111_100mum_0.*
-.. |btSi111_100_5| imagezoom:: _images/btSi111_100mum_5.*
-   :loc: upper-right-corner
-.. |btSi111_007_-5| imagezoom:: _images/btSi111_007mum_-5.*
-.. |btSi111_007_0| imagezoom:: _images/btSi111_007mum_0.*
-.. |btSi111_007_5| imagezoom:: _images/btSi111_007mum_5.*
-   :loc: upper-right-corner
 
 .. |btSi333_100_-5| imagezoom:: _images/btSi333_100mum_-5.*
 .. |btSi333_100_0| imagezoom:: _images/btSi333_100mum_0.*
 .. |btSi333_100_5| imagezoom:: _images/btSi333_100mum_5.*
    :loc: upper-right-corner
-.. |btSi333_007_-5| imagezoom:: _images/btSi333_007mum_-5.*
-.. |btSi333_007_0| imagezoom:: _images/btSi333_007mum_0.*
-.. |btSi333_007_5| imagezoom:: _images/btSi333_007mum_5.*
-   :loc: upper-right-corner
-
-Transmittivity of Laue crystals
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The curves are basically equal only for the symmetric case and only with
-XInpro/XOP results. XInpro/XOP is wrong for asymmetric crystals, when it
-gives too low or too high (>1) transmittivity. As seen, XCrystal/XOP is
-essentially different and wrong with Laue transmittivity.
 
 +-------+--------------------+-------------------+--------------------+
 |       |      α = -5°       |    symmetric      |        α = 5°      |
 +=======+====================+===================+====================+
-| 100 µm|  |ltSi111_100_-5|  |  |ltSi111_100_0|  |  |ltSi111_100_5|   |
-|       |  |ltSi333_100_-5|  |  |ltSi333_100_0|  |  |ltSi333_100_5|   |
+| 100 µm|  |ltSi333_100_-5|  |  |ltSi333_100_0|  |  |ltSi333_100_5|   |
 +-------+--------------------+-------------------+--------------------+
-| 7 µm  |  |ltSi111_007_-5|  |  |ltSi111_007_0|  |  |ltSi111_007_5|   |
-|       |  |ltSi333_007_-5|  |  |ltSi333_007_0|  |  |ltSi333_007_5|   |
-+-------+--------------------+-------------------+--------------------+
-
-.. |ltSi111_100_-5| imagezoom:: _images/ltSi111_100mum_-5.*
-.. |ltSi111_100_0| imagezoom:: _images/ltSi111_100mum_0.*
-.. |ltSi111_100_5| imagezoom:: _images/ltSi111_100mum_5.*
-   :loc: upper-right-corner
-.. |ltSi111_007_-5| imagezoom:: _images/ltSi111_007mum_-5.*
-.. |ltSi111_007_0| imagezoom:: _images/ltSi111_007mum_0.*
-.. |ltSi111_007_5| imagezoom:: _images/ltSi111_007mum_5.*
-   :loc: upper-right-corner
 
 .. |ltSi333_100_-5| imagezoom:: _images/ltSi333_100mum_-5.*
 .. |ltSi333_100_0| imagezoom:: _images/ltSi333_100mum_0.*
 .. |ltSi333_100_5| imagezoom:: _images/ltSi333_100mum_5.*
    :loc: upper-right-corner
-.. |ltSi333_007_-5| imagezoom:: _images/ltSi333_007mum_-5.*
-.. |ltSi333_007_0| imagezoom:: _images/ltSi333_007mum_0.*
-.. |ltSi333_007_5| imagezoom:: _images/ltSi333_007mum_5.*
-   :loc: upper-right-corner
 
-.. _tests_mosaic:
+.. include:: ../tests/raycing/test_pytte.py
+   :start-after: .. start
+   :end-before: .. end
 
-Reflectivity of mosaic crystals
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-These tests implement the diffraction setup from [SanchezDelRioMosaic]_, Fig.
-4. In our case, the source has a finite energy band to demonstrate the energy
-dispersion effect in parafocusing (cf. Figs. 5 and 6 ibid).
-
-+----------+----------+
-|  |mosA|  |  |mosB|  |
-+----------+----------+
-
-.. |mosA| imagezoom:: _images/MosaicGraphite002-screenA.*
-   :align: center
-.. |mosB| imagezoom:: _images/MosaicGraphite002-screenB.*
-   :align: center
-
-The penetration depth distribution should be compared with Fig 7 ibid.
-
-.. imagezoom:: _images/MosaicGraphite002-Z.*
-   :align: center
-
-The reflectivity curves are compared with those by XCrystal/XOP [XOP]_. The
-small differences are primarily due to small differences in the tabulations of
-the scattering factors. We use the one by Chantler [Chantler]_.
-
-.. imagezoom:: _images/MosaicGraphite002-ReflectivityS.*
-   :align: center
+.. include:: ../tests/raycing/test_mosaic_xtal.py
+   :start-after: .. start
+   :end-before: .. end
 
 Mirror reflectivity
 ~~~~~~~~~~~~~~~~~~~
 
-The small amplitude differences with XOP are due
-to slight differences in tabulated values of the atomic scattering factors.
-The phase difference between s- and p-polarized rays (calculated by xrt,
-cyan line, right Y axis) is not calculated by the XOP programs and
-therefore is given without comparison.
+The small amplitude differences with XOP are due to slight differences in
+tabulated values of the atomic scattering factors.
 
 +---------+---------+
 |  |mSi|  | |mSiO2| |
@@ -307,7 +186,6 @@ __author__ = "Konstantin Klementiev"
 __date__ = "12 Mar 2014"
 
 import math
-#import cmath
 import numpy as np
 import matplotlib as mpl
 mpl.rcParams['backend'] = 'Qt5Agg'
@@ -359,7 +237,7 @@ class TwoScatterObjectsHandler(HandlerBase):
 
 
 def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
-                           legendPos1=4, legendPos2=1):
+                           legendPos1='lower right', legendPos2='upper right'):
     """A comparison subroutine used in the module test suit."""
     def for_one_alpha(crystal, alphaDeg, hkl):
         alpha = math.radians(alphaDeg)
@@ -374,7 +252,7 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
         gammah = sum(i*j for i, j in zip(n, sh))
         hns0 = sum(i*j for i, j in zip(hn, s0))
 
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         fig.subplots_adjust(right=0.88)
         ax = fig.add_subplot(111)
 
@@ -383,15 +261,15 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
 #        p6, = ax.plot((theta - thetaCenter) * convFactor, abs(curP)**2, '--g')
         curS, curP = crystal.get_amplitude(E, gamma0, gammah, hns0)
 # phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(curS * curP.conj()))
-        p9, = ax2.plot((theta-thetaCenter) * convFactor, phi, 'c', lw=1,
-                       yunits=math.pi, zorder=0)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
+        # ax2 = ax.twinx()
+        # ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        # phi = np.unwrap(np.angle(curS * curP.conj()))
+        # p9, = ax2.plot((theta-thetaCenter) * convFactor, phi, 'c', lw=1,
+        #                yunits=math.pi, zorder=0)
+        # formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        # ax2.yaxis.set_major_formatter(formatter)
+        # for tl in ax2.get_yticklabels():
+        #     tl.set_color('c')
 
         if t is not None:
             tt = u', t={0:.0f}µm'.format(t * 1e3)
@@ -405,48 +283,40 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
             geomPrefix = 'l'
         if geom.endswith('transmitted'):
             geomPrefix += 't'
-        fig.suptitle(r'{0} Si{1}, $\alpha={2:.1f}^\circ${3}'.format(geom,
-                     hkl, alphaDeg, tt), fontsize=16)
+        ax.set_title(r'{0} Si{1}, $\alpha={2:.1f}^\circ${3}'.format(
+            geom, hkl, alphaDeg, tt), fontsize=14)
 
         path = os.path.join('', 'XOP-RockingCurves') + os.sep
         x, R2s = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_s.xc.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p1, = ax.plot(x, R2s, '-k', label='s XCrystal')
+        p1, = ax.plot(x, R2s, '-C0', label='s XCrystal')
         x, R2p = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_p.xc.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p2, = ax.plot(x, R2p, '--k', label='p XCrystal')
+        p2, = ax.plot(x, R2p, '--C0', label='p XCrystal')
 
         x, R2s = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_s.xin.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p3, = ax.plot(x, R2s, '-b', label='s XInpro')
+        p3, = ax.plot(x, R2s, '-C1', label='s XInpro')
         x, R2p = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_p.xin.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p4, = ax.plot(x, R2p, '--b', label='p XInpro')
+        p4, = ax.plot(x, R2p, '--C1', label='p XInpro')
 
-        p7, = ax.plot((theta - thetaCenter) * convFactor, abs(curS)**2, '-r')
-        p8, = ax.plot((theta - thetaCenter) * convFactor, abs(curP)**2, '--r')
+        p7, = ax.plot((theta - thetaCenter) * convFactor, abs(curS)**2, '-C2')
+        p8, = ax.plot((theta - thetaCenter) * convFactor, abs(curP)**2, '--C2')
         ax.set_xlabel(r'$\theta-\theta_B$ (arcsec)')
         if geom.endswith('transmitted'):
             ax.set_ylabel('transmittivity')
         else:
             ax.set_ylabel('reflectivity')
         ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
-#upper right	1
-#upper left	2
-#lower left	3
-#lower right	4
-#right   	5
-#center left	6
-#center right	7
-#lower center	8
-#upper center	9
-#center         10
-        l1 = ax2.legend([p1, p2], ['s', 'p'], loc=legendPos1)
-#        ax.legend([p1, p3, p5, p7], ['XCrystal/XOP', 'XInpro/XOP',
-#        'pxrt-Authier', 'pxrt-Bel&Dm'], loc=1)
-        ax2.legend([p1, p3, p7], ['XCrystal/XOP', 'XInpro/XOP', 'xrt'],
-                   loc=legendPos2)
-        ax2.add_artist(l1)
+        ax.set_ylim(0, None)
+
+        l1 = ax.legend([p1, p2], ['s', 'p'], loc=legendPos1)
+        # ax.legend([p1, p3, p5, p7], ['XCrystal/XOP', 'XInpro/XOP',
+        # 'pxrt-Authier', 'pxrt-Bel&Dm'], loc=1)
+        ax.legend([p1, p3, p7], ['XCrystal/XOP', 'XInpro/XOP', 'xrt'],
+                  loc=legendPos2)
+        ax.add_artist(l1)
 
         fname = '{0}Si{1}_{2}_{3:-.0f}'.format(
             geomPrefix, hkl, tname, alphaDeg)
@@ -487,14 +357,14 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
         s0 = (np.zeros_like(theta), np.cos(theta+alpha), -np.sin(theta+alpha))
         sh = (np.zeros_like(theta), np.cos(theta-alpha), np.sin(theta-alpha))
 
-#'Bragg':
+# 'Bragg':
         n = (0, 0, 1)  # outward surface normal
         hn = (0, math.sin(alpha), math.cos(alpha))  # outward Bragg normal
         gamma0 = sum(i*j for i, j in zip(n, s0))
         gammah = sum(i*j for i, j in zip(n, sh))
         hns0 = sum(i*j for i, j in zip(hn, s0))
         braggS, braggP = siBraggCrystal.get_amplitude(E, gamma0, gammah, hns0)
-#'Laue':
+# 'Laue':
         n = (0, -1, 0)  # outward surface normal
         hn = (0, math.sin(alpha), math.cos(alpha))  # outward Bragg normal
         gamma0 = sum(i*j for i, j in zip(n, s0))
@@ -502,46 +372,36 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
         hns0 = sum(i*j for i, j in zip(hn, s0))
         laueS, laueP = siLaueCrystal.get_amplitude(E, gamma0, gammah, hns0)
 
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         ax = fig.add_subplot(111)
 
 # phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(braggS * braggP.conj()))
-        p5, = ax2.plot((theta-thetaCenter) * convFactor, phi, '-c', lw=1,
-                       yunits=math.pi, zorder=0)
-        phi = np.unwrap(np.angle(laueS * laueP.conj()))
-        p6, = ax2.plot((theta-thetaCenter) * convFactor, phi, '-c.', lw=1,
-                       yunits=math.pi, zorder=0)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
+        # ax2 = ax.twinx()
+        # ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        # phi = np.unwrap(np.angle(braggS * braggP.conj()))
+        # p5, = ax2.plot((theta-thetaCenter) * convFactor, phi, '-c', lw=1,
+        #                yunits=math.pi, zorder=0)
+        # phi = np.unwrap(np.angle(laueS * laueP.conj()))
+        # p6, = ax2.plot((theta-thetaCenter) * convFactor, phi, '-c.', lw=1,
+        #                yunits=math.pi, zorder=0)
+        # formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        # ax2.yaxis.set_major_formatter(formatter)
+        # for tl in ax2.get_yticklabels():
+        #     tl.set_color('c')
 
-        fig.suptitle(r'Comparison of Bragg and Laue transmittivity for Si{0}'.
-                     format(hkl), fontsize=16)
-        p1, = ax.plot((theta-thetaCenter) * convFactor, abs(braggS)**2, '-r')
-        p2, = ax.plot((theta-thetaCenter) * convFactor, abs(braggP)**2, '-b')
-        p3, = ax.plot((theta-thetaCenter) * convFactor, abs(laueS)**2, '-r.')
-        p4, = ax.plot((theta-thetaCenter) * convFactor, abs(laueP)**2, '-b.')
+        ax.set_title(r'Comparison of Bragg and Laue transmittivity for Si{0}'.
+                     format(hkl), fontsize=14)
+        p1, = ax.plot((theta-thetaCenter) * convFactor, abs(braggS)**2, '-C0')
+        p2, = ax.plot((theta-thetaCenter) * convFactor, abs(braggP)**2, '-C1')
+        p3, = ax.plot((theta-thetaCenter) * convFactor, abs(laueS)**2, '-C0.')
+        p4, = ax.plot((theta-thetaCenter) * convFactor, abs(laueP)**2, '-C1.')
         ax.set_xlabel(r'$\theta-\theta_B$ (arcsec)')
         ax.set_ylabel('transmittivity')
 
-#upper right	1
-#upper left	2
-#lower left	3
-#lower right	4
-#right   	5
-#center left	6
-#center right	7
-#lower center	8
-#upper center	9
-#center         10
-        l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
+        l1 = ax.legend([p1, p2], ['s', 'p'], loc='lower left')
         ax.legend([p1, p3], [u'Bragg t={0:.1f} µm'.format(
             siBraggCrystal.t * 1e3), u'Laue t={0:.1f} µm'.format(
-            siLaueCrystal.t * 1e3)], loc=2)
+            siLaueCrystal.t * 1e3)], loc='upper left')
         ax.add_artist(l1)
         ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
 
@@ -577,33 +437,33 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
 def compare_reflectivity():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, refs, refp, theta, reprAngle):
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel('reflectivity')
         ax.set_xlim(30, 5e4)
-        fig.suptitle(stripe.name + ' ' + reprAngle, fontsize=16)
+        ax.set_title(stripe.name + ' ' + reprAngle, fontsize=14)
         x, R2s = np.loadtxt(refs, unpack=True)
-        p1, = ax.plot(x, R2s, '-k', label='s xf1f2')
+        p1, = ax.plot(x, R2s, '-C0', label='s xf1f2')
         x, R2s = np.loadtxt(refp, unpack=True)
-        p2, = ax.plot(x, R2s, '--k', label='p xf1f2')
+        p2, = ax.plot(x, R2s, '--C0', label='p xf1f2')
         refl = stripe.get_amplitude(E, math.sin(theta))
         rs, rp = refl[0], refl[1]
-        p3, = ax.semilogx(E, abs(rs)**2, '-r')
-        p4, = ax.semilogx(E, abs(rp)**2, '--r')
+        p3, = ax.semilogx(E, abs(rs)**2, '-C1')
+        p4, = ax.semilogx(E, abs(rp)**2, '--C1')
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
         ax.legend([p1, p3], ['Xf1f2/XOP', 'xrt'], loc=6)
         ax.add_artist(l1)
 # phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
+        # ax2 = ax.twinx()
+        # ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        # phi = np.unwrap(np.angle(rs * rp.conj()))
+        # p9, = ax2.plot(E, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+        # formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        # ax2.yaxis.set_major_formatter(formatter)
+        # for tl in ax2.get_yticklabels():
+        #     tl.set_color('c')
 
         fname = 'MirrorRefl' + stripe.name + "".join(reprAngle.split())
         fig.savefig(fname + '.png')
@@ -635,40 +495,39 @@ def compare_reflectivity():
 def compare_reflectivity_coated():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, strOnly, refs, refp, theta, reprAngle):
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (keV)')
         ax.set_ylabel('reflectivity')
         # ax.set_xlim(100, 4e4)
         ax.set_ylim(1e-7, 2)
-        fig.suptitle(stripe.name + ' ' + reprAngle, fontsize=16)
+        ax.set_title(stripe.name + ' ' + reprAngle, fontsize=14)
         x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
-        p1, = ax.semilogy(x*1e-3, R2s, '-k', label='s CXRO')
+        p1, = ax.semilogy(x*1e-3, R2s, '-C0', label='s CXRO')
         x, R2s = np.loadtxt(refp, unpack=True, skiprows=2, usecols=(0, 1))
-        p2, = ax.semilogy(x*1e-3, R2s, '--k', label='p CXRO')
+        p2, = ax.semilogy(x*1e-3, R2s, '--C0', label='p CXRO')
         refl = stripe.get_amplitude(E, math.sin(theta))
         rs, rp = refl[0], refl[1]
         rs0, rp0 = strOnly.get_amplitude(E, math.sin(theta))[0:2]
-        p3, = ax.semilogy(E*1e-3, abs(rs)**2, '-r')
-        p4, = ax.semilogy(E*1e-3, abs(rp)**2, '--r')
-        p5, = ax.semilogy(E*1e-3, abs(rs0)**2, '-m')
-        p6, = ax.semilogy(E*1e-3, abs(rp0)**2, '--c')
+        p3, = ax.semilogy(E*1e-3, abs(rs)**2, '-C1')
+        p4, = ax.semilogy(E*1e-3, abs(rp)**2, '--C1')
+        p5, = ax.semilogy(E*1e-3, abs(rs0)**2, '-C2')
+        p6, = ax.semilogy(E*1e-3, abs(rp0)**2, '--C2')
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
         ax.legend([p1, p3, p5], ['CXRO', 'xrt', 'bulk coating'], loc=1)
         ax.add_artist(l1)
 # phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(E*1e-3, phi, 'c', lw=2, yunits=math.pi, zorder=0)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
-
-        ax2.set_zorder(-1)
-        ax.patch.set_visible(False)  # hide the 'canvas'
+        # ax2 = ax.twinx()
+        # ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        # phi = np.unwrap(np.angle(rs * rp.conj()))
+        # p9, = ax2.plot(E*1e-3, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+        # formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        # ax2.yaxis.set_major_formatter(formatter)
+        # for tl in ax2.get_yticklabels():
+        #     tl.set_color('c')
+        # ax2.set_zorder(-1)
+        # ax.patch.set_visible(False)  # hide the 'canvas'
 
         fname = 'MirrorRefl' + stripe.name + "".join(reprAngle.split())
         fig.savefig(fname + '.png')
@@ -684,54 +543,53 @@ def compare_reflectivity_coated():
                       substrate=mSi, surfaceRoughness=20,
                       substRoughness=20, name='30 nm Rh on Si')
     cCSiO2 = rm.Coated(coating=mC, cThickness=200,
-                        substrate=mSiO2, surfaceRoughness=10,
-                        substRoughness=10, name='20 nm Diamond on Quartz')
+                       substrate=mSiO2, surfaceRoughness=10,
+                       substRoughness=10, name='20 nm Diamond on Quartz')
     for_one_material(cRhSi, mRh,
                      os.path.join(dataDir, "RhSi_s_rough2.CXRO.gz"),
                      os.path.join(dataDir, "RhSi_p_rough2.CXRO.gz"),
                      4e-3, '@ 4 mrad,\nRMS roughness 2 nm')
 
     for_one_material(cCSiO2, mC,
-                      os.path.join(dataDir, "CSiO2_s_rough1.CXRO.gz"),
-                      os.path.join(dataDir, "CSiO2_p_rough1.CXRO.gz"),
-                      np.radians(0.2), '@ 0.2 deg,\nRMS roughness 1 nm')
+                     os.path.join(dataDir, "CSiO2_s_rough1.CXRO.gz"),
+                     os.path.join(dataDir, "CSiO2_p_rough1.CXRO.gz"),
+                     np.radians(0.2), '@ 0.2 deg,\nRMS roughness 1 nm')
 
 
 def compare_reflectivity_slab():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(stripe, refs, refp, E, reprEnergy):
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
         ax.set_ylabel('reflectivity')
         ax.set_xlim(0, 10)
-        fig.suptitle(stripe.name + ' ' + reprEnergy, fontsize=16)
+        ax.set_title(stripe.name + ' ' + reprEnergy, fontsize=14)
         x, R2s = np.loadtxt(refs, unpack=True)
-        p1, = ax.plot(x, R2s, '-k', label='s Mlayer')
+        p1, = ax.plot(x, R2s, '-C0', label='s Mlayer')
         x, R2s = np.loadtxt(refp, unpack=True)
-        p2, = ax.plot(x, R2s, '--k', label='p Mlayer')
+        p2, = ax.plot(x, R2s, '--C0', label='p Mlayer')
         refl = stripe.get_amplitude(E, np.sin(np.deg2rad(theta)))
         rs, rp = refl[0], refl[1]
-        p3, = ax.semilogy(theta, abs(rs)**2, '-r')
-        p4, = ax.semilogy(theta, abs(rp)**2, '--r')
+        p3, = ax.semilogy(theta, abs(rs)**2, '-C1')
+        p4, = ax.semilogy(theta, abs(rp)**2, '--C1')
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=3)
         ax.legend([p1, p3], ['Mlayer/XOP', 'xrt'], loc=1)
         ax.add_artist(l1)
         ylim = ax.get_ylim()
         ax.set_ylim([ylim[0], 1])
 # phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(theta, phi, 'c', lw=2, yunits=math.pi, zorder=0)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
-
-        ax2.set_zorder(-1)
-        ax.patch.set_visible(False)  # hide the 'canvas'
+        # ax2 = ax.twinx()
+        # ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        # phi = np.unwrap(np.angle(rs * rp.conj()))
+        # p9, = ax2.plot(theta, phi, 'c', lw=2, yunits=math.pi, zorder=0)
+        # formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        # ax2.yaxis.set_major_formatter(formatter)
+        # for tl in ax2.get_yticklabels():
+        #     tl.set_color('c')
+        # ax2.set_zorder(-1)
+        # ax.patch.set_visible(False)  # hide the 'canvas'
 
         fname = 'SlabRefl' + stripe.name + ' ' + reprEnergy
         fig.savefig(fname + '.png')
@@ -768,7 +626,7 @@ def compare_multilayer():
     else:
         matCL = None
 
-    def compare(xrtMLs, refDatas, E, title, flabel=''):
+    def compare(refDatas, xrtMLs, E, title, flabel=''):
         refxs, refss, refps, refphs = [], [], [], []
         refLabels = [rd[1] for rd in refDatas]
         for refData in refDatas:
@@ -794,7 +652,7 @@ def compare_multilayer():
             refps.append(refp)
             refphs.append(refph)
 
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
@@ -803,7 +661,18 @@ def compare_multilayer():
         else:
             ax.set_ylabel('reflectivity')
         ax.set_xlim(theta[0], theta[-1])
-        fig.suptitle(title, fontsize=12)
+        ax.set_title(title, fontsize=11)
+
+        refLines = []
+        for iref, (refx, refs, refp) in enumerate(zip(refxs, refss, refps)):
+            c = 'C{0}'.format(iref)
+            lw = 1.5 + iref*0.7
+            pS, = ax.plot(refx, refs, '-', lw=lw, color=c)
+            if refp is not None:
+                pP, = ax.plot(refx, refp, '--', lw=lw, color=c)
+                refLines.append((pS, pP))
+            else:
+                refLines.append((pS, None))
 
         xrtData = []
         xrtLines = []
@@ -812,54 +681,20 @@ def compare_multilayer():
             refl = ml[0].get_amplitude(E, np.sin(np.radians(theta)), ucl=matCL)
             rs, rp = refl[0], refl[1]
             xrtData.append((rs, rp))
-            c = 'C{0}'.format(iml)
-            p1, = ax.plot(theta, abs(rs)**2, '-', color=c, lw=2, zorder=100)
-            p2, = ax.plot(theta, abs(rp)**2, '--', color=c, lw=2, zorder=100)
+            c = 'C{0}'.format(iml+len(refxs))
+            lw = 1.5 + iml*0.7
+            p1, = ax.plot(theta, abs(rs)**2, '-', color=c, lw=lw, zorder=100)
+            p2, = ax.plot(theta, abs(rp)**2, '--', color=c, lw=lw, zorder=100)
             xrtLines.append((p1, p2))
-
-        refLines = []
-        for iref, (refx, refs, refp) in enumerate(zip(refxs, refss, refps)):
-            c = 'C{0}'.format(iref+len(xrtMLs))
-            pS, = ax.plot(refx, refs, '-', lw=2, color=c)
-            if refp is not None:
-                pP, = ax.plot(refx, refp, '--', lw=2, color=c)
-                refLines.append((pS, pP))
-            else:
-                refLines.append((pS, None))
 
         l1 = ax.legend([(p1,), (p2,)], ['s', 'p'], loc='upper right',
                        handler_map={tuple: BlackLineObjectsHandler()})
 
-        ax.legend(xrtLines+refLines, xrtLabels+refLabels, loc='lower left',
+        ax.legend(refLines+xrtLines, refLabels+xrtLabels, loc='lower left',
                   title=ax.get_ylabel(),
                   handler_map={tuple: TwoLineObjectsHandler()})
         ax.add_artist(l1)
         ax.set_ylim([0, None])
-
-# phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$')  # , color='c')
-        xrtLinesPh = []
-        for iml, (rs, rp) in enumerate(xrtData):
-            c = 'C{0}'.format(iml)
-            phi = np.unwrap(np.angle(rs * rp.conj()))
-            p9, = ax2.plot(theta, phi, color=c, yunits=math.pi, alpha=0.5,
-                           zorder=90)
-            xrtLinesPh.append(p9)
-        refLinesPh = []
-        for iref, (refx, refph) in enumerate(zip(refxs, refphs)):
-            c = 'C{0}'.format(iref+len(xrtMLs))
-            if refph is not None:
-                pH, = ax2.plot(refx, refph, color=c, yunits=math.pi, alpha=0.5)
-                refLinesPh.append(pH)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        ax2.set_xlim(theta[0], theta[-1])
-
-        ax2.set_zorder(-1)
-        ax.patch.set_visible(False)  # hide the 'canvas'
-        ax2.legend(xrtLinesPh+refLinesPh, xrtLabels+refLabels,
-                   loc='lower right', title='phase difference')
 
         ml = xrtMLs[0][0]
         fname = 'Multilayer{0}{1}'.format(ml.tLayer.name, ml.bLayer.name)
@@ -874,44 +709,44 @@ def compare_multilayer():
     mScC = rm.Material('Sc', rho=2.98, table='Chantler')
     mCrC = rm.Material('Cr', rho=7.18, table='Chantler')
 
-    # mLH = rm.Multilayer(mScH, 12.8, mCrH, 12.8, 200, mScH)
-    # mLC = rm.Multilayer(mScC, 12.8, mCrC, 12.8, 200, mScC)
-    # compare(
-    #     ((mLH, 'xrt-Henke'), (mLC, 'xrt-Chantler')),
-    #     [(os.path.join(dataDir, "ScCr_ML_reflection_REFLEC.npy"), 'REFLEC'),
-    #      (os.path.join(dataDir, "mLScCr-spph.mlayer.gz"), 'Mlayer/XOP')],
-    #     E0, u'200 × [12.8 Å Sc + 12.8 Å Cr] / Sc multilayer @ 398 eV')
+    mLH = rm.Multilayer(mScH, 12.8, mCrH, 12.8, 200, mScH)
+    mLC = rm.Multilayer(mScC, 12.8, mCrC, 12.8, 200, mScC)
+    compare(
+        [(os.path.join(dataDir, "ScCr_ML_reflection_REFLEC.npy"), 'REFLEC'),
+         (os.path.join(dataDir, "mLScCr-spph.mlayer.gz"), 'Mlayer/XOP')],
+        ((mLH, 'xrt-Henke'), (mLC, 'xrt-Chantler')),
+        E0, u'200 × [12.8 Å Sc + 12.8 Å Cr] / Sc multilayer @ 398 eV')
 
     mLH = rm.Multilayer(mScH, 12.8, mCrH, 12.8, 200, mScH, substThickness=13.0,
                         geom='transmitted')
     mLC = rm.Multilayer(mScC, 12.8, mCrC, 12.8, 200, mScC, substThickness=13.0,
                         geom='transmitted')
     compare(
-        ((mLH, 'xrt-Henke'), (mLC, 'xrt-Chantler')),
         [(os.path.join(dataDir, "ScCr_ML_transmission_REFLEC.npy"), 'REFLEC')],
+        ((mLH, 'xrt-Henke'), (mLC, 'xrt-Chantler')),
         E0, u'200 × [12.8 Å Sc + 12.8 Å Cr] / 13 Å Sc multilayer @ 398 eV',
         '-transmitted')
 
-    # theta = np.linspace(0, 1.6, 801)  # degrees
-    # mSi = rm.Material('Si', rho=2.33)
-    # mW = rm.Material('W', rho=19.3)
+    theta = np.linspace(0, 1.6, 801)  # degrees
+    mSi = rm.Material('Si', rho=2.33)
+    mW = rm.Material('W', rho=19.3)
 
-    # mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi)
-    # compare([(mL, 'xrt')],
-    #         [(os.path.join(dataDir, "WSi45A04.mlayer.gz"), 'Mlayer/XOP')],
-    #         8050, u'40 × [27 Å Si + 18 Å W] multilayer @ 8.05 keV')
+    mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi)
+    compare([(os.path.join(dataDir, "WSi45A04.mlayer.gz"), 'Mlayer/XOP')],
+            [(mL, 'xrt')],
+            8050, u'40 × [27 Å Si + 18 Å W] multilayer @ 8.05 keV')
 
-    # mL = rm.Multilayer(mSi, 27*2, mW, 18*2, 40, mSi, 27, 18, 2)
-    # compare([(mL, 'xrt')],
-    #         [(os.path.join(dataDir, "WSi45_100A40.mlayer.gz"), 'Mlayer/XOP')],
-    #         8050, u'Depth graded multilayer \n 40 × [54 Å Si + 36 Å W]'
-    #         u' to [27 Å Si + 18 Å W] @ 8.05 keV', '-graded')
+    mL = rm.Multilayer(mSi, 27*2, mW, 18*2, 40, mSi, 27, 18, 2)
+    compare([(os.path.join(dataDir, "WSi45_100A40.mlayer.gz"), 'Mlayer/XOP')],
+            [(mL, 'xrt')],
+            8050, u'Depth graded multilayer \n 40 × [54 Å Si + 36 Å W]'
+            u' to [27 Å Si + 18 Å W] @ 8.05 keV', '-graded')
 
-    # mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi, 27*2, 18*2, 2)
-    # compare([(mL, 'xrt')],
-    #         [(os.path.join(dataDir, "WSi100_45A40.mlayer.gz"), 'Mlayer/XOP')],
-    #         8050, u'Depth graded multilayer \n 40 × [27 Å Si + 18 Å W]'
-    #         u' to [54 Å Si + 36 Å W] multilayer @ 8.05 keV', '-antigraded')
+    mL = rm.Multilayer(mSi, 27, mW, 18, 40, mSi, 27*2, 18*2, 2)
+    compare([(os.path.join(dataDir, "WSi100_45A40.mlayer.gz"), 'Mlayer/XOP')],
+            [(mL, 'xrt')],
+            8050, u'Depth graded multilayer \n 40 × [27 Å Si + 18 Å W]'
+            u' to [54 Å Si + 36 Å W] multilayer @ 8.05 keV', '-antigraded')
 
 
 def compare_multilayer_interdiffusion():
@@ -932,42 +767,41 @@ def compare_multilayer_interdiffusion():
         matCL = None
 
     def for_one_material(ml, refs, E, label, flabel=''):
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         fig.subplots_adjust(right=0.86)
         ax = fig.add_subplot(111)
         ax.set_xlabel('grazing angle (deg)')
         ax.set_ylabel('reflectivity')
         ax.set_xlim(theta[0], theta[-1])
-        fig.suptitle(label, fontsize=14)
+        ax.set_title(label, fontsize=12)
 
         x, R2s = np.loadtxt(refs, unpack=True, skiprows=2, usecols=(0, 1))
         refl = ml.get_amplitude(E, np.sin(np.deg2rad(theta)), ucl=matCL)
         rs, rp = refl[0], refl[1]
 
 # amplitudes:
-        p1, = ax.plot(x, R2s, '-k', label='s CXRO')
-        p3, = ax.plot(theta, abs(rs)**2, '-r', lw=1)
-        p4, = ax.plot(theta, abs(rp)**2, '--r')
+        p1, = ax.plot(x, R2s, '-C0', label='s CXRO')
+        p3, = ax.plot(theta, abs(rs)**2, '-C1', lw=1)
+        p4, = ax.plot(theta, abs(rp)**2, '--C1')
         l1 = ax.legend([p3, p4], ['s', 'p'], loc=3)
         ax.legend([p1, p3], ['CXRO-Multilayer', 'xrt'], loc=1)
         ax.add_artist(l1)
-        ylim = ax.get_ylim()
-        ax.set_ylim([ylim[0], 1])
+        ax.set_ylim([0, 1])
 
 # phases:
-        ax2 = ax.twinx()
-        ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
-        phi = np.unwrap(np.angle(rs * rp.conj()))
-        p9, = ax2.plot(theta, phi, 'c', lw=1, yunits=math.pi)
-        ax2.set_ylim(-0.001, 0.001)
-        formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
-        ax2.yaxis.set_major_formatter(formatter)
-        for tl in ax2.get_yticklabels():
-            tl.set_color('c')
-        ax2.set_xlim(theta[0], theta[-1])
+        # ax2 = ax.twinx()
+        # ax2.set_ylabel(r'$\phi_s - \phi_p$', color='c')
+        # phi = np.unwrap(np.angle(rs * rp.conj()))
+        # p9, = ax2.plot(theta, phi, 'c', lw=1, yunits=math.pi)
+        # ax2.set_ylim(-0.001, 0.001)
+        # formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
+        # ax2.yaxis.set_major_formatter(formatter)
+        # for tl in ax2.get_yticklabels():
+        #     tl.set_color('c')
+        # ax2.set_xlim(theta[0], theta[-1])
 
-        ax2.set_zorder(-1)
-        ax.patch.set_visible(False)  # hide the 'canvas'
+        # ax2.set_zorder(-1)
+        # ax.patch.set_visible(False)  # hide the 'canvas'
 
         fname = 'Multilayer' + ml.tLayer.name + ml.bLayer.name
         fig.savefig(fname + flabel)
@@ -979,23 +813,23 @@ def compare_multilayer_interdiffusion():
 
     mL = rm.Multilayer(mSi, 17.82, mW, 11.88, 300, mSi, idThickness=0)
     for_one_material(mL, os.path.join(dataDir, "WSi300id0.CXRO.gz"), 24210,
-                     u'300 × [17.82 Å Si + 11.88 Å W] multilayer @ 24.21 keV\nInterdiffusion RMS 0 Å',
-                     'CXRO_id0')
+                     u'300 × [17.82 Å Si + 11.88 Å W] multilayer @ 24.21 keV'
+                     u'\nInterdiffusion RMS 0 Å', 'CXRO_id0')
 
     mL = rm.Multilayer(mSi, 17.82, mW, 11.88, 300, mSi, idThickness=6)
     for_one_material(mL, os.path.join(dataDir, "WSi300id6.CXRO.gz"), 24210,
-                     u'300 × [17.82 Å Si + 11.88 Å W] multilayer @ 24.21 keV\nInterdiffusion RMS 6 Å',
-                     'CXRO_id6')
+                     u'300 × [17.82 Å Si + 11.88 Å W] multilayer @ 24.21 keV'
+                     u'\nInterdiffusion RMS 6 Å', 'CXRO_id6')
 
 
 def compare_dTheta():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(mat, ref1, title):
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         ax = fig.add_subplot(111)
         ax.set_xlabel(r'$\theta_{B}-\alpha$, deg')
         ax.set_ylabel(r'$\delta\theta$, deg')
-        fig.suptitle(title, fontsize=16)
+        ax.set_title(title, fontsize=14)
         thetaB = np.degrees(mat.get_Bragg_angle(E[0]))
         calc_dt_new = np.degrees(
             np.abs(mat.get_dtheta(E, np.radians(alpha))))
@@ -1026,15 +860,15 @@ def compare_absorption_coeff():
     def for_one_material(m):
         rf = os.path.join(dataDir, "{0}_absCoeff.xcrosssec.gz".format(m.name))
         title = u'Absorption in {0}'.format(mat.name)
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel(r'$\mu_0$ (cm$^{-1}$)')
-        fig.suptitle(title, fontsize=16)
+        ax.set_title(title, fontsize=14)
         x, mu0 = np.loadtxt(rf, unpack=True)
-        p1, = ax.loglog(x, mu0, '-k', lw=2, label='XCrossSec')
+        p1, = ax.loglog(x, mu0, '-C0', lw=2, label='XCrossSec')
         calcmu0 = m.get_absorption_coefficient(E)
-        p3, = ax.loglog(E, calcmu0, '-r', label='xrt')
+        p3, = ax.loglog(E, calcmu0, '-C1', label='xrt')
         ax.legend(loc=1)
         ax.set_xlim(E[0], E[-1])
         fname = title
@@ -1043,17 +877,17 @@ def compare_absorption_coeff():
     dataDir = os.path.join('', 'XOP-Reflectivities')
     E = np.logspace(1+math.log10(2.), 4.+math.log10(3.), 500)
 
-#    mat = rm.Material('Be', rho=1.848)
-#    for_one_material(mat)
+    mat = rm.Material('Be', rho=1.848)
+    for_one_material(mat)
 #    mat = rm.Material('Ag', rho=10.50)
 #    mat = rm.Material('Ag', rho=10.50, table='Henke')
 #    for_one_material(mat)
     mat = rm.Material('Al', rho=2.6989)
     for_one_material(mat)
-#    mat = rm.Material('Au', rho=19.3)
-#    for_one_material(mat)
-#    mat = rm.Material('Ni', rho=8.902)
-#    for_one_material(mat)
+    mat = rm.Material('Au', rho=19.3)
+    for_one_material(mat)
+    mat = rm.Material('Ni', rho=8.902)
+    for_one_material(mat)
     E = 30000
     print("abs coeff at {0} keV = {1} 1/cm".format(
         E*1e-3, mat.get_absorption_coefficient(E)))
@@ -1066,16 +900,16 @@ def compare_absorption_coeff():
 def compare_transmittivity():
     """A comparison subroutine used in the module test suit."""
     def for_one_material(mat, thickness, ref1, title, sname):
-        fig = plt.figure(figsize=(8, 6), dpi=100)
+        fig = plt.figure(figsize=(6, 6))
         ax = fig.add_subplot(111)
         ax.set_xlabel('energy (eV)')
         ax.set_ylabel('transmittivity')
-        fig.suptitle(title, fontsize=16)
+        ax.set_title(title, fontsize=14)
         x, tr = np.loadtxt(ref1, unpack=True)
-        p1, = ax.semilogx(x, tr, '-k', lw=2, label='XPower/XOP')
+        p1, = ax.semilogx(x, tr, '-C0', lw=2, label='XPower/XOP')
         calcmu0 = mat.get_absorption_coefficient(E)
         transm = np.exp(-calcmu0 * thickness)
-        p3, = ax.semilogx(E, transm, '-r', label='xrt')
+        p3, = ax.semilogx(E, transm, '-C1', label='xrt')
         ax.legend(loc=2)
         ax.set_xlim(E[0], E[-1])
         fname = 'Transm' + sname
@@ -1092,58 +926,44 @@ def compare_transmittivity():
 def run_tests():
     """The body of the module test suit. Uncomment the tests you want."""
 
-#Compare the calculated rocking curves of Si crystals with those calculated by
-#XCrystal and XInpro (parts of XOP):
-    # compare_rocking_curves('111')
+# Compare the calculated rocking curves of Si crystals with those calculated by
+# XCrystal and XInpro (parts of XOP):
     # compare_rocking_curves('333')
-    # compare_rocking_curves('111', t=0.007)  # t is thickness in mm
-    # compare_rocking_curves('333', t=0.007)
-    # compare_rocking_curves('111', t=0.100)
-    # compare_rocking_curves('333', t=0.100)
-    # compare_rocking_curves('111', t=0.007, geom='Bragg transmitted')
-    # compare_rocking_curves('333', t=0.007, geom='Bragg transmitted')
-    # compare_rocking_curves('111', t=0.100, geom='Bragg transmitted')
+    # compare_rocking_curves('333', t=0.100)  # t is thickness in mm
     # compare_rocking_curves('333', t=0.100, geom='Bragg transmitted')
-    # compare_rocking_curves('111', t=0.007, geom='Laue reflected')
-    # compare_rocking_curves('333', t=0.007, geom='Laue reflected')
-    # compare_rocking_curves('111', t=0.100, geom='Laue reflected')
     # compare_rocking_curves('333', t=0.100, geom='Laue reflected')
-    # compare_rocking_curves('111', t=0.007, geom='Laue transmitted')
-    # compare_rocking_curves('333', t=0.007, geom='Laue transmitted')
-    # compare_rocking_curves('111', t=0.100, geom='Laue transmitted')
     # compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
 
-#check that Bragg transmitted and Laue transmitted give the same results if the
-#beam path is equal:
+# check that Bragg transmitted and Laue transmitted give the same results if
+# the beam path is equal:
     # beamPath = 0.1  # mm
     # compare_Bragg_Laue('111', beamPath=beamPath)
     # compare_Bragg_Laue('333', beamPath=beamPath)
 
-#Compare the calculated reflectivities of Si, Pt, SiO_2 with those by Xf1f2
-#(part of XOP):
+# Compare the calculated reflectivities of Si, Pt, SiO_2 with those by Xf1f2
+# (part of XOP):
     # compare_reflectivity()
-
     # compare_reflectivity_coated()
 
-#Compare the calculated reflectivities of W slab with those by Mlayer
-#(part of XOP):
+# Compare the calculated reflectivities of W slab with those by Mlayer
+# (part of XOP):
     # compare_reflectivity_slab()
 
-#Compare the calculated reflectivities of W slab with those by Mlayer
-#(part of XOP):
-#    compare_multilayer()
+# Compare the calculated reflectivities of W slab with those by Mlayer
+# (part of XOP):
+    # compare_multilayer()
     # compare_multilayer_interdiffusion()
     # compare_dTheta()
 
-#Compare the calculated absorption coefficient with that by XCrossSec
-#(part of XOP):
+# Compare the calculated absorption coefficient with that by XCrossSec
+# (part of XOP):
     # compare_absorption_coeff()
 
-#Compare the calculated transmittivity with that by XPower
-#(part of XOP):
-    # compare_transmittivity()
+# Compare the calculated transmittivity with that by XPower
+# (part of XOP):
+    compare_transmittivity()
 
-#Play with Si crystal:
+# Play with Si crystal:
     # crystalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=100.)
     # print(2 * crystalSi.get_a()/math.sqrt(3.))  # 2dSi111
     # print('Si111 d-spacing = {0:.6f}'.format(crystalSi.d))

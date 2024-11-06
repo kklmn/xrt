@@ -15,6 +15,11 @@ Current GitHub code:
     - Major rebuild of the documentation on
       `Read the Docs <http://xrt.readthedocs.io>`_ due to changed software
       requirements on readthedocs.io.
+ 
+    - Add in-plane rotation to :meth:`Crystal.get_amplitude_pytte()`.
+
+    - Major update of :ref:`Tests of Materials <tests_materials>`. Add
+      :ref:`Bent crystals: comparison tests for pyTTE backends <tests_pytte>`.
 
 1.6.0 (17 Jul 2023):
     - Enable calculations of elastically deformed crystals on GPUs. Based on

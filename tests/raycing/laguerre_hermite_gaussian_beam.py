@@ -278,7 +278,7 @@ else:  # long test
     ps = np.array(list(range(10)) + list(range(1, 11)) +
                   list(range(20, 101, 10))) * 1000.
     ps[0:10] /= 10.
-#print(ps)
+# print(ps)
 
 bins, ppb = 256, 1
 

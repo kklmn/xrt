@@ -21,7 +21,8 @@ autodoc_mock_imports = [
     'matplotlib.backends.backend_qt5agg',
     'PySide', 'PySide.QtCore',
     'spyder.widgets', 'spyderlib.widgets',
-    'cv2', 'zmq']
+    'cv2', 'zmq',
+    'multiprocess', 'pyTTE']
 
 __fdir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -99,7 +100,6 @@ sys.path.insert(0, '..')
 sys.path.insert(0, '.')
 #sys.path.append('..')
 sys.path.append(os.path.abspath('exts'))
-#autodoc_mock_imports = ["PyQt5.QtWebKitWidgets"]
 
 import xrt.backends.raycing.materials_elemental as xrtelem
 import xrt.backends.raycing.materials_compounds as xrtcomp
@@ -110,13 +110,11 @@ import xrt.backends.raycing.pyTTE_x.elastic_tensors as xrtxelt
 def sort_compounds(method):
     if method == 'density':
         res = sorted([(cname, getattr(xrtcomp, cname)().rho)
-                      for cname in xrtcomp.__all__],
-                     key=lambda mat: mat[1])
+                      for cname in xrtcomp.__all__], key=lambda mat: mat[1])
         return ['{0[0]} ({0[1]:.3g})'.format(tup) for tup in res]
     elif method == 'name':
         res = sorted([(cname, getattr(xrtcomp, cname)().name)
-                      for cname in xrtcomp.__all__],
-                     key=lambda mat: mat[1])
+                      for cname in xrtcomp.__all__], key=lambda mat: mat[1])
         return ['{0[0]} ({0[1]})'.format(tup) for tup in res]
 
 
@@ -124,8 +122,7 @@ def sort_crystals(method):
     elxs = xrtxelt.CRYSTALS
     if method == 'volume':
         res = sorted([(cname, getattr(xrtxtal, cname)().V)
-                      for cname in xrtxtal.__all__],
-                     key=lambda mat: mat[1])
+                     for cname in xrtxtal.__all__], key=lambda mat: mat[1])
         return ['{1}{0[0]}{1} ({0[1]:.4g})'.format(
             tup, '**' if tup[0] in elxs else '') for tup in res]
 
@@ -147,9 +144,7 @@ rst_epilog = """
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = ['sphinx.ext.autodoc', 'sphinx.ext.pngmath']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx_tabs.tabs',
-              'animation',
-              # 'sphinx_build_compatibility.extension'
-              ]
+              'animation']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

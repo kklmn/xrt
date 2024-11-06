@@ -1,6 +1,37 @@
 # -*- coding: utf-8 -*-
 u"""
-Reflection from mosaic crystal
+.. start
+.. _tests_mosaic:
+
+Reflectivity of mosaic crystals
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These tests implement the diffraction setup from [SanchezDelRioMosaic]_, Fig.
+4. In our case, the source has a finite energy band to demonstrate the energy
+dispersion effect in parafocusing (cf. Figs. 5 and 6 ibid).
+
++----------+----------+
+|  |mosA|  |  |mosB|  |
++----------+----------+
+
+.. |mosA| imagezoom:: _images/MosaicGraphite002-screenA.*
+   :align: center
+.. |mosB| imagezoom:: _images/MosaicGraphite002-screenB.*
+   :align: center
+
+The penetration depth distribution should be compared with Fig 7 ibid.
+
+.. imagezoom:: _images/MosaicGraphite002-Z.*
+   :align: center
+
+The reflectivity curves are compared with those by XCrystal/XOP [XOP]_. The
+small differences are primarily due to small differences in the tabulations of
+the scattering factors. We use the one by Chantler [Chantler]_.
+
+.. imagezoom:: _images/MosaicGraphite002-ReflectivityS.*
+   :align: center
+
+.. end
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "2018/08/03"
@@ -20,7 +51,7 @@ import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 
 hkl = (0, 0, 2)
-#hkl = (0, 0, 6)
+# hkl = (0, 0, 6)
 shlk = ''.join(['{0}'.format(i) for i in hkl])
 kw = dict(hkl=hkl, a=2.456, c=6.696, gamma=120,
           atoms=[6]*4, atomsXYZ=[[0., 0., 0.], [0., 0., 0.5],
@@ -34,25 +65,27 @@ mosaicityFWHM = np.deg2rad(mosaicityFWHMdeg)
 mosaicity = mosaicityFWHM/2.355
 xtalMosaic = rmats.CrystalFromCell('mosaic', **kw, mosaicity=mosaicity)
 
-#Ec = 3000.
+# Ec = 3000.
 Ec = 8000.
-#Ec = 17000.
+# Ec = 17000.
 
 dE = 2e-4*Ec
 nrays = 1e6
 
 p = 1e4
-#screenPoss = np.array([1.5, 2, 2.5, 3]) * p
+# screenPoss = np.array([1.5, 2, 2.5, 3]) * p
 screenPoss = np.array([2, 3]) * p
 
 xBins = 160
 zBins = 100
 
+
 def build_beamline():
     beamLine = raycing.BeamLine()
     bragg = xtalPerfect.get_Bragg_angle(Ec) - xtalPerfect.get_dtheta(Ec)
     print('theta={0}deg'.format(np.degrees(bragg)))
-    print('dtheta', xtalPerfect.get_dtheta(Ec), 'mosaicity', mosaicityFWHM/2.355)
+    print('dtheta', xtalPerfect.get_dtheta(Ec), 'mosaicity',
+          mosaicityFWHM/2.355)
     beamLine.bragg = bragg
     print("mosaic divergence hor", 2*mosaicityFWHM*np.sin(bragg))
 
@@ -61,8 +94,8 @@ def build_beamline():
         distx=None, disty=None, distz=None,
 
         # for reflectivity calculations select larger dzprime:
-#        distxprime=None, distzprime='flat', dzprime=0.022,
-#        distE='lines', energies=[Ec], polarization='h',
+        # distxprime=None, distzprime='flat', dzprime=0.022,
+        # distE='lines', energies=[Ec], polarization='h',
         # for getting diffracted images select this one:
         distxprime='flat', distzprime='flat', dxprime=1e-3, dzprime=2e-4,
         distE='flat', energies=(Ec-dE/2, Ec+dE/2), polarization='h',
@@ -273,5 +306,5 @@ def main():
 
 
 if __name__ == '__main__':
-#    main()
+    # main()
     plot_reflectivity()

@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Comparison tests for pyTTE backends
------------------------------------
+.. start
+.. _tests_pytte:
 
-1. Original pyTTE
-Requires xraylib and multiprocess packages (both can be pip-installed), xraylib
-provides the material properties. Solution of Takagi-Taupin equations relies on
-scipy.integrate.ODE, zvode-bdf algorithm.
-Fails on thick crystals (> 1 mm in case 2), requires increasing 'nsteps' in the
-integrator up to 2-3 million in order to converge.
-Calculation of transmitted intensity in Bragg geometry is not supported.
+Bent crystals: comparison tests for pyTTE backends
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-2. xrt pyTTE_x CPU
+xrt can calculate reflectivity curves of elastically deformed bent crystals.
+The following three calculation backends are compared below.
+
+1. Original pyTTE.
+Requires `xraylib` and `multiprocess` packages, both are pip-installable.
+`xraylib` provides x-ray related material properties. Solution of Takagi-Taupin
+equations relies on scipy.integrate.ODE, zvode-bdf algorithm. Fails on thick
+crystals (> 1 mm in case 2), requires increasing 'nsteps' in the integrator up
+to 2-3 million in order to converge. Calculation of transmitted intensity in
+Bragg geometry is not supported.
+
+2. xrt pyTTE_x CPU.
 Pure python custom implementation of Dormand-Prince 4/5 adaptive algorithm.
 Material properties backend can be either 'xrt' (default) or 'xraylib',
 selectable via the TTcrystalX mat_backend init parameter.
@@ -24,14 +30,47 @@ for the raycing backend of xrt. In this test the position of the radius of
 curvature can be defined in the TTcrystalX class init by setting the
 'strain_shift' argument to either 'xrt' or 'pytte'.
 
-3. xrt pyTTE_x OpenCL
+3. xrt pyTTE_x OpenCL.
 Similar to pyTTE_x CPU, ported to execute on GPU with OpenCL. Calculation of
 transmitted intensity in Bragg geometry is not supported.
 
+Reflectivity of 1D and 2D bent Bragg and Laue crystals
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+The horizontal shifts are due to different definitions of bending radius. The
+amplitude mismatch in the Laue cases are due to difference in absorption as
+calculated by `xrt` and `xraylib`.
+
++------------------+------------------+------------------+
+|  |01-BraggFlat|  | |02-Bragg1Dbent| | |03-Bragg2Dbent| |
++------------------+------------------+------------------+
+
+.. |01-BraggFlat| imagezoom:: _images/01-BraggFlat.png
+.. |02-Bragg1Dbent| imagezoom:: _images/02-Bragg1Dbent.png
+.. |03-Bragg2Dbent| imagezoom:: _images/03-Bragg2Dbent.png
+   :loc: upper-right-corner
+
++------------------+------------------+
+|  |04-Laue1Dbent| | |05-Laue2Dbent|  |
++------------------+------------------+
+
+.. |04-Laue1Dbent| imagezoom:: _images/04-Laue1Dbent.png
+.. |05-Laue2Dbent| imagezoom:: _images/05-Laue2Dbent.png
+
+Transmittivity of 1D and 2D bent Laue crystals
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++------------------+------------------+
+|  |06-Laue1Dbent| | |07-Laue2Dbent|  |
++------------------+------------------+
+
+.. |06-Laue1Dbent| imagezoom:: _images/06-Laue1Dbent.png
+.. |07-Laue2Dbent| imagezoom:: _images/07-Laue2Dbent.png
+
+.. end
 """
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "5 Nov 2024"
+__date__ = "6 Nov 2024"
 
 import numpy as np
 np.complex, np.float = complex, float
@@ -63,9 +102,12 @@ try:
     import xrt.backends.raycing.myopencl as mcl
     targetOpenCL = 'auto'
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
-    xrt_cl = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
-                        targetOpenCL=targetOpenCL)
-    isOpenCL = hasattr(xrt_cl, 'cl_precisionF')
+    xrt_cl = {}
+    xrt_cl['float32'] = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
+                                   targetOpenCL=targetOpenCL)
+    xrt_cl['float64'] = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float64',
+                                   targetOpenCL=targetOpenCL)
+    isOpenCL = hasattr(xrt_cl['float64'], 'cl_precisionF')
 except ImportError:
     isOpenCL = False
     print("pyopencl and supported GPU/CPI driver are required for OpenCL")
@@ -151,6 +193,38 @@ case5 = {
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
 
+case6 = {
+    "name": "Laue 1D bent",
+    "crystal": "Si", # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
+    "geometry": "Laue transmitted",  # Combination of Bragg/Laue reflected/transmitted
+    "hkl": [1, 1, 1],
+    "thickness": 0.5,  # mm
+    "asymmetry": -12.,  # degrees
+    "in_plane_rotation": 60.,  # degrees
+    "bending_Rm": 10.,  # meters
+    "bending_Rs": np.inf,  # meters
+    "energy": 29000,  # eV
+    "theta_array": np.linspace(-50, 50, 1500),  # microrad
+    "polarization": "sigma",  # or "pi"
+    "precision": "float64"  # Only for opencl backend. "float64" for Laue
+    }
+
+case7 = {
+    "name": "Laue 2D bent",
+    "crystal": 'Si', # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
+    "geometry": "Laue transmitted",  # Combination of Bragg/Laue reflected/transmitted
+    "hkl": [1, 1, 1],
+    "thickness": 2.,  # mm
+    "asymmetry": 22.,  # degrees
+    "in_plane_rotation": 60.,  # degrees
+    "bending_Rm": 20.,  # meters
+    "bending_Rs": 20,  # meters
+    "energy": 60000,  # eV
+    "theta_array": np.linspace(-40, 100, 1500),  # microrad
+    "polarization": "sigma",  # or "pi"
+    "precision": "float64"  # Only for opencl backend. "float64" for Laue
+    }
+
 
 def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
                          in_plane_rotation, bending_Rm, bending_Rs, energy,
@@ -177,12 +251,8 @@ def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
     gammah = sum(i*j for i, j in zip(n, sh))
     hns0 = sum(i*j for i, j in zip(hn, s0))
 
-    matCL = mcl.XRT_CL(r'materials.cl',
-                       precisionOpenCL=precision,
-                       targetOpenCL=targetOpenCL)
-
     ampS, ampP = crInstance.get_amplitude_pytte(
-            E_in, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
+            E_in, gamma0, gammah, hns0, ucl=xrt_cl[precision], alphaAsym=alpha,
             inPlaneRotation=np.radians(in_plane_rotation),
             Ry=bending_Rm*1e3, Rx=bending_Rs*1e3)
 
@@ -255,20 +325,30 @@ def run_pytte_original(name, crystal, geometry, hkl, thickness, asymmetry,
 
 if __name__ == '__main__':
     t00 = time.time()
-    funcs = [run_pytte_original if isXrayLib else None,
+    funcs = [
+             run_pytte_original if isXrayLib else None,
              run_pytte_xrt_cpu_rk45cpu,
-             run_pytte_xrt_opencl if isOpenCL else None]
-    linewidths = [2, 1.8, 1]
+             run_pytte_xrt_opencl if isOpenCL else None,
+             ]
+    linewidths = [2., 2., 1.]
 
-    for icp, kw in enumerate([case1, case2, case3, case4, case5]):
+    cases = [case1, case2, case3, case4, case5, case6, case7]
+    for icp, kw in enumerate(cases):
         plt.figure(icp)
         plt.xlabel(r'$\theta-\theta_B$ (µrad)')
         plt.ylabel('|Amplitude|²')
-        shape = 'flat' if kw["bending_Rm"] == kw["bending_Rs"] == np.inf else\
-            'bent'
         title = "{0}, {1}-mm-thick {2}{3} at {4:.1f} keV".format(
             kw["name"], kw["thickness"], kw["crystal"],
             ''.join([str(m) for m in kw["hkl"]]), kw["energy"]*1e-3)
+        title2 = []
+        if kw["bending_Rm"] < np.inf:
+            title2.append("Rm = {0:.0f} m".format(kw["bending_Rm"]))
+        if kw["bending_Rs"] < np.inf:
+            title2.append("Rs = {0:.0f} m".format(kw["bending_Rs"]))
+        if kw["asymmetry"] != 0:
+            title2.append("α = {0:.0f}°".format(kw["asymmetry"]))
+        if title2:
+            title += '\n' + ', '.join(title2)
         plt.title(title)
 
         theta = kw['theta_array']
@@ -276,9 +356,9 @@ if __name__ == '__main__':
             if func:
                 t0 = time.time()
                 refl = func(**kw)
-                dt = time.time()-t0
-                label = "{0}\nt = {1:.3g} s".format(
-                    str(func.__name__).split("_")[-1], dt)
+                dt = time.time() - t0
+                label = str(func.__name__).split("_")[-1]
+                label += "\nt = {0:.3g} s".format(dt)
                 plt.plot(theta, refl, label=label, lw=lw, alpha=0.6)
         plt.legend()
         plt.gca().set_xlim(theta[0], theta[-1])

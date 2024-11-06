@@ -1126,7 +1126,7 @@ class Coated(Multilayer):
     @property
     def coating(self):
         return self.bLayer
-    
+
     @coating.setter
     def coating(self, cmat):
         self.bLayer = cmat
@@ -1134,7 +1134,7 @@ class Coated(Multilayer):
     @property
     def cThickness(self):
         return self.bThickness
-    
+
     @cThickness.setter
     def cThickness(self, ct):
         self.bThickness = ct
@@ -1142,10 +1142,11 @@ class Coated(Multilayer):
     @property
     def surfaceRoughness(self):
         return self.idThickness
-    
+
     @surfaceRoughness.setter
     def surfaceRoughness(self, ct):
         self.idThickness = ct
+
 
 class Crystal(Material):
     u"""The parent class for crystals. The descendants must define
@@ -1713,7 +1714,7 @@ class Crystal(Material):
         curvature and asymmetry of the parent optical element to the
         underlying pyTTE.TTcrystal. Returned elastic constants are
         then used for reflectivity/transmittivity calculations.
-        
+
         Parameters
         ----------
         alpha : float
