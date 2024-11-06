@@ -87,7 +87,7 @@ try:
     xrt_cl = mcl.XRT_CL(r'materials.cl', precisionOpenCL='float32',
                         targetOpenCL=targetOpenCL)
     isOpenCL = hasattr(xrt_cl, 'cl_precisionF')
-except ImportError:
+except (ImportError, OSError):  # OSError is here for rtfd.io
     isOpenCL = False
 
 HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
