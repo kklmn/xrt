@@ -1821,6 +1821,10 @@ class Crystal(Material):
         self.set_OE_properties(alphaAsym, Ry, Rx, inPlaneRotation)
 
         geotag = 0 if self.geom.startswith('B') else np.pi*0.5
+        if dh0tag and not geotag:
+            return self.get_amplitude(
+                E, beamInDotNormal, beamOutDotNormal,
+                beamInDotHNormal, xd, yd)
         alphaAsym = 0 if alphaAsym is None else alphaAsym+geotag
         Ryum = Ry*1e3 if Ry not in [np.inf, None] else np.inf  # [um] Meridional
         Rxum = Rx*1e3 if Rx not in [np.inf, None] else np.inf  # [um] Sagittal

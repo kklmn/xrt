@@ -162,8 +162,6 @@ def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
                                        t=thickness,
                                        useTT=True)
 
-    refl = geometry.endswith("lected")
-
     thetaCenter = np.arcsin(rm.ch / (2*crInstance.d*energy))
     E_in = np.ones_like(theta_array) * energy
     theta = theta_array*1e-6 + thetaCenter
@@ -187,9 +185,8 @@ def run_pytte_xrt_opencl(name, crystal, geometry, hkl, thickness, asymmetry,
             E_in, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
             inPlaneRotation=np.radians(in_plane_rotation),
             Ry=bending_Rm*1e3, Rx=bending_Rs*1e3)
-    tmod = int(refl)
-    return tmod * np.abs(ampS)**2 if polarization == "sigma" else\
-        tmod * np.abs(ampP)**2
+
+    return np.abs(ampS)**2 if polarization == "sigma" else np.abs(ampP)**2
 
 
 def run_pytte_xrt_cpu_rk45cpu(name, crystal, geometry, hkl, thickness,
