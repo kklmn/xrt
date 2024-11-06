@@ -1,6 +1,6 @@
 # xrt ![GitHub version](https://img.shields.io/github/v/release/kklmn/xrt)
 
-[![DOI](https://zenodo.org/badge/54989724.svg)](https://zenodo.org/badge/latestdoi/54989724)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1252468.svg)](https://doi.org/10.5281/zenodo.1252468)
 
 Package xrt (XRayTracer) is a python software library for ray tracing and wave
 propagation in x-ray regime. It is primarily meant for modeling synchrotron
