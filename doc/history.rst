@@ -8,9 +8,12 @@ Current GitHub code:
     
     - Enable custom materials in xrtQook.
 
-    - Add hyperbolic and hyperboloid mirrors with focusing test scripts.
+    - Add hyperbolic (HyperbolicMirrorParam) and hyperboloid
+      (HyperboloidCapillaryMirror) mirrors with focusing test scripts
+      `test_param_mirror.py` and `test_hyperboloid_tube_mirror.py`.
 
-    - Add an example for applying a slope error map to a parametric mirror.
+    - Add an example for applying a slope error map to a parametric mirror
+      `examples/withRaycing/13_Warping/ExampleOfSlopeErrorMapToParametricMirror.py`.
 
     - Major rebuild of the documentation on
       `Read the Docs <http://xrt.readthedocs.io>`_ due to changed software
