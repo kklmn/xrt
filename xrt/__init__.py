@@ -155,38 +155,17 @@ Features of xrt
   :ref:`undulators <mesh-methods>`, :ref:`optical elements <test_oes>`,
   :ref:`materials <test_materials>` and :ref:`wave propagation <test_waves>`.
 
-Dependencies
-------------
-
-numpy, scipy and matplotlib are required. If you use OpenCL for calculations on
-GPU or CPU, you need AMD/NVIDIA drivers, ``Intel CPU only OpenCL runtime``
-(these are search key words), pytools and pyopencl. PyQt4 or PyQt5 are needed
-for xrtQook. Spyder (as library of Spyder IDE) is highly recommended for nicer
-view of xrtQook. OpenGL is required for xrtGlow.
-
-See :ref:`detailed instructions for installing dependencies <instructions>`.
-
-Get xrt
--------
-
-xrt is available as source distribution from `pypi.python.org
-<https://pypi.python.org/pypi/xrt>`_ and from `GitHub
-<https://github.com/kklmn/xrt>`_. The distribution archive also includes tests
-and examples. The complete documentation is available online on
-`Read the Docs <http://xrt.readthedocs.io>`_ and offline as
-`zip file on GitHub <https://github.com/kklmn/xrt-docs>`_.
-
 Installation
 ------------
 
-Unzip the .zip file into a suitable directory and use
-`sys.path.append(path-to-xrt)` in your script. You can also install xrt to the
-standard location by running ``python setup.py install`` from the directory
-where you have unzipped the archive, which is less convenient if you try
-different versions of xrt and/or different versions of python. Note that
-python-64-bit is by ~20% faster than the 32-bit version (tested with
-WinPython). Also consider :ref:`Speed tests <tests>` for making choice between
-Windows and Linux and between Python 2 and Python 3.
+Install it by pip or conda or get xrt from
+`GitHub <https://github.com/kklmn/xrt>`_ and use it with or without
+installation. See :ref:`detailed installation instructions <instructions>`.
+
+The distribution archive also includes tests and examples. The complete
+documentation is available online on
+`Read the Docs <http://xrt.readthedocs.io>`_ and offline as
+`zip file on GitHub <https://github.com/kklmn/xrt-docs>`_.
 
 Get help
 --------
