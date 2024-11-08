@@ -283,32 +283,32 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
             geomPrefix = 'l'
         if geom.endswith('transmitted'):
             geomPrefix += 't'
-        ax.set_title(r'{0} Si{1}, $\alpha={2:.1f}^\circ${3}'.format(
+        ax.set_title(r'{0} Si{1}, α={2:.0f}°{3}'.format(
             geom, hkl, alphaDeg, tt), fontsize=14)
 
         path = os.path.join('', 'XOP-RockingCurves') + os.sep
         x, R2s = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_s.xc.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p1, = ax.plot(x, R2s, '-C0', label='s XCrystal')
+        p1, = ax.plot(x/convFactor*1e6, R2s, '-C0', label='s XCrystal')
         x, R2p = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_p.xc.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p2, = ax.plot(x, R2p, '--C0', label='p XCrystal')
+        p2, = ax.plot(x/convFactor*1e6, R2p, '--C0', label='p XCrystal')
 
         x, R2s = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_s.xin.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p3, = ax.plot(x, R2s, '-C1', label='s XInpro')
+        p3, = ax.plot(x/convFactor*1e6, R2s, '-C1', label='s XInpro')
         x, R2p = np.loadtxt("{0}{1}Si{2}_{3}_{4:-.0f}_p.xin.gz".format(path,
                             geomPrefix, hkl, tname, alphaDeg), unpack=True)
-        p4, = ax.plot(x, R2p, '--C1', label='p XInpro')
+        p4, = ax.plot(x/convFactor*1e6, R2p, '--C1', label='p XInpro')
 
-        p7, = ax.plot((theta - thetaCenter) * convFactor, abs(curS)**2, '-C2')
-        p8, = ax.plot((theta - thetaCenter) * convFactor, abs(curP)**2, '--C2')
-        ax.set_xlabel(r'$\theta-\theta_B$ (arcsec)')
+        p7, = ax.plot((theta - thetaCenter)*1e6, abs(curS)**2, '-C2')
+        p8, = ax.plot((theta - thetaCenter)*1e6, abs(curP)**2, '--C2')
+        ax.set_xlabel(r'$\theta-\theta_B$ (µrad)')
         if geom.endswith('transmitted'):
             ax.set_ylabel('transmittivity')
         else:
             ax.set_ylabel('reflectivity')
-        ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
+        ax.set_xlim(dtheta[0]*1e6, dtheta[-1]*1e6)
         ax.set_ylim(0, None)
 
         l1 = ax.legend([p1, p2], ['s', 'p'], loc=legendPos1)
@@ -317,6 +317,8 @@ def compare_rocking_curves(hkl, t=None, geom='Bragg reflected', factDW=1.,
         ax.legend([p1, p3, p7], ['XCrystal/XOP', 'XInpro/XOP', 'xrt'],
                   loc=legendPos2)
         ax.add_artist(l1)
+        fig.text(0.02, 0.98, r'$E$ = {0:.0f} keV'.format(E0*1e-3),
+                 transform=ax.transAxes, size=11, ha='left', va='top')
 
         fname = '{0}Si{1}_{2}_{3:-.0f}'.format(
             geomPrefix, hkl, tname, alphaDeg)
@@ -391,11 +393,11 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
 
         ax.set_title(r'Comparison of Bragg and Laue transmittivity for Si{0}'.
                      format(hkl), fontsize=14)
-        p1, = ax.plot((theta-thetaCenter) * convFactor, abs(braggS)**2, '-C0')
-        p2, = ax.plot((theta-thetaCenter) * convFactor, abs(braggP)**2, '-C1')
-        p3, = ax.plot((theta-thetaCenter) * convFactor, abs(laueS)**2, '-C0.')
-        p4, = ax.plot((theta-thetaCenter) * convFactor, abs(laueP)**2, '-C1.')
-        ax.set_xlabel(r'$\theta-\theta_B$ (arcsec)')
+        p1, = ax.plot((theta-thetaCenter)*1e6, abs(braggS)**2, '-C0')
+        p2, = ax.plot((theta-thetaCenter)*1e6, abs(braggP)**2, '-C1')
+        p3, = ax.plot((theta-thetaCenter)*1e6, abs(laueS)**2, '-C0.')
+        p4, = ax.plot((theta-thetaCenter)*1e6, abs(laueP)**2, '-C1.')
+        ax.set_xlabel(r'$\theta-\theta_B$ (µrad)')
         ax.set_ylabel('transmittivity')
 
         l1 = ax.legend([p1, p2], ['s', 'p'], loc='lower left')
@@ -403,13 +405,13 @@ def compare_Bragg_Laue(hkl, beamPath, factDW=1.):
             siBraggCrystal.t * 1e3), u'Laue t={0:.1f} µm'.format(
             siLaueCrystal.t * 1e3)], loc='upper left')
         ax.add_artist(l1)
-        ax.set_xlim([dtheta[0] * convFactor, dtheta[-1] * convFactor])
+        ax.set_xlim(dtheta[0]*1e6, dtheta[-1]*1e6)
 
         fname = r'BraggLaueTrSi{0}'.format(hkl)
         fig.savefig(fname + '.png')
 
     E0 = 10000.
-    convFactor = 180 / math.pi * 3600.  # arcsec
+    # convFactor = 180 / math.pi * 3600.  # arcsec
     if hkl == '111':  # Si111
         dtheta = np.linspace(-100, 100, 400) * 1e-6
         dSpacing = 3.13562
@@ -928,11 +930,11 @@ def run_tests():
 
 # Compare the calculated rocking curves of Si crystals with those calculated by
 # XCrystal and XInpro (parts of XOP):
-    # compare_rocking_curves('333')
-    # compare_rocking_curves('333', t=0.100)  # t is thickness in mm
-    # compare_rocking_curves('333', t=0.100, geom='Bragg transmitted')
-    # compare_rocking_curves('333', t=0.100, geom='Laue reflected')
-    # compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
+    compare_rocking_curves('333')
+    compare_rocking_curves('333', t=0.100)  # t is thickness in mm
+    compare_rocking_curves('333', t=0.100, geom='Bragg transmitted')
+    compare_rocking_curves('333', t=0.100, geom='Laue reflected')
+    compare_rocking_curves('333', t=0.100, geom='Laue transmitted')
 
 # check that Bragg transmitted and Laue transmitted give the same results if
 # the beam path is equal:
@@ -961,7 +963,7 @@ def run_tests():
 
 # Compare the calculated transmittivity with that by XPower
 # (part of XOP):
-    compare_transmittivity()
+    # compare_transmittivity()
 
 # Play with Si crystal:
     # crystalSi = rm.CrystalSi(hkl=(1, 1, 1), tK=100.)

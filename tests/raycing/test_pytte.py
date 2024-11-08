@@ -117,14 +117,14 @@ case1 = {
     "name": "Bragg Flat",
     "crystal": "Si", # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
     "geometry": "Bragg reflected",  # Combination of Bragg/Laue reflected/transmitted
-    "hkl": [1, 1, 1],
+    "hkl": [3, 3, 3],
     "thickness": 1.,  # mm
     "asymmetry": 0.,  # degrees
     "in_plane_rotation": 0.,  # degrees
     "bending_Rm": np.inf,  # meters
     "bending_Rs": np.inf,  # meters
-    "energy": 9000,  # eV
-    "theta_array": np.linspace(-50, 100, 800),  # microrad
+    "energy": 10000,  # eV
+    "theta_array": np.linspace(-40, 40, 800),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float32"  # Only for opencl backend. "float64" for Laue
     }
@@ -133,14 +133,14 @@ case2 = {
     "name": "Bragg 1D bent",
     "crystal": "Si", # select from ('Si', 'Ge', 'Diamond', 'InSb', 'AlphaQuartz', 'Sapphire')
     "geometry": "Bragg reflected",  # Combination of Bragg/Laue reflected/transmitted
-    "hkl": [1, 1, 1],
+    "hkl": [3, 3, 3],
     "thickness": 0.7,  # mm
     "asymmetry": 5.,  # degrees
     "in_plane_rotation": 0.,  # degrees
     "bending_Rm": 10.,  # meters
     "bending_Rs": np.inf,  # meters
-    "energy": 9000.,  # eV
-    "theta_array": np.linspace(-50, 100, 800),  # microrad
+    "energy": 10000.,  # eV
+    "theta_array": np.linspace(-40, 40, 800),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float32"  # Only for opencl backend. "float64" for Laue
     }
@@ -155,8 +155,8 @@ case3 = {
     "in_plane_rotation": 0.,  # degrees
     "bending_Rm": 10.,  # meters
     "bending_Rs": 10,  # meters
-    "energy": 19000,  # eV
-    "theta_array": np.linspace(-50, 50, 800),  # microrad
+    "energy": 20000,  # eV
+    "theta_array": np.linspace(-40, 40, 800),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float32"  # Only for opencl backend. "float64" for Laue
     }
@@ -171,8 +171,8 @@ case4 = {
     "in_plane_rotation": 60.,  # degrees
     "bending_Rm": 10.,  # meters
     "bending_Rs": np.inf,  # meters
-    "energy": 29000,  # eV
-    "theta_array": np.linspace(-50, 50, 1500),  # microrad
+    "energy": 30000,  # eV
+    "theta_array": np.linspace(-50, 50, 1000),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
@@ -188,7 +188,7 @@ case5 = {
     "bending_Rm": 20.,  # meters
     "bending_Rs": 20,  # meters
     "energy": 60000,  # eV
-    "theta_array": np.linspace(-40, 100, 1500),  # microrad
+    "theta_array": np.linspace(-40, 100, 1400),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
@@ -203,8 +203,8 @@ case6 = {
     "in_plane_rotation": 60.,  # degrees
     "bending_Rm": 10.,  # meters
     "bending_Rs": np.inf,  # meters
-    "energy": 29000,  # eV
-    "theta_array": np.linspace(-50, 50, 1500),  # microrad
+    "energy": 30000,  # eV
+    "theta_array": np.linspace(-50, 50, 1000),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
@@ -220,7 +220,7 @@ case7 = {
     "bending_Rm": 20.,  # meters
     "bending_Rs": 20,  # meters
     "energy": 60000,  # eV
-    "theta_array": np.linspace(-40, 100, 1500),  # microrad
+    "theta_array": np.linspace(-40, 100, 1400),  # microrad
     "polarization": "sigma",  # or "pi"
     "precision": "float64"  # Only for opencl backend. "float64" for Laue
     }
@@ -336,8 +336,10 @@ if __name__ == '__main__':
     for icp, kw in enumerate(cases):
         plt.figure(icp)
         plt.xlabel(r'$\theta-\theta_B$ (µrad)')
-        plt.ylabel('|Amplitude|²')
-        title = "{0}, {1}-mm-thick {2}{3} at {4:.1f} keV".format(
+        ylabel = 'reflectivity' if kw["geometry"].endswith("lected") else \
+            'transmittivity'
+        plt.ylabel(ylabel)
+        title = "{0}, {1}-mm-thick {2}{3} at {4:.0f} keV".format(
             kw["name"], kw["thickness"], kw["crystal"],
             ''.join([str(m) for m in kw["hkl"]]), kw["energy"]*1e-3)
         title2 = []
