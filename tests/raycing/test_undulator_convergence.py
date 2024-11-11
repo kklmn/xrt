@@ -11,22 +11,31 @@ This is a study of a tapered undulator created from
 shown below.
 
 .. imagezoom:: _images/B_vs_Z.png
+   :align: center
 
 The output of `IntegratedSource.test_convergence()` shows convergence of the
 calculated intensity signaled by various indicators:
 
 .. imagezoom:: _images/test_convergence.png
-    
-The transverse intensity distribution vs number of nodes:
+   :align: center
 
-.. video:: _videos/Imap_frames.mp4
++-----------------+-----------------+
+| |Imap_frames_t| |  |Imap_flux_t|  |
++-----------------+-----------------+
+| |Imap_frames_v| |  |Imap_flux_i|  |
++-----------------+-----------------+
+
+.. |Imap_frames_t| replace:: Transverse intensity distribution vs number of nodes
+
+.. |Imap_frames_v| video:: _videos/Imap_frames.mp4
    :controls:
    :loop:
 
-The flux distribution vs number of nodes:
+.. |Imap_flux_t| replace:: Flux distribution vs number of nodes
 
-.. imagezoom:: _images/Total_flux.png
-       
+.. |Imap_flux_i| imagezoom:: _images/Total_flux.png
+   :loc: lower-right-corner
+
 """
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"

@@ -3,6 +3,8 @@ r"""
 Reflection from asymmetrically cut crystal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+See the script: `tests/raycing/test_asymmetric_xtal.py`.
+
 A monochromatic beam of *E* = 2840 eV is diffracted by a Si111 crystal with
 θ\ :sub:`B`\ = 44.132 deg and α = -20.054 deg, which results in *b* = -0.453.
 
@@ -15,8 +17,12 @@ departure angle 2θ\ :sub:`B` seen on the exit screen which is put normally to
 The ray-traced deviation -106 µrad is close to the calculated refractive shift
 -105 µrad.
 
-.. imagezoom:: _images/0-zzP-source,alpha=-0.350.png
-.. imagezoom:: _images/2-zzP-afterXtal,alpha=-0.350.png
++-------------------+-------------------+
+| |asymXtal_before| | |asymXtal_after|  |
++-------------------+-------------------+
+
+.. |asymXtal_before| imagezoom:: _images/0-zzP-source,alpha=-0.350.png
+.. |asymXtal_after| imagezoom:: _images/2-zzP-afterXtal,alpha=-0.350.png
 
 """
 __author__ = "Konstantin Klementiev"

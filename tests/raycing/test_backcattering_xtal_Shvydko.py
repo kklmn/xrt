@@ -3,9 +3,12 @@ u"""
 Reflectivity from highly asymmetric crystal in backscattering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+See the script: `tests/raycing/test_backcattering_xtal_Shvydko.py`.
+
 A test for the optical scheme from [ShvydkoPRL2006]_, Fig 3.
 
 .. imagezoom:: _images/shvydko-rc-ver.png
+   :align: center
 
 The blue curve was ray-traced by xrt. The dotted curve is a reconstruction from
 Fig. 4 of [ShvydkoPRL2006]_. The dispersion rate was calculated from a linear
