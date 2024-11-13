@@ -1,4 +1,4 @@
 ﻿# -*- coding: utf-8 -*-
-__versioninfo__ = (1, 6, 0)
+__versioninfo__ = (1, 6, 1)
 __version__ = '.'.join(map(str, __versioninfo__))
-__date__ = "17 Jul 2023"
+__date__ = "13 Nov 2024"

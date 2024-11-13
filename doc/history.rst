@@ -4,12 +4,15 @@ Version history
 ---------------
 
 Current GitHub code:
+    --
+
+1.6.1 (13 Nov 2024):
     - Minor bug fixes.
     
     - Enable custom materials in xrtQook.
 
-    - Add hyperbolic (HyperbolicMirrorParam) and hyperboloid
-      (HyperboloidCapillaryMirror) mirrors with focusing test scripts
+    - Add hyperbolic (oes.HyperbolicMirrorParam) and hyperboloid
+      (oes.HyperboloidCapillaryMirror) mirrors with focusing test scripts
       `test_param_mirror.py` and `test_hyperboloid_tube_mirror.py`.
 
     - Add an example for applying a slope error map to a parametric mirror
