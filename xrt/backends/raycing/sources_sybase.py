@@ -38,7 +38,7 @@ class SourceBase:
                  eMin=5000., eMax=15000., distE='eV',
                  xPrimeMax=0.5, zPrimeMax=0.5, R0=None,
                  uniformRayDensity=False, filamentBeam=False,
-                 pitch=0, yaw=0, eN=51, nx=25, nz=25):
+                 pitch=0, yaw=0, eN=51, nx=25, nz=25, **kwargs):
         u"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
@@ -120,6 +120,10 @@ class SourceBase:
                 bl.sources.append(self)
                 self.ordinalNum = len(bl.sources)
         raycing.set_name(self, name)
+
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

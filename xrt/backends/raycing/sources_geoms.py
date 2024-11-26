@@ -142,7 +142,7 @@ class GeometricSource(object):
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', filamentBeam=False,
-            uniformRayDensity=False, pitch=0, roll=0, yaw=0):
+            uniformRayDensity=False, pitch=0, roll=0, yaw=0, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -216,6 +216,9 @@ class GeometricSource(object):
 #                                        self.ordinalNum)
 #        else:
 #            self.name = name
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         self.center = center  # 3D point in global system
         self.nrays = np.int64(nrays)
@@ -390,7 +393,7 @@ class GaussianBeam(object):
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
-            polarization='horizontal', pitch=0, roll=0, yaw=0):
+            polarization='horizontal', pitch=0, roll=0, yaw=0, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -435,6 +438,9 @@ class GaussianBeam(object):
 #                                        self.ordinalNum)
 #        else:
 #            self.name = name
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         self.center = center  # 3D point in global system
         self.w0 = w0
@@ -646,7 +652,7 @@ class MeshSource(object):
         minzprime=-1e-4, maxzprime=1e-4, nx=11, nz=11,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', withCentralRay=True,
-            autoAppendToBL=False):
+            autoAppendToBL=False, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -698,6 +704,9 @@ class MeshSource(object):
 #                                        self.ordinalNum)
 #        else:
 #            self.name = name
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         self.center = center  # 3D point in global system
         self.minxprime = raycing.auto_units_angle(minxprime)
@@ -815,7 +824,7 @@ class CollimatedMeshSource(object):
         self, bl=None, name='', center=(0, 0, 0), dx=1., dz=1., nx=11, nz=11,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', withCentralRay=True,
-            autoAppendToBL=False):
+        autoAppendToBL=False, **kwargs):
         self.bl = bl
         if autoAppendToBL:
             if bl is not None:
@@ -829,6 +838,9 @@ class CollimatedMeshSource(object):
 #                                        self.ordinalNum)
 #        else:
 #            self.name = name
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         self.center = center  # 3D point in global system
         self.dx = dx
