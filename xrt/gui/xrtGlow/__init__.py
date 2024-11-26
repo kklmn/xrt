@@ -1499,7 +1499,7 @@ class xrtGlow(qt.QWidget):
 
     def loadScene(self, filename):
         try:
-            params = np.load(filename).item()
+            params = np.load(filename, allow_pickle=True).item()
         except:  # analysis:ignore
             print('Error loading file')
             return
