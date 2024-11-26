@@ -34,7 +34,7 @@ class Screen(object):
     """Flat screen for beam visualization."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0], x='auto', z='auto',
-                 compressX=None, compressZ=None):
+                 compressX=None, compressZ=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -71,6 +71,10 @@ class Screen(object):
         self._x = x
         self._z = z
         self._set_orientation()
+
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

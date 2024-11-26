@@ -171,10 +171,20 @@ import types
 import sys
 import numpy as np
 # from itertools import compress
+from itertools import islice
 from collections import OrderedDict
 import re
 import copy
 import inspect
+import uuid
+import importlib
+import json
+import xml.etree.ElementTree as ET
+
+if sys.version_info < (3, 1):
+    from inspect import getargspec
+else:
+    from inspect import getfullargspec as getargspec
 
 import colorama
 colorama.init(autoreset=True)
@@ -198,6 +208,13 @@ else:
     basestring = basestring
 
 from .physconsts import SIE0  # analysis:ignore
+
+
+safe_globals = {
+    'np': np,
+#    'math': math,
+    '__builtins__': {}  # Disable built-in functions
+}
 
 stateGood, stateOut, stateOver = 1, 2, 3
 
@@ -860,6 +877,235 @@ def quat_vec_rotate(vec, q):
         q, vec_to_quat(vec, np.pi*0.25)), qn)[1:]
 
 
+def get_init_val(value):
+    if str(value) == 'round':
+        return str(value)
+    try:
+        return eval(str(value), safe_globals)
+    except (NameError, SyntaxError):  # Intentionally string
+        return str(value)
+
+
+def get_params(objStr):  # Returns a collection of default parameters
+    uArgs = OrderedDict()
+    args = []
+    argVals = []
+#    objStr = "{0}.{1}".format(oeObj.__module__, type(oeObj).__name__)
+    components = objStr.split('.')
+    module_path = '.'.join(components[:-1])
+    class_name = components[-1]
+    moduleObj = importlib.import_module(module_path)
+
+    try:
+        objRef = getattr(moduleObj, class_name)
+    except:  # TODO: remove if works correctly
+        raise
+
+    isMethod = False
+    if hasattr(objRef, 'hiddenParams'):
+        hpList = objRef.hiddenParams
+    else:
+        hpList = []
+
+    if inspect.isclass(objRef):
+        for parent in (inspect.getmro(objRef))[:-1]:
+            for namef, objf in inspect.getmembers(parent):
+                if inspect.ismethod(objf) or inspect.isfunction(objf):
+                    argSpec = getargspec(objf)
+                    if namef == "__init__":
+                        argnames = []
+                        argdefaults = []
+                        if argSpec[3] is not None:
+                            argnames = argSpec[0][1:]
+                            argdefaults = argSpec[3]
+                        elif hasattr(argSpec, 'kwonlydefaults') and\
+                                argSpec.kwonlydefaults:
+                            argnames = argSpec.kwonlydefaults.keys()
+                            argdefaults = argSpec.kwonlydefaults.values()
+                        for arg, argVal in zip(argnames, argdefaults):
+                            if arg == 'bl':
+                                argVal = None
+                            if arg not in args and arg not in hpList:
+                                uArgs[arg] = argVal
+                    if namef == "__init__" or namef.endswith("pop_kwargs"):
+                        kwa = re.findall(r"(?<=kwargs\.pop).*?\)",
+                                         inspect.getsource(objf),
+                                         re.S)
+                        if len(kwa) > 0:
+                            kwa = [re.split(
+                                ",", kwline.strip("\n ()"),
+                                maxsplit=1) for kwline in kwa]
+                            for kwline in kwa:
+                                arg = kwline[0].strip("\' ")
+                                if len(kwline) > 1:
+                                    argVal = kwline[1].strip("\' ")
+                                else:
+                                    argVal = "None"
+                                if arg not in args and arg not in hpList:
+                                    uArgs[arg] = get_init_val(argVal)
+                    attr = 'varkw' if hasattr(argSpec, 'varkw') else \
+                        'keywords'
+                    if namef == "__init__" and\
+                            str(argSpec.varargs) == 'None' and\
+                            str(getattr(argSpec, attr)) == 'None':
+                        break  # To prevent the parent class __init__
+            else:
+                continue
+            break
+    elif inspect.ismethod(objRef) or inspect.isfunction(objRef):
+        argList = inspect.getargspec(objRef)
+        if argList[3] is not None:
+            if objRef.__name__ == 'run_ray_tracing':
+                uArgs = OrderedDict(zip(argList[0], argList[3]))
+            else:
+                isMethod = True
+                uArgs = OrderedDict(zip(argList[0][1:], argList[3]))
+
+    if hasattr(moduleObj, 'allArguments') and not isMethod:
+        for argName in moduleObj.allArguments:
+            if str(argName) in uArgs.keys():
+                args.append(argName)
+                argVals.append(uArgs[argName])
+    else:
+        args = list(uArgs.keys())
+        argVals = list(uArgs.values())
+    return zip(args, argVals)
+
+
+def parametrize(value):
+    value = get_init_val(value)
+    if isinstance(value, tuple):
+        value = list(value)
+    return value
+
+
+def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
+    kwargs = OrderedDict()
+
+    for paraname, paravalue in paramDictStr.items():
+        if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
+                paravalue == 'bl':
+
+            if paraname == 'center':
+                paravalue = paravalue.strip('[]() ')
+                paravalue =\
+                    [get_init_val(c.strip())
+                     for c in str.split(
+                     paravalue, ',')]
+            elif paraname.startswith('material'):
+                paravalue = beamLine.materialsDict[paravalue]
+            elif paraname == 'bl':
+                paravalue = beamLine
+            else:
+                paravalue = parametrize(paravalue)
+            kwargs[paraname] = paravalue
+    return kwargs
+
+
+def create_paramdict_mat(paramDictStr, defArgs, matDict=None):
+    kwargs = OrderedDict()
+
+    for paraname, paravalue in paramDictStr.items():
+        if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
+                paravalue == 'bl':
+            if paraname.lower() in ['tlayer', 'blayer', 'coating',
+                                    'substrate']:
+                paravalue = matDict[paravalue]
+            else:
+                paravalue = parametrize(paravalue)
+            kwargs[paraname] = paravalue
+    return kwargs
+
+
+def get_obj_str(obj):
+    return "{0}.{1}".format(obj.__module__, type(obj).__name__)
+
+
+def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
+
+    if needRevG:
+        globRev = {str(v): k for k, v in globals().items()}
+
+    defArgs = dict(get_params(get_obj_str(oeObj)))
+
+    initArgs = {}
+    for arg, val in defArgs.items():
+        try:
+            if hasattr(oeObj, arg):
+                if arg == 'data':
+                    continue
+                realval = getattr(oeObj, arg)
+                if arg == 'bl':
+                    realval = blname
+                if arg == 'elements':
+                    realval = [x.name for x in realval]
+
+                if str(arg).lower().startswith(
+                        ('material', 'coating', 'substrate', 'tlay', 'blay')):
+                    if hasattr(realval, 'uuid'):
+                        realval = realval.uuid
+                    elif needRevG:
+                        realval = globRev[str(realval)]
+                    else:
+                        print("Do something with your material")
+                        raise
+                if realval != val:
+                    defArgs[arg] = str(realval)
+                    if compact:
+                        initArgs[arg] = str(realval)
+                else:
+                    defArgs[arg] = str(val)
+            else:
+                defArgs[arg] = str(val)
+
+        except RuntimeError:  # Unclear error on plot init
+            pass
+
+    return initArgs if compact else defArgs
+
+#def prepare_beams(run_prc):
+#    def collect_beams(bl):
+#        run_prc(bl)
+#        outDict = {}
+#        for _, oeLn in bl.oesDict.items():
+#            oe = oeLn[0]
+#            if hasattr(oe, 'beamsOut'):
+#                for bName, bObj in oe.beamsOut.items():
+#                    if bName not in ['beamIn']:
+#                        outDict[f"{oe.name}_{bName}"] = bObj
+#        return outDict
+#    return collect_beams
+
+
+def is_valid_uuid(uuid_string):
+    try:
+        _ = uuid.UUID(uuid_string)
+        return True
+    except ValueError:
+        return False
+
+
+def run_process_from_file(beamLine):
+    outDict = {}
+    for OE, methStr, fArgsStrDict, outArgStr in beamLine.flowList:
+        fArgs = {}
+        for argName, argVal in fArgsStrDict.items():
+            if argName == "beam":
+                fArgs[argName] = outDict[argVal]
+            else:
+                fArgs[argName] = parametrize(argVal)
+
+        outBeams = getattr(OE, methStr)(**fArgs)
+        if isinstance(outBeams, tuple):
+            for outBeam, beamName in zip(list(outBeams),
+                                         list(outArgStr)):
+                outDict[beamName] = outBeam
+        else:
+            outDict[list(outArgStr)[0]] = outBeams
+
+    return outDict
+
+
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
@@ -870,7 +1116,7 @@ class BeamLine(object):
             for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
                 setattr(self, prop, np.zeros(2))
 
-    def __init__(self, azimuth=0., height=0., alignE='auto'):
+    def __init__(self, azimuth=0., height=0., alignE='auto', fileName=None):
         u"""
         *azimuth*: float
             Is counted in cw direction from the global Y axis. At
@@ -909,6 +1155,11 @@ class BeamLine(object):
         self.beamsRevDictUsed = {}
         self.blViewer = None
         self.statusSignal = None
+        if fileName:
+            if str(fileName).lower().endswith("xml"):
+                self.load_from_xml(fileName)
+            elif str(fileName).lower().endswith("json"):
+                self.load_from_json(fileName)
 
     @property
     def azimuth(self):
@@ -1345,3 +1596,146 @@ class BeamLine(object):
             if tBeam is not None:
                 calc_weighted_center(tBeam)
         return [rayPath, beamDict, oesDict]
+
+    def init_oe_from_json(self, elProps):
+        oeModule, oeClass = elProps['_object'].rsplit('.', 1)
+        oeModule = importlib.import_module(oeModule)
+        oeParams = elProps['properties']
+        defArgs = dict(get_params(elProps['_object']))
+        initKWArgs = create_paramdict_oe(oeParams, defArgs, self)
+
+        try:
+            oeObject = getattr(oeModule, oeClass)(**initKWArgs)
+        except:  # TODO: Needs testing
+            print(oeClass, "Init problem")
+            raise
+
+        flowLine = None
+
+        for methStr, methArgs in elProps.items():
+            if methStr in ['properties', '_object']:
+                continue
+            else:
+                flowLine = (oeObject, methStr, dict(methArgs['parameters']),
+                            list(methArgs['output'].values()))
+                break
+        self.flowList.append(flowLine)
+        return oeObject
+
+    def populate_oes_dict_from_json(self, dictIn):
+        self.flowList = []
+        for elName, elProps in dictIn.items():
+            if elName in ['properties', '_object']:
+                continue
+            oeObj = self.init_oe_from_json(elProps)
+            if is_valid_uuid(elName):
+                elKey = elName
+                if hasattr(oeObj, 'uuid'):
+                    self.oesDict.pop(oeObj.uuid, None)
+                oeObj.uuid = elKey
+            elif hasattr(oeObj, 'uuid'):
+                elKey = oeObj.uuid
+            else:  # Should never be here
+                elKey = str(uuid.uuid4())
+                oeObj.uuid = elKey
+
+            self.oesDict[elKey] = oeObj
+
+    def init_material_from_json(self, matName, dictIn, materialsDict):
+        matModule, matClass = dictIn['_object'].rsplit('.', 1)
+        matModule = importlib.import_module(matModule)
+        matParams = dictIn['properties']
+        defArgs = dict(get_params(dictIn['_object']))
+        initKWArgs = create_paramdict_mat(matParams, defArgs, materialsDict)
+        try:
+            matObject =getattr(matModule, matClass)(**initKWArgs)
+        except:  # TODO: Needs testing
+            print(matClass, "Init problem")
+            raise
+        return matObject
+
+    def populate_materials_dict_from_json(self, dictIn):
+        for matName, matProps in dictIn.items():
+            self.materialsDict[matName] = self.init_material_from_json(
+                    matName, matProps, self.materialsDict)
+
+    def load_from_xml(self, openFileName):
+        def xml_to_dict(element):
+            # Recursively convert XML elements into a dictionary
+            if len(element) == 0:  # Base case: if element has no children
+                return element.text
+
+            result = OrderedDict()
+            for child in element:
+                result[child.tag] = xml_to_dict(child)
+
+            return result
+
+        treeImport = ET.parse(openFileName)
+        root = treeImport.getroot()
+        xml_dict = OrderedDict()
+        xml_dict[root.tag] = xml_to_dict(root)
+        self.deserialize(xml_dict)
+
+    def load_from_json(self, openFileName):
+        with open(openFileName, 'r') as file:
+            data = json.load(file)
+        self.deserialize(data)
+
+    def deserialize(self, data):
+        self.layoutStr = data
+        beamlineName = next(islice(data['Project'].keys(), 2, 3))
+        self.name = beamlineName
+        beamlineInitKWargs = data['Project'][beamlineName]['properties']
+        for key, value in beamlineInitKWargs.items():
+            setattr(self, key, get_init_val(value))
+
+        self.populate_materials_dict_from_json(data['Project']['Materials'])
+        self.populate_oes_dict_from_json(data['Project'][beamlineName])
+
+    def export_to_json(self):
+        matDict = OrderedDict()
+        for objName, objInstance in self.materialsDict.items():
+            matRecord = OrderedDict()
+            matRecord['properties'] = get_init_kwargs(objInstance)
+            matRecord['_object'] = get_obj_str(objInstance)
+            if not matRecord['properties']['name']:
+                matRecord['properties']['name'] = objName
+            field = objInstance.uuid if hasattr(objInstance, 'uuid') else objName
+            matDict[field] = matRecord
+
+        blArgs = get_init_kwargs(self)
+
+        beamlineDict = OrderedDict()
+        beamlineDict['properties'] = blArgs
+        beamlineDict['_object'] = get_obj_str(self)
+
+        for oeid, oeline in self.oesDict.items():
+            oeObj = oeline[0]
+            oeRecord = OrderedDict()
+            oeRecord['properties'] = get_init_kwargs(oeObj, blname='beamLine')
+            oeRecord['_object'] = get_obj_str(oeObj)
+            beamlineDict[oeid] = oeRecord
+
+        beamsDict = {}
+
+        for segment in self.flow:
+            method = segment[1]
+            module = method.__module__
+            class_name = method.__class__.__name__
+            method_name = method.__name__
+            methDict = OrderedDict()
+            methDict['_object'] = "{0}.{1}.{2}".format(module, class_name,
+                    method_name)
+            methDict['parameters'] = {k: str(v) for k, v in segment[2].items()}
+            methDict['output'] = segment[3]
+            beamlineDict[segment[0]][method_name] = methDict
+            for bname in segment[3].values():
+                beamsDict[bname] = None
+
+        projectDict = OrderedDict()
+        projectDict['Beams'] = beamsDict
+        projectDict['Materials'] = matDict
+        projectDict['beamLine'] = beamlineDict
+
+        return projectDict

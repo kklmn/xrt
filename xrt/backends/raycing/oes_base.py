@@ -97,7 +97,7 @@ class OE(object):
         limPhysY=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptY=None, isParametric=False, shape='rect',
         gratingDensity=None, order=None, shouldCheckCenter=False,
-            targetOpenCL=None, precisionOpenCL='float64'):
+            targetOpenCL=None, precisionOpenCL='float64', **kwargs):
         r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -263,6 +263,10 @@ class OE(object):
 #        elif not hasattr(self, 'name'):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
+
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

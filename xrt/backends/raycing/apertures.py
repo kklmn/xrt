@@ -62,7 +62,7 @@ class RectangularAperture(object):
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
                  opening=[-10, 10, -10, 10], x='auto', z='auto',
-                 alarmLevel=None):
+                 alarmLevel=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -108,6 +108,9 @@ class RectangularAperture(object):
 #        elif not hasattr(self, 'name'):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -530,7 +533,8 @@ class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
 
     def __init__(self, bl=None, name='',
-                 center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None):
+                 center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None,
+                 **kwargs):
         """ A round aperture aperture.
 
         *r* is the radius.
@@ -556,6 +560,9 @@ class RoundAperture(object):
 #        elif not hasattr(self, 'name'):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -874,7 +881,7 @@ class PolygonalAperture(object):
     vertices."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
-                 opening=None, x='auto', z='auto', alarmLevel=None):
+                 opening=None, x='auto', z='auto', alarmLevel=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -914,6 +921,10 @@ class PolygonalAperture(object):
                 self.ordinalNum if bl is not None else '')
         else:
             self.name = name
+
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

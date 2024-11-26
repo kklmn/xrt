@@ -308,7 +308,7 @@ class Material(object):
 
     def __init__(self, elements=None, quantities=None, kind='auto', rho=0,
                  t=None, table='Chantler total', efficiency=None,
-                 efficiencyFile=None, name='', refractiveIndex=None):
+                 efficiencyFile=None, name='', refractiveIndex=None, **kwargs):
         r"""
         *elements*: str or sequence of str
             Contains all the constituent elements (symbols)
@@ -434,6 +434,10 @@ class Material(object):
         self.efficiencyFile = efficiencyFile
         if efficiencyFile is not None:
             self.read_efficiency_file()
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
+
 
     @property
     def refractiveIndex(self):
@@ -493,7 +497,7 @@ class Material(object):
                         # if fields[0].strip('\"').startswith('Photon'):
                         #   continue
                         try:
-                            tmpv = float(fields[0])
+                            _ = float(fields[0])
                         except ValueError:
                             continue
                         if len(fields) < 3:
@@ -703,7 +707,7 @@ class Multilayer(object):
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
                  idThickness=0., power=2., substRoughness=0,
-                 substThickness=np.inf, name='', geom='reflected'):
+                 substThickness=np.inf, name='', geom='reflected', **kwargs):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
@@ -762,6 +766,9 @@ class Multilayer(object):
             self.name = name
         else:
             self.name = ''
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:
@@ -1152,8 +1159,6 @@ class Crystal(Material):
     u"""The parent class for crystals. The descendants must define
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
-
-#    hiddenParams = ['nuPoisson', 'calcBorrmann']
 
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
@@ -2473,7 +2478,8 @@ class CrystalFromCell(Crystal):
                  atomsFraction=None, tK=0,
                  t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler total',
-                 nuPoisson=0., calcBorrmann=None, useTT=False, mosaicity=0):
+                 volumetricDiffraction=False, useTT=False, nu=0, mosaicity=0,
+                 **kwargs):
         u"""
         *name*: str
             Crystal name. Not used by xrt.
@@ -2505,32 +2511,14 @@ class CrystalFromCell(Crystal):
         *atomsFraction*: a list of float or None
             Atomic fractions. If None, all values are 1.
 
-        *nuPoisson*: float
-            Poisson's ratio. Used to calculate the properties of bent crystals.
-
-        *calcBorrmann*: str
-            Controls the origin of the ray leaving the crystal. Can be 'None',
-            'uniform', 'Bessel' or 'TT'. If 'None', the point of reflection
-            is located on the surface of incidence. In all other cases the
-            coordinate of the exit point is sampled according to the
-            corresponding distribution: 'uniform' is a fast approximation for
-            thick crystals, 'Bessel' is exact solution for the flat crystals,
-            'TT' is exact solution of Takagi-Taupin equations for bent and flat
-            crystals ('TT' requires *targetOpenCL* in the Optical Element to be
-            not 'None' and *useTT* in the :class:`Crystal` to be 'True'. Not
-            recommended for crystals thicker than 100 µm due to heavy
-            computational load).
-
-        *useTT*: bool
-            Specifies whether the reflectivity will by calculated by analytical
-            formula or by solution of the Takagi-Taupin equations (so far only
-            for the Laue geometry). Must be set to 'True' in order to calculate
-            the reflectivity of bent crystals.
-
 
         """
 
         self.name = name
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
+        # TODO: Do we want to call Crystal init()?
         self.hkl = hkl
         h, k, l = hkl  # analysis:ignore
         self.tK = 0
@@ -2576,8 +2564,8 @@ class CrystalFromCell(Crystal):
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
-        self.nuPoisson = nuPoisson
-        self.calcBorrmann = calcBorrmann
+        self.volumetricDiffraction = volumetricDiffraction
+        self.nu = nu
         self.useTT = useTT
         self.mosaicity = mosaicity
 
