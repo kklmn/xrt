@@ -51,6 +51,7 @@ from scipy.spatial import Delaunay
 from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict
 import freetype as ft
+from matplotlib import font_manager
 
 from ...backends import raycing
 from ...backends.raycing import sources as rsources
@@ -7169,10 +7170,25 @@ class CoordinateBox():
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
             ch[0].release()
 
+    def get_sans_font(self):
+        fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Liberation Sans", "Sans-serif"]
+
+        available_fonts = [font_manager.FontProperties(fname=path).get_name()
+                           for path in font_manager.findSystemFonts()]
+
+        for font in fallback_fonts:
+            if font in available_fonts:
+                return font
+
+        return "Sans-serif"
+
     def makefont(self):
-        fontpath = os.path.dirname(__file__)
-        filename = os.path.join(fontpath, self.fontFile)
-        face = ft.Face(filename)
+#        fontpath = os.path.dirname(__file__)
+#        filename = os.path.join(fontpath, self.fontFile)
+        fontName = self.get_sans_font()
+        print("Font found:", fontName)
+        font_path = font_manager.findfont(fontName)
+        face = ft.Face(font_path)
         face.set_pixel_sizes(self.fontSize*10, self.fontSize*10)
 #        faceTexture = ft.Face(filename)
 #        faceTexture.set_pixel_sizes(self.fontSize, self.fontSize)
