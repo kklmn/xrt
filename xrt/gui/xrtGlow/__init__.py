@@ -6718,7 +6718,7 @@ class CoordinateBox():
         self.characters = []
         self.fontSize = 20
         self.fontScale = 5.
-        self.fontFile = 'FreeSans-LrmZ.ttf'
+        self.fontFile = 'FreeSans.ttf'
 #        self.vquad = [
 #          # x   y  u  v
 #            0, 1, 0, 0,
