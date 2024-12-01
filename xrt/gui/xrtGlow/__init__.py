@@ -696,7 +696,7 @@ class xrtGlow(qt.QWidget):
                  self.checkShowLost,
                  self.checkShowLocalAxes])):
             aaCheckBox = qt.QCheckBox(cbText)
-            aaCheckBox.setChecked(iCB in [1, 2])
+            aaCheckBox.setChecked(iCB in [1])
             aaCheckBox.stateChanged.connect(cbFunc)
             self.sceneControls.append(aaCheckBox)
             sceneLayout.addWidget(aaCheckBox)
@@ -1858,7 +1858,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.lineWidth = 1
         self.pointOpacity = 0.1
         self.pointSize = 1
-        self.linesDepthTest = True
+        self.linesDepthTest = False
         self.pointsDepthTest = False
         self.labelCoordPrec = 1
 
