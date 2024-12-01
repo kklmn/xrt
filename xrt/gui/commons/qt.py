@@ -121,7 +121,7 @@ if not starImport:
      QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
-     QPushButton, QDialog) = (
+     QPushButton, QDialog, QOpenGLWidget) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -132,12 +132,18 @@ if not starImport:
         myQtGUI.QLabel, myQtGUI.QTableView, myQtGUI.QSizePolicy,
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
-        myQtGUI.QDialog)
+        myQtGUI.QDialog, myQtGUI.QOpenGLWidget)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
-     QDoubleValidator, QIntValidator, QDrag) = (
+     QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture, 
+     QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D, 
+     QVector2D,
+     QQuaternion, QOpenGLVertexArrayObject, QOpenGLBuffer) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
         QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
-        QtGui.QIntValidator, QtGui.QDrag)
+        QtGui.QIntValidator, QtGui.QDrag, QtGui.QImage, QtGui.QOpenGLTexture, 
+        QtGui.QMatrix4x4, QtGui.QVector4D, QtGui.QOpenGLShaderProgram,
+        QtGui.QOpenGLShader, QtGui.QVector3D, QtGui.QVector2D,
+        QtGui.QQuaternion, QtGui.QOpenGLVertexArrayObject, QtGui.QOpenGLBuffer)
 
 
 class mySlider(QSlider):
