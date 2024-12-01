@@ -47,8 +47,10 @@ import matplotlib as mpl
 import re
 import copy
 # import time
-
+from scipy.spatial import Delaunay
+from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict
+import freetype as ft
 
 from ...backends import raycing
 from ...backends.raycing import sources as rsources
@@ -59,7 +61,74 @@ from ...backends.raycing import materials as rmats
 from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
-_DEBUG_ = False  # If False, exceptions inside the module are ignored
+_DEBUG_ = True  # If False, exceptions inside the module are ignored
+MAXRAYS = 500000
+
+def setVertexBuffer(data_array, dim_vertex, program, shader_str, size=None,
+                    oldVBO=None, usage_hint=qt.QOpenGLBuffer.DynamicDraw,
+                    is_int=False):
+    # slightly modified code from
+    # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
+    if oldVBO is not None:
+        vbo = oldVBO
+    else:
+        vbo = qt.QOpenGLBuffer(qt.QOpenGLBuffer.VertexBuffer)
+        vbo.create()
+        vbo.setUsagePattern(usage_hint)
+
+    dType = np.int32 if is_int else np.float32
+    glType = gl.GL_UNSIGNED_INT if is_int else gl.GL_FLOAT
+    vertices = np.array(data_array, dType)
+
+    vbo.bind()
+
+    if oldVBO is not None:
+        vbo.write(0, vertices, vertices.nbytes)
+    else:
+        bSize = size if size is not None else vertices.nbytes
+        vbo.allocate(vertices, bSize)
+        attr_loc = program.attributeLocation(shader_str)
+        program.enableAttributeArray(attr_loc)
+        program.setAttributeBuffer(attr_loc, glType, 0, dim_vertex)
+
+    vbo.release()
+    return vbo
+
+def create_qt_buffer(data, isIndex=False,
+                     usage_hint=qt.QOpenGLBuffer.DynamicDraw):
+    """Create and populate a QOpenGLBuffer."""
+    bufferType = qt.QOpenGLBuffer.IndexBuffer if isIndex else\
+        qt.QOpenGLBuffer.VertexBuffer
+    buffer = qt.QOpenGLBuffer(bufferType)
+    buffer.create()
+    buffer.setUsagePattern(usage_hint)
+    buffer.bind()
+    data = np.array(data, np.uint32 if isIndex else np.float32)
+    buffer.allocate(data.tobytes(), data.nbytes)
+    buffer.release()
+    return buffer
+
+
+#def setIndexBuffer(data_array, oldIBO=None):
+#    # slightly modified code from
+#    # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
+#    if oldIBO is None:
+#        ibo = qt.QOpenGLBuffer(qt.QOpenGLBuffer.IndexBuffer)
+#        ibo.create()
+#    else:
+#        ibo = oldIBO
+#    ibo.bind()
+#    indices = np.array(data_array, dtype=np.ushort)
+#    ibo.allocate(indices, indices.nbytes)
+#    ibo.release()
+#    return ibo
+
+
+def generate_hsv_texture(width, s, v):
+    h = np.linspace(0., 1., width, endpoint=False)
+    hsv_data = mpl.colors.hsv_to_rgb(np.vstack(
+            (h, s*np.ones_like(h), v*np.ones_like(h))).T)
+    return (hsv_data * 255).astype(np.uint8)
 
 
 class xrtGlow(qt.QWidget):
@@ -304,7 +373,7 @@ class xrtGlow(qt.QWidget):
         for iaxis, (axis, rstart, rend, rstep, val) in enumerate(zip(
                 ('Line opacity', 'Line width', 'Point opacity', 'Point size'),
                 (0, 0, 0, 0), (1., 20., 1., 20.), (0.001, 0.01, 0.001, 0.01),
-                (0.2, 2., 0.25, 3.))):
+                (0.2, 2., 0.75, 3.))):
             axLabel = qt.QLabel(axis)
             opacityValidator = qt.QDoubleValidator()
             axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
@@ -1053,7 +1122,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.newColorAxis = True
         oldColorMin = self.customGlWidget.colorMin
         oldColorMax = self.customGlWidget.colorMax
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.change_beam_colorax()
+#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.mplAx.set_xlabel(selAxis)
         if oldColorMin == self.customGlWidget.colorMin and\
                 oldColorMax == self.customGlWidget.colorMax and not newLimits:
@@ -1636,7 +1706,8 @@ class xrtGlow(qt.QWidget):
             value = float(re.sub(',', '.', str(editor.text())))
             extents = list(self.paletteWidget.span.extents)
             self.customGlWidget.cutoffI = np.float32(value)
-            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+            self.customGlWidget.updateCutOffI(np.float32(value))
+#            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
             newExtents = (extents[0], extents[1],
                           self.customGlWidget.cutoffI, extents[3])
             self.paletteWidget.span.extents = newExtents
@@ -1742,13 +1813,14 @@ class xrtGlow(qt.QWidget):
             editor.setText("{0:.2f}".format(op))
 
 
-class xrtGlWidget(qt.QGLWidget):
+class xrtGlWidget(qt.QOpenGLWidget):
     rotationUpdated = qt.Signal(np.ndarray)
     scaleUpdated = qt.Signal(np.ndarray)
     histogramUpdated = qt.Signal(tuple)
 
     def __init__(self, parent, arrayOfRays, modelRoot, oesList, b2els, signal):
-        qt.QGLWidget.__init__(self, parent)
+        super().__init__(parent=parent)
+        self.hsvTex = generate_hsv_texture(512, s=1.0, v=1.0)
         self.QookSignal = signal
         self.virtScreen = None
         self.virtBeam = None
@@ -1811,7 +1883,7 @@ class xrtGlWidget(qt.QGLWidget):
         self.maxLen = 1.
         self.showLostRays = False
         self.showLocalAxes = False
-        self.populateVerticesArray(modelRoot)
+#        self.populateVerticesArray(modelRoot)
 
         self.drawGrid = True
         self.fineGridEnabled = False
@@ -1820,21 +1892,47 @@ class xrtGlWidget(qt.QGLWidget):
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
         self.coordinateGridLineWidth = 1
+        self.cBoxLineWidth = 1
 #        self.fixedFontType = 'GLUT_BITMAP_TIMES_ROMAN'
         self.fixedFontType = 'GLUT_BITMAP_HELVETICA'
         self.fixedFontSize = '12'  # 10, 12, 18 for Helvetica; 10, 24 for Roman
-        self.fixedFont = getattr(gl, "{0}_{1}".format(self.fixedFontType,
-                                                      self.fixedFontSize))
+        self.fixedFont = None #getattr(gl, "{0}_{1}".format(self.fixedFontType,
+#                                                      self.fixedFontSize))
         self.useScalableFont = False
         self.fontSize = 5
-        self.scalableFontType = gl.GLUT_STROKE_ROMAN
+        self.scalableFontType = None #gl.GLUT_STROKE_ROMAN
 #        self.scalableFontType = gl.GLUT_STROKE_MONO_ROMAN
         self.scalableFontWidth = 1
         self.useFontAA = False
         self.tVec = np.array([0., 0., 0.])
-        self.cameraTarget = [0., 0., 0.]
-        self.cameraPos = np.float32([3.5, 0., 0.])
-        self.isEulerian = False
+#        self.cameraTarget = [0., 0., 0.]
+#        self.cameraPos = np.float32([3.5, 0., 0.])
+#
+#        self.upVec = qt.QVector3D(0., 0., 1.)
+
+        self.cameraTarget = qt.QVector3D(0., 0., 0.)
+        self.cameraPos = qt.QVector3D(3.5, 0, 0)
+        self.upVec = qt.QVector3D(0., 0., 1.)
+
+        self.mView = qt.QMatrix4x4()
+        self.mView.lookAt(self.cameraPos,
+                          self.cameraTarget,
+                          self.upVec)
+
+        self.mProj = qt.QMatrix4x4()
+        self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+
+        self.mModScale = qt.QMatrix4x4()
+        self.mModTrans = qt.QMatrix4x4()
+        self.mModScale.scale(*(self.scaleVec/self.maxLen))
+        self.mModTrans.translate(*(self.tVec-self.coordOffset))
+        self.mMod = self.mModScale*self.mModTrans
+
+        self.mModAx = qt.QMatrix4x4()
+        self.mModAx.setToIdentity()
+
+#        self.isEulerian = False
+
         self.rotations = np.float32([[0., 1., 0., 0.],
                                      [0., 0., 1., 0.],
                                      [0., 0., 0., 1.]])
@@ -1845,7 +1943,366 @@ class xrtGlWidget(qt.QGLWidget):
         self.signs = np.ones_like(pModelT)
         self.invertColors = False
         self.showHelp = False
+        self.beamVAO = dict()
+        self.selectableOEs = {}
+        self.selectedOE = 0
+        self.isColorAxReady = False
+        self.makeCurrent()
+
+#        self.isEulerian = False
+#        self.rotations = np.float32([[0., 1., 0., 0.],
+#                                     [0., 0., 1., 0.],
+#                                     [0., 0., 0., 1.]])
+#        self.textOrientation = [0.5, 0.5, 0.5, 0.5]
+#        self.updateQuats()
+#        pModelT = np.identity(4)
+#        self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
+#        self.signs = np.ones_like(pModelT)
+#        self.invertColors = False
+#        self.showHelp = False
+#        self.selectableOEs = {}
+#        self.selectedOE = 0
 #        self.glDraw()
+
+    def init_shaders(self):
+        shaderBeam = qt.QOpenGLShaderProgram()
+        shaderBeam.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, Beam3D.vertex_source)
+        shaderBeam.addShaderFromSourceCode(
+                qt.QOpenGLShader.Geometry, Beam3D.geometry_source)
+        shaderBeam.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, Beam3D.fragment_source)
+        if not shaderBeam.link():
+            print("Linking Error", str(shaderBeam.log()))
+            print('shaderBeam: Failed to link dummy renderer shader!')
+        self.shaderBeam = shaderBeam
+
+        shaderFootprint = qt.QOpenGLShaderProgram()
+        shaderFootprint.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, Beam3D.vertex_source_point)
+        shaderFootprint.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, Beam3D.fragment_source_point)
+        if not shaderFootprint.link():
+            print("Linking Error", str(shaderFootprint.log()))
+            print('shaderFootprint: Failed to link dummy renderer shader!')
+        self.shaderFootprint = shaderFootprint
+
+        shaderMesh = qt.QOpenGLShaderProgram()
+        shaderMesh.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, OEMesh3D.vertex_source)
+        shaderMesh.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, OEMesh3D.fragment_source)
+        if not shaderMesh.link():
+            print("Linking Error", str(shaderMesh.log()))
+            print('shaderMesh: Failed to link dummy renderer shader!')
+        self.shaderMesh = shaderMesh
+
+    def init_coord_grid(self):
+        self.cBox = CoordinateBox(self)
+        shaderCoord = qt.QOpenGLShaderProgram()
+        shaderCoord.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, self.cBox.vertex_source)
+        shaderCoord.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, self.cBox.fragment_source)
+
+        if not shaderCoord.link():
+            print("Linking Error", str(shaderCoord.log()))
+            print('Failed to link dummy renderer shader!')
+        self.cBox.shader = shaderCoord
+
+        shaderText = qt.QOpenGLShaderProgram()
+        shaderText.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, self.cBox.text_vertex_code)
+        shaderText.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, self.cBox.text_fragment_code)
+
+        if not shaderText.link():
+            print("Linking Error", str(shaderText.log()))
+            print('Failed to link dummy renderer shader!')
+        self.cBox.textShader = shaderText
+
+        origShader = qt.QOpenGLShaderProgram()
+        origShader.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, self.cBox.orig_vertex_source)
+        origShader.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, self.cBox.orig_fragment_source)
+
+        if not origShader.link():
+            print("Linking Error", str(origShader.log()))
+            print('Failed to link dummy renderer shader!')
+        self.cBox.origShader = origShader
+        self.cBox.prepare_grid()
+
+    def generate_beam_texture(self, width):
+        hsv_texture_data = generate_hsv_texture(width, s=1.0, v=1.0)
+
+        self.beamTexture = qt.QOpenGLTexture(qt.QOpenGLTexture.Target1D)
+        self.beamTexture.create()
+        self.beamTexture.setSize(width)  # Width of the texture
+        self.beamTexture.setFormat(qt.QOpenGLTexture.RGB8_UNorm)
+        self.beamTexture.allocateStorage()
+
+        # Upload data (convert NumPy array to raw bytes)
+        self.beamTexture.setData(
+            qt.QOpenGLTexture.RGB,                 # Pixel format
+            qt.QOpenGLTexture.UInt8,               # Pixel type
+            hsv_texture_data.tobytes()          # Raw data as bytes
+        )
+
+
+    def init_beam_footprint(self, beam, oe=None, is2ndXtal=None):
+
+        data = np.float32(np.vstack((beam.x, beam.y, beam.z)).T).copy()
+        dataColor = np.float32(self.getColor(beam)).copy()
+        state = np.float32(np.where((
+                (beam.state == 1) | (beam.state == 2)), 1, 0)).copy()
+        intensity = np.float32(beam.Jss+beam.Jpp).copy()
+
+        vbo = {}
+        vbo['position'] = create_qt_buffer(data)
+        vbo['color'] = create_qt_buffer(dataColor)
+        vbo['state'] = create_qt_buffer(state)
+        vbo['intensity'] = create_qt_buffer(intensity)
+        goodRays = np.where(((state > 0) & (intensity/self.iMax > self.cutoffI)))[0]
+#        if oe is None:
+#            oe = self.beamLine.oesDict[beam.parentId][0]
+
+        vbo['indices'] = create_qt_buffer(goodRays.copy(), isIndex=True)
+        vbo['goodLen'] = len(goodRays)
+#        print(len(goodRays))
+
+        vao = qt.QOpenGLVertexArrayObject()
+        vao.create()
+        vao.bind()
+
+        vbo['position'].bind()
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 0: position
+        gl.glEnableVertexAttribArray(0)
+        vbo['position'].release()
+
+        vbo['color'].bind()
+        gl.glVertexAttribPointer(1, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 1: colorAxis
+        gl.glEnableVertexAttribArray(1)
+        vbo['color'].release()
+
+        vbo['state'].bind()
+        gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 2: state
+        gl.glEnableVertexAttribArray(2)
+        vbo['state'].release()
+
+        vbo['intensity'].bind()
+        gl.glVertexAttribPointer(3, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 3: intensity
+        gl.glEnableVertexAttribArray(3)
+        vbo['intensity'].release()
+
+        vao.release()
+
+        beam.beamLen = min(MAXRAYS, len(beam.x))
+
+        beam.vbo = vbo
+        beam.vao = vao
+
+    def change_beam_colorax(self):
+#        print(self.newColorAxis)
+        if self.newColorAxis:
+            newColorMax = -1e20
+            newColorMin = 1e20
+        else:
+            newColorMax = self.colorMax
+            newColorMin = self.colorMin
+
+        for beamName, beam in self.beamsDict.items():
+            if not hasattr(beam, 'vbo'):
+                # 3D beam object not initialized
+                continue
+#            print(self.getColor)
+            colorax = np.float32(self.getColor(beam))
+            good = (beam.state == 1) | (beam.state == 2)
+            
+            beam.vbo['color'].bind()
+            beam.vbo['color'].write(0, colorax, colorax.nbytes)
+            beam.vbo['color'].release()
+
+            newColorMax = max(np.max(
+                colorax[good]),
+                newColorMax)
+            newColorMin = min(np.min(
+                colorax[good]),
+                newColorMin)
+
+        if self.newColorAxis:
+            if newColorMin != self.colorMin:
+                self.colorMin = newColorMin
+                self.selColorMin = self.colorMin
+            if newColorMax != self.colorMax:
+                self.colorMax = newColorMax
+                self.selColorMax = self.colorMax
+
+        if self.colorMin == self.colorMax:
+            if self.colorMax == 0:  # and self.colorMin == 0 too
+                self.colorMin, self.colorMax = -0.1, 0.1
+            else:
+                self.colorMin = self.colorMax * 0.99
+                self.colorMax *= 1.01
+#        print(self.colorMin, self.colorMax)
+        
+#        hue = (self.colorMin - self.colorMin)/(self.colorMax - self.colorMin)
+#        nrange = np.array([n*64 for n in range(8)])
+#        print([(n, self.hsvTex[n, :]/255.) for n in nrange])
+#        print([(n, mpl.colors.hsv_to_rgb((n/511, 1, 1))) for n in nrange])
+        
+#        print()
+        
+
+        if False:  # Updating textures with histograms
+            for oeuuid, oeLine in self.beamLine.oesDict.items():
+                oeToPlot = oeLine[0]
+    #            oeToPlot = self.oesDict[oeuuid]
+#                if hasattr(oe, 'beamsOut'):
+#                    if 'beamGlobal' in oeToPlot.beamsOut:
+#                        beam = oeToPlot.beamsOut['beamGlobal']
+#                    else:
+#                        beam = oeToPlot.beamsOut['beamLocal']
+#                else:
+#                    continue
+                if hasattr(oeToPlot, 'material'):
+                    is2ndXtal = False  # TODO: DCM, Plate
+    #                t01 = time.time()
+                    self.generate_hist_texture(oeToPlot, beam, is2ndXtal)
+#                t02 = time.time()
+#            t01 = time.time()
+#            print("total", t01-t00, "s")
+
+#        t2 = time.time()
+#        print("ch_color for hists took", t2-t0, "s")
+#        for ioe in range(self.segmentModel.rowCount() - 1):
+#            ioeItem = self.segmentModel.child(ioe + 1, 0)
+#            beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
+#            beam.colorMinMax = qg.QVector2D(self.colorMin, self.colorMax)
+        self.isColorAxReady = True
+
+    def updateCutOffI(self, cutOff):
+        for beamName, beam in self.beamsDict.items():
+            if not hasattr(beam, 'vbo'):
+                # 3D beam object not initialized
+                continue
+            intensity = np.float32(beam.Jss+beam.Jpp)
+            goodRays = np.uint32(np.where((((beam.state == 1) | (beam.state == 2)) & (intensity/self.iMax > self.cutoffI)))[0])
+            beam.vbo['goodLen'] = len(goodRays)
+            
+            beam.vbo['indices'].bind()
+            beam.vbo['indices'].write(0, goodRays, goodRays.nbytes)
+#            beam.vao.bind()
+#            beam.vbo['color'].write(0, colorax, colorax.nbytes)
+            beam.vbo['indices'].release()        
+
+
+    def render_beam(self, beam, model, view, projection, target=None):
+        shader = self.shaderBeam if target else self.shaderFootprint
+        if not hasattr(beam, 'vbo'):
+            print("No VBO")
+            return
+
+        if target is not None and target.vbo['goodLen'] == 0:
+            return
+        shader.bind()
+        beam.vao.bind()
+        
+#        oeIn = self.beamLine.oesDict[beam.parentId][0]
+
+        if target is not None:
+#            oeTarget = self.beamLine.oesDict[target.parentId][0]
+            target.vbo['position'].bind()
+            gl.glVertexAttribPointer(4, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(4)
+#            target.vbo['color'].bind()
+#            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+#            gl.glEnableVertexAttribArray(1)
+
+#            target.vbo['indices'].bind()
+#            arrLen = target.vbo['goodLen']
+#            print("Rendering beam from {} to {}".format(oeIn.name, oeTarget.name))
+#            print(arrLen)
+#        else:
+
+        beam.vbo['indices'].bind()
+        arrLen = beam.vbo['goodLen']
+
+#        oeuuid = beam.parentId
+#        oe = self.beamLine.oesDict[oeuuid][0]
+#        if hasattr(oe, 'mesh3D'):
+#            oeIndex = int(hasattr(beam, 'is2ndXtal'))
+#            oeOrientation = oe.mesh3D.transMatrix[oeIndex]
+#            beam.shader.setUniformValue("model", model*oeOrientation)
+#        else:
+        if self.beamTexture is not None:
+            self.beamTexture.bind(0)
+            shader.setUniformValue("hsvTexture", 0)
+    
+        shader.setUniformValue("model", model)
+        shader.setUniformValue("view", view)
+        shader.setUniformValue("projection", projection)
+
+        shader.setUniformValue(
+                    "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
+#        print(self.colorMin, self.colorMax)
+        shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
+        shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
+
+        shader.setUniformValue(
+                "pointSize",
+                float(self.pointSize if target is None else self.lineWidth))
+        shader.setUniformValue(
+                "opacity",
+                float(self.pointOpacity if target is None else self.lineOpacity))
+        shader.setUniformValue(
+                "iMax",
+                float(self.iMax if self.globalNorm else beam.iMax))
+
+        if target and self.lineWidth > 0:
+            gl.glLineWidth(self.lineWidth)
+
+        gl.glDrawElements(gl.GL_POINTS,  arrLen,
+                          gl.GL_UNSIGNED_INT, [])
+        """
+        if target and self.lineProjectionWidth > 0:
+            gl.glLineWidth(self.lineProjectionWidth)
+
+        for dim in range(3):
+            if self.projectionsVisibility[dim] > 0:
+                gridMask = [1.]*4
+                gridMask[dim] = 0.
+                gridProjection = [0.]*4
+                gridProjection[dim] = -self.aPos[dim]
+                shader.setUniformValue(
+                        "gridMask",
+                        qg.QVector4D(*gridMask))
+                shader.setUniformValue(
+                        "gridProjection",
+                        qg.QVector4D(*gridProjection))
+                shader.setUniformValue(
+                        "pointSize",
+                        float(self.pointProjectionSize if target is None else self.lineProjectionWidth))
+                shader.setUniformValue(
+                        "opacity",
+                        float(self.pointProjectionOpacity if target is None else self.lineProjectionOpacity))
+
+                gl.glDrawArrays(gl.GL_POINTS, 0, beam.beamLen)
+        """
+
+        if target:
+            target.vbo['position'].release()
+#            target.vbo['indices'].release()
+
+        beam.vao.release()
+        beam.vbo['indices'].release()
+        shader.release()
+        if self.beamTexture is not None:
+            self.beamTexture.release()
+
+
+    def glDraw(self):
+        self.update()
 
     def eulerToQ(self, rotMatrXYZ):
         hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
@@ -1907,9 +2364,11 @@ class xrtGlWidget(qt.QGLWidget):
         self.glDraw()
 
     def populateVerticesOnly(self, segmentsModelRoot):
+
         if segmentsModelRoot is None:
             return
         self.segmentModel = segmentsModelRoot
+#        return
         # signal = self.QookSignal
         self.verticesArray = None
         self.footprintsArray = None
@@ -1927,6 +2386,8 @@ class xrtGlWidget(qt.QGLWidget):
         colorsRaysLost = None
         footprintsArrayLost = None
         colorsDotsLost = None
+        
+        return
         maxLen = 1.
         tmpMax = -1.0e12 * np.ones(3)
         tmpMin = -1. * tmpMax
@@ -1958,6 +2419,7 @@ class xrtGlWidget(qt.QGLWidget):
                 self.footprints[str(ioeItem.text())] = None
             if segmentsModelRoot.child(ioe + 1, 3).checkState() == 2:
                 self.labelsToPlot.append(str(ioeItem.text()))
+
 
             try:
                 startBeam = self.beamsDict[
@@ -2283,115 +2745,116 @@ class xrtGlWidget(qt.QGLWidget):
 
     def drawText(self, coord, text, noScalable=False, alignment=None,
                  useCaption=False):
-        useScalableFont = False if noScalable else self.useScalableFont
-        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-        pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-        if not useScalableFont:
-            gl.glRasterPos3f(*coord)
-            for symbol in text:
-                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-        else:
-            tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
-            tLineAA = gl.glIsEnabled(gl.GL_LINE_SMOOTH)
-            if self.useFontAA:
-                gl.glEnable(gl.GL_LINE_SMOOTH)
-            else:
-                gl.glDisable(gl.GL_LINE_SMOOTH)
-            gl.glLineWidth(self.scalableFontWidth)
-
-            fontScale = self.fontSize / 12500.
-            coordShift = np.zeros(3, dtype=np.float32)
-            fontSizeLoc = np.float32(np.array([104.76, 119.05, 0])*fontScale)
-            if alignment is not None:
-                if alignment[0] == 'left':
-                    coordShift[0] = -fontSizeLoc[0] * len(text)
-                else:
-                    coordShift[0] = fontSizeLoc[0]
-
-                if alignment[1] == 'top':
-                    vOffset = 0.5
-                elif alignment[1] == 'bottom':
-                    vOffset = -1.5
-                else:
-                    vOffset = -0.5
-                coordShift[1] = vOffset * fontSizeLoc[1]
-            if useCaption:
-                textWidth = 0
-                for symbol in text.strip(" "):
-                    textWidth += gl.glutStrokeWidth(self.scalableFontType,
-                                                    ord(symbol))
-                gl.glPushMatrix()
-                gl.glTranslatef(*coord)
-                gl.glRotatef(*self.qText)
-                gl.glTranslatef(*coordShift)
-                gl.glScalef(fontScale, fontScale, fontScale)
-                depthCounter = 1
-                spaceFound = False
-                while not spaceFound:
-                    depthCounter += 1
-                    for dy in [-1, 1]:
-                        for dx in [1, -1]:
-                            textShift = (depthCounter+0.5*dy) * 119.05*1.5
-                            gl.glPushMatrix()
-                            textPos = [dx*depthCounter * 119.05*1.5 +
-                                       (0 if dx > 0 else -1) * textWidth,
-                                       dy*textShift, 0]
-                            gl.glTranslatef(*textPos)
-                            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-                            bottomLeft = np.array(gl.gluProject(
-                                *[0, 0, 0], model=pModel, proj=pProjection,
-                                view=pView)[:-1])
-                            topRight = np.array(gl.gluProject(
-                                *[textWidth, 119.05*2.5, 0],
-                                model=pModel, proj=pProjection,
-                                view=pView)[:-1])
-                            gl.glPopMatrix()
-                            spaceFound = True
-                            for oeLabel in list(self.labelsBounds.values()):
-                                if not (bottomLeft[0] > oeLabel[1][0] or
-                                        bottomLeft[1] > oeLabel[1][1] or
-                                        topRight[0] < oeLabel[0][0] or
-                                        topRight[1] < oeLabel[0][1]):
-                                    spaceFound = False
-                            if spaceFound:
-                                self.labelsBounds[text] = [0]*2
-                                self.labelsBounds[text][0] = bottomLeft
-                                self.labelsBounds[text][1] = topRight
-                                break
-                        if spaceFound:
-                            break
-
-                gl.glPopMatrix()
-                gl.glPushMatrix()
-                gl.glTranslatef(*coord)
-                gl.glRotatef(*self.qText)
-                gl.glScalef(fontScale, fontScale, fontScale)
-                captionPos = depthCounter * 119.05*1.5
-                gl.glBegin(gl.GL_LINE_STRIP)
-                gl.glVertex3f(0, 0, 0)
-                gl.glVertex3f(captionPos*dx, captionPos*dy, 0)
-                gl.glVertex3f(captionPos*dx + textWidth*dx,
-                              captionPos*dy, 0)
-                gl.glEnd()
-                gl.glTranslatef(*textPos)
-                for symbol in text.strip(" "):
-                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
-                gl.glPopMatrix()
-            else:
-                gl.glPushMatrix()
-                gl.glTranslatef(*coord)
-                gl.glRotatef(*self.qText)
-                gl.glTranslatef(*coordShift)
-                gl.glScalef(fontScale, fontScale, fontScale)
-                for symbol in text:
-                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
-                gl.glPopMatrix()
-
-            gl.glLineWidth(tLineWidth)
-            if tLineAA:
-                gl.glEnable(gl.GL_LINE_SMOOTH)
-            else:
-                gl.glDisable(gl.GL_LINE_SMOOTH)
+        pass
+#        useScalableFont = False if noScalable else self.useScalableFont
+#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+#        pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
+#        if not useScalableFont:
+#            gl.glRasterPos3f(*coord)
+#            for symbol in text:
+#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
+#        else:
+#            tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
+#            tLineAA = gl.glIsEnabled(gl.GL_LINE_SMOOTH)
+#            if self.useFontAA:
+#                gl.glEnable(gl.GL_LINE_SMOOTH)
+#            else:
+#                gl.glDisable(gl.GL_LINE_SMOOTH)
+#            gl.glLineWidth(self.scalableFontWidth)
+#
+#            fontScale = self.fontSize / 12500.
+#            coordShift = np.zeros(3, dtype=np.float32)
+#            fontSizeLoc = np.float32(np.array([104.76, 119.05, 0])*fontScale)
+#            if alignment is not None:
+#                if alignment[0] == 'left':
+#                    coordShift[0] = -fontSizeLoc[0] * len(text)
+#                else:
+#                    coordShift[0] = fontSizeLoc[0]
+#
+#                if alignment[1] == 'top':
+#                    vOffset = 0.5
+#                elif alignment[1] == 'bottom':
+#                    vOffset = -1.5
+#                else:
+#                    vOffset = -0.5
+#                coordShift[1] = vOffset * fontSizeLoc[1]
+#            if useCaption:
+#                textWidth = 0
+#                for symbol in text.strip(" "):
+#                    textWidth += gl.glutStrokeWidth(self.scalableFontType,
+#                                                    ord(symbol))
+#                gl.glPushMatrix()
+#                gl.glTranslatef(*coord)
+#                gl.glRotatef(*self.qText)
+#                gl.glTranslatef(*coordShift)
+#                gl.glScalef(fontScale, fontScale, fontScale)
+#                depthCounter = 1
+#                spaceFound = False
+#                while not spaceFound:
+#                    depthCounter += 1
+#                    for dy in [-1, 1]:
+#                        for dx in [1, -1]:
+#                            textShift = (depthCounter+0.5*dy) * 119.05*1.5
+#                            gl.glPushMatrix()
+#                            textPos = [dx*depthCounter * 119.05*1.5 +
+#                                       (0 if dx > 0 else -1) * textWidth,
+#                                       dy*textShift, 0]
+#                            gl.glTranslatef(*textPos)
+#                            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+#                            bottomLeft = np.array(gl.gluProject(
+#                                *[0, 0, 0], model=pModel, proj=pProjection,
+#                                view=pView)[:-1])
+#                            topRight = np.array(gl.gluProject(
+#                                *[textWidth, 119.05*2.5, 0],
+#                                model=pModel, proj=pProjection,
+#                                view=pView)[:-1])
+#                            gl.glPopMatrix()
+#                            spaceFound = True
+#                            for oeLabel in list(self.labelsBounds.values()):
+#                                if not (bottomLeft[0] > oeLabel[1][0] or
+#                                        bottomLeft[1] > oeLabel[1][1] or
+#                                        topRight[0] < oeLabel[0][0] or
+#                                        topRight[1] < oeLabel[0][1]):
+#                                    spaceFound = False
+#                            if spaceFound:
+#                                self.labelsBounds[text] = [0]*2
+#                                self.labelsBounds[text][0] = bottomLeft
+#                                self.labelsBounds[text][1] = topRight
+#                                break
+#                        if spaceFound:
+#                            break
+#
+#                gl.glPopMatrix()
+#                gl.glPushMatrix()
+#                gl.glTranslatef(*coord)
+#                gl.glRotatef(*self.qText)
+#                gl.glScalef(fontScale, fontScale, fontScale)
+#                captionPos = depthCounter * 119.05*1.5
+#                gl.glBegin(gl.GL_LINE_STRIP)
+#                gl.glVertex3f(0, 0, 0)
+#                gl.glVertex3f(captionPos*dx, captionPos*dy, 0)
+#                gl.glVertex3f(captionPos*dx + textWidth*dx,
+#                              captionPos*dy, 0)
+#                gl.glEnd()
+#                gl.glTranslatef(*textPos)
+#                for symbol in text.strip(" "):
+#                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
+#                gl.glPopMatrix()
+#            else:
+#                gl.glPushMatrix()
+#                gl.glTranslatef(*coord)
+#                gl.glRotatef(*self.qText)
+#                gl.glTranslatef(*coordShift)
+#                gl.glScalef(fontScale, fontScale, fontScale)
+#                for symbol in text:
+#                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
+#                gl.glPopMatrix()
+#
+#            gl.glLineWidth(tLineWidth)
+#            if tLineAA:
+#                gl.glEnable(gl.GL_LINE_SMOOTH)
+#            else:
+#                gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def setMaterial(self, mat):
         if mat == 'Cu':
@@ -2446,18 +2909,168 @@ class xrtGlWidget(qt.QGLWidget):
             gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
     def paintGL(self):
+        try:
+            gl.glClearColor(0.0, 0.0, 0.0, 1.)
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT |
+                       gl.GL_DEPTH_BUFFER_BIT |
+                       gl.GL_STENCIL_BUFFER_BIT)
+
+            self.mModScale.setToIdentity()
+            self.mModTrans.setToIdentity()
+            self.mModScale.scale(*(self.scaleVec/self.maxLen))
+            self.mModTrans.translate(*(self.tVec-self.coordOffset))
+            self.mMod = self.mModScale*self.mModTrans
+
+            gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            
+            
+
+            if self.enableAA:
+                gl.glEnable(gl.GL_LINE_SMOOTH)
+                gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+                gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+
+#            for oeuuid, oeLine in self.beamLine.oesDict.items():
+#                oeToPlot = oeLine[0]
+#            for oeString in self.oesToPlot:
+
+            if self.enableBlending:
+                gl.glEnable(gl.GL_MULTISAMPLE)
+                gl.glEnable(gl.GL_BLEND)
+                gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+    #            gl.glBlendFunc(gl.GL_SRC_ALPHA, GL_ONE)
+                gl.glEnable(gl.GL_POINT_SMOOTH)
+                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
+
+            if not self.linesDepthTest:
+                gl.glDepthMask(gl.GL_TRUE)
+
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            for ioe in range(self.segmentModel.rowCount() - 1):    
+                if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
+                    continue
+                ioeItem = self.segmentModel.child(ioe + 1, 0)
+                oeString = str(ioeItem.text())
+                oeToPlot = self.oesList[oeString][0]
+                oeuuid = oeToPlot.uuid
+
+#                print(oeToPlot.name, oeToPlot.uuid)
+                if isinstance(oeToPlot, roes.OE):
+                    is2ndXtalOpts = [False]
+                    if isinstance(oeToPlot, roes.DCM):
+                        is2ndXtalOpts.append(True)
+    
+                    for is2ndXtal in is2ndXtalOpts:
+                        if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                            isSelected = False
+                            if oeuuid in self.selectableOEs.values():
+                                oeNum = oeToPlot.mesh3D.stencilNum
+                                isSelected = oeNum == self.selectedOE
+                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
+                            oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
+                                                         is2ndXtal, isSelected=isSelected,
+                                                         shader=self.shaderMesh)
+        #                    oeToPlot.mesh3D.drawLocalAxes(self.mMod, self.mView,
+        #                                                  self.mProj, is2ndXtal)
+
+#                elif isinstance(oeToPlot, rscreens.HemisphericScreen):
+#                    self.setMaterial('semiSi')
+#                    self.plotHemiScreen(oeToPlot)
+#                elif isinstance(oeToPlot, rscreens.Screen):
+#                    self.setMaterial('semiSi')
+#                    self.plotScreen(oeToPlot, frameColor=[1, 1, 0, 0.8])
+#                if isinstance(oeToPlot, (rapertures.RectangularAperture,
+#                                         rapertures.RoundAperture)):
+#                    self.setMaterial('Cu')
+#                    self.plotAperture(oeToPlot)
+#                else:
+#                    continue
+
+
+            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
+
+            self.cBox.draw(self.mModAx, self.mView, self.mProj)
+
+            if not self.linesDepthTest:
+                gl.glDepthMask(gl.GL_FALSE)
+
+            if self.pointsDepthTest:
+                gl.glEnable(gl.GL_DEPTH_TEST)
+            else:
+                gl.glDisable(gl.GL_DEPTH_TEST)
+
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                ioeItem = self.segmentModel.child(ioe + 1, 0)
+                beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
+                if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
+#                    print(beam, hasattr(beam, 'vbo'))
+                    self.render_beam(beam, self.mMod, self.mView, self.mProj, target=None)
+
+            gl.glEnable(gl.GL_DEPTH_TEST)
+
+#            if self.linesDepthTest:
+#                gl.glEnable(gl.GL_DEPTH_TEST)
+#            else:
+#                gl.glDisable(gl.GL_DEPTH_TEST)
+
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                ioeItem = self.segmentModel.child(ioe + 1, 0)
+                beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
+                if ioeItem.hasChildren():
+                    for isegment in range(ioeItem.rowCount()):
+                        segmentItem0 = ioeItem.child(isegment, 0)
+                        if segmentItem0.checkState() == 2:
+                            endBeam = self.beamsDict[
+                                self.oesList[str(segmentItem0.text())[3:]][1]]
+                            self.render_beam(beam, self.mMod, self.mView, self.mProj, target=endBeam)
+
+
+            gl.glDepthMask(gl.GL_TRUE)
+            gl.glEnable(gl.GL_DEPTH_TEST)
+#            gl.glDisable(gl.GL_MULTISAMPLE)
+#            gl.glDisable(gl.GL_BLEND)
+
+
+
+            if self.enableAA:
+                gl.glDisable(gl.GL_LINE_SMOOTH)
+            self.eCounter = 0
+        except Exception as e:
+            raise
+            self.eCounter += 1
+            if self.eCounter < 10:
+                self.update()
+            else:
+                self.eCounter = 0
+                pass
+
+    def paintGL_old(self):
+
         def makeCenterStr(centerList, prec):
             retStr = '('
             for dim in centerList:
                 retStr += '{0:.{1}f}, '.format(dim, prec)
             return retStr[:-2] + ')'
 
+        gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
+
         if self.invertColors:
             gl.glClearColor(1.0, 1.0, 1.0, 1.)
         else:
             gl.glClearColor(0.0, 0.0, 0.0, 1.)
+            gl.glClearColor(0.0, 0.0, 0.25, 0.5)
 
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+#        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT |
+                   gl.GL_DEPTH_BUFFER_BIT |
+                   gl.GL_STENCIL_BUFFER_BIT)
+
+        self.mModScale.setToIdentity()
+        self.mModTrans.setToIdentity()
+        self.mModScale.scale(*(self.scaleVec/self.maxLen))
+        self.mModTrans.translate(*(self.tVec-self.coordOffset))
+        self.mMod = self.mModScale*self.mModTrans
 
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
@@ -2571,9 +3184,27 @@ class xrtGlWidget(qt.QGLWidget):
             for oeString in self.oesToPlot:
                 try:
                     oeToPlot = self.oesList[oeString][0]
-                    is2ndXtal = self.oesList[oeString][3]
+                    oeuuid = oeToPlot.uuid
+#                    is2ndXtal = self.oesList[oeString][3]
                     if isinstance(oeToPlot, roes.OE):
-                        self.plotOeSurface(oeToPlot, is2ndXtal)
+#                        print(oeuuid)
+                        is2ndXtalOpts = [False]
+                        if isinstance(oeToPlot, roes.DCM):
+                            is2ndXtalOpts.append(True)
+
+                        for is2ndXtal in is2ndXtalOpts:
+                            if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                                print(1)
+                                isSelected = False
+                                if oeuuid in self.selectableOEs.values():
+                                    oeNum = oeToPlot.mesh3D.stencilNum
+                                    isSelected = oeNum == self.selectedOE
+                                    gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
+                                oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
+                                                             is2ndXtal, isSelected=isSelected,
+                                                             shader=self.shaderMesh)
+
+#                        self.plotOeSurface(oeToPlot, is2ndXtal)
                     elif isinstance(oeToPlot, rscreens.HemisphericScreen):
                         self.setMaterial('semiSi')
                         self.plotHemiScreen(oeToPlot)
@@ -2799,22 +3430,23 @@ class xrtGlWidget(qt.QGLWidget):
             return axisLabelC, np.vstack((xLines, yLines, zLines))
 
         def drawGridLines(gridArray, lineWidth, lineOpacity, figType):
-            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            gridColor = np.ones((len(gridArray), 4)) * lineOpacity
-            gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
-            gridArrayVBO.bind()
-            gl.glVertexPointerf(gridArrayVBO)
-            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-            gridColorArray.bind()
-            gl.glColorPointerf(gridColorArray)
-            gl.glLineWidth(lineWidth)
-            gl.glDrawArrays(figType, 0, len(gridArrayVBO))
-            gridArrayVBO.unbind()
-            gridColorArray.unbind()
-            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+            pass
+#            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+#            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+#            gridColor = np.ones((len(gridArray), 4)) * lineOpacity
+#            gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
+#            gridArrayVBO.bind()
+#            gl.glVertexPointerf(gridArrayVBO)
+#            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
+#            gridColorArray.bind()
+#            gl.glColorPointerf(gridColorArray)
+#            gl.glLineWidth(lineWidth)
+#            gl.glDrawArrays(figType, 0, len(gridArrayVBO))
+#            gridArrayVBO.unbind()
+#            gridColorArray.unbind()
+#            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+#            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
 
         def getAlignment(point, hDim, vDim=None):
             pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
@@ -2958,28 +3590,29 @@ class xrtGlWidget(qt.QGLWidget):
         gl.glLineWidth(tLineWidth)
 
     def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
-        if vertices is None or colors is None:
-            return
-
-        if bool(tr):
-            vertexArray = gl.vbo.VBO(self.modelToWorld(vertices))
-        else:
-            vertexArray = gl.vbo.VBO(vertices)
-        vertexArray.bind()
-        gl.glVertexPointerf(vertexArray)
-        pureOpacity = np.copy(colors[:, 3])
-        colors[:, 3] = np.float32(pureOpacity * lineOpacity)
-        colorArray = gl.vbo.VBO(colors)
-        colorArray.bind()
-        gl.glColorPointerf(colorArray)
-        if geom == gl.GL_LINES:
-            gl.glLineWidth(lineWidth)
-        else:
-            gl.glPointSize(lineWidth)
-        gl.glDrawArrays(geom, 0, len(vertices))
-        colors[:, 3] = pureOpacity
-        colorArray.unbind()
-        vertexArray.unbind()
+        pass
+#        if vertices is None or colors is None:
+#            return
+#
+#        if bool(tr):
+#            vertexArray = gl.vbo.VBO(self.modelToWorld(vertices))
+#        else:
+#            vertexArray = gl.vbo.VBO(vertices)
+#        vertexArray.bind()
+#        gl.glVertexPointerf(vertexArray)
+#        pureOpacity = np.copy(colors[:, 3])
+#        colors[:, 3] = np.float32(pureOpacity * lineOpacity)
+#        colorArray = gl.vbo.VBO(colors)
+#        colorArray.bind()
+#        gl.glColorPointerf(colorArray)
+#        if geom == gl.GL_LINES:
+#            gl.glLineWidth(lineWidth)
+#        else:
+#            gl.glPointSize(lineWidth)
+#        gl.glDrawArrays(geom, 0, len(vertices))
+#        colors[:, 3] = pureOpacity
+#        colorArray.unbind()
+#        vertexArray.unbind()
 
     def plotSource(self, oe):
         # gl.glEnable(gl.GL_MAP2_VERTEX_3)
@@ -3800,9 +4433,9 @@ class xrtGlWidget(qt.QGLWidget):
                     gl.glTranslatef(-50. * fontScale, 0, 0)
                 gl.glRotatef(90, 1, 0, 0)
                 gl.glScalef(fontScale, fontScale, fontScale)
-                for symbol in text:
-                    gl.glutStrokeCharacter(
-                        gl.GLUT_STROKE_MONO_ROMAN, ord(symbol))
+#                for symbol in text:
+#                    gl.glutStrokeCharacter(
+#                        gl.GLUT_STROKE_MONO_ROMAN, ord(symbol))
                 gl.glPopMatrix()
             gl.glEnable(gl.GL_LIGHTING)
             gl.glEnable(gl.GL_NORMALIZE)
@@ -3990,291 +4623,398 @@ class xrtGlWidget(qt.QGLWidget):
 #        gl.glViewport(*pView)
 
     def drawCone(self, z, r, nFacets, color):
-        phi = np.linspace(0, 2*np.pi, nFacets)
-        xp = r * np.cos(phi)
-        yp = r * np.sin(phi)
-        base = np.vstack((xp, yp, np.zeros_like(xp)))
-        coneVertices = np.hstack((np.array([0, 0, z]).reshape(3, 1),
-                                  base)).T
-        gridColor = np.zeros((len(coneVertices), 4))
-        gridColor[:, color] = 1
-        gridColor[:, 3] = 0.75
-        gridArray = gl.vbo.VBO(np.float32(coneVertices))
-        gridArray.bind()
-        gl.glVertexPointerf(gridArray)
-        gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-        gridColorArray.bind()
-        gl.glColorPointerf(gridColorArray)
-        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
-        gridArray.unbind()
-        gridColorArray.unbind()
+        pass
+#        phi = np.linspace(0, 2*np.pi, nFacets)
+#        xp = r * np.cos(phi)
+#        yp = r * np.sin(phi)
+#        base = np.vstack((xp, yp, np.zeros_like(xp)))
+#        coneVertices = np.hstack((np.array([0, 0, z]).reshape(3, 1),
+#                                  base)).T
+#        gridColor = np.zeros((len(coneVertices), 4))
+#        gridColor[:, color] = 1
+#        gridColor[:, 3] = 0.75
+#        gridArray = gl.vbo.VBO(np.float32(coneVertices))
+#        gridArray.bind()
+#        gl.glVertexPointerf(gridArray)
+#        gridColorArray = gl.vbo.VBO(np.float32(gridColor))
+#        gridColorArray.bind()
+#        gl.glColorPointerf(gridColorArray)
+#        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
+#        gridArray.unbind()
+#        gridColorArray.unbind()
 
     def drawLocalAxes(self, oe, is2ndXtal):
-        def drawArrow(color, arrowArray, yText='hkl'):
-            gridColor = np.zeros((len(arrowArray) - 1, 4))
-            gridColor[:, 3] = 0.75
-            if color == 4:
-                gridColor[:, 0] = 1
-                gridColor[:, 1] = 1
-            elif color == 5:
-                gridColor[:, 0] = 1
-                gridColor[:, 1] = 0.5
-            else:
-                gridColor[:, color] = 1
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-            gridArray = gl.vbo.VBO(np.float32(arrowArray[1:, :]))
-            gridArray.bind()
-            gl.glVertexPointerf(gridArray)
-            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-            gridColorArray.bind()
-            gl.glColorPointerf(gridColorArray)
-            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
-            gridArray.unbind()
-            gridColorArray.unbind()
-            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-            gl.glEnable(gl.GL_LINE_SMOOTH)
-            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-            gl.glBegin(gl.GL_LINES)
-            colorVec = [0, 0, 0, 0.75]
-            if color == 4:
-                colorVec[0] = 1
-                colorVec[1] = 1
-            elif color == 5:
-                colorVec[0] = 1
-                colorVec[1] = 0.5
-            else:
-                colorVec[color] = 1
-            gl.glColor4f(*colorVec)
-            gl.glVertex3f(*arrowArray[0, :])
-            gl.glVertex3f(*arrowArray[1, :])
-            gl.glEnd()
-            gl.glColor4f(*colorVec)
-            gl.glRasterPos3f(*arrowArray[1, :])
-            if color == 0:
-                axSymb = 'Z'
-            elif color == 1:
-                axSymb = 'Y'
-            elif color == 2:
-                axSymb = 'X'
-            elif color == 4:
-                axSymb = yText
-            else:
-                axSymb = ''
-
-            for symbol in "  {}".format(axSymb):
-                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-            gl.glDisable(gl.GL_LINE_SMOOTH)
-
-        z, r, nFacets = 0.25, 0.02, 20
-        phi = np.linspace(0, 2*np.pi, nFacets)
-        xp = np.insert(r * np.cos(phi), 0, [0., 0.])
-        yp = np.insert(r * np.sin(phi), 0, [0., 0.])
-        zp = np.insert(z*0.8*np.ones_like(phi), 0, [0., z])
-
-        crPlaneZ = None
-        yText = None
-        if hasattr(oe, 'local_n'):
-            material = None
-            if hasattr(oe, 'material'):
-                material = oe.material
-            if is2ndXtal:
-                zExt = '2'
-                if hasattr(oe, 'material2'):
-                    material = oe.material2
-            else:
-                zExt = '1' if hasattr(oe, 'local_n1') else ''
-            if raycing.is_sequence(material):
-                material = material[oe.curSurface]
-
-            local_n = getattr(oe, 'local_n{}'.format(zExt))
-            normals = local_n(0, 0)
-            if len(normals) > 3:
-                crPlaneZ = np.array(normals[:3], dtype=float)
-                crPlaneZ /= np.linalg.norm(crPlaneZ)
-                if material not in [None, 'None']:
-                    if hasattr(material, 'hkl'):
-                        hklSeparator = ',' if np.any(np.array(
-                            material.hkl) >= 10) else ''
-                        yText = '[{0[0]}{1}{0[1]}{1}{0[2]}]'.format(
-                            list(material.hkl), hklSeparator)
-#                        yText = '{}'.format(list(material.hkl))
-
-        cb = rsources.Beam(nrays=nFacets+2)
-        cb.a[:] = cb.b[:] = cb.c[:] = 0.
-        cb.a[0] = cb.b[1] = cb.c[2] = 1.
-
-        if crPlaneZ is not None:  # Adding asymmetric crystal orientation
-            asAlpha = np.arccos(crPlaneZ[2])
-            acpX = np.array([0., 0., 1.], dtype=float) if asAlpha == 0 else\
-                np.cross(np.array([0., 0., 1.], dtype=float), crPlaneZ)
-            acpX /= np.linalg.norm(acpX)
-
-            cb.a[3] = acpX[0]
-            cb.b[3] = acpX[1]
-            cb.c[3] = acpX[2]
-
-        cb.state[:] = 1
-
-        if isinstance(oe, (rscreens.HemisphericScreen, rscreens.Screen)):
-            cb.x[:] += oe.center[0]
-            cb.y[:] += oe.center[1]
-            cb.z[:] += oe.center[2]
-            oeNormX = oe.x
-            oeNormY = oe.y
-        else:
-            if is2ndXtal:
-                oe.local_to_global(cb, is2ndXtal=is2ndXtal)
-            else:
-                oe.local_to_global(cb)
-            oeNormX = np.array([cb.a[0], cb.b[0], cb.c[0]])
-            oeNormY = np.array([cb.a[1], cb.b[1], cb.c[1]])
-
-        scNormX = oeNormX * self.scaleVec
-        scNormY = oeNormY * self.scaleVec
-
-        scNormX /= np.linalg.norm(scNormX)
-        scNormY /= np.linalg.norm(scNormY)
-        scNormZ = np.cross(scNormX, scNormY)
-        scNormZ /= np.linalg.norm(scNormZ)
-
-        for iAx in range(3):
-            if iAx == 0:
-                xVec = scNormX
-                yVec = scNormY
-                zVec = scNormZ
-            elif iAx == 2:
-                xVec = scNormY
-                yVec = scNormZ
-                zVec = scNormX
-            else:
-                xVec = scNormZ
-                yVec = scNormX
-                zVec = scNormY
-
-            dX = xp[:, np.newaxis] * xVec
-            dY = yp[:, np.newaxis] * yVec
-            dZ = zp[:, np.newaxis] * zVec
-            coneCP = self.modelToWorld(np.vstack((
-                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
-                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
-            drawArrow(iAx, coneCP)
-
-        if crPlaneZ is not None:  # drawAsymmetricPlane:
-            crPlaneX = np.array([cb.a[3], cb.b[3], cb.c[3]])
-            crPlaneNormX = crPlaneX * self.scaleVec
-            crPlaneNormX /= np.linalg.norm(crPlaneNormX)
-            crPlaneNormZ = self.rotateVecQ(
-                scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
-            crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
-            crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
-            crPlaneNormY /= np.linalg.norm(crPlaneNormY)
-
-            color = 4
-
-            dX = xp[:, np.newaxis] * crPlaneNormX
-            dY = yp[:, np.newaxis] * crPlaneNormY
-            dZ = zp[:, np.newaxis] * crPlaneNormZ
-            coneCP = self.modelToWorld(np.vstack((
-                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
-                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
-            drawArrow(color, coneCP, yText)
+        pass
+#        def drawArrow(color, arrowArray, yText='hkl'):
+#            gridColor = np.zeros((len(arrowArray) - 1, 4))
+#            gridColor[:, 3] = 0.75
+#            if color == 4:
+#                gridColor[:, 0] = 1
+#                gridColor[:, 1] = 1
+#            elif color == 5:
+#                gridColor[:, 0] = 1
+#                gridColor[:, 1] = 0.5
+#            else:
+#                gridColor[:, color] = 1
+#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+#            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+#            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+#            gridArray = gl.vbo.VBO(np.float32(arrowArray[1:, :]))
+#            gridArray.bind()
+#            gl.glVertexPointerf(gridArray)
+#            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
+#            gridColorArray.bind()
+#            gl.glColorPointerf(gridColorArray)
+#            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
+#            gridArray.unbind()
+#            gridColorArray.unbind()
+#            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+#            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+#            gl.glEnable(gl.GL_LINE_SMOOTH)
+#            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+#            gl.glBegin(gl.GL_LINES)
+#            colorVec = [0, 0, 0, 0.75]
+#            if color == 4:
+#                colorVec[0] = 1
+#                colorVec[1] = 1
+#            elif color == 5:
+#                colorVec[0] = 1
+#                colorVec[1] = 0.5
+#            else:
+#                colorVec[color] = 1
+#            gl.glColor4f(*colorVec)
+#            gl.glVertex3f(*arrowArray[0, :])
+#            gl.glVertex3f(*arrowArray[1, :])
+#            gl.glEnd()
+#            gl.glColor4f(*colorVec)
+#            gl.glRasterPos3f(*arrowArray[1, :])
+#            if color == 0:
+#                axSymb = 'Z'
+#            elif color == 1:
+#                axSymb = 'Y'
+#            elif color == 2:
+#                axSymb = 'X'
+#            elif color == 4:
+#                axSymb = yText
+#            else:
+#                axSymb = ''
+#
+#            for symbol in "  {}".format(axSymb):
+#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
+#            gl.glDisable(gl.GL_LINE_SMOOTH)
+#
+#        z, r, nFacets = 0.25, 0.02, 20
+#        phi = np.linspace(0, 2*np.pi, nFacets)
+#        xp = np.insert(r * np.cos(phi), 0, [0., 0.])
+#        yp = np.insert(r * np.sin(phi), 0, [0., 0.])
+#        zp = np.insert(z*0.8*np.ones_like(phi), 0, [0., z])
+#
+#        crPlaneZ = None
+#        yText = None
+#        if hasattr(oe, 'local_n'):
+#            material = None
+#            if hasattr(oe, 'material'):
+#                material = oe.material
+#            if is2ndXtal:
+#                zExt = '2'
+#                if hasattr(oe, 'material2'):
+#                    material = oe.material2
+#            else:
+#                zExt = '1' if hasattr(oe, 'local_n1') else ''
+#            if raycing.is_sequence(material):
+#                material = material[oe.curSurface]
+#
+#            local_n = getattr(oe, 'local_n{}'.format(zExt))
+#            normals = local_n(0, 0)
+#            if len(normals) > 3:
+#                crPlaneZ = np.array(normals[:3], dtype=float)
+#                crPlaneZ /= np.linalg.norm(crPlaneZ)
+#                if material not in [None, 'None']:
+#                    if hasattr(material, 'hkl'):
+#                        hklSeparator = ',' if np.any(np.array(
+#                            material.hkl) >= 10) else ''
+#                        yText = '[{0[0]}{1}{0[1]}{1}{0[2]}]'.format(
+#                            list(material.hkl), hklSeparator)
+##                        yText = '{}'.format(list(material.hkl))
+#
+#        cb = rsources.Beam(nrays=nFacets+2)
+#        cb.a[:] = cb.b[:] = cb.c[:] = 0.
+#        cb.a[0] = cb.b[1] = cb.c[2] = 1.
+#
+#        if crPlaneZ is not None:  # Adding asymmetric crystal orientation
+#            asAlpha = np.arccos(crPlaneZ[2])
+#            acpX = np.array([0., 0., 1.], dtype=float) if asAlpha == 0 else\
+#                np.cross(np.array([0., 0., 1.], dtype=float), crPlaneZ)
+#            acpX /= np.linalg.norm(acpX)
+#
+#            cb.a[3] = acpX[0]
+#            cb.b[3] = acpX[1]
+#            cb.c[3] = acpX[2]
+#
+#        cb.state[:] = 1
+#
+#        if isinstance(oe, (rscreens.HemisphericScreen, rscreens.Screen)):
+#            cb.x[:] += oe.center[0]
+#            cb.y[:] += oe.center[1]
+#            cb.z[:] += oe.center[2]
+#            oeNormX = oe.x
+#            oeNormY = oe.y
+#        else:
+#            if is2ndXtal:
+#                oe.local_to_global(cb, is2ndXtal=is2ndXtal)
+#            else:
+#                oe.local_to_global(cb)
+#            oeNormX = np.array([cb.a[0], cb.b[0], cb.c[0]])
+#            oeNormY = np.array([cb.a[1], cb.b[1], cb.c[1]])
+#
+#        scNormX = oeNormX * self.scaleVec
+#        scNormY = oeNormY * self.scaleVec
+#
+#        scNormX /= np.linalg.norm(scNormX)
+#        scNormY /= np.linalg.norm(scNormY)
+#        scNormZ = np.cross(scNormX, scNormY)
+#        scNormZ /= np.linalg.norm(scNormZ)
+#
+#        for iAx in range(3):
+#            if iAx == 0:
+#                xVec = scNormX
+#                yVec = scNormY
+#                zVec = scNormZ
+#            elif iAx == 2:
+#                xVec = scNormY
+#                yVec = scNormZ
+#                zVec = scNormX
+#            else:
+#                xVec = scNormZ
+#                yVec = scNormX
+#                zVec = scNormY
+#
+#            dX = xp[:, np.newaxis] * xVec
+#            dY = yp[:, np.newaxis] * yVec
+#            dZ = zp[:, np.newaxis] * zVec
+#            coneCP = self.modelToWorld(np.vstack((
+#                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
+#                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
+#            drawArrow(iAx, coneCP)
+#
+#        if crPlaneZ is not None:  # drawAsymmetricPlane:
+#            crPlaneX = np.array([cb.a[3], cb.b[3], cb.c[3]])
+#            crPlaneNormX = crPlaneX * self.scaleVec
+#            crPlaneNormX /= np.linalg.norm(crPlaneNormX)
+#            crPlaneNormZ = self.rotateVecQ(
+#                scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
+#            crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
+#            crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
+#            crPlaneNormY /= np.linalg.norm(crPlaneNormY)
+#
+#            color = 4
+#
+#            dX = xp[:, np.newaxis] * crPlaneNormX
+#            dY = yp[:, np.newaxis] * crPlaneNormY
+#            dZ = zp[:, np.newaxis] * crPlaneNormZ
+#            coneCP = self.modelToWorld(np.vstack((
+#                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
+#                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
+#            drawArrow(color, coneCP, yText)
 
     def drawDirectionAxes(self):
-        arrowSize = 0.05
-        axisLen = 0.1
-        tLen = (arrowSize + axisLen) * 2
-        gl.glLineWidth(1.)
-
-        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-        gl.glViewport(0, 0, int(150*self.aspect), 150)
-
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        if self.perspectiveEnabled:
-            gl.gluPerspective(60, self.aspect, 0.001, 10)
-        else:
-            gl.glOrtho(-tLen*self.aspect, tLen*self.aspect, -tLen, tLen, -1, 1)
-
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
-        gl.gluLookAt(.5, 0.0, 0.0,
-                     0.0, 0.0, 0.0,
-                     0.0, 0.0, 1.0)
-
-        gl.glEnable(gl.GL_LINE_SMOOTH)
-        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-
-        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-
-        self.rotateZYX()
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        for iAx in range(3):
-            if not (not self.perspectiveEnabled and
-                    2-iAx == self.visibleAxes[2]):
-                gl.glPushMatrix()
-                trVec = np.zeros(3, dtype=np.float32)
-                trVec[2-iAx] = axisLen
-                gl.glTranslatef(*trVec)
-                if iAx == 1:
-                    gl.glRotatef(-90, 1.0, 0.0, 0.0)
-                elif iAx == 2:
-                    gl.glRotatef(90, 0.0, 1.0, 0.0)
-                self.drawCone(arrowSize, 0.02, 20, iAx)
-                gl.glPopMatrix()
-        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-
-        gl.glBegin(gl.GL_LINES)
-        for iAx in range(3):
-            if not (not self.perspectiveEnabled and
-                    2-iAx == self.visibleAxes[2]):
-                colorVec = [0, 0, 0, 0.75]
-                colorVec[iAx] = 1
-                gl.glColor4f(*colorVec)
-                gl.glVertex3f(0, 0, 0)
-                trVec = np.zeros(3, dtype=np.float32)
-                trVec[2-iAx] = axisLen
-                gl.glVertex3f(*trVec)
-                gl.glColor4f(*colorVec)
-        gl.glEnd()
-
-        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 2):
-            gl.glColor4f(1, 0, 0, 1)
-            gl.glRasterPos3f(0, 0, axisLen*1.5)
-            for symbol in "  {} (mm)".format('Z'):
-                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
-            gl.glColor4f(0, 0.75, 0, 1)
-            gl.glRasterPos3f(0, axisLen*1.5, 0)
-            for symbol in "  {} (mm)".format('Y'):
-                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
-            gl.glColor4f(0, 0.5, 1, 1)
-            gl.glRasterPos3f(axisLen*1.5, 0, 0)
-            for symbol in "  {} (mm)".format('X'):
-                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-#        gl.glFlush()
-        gl.glViewport(*pView)
-        gl.glColor4f(1, 1, 1, 1)
-        gl.glDisable(gl.GL_LINE_SMOOTH)
+        pass
+#        arrowSize = 0.05
+#        axisLen = 0.1
+#        tLen = (arrowSize + axisLen) * 2
+#        gl.glLineWidth(1.)
+#
+#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+#        gl.glViewport(0, 0, int(150*self.aspect), 150)
+#
+#        gl.glMatrixMode(gl.GL_PROJECTION)
+#        gl.glLoadIdentity()
+#        if self.perspectiveEnabled:
+#            gl.gluPerspective(60, self.aspect, 0.001, 10)
+#        else:
+#            gl.glOrtho(-tLen*self.aspect, tLen*self.aspect, -tLen, tLen, -1, 1)
+#
+#        gl.glMatrixMode(gl.GL_MODELVIEW)
+#        gl.glLoadIdentity()
+#        gl.gluLookAt(.5, 0.0, 0.0,
+#                     0.0, 0.0, 0.0,
+#                     0.0, 0.0, 1.0)
+#
+#        gl.glEnable(gl.GL_LINE_SMOOTH)
+#        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+#        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+#        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
+#
+#        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+#        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+#
+#        self.rotateZYX()
+#
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+#        for iAx in range(3):
+#            if not (not self.perspectiveEnabled and
+#                    2-iAx == self.visibleAxes[2]):
+#                gl.glPushMatrix()
+#                trVec = np.zeros(3, dtype=np.float32)
+#                trVec[2-iAx] = axisLen
+#                gl.glTranslatef(*trVec)
+#                if iAx == 1:
+#                    gl.glRotatef(-90, 1.0, 0.0, 0.0)
+#                elif iAx == 2:
+#                    gl.glRotatef(90, 0.0, 1.0, 0.0)
+#                self.drawCone(arrowSize, 0.02, 20, iAx)
+#                gl.glPopMatrix()
+#        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+#        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+#
+#        gl.glBegin(gl.GL_LINES)
+#        for iAx in range(3):
+#            if not (not self.perspectiveEnabled and
+#                    2-iAx == self.visibleAxes[2]):
+#                colorVec = [0, 0, 0, 0.75]
+#                colorVec[iAx] = 1
+#                gl.glColor4f(*colorVec)
+#                gl.glVertex3f(0, 0, 0)
+#                trVec = np.zeros(3, dtype=np.float32)
+#                trVec[2-iAx] = axisLen
+#                gl.glVertex3f(*trVec)
+#                gl.glColor4f(*colorVec)
+#        gl.glEnd()
+#
+#        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 2):
+#            gl.glColor4f(1, 0, 0, 1)
+#            gl.glRasterPos3f(0, 0, axisLen*1.5)
+#            for symbol in "  {} (mm)".format('Z'):
+#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
+#        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
+#            gl.glColor4f(0, 0.75, 0, 1)
+#            gl.glRasterPos3f(0, axisLen*1.5, 0)
+#            for symbol in "  {} (mm)".format('Y'):
+#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
+#        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
+#            gl.glColor4f(0, 0.5, 1, 1)
+#            gl.glRasterPos3f(axisLen*1.5, 0, 0)
+#            for symbol in "  {} (mm)".format('X'):
+#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
+##        gl.glFlush()
+#        gl.glViewport(*pView)
+#        gl.glColor4f(1, 1, 1, 1)
+#        gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def initializeGL(self):
-        gl.glutInit()
-        gl.glutInitDisplayMode(gl.GLUT_RGBA | gl.GLUT_DOUBLE | gl.GLUT_DEPTH)
+#        gl.glutInit()
+#        gl.glutInitDisplayMode(gl.GLUT_RGBA | gl.GLUT_DOUBLE | gl.GLUT_DEPTH)
+
+#        gl.glEnable(gl.GL_DEPTH_TEST)
+#        gl.glDepthFunc(gl.GL_LESS);
+        gl.glEnable(gl.GL_STENCIL_TEST)
+        gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
+        gl.glEnable(gl.GL_MULTISAMPLE)
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+#        gl.glEnable(gl.GL_POINT_SMOOTH)
+#        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
+
+        self.init_coord_grid()  # We let coordBox have it's own shaders
+        self.init_shaders()
+        self.generate_beam_texture(512)
+
+        self.iMax = -1e20
+
+        maxLen = 1.
+        tmpMax = -1.0e12 * np.ones(3)
+        tmpMin = -1. * tmpMax
+
+        if self.newColorAxis:
+            newColorMax = -1e20
+            newColorMin = 1e20
+            if self.selColorMin is None:
+                self.selColorMin = newColorMin
+            if self.selColorMax is None:
+                self.selColorMax = newColorMax
+        else:
+            newColorMax = self.colorMax
+            newColorMin = self.colorMin
+        
+        for beamName, startBeam in self.beamsDict.items():
+            good = (startBeam.state == 1) | (startBeam.state == 2)
+            if len(startBeam.state[good]) > 0:
+                for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
+                    axMin = np.min(getattr(startBeam, tAxis)[good])
+                    axMax = np.max(getattr(startBeam, tAxis)[good])
+                    if axMin < tmpMin[tmpCoord]:
+                        tmpMin[tmpCoord] = axMin
+                    if axMax > tmpMax[tmpCoord]:
+                        tmpMax[tmpCoord] = axMax
+
+                startBeam.iMax = np.max(startBeam.Jss[good] + startBeam.Jpp[good])
+                self.iMax = max(self.iMax, startBeam.iMax)
+                newColorMax = max(np.max(
+                    self.getColor(startBeam)[good]),
+                    newColorMax)
+                newColorMin = min(np.min(
+                    self.getColor(startBeam)[good]),
+                    newColorMin)
+            
+                self.init_beam_footprint(startBeam)
+
+        if self.newColorAxis:
+            if newColorMin != self.colorMin:
+                self.colorMin = newColorMin
+                self.selColorMin = self.colorMin
+            if newColorMax != self.colorMax:
+                self.colorMax = newColorMax
+                self.selColorMax = self.colorMax
+
+
+        tmpMaxLen = np.max(tmpMax - tmpMin)
+        if tmpMaxLen > maxLen:
+            maxLen = tmpMaxLen
+        self.maxLen = maxLen
+        self.newColorAxis = False
+
+        for oeString in self.oesList: #self.oesToPlot:
+            oeToPlot = self.oesList[oeString][0]
+#            print(oeToPlot.name)
+            oeuuid = oeToPlot.uuid
+#                is2ndXtal = self.oesList[oeString][3]
+
+            if hasattr(oeToPlot, 'material'):  # real oes, no screens or slits (yet)
+#                print(oeuuid)
+                if not hasattr(oeToPlot, 'mesh3D'):
+                    oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
+
+
+                is2ndXtalOpts = [False]
+                if isinstance(oeToPlot, roes.DCM):
+                    is2ndXtalOpts.append(True)
+
+                for is2ndXtal in is2ndXtalOpts:
+                    oeToPlot.mesh3D.prepareSurfaceMesh(is2ndXtal)
+                    oeToPlot.mesh3D.isEnabled = True
+                    if oeuuid not in self.selectableOEs.values():
+                        if len(self.selectableOEs):
+                            stencilNum = np.max(list(self.selectableOEs.keys()))+1
+                        else:
+                            stencilNum = 1
+                        self.selectableOEs[int(stencilNum)] = oeuuid
+                        oeToPlot.mesh3D.stencilNum = stencilNum
+
+#        for beamName, startBeam in self.beamsDict.items():
+#            print(startBeam, hasattr(startBeam, 'vbo'))
+
+
         gl.glViewport(*self.viewPortGL)
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
         gl.glViewport(*self.viewPortGL)
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
+
+        self.mProj.setToIdentity()
+        self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+
 
     def populateVScreen(self):
         if any([prop is None for prop in [self.virtBeam,
@@ -4501,156 +5241,269 @@ class xrtGlWidget(qt.QGLWidget):
         self.positionVScreen()
         self.glDraw()
 
+#    def mouseMoveEvent(self, mEvent):
+#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+#        mouseX = mEvent.x()
+#        mouseY = pView[3] - mEvent.y()
+#        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
+#        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
+#        shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
+#
+#        if mEvent.buttons() == qt.LeftButton:
+#            gl.glMatrixMode(gl.GL_MODELVIEW)
+#            gl.glLoadIdentity()
+#            gl.gluLookAt(self.cameraPos[0], self.cameraPos[1],
+#                         self.cameraPos[2],
+#                         self.cameraTarget[0], self.cameraTarget[1],
+#                         self.cameraTarget[2],
+#                         0.0, 0.0, 1.0)
+#            self.rotateZYX()
+#            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
+#            gl.glMatrixMode(gl.GL_PROJECTION)
+#            gl.glLoadIdentity()
+#
+#            if self.perspectiveEnabled:
+#                gl.gluPerspective(self.cameraAngle, self.aspect, 0.01, 100)
+#            else:
+#                orthoView = self.cameraPos[0]*0.45
+#                gl.glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
+#                           -orthoView, orthoView, -100, 100)
+#            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
+#            pm_list = pModel.flatten().tolist()
+#            pp_list = pProjection.flatten().tolist()
+##            pv_list = pView.flatten().tolist()
+##            print(len(pm_list), len(pp_list), len(pv_list))
+#
+#            self.mMod = qt.QMatrix4x4(*pm_list)  # MODVIEW
+#            self.mProj = qt.QMatrix4x4(*pp_list)
+##            self.mView = qt.QMatrix4x4(*pv_list)
+#
+##            self.mView.setToIdentity()
+##            self.mView.lookAt(qt.QVector3D(*self.cameraPos),
+##                              qt.QVector3D(*self.cameraTarget),
+##                              self.upVec)
+#
+#            if mEvent.modifiers() == qt.NoModifier:
+#                self.rotations[2][0] += np.float32(
+#                    self.signs[2][1] *
+#                    (mouseX - self.prevMPos[0]) * 36. / 90.)
+#                self.rotations[1][0] -= np.float32(
+#                    (mouseY - self.prevMPos[1]) * 36. / 90.)
+#                for ax in range(2):
+#                    if self.rotations[self.visibleAxes[ax+1]][0] > 180:
+#                        self.rotations[self.visibleAxes[ax+1]][0] -= 360
+#                    if self.rotations[self.visibleAxes[ax+1]][0] < -180:
+#                        self.rotations[self.visibleAxes[ax+1]][0] += 360
+#                self.updateQuats()
+#                self.rotationUpdated.emit(self.rotations)
+#
+#            elif shiftOn:
+#                for iDim in range(2):
+#                    mStart = np.zeros(3)
+#                    mEnd = np.zeros(3)
+#                    mEnd[self.visibleAxes[iDim]] = 1.
+##                    mEnd = -1 * mStart
+#                    pStart = np.array(gl.gluProject(
+#                        *mStart, model=pModel, proj=pProjection,
+#                        view=pView)[:-1])
+#                    pEnd = np.array(gl.gluProject(
+#                        *mEnd, model=pModel, proj=pProjection,
+#                        view=pView)[:-1])
+#                    pScr = np.array([mouseX, mouseY])
+#                    prevPScr = np.array(self.prevMPos)
+#                    bDir = pEnd - pStart
+#                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
+#                        np.dot(bDir, bDir) * bDir
+#                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
+#                        np.dot(bDir, bDir) * bDir
+#                    self.tVec[self.visibleAxes[iDim]] += np.dot(
+#                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+#                        self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
+#                    if ctrlOn and self.virtScreen is not None:
+#                        self.virtScreen.center[self.visibleAxes[iDim]] -=\
+#                            np.dot(
+#                            pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+#                            self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
+#                if ctrlOn and self.virtScreen is not None:
+#                    v0 = self.virtScreen.center
+#                    self.positionVScreen()
+#                    self.tVec -= self.virtScreen.center - v0
+#
+#            elif altOn:
+#                mStart = np.zeros(3)
+#                mEnd = np.zeros(3)
+#                mEnd[self.visibleAxes[2]] = 1.
+##                    mEnd = -1 * mStart
+#                pStart = np.array(gl.gluProject(
+#                    *mStart, model=pModel, proj=pProjection,
+#                    view=pView)[:-1])
+#                pEnd = np.array(gl.gluProject(
+#                    *mEnd, model=pModel, proj=pProjection,
+#                    view=pView)[:-1])
+#                pScr = np.array([mouseX, mouseY])
+#                prevPScr = np.array(self.prevMPos)
+#                bDir = pEnd - pStart
+#                pProj = pStart + np.dot(pScr - pStart, bDir) /\
+#                    np.dot(bDir, bDir) * bDir
+#                pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
+#                    np.dot(bDir, bDir) * bDir
+#                self.tVec[self.visibleAxes[2]] += np.dot(
+#                    pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+#                    self.maxLen / self.scaleVec[self.visibleAxes[2]]
+#                if ctrlOn and self.virtScreen is not None:
+#                    self.virtScreen.center[self.visibleAxes[2]] -=\
+#                        np.dot(pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+#                        self.maxLen / self.scaleVec[self.visibleAxes[2]]
+#                    v0 = self.virtScreen.center
+#                    self.positionVScreen()
+#                    self.tVec -= self.virtScreen.center - v0
+#
+#            elif ctrlOn:
+#                if self.virtScreen is not None:
+#
+#                    worldPStart = self.modelToWorld(
+#                        self.virtScreen.beamStart - self.coordOffset)
+#                    worldPEnd = self.modelToWorld(
+#                        self.virtScreen.beamEnd - self.coordOffset)
+#
+#                    worldBDir = worldPEnd - worldPStart
+#
+#                    normPEnd = worldPStart + np.dot(
+#                        np.ones(3) - worldPStart, worldBDir) /\
+#                        np.dot(worldBDir, worldBDir) * worldBDir
+#
+#                    normPStart = worldPStart + np.dot(
+#                        -1. * np.ones(3) - worldPStart, worldBDir) /\
+#                        np.dot(worldBDir, worldBDir) * worldBDir
+#
+#                    normBDir = normPEnd - normPStart
+#                    normScale = np.sqrt(np.dot(normBDir, normBDir) /
+#                                        np.dot(worldBDir, worldBDir))
+#
+#                    if np.dot(normBDir, worldBDir) < 0:
+#                        normPStart, normPEnd = normPEnd, normPStart
+#
+#                    pStart = np.array(gl.gluProject(
+#                        *normPStart, model=pModel, proj=pProjection,
+#                        view=pView)[:-1])
+#                    pEnd = np.array(gl.gluProject(
+#                        *normPEnd, model=pModel, proj=pProjection,
+#                        view=pView)[:-1])
+#                    pScr = np.array([mouseX, mouseY])
+#                    prevPScr = np.array(self.prevMPos)
+#                    bDir = pEnd - pStart
+#                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
+#                        np.dot(bDir, bDir) * bDir
+#                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
+#                        np.dot(bDir, bDir) * bDir
+#                    self.virtScreen.center += normScale * np.dot(
+#                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
+#                        (self.virtScreen.beamEnd - self.virtScreen.beamStart)
+#                    self.positionVScreen()
+#
+#            self.glDraw()
+#        self.prevMPos[0] = mouseX
+#        self.prevMPos[1] = mouseY
+#
+#    def wheelEvent(self, wEvent):
+#        ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
+#        altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
+#        if qt.QtName == "PyQt4":
+#            deltaA = wEvent.delta()
+#        else:
+#            deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
+#
+#        if deltaA > 0:
+#            if altOn:
+#                self.vScreenSize *= 1.1
+#            elif ctrlOn:
+#                self.cameraPos *= 0.9
+#            else:
+#                self.scaleVec *= 1.1
+#        else:
+#            if altOn:
+#                self.vScreenSize *= 0.9
+#            elif ctrlOn:
+#                self.cameraPos *= 1.1
+#            else:
+#                self.scaleVec *= 0.9
+#        if not ctrlOn:
+#            self.scaleUpdated.emit(self.scaleVec)
+#        self.glDraw()
+
     def mouseMoveEvent(self, mEvent):
-        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+
+        xView = self.viewPortGL[2]
+        yView = self.viewPortGL[3]
         mouseX = mEvent.x()
-        mouseY = pView[3] - mEvent.y()
+        mouseY = yView - mEvent.y()
+        self.makeCurrent()
+        outStencil = gl.glReadPixels(
+                mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX, gl.GL_UNSIGNED_INT)
+        overOE = np.squeeze(np.array(outStencil))
+
         ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
         altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
         shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
+        polarAx = qt.QVector3D(0, 0, 1)
+
+        dx = mouseX - self.prevMPos[0]
+        dy = mouseY - self.prevMPos[1]
+
+        xs = 2*dx/xView
+        ys = 2*dy/yView
+        xsn = xs*np.tan(np.radians(60))  # divide by near clipping plane
+        ysn = ys*np.tan(np.radians(60))
+        ym = xsn*3.5  # dist to cam, multiply by near clipping plane
+        zm = ysn*3.5
+
 
         if mEvent.buttons() == qt.LeftButton:
-            gl.glMatrixMode(gl.GL_MODELVIEW)
-            gl.glLoadIdentity()
-            gl.gluLookAt(self.cameraPos[0], self.cameraPos[1],
-                         self.cameraPos[2],
-                         self.cameraTarget[0], self.cameraTarget[1],
-                         self.cameraTarget[2],
-                         0.0, 0.0, 1.0)
-            self.rotateZYX()
-            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-            gl.glMatrixMode(gl.GL_PROJECTION)
-            gl.glLoadIdentity()
-
-            if self.perspectiveEnabled:
-                gl.gluPerspective(self.cameraAngle, self.aspect, 0.01, 100)
-            else:
-                orthoView = self.cameraPos[0]*0.45
-                gl.glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
-                           -orthoView, orthoView, -100, 100)
-            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-
             if mEvent.modifiers() == qt.NoModifier:
-                self.rotations[2][0] += np.float32(
-                    self.signs[2][1] *
-                    (mouseX - self.prevMPos[0]) * 36. / 90.)
-                self.rotations[1][0] -= np.float32(
-                    (mouseY - self.prevMPos[1]) * 36. / 90.)
-                for ax in range(2):
-                    if self.rotations[self.visibleAxes[ax+1]][0] > 180:
-                        self.rotations[self.visibleAxes[ax+1]][0] -= 360
-                    if self.rotations[self.visibleAxes[ax+1]][0] < -180:
-                        self.rotations[self.visibleAxes[ax+1]][0] += 360
-                self.updateQuats()
-                self.rotationUpdated.emit(self.rotations)
+                cR = self.cameraPos.length()
+                axR = self.aPos[0]*0.707
+                scale = np.tan(np.radians(self.cameraAngle))*(cR-axR)
+
+                yaw = self.aspect*dx/xView*scale/np.pi/axR #dx / xView / cR
+                roll = dy/yView*scale/np.pi/axR #dy / yView /cR
+                QXY = qt.QQuaternion().fromAxisAndAngle(polarAx, -np.degrees(yaw))
+                self.cameraPos = QXY.rotatedVector(self.cameraPos)
+                rotAx = qt.QVector3D().crossProduct(polarAx, self.cameraPos.normalized())
+                QXR = qt.QQuaternion().fromAxisAndAngle(rotAx, np.degrees(roll))
+                self.cameraPos = QXR.rotatedVector(self.cameraPos)
+
+                self.mView.setToIdentity()
+                self.mView.lookAt(self.cameraPos, self.cameraTarget, self.upVec)
+
+                pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
+                newVisAx = np.argmax(pModel, axis=0)
+                if len(np.unique(newVisAx)) == 3:
+                    self.visibleAxes = newVisAx
+                self.cBox.update_grid()
 
             elif shiftOn:
-                for iDim in range(2):
-                    mStart = np.zeros(3)
-                    mEnd = np.zeros(3)
-                    mEnd[self.visibleAxes[iDim]] = 1.
-#                    mEnd = -1 * mStart
-                    pStart = np.array(gl.gluProject(
-                        *mStart, model=pModel, proj=pProjection,
-                        view=pView)[:-1])
-                    pEnd = np.array(gl.gluProject(
-                        *mEnd, model=pModel, proj=pProjection,
-                        view=pView)[:-1])
-                    pScr = np.array([mouseX, mouseY])
-                    prevPScr = np.array(self.prevMPos)
-                    bDir = pEnd - pStart
-                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
-                        np.dot(bDir, bDir) * bDir
-                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
-                        np.dot(bDir, bDir) * bDir
-                    self.tVec[self.visibleAxes[iDim]] += np.dot(
-                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-                        self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
-                    if ctrlOn and self.virtScreen is not None:
-                        self.virtScreen.center[self.visibleAxes[iDim]] -=\
-                            np.dot(
-                            pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-                            self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
-                if ctrlOn and self.virtScreen is not None:
-                    v0 = self.virtScreen.center
-                    self.positionVScreen()
-                    self.tVec -= self.virtScreen.center - v0
+                yShift = ym*self.maxLen/self.scaleVec[1]
+                zShift = zm*self.maxLen/self.scaleVec[2]
+                self.tVec[1] += yShift
+                self.tVec[2] += zShift
+                self.cBox.update_grid()
 
-            elif altOn:
-                mStart = np.zeros(3)
-                mEnd = np.zeros(3)
-                mEnd[self.visibleAxes[2]] = 1.
-#                    mEnd = -1 * mStart
-                pStart = np.array(gl.gluProject(
-                    *mStart, model=pModel, proj=pProjection,
-                    view=pView)[:-1])
-                pEnd = np.array(gl.gluProject(
-                    *mEnd, model=pModel, proj=pProjection,
-                    view=pView)[:-1])
-                pScr = np.array([mouseX, mouseY])
-                prevPScr = np.array(self.prevMPos)
-                bDir = pEnd - pStart
-                pProj = pStart + np.dot(pScr - pStart, bDir) /\
-                    np.dot(bDir, bDir) * bDir
-                pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
-                    np.dot(bDir, bDir) * bDir
-                self.tVec[self.visibleAxes[2]] += np.dot(
-                    pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-                    self.maxLen / self.scaleVec[self.visibleAxes[2]]
-                if ctrlOn and self.virtScreen is not None:
-                    self.virtScreen.center[self.visibleAxes[2]] -=\
-                        np.dot(pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-                        self.maxLen / self.scaleVec[self.visibleAxes[2]]
-                    v0 = self.virtScreen.center
-                    self.positionVScreen()
-                    self.tVec -= self.virtScreen.center - v0
-
-            elif ctrlOn:
-                if self.virtScreen is not None:
-
-                    worldPStart = self.modelToWorld(
-                        self.virtScreen.beamStart - self.coordOffset)
-                    worldPEnd = self.modelToWorld(
-                        self.virtScreen.beamEnd - self.coordOffset)
-
-                    worldBDir = worldPEnd - worldPStart
-
-                    normPEnd = worldPStart + np.dot(
-                        np.ones(3) - worldPStart, worldBDir) /\
-                        np.dot(worldBDir, worldBDir) * worldBDir
-
-                    normPStart = worldPStart + np.dot(
-                        -1. * np.ones(3) - worldPStart, worldBDir) /\
-                        np.dot(worldBDir, worldBDir) * worldBDir
-
-                    normBDir = normPEnd - normPStart
-                    normScale = np.sqrt(np.dot(normBDir, normBDir) /
-                                        np.dot(worldBDir, worldBDir))
-
-                    if np.dot(normBDir, worldBDir) < 0:
-                        normPStart, normPEnd = normPEnd, normPStart
-
-                    pStart = np.array(gl.gluProject(
-                        *normPStart, model=pModel, proj=pProjection,
-                        view=pView)[:-1])
-                    pEnd = np.array(gl.gluProject(
-                        *normPEnd, model=pModel, proj=pProjection,
-                        view=pView)[:-1])
-                    pScr = np.array([mouseX, mouseY])
-                    prevPScr = np.array(self.prevMPos)
-                    bDir = pEnd - pStart
-                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
-                        np.dot(bDir, bDir) * bDir
-                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
-                        np.dot(bDir, bDir) * bDir
-                    self.virtScreen.center += normScale * np.dot(
-                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-                        (self.virtScreen.beamEnd - self.virtScreen.beamStart)
-                    self.positionVScreen()
-
+            self.doneCurrent()
             self.glDraw()
+        else:
+            if overOE != self.selectedOE:
+                self.selectedOE = int(overOE)
+                self.doneCurrent()
+                self.glDraw()
         self.prevMPos[0] = mouseX
         self.prevMPos[1] = mouseY
+
+    def mouseDoubleClickEvent(self, mdcevent):
+        pass
+#        if self.selectedOE > 0:
+#            oeSel = self.parent.beamLine.oesDict[self.selectableOEs[int(
+#                    self.selectedOE)]][0]
+#            self.openElViewer.emit([oeSel])
 
     def wheelEvent(self, wEvent):
         ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
@@ -4664,16 +5517,1700 @@ class xrtGlWidget(qt.QGLWidget):
             if altOn:
                 self.vScreenSize *= 1.1
             elif ctrlOn:
-                self.cameraPos *= 0.9
+                self.cameraAngle *= 0.9
+#                self.cameraPos *= 0.9
             else:
                 self.scaleVec *= 1.1
         else:
             if altOn:
                 self.vScreenSize *= 0.9
             elif ctrlOn:
-                self.cameraPos *= 1.1
+                self.cameraAngle *= 1.1
             else:
                 self.scaleVec *= 0.9
-        if not ctrlOn:
+
+        if ctrlOn:
+            self.mProj.setToIdentity()
+            self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+        else:
             self.scaleUpdated.emit(self.scaleVec)
+        self.cBox.update_grid()
         self.glDraw()
+
+
+
+class Beam3D():
+
+    vertex_source = '''
+    #version 400
+
+    layout(location = 0) in vec3 position_start;
+    layout(location = 4) in vec3 position_end;
+
+    layout(location = 1) in float colorAxis;
+    layout(location = 2) in float state;
+    layout(location = 3) in float intensity;
+
+    uniform sampler1D hsvTexture;
+
+    uniform float opacity;
+    uniform float iMax;
+    uniform vec2 colorMinMax;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+
+    out vec4 vs_out_start;
+    out vec4 vs_out_end;
+    out vec4 vs_out_color;
+    //flat out float vs_out_frag_state;
+
+    mat4 transformation;
+    float hue;
+    float intensity_v;
+    vec4 hrgb;
+
+    void main()
+    {
+
+     transformation = projection * view * model;
+     vs_out_start = transformation * vec4(position_start, 1.0);
+     vs_out_end = transformation * vec4(position_end, 1.0);
+
+     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+     intensity_v = opacity*intensity/iMax;
+     hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
+     //vs_out_color = (state > 0) ? hrgb : vec4(0., 0., 0., 0.);
+     vs_out_color = hrgb;
+     //vs_out_frag_state = state;
+
+    }
+    '''
+
+    geometry_source = '''
+    #version 400
+
+    layout(points) in;
+    layout(line_strip, max_vertices = 2) out;
+
+    in vec4 vs_out_start[];
+    in vec4 vs_out_end[];
+    in vec4 vs_out_color[];
+    //flat in float vs_out_frag_state[];
+
+    uniform float pointSize;
+
+    uniform vec4 gridMask;
+    uniform vec4 gridProjection;
+
+    out vec4 gs_out_color;
+    //flat out float gs_out_frag_state;
+
+   // mat4 transformation;
+
+
+    void main() {
+
+       // transformation = projection * view * model;
+
+        gl_Position = vs_out_start[0];
+        gl_PointSize = pointSize;
+        gs_out_color = vs_out_color[0];
+        //gs_out_frag_state = vs_out_frag_state[0];
+        EmitVertex();
+
+        gl_Position = vs_out_end[0];
+        gs_out_color = vs_out_color[0];
+        //gs_out_frag_state = vs_out_frag_state[0];
+        EmitVertex();
+
+        EndPrimitive();
+    }
+    '''
+
+
+    fragment_source = '''
+    #version 400
+
+    in vec4 gs_out_color;
+    //flat in float gs_out_frag_state;
+
+    void main()
+    {
+      // if (gs_out_frag_state < 1) {
+      //      discard;
+      //   }
+      gl_FragColor = gs_out_color;
+    }
+    '''
+
+    vertex_source_point = '''
+    #version 400
+
+    layout(location = 0) in vec3 position_start;
+    layout(location = 1) in float colorAxis;
+    layout(location = 2) in float state;
+    layout(location = 3) in float intensity;
+
+    uniform sampler1D hsvTexture;
+
+    uniform float opacity;
+    uniform float iMax;
+    uniform vec2 colorMinMax;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+
+    uniform float pointSize;
+    uniform vec4 gridMask;
+    uniform vec4 gridProjection;
+
+    out vec4 vs_out_color;
+    //flat out float vs_out_frag_state;
+
+    mat4 transformation;
+    float hue;
+    vec4 hrgb;
+
+    void main()
+    {
+     transformation = projection * view * model;
+     gl_Position = vec4(transformation * vec4(position_start, 1.0));
+     gl_PointSize = pointSize;
+
+     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+     hrgb = vec4(texture(hsvTexture, hue).rgb, opacity*intensity/iMax);
+     //vs_out_color = (state > 0) ? hrgb : vec4(0., 0., 0., 0.);
+     vs_out_color = hrgb;
+     //vs_out_frag_state = state;
+    }
+    '''
+
+    fragment_source_point = '''
+    #version 400
+
+    in vec4 vs_out_color;
+    //flat in float vs_out_frag_state;
+
+    void main()
+    {
+       //if (vs_out_frag_state < 1) {
+       //    discard;
+       // }
+      gl_FragColor = vs_out_color;
+
+    }
+    '''
+
+
+class OEMesh3D():
+    """Container for an optical element mesh"""
+
+    vertex_source = '''
+    #version 400
+    layout(location = 0) in vec3 position;
+    layout(location = 1) in vec3 normals;
+
+    out vec4 w_position;  // position of the vertex (and fragment) in world space
+    out vec3 varyingNormalDirection;  // surface normal vector in world space
+    out vec3 localPos;
+
+    uniform mat4 model;
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    uniform mat3 m_3x3_inv_transp;
+    //varying vec2 texUV;
+
+    void main()
+    {
+      localPos = position;
+      w_position = model * vec4(position, 1.);
+      varyingNormalDirection = normalize(m_3x3_inv_transp * normals);
+
+      //mat4 mvp = projection*view*model;
+      gl_Position = projection*view*model * vec4(position, 1.);
+
+    }
+    '''
+
+    fragment_source = '''
+    #version 400
+
+    in vec4 w_position;  // position of the vertex (and fragment) in world space
+    in vec3 varyingNormalDirection;  // surface normal vector in world space
+    in vec3 localPos;
+
+    uniform mat4 model;
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    uniform mat4 v_inv;
+    uniform vec2 texlimitsx;
+    uniform vec2 texlimitsy;
+    uniform vec2 texlimitsz;
+    uniform sampler2D u_texture;
+    uniform float opacity;
+
+    vec2 texUV;
+    vec4 histColor;
+
+    struct lightSource
+    {
+      vec4 position;
+      vec4 diffuse;
+      vec4 specular;
+      float constantAttenuation, linearAttenuation, quadraticAttenuation;
+      float spotCutoff, spotExponent;
+      vec3 spotDirection;
+    };
+
+    lightSource light0 = lightSource(
+      vec4(0.0,  0.0,  3.0, 0.0),
+      vec4(0.6,  0.6,  0.6, 1.0),
+      vec4(1.0,  1.0,  1.0, 1.0),
+      0.0, 1.0, 0.0,
+      90.0, 0.0,
+      vec3(0.0, 0.0, -1.0)
+    );
+    vec4 scene_ambient = vec4(0.5, 0.5, 0.5, 1.0);
+
+    struct material
+    {
+      vec4 ambient;
+      vec4 diffuse;
+      vec4 specular;
+      float shininess;
+    };
+
+    uniform material frontMaterial;
+//        material frontMaterial = material(
+//          vec4(0.2, 0.2, 0.2, 1.0),
+//          vec4(1.0, 0.8, 0.8, 1.0),
+//          vec4(1.0, 1.0, 1.0, 1.0),
+//          100.0
+//        );
+
+    void main()
+    {
+      vec3 normalDirection = normalize(varyingNormalDirection);
+      vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - w_position));
+      vec3 lightDirection;
+      float attenuation;
+
+      if (0.0 == light0.position.w) // directional light?
+        {
+          attenuation = 1.0; // no attenuation
+          lightDirection = normalize(vec3(light0.position));
+        }
+      else // point light or spotlight (or other kind of light)
+        {
+          vec3 positionToLightSource = -viewDirection;
+          //vec3 positionToLightSource = vec3(light0.position - w_position);
+          float distance = length(positionToLightSource);
+          lightDirection = normalize(positionToLightSource);
+          attenuation = 1.0 / (light0.constantAttenuation
+                               + light0.linearAttenuation * distance
+                               + light0.quadraticAttenuation * distance * distance);
+
+          if (light0.spotCutoff <= 90.0) // spotlight?
+    	{
+    	  float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
+    	  if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone?
+    	    {
+    	      attenuation = 0.0;
+    	    }
+    	  else
+    	    {
+    	      attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
+    	    }
+    	}
+        }
+
+      vec3 ambientLighting = vec3(scene_ambient) * vec3(frontMaterial.ambient);
+
+      vec3 diffuseReflection = attenuation
+        * vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
+        * max(0.0, dot(normalDirection, lightDirection));
+
+      vec3 specularReflection;
+      if (dot(normalDirection, lightDirection) < 0.0) // light source on the wrong side?
+        {
+          specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+        }
+      else // light source on the right side
+        {
+          specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
+    	* pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
+        }
+     texUV = vec2((localPos.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
+                 (localPos.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
+     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1 && localPos.z<texlimitsz.y && localPos.z>texlimitsz.x)
+         histColor = texture(u_texture, texUV);
+     else
+         histColor = vec4(0, 0, 0, 0);
+
+      //gl_FragColor = vec4(1, 1, 1, 1.0);
+      gl_FragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0) + histColor*opacity;
+    }
+    '''
+
+
+    vertex_source_flat = '''
+    #version 400
+
+    struct Material {
+        vec3 ambient;
+        vec3 diffuse;
+        vec3 specular;
+        float shininess;
+    };
+
+    struct Light {
+        vec3 position;
+        vec3 ambient;
+        vec3 diffuse;
+        vec3 specular;
+    };
+
+    attribute vec3 position;
+    attribute vec3 normals;
+
+    uniform mat4 model;
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    uniform vec2 texlimitsx;
+    uniform vec2 texlimitsy;
+    //uniform vec2 texlimitsz;
+
+    uniform vec3 lightPos;
+    uniform vec3 viewPos;
+    uniform Material material;
+    uniform Light light;
+
+    //uniform vec3 lightColor;
+
+    varying vec4 color_out;
+    varying vec2 texUV;
+
+
+    void main()
+    {
+        vec4 worldCoord = model * vec4(position, 1.0);
+        gl_Position = projection * view * worldCoord;
+
+        vec3 ambient = light.ambient * material.ambient;
+        vec3 norm = vec3(model * vec4(normals, 0));
+        vec3 lightDir = vec3(0, 0, -1);
+        //vec3 lightDir = normalize(lightPos - worldCoord.xyz);
+
+        float diff = max(dot(norm, -lightDir), 0.0);
+        vec3 diffuse = light.diffuse * (diff * material.diffuse);
+
+        vec3 viewDir = normalize(viewPos - worldCoord.xyz);
+        vec3 reflectDir = reflect(lightDir, norm);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+        vec3 specular = light.specular * (spec * material.specular);
+        //vec3 result = ambient + diffuse + specular;
+        vec3 result = ambient + specular;
+        color_out = vec4(result, 1.0);
+
+        texUV = vec2((position.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
+                     (position.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
+    }
+    '''
+
+    fragment_source_flat = '''
+    #version 400
+
+    varying vec4 color_out;
+    varying vec2 texUV;
+
+    uniform sampler2D u_texture;
+    uniform float opacity;
+    vec4 histColor;
+
+    void main()
+    {
+
+     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
+         histColor = texture(u_texture, texUV);
+     else
+         histColor = vec4(0, 0, 0, 0);
+
+     //gl_FragColor = vec4(color_out+histColor);
+     gl_FragColor = color_out;
+    }
+    '''
+
+    vertex_contour = '''
+    #version 400
+    attribute vec3 position;
+
+    uniform mat4 model;
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    void main()
+    {
+        gl_Position = projection*view*model*vec4(position, 1.);
+    }
+    '''
+
+    fragment_contour = '''
+    #version 400
+    uniform vec4 cColor;
+
+    void main()
+    {
+        gl_FragColor = cColor;
+    }
+    '''
+
+    vertex_arrow = '''
+    #version 400
+
+    attribute vec3 position;
+
+    uniform mat4 model;
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    void main()
+    {
+        gl_Position = projection*view*model*vec4(position, 1.);
+    }
+    '''
+
+    fragment_arrow = '''
+    #version 400
+    uniform vec4 aColor;
+
+    void main()
+    {
+        gl_FragColor = aColor;
+    }
+    '''
+
+    geometry_source = '''
+    #version 400
+
+    varying vec4 color_out;
+    varying vec2 texUV;
+
+    uniform sampler2D u_texture;
+    vec4 histColor;
+
+    void main()
+    {
+
+     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
+         histColor = texture(u_texture, texUV);
+     else
+         histColor = vec4(0, 0, 0, 0);
+
+     //gl_FragColor = vec4(color_out+histColor);
+     gl_FragColor = color_out;
+    }
+    '''
+
+    fg_source = '''
+    #version 400
+
+    varying vec4 color_out;
+    varying vec2 texUV;
+
+    uniform sampler2D u_texture;
+    vec4 histColor;
+
+    void main()
+    {
+
+     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
+         histColor = texture(u_texture, texUV);
+     else
+         histColor = vec4(0, 0, 0, 0);
+
+     //gl_FragColor = vec4(color_out+histColor);
+     gl_FragColor = color_out;
+    }
+    '''
+
+    def __init__(self, parentOE, parentWidget):
+        self.emptyTex = qt.QOpenGLTexture(
+                qt.QImage(np.zeros((256, 256, 3)),
+                          256, 256, qt.QImage.Format_RGB888))
+        self.defaultLimits = np.array([[-1.]*3, [1.]*3])
+#        print("def shape", self.defaultLimits.shape)
+#        texture.save(str(oe.name)+"_beam_hist.png")
+#        if hasattr(meshObj, 'beamTexture'):
+#            oe.beamTexture.setData(texture)
+#        meshObj.beamTexture[nsIndex] = qg.QOpenGLTexture(texture)
+#        meshObj.beamLimits[nsIndex] = beamLimits
+        self.oe = parentOE
+        self.parent = parentWidget
+        self.isStl = False
+        self.shader = {}
+        self.shader_c = {}
+        self.vao = {}
+        self.vao_c = {}
+        self.ibo = {}
+        self.beamTexture = {}
+        self.beamLimits = {}
+        self.transMatrix = {}
+        self.arrLengths = {}
+
+        self.vbo_vertices = {}
+        self.vbo_normals = {}
+        self.vbo_contour = {}
+
+        self.oeThickness = 5
+        self.tiles = [25, 25]
+        self.showLocalAxes = False
+        self.isEnabled = False
+        self.stencilNum = 0
+#        self.createArrowArray(0.25, 0.02, 20)
+
+    def updateSurfaceMesh(self, is2ndXtal=False):
+        pass
+
+    @staticmethod
+    def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
+#        oe = self.oe
+
+        if isinstance(oe, roes.OE):
+            dx, dy, dz = 0, 0, 0
+            extraAnglesSign = 1.  # only for pitch and yaw
+            if isinstance(oe, roes.DCM):
+                if is2ndXtal:
+                    pitch = -oe.pitch - oe.bragg + oe.cryst2pitch +\
+                        oe.cryst2finePitch
+                    roll = oe.roll + oe.cryst2roll + oe.positionRoll
+                    yaw = -oe.yaw
+                    dx = -oe.dx
+                    dy = oe.cryst2longTransl
+                    dz = -oe.cryst2perpTransl
+                    extraAnglesSign = -1.
+                else:
+                    pitch = oe.pitch + oe.bragg
+                    roll = oe.roll + oe.positionRoll + oe.cryst1roll
+                    yaw = oe.yaw
+                    dx = oe.dx
+            else:
+                pitch = oe.pitch
+                roll = oe.roll + oe.positionRoll
+                yaw = oe.yaw
+
+            rotAx = {'x': pitch,
+                     'y': roll,
+                     'z': yaw}
+            extraRotAx = {'x': extraAnglesSign*oe.extraPitch,
+                          'y': oe.extraRoll,
+                          'z': extraAnglesSign*oe.extraYaw}
+
+            rotSeq = (oe.rotationSequence[slice(1, None, 2)])[::-1]
+            extraRotSeq = (oe.extraRotationSequence[slice(1, None, 2)])[::-1]
+
+#            if isinstance(oe, rscreens.Screen):
+#                rotation = oe.orientationQuat
+#            print("Transmatr", oe.name)
+
+            rotation = (scprot.from_euler(
+                    rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
+            extraRot = (scprot.from_euler(
+                    extraRotSeq,
+                    [extraRotAx[i] for i in extraRotSeq])).as_quat()
+            rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
+            extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
+#            if hasattr(oe, 'orientationQuat'):
+#                print("oe.quat", oe.orientationQuat)
+#                print("tm.rot", raycing.multiply_quats(rotation, extraRot))
+            # 1. Only for DCM - translate to 2nd crystal position
+            m2ndXtalPos = qt.QMatrix4x4()
+            m2ndXtalPos.translate(dx, dy, dz)
+
+            # 2. Apply extra rotation
+            mExtraRot = qt.QMatrix4x4()
+            mExtraRot.rotate(qt.QQuaternion(*extraRot))
+
+            # 3. Apply rotation
+            mRotation = qt.QMatrix4x4()
+            mRotation.rotate(qt.QQuaternion(*rotation))
+
+            # 4. Only for DCM - flip 2nd crystal
+            m2ndXtalRot = qt.QMatrix4x4()
+            if isinstance(oe, roes.DCM):
+                if is2ndXtal:
+                    m2ndXtalRot.rotate(180, 0, 1, 0)
+
+            # 5. Move to position in global coordinates
+            mTranslation = qt.QMatrix4x4()
+            mTranslation.translate(*oe.center)
+
+#            if isinstance(oe, roes.DCM):
+#                print(oe.name, m2ndXtalRot*mRotation, is2ndXtal)
+
+            return mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
+        else:
+            posMatr = qt.QMatrix4x4()
+            posMatr.translate(*oe.center)
+            return posMatr
+
+#    def createArrowArray(self, z, r, nSegments):
+#        phi = np.linspace(0, 2*np.pi, nSegments)
+#        xp = r * np.cos(phi)
+#        yp = r * np.sin(phi)
+#        base = np.vstack((xp, yp, np.zeros_like(xp)))
+#        coneVertices = np.hstack((np.array([0, 0, 0, 0, 0, z]).reshape(3, 2),
+#                                  base)).T
+#        self.arrowLen = len(coneVertices)
+##        print(coneVertices, coneVertices.shape)
+#
+#        vao = qg.QOpenGLVertexArrayObject()
+#        vao.create()
+#        shader = qg.QOpenGLShaderProgram()
+#        shader.addShaderFromSourceCode(
+#                qt.QOpenGLShader.Vertex, self.vertex_arrow)
+#        shader.addShaderFromSourceCode(
+#                qt.QOpenGLShader.Fragment, self.fragment_arrow)
+#
+#        if not shader.link():
+#            print("Linking Error", str(shader.log()))
+#            print('Failed to link dummy renderer shader!')
+#
+#        shader.bind()
+#        vao.bind()
+#
+#        self.vbo_arrow = setVertexBuffer(coneVertices.copy(), 3,
+#                                         shader, "position")
+#        vao.release()
+#        shader.release()
+#        self.shader_arrow = shader
+#        self.vao_arrow = vao
+
+    def prepareSurfaceMesh(self, is2ndXtal=False, updateMesh=False, shader=None):
+        def getThickness():
+#            if self.oeThicknessForce is not None:
+#                return self.oeThicknessForce
+            thickness = self.oeThickness
+            if isinstance(self.oe, roes.Plate):
+                if self.oe.t is not None:
+                    thickness = self.oe.t
+                    if hasattr(self.oe, 'zmax'):
+                        if self.oe.zmax is not None:
+                            thickness += self.oe.zmax
+                            if isinstance(self.oe, roes.DoubleParaboloidLens):
+                                thickness += self.oe.zmax
+                    return thickness
+            if hasattr(self.oe, "material"):
+                if self.oe.material is not None:
+                    thickness = self.oeThickness
+                    if hasattr(self.oe.material, "t"):
+                        thickness = self.oe.material.t if\
+                            self.oe.material.t is not None else thickness
+                    elif isinstance(self.oe.material, rmats.Multilayer):
+                        if self.oe.material.substrate is not None:
+                            if hasattr(self.oe.material.substrate, 't'):
+                                if self.oe.material.substrate.t is not None:
+                                    thickness = self.oe.material.substrate.t
+            return thickness
+
+        nsIndex = int(is2ndXtal)
+        self.transMatrix[nsIndex] = self.get_loc2glo_transformation_matrix(
+                self.oe, is2ndXtal=is2ndXtal)
+
+        if nsIndex in self.vao.keys():
+            vao = self.vao[nsIndex]
+        else:
+#            print("Creating VAO")
+            vao = qt.QOpenGLVertexArrayObject()
+            vao.create()
+
+#        if nsIndex in self.shader.keys():
+#            shader = self.shader[nsIndex]
+#        else:
+#            shader = qg.QOpenGLShaderProgram()
+#            shader.addShaderFromSourceCode(
+#                    qt.QOpenGLShader.Vertex, self.vertex_source)
+#            shader.addShaderFromSourceCode(
+#                    qt.QOpenGLShader.Fragment, self.fragment_source)
+#
+#            if not shader.link():
+#                print("Linking Error", str(shader.log()))
+#                print('Failed to link dummy renderer shader!')
+
+        if hasattr(self.oe, 'stl_mesh'):
+            vao.bind()
+            shader.bind()  # Will fail here if shader is none
+
+            self.isStl = True
+            self.vbo_vertices[nsIndex] = setVertexBuffer(
+                    self.oe.stl_mesh[0].copy(), 3, shader, "position")
+            self.vbo_normals[nsIndex] = setVertexBuffer(
+                    self.oe.stl_mesh[1].copy(), 3, shader, "normals")
+            self.arrLengths[nsIndex] = len(self.oe.stl_mesh[0])
+
+            shader.release()
+            vao.release()
+
+            self.vao[nsIndex] = vao
+            self.ibo[nsIndex] = None
+            return
+
+        isPlate = isinstance(self.oe, roes.Plate)
+
+        thickness = getThickness()
+
+        self.bBox = np.zeros((3, 2))
+        self.bBox[:, 0] = 1e10
+        self.bBox[:, 1] = -1e10
+
+        # TODO: Consider plates
+
+        if is2ndXtal:
+            xLimits = list(self.oe.limPhysX2)
+            yLimits = list(self.oe.limPhysY2)
+        else:
+            xLimits = list(self.oe.limPhysX)
+            yLimits = list(self.oe.limPhysY)
+
+        isClosedSurface = False
+        if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+            isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
+            if len(self.oe.footprint) > 0:
+                xLimits = self.oe.footprint[nsIndex][:, 0]
+        if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+            if len(self.oe.footprint) > 0:
+                yLimits = self.oe.footprint[nsIndex][:, 1]
+
+        localTiles = np.array(self.tiles)
+
+        if self.oe.shape == 'round':
+            rX = np.abs((xLimits[1] - xLimits[0]))*0.5
+            rY = np.abs((yLimits[1] - yLimits[0]))*0.5
+            cX = (xLimits[1] + xLimits[0])*0.5
+            cY = (yLimits[1] + yLimits[0])*0.5
+            xLimits = [0, 1.]
+            yLimits = [0, 2*np.pi]
+            localTiles[1] *= 3
+        if isClosedSurface:
+            # the limits are in parametric coordinates
+            xLimits = yLimits  # s
+            yLimits = [0, 2*np.pi]  # phi
+            localTiles[1] *= 3
+
+        xGridOe = np.linspace(xLimits[0], xLimits[1],
+                              localTiles[0]) + self.oe.dx
+        yGridOe = np.linspace(yLimits[0], yLimits[1], localTiles[1])
+
+        xv, yv = np.meshgrid(xGridOe, yGridOe)
+
+        sideL = np.vstack((xv[:, 0], yv[:, 0])).T
+        sideR = np.vstack((xv[:, -1], yv[:, -1])).T
+        sideF = np.vstack((xv[0, :], yv[0, :])).T
+        sideB = np.vstack((xv[-1, :], yv[-1, :])).T
+
+        if self.oe.shape == 'round':
+            xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
+
+        xv = xv.flatten()
+        yv = yv.flatten()
+
+        if is2ndXtal:
+            zExt = '2'
+        else:
+            zExt = '1' if hasattr(self.oe, 'local_z1') else ''
+        local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
+            self.oe.isParametric else getattr(self.oe,
+                                              'local_z{}'.format(zExt))
+        local_n = getattr(self.oe, 'local_n{}'.format(zExt))
+
+        xv = np.copy(xv)
+        yv = np.copy(yv)
+        zv = np.zeros_like(xv)
+        if isinstance(self.oe, roes.SurfaceOfRevolution):
+            # at z=0 (axis of rotation) phi is undefined, therefore:
+            zv -= 100.
+
+        if self.oe.isParametric and not isClosedSurface:
+            xv, yv, zv = self.oe.xyz_to_param(xv, yv, zv)
+
+        zv = np.array(local_z(xv, yv))
+        nv = np.array(local_n(xv, yv)).T
+
+        if len(nv) == 3:  # flat
+            nv = np.ones_like(zv)[:, np.newaxis] * np.array(nv)
+
+        if self.oe.isParametric:
+            xv, yv, zv = self.oe.param_to_xyz(xv, yv, zv)
+
+#        zmax = np.max(zv)
+#        zmin =
+#        self.bBox[:, 1] = yLimit
+
+        if self.oe.shape == 'round':
+            xC, yC = rX*sideR[:, 0]*np.cos(sideR[:, -1]) +\
+                     cX, rY*sideR[:, 0]*np.sin(sideR[:, -1]) + cY
+            zC = np.array(local_z(xC, yC))
+            if self.oe.isParametric:
+                xC, yC, zC = self.oe.param_to_xyz(xC, yC, zC)
+
+        points = np.vstack((xv, yv, zv)).T
+        surfmesh = {}
+
+        triS = Delaunay(points[:, :-1])
+
+        if not isPlate:
+            bottomPoints = points.copy()
+            bottomPoints[:, 2] = -thickness
+            bottomNormals = np.zeros((len(points), 3))
+            bottomNormals[:, 2] = -1
+
+        zL = np.array(local_z(sideL[:, 0], sideL[:, -1]))
+        zR = np.array(local_z(sideR[:, 0], sideR[:, -1]))
+        zF = np.array(local_z(sideF[:, 0], sideF[:, -1]))
+        zB = np.array(local_z(sideB[:, 0], sideB[:, -1]))
+
+        tL = np.vstack((sideL.T, np.ones_like(zL)*thickness))
+        bottomLine = zL - thickness if isPlate else -np.ones_like(zL)*thickness
+        tL = np.hstack((tL, np.vstack((np.flip(sideL.T, axis=1),
+                                       -np.ones_like(zL)*thickness)))).T
+        normsL = np.zeros((len(zL)*2, 3))
+        normsL[:, 0] = -1
+        triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
+        tL[:len(zL), 2] = zL
+        tL[len(zL):, 2] = bottomLine
+
+        tR = np.vstack((sideR.T, zR))
+        bottomLine = zR - thickness if isPlate else -np.ones_like(zR)*thickness
+        tR = np.hstack((tR, np.vstack((np.flip(sideR.T, axis=1),
+                                       bottomLine)))).T
+        normsR = np.zeros((len(zR)*2, 3))
+        normsR[:, 0] = 1
+
+        tF = np.vstack((sideF.T, np.ones_like(zF)*thickness))
+        bottomLine = zF - thickness if isPlate else -np.ones_like(zF)*thickness
+        tF = np.hstack((tF, np.vstack((np.flip(sideF.T, axis=1),
+                                       bottomLine)))).T
+        normsF = np.zeros((len(zF)*2, 3))
+        normsF[:, 1] = -1
+        triFB = Delaunay(tF[:, [0, -1]])
+        tF[:len(zF), 2] = zF
+
+        if self.oe.shape == 'round':
+            tB = np.vstack((xC, yC, zC))
+            bottomLine = zC - thickness if isPlate else\
+                -np.ones_like(zC)*thickness
+            tB = np.hstack((tB, np.vstack((xC, np.flip(yC), bottomLine)))).T
+            normsB = np.vstack((tB[:, 0], tB[:, 1], np.zeros_like(tB[:, 0]))).T
+            norms = np.linalg.norm(normsB, axis=1, keepdims=True)
+            normsB /= norms
+        else:
+            tB = np.vstack((sideB.T, zB))
+            bottomLine = zB - thickness if isPlate else\
+                -np.ones_like(zB)*thickness
+            tB = np.hstack((tB, np.vstack((np.flip(sideB.T, axis=1),
+                                           bottomLine)))).T
+            normsB = np.zeros((len(zB)*2, 3))
+            normsB[:, 1] = 1
+
+        allSurfaces = points
+        allNormals = nv
+        allIndices = triS.simplices.flatten()
+        indArrOffset = len(points)
+
+        # Bottom Surface, use is2ndXtal for plates
+        if not isPlate:
+            allSurfaces = np.vstack((allSurfaces, bottomPoints))
+            allNormals = np.vstack((nv, bottomNormals))
+            allIndices = np.hstack((allIndices,
+                                    triS.simplices.flatten() + indArrOffset))
+            indArrOffset += len(points)
+
+        # Side Surface, do not plot for 2ndXtal of Plate
+        if not (isPlate and is2ndXtal):
+            if self.oe.shape == 'round':  # Side surface
+                allSurfaces = np.vstack((allSurfaces, tB))
+                allNormals = np.vstack((allNormals, normsB))
+                allIndices = np.hstack((allIndices,
+                                        triLR.simplices.flatten() +
+                                        indArrOffset))
+            else:
+                allSurfaces = np.vstack((allSurfaces, tL, tF, tR, tB))
+                allNormals = np.vstack((allNormals, normsL, normsF,
+                                        normsR, normsB))
+                allIndices = np.hstack((allIndices,
+                                        triLR.simplices.flatten() +
+                                        indArrOffset,
+                                        triFB.simplices.flatten() +
+                                        indArrOffset+len(tL),
+                                        triLR.simplices.flatten() +
+                                        indArrOffset+len(tL)+len(tF),
+                                        triFB.simplices.flatten() +
+                                        indArrOffset+len(tL)*2+len(tF)))
+
+        surfmesh['points'] = allSurfaces.copy()
+        surfmesh['normals'] = allNormals.copy()
+        surfmesh['indices'] = allIndices
+
+        if self.oe.shape == 'round':
+            surfmesh['contour'] = tB
+        else:
+            surfmesh['contour'] = np.vstack((tL, tF, np.flip(tR, axis=0), tB))
+        surfmesh['lentb'] = len(tB)
+
+        self.bBox[:, 0] = np.min(surfmesh['contour'], axis=0)
+        self.bBox[:, 1] = np.max(surfmesh['contour'], axis=0)
+
+        oldVBOpoints = self.vbo_vertices[nsIndex] if\
+            nsIndex in self.vbo_vertices.keys() else None
+        oldVBOnorms = self.vbo_normals[nsIndex] if\
+            nsIndex in self.vbo_normals.keys() else None
+        oldIBO = self.ibo[nsIndex] if nsIndex in self.ibo.keys() else None
+
+        if updateMesh:
+            if oldVBOpoints is not None:
+                oldVBOpoints.destroy()
+            if oldVBOnorms is not None:
+                oldVBOnorms.destroy()
+            if oldIBO is not None:
+                oldIBO.destroy()
+            oldVBOpoints, oldVBOnorms, oldIBO = None, None, None
+
+        self.vbo_vertices[nsIndex] = create_qt_buffer(surfmesh['points'])
+        self.vbo_normals[nsIndex] = create_qt_buffer(surfmesh['normals'])
+        self.ibo[nsIndex] = create_qt_buffer(surfmesh['indices'], isIndex=True)
+
+#        self.vbo_vertices[nsIndex] = setVertexBuffer(
+#                surfmesh['points'], 3, shader, "position", None, oldVBOpoints)
+#        self.vbo_normals[nsIndex] = setVertexBuffer(
+#                surfmesh['normals'], 3, shader, "normals", None, oldVBOnorms)
+#        self.ibo[nsIndex] = setIndexBuffer(surfmesh['indices'], oldIBO)
+        self.arrLengths[nsIndex] = len(surfmesh['indices'])
+
+        vao.bind()
+
+        self.vbo_vertices[nsIndex].bind()
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 0: position
+        gl.glEnableVertexAttribArray(0)
+        self.vbo_vertices[nsIndex].release()
+
+        self.vbo_normals[nsIndex].bind()
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(1)
+        self.vbo_normals[nsIndex].release()
+
+        self.ibo[nsIndex].bind()
+
+        vao.release()
+
+        self.vao[nsIndex] = vao
+        self.z2y = qt.QMatrix4x4().rotate(90, 1, 0, 0)
+        self.z2x = qt.QMatrix4x4().rotate(90, 0, 1, 0)
+
+    def drawLocalAxes(self, mMod, mView, mProj, is2ndXtal):
+        oeIndex = int(is2ndXtal)
+        oeOrientation = self.transMatrix[oeIndex]
+        shader = self.shader_arrow
+        shader.bind()
+        self.vao_arrow.bind()
+        shader.setUniformValue("view", mView)
+        shader.setUniformValue("projection", mProj)
+
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        for iAx in range(3):
+            color = np.array([0., 0., 0., 1.])
+            color[iAx] = 1.
+            colorV = qt.QVector4D(*color)
+            modMatr = mMod*oeOrientation
+            if iAx == 0:
+                modMatr *= self.z2x
+            elif iAx == 1:
+                modMatr *= self.z2y
+
+#            shader.setUniformValue("model", )
+            shader.setUniformValue("aColor", colorV)
+            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
+#            gl.glEnable(gl.GL_LINE_SMOOTH)
+#            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+#            gl.glBegin(gl.GL_LINES)
+#            gl.glDrawArrays(gl.GL_LINES, 0, 2)
+        self.vao_arrow.release()
+        shader.release()
+
+    def render_surface(self, mMod, mView, mProj, is2ndXtal=False,
+                     isSelected=False, shader=None):
+
+        oeIndex = int(is2ndXtal)
+
+#        shader = self.shader[oeIndex]
+        vao = self.vao[oeIndex]
+#        ibo = self.ibo[oeIndex]
+
+        beamTexture = self.beamTexture[oeIndex] if len(self.beamTexture) > 0\
+            else self.emptyTex  # what if there's no texture?
+        beamLimits = self.beamLimits[oeIndex] if len(self.beamLimits) > 0\
+            else self.defaultLimits
+
+        oeOrientation = self.transMatrix[oeIndex]
+        arrLen = self.arrLengths[oeIndex]
+
+        shader.bind()
+        vao.bind()
+
+        shader.setUniformValue("model", mMod*oeOrientation)
+        shader.setUniformValue("view", mView)
+        shader.setUniformValue("projection", mProj)
+
+        mvp = mMod*oeOrientation*mView
+        shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
+        shader.setUniformValue("v_inv", mView.inverted()[0])
+
+        shader.setUniformValue("texlimitsx", qt.QVector2D(*beamLimits[:, 0]))
+        shader.setUniformValue("texlimitsy", qt.QVector2D(*beamLimits[:, 1]))
+        shader.setUniformValue("texlimitsz", qt.QVector2D(*beamLimits[:, 2]))
+
+        # TODO: configurable colors
+        ambient = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.) if\
+            isSelected else qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
+        shader.setUniformValue("frontMaterial.ambient", ambient)
+        shader.setUniformValue("frontMaterial.diffuse",
+                               qt.QVector4D(0.50754, 0.50754,
+                                            0.50754, 1.))
+        shader.setUniformValue("frontMaterial.specular",
+                               qt.QVector4D(1., 0.9, 0.8, 1.))
+        shader.setUniformValue("frontMaterial.shininess", 100.)
+
+        shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
+
+        if beamTexture is not None:
+            beamTexture.bind()
+
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+        if self.isStl:
+            gl.glDrawArrays(gl.GL_TRIANGLES, 0, arrLen)  #
+        else:
+
+#            ibo.bind()
+#            gl.glStencilFunc(gl.GL_ALWAYS, 1, 0xff)
+            gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
+                              gl.GL_UNSIGNED_INT, [])
+#            ibo.release()
+        if beamTexture is not None:
+            beamTexture.release()
+        shader.release()
+        vao.release()
+
+
+class CoordinateBox():
+
+    vertex_source = '''
+    #version 400
+    attribute vec3 position;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    void main()
+    {
+      //gl_Position = projection * model * vec4(position, 1.0);
+      gl_Position = projection * view * model * vec4(position, 1.0);
+    }
+    '''
+
+    fragment_source = '''
+    #version 400
+    uniform float lineOpacity;
+    void main()
+    {
+      gl_FragColor = vec4(1.0, 1.0, 1.0, lineOpacity);
+    }
+    '''
+
+    orig_vertex_source = '''
+    #version 400
+    attribute vec3 position;
+    attribute vec3 linecolor;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    varying vec3 out_color;
+    void main()
+    {
+     out_color = linecolor;
+//     gl_Position = projection * model * vec4(position, 1.0);
+     gl_Position = projection * view * model * vec4(position, 1.0);
+    }
+    '''
+
+    orig_fragment_source = '''
+    #version 400
+    uniform float lineOpacity;
+    varying vec3 out_color;
+    void main()
+    {
+      gl_FragColor = vec4(out_color, lineOpacity);
+    }
+    '''
+
+    text_vertex_code = """
+    #version 400
+
+    in vec4 in_pos;
+
+    out vec2 vUV;
+
+    uniform mat4 model;
+    //uniform mat4 projection;
+
+    void main()
+    {
+        vUV         = in_pos.zw;
+        gl_Position = model * vec4(in_pos.xy, 0.0, 1.0);
+    }
+    """
+
+    text_fragment_code = """
+    #version 400
+
+    in vec2 vUV;
+
+    uniform sampler2D u_texture;
+
+    out vec4 fragColor;
+
+    void main()
+    {
+        vec2 uv = vUV.xy;
+        float text = texture(u_texture, uv).r;
+        fragColor = vec4(text, text, text, text);
+    }
+    """
+
+    def __init__(self, parent):
+
+        self.parent = parent
+#        self.aPos = [0.9, 0.9, 0.9]
+        self.axPosModifier = np.ones(3)
+        self.perspectiveEnabled = True
+#        self.cBoxLineWidth = 1
+        self.shader = None
+        self.origShader = None
+        self.textShader = None
+        self.vaoFrame = qt.QOpenGLVertexArrayObject()
+        self.vaoFrame.create()
+
+        self.vaoGrid = qt.QOpenGLVertexArrayObject()
+        self.vaoGrid.create()
+
+        self.vaoFineGrid = qt.QOpenGLVertexArrayObject()
+        self.vaoFineGrid.create()
+
+        self.vaoOrigin = qt.QOpenGLVertexArrayObject()
+        self.vaoOrigin.create()
+
+        self.vaoOrigin = qt.QOpenGLVertexArrayObject()
+        self.vaoOrigin.create()
+
+        self.vaoText = qt.QOpenGLVertexArrayObject()
+        self.vaoText.create()
+
+        self.characters = []
+        self.fontSize = 20
+        self.fontScale = 5.
+        self.fontFile = 'FreeSans-LrmZ.ttf'
+#        self.vquad = [
+#          # x   y  u  v
+#            0, 1, 0, 0,
+#            0,  0, 0, 1,
+#            1,  0, 1, 1,
+#            0, 1, 0, 0,
+#            1,  0, 1, 1,
+#            1, 1, 1, 0
+#        ]
+
+#        self.prepare_grid()
+
+    def make_frame(self):
+        back = np.array([[-self.parent.aPos[0],
+                          self.parent.aPos[1],
+                          -self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          self.parent.aPos[1],
+                          self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          -self.parent.aPos[2]]])
+
+        side = np.array([[self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          -self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          -self.parent.aPos[2]],
+                         [-self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          self.parent.aPos[2]],
+                         [self.parent.aPos[0],
+                          -self.parent.aPos[1],
+                          self.parent.aPos[2]]])
+
+        bottom = np.array([[self.parent.aPos[0],
+                            -self.parent.aPos[1],
+                            -self.parent.aPos[2]],
+                           [self.parent.aPos[0],
+                            self.parent.aPos[1],
+                            -self.parent.aPos[2]],
+                           [-self.parent.aPos[0],
+                            self.parent.aPos[1],
+                            -self.parent.aPos[2]],
+                           [-self.parent.aPos[0],
+                            -self.parent.aPos[1],
+                            -self.parent.aPos[2]]])
+
+        back[:, 0] *= self.axPosModifier[0]
+        side[:, 1] *= self.axPosModifier[1]
+        bottom[:, 2] *= self.axPosModifier[2]
+        self.halfCube = np.float32(np.vstack((back, side, bottom)))
+
+    def make_coarse_grid(self):
+
+        self.gridLabels = []
+        self.precisionLabels = []
+        #  Calculating regular grids in world coordinates
+        limits = np.array([-1, 1])[:, np.newaxis] * np.array(self.parent.aPos)
+        allLimits = limits * self.parent.maxLen / self.parent.scaleVec -\
+            self.parent.tVec + self.parent.coordOffset
+        axisGridArray = []
+
+        for iAx in range(3):
+            m2 = self.parent.aPos[iAx] / 0.9
+            dx1 = np.abs(allLimits[:, iAx][0] - allLimits[:, iAx][1]) / m2
+            order = np.floor(np.log10(dx1))
+            m1 = dx1 * 10**-order
+
+            if (m1 >= 1) and (m1 < 2):
+                step = 0.2 * 10**order
+            elif (m1 >= 2) and (m1 < 4):
+                step = 0.5 * 10**order
+            else:
+                step = 10**order
+            if step < 1:
+                decimalX = int(np.abs(order)) + 1 if m1 < 4 else\
+                    int(np.abs(order))
+            else:
+                decimalX = 0
+
+            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
+                              allLimits[:, iAx][1], step)
+            gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
+                gridX[1:]
+            self.gridLabels.extend([gridX])
+            self.precisionLabels.extend([np.ones_like(gridX)*decimalX])
+            axisGridArray.extend([gridX - self.parent.coordOffset[iAx]])
+#            if self.parent.fineGridEnabled:
+#                fineStep = step * 0.2
+#                fineGrid = np.arange(
+#                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
+#                    allLimits[:, iAx][1], fineStep)
+#                fineGrid = fineGrid if\
+#                    fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
+#                fineGridArray.extend([fineGrid - self.parent.coordOffset[iAx]])
+
+        self.axisL, self.axGrid = self.populateGrid(axisGridArray)
+        self.gridLen = len(self.axGrid)
+
+#        for iAx in range(3):
+#            if not (not self.perspectiveEnabled and
+#                    iAx == self.parent.visibleAxes[2]):
+#
+#                midp = int(len(self.axisL[iAx][0, :])/2)
+#                if iAx == self.parent.visibleAxes[1]:  # Side plane,
+#                    print(self.axisL[iAx][:, midp], self.parent.visibleAxes[0])
+##                    if self.useScalableFont:
+##                        tAlign = getAlignment(axisL[iAx][:, midp],
+##                                              self.visibleAxes[0])
+##                    else:
+#                    self.axisL[iAx][self.parent.visibleAxes[2], :] *= 1.05  # depth
+#                    self.axisL[iAx][self.parent.visibleAxes[0], :] *= 1.05  # side
+#                if iAx == self.parent.visibleAxes[0]:  # Bottom plane, left-right
+##                    if self.useScalableFont:
+##                        tAlign = getAlignment(axisL[iAx][:, midp],
+##                                              self.visibleAxes[2],
+##                                              self.visibleAxes[1])
+##                    else:
+#                    self.axisL[iAx][self.parent.visibleAxes[1], :] *= 1.05  # height
+#                    self.axisL[iAx][self.parent.visibleAxes[2], :] *= 1.05  # side
+#                if iAx == self.parent.visibleAxes[2]:  # Bottom plane, left-right
+##                    if self.useScalableFont:
+##                        tAlign = getAlignment(axisL[iAx][:, midp],
+##                                              self.visibleAxes[0],
+##                                              self.visibleAxes[1])
+##                    else:
+#                    self.axisL[iAx][self.parent.visibleAxes[1], :] *= 1.05  # height
+#                    self.axisL[iAx][self.parent.visibleAxes[0], :] *= 1.05  # side
+
+    def update_grid(self):
+        if hasattr(self, "vbo_frame"):
+            self.make_frame()
+            self.vbo_frame.bind()
+            self.vbo_frame.write(0, self.halfCube, self.halfCube.nbytes)
+            self.vbo_frame.release()
+        if hasattr(self, "vbo_grid"):
+            self.make_coarse_grid()
+            self.vbo_grid.bind()
+            self.vbo_grid.write(0, self.axGrid, self.axGrid.nbytes)
+            self.vbo_grid.release()
+
+    def prepare_grid(self):
+
+        self.makefont()
+        self.make_frame()
+        self.make_coarse_grid()
+#        if self.parent.fineGridEnabled:
+#            fineGridArray = []
+
+
+#        print(axisL)
+#        if self.parent.fineGridEnabled:
+#            tmp, fineAxGrid = self.populateGrid(fineGridArray)
+#            self.fineGridLen = len(fineAxGrid)
+#            self.vaoFineGrid.bind()
+#            self.vbo_fineGrid = self.setVertexBuffer(fineAxGrid, 3, self.shader, "position" )
+#            self.vaoFineGrid.release()
+
+        cLines = np.array([[-self.parent.aPos[0], 0, 0],
+                           [self.parent.aPos[0], 0, 0],
+                           [0, -self.parent.aPos[1], 0],
+                           [0, self.parent.aPos[1], 0],
+                           [0, 0, -self.parent.aPos[2]],
+                           [0, 0, self.parent.aPos[2]]])*0.5
+
+        cLineColors = np.array([[0, 0.5, 1],
+                                [0, 0.5, 1],
+                                [0, 0.9, 0],
+                                [0, 0.9, 0],
+                                [0.8, 0, 0],
+                                [0.8, 0, 0]])
+
+        self.vaoFrame.bind()
+        self.vbo_frame = setVertexBuffer(
+                self.halfCube, 3, self.shader, "position")
+        self.vaoFrame.release()
+
+        self.vaoGrid.bind()
+        self.vbo_grid = setVertexBuffer(
+                self.axGrid, 3, self.shader, "position",
+                size=np.float32(self.axGrid).nbytes*100)  # TODO: calculate
+        self.vaoGrid.release()
+
+        self.vaoOrigin.bind()
+        self.vbo_origin = setVertexBuffer(
+                cLines, 3, self.origShader, "position")
+        self.vbo_oc = setVertexBuffer(
+                cLineColors, 3, self.origShader, "linecolor")
+        self.vaoOrigin.release()
+
+        # x  y  u  v
+        vquad = [
+            0, 1, 0, 0,
+            0,  0, 0, 1,
+            1,  0, 1, 1,
+            0, 1, 0, 0,
+            1,  0, 1, 1,
+            1, 1, 1, 0
+        ]
+
+        self.vaoText.bind()
+        self.vbo_Text = setVertexBuffer(vquad, 4, self.textShader, "in_pos")
+        self.vaoText.release()
+
+    def populateGrid(self, grids):
+        pModel = np.array(self.parent.mView.data()).reshape(4, 4)[:-1, :-1]
+#                print(pModel)
+#        self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
+        self.signs = np.sign(pModel)
+#                self.axPosModifier = np.ones(3)
+        for iAx in range(3):
+            self.axPosModifier[iAx] = (self.signs[iAx][2] if
+                                       self.signs[iAx][2] != 0 else 1)
+        axisLabelC = []
+        axisLabelC.extend([np.vstack(
+            (self.parent.modelToWorld(grids, 0),
+             np.ones(len(grids[0]))*self.parent.aPos[1]*self.axPosModifier[1],
+             np.ones(len(grids[0]))*-self.parent.aPos[2]*self.axPosModifier[2]
+             ))])
+        axisLabelC.extend([np.vstack(
+            (np.ones(len(grids[1]))*self.parent.aPos[0]*self.axPosModifier[0],
+             self.parent.modelToWorld(grids, 1),
+             np.ones(len(grids[1]))*-self.parent.aPos[2]*self.axPosModifier[2]
+             ))])
+        zAxis = np.vstack(
+            (np.ones(len(grids[2]))*-self.parent.aPos[0]*self.axPosModifier[0],
+             np.ones(len(grids[2]))*self.parent.aPos[1]*self.axPosModifier[1],
+             self.parent.modelToWorld(grids, 2)))
+
+        xAxisB = np.vstack(
+            (self.parent.modelToWorld(grids, 0),
+             np.ones(len(grids[0]))*-self.parent.aPos[1]*self.axPosModifier[1],
+             np.ones(len(grids[0]))*-self.parent.aPos[2]*self.axPosModifier[2]))
+        yAxisB = np.vstack(
+            (np.ones(len(grids[1]))*-self.parent.aPos[0]*self.axPosModifier[0],
+             self.parent.modelToWorld(grids, 1),
+             np.ones(len(grids[1]))*-self.parent.aPos[2]*self.axPosModifier[2]))
+        zAxisB = np.vstack(
+            (np.ones(len(grids[2]))*-self.parent.aPos[0]*self.axPosModifier[0],
+             np.ones(len(grids[2]))*-self.parent.aPos[1]*self.axPosModifier[1],
+             self.parent.modelToWorld(grids, 2)))
+
+        xAxisC = np.vstack(
+            (self.parent.modelToWorld(grids, 0),
+             np.ones(len(grids[0]))*-self.parent.aPos[1]*self.axPosModifier[1],
+             np.ones(len(grids[0]))*self.parent.aPos[2]*self.axPosModifier[2]))
+        yAxisC = np.vstack(
+            (np.ones(len(grids[1]))*-self.parent.aPos[0]*self.axPosModifier[0],
+             self.parent.modelToWorld(grids, 1),
+             np.ones(len(grids[1]))*self.parent.aPos[2]*self.axPosModifier[2]))
+        axisLabelC.extend([np.vstack(
+            (np.ones(len(grids[2]))*self.parent.aPos[0]*self.axPosModifier[0],
+             np.ones(len(grids[2]))*-self.parent.aPos[1]*self.axPosModifier[1],
+             self.parent.modelToWorld(grids, 2)))])
+
+        xLines = np.vstack(
+            (axisLabelC[0], xAxisB, xAxisB, xAxisC)).T.flatten().reshape(
+            4*xAxisB.shape[1], 3)
+        yLines = np.vstack(
+            (axisLabelC[1], yAxisB, yAxisB, yAxisC)).T.flatten().reshape(
+            4*yAxisB.shape[1], 3)
+        zLines = np.vstack(
+            (zAxis, zAxisB, zAxisB, axisLabelC[2])).T.flatten().reshape(
+            4*zAxisB.shape[1], 3)
+
+        return axisLabelC, np.float32(np.vstack((xLines, yLines, zLines)))
+
+#    def drawGridLines(self, gridArray, lineWidth, lineOpacity, figType):
+
+#        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+#        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+#        gridColor = np.ones((len(gridArray), 4)) * lineOpacity
+#        gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
+#        gridArrayVBO.bind()
+#        gl.glVertexPointerf(gridArrayVBO)
+#        gridColorArray = gl.vbo.VBO(np.float32(gridColor))
+#        gridColorArray.bind()
+#        gl.glColorPointerf(gridColorArray)
+#        gl.glLineWidth(lineWidth)
+#        gl.glDrawArrays(figType, 0, len(gridArrayVBO))
+#        gridArrayVBO.unbind()
+#        gridColorArray.unbind()
+#        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+#        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+
+#    def modelToWorld(self, coords, dimension=None):
+#        if dimension is None:
+#            return np.float32(coords)
+#        else:
+#            return np.float32(coords[dimension])
+
+#    def setVertexBuffer( self, data_array, dim_vertex, program, shader_str, size=None):
+#        # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
+#        vbo = qg.QOpenGLBuffer(qg.QOpenGLBuffer.VertexBuffer)
+#        vbo.create()
+#        vbo.bind()
+##        print(vbo.bufferId())
+#
+#        vertices = np.array(data_array, np.float32)
+##        print(type(vertices), vertices.shape[0], vertices.itemsize, vertices.shape)
+#        bSize = size if size is not None else vertices.nbytes
+#        vbo.allocate( vertices, bSize)
+#
+#        attr_loc = program.attributeLocation( shader_str )
+#        program.enableAttributeArray(attr_loc )
+#        program.setAttributeBuffer(attr_loc, gl.GL_FLOAT, 0, dim_vertex)
+#        vbo.release()
+#
+#        return vbo
+
+    def draw(self, model, view, projection):
+
+        gl.glEnable(gl.GL_LINE_SMOOTH)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+
+        self.shader.bind()
+        self.shader.setUniformValue("model", model)
+        self.shader.setUniformValue("view", view)
+        self.shader.setUniformValue("projection", projection)
+
+        self.vaoFrame.bind()
+        self.shader.setUniformValue("lineOpacity", 0.75)
+        gl.glLineWidth(self.parent.cBoxLineWidth * 2)
+        gl.glDrawArrays(gl.GL_QUADS, 0, 12)
+        self.vaoFrame.release()
+
+        self.vaoGrid.bind()
+        self.shader.setUniformValue("lineOpacity", 0.5)
+        gl.glLineWidth(self.parent.cBoxLineWidth)
+        gl.glDrawArrays(gl.GL_LINES, 0, self.gridLen)
+        self.vaoGrid.release()
+
+#        if self.parent.fineGridEnabled:
+#            self.vaoFineGrid.bind()
+#            self.shader.setUniformValue("lineOpacity", 0.25)
+#            gl.glLineWidth(self.parent.cBoxLineWidth)
+#            gl.glDrawArrays(gl.GL_LINES, 0, self.fineGridLen)
+#            self.vaoFineGrid.release()
+        self.shader.release()
+
+        self.origShader.bind()
+        self.origShader.setUniformValue("model", model)
+        self.origShader.setUniformValue("view", view)
+        self.origShader.setUniformValue("projection", projection)
+        self.vaoOrigin.bind()
+        self.origShader.setUniformValue("lineOpacity", 0.85)
+        gl.glLineWidth(self.parent.cBoxLineWidth)
+        gl.glDrawArrays(gl.GL_LINES, 0, 6)
+        self.vaoOrigin.release()
+        self.origShader.release()
+
+        self.textShader.bind()
+        self.vaoText.bind()
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+#        gl.glEnable(gl.GL_POLYGON_SMOOTH)
+        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+        vpMat = projection*view
+        for iAx in range(3):
+            if not (not self.perspectiveEnabled and
+                    iAx == self.parent.visibleAxes[2]):
+
+                midp = int(len(self.axisL[iAx][0, :])/2)
+                p0 = self.axisL[iAx][:, midp]
+                alignment = None
+                if iAx == self.parent.visibleAxes[1]:  # Side plane,
+                    alignment = self.getAlignment(vpMat, p0,
+                                                  self.parent.visibleAxes[0])
+                if iAx == self.parent.visibleAxes[0]:  # Bottom plane, L-R
+                    alignment = self.getAlignment(vpMat, p0,
+                                                  self.parent.visibleAxes[2],
+                                                  self.parent.visibleAxes[1])
+                if iAx == self.parent.visibleAxes[2]:  # Bottom plane, L-R
+                    alignment = self.getAlignment(vpMat, p0,
+                                                  self.parent.visibleAxes[0],
+                                                  self.parent.visibleAxes[1])
+
+                for tick, tText, pcs in list(zip(self.axisL[iAx].T,
+                                                 self.gridLabels[iAx],
+                                                 self.precisionLabels[iAx])):
+                    valueStr = "{0:.{1}f}".format(tText, int(pcs))
+                    tickPos = (vpMat*qt.QVector4D(*tick, 1)).toVector3DAffine()
+                    self.render_text(tickPos, valueStr, alignment=alignment,
+                                     scale=0.04*self.fontScale)
+        self.vaoText.release()
+        self.textShader.release()
+
+    def render_text(self, pos, text, alignment, scale):
+        char_x = 0
+        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+        scaleX = scale/float(pView[2])
+        scaleY = scale/float(pView[3])
+        coordShift = np.zeros(2, dtype=np.float32)
+
+        aw = []
+        ah = []
+        axrel = []
+        ayrel = []
+
+        for c in text:
+            c = ord(c)
+            ch = self.characters[c]
+            w, h = ch[1][0] * scaleX, ch[1][1] * scaleY
+            xrel = char_x + ch[2][0]*scaleX
+            yrel = (ch[1][1] - ch[2][1]) * scaleY
+            if c == 45:
+                yrel = ch[1][0]*scaleY
+            char_x += (ch[3] >> 6) * scaleX
+            aw.append(w)
+            ah.append(h)
+            axrel.append(xrel)
+            ayrel.append(yrel)
+
+        if alignment is not None:
+            if alignment[0] == 'left':
+                coordShift[0] = -(axrel[-1]+2*aw[-1])
+            else:
+                coordShift[0] = 2*aw[-1]
+
+            if alignment[1] == 'top':
+                vOffset = 0.5
+            elif alignment[1] == 'bottom':
+                vOffset = -2
+            else:
+                vOffset = -1
+            coordShift[1] = vOffset*ah[-1]
+
+        for ic, c in enumerate(text):
+            c = ord(c)
+            ch = self.characters[c]
+            mMod = qt.QMatrix4x4()
+            mMod.setToIdentity()
+
+            mMod.translate(pos)
+            mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
+            mMod.scale(aw[ic], ah[ic], 1)
+            ch[0].bind()
+            self.textShader.setUniformValue("model", mMod)
+            gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+            ch[0].release()
+
+    def makefont(self):
+        fontpath = os.path.dirname(__file__)
+        filename = os.path.join(fontpath, self.fontFile)
+        face = ft.Face(filename)
+        face.set_pixel_sizes(self.fontSize*10, self.fontSize*10)
+#        faceTexture = ft.Face(filename)
+#        faceTexture.set_pixel_sizes(self.fontSize, self.fontSize)
+
+        for c in range(128):
+            face.load_char(chr(c), ft.FT_LOAD_RENDER)
+#            faceTexture.load_char(chr(c), ft.FT_LOAD_RENDER)
+            glyph = face.glyph
+#            glyphT = faceTexture.glyph
+            bitmap = glyph.bitmap
+#            bitmapT = glyphT.bitmap
+            size = bitmap.width, bitmap.rows
+            bearing = glyph.bitmap_left, glyph.bitmap_top
+            advance = glyph.advance.x
+
+            qi = qt.QImage(np.array(bitmap.buffer, dtype=np.uint8),
+                           int(bitmap.width), int(bitmap.rows),
+                           int(bitmap.width),
+                           qt.QImage.Format_Grayscale8)
+#            if chr(c) == "0":
+#                qi.save("0.jpg")
+            texObj = qt.QOpenGLTexture(qi)
+            self.characters.append((texObj, size, bearing, advance))
+
+    def getAlignment(self, pvMatr, point, hDim, vDim=None):
+        pointH = np.copy(point)
+        pointV = np.copy(point)
+
+        sp0 = pvMatr * qt.QVector4D(*point, 1)
+        pointH[hDim] *= 1.1
+        spH = pvMatr * qt.QVector4D(*pointH, 1)
+
+        if vDim is None:
+            vAlign = 'middle'
+        else:
+            pointV[vDim] *= 1.1
+            spV = pvMatr * qt.QVector4D(*pointV, 1)
+            vAlign = 'top' if spV[1] - sp0[1] > 0 else 'bottom'
+        hAlign = 'left' if spH[0] - sp0[0] < 0 else 'right'
+        return (hAlign, vAlign)
+
