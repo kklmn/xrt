@@ -196,7 +196,7 @@ setup(
                       # GPU support
                       'pyopencl',
                       # glow support
-                      'pyopengl', 'siphash24'
+                      'pyopengl', 'siphash24', 'freetype-py'
                       # 'openpyxl',
                       ],
     extras_require={
