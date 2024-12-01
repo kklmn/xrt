@@ -2203,7 +2203,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print("No VBO")
             return
 
-        if target is not None and target.vbo['goodLen'] == 0:
+        if target is not None and not hasattr(target, 'vbo'):
             return
         shader.bind()
         beam.vao.bind()
