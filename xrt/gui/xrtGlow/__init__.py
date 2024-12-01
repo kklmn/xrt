@@ -1516,7 +1516,7 @@ class xrtGlow(qt.QWidget):
             "PNG files (*.png);;TIFF files (*.tif)")
         saveDialog.selectNameFilter("JPG files (*.jpg)")
         if (saveDialog.exec_()):
-            image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
+            image = self.customGlWidget.grabFramebuffer()
             filename = saveDialog.selectedFiles()[0]
             extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
