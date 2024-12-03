@@ -1123,8 +1123,8 @@ class XrtQook(qt.QWidget):
                 locos = 'Windows 11'
         if gl.isOpenGL:
             strOpenGL = '{0} {1}'.format(gl.__name__, gl.__version__)
-            if not bool(gl.glutBitmapCharacter):
-                strOpenGL += ' ' + redStr.format('but GLUT is not found')
+#            if not bool(gl.glutBitmapCharacter):
+#                strOpenGL += ' ' + redStr.format('but GLUT is not found')
         else:
             strOpenGL = 'OpenGL '+redStr.format('not found')
         if isOpenCL:

@@ -43,6 +43,8 @@ import os
 import numpy as np
 from functools import partial
 import matplotlib as mpl
+
+from matplotlib import pyplot as plt
 # import inspect
 import re
 import copy
@@ -732,7 +734,7 @@ class xrtGlow(qt.QWidget):
         axLabel = qt.QLabel('Font Size')
         axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
         axSlider.setRange(1, 20, 0.5)
-        axSlider.setValue(5)
+        axSlider.setValue(4)
         axSlider.valueChanged.connect(partial(self.updateFontSize, axSlider))
 
         layout = qt.QHBoxLayout()
@@ -1318,7 +1320,7 @@ class xrtGlow(qt.QWidget):
                 position /= slider.scale
             except:  # analysis:ignore
                 pass
-        self.customGlWidget.fontSize = position
+        self.customGlWidget.cBox.fontScale = position
         self.customGlWidget.glDraw()
 
     def updateRaysList(self, item):
@@ -1988,6 +1990,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print('shaderFootprint: Failed to link dummy renderer shader!')
         self.shaderFootprint = shaderFootprint
 
+#        shaderHist = qt.QOpenGLShaderProgram()
+#        shaderHist.addShaderFromSourceCode(
+#                qt.QOpenGLShader.Compute, Beam3D.compute_source)
+#        if not shaderHist.link():
+#            print("Linking Error", str(shaderHist.log()))
+#            print('shaderHist: Failed to link dummy renderer shader!')
+#        self.shaderHist = shaderHist
+#        print("shaderHist")
+
         shaderMesh = qt.QOpenGLShaderProgram()
         shaderMesh.addShaderFromSourceCode(
                 qt.QOpenGLShader.Vertex, OEMesh3D.vertex_source)
@@ -2050,13 +2061,231 @@ class xrtGlWidget(qt.QOpenGLWidget):
             hsv_texture_data.tobytes()          # Raw data as bytes
         )
 
+    def build_histRGB(self, lb, gb, limits=None, isScreen=False, bins=[256, 256]):
+        good = (lb.state == 1) | (lb.state == 2)
+        if isScreen:
+            x, y, z = lb.x[good], lb.z[good], lb.y[good]
+        else:
+            x, y, z = lb.x[good], lb.y[good], lb.z[good]
+
+        if limits is None:
+            limits = np.array([[np.min(x), np.max(x)],
+                               [np.min(y), np.max(y)],
+                               [np.min(z), np.max(z)]])
+            beamLimits = [limits[0, :], limits[1, :]]
+        else:
+            beamLimits = [limits[:, 1], limits[:, 0]]
+        print(f"{beamLimits=}")
+
+        flux = gb.Jss[good]+gb.Jpp[good]
+
+        cData = self.getColor(gb)[good]
+        cData01 = ((cData - self.colorMin) * 0.85 /
+                   (self.colorMax - self.colorMin)).reshape(-1, 1)
+
+        cDataHSV = np.dstack(
+            (cData01, np.ones_like(cData01) * 0.85,
+             flux.reshape(-1, 1)))
+        cDataRGB = (mpl.colors.hsv_to_rgb(cDataHSV)).reshape(-1, 3)
+
+        hist2dRGB = np.zeros((bins[0], bins[1], 3), dtype=np.float64)
+        hist2d = None
+        if len(lb.x[good]) > 0:
+            for i in range(3):  # over RGB components
+                hist2dRGB[:, :, i], yedges, xedges = np.histogram2d(
+                    y, x, bins=bins, range=beamLimits,
+                    weights=cDataRGB[:, i])
+
+        hist2dRGB /= np.max(hist2dRGB)
+        hist2dRGB = np.uint8(hist2dRGB*255)
+        print("numpy beamlimits:", beamLimits)
+        return hist2d, hist2dRGB, limits
+
+    def generate_hist_texture(self, oe, beam, is2ndXtal=False):
+        nsIndex = int(is2ndXtal)
+        if not hasattr(oe, 'mesh3D'):
+#            print("No 3d mesh, no need to generate historgram")
+            return
+        meshObj = oe.mesh3D
+        lb = rsources.Beam(copyFrom=beam)
+
+        beamLimits = oe.footprint if hasattr(oe, 'footprint') else None
+
+        histAlpha, hist2dRGB, beamLimits = self.build_histRGB(
+                lb, beam, beamLimits[nsIndex])
+
+        texture = qt.QImage(hist2dRGB, 256, 256, qt.QImage.Format_RGB888)
+#        texture.save(str(oe.name)+"_beam_hist.png")
+#        if hasattr(meshObj, 'beamTexture'):
+#            oe.beamTexture.setData(texture)
+#        meshObj.beamTexture[nsIndex] = qg.QOpenGLTexture(texture)
+#        meshObj.beamLimits[nsIndex] = beamLimits
+#        self.glDraw()
+
+    def calculate_fp_hist(self, beam, width, height):
+
+        good = (beam.state == 1) # | (beam.state == 2)
+        xmin, xmax = np.min(beam.x[good]), np.max(beam.x[good])
+        ymin, ymax = np.min(beam.y[good]), np.max(beam.y[good])
+
+#        histTexture = qt.QOpenGLTexture(qt.QOpenGLTexture.Target2D)
+#        histTexture.create()
+#        histTexture.setSize(width, height)  # Width of the texture
+#        histTexture.setFormat(qt.QOpenGLTexture.RGB32F)
+#        histTexture.allocateStorage()
+#        histTexture.setMinMagFilters(qt.QOpenGLTexture.Nearest,
+#                                     qt.QOpenGLTexture.Nearest)
+
+        data = np.zeros((height, width, 3), dtype=np.float32)
+
+        red_data = np.zeros(width * height, dtype=np.uint32)
+        green_data = np.zeros_like(red_data)
+        blue_data = np.zeros_like(red_data)
+        ind_data = np.zeros(width * height, dtype=np.uint32)
+
+        shader = self.shaderHist
+        shader.bind()
+
+        beam.vbo['position'].bind()
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 0, 
+                            beam.vbo['position'].bufferId())  # 0 is location for position
+
+        beam.vbo['color'].bind()
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 1,
+                            beam.vbo['color'].bufferId())  # 1 is location for color
+
+        beam.vbo['state'].bind()
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 2,
+                            beam.vbo['state'].bufferId())  # 0 is location for state
+
+        beam.vbo['intensity'].bind()
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 3,
+                            beam.vbo['intensity'].bufferId())  # 0 is location for intensity
+
+        red_buffer = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, red_buffer)
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, red_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 4, red_buffer)  # Binding = 4
+
+        green_buffer = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, green_buffer)
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, green_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 5, green_buffer)  # Binding = 5
+
+        blue_buffer = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, blue_buffer)
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, blue_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 6, blue_buffer)  # Binding = 6
+
+        ind_buffer = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, ind_buffer)
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, ind_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 7, ind_buffer)  # Binding = 6
+
+        shader.setUniformValue("numBins", qt.QVector2D(width, height))
+        shader.setUniformValue(
+                    "bounds", qt.QVector4D(xmin, ymin, xmax, ymax))  # [[xmin, ymin], [xmax, ymax]]
+        shader.setUniformValue(
+                    "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
+        shader.setUniformValue(
+                "iMax",
+                float(np.max(beam.Jss[good]+beam.Jpp[good])))
+
+        if self.beamTexture is not None:
+            self.beamTexture.bind(0)
+            shader.setUniformValue("hsvTexture", 0)
+        print("xmin, ymin, xmax, ymax", xmin, ymin, xmax, ymax)
+
+#        gl.glBindImageTexture(1, histTexture.textureId(), 0, gl.GL_FALSE, 0,
+#                              gl.GL_WRITE_ONLY, gl.GL_RGB32F)  # we need this to calculate colors
+
+        num_vertices = len(beam.x)
+        workgroup_size = 32
+        num_workgroups = (num_vertices + workgroup_size - 1) // workgroup_size
+#        print("3")
+        gl.glDispatchCompute(num_workgroups, 1, 1)
+#        print("4")
+        gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT)  # Ensure completion
+#        print("5")
+
+
+       
+#        gl.glGetTexImage(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, gl.GL_FLOAT, data)
+#        hist2dRGB /= np.max(hist2dRGB)
+#        hist2dRGB = np.uint8(hist2dRGB*255)
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, red_buffer)
+#        print("06")
+        red_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, red_data.nbytes)
+#        print("6")
+        red_data = np.frombuffer(red_result, dtype=np.uint32).reshape((width, height))
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 4, 0)
+        gl.glDeleteBuffers(1, [red_buffer])
+        
+        # Read back GreenBuffer
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, green_buffer)
+        green_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, green_data.nbytes)
+#        print("7")
+        green_data = np.frombuffer(green_result, dtype=np.uint32).reshape((width, height))
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 5, 0)
+        gl.glDeleteBuffers(1, [green_buffer])        
+#        # Read back BlueBuffer
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, blue_buffer)
+        blue_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, blue_data.nbytes)
+#        print("8")
+        blue_data = np.frombuffer(blue_result, dtype=np.uint32).reshape((width, height))
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 6, 0)
+        gl.glDeleteBuffers(1, [blue_buffer])
+
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, ind_buffer)
+        ind_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, ind_data.nbytes)
+        print("8")
+        ind_data = np.squeeze(np.frombuffer(ind_result, dtype=np.uint32)) #.reshape((width, height))
+        gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 7, 0)
+        gl.glDeleteBuffers(1, [ind_buffer])
+
+        beam.vbo['position'].release()
+#        beam.vbo['color'].release()
+#        beam.vbo['state'].release()
+#        beam.vbo['intensity'].release()
+        shader.release()
+#        data = np.float64(np.dstack((red_data, green_data, blue_data)))
+        data[:, :, 0] = np.float32(red_data)
+        data[:, :, 1] = np.float32(green_data)
+        data[:, :, 2] = np.float32(blue_data)
+        data = np.sum(data, axis=2)
+
+#        print(np.max(data))        
+        data /= np.max(data)
+#        print(np.max(data))
+        data = np.uint8(data*255)
+#        print("SUM", np.sum(data))
+#        nmax = 6
+#        print(good[0:nmax])
+#        print(np.dstack((beam.x[0:nmax], beam.y[0:nmax], beam.z[0:nmax])))
+#        print(xmin, ymin, xmax, ymax)
+#        print(np.dstack(((beam.x[0:nmax]-xmin)/(xmax-xmin),
+#                         (beam.y[0:nmax]-ymin)/(ymax-ymin),
+#                          beam.z[0:nmax])))
+#        data = np.dstack((red_data[0:nmax], green_data[0:nmax], blue_data[0:nmax]))
+#        data = np.dstack((red_data, green_data, blue_data))
+#        print(f'{data=}', data.shape)
+
+        
+#        _, cpudata, _ = self.build_histRGB(beam, beam)
+#        print(f'{cpudata=}')
+        return data, ind_data
 
     def init_beam_footprint(self, beam, oe=None, is2ndXtal=None):
 
-        data = np.float32(np.vstack((beam.x, beam.y, beam.z)).T).copy()
-        dataColor = np.float32(self.getColor(beam)).copy()
-        state = np.float32(np.where((
-                (beam.state == 1) | (beam.state == 2)), 1, 0)).copy()
+#        data = np.float32(np.vstack((beam.x, beam.y, beam.z)).T).copy()
+        data = np.dstack((beam.x, beam.y, beam.z)).copy()
+        dataColor = self.getColor(beam).copy()
+        state = np.where((
+                (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
 
         vbo = {}
@@ -2119,7 +2348,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            print(self.getColor)
             colorax = np.float32(self.getColor(beam))
             good = (beam.state == 1) | (beam.state == 2)
-            
+
             beam.vbo['color'].bind()
             beam.vbo['color'].write(0, colorax, colorax.nbytes)
             beam.vbo['color'].release()
@@ -2146,14 +2375,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
 #        print(self.colorMin, self.colorMax)
-        
+
 #        hue = (self.colorMin - self.colorMin)/(self.colorMax - self.colorMin)
 #        nrange = np.array([n*64 for n in range(8)])
 #        print([(n, self.hsvTex[n, :]/255.) for n in nrange])
 #        print([(n, mpl.colors.hsv_to_rgb((n/511, 1, 1))) for n in nrange])
-        
+
 #        print()
-        
+
 
         if False:  # Updating textures with histograms
             for oeuuid, oeLine in self.beamLine.oesDict.items():
@@ -2190,12 +2419,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
             intensity = np.float32(beam.Jss+beam.Jpp)
             goodRays = np.uint32(np.where((((beam.state == 1) | (beam.state == 2)) & (intensity/self.iMax > self.cutoffI)))[0])
             beam.vbo['goodLen'] = len(goodRays)
-            
+
             beam.vbo['indices'].bind()
             beam.vbo['indices'].write(0, goodRays, goodRays.nbytes)
 #            beam.vao.bind()
 #            beam.vbo['color'].write(0, colorax, colorax.nbytes)
-            beam.vbo['indices'].release()        
+            beam.vbo['indices'].release()
 
 
     def render_beam(self, beam, model, view, projection, target=None):
@@ -2208,7 +2437,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             return
         shader.bind()
         beam.vao.bind()
-        
+
 #        oeIn = self.beamLine.oesDict[beam.parentId][0]
 
         if target is not None:
@@ -2239,7 +2468,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if self.beamTexture is not None:
             self.beamTexture.bind(0)
             shader.setUniformValue("hsvTexture", 0)
-    
+
         shader.setUniformValue("model", model)
         shader.setUniformValue("view", view)
         shader.setUniformValue("projection", projection)
@@ -2387,7 +2616,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         colorsRaysLost = None
         footprintsArrayLost = None
         colorsDotsLost = None
-        
+
         return
         maxLen = 1.
         tmpMax = -1.0e12 * np.ones(3)
@@ -2910,6 +3139,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
     def paintGL(self):
+
+        def makeCenterStr(centerList, prec):
+            retStr = ''  # disabling parentheses temporarily
+            for dim in centerList:
+                retStr += '{0:.{1}f}, '.format(dim, prec)
+            return retStr[:-2] + ''
+
         try:
             gl.glClearColor(0.0, 0.0, 0.0, 1.)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT |
@@ -2924,8 +3160,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            
-            
 
             if self.enableAA:
                 gl.glEnable(gl.GL_LINE_SMOOTH)
@@ -2948,7 +3182,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glDepthMask(gl.GL_TRUE)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
-            for ioe in range(self.segmentModel.rowCount() - 1):    
+            for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
                     continue
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
@@ -2961,7 +3195,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     is2ndXtalOpts = [False]
                     if isinstance(oeToPlot, roes.DCM):
                         is2ndXtalOpts.append(True)
-    
+
                     for is2ndXtal in is2ndXtalOpts:
                         if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
                             isSelected = False
@@ -2972,6 +3206,32 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
                                                          is2ndXtal, isSelected=isSelected,
                                                          shader=self.shaderMesh)
+            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
+
+            self.cBox.textShader.bind()
+            self.cBox.vaoText.bind()
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            gl.glEnable(gl.GL_POLYGON_SMOOTH)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
+                    ioeItem = self.segmentModel.child(ioe + 1, 0)
+                    oeString = str(ioeItem.text())
+                    oeToPlot = self.oesList[oeString][0]
+                    oeCenter = self.modelToWorld(np.array(oeToPlot.center) - self.coordOffset)
+                    vpMat = self.mProj * self.mView
+                    alignment = "top"
+                    dx = 0.1
+                    oeCenterStr = makeCenterStr(oeCenter, self.labelCoordPrec)
+                    oeLabel = '  {0}: {1}mm'.format(
+                        oeString, oeCenterStr)
+                    labelPos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() + qt.QVector3D(dx, 0, 0)
+                    self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
+                                     scale=0.04*self.cBox.fontScale)
+            self.cBox.textShader.release()
+            self.cBox.vaoText.release()
+
         #                    oeToPlot.mesh3D.drawLocalAxes(self.mMod, self.mView,
         #                                                  self.mProj, is2ndXtal)
 
@@ -2987,9 +3247,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                    self.plotAperture(oeToPlot)
 #                else:
 #                    continue
-
-
-            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
 
             self.cBox.draw(self.mModAx, self.mView, self.mProj)
 
@@ -3026,13 +3283,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 self.oesList[str(segmentItem0.text())[3:]][1]]
                             self.render_beam(beam, self.mMod, self.mView, self.mProj, target=endBeam)
 
-
             gl.glDepthMask(gl.GL_TRUE)
             gl.glEnable(gl.GL_DEPTH_TEST)
 #            gl.glDisable(gl.GL_MULTISAMPLE)
 #            gl.glDisable(gl.GL_BLEND)
-
-
 
             if self.enableAA:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
@@ -4937,7 +5191,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             newColorMax = self.colorMax
             newColorMin = self.colorMin
-        
+
         for beamName, startBeam in self.beamsDict.items():
             good = (startBeam.state == 1) | (startBeam.state == 2)
             if len(startBeam.state[good]) > 0:
@@ -4957,7 +5211,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 newColorMin = min(np.min(
                     self.getColor(startBeam)[good]),
                     newColorMin)
-            
+
                 self.init_beam_footprint(startBeam)
 
         if self.newColorAxis:
@@ -5001,10 +5255,26 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
                         oeToPlot.mesh3D.stencilNum = stencilNum
-
+#        counter = 0
 #        for beamName, startBeam in self.beamsDict.items():
-#            print(startBeam, hasattr(startBeam, 'vbo'))
-
+#            if counter > 1:
+#                break
+##            print(startBeam, hasattr(startBeam, 'vbo'))
+#            beamHist, ind_array = self.calculate_fp_hist(startBeam, 256, 256)
+#            _, nphist2d, _ = self.build_histRGB(startBeam, startBeam)
+#       
+#            plt.figure(f"{counter}_2d")
+#            plt.imshow(beamHist)
+#
+#            plt.figure(f"{counter}_2d_numpy")
+#            plt.imshow(nphist2d)
+#            
+##            plt.figure(f"{counter}_hist")
+##            plt.plot(ind_array)
+#            counter += 1
+#            
+#            
+#        plt.show()
 
         gl.glViewport(*self.viewPortGL)
 
@@ -5543,7 +5813,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 class Beam3D():
 
     vertex_source = '''
-    #version 400
+    #version 430 core
 
     layout(location = 0) in vec3 position_start;
     layout(location = 4) in vec3 position_end;
@@ -5590,7 +5860,7 @@ class Beam3D():
     '''
 
     geometry_source = '''
-    #version 400
+    #version 430 core
 
     layout(points) in;
     layout(line_strip, max_vertices = 2) out;
@@ -5630,24 +5900,95 @@ class Beam3D():
     }
     '''
 
+    compute_source = '''
+    #version 430
+
+    layout(local_size_x = 32) in;
+
+    layout(std430, binding = 0) buffer VertexBuffer {
+        vec3 position[];
+    };
+
+    layout(std430, binding = 1) buffer ColorBuffer {
+        float color[];
+    };
+
+    layout(std430, binding = 2) buffer StateBuffer {
+        float state[];
+    };
+
+    layout(std430, binding = 3) buffer IntensityBuffer {
+        float intensity[];
+    };
+
+    layout(std430, binding = 4) buffer RedBuffer {
+        int red[];
+    };
+
+    layout(std430, binding = 5) buffer GreenBuffer {
+        int green[];
+    };
+
+    layout(std430, binding = 6) buffer BlueBuffer {
+        int blue[];
+    };
+
+    layout(std430, binding = 7) buffer IndexBuffer {
+        uint ind_out[];
+    };
+
+    uniform sampler1D hsvTexture;        
+
+    uniform vec2 numBins;
+    uniform vec4 bounds; // Min and max for X, Y as [[xmin, ymin], [xmax, ymax]]
+    uniform vec2 colorMinMax;
+    uniform float iMax;
+    
+    vec3 rgb_color;
+
+    void main(void) {
+        uint idx = gl_GlobalInvocationID.x;
+        
+        vec2 normalized = (position[idx].xy - bounds.xy) / (bounds.zw - bounds.xy);
+        //ivec2 binIndex = ivec2(clamp(normalized * numBins, vec2(0, 0), numBins - vec2(1., 1.)));
+        vec2 binIndex = vec2(normalized.x * numBins.x, normalized.y * numBins.y);
+        uint flatIndex = uint(binIndex.x) + uint(binIndex.y * numBins.x);
+
+        float hue = (color[idx] - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+        //float hue = 0.5;
+        if (state[idx] > 0) {
+                //rgb_color = vec3(1, 1, 1);
+                rgb_color =  intensity[idx] / iMax * 10000. * texture(hsvTexture, hue*0.85).rgb;
+        } else {
+                //rgb_color = vec3(1, 1, 1);
+                rgb_color = vec3(0, 0, 0);
+        };
+
+        atomicAdd(red[flatIndex], int(rgb_color.x)); 
+        atomicAdd(green[flatIndex], int(rgb_color.y));        
+        atomicAdd(blue[flatIndex], int(rgb_color.z));
+        ind_out[idx] = flatIndex;
+    }
+    '''
 
     fragment_source = '''
-    #version 400
+    #version 430 core
 
     in vec4 gs_out_color;
     //flat in float gs_out_frag_state;
+    out vec4 fragColor;
 
     void main()
     {
       // if (gs_out_frag_state < 1) {
       //      discard;
       //   }
-      gl_FragColor = gs_out_color;
+      fragColor = gs_out_color;
     }
     '''
 
     vertex_source_point = '''
-    #version 400
+    #version 430 core
 
     layout(location = 0) in vec3 position_start;
     layout(location = 1) in float colorAxis;
@@ -5690,17 +6031,18 @@ class Beam3D():
     '''
 
     fragment_source_point = '''
-    #version 400
+    #version 430 core
 
     in vec4 vs_out_color;
     //flat in float vs_out_frag_state;
+    out vec4 fragColor;
 
     void main()
     {
        //if (vs_out_frag_state < 1) {
        //    discard;
        // }
-      gl_FragColor = vs_out_color;
+      fragColor = vs_out_color;
 
     }
     '''
@@ -5710,7 +6052,7 @@ class OEMesh3D():
     """Container for an optical element mesh"""
 
     vertex_source = '''
-    #version 400
+    #version 430 core
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec3 normals;
 
@@ -5738,7 +6080,7 @@ class OEMesh3D():
     '''
 
     fragment_source = '''
-    #version 400
+    #version 430 core
 
     in vec4 w_position;  // position of the vertex (and fragment) in world space
     in vec3 varyingNormalDirection;  // surface normal vector in world space
@@ -5754,6 +6096,8 @@ class OEMesh3D():
     uniform vec2 texlimitsz;
     uniform sampler2D u_texture;
     uniform float opacity;
+
+    out vec4 fragColor;
 
     vec2 texUV;
     vec4 histColor;
@@ -5854,13 +6198,13 @@ class OEMesh3D():
          histColor = vec4(0, 0, 0, 0);
 
       //gl_FragColor = vec4(1, 1, 1, 1.0);
-      gl_FragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0) + histColor*opacity;
+      fragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0) + histColor*opacity;
     }
     '''
 
 
     vertex_source_flat = '''
-    #version 400
+    #version 430 core
 
     struct Material {
         vec3 ambient;
@@ -5876,8 +6220,8 @@ class OEMesh3D():
         vec3 specular;
     };
 
-    attribute vec3 position;
-    attribute vec3 normals;
+    layout(location = 0) in vec3 position;
+    layout(location = 1) in vec3 normals;
 
     uniform mat4 model;
     uniform mat4 projection;
@@ -5894,8 +6238,8 @@ class OEMesh3D():
 
     //uniform vec3 lightColor;
 
-    varying vec4 color_out;
-    varying vec2 texUV;
+    out vec4 color_out;
+    out vec2 texUV;
 
 
     void main()
@@ -5925,14 +6269,16 @@ class OEMesh3D():
     '''
 
     fragment_source_flat = '''
-    #version 400
+    #version 430 core
 
-    varying vec4 color_out;
-    varying vec2 texUV;
+    in vec4 color_out;
+    in vec2 texUV;
 
     uniform sampler2D u_texture;
     uniform float opacity;
     vec4 histColor;
+
+    out vec4 fragColor;
 
     void main()
     {
@@ -5943,13 +6289,13 @@ class OEMesh3D():
          histColor = vec4(0, 0, 0, 0);
 
      //gl_FragColor = vec4(color_out+histColor);
-     gl_FragColor = color_out;
+     fragColor = color_out;
     }
     '''
 
     vertex_contour = '''
-    #version 400
-    attribute vec3 position;
+    #version 430 core
+    layout(location = 0) in vec3 position;
 
     uniform mat4 model;
     uniform mat4 projection;
@@ -5962,19 +6308,20 @@ class OEMesh3D():
     '''
 
     fragment_contour = '''
-    #version 400
+    #version 430 core
     uniform vec4 cColor;
+    out vec4 fragColor;
 
     void main()
     {
-        gl_FragColor = cColor;
+        fragColor = cColor;
     }
     '''
 
     vertex_arrow = '''
-    #version 400
+    #version 430 core
 
-    attribute vec3 position;
+    layout(location = 0) in vec3 position;
 
     uniform mat4 model;
     uniform mat4 projection;
@@ -5987,58 +6334,62 @@ class OEMesh3D():
     '''
 
     fragment_arrow = '''
-    #version 400
+    #version 430 core
+
     uniform vec4 aColor;
+    out vec4 fragColor;
 
     void main()
     {
-        gl_FragColor = aColor;
+        fragColor = aColor;
     }
     '''
 
-    geometry_source = '''
-    #version 400
-
-    varying vec4 color_out;
-    varying vec2 texUV;
-
-    uniform sampler2D u_texture;
-    vec4 histColor;
-
-    void main()
-    {
-
-     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
-         histColor = texture(u_texture, texUV);
-     else
-         histColor = vec4(0, 0, 0, 0);
-
-     //gl_FragColor = vec4(color_out+histColor);
-     gl_FragColor = color_out;
-    }
-    '''
-
-    fg_source = '''
-    #version 400
-
-    varying vec4 color_out;
-    varying vec2 texUV;
-
-    uniform sampler2D u_texture;
-    vec4 histColor;
-
-    void main()
-    {
-
-     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
-         histColor = texture(u_texture, texUV);
-     else
-         histColor = vec4(0, 0, 0, 0);
-
-     //gl_FragColor = vec4(color_out+histColor);
-     gl_FragColor = color_out;
-    }
-    '''
+#    geometry_source = '''
+#    #version 430 core
+#
+#    varying vec4 color_out;
+#    varying vec2 texUV;
+#
+#    uniform sampler2D u_texture;
+#    vec4 histColor;
+#
+#    void main()
+#    {
+#
+#     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
+#         histColor = texture(u_texture, texUV);
+#     else
+#         histColor = vec4(0, 0, 0, 0);
+#
+#     //gl_FragColor = vec4(color_out+histColor);
+#     gl_FragColor = color_out;
+#    }
+#    '''
+#
+#    fg_source = '''
+#    #version 430 core
+#
+#    in vec4 color_out;
+#    in vec2 texUV;
+#
+#    uniform sampler2D u_texture;
+#    vec4 histColor;
+#
+#    out vec4 fragColor;
+#
+#    void main()
+#    {
+#
+#     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
+#         histColor = texture(u_texture, texUV);
+#     else
+#         histColor = vec4(0, 0, 0, 0);
+#
+#     //gl_FragColor = vec4(color_out+histColor);
+#     fragColor = color_out;
+#    }
+#    '''
 
     def __init__(self, parentOE, parentWidget):
         self.emptyTex = qt.QOpenGLTexture(
@@ -6610,8 +6961,8 @@ class OEMesh3D():
 class CoordinateBox():
 
     vertex_source = '''
-    #version 400
-    attribute vec3 position;
+    #version 430 core
+    layout(location = 0) in vec3 position;
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
@@ -6623,22 +6974,23 @@ class CoordinateBox():
     '''
 
     fragment_source = '''
-    #version 400
+    #version 430 core
     uniform float lineOpacity;
+    out vec4 fragColor;
     void main()
     {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, lineOpacity);
+      fragColor = vec4(1.0, 1.0, 1.0, lineOpacity);
     }
     '''
 
     orig_vertex_source = '''
-    #version 400
-    attribute vec3 position;
-    attribute vec3 linecolor;
+    #version 430 core
+    layout(location = 0) in vec3 position;
+    layout(location = 1) in vec3 linecolor;
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
-    varying vec3 out_color;
+    out vec3 out_color;
     void main()
     {
      out_color = linecolor;
@@ -6648,17 +7000,18 @@ class CoordinateBox():
     '''
 
     orig_fragment_source = '''
-    #version 400
+    #version 430 core
     uniform float lineOpacity;
-    varying vec3 out_color;
+    in vec3 out_color;
+    out vec4 fragColor;
     void main()
     {
-      gl_FragColor = vec4(out_color, lineOpacity);
+      fragColor = vec4(out_color, lineOpacity);
     }
     '''
 
     text_vertex_code = """
-    #version 400
+    #version 430 core
 
     in vec4 in_pos;
 
@@ -6675,7 +7028,7 @@ class CoordinateBox():
     """
 
     text_fragment_code = """
-    #version 400
+    #version 430 core
 
     in vec2 vUV;
 
@@ -6720,8 +7073,8 @@ class CoordinateBox():
         self.vaoText.create()
 
         self.characters = []
-        self.fontSize = 20
-        self.fontScale = 5.
+        self.fontSize = 32
+        self.fontScale = 4.
         self.fontFile = 'FreeSans.ttf'
 #        self.vquad = [
 #          # x   y  u  v
@@ -6871,7 +7224,7 @@ class CoordinateBox():
 
     def prepare_grid(self):
 
-        self.makefont()
+        self.make_font()
         self.make_frame()
         self.make_coarse_grid()
 #        if self.parent.fineGridEnabled:
@@ -7117,58 +7470,63 @@ class CoordinateBox():
         self.textShader.release()
 
     def render_text(self, pos, text, alignment, scale):
-        char_x = 0
-        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-        scaleX = scale/float(pView[2])
-        scaleY = scale/float(pView[3])
-        coordShift = np.zeros(2, dtype=np.float32)
-
-        aw = []
-        ah = []
-        axrel = []
-        ayrel = []
-
-        for c in text:
-            c = ord(c)
-            ch = self.characters[c]
-            w, h = ch[1][0] * scaleX, ch[1][1] * scaleY
-            xrel = char_x + ch[2][0]*scaleX
-            yrel = (ch[1][1] - ch[2][1]) * scaleY
-            if c == 45:
-                yrel = ch[1][0]*scaleY
-            char_x += (ch[3] >> 6) * scaleX
-            aw.append(w)
-            ah.append(h)
-            axrel.append(xrel)
-            ayrel.append(yrel)
-
-        if alignment is not None:
-            if alignment[0] == 'left':
-                coordShift[0] = -(axrel[-1]+2*aw[-1])
-            else:
-                coordShift[0] = 2*aw[-1]
-
-            if alignment[1] == 'top':
-                vOffset = 0.5
-            elif alignment[1] == 'bottom':
-                vOffset = -2
-            else:
-                vOffset = -1
-            coordShift[1] = vOffset*ah[-1]
-
-        for ic, c in enumerate(text):
-            c = ord(c)
-            ch = self.characters[c]
-            mMod = qt.QMatrix4x4()
-            mMod.setToIdentity()
-
-            mMod.translate(pos)
-            mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
-            mMod.scale(aw[ic], ah[ic], 1)
-            ch[0].bind()
-            self.textShader.setUniformValue("model", mMod)
-            gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
-            ch[0].release()
+        try:
+            char_x = 0
+            pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+            scaleX = scale/float(pView[2])
+            scaleY = scale/float(pView[3])
+            coordShift = np.zeros(2, dtype=np.float32)
+    
+            aw = []
+            ah = []
+            axrel = []
+            ayrel = []
+    
+            for c in text:
+                c = ord(c)
+                ch = self.characters[c]
+                w, h = ch[1][0] * scaleX, ch[1][1] * scaleY
+                xrel = char_x + ch[2][0]*scaleX
+                yrel = (ch[1][1] - ch[2][1]) * scaleY
+                if c == 45:
+                    yrel = ch[1][0]*scaleY
+                char_x += (ch[3] >> 6) * scaleX
+                aw.append(w)
+                ah.append(h)
+                axrel.append(xrel)
+                ayrel.append(yrel)
+    
+            if alignment is not None:
+                if alignment[0] == 'left':
+                    coordShift[0] = -(axrel[-1]+2*aw[-1])
+                else:
+                    coordShift[0] = 2*aw[-1]
+    
+                if alignment[1] == 'top':
+                    vOffset = 0.5
+                elif alignment[1] == 'bottom':
+                    vOffset = -2
+                else:
+                    vOffset = -1
+                coordShift[1] = vOffset*ah[-1]
+#            print([f"-{c}--{ord(c)}" for c in text])
+            for ic, c in enumerate(text):
+                c = ord(c)
+                ch = self.characters[c]
+                if ch[1] == (0, 0):
+                    continue
+                mMod = qt.QMatrix4x4()
+                mMod.setToIdentity()
+    
+                mMod.translate(pos)
+                mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
+                mMod.scale(aw[ic], ah[ic], 1)
+                ch[0].bind()
+                self.textShader.setUniformValue("model", mMod)
+                gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+                ch[0].release()
+        except:
+            raise
 
     def get_sans_font(self):
         fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Liberation Sans", "Sans-serif"]
@@ -7182,14 +7540,14 @@ class CoordinateBox():
 
         return "Sans-serif"
 
-    def makefont(self):
+    def make_font(self):
 #        fontpath = os.path.dirname(__file__)
 #        filename = os.path.join(fontpath, self.fontFile)
         fontName = self.get_sans_font()
-        print("Font found:", fontName)
+#        print("Font found:", fontName)
         font_path = font_manager.findfont(fontName)
         face = ft.Face(font_path)
-        face.set_pixel_sizes(self.fontSize*10, self.fontSize*10)
+        face.set_pixel_sizes(self.fontSize*8, self.fontSize*8)
 #        faceTexture = ft.Face(filename)
 #        faceTexture.set_pixel_sizes(self.fontSize, self.fontSize)
 
@@ -7211,6 +7569,9 @@ class CoordinateBox():
 #            if chr(c) == "0":
 #                qi.save("0.jpg")
             texObj = qt.QOpenGLTexture(qi)
+            texObj.setMinificationFilter(qt.QOpenGLTexture.LinearMipMapLinear)
+            texObj.setMagnificationFilter(qt.QOpenGLTexture.Linear)
+            texObj.generateMipMaps()
             self.characters.append((texObj, size, bearing, advance))
 
     def getAlignment(self, pvMatr, point, hDim, vDim=None):

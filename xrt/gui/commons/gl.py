@@ -23,6 +23,8 @@ if isOpenGL:
         glBegin, glEnd, glViewport, glMaterialf, glHint, glPointSize,\
         glAlphaFunc, glDrawElements, glStencilOp, glStencilFunc, glDepthMask,\
         glReadPixelsui, glReadPixels, glBindFramebuffer, glDepthFunc,\
+        glBindBufferBase, glBindImageTexture, glDispatchCompute,\
+        glMemoryBarrier, glGetBufferSubData, glDeleteBuffers,\
         GL_FRONT_AND_BACK, GL_AMBIENT, GL_DIFFUSE, GL_SPECULAR, GL_EMISSION,\
         GL_FRONT, GL_SHININESS, GL_PROJECTION, GL_MODELVIEW, GL_INT,\
         GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, GL_MULTISAMPLE, GL_BLEND,\
@@ -40,7 +42,8 @@ if isOpenGL:
         GL_STENCIL_BUFFER_BIT, GL_STENCIL_TEST, GL_KEEP, GL_REPLACE, GL_ALWAYS,\
         GL_UNSIGNED_INT, GL_STENCIL_INDEX, GL_RGBA, GL_DEPTH_COMPONENT,\
         GL_READ_FRAMEBUFFER, GL_DRAW_FRAMEBUFFER, GL_NEAREST, GL_POLYGON_SMOOTH,\
-        GL_FALSE, GL_LESS, GL_TRUE
+        GL_FALSE, GL_LESS, GL_TRUE, GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY,\
+        GL_RGB32F, GL_SHADER_STORAGE_BARRIER_BIT, GL_TEXTURE_2D
 
     from OpenGL.GLU import gluPerspective, gluLookAt, gluProject
 
