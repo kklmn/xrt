@@ -3208,48 +3208,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                          shader=self.shaderMesh)
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
 
-            self.cBox.textShader.bind()
-            self.cBox.vaoText.bind()
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glEnable(gl.GL_POLYGON_SMOOTH)
-            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-
-            for ioe in range(self.segmentModel.rowCount() - 1):
-                if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
-                    ioeItem = self.segmentModel.child(ioe + 1, 0)
-                    oeString = str(ioeItem.text())
-                    oeToPlot = self.oesList[oeString][0]
-                    oeCenter = self.modelToWorld(np.array(oeToPlot.center) - self.coordOffset)
-                    vpMat = self.mProj * self.mView
-                    alignment = "top"
-                    dx = 0.1
-                    oeCenterStr = makeCenterStr(oeCenter, self.labelCoordPrec)
-                    oeLabel = '  {0}: {1}mm'.format(
-                        oeString, oeCenterStr)
-                    labelPos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() + qt.QVector3D(dx, 0, 0)
-                    self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
-                                     scale=0.04*self.cBox.fontScale)
-            self.cBox.textShader.release()
-            self.cBox.vaoText.release()
-
-        #                    oeToPlot.mesh3D.drawLocalAxes(self.mMod, self.mView,
-        #                                                  self.mProj, is2ndXtal)
-
-#                elif isinstance(oeToPlot, rscreens.HemisphericScreen):
-#                    self.setMaterial('semiSi')
-#                    self.plotHemiScreen(oeToPlot)
-#                elif isinstance(oeToPlot, rscreens.Screen):
-#                    self.setMaterial('semiSi')
-#                    self.plotScreen(oeToPlot, frameColor=[1, 1, 0, 0.8])
-#                if isinstance(oeToPlot, (rapertures.RectangularAperture,
-#                                         rapertures.RoundAperture)):
-#                    self.setMaterial('Cu')
-#                    self.plotAperture(oeToPlot)
-#                else:
-#                    continue
-
-            self.cBox.draw(self.mModAx, self.mView, self.mProj)
-
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
 
@@ -3287,6 +3245,33 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_DEPTH_TEST)
 #            gl.glDisable(gl.GL_MULTISAMPLE)
 #            gl.glDisable(gl.GL_BLEND)
+
+            self.cBox.textShader.bind()
+            self.cBox.vaoText.bind()
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            gl.glEnable(gl.GL_POLYGON_SMOOTH)
+            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
+                    ioeItem = self.segmentModel.child(ioe + 1, 0)
+                    oeString = str(ioeItem.text())
+                    oeToPlot = self.oesList[oeString][0]
+                    oeCenter = self.modelToWorld(
+                            np.array(oeToPlot.center) - self.coordOffset)
+                    vpMat = self.mProj * self.mView
+                    alignment = "middle"
+                    dx = 0.1
+                    oeCenterStr = makeCenterStr(oeToPlot.center,
+                                                self.labelCoordPrec)
+                    oeLabel = '  {0}: {1}mm'.format(
+                        oeString, oeCenterStr)
+                    labelPos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() + qt.QVector3D(dx, 0, 0)
+                    self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
+                                     scale=0.04*self.cBox.fontScale)
+            self.cBox.textShader.release()
+            self.cBox.vaoText.release()
+            self.cBox.draw(self.mModAx, self.mView, self.mProj)
 
             if self.enableAA:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
