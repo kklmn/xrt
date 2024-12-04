@@ -3255,6 +3255,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             gl.glEnable(gl.GL_POLYGON_SMOOTH)
             gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+            
+            sclY = self.cBox.characters[124][1][1]*0.04*self.cBox.fontScale/float(self.viewPortGL[3])
+            
+            labelBounds = []
 
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
@@ -3265,12 +3269,40 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             np.array(oeToPlot.center) - self.coordOffset)
                     vpMat = self.mProj * self.mView
                     alignment = "middle"
-                    dx = 0.1
+                    dx = 0.075
                     oeCenterStr = makeCenterStr(oeToPlot.center,
                                                 self.labelCoordPrec)
                     oeLabel = '  {0}: {1}mm'.format(
                         oeString, oeCenterStr)
+#                    print(oeLabel)
                     labelPos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() + qt.QVector3D(dx, 0, 0)
+                    
+#                    mMod = qt.QMatrix4x4()
+#                    mMod.setToIdentity()
+#                    mMod.translate(labelPos)
+#                    mMod.scale(1, sclY, 1)
+#                    
+#                    labelYmin = mMod*qt.QVector4D(0, 0, 0, 1)
+#                    labelYmax = mMod*qt.QVector4D(1, 1, 1, 1)
+                    
+#                    print(labelPos, labelYmin, labelYmax)
+                    
+                    intersecting = True
+                    while intersecting:
+                        labelYmin = labelPos.y()
+                        labelYmax = labelYmin + sclY                       
+                        for bmin, bmax in labelBounds:
+                            if labelYmax > bmin and labelYmin < bmax:
+                                labelPos += qt.QVector3D(0, 1.5*sclY, 0)
+                                break
+                            elif labelYmin > bmax and labelYmax < bmin:
+                                labelPos -= qt.QVector3D(0, 1.5*sclY, 0)
+                                break
+                        else:
+                            intersecting = False
+                            labelBounds.append((labelPos.y(), labelPos.y() + sclY))
+
+                    
                     self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
                                      scale=0.04*self.cBox.fontScale)
             self.cBox.textShader.release()
@@ -7435,63 +7467,61 @@ class CoordinateBox():
         self.textShader.release()
 
     def render_text(self, pos, text, alignment, scale):
-        try:
-            char_x = 0
-            pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-            scaleX = scale/float(pView[2])
-            scaleY = scale/float(pView[3])
-            coordShift = np.zeros(2, dtype=np.float32)
 
-            aw = []
-            ah = []
-            axrel = []
-            ayrel = []
+        char_x = 0
+        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
+        scaleX = scale/float(pView[2])
+        scaleY = scale/float(pView[3])
+        coordShift = np.zeros(2, dtype=np.float32)
 
-            for c in text:
-                c = ord(c)
-                ch = self.characters[c]
-                w, h = ch[1][0] * scaleX, ch[1][1] * scaleY
-                xrel = char_x + ch[2][0]*scaleX
-                yrel = (ch[1][1] - ch[2][1]) * scaleY
-                if c == 45:
-                    yrel = ch[1][0]*scaleY
-                char_x += (ch[3] >> 6) * scaleX
-                aw.append(w)
-                ah.append(h)
-                axrel.append(xrel)
-                ayrel.append(yrel)
+        aw = []
+        ah = []
+        axrel = []
+        ayrel = []
 
-            if alignment is not None:
-                if alignment[0] == 'left':
-                    coordShift[0] = -(axrel[-1]+2*aw[-1])
-                else:
-                    coordShift[0] = 2*aw[-1]
+        for c in text:
+            c = ord(c)
+            ch = self.characters[c]
+            w, h = ch[1][0] * scaleX, ch[1][1] * scaleY
+            xrel = char_x + ch[2][0] * scaleX
+            yrel = (ch[1][1] - ch[2][1]) * scaleY
+            if c == 45:
+                yrel = ch[1][0] * scaleY
+            char_x += (ch[3] >> 6) * scaleX
+            aw.append(w)
+            ah.append(h)
+            axrel.append(xrel)
+            ayrel.append(yrel)
 
-                if alignment[1] == 'top':
-                    vOffset = 0.5
-                elif alignment[1] == 'bottom':
-                    vOffset = -2
-                else:
-                    vOffset = -1
-                coordShift[1] = vOffset*ah[-1]
-#            print([f"-{c}--{ord(c)}" for c in text])
-            for ic, c in enumerate(text):
-                c = ord(c)
-                ch = self.characters[c]
-                if ch[1] == (0, 0):
-                    continue
-                mMod = qt.QMatrix4x4()
-                mMod.setToIdentity()
+        if alignment is not None:
+            if alignment[0] == 'left':
+                coordShift[0] = -(axrel[-1]+2*aw[-1])
+            else:
+                coordShift[0] = 2*aw[-1]
 
-                mMod.translate(pos)
-                mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
-                mMod.scale(aw[ic], ah[ic], 1)
-                ch[0].bind()
-                self.textShader.setUniformValue("model", mMod)
-                gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
-                ch[0].release()
-        except:
-            raise
+            if alignment[1] == 'top':
+                vOffset = 0.5
+            elif alignment[1] == 'bottom':
+                vOffset = -2
+            else:
+                vOffset = -1
+            coordShift[1] = vOffset*ah[-1]
+
+        for ic, c in enumerate(text):
+            c = ord(c)
+            ch = self.characters[c]
+            if ch[1] == (0, 0):
+                continue
+            mMod = qt.QMatrix4x4()
+            mMod.setToIdentity()
+
+            mMod.translate(pos)
+            mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
+            mMod.scale(aw[ic], ah[ic], 1)
+            ch[0].bind()
+            self.textShader.setUniformValue("model", mMod)
+            gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+            ch[0].release()
 
     def get_sans_font(self):
         fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Liberation Sans", "Sans-serif"]
@@ -7520,11 +7550,9 @@ class CoordinateBox():
             face.load_char(chr(c), ft.FT_LOAD_RENDER)
 #            faceTexture.load_char(chr(c), ft.FT_LOAD_RENDER)
             glyph = face.glyph
-#            glyphT = faceTexture.glyph
             bitmap = glyph.bitmap
-#            bitmapT = glyphT.bitmap
             size = bitmap.width, bitmap.rows
-            bearing = glyph.bitmap_left, glyph.bitmap_top
+            bearing = glyph.bitmap_left, 2 * bitmap.rows - glyph.bitmap_top
             advance = glyph.advance.x
 
             qi = qt.QImage(np.array(bitmap.buffer, dtype=np.uint8),
