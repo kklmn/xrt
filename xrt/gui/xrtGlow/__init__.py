@@ -2147,7 +2147,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         shader.bind()
 
         beam.vbo['position'].bind()
-        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 0, 
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 0,
                             beam.vbo['position'].bufferId())  # 0 is location for position
 
         beam.vbo['color'].bind()
@@ -2209,7 +2209,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        print("5")
 
 
-       
+
 #        gl.glGetTexImage(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, gl.GL_FLOAT, data)
 #        hist2dRGB /= np.max(hist2dRGB)
 #        hist2dRGB = np.uint8(hist2dRGB*255)
@@ -2221,7 +2221,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 4, 0)
         gl.glDeleteBuffers(1, [red_buffer])
-        
+
         # Read back GreenBuffer
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, green_buffer)
         green_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, green_data.nbytes)
@@ -2229,7 +2229,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         green_data = np.frombuffer(green_result, dtype=np.uint32).reshape((width, height))
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 5, 0)
-        gl.glDeleteBuffers(1, [green_buffer])        
+        gl.glDeleteBuffers(1, [green_buffer])
 #        # Read back BlueBuffer
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, blue_buffer)
         blue_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, blue_data.nbytes)
@@ -2258,7 +2258,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         data[:, :, 2] = np.float32(blue_data)
         data = np.sum(data, axis=2)
 
-#        print(np.max(data))        
+#        print(np.max(data))
         data /= np.max(data)
 #        print(np.max(data))
         data = np.uint8(data*255)
@@ -2274,7 +2274,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        data = np.dstack((red_data, green_data, blue_data))
 #        print(f'{data=}', data.shape)
 
-        
+
 #        _, cpudata, _ = self.build_histRGB(beam, beam)
 #        print(f'{cpudata=}')
         return data, ind_data
@@ -2469,9 +2469,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.beamTexture.bind(0)
             shader.setUniformValue("hsvTexture", 0)
 
+        mPV = projection*view
+
         shader.setUniformValue("model", model)
-        shader.setUniformValue("view", view)
-        shader.setUniformValue("projection", projection)
+#        shader.setUniformValue("view", view)
+#        shader.setUniformValue("projection", projection)
+        shader.setUniformValue("mPV", mPV)
 
         shader.setUniformValue(
                     "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
@@ -2493,8 +2496,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glLineWidth(self.lineWidth)
 
         gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                          gl.GL_UNSIGNED_INT, [])
-        """
+                          gl.GL_UNSIGNED_INT, None)
+
         if target and self.lineProjectionWidth > 0:
             gl.glLineWidth(self.lineProjectionWidth)
 
@@ -2506,10 +2509,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gridProjection[dim] = -self.aPos[dim]
                 shader.setUniformValue(
                         "gridMask",
-                        qg.QVector4D(*gridMask))
+                        qt.QVector4D(*gridMask))
                 shader.setUniformValue(
                         "gridProjection",
-                        qg.QVector4D(*gridProjection))
+                        qt.QVector4D(*gridProjection))
                 shader.setUniformValue(
                         "pointSize",
                         float(self.pointProjectionSize if target is None else self.lineProjectionWidth))
@@ -2517,8 +2520,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         "opacity",
                         float(self.pointProjectionOpacity if target is None else self.lineProjectionOpacity))
 
-                gl.glDrawArrays(gl.GL_POINTS, 0, beam.beamLen)
-        """
+                gl.glDrawElements(gl.GL_POINTS,  arrLen,
+                                  gl.GL_UNSIGNED_INT, None)
+
 
         if target:
             target.vbo['position'].release()
@@ -5247,18 +5251,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
 ##            print(startBeam, hasattr(startBeam, 'vbo'))
 #            beamHist, ind_array = self.calculate_fp_hist(startBeam, 256, 256)
 #            _, nphist2d, _ = self.build_histRGB(startBeam, startBeam)
-#       
+#
 #            plt.figure(f"{counter}_2d")
 #            plt.imshow(beamHist)
 #
 #            plt.figure(f"{counter}_2d_numpy")
 #            plt.imshow(nphist2d)
-#            
+#
 ##            plt.figure(f"{counter}_hist")
 ##            plt.plot(ind_array)
 #            counter += 1
-#            
-#            
+#
+#
 #        plt.show()
 
         gl.glViewport(*self.viewPortGL)
@@ -5813,16 +5817,16 @@ class Beam3D():
     uniform float iMax;
     uniform vec2 colorMinMax;
 
+    uniform mat4 mPV;
     uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
+    
+    uniform vec4 gridMask;
+    uniform vec4 gridProjection;
 
     out vec4 vs_out_start;
     out vec4 vs_out_end;
     out vec4 vs_out_color;
-    //flat out float vs_out_frag_state;
 
-    mat4 transformation;
     float hue;
     float intensity_v;
     vec4 hrgb;
@@ -5830,16 +5834,13 @@ class Beam3D():
     void main()
     {
 
-     transformation = projection * view * model;
-     vs_out_start = transformation * vec4(position_start, 1.0);
-     vs_out_end = transformation * vec4(position_end, 1.0);
+     vs_out_start = mPV * (gridMask * (model * vec4(position_start, 1.0)) + gridProjection);
+     vs_out_end = mPV * (gridMask * (model * vec4(position_end, 1.0)) + gridProjection);
 
      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
      intensity_v = opacity*intensity/iMax;
      hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
-     //vs_out_color = (state > 0) ? hrgb : vec4(0., 0., 0., 0.);
      vs_out_color = hrgb;
-     //vs_out_frag_state = state;
 
     }
     '''
@@ -5853,32 +5854,20 @@ class Beam3D():
     in vec4 vs_out_start[];
     in vec4 vs_out_end[];
     in vec4 vs_out_color[];
-    //flat in float vs_out_frag_state[];
 
     uniform float pointSize;
 
-    uniform vec4 gridMask;
-    uniform vec4 gridProjection;
-
     out vec4 gs_out_color;
-    //flat out float gs_out_frag_state;
-
-   // mat4 transformation;
-
 
     void main() {
-
-       // transformation = projection * view * model;
 
         gl_Position = vs_out_start[0];
         gl_PointSize = pointSize;
         gs_out_color = vs_out_color[0];
-        //gs_out_frag_state = vs_out_frag_state[0];
         EmitVertex();
 
         gl_Position = vs_out_end[0];
         gs_out_color = vs_out_color[0];
-        //gs_out_frag_state = vs_out_frag_state[0];
         EmitVertex();
 
         EndPrimitive();
@@ -5922,18 +5911,18 @@ class Beam3D():
         uint ind_out[];
     };
 
-    uniform sampler1D hsvTexture;        
+    uniform sampler1D hsvTexture;
 
     uniform vec2 numBins;
     uniform vec4 bounds; // Min and max for X, Y as [[xmin, ymin], [xmax, ymax]]
     uniform vec2 colorMinMax;
     uniform float iMax;
-    
+
     vec3 rgb_color;
 
     void main(void) {
         uint idx = gl_GlobalInvocationID.x;
-        
+
         vec2 normalized = (position[idx].xy - bounds.xy) / (bounds.zw - bounds.xy);
         //ivec2 binIndex = ivec2(clamp(normalized * numBins, vec2(0, 0), numBins - vec2(1., 1.)));
         vec2 binIndex = vec2(normalized.x * numBins.x, normalized.y * numBins.y);
@@ -5949,8 +5938,8 @@ class Beam3D():
                 rgb_color = vec3(0, 0, 0);
         };
 
-        atomicAdd(red[flatIndex], int(rgb_color.x)); 
-        atomicAdd(green[flatIndex], int(rgb_color.y));        
+        atomicAdd(red[flatIndex], int(rgb_color.x));
+        atomicAdd(green[flatIndex], int(rgb_color.y));
         atomicAdd(blue[flatIndex], int(rgb_color.z));
         ind_out[idx] = flatIndex;
     }
@@ -5960,14 +5949,11 @@ class Beam3D():
     #version 430 core
 
     in vec4 gs_out_color;
-    //flat in float gs_out_frag_state;
+
     out vec4 fragColor;
 
     void main()
     {
-      // if (gs_out_frag_state < 1) {
-      //      discard;
-      //   }
       fragColor = gs_out_color;
     }
     '''
@@ -5986,32 +5972,28 @@ class Beam3D():
     uniform float iMax;
     uniform vec2 colorMinMax;
 
+    uniform mat4 mPV;
     uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-
+    
     uniform float pointSize;
     uniform vec4 gridMask;
     uniform vec4 gridProjection;
 
     out vec4 vs_out_color;
-    //flat out float vs_out_frag_state;
 
-    mat4 transformation;
     float hue;
     vec4 hrgb;
 
     void main()
     {
-     transformation = projection * view * model;
-     gl_Position = vec4(transformation * vec4(position_start, 1.0));
+
+     gl_Position = mPV * (gridMask * (model * vec4(position_start, 1.0)) + gridProjection);
      gl_PointSize = pointSize;
 
      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
      hrgb = vec4(texture(hsvTexture, hue).rgb, opacity*intensity/iMax);
-     //vs_out_color = (state > 0) ? hrgb : vec4(0., 0., 0., 0.);
      vs_out_color = hrgb;
-     //vs_out_frag_state = state;
+
     }
     '''
 
@@ -6019,14 +6001,12 @@ class Beam3D():
     #version 430 core
 
     in vec4 vs_out_color;
-    //flat in float vs_out_frag_state;
+
     out vec4 fragColor;
 
     void main()
     {
-       //if (vs_out_frag_state < 1) {
-       //    discard;
-       // }
+
       fragColor = vs_out_color;
 
     }
@@ -7461,12 +7441,12 @@ class CoordinateBox():
             scaleX = scale/float(pView[2])
             scaleY = scale/float(pView[3])
             coordShift = np.zeros(2, dtype=np.float32)
-    
+
             aw = []
             ah = []
             axrel = []
             ayrel = []
-    
+
             for c in text:
                 c = ord(c)
                 ch = self.characters[c]
@@ -7480,13 +7460,13 @@ class CoordinateBox():
                 ah.append(h)
                 axrel.append(xrel)
                 ayrel.append(yrel)
-    
+
             if alignment is not None:
                 if alignment[0] == 'left':
                     coordShift[0] = -(axrel[-1]+2*aw[-1])
                 else:
                     coordShift[0] = 2*aw[-1]
-    
+
                 if alignment[1] == 'top':
                     vOffset = 0.5
                 elif alignment[1] == 'bottom':
@@ -7502,7 +7482,7 @@ class CoordinateBox():
                     continue
                 mMod = qt.QMatrix4x4()
                 mMod.setToIdentity()
-    
+
                 mMod.translate(pos)
                 mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
                 mMod.scale(aw[ic], ah[ic], 1)
