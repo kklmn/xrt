@@ -70,6 +70,7 @@ class Screen(object):
         raycing.set_name(self, name)
         self._x = x
         self._z = z
+        self.footprint = []
         self._set_orientation()
 
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
@@ -194,6 +195,12 @@ class Screen(object):
             propPhase = np.exp(1e7j * (blo.E/CHBAR) * path)
             blo.Es *= propPhase
             blo.Ep *= propPhase
+        # Screen size hint for Glow
+        good = (blo.state == 1) | (blo.state == 2)
+        self.footprint.extend([np.hstack((np.min(np.vstack((
+            blo.x[good], blo.y[good], blo.z[good])), axis=1),
+            np.max(np.vstack((blo.x[good], blo.y[good], blo.z[good])),
+                   axis=1))).reshape(2, 3)])
 
         if self.compressX:
             blo.x[:] *= self.compressX

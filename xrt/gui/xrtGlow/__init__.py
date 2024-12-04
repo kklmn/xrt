@@ -3195,7 +3195,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeuuid = oeToPlot.uuid
 
 #                print(oeToPlot.name, oeToPlot.uuid)
-                if isinstance(oeToPlot, roes.OE):
+                if isinstance(oeToPlot, (roes.OE, rscreens.Screen)):
                     is2ndXtalOpts = [False]
                     if isinstance(oeToPlot, roes.DCM):
                         is2ndXtalOpts.append(True)
@@ -3275,17 +3275,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     oeLabel = '  {0}: {1}mm'.format(
                         oeString, oeCenterStr)
 #                    print(oeLabel)
-                    labelPos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() + qt.QVector3D(dx, 0, 0)
-                    
-#                    mMod = qt.QMatrix4x4()
-#                    mMod.setToIdentity()
-#                    mMod.translate(labelPos)
-#                    mMod.scale(1, sclY, 1)
-#                    
-#                    labelYmin = mMod*qt.QVector4D(0, 0, 0, 1)
-#                    labelYmax = mMod*qt.QVector4D(1, 1, 1, 1)
-                    
-#                    print(labelPos, labelYmin, labelYmax)
+                    oePos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() 
+                    labelPos = qt.QVector3D(oePos.x(), oePos.y(), oePos.z()) + qt.QVector3D(dx, 0, 0)
                     
                     intersecting = True
                     while intersecting:
@@ -3305,6 +3296,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     
                     self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
                                      scale=0.04*self.cBox.fontScale)
+
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
             self.cBox.draw(self.mModAx, self.mView, self.mProj)
@@ -5256,11 +5248,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
             oeuuid = oeToPlot.uuid
 #                is2ndXtal = self.oesList[oeString][3]
 
-            if hasattr(oeToPlot, 'material'):  # real oes, no screens or slits (yet)
+#            if hasattr(oeToPlot, 'material'):
 #                print(oeuuid)
+            if isinstance(oeToPlot, (roes.OE, rscreens.Screen)):
                 if not hasattr(oeToPlot, 'mesh3D'):
                     oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
-
 
                 is2ndXtalOpts = [False]
                 if isinstance(oeToPlot, roes.DCM):
@@ -5730,8 +5722,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
         mouseX = mEvent.x()
         mouseY = yView - mEvent.y()
         self.makeCurrent()
-        outStencil = gl.glReadPixels(
-                mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX, gl.GL_UNSIGNED_INT)
+        try:
+            outStencil = gl.glReadPixels(
+                    mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX, gl.GL_UNSIGNED_INT)
+        except OSError:
+            return
         overOE = np.squeeze(np.array(outStencil))
 
         ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
@@ -6093,6 +6088,7 @@ class OEMesh3D():
     uniform vec2 texlimitsz;
     uniform sampler2D u_texture;
     uniform float opacity;
+    uniform float surfOpacity;
 
     out vec4 fragColor;
 
@@ -6195,7 +6191,7 @@ class OEMesh3D():
          histColor = vec4(0, 0, 0, 0);
 
       //gl_FragColor = vec4(1, 1, 1, 1.0);
-      fragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0) + histColor*opacity;
+      fragColor = vec4(ambientLighting + diffuseReflection + specularReflection, surfOpacity) + histColor*opacity;
     }
     '''
 
@@ -6232,6 +6228,7 @@ class OEMesh3D():
     uniform vec3 viewPos;
     uniform Material material;
     uniform Light light;
+    uniform float surfOpacity;
 
     //uniform vec3 lightColor;
 
@@ -6258,7 +6255,7 @@ class OEMesh3D():
         vec3 specular = light.specular * (spec * material.specular);
         //vec3 result = ambient + diffuse + specular;
         vec3 result = ambient + specular;
-        color_out = vec4(result, 1.0);
+        color_out = vec4(result, surfOpacity);
 
         texUV = vec2((position.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
                      (position.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
@@ -6463,10 +6460,6 @@ class OEMesh3D():
             rotSeq = (oe.rotationSequence[slice(1, None, 2)])[::-1]
             extraRotSeq = (oe.extraRotationSequence[slice(1, None, 2)])[::-1]
 
-#            if isinstance(oe, rscreens.Screen):
-#                rotation = oe.orientationQuat
-#            print("Transmatr", oe.name)
-
             rotation = (scprot.from_euler(
                     rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
             extraRot = (scprot.from_euler(
@@ -6504,9 +6497,20 @@ class OEMesh3D():
 
             return mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
         else:
+            startVec = np.array([0, 0, 1])
+            destVec = np.array(oe.y / np.linalg.norm(oe.y))
+            rotVec = np.cross(destVec, startVec)
+            rotAngle = np.arccos(
+                np.dot(startVec, destVec))# /
+                #np.linalg.norm(startVec) / np.linalg.norm(destVec))
+            rotationQ = np.insert(rotVec*np.sin(rotAngle*0.5), 0, 
+                                  np.cos(rotAngle*0.5))
+            mRotation = qt.QMatrix4x4()
+            mRotation.rotate(qt.QQuaternion(*rotationQ))
+
             posMatr = qt.QMatrix4x4()
             posMatr.translate(*oe.center)
-            return posMatr
+            return posMatr*mRotation
 
 #    def createArrowArray(self, z, r, nSegments):
 #        phi = np.linspace(0, 2*np.pi, nSegments)
@@ -6545,7 +6549,9 @@ class OEMesh3D():
 #            if self.oeThicknessForce is not None:
 #                return self.oeThicknessForce
             thickness = self.oeThickness
-            if isinstance(self.oe, roes.Plate):
+            if isScreen:
+                return 0
+            if isPlate:
                 if self.oe.t is not None:
                     thickness = self.oe.t
                     if hasattr(self.oe, 'zmax'):
@@ -6574,26 +6580,12 @@ class OEMesh3D():
         if nsIndex in self.vao.keys():
             vao = self.vao[nsIndex]
         else:
-#            print("Creating VAO")
             vao = qt.QOpenGLVertexArrayObject()
             vao.create()
 
-#        if nsIndex in self.shader.keys():
-#            shader = self.shader[nsIndex]
-#        else:
-#            shader = qg.QOpenGLShaderProgram()
-#            shader.addShaderFromSourceCode(
-#                    qt.QOpenGLShader.Vertex, self.vertex_source)
-#            shader.addShaderFromSourceCode(
-#                    qt.QOpenGLShader.Fragment, self.fragment_source)
-#
-#            if not shader.link():
-#                print("Linking Error", str(shader.log()))
-#                print('Failed to link dummy renderer shader!')
-
         if hasattr(self.oe, 'stl_mesh'):
             vao.bind()
-            shader.bind()  # Will fail here if shader is none
+            shader.bind()  # WARNING: Will fail here if shader is none
 
             self.isStl = True
             self.vbo_vertices[nsIndex] = setVertexBuffer(
@@ -6606,10 +6598,11 @@ class OEMesh3D():
             vao.release()
 
             self.vao[nsIndex] = vao
-            self.ibo[nsIndex] = None
+            self.ibo[nsIndex] = None  # Check if works with glDrawElements
             return
 
         isPlate = isinstance(self.oe, roes.Plate)
+        isScreen = isinstance(self.oe, rscreens.Screen)
 
         thickness = getThickness()
 
@@ -6618,8 +6611,18 @@ class OEMesh3D():
         self.bBox[:, 1] = -1e10
 
         # TODO: Consider plates
+        oeShape = self.oe.shape if hasattr(self.oe, 'shape') else 'rect'
+        oeDx = self.oe.dx if hasattr(self.oe, 'dx') else 0
+        isOeParametric = self.oe.isParametric if hasattr(self.oe, 'isParametric') else False
 
-        if is2ndXtal:
+        yDim = 1
+        if isScreen:
+#            xLimits = [-10, 10]
+#            yLimits = [-10, 10]
+            xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]  # delegate to footprints
+            yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
+            yDim = 2
+        elif is2ndXtal:
             xLimits = list(self.oe.limPhysX2)
             yLimits = list(self.oe.limPhysY2)
         else:
@@ -6629,15 +6632,24 @@ class OEMesh3D():
         isClosedSurface = False
         if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
             isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
-            if len(self.oe.footprint) > 0:
+            if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
         if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-            if len(self.oe.footprint) > 0:
-                yLimits = self.oe.footprint[nsIndex][:, 1]
+            if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
+                yLimits = self.oe.footprint[nsIndex][:, yDim]
+                
+        if isScreen:  # Making square screen
+            xSize = abs(xLimits[1] - xLimits[0])
+            xCenter = 0.5*(xLimits[1] + xLimits[0])
+            ySize = abs(yLimits[1] - yLimits[0])
+            yCenter = 0.5*(yLimits[1] + yLimits[0])
+            newSize = max(xSize, ySize) * 1.2
+            xLimits = [xCenter-0.5*newSize, xCenter+0.5*newSize]
+            yLimits = [yCenter-0.5*newSize, yCenter+0.5*newSize]
 
         localTiles = np.array(self.tiles)
 
-        if self.oe.shape == 'round':
+        if oeShape == 'round':
             rX = np.abs((xLimits[1] - xLimits[0]))*0.5
             rY = np.abs((yLimits[1] - yLimits[0]))*0.5
             cX = (xLimits[1] + xLimits[0])*0.5
@@ -6652,7 +6664,7 @@ class OEMesh3D():
             localTiles[1] *= 3
 
         xGridOe = np.linspace(xLimits[0], xLimits[1],
-                              localTiles[0]) + self.oe.dx
+                              localTiles[0]) + oeDx
         yGridOe = np.linspace(yLimits[0], yLimits[1], localTiles[1])
 
         xv, yv = np.meshgrid(xGridOe, yGridOe)
@@ -6662,7 +6674,7 @@ class OEMesh3D():
         sideF = np.vstack((xv[0, :], yv[0, :])).T
         sideB = np.vstack((xv[-1, :], yv[-1, :])).T
 
-        if self.oe.shape == 'round':
+        if oeShape == 'round':
             xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
 
         xv = xv.flatten()
@@ -6672,10 +6684,15 @@ class OEMesh3D():
             zExt = '2'
         else:
             zExt = '1' if hasattr(self.oe, 'local_z1') else ''
-        local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
-            self.oe.isParametric else getattr(self.oe,
-                                              'local_z{}'.format(zExt))
-        local_n = getattr(self.oe, 'local_n{}'.format(zExt))
+
+        if isScreen:
+            local_n = lambda x, y: [0, 0, 1] 
+            local_z = lambda x, y: np.zeros_like(x)
+        else:
+            local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
+                self.oe.isParametric else getattr(self.oe,
+                                                  'local_z{}'.format(zExt))
+            local_n = getattr(self.oe, 'local_n{}'.format(zExt))
 
         xv = np.copy(xv)
         yv = np.copy(yv)
@@ -6684,7 +6701,7 @@ class OEMesh3D():
             # at z=0 (axis of rotation) phi is undefined, therefore:
             zv -= 100.
 
-        if self.oe.isParametric and not isClosedSurface:
+        if isOeParametric and not isClosedSurface:
             xv, yv, zv = self.oe.xyz_to_param(xv, yv, zv)
 
         zv = np.array(local_z(xv, yv))
@@ -6693,18 +6710,18 @@ class OEMesh3D():
         if len(nv) == 3:  # flat
             nv = np.ones_like(zv)[:, np.newaxis] * np.array(nv)
 
-        if self.oe.isParametric:
+        if isOeParametric:
             xv, yv, zv = self.oe.param_to_xyz(xv, yv, zv)
 
 #        zmax = np.max(zv)
 #        zmin =
 #        self.bBox[:, 1] = yLimit
 
-        if self.oe.shape == 'round':
+        if oeShape == 'round':
             xC, yC = rX*sideR[:, 0]*np.cos(sideR[:, -1]) +\
                      cX, rY*sideR[:, 0]*np.sin(sideR[:, -1]) + cY
             zC = np.array(local_z(xC, yC))
-            if self.oe.isParametric:
+            if isOeParametric:
                 xC, yC, zC = self.oe.param_to_xyz(xC, yC, zC)
 
         points = np.vstack((xv, yv, zv)).T
@@ -6729,7 +6746,8 @@ class OEMesh3D():
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
-        triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
+        if not isScreen:
+            triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
         tL[:len(zL), 2] = zL
         tL[len(zL):, 2] = bottomLine
 
@@ -6746,10 +6764,11 @@ class OEMesh3D():
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
-        triFB = Delaunay(tF[:, [0, -1]])
+        if not isScreen:
+            triFB = Delaunay(tF[:, [0, -1]])
         tF[:len(zF), 2] = zF
 
-        if self.oe.shape == 'round':
+        if oeShape == 'round':
             tB = np.vstack((xC, yC, zC))
             bottomLine = zC - thickness if isPlate else\
                 -np.ones_like(zC)*thickness
@@ -6780,8 +6799,8 @@ class OEMesh3D():
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
-        if not (isPlate and is2ndXtal):
-            if self.oe.shape == 'round':  # Side surface
+        if not ((isPlate and is2ndXtal) or isScreen):
+            if oeShape == 'round':  # Side surface
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
                 allIndices = np.hstack((allIndices,
@@ -6805,7 +6824,7 @@ class OEMesh3D():
         surfmesh['normals'] = allNormals.copy()
         surfmesh['indices'] = allIndices
 
-        if self.oe.shape == 'round':
+        if oeShape == 'round':
             surfmesh['contour'] = tB
         else:
             surfmesh['contour'] = np.vstack((tL, tF, np.flip(tR, axis=0), tB))
@@ -6832,18 +6851,12 @@ class OEMesh3D():
         self.vbo_vertices[nsIndex] = create_qt_buffer(surfmesh['points'])
         self.vbo_normals[nsIndex] = create_qt_buffer(surfmesh['normals'])
         self.ibo[nsIndex] = create_qt_buffer(surfmesh['indices'], isIndex=True)
-
-#        self.vbo_vertices[nsIndex] = setVertexBuffer(
-#                surfmesh['points'], 3, shader, "position", None, oldVBOpoints)
-#        self.vbo_normals[nsIndex] = setVertexBuffer(
-#                surfmesh['normals'], 3, shader, "normals", None, oldVBOnorms)
-#        self.ibo[nsIndex] = setIndexBuffer(surfmesh['indices'], oldIBO)
         self.arrLengths[nsIndex] = len(surfmesh['indices'])
 
         vao.bind()
 
         self.vbo_vertices[nsIndex].bind()
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 0: position
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
         gl.glEnableVertexAttribArray(0)
         self.vbo_vertices[nsIndex].release()
 
@@ -6923,6 +6936,7 @@ class OEMesh3D():
         shader.setUniformValue("texlimitsz", qt.QVector2D(*beamLimits[:, 2]))
 
         # TODO: configurable colors
+        surfOpacity = 1. if isinstance(self.oe, rscreens.Screen) else 1.
         ambient = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.) if\
             isSelected else qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
         shader.setUniformValue("frontMaterial.ambient", ambient)
@@ -6934,6 +6948,7 @@ class OEMesh3D():
         shader.setUniformValue("frontMaterial.shininess", 100.)
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
+        shader.setUniformValue("surfOpacity", float(surfOpacity))
 
         if beamTexture is not None:
             beamTexture.bind()
