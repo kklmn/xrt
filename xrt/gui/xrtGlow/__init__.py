@@ -160,6 +160,24 @@ def basis_rotation_q(xyz_start, xyz_end):
     return qnp/np.linalg.norm(qnp)
 
 
+def is_oe(oe):
+    return isinstance(oe, roes.OE)
+
+def is_dcm(oe):
+    return isinstance(oe, roes.DCM)
+
+def is_plate(oe):
+    return isinstance(oe, roes.Plate)
+
+def is_screen(oe):
+    return isinstance(oe, rscreens.Screen)
+
+def is_aperture(oe):
+    res = isinstance(oe, (rapertures.RectangularAperture)) #,
+                                          #rapertures.RoundAperture,
+                                          #rapertures.PolygonalAperture))    
+    return res
+
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
         super(xrtGlow, self).__init__()
@@ -3224,9 +3242,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeuuid = oeToPlot.uuid
 
 #                print(oeToPlot.name, oeToPlot.uuid)
-                if isinstance(oeToPlot, (roes.OE)):
+                if is_oe(oeToPlot):
                     is2ndXtalOpts = [False]
-                    if isinstance(oeToPlot, roes.DCM):
+                    if is_dcm(oeToPlot):
                         is2ndXtalOpts.append(True)
 
                     for is2ndXtal in is2ndXtalOpts:
@@ -3239,7 +3257,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
                                                          is2ndXtal, isSelected=isSelected,
                                                          shader=self.shaderMesh)
-            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
+
 
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
@@ -3254,22 +3272,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeToPlot = self.oesList[oeString][0]
                 oeuuid = oeToPlot.uuid
 
-                if isinstance(oeToPlot, (rscreens.Screen)):
-                    is2ndXtalOpts = [False]
-                    if isinstance(oeToPlot, roes.DCM):
-                        is2ndXtalOpts.append(True)
+                if is_screen(oeToPlot):  # or is_aperture(oeToPlot):
+                    is2ndXtal = False
 
-                    for is2ndXtal in is2ndXtalOpts:
-                        if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
-                            isSelected = False
-                            if oeuuid in self.selectableOEs.values():
-                                oeNum = oeToPlot.mesh3D.stencilNum
-                                isSelected = oeNum == self.selectedOE
-                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
-                            oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
-                                                         is2ndXtal, isSelected=isSelected,
-                                                         shader=self.shaderMesh)
+                    if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                        isSelected = False
+                        if oeuuid in self.selectableOEs.values():
+                            oeNum = oeToPlot.mesh3D.stencilNum
+                            isSelected = oeNum == self.selectedOE
+                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
+                        oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
+                                                     is2ndXtal, isSelected=isSelected,
+                                                     shader=self.shaderMesh)
 
+            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
 
             if self.pointsDepthTest:
                 gl.glEnable(gl.GL_DEPTH_TEST)
@@ -5297,20 +5313,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = maxLen
         self.newColorAxis = False
 
-        for oeString in self.oesList: #self.oesToPlot:
+        for oeString in self.oesList:
             oeToPlot = self.oesList[oeString][0]
-#            print(oeToPlot.name)
             oeuuid = oeToPlot.uuid
-#                is2ndXtal = self.oesList[oeString][3]
-
-#            if hasattr(oeToPlot, 'material'):
-#                print(oeuuid)
-            if isinstance(oeToPlot, (roes.OE, rscreens.Screen)):
+            if is_oe(oeToPlot) or is_screen(oeToPlot) or is_aperture(oeToPlot):
                 if not hasattr(oeToPlot, 'mesh3D'):
                     oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
 
                 is2ndXtalOpts = [False]
-                if isinstance(oeToPlot, roes.DCM):
+                if is_dcm(oeToPlot):
                     is2ndXtalOpts.append(True)
 
                 for is2ndXtal in is2ndXtalOpts:
@@ -5882,6 +5893,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             self.scaleUpdated.emit(self.scaleVec)
         self.cBox.update_grid()
+
+#        for ioe in range(self.segmentModel.rowCount() - 1):
+#            if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
+#                continue
+#            ioeItem = self.segmentModel.child(ioe + 1, 0)
+#            oeString = str(ioeItem.text())
+#            oeToPlot = self.oesList[oeString][0]
+#            oeuuid = oeToPlot.uuid
+#
+#            if isinstance(oeToPlot, (rscreens.Screen)):
+#                if hasattr(oeToPlot, 'mesh3D'):
+#                    
+#                    axisGridArray, gridLabels, precisionLabels =\
+#                        CoordinateBox.make_plane([oeToPlot.mesh3D.xLimits,
+#                                                  oeToPlot.mesh3D.yLimits])
+#                    print(axisGridArray)
+
         self.glDraw()
 
 
@@ -6487,10 +6515,10 @@ class OEMesh3D():
     def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
 #        oe = self.oe
 
-        if isinstance(oe, roes.OE):
+        if is_oe(oe):
             dx, dy, dz = 0, 0, 0
             extraAnglesSign = 1.  # only for pitch and yaw
-            if isinstance(oe, roes.DCM):
+            if is_dcm(oe):
                 if is2ndXtal:
                     pitch = -oe.pitch - oe.bragg + oe.cryst2pitch +\
                         oe.cryst2finePitch
@@ -6544,7 +6572,7 @@ class OEMesh3D():
 
             # 4. Only for DCM - flip 2nd crystal
             m2ndXtalRot = qt.QMatrix4x4()
-            if isinstance(oe, roes.DCM):
+            if is_dcm(oe):
                 if is2ndXtal:
                     m2ndXtalRot.rotate(180, 0, 1, 0)
 
@@ -6556,7 +6584,7 @@ class OEMesh3D():
 #                print(oe.name, m2ndXtalRot*mRotation, is2ndXtal)
 
             return mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
-        else:
+        else:  # Screens, Apertures
             bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
             
             bEnd = np.column_stack((oe.x / np.linalg.norm(oe.x),
@@ -6605,7 +6633,7 @@ class OEMesh3D():
 #        self.vao_arrow = vao
 
     def prepareSurfaceMesh(self, is2ndXtal=False, updateMesh=False, shader=None):
-        def getThickness():
+        def get_thickness():
 #            if self.oeThicknessForce is not None:
 #                return self.oeThicknessForce
             thickness = self.oeThickness
@@ -6661,10 +6689,11 @@ class OEMesh3D():
             self.ibo[nsIndex] = None  # Check if works with glDrawElements
             return
 
-        isPlate = isinstance(self.oe, roes.Plate)
-        isScreen = isinstance(self.oe, rscreens.Screen)
+        isPlate = is_plate(self.oe)
+        isScreen = is_screen(self.oe)
+        isAperture = is_aperture(self.oe)
 
-        thickness = getThickness()
+        thickness = get_thickness()
 
         self.bBox = np.zeros((3, 2))
         self.bBox[:, 0] = 1e10
@@ -6682,13 +6711,19 @@ class OEMesh3D():
             xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]  # delegate to footprints
             yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yDim = 2
+        elif isAperture:
+            xLimits = [self.oe.opening[self.oe.kind.index('left')],
+                       self.oe.opening[self.oe.kind.index('right')]]                
+            yLimits = [self.oe.opening[self.oe.kind.index('bottom')],
+                       self.oe.opening[self.oe.kind.index('top')]]
+            yDim = 2
         elif is2ndXtal:
             xLimits = list(self.oe.limPhysX2)
             yLimits = list(self.oe.limPhysY2)
         else:
             xLimits = list(self.oe.limPhysX)
             yLimits = list(self.oe.limPhysY)
-
+            
         isClosedSurface = False
         if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
             isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
@@ -6697,8 +6732,9 @@ class OEMesh3D():
         if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
-                
-#        axisGridArray, gridLabels, precisionLabels = CoordinateBox.make_plane([xLimits, yLimits])
+
+        self.xLimits = xLimits
+        self.yLimits = yLimits
                 
         if isScreen:  # Making square screen
             xSize = abs(xLimits[1] - xLimits[0])
@@ -6747,7 +6783,7 @@ class OEMesh3D():
         else:
             zExt = '1' if hasattr(self.oe, 'local_z1') else ''
 
-        if isScreen:
+        if isScreen or isAperture:
             local_n = lambda x, y: [0, 0, 1] 
             local_z = lambda x, y: np.zeros_like(x)
         else:
@@ -6808,7 +6844,7 @@ class OEMesh3D():
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
-        if not isScreen:
+        if not (isScreen or isAperture):
             triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
         tL[:len(zL), 2] = zL
         tL[len(zL):, 2] = bottomLine
@@ -6826,7 +6862,7 @@ class OEMesh3D():
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
-        if not isScreen:
+        if not (isScreen or isAperture):
             triFB = Delaunay(tF[:, [0, -1]])
         tF[:len(zF), 2] = zF
 
@@ -6861,7 +6897,7 @@ class OEMesh3D():
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
-        if not ((isPlate and is2ndXtal) or isScreen):
+        if not ((isPlate and is2ndXtal) or isScreen or isAperture):
             if oeShape == 'round':  # Side surface
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
@@ -6998,11 +7034,19 @@ class OEMesh3D():
         shader.setUniformValue("texlimitsz", qt.QVector2D(*beamLimits[:, 2]))
 
         # TODO: configurable colors
-        surfOpacity = 0.75 if isinstance(self.oe, rscreens.Screen) else 1.
+        if is_screen(self.oe):
+            surfOpacity = 0.75
+        elif is_aperture(self.oe):
+            surfOpacity = 0.5
+        else:
+            surfOpacity = 1.
+        # TODO: Apertures
         ambient = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.) if\
             isSelected else qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
         shader.setUniformValue("frontMaterial.ambient", ambient)
         shader.setUniformValue("frontMaterial.diffuse",
+                               qt.QVector4D(0.50754, 0.25,
+                                            0., 1.) if is_aperture(self.oe) else
                                qt.QVector4D(0.50754, 0.50754,
                                             0.50754, 1.))
         shader.setUniformValue("frontMaterial.specular",
@@ -7163,49 +7207,49 @@ class CoordinateBox():
 
 #        self.prepare_grid()
 
-#    @staticmethod
-#    def make_plane(limits):
-#        # working in local coordinates
-#        # limits: [[xmin, xmax], [ymin, ymax]]
-#        gridLabels = []
-#        precisionLabels = []
-#        limits = np.array(limits)
-#
-#        frame = np.array([[limits[0, 1], limits[1, 0], 0],
-#                          [limits[0, 1], limits[1, 1], 0],
-#                          [limits[0, 0], limits[1, 1], 0],
-#                          [limits[0, 0], limits[1, 0], 0]])
-#
-#        axisGridArray = []
-#    
-#        for iAx in range(2):
-#
-#            dx1 = np.abs(limits[iAx][0] - limits[iAx][1]) * 1.1
-#            order = np.floor(np.log10(dx1))
-#            m1 = dx1 * 10**-order
-#
-#            if (m1 >= 1) and (m1 < 2):
-#                step = 0.2 * 10**order
-#            elif (m1 >= 2) and (m1 < 4):
-#                step = 0.5 * 10**order
-#            else:
-#                step = 10**order
-#            if step < 1:
-#                decimalX = int(np.abs(order)) + 1 if m1 < 4 else\
-#                    int(np.abs(order))
-#            else:
-#                decimalX = 0
-#
-#            gridX = np.arange(np.int32(limits[iAx][0]/step)*step,
-#                              limits[iAx][1], step)
-#            gridX = gridX if gridX[0] >= limits[iAx][0] else\
-#                gridX[1:]
-#            gridLabels.extend([gridX])
-#            precisionLabels.extend([np.ones_like(gridX)*decimalX])
-#            axisGridArray.extend([gridX])
+    @staticmethod
+    def make_plane(limits):
+        # working in local coordinates
+        # limits: [[xmin, xmax], [ymin, ymax]]
+        gridLabels = []
+        precisionLabels = []
+        limits = np.array(limits)
+
+        frame = np.array([[limits[0, 1], limits[1, 0], 0],
+                          [limits[0, 1], limits[1, 1], 0],
+                          [limits[0, 0], limits[1, 1], 0],
+                          [limits[0, 0], limits[1, 0], 0]])
+
+        axisGridArray = []
+    
+        for iAx in range(2):
+
+            dx1 = np.abs(limits[iAx][0] - limits[iAx][1]) * 1.1
+            order = np.floor(np.log10(dx1))
+            m1 = dx1 * 10**-order
+
+            if (m1 >= 1) and (m1 < 2):
+                step = 0.2 * 10**order
+            elif (m1 >= 2) and (m1 < 4):
+                step = 0.5 * 10**order
+            else:
+                step = 10**order
+            if step < 1:
+                decimalX = int(np.abs(order)) + 1 if m1 < 4 else\
+                    int(np.abs(order))
+            else:
+                decimalX = 0
+
+            gridX = np.arange(np.int32(limits[iAx][0]/step)*step,
+                              limits[iAx][1], step)
+            gridX = gridX if gridX[0] >= limits[iAx][0] else\
+                gridX[1:]
+            gridLabels.extend([gridX])
+            precisionLabels.extend([np.ones_like(gridX)*decimalX])
+            axisGridArray.extend([gridX])
 #        axisL, axGrid = populateGrid(axisGridArray)
 #        gridLen = len(axGrid)
-#        return axisGridArray, gridLabels, precisionLabels
+        return axisGridArray, gridLabels, precisionLabels
 
     def make_frame(self, limits):
         back = np.array([[-limits[0], limits[1], -limits[2]],
@@ -7234,7 +7278,7 @@ class CoordinateBox():
         self.precisionLabels = []
         #  Calculating regular grids in world coordinates
         limits = np.array([-1, 1])[:, np.newaxis] * np.array(self.parent.aPos)
-        #  
+        #  allLimits -> in model coordinates
         allLimits = limits * self.parent.maxLen / self.parent.scaleVec -\
             self.parent.tVec + self.parent.coordOffset
         axisGridArray = []
