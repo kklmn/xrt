@@ -112,26 +112,52 @@ def create_qt_buffer(data, isIndex=False,
     return buffer
 
 
-#def setIndexBuffer(data_array, oldIBO=None):
-#    # slightly modified code from
-#    # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
-#    if oldIBO is None:
-#        ibo = qt.QOpenGLBuffer(qt.QOpenGLBuffer.IndexBuffer)
-#        ibo.create()
-#    else:
-#        ibo = oldIBO
-#    ibo.bind()
-#    indices = np.array(data_array, dtype=np.ushort)
-#    ibo.allocate(indices, indices.nbytes)
-#    ibo.release()
-#    return ibo
-
-
 def generate_hsv_texture(width, s, v):
     h = np.linspace(0., 1., width, endpoint=False)
     hsv_data = mpl.colors.hsv_to_rgb(np.vstack(
             (h, s*np.ones_like(h), v*np.ones_like(h))).T)
     return (hsv_data * 255).astype(np.uint8)
+
+
+def basis_rotation_q(xyz_start, xyz_end):
+    """This function calculates quaternion that transfroms a basis set to
+    a new one.
+    xyz_start: nested list or 3x3 numpy array representing 3 vectors defining
+    the initial orthogonal basis set
+    xyz_start: nested list or 3x3 numpy array representing the target
+    orthogonal basis set
+    
+    """
+    U = np.array(xyz_start)
+    V = np.array(xyz_end)    
+
+    R = np.matmul(V, U.T)
+
+    tr = R[0, 0] + R[1, 1] + R[2, 2]
+
+    Q0 = lambda M, G: 0.25*G
+    Q1 = lambda M, G: (M[2, 1]-M[1, 2])/G
+    Q2 = lambda M, G: (M[0, 2]-M[2, 0])/G
+    Q3 = lambda M, G: (M[1, 0]-M[0, 1])/G
+    Q4 = lambda M, G: (M[1, 0]+M[0, 1])/G
+    Q5 = lambda M, G: (M[2, 0]+M[0, 2])/G    
+    Q6 = lambda M, G: (M[1, 2]+M[2, 1])/G 
+
+    if tr > 0:
+        S = 2*np.sqrt(tr + 1.)
+        q = [Q0(R, S), Q1(R, S), Q2(R, S), Q3(R, S)]
+    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+        S = 2*np.sqrt(1. + R[0, 0] - R[1, 1] - R[2, 2])
+        q = [Q1(R, S), Q0(R, S), Q4(R, S), Q5(R, S)]
+    elif R[1, 1] > R[2, 2]:
+        S = 2*np.sqrt(1. + R[1, 1] - R[0, 0] - R[2, 2])
+        q = [Q2(R, S), Q4(R, S), Q0(R, S), Q6(R, S)]
+    else:
+        S = 2*np.sqrt(1. + R[2, 2] - R[0, 0] - R[1, 1])
+        q = [Q3(R, S), Q5(R, S), Q6(R, S), Q0(R, S)]
+    qnp = np.array(q)
+
+    return qnp/np.linalg.norm(qnp)
 
 
 class xrtGlow(qt.QWidget):
@@ -6497,14 +6523,14 @@ class OEMesh3D():
 
             return mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
         else:
-            startVec = np.array([0, 0, 1])
-            destVec = np.array(oe.y / np.linalg.norm(oe.y))
-            rotVec = np.cross(destVec, startVec)
-            rotAngle = np.arccos(
-                np.dot(startVec, destVec))# /
-                #np.linalg.norm(startVec) / np.linalg.norm(destVec))
-            rotationQ = np.insert(rotVec*np.sin(rotAngle*0.5), 0, 
-                                  np.cos(rotAngle*0.5))
+            bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
+            
+            bEnd = np.column_stack((oe.x / np.linalg.norm(oe.x),
+                                    oe.y / np.linalg.norm(oe.y), 
+                                    oe.z / np.linalg.norm(oe.z)))
+            
+            rotationQ = basis_rotation_q(bStart, bEnd)
+
             mRotation = qt.QMatrix4x4()
             mRotation.rotate(qt.QQuaternion(*rotationQ))
 
