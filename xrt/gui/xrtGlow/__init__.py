@@ -3172,10 +3172,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def paintGL(self):
 
         def makeCenterStr(centerList, prec):
-            retStr = ''  # disabling parentheses temporarily
+            retStr = '('
             for dim in centerList:
                 retStr += '{0:.{1}f}, '.format(dim, prec)
-            return retStr[:-2] + ''
+            return retStr[:-2] + ')'
 
         try:
             gl.glClearColor(0.0, 0.0, 0.0, 1.)
@@ -3209,10 +3209,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glEnable(gl.GL_POINT_SMOOTH)
                 gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
+#            if self.linesDepthTest:
+#                gl.glDepthMask(gl.GL_FALSE)
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_TRUE)
-
             gl.glEnable(gl.GL_DEPTH_TEST)
+
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
                     continue
@@ -3222,7 +3224,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeuuid = oeToPlot.uuid
 
 #                print(oeToPlot.name, oeToPlot.uuid)
-                if isinstance(oeToPlot, (roes.OE, rscreens.Screen)):
+                if isinstance(oeToPlot, (roes.OE)):
                     is2ndXtalOpts = [False]
                     if isinstance(oeToPlot, roes.DCM):
                         is2ndXtalOpts.append(True)
@@ -3241,6 +3243,33 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
+            else:
+                gl.glDisable(gl.GL_DEPTH_TEST)
+            # Screens are semi-transparent, DepthMask must be OFF
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
+                    continue
+                ioeItem = self.segmentModel.child(ioe + 1, 0)
+                oeString = str(ioeItem.text())
+                oeToPlot = self.oesList[oeString][0]
+                oeuuid = oeToPlot.uuid
+
+                if isinstance(oeToPlot, (rscreens.Screen)):
+                    is2ndXtalOpts = [False]
+                    if isinstance(oeToPlot, roes.DCM):
+                        is2ndXtalOpts.append(True)
+
+                    for is2ndXtal in is2ndXtalOpts:
+                        if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                            isSelected = False
+                            if oeuuid in self.selectableOEs.values():
+                                oeNum = oeToPlot.mesh3D.stencilNum
+                                isSelected = oeNum == self.selectedOE
+                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
+                            oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
+                                                         is2ndXtal, isSelected=isSelected,
+                                                         shader=self.shaderMesh)
+
 
             if self.pointsDepthTest:
                 gl.glEnable(gl.GL_DEPTH_TEST)
@@ -3251,15 +3280,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
                 beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
                 if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
-#                    print(beam, hasattr(beam, 'vbo'))
                     self.render_beam(beam, self.mMod, self.mView, self.mProj, target=None)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
-
-#            if self.linesDepthTest:
-#                gl.glEnable(gl.GL_DEPTH_TEST)
-#            else:
-#                gl.glDisable(gl.GL_DEPTH_TEST)
 
             for ioe in range(self.segmentModel.rowCount() - 1):
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
@@ -3272,8 +3295,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 self.oesList[str(segmentItem0.text())[3:]][1]]
                             self.render_beam(beam, self.mMod, self.mView, self.mProj, target=endBeam)
 
-            gl.glDepthMask(gl.GL_TRUE)
-            gl.glEnable(gl.GL_DEPTH_TEST)
 #            gl.glDisable(gl.GL_MULTISAMPLE)
 #            gl.glDisable(gl.GL_BLEND)
 
@@ -3286,7 +3307,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             sclY = self.cBox.characters[124][1][1]*0.04*self.cBox.fontScale/float(self.viewPortGL[3])
             
             labelBounds = []
-
+            gl.glDisable(gl.GL_DEPTH_TEST)
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
                     ioeItem = self.segmentModel.child(ioe + 1, 0)
@@ -3306,7 +3327,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     labelPos = qt.QVector3D(oePos.x(), oePos.y(), oePos.z()) + qt.QVector3D(dx, 0, 0)
                     
                     intersecting = True
-                    while intersecting:
+                    fbCounter = 0
+                    while intersecting and fbCounter < 3*(len(labelBounds)+1):
                         labelYmin = labelPos.y()
                         labelYmax = labelYmin + sclY                       
                         for bmin, bmax in labelBounds:
@@ -3319,14 +3341,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         else:
                             intersecting = False
                             labelBounds.append((labelPos.y(), labelPos.y() + sclY))
+                        fbCounter += 1
 
                     
                     self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
-                                     scale=0.04*self.cBox.fontScale)
+                                     scale=0.04*self.cBox.fontScale,
+                                     textColor=qt.QVector4D(1, 1, 0, 1))  # Yellow
 
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
-
+            if not self.linesDepthTest:
+                gl.glDepthMask(gl.GL_TRUE)
+            gl.glEnable(gl.GL_DEPTH_TEST)
             if self.drawGrid:
                 self.cBox.draw(self.mModAx, self.mView, self.mProj)
 
@@ -5319,6 +5345,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        plt.show()
 
         gl.glViewport(*self.viewPortGL)
+        pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
+        newVisAx = np.argmax(pModel, axis=0)
+        if len(np.unique(newVisAx)) == 3:
+            self.visibleAxes = newVisAx
+        self.cBox.update_grid()
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
@@ -6416,8 +6447,8 @@ class OEMesh3D():
 
     def __init__(self, parentOE, parentWidget):
         self.emptyTex = qt.QOpenGLTexture(
-                qt.QImage(np.zeros((256, 256, 3)),
-                          256, 256, qt.QImage.Format_RGB888))
+                qt.QImage(np.zeros((256, 256, 4)),
+                          256, 256, qt.QImage.Format_RGBA8888))
         self.defaultLimits = np.array([[-1.]*3, [1.]*3])
 #        print("def shape", self.defaultLimits.shape)
 #        texture.save(str(oe.name)+"_beam_hist.png")
@@ -6666,6 +6697,8 @@ class OEMesh3D():
         if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
+                
+#        axisGridArray, gridLabels, precisionLabels = CoordinateBox.make_plane([xLimits, yLimits])
                 
         if isScreen:  # Making square screen
             xSize = abs(xLimits[1] - xLimits[0])
@@ -6965,7 +6998,7 @@ class OEMesh3D():
         shader.setUniformValue("texlimitsz", qt.QVector2D(*beamLimits[:, 2]))
 
         # TODO: configurable colors
-        surfOpacity = 1. if isinstance(self.oe, rscreens.Screen) else 1.
+        surfOpacity = 0.75 if isinstance(self.oe, rscreens.Screen) else 1.
         ambient = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.) if\
             isSelected else qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
         shader.setUniformValue("frontMaterial.ambient", ambient)
@@ -7074,6 +7107,7 @@ class CoordinateBox():
     in vec2 vUV;
 
     uniform sampler2D u_texture;
+    uniform vec4 textColor;
 
     out vec4 fragColor;
 
@@ -7081,7 +7115,7 @@ class CoordinateBox():
     {
         vec2 uv = vUV.xy;
         float text = texture(u_texture, uv).r;
-        fragColor = vec4(text, text, text, text);
+        fragColor = textColor * vec4(text, text, text, text);
     }
     """
 
@@ -7129,45 +7163,65 @@ class CoordinateBox():
 
 #        self.prepare_grid()
 
-    def make_frame(self):
-        back = np.array([[-self.parent.aPos[0],
-                          self.parent.aPos[1],
-                          -self.parent.aPos[2]],
-                         [-self.parent.aPos[0],
-                          self.parent.aPos[1],
-                          self.parent.aPos[2]],
-                         [-self.parent.aPos[0],
-                          -self.parent.aPos[1],
-                          self.parent.aPos[2]],
-                         [-self.parent.aPos[0],
-                          -self.parent.aPos[1],
-                          -self.parent.aPos[2]]])
+#    @staticmethod
+#    def make_plane(limits):
+#        # working in local coordinates
+#        # limits: [[xmin, xmax], [ymin, ymax]]
+#        gridLabels = []
+#        precisionLabels = []
+#        limits = np.array(limits)
+#
+#        frame = np.array([[limits[0, 1], limits[1, 0], 0],
+#                          [limits[0, 1], limits[1, 1], 0],
+#                          [limits[0, 0], limits[1, 1], 0],
+#                          [limits[0, 0], limits[1, 0], 0]])
+#
+#        axisGridArray = []
+#    
+#        for iAx in range(2):
+#
+#            dx1 = np.abs(limits[iAx][0] - limits[iAx][1]) * 1.1
+#            order = np.floor(np.log10(dx1))
+#            m1 = dx1 * 10**-order
+#
+#            if (m1 >= 1) and (m1 < 2):
+#                step = 0.2 * 10**order
+#            elif (m1 >= 2) and (m1 < 4):
+#                step = 0.5 * 10**order
+#            else:
+#                step = 10**order
+#            if step < 1:
+#                decimalX = int(np.abs(order)) + 1 if m1 < 4 else\
+#                    int(np.abs(order))
+#            else:
+#                decimalX = 0
+#
+#            gridX = np.arange(np.int32(limits[iAx][0]/step)*step,
+#                              limits[iAx][1], step)
+#            gridX = gridX if gridX[0] >= limits[iAx][0] else\
+#                gridX[1:]
+#            gridLabels.extend([gridX])
+#            precisionLabels.extend([np.ones_like(gridX)*decimalX])
+#            axisGridArray.extend([gridX])
+#        axisL, axGrid = populateGrid(axisGridArray)
+#        gridLen = len(axGrid)
+#        return axisGridArray, gridLabels, precisionLabels
 
-        side = np.array([[self.parent.aPos[0],
-                          -self.parent.aPos[1],
-                          -self.parent.aPos[2]],
-                         [-self.parent.aPos[0],
-                          -self.parent.aPos[1],
-                          -self.parent.aPos[2]],
-                         [-self.parent.aPos[0],
-                          -self.parent.aPos[1],
-                          self.parent.aPos[2]],
-                         [self.parent.aPos[0],
-                          -self.parent.aPos[1],
-                          self.parent.aPos[2]]])
+    def make_frame(self, limits):
+        back = np.array([[-limits[0], limits[1], -limits[2]],
+                         [-limits[0], limits[1], limits[2]],
+                         [-limits[0], -limits[1], limits[2]],
+                         [-limits[0], -limits[1], -limits[2]]])
 
-        bottom = np.array([[self.parent.aPos[0],
-                            -self.parent.aPos[1],
-                            -self.parent.aPos[2]],
-                           [self.parent.aPos[0],
-                            self.parent.aPos[1],
-                            -self.parent.aPos[2]],
-                           [-self.parent.aPos[0],
-                            self.parent.aPos[1],
-                            -self.parent.aPos[2]],
-                           [-self.parent.aPos[0],
-                            -self.parent.aPos[1],
-                            -self.parent.aPos[2]]])
+        side = np.array([[limits[0], -limits[1], -limits[2]],
+                         [-limits[0], -limits[1], -limits[2]],
+                         [-limits[0], -limits[1], limits[2]],
+                         [limits[0], -limits[1], limits[2]]])
+
+        bottom = np.array([[limits[0], -limits[1], -limits[2]],
+                           [limits[0], limits[1], -limits[2]],
+                           [-limits[0], limits[1], -limits[2]],
+                           [-limits[0], -limits[1], -limits[2]]])
 
         back[:, 0] *= self.axPosModifier[0]
         side[:, 1] *= self.axPosModifier[1]
@@ -7180,6 +7234,7 @@ class CoordinateBox():
         self.precisionLabels = []
         #  Calculating regular grids in world coordinates
         limits = np.array([-1, 1])[:, np.newaxis] * np.array(self.parent.aPos)
+        #  
         allLimits = limits * self.parent.maxLen / self.parent.scaleVec -\
             self.parent.tVec + self.parent.coordOffset
         axisGridArray = []
@@ -7253,7 +7308,7 @@ class CoordinateBox():
 
     def update_grid(self):
         if hasattr(self, "vbo_frame"):
-            self.make_frame()
+            self.make_frame(self.parent.aPos)
             self.vbo_frame.bind()
             self.vbo_frame.write(0, self.halfCube, self.halfCube.nbytes)
             self.vbo_frame.release()
@@ -7266,12 +7321,10 @@ class CoordinateBox():
     def prepare_grid(self):
 
         self.make_font()
-        self.make_frame()
+        self.make_frame(self.parent.aPos)
         self.make_coarse_grid()
 #        if self.parent.fineGridEnabled:
 #            fineGridArray = []
-
-
 #        print(axisL)
 #        if self.parent.fineGridEnabled:
 #            tmp, fineAxGrid = self.populateGrid(fineGridArray)
@@ -7510,8 +7563,9 @@ class CoordinateBox():
         self.vaoText.release()
         self.textShader.release()
 
-    def render_text(self, pos, text, alignment, scale):
-
+    def render_text(self, pos, text, alignment, scale, textColor=None):
+        tcValue = textColor or qt.QVector4D(1, 1, 1, 1)
+        self.textShader.setUniformValue("textColor", tcValue)
         char_x = 0
         pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
         scaleX = scale/float(pView[2])
@@ -7580,15 +7634,15 @@ class CoordinateBox():
         return "Sans-serif"
 
     def make_font(self):
-#        fontpath = os.path.dirname(__file__)
-#        filename = os.path.join(fontpath, self.fontFile)
-        fontName = self.get_sans_font()
-#        print("Font found:", fontName)
-        font_path = font_manager.findfont(fontName)
+        try:
+            fontName = self.get_sans_font()
+            font_path = font_manager.findfont(fontName)
+        except Exception:  # TODO: track exceptions
+            fontpath = os.path.dirname(__file__)
+            font_path = os.path.join(fontpath, self.fontFile)
+            
         face = ft.Face(font_path)
         face.set_pixel_sizes(self.fontSize*8, self.fontSize*8)
-#        faceTexture = ft.Face(filename)
-#        faceTexture.set_pixel_sizes(self.fontSize, self.fontSize)
 
         for c in range(128):
             face.load_char(chr(c), ft.FT_LOAD_RENDER)
