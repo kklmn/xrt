@@ -1448,6 +1448,7 @@ class xrtGlow(qt.QWidget):
         editor.setText("{0:.2f}".format(position))
         if position != 0:
             self.customGlWidget.aPos[iax] = np.float32(position)
+            self.customGlWidget.cBox.update_grid()
             self.customGlWidget.glDraw()
 
     def updateGridFromQLE(self, editor, slider):
@@ -3325,7 +3326,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
-            self.cBox.draw(self.mModAx, self.mView, self.mProj)
+
+            if self.drawGrid:
+                self.cBox.draw(self.mModAx, self.mView, self.mProj)
 
             if self.enableAA:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
