@@ -178,6 +178,24 @@ def is_aperture(oe):
                                           #rapertures.PolygonalAperture))    
     return res
 
+ambient = {}
+diffuse = {}
+specular = {}
+shininess = {}
+
+ambient['Cu'] = qt.QVector4D(0.8, 0.4, 0., 1.)
+diffuse['Cu'] = qt.QVector4D(0.50, 0.25, 0., 1.)
+specular['Cu'] = qt.QVector4D(1., 0.5, 0.5, 1.)
+shininess['Cu'] = 100.
+
+ambient['Si'] = qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
+diffuse['Si'] = qt.QVector4D(0.50754, 0.50754, 0.50754, 1.)
+specular['Si'] = qt.QVector4D(1., 0.9, 0.8, 1.)
+shininess['Si'] = 100.
+
+ambient['selected'] = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.)
+
+
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays, parent=None, progressSignal=None):
         super(xrtGlow, self).__init__()
@@ -3242,7 +3260,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeuuid = oeToPlot.uuid
 
 #                print(oeToPlot.name, oeToPlot.uuid)
-                if is_oe(oeToPlot):
+                if is_oe(oeToPlot) or is_aperture(oeToPlot):
                     is2ndXtalOpts = [False]
                     if is_dcm(oeToPlot):
                         is2ndXtalOpts.append(True)
@@ -3272,7 +3290,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeToPlot = self.oesList[oeString][0]
                 oeuuid = oeToPlot.uuid
 
-                if is_screen(oeToPlot):  # or is_aperture(oeToPlot):
+                if is_screen(oeToPlot):
                     is2ndXtal = False
 
                     if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
@@ -6177,8 +6195,10 @@ class OEMesh3D():
     uniform sampler2D u_texture;
     uniform float opacity;
     uniform float surfOpacity;
+    uniform int isApt;
 
     out vec4 fragColor;
+    float texOpacity;
 
     vec2 texUV;
     vec4 histColor;
@@ -6273,13 +6293,16 @@ class OEMesh3D():
         }
      texUV = vec2((localPos.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
                  (localPos.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
-     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1 && localPos.z<texlimitsz.y && localPos.z>texlimitsz.x)
+
+     texOpacity = surfOpacity;
+     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1 && localPos.z<texlimitsz.y && localPos.z>texlimitsz.x) {
          histColor = texture(u_texture, texUV);
+         if (isApt>0) texOpacity = 0.; }
      else
          histColor = vec4(0, 0, 0, 0);
 
       //gl_FragColor = vec4(1, 1, 1, 1.0);
-      fragColor = vec4(ambientLighting + diffuseReflection + specularReflection, surfOpacity) + histColor*opacity;
+      fragColor = vec4(ambientLighting + diffuseReflection + specularReflection, texOpacity) + histColor*opacity;
     }
     '''
 
@@ -6637,7 +6660,7 @@ class OEMesh3D():
 #            if self.oeThicknessForce is not None:
 #                return self.oeThicknessForce
             thickness = self.oeThickness
-            if isScreen:
+            if isScreen or isAperture:
                 return 0
             if isPlate:
                 if self.oe.t is not None:
@@ -6733,17 +6756,23 @@ class OEMesh3D():
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
 
-        self.xLimits = xLimits
-        self.yLimits = yLimits
-                
-        if isScreen:  # Making square screen
+        self.xLimits = copy.deepcopy(xLimits)
+        self.yLimits = copy.deepcopy(yLimits)      
+               
+        if isScreen or isAperture:  # Making square screen
             xSize = abs(xLimits[1] - xLimits[0])
             xCenter = 0.5*(xLimits[1] + xLimits[0])
             ySize = abs(yLimits[1] - yLimits[0])
             yCenter = 0.5*(yLimits[1] + yLimits[0])
+#            if isScreen:
             newSize = max(xSize, ySize) * 1.2
             xLimits = [xCenter-0.5*newSize, xCenter+0.5*newSize]
             yLimits = [yCenter-0.5*newSize, yCenter+0.5*newSize]
+#            else:
+#                xSize *= 1.5
+#                ySize *= 1.5
+#                xLimits = [xCenter-0.5*xSize, xCenter+0.5*xSize]
+#                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]                
 
         localTiles = np.array(self.tiles)
 
@@ -7014,7 +7043,17 @@ class OEMesh3D():
             else self.emptyTex  # what if there's no texture?
         beamLimits = self.beamLimits[oeIndex] if len(self.beamLimits) > 0\
             else self.defaultLimits
+            
+        xLimits, yLimits, zLimits = beamLimits[:, 0], beamLimits[:, 1], beamLimits[:, 2] 
 
+        surfOpacity = 1.0
+        if is_screen(self.oe):
+            surfOpacity = 0.5
+        elif is_aperture(self.oe):
+            xLimits, yLimits = self.xLimits, self.yLimits
+
+#        print(self.oe, xLimits, yLimits)
+            
         oeOrientation = self.transMatrix[oeIndex]
         arrLen = self.arrLengths[oeIndex]
 
@@ -7029,32 +7068,25 @@ class OEMesh3D():
         shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
-        shader.setUniformValue("texlimitsx", qt.QVector2D(*beamLimits[:, 0]))
-        shader.setUniformValue("texlimitsy", qt.QVector2D(*beamLimits[:, 1]))
-        shader.setUniformValue("texlimitsz", qt.QVector2D(*beamLimits[:, 2]))
+        shader.setUniformValue("texlimitsx", qt.QVector2D(*xLimits))
+        shader.setUniformValue("texlimitsy", qt.QVector2D(*yLimits))
+        shader.setUniformValue("texlimitsz", qt.QVector2D(*zLimits))
 
-        # TODO: configurable colors
-        if is_screen(self.oe):
-            surfOpacity = 0.75
-        elif is_aperture(self.oe):
-            surfOpacity = 0.5
-        else:
-            surfOpacity = 1.
-        # TODO: Apertures
-        ambient = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.) if\
-            isSelected else qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
-        shader.setUniformValue("frontMaterial.ambient", ambient)
-        shader.setUniformValue("frontMaterial.diffuse",
-                               qt.QVector4D(0.50754, 0.25,
-                                            0., 1.) if is_aperture(self.oe) else
-                               qt.QVector4D(0.50754, 0.50754,
-                                            0.50754, 1.))
-        shader.setUniformValue("frontMaterial.specular",
-                               qt.QVector4D(1., 0.9, 0.8, 1.))
-        shader.setUniformValue("frontMaterial.shininess", 100.)
+        mat = 'Cu' if is_aperture(self.oe) else 'Si'
+
+        ambient_in = ambient['selected'] if isSelected else ambient[mat]
+        diffuse_in = diffuse[mat]
+        specular_in = specular[mat]
+        shininess_in = shininess[mat]
+
+        shader.setUniformValue("frontMaterial.ambient", ambient_in)
+        shader.setUniformValue("frontMaterial.diffuse", diffuse_in)
+        shader.setUniformValue("frontMaterial.specular", specular_in)
+        shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
         shader.setUniformValue("surfOpacity", float(surfOpacity))
+        shader.setUniformValue("isApt", int(is_aperture(self.oe)))
 
         if beamTexture is not None:
             beamTexture.bind()
