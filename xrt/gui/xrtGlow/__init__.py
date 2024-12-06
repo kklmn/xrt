@@ -3384,6 +3384,32 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
+
+            self.cBox.shader.bind()
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or False:  # TODO: Add checkbox to control grid
+                    continue
+                ioeItem = self.segmentModel.child(ioe + 1, 0)
+                oeString = str(ioeItem.text())
+                oeToPlot = self.oesList[oeString][0]
+                if is_screen(oeToPlot):
+                    oeToPlot.mesh3D.grid_vbo['vertices'].bind()
+                    gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+                    gl.glEnableVertexAttribArray(0)
+                    oeOrientation = oeToPlot.mesh3D.transMatrix[0]
+                    self.cBox.shader.setUniformValue("model", self.mMod*oeOrientation)
+                    self.cBox.shader.setUniformValue("view", self.mView)
+                    self.cBox.shader.setUniformValue("projection", self.mProj)
+        
+                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)                    
+                    gl.glLineWidth(1.)
+                    gl.glDrawArrays(gl.GL_LINES, 0,
+                                    oeToPlot.mesh3D.grid_vbo['gridLen'])
+                    oeToPlot.mesh3D.grid_vbo['vertices'].release()
+
+            self.cBox.shader.release()
+
+
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_TRUE)
             gl.glEnable(gl.GL_DEPTH_TEST)
@@ -5912,22 +5938,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.scaleUpdated.emit(self.scaleVec)
         self.cBox.update_grid()
 
-#        for ioe in range(self.segmentModel.rowCount() - 1):
-#            if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
-#                continue
-#            ioeItem = self.segmentModel.child(ioe + 1, 0)
-#            oeString = str(ioeItem.text())
-#            oeToPlot = self.oesList[oeString][0]
-#            oeuuid = oeToPlot.uuid
-#
-#            if isinstance(oeToPlot, (rscreens.Screen)):
-#                if hasattr(oeToPlot, 'mesh3D'):
-#                    
-#                    axisGridArray, gridLabels, precisionLabels =\
-#                        CoordinateBox.make_plane([oeToPlot.mesh3D.xLimits,
-#                                                  oeToPlot.mesh3D.yLimits])
-#                    print(axisGridArray)
-
         self.glDraw()
 
 
@@ -7000,6 +7010,20 @@ class OEMesh3D():
         self.z2y = qt.QMatrix4x4().rotate(90, 1, 0, 0)
         self.z2x = qt.QMatrix4x4().rotate(90, 0, 1, 0)
 
+        if isScreen:
+            axisGridArray, gridLabels, precisionLabels =\
+                CoordinateBox.make_plane([xLimits, yLimits])
+            print(axisGridArray)
+            self.grid_vbo = {}
+            self.grid_vbo['vertices'] = create_qt_buffer(axisGridArray)
+            self.grid_vbo['gridLen'] = len(axisGridArray)
+            self.grid_vbo['gridLabels'] = gridLabels
+            self.grid_vbo['precisionLabels'] = precisionLabels
+       
+#        gridvao = qt.QOpenGLVertexArrayObject()
+#        gridvao.create()
+        
+
     def drawLocalAxes(self, mMod, mView, mProj, is2ndXtal):
         oeIndex = int(is2ndXtal)
         oeOrientation = self.transMatrix[oeIndex]
@@ -7247,16 +7271,26 @@ class CoordinateBox():
         precisionLabels = []
         limits = np.array(limits)
 
-        frame = np.array([[limits[0, 1], limits[1, 0], 0],
-                          [limits[0, 1], limits[1, 1], 0],
-                          [limits[0, 0], limits[1, 1], 0],
-                          [limits[0, 0], limits[1, 0], 0]])
+        frame = np.array([[limits[0, 0], limits[1, 0], 0],  #xmin, ymin
+                          [limits[0, 1], limits[1, 0], 0],  #xmax, ymin
+                          [limits[0, 1], limits[1, 0], 0],  #xmax, ymin
+                          [limits[0, 1], limits[1, 1], 0],  #xmax, ymax
+                          [limits[0, 1], limits[1, 1], 0],  #xmax, ymax
+                          [limits[0, 0], limits[1, 1], 0],  #xmin, ymax
+                          [limits[0, 0], limits[1, 1], 0],  #xmin, ymax
+                          [limits[0, 0], limits[1, 0], 0]  #xmin, ymin
+                          ])
+    
+#        frame_w = np.matmul(frame, model.T)
 
         axisGridArray = []
     
         for iAx in range(2):
-
+            # need to convert to model coordinates
+            # dx1 will be a vector. 
             dx1 = np.abs(limits[iAx][0] - limits[iAx][1]) * 1.1
+#            dx1 = np.abs(frame_w[:, iAx+1] - frame_w[:, iAx]) * 1.1
+            
             order = np.floor(np.log10(dx1))
             m1 = dx1 * 10**-order
 
@@ -7272,6 +7306,7 @@ class CoordinateBox():
             else:
                 decimalX = 0
 
+            step *= 0.2  # fine step
             gridX = np.arange(np.int32(limits[iAx][0]/step)*step,
                               limits[iAx][1], step)
             gridX = gridX if gridX[0] >= limits[iAx][0] else\
@@ -7279,9 +7314,23 @@ class CoordinateBox():
             gridLabels.extend([gridX])
             precisionLabels.extend([np.ones_like(gridX)*decimalX])
             axisGridArray.extend([gridX])
-#        axisL, axGrid = populateGrid(axisGridArray)
-#        gridLen = len(axGrid)
-        return axisGridArray, gridLabels, precisionLabels
+
+        xPoints, yPoints = np.array(axisGridArray[0]), np.array(axisGridArray[1])            
+        col_x = np.vstack((np.ones_like(yPoints)*limits[0][0],
+                           np.ones_like(yPoints)*limits[0][1])).flatten('F')
+
+        col_y = np.vstack((yPoints, yPoints)).flatten('F')
+
+        vertices = np.vstack((frame, np.column_stack((
+                col_x, col_y, np.zeros_like(col_x)))))
+
+        col_y = np.vstack((np.ones_like(xPoints)*limits[1][0],
+                           np.ones_like(xPoints)*limits[1][1])).flatten('F')
+        col_x = np.vstack((xPoints, xPoints)).flatten('F')
+        vertices = np.vstack((vertices, np.column_stack((
+                col_x, col_y, np.zeros_like(col_x)))))
+            
+        return vertices, gridLabels, precisionLabels
 
     def make_frame(self, limits):
         back = np.array([[-limits[0], limits[1], -limits[2]],
