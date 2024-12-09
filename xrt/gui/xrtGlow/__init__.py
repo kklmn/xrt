@@ -126,10 +126,10 @@ def basis_rotation_q(xyz_start, xyz_end):
     the initial orthogonal basis set
     xyz_start: nested list or 3x3 numpy array representing the target
     orthogonal basis set
-    
+
     """
     U = np.array(xyz_start)
-    V = np.array(xyz_end)    
+    V = np.array(xyz_end)
 
     R = np.matmul(V, U.T)
 
@@ -140,8 +140,8 @@ def basis_rotation_q(xyz_start, xyz_end):
     Q2 = lambda M, G: (M[0, 2]-M[2, 0])/G
     Q3 = lambda M, G: (M[1, 0]-M[0, 1])/G
     Q4 = lambda M, G: (M[1, 0]+M[0, 1])/G
-    Q5 = lambda M, G: (M[2, 0]+M[0, 2])/G    
-    Q6 = lambda M, G: (M[1, 2]+M[2, 1])/G 
+    Q5 = lambda M, G: (M[2, 0]+M[0, 2])/G
+    Q6 = lambda M, G: (M[1, 2]+M[2, 1])/G
 
     if tr > 0:
         S = 2*np.sqrt(tr + 1.)
@@ -175,7 +175,11 @@ def is_screen(oe):
 def is_aperture(oe):
     res = isinstance(oe, (rapertures.RectangularAperture)) #,
                                           #rapertures.RoundAperture,
-                                          #rapertures.PolygonalAperture))    
+                                          #rapertures.PolygonalAperture))
+    return res
+
+def is_source(oe):
+    res = isinstance(oe, (rsources.SourceBase))
     return res
 
 ambient = {}
@@ -2072,6 +2076,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print('shaderMesh: Failed to link dummy renderer shader!')
         self.shaderMesh = shaderMesh
 
+        shaderMag = qt.QOpenGLShaderProgram()
+        shaderMag.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, OEMesh3D.vertex_magnet)
+        shaderMag.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, OEMesh3D.fragment_magnet)
+        if not shaderMag.link():
+            print("Linking Error", str(shaderMag.log()))
+            print('shaderMag: Failed to link dummy renderer shader!')
+        self.shaderMag = shaderMag
+
     def init_coord_grid(self):
         self.cBox = CoordinateBox(self)
         shaderCoord = qt.QOpenGLShaderProgram()
@@ -3275,6 +3289,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
                                                          is2ndXtal, isSelected=isSelected,
                                                          shader=self.shaderMesh)
+                elif is_source(oeToPlot):
+                    oeToPlot.mesh3D.render_magnets(self.mMod, self.mView, self.mProj,
+                                                         shader=self.shaderMag)
 
 
             if not self.linesDepthTest:
@@ -3337,9 +3354,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             gl.glEnable(gl.GL_POLYGON_SMOOTH)
             gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-            
+
             sclY = self.cBox.characters[124][1][1]*0.04*self.cBox.fontScale/float(self.viewPortGL[3])
-            
+
             labelBounds = []
             gl.glDisable(gl.GL_DEPTH_TEST)
             for ioe in range(self.segmentModel.rowCount() - 1):
@@ -3357,14 +3374,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     oeLabel = '  {0}: {1}mm'.format(
                         oeString, oeCenterStr)
 #                    print(oeLabel)
-                    oePos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine() 
+                    oePos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine()
                     labelPos = qt.QVector3D(oePos.x(), oePos.y(), oePos.z()) + qt.QVector3D(dx, 0, 0)
-                    
+
                     intersecting = True
                     fbCounter = 0
                     while intersecting and fbCounter < 3*(len(labelBounds)+1):
                         labelYmin = labelPos.y()
-                        labelYmax = labelYmin + sclY                       
+                        labelYmax = labelYmin + sclY
                         for bmin, bmax in labelBounds:
                             if labelYmax > bmin and labelYmin < bmax:
                                 labelPos += qt.QVector3D(0, 1.5*sclY, 0)
@@ -3377,7 +3394,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             labelBounds.append((labelPos.y(), labelPos.y() + sclY))
                         fbCounter += 1
 
-                    
+
                     self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
                                      scale=0.04*self.cBox.fontScale,
                                      textColor=qt.QVector4D(1, 1, 0, 1))  # Yellow
@@ -3400,8 +3417,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.cBox.shader.setUniformValue("model", self.mMod*oeOrientation)
                     self.cBox.shader.setUniformValue("view", self.mView)
                     self.cBox.shader.setUniformValue("projection", self.mProj)
-        
-                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)                    
+
+                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)
                     gl.glLineWidth(1.)
                     gl.glDrawArrays(gl.GL_LINES, 0,
                                     oeToPlot.mesh3D.grid_vbo['gridLen'])
@@ -5378,6 +5395,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
                         oeToPlot.mesh3D.stencilNum = stencilNum
+            else:  # must be the source
+                if not hasattr(oeToPlot, 'mesh3D'):
+                    oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
+                oeToPlot.mesh3D.prepare_magnets()
+                oeToPlot.mesh3D.isEnabled = True
+
+
 #        counter = 0
 #        for beamName, startBeam in self.beamsDict.items():
 #            if counter > 1:
@@ -5962,7 +5986,7 @@ class Beam3D():
 
     uniform mat4 mPV;
     uniform mat4 model;
-    
+
     uniform vec4 gridMask;
     uniform vec4 gridProjection;
 
@@ -6117,7 +6141,7 @@ class Beam3D():
 
     uniform mat4 mPV;
     uniform mat4 model;
-    
+
     uniform float pointSize;
     uniform vec4 gridMask;
     uniform vec4 gridProjection;
@@ -6460,6 +6484,74 @@ class OEMesh3D():
     }
     '''
 
+    vertex_magnet = """
+    #version 430 core
+    layout (location = 0) in vec3 inPosition;
+    layout (location = 1) in vec3 inNormal;
+    layout (location = 2) in vec3 instancePosition;
+    layout (location = 3) in vec3 instanceColor;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    uniform mat4 scale;
+
+    out vec3 FragPos;
+    out vec3 Normal;
+    out vec3 DiffuseColor;
+
+    void main()
+    {
+        vec4 scaledPos = vec4(inPosition, 1.0) * scale;
+        vec4 worldPos = model * vec4(scaledPos + vec4(instancePosition, 1.0));
+
+        gl_Position = projection * view * worldPos;
+
+        FragPos = worldPos.xyz;
+        Normal = normalize(inNormal);
+        DiffuseColor = instanceColor;
+    }
+    """
+
+    fragment_magnet = """
+    #version 430 core
+    in vec3 FragPos;
+    in vec3 Normal;
+    in vec3 DiffuseColor;
+
+    out vec4 FragColor;
+
+    //uniform mat4 v_inv;
+    //uniform vec3 ambientMaterial;
+    uniform vec3 diffuseMaterial;
+    //uniform vec3 specularMaterial;
+    //uniform float shininess;
+
+    //vec3 lightPos = vec3(0.0,  0.0,  3.0, 0.0);
+    //vec3 viewPos;
+
+    void main()
+    {
+        //vec3 ambient = ambientMaterial * DiffuseColor;
+
+        //vec3 norm = normalize(Normal);
+        //vec3 lightDir = normalize(lightPos - FragPos);
+        //float diff = max(dot(norm, lightDir), 0.0);
+        //vec3 diffuse = diffuseMaterial * diff * DiffuseColor;
+
+        //vec3 viewDir = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - FragPos));
+        //vec3 viewDir = normalize(viewPos - FragPos);
+        //vec3 reflectDir = reflect(-lightDir, norm);
+        //float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+        //vec3 specular = specularMaterial * spec;
+
+        //vec3 result = ambient + diffuse + specular;
+        vec3 result = DiffuseColor;
+        FragColor = vec4(result, 1.0);
+    }
+    """
+
+
 #    geometry_source = '''
 #    #version 430 core
 #
@@ -6539,10 +6631,64 @@ class OEMesh3D():
         self.showLocalAxes = False
         self.isEnabled = False
         self.stencilNum = 0
+
+        self.cube_vertices = np.array([
+            # Positions           Normals
+            # Front face
+            -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,
+             0.5, -0.5,  0.5,    0.0,  0.0,  1.0,
+             0.5,  0.5,  0.5,    0.0,  0.0,  1.0,
+             0.5,  0.5,  0.5,    0.0,  0.0,  1.0,
+            -0.5,  0.5,  0.5,    0.0,  0.0,  1.0,
+            -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,
+
+            # Back face
+            -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,
+            -0.5,  0.5, -0.5,    0.0,  0.0, -1.0,
+             0.5,  0.5, -0.5,    0.0,  0.0, -1.0,
+             0.5,  0.5, -0.5,    0.0,  0.0, -1.0,
+             0.5, -0.5, -0.5,    0.0,  0.0, -1.0,
+            -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,
+
+            # Left face
+            -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,
+            -0.5,  0.5, -0.5,   -1.0,  0.0,  0.0,
+            -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,
+            -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,
+            -0.5, -0.5,  0.5,   -1.0,  0.0,  0.0,
+            -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,
+
+            # Right face
+             0.5,  0.5,  0.5,    1.0,  0.0,  0.0,
+             0.5, -0.5,  0.5,    1.0,  0.0,  0.0,
+             0.5, -0.5, -0.5,    1.0,  0.0,  0.0,
+             0.5, -0.5, -0.5,    1.0,  0.0,  0.0,
+             0.5,  0.5, -0.5,    1.0,  0.0,  0.0,
+             0.5,  0.5,  0.5,    1.0,  0.0,  0.0,
+
+            # Bottom face
+            -0.5, -0.5, -0.5,    0.0, -1.0,  0.0,
+             0.5, -0.5, -0.5,    0.0, -1.0,  0.0,
+             0.5, -0.5,  0.5,    0.0, -1.0,  0.0,
+             0.5, -0.5,  0.5,    0.0, -1.0,  0.0,
+            -0.5, -0.5,  0.5,    0.0, -1.0,  0.0,
+            -0.5, -0.5, -0.5,    0.0, -1.0,  0.0,
+
+            # Top face
+            -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,
+            -0.5,  0.5,  0.5,    0.0,  1.0,  0.0,
+             0.5,  0.5,  0.5,    0.0,  1.0,  0.0,
+             0.5,  0.5,  0.5,    0.0,  1.0,  0.0,
+             0.5,  0.5, -0.5,    0.0,  1.0,  0.0,
+            -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,
+        ], dtype=np.float32)
+
 #        self.createArrowArray(0.25, 0.02, 20)
 
     def updateSurfaceMesh(self, is2ndXtal=False):
         pass
+
+
 
     @staticmethod
     def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
@@ -6619,11 +6765,11 @@ class OEMesh3D():
             return mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
         else:  # Screens, Apertures
             bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
-            
+
             bEnd = np.column_stack((oe.x / np.linalg.norm(oe.x),
-                                    oe.y / np.linalg.norm(oe.y), 
+                                    oe.y / np.linalg.norm(oe.y),
                                     oe.z / np.linalg.norm(oe.z)))
-            
+
             rotationQ = basis_rotation_q(bStart, bEnd)
 
             mRotation = qt.QMatrix4x4()
@@ -6746,7 +6892,7 @@ class OEMesh3D():
             yDim = 2
         elif isAperture:
             xLimits = [self.oe.opening[self.oe.kind.index('left')],
-                       self.oe.opening[self.oe.kind.index('right')]]                
+                       self.oe.opening[self.oe.kind.index('right')]]
             yLimits = [self.oe.opening[self.oe.kind.index('bottom')],
                        self.oe.opening[self.oe.kind.index('top')]]
             yDim = 2
@@ -6756,7 +6902,7 @@ class OEMesh3D():
         else:
             xLimits = list(self.oe.limPhysX)
             yLimits = list(self.oe.limPhysY)
-            
+
         isClosedSurface = False
         if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
             isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
@@ -6767,8 +6913,8 @@ class OEMesh3D():
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
 
         self.xLimits = copy.deepcopy(xLimits)
-        self.yLimits = copy.deepcopy(yLimits)      
-               
+        self.yLimits = copy.deepcopy(yLimits)
+
         if isScreen or isAperture:  # Making square screen
             xSize = abs(xLimits[1] - xLimits[0])
             xCenter = 0.5*(xLimits[1] + xLimits[0])
@@ -6782,7 +6928,7 @@ class OEMesh3D():
 #                xSize *= 1.5
 #                ySize *= 1.5
 #                xLimits = [xCenter-0.5*xSize, xCenter+0.5*xSize]
-#                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]                
+#                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]
 
         localTiles = np.array(self.tiles)
 
@@ -6823,7 +6969,7 @@ class OEMesh3D():
             zExt = '1' if hasattr(self.oe, 'local_z1') else ''
 
         if isScreen or isAperture:
-            local_n = lambda x, y: [0, 0, 1] 
+            local_n = lambda x, y: [0, 0, 1]
             local_z = lambda x, y: np.zeros_like(x)
         else:
             local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
@@ -7013,16 +7159,15 @@ class OEMesh3D():
         if isScreen:
             axisGridArray, gridLabels, precisionLabels =\
                 CoordinateBox.make_plane([xLimits, yLimits])
-            print(axisGridArray)
             self.grid_vbo = {}
             self.grid_vbo['vertices'] = create_qt_buffer(axisGridArray)
             self.grid_vbo['gridLen'] = len(axisGridArray)
             self.grid_vbo['gridLabels'] = gridLabels
             self.grid_vbo['precisionLabels'] = precisionLabels
-       
+
 #        gridvao = qt.QOpenGLVertexArrayObject()
 #        gridvao.create()
-        
+
 
     def drawLocalAxes(self, mMod, mView, mProj, is2ndXtal):
         oeIndex = int(is2ndXtal)
@@ -7054,6 +7199,63 @@ class OEMesh3D():
         self.vao_arrow.release()
         shader.release()
 
+    def generate_instance_data(self, num):
+        period = 40  # [mm]
+        gap = 10  # [mm]
+
+        instancePositions = np.zeros((num*2, 3), dtype=np.float32)
+        instanceColors = np.zeros((num*2, 3), dtype=np.float32)
+
+        for n in range(num):
+            pos_x = 0
+            pos_y = period*(n - 0.5*num)
+            instancePositions[2*n] = (pos_x, pos_y, gap*0.5+period*0.5)
+            instancePositions[2*n+1] = (pos_x, pos_y, -gap*0.5-period*0.5)
+            isEven = (n % 2) == 0
+            instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else (0.0, 0.0, 1.0)
+            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if isEven else (1.0, 0.0, 0.0)
+
+        return instancePositions, instanceColors
+
+
+    def prepare_magnets(self, updateMesh=False, shader=None):
+        num_poles = 3  # oe.n or 1
+        self.vbo_vertices = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, :3].copy())
+        self.vbo_normals = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+        instancePositions, instanceColors = self.generate_instance_data(num_poles)
+        print(instancePositions, instanceColors)
+        self.vbo_positions = create_qt_buffer(instancePositions.copy())
+        self.vbo_colors = create_qt_buffer(instanceColors.copy())
+
+        vao = qt.QOpenGLVertexArrayObject()
+        vao.create()
+        vao.bind()
+
+        self.vbo_vertices.bind()
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        self.vbo_vertices.release()
+        # Normal attribute
+        self.vbo_normals.bind()
+        gl.glEnableVertexAttribArray(1)
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        self.vbo_normals.release()
+        # Instance arrays
+        self.vbo_positions.bind()
+        gl.glEnableVertexAttribArray(2)
+        gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glVertexAttribDivisor(2, 1)
+        self.vbo_positions.release()
+        self.vbo_colors.bind()
+        gl.glEnableVertexAttribArray(3)
+        gl.glVertexAttribPointer(3, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glVertexAttribDivisor(3, 1)
+        self.vbo_colors.release()
+        vao.release()
+        self.vao = vao
+        self.num_poles = num_poles
+
+
     def render_surface(self, mMod, mView, mProj, is2ndXtal=False,
                      isSelected=False, shader=None):
 
@@ -7067,8 +7269,8 @@ class OEMesh3D():
             else self.emptyTex  # what if there's no texture?
         beamLimits = self.beamLimits[oeIndex] if len(self.beamLimits) > 0\
             else self.defaultLimits
-            
-        xLimits, yLimits, zLimits = beamLimits[:, 0], beamLimits[:, 1], beamLimits[:, 2] 
+
+        xLimits, yLimits, zLimits = beamLimits[:, 0], beamLimits[:, 1], beamLimits[:, 2]
 
         surfOpacity = 1.0
         if is_screen(self.oe):
@@ -7077,7 +7279,7 @@ class OEMesh3D():
             xLimits, yLimits = self.xLimits, self.yLimits
 
 #        print(self.oe, xLimits, yLimits)
-            
+
         oeOrientation = self.transMatrix[oeIndex]
         arrLen = self.arrLengths[oeIndex]
 
@@ -7120,16 +7322,42 @@ class OEMesh3D():
         if self.isStl:
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, arrLen)  #
         else:
-
-#            ibo.bind()
-#            gl.glStencilFunc(gl.GL_ALWAYS, 1, 0xff)
             gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
                               gl.GL_UNSIGNED_INT, [])
-#            ibo.release()
+
         if beamTexture is not None:
             beamTexture.release()
         shader.release()
         vao.release()
+
+    def render_magnets(self, mMod, mView, mProj, shader=None):
+        if shader is None:
+            return
+
+#        period = 40  # [mm]
+#        gap = 10  # [mm]
+
+        shader.bind()
+        self.vao.bind()
+
+        shader.setUniformValue("model", mMod)
+        shader.setUniformValue("view", mView)
+        shader.setUniformValue("projection", mProj)
+        shader.setUniformValue("v_inv", mView.inverted()[0])
+
+        mModScale = qt.QMatrix4x4()
+        mModScale.setToIdentity()
+        mModScale.scale(*(np.array([20, 20, 20])))
+        shader.setUniformValue("scale", mModScale)
+
+        shader.setUniformValue("ambientMaterial", qt.QVector3D(0.1, 0.1, 0.1))
+        shader.setUniformValue("diffuseMaterial", qt.QVector3D(0.7, 0.7, 0.7))
+        shader.setUniformValue("specularMaterial", qt.QVector3D(1.0, 1.0, 1.0))
+        shader.setUniformValue("shininess", 32)
+
+        gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, self.num_poles*2)
+        shader.release()
+        self.vao.release()
 
 
 class CoordinateBox():
@@ -7280,17 +7508,17 @@ class CoordinateBox():
                           [limits[0, 0], limits[1, 1], 0],  #xmin, ymax
                           [limits[0, 0], limits[1, 0], 0]  #xmin, ymin
                           ])
-    
+
 #        frame_w = np.matmul(frame, model.T)
 
         axisGridArray = []
-    
+
         for iAx in range(2):
             # need to convert to model coordinates
-            # dx1 will be a vector. 
+            # dx1 will be a vector.
             dx1 = np.abs(limits[iAx][0] - limits[iAx][1]) * 1.1
 #            dx1 = np.abs(frame_w[:, iAx+1] - frame_w[:, iAx]) * 1.1
-            
+
             order = np.floor(np.log10(dx1))
             m1 = dx1 * 10**-order
 
@@ -7315,7 +7543,7 @@ class CoordinateBox():
             precisionLabels.extend([np.ones_like(gridX)*decimalX])
             axisGridArray.extend([gridX])
 
-        xPoints, yPoints = np.array(axisGridArray[0]), np.array(axisGridArray[1])            
+        xPoints, yPoints = np.array(axisGridArray[0]), np.array(axisGridArray[1])
         col_x = np.vstack((np.ones_like(yPoints)*limits[0][0],
                            np.ones_like(yPoints)*limits[0][1])).flatten('F')
 
@@ -7329,7 +7557,7 @@ class CoordinateBox():
         col_x = np.vstack((xPoints, xPoints)).flatten('F')
         vertices = np.vstack((vertices, np.column_stack((
                 col_x, col_y, np.zeros_like(col_x)))))
-            
+
         return vertices, gridLabels, precisionLabels
 
     def make_frame(self, limits):
@@ -7765,7 +7993,7 @@ class CoordinateBox():
         except Exception:  # TODO: track exceptions
             fontpath = os.path.dirname(__file__)
             font_path = os.path.join(fontpath, self.fontFile)
-            
+
         face = ft.Face(font_path)
         face.set_pixel_sizes(self.fontSize*8, self.fontSize*8)
 
