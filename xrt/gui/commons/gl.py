@@ -25,6 +25,7 @@ if isOpenGL:
         glReadPixelsui, glReadPixels, glBindFramebuffer, glDepthFunc,\
         glBindBufferBase, glBindImageTexture, glDispatchCompute,\
         glMemoryBarrier, glGetBufferSubData, glDeleteBuffers,\
+        glVertexAttribDivisor, glDrawArraysInstanced,\
         GL_FRONT_AND_BACK, GL_AMBIENT, GL_DIFFUSE, GL_SPECULAR, GL_EMISSION,\
         GL_FRONT, GL_SHININESS, GL_PROJECTION, GL_MODELVIEW, GL_INT,\
         GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, GL_MULTISAMPLE, GL_BLEND,\

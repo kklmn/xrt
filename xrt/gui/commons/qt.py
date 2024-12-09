@@ -136,13 +136,13 @@ if not starImport:
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture, 
      QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D, 
-     QVector2D,
+     QVector2D, QMatrix3x3,
      QQuaternion, QOpenGLVertexArrayObject, QOpenGLBuffer) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
         QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
         QtGui.QIntValidator, QtGui.QDrag, QtGui.QImage, QtGui.QOpenGLTexture, 
         QtGui.QMatrix4x4, QtGui.QVector4D, QtGui.QOpenGLShaderProgram,
-        QtGui.QOpenGLShader, QtGui.QVector3D, QtGui.QVector2D,
+        QtGui.QOpenGLShader, QtGui.QVector3D, QtGui.QVector2D, QtGui.QMatrix3x3,
         QtGui.QQuaternion, QtGui.QOpenGLVertexArrayObject, QtGui.QOpenGLBuffer)
 
 
