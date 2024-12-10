@@ -2121,6 +2121,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print('Failed to link dummy renderer shader!')
         self.cBox.origShader = origShader
         self.cBox.prepare_grid()
+#        self.cBox.prepare_arrows(0.25, 0.02, 20)
+        self.cBox.prepare_arrows(1., 0.5, 20)
+
+
 
     def generate_beam_texture(self, width):
         hsv_texture_data = generate_hsv_texture(width, s=1.0, v=1.0)
@@ -3401,6 +3405,27 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
+
+            self.cBox.origShader.bind()
+            self.cBox.vao_arrow.bind()
+            self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
+            gl.glLineWidth(self.cBoxLineWidth)
+            for ioe in range(self.segmentModel.rowCount() - 1):
+                if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or True:  # TODO: Add checkbox to control grid
+                    continue
+                ioeItem = self.segmentModel.child(ioe + 1, 0)
+                oeString = str(ioeItem.text())
+                oeToPlot = self.oesList[oeString][0]
+                is2ndXtalOpts = [False]
+                if is_dcm(oeToPlot):
+                    is2ndXtalOpts.append(True)
+
+                for is2ndXtal in is2ndXtalOpts:
+                    oeOrientation = oeToPlot.mesh3D.transMatrix[0]
+                    self.cBox.render_local_axes(self.mProj*self.mView*(
+                            self.mMod*oeOrientation), self.cBox.origShader)
+            self.cBox.vao_arrow.release()
+            self.cBox.origShader.release()
 
             self.cBox.shader.bind()
             for ioe in range(self.segmentModel.rowCount() - 1):
@@ -5386,7 +5411,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     is2ndXtalOpts.append(True)
 
                 for is2ndXtal in is2ndXtalOpts:
-                    oeToPlot.mesh3D.prepareSurfaceMesh(is2ndXtal)
+                    oeToPlot.mesh3D.prepare_surface_mesh(is2ndXtal)
                     oeToPlot.mesh3D.isEnabled = True
                     if oeuuid not in self.selectableOEs.values():
                         if len(self.selectableOEs):
@@ -6218,9 +6243,9 @@ class OEMesh3D():
     in vec3 varyingNormalDirection;  // surface normal vector in world space
     in vec3 localPos;
 
-    uniform mat4 model;
-    uniform mat4 projection;
-    uniform mat4 view;
+    //uniform mat4 model;
+    //uniform mat4 projection;
+    //uniform mat4 view;
 
     uniform mat4 v_inv;
     uniform vec2 texlimitsx;
@@ -6296,17 +6321,17 @@ class OEMesh3D():
                                + light0.quadraticAttenuation * distance * distance);
 
           if (light0.spotCutoff <= 90.0) // spotlight?
-    	{
-    	  float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
-    	  if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone?
-    	    {
-    	      attenuation = 0.0;
-    	    }
-    	  else
-    	    {
-    	      attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
-    	    }
-    	}
+        {
+          float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
+          if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone?
+            {
+              attenuation = 0.0;
+            }
+          else
+            {
+              attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
+            }
+        }
         }
 
       vec3 ambientLighting = vec3(scene_ambient) * vec3(frontMaterial.ambient);
@@ -6323,7 +6348,7 @@ class OEMesh3D():
       else // light source on the right side
         {
           specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
-    	* pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
+        * pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
         }
      texUV = vec2((localPos.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
                  (localPos.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
@@ -6457,33 +6482,6 @@ class OEMesh3D():
     }
     '''
 
-    vertex_arrow = '''
-    #version 430 core
-
-    layout(location = 0) in vec3 position;
-
-    uniform mat4 model;
-    uniform mat4 projection;
-    uniform mat4 view;
-
-    void main()
-    {
-        gl_Position = projection*view*model*vec4(position, 1.);
-    }
-    '''
-
-    fragment_arrow = '''
-    #version 430 core
-
-    uniform vec4 aColor;
-    out vec4 fragColor;
-
-    void main()
-    {
-        fragColor = aColor;
-    }
-    '''
-
     vertex_magnet = """
     #version 430 core
     layout (location = 0) in vec3 inPosition;
@@ -6495,108 +6493,125 @@ class OEMesh3D():
     uniform mat4 view;
     uniform mat4 projection;
     uniform mat4 scale;
+    uniform mat3 m_3x3_inv_transp;
 
-    out vec3 FragPos;
-    out vec3 Normal;
+    out vec4 w_position;
+    out vec3 varyingNormalDirection;
     out vec3 DiffuseColor;
 
     void main()
     {
         vec4 scaledPos = vec4(inPosition, 1.0) * scale;
-        vec4 worldPos = model * vec4(scaledPos + vec4(instancePosition, 1.0));
+        w_position = model * vec4(scaledPos + vec4(instancePosition, 1.0));
 
-        gl_Position = projection * view * worldPos;
+        gl_Position = projection * view * w_position;
 
-        FragPos = worldPos.xyz;
-        Normal = normalize(inNormal);
+        varyingNormalDirection = normalize(m_3x3_inv_transp * inNormal);
         DiffuseColor = instanceColor;
+
+
     }
     """
 
     fragment_magnet = """
     #version 430 core
-    in vec3 FragPos;
-    in vec3 Normal;
+
+    in vec4 w_position;
+    in vec3 varyingNormalDirection;
     in vec3 DiffuseColor;
+    out vec4 fragColor;
 
-    out vec4 FragColor;
+    uniform mat4 v_inv;
 
-    //uniform mat4 v_inv;
-    //uniform vec3 ambientMaterial;
-    uniform vec3 diffuseMaterial;
-    //uniform vec3 specularMaterial;
-    //uniform float shininess;
+    struct lightSource
+    {
+      vec4 position;
+      vec4 diffuse;
+      vec4 specular;
+      float constantAttenuation, linearAttenuation, quadraticAttenuation;
+      float spotCutoff, spotExponent;
+      vec3 spotDirection;
+    };
 
-    //vec3 lightPos = vec3(0.0,  0.0,  3.0, 0.0);
-    //vec3 viewPos;
+    lightSource light0 = lightSource(
+      vec4(0.0,  0.0,  3.0, 0.0),
+      vec4(0.6,  0.6,  0.6, 1.0),
+      vec4(1.0,  1.0,  1.0, 1.0),
+      0.0, 1.0, 0.0,
+      90.0, -0.7,
+      vec3(0.0, 0.0, -1.0)
+    );
+
+    vec4 scene_ambient = vec4(0.5, 0.5, 0.5, 1.0);
+
+    struct material
+    {
+      vec4 ambient;
+      vec4 diffuse;
+      vec4 specular;
+      float shininess;
+    };
+
+    uniform material frontMaterial;
 
     void main()
     {
-        //vec3 ambient = ambientMaterial * DiffuseColor;
 
-        //vec3 norm = normalize(Normal);
-        //vec3 lightDir = normalize(lightPos - FragPos);
-        //float diff = max(dot(norm, lightDir), 0.0);
-        //vec3 diffuse = diffuseMaterial * diff * DiffuseColor;
+      vec3 normalDirection = normalize(varyingNormalDirection);
+      vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - w_position));
+      vec3 lightDirection;
+      float attenuation;
 
-        //vec3 viewDir = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - FragPos));
-        //vec3 viewDir = normalize(viewPos - FragPos);
-        //vec3 reflectDir = reflect(-lightDir, norm);
-        //float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-        //vec3 specular = specularMaterial * spec;
+      if (0.0 == light0.position.w) // directional light?
+        {
+          attenuation = 1.0; // no attenuation
+          lightDirection = normalize(vec3(light0.position));
+        }
+      else // point light or spotlight (or other kind of light)
+        {
+          vec3 positionToLightSource = -viewDirection;
+          //vec3 positionToLightSource = vec3(light0.position - w_position);
+          float distance = length(positionToLightSource);
+          lightDirection = normalize(positionToLightSource);
+          attenuation = 1.0 / (light0.constantAttenuation
+                               + light0.linearAttenuation * distance
+                               + light0.quadraticAttenuation * distance * distance);
 
-        //vec3 result = ambient + diffuse + specular;
-        vec3 result = DiffuseColor;
-        FragColor = vec4(result, 1.0);
+          if (light0.spotCutoff <= 90.0) // spotlight?
+        {
+          float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
+          if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone?
+            {
+              attenuation = 0.0;
+            }
+          else
+            {
+              attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
+            }
+        }
+        }
+
+      vec3 ambientLighting = DiffuseColor*0.6;
+
+      vec3 diffuseReflection = attenuation
+        * vec3(light0.diffuse) * vec3(frontMaterial.diffuse) * DiffuseColor
+        * max(0.0, dot(normalDirection, lightDirection));
+
+      vec3 specularReflection;
+      if (dot(normalDirection, lightDirection) < 0.0) // light source on the wrong side?
+        {
+          specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+        }
+      else // light source on the right side
+        {
+          specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
+        * pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
+        }
+
+        fragColor = vec4(ambientLighting+ diffuseReflection+ specularReflection, 1.0);
+
     }
     """
-
-
-#    geometry_source = '''
-#    #version 430 core
-#
-#    varying vec4 color_out;
-#    varying vec2 texUV;
-#
-#    uniform sampler2D u_texture;
-#    vec4 histColor;
-#
-#    void main()
-#    {
-#
-#     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
-#         histColor = texture(u_texture, texUV);
-#     else
-#         histColor = vec4(0, 0, 0, 0);
-#
-#     //gl_FragColor = vec4(color_out+histColor);
-#     gl_FragColor = color_out;
-#    }
-#    '''
-#
-#    fg_source = '''
-#    #version 430 core
-#
-#    in vec4 color_out;
-#    in vec2 texUV;
-#
-#    uniform sampler2D u_texture;
-#    vec4 histColor;
-#
-#    out vec4 fragColor;
-#
-#    void main()
-#    {
-#
-#     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1)
-#         histColor = texture(u_texture, texUV);
-#     else
-#         histColor = vec4(0, 0, 0, 0);
-#
-#     //gl_FragColor = vec4(color_out+histColor);
-#     fragColor = color_out;
-#    }
-#    '''
 
     def __init__(self, parentOE, parentWidget):
         self.emptyTex = qt.QOpenGLTexture(
@@ -6685,9 +6700,8 @@ class OEMesh3D():
 
 #        self.createArrowArray(0.25, 0.02, 20)
 
-    def updateSurfaceMesh(self, is2ndXtal=False):
+    def update_surface_mesh(self, is2ndXtal=False):
         pass
-
 
 
     @staticmethod
@@ -6779,39 +6793,8 @@ class OEMesh3D():
             posMatr.translate(*oe.center)
             return posMatr*mRotation
 
-#    def createArrowArray(self, z, r, nSegments):
-#        phi = np.linspace(0, 2*np.pi, nSegments)
-#        xp = r * np.cos(phi)
-#        yp = r * np.sin(phi)
-#        base = np.vstack((xp, yp, np.zeros_like(xp)))
-#        coneVertices = np.hstack((np.array([0, 0, 0, 0, 0, z]).reshape(3, 2),
-#                                  base)).T
-#        self.arrowLen = len(coneVertices)
-##        print(coneVertices, coneVertices.shape)
-#
-#        vao = qg.QOpenGLVertexArrayObject()
-#        vao.create()
-#        shader = qg.QOpenGLShaderProgram()
-#        shader.addShaderFromSourceCode(
-#                qt.QOpenGLShader.Vertex, self.vertex_arrow)
-#        shader.addShaderFromSourceCode(
-#                qt.QOpenGLShader.Fragment, self.fragment_arrow)
-#
-#        if not shader.link():
-#            print("Linking Error", str(shader.log()))
-#            print('Failed to link dummy renderer shader!')
-#
-#        shader.bind()
-#        vao.bind()
-#
-#        self.vbo_arrow = setVertexBuffer(coneVertices.copy(), 3,
-#                                         shader, "position")
-#        vao.release()
-#        shader.release()
-#        self.shader_arrow = shader
-#        self.vao_arrow = vao
-
-    def prepareSurfaceMesh(self, is2ndXtal=False, updateMesh=False, shader=None):
+    def prepare_surface_mesh(self, is2ndXtal=False, updateMesh=False,
+                              shader=None):
         def get_thickness():
 #            if self.oeThicknessForce is not None:
 #                return self.oeThicknessForce
@@ -7153,8 +7136,6 @@ class OEMesh3D():
         vao.release()
 
         self.vao[nsIndex] = vao
-        self.z2y = qt.QMatrix4x4().rotate(90, 1, 0, 0)
-        self.z2x = qt.QMatrix4x4().rotate(90, 0, 1, 0)
 
         if isScreen:
             axisGridArray, gridLabels, precisionLabels =\
@@ -7168,39 +7149,8 @@ class OEMesh3D():
 #        gridvao = qt.QOpenGLVertexArrayObject()
 #        gridvao.create()
 
-
-    def drawLocalAxes(self, mMod, mView, mProj, is2ndXtal):
-        oeIndex = int(is2ndXtal)
-        oeOrientation = self.transMatrix[oeIndex]
-        shader = self.shader_arrow
-        shader.bind()
-        self.vao_arrow.bind()
-        shader.setUniformValue("view", mView)
-        shader.setUniformValue("projection", mProj)
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        for iAx in range(3):
-            color = np.array([0., 0., 0., 1.])
-            color[iAx] = 1.
-            colorV = qt.QVector4D(*color)
-            modMatr = mMod*oeOrientation
-            if iAx == 0:
-                modMatr *= self.z2x
-            elif iAx == 1:
-                modMatr *= self.z2y
-
-#            shader.setUniformValue("model", )
-            shader.setUniformValue("aColor", colorV)
-            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
-#            gl.glEnable(gl.GL_LINE_SMOOTH)
-#            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-#            gl.glBegin(gl.GL_LINES)
-#            gl.glDrawArrays(gl.GL_LINES, 0, 2)
-        self.vao_arrow.release()
-        shader.release()
-
     def generate_instance_data(self, num):
-        period = 40  # [mm]
+        period = self.oe.period if hasattr(self.oe, 'period') else 40  # [mm]
         gap = 10  # [mm]
 
         instancePositions = np.zeros((num*2, 3), dtype=np.float32)
@@ -7219,11 +7169,11 @@ class OEMesh3D():
 
 
     def prepare_magnets(self, updateMesh=False, shader=None):
-        num_poles = 3  # oe.n or 1
+        num_poles = self.oe.n if hasattr(self.oe, 'n') else 1
         self.vbo_vertices = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, :3].copy())
         self.vbo_normals = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
         instancePositions, instanceColors = self.generate_instance_data(num_poles)
-        print(instancePositions, instanceColors)
+
         self.vbo_positions = create_qt_buffer(instancePositions.copy())
         self.vbo_colors = create_qt_buffer(instanceColors.copy())
 
@@ -7343,21 +7293,32 @@ class OEMesh3D():
         shader.setUniformValue("model", mMod)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
-        shader.setUniformValue("v_inv", mView.inverted()[0])
-
         mModScale = qt.QMatrix4x4()
         mModScale.setToIdentity()
-        mModScale.scale(*(np.array([20, 20, 20])))
+        mag_y = self.oe.period*0.75 if hasattr(self.oe, 'period') else 40
+        mModScale.scale(*(np.array([mag_y, mag_y, 20])))
         shader.setUniformValue("scale", mModScale)
 
-        shader.setUniformValue("ambientMaterial", qt.QVector3D(0.1, 0.1, 0.1))
-        shader.setUniformValue("diffuseMaterial", qt.QVector3D(0.7, 0.7, 0.7))
-        shader.setUniformValue("specularMaterial", qt.QVector3D(1.0, 1.0, 1.0))
-        shader.setUniformValue("shininess", 32)
+        mvp = mMod*mView
+        shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
+        shader.setUniformValue("v_inv", mView.inverted()[0])
+
+        mat = 'Si'
+#        ambient_in = ambient['selected'] if isSelected else ambient[mat]
+        ambient_in = ambient[mat]
+        diffuse_in = diffuse[mat]
+        specular_in = specular[mat]
+        shininess_in = shininess[mat]
+
+        shader.setUniformValue("frontMaterial.ambient", ambient_in)
+        shader.setUniformValue("frontMaterial.diffuse", diffuse_in)
+        shader.setUniformValue("frontMaterial.specular", specular_in)
+        shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
         gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, self.num_poles*2)
-        shader.release()
         self.vao.release()
+        shader.release()
+
 
 
 class CoordinateBox():
@@ -7387,17 +7348,21 @@ class CoordinateBox():
 
     orig_vertex_source = '''
     #version 430 core
+
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec3 linecolor;
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
+    layout(location = 2) in mat4 rotation;
+
+    uniform mat4 pvm;  // projection * view * model
+    //uniform mat4 model;
+    //uniform mat4 view;
+    //uniform mat4 projection;
+
     out vec3 out_color;
     void main()
     {
      out_color = linecolor;
-//     gl_Position = projection * model * vec4(position, 1.0);
-     gl_Position = projection * view * model * vec4(position, 1.0);
+     gl_Position = pvm * (rotation*vec4(position, 1.0));
     }
     '''
 
@@ -7447,6 +7412,32 @@ class CoordinateBox():
     }
     """
 
+#    vertex_arrow = '''
+#    #version 430 core
+#
+#    layout(location = 0) in vec3 position;
+#
+#    uniform mat4 pvm;  // projection*view*model
+#
+#    void main()
+#    {
+#        gl_Position = pvm*vec4(position, 1.);
+#    }
+#    '''
+#
+#    fragment_arrow = '''
+#    #version 430 core
+#
+#    uniform vec4 aColor;
+#    out vec4 fragColor;
+#
+#    void main()
+#    {
+#        fragColor = aColor;
+#    }
+#    '''
+
+
     def __init__(self, parent):
 
         self.parent = parent
@@ -7479,6 +7470,12 @@ class CoordinateBox():
         self.fontSize = 32
         self.fontScale = 4.
         self.fontFile = 'FreeSans.ttf'
+
+        self.z2y = qt.QMatrix4x4()
+        self.z2y.rotate(90, 1, 0, 0)
+        self.z2x = qt.QMatrix4x4()
+        self.z2x.rotate(90, 0, 1, 0)
+
 #        self.vquad = [
 #          # x   y  u  v
 #            0, 1, 0, 0,
@@ -7686,19 +7683,19 @@ class CoordinateBox():
 #            self.vbo_fineGrid = self.setVertexBuffer(fineAxGrid, 3, self.shader, "position" )
 #            self.vaoFineGrid.release()
 
-        cLines = np.array([[-self.parent.aPos[0], 0, 0],
-                           [self.parent.aPos[0], 0, 0],
-                           [0, -self.parent.aPos[1], 0],
-                           [0, self.parent.aPos[1], 0],
-                           [0, 0, -self.parent.aPos[2]],
-                           [0, 0, self.parent.aPos[2]]])*0.5
-
-        cLineColors = np.array([[0, 0.5, 1],
-                                [0, 0.5, 1],
-                                [0, 0.9, 0],
-                                [0, 0.9, 0],
-                                [0.8, 0, 0],
-                                [0.8, 0, 0]])
+#        cLines = np.array([[-self.parent.aPos[0], 0, 0],
+#                           [self.parent.aPos[0], 0, 0],
+#                           [0, -self.parent.aPos[1], 0],
+#                           [0, self.parent.aPos[1], 0],
+#                           [0, 0, -self.parent.aPos[2]],
+#                           [0, 0, self.parent.aPos[2]]])*0.5
+#
+#        cLineColors = np.array([[0, 0.5, 1],
+#                                [0, 0.5, 1],
+#                                [0, 0.9, 0],
+#                                [0, 0.9, 0],
+#                                [0.8, 0, 0],
+#                                [0.8, 0, 0]])
 
         self.vaoFrame.bind()
         self.vbo_frame = setVertexBuffer(
@@ -7711,12 +7708,12 @@ class CoordinateBox():
                 size=np.float32(self.axGrid).nbytes*100)  # TODO: calculate
         self.vaoGrid.release()
 
-        self.vaoOrigin.bind()
-        self.vbo_origin = setVertexBuffer(
-                cLines, 3, self.origShader, "position")
-        self.vbo_oc = setVertexBuffer(
-                cLineColors, 3, self.origShader, "linecolor")
-        self.vaoOrigin.release()
+#        self.vaoOrigin.bind()
+#        self.vbo_origin = setVertexBuffer(
+#                cLines, 3, self.origShader, "position")
+#        self.vbo_oc = setVertexBuffer(
+#                cLineColors, 3, self.origShader, "linecolor")
+#        self.vaoOrigin.release()
 
         # x  y  u  v
         vquad = [
@@ -7731,6 +7728,45 @@ class CoordinateBox():
         self.vaoText.bind()
         self.vbo_Text = setVertexBuffer(vquad, 4, self.textShader, "in_pos")
         self.vaoText.release()
+
+    def prepare_arrows(self, z, r, nSegments):
+        phi = np.linspace(0, 2*np.pi, nSegments)
+        xp = r * np.cos(phi)
+        yp = r * np.sin(phi)
+        base = np.vstack((xp, yp, np.zeros_like(xp)))
+        coneVertices = np.hstack((np.array([0, 0, 0, 0, 0, z]).reshape(3, 2),
+                                  base)).T
+
+        self.arrowLen = len(coneVertices)
+        self.vbo_arrow = create_qt_buffer(coneVertices)
+        self.vbo_arr_colors = create_qt_buffer(np.identity(3))
+        self.vbo_arr_rot = create_qt_buffer(np.array(
+                [qt.QMatrix4x4().data(), self.z2x.data(), self.z2y.data()]))
+
+
+        vao = qt.QOpenGLVertexArrayObject()
+        vao.create()
+        vao.bind()
+
+        self.vbo_arrow.bind()
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)        
+        self.vbo_arrow.release()
+
+        self.vbo_arr_colors.bind()
+        gl.glEnableVertexAttribArray(1)
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)         
+        self.vbo_arr_colors.release()
+
+        self.vbo_arr_rot.bind()
+        for i in range(4):  # A mat4 is treated as 4 vec4 attributes
+            gl.glEnableVertexAttribArray(2 + i)  # Locations: 2, 3, 4, 5
+            gl.glVertexAttribPointer(2 + i, 4, gl.GL_FLOAT, gl.GL_FALSE, 64,
+                                     int(i * 16))  # Offset for each column
+            gl.glVertexAttribDivisor(2 + i, 1)  # Set divisor to 1 for instancing        
+        self.vbo_arr_rot.release()
+        vao.release()
+        self.vao_arrow = vao
 
     def populateGrid(self, grids):
         pModel = np.array(self.parent.mView.data()).reshape(4, 4)[:-1, :-1]
@@ -7870,16 +7906,18 @@ class CoordinateBox():
 #            self.vaoFineGrid.release()
         self.shader.release()
 
-        self.origShader.bind()
-        self.origShader.setUniformValue("model", model)
-        self.origShader.setUniformValue("view", view)
-        self.origShader.setUniformValue("projection", projection)
-        self.vaoOrigin.bind()
-        self.origShader.setUniformValue("lineOpacity", 0.85)
-        gl.glLineWidth(self.parent.cBoxLineWidth)
-        gl.glDrawArrays(gl.GL_LINES, 0, 6)
-        self.vaoOrigin.release()
-        self.origShader.release()
+#        self.origShader.bind()
+#        self.origShader.setUniformValue("pvm", projection*view*model)
+#        
+##        self.origShader.setUniformValue("model", model)
+##        self.origShader.setUniformValue("view", view)
+##        self.origShader.setUniformValue("projection", projection)
+#        self.vaoOrigin.bind()
+#        self.origShader.setUniformValue("lineOpacity", 0.85)
+#        gl.glLineWidth(self.parent.cBoxLineWidth)
+#        gl.glDrawArrays(gl.GL_LINES, 0, 6)
+#        self.vaoOrigin.release()
+#        self.origShader.release()
 
         self.textShader.bind()
         self.vaoText.bind()
@@ -7973,6 +8011,37 @@ class CoordinateBox():
             self.textShader.setUniformValue("model", mMod)
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
             ch[0].release()
+
+    def render_local_axes(self, pvm, shader):
+#        oeIndex = int(is2ndXtal)
+#        oeOrientation = self.transMatrix[oeIndex]
+#        shader = self.shader_arrow
+#        shader.bind()
+#        shader = self.origShader
+#        shader.bind()
+#        self.vao_arrow.bind()
+        
+        shader.setUniformValue("pvm", pvm)
+      
+        gl.glDrawArraysInstanced(gl.GL_TRIANGLE_FAN, 0, self.arrowLen-1, 3)
+#
+#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+#        for iAx in range(3):
+#            color = np.array([0., 0., 0., 1.])
+#            color[iAx] = 1.
+#            colorV = qt.QVector4D(*color)
+#            modMatr = mMod*oeOrientation
+#            if iAx == 0:
+#                modMatr *= self.z2x
+#            elif iAx == 1:
+#                modMatr *= self.z2y
+#
+#            shader.setUniformValue("aColor", colorV)
+#            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
+
+#        self.vao_arrow.release()
+#        shader.release()
+
 
     def get_sans_font(self):
         fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Liberation Sans", "Sans-serif"]
