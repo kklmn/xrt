@@ -1474,6 +1474,10 @@ class xrtGlow(qt.QWidget):
             menu = qt.QMenu()
             menu.addAction('Center here',
                            partial(self.centerEl, str(selectedItem.text())))
+            menu.addAction('to Local',
+                           partial(self.toLocal, str(selectedItem.text())))
+            menu.addAction('restore Global',
+                           partial(self.toGlobal, str(selectedItem.text())))
             menu.exec_(self.oeTree.viewport().mapToGlobal(position))
         else:
             pass
@@ -1765,9 +1769,40 @@ class xrtGlow(qt.QWidget):
         d.show()
 
     def centerEl(self, oeName):
+#        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
+
+        off0 = np.array(self.oesList[str(oeName)][2])
+        cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
+        off1 = self.customGlWidget.mModLocal * cOffset
+        self.customGlWidget.coordOffset = np.array([off1.x(), off1.y(), off1.z()])
+#        print(self.customGlWidget.coordOffset)
+
+
+#        oeToPlot = self.oesList[oeName][0]
+#        trMat = qt.QMatrix4x4()
+#        translation = -1*np.array(oeToPlot.center)
+#        trMat.translate(*translation)
+#        self.customGlWidget.mModLocal = trMat
+        self.customGlWidget.tVec = np.float32([0, 0, 0])
+#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.glDraw()
+
+    def toLocal(self, oeName):
+        oeToPlot = self.oesList[oeName][0]
+        self.customGlWidget.mModLocal = oeToPlot.mesh3D.transMatrix[0].inverted()[0]
+        self.customGlWidget.coordOffset = np.float32([0, 0, 0])
+#        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
+#        self.customGlWidget.tVec = np.float32([0, 0, 0])
+#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.glDraw()
+
+    def toGlobal(self, oeName):
+        oeToPlot = self.oesList[oeName][0]
+        self.customGlWidget.mModLocal = qt.QMatrix4x4()
+        # self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
     def updateCutoffFromQLE(self, editor):
@@ -2000,7 +2035,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.mModAx = qt.QMatrix4x4()
         self.mModAx.setToIdentity()
-
+        
+        self.mModLocal = qt.QMatrix4x4()
+        self.mModLocal.setToIdentity()
 #        self.isEulerian = False
 
         self.rotations = np.float32([[0., 1., 0., 0.],
@@ -2122,7 +2159,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.cBox.origShader = origShader
         self.cBox.prepare_grid()
 #        self.cBox.prepare_arrows(0.25, 0.02, 20)
-        self.cBox.prepare_arrows(1., 0.5, 20)
+        self.cBox.prepare_arrows(1, 0.25, 0.1, 13)
 
 
 
@@ -3290,11 +3327,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 oeNum = oeToPlot.mesh3D.stencilNum
                                 isSelected = oeNum == self.selectedOE
                                 gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
-                            oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
+                            oeToPlot.mesh3D.render_surface(self.mMod*self.mModLocal, self.mView, self.mProj,
                                                          is2ndXtal, isSelected=isSelected,
                                                          shader=self.shaderMesh)
                 elif is_source(oeToPlot):
-                    oeToPlot.mesh3D.render_magnets(self.mMod, self.mView, self.mProj,
+                    oeToPlot.mesh3D.render_magnets(self.mMod*self.mModLocal, self.mView, self.mProj,
                                                          shader=self.shaderMag)
 
 
@@ -3320,7 +3357,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeNum = oeToPlot.mesh3D.stencilNum
                             isSelected = oeNum == self.selectedOE
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
-                        oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
+                        oeToPlot.mesh3D.render_surface(self.mMod*self.mModLocal, self.mView, self.mProj,
                                                      is2ndXtal, isSelected=isSelected,
                                                      shader=self.shaderMesh)
 
@@ -3335,7 +3372,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
                 beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
                 if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
-                    self.render_beam(beam, self.mMod, self.mView, self.mProj, target=None)
+                    self.render_beam(beam, self.mMod*self.mModLocal, self.mView, self.mProj, target=None)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -3348,7 +3385,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if segmentItem0.checkState() == 2:
                             endBeam = self.beamsDict[
                                 self.oesList[str(segmentItem0.text())[3:]][1]]
-                            self.render_beam(beam, self.mMod, self.mView, self.mProj, target=endBeam)
+                            self.render_beam(beam, self.mMod*self.mModLocal, self.mView, self.mProj, target=endBeam)
 
 #            gl.glDisable(gl.GL_MULTISAMPLE)
 #            gl.glDisable(gl.GL_BLEND)
@@ -3368,9 +3405,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     ioeItem = self.segmentModel.child(ioe + 1, 0)
                     oeString = str(ioeItem.text())
                     oeToPlot = self.oesList[oeString][0]
-                    oeCenter = self.modelToWorld(
-                            np.array(oeToPlot.center) - self.coordOffset)
-                    vpMat = self.mProj * self.mView
+#                    oeCenter = self.modelToWorld(
+#                            np.array(oeToPlot.center) - self.coordOffset)
+                    oeCenter = oeToPlot.center
+                    vpMat = self.mProj * self.mView*self.mMod*self.mModLocal
                     alignment = "middle"
                     dx = 0.075
                     oeCenterStr = makeCenterStr(oeToPlot.center,
@@ -3406,26 +3444,27 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
-            self.cBox.origShader.bind()
-            self.cBox.vao_arrow.bind()
-            self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
-            gl.glLineWidth(self.cBoxLineWidth)
-            for ioe in range(self.segmentModel.rowCount() - 1):
-                if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or True:  # TODO: Add checkbox to control grid
-                    continue
-                ioeItem = self.segmentModel.child(ioe + 1, 0)
-                oeString = str(ioeItem.text())
-                oeToPlot = self.oesList[oeString][0]
-                is2ndXtalOpts = [False]
-                if is_dcm(oeToPlot):
-                    is2ndXtalOpts.append(True)
+            # self.cBox.origShader.bind()
+            # self.cBox.vao_arrow.bind()
+            # self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
+            # gl.glLineWidth(self.cBoxLineWidth)
+            # for ioe in range(self.segmentModel.rowCount() - 1):
+            #     if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or False:  # TODO: Add checkbox to control grid
+            #         continue
+            #     ioeItem = self.segmentModel.child(ioe + 1, 0)
+            #     oeString = str(ioeItem.text())
+            #     oeToPlot = self.oesList[oeString][0]
+            #     is2ndXtalOpts = [False]
+            #     if is_dcm(oeToPlot):
+            #         is2ndXtalOpts.append(True)
 
-                for is2ndXtal in is2ndXtalOpts:
-                    oeOrientation = oeToPlot.mesh3D.transMatrix[0]
-                    self.cBox.render_local_axes(self.mProj*self.mView*(
-                            self.mMod*oeOrientation), self.cBox.origShader)
-            self.cBox.vao_arrow.release()
-            self.cBox.origShader.release()
+            #     for is2ndXtal in is2ndXtalOpts:
+            #         oeOrientation = oeToPlot.mesh3D.transMatrix[0]
+            #         self.cBox.render_local_axes(self.mProj, self.mView,
+            #                 self.mMod, oeOrientation, self.mModScale,
+            #                 self.mModTrans, self.cBox.origShader)
+            # self.cBox.vao_arrow.release()
+            # self.cBox.origShader.release()
 
             self.cBox.shader.bind()
             for ioe in range(self.segmentModel.rowCount() - 1):
@@ -3439,7 +3478,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
                     gl.glEnableVertexAttribArray(0)
                     oeOrientation = oeToPlot.mesh3D.transMatrix[0]
-                    self.cBox.shader.setUniformValue("model", self.mMod*oeOrientation)
+                    self.cBox.shader.setUniformValue("model", self.mMod*oeOrientation*self.mModLocal)
                     self.cBox.shader.setUniformValue("view", self.mView)
                     self.cBox.shader.setUniformValue("projection", self.mProj)
 
@@ -6748,9 +6787,7 @@ class OEMesh3D():
                     [extraRotAx[i] for i in extraRotSeq])).as_quat()
             rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
             extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
-#            if hasattr(oe, 'orientationQuat'):
-#                print("oe.quat", oe.orientationQuat)
-#                print("tm.rot", raycing.multiply_quats(rotation, extraRot))
+
             # 1. Only for DCM - translate to 2nd crystal position
             m2ndXtalPos = qt.QMatrix4x4()
             m2ndXtalPos.translate(dx, dy, dz)
@@ -6776,8 +6813,12 @@ class OEMesh3D():
 #            if isinstance(oe, roes.DCM):
 #                print(oe.name, m2ndXtalRot*mRotation, is2ndXtal)
 
-            return mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
-        else:  # Screens, Apertures
+            orientation =  mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
+            # matr3x3 = np.array(orientation.data()).reshape((4, 4), order='F')[:3, :3]
+            # quat = scprot.from_matrix(matr3x3).as_quat()
+            # quat = [quat[-1], quat[0], quat[1], quat[2]]
+            # print(oe.name, quat, oe.get_orientation_quaternion())
+        elif is_screen(oe) or is_aperture(oe):  # Screens, Apertures
             bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
 
             bEnd = np.column_stack((oe.x / np.linalg.norm(oe.x),
@@ -6791,7 +6832,14 @@ class OEMesh3D():
 
             posMatr = qt.QMatrix4x4()
             posMatr.translate(*oe.center)
-            return posMatr*mRotation
+            orientation = posMatr*mRotation
+        else:  # source
+            posMatr = qt.QMatrix4x4()
+            posMatr.translate(*oe.center)
+            orientation = posMatr
+            
+        return orientation
+                        
 
     def prepare_surface_mesh(self, is2ndXtal=False, updateMesh=False,
                               shader=None):
@@ -7153,14 +7201,16 @@ class OEMesh3D():
         period = self.oe.period if hasattr(self.oe, 'period') else 40  # [mm]
         gap = 10  # [mm]
 
-        instancePositions = np.zeros((num*2, 3), dtype=np.float32)
-        instanceColors = np.zeros((num*2, 3), dtype=np.float32)
+        instancePositions = np.zeros((int(num*2), 3), dtype=np.float32)
+        instanceColors = np.zeros((int(num*2), 3), dtype=np.float32)
 
         for n in range(num):
             pos_x = 0
-            pos_y = period*(n - 0.5*num)
-            instancePositions[2*n] = (pos_x, pos_y, gap*0.5+period*0.5)
-            instancePositions[2*n+1] = (pos_x, pos_y, -gap*0.5-period*0.5)
+            dy = n - 0.5*num if num > 1 else 0
+            pos_y = period * dy
+            
+            instancePositions[2*n] = (pos_x, pos_y, gap+0.5*self.mag_z_size)
+            instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*self.mag_z_size)
             isEven = (n % 2) == 0
             instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else (0.0, 0.0, 1.0)
             instanceColors[2*n+1] = (0.0, 0.0, 1.0) if isEven else (1.0, 0.0, 0.0)
@@ -7169,7 +7219,12 @@ class OEMesh3D():
 
 
     def prepare_magnets(self, updateMesh=False, shader=None):
-        num_poles = self.oe.n if hasattr(self.oe, 'n') else 1
+
+        self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
+            self.oe, is2ndXtal=False)
+
+        num_poles = self.oe.n*2 if hasattr(self.oe, 'n') else 1
+        self.mag_z_size = 20
         self.vbo_vertices = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, :3].copy())
         self.vbo_normals = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
         instancePositions, instanceColors = self.generate_instance_data(num_poles)
@@ -7284,9 +7339,6 @@ class OEMesh3D():
         if shader is None:
             return
 
-#        period = 40  # [mm]
-#        gap = 10  # [mm]
-
         shader.bind()
         self.vao.bind()
 
@@ -7296,7 +7348,7 @@ class OEMesh3D():
         mModScale = qt.QMatrix4x4()
         mModScale.setToIdentity()
         mag_y = self.oe.period*0.75 if hasattr(self.oe, 'period') else 40
-        mModScale.scale(*(np.array([mag_y, mag_y, 20])))
+        mModScale.scale(*(np.array([mag_y, mag_y, self.mag_z_size])))
         shader.setUniformValue("scale", mModScale)
 
         mvp = mMod*mView
@@ -7349,9 +7401,9 @@ class CoordinateBox():
     orig_vertex_source = '''
     #version 430 core
 
-    layout(location = 0) in vec3 position;
+    layout(location = 0) in vec4 position;
     layout(location = 1) in vec3 linecolor;
-    layout(location = 2) in mat4 rotation;
+    //layout(location = 2) in mat4 rotation;
 
     uniform mat4 pvm;  // projection * view * model
     //uniform mat4 model;
@@ -7362,7 +7414,8 @@ class CoordinateBox():
     void main()
     {
      out_color = linecolor;
-     gl_Position = pvm * (rotation*vec4(position, 1.0));
+     gl_Position = pvm * position;
+     //gl_Position = pvm * (rotation*vec4(position, 1.0));
     }
     '''
 
@@ -7474,7 +7527,7 @@ class CoordinateBox():
         self.z2y = qt.QMatrix4x4()
         self.z2y.rotate(90, 1, 0, 0)
         self.z2x = qt.QMatrix4x4()
-        self.z2x.rotate(90, 0, 1, 0)
+        self.z2x.rotate(90, 0, -1, 0)
 
 #        self.vquad = [
 #          # x   y  u  v
@@ -7729,42 +7782,43 @@ class CoordinateBox():
         self.vbo_Text = setVertexBuffer(vquad, 4, self.textShader, "in_pos")
         self.vaoText.release()
 
-    def prepare_arrows(self, z, r, nSegments):
+    def prepare_arrows(self, z0, z, r, nSegments):
         phi = np.linspace(0, 2*np.pi, nSegments)
         xp = r * np.cos(phi)
         yp = r * np.sin(phi)
-        base = np.vstack((xp, yp, np.zeros_like(xp)))
-        coneVertices = np.hstack((np.array([0, 0, 0, 0, 0, z]).reshape(3, 2),
-                                  base)).T
+        base = np.vstack((xp, yp, np.ones_like(xp)*(z0-z), np.ones_like(xp)))
+        coneVertices = np.vstack((np.array([[0, 0, 0, 1], [0, 0, z0, 1]]),
+                                  base.T))
+#        print(base.shape, np.array([0, 0, z]).shape)
+#        coneVertices = np.vstack((np.array([0, 0, z, 1]), base.T))
+        self.arrows = coneVertices.copy()
 
-        self.arrowLen = len(coneVertices)
-        self.vbo_arrow = create_qt_buffer(coneVertices)
-        self.vbo_arr_colors = create_qt_buffer(np.identity(3))
-        self.vbo_arr_rot = create_qt_buffer(np.array(
-                [qt.QMatrix4x4().data(), self.z2x.data(), self.z2y.data()]))
-
+        for rotation in [self.z2x, self.z2y]:
+            m3rot = np.array(rotation.data()).reshape(4, 4)
+            self.arrows = np.vstack((self.arrows, 
+                                       np.matmul(coneVertices, m3rot.T)))
+        self.arrowLen = len(coneVertices)        
+        self.vbo_arrows = create_qt_buffer(self.arrows)
+        colorArr = None
+        for line in range(3):
+            oneColor = np.tile(np.identity(3)[line, :], self.arrowLen)
+            colorArr = np.vstack((colorArr, oneColor)) if colorArr is not None else oneColor
+        self.vbo_arr_colors = create_qt_buffer(colorArr)
 
         vao = qt.QOpenGLVertexArrayObject()
         vao.create()
         vao.bind()
 
-        self.vbo_arrow.bind()
+        self.vbo_arrows.bind()
         gl.glEnableVertexAttribArray(0)
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)        
-        self.vbo_arrow.release()
+        gl.glVertexAttribPointer(0, 4, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        self.vbo_arrows.release()
 
         self.vbo_arr_colors.bind()
         gl.glEnableVertexAttribArray(1)
         gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)         
         self.vbo_arr_colors.release()
 
-        self.vbo_arr_rot.bind()
-        for i in range(4):  # A mat4 is treated as 4 vec4 attributes
-            gl.glEnableVertexAttribArray(2 + i)  # Locations: 2, 3, 4, 5
-            gl.glVertexAttribPointer(2 + i, 4, gl.GL_FLOAT, gl.GL_FALSE, 64,
-                                     int(i * 16))  # Offset for each column
-            gl.glVertexAttribDivisor(2 + i, 1)  # Set divisor to 1 for instancing        
-        self.vbo_arr_rot.release()
         vao.release()
         self.vao_arrow = vao
 
@@ -8003,7 +8057,6 @@ class CoordinateBox():
                 continue
             mMod = qt.QMatrix4x4()
             mMod.setToIdentity()
-
             mMod.translate(pos)
             mMod.translate(axrel[ic]+coordShift[0], ayrel[ic]+coordShift[1], 0)
             mMod.scale(aw[ic], ah[ic], 1)
@@ -8012,36 +8065,40 @@ class CoordinateBox():
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
             ch[0].release()
 
-    def render_local_axes(self, pvm, shader):
-#        oeIndex = int(is2ndXtal)
-#        oeOrientation = self.transMatrix[oeIndex]
-#        shader = self.shader_arrow
-#        shader.bind()
-#        shader = self.origShader
-#        shader.bind()
-#        self.vao_arrow.bind()
+    def render_local_axes(self, mProj, mView, mMod, oeOrientation, scale,
+                          trans, shader):
+        moe = mMod * oeOrientation
+        pvm = mProj * mView * moe
+        x = moe * qt.QVector4D(1, 0, 0, 0) 
+        y = moe * qt.QVector4D(0, 1, 0, 0)
+        z = moe * qt.QVector4D(0, 0, 1, 0)
+
+#        x.normalize()
+#        y.normalize()
+#        z.normalize()
         
-        shader.setUniformValue("pvm", pvm)
-      
-        gl.glDrawArraysInstanced(gl.GL_TRIANGLE_FAN, 0, self.arrowLen-1, 3)
-#
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-#        for iAx in range(3):
-#            color = np.array([0., 0., 0., 1.])
-#            color[iAx] = 1.
-#            colorV = qt.QVector4D(*color)
-#            modMatr = mMod*oeOrientation
-#            if iAx == 0:
-#                modMatr *= self.z2x
-#            elif iAx == 1:
-#                modMatr *= self.z2y
-#
-#            shader.setUniformValue("aColor", colorV)
-#            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
+        znew = qt.QVector3D.crossProduct(x.toVector3D(), y.toVector3D())
+        znew.normalize()
+#        print(z, znew)
+        z3 = z.toVector3D()
+        rotax = qt.QVector3D.crossProduct(znew, z3)
+        dotnorm = float(qt.QVector3D.dotProduct(znew, z3) / (znew.length()*z3.length()))
+#        print(dotnorm)
+        extraAngle = np.arccos(dotnorm)
+        extraRotation = qt.QMatrix4x4()
+        extraRotation.rotate(np.degrees(-extraAngle), rotax)
+#        shader.setUniformValue("pvm", mProj * mView * extraRotation * trans * oeOrientation)
+#        oePos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine()
+        shader.setUniformValue("pvm", mProj * mView * extraRotation * mMod*oeOrientation)
+        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
+        gl.glDrawArrays(gl.GL_LINES, 0, 2)
+        shader.setUniformValue("pvm", mProj * mView * mMod * oeOrientation)
+#        shader.setUniformValue("pvm", trans)
+        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen+1, self.arrowLen-1)
+        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen*2+1, self.arrowLen-1)
 
-#        self.vao_arrow.release()
-#        shader.release()
-
+        gl.glDrawArrays(gl.GL_LINES, self.arrowLen, 2)
+        gl.glDrawArrays(gl.GL_LINES, self.arrowLen*2, 2)
 
     def get_sans_font(self):
         fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Liberation Sans", "Sans-serif"]

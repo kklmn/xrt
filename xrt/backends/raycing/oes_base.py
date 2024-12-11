@@ -375,7 +375,7 @@ class OE(object):
             self._pitchInit = copy.copy(pitch)  # For glow auto-recognition
         else:  # also after auto-calculation
             self._pitchVal = pitch
-            self.update_orientation_quaternion()
+#            self.update_orientation_quaternion()
 
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
@@ -404,7 +404,7 @@ class OE(object):
     @roll.setter
     def roll(self, roll):
         self._roll = raycing.auto_units_angle(roll)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -415,7 +415,7 @@ class OE(object):
     @yaw.setter
     def yaw(self, yaw):
         self._yaw = raycing.auto_units_angle(yaw)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -426,7 +426,7 @@ class OE(object):
     @extraPitch.setter
     def extraPitch(self, extraPitch):
         self._extraPitch = raycing.auto_units_angle(extraPitch)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def extraRoll(self):
@@ -435,7 +435,7 @@ class OE(object):
     @extraRoll.setter
     def extraRoll(self, extraRoll):
         self._extraRoll = raycing.auto_units_angle(extraRoll)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def extraYaw(self):
@@ -444,7 +444,7 @@ class OE(object):
     @extraYaw.setter
     def extraYaw(self, extraYaw):
         self._extraYaw = raycing.auto_units_angle(extraYaw)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def positionRoll(self):
@@ -453,7 +453,7 @@ class OE(object):
     @positionRoll.setter
     def positionRoll(self, positionRoll):
         self._positionRoll = raycing.auto_units_angle(positionRoll)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -521,10 +521,10 @@ class OE(object):
         """Same as alpha.setter, left for compatibility"""
         self.alpha = alpha
 
-    def update_orientation_quaternion(self):
+    def get_orientation_quaternion(self):
         """Will be used with xrtGlow for fast orientation tracking"""
         try:  # Experimental
-            if all([hasattr(self, angle) for angle in ['pitch', 'roll', 'yaw'
+            if all([hasattr(self, angle) for angle in ['pitch', 'roll', 'yaw',
                     'extraPitch', 'extraRoll', 'extraYaw', 'positionRoll']]):
                 rotAx = {'x': self.pitch,
                          'y': self.roll+self.positionRoll,
@@ -532,16 +532,18 @@ class OE(object):
                 extraRotAx = {'x': self.extraPitch,
                               'y': self.extraRoll,
                               'z': self.extraYaw}
-                rotSeq = self.rotationSequence(slice(1, None, 2))
-                extraRotSeq = self.extraRotationSequence(slice(1, None, 2))
-                rotation = (scprot.from_euler(
-                        rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
-                extraRot = (scprot.from_euler(
+                rotSeq = self.rotationSequence[slice(1, None, 2)]
+                extraRotSeq = self.extraRotationSequence[slice(1, None, 2)]
+                rotation = scprot.from_euler(
+                        rotSeq, [rotAx[i] for i in rotSeq]).as_quat()
+                extraRot = scprot.from_euler(
                     extraRotSeq,
-                    [extraRotAx[i] for i in extraRotSeq])).as_quat()
-                self.orientationQuat = raycing.multiply_quats(rotation,
-                                                              extraRot)
+                    [extraRotAx[i] for i in extraRotSeq]).as_quat()
+                rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
+                extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
+                return raycing.multiply_quats(rotation, extraRot)
         except Exception as e:
+#            raise
             print(e)
 
     def _update_bounding_box(self):
@@ -2377,7 +2379,7 @@ class DCM(OE):
             self._braggInit = copy.copy(bragg)  # For glow auto-recognition
         else:
             self._braggVal = raycing.auto_units_angle(bragg)
-            self.update_orientation_quaternion()
+#            self.update_orientation_quaternion()
 
     @property
     def cryst1roll(self):
@@ -2386,7 +2388,7 @@ class DCM(OE):
     @cryst1roll.setter
     def cryst1roll(self, cryst1roll):
         self._cryst1roll = raycing.auto_units_angle(cryst1roll)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def cryst2roll(self):
@@ -2395,7 +2397,7 @@ class DCM(OE):
     @cryst2roll.setter
     def cryst2roll(self, cryst2roll):
         self._cryst2roll = raycing.auto_units_angle(cryst2roll)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def cryst2pitch(self):
@@ -2404,7 +2406,7 @@ class DCM(OE):
     @cryst2pitch.setter
     def cryst2pitch(self, cryst2pitch):
         self._cryst2pitch = raycing.auto_units_angle(cryst2pitch)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def cryst2finePitch(self):
@@ -2413,7 +2415,7 @@ class DCM(OE):
     @cryst2finePitch.setter
     def cryst2finePitch(self, cryst2finePitch):
         self._cryst2finePitch = raycing.auto_units_angle(cryst2finePitch)
-        self.update_orientation_quaternion()
+#        self.update_orientation_quaternion()
 
     @property
     def limPhysX2(self):
