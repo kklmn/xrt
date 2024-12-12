@@ -375,6 +375,9 @@ class BendingMagnet(SourceBase):
         bo.a /= norm
         bo.b /= norm
         bo.c /= norm
+        
+        bo.basis = np.identity(3)
+        
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
