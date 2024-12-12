@@ -532,8 +532,8 @@ class OE(object):
                 extraRotAx = {'x': self.extraPitch,
                               'y': self.extraRoll,
                               'z': self.extraYaw}
-                rotSeq = self.rotationSequence[slice(1, None, 2)]
-                extraRotSeq = self.extraRotationSequence[slice(1, None, 2)]
+                rotSeq = (self.rotationSequence[slice(1, None, 2)])[::-1]
+                extraRotSeq = (self.extraRotationSequence[slice(1, None, 2)])[::-1]
                 rotation = scprot.from_euler(
                         rotSeq, [rotAx[i] for i in rotSeq]).as_quat()
                 extraRot = scprot.from_euler(
@@ -541,7 +541,12 @@ class OE(object):
                     [extraRotAx[i] for i in extraRotSeq]).as_quat()
                 rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
                 extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
-                return raycing.multiply_quats(rotation, extraRot)
+                
+                orientationQ = raycing.multiply_quats(rotation, extraRot)
+                
+                new_norm = raycing.quat_vec_rotate(np.array([0, 0, 1]), rotation)
+               
+                return orientationQ
         except Exception as e:
 #            raise
             print(e)
@@ -1184,6 +1189,24 @@ class OE(object):
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
         lb.parentId = self.name
+
+        oq = self.get_orientation_quaternion()
+        globalNorm = np.array(raycing.quat_vec_rotate(np.array([0, 0, 1]), oq))
+        globalNorm /= np.linalg.norm(globalNorm)
+        print(self.name, "global norm", globalNorm)
+        if hasattr(beam, 'basis'):
+            newBasis = np.identity(3)
+            for line in range(3):
+                cmpt = beam.basis[line, :]
+                newcmpt = cmpt - 2*np.dot(cmpt, globalNorm)*globalNorm
+                newBasis[line, :] = newcmpt / np.linalg.norm(newcmpt)
+                
+            det = np.linalg.det(newBasis)
+            if det < 0:
+                newBasis[-1, :] *= -1
+            gb.basis = newBasis
+            print("beam new basis", gb.basis)
+
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(

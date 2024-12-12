@@ -128,12 +128,12 @@ def basis_rotation_q(xyz_start, xyz_end):
     orthogonal basis set
 
     """
-    U = np.array(xyz_start)
-    V = np.array(xyz_end)
+    U = np.array(xyz_start, dtype=float)
+    V = np.array(xyz_end, dtype=float)
 
     R = np.matmul(V, U.T)
 
-    tr = R[0, 0] + R[1, 1] + R[2, 2]
+    tr = np.trace(R)
 
     Q0 = lambda M, G: 0.25*G
     Q1 = lambda M, G: (M[2, 1]-M[1, 2])/G
@@ -1476,8 +1476,11 @@ class xrtGlow(qt.QWidget):
                            partial(self.centerEl, str(selectedItem.text())))
             menu.addAction('to Local',
                            partial(self.toLocal, str(selectedItem.text())))
+            menu.addAction('to Beam Local',
+                           partial(self.toBeamLocal, str(selectedItem.text())))
             menu.addAction('restore Global',
                            partial(self.toGlobal, str(selectedItem.text())))
+
             menu.exec_(self.oeTree.viewport().mapToGlobal(position))
         else:
             pass
@@ -1772,9 +1775,13 @@ class xrtGlow(qt.QWidget):
 #        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
 
         off0 = np.array(self.oesList[str(oeName)][2])
-        cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
-        off1 = self.customGlWidget.mModLocal * cOffset
-        self.customGlWidget.coordOffset = np.array([off1.x(), off1.y(), off1.z()])
+        # print("old offset", off0)
+        # cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
+        backtransl = qt.QMatrix4x4()
+        backtransl.translate(*off0)
+        off1 = self.customGlWidget.mModLocal * backtransl
+        # print("new offset", off1)
+        # self.customGlWidget.coordOffset = np.array([off1.x(), off1.y(), off1.z()])
 #        print(self.customGlWidget.coordOffset)
 
 
@@ -1792,8 +1799,9 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.mModLocal = oeToPlot.mesh3D.transMatrix[0].inverted()[0]
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
 #        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
-#        self.customGlWidget.tVec = np.float32([0, 0, 0])
+        self.customGlWidget.tVec = np.float32([0, 0, 0])
 #        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
     def toGlobal(self, oeName):
@@ -1802,8 +1810,31 @@ class xrtGlow(qt.QWidget):
         # self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
+        
 #        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+        self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
+
+    def toBeamLocal(self, oeName):
+        beam = self.customGlWidget.beamsDict[self.oesList[oeName][1]]
+        off0 = np.array(self.oesList[str(oeName)][2])
+        mTranslation = qt.QMatrix4x4()
+        mTranslation.translate(*off0)
+        self.customGlWidget.coordOffset = np.float32([0, 0, 0])
+        self.customGlWidget.tVec = np.float32([0, 0, 0])
+
+        if hasattr(beam, 'basis'):
+            print("new basis", beam.basis)
+            rotationQ = basis_rotation_q(np.identity(3), beam.basis.T)
+            print(rotationQ)
+            mRotation = qt.QMatrix4x4()
+            mRotation.rotate(qt.QQuaternion(*rotationQ))
+            posMatrix = mTranslation*mRotation
+
+            self.customGlWidget.mModLocal = posMatrix.inverted()[0]
+        self.customGlWidget.cBox.update_grid()
+        self.customGlWidget.glDraw()
+
 
     def updateCutoffFromQLE(self, editor):
         try:
@@ -6787,6 +6818,8 @@ class OEMesh3D():
                     [extraRotAx[i] for i in extraRotSeq])).as_quat()
             rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
             extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
+            
+            print(oe.name, "glow: rotation", rotation)
 
             # 1. Only for DCM - translate to 2nd crystal position
             m2ndXtalPos = qt.QMatrix4x4()
