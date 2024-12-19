@@ -3307,10 +3307,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
                 gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
-#            for oeuuid, oeLine in self.beamLine.oesDict.items():
-#                oeToPlot = oeLine[0]
-#            for oeString in self.oesToPlot:
-
             if self.enableBlending:
                 gl.glEnable(gl.GL_MULTISAMPLE)
                 gl.glEnable(gl.GL_BLEND)
@@ -3333,7 +3329,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeToPlot = self.oesList[oeString][0]
                 oeuuid = oeToPlot.uuid
 
-#                print(oeToPlot.name, oeToPlot.uuid)
                 if is_oe(oeToPlot) or is_aperture(oeToPlot):
                     is2ndXtalOpts = [False]
                     if is_dcm(oeToPlot):
@@ -3350,8 +3345,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                          is2ndXtal, isSelected=isSelected,
                                                          shader=self.shaderMesh)
                 elif is_source(oeToPlot):
-                    oeToPlot.mesh3D.render_magnets(self.mMod*self.mModLocal, self.mView, self.mProj,
-                                                         shader=self.shaderMag)
+                    if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                        isSelected = False
+                        if oeuuid in self.selectableOEs.values():
+                            oeNum = oeToPlot.mesh3D.stencilNum
+                            isSelected = oeNum == self.selectedOE
+                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
+                        oeToPlot.mesh3D.render_magnets(
+                                self.mMod*self.mModLocal, self.mView, self.mProj,
+                                isSelected=isSelected, shader=self.shaderMag)
 
 
             if not self.linesDepthTest:
@@ -3487,19 +3489,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.cBox.shader.bind()
             for ioe in range(self.segmentModel.rowCount() - 1):
-                if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or False:  # TODO: Add checkbox to control grid
+                if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or True:   # TODO: Add checkbox to control grid on screens
                     continue
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
                 oeString = str(ioeItem.text())
                 oeToPlot = self.oesList[oeString][0]
                 if is_screen(oeToPlot):
                     oeToPlot.mesh3D.grid_vbo['vertices'].bind()
-                    gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+                    gl.glVertexAttribPointer(
+                            0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
                     gl.glEnableVertexAttribArray(0)
                     oeOrientation = oeToPlot.mesh3D.transMatrix[0]
-                    self.cBox.shader.setUniformValue("model", self.mMod*oeOrientation*self.mModLocal)
+                    self.cBox.shader.setUniformValue(
+                            "model",
+                            self.mMod*oeOrientation*self.mModLocal)
                     self.cBox.shader.setUniformValue("view", self.mView)
-                    self.cBox.shader.setUniformValue("projection", self.mProj)
+                    self.cBox.shader.setUniformValue("projection",
+                                                     self.mProj)
 
                     self.cBox.shader.setUniformValue("lineOpacity", 0.3)
                     gl.glLineWidth(1.)
@@ -5478,12 +5484,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
                         oeToPlot.mesh3D.stencilNum = stencilNum
+                        print(oeToPlot.name, oeuuid, stencilNum)
             else:  # must be the source
                 if not hasattr(oeToPlot, 'mesh3D'):
                     oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
                 oeToPlot.mesh3D.prepare_magnets()
                 oeToPlot.mesh3D.isEnabled = True
-
+                if oeuuid not in self.selectableOEs.values():
+                    if len(self.selectableOEs):
+                        stencilNum = np.max(list(self.selectableOEs.keys()))+1
+                    else:
+                        stencilNum = 1
+                    self.selectableOEs[int(stencilNum)] = oeuuid
+                    oeToPlot.mesh3D.stencilNum = stencilNum
+                    print(oeToPlot.name, oeuuid, stencilNum)
 
 #        counter = 0
 #        for beamName, startBeam in self.beamsDict.items():
@@ -6649,7 +6663,7 @@ class OEMesh3D():
         }
         }
 
-      vec3 ambientLighting = DiffuseColor*0.6;
+      vec3 ambientLighting = DiffuseColor * vec3(frontMaterial.ambient);
 
       vec3 diffuseReflection = attenuation
         * vec3(light0.diffuse) * vec3(frontMaterial.diffuse) * DiffuseColor
@@ -6764,8 +6778,6 @@ class OEMesh3D():
 
     @staticmethod
     def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
-#        oe = self.oe
-
         if is_oe(oe):
             dx, dy, dz = 0, 0, 0
             extraAnglesSign = 1.  # only for pitch and yaw
@@ -6806,8 +6818,6 @@ class OEMesh3D():
                     [extraRotAx[i] for i in extraRotSeq])).as_quat()
             rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
             extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
-            
-            print(oe.name, "glow: rotation", rotation)
 
             # 1. Only for DCM - translate to 2nd crystal position
             m2ndXtalPos = qt.QMatrix4x4()
@@ -6831,14 +6841,7 @@ class OEMesh3D():
             mTranslation = qt.QMatrix4x4()
             mTranslation.translate(*oe.center)
 
-#            if isinstance(oe, roes.DCM):
-#                print(oe.name, m2ndXtalRot*mRotation, is2ndXtal)
-
             orientation =  mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
-            # matr3x3 = np.array(orientation.data()).reshape((4, 4), order='F')[:3, :3]
-            # quat = scprot.from_matrix(matr3x3).as_quat()
-            # quat = [quat[-1], quat[0], quat[1], quat[2]]
-            # print(oe.name, quat, oe.get_orientation_quaternion())
         elif is_screen(oe) or is_aperture(oe):  # Screens, Apertures
             bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
 
@@ -6860,7 +6863,6 @@ class OEMesh3D():
             orientation = posMatr
             
         return orientation
-                        
 
     def prepare_surface_mesh(self, is2ndXtal=False, updateMesh=False,
                               shader=None):
@@ -7356,7 +7358,7 @@ class OEMesh3D():
         shader.release()
         vao.release()
 
-    def render_magnets(self, mMod, mView, mProj, shader=None):
+    def render_magnets(self, mMod, mView, mProj, isSelected=False, shader=None):
         if shader is None:
             return
 
@@ -7377,8 +7379,7 @@ class OEMesh3D():
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
         mat = 'Si'
-#        ambient_in = ambient['selected'] if isSelected else ambient[mat]
-        ambient_in = ambient[mat]
+        ambient_in = ambient['selected'] if isSelected else ambient[mat]
         diffuse_in = diffuse[mat]
         specular_in = specular[mat]
         shininess_in = shininess[mat]
