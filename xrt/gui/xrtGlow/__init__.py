@@ -1773,25 +1773,11 @@ class xrtGlow(qt.QWidget):
 
     def centerEl(self, oeName):
 #        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
-
-        off0 = np.array(self.oesList[str(oeName)][2])
-        # print("old offset", off0)
-        # cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
-        backtransl = qt.QMatrix4x4()
-        backtransl.translate(*off0)
-        off1 = self.customGlWidget.mModLocal * backtransl
-        # print("new offset", off1)
-        # self.customGlWidget.coordOffset = np.array([off1.x(), off1.y(), off1.z()])
-#        print(self.customGlWidget.coordOffset)
-
-
-#        oeToPlot = self.oesList[oeName][0]
-#        trMat = qt.QMatrix4x4()
-#        translation = -1*np.array(oeToPlot.center)
-#        trMat.translate(*translation)
-#        self.customGlWidget.mModLocal = trMat
+        off0 = np.array(self.oesList[str(oeName)][2]) - np.array(self.customGlWidget.tmpOffset)
+        cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
+        off1 = self.customGlWidget.mModLocal * cOffset
+        self.customGlWidget.coordOffset = np.array([off1.x(), off1.y(), off1.z()])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
     def toLocal(self, oeName):
@@ -1800,6 +1786,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
 #        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
+        self.customGlWidget.tmpOffset = oeToPlot.center
 #        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
@@ -1807,6 +1794,7 @@ class xrtGlow(qt.QWidget):
     def toGlobal(self, oeName):
         oeToPlot = self.oesList[oeName][0]
         self.customGlWidget.mModLocal = qt.QMatrix4x4()
+        self.customGlWidget.tmpOffset = oeToPlot.center
         # self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
@@ -1834,7 +1822,6 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.mModLocal = posMatrix.inverted()[0]
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
-
 
     def updateCutoffFromQLE(self, editor):
         try:
@@ -2041,6 +2028,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.scalableFontWidth = 1
         self.useFontAA = False
         self.tVec = np.array([0., 0., 0.])
+        self.tmpOffset = np.array([0., 0., 0.])
 #        self.cameraTarget = [0., 0., 0.]
 #        self.cameraPos = np.float32([3.5, 0., 0.])
 #
@@ -2642,13 +2630,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 float(self.iMax if self.globalNorm else beam.iMax))
 
         if target and self.lineWidth > 0:
-            gl.glLineWidth(self.lineWidth)
+            gl.glLineWidth(min(self.lineWidth, 1.))
 
         gl.glDrawElements(gl.GL_POINTS,  arrLen,
                           gl.GL_UNSIGNED_INT, None)
 
         if target and self.lineProjectionWidth > 0:
-            gl.glLineWidth(self.lineProjectionWidth)
+            gl.glLineWidth(min(self.lineProjectionWidth, 1.))
 
         for dim in range(3):
             if self.projectionsVisibility[dim] > 0:
@@ -3328,8 +3316,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glEnable(gl.GL_BLEND)
                 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
     #            gl.glBlendFunc(gl.GL_SRC_ALPHA, GL_ONE)
-                gl.glEnable(gl.GL_POINT_SMOOTH)
-                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
+#                gl.glEnable(gl.GL_POINT_SMOOTH)
+#                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
 #            if self.linesDepthTest:
 #                gl.glDepthMask(gl.GL_FALSE)
@@ -6064,7 +6052,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 class Beam3D():
 
     vertex_source = '''
-    #version 430 core
+    #version 410 core
 
     layout(location = 0) in vec3 position_start;
     layout(location = 4) in vec3 position_end;
@@ -6108,7 +6096,7 @@ class Beam3D():
     '''
 
     geometry_source = '''
-    #version 430 core
+    #version 410 core
 
     layout(points) in;
     layout(line_strip, max_vertices = 2) out;
@@ -6208,7 +6196,7 @@ class Beam3D():
     '''
 
     fragment_source = '''
-    #version 430 core
+    #version 410 core
 
     in vec4 gs_out_color;
 
@@ -6221,7 +6209,7 @@ class Beam3D():
     '''
 
     vertex_source_point = '''
-    #version 430 core
+    #version 410 core
 
     layout(location = 0) in vec3 position_start;
     layout(location = 1) in float colorAxis;
@@ -6260,7 +6248,7 @@ class Beam3D():
     '''
 
     fragment_source_point = '''
-    #version 430 core
+    #version 410 core
 
     in vec4 vs_out_color;
 
@@ -6279,7 +6267,7 @@ class OEMesh3D():
     """Container for an optical element mesh"""
 
     vertex_source = '''
-    #version 430 core
+    #version 410 core
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec3 normals;
 
@@ -6307,7 +6295,7 @@ class OEMesh3D():
     '''
 
     fragment_source = '''
-    #version 430 core
+    #version 410 core
 
     in vec4 w_position;  // position of the vertex (and fragment) in world space
     in vec3 varyingNormalDirection;  // surface normal vector in world space
@@ -6437,7 +6425,7 @@ class OEMesh3D():
 
 
     vertex_source_flat = '''
-    #version 430 core
+    #version 410 core
 
     struct Material {
         vec3 ambient;
@@ -6503,7 +6491,7 @@ class OEMesh3D():
     '''
 
     fragment_source_flat = '''
-    #version 430 core
+    #version 410 core
 
     in vec4 color_out;
     in vec2 texUV;
@@ -6528,7 +6516,7 @@ class OEMesh3D():
     '''
 
     vertex_contour = '''
-    #version 430 core
+    #version 410 core
     layout(location = 0) in vec3 position;
 
     uniform mat4 model;
@@ -6542,7 +6530,7 @@ class OEMesh3D():
     '''
 
     fragment_contour = '''
-    #version 430 core
+    #version 410 core
     uniform vec4 cColor;
     out vec4 fragColor;
 
@@ -6553,7 +6541,7 @@ class OEMesh3D():
     '''
 
     vertex_magnet = """
-    #version 430 core
+    #version 410 core
     layout (location = 0) in vec3 inPosition;
     layout (location = 1) in vec3 inNormal;
     layout (location = 2) in vec3 instancePosition;
@@ -6584,7 +6572,7 @@ class OEMesh3D():
     """
 
     fragment_magnet = """
-    #version 430 core
+    #version 410 core
 
     in vec4 w_position;
     in vec3 varyingNormalDirection;
@@ -7409,7 +7397,7 @@ class OEMesh3D():
 class CoordinateBox():
 
     vertex_source = '''
-    #version 430 core
+    #version 410 core
     layout(location = 0) in vec3 position;
     uniform mat4 model;
     uniform mat4 view;
@@ -7422,7 +7410,7 @@ class CoordinateBox():
     '''
 
     fragment_source = '''
-    #version 430 core
+    #version 410 core
     uniform float lineOpacity;
     out vec4 fragColor;
     void main()
@@ -7432,7 +7420,7 @@ class CoordinateBox():
     '''
 
     orig_vertex_source = '''
-    #version 430 core
+    #version 410 core
 
     layout(location = 0) in vec4 position;
     layout(location = 1) in vec3 linecolor;
@@ -7453,7 +7441,7 @@ class CoordinateBox():
     '''
 
     orig_fragment_source = '''
-    #version 430 core
+    #version 410 core
     uniform float lineOpacity;
     in vec3 out_color;
     out vec4 fragColor;
@@ -7464,7 +7452,7 @@ class CoordinateBox():
     '''
 
     text_vertex_code = """
-    #version 430 core
+    #version 410 core
 
     in vec4 in_pos;
 
@@ -7481,7 +7469,7 @@ class CoordinateBox():
     """
 
     text_fragment_code = """
-    #version 430 core
+    #version 410 core
 
     in vec2 vUV;
 
@@ -7646,18 +7634,30 @@ class CoordinateBox():
     def make_frame(self, limits):
         back = np.array([[-limits[0], limits[1], -limits[2]],
                          [-limits[0], limits[1], limits[2]],
+                         [-limits[0], limits[1], limits[2]],
                          [-limits[0], -limits[1], limits[2]],
-                         [-limits[0], -limits[1], -limits[2]]])
+                         [-limits[0], -limits[1], limits[2]],
+                         [-limits[0], -limits[1], -limits[2]],
+                         [-limits[0], -limits[1], -limits[2]],
+                         [-limits[0], limits[1], -limits[2]]])
 
         side = np.array([[limits[0], -limits[1], -limits[2]],
                          [-limits[0], -limits[1], -limits[2]],
+                         [-limits[0], -limits[1], -limits[2]],
                          [-limits[0], -limits[1], limits[2]],
-                         [limits[0], -limits[1], limits[2]]])
+                         [-limits[0], -limits[1], limits[2]],
+                         [limits[0], -limits[1], limits[2]],
+                         [limits[0], -limits[1], limits[2]],
+                         [limits[0], -limits[1], -limits[2]]])
 
         bottom = np.array([[limits[0], -limits[1], -limits[2]],
                            [limits[0], limits[1], -limits[2]],
+                           [limits[0], limits[1], -limits[2]],
                            [-limits[0], limits[1], -limits[2]],
-                           [-limits[0], -limits[1], -limits[2]]])
+                           [-limits[0], limits[1], -limits[2]],
+                           [-limits[0], -limits[1], -limits[2]],
+                           [-limits[0], -limits[1], -limits[2]],
+                           [limits[0], -limits[1], -limits[2]]])
 
         back[:, 0] *= self.axPosModifier[0]
         side[:, 1] *= self.axPosModifier[1]
@@ -7975,13 +7975,13 @@ class CoordinateBox():
 
         self.vaoFrame.bind()
         self.shader.setUniformValue("lineOpacity", 0.75)
-        gl.glLineWidth(self.parent.cBoxLineWidth * 2)
-        gl.glDrawArrays(gl.GL_QUADS, 0, 12)
+        gl.glLineWidth(min(self.parent.cBoxLineWidth * 2, 1.))
+        gl.glDrawArrays(gl.GL_LINES, 0, 24)
         self.vaoFrame.release()
 
         self.vaoGrid.bind()
         self.shader.setUniformValue("lineOpacity", 0.5)
-        gl.glLineWidth(self.parent.cBoxLineWidth)
+        gl.glLineWidth(min(self.parent.cBoxLineWidth, 1.))
         gl.glDrawArrays(gl.GL_LINES, 0, self.gridLen)
         self.vaoGrid.release()
 
