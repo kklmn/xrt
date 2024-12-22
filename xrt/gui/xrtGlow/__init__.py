@@ -1511,6 +1511,7 @@ class xrtGlow(qt.QWidget):
             editor.setText("{0:.2f}".format(value))
 
     def glMenu(self, position):
+        glw = self.customGlWidget
         menu = qt.QMenu()
         subMenuF = menu.addMenu('File')
         for actText, actFunc in zip(['Export to image', 'Save scene geometry',
@@ -1525,9 +1526,9 @@ class xrtGlow(qt.QWidget):
         mAction = qt.QAction(self)
         mAction.setText("Show Virtual Screen")
         mAction.setCheckable(True)
-        mAction.setChecked(False if self.customGlWidget.virtScreen is None
+        mAction.setChecked(False if glw.virtScreen is None
                            else True)
-        mAction.triggered.connect(self.customGlWidget.toggleVScreen)
+        mAction.triggered.connect(glw.toggleVScreen)
         menu.addAction(mAction)
         for iAction, actCnt in enumerate(self.sceneControls):
             if 'Virtual Screen' not in actCnt.text():
@@ -1581,7 +1582,18 @@ class xrtGlow(qt.QWidget):
             mAction.triggered.connect(partial(self.setSceneParam, iAction))
             subMenuS.addAction(mAction)
         menu.addSeparator()
-
+        if glw.selectedOE in glw.selectableOEs:
+            oe = glw.uuidDict[glw.selectableOEs[int(glw.selectedOE)]]
+            oeName = str(oe.name)
+            menu.addAction('Center view at {}'.format(oeName),
+                           partial(self.centerEl, oeName))
+            menu.addAction('Transform to {} Local'.format(oeName),
+                           partial(self.toLocal, oeName))
+            menu.addAction('Transform to {} Beam Local'.format(oeName),
+                           partial(self.toBeamLocal, oeName))
+            menu.addAction('Restore Global at {}.center'.format(oeName),
+                           partial(self.toGlobal, oeName))
+        menu.addSeparator()
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
     def exportToImage(self):
@@ -2070,6 +2082,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.invertColors = False
         self.showHelp = False
         self.beamVAO = dict()
+        self.uuidDict = dict()
         self.selectableOEs = {}
         self.selectedOE = 0
         self.isColorAxReady = False
@@ -2198,12 +2211,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
             hsv_texture_data.tobytes()          # Raw data as bytes
         )
 
-    def build_histRGB(self, lb, gb, limits=None, isScreen=False, bins=[256, 256]):
-        good = (lb.state == 1) | (lb.state == 2)
+    def build_histRGB(self, beam, limits=None, isScreen=False, bins=[256, 256]):
+        good = (beam.state == 1) | (beam.state == 2)
         if isScreen:
-            x, y, z = lb.x[good], lb.z[good], lb.y[good]
+            x, y, z = beam.x[good], beam.z[good], beam.y[good]
         else:
-            x, y, z = lb.x[good], lb.y[good], lb.z[good]
+            x, y, z = beam.x[good], beam.y[good], beam.z[good]
 
         if limits is None:
             limits = np.array([[np.min(x), np.max(x)],
@@ -2212,11 +2225,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beamLimits = [limits[0, :], limits[1, :]]
         else:
             beamLimits = [limits[:, 1], limits[:, 0]]
-        print(f"{beamLimits=}")
 
-        flux = gb.Jss[good]+gb.Jpp[good]
+        flux = beam.Jss[good] + beam.Jpp[good]
 
-        cData = self.getColor(gb)[good]
+        cData = self.getColor(beam)[good]
         cData01 = ((cData - self.colorMin) * 0.85 /
                    (self.colorMax - self.colorMin)).reshape(-1, 1)
 
@@ -2227,7 +2239,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         hist2dRGB = np.zeros((bins[0], bins[1], 3), dtype=np.float64)
         hist2d = None
-        if len(lb.x[good]) > 0:
+        if len(beam.x[good]) > 0:
             for i in range(3):  # over RGB components
                 hist2dRGB[:, :, i], yedges, xedges = np.histogram2d(
                     y, x, bins=bins, range=beamLimits,
@@ -2235,7 +2247,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         hist2dRGB /= np.max(hist2dRGB)
         hist2dRGB = np.uint8(hist2dRGB*255)
-        print("numpy beamlimits:", beamLimits)
+
         return hist2d, hist2dRGB, limits
 
     def generate_hist_texture(self, oe, beam, is2ndXtal=False):
@@ -5466,6 +5478,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         for oeString in self.oesList:
             oeToPlot = self.oesList[oeString][0]
             oeuuid = oeToPlot.uuid
+            self.uuidDict[oeuuid] = oeToPlot
             if is_oe(oeToPlot) or is_screen(oeToPlot) or is_aperture(oeToPlot):
                 if not hasattr(oeToPlot, 'mesh3D'):
                     oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
@@ -5484,7 +5497,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
                         oeToPlot.mesh3D.stencilNum = stencilNum
-                        print(oeToPlot.name, oeuuid, stencilNum)
+#                        print(oeToPlot.name, oeuuid, stencilNum)
             else:  # must be the source
                 if not hasattr(oeToPlot, 'mesh3D'):
                     oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
@@ -5497,7 +5510,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         stencilNum = 1
                     self.selectableOEs[int(stencilNum)] = oeuuid
                     oeToPlot.mesh3D.stencilNum = stencilNum
-                    print(oeToPlot.name, oeuuid, stencilNum)
+#                    print(oeToPlot.name, oeuuid, stencilNum)
 
 #        counter = 0
 #        for beamName, startBeam in self.beamsDict.items():
@@ -6014,6 +6027,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.doneCurrent()
             self.glDraw()
         else:
+            if int(overOE) in self.selectableOEs:
+                oe = self.uuidDict[self.selectableOEs[int(overOE)]]
+                tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
+                        oe.name, *oe.center,
+                        np.degrees(oe.pitch + (oe.bragg if hasattr(oe, 'bragg') else 0)) if hasattr(oe, 'pitch') else 0,
+                        np.degrees(oe.roll+oe.positionRoll) if is_oe(oe) else 0,
+                        np.degrees(oe.yaw) if hasattr(oe, 'yaw') else 0)
+                qt.QToolTip.showText(mEvent.globalPos(), tooltipStr, self)
+            else:
+                qt.QToolTip.hideText()
             if overOE != self.selectedOE:
                 self.selectedOE = int(overOE)
                 self.doneCurrent()
