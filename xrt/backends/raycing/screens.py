@@ -163,7 +163,7 @@ class Screen(object):
         glo.z[:] = beam.z + path*beam.c
         return glo
 
-    def expose(self, beam=None, onlyPositivePath=False):
+    def expose(self, beam=None, onlyPositivePath=False, saveHist=False):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
         desired image.
@@ -207,6 +207,13 @@ class Screen(object):
         if self.compressZ:
             blo.z[:] *= self.compressZ
         raycing.append_to_flow(self.expose, [blo], inspect.currentframe())
+        if saveHist:
+            limitsIn = [self.limPhysX, self.limPhysY]
+            histShape = self.histShape
+            hist2d, hist2dRGB, limitsOut = raycing.build_hist(
+                    blo, limits=limitsIn, isScreen=True, shape=[256, 256],
+                    cDataFunc=None, cLimits=None)
+            self.image = hist2d
         return blo
 
     def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None, condition=None):
