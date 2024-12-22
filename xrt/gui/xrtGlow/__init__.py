@@ -48,7 +48,7 @@ from matplotlib import pyplot as plt
 # import inspect
 import re
 import copy
-# import time
+import time
 from scipy.spatial import Delaunay
 from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict
@@ -2104,6 +2104,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        self.glDraw()
 
     def init_shaders(self):
+        print("Compiling shaders")
         shaderBeam = qt.QOpenGLShaderProgram()
         shaderBeam.addShaderFromSourceCode(
                 qt.QOpenGLShader.Vertex, Beam3D.vertex_source)
@@ -2154,6 +2155,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print("Linking Error", str(shaderMag.log()))
             print('shaderMag: Failed to link dummy renderer shader!')
         self.shaderMag = shaderMag
+        print("Done")
 
     def init_coord_grid(self):
         self.cBox = CoordinateBox(self)
@@ -2191,8 +2193,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.cBox.origShader = origShader
         self.cBox.prepare_grid()
 #        self.cBox.prepare_arrows(0.25, 0.02, 20)
-        self.cBox.prepare_arrows(1, 0.25, 0.1, 13)
-
+#        self.cBox.prepare_arrows(1, 0.25, 0.1, 13)
 
 
     def generate_beam_texture(self, width):
@@ -2436,6 +2437,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         state = np.where((
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
+        
+#        gl.glGetError()
+#        self.makeCurrent()
 
         vbo = {}
         vbo['position'] = create_qt_buffer(data)
@@ -2449,7 +2453,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         vbo['indices'] = create_qt_buffer(goodRays.copy(), isIndex=True)
         vbo['goodLen'] = len(goodRays)
 #        print(len(goodRays))
-
+        gl.glGetError()
         vao = qt.QOpenGLVertexArrayObject()
         vao.create()
         vao.bind()
@@ -5409,17 +5413,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
 #        gl.glEnable(gl.GL_DEPTH_TEST)
 #        gl.glDepthFunc(gl.GL_LESS);
+        gl.glGetError()
         gl.glEnable(gl.GL_STENCIL_TEST)
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         gl.glEnable(gl.GL_MULTISAMPLE)
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glGetError()
 #        gl.glEnable(gl.GL_POINT_SMOOTH)
 #        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
-        self.init_coord_grid()  # We let coordBox have it's own shaders
         self.init_shaders()
+        gl.glGetError()
+        self.init_coord_grid()  # We let coordBox have it's own shaders
+        gl.glGetError()
         self.generate_beam_texture(512)
+        gl.glGetError()
+       
 
         self.iMax = -1e20
 
@@ -7511,7 +7521,7 @@ class CoordinateBox():
     """
 
 #    vertex_arrow = '''
-#    #version 430 core
+#    #version 410 core
 #
 #    layout(location = 0) in vec3 position;
 #
@@ -7524,7 +7534,7 @@ class CoordinateBox():
 #    '''
 #
 #    fragment_arrow = '''
-#    #version 430 core
+#    #version 410 core
 #
 #    uniform vec4 aColor;
 #    out vec4 fragColor;
