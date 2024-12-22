@@ -181,6 +181,8 @@ import importlib
 import json
 import xml.etree.ElementTree as ET
 
+from matplotlib.colors import hsv_to_rgb
+
 if sys.version_info < (3, 1):
     from inspect import getargspec
 else:
@@ -1120,6 +1122,63 @@ def run_process_from_file(beamLine):
             outDict[list(outArgStr)[0]] = outBeams
 
     return outDict
+
+
+def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
+                    cDataFunc=None, cLimits=None):
+    """This is a simplified standalone implementation of
+    multipro.do_hist2d()
+    cData is one of get_NNN methods or None. In the latter case the function
+    returns only intensity histogram
+    """
+    
+    good = (beam.state == 1) | (beam.state == 2)
+    if isScreen:
+        x, y, z = beam.x[good], beam.z[good], beam.y[good]
+    else:
+        x, y, z = beam.x[good], beam.y[good], beam.z[good]
+    goodlen = len(beam.x[good])
+    hist2dRGB=None
+    hist2d = np.zeros((shape[1], shape[0]), dtype=np.float64)
+
+    if limits is None and goodlen > 0:
+        limits = np.array([[np.min(x), np.max(x)],
+                           [np.min(y), np.max(y)],
+                           [np.min(z), np.max(z)]])
+
+    if goodlen > 0:
+        beamLimits = [limits[1], limits[0]] or None
+        flux = beam.Jss[good]+beam.Jpp[good]
+        hist2d, yedges, xedges = np.histogram2d(
+            y, x, bins=[shape[1],shape[0]], range=beamLimits, weights=flux)
+
+    if cDataFunc is not None:
+        hist2dRGB = np.zeros((shape[1], shape[0], 3), dtype=np.float64)
+        cData = cDataFunc(beam)[good]
+        if cLimits is None:
+            colorMin, colorMax = np.min(cData), np.max(cData)
+        else:
+            colorMin, colorMax = cLimits[0], cLimits[-1]
+        cData01 = ((cData - colorMin) * 0.85 /
+                   (colorMax - colorMin)).reshape(-1, 1)
+
+        cDataHSV = np.dstack(
+            (cData01, np.ones_like(cData01) * 0.85,
+             flux.reshape(-1, 1)))
+        cDataRGB = (hsv_to_rgb(cDataHSV)).reshape(-1, 3)
+
+        hist2dRGB = np.zeros((shape[0], shape[1], 3), dtype=np.float64)
+        hist2d = None
+        if len(beam.x[good]) > 0:
+            for i in range(3):  # over RGB components
+                hist2dRGB[:, :, i], yedges, xedges = np.histogram2d(
+                    y, x, bins=shape, range=beamLimits,
+                    weights=cDataRGB[:, i])
+
+        hist2dRGB /= np.max(hist2dRGB)
+        hist2dRGB = np.uint8(hist2dRGB*255)
+
+    return hist2d, hist2dRGB, limits
 
 
 class BeamLine(object):
