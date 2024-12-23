@@ -1802,9 +1802,8 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def toGlobal(self, oeName):
-        oeToPlot = self.oesList[oeName][0]
         self.customGlWidget.mModLocal = qt.QMatrix4x4()
-        self.customGlWidget.tmpOffset = oeToPlot.center
+        self.customGlWidget.tmpOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.cBox.update_grid()
@@ -1820,8 +1819,6 @@ class xrtGlow(qt.QWidget):
 
         if hasattr(beam, 'basis'):
             rotationQ = basis_rotation_q(np.identity(3), beam.basis.T)
-#            print("new basis", beam.basis)
-#            print(rotationQ)
             mRotation = qt.QMatrix4x4()
             mRotation.rotate(qt.QQuaternion(*rotationQ))
             posMatrix = mTranslation*mRotation
@@ -2010,6 +2007,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = 1.
         self.showLostRays = False
         self.showLocalAxes = False
+        self.arrowSize = [0.4, 0.05, 0.025, 13]  # length, tip length, tip R
 
         self.drawGrid = True
         self.fineGridEnabled = False
@@ -2056,6 +2054,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                      [0., 0., 1., 0.],
                                      [0., 0., 0., 1.]])
         self.textOrientation = [0.5, 0.5, 0.5, 0.5]
+        
         self.updateQuats()
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
@@ -2070,7 +2069,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.makeCurrent()
 
     def init_shaders(self):
-        print("Compiling shaders...", end='')
         shaderBeam = qt.QOpenGLShaderProgram()
         shaderBeam.addShaderFromSourceCode(
                 qt.QOpenGLShader.Vertex, Beam3D.vertex_source)
@@ -2121,7 +2119,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print("Linking Error", str(shaderMag.log()))
             print('shaderMag: Failed to link dummy renderer shader!')
         self.shaderMag = shaderMag
-        print(" Done!")
 
     def init_coord_grid(self):
         self.cBox = CoordinateBox(self)
@@ -2158,8 +2155,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print('Failed to link dummy renderer shader!')
         self.cBox.origShader = origShader
         self.cBox.prepare_grid()
-#        self.cBox.prepare_arrows(0.25, 0.02, 20)
-#        self.cBox.prepare_arrows(1, 0.25, 0.1, 13)
+        self.cBox.prepare_arrows(*self.arrowSize)  # in model space
 
     def generate_beam_texture(self, width):
         hsv_texture_data = generate_hsv_texture(width, s=1.0, v=1.0)
@@ -2565,7 +2561,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gridMask = [1.]*4
                 gridMask[dim] = 0.
                 gridProjection = [0.]*4
-                gridProjection[dim] = -self.aPos[dim]
+                gridProjection[dim] = -self.aPos[dim] *\
+                    self.cBox.axPosModifier[dim]
                 shader.setUniformValue(
                         "gridMask",
                         qt.QVector4D(*gridMask))
@@ -2705,6 +2702,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.mModScale.scale(*(self.scaleVec/self.maxLen))
             self.mModTrans.translate(*(self.tVec-self.coordOffset))
             self.mMod = self.mModScale*self.mModTrans
+            
+            mMMLoc = self.mMod * self.mModLocal
+
+            vpMat = self.mProj * self.mView * mMMLoc
 
             gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
@@ -2712,6 +2713,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if self.enableAA:
                 gl.glEnable(gl.GL_LINE_SMOOTH)
                 gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+                gl.glEnable(gl.GL_POLYGON_SMOOTH)
                 gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
             if self.enableBlending:
@@ -2751,7 +2753,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                                  0xff)
                             oeToPlot.mesh3D.render_surface(
-                                self.mMod*self.mModLocal, self.mView,
+                                mMMLoc, self.mView,
                                 self.mProj, is2ndXtal, isSelected=isSelected,
                                 shader=self.shaderMesh)
                 elif is_source(oeToPlot):
@@ -2764,7 +2766,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
                         oeToPlot.mesh3D.render_magnets(
-                            self.mMod*self.mModLocal, self.mView, self.mProj,
+                            mMMLoc, self.mView, self.mProj,
                             isSelected=isSelected, shader=self.shaderMag)
 
             if not self.linesDepthTest:
@@ -2791,7 +2793,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
                         oeToPlot.mesh3D.render_surface(
-                                self.mMod*self.mModLocal, self.mView,
+                                mMMLoc, self.mView,
                                 self.mProj, is2ndXtal, isSelected=isSelected,
                                 shader=self.shaderMesh)
 
@@ -2806,7 +2808,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
                 beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
                 if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
-                    self.render_beam(beam, self.mMod*self.mModLocal,
+                    self.render_beam(beam, mMMLoc,
                                      self.mView, self.mProj, target=None)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
@@ -2820,7 +2822,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if segmentItem0.checkState() == 2:
                             endBeam = self.beamsDict[
                                 self.oesList[str(segmentItem0.text())[3:]][1]]
-                            self.render_beam(beam, self.mMod*self.mModLocal,
+                            self.render_beam(beam, mMMLoc,
                                              self.mView, self.mProj,
                                              target=endBeam)
 
@@ -2836,13 +2838,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
             lineCounter = 0
             labelLines = None
             gl.glDisable(gl.GL_DEPTH_TEST)
+
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
                     ioeItem = self.segmentModel.child(ioe + 1, 0)
                     oeString = str(ioeItem.text())
                     oeToPlot = self.oesList[oeString][0]
-                    oeCenter = oeToPlot.center
-                    vpMat = self.mProj * self.mView*self.mMod*self.mModLocal
+                    oeCenter = self.oesList[oeString][2]
+#                    oeCenter = oeToPlot.center
                     alignment = "middle"
                     dx = 0.1
                     oeCenterStr = makeCenterStr(oeToPlot.center,
@@ -2905,27 +2908,29 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.llVBO.release()
                 self.cBox.shader.release()
 
-            # self.cBox.origShader.bind()
-            # self.cBox.vao_arrow.bind()
-            # self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
-            # gl.glLineWidth(self.cBoxLineWidth)
-            # for ioe in range(self.segmentModel.rowCount() - 1):
-            #     if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or False:  # TODO: Add checkbox to control grid
-            #         continue
-            #     ioeItem = self.segmentModel.child(ioe + 1, 0)
-            #     oeString = str(ioeItem.text())
-            #     oeToPlot = self.oesList[oeString][0]
-            #     is2ndXtalOpts = [False]
-            #     if is_dcm(oeToPlot):
-            #         is2ndXtalOpts.append(True)
+            if self.showLocalAxes:
+                self.cBox.origShader.bind()
+                self.cBox.vao_arrow.bind()
+                self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
+                gl.glLineWidth(min(self.cBoxLineWidth, 1.))
+                for ioe in range(self.segmentModel.rowCount() - 1):
+                    if self.segmentModel.child(ioe + 1, 2).checkState() != 2:  # TODO: Add checkbox to control grid
+                        continue
+                    ioeItem = self.segmentModel.child(ioe + 1, 0)
+                    oeString = str(ioeItem.text())
+                    oeToPlot = self.oesList[oeString][0]
+                    oeCenter = self.oesList[oeString][2]
+                    is2ndXtal = int(self.oesList[oeString][3])
 
-            #     for is2ndXtal in is2ndXtalOpts:
-            #         oeOrientation = oeToPlot.mesh3D.transMatrix[0]
-            #         self.cBox.render_local_axes(self.mProj, self.mView,
-            #                 self.mMod, oeOrientation, self.mModScale,
-            #                 self.mModTrans, self.cBox.origShader)
-            # self.cBox.vao_arrow.release()
-            # self.cBox.origShader.release()
+                    oePos = (mMMLoc*qt.QVector4D(*oeCenter,
+                                                1)).toVector3DAffine()
+                    oeNorm = oeToPlot.mesh3D.transMatrix[is2ndXtal]
+                    self.cBox.render_local_axes(
+                            mMMLoc*oeNorm, oePos, self.mView, self.mProj, 
+                            self.cBox.origShader,
+                            is_screen(oeToPlot) or is_aperture(oeToPlot))
+                self.cBox.vao_arrow.release()
+                self.cBox.origShader.release()
 
             self.cBox.shader.bind()
             self.cBox.shader.setUniformValue("lineColor", self.lineColor)
@@ -2973,47 +2978,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             else:
                 self.eCounter = 0
                 pass
-
-    def paintGL_old(self):
-
-        for dim in range(3):
-            for iAx in range(3):
-                self.axPosModifier[iAx] = (self.signs[iAx][2] if
-                                           self.signs[iAx][2] != 0 else 1)
-            if self.projectionsVisibility[dim] > 0:
-                if self.lineProjectionWidth > 0 and\
-                        self.lineProjectionOpacity > 0 and\
-                        self.verticesArray is not None:
-                    projectionRays = self.modelToWorld(
-                        np.copy(self.verticesArray))
-                    projectionRays[:, dim] =\
-                        -self.aPos[dim] * self.axPosModifier[dim]
-                    self.drawArrays(
-                        0, gl.GL_LINES, projectionRays, self.raysColor,
-                        self.lineProjectionOpacity, self.lineProjectionWidth)
-
-                if self.pointProjectionSize > 0 and\
-                        self.pointProjectionOpacity > 0:
-                    if self.footprintsArray is not None:
-                        projectionDots = self.modelToWorld(
-                            np.copy(self.footprintsArray))
-                        projectionDots[:, dim] =\
-                            -self.aPos[dim] * self.axPosModifier[dim]
-                        self.drawArrays(
-                            0, gl.GL_POINTS, projectionDots, self.dotsColor,
-                            self.pointProjectionOpacity,
-                            self.pointProjectionSize)
-
-                    if self.virtDotsArray is not None:
-                        projectionDots = self.modelToWorld(
-                            np.copy(self.virtDotsArray))
-                        projectionDots[:, dim] =\
-                            -self.aPos[dim] * self.axPosModifier[dim]
-                        self.drawArrays(
-                            0, gl.GL_POINTS, projectionDots,
-                            self.virtDotsColor,
-                            self.pointProjectionOpacity,
-                            self.pointProjectionSize)
 
     def quatMult(self, qf, qt):
         return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
@@ -3406,14 +3370,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glGetError()
 #        gl.glEnable(gl.GL_POINT_SMOOTH)
 #        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-
+        print("Compiling shaders...", end='')
         self.init_shaders()
         gl.glGetError()
         self.init_coord_grid()  # We let coordBox have it's own shaders
         gl.glGetError()
         self.generate_beam_texture(512)
         gl.glGetError()
-
+        print(" Done!")
         self.iMax = -1e20
 
         maxLen = 1.
@@ -5218,7 +5182,7 @@ class OEMesh3D():
 
         surfOpacity = 1.0
         if is_screen(self.oe):
-            surfOpacity = 0.5
+            surfOpacity = 0.75
         elif is_aperture(self.oe):
             xLimits, yLimits = self.xLimits, self.yLimits
 
@@ -5937,32 +5901,37 @@ class CoordinateBox():
             ch[0].release()
         return mMod*qt.QVector4D(1.0, 0.0, 0.0, 1.0)
 
-    def render_local_axes(self, mProj, mView, mMod, oeOrientation, scale,
-                          trans, shader):
-        moe = mMod * oeOrientation
-#        pvm = mProj * mView * moe
-        x = moe * qt.QVector4D(1, 0, 0, 0)
-        y = moe * qt.QVector4D(0, 1, 0, 0)
-        z = moe * qt.QVector4D(0, 0, 1, 0)
+    def render_local_axes(self, moe, trans, view, proj, shader, isScreen):
 
-        znew = qt.QVector3D.crossProduct(x.toVector3D(), y.toVector3D())
-        znew.normalize()
-        z3 = z.toVector3D()
-        rotax = qt.QVector3D.crossProduct(znew, z3)
-        dotnorm = float(qt.QVector3D.dotProduct(znew, z3) /
-                        (znew.length()*z3.length()))
-        extraAngle = np.arccos(dotnorm)
-        extraRotation = qt.QMatrix4x4()
-        extraRotation.rotate(np.degrees(-extraAngle), rotax)
+        moe_np = np.array(moe.data()).reshape((4, 4), order=('F'))
 
-        shader.setUniformValue(
-                "pvm", mProj * mView * extraRotation * mMod*oeOrientation)
+        if isScreen:
+            bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))            
+            x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
+            y = np.matmul(moe_np, np.array([0, -1, 0, 0]))[:-1]
+        else:
+            bStart = np.column_stack(([1, 0, 0], [0, 1, 0], [0, 0, 1]))
+            x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
+            y = np.matmul(moe_np, np.array([0, 1, 0, 0]))[:-1]
+
+        x = x / np.linalg.norm(x)
+        y = y / np.linalg.norm(y)
+        z = np.cross(x, y)
+        z = z / np.linalg.norm(z)
+
+        bEnd = np.column_stack((x, y, z))
+        rotationQ = basis_rotation_q(bStart, bEnd)
+
+        mRotation = qt.QMatrix4x4()
+        mRotation.translate(trans)
+        mRotation.rotate(qt.QQuaternion(*rotationQ))       
+        shader.setUniformValue("pvm", proj*view*mRotation)
+
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
-        gl.glDrawArrays(gl.GL_LINES, 0, 2)
-        shader.setUniformValue("pvm", mProj * mView * mMod * oeOrientation)
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen+1, self.arrowLen-1)
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen*2+1, self.arrowLen-1)
 
+        gl.glDrawArrays(gl.GL_LINES, 0, 2)
         gl.glDrawArrays(gl.GL_LINES, self.arrowLen, 2)
         gl.glDrawArrays(gl.GL_LINES, self.arrowLen*2, 2)
 
