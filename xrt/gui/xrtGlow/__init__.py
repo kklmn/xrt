@@ -2713,8 +2713,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if self.enableAA:
                 gl.glEnable(gl.GL_LINE_SMOOTH)
                 gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-                gl.glEnable(gl.GL_POLYGON_SMOOTH)
-                gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+#                gl.glEnable(gl.GL_POLYGON_SMOOTH)
+#                gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
             if self.enableBlending:
                 gl.glEnable(gl.GL_MULTISAMPLE)
@@ -2829,8 +2829,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.cBox.textShader.bind()
             self.cBox.vaoText.bind()
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glEnable(gl.GL_POLYGON_SMOOTH)
-            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+#            gl.glEnable(gl.GL_POLYGON_SMOOTH)
+#            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
             sclY = self.cBox.characters[124][1][1] * 0.04 *\
                 self.cBox.fontScale / float(self.viewPortGL[3])
@@ -5810,7 +5810,7 @@ class CoordinateBox():
         self.vaoText.bind()
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 #        gl.glEnable(gl.GL_POLYGON_SMOOTH)
-        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+#        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
         vpMat = projection*view
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
