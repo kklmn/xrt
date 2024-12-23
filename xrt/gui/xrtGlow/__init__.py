@@ -1810,7 +1810,7 @@ class xrtGlow(qt.QWidget):
         # self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-        
+
 #        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
@@ -2023,6 +2023,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.drawGrid = True
         self.fineGridEnabled = False
         self.showOeLabels = False
+        self.labelLines = None
         self.aPos = [0.9, 0.9, 0.9]
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
@@ -2066,7 +2067,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.mModAx = qt.QMatrix4x4()
         self.mModAx.setToIdentity()
-        
+
         self.mModLocal = qt.QMatrix4x4()
         self.mModLocal.setToIdentity()
 #        self.isEulerian = False
@@ -2437,7 +2438,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         state = np.where((
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
-        
+
 #        gl.glGetError()
 #        self.makeCurrent()
 
@@ -3295,6 +3296,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             [0.1, 0.1, 0.1, 1])
             gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
+    def setSceneColors(self):
+        if self.invertColors:
+            self.lineColor = qt.QVector3D(0.0, 0.0, 0.0)
+            self.bgColor = [1.0, 1.0, 1.0, 1.0]
+            self.textColor = qt.QVector3D(0.0, 0.0, 1.0)
+        else:
+            self.lineColor = qt.QVector3D(1.0, 1.0, 1.0)
+            self.bgColor = [0.0, 0.0, 0.0, 1.0]
+            self.textColor = qt.QVector3D(1.0, 1.0, 0.0)
+
     def paintGL(self):
 
         def makeCenterStr(centerList, prec):
@@ -3304,7 +3315,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             return retStr[:-2] + ')'
 
         try:
-            gl.glClearColor(0.0, 0.0, 0.0, 1.)
+            self.setSceneColors()
+            gl.glClearColor(*self.bgColor)
+
             gl.glClear(gl.GL_COLOR_BUFFER_BIT |
                        gl.GL_DEPTH_BUFFER_BIT |
                        gl.GL_STENCIL_BUFFER_BIT)
@@ -3327,7 +3340,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glEnable(gl.GL_MULTISAMPLE)
                 gl.glEnable(gl.GL_BLEND)
                 gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-    #            gl.glBlendFunc(gl.GL_SRC_ALPHA, GL_ONE)
 #                gl.glEnable(gl.GL_POINT_SMOOTH)
 #                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 
@@ -3336,6 +3348,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_TRUE)
             gl.glEnable(gl.GL_DEPTH_TEST)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 2).checkState() != 2:
@@ -3351,26 +3364,30 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         is2ndXtalOpts.append(True)
 
                     for is2ndXtal in is2ndXtalOpts:
-                        if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                        if (hasattr(oeToPlot, 'mesh3D') and
+                                oeToPlot.mesh3D.isEnabled):
                             isSelected = False
                             if oeuuid in self.selectableOEs.values():
                                 oeNum = oeToPlot.mesh3D.stencilNum
                                 isSelected = oeNum == self.selectedOE
-                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
-                            oeToPlot.mesh3D.render_surface(self.mMod*self.mModLocal, self.mView, self.mProj,
-                                                         is2ndXtal, isSelected=isSelected,
-                                                         shader=self.shaderMesh)
+                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                                 0xff)
+                            oeToPlot.mesh3D.render_surface(
+                                self.mMod*self.mModLocal, self.mView,
+                                self.mProj, is2ndXtal, isSelected=isSelected,
+                                shader=self.shaderMesh)
                 elif is_source(oeToPlot):
-                    if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                    if (hasattr(oeToPlot, 'mesh3D') and
+                            oeToPlot.mesh3D.isEnabled):
                         isSelected = False
                         if oeuuid in self.selectableOEs.values():
                             oeNum = oeToPlot.mesh3D.stencilNum
                             isSelected = oeNum == self.selectedOE
-                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
+                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                             0xff)
                         oeToPlot.mesh3D.render_magnets(
-                                self.mMod*self.mModLocal, self.mView, self.mProj,
-                                isSelected=isSelected, shader=self.shaderMag)
-
+                            self.mMod*self.mModLocal, self.mView, self.mProj,
+                            isSelected=isSelected, shader=self.shaderMag)
 
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
@@ -3387,16 +3404,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 if is_screen(oeToPlot):
                     is2ndXtal = False
-
-                    if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
+                    if (hasattr(oeToPlot, 'mesh3D') and
+                            oeToPlot.mesh3D.isEnabled):
                         isSelected = False
                         if oeuuid in self.selectableOEs.values():
                             oeNum = oeToPlot.mesh3D.stencilNum
                             isSelected = oeNum == self.selectedOE
-                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
-                        oeToPlot.mesh3D.render_surface(self.mMod*self.mModLocal, self.mView, self.mProj,
-                                                     is2ndXtal, isSelected=isSelected,
-                                                     shader=self.shaderMesh)
+                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                             0xff)
+                        oeToPlot.mesh3D.render_surface(
+                                self.mMod*self.mModLocal, self.mView,
+                                self.mProj, is2ndXtal, isSelected=isSelected,
+                                shader=self.shaderMesh)
 
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
 
@@ -3409,7 +3428,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 ioeItem = self.segmentModel.child(ioe + 1, 0)
                 beam = self.beamsDict[self.oesList[str(ioeItem.text())][1]]
                 if self.segmentModel.child(ioe + 1, 1).checkState() == 2:
-                    self.render_beam(beam, self.mMod*self.mModLocal, self.mView, self.mProj, target=None)
+                    self.render_beam(beam, self.mMod*self.mModLocal,
+                                     self.mView, self.mProj, target=None)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -3422,10 +3442,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if segmentItem0.checkState() == 2:
                             endBeam = self.beamsDict[
                                 self.oesList[str(segmentItem0.text())[3:]][1]]
-                            self.render_beam(beam, self.mMod*self.mModLocal, self.mView, self.mProj, target=endBeam)
-
-#            gl.glDisable(gl.GL_MULTISAMPLE)
-#            gl.glDisable(gl.GL_BLEND)
+                            self.render_beam(beam, self.mMod*self.mModLocal,
+                                             self.mView, self.mProj,
+                                             target=endBeam)
 
             self.cBox.textShader.bind()
             self.cBox.vaoText.bind()
@@ -3433,28 +3452,30 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_POLYGON_SMOOTH)
             gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
-            sclY = self.cBox.characters[124][1][1]*0.04*self.cBox.fontScale/float(self.viewPortGL[3])
-
+            sclY = self.cBox.characters[124][1][1] * 0.04 *\
+                self.cBox.fontScale / float(self.viewPortGL[3])
             labelBounds = []
+            lineCounter = 0
+            labelLines = None
             gl.glDisable(gl.GL_DEPTH_TEST)
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 3).checkState() == 2:
                     ioeItem = self.segmentModel.child(ioe + 1, 0)
                     oeString = str(ioeItem.text())
                     oeToPlot = self.oesList[oeString][0]
-#                    oeCenter = self.modelToWorld(
-#                            np.array(oeToPlot.center) - self.coordOffset)
                     oeCenter = oeToPlot.center
                     vpMat = self.mProj * self.mView*self.mMod*self.mModLocal
                     alignment = "middle"
-                    dx = 0.075
+                    dx = 0.1
                     oeCenterStr = makeCenterStr(oeToPlot.center,
                                                 self.labelCoordPrec)
                     oeLabel = '  {0}: {1}mm'.format(
                         oeString, oeCenterStr)
-#                    print(oeLabel)
-                    oePos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine()
-                    labelPos = qt.QVector3D(oePos.x(), oePos.y(), oePos.z()) + qt.QVector3D(dx, 0, 0)
+
+                    oePos = (vpMat*qt.QVector4D(*oeCenter,
+                                                1)).toVector3DAffine()
+                    lineHint = [oePos.x(), oePos.y(), oePos.z()]
+                    labelPos = qt.QVector3D(*lineHint) + qt.QVector3D(dx, 0, 0)
 
                     intersecting = True
                     fbCounter = 0
@@ -3463,23 +3484,48 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         labelYmax = labelYmin + sclY
                         for bmin, bmax in labelBounds:
                             if labelYmax > bmin and labelYmin < bmax:
-                                labelPos += qt.QVector3D(0, 1.5*sclY, 0)
+                                labelPos += qt.QVector3D(0, 2*sclY, 0)
                                 break
                             elif labelYmin > bmax and labelYmax < bmin:
-                                labelPos -= qt.QVector3D(0, 1.5*sclY, 0)
+                                labelPos -= qt.QVector3D(0, 2*sclY, 0)
                                 break
                         else:
                             intersecting = False
-                            labelBounds.append((labelPos.y(), labelPos.y() + sclY))
+                            labelBounds.append((labelPos.y(),
+                                                labelPos.y() + sclY))
                         fbCounter += 1
 
-
-                    self.cBox.render_text(labelPos, oeLabel, alignment=alignment,
-                                     scale=0.04*self.cBox.fontScale,
-                                     textColor=qt.QVector4D(1, 1, 0, 1))  # Yellow
-
+                    endPos = self.cBox.render_text(
+                        labelPos, oeLabel, alignment=alignment,
+                        scale=0.04*self.cBox.fontScale,
+                        textColor=self.textColor)
+                    labelLinesN = np.vstack(
+                        (np.array(lineHint),
+                         np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
+                         np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
+                         np.array([endPos.x(), labelPos.y()-sclY, 0.0])))
+                    labelLines = labelLinesN if labelLines is None else\
+                        np.vstack((labelLines, labelLinesN))
+                    lineCounter += 1
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
+
+            if labelLines is not None:
+                labelLines = np.float32(labelLines)
+                self.cBox.shader.bind()
+                self.cBox.shader.setUniformValue("lineOpacity", 0.85)
+                self.cBox.shader.setUniformValue("lineColor", self.textColor)
+                self.llVBO.bind()
+                self.llVBO.write(0, labelLines, labelLines.nbytes)
+                gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0,
+                                         None)
+                gl.glEnableVertexAttribArray(0)
+                self.cBox.shader.setUniformValue(
+                        "pvm", qt.QMatrix4x4())
+                gl.glLineWidth(min(self.cBoxLineWidth, 1.))
+                gl.glDrawArrays(gl.GL_LINES, 0, lineCounter*4)
+                self.llVBO.release()
+                self.cBox.shader.release()
 
             # self.cBox.origShader.bind()
             # self.cBox.vao_arrow.bind()
@@ -3504,6 +3550,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             # self.cBox.origShader.release()
 
             self.cBox.shader.bind()
+            self.cBox.shader.setUniformValue("lineColor", self.lineColor)
             for ioe in range(self.segmentModel.rowCount() - 1):
                 if self.segmentModel.child(ioe + 1, 2).checkState() != 2 or True:   # TODO: Add checkbox to control grid on screens
                     continue
@@ -5408,11 +5455,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        gl.glDisable(gl.GL_LINE_SMOOTH)
 
     def initializeGL(self):
-#        gl.glutInit()
-#        gl.glutInitDisplayMode(gl.GLUT_RGBA | gl.GLUT_DOUBLE | gl.GLUT_DEPTH)
-
-#        gl.glEnable(gl.GL_DEPTH_TEST)
-#        gl.glDepthFunc(gl.GL_LESS);
         gl.glGetError()
         gl.glEnable(gl.GL_STENCIL_TEST)
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
@@ -5429,7 +5471,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glGetError()
         self.generate_beam_texture(512)
         gl.glGetError()
-       
+
 
         self.iMax = -1e20
 
@@ -5484,6 +5526,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             maxLen = tmpMaxLen
         self.maxLen = maxLen
         self.newColorAxis = False
+
+        self.labelLines = np.zeros((len(self.oesList)*4, 3))
+        self.llVBO = create_qt_buffer(self.labelLines)
 
         for oeString in self.oesList:
             oeToPlot = self.oesList[oeString][0]
@@ -6894,7 +6939,7 @@ class OEMesh3D():
             posMatr = qt.QMatrix4x4()
             posMatr.translate(*oe.center)
             orientation = posMatr
-            
+
         return orientation
 
     def prepare_surface_mesh(self, is2ndXtal=False, updateMesh=False,
@@ -7264,7 +7309,7 @@ class OEMesh3D():
             pos_x = 0
             dy = n - 0.5*num if num > 1 else 0
             pos_y = period * dy
-            
+
             instancePositions[2*n] = (pos_x, pos_y, gap+0.5*self.mag_z_size)
             instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*self.mag_z_size)
             isEven = (n % 2) == 0
@@ -7378,8 +7423,6 @@ class OEMesh3D():
         if beamTexture is not None:
             beamTexture.bind()
 
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
         if self.isStl:
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, arrLen)  #
         else:
@@ -7427,29 +7470,29 @@ class OEMesh3D():
         shader.release()
 
 
-
 class CoordinateBox():
 
     vertex_source = '''
     #version 410 core
     layout(location = 0) in vec3 position;
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
+    uniform mat4 pvm;
+    //uniform mat4 model;
+    //uniform mat4 view;
+    //uniform mat4 projection;
     void main()
     {
-      //gl_Position = projection * model * vec4(position, 1.0);
-      gl_Position = projection * view * model * vec4(position, 1.0);
+      gl_Position = pvm * vec4(position, 1.0);
     }
     '''
 
     fragment_source = '''
     #version 410 core
     uniform float lineOpacity;
+    uniform vec3 lineColor;
     out vec4 fragColor;
     void main()
     {
-      fragColor = vec4(1.0, 1.0, 1.0, lineOpacity);
+      fragColor = vec4(lineColor, lineOpacity);
     }
     '''
 
@@ -7508,7 +7551,8 @@ class CoordinateBox():
     in vec2 vUV;
 
     uniform sampler2D u_texture;
-    uniform vec4 textColor;
+    uniform vec3 textColor;
+    uniform float textOpacity;
 
     out vec4 fragColor;
 
@@ -7516,7 +7560,7 @@ class CoordinateBox():
     {
         vec2 uv = vUV.xy;
         float text = texture(u_texture, uv).r;
-        fragColor = textColor * vec4(text, text, text, text);
+        fragColor = vec4(textColor, textOpacity) * vec4(text, text, text, text);
     }
     """
 
@@ -7549,10 +7593,8 @@ class CoordinateBox():
     def __init__(self, parent):
 
         self.parent = parent
-#        self.aPos = [0.9, 0.9, 0.9]
         self.axPosModifier = np.ones(3)
         self.perspectiveEnabled = True
-#        self.cBoxLineWidth = 1
         self.shader = None
         self.origShader = None
         self.textShader = None
@@ -7604,17 +7646,15 @@ class CoordinateBox():
         precisionLabels = []
         limits = np.array(limits)
 
-        frame = np.array([[limits[0, 0], limits[1, 0], 0],  #xmin, ymin
-                          [limits[0, 1], limits[1, 0], 0],  #xmax, ymin
-                          [limits[0, 1], limits[1, 0], 0],  #xmax, ymin
-                          [limits[0, 1], limits[1, 1], 0],  #xmax, ymax
-                          [limits[0, 1], limits[1, 1], 0],  #xmax, ymax
-                          [limits[0, 0], limits[1, 1], 0],  #xmin, ymax
-                          [limits[0, 0], limits[1, 1], 0],  #xmin, ymax
-                          [limits[0, 0], limits[1, 0], 0]  #xmin, ymin
+        frame = np.array([[limits[0, 0], limits[1, 0], 0],  # xmin, ymin
+                          [limits[0, 1], limits[1, 0], 0],  # xmax, ymin
+                          [limits[0, 1], limits[1, 0], 0],  # xmax, ymin
+                          [limits[0, 1], limits[1, 1], 0],  # xmax, ymax
+                          [limits[0, 1], limits[1, 1], 0],  # xmax, ymax
+                          [limits[0, 0], limits[1, 1], 0],  # xmin, ymax
+                          [limits[0, 0], limits[1, 1], 0],  # xmin, ymax
+                          [limits[0, 0], limits[1, 0], 0]  # xmin, ymin
                           ])
-
-#        frame_w = np.matmul(frame, model.T)
 
         axisGridArray = []
 
@@ -7622,7 +7662,6 @@ class CoordinateBox():
             # need to convert to model coordinates
             # dx1 will be a vector.
             dx1 = np.abs(limits[iAx][0] - limits[iAx][1]) * 1.1
-#            dx1 = np.abs(frame_w[:, iAx+1] - frame_w[:, iAx]) * 1.1
 
             order = np.floor(np.log10(dx1))
             m1 = dx1 * 10**-order
@@ -7648,7 +7687,8 @@ class CoordinateBox():
             precisionLabels.extend([np.ones_like(gridX)*decimalX])
             axisGridArray.extend([gridX])
 
-        xPoints, yPoints = np.array(axisGridArray[0]), np.array(axisGridArray[1])
+        xPoints = np.array(axisGridArray[0])
+        yPoints = np.array(axisGridArray[1])
         col_x = np.vstack((np.ones_like(yPoints)*limits[0][0],
                            np.ones_like(yPoints)*limits[0][1])).flatten('F')
 
@@ -7862,9 +7902,9 @@ class CoordinateBox():
 
         for rotation in [self.z2x, self.z2y]:
             m3rot = np.array(rotation.data()).reshape(4, 4)
-            self.arrows = np.vstack((self.arrows, 
+            self.arrows = np.vstack((self.arrows,
                                        np.matmul(coneVertices, m3rot.T)))
-        self.arrowLen = len(coneVertices)        
+        self.arrowLen = len(coneVertices)
         self.vbo_arrows = create_qt_buffer(self.arrows)
         colorArr = None
         for line in range(3):
@@ -7883,7 +7923,7 @@ class CoordinateBox():
 
         self.vbo_arr_colors.bind()
         gl.glEnableVertexAttribArray(1)
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)         
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
         self.vbo_arr_colors.release()
 
         vao.release()
@@ -8003,9 +8043,8 @@ class CoordinateBox():
         gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
 
         self.shader.bind()
-        self.shader.setUniformValue("model", model)
-        self.shader.setUniformValue("view", view)
-        self.shader.setUniformValue("projection", projection)
+        self.shader.setUniformValue("pvm", projection*view*model)
+        self.shader.setUniformValue("lineColor", self.parent.lineColor)
 
         self.vaoFrame.bind()
         self.shader.setUniformValue("lineOpacity", 0.75)
@@ -8015,6 +8054,7 @@ class CoordinateBox():
 
         self.vaoGrid.bind()
         self.shader.setUniformValue("lineOpacity", 0.5)
+
         gl.glLineWidth(min(self.parent.cBoxLineWidth, 1.))
         gl.glDrawArrays(gl.GL_LINES, 0, self.gridLen)
         self.vaoGrid.release()
@@ -8029,7 +8069,7 @@ class CoordinateBox():
 
 #        self.origShader.bind()
 #        self.origShader.setUniformValue("pvm", projection*view*model)
-#        
+#
 ##        self.origShader.setUniformValue("model", model)
 ##        self.origShader.setUniformValue("view", view)
 ##        self.origShader.setUniformValue("projection", projection)
@@ -8071,13 +8111,15 @@ class CoordinateBox():
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
                     tickPos = (vpMat*qt.QVector4D(*tick, 1)).toVector3DAffine()
                     self.render_text(tickPos, valueStr, alignment=alignment,
-                                     scale=0.04*self.fontScale)
+                                     scale=0.04*self.fontScale,
+                                     textColor=self.parent.lineColor)
         self.vaoText.release()
         self.textShader.release()
 
     def render_text(self, pos, text, alignment, scale, textColor=None):
-        tcValue = textColor or qt.QVector4D(1, 1, 1, 1)
+        tcValue = textColor or qt.QVector3D(1, 1, 1)
         self.textShader.setUniformValue("textColor", tcValue)
+        self.textShader.setUniformValue("textOpacity", 0.75)
         char_x = 0
         pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
         scaleX = scale/float(pView[2])
@@ -8131,19 +8173,20 @@ class CoordinateBox():
             self.textShader.setUniformValue("model", mMod)
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
             ch[0].release()
+        return mMod*qt.QVector4D(1.0, 0.0, 0.0, 1.0)
 
     def render_local_axes(self, mProj, mView, mMod, oeOrientation, scale,
                           trans, shader):
         moe = mMod * oeOrientation
         pvm = mProj * mView * moe
-        x = moe * qt.QVector4D(1, 0, 0, 0) 
+        x = moe * qt.QVector4D(1, 0, 0, 0)
         y = moe * qt.QVector4D(0, 1, 0, 0)
         z = moe * qt.QVector4D(0, 0, 1, 0)
 
 #        x.normalize()
 #        y.normalize()
 #        z.normalize()
-        
+
         znew = qt.QVector3D.crossProduct(x.toVector3D(), y.toVector3D())
         znew.normalize()
 #        print(z, znew)
@@ -8192,7 +8235,6 @@ class CoordinateBox():
 
         for c in range(128):
             face.load_char(chr(c), ft.FT_LOAD_RENDER)
-#            faceTexture.load_char(chr(c), ft.FT_LOAD_RENDER)
             glyph = face.glyph
             bitmap = glyph.bitmap
             size = bitmap.width, bitmap.rows
@@ -8203,8 +8245,6 @@ class CoordinateBox():
                            int(bitmap.width), int(bitmap.rows),
                            int(bitmap.width),
                            qt.QImage.Format_Grayscale8)
-#            if chr(c) == "0":
-#                qi.save("0.jpg")
             texObj = qt.QOpenGLTexture(qi)
             texObj.setMinificationFilter(qt.QOpenGLTexture.LinearMipMapLinear)
             texObj.setMagnificationFilter(qt.QOpenGLTexture.Linear)
