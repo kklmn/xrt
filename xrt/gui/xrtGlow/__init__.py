@@ -890,8 +890,6 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.beamsDict = arrayOfRays[1]
         self.customGlWidget.oesList = self.oesList
         self.customGlWidget.beamsToElements = self.beamsToElements
-#        self.customGlWidget.newColorAxis = True
-#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.changeColorAxis(None)
         self.customGlWidget.positionVScreen()
         self.customGlWidget.glDraw()
@@ -1784,22 +1782,22 @@ class xrtGlow(qt.QWidget):
         d.show()
 
     def centerEl(self, oeName):
-#        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
-        off0 = np.array(self.oesList[str(oeName)][2]) - np.array(self.customGlWidget.tmpOffset)
+        off0 = np.array(self.oesList[str(oeName)][2]) - np.array(
+            self.customGlWidget.tmpOffset)
         cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
         off1 = self.customGlWidget.mModLocal * cOffset
-        self.customGlWidget.coordOffset = np.array([off1.x(), off1.y(), off1.z()])
+        self.customGlWidget.coordOffset = np.array(
+            [off1.x(), off1.y(), off1.z()])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.glDraw()
 
     def toLocal(self, oeName):
         oeToPlot = self.oesList[oeName][0]
-        self.customGlWidget.mModLocal = oeToPlot.mesh3D.transMatrix[0].inverted()[0]
+        self.customGlWidget.mModLocal =\
+            oeToPlot.mesh3D.transMatrix[0].inverted()[0]
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
-#        self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.tmpOffset = oeToPlot.center
-#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
@@ -1807,11 +1805,8 @@ class xrtGlow(qt.QWidget):
         oeToPlot = self.oesList[oeName][0]
         self.customGlWidget.mModLocal = qt.QMatrix4x4()
         self.customGlWidget.tmpOffset = oeToPlot.center
-        # self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(self.oesList[str(oeName)][2])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-
-#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
@@ -1824,25 +1819,22 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.tVec = np.float32([0, 0, 0])
 
         if hasattr(beam, 'basis'):
-            print("new basis", beam.basis)
             rotationQ = basis_rotation_q(np.identity(3), beam.basis.T)
-            print(rotationQ)
+#            print("new basis", beam.basis)
+#            print(rotationQ)
             mRotation = qt.QMatrix4x4()
             mRotation.rotate(qt.QQuaternion(*rotationQ))
             posMatrix = mTranslation*mRotation
-
             self.customGlWidget.mModLocal = posMatrix.inverted()[0]
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
     def updateCutoffFromQLE(self, editor):
         try:
-            # editor = self.sender()
             value = float(re.sub(',', '.', str(editor.text())))
             extents = list(self.paletteWidget.span.extents)
             self.customGlWidget.cutoffI = np.float32(value)
             self.customGlWidget.updateCutOffI(np.float32(value))
-#            self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
             newExtents = (extents[0], extents[1],
                           self.customGlWidget.cutoffI, extents[3])
             self.paletteWidget.span.extents = newExtents
@@ -2018,7 +2010,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = 1.
         self.showLostRays = False
         self.showLocalAxes = False
-#        self.populateVerticesArray(modelRoot)
 
         self.drawGrid = True
         self.fineGridEnabled = False
@@ -2029,23 +2020,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.prevWC = np.float32([0, 0, 0])
         self.coordinateGridLineWidth = 1
         self.cBoxLineWidth = 1
-#        self.fixedFontType = 'GLUT_BITMAP_TIMES_ROMAN'
-        self.fixedFontType = 'GLUT_BITMAP_HELVETICA'
-        self.fixedFontSize = '12'  # 10, 12, 18 for Helvetica; 10, 24 for Roman
-        self.fixedFont = None #getattr(gl, "{0}_{1}".format(self.fixedFontType,
-#                                                      self.fixedFontSize))
         self.useScalableFont = False
         self.fontSize = 5
-        self.scalableFontType = None #gl.GLUT_STROKE_ROMAN
-#        self.scalableFontType = gl.GLUT_STROKE_MONO_ROMAN
+        self.scalableFontType = "Sans-serif"
         self.scalableFontWidth = 1
         self.useFontAA = False
         self.tVec = np.array([0., 0., 0.])
         self.tmpOffset = np.array([0., 0., 0.])
-#        self.cameraTarget = [0., 0., 0.]
-#        self.cameraPos = np.float32([3.5, 0., 0.])
-#
-#        self.upVec = qt.QVector3D(0., 0., 1.)
 
         self.cameraTarget = qt.QVector3D(0., 0., 0.)
         self.cameraPos = qt.QVector3D(3.5, 0, 0)
@@ -2070,7 +2051,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.mModLocal = qt.QMatrix4x4()
         self.mModLocal.setToIdentity()
-#        self.isEulerian = False
 
         self.rotations = np.float32([[0., 1., 0., 0.],
                                      [0., 0., 1., 0.],
@@ -2089,23 +2069,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.isColorAxReady = False
         self.makeCurrent()
 
-#        self.isEulerian = False
-#        self.rotations = np.float32([[0., 1., 0., 0.],
-#                                     [0., 0., 1., 0.],
-#                                     [0., 0., 0., 1.]])
-#        self.textOrientation = [0.5, 0.5, 0.5, 0.5]
-#        self.updateQuats()
-#        pModelT = np.identity(4)
-#        self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
-#        self.signs = np.ones_like(pModelT)
-#        self.invertColors = False
-#        self.showHelp = False
-#        self.selectableOEs = {}
-#        self.selectedOE = 0
-#        self.glDraw()
-
     def init_shaders(self):
-        print("Compiling shaders")
+        print("Compiling shaders...", end='')
         shaderBeam = qt.QOpenGLShaderProgram()
         shaderBeam.addShaderFromSourceCode(
                 qt.QOpenGLShader.Vertex, Beam3D.vertex_source)
@@ -2156,7 +2121,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print("Linking Error", str(shaderMag.log()))
             print('shaderMag: Failed to link dummy renderer shader!')
         self.shaderMag = shaderMag
-        print("Done")
+        print(" Done!")
 
     def init_coord_grid(self):
         self.cBox = CoordinateBox(self)
@@ -2196,7 +2161,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        self.cBox.prepare_arrows(0.25, 0.02, 20)
 #        self.cBox.prepare_arrows(1, 0.25, 0.1, 13)
 
-
     def generate_beam_texture(self, width):
         hsv_texture_data = generate_hsv_texture(width, s=1.0, v=1.0)
 
@@ -2213,7 +2177,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             hsv_texture_data.tobytes()          # Raw data as bytes
         )
 
-    def build_histRGB(self, beam, limits=None, isScreen=False, bins=[256, 256]):
+    def build_histRGB(self, beam, limits=None, isScreen=False,
+                      bins=[256, 256]):
         good = (beam.state == 1) | (beam.state == 2)
         if isScreen:
             x, y, z = beam.x[good], beam.z[good], beam.y[good]
@@ -2255,7 +2220,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def generate_hist_texture(self, oe, beam, is2ndXtal=False):
         nsIndex = int(is2ndXtal)
         if not hasattr(oe, 'mesh3D'):
-#            print("No 3d mesh, no need to generate historgram")
             return
         meshObj = oe.mesh3D
         lb = rsources.Beam(copyFrom=beam)
@@ -2275,7 +2239,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def calculate_fp_hist(self, beam, width, height):
 
-        good = (beam.state == 1) # | (beam.state == 2)
+        good = (beam.state == 1)  # | (beam.state == 2)
         xmin, xmax = np.min(beam.x[good]), np.max(beam.x[good])
         ymin, ymax = np.min(beam.y[good]), np.max(beam.y[good])
 
@@ -2299,43 +2263,47 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         beam.vbo['position'].bind()
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 0,
-                            beam.vbo['position'].bufferId())  # 0 is location for position
+                            beam.vbo['position'].bufferId())  # 0  position
 
         beam.vbo['color'].bind()
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 1,
-                            beam.vbo['color'].bufferId())  # 1 is location for color
+                            beam.vbo['color'].bufferId())  # 1  color
 
         beam.vbo['state'].bind()
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 2,
-                            beam.vbo['state'].bufferId())  # 0 is location for state
+                            beam.vbo['state'].bufferId())  # 0  state
 
         beam.vbo['intensity'].bind()
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 3,
-                            beam.vbo['intensity'].bufferId())  # 0 is location for intensity
+                            beam.vbo['intensity'].bufferId())  # 3  intensity
 
         red_buffer = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, red_buffer)
-        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, red_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
-        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 4, red_buffer)  # Binding = 4
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, red_data.nbytes,
+                        None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 4, red_buffer)
 
         green_buffer = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, green_buffer)
-        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, green_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
-        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 5, green_buffer)  # Binding = 5
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, green_data.nbytes,
+                        None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 5, green_buffer)
 
         blue_buffer = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, blue_buffer)
-        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, blue_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
-        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 6, blue_buffer)  # Binding = 6
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, blue_data.nbytes,
+                        None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 6, blue_buffer)
 
         ind_buffer = gl.glGenBuffers(1)
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, ind_buffer)
-        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, ind_data.nbytes, None, gl.GL_DYNAMIC_DRAW)
-        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 7, ind_buffer)  # Binding = 6
+        gl.glBufferData(gl.GL_SHADER_STORAGE_BUFFER, ind_data.nbytes,
+                        None, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 7, ind_buffer)
 
         shader.setUniformValue("numBins", qt.QVector2D(width, height))
         shader.setUniformValue(
-                    "bounds", qt.QVector4D(xmin, ymin, xmax, ymax))  # [[xmin, ymin], [xmax, ymax]]
+                    "bounds", qt.QVector4D(xmin, ymin, xmax, ymax))
         shader.setUniformValue(
                     "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
         shader.setUniformValue(
@@ -2345,138 +2313,101 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if self.beamTexture is not None:
             self.beamTexture.bind(0)
             shader.setUniformValue("hsvTexture", 0)
-        print("xmin, ymin, xmax, ymax", xmin, ymin, xmax, ymax)
-
-#        gl.glBindImageTexture(1, histTexture.textureId(), 0, gl.GL_FALSE, 0,
-#                              gl.GL_WRITE_ONLY, gl.GL_RGB32F)  # we need this to calculate colors
 
         num_vertices = len(beam.x)
         workgroup_size = 32
         num_workgroups = (num_vertices + workgroup_size - 1) // workgroup_size
-#        print("3")
+
         gl.glDispatchCompute(num_workgroups, 1, 1)
-#        print("4")
-        gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT)  # Ensure completion
-#        print("5")
 
-
-
-#        gl.glGetTexImage(gl.GL_TEXTURE_2D, 0, gl.GL_RGB, gl.GL_FLOAT, data)
-#        hist2dRGB /= np.max(hist2dRGB)
-#        hist2dRGB = np.uint8(hist2dRGB*255)
+        gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT)
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, red_buffer)
-#        print("06")
-        red_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, red_data.nbytes)
-#        print("6")
-        red_data = np.frombuffer(red_result, dtype=np.uint32).reshape((width, height))
+        red_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0,
+                                           red_data.nbytes)
+        red_data = np.frombuffer(red_result, dtype=np.uint32).reshape(
+                (width, height))
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 4, 0)
         gl.glDeleteBuffers(1, [red_buffer])
 
         # Read back GreenBuffer
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, green_buffer)
-        green_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, green_data.nbytes)
-#        print("7")
-        green_data = np.frombuffer(green_result, dtype=np.uint32).reshape((width, height))
+        green_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0,
+                                             green_data.nbytes)
+        green_data = np.frombuffer(green_result, dtype=np.uint32).reshape(
+                (width, height))
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 5, 0)
         gl.glDeleteBuffers(1, [green_buffer])
 #        # Read back BlueBuffer
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, blue_buffer)
-        blue_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, blue_data.nbytes)
-#        print("8")
-        blue_data = np.frombuffer(blue_result, dtype=np.uint32).reshape((width, height))
+        blue_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0,
+                                            blue_data.nbytes)
+        blue_data = np.frombuffer(blue_result, dtype=np.uint32).reshape(
+                (width, height))
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 6, 0)
         gl.glDeleteBuffers(1, [blue_buffer])
 
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, ind_buffer)
-        ind_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0, ind_data.nbytes)
-        print("8")
-        ind_data = np.squeeze(np.frombuffer(ind_result, dtype=np.uint32)) #.reshape((width, height))
+        ind_result = gl.glGetBufferSubData(gl.GL_SHADER_STORAGE_BUFFER, 0,
+                                           ind_data.nbytes)
+        ind_data = np.squeeze(np.frombuffer(ind_result, dtype=np.uint32))
         gl.glBindBuffer(gl.GL_SHADER_STORAGE_BUFFER, 0)
         gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 7, 0)
         gl.glDeleteBuffers(1, [ind_buffer])
 
         beam.vbo['position'].release()
-#        beam.vbo['color'].release()
-#        beam.vbo['state'].release()
-#        beam.vbo['intensity'].release()
         shader.release()
-#        data = np.float64(np.dstack((red_data, green_data, blue_data)))
         data[:, :, 0] = np.float32(red_data)
         data[:, :, 1] = np.float32(green_data)
         data[:, :, 2] = np.float32(blue_data)
         data = np.sum(data, axis=2)
-
-#        print(np.max(data))
         data /= np.max(data)
-#        print(np.max(data))
         data = np.uint8(data*255)
-#        print("SUM", np.sum(data))
-#        nmax = 6
-#        print(good[0:nmax])
-#        print(np.dstack((beam.x[0:nmax], beam.y[0:nmax], beam.z[0:nmax])))
-#        print(xmin, ymin, xmax, ymax)
-#        print(np.dstack(((beam.x[0:nmax]-xmin)/(xmax-xmin),
-#                         (beam.y[0:nmax]-ymin)/(ymax-ymin),
-#                          beam.z[0:nmax])))
-#        data = np.dstack((red_data[0:nmax], green_data[0:nmax], blue_data[0:nmax]))
-#        data = np.dstack((red_data, green_data, blue_data))
-#        print(f'{data=}', data.shape)
-
-
-#        _, cpudata, _ = self.build_histRGB(beam, beam)
-#        print(f'{cpudata=}')
         return data, ind_data
 
     def init_beam_footprint(self, beam, oe=None, is2ndXtal=None):
-
-#        data = np.float32(np.vstack((beam.x, beam.y, beam.z)).T).copy()
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColor(beam).copy()
         state = np.where((
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
 
-#        gl.glGetError()
-#        self.makeCurrent()
-
         vbo = {}
         vbo['position'] = create_qt_buffer(data)
         vbo['color'] = create_qt_buffer(dataColor)
         vbo['state'] = create_qt_buffer(state)
         vbo['intensity'] = create_qt_buffer(intensity)
-        goodRays = np.where(((state > 0) & (intensity/self.iMax > self.cutoffI)))[0]
-#        if oe is None:
-#            oe = self.beamLine.oesDict[beam.parentId][0]
+        goodRays = np.where(((state > 0) & (intensity/self.iMax >
+                             self.cutoffI)))[0]
 
         vbo['indices'] = create_qt_buffer(goodRays.copy(), isIndex=True)
         vbo['goodLen'] = len(goodRays)
-#        print(len(goodRays))
+
         gl.glGetError()
         vao = qt.QOpenGLVertexArrayObject()
         vao.create()
         vao.bind()
 
         vbo['position'].bind()
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 0: position
-        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(0)  # Attribute 0: position
         vbo['position'].release()
 
         vbo['color'].bind()
-        gl.glVertexAttribPointer(1, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 1: colorAxis
-        gl.glEnableVertexAttribArray(1)
+        gl.glVertexAttribPointer(1, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(1)  # Attribute 1: colorAxis
         vbo['color'].release()
 
         vbo['state'].bind()
-        gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 2: state
-        gl.glEnableVertexAttribArray(2)
+        gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(2)  # Attribute 2: state
         vbo['state'].release()
 
         vbo['intensity'].bind()
-        gl.glVertexAttribPointer(3, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)  # Attribute 3: intensity
-        gl.glEnableVertexAttribArray(3)
+        gl.glVertexAttribPointer(3, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(3)  # Attribute 3: intensity
         vbo['intensity'].release()
 
         vao.release()
@@ -2487,7 +2418,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beam.vao = vao
 
     def change_beam_colorax(self):
-#        print(self.newColorAxis)
         if self.newColorAxis:
             newColorMax = -1e20
             newColorMin = 1e20
@@ -2499,7 +2429,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if not hasattr(beam, 'vbo'):
                 # 3D beam object not initialized
                 continue
-#            print(self.getColor)
             colorax = np.float32(self.getColor(beam))
             good = (beam.state == 1) | (beam.state == 2)
 
@@ -2528,15 +2457,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             else:
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
-#        print(self.colorMin, self.colorMax)
-
-#        hue = (self.colorMin - self.colorMin)/(self.colorMax - self.colorMin)
-#        nrange = np.array([n*64 for n in range(8)])
-#        print([(n, self.hsvTex[n, :]/255.) for n in nrange])
-#        print([(n, mpl.colors.hsv_to_rgb((n/511, 1, 1))) for n in nrange])
-
-#        print()
-
 
         if False:  # Updating textures with histograms
             for oeuuid, oeLine in self.beamLine.oesDict.items():
@@ -2571,15 +2491,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 # 3D beam object not initialized
                 continue
             intensity = np.float32(beam.Jss+beam.Jpp)
-            goodRays = np.uint32(np.where((((beam.state == 1) | (beam.state == 2)) & (intensity/self.iMax > self.cutoffI)))[0])
+            goodRays = np.uint32(np.where(((
+                    (beam.state == 1) | (beam.state == 2)) &
+                    (intensity/self.iMax > self.cutoffI)))[0])
             beam.vbo['goodLen'] = len(goodRays)
 
             beam.vbo['indices'].bind()
             beam.vbo['indices'].write(0, goodRays, goodRays.nbytes)
-#            beam.vao.bind()
-#            beam.vbo['color'].write(0, colorax, colorax.nbytes)
             beam.vbo['indices'].release()
-
 
     def render_beam(self, beam, model, view, projection, target=None):
         shader = self.shaderBeam if target else self.shaderFootprint
@@ -2592,22 +2511,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         shader.bind()
         beam.vao.bind()
 
-#        oeIn = self.beamLine.oesDict[beam.parentId][0]
-
         if target is not None:
-#            oeTarget = self.beamLine.oesDict[target.parentId][0]
             target.vbo['position'].bind()
             gl.glVertexAttribPointer(4, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
             gl.glEnableVertexAttribArray(4)
-#            target.vbo['color'].bind()
-#            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-#            gl.glEnableVertexAttribArray(1)
-
-#            target.vbo['indices'].bind()
-#            arrLen = target.vbo['goodLen']
-#            print("Rendering beam from {} to {}".format(oeIn.name, oeTarget.name))
-#            print(arrLen)
-#        else:
 
         beam.vbo['indices'].bind()
         arrLen = beam.vbo['goodLen']
@@ -2626,13 +2533,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         mPV = projection*view
 
         shader.setUniformValue("model", model)
-#        shader.setUniformValue("view", view)
-#        shader.setUniformValue("projection", projection)
         shader.setUniformValue("mPV", mPV)
 
         shader.setUniformValue(
                     "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
-#        print(self.colorMin, self.colorMax)
         shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
         shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
 
@@ -2641,7 +2545,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 float(self.pointSize if target is None else self.lineWidth))
         shader.setUniformValue(
                 "opacity",
-                float(self.pointOpacity if target is None else self.lineOpacity))
+                float(self.pointOpacity if target is None else
+                      self.lineOpacity))
         shader.setUniformValue(
                 "iMax",
                 float(self.iMax if self.globalNorm else beam.iMax))
@@ -2669,25 +2574,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         qt.QVector4D(*gridProjection))
                 shader.setUniformValue(
                         "pointSize",
-                        float(self.pointProjectionSize if target is None else self.lineProjectionWidth))
+                        float(self.pointProjectionSize if target is None
+                              else self.lineProjectionWidth))
                 shader.setUniformValue(
                         "opacity",
-                        float(self.pointProjectionOpacity if target is None else self.lineProjectionOpacity))
+                        float(self.pointProjectionOpacity if target is None
+                              else self.lineProjectionOpacity))
 
                 gl.glDrawElements(gl.GL_POINTS,  arrLen,
                                   gl.GL_UNSIGNED_INT, None)
 
-
         if target:
             target.vbo['position'].release()
-#            target.vbo['indices'].release()
 
         beam.vao.release()
         beam.vbo['indices'].release()
         shader.release()
         if self.beamTexture is not None:
             self.beamTexture.release()
-
 
     def glDraw(self):
         self.update()
@@ -2751,373 +2655,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.lineWidth = lWidth
         self.glDraw()
 
-    def populateVerticesOnly(self, segmentsModelRoot):
-
-        if segmentsModelRoot is None:
-            return
-        self.segmentModel = segmentsModelRoot
-#        return
-        # signal = self.QookSignal
-        self.verticesArray = None
-        self.footprintsArray = None
-        self.oesToPlot = []
-        self.labelsToPlot = []
-        self.footprints = dict()
-        colorsRays = None
-        alphaRays = None
-        colorsDots = None
-        alphaDots = None
-        globalColorsDots = None
-        globalColorsRays = None
-
-        verticesArrayLost = None
-        colorsRaysLost = None
-        footprintsArrayLost = None
-        colorsDotsLost = None
-
-        return
-        maxLen = 1.
-        tmpMax = -1.0e12 * np.ones(3)
-        tmpMin = -1. * tmpMax
-
-        if self.newColorAxis:
-            newColorMax = -1e20
-            newColorMin = 1e20
-            if self.selColorMin is None:
-                self.selColorMin = newColorMin
-            if self.selColorMax is None:
-                self.selColorMax = newColorMax
-        else:
-            newColorMax = self.colorMax
-            newColorMin = self.colorMin
-
-#        totalOEs = range(segmentsModelRoot.rowCount() - 2)
-        for ioe in range(segmentsModelRoot.rowCount() - 1):
-            ioeItem = segmentsModelRoot.child(ioe + 1, 0)
-#            try:
-#                if signal is not None:
-#                    signalStr = "Plotting beams for {}, %p% done.".format(
-#                        str(ioeItem.text()))
-#                    signal.emit((float(ioe) / float(totalOEs),
-#                                 signalStr))
-#            except:
-#                pass
-            if segmentsModelRoot.child(ioe + 1, 2).checkState() == 2:
-                self.oesToPlot.append(str(ioeItem.text()))
-                self.footprints[str(ioeItem.text())] = None
-            if segmentsModelRoot.child(ioe + 1, 3).checkState() == 2:
-                self.labelsToPlot.append(str(ioeItem.text()))
-
-
-            try:
-                startBeam = self.beamsDict[
-                    self.oesList[str(ioeItem.text())][1]]
-#                lostNum = self.oesList[str(ioeItem.text())][0].lostNum
-                # good = startBeam.state > 0
-                good = (startBeam.state == 1) | (startBeam.state == 2)
-                if len(startBeam.state[good]) > 0:
-                    for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
-                        axMin = np.min(getattr(startBeam, tAxis)[good])
-                        axMax = np.max(getattr(startBeam, tAxis)[good])
-                        if axMin < tmpMin[tmpCoord]:
-                            tmpMin[tmpCoord] = axMin
-                        if axMax > tmpMax[tmpCoord]:
-                            tmpMax[tmpCoord] = axMax
-
-                    newColorMax = max(np.max(
-                        self.getColor(startBeam)[good]),
-                        newColorMax)
-                    newColorMin = min(np.min(
-                        self.getColor(startBeam)[good]),
-                        newColorMin)
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
-                else:
-                    continue
-
-            if self.newColorAxis:
-                if newColorMin != self.colorMin:
-                    self.colorMin = newColorMin
-                    self.selColorMin = self.colorMin
-                if newColorMax != self.colorMax:
-                    self.colorMax = newColorMax
-                    self.selColorMax = self.colorMax
-
-            if ioeItem.hasChildren():
-                for isegment in range(ioeItem.rowCount()):
-                    segmentItem0 = ioeItem.child(isegment, 0)
-                    if segmentItem0.checkState() == 2:
-                        endBeam = self.beamsDict[
-                            self.oesList[str(segmentItem0.text())[3:]][1]]
-                        # good = startBeam.state > 0
-                        good = (startBeam.state == 1) | (startBeam.state == 2)
-                        if len(startBeam.state[good]) == 0:
-                            continue
-                        intensity = startBeam.Jss + startBeam.Jpp
-                        intensityAll = intensity / np.max(intensity[good])
-
-                        good = np.logical_and(good,
-                                              intensityAll >= self.cutoffI)
-                        goodC = np.logical_and(
-                            self.getColor(startBeam) <= self.selColorMax,
-                            self.getColor(startBeam) >= self.selColorMin)
-
-                        good = np.logical_and(good, goodC)
-
-                        if self.vScreenForColors and\
-                                self.globalColorIndex is not None:
-                            good = np.logical_and(good, self.globalColorIndex)
-                            globalColorsRays = np.repeat(
-                                self.globalColorArray[good], 2, axis=0) if\
-                                globalColorsRays is None else np.concatenate(
-                                    (globalColorsRays,
-                                     np.repeat(self.globalColorArray[good], 2,
-                                               axis=0)))
-                        else:
-                            if self.globalNorm:
-                                alphaMax = 1.
-                            else:
-                                if len(intensity[good]) > 0:
-                                    alphaMax = np.max(intensity[good])
-                                else:
-                                    alphaMax = 1.
-                            alphaMax = alphaMax if alphaMax != 0 else 1.
-
-                            alphaRays = np.repeat(intensity[good] / alphaMax,
-                                                  2).T\
-                                if alphaRays is None else np.concatenate(
-                                    (alphaRays.T,
-                                     np.repeat(intensity[good] / alphaMax,
-                                               2).T))
-                            colorsRays = np.repeat(np.array(self.getColor(
-                                startBeam)[good]), 2).T if\
-                                colorsRays is None else np.concatenate(
-                                    (colorsRays.T,
-                                     np.repeat(np.array(self.getColor(
-                                         startBeam)[good]), 2).T))
-                        vertices = np.array(
-                            [startBeam.x[good] - self.coordOffset[0],
-                             endBeam.x[good] - self.coordOffset[0]]).flatten(
-                                 'F')
-                        vertices = np.vstack((vertices, np.array(
-                            [startBeam.y[good] - self.coordOffset[1],
-                             endBeam.y[good] - self.coordOffset[1]]).flatten(
-                                 'F')))
-                        vertices = np.vstack((vertices, np.array(
-                            [startBeam.z[good] - self.coordOffset[2],
-                             endBeam.z[good] - self.coordOffset[2]]).flatten(
-                                 'F')))
-
-                        self.verticesArray = vertices.T if\
-                            self.verticesArray is None else\
-                            np.vstack((self.verticesArray, vertices.T))
-
-                        if self.showLostRays:
-                            try:
-                                lostNum = self.oesList[str(
-                                    segmentItem0.text())[3:]][0].lostNum
-                            except:  # analysis:ignore
-                                lostNum = 1e3
-                            lost = startBeam.state == lostNum
-                            try:
-                                lostOnes = len(startBeam.x[lost]) * 2
-                            except:  # analysis:ignore
-                                lostOnes = 0
-                            colorsRaysLost = lostOnes if colorsRaysLost is\
-                                None else colorsRaysLost + lostOnes
-                            if lostOnes > 0:
-                                verticesLost = np.array(
-                                    [startBeam.x[lost] - self.coordOffset[0],
-                                     endBeam.x[lost] -
-                                     self.coordOffset[0]]).flatten('F')
-                                verticesLost = np.vstack(
-                                    (verticesLost, np.array(
-                                        [startBeam.y[lost]-self.coordOffset[1],
-                                         endBeam.y[lost] -
-                                         self.coordOffset[1]]).flatten('F')))
-                                verticesLost = np.vstack(
-                                    (verticesLost, np.array(
-                                        [startBeam.z[lost]-self.coordOffset[2],
-                                         endBeam.z[lost] -
-                                         self.coordOffset[2]]).flatten('F')))
-                                verticesArrayLost = verticesLost.T if\
-                                    verticesArrayLost is None else\
-                                    np.vstack(
-                                        (verticesArrayLost, verticesLost.T))
-
-            if segmentsModelRoot.child(ioe + 1, 1).checkState() == 2:
-                # good = startBeam.state > 0
-                good = (startBeam.state == 1) | (startBeam.state == 2)
-                if len(startBeam.state[good]) == 0:
-                    continue
-                intensity = startBeam.Jss + startBeam.Jpp
-                try:
-                    intensityAll = intensity / np.max(intensity[good])
-                    good = np.logical_and(good, intensityAll >= self.cutoffI)
-                    goodC = np.logical_and(
-                        self.getColor(startBeam) <= self.selColorMax,
-                        self.getColor(startBeam) >= self.selColorMin)
-
-                    good = np.logical_and(good, goodC)
-                except:  # analysis:ignore
-                    if _DEBUG_:
-                        raise
-                    else:
-                        continue
-                if self.vScreenForColors and self.globalColorIndex is not None:
-                    good = np.logical_and(good, self.globalColorIndex)
-                    globalColorsDots = self.globalColorArray[good] if\
-                        globalColorsDots is None else np.concatenate(
-                            (globalColorsDots, self.globalColorArray[good]))
-                else:
-                    if self.globalNorm:
-                        alphaMax = 1.
-                    else:
-                        if len(intensity[good]) > 0:
-                            alphaMax = np.max(intensity[good])
-                        else:
-                            alphaMax = 1.
-
-                    alphaMax = alphaMax if alphaMax != 0 else 1.
-                    alphaDots = intensity[good].T / alphaMax if\
-                        alphaDots is None else np.concatenate(
-                            (alphaDots.T, intensity[good].T / alphaMax))
-                    colorsDots = np.array(self.getColor(
-                        startBeam)[good]).T if\
-                        colorsDots is None else np.concatenate(
-                            (colorsDots.T, np.array(self.getColor(
-                                startBeam)[good]).T))
-
-                vertices = np.array(startBeam.x[good] - self.coordOffset[0])
-                vertices = np.vstack((vertices, np.array(
-                    startBeam.y[good] - self.coordOffset[1])))
-                vertices = np.vstack((vertices, np.array(
-                    startBeam.z[good] - self.coordOffset[2])))
-                self.footprintsArray = vertices.T if\
-                    self.footprintsArray is None else\
-                    np.vstack((self.footprintsArray, vertices.T))
-                if self.showLostRays:
-                    try:
-                        lostNum = self.oesList[str(ioeItem.text())][0].lostNum
-                    except:  # analysis:ignore
-                        lostNum = 1e3
-                    lost = startBeam.state == lostNum
-                    try:
-                        lostOnes = len(startBeam.x[lost])
-                    except:  # analysis:ignore
-                        lostOnes = 0
-                    colorsDotsLost = lostOnes if\
-                        colorsDotsLost is None else\
-                        colorsDotsLost + lostOnes
-                    if lostOnes > 0:
-                        verticesLost = np.array(startBeam.x[lost] -
-                                                self.coordOffset[0])
-                        verticesLost = np.vstack((verticesLost, np.array(
-                            startBeam.y[lost] - self.coordOffset[1])))
-                        verticesLost = np.vstack((verticesLost, np.array(
-                            startBeam.z[lost] - self.coordOffset[2])))
-                        footprintsArrayLost = verticesLost.T if\
-                            footprintsArrayLost is None else\
-                            np.vstack((footprintsArrayLost, verticesLost.T))
-
-        try:
-            if self.colorMin == self.colorMax:
-                if self.colorMax == 0:  # and self.colorMin == 0 too
-                    self.colorMin, self.colorMax = -0.1, 0.1
-                else:
-                    self.colorMin = self.colorMax * 0.99
-                    self.colorMax *= 1.01
-
-            if self.vScreenForColors and self.globalColorIndex is not None:
-                self.raysColor = globalColorsRays
-            elif colorsRays is not None:
-                colorsRays = colorFactor * (colorsRays-self.colorMin) /\
-                    (self.colorMax - self.colorMin)
-                colorsRays = np.dstack(
-                    (colorsRays,
-                     np.ones_like(alphaRays)*colorSaturation,
-                     alphaRays if self.iHSV else
-                     np.ones_like(alphaRays)))
-                colorsRGBRays = np.squeeze(mpl.colors.hsv_to_rgb(colorsRays))
-                if self.globalNorm and len(alphaRays) > 0:
-                    alphaMax = np.max(alphaRays)
-                else:
-                    alphaMax = 1.
-                alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaColorRays = np.array([alphaRays / alphaMax]).T
-                self.raysColor = np.float32(np.hstack([colorsRGBRays,
-                                                       alphaColorRays]))
-            if self.showLostRays:
-                if colorsRaysLost is not None:
-                    lostColor = np.zeros((colorsRaysLost, 4))
-                    lostColor[:, 0] = 0.5
-                    lostColor[:, 3] = 0.25
-                    self.raysColor = np.float32(np.vstack((self.raysColor,
-                                                           lostColor)))
-                if verticesArrayLost is not None:
-                    self.verticesArray = np.float32(np.vstack((
-                        self.verticesArray, verticesArrayLost)))
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                pass
-
-        try:
-            if self.colorMin == self.colorMax:
-                if self.colorMax == 0:  # and self.colorMin == 0 too
-                    self.colorMin, self.colorMax = -0.1, 0.1
-                else:
-                    self.colorMin = self.colorMax * 0.99
-                    self.colorMax *= 1.01
-            if self.vScreenForColors and self.globalColorIndex is not None:
-                self.dotsColor = globalColorsDots
-            elif colorsDots is not None:
-                colorsDots = colorFactor * (colorsDots-self.colorMin) /\
-                    (self.colorMax - self.colorMin)
-                colorsDots = np.dstack(
-                    (colorsDots,
-                     np.ones_like(alphaDots)*colorSaturation,
-                     alphaDots if self.iHSV else
-                     np.ones_like(alphaDots)))
-                colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-
-                if self.globalNorm and len(alphaDots) > 0:
-                    alphaMax = np.max(alphaDots)
-                else:
-                    alphaMax = 1.
-                alphaMax = alphaMax if alphaMax != 0 else 1.
-                alphaColorDots = np.array([alphaDots / alphaMax]).T
-                self.dotsColor = np.float32(np.hstack([colorsRGBDots,
-                                                       alphaColorDots]))
-
-            if self.showLostRays:
-                if colorsDotsLost is not None:
-                    lostColor = np.zeros((colorsDotsLost, 4))
-                    lostColor[:, 0] = 0.5
-                    lostColor[:, 3] = 0.25
-                    self.dotsColor = np.float32(np.vstack((self.dotsColor,
-                                                           lostColor)))
-                if footprintsArrayLost is not None:
-                    self.footprintsArray = np.float32(np.vstack((
-                        self.footprintsArray, footprintsArrayLost)))
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                pass
-        tmpMaxLen = np.max(tmpMax - tmpMin)
-        if tmpMaxLen > maxLen:
-            maxLen = tmpMaxLen
-        self.maxLen = maxLen
-        self.newColorAxis = False
-
     def populateVerticesArray(self, segmentsModelRoot):
-        self.populateVerticesOnly(segmentsModelRoot)
-        self.populateVScreen()
-        if self.vScreenForColors:
-            self.populateVerticesOnly(segmentsModelRoot)
+        pass
 
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
@@ -3134,167 +2673,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def drawText(self, coord, text, noScalable=False, alignment=None,
                  useCaption=False):
         pass
-#        useScalableFont = False if noScalable else self.useScalableFont
-#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-#        pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-#        if not useScalableFont:
-#            gl.glRasterPos3f(*coord)
-#            for symbol in text:
-#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-#        else:
-#            tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
-#            tLineAA = gl.glIsEnabled(gl.GL_LINE_SMOOTH)
-#            if self.useFontAA:
-#                gl.glEnable(gl.GL_LINE_SMOOTH)
-#            else:
-#                gl.glDisable(gl.GL_LINE_SMOOTH)
-#            gl.glLineWidth(self.scalableFontWidth)
-#
-#            fontScale = self.fontSize / 12500.
-#            coordShift = np.zeros(3, dtype=np.float32)
-#            fontSizeLoc = np.float32(np.array([104.76, 119.05, 0])*fontScale)
-#            if alignment is not None:
-#                if alignment[0] == 'left':
-#                    coordShift[0] = -fontSizeLoc[0] * len(text)
-#                else:
-#                    coordShift[0] = fontSizeLoc[0]
-#
-#                if alignment[1] == 'top':
-#                    vOffset = 0.5
-#                elif alignment[1] == 'bottom':
-#                    vOffset = -1.5
-#                else:
-#                    vOffset = -0.5
-#                coordShift[1] = vOffset * fontSizeLoc[1]
-#            if useCaption:
-#                textWidth = 0
-#                for symbol in text.strip(" "):
-#                    textWidth += gl.glutStrokeWidth(self.scalableFontType,
-#                                                    ord(symbol))
-#                gl.glPushMatrix()
-#                gl.glTranslatef(*coord)
-#                gl.glRotatef(*self.qText)
-#                gl.glTranslatef(*coordShift)
-#                gl.glScalef(fontScale, fontScale, fontScale)
-#                depthCounter = 1
-#                spaceFound = False
-#                while not spaceFound:
-#                    depthCounter += 1
-#                    for dy in [-1, 1]:
-#                        for dx in [1, -1]:
-#                            textShift = (depthCounter+0.5*dy) * 119.05*1.5
-#                            gl.glPushMatrix()
-#                            textPos = [dx*depthCounter * 119.05*1.5 +
-#                                       (0 if dx > 0 else -1) * textWidth,
-#                                       dy*textShift, 0]
-#                            gl.glTranslatef(*textPos)
-#                            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-#                            bottomLeft = np.array(gl.gluProject(
-#                                *[0, 0, 0], model=pModel, proj=pProjection,
-#                                view=pView)[:-1])
-#                            topRight = np.array(gl.gluProject(
-#                                *[textWidth, 119.05*2.5, 0],
-#                                model=pModel, proj=pProjection,
-#                                view=pView)[:-1])
-#                            gl.glPopMatrix()
-#                            spaceFound = True
-#                            for oeLabel in list(self.labelsBounds.values()):
-#                                if not (bottomLeft[0] > oeLabel[1][0] or
-#                                        bottomLeft[1] > oeLabel[1][1] or
-#                                        topRight[0] < oeLabel[0][0] or
-#                                        topRight[1] < oeLabel[0][1]):
-#                                    spaceFound = False
-#                            if spaceFound:
-#                                self.labelsBounds[text] = [0]*2
-#                                self.labelsBounds[text][0] = bottomLeft
-#                                self.labelsBounds[text][1] = topRight
-#                                break
-#                        if spaceFound:
-#                            break
-#
-#                gl.glPopMatrix()
-#                gl.glPushMatrix()
-#                gl.glTranslatef(*coord)
-#                gl.glRotatef(*self.qText)
-#                gl.glScalef(fontScale, fontScale, fontScale)
-#                captionPos = depthCounter * 119.05*1.5
-#                gl.glBegin(gl.GL_LINE_STRIP)
-#                gl.glVertex3f(0, 0, 0)
-#                gl.glVertex3f(captionPos*dx, captionPos*dy, 0)
-#                gl.glVertex3f(captionPos*dx + textWidth*dx,
-#                              captionPos*dy, 0)
-#                gl.glEnd()
-#                gl.glTranslatef(*textPos)
-#                for symbol in text.strip(" "):
-#                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
-#                gl.glPopMatrix()
-#            else:
-#                gl.glPushMatrix()
-#                gl.glTranslatef(*coord)
-#                gl.glRotatef(*self.qText)
-#                gl.glTranslatef(*coordShift)
-#                gl.glScalef(fontScale, fontScale, fontScale)
-#                for symbol in text:
-#                    gl.glutStrokeCharacter(self.scalableFontType, ord(symbol))
-#                gl.glPopMatrix()
-#
-#            gl.glLineWidth(tLineWidth)
-#            if tLineAA:
-#                gl.glEnable(gl.GL_LINE_SMOOTH)
-#            else:
-#                gl.glDisable(gl.GL_LINE_SMOOTH)
-
-    def setMaterial(self, mat):
-        if mat == 'Cu':
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                            [0.3, 0.15, 0.15, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                            [0.4, 0.25, 0.15, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                            [1., 0.7, 0.3, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                            [0.1, 0.1, 0.1, 1])
-            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
-        elif mat == 'magRed':
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                            [0.6, 0.1, 0.1, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                            [0.8, 0.1, 0.1, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                            [1., 0.1, 0.1, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                            [0.1, 0.1, 0.1, 1])
-            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
-        elif mat == 'magBlue':
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                            [0.1, 0.1, 0.6, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                            [0.1, 0.1, 0.8, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                            [0.1, 0.1, 1., 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                            [0.1, 0.1, 0.1, 1])
-            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
-        elif mat == 'semiSi':
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                            [0.1, 0.1, 0.1, 0.75])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                            [0.3, 0.3, 0.3, 0.75])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                            [1., 0.9, 0.8, 0.75])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                            [0.1, 0.1, 0.1, 0.75])
-            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
-        else:
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT,
-                            [0.1, 0.1, 0.1, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE,
-                            [0.3, 0.3, 0.3, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_SPECULAR,
-                            [1., 0.9, 0.8, 1])
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_EMISSION,
-                            [0.1, 0.1, 0.1, 1])
-            gl.glMaterialf(gl.GL_FRONT, gl.GL_SHININESS, 100)
 
     def setSceneColors(self):
         if self.invertColors:
@@ -3578,17 +2956,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.cBox.shader.release()
 
-
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_TRUE)
             gl.glEnable(gl.GL_DEPTH_TEST)
             if self.drawGrid:
-                self.cBox.draw(self.mModAx, self.mView, self.mProj)
+                self.cBox.render_grid(self.mModAx, self.mView, self.mProj)
 
             if self.enableAA:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
             self.eCounter = 0
-        except Exception as e:
+        except Exception as e:  # TODO: properly handle exceptions
             raise
             self.eCounter += 1
             if self.eCounter < 10:
@@ -3598,72 +2975,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 pass
 
     def paintGL_old(self):
-
-        def makeCenterStr(centerList, prec):
-            retStr = '('
-            for dim in centerList:
-                retStr += '{0:.{1}f}, '.format(dim, prec)
-            return retStr[:-2] + ')'
-
-        gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
-
-        if self.invertColors:
-            gl.glClearColor(1.0, 1.0, 1.0, 1.)
-        else:
-            gl.glClearColor(0.0, 0.0, 0.0, 1.)
-            gl.glClearColor(0.0, 0.0, 0.25, 0.5)
-
-#        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT |
-                   gl.GL_DEPTH_BUFFER_BIT |
-                   gl.GL_STENCIL_BUFFER_BIT)
-
-        self.mModScale.setToIdentity()
-        self.mModTrans.setToIdentity()
-        self.mModScale.scale(*(self.scaleVec/self.maxLen))
-        self.mModTrans.translate(*(self.tVec-self.coordOffset))
-        self.mMod = self.mModScale*self.mModTrans
-
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        if self.perspectiveEnabled:
-            gl.gluPerspective(self.cameraAngle, self.aspect, 0.001, 10000)
-        else:
-            orthoView = self.cameraPos[0]*0.45
-            gl.glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
-                       -orthoView, orthoView, -100, 100)
-
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
-        gl.gluLookAt(self.cameraPos[0], self.cameraPos[1], self.cameraPos[2],
-                     self.cameraTarget[0], self.cameraTarget[1],
-                     self.cameraTarget[2],
-                     0.0, 0.0, 1.0)
-
-        if self.enableBlending:
-            gl.glEnable(gl.GL_MULTISAMPLE)
-            gl.glEnable(gl.GL_BLEND)
-            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-#            gl.glBlendFunc(gl.GL_SRC_ALPHA, GL_ONE)
-            gl.glEnable(gl.GL_POINT_SMOOTH)
-            gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-
-        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-
-        self.rotateZYX()
-
-        pModel = np.array(gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX))[:-1, :-1]
-        self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
-        self.signs = np.sign(pModel)
-        self.axPosModifier = np.ones(3)
-
-        if self.enableAA:
-            gl.glEnable(gl.GL_LINE_SMOOTH)
-            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-#            gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, gl.GL_NICEST)
 
         for dim in range(3):
             for iAx in range(3):
@@ -3704,1170 +3015,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             self.pointProjectionOpacity,
                             self.pointProjectionSize)
 
-        if self.enableAA:
-            gl.glDisable(gl.GL_LINE_SMOOTH)
-
-        if self.linesDepthTest:
-            gl.glEnable(gl.GL_DEPTH_TEST)
-
-        if self.enableAA:
-            gl.glEnable(gl.GL_LINE_SMOOTH)
-            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-
-        if self.lineWidth > 0 and self.lineOpacity > 0 and\
-                self.verticesArray is not None:
-            self.drawArrays(1, gl.GL_LINES, self.verticesArray, self.raysColor,
-                            self.lineOpacity, self.lineWidth)
-        if self.linesDepthTest:
-            gl.glDisable(gl.GL_DEPTH_TEST)
-
-        if self.enableAA:
-            gl.glDisable(gl.GL_LINE_SMOOTH)
-
-        gl.glEnable(gl.GL_DEPTH_TEST)
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        # Surfaces of optical elements:
-        if len(self.oesToPlot) > 0 or self.virtScreen is not None:
-            gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
-            gl.glEnable(gl.GL_NORMALIZE)
-
-            self.addLighting(3.)
-            for oeString in self.oesToPlot:
-                try:
-                    oeToPlot = self.oesList[oeString][0]
-                    oeuuid = oeToPlot.uuid
-#                    is2ndXtal = self.oesList[oeString][3]
-                    if isinstance(oeToPlot, roes.OE):
-#                        print(oeuuid)
-                        is2ndXtalOpts = [False]
-                        if isinstance(oeToPlot, roes.DCM):
-                            is2ndXtalOpts.append(True)
-
-                        for is2ndXtal in is2ndXtalOpts:
-                            if hasattr(oeToPlot, 'mesh3D') and oeToPlot.mesh3D.isEnabled:
-                                print(1)
-                                isSelected = False
-                                if oeuuid in self.selectableOEs.values():
-                                    oeNum = oeToPlot.mesh3D.stencilNum
-                                    isSelected = oeNum == self.selectedOE
-                                    gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum), 0xff)
-                                oeToPlot.mesh3D.render_surface(self.mMod, self.mView, self.mProj,
-                                                             is2ndXtal, isSelected=isSelected,
-                                                             shader=self.shaderMesh)
-
-#                        self.plotOeSurface(oeToPlot, is2ndXtal)
-                    elif isinstance(oeToPlot, rscreens.HemisphericScreen):
-                        self.setMaterial('semiSi')
-                        self.plotHemiScreen(oeToPlot)
-                    elif isinstance(oeToPlot, rscreens.Screen):
-                        self.setMaterial('semiSi')
-                        self.plotScreen(oeToPlot, frameColor=[1, 1, 0, 0.8])
-                    if isinstance(oeToPlot, (rapertures.RectangularAperture,
-                                             rapertures.RoundAperture)):
-                        self.setMaterial('Cu')
-                        self.plotAperture(oeToPlot)
-                    else:
-                        continue
-                except:  # analysis:ignore
-                    if _DEBUG_:
-                        raise
-                    else:
-                        continue
-
-            if self.virtScreen is not None:
-                self.setMaterial('semiSi')
-                self.plotScreen(self.virtScreen, [self.vScreenSize]*2,
-                                [1, 0, 0, 0.8], plotFWHM=True)
-
-            gl.glDisable(gl.GL_LIGHTING)
-            gl.glDisable(gl.GL_NORMALIZE)
-            gl.glDisableClientState(gl.GL_NORMAL_ARRAY)
-        gl.glDisable(gl.GL_DEPTH_TEST)
-
-        if self.enableAA:
-            gl.glEnable(gl.GL_LINE_SMOOTH)
-            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-
-        gl.glEnable(gl.GL_DEPTH_TEST)
-        if len(self.oesToPlot) > 0:
-            for oeString in self.oesToPlot:
-                oeToPlot = self.oesList[oeString][0]
-                if isinstance(oeToPlot, (rsources.BendingMagnet,
-                                         rsources.Wiggler,
-                                         rsources.Undulator)):
-                    self.plotSource(oeToPlot)
-#                elif isinstance(oeToPlot, rscreens.HemisphericScreen):
-#                    self.plotHemiScreen(oeToPlot)
-#                elif isinstance(oeToPlot, rscreens.Screen):
-#                    self.plotScreen(oeToPlot)
-#                elif isinstance(oeToPlot, roes.OE):
-#                    self.drawOeContour(oeToPlot)
-#                elif isinstance(oeToPlot, rapertures.RectangularAperture):
-#                    self.drawSlitEdges(oeToPlot)
-                else:
-                    continue
-
-
-#            if not self.enableAA:
-#                gl.glDisable(gl.GL_LINE_SMOOTH)
-
-        gl.glDisable(gl.GL_DEPTH_TEST)
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-
-        if self.pointsDepthTest:
-            gl.glEnable(gl.GL_DEPTH_TEST)
-
-        if self.pointSize > 0 and self.pointOpacity > 0:
-            if self.footprintsArray is not None:
-                self.drawArrays(1, gl.GL_POINTS, self.footprintsArray,
-                                self.dotsColor, self.pointOpacity,
-                                self.pointSize)
-
-            if self.virtDotsArray is not None:
-                self.drawArrays(1, gl.GL_POINTS, self.virtDotsArray,
-                                self.virtDotsColor, self.pointOpacity,
-                                self.pointSize)
-
-        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-
-        if self.enableAA:
-            gl.glDisable(gl.GL_LINE_SMOOTH)
-
-        if self.pointsDepthTest:
-            gl.glDisable(gl.GL_DEPTH_TEST)
-
-#        oeLabels = OrderedDict()
-        self.labelsBounds = OrderedDict()
-        if len(self.labelsToPlot) > 0:
-            if self.invertColors:
-                gl.glColor4f(0.0, 0.0, 0.0, 1.)
-            else:
-                gl.glColor4f(1.0, 1.0, 1.0, 1.)
-            gl.glLineWidth(1)
-#            for oeKey, oeValue in self.oesList.items():
-            for oeKey in self.labelsToPlot:
-                oeValue = self.oesList[oeKey]
-                oeCenterStr = makeCenterStr(oeValue[2],
-                                            self.labelCoordPrec)
-                oeCoord = np.array(oeValue[2])
-                oeCenterStr = '  {0}: {1}mm'.format(
-                    oeKey, oeCenterStr)
-                oeLabelPos = self.modelToWorld(oeCoord - self.coordOffset)
-                self.drawText(oeLabelPos, oeCenterStr, useCaption=True)
-
-        if self.showOeLabels and self.virtScreen is not None:
-            vsCenterStr = '    {0}: {1}mm'.format(
-                'Virtual Screen', makeCenterStr(self.virtScreen.center,
-                                                self.labelCoordPrec))
-            try:
-                pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-                pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-                pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-                m1 = self.modelToWorld(
-                    self.virtScreen.frame[1] - self.coordOffset)
-                m2 = self.modelToWorld(
-                    self.virtScreen.frame[2] - self.coordOffset)
-                scr1 = gl.gluProject(
-                    *m1, model=pModel,
-                    proj=pProjection, view=pView)[0]
-                scr2 = gl.gluProject(
-                    *m2, model=pModel,
-                    proj=pProjection, view=pView)[0]
-                lblCenter = self.virtScreen.frame[1] if scr1 > scr2 else\
-                    self.virtScreen.frame[2]
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
-                else:
-                    lblCenter = self.virtScreen.center
-            vsLabelPos = self.modelToWorld(lblCenter - self.coordOffset)
-            if self.invertColors:
-                gl.glColor4f(0.0, 0.0, 0.0, 1.)
-            else:
-                gl.glColor4f(1.0, 1.0, 1.0, 1.)
-            gl.glLineWidth(1)
-            self.drawText(vsLabelPos, vsCenterStr)
-
-        if len(self.oesToPlot) > 0 and self.showLocalAxes:  # Local axes
-            for oeString in self.oesToPlot:
-                try:
-                    oeToPlot = self.oesList[oeString][0]
-                    is2ndXtal = self.oesList[oeString][3]
-                    if hasattr(oeToPlot, 'local_to_global'):
-                        self.drawLocalAxes(oeToPlot, is2ndXtal)
-                except:
-                    if _DEBUG_:
-                        raise
-                    else:
-                        continue
-
-        gl.glEnable(gl.GL_DEPTH_TEST)
-        if self.drawGrid:  # Coordinate grid box
-            self.drawCoordinateGrid()
-        gl.glFlush()
-
-        self.drawDirectionAxes()
-#        if self.showHelp:
-#            self.openHelpDialog()
-#            self.drawHelp()
-        if self.enableBlending:
-            gl.glDisable(gl.GL_MULTISAMPLE)
-            gl.glDisable(gl.GL_BLEND)
-            gl.glDisable(gl.GL_POINT_SMOOTH)
-
-        gl.glFlush()
-
     def quatMult(self, qf, qt):
         return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
                 qf[0]*qt[1]+qf[1]*qt[0]+qf[2]*qt[3]-qf[3]*qt[2],
                 qf[0]*qt[2]-qf[1]*qt[3]+qf[2]*qt[0]+qf[3]*qt[1],
                 qf[0]*qt[3]+qf[1]*qt[2]-qf[2]*qt[1]+qf[3]*qt[0]]
-
-    def drawCoordinateGrid(self):
-        def populateGrid(grids):
-            axisLabelC = []
-            axisLabelC.extend([np.vstack(
-                (self.modelToWorld(grids, 0),
-                 np.ones(len(grids[0]))*self.aPos[1]*self.axPosModifier[1],
-                 np.ones(len(grids[0]))*-self.aPos[2]*self.axPosModifier[2]
-                 ))])
-            axisLabelC.extend([np.vstack(
-                (np.ones(len(grids[1]))*self.aPos[0]*self.axPosModifier[0],
-                 self.modelToWorld(grids, 1),
-                 np.ones(len(grids[1]))*-self.aPos[2]*self.axPosModifier[2]
-                 ))])
-            zAxis = np.vstack(
-                (np.ones(len(grids[2]))*-self.aPos[0]*self.axPosModifier[0],
-                 np.ones(len(grids[2]))*self.aPos[1]*self.axPosModifier[1],
-                 self.modelToWorld(grids, 2)))
-
-            xAxisB = np.vstack(
-                (self.modelToWorld(grids, 0),
-                 np.ones(len(grids[0]))*-self.aPos[1]*self.axPosModifier[1],
-                 np.ones(len(grids[0]))*-self.aPos[2]*self.axPosModifier[2]))
-            yAxisB = np.vstack(
-                (np.ones(len(grids[1]))*-self.aPos[0]*self.axPosModifier[0],
-                 self.modelToWorld(grids, 1),
-                 np.ones(len(grids[1]))*-self.aPos[2]*self.axPosModifier[2]))
-            zAxisB = np.vstack(
-                (np.ones(len(grids[2]))*-self.aPos[0]*self.axPosModifier[0],
-                 np.ones(len(grids[2]))*-self.aPos[1]*self.axPosModifier[1],
-                 self.modelToWorld(grids, 2)))
-
-            xAxisC = np.vstack(
-                (self.modelToWorld(grids, 0),
-                 np.ones(len(grids[0]))*-self.aPos[1]*self.axPosModifier[1],
-                 np.ones(len(grids[0]))*self.aPos[2]*self.axPosModifier[2]))
-            yAxisC = np.vstack(
-                (np.ones(len(grids[1]))*-self.aPos[0]*self.axPosModifier[0],
-                 self.modelToWorld(grids, 1),
-                 np.ones(len(grids[1]))*self.aPos[2]*self.axPosModifier[2]))
-            axisLabelC.extend([np.vstack(
-                (np.ones(len(grids[2]))*self.aPos[0]*self.axPosModifier[0],
-                 np.ones(len(grids[2]))*-self.aPos[1]*self.axPosModifier[1],
-                 self.modelToWorld(grids, 2)))])
-
-            xLines = np.vstack(
-                (axisLabelC[0], xAxisB, xAxisB, xAxisC)).T.flatten().reshape(
-                4*xAxisB.shape[1], 3)
-            yLines = np.vstack(
-                (axisLabelC[1], yAxisB, yAxisB, yAxisC)).T.flatten().reshape(
-                4*yAxisB.shape[1], 3)
-            zLines = np.vstack(
-                (zAxis, zAxisB, zAxisB, axisLabelC[2])).T.flatten().reshape(
-                4*zAxisB.shape[1], 3)
-
-            return axisLabelC, np.vstack((xLines, yLines, zLines))
-
-        def drawGridLines(gridArray, lineWidth, lineOpacity, figType):
-            pass
-#            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-#            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#            gridColor = np.ones((len(gridArray), 4)) * lineOpacity
-#            gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
-#            gridArrayVBO.bind()
-#            gl.glVertexPointerf(gridArrayVBO)
-#            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-#            gridColorArray.bind()
-#            gl.glColorPointerf(gridColorArray)
-#            gl.glLineWidth(lineWidth)
-#            gl.glDrawArrays(figType, 0, len(gridArrayVBO))
-#            gridArrayVBO.unbind()
-#            gridColorArray.unbind()
-#            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-#            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-
-        def getAlignment(point, hDim, vDim=None):
-            pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-            sp0 = np.array(gl.gluProject(
-                *point, model=pModel, proj=pProjection, view=pView))
-            pointH = np.copy(point)
-            pointH[hDim] *= 1.1
-            spH = np.array(gl.gluProject(*pointH, model=pModel,
-                                         proj=pProjection, view=pView))
-            pointV = np.copy(point)
-            if vDim is None:
-                vAlign = 'middle'
-            else:
-                pointV[vDim] *= 1.1
-                spV = np.array(gl.gluProject(*pointV, model=pModel,
-                                             proj=pProjection, view=pView))
-                vAlign = 'top' if spV[1] - sp0[1] > 0 else 'bottom'
-            hAlign = 'left' if spH[0] - sp0[0] < 0 else 'right'
-            return (hAlign, vAlign)
-
-        back = np.array([[-self.aPos[0], self.aPos[1], -self.aPos[2]],
-                         [-self.aPos[0], self.aPos[1], self.aPos[2]],
-                         [-self.aPos[0], -self.aPos[1], self.aPos[2]],
-                         [-self.aPos[0], -self.aPos[1], -self.aPos[2]]])
-
-        side = np.array([[self.aPos[0], -self.aPos[1], -self.aPos[2]],
-                         [-self.aPos[0], -self.aPos[1], -self.aPos[2]],
-                         [-self.aPos[0], -self.aPos[1], self.aPos[2]],
-                         [self.aPos[0], -self.aPos[1], self.aPos[2]]])
-
-        bottom = np.array([[self.aPos[0], -self.aPos[1], -self.aPos[2]],
-                           [self.aPos[0], self.aPos[1], -self.aPos[2]],
-                           [-self.aPos[0], self.aPos[1], -self.aPos[2]],
-                           [-self.aPos[0], -self.aPos[1], -self.aPos[2]]])
-
-        back[:, 0] *= self.axPosModifier[0]
-        side[:, 1] *= self.axPosModifier[1]
-        bottom[:, 2] *= self.axPosModifier[2]
-
-#  Calculating regular grids in world coordinates
-        limits = np.array([-1, 1])[:, np.newaxis] * np.array(self.aPos)
-        allLimits = limits * self.maxLen / self.scaleVec - self.tVec\
-            + self.coordOffset
-        axisGridArray = []
-        gridLabels = []
-        precisionLabels = []
-        if self.fineGridEnabled:
-            fineGridArray = []
-
-        for iAx in range(3):
-            m2 = self.aPos[iAx] / 0.9
-            dx1 = np.abs(allLimits[:, iAx][0] - allLimits[:, iAx][1]) / m2
-            order = np.floor(np.log10(dx1))
-            m1 = dx1 * 10**-order
-
-            if (m1 >= 1) and (m1 < 2):
-                step = 0.2 * 10**order
-            elif (m1 >= 2) and (m1 < 4):
-                step = 0.5 * 10**order
-            else:
-                step = 10**order
-            if step < 1:
-                decimalX = int(np.abs(order)) + 1 if m1 < 4 else\
-                    int(np.abs(order))
-            else:
-                decimalX = 0
-
-            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
-                              allLimits[:, iAx][1], step)
-            gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
-                gridX[1:]
-            gridLabels.extend([gridX])
-            precisionLabels.extend([np.ones_like(gridX)*decimalX])
-            axisGridArray.extend([gridX - self.coordOffset[iAx]])
-            if self.fineGridEnabled:
-                fineStep = step * 0.2
-                fineGrid = np.arange(
-                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
-                    allLimits[:, iAx][1], fineStep)
-                fineGrid = fineGrid if\
-                    fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
-                fineGridArray.extend([fineGrid - self.coordOffset[iAx]])
-
-        axisL, axGrid = populateGrid(axisGridArray)
-        if self.fineGridEnabled:
-            tmp, fineAxGrid = populateGrid(fineGridArray)
-
-        if self.invertColors:
-            gl.glColor4f(0.0, 0.0, 0.0, 1.)
-        else:
-            gl.glColor4f(1.0, 1.0, 1.0, 1.)
-
-        for iAx in range(3):
-            if not (not self.perspectiveEnabled and
-                    iAx == self.visibleAxes[2]):
-                tAlign = None
-                midp = int(len(axisL[iAx][0, :])/2)
-                if iAx == self.visibleAxes[1]:  # Side plane,
-                    if self.useScalableFont:
-                        tAlign = getAlignment(axisL[iAx][:, midp],
-                                              self.visibleAxes[0])
-                    else:
-                        axisL[iAx][self.visibleAxes[2], :] *= 1.05  # depth
-                        axisL[iAx][self.visibleAxes[0], :] *= 1.05  # side
-                if iAx == self.visibleAxes[0]:  # Bottom plane, left-right
-                    if self.useScalableFont:
-                        tAlign = getAlignment(axisL[iAx][:, midp],
-                                              self.visibleAxes[2],
-                                              self.visibleAxes[1])
-                    else:
-                        axisL[iAx][self.visibleAxes[1], :] *= 1.05  # height
-                        axisL[iAx][self.visibleAxes[2], :] *= 1.05  # side
-                if iAx == self.visibleAxes[2]:  # Bottom plane, left-right
-                    if self.useScalableFont:
-                        tAlign = getAlignment(axisL[iAx][:, midp],
-                                              self.visibleAxes[0],
-                                              self.visibleAxes[1])
-                    else:
-                        axisL[iAx][self.visibleAxes[1], :] *= 1.05  # height
-                        axisL[iAx][self.visibleAxes[0], :] *= 1.05  # side
-
-                for tick, tText, pcs in list(zip(axisL[iAx].T, gridLabels[iAx],
-                                                 precisionLabels[iAx])):
-                    valueStr = "{0:.{1}f}".format(tText, int(pcs))
-                    self.drawText(tick, valueStr, alignment=tAlign)
-#            if not self.enableAA:
-#                gl.glDisable(gl.GL_LINE_SMOOTH)
-        gl.glEnable(gl.GL_LINE_SMOOTH)
-        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-        tLineWidth = gl.glGetDoublev(gl.GL_LINE_WIDTH)
-        drawGridLines(np.vstack((back, side, bottom)),
-                      self.coordinateGridLineWidth * 2, 0.75, gl.GL_QUADS)
-        drawGridLines(axGrid, self.coordinateGridLineWidth, 0.5, gl.GL_LINES)
-        if self.fineGridEnabled:
-            drawGridLines(fineAxGrid, self.coordinateGridLineWidth, 0.25,
-                          gl.GL_LINES)
-        gl.glDisable(gl.GL_LINE_SMOOTH)
-        gl.glLineWidth(tLineWidth)
-
-    def drawArrays(self, tr, geom, vertices, colors, lineOpacity, lineWidth):
-        pass
-#        if vertices is None or colors is None:
-#            return
-#
-#        if bool(tr):
-#            vertexArray = gl.vbo.VBO(self.modelToWorld(vertices))
-#        else:
-#            vertexArray = gl.vbo.VBO(vertices)
-#        vertexArray.bind()
-#        gl.glVertexPointerf(vertexArray)
-#        pureOpacity = np.copy(colors[:, 3])
-#        colors[:, 3] = np.float32(pureOpacity * lineOpacity)
-#        colorArray = gl.vbo.VBO(colors)
-#        colorArray.bind()
-#        gl.glColorPointerf(colorArray)
-#        if geom == gl.GL_LINES:
-#            gl.glLineWidth(lineWidth)
-#        else:
-#            gl.glPointSize(lineWidth)
-#        gl.glDrawArrays(geom, 0, len(vertices))
-#        colors[:, 3] = pureOpacity
-#        colorArray.unbind()
-#        vertexArray.unbind()
-
-    def plotSource(self, oe):
-        # gl.glEnable(gl.GL_MAP2_VERTEX_3)
-        # gl.glEnable(gl.GL_MAP2_NORMAL)
-
-        nPeriods = int(oe.Np) if hasattr(oe, 'Np') else 0.5
-        if hasattr(oe, 'L0'):
-            lPeriod = oe.L0
-            maghL = 0.25 * lPeriod * 0.5
-        else:
-            try:
-                lPeriod = (oe.Theta_max - oe.Theta_min) * oe.ro * 1000
-            except AttributeError:
-                if _DEBUG_:
-                    raise
-                else:
-                    lPeriod = 500.
-            maghL = lPeriod
-
-        maghH = 10 * 0.5
-        maghW = 10 * 0.5
-
-        surfRot = [[0, 0, 0, 1], [180, 0, 1, 0],
-                   [-90, 0, 1, 0], [90, 0, 1, 0],
-                   [-90, 1, 0, 0], [90, 1, 0, 0]]
-        surfTrans = np.array([[0, 0, maghH], [0, 0, -maghH],
-                              [-maghW, 0, 0], [maghW, 0, 0],
-                              [0, maghL, 0], [0, -maghL, 0]])
-        surfScales = np.array([[maghW*2, maghL*2, 0], [maghW*2, maghL*2, 0],
-                               [0, maghL*2, maghH*2], [0, maghL*2, maghH*2],
-                               [maghW*2, 0, maghH*2], [maghW*2, 0, maghH*2]])
-#        deltaX = 1. / 2.  # float(self.tiles[0])
-#        deltaY = 1. / 2.  # float(self.tiles[1])
-        magToggle = True
-        gl.glLineWidth(1)
-        gl.glPushMatrix()
-        gl.glTranslatef(*(self.modelToWorld(np.array(oe.center) -
-                                            self.coordOffset)))
-        gl.glRotatef(np.degrees(oe.pitch * self.scaleVec[2] /
-                                self.scaleVec[1]), 1, 0, 0)
-        yaw = oe.yaw
-        try:
-            az = oe.bl.azimuth
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                az = 0
-        gl.glRotatef(np.degrees((yaw-az) * self.scaleVec[0] /
-                                self.scaleVec[1]), 0, 0, 1)
-        gl.glTranslatef(*(-1. * self.modelToWorld(np.array(oe.center) -
-                                                  self.coordOffset)))
-        for period in range(int(nPeriods) if nPeriods > 0.5 else 1):
-            for hp in ([0, 0.5] if nPeriods > 0.5 else [0.25]):
-                pY = list(oe.center)[1] - lPeriod * (0.5 * nPeriods -
-                                                     period - hp)
-                magToggle = not magToggle
-                for gap in [maghH*1.25, -maghH*1.25]:
-                    cubeCenter = np.array([oe.center[0], pY, oe.center[2]+gap])
-#                    self.setMaterial('magRed' if magToggle else 'magBlue')
-                    magColor = [0.7, 0.1, 0.1, 1.] if magToggle \
-                        else [0.1, 0.1, 0.7, 1.]
-                    magToggle = not magToggle
-                    for surf in range(6):
-                        gl.glPushMatrix()
-                        gl.glTranslatef(*(self.modelToWorld(
-                            cubeCenter + surfTrans[surf] - self.coordOffset)))
-                        gl.glScalef(*(self.modelToWorld(surfScales[surf] -
-                                                        self.tVec)))
-                        gl.glRotatef(*surfRot[surf])
-                        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-                        gl.glBegin(gl.GL_QUADS)
-                        gl.glColor4f(*magColor)
-                        gl.glVertex3f(-0.5, -0.5, 0)
-                        gl.glVertex3f(-0.5, 0.5, 0)
-                        gl.glVertex3f(0.5, 0.5, 0)
-                        gl.glVertex3f(0.5, -0.5, 0)
-                        gl.glEnd()
-                        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-                        gl.glBegin(gl.GL_QUADS)
-                        gl.glColor4f(0, 0, 0, 1.)
-                        gl.glVertex3f(-0.5, -0.5, 0)
-                        gl.glVertex3f(-0.5, 0.5, 0)
-                        gl.glVertex3f(0.5, 0.5, 0)
-                        gl.glVertex3f(0.5, -0.5, 0)
-                        gl.glEnd()
-#                        for i in range(2):
-#                            xGridOe = np.linspace(-0.5 + i*deltaX,
-#                                                  -0.5 + (i+1)*deltaX,
-#                                                  self.surfCPOrder)
-#                            for k in range(2):
-#                                yGridOe = np.linspace(-0.5 + k*deltaY,
-#                                                      -0.5 + (k+1)*deltaY,
-#                                                      self.surfCPOrder)
-#                                xv, yv = np.meshgrid(xGridOe, yGridOe)
-#                                xv = xv.flatten()
-#                                yv = yv.flatten()
-#                                zv = np.zeros_like(xv)
-#
-#                                surfCP = np.vstack((xv, yv, zv)).T
-#                                surfNorm = np.vstack((np.zeros_like(xv),
-#                                                      np.zeros_like(xv),
-#                                                      np.ones_like(zv),
-#                                                      np.ones_like(zv))).T
-#
-#                                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-#                                           surfCP.reshape(
-#                                               self.surfCPOrder,
-#                                               self.surfCPOrder, 3))
-#
-#                                gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-#                                           surfNorm.reshape(
-#                                               self.surfCPOrder,
-#                                               self.surfCPOrder, 4))
-#
-#                                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-#                                               self.surfCPOrder, 0.0, 1.0)
-#
-#                                gl.glEvalMesh2(gl.GL_FILL, 0,
-#                                               self.surfCPOrder,
-#                                               0, self.surfCPOrder)
-                        gl.glPopMatrix()
-        gl.glPopMatrix()
-#        gl.glDisable(gl.GL_MAP2_VERTEX_3)
-#        gl.glDisable(gl.GL_MAP2_NORMAL)
-
-    def plotCurvedMesh(self, x, y, z, a, b, c, shift):
-        surfCP = np.vstack((x - self.coordOffset[0] - shift[0],
-                            y - self.coordOffset[1] - shift[1],
-                            z - self.coordOffset[2] - shift[2])).T
-        gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                   self.modelToWorld(surfCP.reshape(
-                       self.surfCPOrder,
-                       self.surfCPOrder, 3)))
-
-        surfNorm = np.vstack((a, b, c,
-                              np.ones_like(a))).T
-
-        gl.glMap2f(gl.GL_MAP2_NORMAL, 0, 1, 0, 1,
-                   surfNorm.reshape(
-                       self.surfCPOrder,
-                       self.surfCPOrder, 4))
-
-        gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                       self.surfCPOrder, 0.0, 1.0)
-
-        gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
-                       0, self.surfCPOrder)
-
-    def plotOeSurface(self, oe, is2ndXtal):
-        def getThickness(element):
-            if self.oeThicknessForce is not None:
-                return self.oeThicknessForce
-            thickness = 0
-            if isinstance(oe, roes.Plate):
-                if oe.t is not None:
-                    return oe.t
-            if hasattr(oe, "material"):
-                if oe.material is not None:
-                    thickness = self.oeThickness
-                    if hasattr(oe.material, "t"):
-                        thickness = oe.material.t if oe.material.t is not None\
-                            else thickness
-                    elif isinstance(oe.material, rmats.Multilayer):
-                        if oe.material.substrate is not None:
-                            if hasattr(oe.material.substrate, 't'):
-                                if oe.material.substrate.t is not None:
-                                    thickness = oe.material.substrate.t
-            return thickness
-
-        thickness = getThickness(oe)
-
-        self.setMaterial('Si')
-        gl.glEnable(gl.GL_MAP2_VERTEX_3)
-        gl.glEnable(gl.GL_MAP2_NORMAL)
-
-        isWedge = False
-        if isinstance(oe, roes.Plate):
-            if abs(oe.wedgeAngle) > 0:
-                isWedge = True
-
-        # Top and Bottom Surfaces
-        nsIndex = int(is2ndXtal)
-        if is2ndXtal:
-            xLimits = list(oe.limPhysX2)
-            yLimits = list(oe.limPhysY2)
-        else:
-            xLimits = list(oe.limPhysX)
-            yLimits = list(oe.limPhysY)
-
-        isClosedSurface = False
-        if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-            isClosedSurface = isinstance(oe, roes.SurfaceOfRevolution) or\
-                (hasattr(oe, 'isClosed') and oe.isClosed)
-            if oe.footprint is not None:
-                xLimits = oe.footprint[nsIndex][:, 0]
-        if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-            if oe.footprint is not None:
-                yLimits = oe.footprint[nsIndex][:, 1]
-        localTiles = np.array(self.tiles)
-
-        if isClosedSurface:
-            # the limits are in parametric coordinates
-            yLimitsS0, _, _ = oe.xyz_to_param(0, yLimits[0], 0)
-            yLimitsS1, _, _ = oe.xyz_to_param(0, yLimits[1], 0)
-            xLimits = [yLimitsS0, yLimitsS1]  # s
-            yLimits = [0, 2*np.pi]  # phi
-            localTiles[1] *= 3
-        else:
-            if oe.shape == 'round':
-                rX = np.abs((xLimits[1] - xLimits[0]))*0.5
-                rY = np.abs((yLimits[1] - yLimits[0]))*0.5
-                cX = (xLimits[1] + xLimits[0])*0.5
-                cY = (yLimits[1] + yLimits[0])*0.5
-                xLimits = [0, 1.]
-                yLimits = [0, 2*np.pi]
-                localTiles[1] *= 3
-
-        if is2ndXtal:
-            zExt = '2'
-        else:
-            zExt = '1' if hasattr(oe, 'local_z1') else ''
-        local_z = getattr(oe, 'local_r{}'.format(zExt)) if\
-            oe.isParametric else getattr(oe, 'local_z{}'.format(zExt))
-        local_n = getattr(oe, 'local_n{}'.format(zExt))
-
-        deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
-        for i in range(localTiles[0]):
-            xGridOe = np.linspace(xLimits[0] + i*deltaX,
-                                  xLimits[0] + (i+1)*deltaX,
-                                  self.surfCPOrder) + oe.dx
-
-            deltaY = (yLimits[1] - yLimits[0]) / float(localTiles[1])
-            for k in range(localTiles[1]):
-                yGridOe = np.linspace(yLimits[0] + k*deltaY,
-                                      yLimits[0] + (k+1)*deltaY,
-                                      self.surfCPOrder)
-
-                xv, yv = np.meshgrid(xGridOe, yGridOe)
-                if oe.shape == 'round' and not isClosedSurface:
-                    xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
-
-                xv = xv.flatten()
-                yv = yv.flatten()
-
-                xv = np.copy(xv)  # ?
-                yv = np.copy(yv)  # ?
-                zv = np.zeros_like(xv)
-                if isinstance(oe, roes.SurfaceOfRevolution):
-                    # at z=0 (axis of rotation) phi is undefined, therefore:
-                    zv -= 100.
-
-                if oe.isParametric and not isClosedSurface:
-                    xv, yv, zv = oe.xyz_to_param(xv, yv, zv)
-
-                zv = local_z(xv, yv)
-                nv = local_n(xv, yv)
-
-                gbT = rsources.Beam(nrays=len(xv))
-                if oe.isParametric:
-                    xv, yv, zv = oe.param_to_xyz(xv, yv, zv)
-
-                gbT.x = xv
-                gbT.y = yv
-                gbT.z = zv
-                gbT.a = nv[0] * np.ones_like(zv)
-                gbT.b = nv[1] * np.ones_like(zv)
-                gbT.c = nv[2] * np.ones_like(zv)
-
-                if thickness > 0 and not isClosedSurface:
-                    gbB = rsources.Beam(copyFrom=gbT)
-                    if isinstance(oe, (roes.LauePlate, roes.BentLaue2D)):
-                        gbB.z[:] = gbT.z - thickness
-                        gbB.a = -gbT.a
-                        gbB.b = -gbT.b
-                        gbB.c = -gbT.c
-                    else:
-                        gbB.z[:] = -thickness
-                        gbB.a[:] = 0
-                        gbB.b[:] = 0
-                        gbB.c[:] = -1.
-                    oe.local_to_global(gbB, is2ndXtal=is2ndXtal)
-
-                oe.local_to_global(gbT, is2ndXtal=is2ndXtal)
-
-                if hasattr(oe, 'centerShift'):
-                    cShift = oe.centerShift
-                    nSurf = oe._nCRL
-                else:
-                    cShift = np.zeros(3)
-                    nSurf = 1
-
-                for iSurf in range(nSurf):
-                    dC = cShift * iSurf
-                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-                                        gbT.a, gbT.b, gbT.c, dC)
-                    if thickness > 0 \
-                            and not isinstance(oe, roes.DoubleParaboloidLens)\
-                            and not isClosedSurface and not isWedge:
-                        self.plotCurvedMesh(gbB.x, gbB.y, gbB.z,
-                                            gbB.a, gbB.b, gbB.c, dC)
-
-    # Side faces
-        if isinstance(oe, roes.Plate):
-            self.setMaterial('semiSi')
-        if thickness > 0 and not isClosedSurface and not isWedge:
-            deltaX = (xLimits[1] - xLimits[0]) / float(localTiles[0])
-            for ie, yPos in enumerate(yLimits):
-                for i in range(localTiles[0]):
-                    if oe.shape == 'round' and not isClosedSurface:
-                        continue
-                    xGridOe = np.linspace(xLimits[0] + i*deltaX,
-                                          xLimits[0] + (i+1)*deltaX,
-                                          self.surfCPOrder) + oe.dx
-
-                    edgeX = xGridOe
-                    edgeY = np.ones_like(xGridOe)*yPos
-                    edgeZ = np.zeros_like(xGridOe)
-                    if oe.isParametric:
-                        edgeX, edgeY, edgeZ = oe.xyz_to_param(
-                            edgeX, edgeY, edgeZ)
-
-                    edgeZ = local_z(edgeX, edgeY)
-                    if oe.isParametric:
-                        edgeX, edgeY, edgeZ = oe.param_to_xyz(
-                            edgeX, edgeY, edgeZ)
-
-                    gridZ = None
-                    for zTop in edgeZ:
-                        if isinstance(oe, (roes.LauePlate, roes.BentLaue2D)):
-                            gridZ = np.linspace(zTop-thickness, zTop,
-                                                self.surfCPOrder) if\
-                                gridZ is None else np.concatenate((
-                                    gridZ, np.linspace(zTop-thickness, zTop,
-                                                       self.surfCPOrder)))
-                        else:
-                            gridZ = np.linspace(-thickness, zTop,
-                                                self.surfCPOrder) if\
-                                gridZ is None else np.concatenate((
-                                    gridZ, np.linspace(-thickness, zTop,
-                                                       self.surfCPOrder)))
-
-                    gridX = np.repeat(edgeX, len(edgeZ))
-                    gridY = np.ones_like(gridX) * yPos
-
-                    xN = np.zeros_like(gridX)
-                    yN = (1 if ie == 1 else -1)*np.ones_like(gridX)
-                    zN = np.zeros_like(gridX)
-
-                    faceBeam = rsources.Beam(nrays=len(gridX))
-                    faceBeam.x = gridX
-                    faceBeam.y = gridY
-                    faceBeam.z = gridZ
-                    faceBeam.a = xN
-                    faceBeam.b = yN
-                    faceBeam.c = zN
-                    oe.local_to_global(faceBeam, is2ndXtal=is2ndXtal)
-                    self.plotCurvedMesh(faceBeam.x, faceBeam.y, faceBeam.z,
-                                        faceBeam.a, faceBeam.b, faceBeam.c,
-                                        [0]*3)
-
-            for ie, xPos in enumerate(xLimits):
-                if ie == 0 and oe.shape == 'round' and not isClosedSurface:
-                    continue
-                deltaY = (yLimits[1] - yLimits[0]) / float(localTiles[1])
-                for i in range(localTiles[1]):
-                    yGridOe = np.linspace(yLimits[0] + i*deltaY,
-                                          yLimits[0] + (i+1)*deltaY,
-                                          self.surfCPOrder)
-
-                    edgeY = yGridOe
-                    edgeX = np.ones_like(yGridOe)*xPos
-                    edgeZ = np.zeros_like(xGridOe)
-
-                    if oe.shape == 'round' and not isClosedSurface:
-                        edgeX, edgeY = rX*edgeX*np.cos(edgeY)+cX, \
-                            rY*edgeX*np.sin(edgeY)+cY
-
-                    if oe.isParametric:
-                        edgeX, edgeY, edgeZ = oe.xyz_to_param(
-                            edgeX, edgeY, edgeZ)
-                    edgeZ = local_z(edgeX, edgeY)
-                    if oe.isParametric:
-                        edgeX, edgeY, edgeZ = oe.param_to_xyz(
-                            edgeX, edgeY, edgeZ)
-
-                    zN = 0
-                    gridZ = None
-                    for zTop in edgeZ:
-                        if isinstance(oe, (roes.LauePlate, roes.BentLaue2D)):
-                            gridZ = np.linspace(zTop-thickness, zTop,
-                                                self.surfCPOrder) if\
-                                gridZ is None else np.concatenate((
-                                    gridZ, np.linspace(zTop-thickness, zTop,
-                                                       self.surfCPOrder)))
-                        else:
-                            gridZ = np.linspace(-thickness, zTop,
-                                                self.surfCPOrder) if\
-                                gridZ is None else np.concatenate((
-                                    gridZ, np.linspace(-thickness, zTop,
-                                                       self.surfCPOrder)))
-
-                    gridY = np.repeat(edgeY, len(edgeZ))
-                    if oe.shape == 'round' and not isClosedSurface:
-                        yN = (gridY-cY) / rY
-                        gridX = np.repeat(edgeX, len(edgeZ))
-                        xN = (gridX-cX) / rX
-                    else:
-                        gridX = np.repeat(edgeX, len(edgeZ))
-                        yN = np.zeros_like(gridX)
-                        xN = (1 if ie == 1 else -1) * np.ones_like(gridX)
-                    zN = np.zeros_like(gridX)
-
-                    faceBeam = rsources.Beam(nrays=len(gridX))
-                    faceBeam.x = gridX
-                    faceBeam.y = gridY
-                    faceBeam.z = gridZ
-
-                    faceBeam.a = xN
-                    faceBeam.b = yN
-                    faceBeam.c = zN
-
-                    oe.local_to_global(faceBeam, is2ndXtal=is2ndXtal)
-                    self.plotCurvedMesh(faceBeam.x, faceBeam.y, faceBeam.z,
-                                        faceBeam.a, faceBeam.b, faceBeam.c,
-                                        [0]*3)
-        gl.glDisable(gl.GL_MAP2_VERTEX_3)
-        gl.glDisable(gl.GL_MAP2_NORMAL)
-
-        # Contour
-#        xBound = np.linspace(xLimits[0], xLimits[1],
-#                             self.surfCPOrder*(localTiles[0]+1))
-#        yBound = np.linspace(yLimits[0], yLimits[1],
-#                             self.surfCPOrder*(localTiles[1]+1))
-#        if oe.shape == 'round' and not isClosedSurface:
-#            oeContour = [0]
-#            oneEdge = [0]
-#        else:
-#            oeContour = [0]*4
-#            oneEdge = [0]*4
-#            oeContour[0] = np.array([xBound,
-#                                     yBound[0]*np.ones_like(xBound)])  # bottom
-#            oeContour[1] = np.array([xBound[-1]*np.ones_like(yBound),
-#                                     yBound])  # left
-#            oeContour[2] = np.array([np.flip(xBound, 0),
-#                                     yBound[-1]*np.ones_like(xBound)])  # top
-#            oeContour[3] = np.array([xBound[0]*np.ones_like(yBound),
-#                                     np.flip(yBound, 0)])  # right
-#
-#        for ie, edge in enumerate(oeContour):
-#            if oe.shape == 'round' and not isClosedSurface:
-#                edgeX, edgeY = rX*np.cos(yBound)+cX, rY*np.sin(yBound)+cY
-#            else:
-#                edgeX = edge[0, :]
-#                edgeY = edge[1, :]
-#            edgeZ = np.zeros_like(edgeX)
-#
-#            if oe.isParametric:
-#                edgeX, edgeY, edgeZ = oe.xyz_to_param(edgeX, edgeY,
-#                                                      edgeZ)
-#
-#            edgeZ = local_z(edgeX, edgeY)
-#            if oe.isParametric:
-#                edgeX, edgeY, edgeZ = oe.param_to_xyz(
-#                        edgeX, edgeY, edgeZ)
-#            edgeBeam = rsources.Beam(nrays=len(edgeX))
-#            edgeBeam.x = edgeX
-#            edgeBeam.y = edgeY
-#            edgeBeam.z = edgeZ
-#
-#            oe.local_to_global(edgeBeam, is2ndXtal=is2ndXtal)
-#            oneEdge[ie] = np.vstack((edgeBeam.x - self.coordOffset[0],
-#                                     edgeBeam.y - self.coordOffset[1],
-#                                     edgeBeam.z - self.coordOffset[2])).T
-#
-#        self.oeContour[oe.name] = oneEdge
-
-#    def drawOeContour(self, oe):
-#        gl.glEnable(gl.GL_MAP1_VERTEX_3)
-#        gl.glLineWidth(self.contourWidth)
-#        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-#        cpo = self.surfCPOrder
-#        for ie in range(len(self.oeContour[oe.name])):
-#            edge = self.oeContour[oe.name][ie]
-#            nTiles = self.tiles[0] if ie in [0, 2] else self.tiles[1]
-#            nTiles = self.tiles[1]*3 if oe.shape == 'round' else nTiles
-#            for tile in range(nTiles+1):
-#                gl.glMap1f(gl.GL_MAP1_VERTEX_3,  0, 1,
-#                           self.modelToWorld(edge[tile*cpo:(tile+1)*cpo+1, :]))
-#                gl.glMapGrid1f(cpo, 0.0, 1.0)
-#                gl.glEvalMesh1(gl.GL_LINE, 0, cpo)
-#
-#        gl.glDisable(gl.GL_MAP1_VERTEX_3)
-
-#    def drawSlitEdges(self, oe):
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#        gl.glLineWidth(self.contourWidth)
-#        gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-#        gl.glBegin(gl.GL_QUADS)
-#        for edge in self.modelToWorld(np.array(self.slitEdges[oe.name]) -
-#                                      np.array(self.coordOffset)):
-#            gl.glVertex3f(*edge[0, :])
-#            gl.glVertex3f(*edge[1, :])
-#            gl.glVertex3f(*edge[3, :])
-#            gl.glVertex3f(*edge[2, :])
-#
-#            gl.glVertex3f(*edge[0, :])
-#            gl.glVertex3f(*edge[1, :])
-#            gl.glVertex3f(*edge[5, :])
-#            gl.glVertex3f(*edge[4, :])
-#
-#            gl.glVertex3f(*edge[5, :])
-#            gl.glVertex3f(*edge[1, :])
-#            gl.glVertex3f(*edge[3, :])
-#            gl.glVertex3f(*edge[7, :])
-#
-#            gl.glVertex3f(*edge[4, :])
-#            gl.glVertex3f(*edge[5, :])
-#            gl.glVertex3f(*edge[7, :])
-#            gl.glVertex3f(*edge[6, :])
-#
-#            gl.glVertex3f(*edge[0, :])
-#            gl.glVertex3f(*edge[4, :])
-#            gl.glVertex3f(*edge[6, :])
-#            gl.glVertex3f(*edge[2, :])
-#
-#            gl.glVertex3f(*edge[2, :])
-#            gl.glVertex3f(*edge[3, :])
-#            gl.glVertex3f(*edge[7, :])
-#            gl.glVertex3f(*edge[6, :])
-#        gl.glEnd()
-
-    def plotAperture(self, oe):
-        surfCPOrder = self.surfCPOrder
-        gl.glEnable(gl.GL_MAP2_VERTEX_3)
-        gl.glEnable(gl.GL_MAP2_NORMAL)
-        plotVolume = False
-
-        if oe.shape == 'round':
-            r = oe.r
-            isBeamStop = len(re.findall('Stop', str(type(oe)))) > 0
-            if isBeamStop:
-                limits = [[0, r, 0, 2*np.pi]]
-            else:
-                # wf = max(r*0.25, 2.5)
-                wf = 2*r * self.slitThicknessFraction*0.01
-                limits = [[r, r+wf, 0, 2*np.pi]]
-            tiles = self.tiles[1] * 5
-        else:
-            try:
-                left, right, bottom, top = oe.spotLimits
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
-                else:
-                    left, right, bottom, top = 0, 0, 0, 0
-            for akind, d in zip(oe.kind, oe.opening):
-                if akind.startswith('l'):
-                    left = d
-                elif akind.startswith('r'):
-                    right = d
-                elif akind.startswith('b'):
-                    bottom = d
-                elif akind.startswith('t'):
-                    top = d
-
-            w = right - left
-            h = top - bottom
-            # wf = max(min(w, h)*0.5, 2.5)
-            wf = min(w, h) * self.slitThicknessFraction*0.01
-            limits = []
-            for akind, d in zip(oe.kind, oe.opening):
-                if akind.startswith('l'):
-                    limits.append([left-wf, left, bottom-wf, top+wf])
-                elif akind.startswith('r'):
-                    limits.append([right, right+wf, bottom-wf, top+wf])
-                elif akind.startswith('b'):
-                    limits.append([left-wf, right+wf, bottom-wf, bottom])
-                elif akind.startswith('t'):
-                    limits.append([left-wf, right+wf, top, top+wf])
-
-            tiles = self.tiles[1]
-
-        if not plotVolume:
-            for xMin, xMax, yMin, yMax in limits:
-                xGridOe = np.linspace(xMin, xMax, surfCPOrder)
-                deltaY = (yMax - yMin) / float(tiles)
-                for k in range(tiles):
-                    yMinT = yMin + k*deltaY
-                    yMaxT = yMinT + deltaY
-                    yGridOe = np.linspace(yMinT, yMaxT, surfCPOrder)
-                    xv, yv = np.meshgrid(xGridOe, yGridOe)
-                    if oe.shape == 'round':
-                        xv, yv = xv*np.cos(yv), xv*np.sin(yv)
-                    xv = xv.flatten()
-                    yv = yv.flatten()
-
-                    gbT = rsources.Beam(nrays=len(xv))
-                    gbT.x = xv
-                    gbT.y = np.zeros_like(xv)
-                    gbT.z = yv
-
-                    gbT.a = np.zeros_like(xv)
-                    gbT.b = np.ones_like(xv)
-                    gbT.c = np.zeros_like(xv)
-
-                    oe.local_to_global(gbT)
-
-                    for surf in [1, -1]:
-                        self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-                                            gbT.a, gbT.b[:]*surf, gbT.c,
-                                            [0, 0, 0])
-#        else:
-#            self.slitEdges[oe.name] = []
-#            for iface, face in enumerate(limits):
-#                dT = slitT if iface < 2 else -slitT  # Slit thickness
-#                # front
-#                xGridOe = np.linspace(face[0], face[1], surfCPOrder)
-#                zGridOe = np.linspace(face[2], face[3], surfCPOrder)
-#                yGridOe = np.linspace(0, -dT, surfCPOrder)
-#                xVert, yVert, zVert = np.meshgrid([face[0], face[1]],
-#                                                  [0, -dT],
-#                                                  [face[2], face[3]])
-#                bladeVertices = np.vstack((xVert.flatten(),
-#                                           yVert.flatten(),
-#                                           zVert.flatten())).T
-#                gbt = rsources.Beam(nrays=8)
-#                gbt.x = bladeVertices[:, 0]
-#                gbt.y = bladeVertices[:, 1]
-#                gbt.z = bladeVertices[:, 2]
-#                oe.local_to_global(gbt)
-#
-#                self.slitEdges[oe.name].append(np.vstack((gbt.x, gbt.y,
-#                                                          gbt.z)).T)
-#
-#                xv, zv = np.meshgrid(xGridOe, zGridOe)
-#                xv = xv.flatten()
-#                zv = zv.flatten()
-#
-#                gbT = rsources.Beam(nrays=len(xv))
-#                gbT.x = xv
-#                gbT.y = np.zeros_like(xv)
-#                gbT.z = zv
-#
-#                gbT.a = np.zeros_like(xv)
-#                gbT.b = np.ones_like(xv)
-#                gbT.c = np.zeros_like(xv)
-#
-#                oe.local_to_global(gbT)
-#
-#                for ysurf in [0, dT]:
-#                    nsurf = 1. if (dT > 0 and ysurf != 0) or\
-#                        (ysurf == 0 and dT < 0) else -1.
-#                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-#                                        gbT.a, gbT.b[:]*nsurf, gbT.c,
-#                                        [0, ysurf, 0])
-#
-#                # side
-#                zv, yv = np.meshgrid(zGridOe, yGridOe)
-#                zv = zv.flatten()
-#                yv = yv.flatten()
-#
-#                gbT = rsources.Beam(nrays=len(yv))
-#                gbT.y = yv
-#                gbT.x = np.zeros_like(yv)
-#                gbT.z = zv
-#
-#                gbT.a = np.ones_like(yv)
-#                gbT.b = np.zeros_like(yv)
-#                gbT.c = np.zeros_like(yv)
-#
-#                oe.local_to_global(gbT)
-#
-#                for isurf, xsurf in enumerate([face[0], face[1]]):
-#                    nsurf = 1. if isurf == 0 else -1
-#                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-#                                        gbT.a[:]*nsurf, gbT.b, gbT.c,
-#                                        [xsurf, 0, 0])
-#
-#                # top
-#                xv, yv = np.meshgrid(xGridOe, yGridOe)
-#                xv = xv.flatten()
-#                yv = yv.flatten()
-#
-#                gbT = rsources.Beam(nrays=len(yv))
-#                gbT.x = xv
-#                gbT.y = yv
-#                gbT.z = np.zeros_like(xv)
-#
-#                gbT.a = np.zeros_like(yv)
-#                gbT.b = np.zeros_like(yv)
-#                gbT.c = np.ones_like(yv)
-#
-#                oe.local_to_global(gbT)
-#
-#                for isurf, zsurf in enumerate([face[2], face[3]]):
-#                    nsurf = 1. if isurf == 0 else -1
-#                    self.plotCurvedMesh(gbT.x, gbT.y, gbT.z,
-#                                        gbT.a, gbT.b, gbT.c[:]*nsurf,
-#                                        [0, 0, zsurf])
-
-        gl.glDisable(gl.GL_MAP2_VERTEX_3)
-        gl.glDisable(gl.GL_MAP2_NORMAL)
 
     def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
         scAbsZ = np.linalg.norm(oe.z * self.scaleVec)
@@ -5070,131 +3222,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         gl.glDisable(gl.GL_MAP2_VERTEX_3)
 
-    def addLighting(self, pos):
-        spot = 60
-        exp = 30
-        ambient = [0.2, 0.2, 0.2, 1]
-        diffuse = [0.5, 0.5, 0.5, 1]
-        specular = [1.0, 1.0, 1.0, 1]
-        gl.glEnable(gl.GL_LIGHTING)
-
-#        corners = [[-pos, pos, pos, 1], [-pos, -pos, -pos, 1],
-#                   [-pos, pos, -pos, 1], [-pos, -pos, pos, 1],
-#                   [pos, pos, -pos, 1], [pos, -pos, pos, 1],
-#                   [pos, pos, pos, 1], [pos, -pos, -pos, 1]]
-
-        corners = [[0, 0, pos, 1], [0, pos, 0, 1],
-                   [pos, 0, 0, 1], [-pos, 0, 0, 1],
-                   [0, -pos, 0, 1], [0, 0, -pos, 1]]
-
-        gl.glLightModeli(gl.GL_LIGHT_MODEL_TWO_SIDE, 0)
-        for iLight in range(len(corners)):
-            light = gl.GL_LIGHT0 + iLight
-            gl.glEnable(light)
-            gl.glLightfv(light, gl.GL_POSITION, corners[iLight])
-            gl.glLightfv(light, gl.GL_SPOT_DIRECTION,
-                         np.array(corners[len(corners)-iLight-1])/pos)
-            gl.glLightfv(light, gl.GL_SPOT_CUTOFF, spot)
-            gl.glLightfv(light, gl.GL_SPOT_EXPONENT, exp)
-            gl.glLightfv(light, gl.GL_AMBIENT, ambient)
-            gl.glLightfv(light, gl.GL_DIFFUSE, diffuse)
-            gl.glLightfv(light, gl.GL_SPECULAR, specular)
-#            gl.glBegin(gl.GL_LINES)
-#            glVertex4f(*corners[iLight])
-#            glVertex4f(*corners[len(corners)-iLight-1])
-#            gl.glEnd()
-
-#    def toggleHelp(self):
-#        self.showHelp = not self.showHelp
-#        self.glDraw()
-
-#    def drawHelp(self):
-#        hHeight = 300
-#        hWidth = 500
-#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-#        gl.glViewport(0, self.viewPortGL[3]-hHeight, hWidth, hHeight)
-#        gl.glMatrixMode(gl.GL_PROJECTION)
-#        gl.glLoadIdentity()
-#        gl.glOrtho(-1, 1, -1, 1, -1, 1)
-#        gl.glMatrixMode(gl.GL_MODELVIEW)
-#        gl.glLoadIdentity()
-#
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-#        gl.glBegin(gl.GL_QUADS)
-#
-#        if self.invertColors:
-#            gl.glColor4f(1.0, 1.0, 1.0, 0.9)
-#        else:
-#            gl.glColor4f(0.0, 0.0, 0.0, 0.9)
-#        backScreen = [[1, 1], [1, -1],
-#                      [-1, -1], [-1, 1]]
-#        for corner in backScreen:
-#                gl.glVertex3f(corner[0], corner[1], 0)
-#
-#        gl.glEnd()
-#
-#        if self.invertColors:
-#            gl.glColor4f(0.0, 0.0, 0.0, 1.0)
-#        else:
-#            gl.glColor4f(1.0, 1.0, 1.0, 1.0)
-#        gl.glLineWidth(3)
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#        gl.glBegin(gl.GL_QUADS)
-#        backScreen = [[1, 1], [1, -1],
-#                      [-1, -1], [-1, 1]]
-#        for corner in backScreen:
-#                gl.glVertex3f(corner[0], corner[1], 0)
-#        gl.glEnd()
-#
-#        helpList = [
-#            'F1: Open/Close this help window',
-#            'F3: Add/Remove Virtual Screen',
-#            'F4: Dock/Undock xrtGlow if launched from xrtQook',
-#            'F5/F6: Quick Save/Load Scene']
-#        if hasattr(self, 'generator'):
-#            helpList += ['F7: Start recording movie']
-#        helpList += [
-#            'LeftMouse: Rotate the Scene',
-#            'SHIFT+LeftMouse: Translate in perpendicular to the shortest view axis',  # analysis:ignore
-#            'ALT+LeftMouse: Translate in parallel to the shortest view axis',  # analysis:ignore
-#            'CTRL+LeftMouse: Drag Virtual Screen',
-#            'ALT+WheelMouse: Scale Virtual Screen',
-#            'CTRL+SHIFT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
-#            '                      (with Beamline along the longest view axis)',  # analysis:ignore
-#            'CTRL+ALT+LeftMouse: Translate the Beamline around Virtual Screen',  # analysis:ignore
-#            '                      (with Beamline along the shortest view axis)',  # analysis:ignore
-#            'CTRL+T: Toggle Virtual Screen orientation (vertical/normal to the beam)',  # analysis:ignore
-#            'WheelMouse: Zoom the Beamline',
-#            'CTRL+WheelMouse: Zoom the Scene']
-#        for iLine, text in enumerate(helpList):
-#            self.drawText([-1. + 0.05,
-#                           1. - 2. * (iLine + 1) / float(len(helpList)+1), 0],
-#                          text, True)
-#
-#        gl.glFlush()
-#        gl.glViewport(*pView)
-
-    def drawCone(self, z, r, nFacets, color):
-        pass
-#        phi = np.linspace(0, 2*np.pi, nFacets)
-#        xp = r * np.cos(phi)
-#        yp = r * np.sin(phi)
-#        base = np.vstack((xp, yp, np.zeros_like(xp)))
-#        coneVertices = np.hstack((np.array([0, 0, z]).reshape(3, 1),
-#                                  base)).T
-#        gridColor = np.zeros((len(coneVertices), 4))
-#        gridColor[:, color] = 1
-#        gridColor[:, 3] = 0.75
-#        gridArray = gl.vbo.VBO(np.float32(coneVertices))
-#        gridArray.bind()
-#        gl.glVertexPointerf(gridArray)
-#        gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-#        gridColorArray.bind()
-#        gl.glColorPointerf(gridColorArray)
-#        gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
-#        gridArray.unbind()
-#        gridColorArray.unbind()
-
     def drawLocalAxes(self, oe, is2ndXtal):
         pass
 #        def drawArrow(color, arrowArray, yText='hkl'):
@@ -5369,91 +3396,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
 #            drawArrow(color, coneCP, yText)
 
-    def drawDirectionAxes(self):
-        pass
-#        arrowSize = 0.05
-#        axisLen = 0.1
-#        tLen = (arrowSize + axisLen) * 2
-#        gl.glLineWidth(1.)
-#
-#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-#        gl.glViewport(0, 0, int(150*self.aspect), 150)
-#
-#        gl.glMatrixMode(gl.GL_PROJECTION)
-#        gl.glLoadIdentity()
-#        if self.perspectiveEnabled:
-#            gl.gluPerspective(60, self.aspect, 0.001, 10)
-#        else:
-#            gl.glOrtho(-tLen*self.aspect, tLen*self.aspect, -tLen, tLen, -1, 1)
-#
-#        gl.glMatrixMode(gl.GL_MODELVIEW)
-#        gl.glLoadIdentity()
-#        gl.gluLookAt(.5, 0.0, 0.0,
-#                     0.0, 0.0, 0.0,
-#                     0.0, 0.0, 1.0)
-#
-#        gl.glEnable(gl.GL_LINE_SMOOTH)
-#        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-#        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-#        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-#
-#        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-#        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-#
-#        self.rotateZYX()
-#
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-#        for iAx in range(3):
-#            if not (not self.perspectiveEnabled and
-#                    2-iAx == self.visibleAxes[2]):
-#                gl.glPushMatrix()
-#                trVec = np.zeros(3, dtype=np.float32)
-#                trVec[2-iAx] = axisLen
-#                gl.glTranslatef(*trVec)
-#                if iAx == 1:
-#                    gl.glRotatef(-90, 1.0, 0.0, 0.0)
-#                elif iAx == 2:
-#                    gl.glRotatef(90, 0.0, 1.0, 0.0)
-#                self.drawCone(arrowSize, 0.02, 20, iAx)
-#                gl.glPopMatrix()
-#        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-#        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#
-#        gl.glBegin(gl.GL_LINES)
-#        for iAx in range(3):
-#            if not (not self.perspectiveEnabled and
-#                    2-iAx == self.visibleAxes[2]):
-#                colorVec = [0, 0, 0, 0.75]
-#                colorVec[iAx] = 1
-#                gl.glColor4f(*colorVec)
-#                gl.glVertex3f(0, 0, 0)
-#                trVec = np.zeros(3, dtype=np.float32)
-#                trVec[2-iAx] = axisLen
-#                gl.glVertex3f(*trVec)
-#                gl.glColor4f(*colorVec)
-#        gl.glEnd()
-#
-#        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 2):
-#            gl.glColor4f(1, 0, 0, 1)
-#            gl.glRasterPos3f(0, 0, axisLen*1.5)
-#            for symbol in "  {} (mm)".format('Z'):
-#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-#        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 1):
-#            gl.glColor4f(0, 0.75, 0, 1)
-#            gl.glRasterPos3f(0, axisLen*1.5, 0)
-#            for symbol in "  {} (mm)".format('Y'):
-#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-#        if not (not self.perspectiveEnabled and self.visibleAxes[2] == 0):
-#            gl.glColor4f(0, 0.5, 1, 1)
-#            gl.glRasterPos3f(axisLen*1.5, 0, 0)
-#            for symbol in "  {} (mm)".format('X'):
-#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-##        gl.glFlush()
-#        gl.glViewport(*pView)
-#        gl.glColor4f(1, 1, 1, 1)
-#        gl.glDisable(gl.GL_LINE_SMOOTH)
-
     def initializeGL(self):
         gl.glGetError()
         gl.glEnable(gl.GL_STENCIL_TEST)
@@ -5471,7 +3413,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glGetError()
         self.generate_beam_texture(512)
         gl.glGetError()
-
 
         self.iMax = -1e20
 
@@ -5501,7 +3442,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if axMax > tmpMax[tmpCoord]:
                         tmpMax[tmpCoord] = axMax
 
-                startBeam.iMax = np.max(startBeam.Jss[good] + startBeam.Jpp[good])
+                startBeam.iMax = np.max(startBeam.Jss[good] +
+                                        startBeam.Jpp[good])
                 self.iMax = max(self.iMax, startBeam.iMax)
                 newColorMax = max(np.max(
                     self.getColor(startBeam)[good]),
@@ -5519,7 +3461,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if newColorMax != self.colorMax:
                 self.colorMax = newColorMax
                 self.selColorMax = self.colorMax
-
 
         tmpMaxLen = np.max(tmpMax - tmpMin)
         if tmpMaxLen > maxLen:
@@ -5547,12 +3488,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     oeToPlot.mesh3D.isEnabled = True
                     if oeuuid not in self.selectableOEs.values():
                         if len(self.selectableOEs):
-                            stencilNum = np.max(list(self.selectableOEs.keys()))+1
+                            stencilNum = np.max(
+                                    list(self.selectableOEs.keys())) + 1
                         else:
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
                         oeToPlot.mesh3D.stencilNum = stencilNum
-#                        print(oeToPlot.name, oeuuid, stencilNum)
             else:  # must be the source
                 if not hasattr(oeToPlot, 'mesh3D'):
                     oeToPlot.mesh3D = OEMesh3D(oeToPlot, self)
@@ -5565,28 +3506,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         stencilNum = 1
                     self.selectableOEs[int(stencilNum)] = oeuuid
                     oeToPlot.mesh3D.stencilNum = stencilNum
-#                    print(oeToPlot.name, oeuuid, stencilNum)
-
-#        counter = 0
-#        for beamName, startBeam in self.beamsDict.items():
-#            if counter > 1:
-#                break
-##            print(startBeam, hasattr(startBeam, 'vbo'))
-#            beamHist, ind_array = self.calculate_fp_hist(startBeam, 256, 256)
-#            _, nphist2d, _ = self.build_histRGB(startBeam, startBeam)
-#
-#            plt.figure(f"{counter}_2d")
-#            plt.imshow(beamHist)
-#
-#            plt.figure(f"{counter}_2d_numpy")
-#            plt.imshow(nphist2d)
-#
-##            plt.figure(f"{counter}_hist")
-##            plt.plot(ind_array)
-#            counter += 1
-#
-#
-#        plt.show()
 
         gl.glViewport(*self.viewPortGL)
         pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
@@ -5602,7 +3521,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.mProj.setToIdentity()
         self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
-
 
     def populateVScreen(self):
         if any([prop is None for prop in [self.virtBeam,
@@ -5838,39 +3756,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
 #
 #        if mEvent.buttons() == qt.LeftButton:
-#            gl.glMatrixMode(gl.GL_MODELVIEW)
-#            gl.glLoadIdentity()
-#            gl.gluLookAt(self.cameraPos[0], self.cameraPos[1],
-#                         self.cameraPos[2],
-#                         self.cameraTarget[0], self.cameraTarget[1],
-#                         self.cameraTarget[2],
-#                         0.0, 0.0, 1.0)
-#            self.rotateZYX()
-#            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-#            gl.glMatrixMode(gl.GL_PROJECTION)
-#            gl.glLoadIdentity()
-#
-#            if self.perspectiveEnabled:
-#                gl.gluPerspective(self.cameraAngle, self.aspect, 0.01, 100)
-#            else:
-#                orthoView = self.cameraPos[0]*0.45
-#                gl.glOrtho(-orthoView*self.aspect, orthoView*self.aspect,
-#                           -orthoView, orthoView, -100, 100)
-#            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-#            pm_list = pModel.flatten().tolist()
-#            pp_list = pProjection.flatten().tolist()
-##            pv_list = pView.flatten().tolist()
-##            print(len(pm_list), len(pp_list), len(pv_list))
-#
-#            self.mMod = qt.QMatrix4x4(*pm_list)  # MODVIEW
-#            self.mProj = qt.QMatrix4x4(*pp_list)
-##            self.mView = qt.QMatrix4x4(*pv_list)
-#
-##            self.mView.setToIdentity()
-##            self.mView.lookAt(qt.QVector3D(*self.cameraPos),
-##                              qt.QVector3D(*self.cameraTarget),
-##                              self.upVec)
-#
 #            if mEvent.modifiers() == qt.NoModifier:
 #                self.rotations[2][0] += np.float32(
 #                    self.signs[2][1] *
@@ -5884,38 +3769,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                        self.rotations[self.visibleAxes[ax+1]][0] += 360
 #                self.updateQuats()
 #                self.rotationUpdated.emit(self.rotations)
-#
-#            elif shiftOn:
-#                for iDim in range(2):
-#                    mStart = np.zeros(3)
-#                    mEnd = np.zeros(3)
-#                    mEnd[self.visibleAxes[iDim]] = 1.
-##                    mEnd = -1 * mStart
-#                    pStart = np.array(gl.gluProject(
-#                        *mStart, model=pModel, proj=pProjection,
-#                        view=pView)[:-1])
-#                    pEnd = np.array(gl.gluProject(
-#                        *mEnd, model=pModel, proj=pProjection,
-#                        view=pView)[:-1])
-#                    pScr = np.array([mouseX, mouseY])
-#                    prevPScr = np.array(self.prevMPos)
-#                    bDir = pEnd - pStart
-#                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
-#                        np.dot(bDir, bDir) * bDir
-#                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
-#                        np.dot(bDir, bDir) * bDir
-#                    self.tVec[self.visibleAxes[iDim]] += np.dot(
-#                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-#                        self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
-#                    if ctrlOn and self.virtScreen is not None:
-#                        self.virtScreen.center[self.visibleAxes[iDim]] -=\
-#                            np.dot(
-#                            pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-#                            self.maxLen / self.scaleVec[self.visibleAxes[iDim]]
-#                if ctrlOn and self.virtScreen is not None:
-#                    v0 = self.virtScreen.center
-#                    self.positionVScreen()
-#                    self.tVec -= self.virtScreen.center - v0
 #
 #            elif altOn:
 #                mStart = np.zeros(3)
@@ -5992,32 +3845,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            self.glDraw()
 #        self.prevMPos[0] = mouseX
 #        self.prevMPos[1] = mouseY
-#
-#    def wheelEvent(self, wEvent):
-#        ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
-#        altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
-#        if qt.QtName == "PyQt4":
-#            deltaA = wEvent.delta()
-#        else:
-#            deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
-#
-#        if deltaA > 0:
-#            if altOn:
-#                self.vScreenSize *= 1.1
-#            elif ctrlOn:
-#                self.cameraPos *= 0.9
-#            else:
-#                self.scaleVec *= 1.1
-#        else:
-#            if altOn:
-#                self.vScreenSize *= 0.9
-#            elif ctrlOn:
-#                self.cameraPos *= 1.1
-#            else:
-#                self.scaleVec *= 0.9
-#        if not ctrlOn:
-#            self.scaleUpdated.emit(self.scaleVec)
-#        self.glDraw()
 
     def mouseMoveEvent(self, mEvent):
 
@@ -6028,13 +3855,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.makeCurrent()
         try:
             outStencil = gl.glReadPixels(
-                    mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX, gl.GL_UNSIGNED_INT)
+                    mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX,
+                    gl.GL_UNSIGNED_INT)
         except OSError:
             return
         overOE = np.squeeze(np.array(outStencil))
 
-        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
-        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
+#        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
+#        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
         shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
         polarAx = qt.QVector3D(0, 0, 1)
 
@@ -6048,23 +3876,26 @@ class xrtGlWidget(qt.QOpenGLWidget):
         ym = xsn*3.5  # dist to cam, multiply by near clipping plane
         zm = ysn*3.5
 
-
         if mEvent.buttons() == qt.LeftButton:
             if mEvent.modifiers() == qt.NoModifier:
                 cR = self.cameraPos.length()
                 axR = self.aPos[0]*0.707
                 scale = np.tan(np.radians(self.cameraAngle))*(cR-axR)
 
-                yaw = self.aspect*dx/xView*scale/np.pi/axR #dx / xView / cR
-                roll = dy/yView*scale/np.pi/axR #dy / yView /cR
-                QXY = qt.QQuaternion().fromAxisAndAngle(polarAx, -np.degrees(yaw))
+                yaw = self.aspect*dx/xView*scale/np.pi/axR  # dx / xView / cR
+                roll = dy/yView*scale/np.pi/axR  # dy / yView /cR
+                QXY = qt.QQuaternion().fromAxisAndAngle(polarAx,
+                                                        -np.degrees(yaw))
                 self.cameraPos = QXY.rotatedVector(self.cameraPos)
-                rotAx = qt.QVector3D().crossProduct(polarAx, self.cameraPos.normalized())
-                QXR = qt.QQuaternion().fromAxisAndAngle(rotAx, np.degrees(roll))
+                rotAx = qt.QVector3D().crossProduct(
+                    polarAx, self.cameraPos.normalized())
+                QXR = qt.QQuaternion().fromAxisAndAngle(rotAx,
+                                                        np.degrees(roll))
                 self.cameraPos = QXR.rotatedVector(self.cameraPos)
 
                 self.mView.setToIdentity()
-                self.mView.lookAt(self.cameraPos, self.cameraTarget, self.upVec)
+                self.mView.lookAt(self.cameraPos, self.cameraTarget,
+                                  self.upVec)
 
                 pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
                 newVisAx = np.argmax(pModel, axis=0)
@@ -6086,9 +3917,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oe = self.uuidDict[self.selectableOEs[int(overOE)]]
                 tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
                         oe.name, *oe.center,
-                        np.degrees(oe.pitch + (oe.bragg if hasattr(oe, 'bragg') else 0)) if hasattr(oe, 'pitch') else 0,
-                        np.degrees(oe.roll+oe.positionRoll) if is_oe(oe) else 0,
-                        np.degrees(oe.yaw) if hasattr(oe, 'yaw') else 0)
+                        np.degrees(oe.pitch +
+                                   (oe.bragg if hasattr(oe, 'bragg') else 0))
+                        if hasattr(oe, 'pitch') else 0,
+                        np.degrees(oe.roll+oe.positionRoll)
+                        if is_oe(oe) else 0,
+                        np.degrees(oe.yaw)
+                        if hasattr(oe, 'yaw') else 0)
                 qt.QToolTip.showText(mEvent.globalPos(), tooltipStr, self)
             else:
                 qt.QToolTip.hideText()
@@ -6119,7 +3954,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.vScreenSize *= 1.1
             elif ctrlOn:
                 self.cameraAngle *= 0.9
-#                self.cameraPos *= 0.9
             else:
                 self.scaleVec *= 1.1
         else:
@@ -6136,9 +3970,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             self.scaleUpdated.emit(self.scaleVec)
         self.cBox.update_grid()
-
         self.glDraw()
-
 
 
 class Beam3D():
@@ -6176,8 +4008,10 @@ class Beam3D():
     void main()
     {
 
-     vs_out_start = mPV * (gridMask * (model * vec4(position_start, 1.0)) + gridProjection);
-     vs_out_end = mPV * (gridMask * (model * vec4(position_end, 1.0)) + gridProjection);
+     vs_out_start = mPV * (gridMask * (model * vec4(position_start, 1.0)) +
+                           gridProjection);
+     vs_out_end = mPV * (gridMask * (model * vec4(position_end, 1.0)) +
+                         gridProjection);
 
      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
      intensity_v = opacity*intensity/iMax;
@@ -6256,7 +4090,7 @@ class Beam3D():
     uniform sampler1D hsvTexture;
 
     uniform vec2 numBins;
-    uniform vec4 bounds; // Min and max for X, Y as [[xmin, ymin], [xmax, ymax]]
+    uniform vec4 bounds; // Min and max for X,Y as [[xmin, ymin], [xmax, ymax]]
     uniform vec2 colorMinMax;
     uniform float iMax;
 
@@ -6265,18 +4099,18 @@ class Beam3D():
     void main(void) {
         uint idx = gl_GlobalInvocationID.x;
 
-        vec2 normalized = (position[idx].xy - bounds.xy) / (bounds.zw - bounds.xy);
-        //ivec2 binIndex = ivec2(clamp(normalized * numBins, vec2(0, 0), numBins - vec2(1., 1.)));
-        vec2 binIndex = vec2(normalized.x * numBins.x, normalized.y * numBins.y);
+        vec2 normalized = (position[idx].xy - bounds.xy) /
+            (bounds.zw - bounds.xy);
+        vec2 binIndex = vec2(normalized.x * numBins.x,
+                             normalized.y * numBins.y);
         uint flatIndex = uint(binIndex.x) + uint(binIndex.y * numBins.x);
 
-        float hue = (color[idx] - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-        //float hue = 0.5;
+        float hue = (color[idx] - colorMinMax.x) /
+            (colorMinMax.y - colorMinMax.x);
         if (state[idx] > 0) {
-                //rgb_color = vec3(1, 1, 1);
-                rgb_color =  intensity[idx] / iMax * 10000. * texture(hsvTexture, hue*0.85).rgb;
+                rgb_color =  intensity[idx] / iMax * 10000. *
+                texture(hsvTexture, hue*0.85).rgb;
         } else {
-                //rgb_color = vec3(1, 1, 1);
                 rgb_color = vec3(0, 0, 0);
         };
 
@@ -6329,7 +4163,8 @@ class Beam3D():
     void main()
     {
 
-     gl_Position = mPV * (gridMask * (model * vec4(position_start, 1.0)) + gridProjection);
+     gl_Position = mPV * (gridMask * (model * vec4(position_start, 1.0)) +
+                          gridProjection);
      gl_PointSize = pointSize;
 
      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
@@ -6363,7 +4198,7 @@ class OEMesh3D():
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec3 normals;
 
-    out vec4 w_position;  // position of the vertex (and fragment) in world space
+    out vec4 w_position;  // position of the vertex in world space
     out vec3 varyingNormalDirection;  // surface normal vector in world space
     out vec3 localPos;
 
@@ -6389,7 +4224,7 @@ class OEMesh3D():
     fragment_source = '''
     #version 410 core
 
-    in vec4 w_position;  // position of the vertex (and fragment) in world space
+    in vec4 w_position;  // position of the vertex in world space
     in vec3 varyingNormalDirection;  // surface normal vector in world space
     in vec3 localPos;
 
@@ -6441,17 +4276,12 @@ class OEMesh3D():
     };
 
     uniform material frontMaterial;
-//        material frontMaterial = material(
-//          vec4(0.2, 0.2, 0.2, 1.0),
-//          vec4(1.0, 0.8, 0.8, 1.0),
-//          vec4(1.0, 1.0, 1.0, 1.0),
-//          100.0
-//        );
 
     void main()
     {
       vec3 normalDirection = normalize(varyingNormalDirection);
-      vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - w_position));
+      vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
+                                          w_position));
       vec3 lightDirection;
       float attenuation;
 
@@ -6468,18 +4298,21 @@ class OEMesh3D():
           lightDirection = normalize(positionToLightSource);
           attenuation = 1.0 / (light0.constantAttenuation
                                + light0.linearAttenuation * distance
-                               + light0.quadraticAttenuation * distance * distance);
+                               + light0.quadraticAttenuation * distance *
+                               distance);
 
           if (light0.spotCutoff <= 90.0) // spotlight?
         {
-          float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
-          if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone?
+          float clampedCosine = max(0.0, dot(-lightDirection,
+                                             light0.spotDirection));
+          if (clampedCosine < cos(radians(light0.spotCutoff)))
             {
               attenuation = 0.0;
             }
           else
             {
-              attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
+              attenuation = attenuation * pow(clampedCosine,
+                                              light0.spotExponent);
             }
         }
         }
@@ -6491,30 +4324,31 @@ class OEMesh3D():
         * max(0.0, dot(normalDirection, lightDirection));
 
       vec3 specularReflection;
-      if (dot(normalDirection, lightDirection) < 0.0) // light source on the wrong side?
+      if (dot(normalDirection, lightDirection) < 0.0)
         {
           specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
         }
       else // light source on the right side
         {
-          specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
-        * pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
+          specularReflection = attenuation * vec3(light0.specular) *
+          vec3(frontMaterial.specular) *
+          pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
+                           viewDirection)), frontMaterial.shininess);
         }
      texUV = vec2((localPos.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
                  (localPos.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
 
      texOpacity = surfOpacity;
-     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1 && localPos.z<texlimitsz.y && localPos.z>texlimitsz.x) {
+     if (texUV.x>0 && texUV.x<1 && texUV.y>0 && texUV.y<1 &&
+         localPos.z<texlimitsz.y && localPos.z>texlimitsz.x) {
          histColor = texture(u_texture, texUV);
          if (isApt>0) texOpacity = 0.; }
      else
          histColor = vec4(0, 0, 0, 0);
-
-      //gl_FragColor = vec4(1, 1, 1, 1.0);
-      fragColor = vec4(ambientLighting + diffuseReflection + specularReflection, texOpacity) + histColor*opacity;
+      fragColor = vec4(ambientLighting + diffuseReflection +
+                       specularReflection, texOpacity) + histColor*opacity;
     }
     '''
-
 
     vertex_source_flat = '''
     #version 410 core
@@ -6571,7 +4405,8 @@ class OEMesh3D():
 
         vec3 viewDir = normalize(viewPos - worldCoord.xyz);
         vec3 reflectDir = reflect(lightDir, norm);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0),
+                         material.shininess);
         vec3 specular = light.specular * (spec * material.specular);
         //vec3 result = ambient + diffuse + specular;
         vec3 result = ambient + specular;
@@ -6708,7 +4543,8 @@ class OEMesh3D():
     {
 
       vec3 normalDirection = normalize(varyingNormalDirection);
-      vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) - w_position));
+      vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
+                                          w_position));
       vec3 lightDirection;
       float attenuation;
 
@@ -6725,18 +4561,21 @@ class OEMesh3D():
           lightDirection = normalize(positionToLightSource);
           attenuation = 1.0 / (light0.constantAttenuation
                                + light0.linearAttenuation * distance
-                               + light0.quadraticAttenuation * distance * distance);
+                               + light0.quadraticAttenuation * distance *
+                               distance);
 
           if (light0.spotCutoff <= 90.0) // spotlight?
         {
-          float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
-          if (clampedCosine < cos(radians(light0.spotCutoff))) // outside of spotlight cone?
+          float clampedCosine = max(0.0, dot(-lightDirection,
+                                             light0.spotDirection));
+          if (clampedCosine < cos(radians(light0.spotCutoff)))
             {
               attenuation = 0.0;
             }
           else
             {
-              attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
+              attenuation = attenuation * pow(clampedCosine,
+                                              light0.spotExponent);
             }
         }
         }
@@ -6748,17 +4587,20 @@ class OEMesh3D():
         * max(0.0, dot(normalDirection, lightDirection));
 
       vec3 specularReflection;
-      if (dot(normalDirection, lightDirection) < 0.0) // light source on the wrong side?
+      if (dot(normalDirection, lightDirection) < 0.0)
         {
           specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
         }
       else // light source on the right side
         {
-          specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
-        * pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess);
+          specularReflection = attenuation * vec3(light0.specular) *
+          vec3(frontMaterial.specular) *
+          pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
+                           viewDirection)), frontMaterial.shininess);
         }
 
-        fragColor = vec4(ambientLighting+ diffuseReflection+ specularReflection, 1.0);
+        fragColor = vec4(ambientLighting + diffuseReflection +
+                         specularReflection, 1.0);
 
     }
     """
@@ -6800,59 +4642,56 @@ class OEMesh3D():
         self.cube_vertices = np.array([
             # Positions           Normals
             # Front face
-            -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,
-             0.5, -0.5,  0.5,    0.0,  0.0,  1.0,
-             0.5,  0.5,  0.5,    0.0,  0.0,  1.0,
-             0.5,  0.5,  0.5,    0.0,  0.0,  1.0,
-            -0.5,  0.5,  0.5,    0.0,  0.0,  1.0,
-            -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,
+            -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
+            0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
+            0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
+            0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
+            -0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
+            -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
 
             # Back face
-            -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,
-            -0.5,  0.5, -0.5,    0.0,  0.0, -1.0,
-             0.5,  0.5, -0.5,    0.0,  0.0, -1.0,
-             0.5,  0.5, -0.5,    0.0,  0.0, -1.0,
-             0.5, -0.5, -0.5,    0.0,  0.0, -1.0,
-            -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,
+            -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
+            -0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
+            0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
+            0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
+            0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
+            -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
 
             # Left face
-            -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,
-            -0.5,  0.5, -0.5,   -1.0,  0.0,  0.0,
-            -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,
-            -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,
-            -0.5, -0.5,  0.5,   -1.0,  0.0,  0.0,
-            -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,
+            -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
+            -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,
+            -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
+            -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
+            -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,
+            -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
 
             # Right face
-             0.5,  0.5,  0.5,    1.0,  0.0,  0.0,
-             0.5, -0.5,  0.5,    1.0,  0.0,  0.0,
-             0.5, -0.5, -0.5,    1.0,  0.0,  0.0,
-             0.5, -0.5, -0.5,    1.0,  0.0,  0.0,
-             0.5,  0.5, -0.5,    1.0,  0.0,  0.0,
-             0.5,  0.5,  0.5,    1.0,  0.0,  0.0,
+            0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
+            0.5, -0.5,  0.5,  1.0,  0.0,  0.0,
+            0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
+            0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
+            0.5,  0.5, -0.5,  1.0,  0.0,  0.0,
+            0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
 
             # Bottom face
-            -0.5, -0.5, -0.5,    0.0, -1.0,  0.0,
-             0.5, -0.5, -0.5,    0.0, -1.0,  0.0,
-             0.5, -0.5,  0.5,    0.0, -1.0,  0.0,
-             0.5, -0.5,  0.5,    0.0, -1.0,  0.0,
-            -0.5, -0.5,  0.5,    0.0, -1.0,  0.0,
-            -0.5, -0.5, -0.5,    0.0, -1.0,  0.0,
+            -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+            0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+            0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+            0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+            -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+            -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
 
             # Top face
-            -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,
-            -0.5,  0.5,  0.5,    0.0,  1.0,  0.0,
-             0.5,  0.5,  0.5,    0.0,  1.0,  0.0,
-             0.5,  0.5,  0.5,    0.0,  1.0,  0.0,
-             0.5,  0.5, -0.5,    0.0,  1.0,  0.0,
-            -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,
+            -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+            -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+            0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+            0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+            0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+            -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
         ], dtype=np.float32)
-
-#        self.createArrowArray(0.25, 0.02, 20)
 
     def update_surface_mesh(self, is2ndXtal=False):
         pass
-
 
     @staticmethod
     def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
@@ -6919,7 +4758,8 @@ class OEMesh3D():
             mTranslation = qt.QMatrix4x4()
             mTranslation.translate(*oe.center)
 
-            orientation =  mTranslation*m2ndXtalRot*mRotation*mExtraRot*m2ndXtalPos
+            orientation = mTranslation * m2ndXtalRot * mRotation *\
+                mExtraRot * m2ndXtalPos
         elif is_screen(oe) or is_aperture(oe):  # Screens, Apertures
             bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
 
@@ -6943,7 +4783,7 @@ class OEMesh3D():
         return orientation
 
     def prepare_surface_mesh(self, is2ndXtal=False, updateMesh=False,
-                              shader=None):
+                             shader=None):
         def get_thickness():
 #            if self.oeThicknessForce is not None:
 #                return self.oeThicknessForce
@@ -7013,13 +4853,12 @@ class OEMesh3D():
         # TODO: Consider plates
         oeShape = self.oe.shape if hasattr(self.oe, 'shape') else 'rect'
         oeDx = self.oe.dx if hasattr(self.oe, 'dx') else 0
-        isOeParametric = self.oe.isParametric if hasattr(self.oe, 'isParametric') else False
+        isOeParametric = self.oe.isParametric if hasattr(
+                self.oe, 'isParametric') else False
 
         yDim = 1
         if isScreen:
-#            xLimits = [-10, 10]
-#            yLimits = [-10, 10]
-            xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]  # delegate to footprints
+            xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yDim = 2
         elif isAperture:
@@ -7313,22 +5152,25 @@ class OEMesh3D():
             instancePositions[2*n] = (pos_x, pos_y, gap+0.5*self.mag_z_size)
             instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*self.mag_z_size)
             isEven = (n % 2) == 0
-            instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else (0.0, 0.0, 1.0)
-            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if isEven else (1.0, 0.0, 0.0)
+            instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else\
+                (0.0, 0.0, 1.0)
+            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if isEven else\
+                (1.0, 0.0, 0.0)
 
         return instancePositions, instanceColors
 
-
     def prepare_magnets(self, updateMesh=False, shader=None):
-
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
 
         num_poles = self.oe.n*2 if hasattr(self.oe, 'n') else 1
         self.mag_z_size = 20
-        self.vbo_vertices = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, :3].copy())
-        self.vbo_normals = create_qt_buffer(self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
-        instancePositions, instanceColors = self.generate_instance_data(num_poles)
+        self.vbo_vertices = create_qt_buffer(
+                self.cube_vertices.reshape(-1, 6)[:, :3].copy())
+        self.vbo_normals = create_qt_buffer(
+                self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+        instancePositions, instanceColors = self.generate_instance_data(
+                num_poles)
 
         self.vbo_positions = create_qt_buffer(instancePositions.copy())
         self.vbo_colors = create_qt_buffer(instanceColors.copy())
@@ -7361,15 +5203,11 @@ class OEMesh3D():
         self.vao = vao
         self.num_poles = num_poles
 
-
     def render_surface(self, mMod, mView, mProj, is2ndXtal=False,
-                     isSelected=False, shader=None):
+                       isSelected=False, shader=None):
 
         oeIndex = int(is2ndXtal)
-
-#        shader = self.shader[oeIndex]
         vao = self.vao[oeIndex]
-#        ibo = self.ibo[oeIndex]
 
         beamTexture = self.beamTexture[oeIndex] if len(self.beamTexture) > 0\
             else self.emptyTex  # what if there's no texture?
@@ -7383,8 +5221,6 @@ class OEMesh3D():
             surfOpacity = 0.5
         elif is_aperture(self.oe):
             xLimits, yLimits = self.xLimits, self.yLimits
-
-#        print(self.oe, xLimits, yLimits)
 
         oeOrientation = self.transMatrix[oeIndex]
         arrLen = self.arrLengths[oeIndex]
@@ -7434,7 +5270,8 @@ class OEMesh3D():
         shader.release()
         vao.release()
 
-    def render_magnets(self, mMod, mView, mProj, isSelected=False, shader=None):
+    def render_magnets(self, mMod, mView, mProj, isSelected=False,
+                       shader=None):
         if shader is None:
             return
 
@@ -7560,35 +5397,10 @@ class CoordinateBox():
     {
         vec2 uv = vUV.xy;
         float text = texture(u_texture, uv).r;
-        fragColor = vec4(textColor, textOpacity) * vec4(text, text, text, text);
+        fragColor = vec4(textColor, textOpacity) *
+            vec4(text, text, text, text);
     }
     """
-
-#    vertex_arrow = '''
-#    #version 410 core
-#
-#    layout(location = 0) in vec3 position;
-#
-#    uniform mat4 pvm;  // projection*view*model
-#
-#    void main()
-#    {
-#        gl_Position = pvm*vec4(position, 1.);
-#    }
-#    '''
-#
-#    fragment_arrow = '''
-#    #version 410 core
-#
-#    uniform vec4 aColor;
-#    out vec4 fragColor;
-#
-#    void main()
-#    {
-#        fragColor = aColor;
-#    }
-#    '''
-
 
     def __init__(self, parent):
 
@@ -7874,7 +5686,7 @@ class CoordinateBox():
 #        self.vbo_oc = setVertexBuffer(
 #                cLineColors, 3, self.origShader, "linecolor")
 #        self.vaoOrigin.release()
-
+        # TODO: Move font init outside
         # x  y  u  v
         vquad = [
             0, 1, 0, 0,
@@ -7896,8 +5708,6 @@ class CoordinateBox():
         base = np.vstack((xp, yp, np.ones_like(xp)*(z0-z), np.ones_like(xp)))
         coneVertices = np.vstack((np.array([[0, 0, 0, 1], [0, 0, z0, 1]]),
                                   base.T))
-#        print(base.shape, np.array([0, 0, z]).shape)
-#        coneVertices = np.vstack((np.array([0, 0, z, 1]), base.T))
         self.arrows = coneVertices.copy()
 
         for rotation in [self.z2x, self.z2y]:
@@ -7992,51 +5802,7 @@ class CoordinateBox():
 
         return axisLabelC, np.float32(np.vstack((xLines, yLines, zLines)))
 
-#    def drawGridLines(self, gridArray, lineWidth, lineOpacity, figType):
-
-#        gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-#        gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-#        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-#        gridColor = np.ones((len(gridArray), 4)) * lineOpacity
-#        gridArrayVBO = gl.vbo.VBO(np.float32(gridArray))
-#        gridArrayVBO.bind()
-#        gl.glVertexPointerf(gridArrayVBO)
-#        gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-#        gridColorArray.bind()
-#        gl.glColorPointerf(gridColorArray)
-#        gl.glLineWidth(lineWidth)
-#        gl.glDrawArrays(figType, 0, len(gridArrayVBO))
-#        gridArrayVBO.unbind()
-#        gridColorArray.unbind()
-#        gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-#        gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-
-#    def modelToWorld(self, coords, dimension=None):
-#        if dimension is None:
-#            return np.float32(coords)
-#        else:
-#            return np.float32(coords[dimension])
-
-#    def setVertexBuffer( self, data_array, dim_vertex, program, shader_str, size=None):
-#        # https://github.com/Upcios/PyQtSamples/blob/master/PyQt5/opengl/triangle_simple/main.py
-#        vbo = qg.QOpenGLBuffer(qg.QOpenGLBuffer.VertexBuffer)
-#        vbo.create()
-#        vbo.bind()
-##        print(vbo.bufferId())
-#
-#        vertices = np.array(data_array, np.float32)
-##        print(type(vertices), vertices.shape[0], vertices.itemsize, vertices.shape)
-#        bSize = size if size is not None else vertices.nbytes
-#        vbo.allocate( vertices, bSize)
-#
-#        attr_loc = program.attributeLocation( shader_str )
-#        program.enableAttributeArray(attr_loc )
-#        program.setAttributeBuffer(attr_loc, gl.GL_FLOAT, 0, dim_vertex)
-#        vbo.release()
-#
-#        return vbo
-
-    def draw(self, model, view, projection):
+    def render_grid(self, model, view, projection):
 
         gl.glEnable(gl.GL_LINE_SMOOTH)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
@@ -8069,10 +5835,6 @@ class CoordinateBox():
 
 #        self.origShader.bind()
 #        self.origShader.setUniformValue("pvm", projection*view*model)
-#
-##        self.origShader.setUniformValue("model", model)
-##        self.origShader.setUniformValue("view", view)
-##        self.origShader.setUniformValue("projection", projection)
 #        self.vaoOrigin.bind()
 #        self.origShader.setUniformValue("lineOpacity", 0.85)
 #        gl.glLineWidth(self.parent.cBoxLineWidth)
@@ -8178,32 +5940,26 @@ class CoordinateBox():
     def render_local_axes(self, mProj, mView, mMod, oeOrientation, scale,
                           trans, shader):
         moe = mMod * oeOrientation
-        pvm = mProj * mView * moe
+#        pvm = mProj * mView * moe
         x = moe * qt.QVector4D(1, 0, 0, 0)
         y = moe * qt.QVector4D(0, 1, 0, 0)
         z = moe * qt.QVector4D(0, 0, 1, 0)
 
-#        x.normalize()
-#        y.normalize()
-#        z.normalize()
-
         znew = qt.QVector3D.crossProduct(x.toVector3D(), y.toVector3D())
         znew.normalize()
-#        print(z, znew)
         z3 = z.toVector3D()
         rotax = qt.QVector3D.crossProduct(znew, z3)
-        dotnorm = float(qt.QVector3D.dotProduct(znew, z3) / (znew.length()*z3.length()))
-#        print(dotnorm)
+        dotnorm = float(qt.QVector3D.dotProduct(znew, z3) /
+                        (znew.length()*z3.length()))
         extraAngle = np.arccos(dotnorm)
         extraRotation = qt.QMatrix4x4()
         extraRotation.rotate(np.degrees(-extraAngle), rotax)
-#        shader.setUniformValue("pvm", mProj * mView * extraRotation * trans * oeOrientation)
-#        oePos = (vpMat*qt.QVector4D(*oeCenter, 1)).toVector3DAffine()
-        shader.setUniformValue("pvm", mProj * mView * extraRotation * mMod*oeOrientation)
+
+        shader.setUniformValue(
+                "pvm", mProj * mView * extraRotation * mMod*oeOrientation)
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
         gl.glDrawArrays(gl.GL_LINES, 0, 2)
         shader.setUniformValue("pvm", mProj * mView * mMod * oeOrientation)
-#        shader.setUniformValue("pvm", trans)
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen+1, self.arrowLen-1)
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen*2+1, self.arrowLen-1)
 
@@ -8211,7 +5967,8 @@ class CoordinateBox():
         gl.glDrawArrays(gl.GL_LINES, self.arrowLen*2, 2)
 
     def get_sans_font(self):
-        fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans", "Liberation Sans", "Sans-serif"]
+        fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans",
+                          "Liberation Sans", "Sans-serif"]
 
         available_fonts = [font_manager.FontProperties(fname=path).get_name()
                            for path in font_manager.findSystemFonts()]
@@ -8220,7 +5977,7 @@ class CoordinateBox():
             if font in available_fonts:
                 return font
 
-        return "Sans-serif"
+        return self.parent.scalableFontType
 
     def make_font(self):
         try:
@@ -8267,4 +6024,3 @@ class CoordinateBox():
             vAlign = 'top' if spV[1] - sp0[1] > 0 else 'bottom'
         hAlign = 'left' if spH[0] - sp0[0] < 0 else 'right'
         return (hAlign, vAlign)
-
