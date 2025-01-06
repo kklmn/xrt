@@ -76,6 +76,13 @@ class Screen(object):
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
+                
+        histArgs = ['limPhysX', 'limPhysY', 'cLimits']  # Optional
+                
+        for attr in histArgs:
+            setattr(self, attr, kwargs.get(attr, None))
+            
+        setattr(self, 'histShape', kwargs.get('histShape', [256, 256]))
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
@@ -163,7 +170,7 @@ class Screen(object):
         glo.z[:] = beam.z + path*beam.c
         return glo
 
-    def expose(self, beam=None, onlyPositivePath=False, saveHist=False):
+    def expose(self, beam=None, onlyPositivePath=False, withHistogram=False):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
         desired image.
@@ -207,11 +214,15 @@ class Screen(object):
         if self.compressZ:
             blo.z[:] *= self.compressZ
         raycing.append_to_flow(self.expose, [blo], inspect.currentframe())
-        if saveHist:
+        if withHistogram:
+            if any([x is None for x in [self.limPhysX, self.limPhysY]]):
+                print("Using auto limits for histogramming")
+                self.limPhysX = self.footprint[-1][:, 0].tolist()
+                self.limPhysY = self.footprint[-1][:, 2].tolist()
+
             limitsIn = [self.limPhysX, self.limPhysY]
-            histShape = self.histShape
             hist2d, hist2dRGB, limitsOut = raycing.build_hist(
-                    blo, limits=limitsIn, isScreen=True, shape=[256, 256],
+                    blo, limits=limitsIn, isScreen=True, shape=self.histShape,
                     cDataFunc=None, cLimits=None)
             self.image = hist2d
         return blo

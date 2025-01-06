@@ -293,7 +293,7 @@ class OE(object):
         self.alarmLevel = alarmLevel
 
         self.surface = surface
-        self.material = material
+        self.material = material  # can be uuid
         self.alpha = alpha
         self.curSurface = 0
         self.dx = 0
