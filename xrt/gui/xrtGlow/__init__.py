@@ -2893,19 +2893,19 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             if labelLines is not None:
                 labelLines = np.float32(labelLines)
+                self.llVBO.bind()
+                self.llVBO.write(0, labelLines, labelLines.nbytes)
+                self.llVBO.release()
+
                 self.cBox.shader.bind()
                 self.cBox.shader.setUniformValue("lineOpacity", 0.85)
                 self.cBox.shader.setUniformValue("lineColor", self.textColor)
-                self.llVBO.bind()
-                self.llVBO.write(0, labelLines, labelLines.nbytes)
-                gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0,
-                                         None)
-                gl.glEnableVertexAttribArray(0)
+                self.labelvao.bind()
                 self.cBox.shader.setUniformValue(
                         "pvm", qt.QMatrix4x4())
                 gl.glLineWidth(min(self.cBoxLineWidth, 1.))
                 gl.glDrawArrays(gl.GL_LINES, 0, lineCounter*4)
-                self.llVBO.release()
+                self.labelvao.release()
                 self.cBox.shader.release()
 
             if self.showLocalAxes:
@@ -3432,8 +3432,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = maxLen
         self.newColorAxis = False
 
-        self.labelLines = np.zeros((len(self.oesList)*4, 3))
         self.llVBO = create_qt_buffer(self.labelLines)
+        self.labelLines = np.zeros((len(self.oesList)*4, 3))
+        self.labelvao = qt.QOpenGLVertexArrayObject()
+        self.labelvao.create()
+        self.labelvao.bind()
+        self.llVBO.bind()
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(0)
+        self.llVBO.release()
+        self.labelvao.release()
 
         for oeString in self.oesList:
             oeToPlot = self.oesList[oeString][0]
