@@ -131,6 +131,9 @@
 			<z type="param">auto</z>
 			<compressX type="param">None</compressX>
 			<compressZ type="param">None</compressZ>
+			<limPhysX type="param">[-20, 20]</limPhysX>
+			<limPhysY type="param">[-10, 10]</limPhysY>
+			<histShape type="param">[512, 256]</histShape>
 		</properties>
 		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
 		<expose type="prop">
