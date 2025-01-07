@@ -28,11 +28,22 @@ import numbers
 os.environ["EPICS_CA_ADDR_LIST"] = "192.168.152.101"
 os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
 
-def submit_param(beamline, key, value):
-    setattr(beamline, key, raycing.get_init_val(value))
+def submit_param(component, key, value):
+    print(component, key, value, raycing.get_init_val(value))
+    setattr(component, key, raycing.get_init_val(value))
+    
+# def read_image()
 
-def run_ray_tracing(beamline, plots):
-    raycing.run_process_from_file(beamline, plots)
+def run_ray_tracing(beamline, db, value): #, plots):
+    if int(value):
+        raycing.run_process_from_file(beamline) #, plots)
+        for obj in beamline.oesDict.values():
+            if isinstance(obj, rscreens.Screen):
+                name = obj.name
+                if obj.image is not None:
+                    db[f'{name}:Array'].set(obj.image.flatten())
+                    db[f'{name}:Acquire'].set(0)
+                    db[f'{name}:Status'].set(0)
 
 def get_init_kwargs(obj):
     defArgs = dict(raycing.get_params(obj))
@@ -48,7 +59,7 @@ def get_init_kwargs(obj):
 
 
 # fileName = r"C:/github/xrt/examples/withRaycing/"
-fileName = "1crystal.xml"
+fileName = "1crystal_img.xml"
 
 bl = raycing.BeamLine(fileName=fileName)
 raycing.run_process_from_file(bl)
@@ -79,7 +90,23 @@ for oeid, oeline in bl.oesDict.items():
                 pvname, 
                 initial_value=argVal, 
                 always_update=True,
-                on_update=partial(submit_param, bl, argName))
+                on_update=partial(submit_param, oeObj, argName))
+        
+    
+    if isinstance(oeObj, rscreens.Screen):
+        histShape = oeObj.histShape
+        if histShape is not None:
+            length = np.prod(histShape)
+        pv_records[f'{oeObj.name}:Array'] = builder.WaveformIn(
+            f'{oeObj.name}:Array', length=length)  # TODO: check API for 
+        pv_records[f'{oeObj.name}:Status'] = builder.mbbIn(
+            f'{oeObj.name}:Status', "OK", ("FAILING", "MINOR"),
+            ("FAILED", "MAJOR"), ("NOT CONNECTED", "INVALID"))
+        pv_records[f'{oeObj.name}:Acquire'] = builder.boolOut(
+            f'{oeObj.name}:Acquire', ZNAM=0, ONAM=1,
+            initial_value=0, always_update=True,
+            on_update=partial(run_ray_tracing, bl, pv_records))
+
 
 builder.LoadDatabase()
 softioc.iocInit()
