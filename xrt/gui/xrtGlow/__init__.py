@@ -3432,8 +3432,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = maxLen
         self.newColorAxis = False
 
-        self.llVBO = create_qt_buffer(self.labelLines)
         self.labelLines = np.zeros((len(self.oesList)*4, 3))
+        self.llVBO = create_qt_buffer(self.labelLines)
         self.labelvao = qt.QOpenGLVertexArrayObject()
         self.labelvao.create()
         self.labelvao.bind()
