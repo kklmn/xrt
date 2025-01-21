@@ -5694,7 +5694,7 @@ class CoordinateBox():
         vao = qt.QOpenGLVertexArrayObject()
         vao.create()
         vao.bind()
-
+        gl.glGetError()
         self.vbo_arrows.bind()
         gl.glEnableVertexAttribArray(0)
         gl.glVertexAttribPointer(0, 4, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
