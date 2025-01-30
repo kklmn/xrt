@@ -251,6 +251,14 @@ class GeometricSource(object):
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
 
+    @property
+    def nrays(self):
+        return self._nrays
+
+    @nrays.setter
+    def nrays(self, nrays):
+        self._nrays = np.int64(nrays)
+
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
             if self.uniformRayDensity:

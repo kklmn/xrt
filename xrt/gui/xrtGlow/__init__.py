@@ -5699,13 +5699,16 @@ class CoordinateBox():
         vao.bind()
 
         self.vbo_arrows.bind()
-        gl.glEnableVertexAttribArray(0)
+        gl.glGetError()
+        
+        # gl.glEnableVertexAttribArray(0)
         gl.glVertexAttribPointer(0, 4, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(0)
         self.vbo_arrows.release()
 
         self.vbo_arr_colors.bind()
-        gl.glEnableVertexAttribArray(1)
         gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(1)
         self.vbo_arr_colors.release()
 
         vao.release()
