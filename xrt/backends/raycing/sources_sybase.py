@@ -224,6 +224,14 @@ class SourceBase:
         self.needReset = True
 
     @property
+    def nrays(self):
+        return self._nrays
+
+    @nrays.setter
+    def nrays(self, nrays):
+        self._nrays = np.int64(nrays)
+
+    @property
     def pitch(self):
         return self._pitch
 
