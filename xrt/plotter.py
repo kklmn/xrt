@@ -49,7 +49,8 @@ import copy
 import pickle
 import numpy as np
 import scipy as sp
-from scipy.interpolate import UnivariateSpline
+# from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import make_interp_spline, PPoly
 
 import matplotlib as mpl
 from matplotlib.ticker import MaxNLocator
@@ -1342,8 +1343,10 @@ class XYCPlot(object):
             wantDiscrete = (xx[0] > xxMaxHalf) or (xx[-1] > xxMaxHalf)
             if not wantDiscrete:
                 try:
-                    spl = UnivariateSpline(axis.binCenters, xx-xxMaxHalf, s=0)
-                    roots = spl.roots()
+                    # spl = UnivariateSpline(axis.binCenters, xx-xxMaxHalf, s=0)
+                    # roots = spl.roots()
+                    spl = make_interp_spline(axis.binCenters, xx-xxMaxHalf)
+                    roots = PPoly.from_spline(spl, False).roots()
                     histFWHMlow = min(roots) - axis.offset
                     histFWHMhigh = max(roots) - axis.offset
                 except ValueError:

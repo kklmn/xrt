@@ -47,7 +47,8 @@ from functools import partial
 from datetime import datetime
 #from collections import namedtuple
 
-from scipy.interpolate import UnivariateSpline
+# from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import make_interp_spline, PPoly
 
 QtName = "PyQt5"
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
@@ -535,10 +536,10 @@ class PlotWidget(QWidget):
 
         # a better implementation, weakly dependent on dx size
         try:
-            spline = UnivariateSpline(x, y - y.max()*0.5, s=0)
-            roots = spline.roots()
-            if len(roots) > 1:
-                return simple()
+            # spline = UnivariateSpline(x, y - y.max()*0.5, s=0)
+            # roots = spline.roots()
+            spline = make_interp_spline(x, y - y.max()*0.5)
+            roots = PPoly.from_spline(spline, False).roots()
             return max(roots) - min(roots)
         except ValueError:
             return simple()
