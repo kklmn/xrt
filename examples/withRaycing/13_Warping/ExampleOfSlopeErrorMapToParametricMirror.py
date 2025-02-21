@@ -4,7 +4,7 @@ __date__ = "20 Jan 2024"
 # sys.path.append(r"C:\Ray-tracing")
 import numpy as np
 from scipy import ndimage
-import pickle
+# import pickle
 
 import xrt.backends.raycing.oes as roe
 
@@ -41,9 +41,12 @@ class EllipticalMirrorParamNOM(roe.EllipticalMirrorParam):
         b = np.arctan(b/dx)
         self.nom_rmsA = ((a**2).sum() / (nX * nY))**0.5
         self.nom_rmsB = ((b**2).sum() / (nX * nY))**0.5
-        self.nom_splineZ = ndimage.spline_filter(z.T) * 1e-6  # mm to nm
-        self.nom_splineA = ndimage.spline_filter(a.T) * 1e-6  # rad to µrad
-        self.nom_splineB = ndimage.spline_filter(b.T) * 1e-6  # rad to µrad
+        # self.nom_splineZ = ndimage.spline_filter(z.T) * 1e-6  # mm to nm
+        # self.nom_splineA = ndimage.spline_filter(a.T) * 1e-6  # rad to µrad
+        # self.nom_splineB = ndimage.spline_filter(b.T) * 1e-6  # rad to µrad
+        self.nom_splineZ = z.T * 1e-6  # mm to nm
+        self.nom_splineA = a.T * 1e-6  # rad to µrad
+        self.nom_splineB = b.T * 1e-6  # rad to µrad
         self.nom_nX = nX
         self.nom_nY = nY
         self.nom_x = x
@@ -57,7 +60,8 @@ class EllipticalMirrorParamNOM(roe.EllipticalMirrorParam):
             (y/(self.nom_x[-1]-self.nom_x[0]) + 0.5) * (self.nom_nX-1),
             (x/(self.nom_y[-1]-self.nom_y[0]) + 0.5) * (self.nom_nY-1)])
         # coords.shape = (2, self.nrays)
-        z += ndimage.map_coordinates(self.nom_splineZ, coords, prefilter=True)
+        # z += ndimage.map_coordinates(self.nom_splineZ, coords, prefilter=True)
+        z += ndimage.map_coordinates(self.nom_splineZ, coords, order=1)
         s1, phi1, r1 = self.xyz_to_param(x, y, z)
         return r1 - r
 
@@ -69,6 +73,8 @@ class EllipticalMirrorParamNOM(roe.EllipticalMirrorParam):
             (y/(self.nom_x[-1]-self.nom_x[0]) + 0.5) * (self.nom_nX-1),
             (x/(self.nom_y[-1]-self.nom_y[0]) + 0.5) * (self.nom_nY-1)])
         # coords.shape = (2, self.nrays)
-        a = ndimage.map_coordinates(self.nom_splineA, coords, prefilter=True)
-        b = ndimage.map_coordinates(self.nom_splineB, coords, prefilter=True)
+        # a = ndimage.map_coordinates(self.nom_splineA, coords, prefilter=True)
+        # b = ndimage.map_coordinates(self.nom_splineB, coords, prefilter=True)
+        a = ndimage.map_coordinates(self.nom_splineA, coords, order=1)
+        b = ndimage.map_coordinates(self.nom_splineB, coords, order=1)
         return -a, -b

@@ -3913,10 +3913,9 @@ class OEfrom3DModel(OE):
         xygrid = np.vstack((xmesh.flatten(), ymesh.flatten())).T
         zgrid = self.z_spline(xygrid).reshape(self.gridsizeX, self.gridsizeY)
 
-        x_grad, y_grad = np.gradient(zgrid)
-
-        self.a_spline = ndimage.spline_filter(x_grad/(xgrid[1]-xgrid[0]))
-        self.b_spline = ndimage.spline_filter(y_grad/(ygrid[1]-ygrid[0]))
+        self.x_grad, self.y_grad = np.gradient(zgrid)
+        # self.a_spline = ndimage.spline_filter(x_grad/(xgrid[1]-xgrid[0]))
+        # self.b_spline = ndimage.spline_filter(y_grad/(ygrid[1]-ygrid[0]))
 
     def local_z(self, x, y):
         pnt = np.array((x, y)).T
@@ -3929,7 +3928,7 @@ class OEfrom3DModel(OE):
              (self.limPhysX[-1]-self.limPhysX[0]) * (self.gridsizeX-1),
              (y-self.limPhysY[0]) /
              (self.limPhysY[-1]-self.limPhysY[0]) * (self.gridsizeY-1)])
-        a = ndimage.map_coordinates(self.a_spline, coords, prefilter=True)
-        b = ndimage.map_coordinates(self.b_spline, coords, prefilter=True)
+        a = ndimage.map_coordinates(self.x_grad, coords, order=1)
+        b = ndimage.map_coordinates(self.y_grad, coords, order=1)
         norm = np.sqrt(a**2+b**2+1.)
         return [-a/norm, -b/norm, 1./norm]

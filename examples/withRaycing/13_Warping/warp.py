@@ -223,9 +223,9 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
         self.warpB = np.arctan(self.warpB/dy)
 #        print(self.warpZ.shape)
 #end# here you specify the bump and its mesh ###
-        self.warpSplineZ = ndimage.spline_filter(self.warpZ)
-        self.warpSplineA = ndimage.spline_filter(self.warpA)
-        self.warpSplineB = ndimage.spline_filter(self.warpB)
+        # self.warpSplineZ = ndimage.spline_filter(self.warpZ)
+        # self.warpSplineA = ndimage.spline_filter(self.warpA)
+        # self.warpSplineB = ndimage.spline_filter(self.warpB)
 
     def local_z_distorted(self, x, y):
         if get_distorted_surface is None:
@@ -236,7 +236,8 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
              (y-self.limPhysY[0]) /
              (self.limPhysY[1]-self.limPhysY[0]) * (self.warpNY-1)])
 # coords.shape = (2, self.nrays)
-        z = ndimage.map_coordinates(self.warpSplineZ, coords, prefilter=True)
+        # z = ndimage.map_coordinates(self.warpSplineZ, coords, prefilter=True)
+        z = ndimage.map_coordinates(self.warpZ, coords, order=1)
         return z
 
     def local_n_distorted(self, x, y):
@@ -249,8 +250,10 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
              (self.limPhysX[1]-self.limPhysX[0]) * (self.warpNX-1),
              (y-self.limPhysY[0]) /
              (self.limPhysY[1]-self.limPhysY[0]) * (self.warpNY-1)])
-        a = ndimage.map_coordinates(self.warpSplineA, coords, prefilter=True)
-        b = ndimage.map_coordinates(self.warpSplineB, coords, prefilter=True)
+        # a = ndimage.map_coordinates(self.warpSplineA, coords, prefilter=True)
+        # b = ndimage.map_coordinates(self.warpSplineB, coords, prefilter=True)
+        a = ndimage.map_coordinates(self.warpA, coords, order=1)
+        b = ndimage.map_coordinates(self.warpB, coords, order=1)
         return b, -a
 
 
