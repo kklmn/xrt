@@ -76,7 +76,8 @@ number of reflections. The longitudinal coordinate *s* has its zero at the exit
 from the capillary.
 
 +--------+----------------------+----------------------+----------------------+
-|        |       layer 1        |        layer 6       |       layer 12       |
+|        |   central capillary  |   capillary from     |   capillary from     |
+|        |   (0th layer)        |   layer 1            |   layer 2            |
 +========+======================+======================+======================+
 | n refl |         |cN0|        |         |cN5|        |        |cN11|        |
 +--------+----------------------+----------------------+----------------------+

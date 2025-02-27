@@ -124,7 +124,8 @@ def build_beamline(nrays=1000):
                     beamLine.xzMax = capillary.b0
     print('max divergence =', alpha)
     beamLine.xzMax += 2 * r0
-    print(len(beamLine.capillaries))
+    print('{0} capillaries built'.format(len(beamLine.capillaries)))
+    print('indices of first capillaries in each layer:', beamLine.firstInLayer)
     beamLine.sources[0].dxprime = 0, np.arcsin((2*n+1) * (r0+wall) / rSample)
 #    beamLine.sources[0].dxprime = (np.arcsin((2*n-3) * (r0+wall) / rSample),
 #        np.arcsin((2*n+1) * (r0+wall) / rSample))
@@ -199,10 +200,9 @@ def define_plots(beamLine):
         plot.baseName = 'NCapillaries-a-FSM1Cat{0}'.format(ibins)
         plots.append(plot)
 
-    #    for i in beamLine.firstInLayer:
-        capillariesToShow = 0, (layers-1)//2, layers-1
-    #    print(capillariesToShow)
-        for i in capillariesToShow:
+        toShow = [0, 5, 11]
+        # for i in [beamLine.firstInLayer[ind] for ind in toShow]:
+        for i in toShow:
             beamLocal = 'beamCapillaryLocalN{0:02d}'.format(i)
 
             plot = PlotClass(
@@ -330,8 +330,9 @@ def main():
     xrtr.run_ray_tracing(plots, repeats=1000*16, beamLine=beamLine,
                          processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
 #    plot2D()
