@@ -940,9 +940,12 @@ class xrtGlow(qt.QWidget):
             self.mplAx.set_title("")
             self.mplFig.canvas.draw()
             self.mplFig.canvas.blit()
-            if self.paletteWidget.span.visible:
-                self.paletteWidget.span.extents =\
-                    self.paletteWidget.span.extents
+            try:
+                if self.paletteWidget.span.visible:
+                    self.paletteWidget.span.extents =\
+                        self.paletteWidget.span.extents
+            except AttributeError:
+                pass
         self.mplFig.canvas.blit()
 
     def checkGNorm(self, state):
