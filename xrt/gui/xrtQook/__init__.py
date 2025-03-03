@@ -1174,7 +1174,7 @@ class XrtQook(qt.QWidget):
             'tutorial',
             locos, pythonplatform.python_version(), Qt_version, qt.QtName,
             PyQt_version, strOpenGL, strOpenCL, strSphinx, strXrt)
-        self.showTutorial(txt, "xrtQook")
+        self.showTutorial(txt, "xrtQook", img_path='../_images')
 
     def showDescrByTab(self, tab):
         if tab == 4:

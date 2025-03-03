@@ -29,7 +29,7 @@ copyright = u'2018 Konstantin Klementiev, Roman Chernikov'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', '_sources']
+exclude_patterns = ['_build']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -60,7 +60,7 @@ html_theme = 'qook'
 #html_theme = "nonav"
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["./_themes"]
+html_theme_path = ["_themes"]
 #html_theme_path = [csp.get_theme_dir()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
