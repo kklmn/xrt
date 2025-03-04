@@ -180,8 +180,11 @@ def _solve_modes(fields, nModes, phaseEsEp=0, name=''):
     DTD /= np.diag(DTD).sum()
     wAll = spl.eigh(DTD, eigvals_only=True)
     print("Eigenvalues 0 to {0} w={1}".format(nModes-1, wAll[::-1][:nModes]))
-    kwargs = dict(eigvals=(nElectrons-nModes, nElectrons-1))
-    wE, vE = spl.eigh(DTD, **kwargs)
+    eigvals = nElectrons-nModes, nElectrons-1
+    try:
+        wE, vE = spl.eigh(DTD, eigvals=eigvals)
+    except TypeError:  # the kw 'eigvals' is gone
+        wE, vE = spl.eigh(DTD, subset_by_index=eigvals)
     stop = time.time()
     if name:
         print("{0}:".format(name))

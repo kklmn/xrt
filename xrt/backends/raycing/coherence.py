@@ -228,8 +228,14 @@ def calc_eigen_modes_4D(J, eigenN=4):
     """
     k = J.shape[0]
     J /= np.diag(J).sum()
-    kwargs = dict(eigvals=(k-eigenN, k-1)) if eigenN else {}
-    w, v = spl.eigh(J, **kwargs)
+    if eigenN:
+        eigvals = k-eigenN, k-1
+        try:
+            w, v = spl.eigh(J, eigvals=eigvals)
+        except TypeError:  # the kw 'eigvals' is gone
+            w, v = spl.eigh(J, subset_by_index=eigvals)
+    else:
+        w, v = spl.eigh(J)
     if eigenN is None:
         rE = np.dot(np.dot(v, np.diag(w)), np.conj(v.T))
         print("diff J--decomposed(J) = {0}".format(np.abs(J-rE).sum()))
@@ -278,8 +284,11 @@ def calc_eigen_modes_PCA(U, eigenN=4, maxRepeats=None, normalize=False):
     D = np.array(locU).reshape((repeats, k), order='F').T
     DTD = np.dot(D.T.conjugate(), D)
     DTD /= np.diag(DTD).sum()
-    kwargs = dict(eigvals=(repeats-maxEigenNw, repeats-1))
-    wPCA, vPCA = spl.eigh(DTD, **kwargs)
+    eigvals = repeats-maxEigenNw, repeats-1
+    try:
+        wPCA, vPCA = spl.eigh(DTD, eigvals=eigvals)
+    except TypeError:  # the kw 'eigvals' is gone
+        wPCA, vPCA = spl.eigh(DTD, subset_by_index=eigvals)
     outPCA = np.zeros((k, eigenNv), dtype=np.complex128)
     for i in range(eigenNv):
         mPCA = np.outer(vPCA[:, -1-i], vPCA[:, -1-i].T.conjugate())
