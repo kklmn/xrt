@@ -456,8 +456,12 @@ def xyz_from_xz(obj, x=None, z=None):
 
     xdotz = np.dot(retx, retz)
     if abs(xdotz) > 1e-8:
+        try:
+            objName = obj.name
+        except AttributeError:
+            objName = obj.__class__.__name__
         colorPrint('x and z must be orthogonal, got xz={0:.4e} for {1}'
-                   .format(xdotz, obj.name), 'RED')
+                   .format(xdotz, objName), 'RED')
     rety = np.cross(retz, retx)
     return [retx, rety, retz]
 
@@ -466,6 +470,10 @@ def check_alarm(self, incoming, beam):
     """Appends an alarm string to the list of beamline alarms if the alarm
     condition is fulfilled."""
     incomingSum = incoming.sum()
+    try:
+        objName = self.name
+    except AttributeError:
+        objName = self.__class__.__name__
     if incomingSum > 0:
         badState = beam.state == self.lostNum
         badSum = badState.sum()
@@ -476,10 +484,10 @@ def check_alarm(self, incoming, beam):
         if ratio > self.alarmLevel:
             alarmStr = ('{0}{1} absorbes {2:.2%} of rays or {3:.2%} of flux ' +
                         'at {4:.0%} alarm level!').format(
-                'Alarm! ', self.name, ratio, ratioFlux, self.alarmLevel)
+                'Alarm! ', objName, ratio, ratioFlux, self.alarmLevel)
             self.bl.alarms.append(alarmStr)
     else:
-        self.bl.alarms.append('no incident rays to {0}!'.format(self.name))
+        self.bl.alarms.append('no incident rays to {0}!'.format(objName))
 
 
 def get_energy(beam):
@@ -807,7 +815,11 @@ def append_to_flow(meth, bOut, frame):
     for outstr, outbm in zip(list(fdoc), bOut):
         kwArgsOut[outstr.strip()] = id(outbm)
 
-    oe.bl.flow.append([oe.name, meth.__func__, kwArgsIn, kwArgsOut])
+    try:
+        objName = oe.name
+    except AttributeError:
+        objName = oe.__class__.__name__
+    oe.bl.flow.append([objName, meth.__func__, kwArgsIn, kwArgsOut])
 
 
 def is_auto_align_required(oe):
@@ -821,8 +833,12 @@ def is_auto_align_required(oe):
                           naParam, str(getattr(oe, naParam)))
                 needAutoAlign = True
                 if _VERBOSITY_ > 10:
+                    try:
+                        objName = oe.name
+                    except AttributeError:
+                        objName = oe.__class__.__name__
                     print("{0}.{1} requires auto-calculation".format(
-                        oe.name, naParam))
+                        objName, naParam))
     return needAutoAlign
 
 
