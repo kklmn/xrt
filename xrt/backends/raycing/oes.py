@@ -2557,7 +2557,7 @@ class ParaboloidFlatLens(Plate):
                 if isinstance(self, DoubleParaboloidLens):
                     nFactor = 0.5
                 elif isinstance(self, ParabolicCylinderFlatLens):
-                    nFactor = 2.
+                    nFactor = 2. if self.isStaggered else 1.
                 else:
                     nFactor = 1.
                 nCRL = 2 * self.focus / float(f) /\
@@ -2597,7 +2597,8 @@ class ParaboloidFlatLens(Plate):
                 if isinstance(self, DoubleParaboloidLens) else self.zmax+self.t
             for ilens in range(self.nCRL):
                 if isinstance(self, ParabolicCylinderFlatLens):
-                    self.roll = -np.pi/4 if ilens % 2 == 0 else np.pi/4
+                    if self.isStaggered:
+                        self.roll = -np.pi/4 if ilens % 2 == 0 else np.pi/4
                 lglobal, tlocal1, tlocal2 = self.double_refract(
                     beamIn, needLocal=needLocal)
                 if self.zmax is not None:
@@ -2636,10 +2637,13 @@ class ParaboloidFlatLens(Plate):
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):
     u"""Implements a refractive lens or a stack of lenses (CRL) with one side
-    as parabolic cylinder and the other one flat. If used as a CRL, the
-    lenslets are arranged such that they alternatively focus in the -45° and
-    +45° planes. Therefore the total number of lenslets is doubled as compared
-    to ParaboloidFlatLens case."""
+    as parabolic cylinder and the other one flat. If used as a CRL: if
+    *isStaggered* is True (default), the lenslets are arranged such that they
+    alternatively focus in the -45° and +45° planes; otherwise (*isStaggered*
+    is False) the lenslets focalize in one direction and they are flat in their
+    local *x* direction and curved in the local *y* direction. When staggered,
+    the total number of lenslets is doubled as compared to ParaboloidFlatLens
+    case."""
 
     cl_plist = ("zmax", "focus")
     cl_local_z = """
@@ -2696,11 +2700,15 @@ class ParabolicCylinderFlatLens(ParaboloidFlatLens):
         return res;
     }"""
 
+    def __init__(self, *args, **kwargs):
+        self.isStaggered = kwargs.pop('isStaggered', True)
+        super().__init__(*args, **kwargs)
+
     def local_z1(self, x, y):
-        return ParaboloidFlatLens.local_z1(self, 0, y)
+        return super().local_z1(0, y)
 
     def local_n1(self, x, y):
-        return ParaboloidFlatLens.local_n1(self, 0, y)
+        return super().local_n1(0, y)
 
 
 class DoubleParaboloidLens(ParaboloidFlatLens):

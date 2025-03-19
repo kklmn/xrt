@@ -81,22 +81,26 @@ p = 1000.  # source to 1st lens
 q = 5000.  # 1st lens to focus
 xyLimits = -5, 5
 
-#Lens = roe.ParaboloidFlatLens
-Lens = roe.DoubleParaboloidLens
-#Lens = roe.ParabolicCylinderFlatLens
-if Lens == roe.DoubleParaboloidLens:
-    lensName = '2-'
-elif Lens == roe.ParaboloidFlatLens:
+Lens = roe.ParaboloidFlatLens
+# Lens = roe.DoubleParaboloidLens
+# Lens = roe.ParabolicCylinderFlatLens
+if Lens == roe.ParaboloidFlatLens:
     lensName = '1-'
-else:
+elif Lens == roe.DoubleParaboloidLens:
+    lensName = '2-'
+elif Lens == roe.ParabolicCylinderFlatLens:
     lensName = '3-'
+    xyLimits = None
+    isStaggered = False
+else:
+    raise ValueError('Unknown mirror')
 
 mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
-#mDiamond = rm.Material('C', rho=3.52, kind='lens')
-mAluminum = rm.Material('Al', rho=2.7, kind='lens')
-#mSilicon = rm.Material('Si', rho=2.33, kind='lens')
-#mNickel = rm.Material('Ni', rho=8.9, kind='lens')
-#mLead = rm.Material('Pb', rho=11.35, kind='lens')
+# mDiamond = rm.Material('C', rho=3.52, kind='lens')
+# mAluminum = rm.Material('Al', rho=2.7, kind='lens')
+# mSilicon = rm.Material('Si', rho=2.33, kind='lens')
+# mNickel = rm.Material('Ni', rho=8.9, kind='lens')
+# mLead = rm.Material('Pb', rho=11.35, kind='lens')
 
 
 def build_beamline(nrays=1e4):
@@ -109,13 +113,11 @@ def build_beamline(nrays=1e4):
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
-    beamLine.lens = Lens(
-        beamLine, 'CRL', [0, p, 0], pitch=np.pi/2, t=0, 
-        material=mBeryllium,
-        focus=parabolaParam,
-        zmax=zmax, 
-        nCRL=(q, E0), 
-        alarmLevel=0.1)
+    kwargs = dict(pitch=np.pi/2, t=0, material=mBeryllium, focus=parabolaParam,
+                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.1)
+    if Lens == roe.ParabolicCylinderFlatLens:
+        kwargs['isStaggered'] = isStaggered
+    beamLine.lens = Lens(beamLine, 'CRL', [0, p, 0], **kwargs)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
     beamLine.fsm2.dqs = np.linspace(-140, 140, 71)
@@ -167,7 +169,7 @@ def define_plots(beamLine):
     plotsFSM2 = []
     for i, dq in enumerate(beamLine.fsm2.dqs):
         plot2 = xrtp.XYCPlot(
-            'beamFSM2_{0:02d}'.format(i), (1,),
+            'beamFSM2_{0:02d}'.format(i), (1,), aspect='auto',
             xaxis=xrtp.XYCAxis(
                 r'$x$', u'µm', limits=xyLimits, bins=250, ppb=1),
             yaxis=xrtp.XYCAxis(
@@ -231,8 +233,9 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, plotsFSM2, beamLine):
-#    materials = mBeryllium, mDiamond, mAluminum, mSilicon, mNickel, mLead
-    materials = mBeryllium, mAluminum
+    # materials = mBeryllium, mDiamond, mAluminum, mSilicon, mNickel, mLead
+    # materials = mBeryllium, mAluminum
+    materials = mBeryllium,
 
     print('At E = {0} eV and parabola focus = {1} mm:'.format(
           E0, parabolaParam))
@@ -287,10 +290,9 @@ def plot_generator(plots, plotsFSM2, beamLine):
             xCurve = []
             yCurve = []
             for dq, plot in zip(beamLine.fsm2.dqs, plotsFSM2):
-                if plot.dx < (xyLimits[1] - xyLimits[0]) * 0.5:
-#                    print(dq, plot.dx)
+                if (not xyLimits) or plot.dy < (xyLimits[1]-xyLimits[0]) * 0.5:
                     xCurve.append(dq)
-                    yCurve.append(plot.dx)
+                    yCurve.append(plot.dy)
             yFlux.append(plotsFSM2[-1].intensity)
             ax1.plot(
                 xCurve, yCurve, 'o', label='{0}, n={1:.0f}'.format(
