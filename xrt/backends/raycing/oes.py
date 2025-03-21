@@ -2551,15 +2551,12 @@ class ParaboloidFlatLens(Plate):
         return self.local_n(x, y)
 
     def get_nCRL(self, f, E):
-        nCRL = 1
+        nCRL, nFactor = 1, 1.
         if all([hasattr(self, val) for val in ['focus', 'material']]):
             if self.focus is not None and self.material is not None:
-                if isinstance(self, DoubleParaboloidLens):
-                    nFactor = 0.5
-                elif isinstance(self, ParabolicCylinderFlatLens):
-                    nFactor = 2. if self.isStaggered else 1.
-                else:
-                    nFactor = 1.
+                if isinstance(self, (DoubleParaboloidLens,
+                                     DoubleParabolicCylinderLens)):
+                    nFactor *= 0.5
                 nCRL = 2 * self.focus / float(f) /\
                     (1. - self.material.get_refractive_index(E).real) * nFactor
         return nCRL
@@ -2593,21 +2590,19 @@ class ParaboloidFlatLens(Plate):
             self.bl.flowSource = 'multiple_refract'
             tempCenter = [c for c in self.center]
             beamIn = beam
-            step = 2.*self.zmax + self.t\
-                if isinstance(self, DoubleParaboloidLens) else self.zmax+self.t
+            zmax = 5 if self.zmax is None else self.zmax
+            if isinstance(self, (DoubleParaboloidLens,
+                                 DoubleParabolicCylinderLens)):
+                step = 2.*zmax + self.t
+            else:
+                step = zmax + self.t
+            toward = [0, -step, 0]
             for ilens in range(self.nCRL):
-                if isinstance(self, ParabolicCylinderFlatLens):
-                    if self.isStaggered:
-                        self.roll = -np.pi/4 if ilens % 2 == 0 else np.pi/4
                 lglobal, tlocal1, tlocal2 = self.double_refract(
                     beamIn, needLocal=needLocal)
-                if self.zmax is not None:
-                    toward = raycing.rotate_point(
-                        [0, 0, 1], self.rotationSequence, self.pitch,
-                        self.roll+self.positionRoll, self.yaw)
-                    self.center[0] -= step * toward[0]
-                    self.center[1] -= step * toward[1]
-                    self.center[2] -= step * toward[2]
+                self.center[0] -= step * toward[0]
+                self.center[1] -= step * toward[1]
+                self.center[2] -= step * toward[2]
                 beamIn = lglobal
                 if ilens == 0:
                     llocal1, llocal2 = tlocal1, tlocal2
@@ -2637,13 +2632,9 @@ class ParaboloidFlatLens(Plate):
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):
     u"""Implements a refractive lens or a stack of lenses (CRL) with one side
-    as parabolic cylinder and the other one flat. If used as a CRL: if
-    *isStaggered* is True (default), the lenslets are arranged such that they
-    alternatively focus in the -45° and +45° planes; otherwise (*isStaggered*
-    is False) the lenslets focalize in one direction and they are flat in their
-    local *x* direction and curved in the local *y* direction. When staggered,
-    the total number of lenslets is doubled as compared to ParaboloidFlatLens
-    case."""
+    as parabolic cylinder and the other one flat. The lenslets focalize in one
+    direction and they are flat in their local *x* direction and curved in the
+    local *y* direction."""
 
     cl_plist = ("zmax", "focus")
     cl_local_z = """
@@ -2699,10 +2690,6 @@ class ParabolicCylinderFlatLens(ParaboloidFlatLens):
             res = local_n2(cl_plist, 0, y);
         return res;
     }"""
-
-    def __init__(self, *args, **kwargs):
-        self.isStaggered = kwargs.pop('isStaggered', True)
-        super().__init__(*args, **kwargs)
 
     def local_z1(self, x, y):
         return super().local_z1(0, y)

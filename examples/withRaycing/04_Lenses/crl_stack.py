@@ -56,8 +56,8 @@ spot at the expense of flux:
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "08 Mar 2016"
-#import matplotlib as mpl
-#mpl.use('agg')
+# import matplotlib as mpl
+# mpl.use('agg')
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import matplotlib.pyplot as plt
@@ -75,23 +75,26 @@ import xrt.runner as xrtr
 showIn3D = False
 
 parabolaParam = 1.  # mm
-zmax = 1.  # mm
+zmax = 1.5  # mm
 E0 = 9000.  # eV
 p = 1000.  # source to 1st lens
 q = 5000.  # 1st lens to focus
-xyLimits = -5, 5
+# xyLimits = -5, 5
+xyLimits = None
 
 Lens = roe.ParaboloidFlatLens
 # Lens = roe.DoubleParaboloidLens
 # Lens = roe.ParabolicCylinderFlatLens
+# Lens = roe.DoubleParabolicCylinderLens
+
 if Lens == roe.ParaboloidFlatLens:
     lensName = '1-'
 elif Lens == roe.DoubleParaboloidLens:
     lensName = '2-'
 elif Lens == roe.ParabolicCylinderFlatLens:
     lensName = '3-'
-    xyLimits = None
-    isStaggered = False
+elif Lens == roe.DoubleParabolicCylinderLens:
+    lensName = '4-'
 else:
     raise ValueError('Unknown mirror')
 
@@ -115,12 +118,10 @@ def build_beamline(nrays=1e4):
 
     kwargs = dict(pitch=np.pi/2, t=0, material=mBeryllium, focus=parabolaParam,
                   zmax=zmax, nCRL=(q, E0), alarmLevel=0.1)
-    if Lens == roe.ParabolicCylinderFlatLens:
-        kwargs['isStaggered'] = isStaggered
     beamLine.lens = Lens(beamLine, 'CRL', [0, p, 0], **kwargs)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
-    beamLine.fsm2.dqs = np.linspace(-140, 140, 71)
+    beamLine.fsm2.dqs = np.linspace(-500, 500, 61)
 #    beamLine.fsm2.dqs = np.linspace(-70, 70, 15)
     return beamLine
 
@@ -290,9 +291,8 @@ def plot_generator(plots, plotsFSM2, beamLine):
             xCurve = []
             yCurve = []
             for dq, plot in zip(beamLine.fsm2.dqs, plotsFSM2):
-                if (not xyLimits) or plot.dy < (xyLimits[1]-xyLimits[0]) * 0.5:
-                    xCurve.append(dq)
-                    yCurve.append(plot.dy)
+                xCurve.append(dq)
+                yCurve.append(plot.dy)
             yFlux.append(plotsFSM2[-1].intensity)
             ax1.plot(
                 xCurve, yCurve, 'o', label='{0}, n={1:.0f}'.format(
@@ -322,12 +322,12 @@ def main():
         return
     plots, plotsFSM2 = define_plots(beamLine)
     xrtr.run_ray_tracing(
-        plots, repeats=16, generator=plot_generator,
+        plots, repeats=1, generator=plot_generator,
         generatorArgs=[plots, plotsFSM2, beamLine],
         updateEvery=1, beamLine=beamLine, processes='half')
 
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
