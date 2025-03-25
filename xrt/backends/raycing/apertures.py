@@ -114,7 +114,7 @@ class RectangularAperture(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -128,14 +128,15 @@ class RectangularAperture(object):
             self.opening = [opening, ]
         else:
             self.kind = kind
-            self.opening = opening
+            Opening = raycing.NamedArrayFactory(kind)
+            self.opening = Opening(opening)
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-500, 500]
         self.limOptY = [-500, 500]
-        self.limPhysX = self.limOptX
-        self.limPhysY = self.limOptY
+        self.limPhysX = raycing.Limits(self.limOptX)
+        self.limPhysY = raycing.Limits(self.limOptY)
         if opening is not None:
             self.set_optical_limits()
         self.shape = 'rect'
@@ -168,11 +169,11 @@ class RectangularAperture(object):
     @center.setter
     def center(self, center):
         if any([x == 'auto' for x in center]):
-            self._center = copy.copy(center)
+            self._center = copy.deepcopy(center)
             self._centerVal = None
-            self._centerInit = copy.copy(center)
+            self._centerInit = copy.deepcopy(center)
         else:
-            self._centerVal = center
+            self._centerVal = raycing.Center(center)
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
@@ -228,6 +229,7 @@ class RectangularAperture(object):
             d.append(div*sourceToAperture + sgn*raycing.accuracyInPosition)
         self.opening = d
 
+    @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
@@ -236,8 +238,14 @@ class RectangularAperture(object):
 
         .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'needNewGlobal': needNewGlobal}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -279,15 +287,26 @@ class RectangularAperture(object):
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
+
+#        self.bl.flowU[self.uuid] = {'method': self.propagate,
+#                                    'kwArgsIn': kwArgsIn}
+
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
             raycing.append_to_flow(self.propagate, [glo, lo],
                                    inspect.currentframe())
+
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
+#                                             'beamLocal': lo}
+
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
+
             return lo
 
     def touch_beam(self, beam):
@@ -460,7 +479,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -485,8 +504,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.limOptX[1] = [dx*0.5 for dx in dXs]
         self.limOptX[0].append(-500)
         self.limOptX[1].append(500)
-        self.limPhysX = self.limOptX
-        self.limPhysY = self.limOptY
+        self.limPhysX = raycing.Limits(self.limOptX)
+        self.limPhysY = raycing.Limits(self.limOptY)
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
 
@@ -566,7 +585,7 @@ class RoundAperture(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -581,8 +600,8 @@ class RoundAperture(object):
         self.surface = name,
         self.limOptX = [-r, r]
         self.limOptY = [-r, r]
-        self.limPhysX = self.limOptX
-        self.limPhysY = self.limOptY
+        self.limPhysX = raycing.Limits(self.limOptX)
+        self.limPhysY = raycing.Limits(self.limOptY)
         self.shape = 'round'
 
     @property
@@ -616,7 +635,7 @@ class RoundAperture(object):
             self._centerVal = None
             self._centerInit = copy.copy(center)
         else:
-            self._centerVal = center
+            self._centerVal = raycing.Center(center)
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
@@ -637,6 +656,7 @@ class RoundAperture(object):
         ss = [a - b for a, b in zip(self.center - source.center)]
         return self.r * 2 * (np.dot(ss, ss) ** -0.5)
 
+    @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
@@ -645,8 +665,14 @@ class RoundAperture(object):
 
         .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'needNewGlobal': needNewGlobal}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -671,13 +697,24 @@ class RoundAperture(object):
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
+
+#        self.bl.flowU[self.uuid] = {'method': self.propagate,
+#                                    'kwArgsIn': kwArgsIn}
+
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
+#                                             'beamLocal': lo}
+
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
+
             return lo
 
     def local_to_global(self, glo, **kwargs):
@@ -754,6 +791,7 @@ class RoundBeamStop(RoundAperture):
     """Implements a round beamstop. Descends from RoundAperture and has the
     same parameters."""
 
+    @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
@@ -762,8 +800,14 @@ class RoundBeamStop(RoundAperture):
 
         .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'needNewGlobal': needNewGlobal}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -793,14 +837,25 @@ class RoundBeamStop(RoundAperture):
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
+
+#        self.bl.flowU[self.uuid] = {'method': self.propagate,
+#                                    'kwArgsIn': kwArgsIn}
+
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
             glo.path[good] += beam.path[good]
+
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
+#                                             'beamLocal': lo}
+
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
+
             return lo
 
 
@@ -815,6 +870,7 @@ class DoubleSlit(RectangularAperture):
         self.shadeFraction = kwargs.pop('shadeFraction', 0.5)
         super(DoubleSlit, self).__init__(*args, **kwargs)
 
+    @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
@@ -823,8 +879,14 @@ class DoubleSlit(RectangularAperture):
 
         .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'needNewGlobal': needNewGlobal}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         shadeMin = (1 - self.shadeFraction) * 0.5
         shadeMax = shadeMin + self.shadeFraction
         good = beam.state > 0
@@ -865,14 +927,25 @@ class DoubleSlit(RectangularAperture):
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
+
+#        self.bl.flowU[self.uuid] = {'method': self.propagate,
+#                                    'kwArgsIn': kwArgsIn}
+
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
             glo.path[good] += beam.path[good]
+
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
+#                                             'beamLocal': lo}
+
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
+
             return lo
 
 
@@ -928,7 +1001,7 @@ class PolygonalAperture(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -981,7 +1054,7 @@ class PolygonalAperture(object):
             self._centerVal = None
             self._centerInit = copy.copy(center)
         else:
-            self._centerVal = center
+            self._centerVal = raycing.Center(center)
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
@@ -1004,6 +1077,7 @@ class PolygonalAperture(object):
         self.limOptY = [np.nanmin(self.vertices[:, 1]),
                         np.nanmax(self.vertices[:, 1])]
 
+    @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
@@ -1012,8 +1086,14 @@ class PolygonalAperture(object):
 
         .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'needNewGlobal': needNewGlobal}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -1039,13 +1119,24 @@ class PolygonalAperture(object):
 
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
+
+#        self.bl.flowU[self.uuid] = {'method': self.propagate,
+#                                    'kwArgsIn': kwArgsIn}
+
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
+#                                             'beamLocal': lo}
+
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
+
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
+
             return lo
 
     def local_to_global(self, glo, **kwargs):

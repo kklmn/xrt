@@ -220,7 +220,7 @@ class GeometricSource(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = center  # 3D point in global system
+        self.center = raycing.Center(center)  # 3D point in global system
         self.nrays = np.int64(nrays)
 
         self.distx = distx
@@ -242,7 +242,7 @@ class GeometricSource(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
         self.filamentBeam = filamentBeam
@@ -250,14 +250,6 @@ class GeometricSource(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
-
-    @property
-    def nrays(self):
-        return self._nrays
-
-    @nrays.setter
-    def nrays(self, nrays):
-        self._nrays = np.int64(nrays)
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
@@ -300,6 +292,7 @@ class GeometricSource(object):
         axis1[:] = r * np.cos(phi)
         axis2[:] = r * np.sin(phi)
 
+    @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True, withAmplitudes=False, accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
@@ -310,6 +303,10 @@ class GeometricSource(object):
 
         .. Returned values: beamGlobal
         """
+
+#        kwArgsIn = {'toGlobal': toGlobal,
+#                    'withAmplitudes': withAmplitudes}
+
         if self.bl is not None:
             try:
                 self.bl._alignE = float(self.bl.alignE)
@@ -321,6 +318,16 @@ class GeometricSource(object):
                                              self.energies[-1])
                 else:
                     self.bl._alignE = self.energies
+
+#            if accuBeam is None:
+#                kwArgsIn['accuBeam'] = accuBeam
+#            else:    
+#                if raycing.is_valid_uuid(accuBeam):
+#                    kwArgsIn['accuBeam'] = accuBeam
+#                    accuBeam = self.bl.beamsDictU[accuBeam][
+#                            'beamGlobal' if toGlobal else 'beamLocal']
+#                else:
+#                    kwArgsIn['accuBeam'] = accuBeam.parentId
 
         if self.uniformRayDensity:
             withAmplitudes = True
@@ -387,8 +394,16 @@ class GeometricSource(object):
                 bo, pitch=self.pitch, roll=self.roll, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
+#        else:
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
+
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
+
+#        self.bl.flowU[self.uuid] = {'method': self.shine,
+#                                    'kwArgsIn': kwArgsIn}
+
         return bo
 
 
@@ -450,7 +465,7 @@ class GaussianBeam(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = center  # 3D point in global system
+        self.center = raycing.Center(center)  # 3D point in global system
         self.w0 = w0
         if raycing.is_sequence(self.w0):
             if len(self.w0) != 2:
@@ -464,7 +479,7 @@ class GaussianBeam(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
         self.vortex = None
@@ -486,6 +501,7 @@ class GaussianBeam(object):
             yR = self.rayleigh_range(E, w0)
         return w0 * (1 + (y/yR)**2)**0.5
 
+    @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True, wave=None, accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
@@ -716,7 +732,7 @@ class MeshSource(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = center  # 3D point in global system
+        self.center = raycing.Center(center)  # 3D point in global system
         self.minxprime = raycing.auto_units_angle(minxprime)
         self.maxxprime = raycing.auto_units_angle(maxxprime)
         self.minzprime = raycing.auto_units_angle(minzprime)
@@ -733,10 +749,11 @@ class MeshSource(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
 
+    @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
         u"""
         Returns the source. If *toGlobal* is True, the output is in the global
@@ -790,6 +807,7 @@ class NESWSource(MeshSource):
     optical elements.
     """
 
+    @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
         u"""
         Returns the source. If *toGlobal* is True, the output is in the global
@@ -850,7 +868,7 @@ class CollimatedMeshSource(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = center  # 3D point in global system
+        self.center = raycing.Center(center)  # 3D point in global system
         self.dx = dx
         self.dz = dz
         self.nx = nx
@@ -865,10 +883,11 @@ class CollimatedMeshSource(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
 
+    @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in the
@@ -907,6 +926,53 @@ class CollimatedMeshSource(object):
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
         return bo
+
+
+class BeamFromFile(object):
+    r"""Convenience class to simulate beam generation from a previously saved
+    beam object. Can be used as a reproducible source or to save time on
+    synchrotron source beam generation. Provides the shine() method for
+    compatibility with other sources.
+    
+    
+    """
+
+    def __init__(self, bl=None, name='', center=(0, 0, 0),
+                 nrays=raycing.nrays, fileName=None, **kwargs):
+        super().__init__()
+        self.bl = bl
+        if bl is not None:
+            if self not in bl.sources:
+                bl.sources.append(self)
+                self.ordinalNum = len(bl.sources)
+        raycing.set_name(self, name)
+
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
+
+        if bl is not None:
+            if self.bl.flowSource != 'Qook':
+                bl.oesDict[self.uuid] = [self, 0]
+
+        self.center = raycing.Center(center)  # 3D point in global system
+        self.nrays = np.int64(nrays)
+        self.fileName = fileName
+        if self.fileName:
+            self.fbeam = raycing.Beam(copyFrom=self.fileName)
+        else:
+            print("No filename provided, using an empty beam")
+            self.fbeam = raycing.Beam()
+
+    @raycing.append_to_flow_decorator        
+    def shine(self):
+        u"""
+        Returns the beam loaded from file.
+
+        .. Returned values: beamGlobal
+        """
+#        self.fbeam.parentId = self.uuid
+        return self.fbeam
 
 
 def shrink_source(beamLine, beams, minxprime, maxxprime, minzprime, maxzprime,

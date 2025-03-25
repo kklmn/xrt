@@ -190,3 +190,11 @@ class QComboBox(StdQComboBox):
                 return self.parent().wheelEvent(*args, **kwargs)
             except RuntimeError:
                 return
+
+
+class ComboBoxFilterProxyModel(QSortFilterProxyModel):
+    def filterAcceptsRow(self, source_row, source_parent):
+        # Skip the top element (row 0)
+        if source_row == 0:
+            return False
+        return True

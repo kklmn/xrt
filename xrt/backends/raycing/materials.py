@@ -1164,7 +1164,7 @@ class Crystal(Material):
                  quantities=None, rho=0, t=None, factDW=1.,
                  geom='Bragg reflected', table='Chantler total', name='',
                  volumetricDiffraction=False, useTT=False, nu=None,
-                 mosaicity=0):
+                 mosaicity=0, **kwargs):
         u"""
         *hkl*: sequence
             hkl indices.
@@ -1271,7 +1271,8 @@ class Crystal(Material):
                Acta Crystallogr. 1, (1948) 303.
 
         """
-        super().__init__(elements, quantities, rho=rho, table=table, name=name)
+        super().__init__(elements, quantities, rho=rho, table=table, name=name,
+             **kwargs)
         self.hkl = hkl
         self.sqrthkl2 = (sum(i**2 for i in hkl))**0.5
         self.d = d
