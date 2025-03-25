@@ -25,7 +25,8 @@ from . import sources as rs
 from .physconsts import CHBAR
 
 allArguments = ('bl', 'name', 'center', 'x', 'z', 'compressX',
-                'compressZ', 'R', 'phiOffset', 'thetaOffset')
+                'compressZ', 'R', 'phiOffset', 'thetaOffset', 'limPhysX',
+                'limPhysY', 'cLimits', 'histShape')
 
 _DEBUG = 20
 
@@ -59,6 +60,13 @@ class Screen(object):
             camera magnification or when the camera sees the screen at an
             angle.
 
+        *limPhysX* and *limPhysY*: [*min*, *max*] where *min*, *max* are
+            floats or sequences of floats (optional)
+            Physical dimension = local coordinate of the corresponding edge.
+            Can be given by sequences of the length of *surface*. You do not
+            have to provide the limits, although they may help in finding
+            intersection points, especially for (strongly) curved surfaces.
+
 
         """
         self.bl = bl
@@ -77,22 +85,70 @@ class Screen(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
                 
-        histArgs = ['limPhysX', 'limPhysY', 'cLimits']  # Optional
-                
-        for attr in histArgs:
-            setattr(self, attr, kwargs.get(attr, None))
-            
-        setattr(self, 'histShape', kwargs.get('histShape', [256, 256]))
+        _ = self.__pop_kwargs(**kwargs)
+        if np.sum(self.limPhysX) > 0:
+            self.image = np.zeros(np.int32(self.histShape))
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([coord == 'auto' for coord in self.center]):
 #            self._center = copy.copy(self.center)
         self.compressX = compressX
         self.compressZ = compressZ
+
+    def __pop_kwargs(self, **kwargs):
+        self.limPhysX = kwargs.pop('limPhysX', None)
+        self.limPhysY = kwargs.pop('limPhysY', None)
+        self.cLimits = kwargs.pop('cLimits', None)
+        self.histShape = kwargs.pop('histShape', [256, 256])
+#        print(self.name, self.limPhysX, self.limPhysY)
+
+    @property
+    def limPhysX(self):
+        return self._limPhysX
+
+    @limPhysX.setter
+    def limPhysX(self, limPhysX):
+        if limPhysX is None:
+            self._limPhysX = raycing.Limits([0, 0])
+        else:
+            self._limPhysX = raycing.Limits(limPhysX)
+
+    @property
+    def limPhysY(self):
+        return self._limPhysY
+
+    @limPhysY.setter
+    def limPhysY(self, limPhysY):
+        if limPhysY is None:
+            self._limPhysY = raycing.Limits([0, 0])
+        else:
+            self._limPhysY = raycing.Limits(limPhysY)
+
+    @property
+    def cLimits(self):
+        return self._cLimits
+
+    @cLimits.setter
+    def cLimits(self, cLimits):
+        if cLimits is None:
+            self._cLimits = raycing.Limits([0, 0])
+        else:
+            self._cLimits = raycing.Limits(cLimits)
+
+    @property
+    def histShape(self):
+        return self._histShape
+
+    @histShape.setter
+    def histShape(self, histShape):
+        if histShape is None:
+            self._histShape = raycing.Image2D([256, 256])
+        else:
+            self._histShape = raycing.Image2D(histShape)
 
     @property
     def center(self):
@@ -105,7 +161,7 @@ class Screen(object):
             self._centerVal = None
             self._centerInit = center
         else:
-            self._centerVal = center
+            self._centerVal = raycing.Center(center)
 
     @property
     def x(self):
@@ -148,7 +204,13 @@ class Screen(object):
         return xglo, yglo, zglo
 
     def expose_global(self, beam=None, onlyPositivePath=False):
+        kwArgsIn = {}
         if self.bl is not None:
+            if raycing.is_valid_uuid(beam):
+                kwArgsIn['beam'] = beam
+                beam = self.bl.beamsDictU[beam]['beamGlobal']
+            else:
+                kwArgsIn['beam'] = beam.parentId
             self.bl.auto_align(self, beam)
         glo = rs.Beam(copyFrom=beam)  # global
         with np.errstate(divide='ignore'):
@@ -170,6 +232,7 @@ class Screen(object):
         glo.z[:] = beam.z + path*beam.c
         return glo
 
+    @raycing.append_to_flow_decorator
     def expose(self, beam=None, onlyPositivePath=False, withHistogram=False):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
@@ -178,8 +241,15 @@ class Screen(object):
 
         .. .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'onlyPositivePath': onlyPositivePath,
+#                    'withHistogram': withHistogram}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         xyz = self.x, self.y, self.z
         raycing.global_to_virgin_local(xyz, beam, blo, self.center)
@@ -204,10 +274,12 @@ class Screen(object):
             blo.Ep *= propPhase
         # Screen size hint for Glow
         good = (blo.state == 1) | (blo.state == 2)
-        self.footprint.extend([np.hstack((np.min(np.vstack((
-            blo.x[good], blo.y[good], blo.z[good])), axis=1),
-            np.max(np.vstack((blo.x[good], blo.y[good], blo.z[good])),
-                   axis=1))).reshape(2, 3)])
+        self.footprint = []
+        if len(blo.state[good]) > 0:
+            self.footprint.extend([np.hstack((np.min(np.vstack((
+                blo.x[good], blo.y[good], blo.z[good])), axis=1),
+                np.max(np.vstack((blo.x[good], blo.y[good], blo.z[good])),
+                       axis=1))).reshape(2, 3)])
 
         if self.compressX:
             blo.x[:] *= self.compressX
@@ -215,16 +287,28 @@ class Screen(object):
             blo.z[:] *= self.compressZ
         raycing.append_to_flow(self.expose, [blo], inspect.currentframe())
         if withHistogram:
-            if any([x is None for x in [self.limPhysX, self.limPhysY]]):
+#            print(self.limPhysX, self.limPhysY)
+            if any([np.sum(np.abs(x)) == 0 for x in [self.limPhysX, self.limPhysY]]):
                 print("Using auto limits for histogramming")
-                self.limPhysX = self.footprint[-1][:, 0].tolist()
-                self.limPhysY = self.footprint[-1][:, 2].tolist()
+                self.limPhysX = raycing.Limits(self.footprint[-1][:, 0].tolist())
+                self.limPhysY = raycing.Limits(self.footprint[-1][:, 2].tolist())
+#            print(self.limPhysX, self.limPhysY)
 
-            limitsIn = [self.limPhysX, self.limPhysY]
+            limitsIn = [self.limPhysX if isinstance(self.limPhysX, list) else
+                        self.limPhysX.tolist(),
+                        self.limPhysY if isinstance(self.limPhysY, list) else
+                        self.limPhysY.tolist()]
+            print(limitsIn, self.histShape)
             hist2d, hist2dRGB, limitsOut = raycing.build_hist(
                     blo, limits=limitsIn, isScreen=True, shape=self.histShape,
                     cDataFunc=None, cLimits=None)
             self.image = hist2d
+#            print(np.sum(hist2d))
+#        blo.parentId = self.uuid
+#        self.bl.flowU[self.uuid] = {'method': self.expose,
+#                                    'kwArgsIn': kwArgsIn}
+#        self.bl.beamsDictU[self.uuid] = {'beamLocal': blo}
+
         return blo
 
     def prepare_wave(self, prevOE, dim1, dim2, dy=0, rw=None, condition=None):
@@ -340,7 +424,7 @@ class Screen(object):
             prevOE.shine(wave=waveOnSelf)
         else:
             rw.diffract(wave, waveOnSelf)
-        waveOnSelf.parentId = self.name
+        waveOnSelf.parentId = self.uuid
         return waveOnSelf
 
 
@@ -377,7 +461,7 @@ class HemisphericScreen(Screen):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
 #        if any([coord == 'auto' for coord in self.center]):
@@ -416,13 +500,20 @@ class HemisphericScreen(Screen):
         return x, y, z, xglo, yglo, zglo
 
     def expose_global(self, beam=None):
+        kwArgsIn = {}
         if self.bl is not None:
+            if raycing.is_valid_uuid(beam):
+                kwArgsIn['beam'] = beam
+                beam = self.bl.beamsDictU[beam]['beamGlobal']
+            else:
+                kwArgsIn['beam'] = beam.parentId
             self.bl.auto_align(self, beam)
         glo = self.expose(beam)
         _, _, _, glo.x[:], glo.y[:], glo.z[:] = \
             self.local_to_global(glo.phi, glo.theta)
         return glo
 
+    @raycing.append_to_flow_decorator
     def expose(self, beam=None, onlyPositivePath=False):
         """Exposes the screen to the beam. *beam* is in global system, the
         returned beam is in local system of the screen and represents the
@@ -431,8 +522,14 @@ class HemisphericScreen(Screen):
 
         .. Returned values: beamLocal
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'onlyPositivePath': onlyPositivePath}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         sqb_2 = (beam.a * (beam.x-self.center[0]) +
                  beam.b * (beam.y-self.center[1]) +
@@ -465,4 +562,9 @@ class HemisphericScreen(Screen):
             blo.Ep *= propPhase
         raycing.append_to_flow(self.expose, [blo],
                                inspect.currentframe())
+#        blo.parentId = self.uuid
+#        self.bl.flowU[self.uuid] = {'method': self.expose,
+#                                    'kwArgsIn': kwArgsIn}
+#        self.bl.beamsDictU[self.uuid] = {'beamLocal': blo}
+
         return blo

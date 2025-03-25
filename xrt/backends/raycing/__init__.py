@@ -171,8 +171,9 @@ import types
 import sys
 import numpy as np
 # from itertools import compress
-from itertools import islice
+from itertools import islice, count
 from collections import OrderedDict
+from functools import wraps
 import re
 import copy
 import inspect
@@ -180,6 +181,7 @@ import uuid
 import importlib
 import json
 import xml.etree.ElementTree as ET
+import time
 
 from matplotlib.colors import hsv_to_rgb
 
@@ -256,6 +258,70 @@ allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
 colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
     'WHITE', 'RESET'
 
+
+def NamedArrayFactory(names, default_dtype=float):
+    class NamedArray(np.ndarray):
+        def __new__(cls, values=None, dtype=default_dtype, **kwargs):
+            num_elements = len(names)
+
+            if values is None and kwargs:
+                values = [kwargs.get(name, 0.0) for name in names]
+            elif values is not None:
+                if len(values) != num_elements:
+                    raise ValueError(f'Expected {num_elements} elements, got {len(values)}.')
+            else:
+                values = np.zeros(num_elements, dtype=dtype)
+
+            obj = np.asarray(values, dtype=dtype).view(cls)
+            return obj
+
+        def __array_finalize__(self, obj):
+            if obj is None:
+                return  # nothing additional to do here
+
+        def __getattr__(self, attr):
+            if attr in names:
+                idx = names.index(attr)
+                return self[idx]
+            raise AttributeError(f"{type(self).__name__} has no attribute '{attr}'")
+
+        def __setattr__(self, attr, value):
+            if attr in names:
+                idx = names.index(attr)
+                self[idx] = value
+            else:
+                super().__setattr__(attr, value)
+
+        def __eq__(self, other):
+            return np.array_equal(self, other)
+
+        def __ne__(self, other):
+            return not np.array_equal(self, other)
+
+        def __repr__(self):
+            components = ', '.join(f'{name}={getattr(self, name)}'
+                                   for name in names)
+            return f'{type(self).__name__}({components})'
+
+        def __str__(self):
+            return '[' + ', '.join(str(val) for val in self) + ']'
+
+#        def __reduce__(self):
+#            module_name = self.__class__.__module__
+#            class_name = self.__class__.__name__
+#            return (getattr(xrt.backends.raycing, class_name), (np.asarray(self),))
+#
+    NamedArray.__name__ = 'NamedArray_' + '_'.join(names)
+#    NamedArray.__module__ = __name__  # explicitly set module
+#    globals()[NamedArray.__name__] = NamedArray  # make it visible at module level
+
+    return NamedArray
+
+
+Center = NamedArrayFactory(['x', 'y', 'z'])
+Limits = NamedArrayFactory(['lmin', 'lmax'])
+Opening = NamedArrayFactory(['left', 'right', 'bottom', 'top'])
+Image2D = NamedArrayFactory(['width', 'height'], default_dtype=int)
 
 def colorPrint(s, fcolor=None, bcolor=None):
     style = getattr(colorama.Fore, fcolor) if fcolor in colors else \
@@ -834,12 +900,77 @@ def append_to_flow(meth, bOut, frame):
     for outstr, outbm in zip(list(fdoc), bOut):
         kwArgsOut[outstr.strip()] = id(outbm)
 
-    try:
-        objName = oe.name
-    except AttributeError:
-        objName = oe.__class__.__name__
-    oe.bl.flow.append([objName, meth.__func__, kwArgsIn, kwArgsOut])
+    oe.bl.flow.append([oe.uuid, meth.__func__, kwArgsIn, kwArgsOut])
 
+
+def append_to_flow_decorator(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargsIn):
+        meth_name = func.__name__
+
+        sig = inspect.signature(func)
+        bound_args = sig.bind(self, *args, **kwargsIn)
+        bound_args.apply_defaults()
+
+        kwargs = {k: v for k, v in bound_args.arguments.items() if k != 'self'}
+
+        beamIn = None
+        if 'beam' in kwargs:
+            beamIn = 'beam'
+        elif 'accuBeam' in kwargs:
+            beamIn = 'accuBeam'
+
+        toGlobal = kwargs.get('toGlobal', True)
+
+        if beamIn and kwargs[beamIn] is not None:
+            if hasattr(self, 'bl') and self.bl is not None and\
+                    not self.bl.flowSource.endswith('refract'):
+                if is_valid_uuid(kwargs[beamIn]):
+                    beamId = kwargs[beamIn]
+                    kwargs[beamIn] = self.bl.beamsDictU[beamId][
+                            'beamGlobal' if toGlobal else 'beamLocal']
+                else:
+                    beamId = kwargs[beamIn].parentId
+
+                if meth_name != 'shine':
+                    self.bl.auto_align(self, kwargs[beamIn])
+        if hasattr(self, 'get_orientation'):
+            self.get_orientation()
+
+        result = func(self, **kwargs)
+
+        if hasattr(self, 'bl') and self.bl is not None:
+#            if self.bl.flowSource != 'double_refract':
+
+#            self.bl.flowU[self.uuid] = {meth_name: kwargs}
+            if isinstance(result, tuple):
+                for a in result:
+                    a.parentId = self.uuid
+                if len(result) > 2:
+                    result[0].parentId = self.uuid
+                    if self.bl.flowSource.endswith('refract'):
+                        ret_dict = {}
+                    else:
+                        ret_dict = {'beamGlobal': result[0],
+                                    'beamLocal1': result[1],
+                                    'beamLocal2': result[2]}
+                else:
+                    ret_dict = {'beamGlobal': result[0],
+                                'beamLocal': result[1]}
+            else:
+                result.parentId = self.uuid
+                if meth_name in ['propagate', 'expose']:
+                    ret_dict = {'beamLocal': result}
+                else:
+                    ret_dict = {'beamGlobal' if toGlobal else 'beamLocal': result}
+            if ret_dict:
+                if 'beam' in kwargs:
+                    kwargs['beam'] = beamId
+                self.bl.flowU[self.uuid] = {meth_name: kwargs}
+                self.bl.beamsDictU[self.uuid] = ret_dict
+
+        return result
+    return wrapper
 
 def is_auto_align_required(oe):
     needAutoAlign = False
@@ -1010,6 +1141,12 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                     [get_init_val(c.strip())
                      for c in str.split(
                      paravalue, ',')]
+            elif paraname.startswith('limPhys'):
+                paravalue = paravalue.strip('[]() ')
+                paravalue =\
+                    [get_init_val(c.strip())
+                     for c in str.split(
+                     paravalue, ',')]
             elif paraname.startswith('material'):
                 paravalue = beamLine.materialsDict[paravalue]
             elif paraname == 'bl':
@@ -1097,7 +1234,7 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
 
 def is_valid_uuid(uuid_string):
     try:
-        _ = uuid.UUID(uuid_string)
+        _ = uuid.UUID(str(uuid_string))
         return True
     except ValueError:
         return False
@@ -1131,7 +1268,7 @@ def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
     cData is one of get_NNN methods or None. In the latter case the function
     returns only intensity histogram
     """
-    
+
     good = (beam.state == 1) | (beam.state == 2)
     if isScreen:
         x, y, z = beam.x[good], beam.z[good], beam.y[good]
@@ -1226,6 +1363,8 @@ class BeamLine(object):
         self.beamsDict = OrderedDict()
         self.flowSource = 'legacy'
         self.forceAlign = False
+        self.beamsDictU = OrderedDict()
+        self.flowU = OrderedDict()
         self.beamsRevDict = OrderedDict()
         self.beamsRevDictUsed = {}
         self.blViewer = None
@@ -1493,6 +1632,72 @@ class BeamLine(object):
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
+             colorAxisLimits=None, generator=None, generatorArgs=[], v2=False):
+        if generator is not None:
+            gen = generator(*generatorArgs)
+            try:
+                if sys.version_info < (3, 1):
+                    gen.next()
+                else:
+                    next(gen)
+            except StopIteration:
+                return
+
+        try:
+            from ...gui import xrtGlow as xrtglow
+        except ImportError:
+            print("Cannot import xrtGlow. "
+                  "If you run your script from an IDE, don't.")
+            return
+
+        from .run import run_process
+        run_process(self)
+
+        if self.blViewer is None:
+            app = xrtglow.qt.QApplication.instance()
+            if app is None:
+                app = xrtglow.qt.QApplication(sys.argv)
+            if v2:
+                self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr)
+            else:
+                rayPath = self.export_to_glow()
+                self.blViewer = xrtglow.xrtGlow(rayPath)
+            self.blViewer.generator = generator
+            self.blViewer.generatorArgs = generatorArgs
+            self.blViewer.customGlWidget.generator = generator
+            self.blViewer.setWindowTitle("xrtGlow")
+            self.blViewer.startFrom = startFrom
+            self.blViewer.bl = self
+            if scale:
+                try:
+                    self.blViewer.updateScaleFromGL(scale)
+                except Exception:
+                    pass
+            if centerAt:
+                try:
+                    self.blViewer.centerEl(centerAt)
+                except Exception:
+                    pass
+            if colorAxis:
+                try:
+                    colorCB = self.blViewer.colorControls[0]
+                    colorCB.setCurrentIndex(colorCB.findText(colorAxis))
+                except Exception:
+                    pass
+            if colorAxisLimits:
+                try:
+                    self.blViewer.customGlWidget.colorMin,\
+                        self.blViewer.customGlWidget.colorMax = colorAxisLimits
+                    self.blViewer.changeColorAxis(None, newLimits=True)
+                except Exception:
+                    pass
+
+            self.blViewer.show()
+            sys.exit(app.exec_())
+        else:
+            self.blViewer.show()
+
+    def glow2(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[]):
         if generator is not None:
             gen = generator(*generatorArgs)
@@ -1513,12 +1718,13 @@ class BeamLine(object):
 
         from .run import run_process
         run_process(self)
+
         if self.blViewer is None:
             app = xrtglow.qt.QApplication.instance()
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
-            rayPath = self.export_to_glow()
-            self.blViewer = xrtglow.xrtGlow(rayPath)
+#            rayPath = self.export_to_glow()
+            self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr)
             self.blViewer.generator = generator
             self.blViewer.generatorArgs = generatorArgs
             self.blViewer.customGlWidget.generator = generator
@@ -1703,6 +1909,7 @@ class BeamLine(object):
             if elName in ['properties', '_object']:
                 continue
             oeObj = self.init_oe_from_json(elProps)
+            # TODO: Can we do it same way as materials, pass uuid at init?
             if is_valid_uuid(elName):
                 elKey = elName
                 if hasattr(oeObj, 'uuid'):
@@ -1714,7 +1921,7 @@ class BeamLine(object):
                 elKey = str(uuid.uuid4())
                 oeObj.uuid = elKey
 
-            self.oesDict[elKey] = oeObj
+            self.oesDict[elKey] = [oeObj]
 
     def init_material_from_json(self, matName, dictIn, materialsDict):
         matModule, matClass = dictIn['_object'].rsplit('.', 1)
@@ -1722,8 +1929,12 @@ class BeamLine(object):
         matParams = dictIn['properties']
         defArgs = dict(get_params(dictIn['_object']))
         initKWArgs = create_paramdict_mat(matParams, defArgs, materialsDict)
+
+        if is_valid_uuid(matName):
+            initKWArgs['uuid'] = matName
+
         try:
-            matObject =getattr(matModule, matClass)(**initKWArgs)
+            matObject = getattr(matModule, matClass)(**initKWArgs)
         except:  # TODO: Needs testing
             print(matClass, "Init problem")
             raise
@@ -1767,12 +1978,14 @@ class BeamLine(object):
 
         self.populate_materials_dict_from_json(data['Project']['Materials'])
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
+        if 'flow' in data['Project'].keys():
+            self.flowU = data['Project']['flow']
 
     def export_to_json(self):
         matDict = OrderedDict()
         for objName, objInstance in self.materialsDict.items():
             matRecord = OrderedDict()
-            matRecord['properties'] = get_init_kwargs(objInstance)
+            matRecord['properties'] = get_init_kwargs(objInstance, compact=False)
             matRecord['_object'] = get_obj_str(objInstance)
             if not matRecord['properties']['name']:
                 matRecord['properties']['name'] = objName
@@ -1812,5 +2025,8 @@ class BeamLine(object):
         projectDict['Beams'] = beamsDict
         projectDict['Materials'] = matDict
         projectDict['beamLine'] = beamlineDict
+        projectDict['flow'] = self.flowU
+        
+        self.layoutStr = {'Project': projectDict}
 
         return projectDict

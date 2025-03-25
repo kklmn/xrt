@@ -13,6 +13,7 @@ from . import sources as rs
 from . import myopencl as mcl
 from .physconsts import PI2, CH, CHBAR, SQRT2PI
 from .materials import EmptyMaterial
+
 # try:
 #     import pyopencl as cl  # analysis:ignore
 #     isOpenCL = True
@@ -36,7 +37,7 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'limPhysX', 'limOptX', 'limPhysY', 'limOptY',
                 'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2',
                 'isParametric', 'shape', 'gratingDensity', 'order',
-                'shouldCheckCenter',
+                'shouldCheckCenter', 'braggOffset',
                 'dxFacet', 'dyFacet', 'dxGap', 'dyGap', 'Rm',
                 'crossSection', 'Rs', 'R', 'r', 'p', 'q', 'isCylindrical',
                 'isClosed', 'L0', 'theta', 'r0', 'ellipseA', 'ellipseB',
@@ -270,7 +271,7 @@ class OE(object):
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 1]
+                bl.oesDict[self.uuid] = [self, 1]
 
         self.shouldCheckCenter = shouldCheckCenter
 
@@ -297,17 +298,17 @@ class OE(object):
         self.alpha = alpha
         self.curSurface = 0
         self.dx = 0
-        self.limPhysX = limPhysX
-        self.limPhysY = limPhysY
         self.limOptX = limOptX
         self.limOptY = limOptY
+        self.limPhysX = limPhysX
+        self.limPhysY = limPhysY
         self.isParametric = isParametric
         self.use_rays_good_gn = False  # use rays_good_gn instead of rays_good
 
         self.shape = shape
         self.gratingDensity = gratingDensity
         self.order = order
-        self.get_surface_limits()
+#        self.get_surface_limits()
         self.cl_ctx = None
         self.ucl = None
         self.footprint = []
@@ -356,7 +357,7 @@ class OE(object):
             self._centerVal = None
             self._centerInit = copy.copy(center)  # For glow auto-recognition
         else:
-            self._centerVal = center
+            self._centerVal = raycing.Center(center)
 #            if not hasattr(self, '_center'):
 #                self._center = None
 
@@ -464,10 +465,11 @@ class OE(object):
     @limPhysX.setter
     def limPhysX(self, limPhysX):
         if limPhysX is None:
-            self._limPhysX = [-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE]
+            self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE])
         else:
-            self._limPhysX = limPhysX
+            self._limPhysX = raycing.Limits(limPhysX)
+        self.get_surface_limits()
 
     @property
     def limPhysY(self):
@@ -476,10 +478,11 @@ class OE(object):
     @limPhysY.setter
     def limPhysY(self, limPhysY):
         if limPhysY is None:
-            self._limPhysY = [-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE]
+            self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE])
         else:
-            self._limPhysY = limPhysY
+            self._limPhysY = raycing.Limits(limPhysY)
+        self.get_surface_limits()
 
     @property
     def gratingDensity(self):
@@ -541,11 +544,11 @@ class OE(object):
                     [extraRotAx[i] for i in extraRotSeq]).as_quat()
                 rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
                 extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
-                
+
                 orientationQ = raycing.multiply_quats(rotation, extraRot)
-                
+
                 new_norm = raycing.quat_vec_rotate(np.array([0, 0, 1]), rotation)
-               
+
                 return orientationQ
         except Exception as e:
 #            raise
@@ -958,6 +961,10 @@ class OE(object):
 
     def get_surface_limits(self):
         """Returns surface_limits."""
+
+        if not all([hasattr(self, arg) for arg in ['curSurface', 'limPhysX',
+                'limPhysY', 'limOptX', 'limOptY']]):
+            return
         cs = self.curSurface
         self.surfPhysX = self.limPhysX
         if self.limPhysX is not None:
@@ -1072,6 +1079,7 @@ class OE(object):
             raise ValueError('Unknown shape of OE {0}!'.format(self.name))
         return locState
 
+    @raycing.append_to_flow_decorator
     def reflect(self, beam=None, needLocal=True, noIntersectionSearch=False,
                 returnLocalAbsorbed=None):
         r"""
@@ -1148,10 +1156,16 @@ class OE(object):
                 'You should remove "noIntersectionSearch" for this parametric'
                 'surface ({0})'.format(self.name), "RED")
         self.footprint = []
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
-        self.get_orientation()
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
+#        self.get_orientation()
         # output beam in global coordinates
+
         gb = rs.Beam(copyFrom=beam)
         if needLocal:
             # output beam in local coordinates
@@ -1188,25 +1202,29 @@ class OE(object):
             absorbedLb.absorb_intensity(beam)
             lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
-        lb.parentId = self.name
+
+#        gb.parentId = self.uuid
+#        lb.parentId = self.uuid
 
         oq = self.get_orientation_quaternion()
         globalNorm = np.array(raycing.quat_vec_rotate(np.array([0, 0, 1]), oq))
         globalNorm /= np.linalg.norm(globalNorm)
-        print(self.name, "global norm", globalNorm)
+#        print(self.name, "global norm", globalNorm)
         if hasattr(beam, 'basis'):
             newBasis = np.identity(3)
             for line in range(3):
                 cmpt = beam.basis[line, :]
                 newcmpt = cmpt - 2*np.dot(cmpt, globalNorm)*globalNorm
                 newBasis[line, :] = newcmpt / np.linalg.norm(newcmpt)
-                
+
             det = np.linalg.det(newBasis)
             if det < 0:
                 newBasis[-1, :] *= -1
             gb.basis = newBasis
-            print("beam new basis", gb.basis)
-
+        # TODO: what if one element processing multiple beams?
+#        self.bl.flowU[self.uuid] = {'method': self.reflect.__name__,
+#                                    'kwArgsIn': kwArgsIn}
+#        self.bl.beamsDictU[self.uuid] = {'beamGlobal': gb, 'beamLocal': lb}
         return gb, lb  # in global(gb) and local(lb) coordinates
 
     def multiple_reflect(
@@ -1228,10 +1246,18 @@ class OE(object):
 
         .. .. Returned values: beamGlobal, beamLocal
         """
+#        kwArgsIn = {'maxReflections': maxReflections,
+#                    'needElevationMap': needElevationMap,
+#                    'returnLocalAbsorbed': returnLocalAbsorbed}
         self.footprint = []
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
-        self.get_orientation()
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
+#        self.get_orientation()
 # output beam in global coordinates
         gb = rs.Beam(copyFrom=beam)
         lb = gb
@@ -1294,9 +1320,12 @@ class OE(object):
             absorbedLb = rs.Beam(copyFrom=lb)
             absorbedLb.absorb_intensity(beam)
             lbN = absorbedLb
-        lbN.parentId = self.name
+#        lbN.parentId = self.uuid
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())
+#        self.bl.flowU[self.uuid] = {'method': self.multiple_reflect,
+#                                    'kwArgsIn': kwArgsIn}
+#        self.bl.beamsDictU[self.uuid] = {'beamGlobal': gb, 'beamLocal': lbN}
         return gb, lbN
 
     def local_to_global(self, lb, returnBeam=False, **kwargs):
@@ -1511,7 +1540,7 @@ class OE(object):
             beamToSelf = rw.diffract(wave, waveOnSelf)
             nIS = True
         retGlo, retLoc = self.reflect(beamToSelf, noIntersectionSearch=nIS)
-        retLoc.parent = self.name
+        retLoc.parentId = self.uuid
         return retGlo, retLoc
 
     def _set_t(self, xyz=None, abc=None, surfPhys=None,
@@ -2347,6 +2376,9 @@ class DCM(OE):
             energy is given as a single element list [energy]. If 'auto',
             the alignment energy will be taken from beamLine.alignE.
 
+        *braggOffset*: float
+            Bragg angle offset in rad.
+
         *cryst1roll*, *cryst2roll*, *cryst2pitch*, *cryst2finePitch*: float
             Misalignment angles in rad.
 
@@ -2371,6 +2403,7 @@ class DCM(OE):
         self.energyMax = rs.defaultEnergy + 5.
 
     def __pop_kwargs(self, **kwargs):
+        self.braggOffset = kwargs.pop('braggOffset', 0)
         self.bragg = kwargs.pop('bragg', 0)
         self.cryst1roll = kwargs.pop('cryst1roll', 0)
         self.cryst2roll = kwargs.pop('cryst2roll', 0)
@@ -2399,10 +2432,20 @@ class DCM(OE):
         if isinstance(bragg, (raycing.basestring, list, tuple)):
             self._bragg = copy.copy(bragg)
             self._braggVal = None
+            if hasattr(self, 'material') and self.material is not None:
+                if hasattr(self.material, 'get_Bragg_angle'):
+                    self._braggVal = self.material.get_Bragg_angle(bragg[0]) - self.braggOffset
             self._braggInit = copy.copy(bragg)  # For glow auto-recognition
         else:
             self._braggVal = raycing.auto_units_angle(bragg)
-#            self.update_orientation_quaternion()
+
+    @property
+    def braggOffset(self):
+        return self._braggOffset
+
+    @braggOffset.setter
+    def braggOffset(self, braggOffset):
+        self._braggOffset = raycing.auto_units_angle(braggOffset)
 
     @property
     def cryst1roll(self):
@@ -2447,10 +2490,10 @@ class DCM(OE):
     @limPhysX2.setter
     def limPhysX2(self, limPhysX2):
         if limPhysX2 is None:
-            self._limPhysX2 = [-raycing.maxHalfSizeOfOE,
-                               raycing.maxHalfSizeOfOE]
+            self._limPhysX2 = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                               raycing.maxHalfSizeOfOE])
         else:
-            self._limPhysX2 = limPhysX2
+            self._limPhysX2 = raycing.Limits(limPhysX2)
 
     @property
     def limPhysY2(self):
@@ -2459,14 +2502,18 @@ class DCM(OE):
     @limPhysY2.setter
     def limPhysY2(self, limPhysY2):
         if limPhysY2 is None:
-            self._limPhysY2 = [-raycing.maxHalfSizeOfOE,
-                               raycing.maxHalfSizeOfOE]
+            self._limPhysY2 = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                               raycing.maxHalfSizeOfOE])
         else:
-            self._limPhysY2 = limPhysY2
+            self._limPhysY2 = raycing.Limits(limPhysY2)
 
     def get_surface_limits(self):
         """Returns surface_limits."""
+        # TODO: multiple surfaces
         OE.get_surface_limits(self)
+        if not all([hasattr(self, arg) for arg in ['curSurface', 'limPhysX2',
+                'limPhysY2', 'limOptX2', 'limOptY2']]):
+            return
         cs = self.curSurface
         self.surfPhysX2 = self.limPhysX2
         if self.limPhysX2 is not None:
@@ -2509,6 +2556,7 @@ class DCM(OE):
         if self.fixedOffset not in [0, None]:
             self.cryst2perpTransl = self.fixedOffset/2./np.cos(self.bragg)
 
+    @raycing.append_to_flow_decorator
     def double_reflect(self, beam=None, needLocal=True,
                        fromVacuum1=True, fromVacuum2=True,
                        returnLocalAbsorbed=None):
@@ -2525,10 +2573,20 @@ class DCM(OE):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
-        self.footprint = []
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
-        self.get_orientation()
+#        kwArgsIn = {'needLocal': needLocal,
+#                    'fromVacuum1': fromVacuum1,
+#                    'fromVacuum2': fromVacuum2,
+#                    'returnLocalAbsorbed': returnLocalAbsorbed}
+#        self.footprint = []
+#        if self.bl is not None:
+#            if self.bl.flowSource != 'double_refract':
+#                if raycing.is_valid_uuid(beam):
+#                    kwArgsIn['beam'] = beam
+#                    beam = self.bl.beamsDictU[beam]['beamGlobal']
+#                else:
+#                    kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
+#        self.get_orientation()
         gb = rs.Beam(copyFrom=beam)  # output beam in global coordinates
         if needLocal:
             lo1 = rs.Beam(copyFrom=beam)  # output beam in local coordinates
@@ -2590,8 +2648,16 @@ class DCM(OE):
                 absorbedLb = rs.Beam(copyFrom=lo2)
                 absorbedLb.absorb_intensity(lo1)
                 lo2 = absorbedLb
-        lo2.parentId = self.name
+#        gb2.parentId = self.uuid
+#        lo1.parentId = self.uuid
+#        lo2.parentId = self.uuid
         raycing.append_to_flow(self.double_reflect, [gb2, lo1, lo2],
                                inspect.currentframe())
+#        if self.bl and self.bl.flowSource != 'double_refract':
+#            self.bl.flowU[self.uuid] = {'method': self.double_reflect,
+#                                        'kwArgsIn': kwArgsIn}
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': gb2,
+#                                             'beamLocal1': lo1,
+#                                             'beamLocal2': lo2}
 
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates

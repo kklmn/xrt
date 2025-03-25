@@ -127,9 +127,9 @@ class SourceBase:
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.name] = [self, 0]
+                bl.oesDict[self.uuid] = [self, 0]
 
-        self.center = center  # 3D point in global system
+        self.center = raycing.Center(center)  # 3D point in global system
         self._pitch = raycing.auto_units_angle(pitch)
         self._yaw = raycing.auto_units_angle(yaw)
         self.nrays = np.int64(nrays)
@@ -222,14 +222,6 @@ class SourceBase:
         self.nz = 2*nz + 1
 
         self.needReset = True
-
-    @property
-    def nrays(self):
-        return self._nrays
-
-    @nrays.setter
-    def nrays(self, nrays):
-        self._nrays = np.int64(nrays)
 
     @property
     def pitch(self):
@@ -1317,6 +1309,7 @@ class IntegratedSource(SourceBase):
                       self.quadm, self.gIntervals,
                       's' if self.gIntervals > 1 else ''))
 
+    @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=False,
               wave=None, accuBeam=None):
         u"""
@@ -1340,13 +1333,34 @@ class IntegratedSource(SourceBase):
         """
         if self.needReset:
             self.reset()
+
+        kwArgsIn = {'toGlobal': toGlobal,
+                    'withAmplitudes': withAmplitudes,
+                    'fixedEnergy': fixedEnergy}
+
         if self.bl is not None:
             try:
                 self.bl._alignE = float(self.bl.alignE)
             except ValueError:
                 self.bl._alignE = 0.5 * (self.eMin + self.eMax)
 
+            if raycing.is_valid_uuid(accuBeam):
+                kwArgsIn['accuBeam'] = accuBeam
+                accuBeam = self.bl.beamsDictU[accuBeam][
+                        'beamGlobal' if toGlobal else 'beamLocal']
+            elif accuBeam is not None:
+                kwArgsIn['accuBeam'] = accuBeam.parentId
+            else:
+                kwArgsIn['accuBeam'] = None
+
+
         if wave is not None:
+            if raycing.is_valid_uuid(wave):
+                kwArgsIn['wave'] = wave
+                wave = self.bl.beamsDictU[accuBeam]['wave']
+            else:
+                kwArgsIn['wave'] = accuBeam.parentId
+
             if not hasattr(wave, 'rDiffr'):
                 raise ValueError("If you want to use a `wave`, run a" +
                                  " `prepare_wave` before shine!")
@@ -1354,6 +1368,7 @@ class IntegratedSource(SourceBase):
             mcRays = len(wave.a)
         else:
             mcRays = self.nrays
+            kwArgsIn['wave'] = wave
 
         if self.uniformRayDensity:
             withAmplitudes = True
@@ -1620,7 +1635,16 @@ class IntegratedSource(SourceBase):
 
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
-        bor.parentId = self.name
+            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
+        else:
+            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
+
+        bor.parentId = self.uuid
+
         raycing.append_to_flow(self.shine, [bor],
                                inspect.currentframe())
+
+        self.bl.flowU[self.uuid] = {'method': self.shine,
+                                    'kwArgsIn': kwArgsIn}
+
         return bor

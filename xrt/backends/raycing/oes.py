@@ -1113,13 +1113,17 @@ class ToroidMirror(OE):
 
     def __init__(self, *args, **kwargs):
         """
-        *R*: float or 2-tuple.
-            Meridional radius. Can be given as (*p*, *q*) for automatic
-            calculation based the "Coddington" equations.
+        *R*: float, 2- or 3-tuple.
+            Meridional radius. Can be given as (*p*, *q*) or (*p*, *q*, *pitch*)
+            for automatic calculation based the "Coddington" equations. If
+            pitch is not given explicitly, it will be taken from the *pitch*
+            attribute.
 
-        *r*: float or 2-tuple.
-            Sagittal radius. Can be given as (*p*, *q*) for automatic
-            calculation based the "Coddington" equations.
+        *r*: float or 2- or 3-tuple.
+            Sagittal radius. Can be given as (*p*, *q*) or (*p*, *q*, *pitch*)
+            for automatic calculation based the "Coddington" equations. If
+            pitch is not given explicitly, it will be taken from the *pitch*
+            attribute.
 
 
         """
@@ -1134,7 +1138,7 @@ class ToroidMirror(OE):
     def R(self, R):
         if isinstance(R, (list, tuple)):
             self._RPQ = R
-            self._R = self.get_Rmer_from_Coddington(R[0], R[1])
+            self._R = self.get_Rmer_from_Coddington(*R)
         elif R is None:
             self._RPQ = None
             self._R = 1e100
@@ -1152,7 +1156,7 @@ class ToroidMirror(OE):
             raise ValueError("r must be non-zero")
         if isinstance(r, (list, tuple)):
             self._rPQ = r
-            self._r = self.get_rsag_from_Coddington(r[0], r[1])
+            self._r = self.get_rsag_from_Coddington(*r)
         elif r is None:
             self._rPQ = None
             self._r = 1e100
@@ -2406,6 +2410,7 @@ class Plate(DCM):
     def assign_auto_material_kind(self, material):
         material.kind = 'plate'
 
+    @raycing.append_to_flow_decorator
     def double_refract(self, beam=None, needLocal=True,
                        returnLocalAbsorbed=None):
         """
@@ -2422,16 +2427,27 @@ class Plate(DCM):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+#        kwArgsIn = {'needLocal': needLocal,
+#                    'returnLocalAbsorbed': returnLocalAbsorbed}
+#        if self.bl is not None:
+#            if self.bl.flowSource != 'multiple_refract':
+#                if raycing.is_valid_uuid(beam):
+#                    kwArgsIn['beam'] = beam
+#                    beam = self.bl.beamsDictU[beam]['beamGlobal']
+#                else:
+#                    kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
 #        self.material2 = self.material
 #        self.cryst2perpTransl = -self.t
         if self.bl is not None:
             tmpFlowSource = self.bl.flowSource
             if self.bl.flowSource != 'multiple_refract':
                 self.bl.flowSource = 'double_refract'
-        gb, lb1, lb2 = self.double_reflect(beam, needLocal, fromVacuum1=True,
+
+        gb, lb1, lb2 = self.double_reflect(beam=beam, needLocal=needLocal,
+                                           fromVacuum1=True,
                                            fromVacuum2=False)
+
         if self.bl is not None:
             if self.bl.flowSource == 'double_refract':
                 self.bl.flowSource = tmpFlowSource
@@ -2449,9 +2465,19 @@ class Plate(DCM):
                 absorbedLb = rs.Beam(copyFrom=lb2)
                 absorbedLb.absorb_intensity(lb1)
                 lb2 = absorbedLb
-        lb2.parent = self
+#        gb.parentId = self.uuid
+#        lb1.parentId = self.uuid
+#        lb2.parentId = self.uuid
         raycing.append_to_flow(self.double_refract, [gb, lb1, lb2],
                                inspect.currentframe())
+
+#        if self.bl.flowSource != 'multiple_refract':
+#            self.bl.flowU[self.uuid] = {'method': self.double_refract,
+#                                        'kwArgsIn': kwArgsIn}
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': gb,
+#                                             'beamLocal1': lb1,
+#                                             'beamLocal2': lb2}
+
         return gb, lb1, lb2
 
 
@@ -2637,6 +2663,7 @@ class ParaboloidFlatLens(Plate):
                     (1. - self.material.get_refractive_index(E).real) * nFactor
         return nCRL
 
+    @raycing.append_to_flow_decorator
     def multiple_refract(self, beam=None, needLocal=True,
                          returnLocalAbsorbed=None):
         """
@@ -2655,12 +2682,25 @@ class ParaboloidFlatLens(Plate):
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
         """
-        if self.bl is not None:
-            self.bl.auto_align(self, beam)
+        tmpFlowSource = self.bl.flowSource
+        self.bl.flowSource = 'multiple_refract'
+
+#        kwArgsIn = {'needLocal': needLocal,
+#                    'returnLocalAbsorbed': returnLocalAbsorbed}
+#        if self.bl is not None:
+#            if raycing.is_valid_uuid(beam):
+#                kwArgsIn['beam'] = beam
+#                beam = self.bl.beamsDictU[beam]['beamGlobal']
+#            else:
+#                kwArgsIn['beam'] = beam.parentId
+#            self.bl.auto_align(self, beam)
         if self.nCRL == 1:
             self.centerShift = np.zeros(3)
-            return self.double_refract(beam, needLocal=needLocal,
-                                       returnLocalAbsorbed=returnLocalAbsorbed)
+
+            lglobal, llocal1, llocal2 =  self.double_refract(
+                    beam=beam, needLocal=needLocal,
+                    returnLocalAbsorbed=returnLocalAbsorbed)
+#            self.bl.flowSource = tmpFlowSource
         else:
             tmpFlowSource = self.bl.flowSource
             self.bl.flowSource = 'multiple_refract'
@@ -2675,16 +2715,19 @@ class ParaboloidFlatLens(Plate):
             toward = [0, -step, 0]
             for ilens in range(self.nCRL):
                 lglobal, tlocal1, tlocal2 = self.double_refract(
-                    beamIn, needLocal=needLocal)
-                self.center[0] -= step * toward[0]
-                self.center[1] -= step * toward[1]
-                self.center[2] -= step * toward[2]
+                    beam=beamIn, needLocal=needLocal)
+                if self.zmax is not None:
+                    toward = raycing.rotate_point(
+                        [0, 0, 1], self.rotationSequence, self.pitch,
+                        self.roll+self.positionRoll, self.yaw)
+                    self.center[0] -= step * toward[0]
+                    self.center[1] -= step * toward[1]
+                    self.center[2] -= step * toward[2]
                 beamIn = lglobal
                 if ilens == 0:
                     llocal1, llocal2 = tlocal1, tlocal2
             self.centerShift = step * np.array(toward)
             self.center = tempCenter
-            self.bl.flowSource = tmpFlowSource
 
             if returnLocalAbsorbed is not None:
                 if returnLocalAbsorbed == 0:
@@ -2699,11 +2742,23 @@ class ParaboloidFlatLens(Plate):
                     absorbedLb = rs.Beam(copyFrom=llocal2)
                     absorbedLb.absorb_intensity(llocal1)
                     llocal2 = absorbedLb
-            llocal2.parent = self
+
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],
                                    inspect.currentframe())
-            return lglobal, llocal1, llocal2
+
+        self.bl.flowSource = tmpFlowSource
+
+#        self.bl.flowU[self.uuid] = {'method': self.multiple_refract,
+#                                    'kwArgsIn': kwArgsIn}
+#        self.bl.beamsDictU[self.uuid] = {'beamGlobal': lglobal,
+#                                         'beamLocal1': llocal1,
+#                                         'beamLocal2': llocal2}
+
+#        lglobal.parentId = self.uuid
+#        llocal1.parentId = self.uuid
+#        llocal2.parentId = self.uuid
+        return lglobal, llocal1, llocal2
 
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):
