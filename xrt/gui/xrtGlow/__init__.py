@@ -391,7 +391,6 @@ class xrtGlow(qt.QWidget):
 #            print("FLOW", layout['Project']['flow'])
 
         self.customGlWidget = xrtGlWidget(**glwInitKwargs)
-        
        
         self.populateSegmentsModel(arrayOfRays)
 
@@ -2691,6 +2690,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                print(msg['sender_name'], msg['sender_id'], msg['beam'])
                 for beamKey, beam in msg['beam'].items():
                     self.update_beam_footprint((msg['sender_id'], beamKey), beam)
+                    self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
             elif 'histogram' in msg and self.epicsPrefix is not None:
                 histPvName = f'{to_valid_var_name(msg["sender_name"])}:image'
                 if histPvName in self.pv_records:
@@ -2801,7 +2801,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beamvbo['goodLen'] = len(goodRays)
 
     def change_beam_colorax(self):
-#        print("changing color axis")
+
         if self.newColorAxis:
             newColorMax = -1e20
             newColorMin = 1e20
@@ -2809,25 +2809,28 @@ class xrtGlWidget(qt.QOpenGLWidget):
             newColorMax = self.colorMax
             newColorMin = self.colorMin
 
-#        for beamName, beam in self.beamsDict.items():
-        # TODO: THis only works in static mode 
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
-#            continue
-#            bField = 'beamLocal' if 'beamLocal' in beamDict else 'beamGlobal'
-#            bField = 'beamGlobal' if 'beamGlobal' in beamDict else 'beamLocal'
             for beamKey, beam in beamDict.items():
-    #            beam = beamDict.get('beamGlobal')
-    #            if beam is None:
-    #                continue
-#                if not hasattr(beam, 'vbo'):
-#                    # 3D beam object not initialized
-#                    continue
                 if self.beamBufferDict.get(oeuuid) is not None:
                     vboStore = self.beamBufferDict[oeuuid][beamKey] 
-                colorax = np.float32(self.getColor(beam))
+
                 good = (beam.state == 1) | (beam.state == 2)
 
-                update_qt_buffer(vboStore['vbo']['color'], colorax)
+                if beamKey.startswith('beamLoc') and self.renderingMode == 'dynamic':
+                    oe = self.beamline.oesDict[oeuuid][0]
+                    beamGlo = rsources.Beam(copyFrom=beam)
+                    is2ndXtal = beamKey == 'beamLocal2'
+                    if is_screen(oe):
+                        raycing.virgin_local_to_global(
+                                self.beamline, beamGlo, oe.center)
+                    else:
+                        oe.local_to_global(
+                                beamGlo, is2ndXtal=is2ndXtal)
+                    colorax = self.getColor(beamGlo)
+                else:
+                    colorax = self.getColor(beam)                    
+
+                update_qt_buffer(vboStore['vbo']['color'], colorax.copy())
 
                 newColorMax = max(np.max(
                     colorax[good]),
