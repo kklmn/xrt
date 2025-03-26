@@ -1049,7 +1049,7 @@ class xrtGlow(qt.QWidget):
                 child = qt.QStandardItem("")
                 child.setEditable(False)
                 child.setCheckable(True)
-                child.setCheckState(qt.Checked if i < 2 else qt.Unchecked)
+                child.setCheckState(qt.Checked if i < 3 else qt.Unchecked)
                 headerRow.append(child)
             newModel.invisibleRootItem().appendRow(headerRow)
         newModel.itemChanged.connect(self.updateRaysList)
@@ -3255,13 +3255,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 retStr += '{0:.{1}f}, '.format(dim, prec)
             return retStr[:-2] + ')'
 
-        def getItem(iid, itemType='beam'):
+        def getItem(iId, itemType='beam', targetId=None):
             item = None
             start_index = model.index(0, 0)
-            matches = model.match(start_index, qt.UserRole, iid, hits=1,
-                                  flags=qt.MatchExactly)
+            flags = qt.MatchExactly
+            matches = model.match(start_index, qt.UserRole, iId, hits=1,
+                                  flags=flags)
             if matches:
                 item = model.item(matches[0].row(), itemTypes[itemType])
+                if  itemType == 'beam' and item.rowCount() > 0:
+                    parent_index = model.indexFromItem(item)
+                    fcIndex = item.child(0, 0).index()
+                    tgt_matches = model.match(fcIndex, qt.UserRole, targetId,
+                                              hits=-1, flags=flags)
+                    for line in tgt_matches:
+                        if line.parent() == parent_index:
+                            item = model.itemFromIndex(line)
+                            break
             return item
 
         try:
@@ -3419,10 +3429,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             if self.renderingMode == 'dynamic':
                 for eluuid, operations in self.beamline.flowU.items():
-    #                continue
                     for kwargset in operations.values():
                         if 'beam' in kwargset:
                             sourceuuid = kwargset['beam']
+                            item = getItem(sourceuuid, 'beam', eluuid)
+                            if item.checkState() != 2:
+                                continue
+
                             beamStartDict = self.beamline.beamsDictU[sourceuuid]
                             beamEndDict = self.beamline.beamsDictU[eluuid]
                             startField = None
@@ -3452,6 +3465,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 for flowLine in self.beamline.flow:
                     sourceuuid = flowLine[0]
                     eluuid = flowLine[2]
+                    item = getItem(sourceuuid, 'beam', eluuid)
+                    if item.checkState() != 2:
+                        continue
                     if eluuid not in [None, sourceuuid]:
                         elObj = self.beamline.oesDict[eluuid][0]
                         startField = 'beamGlobal'
