@@ -2004,32 +2004,39 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.glDraw()
 
-    def toLocal(self, oeName):
-        oeToPlot = self.customGlWidget.beamline.oesDict[str(oeName)][0]
+    def toLocal(self, oeuuid):
+        oe = self.customGlWidget.beamline.oesDict[oeuuid][0]
         self.customGlWidget.mModLocal =\
-            self.customGlWidget.meshDict[oeName].transMatrix[0].inverted()[0]
+            self.customGlWidget.meshDict[oeuuid].transMatrix[0].inverted()[0]
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-        self.customGlWidget.tmpOffset = oeToPlot.center
+        self.customGlWidget.tmpOffset = oe.center
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
-    def toGlobal(self, oeName):
+    def toGlobal(self, oeuuid):
         self.customGlWidget.mModLocal = qt.QMatrix4x4()
         self.customGlWidget.tmpOffset = np.float32([0, 0, 0])
         self.customGlWidget.coordOffset = list(
-                self.customGlWidget.beamline.oesDict[str(oeName)][0].center)
+                self.customGlWidget.beamline.oesDict[oeuuid][0].center)
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
-    def toBeamLocal(self, oeName):
-        beam = self.customGlWidget.beamsDict[self.oesList[oeName][1]]
-        off0 = np.array(self.oesList[str(oeName)][2])
+    def toBeamLocal(self, oeuuid):
+        beamDict = self.customGlWidget.beamline.beamsDictU[oeuuid]
+        oe = self.customGlWidget.beamline.oesDict[oeuuid][0]
+        off0 = oe.center if isinstance(oe.center, list) else oe.center.tolist()
         mTranslation = qt.QMatrix4x4()
         mTranslation.translate(*off0)
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
+        if 'beamLocal1' in beamDict:
+            beam = beamDict['beamLocal1']
+        elif 'beamLocal' in beamDict:
+            beam = beamDict['beamLocal']
+        else:
+            beam = beamDict['beamGlobal']            
 
         if hasattr(beam, 'basis'):
             rotationQ = basis_rotation_q(np.identity(3), beam.basis.T)
@@ -2652,7 +2659,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         flux = beam.Jss[good] + beam.Jpp[good]
 
-        cData = self.getColor(beam)[good]
+        cData = self.getColor(beam)[good]  # TODO: getColorData
         cData01 = ((cData - self.colorMin) * 0.85 /
                    (self.colorMax - self.colorMin)).reshape(-1, 1)
 
@@ -2718,8 +2725,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        meshObj.beamLimits[nsIndex] = beamLimits
 #        self.glDraw()
 
-    def init_beam_footprint(self, beam, beamvbo=None):
-        """beamvbo: ('oeuuid', 'beamKey') """
+    def init_beam_footprint(self, beam, beamTag=None):
+        """beamTag: ('oeuuid', 'beamKey') """
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColor(beam).copy()
         state = np.where((
@@ -2779,15 +2786,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
         vboStore['vao'] = vao
         vboStore['iMax'] = beam.iMax
 
-        if self.beamBufferDict.get(beamvbo[0]) is not None:
-            self.beamBufferDict[beamvbo[0]][beamvbo[1]] = vboStore
+        if self.beamBufferDict.get(beamTag[0]) is not None:
+            self.beamBufferDict[beamTag[0]][beamTag[1]] = vboStore
         else:
-            self.beamBufferDict[beamvbo[0]] = {beamvbo[1]: vboStore}
+            self.beamBufferDict[beamTag[0]] = {beamTag[1]: vboStore}
 
-    def update_beam_footprint(self, vbo, beam):
-        beamvbo = self.beamBufferDict[vbo[0]][vbo[1]]['vbo']
+    def update_beam_footprint(self, beamTag, beam):
+        beamvbo = self.beamBufferDict[beamTag[0]][beamTag[1]]['vbo']
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
-        dataColor = self.getColor(beam).copy()
+        dataColor = self.getColorData(beam, beamTag)
         state = np.where((
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
@@ -2799,6 +2806,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
         update_qt_buffer(beamvbo['intensity'], intensity)
         update_qt_buffer(beamvbo['indices'], goodRays.copy(), isIndex=True)
         beamvbo['goodLen'] = len(goodRays)
+
+    def getColorData(self, beam, beamTag):
+        """beamTag: ('oeuuid', 'beamKey') """
+        if beamTag[1].startswith('beamLoc') and self.renderingMode == 'dynamic':
+            oe = self.beamline.oesDict[beamTag[0]][0]
+            beamGlo = rsources.Beam(copyFrom=beam)
+            is2ndXtal = beamTag[1] == 'beamLocal2'
+            if is_screen(oe):
+                raycing.virgin_local_to_global(
+                        self.beamline, beamGlo, oe.center)
+            else:
+                oe.local_to_global(
+                        beamGlo, is2ndXtal=is2ndXtal)
+            colorData = self.getColor(beamGlo)
+        else:
+            colorData = self.getColor(beam)
+            
+        return colorData.copy()
 
     def change_beam_colorax(self):
 
@@ -2816,19 +2841,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 good = (beam.state == 1) | (beam.state == 2)
 
-                if beamKey.startswith('beamLoc') and self.renderingMode == 'dynamic':
-                    oe = self.beamline.oesDict[oeuuid][0]
-                    beamGlo = rsources.Beam(copyFrom=beam)
-                    is2ndXtal = beamKey == 'beamLocal2'
-                    if is_screen(oe):
-                        raycing.virgin_local_to_global(
-                                self.beamline, beamGlo, oe.center)
-                    else:
-                        oe.local_to_global(
-                                beamGlo, is2ndXtal=is2ndXtal)
-                    colorax = self.getColor(beamGlo)
-                else:
-                    colorax = self.getColor(beam)                    
+                colorax = self.getColorData(beam, (oeuuid, beamKey))
 
                 update_qt_buffer(vboStore['vbo']['color'], colorax.copy())
 
@@ -4131,12 +4144,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     startBeam.iMax = np.max(startBeam.Jss[good] +
                                             startBeam.Jpp[good])
                     self.iMax = max(self.iMax, startBeam.iMax)
-                    newColorMax = max(np.max(
-                        self.getColor(startBeam)[good]),
-                        newColorMax)
-                    newColorMin = min(np.min(
-                        self.getColor(startBeam)[good]),
-                        newColorMin)
+                    colorax = self.getColorData(startBeam, (oeuuid, beamKey))
+                    newColorMax = max(np.max(colorax[good]), newColorMax)
+                    newColorMin = min(np.min(colorax[good]), newColorMin)
 
                     self.init_beam_footprint(startBeam, (oeuuid, beamKey))
 

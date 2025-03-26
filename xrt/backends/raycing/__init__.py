@@ -1632,7 +1632,8 @@ class BeamLine(object):
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
-             colorAxisLimits=None, generator=None, generatorArgs=[], v2=False):
+             colorAxisLimits=None, generator=None, generatorArgs=[], v2=False,
+             **kwargs):
         if generator is not None:
             gen = generator(*generatorArgs)
             try:
@@ -1658,7 +1659,7 @@ class BeamLine(object):
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
             if v2:
-                self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr)
+                self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr, **kwargs)
             else:
                 rayPath = self.export_to_glow()
                 self.blViewer = xrtglow.xrtGlow(rayPath)
