@@ -60,7 +60,6 @@ def build_beamline(nrays=1e4):
         ilens += 1
         if nCRL - ilens < 0.5:
             break
-
     beamLine.fsmF = rsc.Screen(beamLine, 'FSM-focus', [0, p+q, 0])
     return beamLine
 
@@ -86,9 +85,19 @@ rr.run_process = run_process
 
 
 def main():
-    beamLine = build_beamline()
-    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1),
-                  colorAxis='xzprime')
+    myTestBeamline = build_beamline()
+    run_process(myTestBeamline)
+    materialsDict = raycing.OrderedDict()
+    for objName, objInstance in globals().items():
+        if isinstance(objInstance, (rm.Element, rm.Material, 
+                                    rm.Multilayer)):
+            materialsDict[objName] = objInstance
+    myTestBeamline.materialsDict = materialsDict
+    myTestBeamline.export_to_json()
+#    myTestBeamline.glow(v2=True)
+    myTestBeamline.glow2()
+#    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1),
+#                  colorAxis='xzprime')
 
 
 if __name__ == '__main__':
