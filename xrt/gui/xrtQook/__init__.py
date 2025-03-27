@@ -95,7 +95,7 @@ try:
     pdfMats = True
 except ImportError:
     pdfMats = False
-    raise("no predef mats")
+    raise ImportError("no predef mats")
 
 
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -106,6 +106,7 @@ useSlidersInTree = False
 withSlidersInTree = ['pitch', 'roll', 'yaw', 'bragg']
 slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
+# os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
 try:
     QWebView = qt.QtWeb.QWebView
 except AttributeError:

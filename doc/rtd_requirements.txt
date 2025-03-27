@@ -2,4 +2,5 @@ numpy
 scipy
 matplotlib
 sphinx-tabs
+sphinxcontrib-jquery
 colorama

@@ -1,4 +1,4 @@
-{%- extends "basic/layout.html" %} 
+{%- extends "basic/layout.html" %}
 {% block sidebar1 %}{% endblock %}
 {% block sidebar2 %}{% endblock %}
 {% block relbar1 %}{% endblock %}
@@ -10,8 +10,9 @@
     <link rel="stylesheet" href="file:///{{css_path}}/default.css" type="text/css" />
     <link rel="stylesheet" href="file:///{{css_path}}/basic.css" type="text/css" />
     <link rel="stylesheet" href="file:///{{css_path}}/pygments.css" type="text/css" />
+    <script type="text/javascript" src="file:///{{js_path}}/jquery.js"></script>
     <script type="text/javascript" src="file:///{{js_path}}/utils.js"></script>
-    {% if shouldScaleMath %} 
+    {% if shouldScaleMath %}
     <script type="text/javascript" src="file:///{{js_path}}/math_config_win32.js"></script>
     {% endif %}
 {% endblock %}

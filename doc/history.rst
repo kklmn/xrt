@@ -3,12 +3,12 @@
 Version history
 ---------------
 
-Current GitHub code:
-    --
+Current GitHub code (27 Mar 2025):
+    - Minor bugs in help pages of xrtQook.
 
 1.6.1 (13 Nov 2024):
     - Minor bug fixes.
-    
+
     - Enable custom materials in xrtQook.
 
     - Add hyperbolic (oes.HyperbolicMirrorParam) and hyperboloid
@@ -21,7 +21,7 @@ Current GitHub code:
     - Major rebuild of the documentation on
       `Read the Docs <http://xrt.readthedocs.io>`_ due to changed software
       requirements on readthedocs.io.
- 
+
     - Add in-plane rotation to :meth:`Crystal.get_amplitude_pytte()`.
 
     - Major update of :ref:`Tests of Materials <tests_materials>`. Add

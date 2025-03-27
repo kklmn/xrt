@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "4 Mar 2022"
+__date__ = "27 Mar 2025"
 
 import re
 import sys
@@ -33,12 +33,14 @@ except (ImportError, KeyError):
 
 CONFDIR = osp.dirname(osp.abspath(__file__))
 DOCDIR = osp.expanduser(osp.join('~', '.xrt', 'doc'))
-try:
-    shutil.rmtree(DOCDIR)
-except FileNotFoundError:
-    pass
-shutil.copytree(osp.join(CONFDIR, '_images'), osp.join(DOCDIR, '_images'))
-shutil.copytree(osp.join(CONFDIR, '_themes'), osp.join(DOCDIR, '_themes'))
+# try:
+#     shutil.rmtree(DOCDIR)
+# except FileNotFoundError:
+#     pass
+shutil.copytree(osp.join(CONFDIR, '_images'), osp.join(DOCDIR, '_images'),
+                dirs_exist_ok=True)
+shutil.copytree(osp.join(CONFDIR, '_themes'), osp.join(DOCDIR, '_themes'),
+                dirs_exist_ok=True)
 shutil.copy2(osp.join(CONFDIR, 'conf.py'), osp.join(DOCDIR, 'conf.py'))
 
 CSS_PATH = osp.join(DOCDIR, '_static')
@@ -108,8 +110,7 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
     doc_file.close()
 
     confoverrides = {'html_context': context,
-                     'extensions': ['sphinx.ext.mathjax',
-                                    'sphinxcontrib.jquery']}
+                     'extensions': ['sphinx.ext.mathjax']}
 
     doctreedir = osp.join(DOCDIR, 'doctrees')
     sphinx_app = Sphinx(srcdir, DOCDIR, DOCDIR, doctreedir, buildername,
