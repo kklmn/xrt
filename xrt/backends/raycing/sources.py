@@ -733,7 +733,7 @@ from .sources_beams import Beam, BeamProxy,\
     copy_beam, rotate_coherency_matrix, defaultEnergy
 from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
     CollimatedMeshSource, shrink_source, make_energy, make_polarization,\
-    GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam
+    GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam, BeamFromFile
 from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
     UndulatorSRW, SourceFromFieldSRW
 from .sources_synchr import BendingMagnet, Wiggler, Undulator, SourceFromField

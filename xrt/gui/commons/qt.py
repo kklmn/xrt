@@ -34,7 +34,7 @@ if QtName == "PyQt4":
     else:
         from PyQt4.QtCore import (
             SIGNAL, QUrl, QObject, QTimer, QProcess,
-            QThread, QT_VERSION_STR, PYQT_VERSION_STR)
+            QThread, QT_VERSION_STR, PYQT_VERSION_STR, QSize)
         from PyQt4.QtGui import QSortFilterProxyModel
         try:
             from PyQt4.QtCore import Signal
@@ -66,7 +66,7 @@ elif QtName == "PyQt5":
     else:
         from PyQt5.QtCore import (
             pyqtSignal, QUrl, QObject, QTimer, QProcess, QThread,
-            QT_VERSION_STR, PYQT_VERSION_STR, QSortFilterProxyModel)
+            QT_VERSION_STR, PYQT_VERSION_STR, QSortFilterProxyModel, QSize)
         try:
             from PyQt5.QtCore import Signal
         except ImportError:
@@ -93,7 +93,8 @@ elif QtName == "PySide2":
         from PySide2.QtWidgets import *
     else:
         from PySide2.QtCore import (
-            QUrl, QObject, QTimer, QProcess, QThread, QSortFilterProxyModel)
+            QUrl, QObject, QTimer, QProcess, QThread, QSortFilterProxyModel,
+            QSize)
         try:
             from PySide2.QtCore import Signal
         except ImportError:

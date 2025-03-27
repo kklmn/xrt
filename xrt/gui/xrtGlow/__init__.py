@@ -179,13 +179,16 @@ def is_screen(oe):
     return isinstance(oe, rscreens.Screen)
 
 def is_aperture(oe):
-    res = isinstance(oe, (rapertures.RectangularAperture)) #,
-                                          #rapertures.RoundAperture,
-                                          #rapertures.PolygonalAperture))
+    res = isinstance(oe, (rapertures.RectangularAperture,
+                          rapertures.RoundAperture,
+                          rapertures.PolygonalAperture))
     return res
 
 def is_source(oe):
-    res = isinstance(oe, (rsources.SourceBase))
+    res = isinstance(oe, (rsources.SourceBase, rsources.GeometricSource,
+                          rsources.GaussianBeam, rsources.MeshSource,
+                          rsources.CollimatedMeshSource,
+                          rsources.BeamFromFile))
     return res
 
 
@@ -364,6 +367,11 @@ class xrtGlow(qt.QWidget):
         iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
+        self.iconLib = {}
+        for oeInd, oeType in enumerate(['source', 'oe', 'aperture', 'screen']):
+            self.iconLib[oeType] = qt.QIcon(os.path.join(
+                    iconsDir, f'add{oeInd+1}.png'))
+        
 #        if arrayOfRays is not None:
 #            self.populateOEsList(arrayOfRays)
 #        print("arrayOfRays", arrayOfRays)
@@ -504,6 +512,7 @@ class xrtGlow(qt.QWidget):
         self.navigationLayout.addLayout(layout)
         self.oeTree = qt.QTreeView()
         self.oeTree.setModel(self.segmentsModel)
+        self.oeTree.setIconSize(qt.QSize(32, 32))
         self.oeTree.setContextMenuPolicy(qt.CustomContextMenu)
         self.oeTree.customContextMenuRequested.connect(self.oeTreeMenu)
         self.oeTree.resizeColumnToContents(0)
@@ -1128,12 +1137,14 @@ class xrtGlow(qt.QWidget):
 #                self.oesList[elName].append(center)
 #                self.oesList[elName].append(is2ndXtal)
 
-    def createRow(self, text, segMode, uuid=None):
+    def createRow(self, text, segMode, uuid=None, icon=None):
         newRow = []
         for iCol in range(4):
             newItem = qt.QStandardItem(str(text) if iCol == 0 else "")
             if iCol == 0:
                 newItem.setData(uuid, qt.UserRole)
+                if icon is not None:
+                    newItem.setIcon(icon)
             newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
                                  (segMode == 1 and iCol > 0) else False)
             if newItem.isCheckable():
@@ -1197,11 +1208,23 @@ class xrtGlow(qt.QWidget):
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
         self.oeTree.setModel(self.segmentsModel)
 
+    def getIcon(self, oe):
+        if is_aperture(oe):
+            icon = self.iconLib['aperture']
+        elif is_source(oe):
+            icon = self.iconLib['source']
+        elif is_screen(oe):
+            icon = self.iconLib['screen']
+        else:
+            icon = self.iconLib['oe']
+        return icon
+
     def populateSegmentsModel(self, arrayOfRays=None):
         if arrayOfRays is not None:
             for eluuid, elline in arrayOfRays[2].items():
                 element = elline[0].name
-                newRow = self.createRow(element, 1, uuid=eluuid)
+                newRow = self.createRow(element, 1, uuid=eluuid,
+                                        icon=self.getIcon(elline[0]))
                 for flowLine in arrayOfRays[0]:
                     if flowLine[0] == eluuid:
                         targetuuid = flowLine[2]
@@ -1216,8 +1239,10 @@ class xrtGlow(qt.QWidget):
                 self.segmentsModelRoot.appendRow(newRow)
         else:
             for eluuid, operations in self.customGlWidget.beamline.flowU.items():
-                element = self.customGlWidget.beamline.oesDict[eluuid][0].name
-                newRow = self.createRow(element, 1, uuid=eluuid)
+                element = self.customGlWidget.beamline.oesDict[eluuid][0]
+                elname = element.name
+                newRow = self.createRow(elname, 1, uuid=eluuid,
+                                        icon=self.getIcon(element))
                 for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
                     for kwargset in targetoperations.values():
                         if kwargset.get('beam', 'none') == eluuid:
