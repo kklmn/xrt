@@ -146,7 +146,7 @@ def run_process(beamLine):
 
 
 # fileName = r"C:/github/xrt/examples/withRaycing/"
-fileName = "1crystal.xml"
+# fileName = "1crystal.xml"
 
 # bl = raycing.BeamLine(fileName=fileName)
 # raycing.run_process_from_file(bl)

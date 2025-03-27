@@ -74,13 +74,15 @@ MAXRAYS = 500000
 from multiprocessing import Process, Queue
 import queue
 
-#try:
-#    from softioc import softioc, builder, asyncio_dispatcher
-#    import asyncio
-#    epicsEnabled = True
-#except ImportError:
-epicsEnabled = False
-
+try:
+    from softioc import softioc, builder, asyncio_dispatcher
+    import asyncio
+    epicsEnabled = True
+    os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
+    os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
+except ImportError:
+    epicsEnabled = False
+# epicsEnabled = False
 msg_start = {
         "command": "start"}
 msg_stop = {
@@ -240,7 +242,7 @@ def propagationProcess(q_in, q_out):
             # TODO: run propagation downstream of the updated element
             started = True if handler.startEl is None else False
             for oeid, meth in handler.bl.flowU.items():
-                if not started:
+                if not started:  # Skip until the modified element
                     if handler.startEl == oeid:
                         started = True
                     else:
@@ -263,6 +265,7 @@ def propagationProcess(q_in, q_out):
                         q_out.put(msg_hist)
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False
+            handler.startEl = None
             time.sleep(0.1)
 
 #            handler.stop = True
@@ -291,6 +294,7 @@ class MessageHandler:
         self.bl = bl
         self.stop = False
         self.needUpdate = False
+        self.autoUpdate = False
         self.startEl = None
 
     def handle_create(self, message):
@@ -301,7 +305,8 @@ class MessageHandler:
         if object_type == 'beamline':
             self.bl = raycing.BeamLine()
             self.bl.deserialize(kwargs)
-            self.needUpdate = True
+            if self.autoUpdate:
+                self.needUpdate = True
 #            self.startEl = self.bl.flowU
 #            print("Deserialized beamline", self.bl.flowU)
 
@@ -318,7 +323,8 @@ class MessageHandler:
             for key, value in kwargs.items():
 #                print(element[0], key, value)
                 setattr(element[0], key, value)
-            self.needUpdate = True
+            if self.autoUpdate:
+                self.needUpdate = True
             if is_aperture(element[0]):
                 kwargs = list(self.bl.flowU[uuid].values())[0]
                 self.startEl = kwargs['beam']
@@ -333,6 +339,18 @@ class MessageHandler:
         print("Starting processing loop.")
         self.stop = False
 
+    def handle_run_once(self, message):
+        print("Starting processing loop.")
+        self.needUpdate = True
+        self.startEl = None
+
+    def handle_auto_update(self, message):
+        # print("Starting processing loop.")
+        kwargs = message.get('kwargs')
+        if kwargs is not None:
+            auto_update = kwargs.get('value')
+        self.autoUpdate = bool(auto_update)
+
     def handle_stop(self, message):
         print("Stopping processing loop.")
         self.stop = True
@@ -345,6 +363,8 @@ class MessageHandler:
             "delete": self.handle_delete,
             "start": self.handle_start,
             "stop": self.handle_stop,
+            "run_once": self.handle_run_once,
+            "auto_update": self.handle_auto_update,
         }
 
         command = message.get("command")
@@ -371,7 +391,7 @@ class xrtGlow(qt.QWidget):
         for oeInd, oeType in enumerate(['source', 'oe', 'aperture', 'screen']):
             self.iconLib[oeType] = qt.QIcon(os.path.join(
                     iconsDir, f'add{oeInd+1}.png'))
-        
+
 #        if arrayOfRays is not None:
 #            self.populateOEsList(arrayOfRays)
 #        print("arrayOfRays", arrayOfRays)
@@ -399,7 +419,7 @@ class xrtGlow(qt.QWidget):
 #            print("FLOW", layout['Project']['flow'])
 
         self.customGlWidget = xrtGlWidget(**glwInitKwargs)
-       
+
         self.populateSegmentsModel(arrayOfRays)
 
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
@@ -2061,7 +2081,7 @@ class xrtGlow(qt.QWidget):
         elif 'beamLocal' in beamDict:
             beam = beamDict['beamLocal']
         else:
-            beam = beamDict['beamGlobal']            
+            beam = beamDict['beamGlobal']
 
         if hasattr(beam, 'basis'):
             rotationQ = basis_rotation_q(np.identity(3), beam.basis.T)
@@ -2228,7 +2248,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.oesList = oesList
         self.beamsToElements = b2els
         self.needMeshUpdate = None
-        
+
         self.beamline = raycing.BeamLine()
 
         if arrayOfRays is not None:
@@ -2249,7 +2269,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     beamDict['beamLocal2'] = arrayOfRays[1][flowLine[1]]
                             else:
                                 if not 'beamLocal' in beamDict:
-                                    beamDict['beamLocal'] = arrayOfRays[1][flowLine[1]]                                
+                                    beamDict['beamLocal'] = arrayOfRays[1][flowLine[1]]
                         else:
                             if not 'beamLocal1' in beamDict:
                                 beamDict['beamLocal1'] = arrayOfRays[1][flowLine[1]]
@@ -2260,7 +2280,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         elif beamLayout is not None:
             self.renderingMode = 'dynamic'
             self.epicsPrefix = epicsPrefix
-            
+
             self.beamline.deserialize(beamLayout)
             self.input_queue = Queue()
             self.output_queue = Queue()
@@ -2399,6 +2419,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
         pv_records = {}
         pvFields = {'name'} | orientationArgSet | shapeArgSet
 
+        pv_records['Acquire'] = builder.boolOut(
+            'Acquire', ZNAM=0, ONAM=1,
+            initial_value=0, always_update=True,
+            on_update=partial(self.update_beamline, None, 'Acquire'))
+
+        pv_records['AcquireStatus'] = builder.boolIn(
+            'AcquireStatus', ZNAM=0, ONAM=1,
+            initial_value=0)
+
+        pv_records['AutoUpdate'] = builder.boolOut(
+            'AutoUpdate', ZNAM=0, ONAM=1,
+            initial_value=0, always_update=True,
+            on_update=partial(self.update_beamline, None, 'AutoUpdate'))
+
         for oeid, oeline in self.beamline.oesDict.items():
             oeObj = oeline[0]
             oename = to_valid_var_name(oeObj.name)
@@ -2421,7 +2455,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             if is_screen(oeObj) and oeObj.limPhysX is not None:
                 pvname = f'{oename}:image'
-                print(pvname)
+                # print(pvname)
                 histShape = getattr(oeObj, 'histShape')
                 imageLength = histShape[0]*histShape[1]
                 pv_records[pvname] = builder.WaveformIn(
@@ -2439,7 +2473,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             always_update=True,
                             on_update=partial(self.update_beamline,
                                               oeid, f'histShape.{field}'))
-                    print(pvname)
+                    # print(pvname)
 
             for argName in pvFields:
                 if hasattr(oeObj, argName):
@@ -2451,7 +2485,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             always_update=True,
                             on_update=partial(self.update_beamline,
                                               oeid, argName))
-                        print(pvname)
+                        # print(pvname)
                     elif argName in ['center']:
                         for field in ['x', 'y', 'z']:
                             pvname = f'{oename}:{argName}:{field}'
@@ -2460,7 +2494,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 initial_value=getattr(oeObj.center, field),
                                 always_update=True,
                                 on_update=partial(self.update_beamline, oeid, f'{argName}.{field}'))
-                            print(pvname)
+                            # print(pvname)
                     elif argName in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
                         for fIndex, field in enumerate(['lmin', 'lmax']):
                             pvname = f'{oename}:{argName}:{field}'
@@ -2472,7 +2506,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     always_update=True,
                                     on_update=partial(self.update_beamline,
                                                       oeid, f'{argName}.{field}'))
-                            print(pvname)
+                            # print(pvname)
                     elif argName in ['opening']:
                         for field in oeObj.kind:
                             pvname = f'{oename}:{argName}:{field}'
@@ -2482,9 +2516,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     pvname,
                                     initial_value=getattr(limObj, field),
                                     always_update=True,
-                                    on_update=partial(self.update_beamline, 
+                                    on_update=partial(self.update_beamline,
                                                       oeid, f'{argName}.{field}'))
-                            print(pvname)
+                            # print(pvname)
                     else:
                         pvname = f'{oename}:{argName}'
                         pv_records[pvname] = builder.aOut(
@@ -2493,13 +2527,35 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             always_update=True,
                             on_update=partial(self.update_beamline,
                                               oeid, argName))
-                        print(pvname)
+                        # print(pvname)
+        [print(f'{self.epicsPrefix}:{recName}') for recName in pv_records]
         builder.LoadDatabase()
         softioc.iocInit(self.dispatcher)
         self.pv_records = pv_records
-        
+
     async def update_beamline(self, oeid, argName, argValue):
         # we expect individual attributes
+        # print(oeid, argValue)
+        if oeid is None:
+            # print("no OE id provided, re-tracing from start")
+            if self.epicsPrefix is not None:
+                if argName == 'Acquire':
+                    self.pv_records['AcquireStatus'].set(1)
+                    if str(argValue) == '1':
+                        if hasattr(self, 'input_queue'):
+                            self.input_queue.put({
+                                        "command": "run_once",
+                                        "object_type": "beamline"
+                                        })
+                elif argName == 'AutoUpdate':
+                    if hasattr(self, 'input_queue'):
+                        self.input_queue.put({
+                                    "command": "auto_update",
+                                    "object_type": "beamline",
+                                    "kwargs": {"value": int(argValue)}
+                                    })
+            return
+
         oe = self.beamline.oesDict[oeid][0]
 
         args = argName.split('.')
@@ -2525,6 +2581,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.needMeshUpdate = oeid
 
         # updating the beamline model in the runner
+        if self.epicsPrefix is not None:
+            self.pv_records[f'AcquireStatus'].set(1)
+
         if hasattr(self, 'input_queue'):
             self.input_queue.put({
                         "command": "modify",
@@ -2726,8 +2785,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif 'histogram' in msg and self.epicsPrefix is not None:
                 histPvName = f'{to_valid_var_name(msg["sender_name"])}:image'
                 if histPvName in self.pv_records:
-                    self.pv_records[histPvName].set(msg['histogram'].flatten())
+                    imgHist = np.flipud(msg['histogram'])  # Appears flipped
+                    self.pv_records[histPvName].set(imgHist.flatten())
             elif 'repeat' in msg:
+                print("Total repeats:", msg['repeat'])
+                if self.epicsPrefix is not None:
+                    self.pv_records['AcquireStatus'].set(0)
                 self.glDraw()
 
     def generate_hist_texture(self, oe, beam, is2ndXtal=False):
@@ -2847,7 +2910,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             colorData = self.getColor(beamGlo)
         else:
             colorData = self.getColor(beam)
-            
+
         return colorData.copy()
 
     def change_beam_colorax(self):
@@ -2862,7 +2925,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
             for beamKey, beam in beamDict.items():
                 if self.beamBufferDict.get(oeuuid) is not None:
-                    vboStore = self.beamBufferDict[oeuuid][beamKey] 
+                    vboStore = self.beamBufferDict[oeuuid][beamKey]
 
                 good = (beam.state == 1) | (beam.state == 2)
 
@@ -3484,14 +3547,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 startField = 'beamLocal2'
                             elif 'beamGlobal' in beamStartDict:
                                 startField = 'beamGlobal'
-    
+
                             if 'beamLocal' in beamEndDict:
                                 endField = 'beamLocal'
                             elif 'beamLocal1' in beamEndDict:
                                 endField = 'beamLocal1'
                             elif 'beamGlobal' in beamEndDict:
                                 endField = 'beamGlobal'
-    
+
     #                        beamStart = beamStartDict.get(startField)
     #                        beamEnd = beamEndDict.get(endField)
                             beamStart = (sourceuuid, startField)
@@ -3515,12 +3578,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             endField = 'beamLocal'
                         else:
                             endField = 'beamGlobal'
-                    
+
                         beamStart = (sourceuuid, startField)
                         beamEnd = (eluuid, endField)
                         self.render_beam(beamStart, mMMLoc,
                                          self.mView, self.mProj,
-                                         target=beamEnd)                    
+                                         target=beamEnd)
 
 
 #            for ioe in range(self.segmentModel.rowCount() - 1):
@@ -4147,7 +4210,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        """beamvbo: ('oeuuid', 'beamKey') """
         beams = self.beamline.beamsDictU # if self.renderingMode == 'dynamic'\
 #            else self.beamsDict
-            
+
 #        print(beams)
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
 #            beamSrc = beamDict if self.renderingMode == 'dynamic'\
@@ -5613,8 +5676,16 @@ class OEMesh3D():
 
         yDim = 1
         if isScreen:
-            xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
-            yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
+            if self.oe.limPhysX is not None and np.sum(np.abs(self.oe.limPhysX)):
+                xLimits = self.oe.limPhysX if isinstance(
+                    self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
+            else:
+                xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
+            if self.oe.limPhysY is not None and np.sum(np.abs(self.oe.limPhysX)):
+                yLimits = self.oe.limPhysY if isinstance(
+                    self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
+            else:
+                yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yDim = 2
         elif isAperture:
             xLimits = [self.oe.opening[self.oe.kind.index('left')],
@@ -5641,7 +5712,8 @@ class OEMesh3D():
         self.xLimits = copy.deepcopy(xLimits)
         self.yLimits = copy.deepcopy(yLimits)
 
-        if isScreen or isAperture:  # Making square screen
+        if isAperture:  # TODO: Must use physical limits
+        # if isScreen or isAperture:  # Making square screen
             xSize = abs(xLimits[1] - xLimits[0])
             xCenter = 0.5*(xLimits[1] + xLimits[0])
             ySize = abs(yLimits[1] - yLimits[0])
@@ -5658,6 +5730,7 @@ class OEMesh3D():
 #                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]
 
         localTiles = np.array(self.tiles)
+        # print(self.oe.name, xLimits, yLimits)
 
         if oeShape == 'round':
             rX = np.abs((xLimits[1] - xLimits[0]))*0.5

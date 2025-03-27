@@ -169,6 +169,7 @@ Find more generators in the supplied examples.
 from __future__ import print_function
 import types
 import sys
+import os
 import numpy as np
 # from itertools import compress
 from itertools import islice, count
@@ -673,23 +674,23 @@ def get_elevation_z(beam):
 
 def get_Es_amp(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return np.abs(beam.Es)
+    return np.abs(beam.Es) if hasattr(beam, 'Es') else np.zeros_like(beam.x)
 
 
 def get_Ep_amp(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return np.abs(beam.Ep)
+    return np.abs(beam.Ep) if hasattr(beam, 'Ep') else np.zeros_like(beam.x)
 
 
 def get_Es_phase(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return np.angle(beam.Es)
+    return np.angle(beam.Es) if hasattr(beam, 'Es') else np.zeros_like(beam.x)
 #    return np.arctan2(beam.Es.imag, beam.Es.real)
 
 
 def get_Ep_phase(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return np.angle(beam.Ep)
+    return np.angle(beam.Ep) if hasattr(beam, 'Ep') else np.zeros_like(beam.x)
 #    return np.arctan2(beam.Ep.imag, beam.Ep.real)
 
 
@@ -1659,73 +1660,24 @@ class BeamLine(object):
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
             if v2:
-                self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr, **kwargs)
+                if not self.materialsDict:
+                    rmats = importlib.import_module(
+                        '.materials', package='xrt.backends.raycing')
+                    materialsDict = OrderedDict()
+                    scr_globals = inspect.stack()[1][0].f_globals
+
+                    for objName, objInstance in scr_globals.items():
+                        if isinstance(objInstance, (rmats.Element, rmats.Material,
+                                                    rmats.Multilayer)):
+                            materialsDict[objInstance.uuid] = objInstance
+                    self.materialsDict.update(materialsDict)
+                    _ = self.export_to_json()  # layoutStr is populated inside
+
+                self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr,
+                                                **kwargs)
             else:
                 rayPath = self.export_to_glow()
                 self.blViewer = xrtglow.xrtGlow(rayPath)
-            self.blViewer.generator = generator
-            self.blViewer.generatorArgs = generatorArgs
-            self.blViewer.customGlWidget.generator = generator
-            self.blViewer.setWindowTitle("xrtGlow")
-            self.blViewer.startFrom = startFrom
-            self.blViewer.bl = self
-            if scale:
-                try:
-                    self.blViewer.updateScaleFromGL(scale)
-                except Exception:
-                    pass
-            if centerAt:
-                try:
-                    self.blViewer.centerEl(centerAt)
-                except Exception:
-                    pass
-            if colorAxis:
-                try:
-                    colorCB = self.blViewer.colorControls[0]
-                    colorCB.setCurrentIndex(colorCB.findText(colorAxis))
-                except Exception:
-                    pass
-            if colorAxisLimits:
-                try:
-                    self.blViewer.customGlWidget.colorMin,\
-                        self.blViewer.customGlWidget.colorMax = colorAxisLimits
-                    self.blViewer.changeColorAxis(None, newLimits=True)
-                except Exception:
-                    pass
-
-            self.blViewer.show()
-            sys.exit(app.exec_())
-        else:
-            self.blViewer.show()
-
-    def glow2(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
-             colorAxisLimits=None, generator=None, generatorArgs=[]):
-        if generator is not None:
-            gen = generator(*generatorArgs)
-            try:
-                if sys.version_info < (3, 1):
-                    gen.next()
-                else:
-                    next(gen)
-            except StopIteration:
-                return
-
-        try:
-            from ...gui import xrtGlow as xrtglow
-        except ImportError:
-            print("Cannot import xrtGlow. "
-                  "If you run your script from an IDE, don't.")
-            return
-
-        from .run import run_process
-        run_process(self)
-
-        if self.blViewer is None:
-            app = xrtglow.qt.QApplication.instance()
-            if app is None:
-                app = xrtglow.qt.QApplication(sys.argv)
-#            rayPath = self.export_to_glow()
-            self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr)
             self.blViewer.generator = generator
             self.blViewer.generatorArgs = generatorArgs
             self.blViewer.customGlWidget.generator = generator
@@ -2027,7 +1979,7 @@ class BeamLine(object):
         projectDict['Materials'] = matDict
         projectDict['beamLine'] = beamlineDict
         projectDict['flow'] = self.flowU
-        
+
         self.layoutStr = {'Project': projectDict}
 
         return projectDict
