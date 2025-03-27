@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __copyright__ = u'2016 Konstantin Klementiev, MIT License'
-__date__ = "11 Oct 2024"
+__date__ = "29 Aug 2021"
 
 import os
 import shutil
@@ -55,7 +55,7 @@ class AnimationDirective(Directive):
         if uri.endswith('.*'):
             uri = uri[:-1] + 'png'
 
-        if uri.endswith('.png'):
+        if uri.endswith(('.png', '.gif')):
             try:
                 im = Image.open(uri)
             except FileNotFoundError:
@@ -64,6 +64,12 @@ class AnimationDirective(Directive):
 
             defwidthzoom, defheightzoom = im.size
             scale = self.options.get('scale', None)
+            scalezoom = self.options.get('scalezoom', None)
+            if scalezoom:
+                scalezoom /= 100.
+                defwidthzoom, defheightzoom = \
+                    defwidthzoom*scalezoom, defheightzoom*scalezoom
+
             if scale:
                 scale /= 100.
                 defwidth, defheight = defwidthzoom*scale, defheightzoom*scale
@@ -140,11 +146,9 @@ class AnimationDirective(Directive):
         ta = 'text-align: left; '
         if 'corner' in loc:
             if 'lower' in loc:
-                # loctop = u'top: -{0}px; '.format(int(heightzoom-height//2))
-                loctop = u'bottom: -{0}px; '.format(height)
+                loctop = u'top: -{0}px; '.format(int(heightzoom-height//2))
             else:
                 loctop = u'top: {0}px; '.format(0)
-
             if 'right' in loc:
                 ta = 'text-align: right; '
                 lochor += u'right: {0}px; '.format(0)
@@ -153,26 +157,27 @@ class AnimationDirective(Directive):
                 lochor += u'left: {0}px; '.format(0)
         elif loc == "center":
             ta = 'text-align: center ;'
+            loctop = u'top: 0px; '
             lochor += u'left: 50%; transform: translate(-50%, 0%); '
         locst = u'style="{0} {1} {2}"'.format(loctop, lochor, ta)
 
         alt = self.options.get('alt', '')
         if alt:
             if alt.startswith("&ensp;") or alt.startswith("&emsp;"):
+                # Unicode &ensp; or &emsp;
                 alt = '{0}'.format(alt)
-            else:  # otherwise Silx assigns replacement alias to it
+            else:
                 alt = ''
 #        self.options['uri'] = uri
         env = self.state.document.settings.env
         targetid = "animation{0}".format(env.new_serialno('animation'))
-        if uri.endswith('.png'):
-            text = '<a class="{6}">'\
-                '<img class="{7}" src="{0}" {2} />'\
-                '<span {5}>{3}<br><canvas id="{1}" {4} ></canvas><br>{3}'\
-                '<script>set_static("{0}", "{1}")</script></span></a>'\
+        if uri.endswith(('.png', '.gif')):
+            text = '<a class="{5}">'\
+                '<img class="{6}" src="{0}" {1} />'\
+                '<span {4}>{2}<br><img class="{6}" src="{0}" {3}/>'\
+                '<br>{2}</span></a>'\
                 .format(
-                    uri, targetid, size, alt, sizezoom, locst, self.aclass,
-                    alignC)
+                    uri, size, alt, sizezoom, locst, self.aclass, alignC)
         else:
             text = '<a class={6}>'\
                 '<script type="text/javascript" src="{0}/s_anim.js"></script>'\
@@ -250,4 +255,4 @@ def setup(app):
     app.add_directive('animationhover', AnimationHoverDirective)
     app.add_directive('imagezoomhover', AnimationHoverDirective)
     app.add_directive('video', VideoDirective)
-    return {'version': '2.0'}   # identifies the version of our extension
+    return {'version': '1.1'}   # identifies the version of our extension

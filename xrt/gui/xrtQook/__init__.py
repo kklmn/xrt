@@ -1071,7 +1071,8 @@ class XrtQook(qt.QWidget):
         if ext.isSphinx:
             self.webHelp.history().clear()
             self.webHelp.page().history().clear()
-            self.renderLiveDoc(argDocStr, nameStr, argSpecStr, noteStr)
+            self.renderLiveDoc(argDocStr, nameStr, argSpecStr, noteStr,
+                               img_path='../_images')
         else:
             argDocStr = u'{0}\nDefiniiton: {1}\n\nType: {2}\n\n\n'.format(
                 nameStr.upper(), argSpecStr, noteStr) + argDocStr
@@ -1197,7 +1198,8 @@ class XrtQook(qt.QWidget):
             return
         if strURL.endswith('tutorial.html') or strURL.endswith('tutorial'):
             self.showTutorial(tutorial.__doc__[60:],
-                              "Using xrtQook for script generation")
+                              "Using xrtQook for script generation",
+                              img_path='../_images')
         elif strURL.startswith('http') or strURL.startswith('ftp'):
             if self.lastBrowserLink == strURL:
                 return
@@ -2081,7 +2083,7 @@ class XrtQook(qt.QWidget):
                         self.fileDescription,
                         "Descriprion",
                         os.path.join(os.path.dirname(os.path.abspath(str(
-                            self.layoutFileName))), "_images"))
+                            self.layoutFileName))), "../_images"))
                     self.setWindowTitle(self.layoutFileName + " - xrtQook")
                     self.writeCodeBox("")
                     self.plotTree.expand(self.rootPlotItem.index())
