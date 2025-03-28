@@ -953,7 +953,7 @@ class xrtGlow(qt.QWidget):
         self.sceneControls = []
         for iCB, (cbText, cbFunc) in enumerate(zip(
                 ['Enable antialiasing',
-                 'Enable blending',
+                 'Use global colors',
                  'Depth test for Lines',
                  'Depth test for Points',
                  'Invert scene color',
@@ -963,7 +963,7 @@ class xrtGlow(qt.QWidget):
                  'Show lost rays',
                  'Show local axes'],
                 [self.checkAA,
-                 self.checkBlending,
+                 self.checkGlobalColors,
                  self.checkLineDepthTest,
                  self.checkPointDepthTest,
                  self.invertSceneColor,
@@ -1354,8 +1354,11 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.enableAA = True if state > 0 else False
         self.customGlWidget.glDraw()
 
-    def checkBlending(self, state):
-        self.customGlWidget.enableBlending = True if state > 0 else False
+    def checkGlobalColors(self, state):
+        self.customGlWidget.globalColors = True if state > 0 else False
+        self.customGlWidget.newColorAxis = True
+        self.customGlWidget.change_beam_colorax()
+#        self.customGlWidget.enableBlending = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def checkLineDepthTest(self, state):
@@ -2218,6 +2221,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.virtDotsColor = None
         self.vScreenForColors = False
         self.globalColorIndex = None
+        self.globalColors = True
         self.isVirtScreenNormal = False
         self.vScreenSize = 0.5
         self.setMinimumSize(400, 400)
@@ -2901,16 +2905,19 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def getColorData(self, beam, beamTag):
         """beamTag: ('oeuuid', 'beamKey') """
-        if beamTag[1].startswith('beamLoc') and self.renderingMode == 'dynamic':
+        if beamTag[1].startswith('beamLoc')\
+                and self.renderingMode == 'dynamic'\
+                and self.globalColors:
             oe = self.beamline.oesDict[beamTag[0]][0]
             beamGlo = rsources.Beam(copyFrom=beam)
             is2ndXtal = beamTag[1] == 'beamLocal2'
-            if is_screen(oe):
-                raycing.virgin_local_to_global(
-                        self.beamline, beamGlo, oe.center)
-            else:
-                oe.local_to_global(
-                        beamGlo, is2ndXtal=is2ndXtal)
+            if self.globalColors:
+                if is_screen(oe):
+                    raycing.virgin_local_to_global(
+                            self.beamline, beamGlo, oe.center)
+                else:
+                    oe.local_to_global(
+                            beamGlo, is2ndXtal=is2ndXtal)
             colorData = self.getColor(beamGlo)
         else:
             colorData = self.getColor(beam)
@@ -2937,12 +2944,29 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 update_qt_buffer(vboStore['vbo']['color'], colorax.copy())
 
-                newColorMax = max(np.max(
-                    colorax[good]),
-                    newColorMax)
-                newColorMin = min(np.min(
-                    colorax[good]),
-                    newColorMin)
+                if self.globalColors:
+                    newColorMax = max(np.max(
+                        colorax[good]),
+                        newColorMax)
+                    newColorMin = min(np.min(
+                        colorax[good]),
+                        newColorMin)
+                else:
+                    newColorMax = np.max(colorax[good])
+                    newColorMin = np.min(colorax[good])
+
+                if newColorMin == newColorMax:
+                    if newColorMax == 0:
+                        colorMinLoc, colorMaxLoc = -0.1, 0.1
+                    else:
+                        colorMinLoc = colorMaxLoc * 0.99
+                        colorMaxLoc *= 1.01
+                else:
+                    colorMinLoc = newColorMin
+                    colorMaxLoc = newColorMax
+
+                vboStore['colorMin'] = colorMinLoc
+                vboStore['colorMax'] = colorMaxLoc
 
         if self.newColorAxis:
             if newColorMin != self.colorMin:
@@ -3004,11 +3028,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def render_beam(self, beam, model, view, projection, target=None):
         """beam: ('oeuuid', 'beamKey') """
         shader = self.shaderBeam if target is not None else self.shaderFootprint
-#        targetvbo = None
-#        if not hasattr(beam, 'vbo'):
-#        if 'vbo' not in self.beamBufferDict[beam[0]][beam[1]]:
-#            print("No VBO")
-#            return
         beamBuffers = self.beamBufferDict[beam[0]][beam[1]]
 
         beamvbo = beamBuffers.get('vbo')
@@ -3075,8 +3094,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         shader.setUniformValue("mPV", mPV)
 
-        shader.setUniformValue(
-                    "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
+        if self.globalColors:
+            shader.setUniformValue(
+                        "colorMinMax", qt.QVector2D(self.colorMin,
+                                                    self.colorMax))
+        else:
+            shader.setUniformValue(
+                        "colorMinMax",
+                        qt.QVector2D(beamBuffers.get('colorMin', 0),
+                                     beamBuffers.get('colorMax', 0)))
         shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
         shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
 
