@@ -1660,7 +1660,7 @@ class BeamLine(object):
                                                     rmats.Multilayer)):
                             materialsDict[objInstance.uuid] = objInstance
                     self.materialsDict.update(materialsDict)
-                    _ = self.export_to_json()  # layoutStr is populated inside
+                _ = self.export_to_json()  # layoutStr is populated inside
 
                 self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr,
                                                 **kwargs)
