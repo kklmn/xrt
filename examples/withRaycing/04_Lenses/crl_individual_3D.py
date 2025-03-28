@@ -79,23 +79,15 @@ def run_process(beamLine):
 
     outDict['beamFSM2'] = beamLine.fsmF.expose(lglobal)
 
-    beamLine.prepare_flow()
+#    beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
 
 def main():
     myTestBeamline = build_beamline()
-    run_process(myTestBeamline)
-    materialsDict = raycing.OrderedDict()
-    for objName, objInstance in globals().items():
-        if isinstance(objInstance, (rm.Element, rm.Material, 
-                                    rm.Multilayer)):
-            materialsDict[objName] = objInstance
-    myTestBeamline.materialsDict = materialsDict
-    myTestBeamline.export_to_json()
-#    myTestBeamline.glow(v2=True)
-    myTestBeamline.glow2()
+    myTestBeamline.glow(v2=True)
+#    myTestBeamline.glow(v2=True, epicsPrefix="CRL")
 #    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1),
 #                  colorAxis='xzprime')
 
