@@ -54,7 +54,7 @@ from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict
 import freetype as ft
 from matplotlib import font_manager
-
+import asyncio
 from ...backends import raycing
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
@@ -74,14 +74,6 @@ MAXRAYS = 500000
 from multiprocessing import Process, Queue
 import queue
 
-try:
-    from softioc import softioc, builder, asyncio_dispatcher
-    import asyncio
-    epicsEnabled = True
-    os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
-    os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
-except ImportError:
-    epicsEnabled = False
 # epicsEnabled = False
 msg_start = {
         "command": "start"}
@@ -294,7 +286,7 @@ class MessageHandler:
         self.bl = bl
         self.stop = False
         self.needUpdate = False
-        self.autoUpdate = False
+        self.autoUpdate = True
         self.startEl = None
 
     def handle_create(self, message):
@@ -2308,9 +2300,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 for func, fkwargs in meth.items():
                     getattr(oe, func)(**fkwargs)
 
-        if not epicsEnabled:
-            self.epicsPrefix = None
-
         self.oeContour = dict()
         self.slitEdges = dict()
         self.oeThickness = 5  # mm
@@ -2409,9 +2398,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.isColorAxReady = False
         self.makeCurrent()
         if self.epicsPrefix is not None and self.renderingMode == 'dynamic':
-            self.build_epics_device(epicsPrefix)
+            try:
+                from softioc import softioc, builder, asyncio_dispatcher
+                os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
+                os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
+                self.build_epics_device(epicsPrefix, softioc, builder,
+                                        asyncio_dispatcher)
+            except ImportError:
+                print("pythonSoftIOC not installed")
+                self.epicsPrefix = None
 
-    def build_epics_device(self, prefix):
+    def build_epics_device(self, prefix, softioc, builder, asyncio_dispatcher):
         # Create an asyncio dispatcher, the event loop is now running
         self.dispatcher = asyncio_dispatcher.AsyncioDispatcher()
         # Set the record prefix
@@ -2441,10 +2438,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if hasattr(oeObj.material, 'get_Bragg_angle'):
                     if hasattr(oeObj, 'bragg'):
                         e_field = 'bragg.energy'
-                        initial_e = np.abs(physconsts.CH / (2*oeObj.material.d*np.sin(oeObj.bragg-oeObj.braggOffset)))
+                        initial_e = np.abs(physconsts.CH / (
+                                2*oeObj.material.d*np.sin(
+                                        oeObj.bragg-oeObj.braggOffset)))
                     else:
                         e_field = 'pitch.energy'
-                        initial_e = np.abs(physconsts.CH / (2*oeObj.material.d*np.sin(oeObj.pitch)))
+                        initial_e = np.abs(physconsts.CH / (
+                                2*oeObj.material.d*np.sin(oeObj.pitch)))
                     pvname = f'{oename}:ENERGY'
                     pv_records[pvname] = builder.aOut(
                             pvname,
@@ -2493,9 +2493,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 pvname,
                                 initial_value=getattr(oeObj.center, field),
                                 always_update=True,
-                                on_update=partial(self.update_beamline, oeid, f'{argName}.{field}'))
+                                on_update=partial(self.update_beamline, oeid,
+                                                  f'{argName}.{field}'))
                             # print(pvname)
-                    elif argName in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
+                    elif argName in ['limPhysX', 'limPhysY', 'limPhysX2',
+                                     'limPhysY2']:
                         for fIndex, field in enumerate(['lmin', 'lmax']):
                             pvname = f'{oename}:{argName}:{field}'
                             limObj = getattr(oeObj, argName)
@@ -2505,7 +2507,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     initial_value=limObj[fIndex],
                                     always_update=True,
                                     on_update=partial(self.update_beamline,
-                                                      oeid, f'{argName}.{field}'))
+                                                      oeid,
+                                                      f'{argName}.{field}'))
                             # print(pvname)
                     elif argName in ['opening']:
                         for field in oeObj.kind:
@@ -2517,7 +2520,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     initial_value=getattr(limObj, field),
                                     always_update=True,
                                     on_update=partial(self.update_beamline,
-                                                      oeid, f'{argName}.{field}'))
+                                                      oeid,
+                                                      f'{argName}.{field}'))
                             # print(pvname)
                     else:
                         pvname = f'{oename}:{argName}'
@@ -4205,20 +4209,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             newColorMax = self.colorMax
             newColorMin = self.colorMin
 
-#        for beamName, startBeam in self.beamsDict.items():
-#        print("self.beamline.beamsDictU", self.beamline.beamsDictU)
-#        """beamvbo: ('oeuuid', 'beamKey') """
-        beams = self.beamline.beamsDictU # if self.renderingMode == 'dynamic'\
-#            else self.beamsDict
+        beams = self.beamline.beamsDictU
 
-#        print(beams)
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
-#            beamSrc = beamDict if self.renderingMode == 'dynamic'\
-#                else {'beamGlobal': beamDict}
             for beamKey, startBeam in beamDict.items():
-#                startBeam = beamDict[bField]
-#                print(oeuuid, startBeam)
-#                startBeam.is2ndXtal = str(beamKey).endswith('2')
                 good = (startBeam.state == 1) | (startBeam.state == 2)
                 if len(startBeam.state[good]) > 0:
                     for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
@@ -4251,9 +4245,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             maxLen = tmpMaxLen
         self.maxLen = maxLen
         self.newColorAxis = False
-
-#        oesList = self.oesList or self.beamline.oesDict
-
         self.labelLines = np.zeros((len(self.beamline.oesDict)*4, 3))
         self.llVBO = create_qt_buffer(self.labelLines)
         self.labelvao = qt.QOpenGLVertexArrayObject()
@@ -4267,10 +4258,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         for oeuuid, oeLine in self.beamline.oesDict.items():
             oeToPlot = oeLine[0]
-#            print("preparing mesh for", oeToPlot.name)
-#            if not raycing.is_valid_uuid(oeuuid):
-#                oeuuid = oeToPlot.uuid
-#            self.uuidDict[oeuuid] = oeToPlot
             if is_oe(oeToPlot) or is_screen(oeToPlot) or is_aperture(oeToPlot):
                 if not oeuuid in self.meshDict:
                     mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
@@ -4292,7 +4279,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         mesh3D.stencilNum = stencilNum
             else:  # must be the source
                 mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
-#                mesh3D =
                 mesh3D.prepare_magnets()
                 mesh3D.isEnabled = True
                 if oeuuid not in self.selectableOEs.values():
@@ -4302,10 +4288,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         stencilNum = 1
                     self.selectableOEs[int(stencilNum)] = oeuuid
                     mesh3D.stencilNum = stencilNum
-#            print("saving mesh", oeuuid, mesh3D)
             self.meshDict[oeuuid] = mesh3D
-#        print("uuiddict", self.uuidDict)
-#        print("selectable OEs", self.selectableOEs)
 
         gl.glViewport(*self.viewPortGL)
         pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
@@ -4313,14 +4296,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if len(np.unique(newVisAx)) == 3:
             self.visibleAxes = newVisAx
         self.cBox.update_grid()
-#        if hasattr(self, 'input_queue'):
-#            self.input_queue.put(msg_stop)
-#            self.loopRunning = False
-
-#        print("FLOWU")
-#        for key, line in self.beamline.flowU.items():
-#            print(key, line)
-
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
@@ -4724,7 +4699,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             if int(overOE) in self.selectableOEs:
                 oe = self.beamline.oesDict[self.selectableOEs[int(overOE)]][0]
-#                oe = self.uuidDict[self.selectableOEs[int(overOE)]]
                 tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
                         oe.name, *oe.center,
                         np.degrees(oe.pitch +
