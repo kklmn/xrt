@@ -1647,9 +1647,10 @@ class BeamLine(object):
 
         try:
             from ...gui import xrtGlow as xrtglow
-        except ImportError:
+        except ImportError as e:
             print("Cannot import xrtGlow. "
                   "If you run your script from an IDE, don't.")
+            print(e)
             return
 
         from .run import run_process
