@@ -512,6 +512,7 @@ class xrtGlow(qt.QWidget):
             blName = self.customGlWidget.beamline.name
             oeProps = raycing.get_init_kwargs(oeObj, compact=False,
                                               blname=blName)
+            oeProps.update({'uuid': oeuuid})
         elViewer = OEExplorer(oeProps, self)
         if (elViewer.exec_()):
             pass
