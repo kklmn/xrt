@@ -3543,10 +3543,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     continue
 
                 for bField, bObj in beamDict.items():
-                    if bField == 'beamGlobal' and 'beamLocal' in beamDict:
+                    if bField == 'beamGlobal' and {
+                            'beamLocal', 'beamLocal1'} & beamDict.keys():
                         continue
 
-#                    beam = beamDict[bField]
                     beam = (oeuuid, bField)
                     self.render_beam(beam, mMMLoc,
                                      self.mView, self.mProj, target=None)
