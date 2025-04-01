@@ -675,10 +675,13 @@ class xrtGlow(qt.QWidget):
         self.transformationPanel.setLayout(transformationLayout)
 
     def fitScales(self, dims):
+        minmax = self.customGlWidget.minmax
+        
         for dim in dims:
-            dimMin = np.min(self.customGlWidget.footprintsArray[:, dim])
-            dimMax = np.max(self.customGlWidget.footprintsArray[:, dim])
-            newScale = 1.9 * self.customGlWidget.aPos[dim] /\
+            dimMin = minmax[0, dim]
+            dimMax = minmax[1, dim]
+            print(dim, dimMin, dimMax)
+            newScale = 1.5 * self.customGlWidget.aPos[dim] /\
                 (dimMax - dimMin) * self.customGlWidget.maxLen
             self.customGlWidget.tVec[dim] = -0.5 * (dimMin + dimMax)
             self.customGlWidget.scaleVec[dim] = newScale
@@ -3401,6 +3404,28 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def populateVerticesArray(self, segmentsModelRoot):
         pass
 
+    def getMinMax(self):
+        mins = np.array([1e20, 1e20, 1e20])
+        maxs = -1 * mins
+
+        for oeid, elline in self.beamline.oesDict.items():
+            mins = np.vstack((mins, elline[0].center))
+            maxs = np.vstack((maxs, elline[0].center))
+            for beamkey, beam in self.beamline.beamsDictU[oeid].items():
+                if beamkey.startswith('beamGlo'):
+                    good = (beam.state == 1) | (beam.state == 2)
+                    bx, by, bz = beam.x[good], beam.y[good], beam.z[good]
+                    mins = np.vstack((mins, np.array([np.min(bx),
+                                                      np.min(by),
+                                                      np.min(bz)])))
+                    maxs = np.vstack((maxs, np.array([np.max(bx),
+                                                      np.max(by),
+                                                      np.max(bz)])))
+        mins = np.min(mins, axis=0)
+        maxs = np.max(maxs, axis=0)
+        self.minmax = np.vstack((mins, maxs))
+        return self.minmax
+
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
         if dimension is None:
@@ -4242,13 +4267,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for beamKey, startBeam in beamDict.items():
                 good = (startBeam.state == 1) | (startBeam.state == 2)
                 if len(startBeam.state[good]) > 0:
-                    for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
-                        axMin = np.min(getattr(startBeam, tAxis)[good])
-                        axMax = np.max(getattr(startBeam, tAxis)[good])
-                        if axMin < tmpMin[tmpCoord]:
-                            tmpMin[tmpCoord] = axMin
-                        if axMax > tmpMax[tmpCoord]:
-                            tmpMax[tmpCoord] = axMax
+#                    for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
+#                        axMin = np.min(getattr(startBeam, tAxis)[good])
+#                        axMax = np.max(getattr(startBeam, tAxis)[good])
+#                        if axMin < tmpMin[tmpCoord]:
+#                            tmpMin[tmpCoord] = axMin
+#                        if axMax > tmpMax[tmpCoord]:
+#                            tmpMax[tmpCoord] = axMax
 
                     startBeam.iMax = np.max(startBeam.Jss[good] +
                                             startBeam.Jpp[good])
@@ -4267,10 +4292,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.colorMax = newColorMax
                 self.selColorMax = self.colorMax
 
-        tmpMaxLen = np.max(tmpMax - tmpMin)
-        if tmpMaxLen > maxLen:
-            maxLen = tmpMaxLen
-        self.maxLen = maxLen
+#        tmpMaxLen = np.max(tmpMax - tmpMin)
+#        if tmpMaxLen > maxLen:
+#            maxLen = tmpMaxLen
+        self.getMinMax()
+        self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
+        print(self.maxLen)
         self.newColorAxis = False
         self.labelLines = np.zeros((len(self.beamline.oesDict)*4, 3))
         self.llVBO = create_qt_buffer(self.labelLines)
