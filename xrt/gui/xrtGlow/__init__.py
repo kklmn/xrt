@@ -6933,6 +6933,7 @@ class OEExplorer(qt.QDialog):
                     nvalue = val.strip()
                     self.add_row(nkey, nvalue)
             elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
+                spVal = value.strip('([])')
                 for field, val in zip(['lmin', 'lmax'], spVal.split(",")):
                     nkey = f"{key}.{field}"
                     nvalue = val.strip()
