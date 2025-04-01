@@ -315,8 +315,20 @@ class MessageHandler:
 #        print(element)
         if element is not None:
             for key, value in kwargs.items():
-#                print(element[0], key, value)
-                setattr(element[0], key, value)
+                args = key.split('.')
+                arg = args[0]
+                if len(args) > 1:
+                    field = args[-1]
+                    if field == 'energy':
+                        if arg == 'bragg':
+                            value = [float(value)]
+                        else:
+                            value = element[0].material.get_Bragg_angle(float(value))
+                    else:
+                        arrayValue = getattr(element[0], arg)
+                        setattr(arrayValue, field, value)
+                        value = arrayValue
+                setattr(element[0], arg, value)
             if self.autoUpdate:
                 self.needUpdate = True
             if is_aperture(element[0]):
@@ -517,6 +529,8 @@ class xrtGlow(qt.QWidget):
                                               blname=blName)
             oeProps.update({'uuid': oeuuid})
         elViewer = OEExplorer(oeProps, self)
+        elViewer.propertiesChanged.connect(
+                partial(self.customGlWidget.update_beamline, oeuuid))
         if (elViewer.exec_()):
             pass
 
@@ -2582,61 +2596,66 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.pv_records = pv_records
 
     async def update_beamline_async(self, oeid, argName, argValue):
-        if oeid is None:
-            # print("no OE id provided, re-tracing from start")
-            if self.epicsPrefix is not None:
-                if argName == 'Acquire':
-                    self.pv_records['AcquireStatus'].set(1)
-                    if str(argValue) == '1':
+        self.update_beamline(oeid, {argName: argValue})
+
+    def update_beamline(self, oeid, kwargs):
+        for argName, argValue in kwargs.items():
+            if oeid is None:
+                # print("no OE id provided, re-tracing from start")
+                if self.epicsPrefix is not None:
+                    if argName == 'Acquire':
+                        self.pv_records['AcquireStatus'].set(1)
+                        if str(argValue) == '1':
+                            if hasattr(self, 'input_queue'):
+                                self.input_queue.put({
+                                            "command": "run_once",
+                                            "object_type": "beamline"
+                                            })
+                    elif argName == 'AutoUpdate':
                         if hasattr(self, 'input_queue'):
                             self.input_queue.put({
-                                        "command": "run_once",
-                                        "object_type": "beamline"
+                                        "command": "auto_update",
+                                        "object_type": "beamline",
+                                        "kwargs": {"value": int(argValue)}
                                         })
-                elif argName == 'AutoUpdate':
-                    if hasattr(self, 'input_queue'):
-                        self.input_queue.put({
-                                    "command": "auto_update",
-                                    "object_type": "beamline",
-                                    "kwargs": {"value": int(argValue)}
-                                    })
-            return
-
-        oe = self.beamline.oesDict[oeid][0]
-
-        args = argName.split('.')
-        arg = args[0]
-        if len(args) > 1:
-            field = args[-1]
-            if field == 'energy':
-                if arg == 'bragg':
-                    argValue = [float(argValue)]
+                return
+    
+            oe = self.beamline.oesDict[oeid][0]
+    
+            args = argName.split('.')
+            arg = args[0]
+            if len(args) > 1:
+                field = args[-1]
+                if field == 'energy':
+                    if arg == 'bragg':
+                        argValue = [float(argValue)]
+                    else:
+                        argValue = oe.material.get_Bragg_angle(float(argValue))
                 else:
-                    argValue = oe.material.get_Bragg_angle(float(argValue))
-            else:
-                arrayValue = getattr(oe, arg)
-                setattr(arrayValue, field, argValue)
-                argValue = arrayValue
-
-        # updating local beamline tree
-        setattr(oe, arg, argValue)
-
-        if arg in orientationArgSet:
-            self.meshDict[oeid].update_transformation_matrix()
-
-        self.needMeshUpdate = oeid
-
-        # updating the beamline model in the runner
+                    arrayValue = getattr(oe, arg)
+                    setattr(arrayValue, field, argValue)
+                    argValue = arrayValue
+    
+            # updating local beamline tree
+            setattr(oe, arg, argValue)
+    
+            if arg in orientationArgSet:
+                self.meshDict[oeid].update_transformation_matrix()
+            elif arg in shapeArgSet:
+                self.needMeshUpdate = oeid
+    
+            # updating the beamline model in the runner
         if self.epicsPrefix is not None:
-            self.pv_records[f'AcquireStatus'].set(1)
+            self.pv_records['AcquireStatus'].set(1)
 
         if hasattr(self, 'input_queue'):
             self.input_queue.put({
                         "command": "modify",
                         "object_type": "beamline",
                         "uuid": oeid,
-                        "kwargs": {arg: argValue.tolist() if isinstance(
-                                argValue, np.ndarray) else argValue}
+                        "kwargs": kwargs
+#                        "kwargs": {arg: argValue.tolist() if isinstance(
+#                                argValue, np.ndarray) else argValue}
                         })
 
     def init_shaders(self):
@@ -3480,8 +3499,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
             model = self.segmentModel.model()
             if self.needMeshUpdate is not None:
                 gl.glGetError()
-                self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
-                        is2ndXtal=False, updateMesh=True)
+                if is_source(self.meshDict[self.needMeshUpdate].oe):
+                    self.meshDict[self.needMeshUpdate].prepare_magnets(
+                            updateMesh=True)
+                else:
+                    self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
+                            is2ndXtal=False, updateMesh=True)
                 self.needMeshUpdate = None
 
             gl.glEnable(gl.GL_STENCIL_TEST)
@@ -5979,7 +6002,7 @@ class OEMesh3D():
 
         return instancePositions, instanceColors
 
-    def prepare_magnets(self, updateMesh=False, shader=None):
+    def prepare_magnets(self, updateMesh=False):
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
 
@@ -6893,19 +6916,41 @@ class CoordinateBox():
 
 
 class OEExplorer(qt.QDialog):
+    propertiesChanged = qt.Signal(dict)
+
     def __init__(self, data_dict, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Edit Class Properties")
 
-        self.original_data = data_dict
-        self.model = qt.QStandardItemModel(len(data_dict), 2)
+        self.model = qt.QStandardItemModel()
+        self.original_data = raycing.OrderedDict()
         self.model.setHorizontalHeaderLabels(["Property", "Value"])
-        for row, (key, value) in enumerate(data_dict.items()):
-            key_item = qt.QStandardItem(str(key))
-            key_item.setEditable(False)  # Key should not be edited
-            value_item = qt.QStandardItem(str(value))
-            self.model.setItem(row, 0, key_item)
-            self.model.setItem(row, 1, value_item)
+        for key, value in data_dict.items():
+            if key in ['center']:
+                spVal = value.strip('([])')
+                for field, val in zip(['x', 'y', 'z'], spVal.split(",")):
+                    nkey = f"{key}.{field}"
+                    nvalue = val.strip()
+                    self.add_row(nkey, nvalue)
+            elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
+                for field, val in zip(['lmin', 'lmax'], spVal.split(",")):
+                    nkey = f"{key}.{field}"
+                    nvalue = val.strip()
+                    self.add_row(nkey, nvalue)
+#            if hasattr(value, "_fields"):
+#                for subfield in value._fields:
+#                    subkey = f"{key}.{subfield}"
+#                    subval = getattr(value, subfield)
+#                    self.add_row(subkey, subval)
+#                    self.original_data[subkey] = subval
+            else:
+                self.add_row(key, value)
+                self.original_data[key] = value
+
+        self.changed_data = {}
+        self.model.itemChanged.connect(self.on_item_changed)
+        
+        self.highlight_color = qt.QtGui.QColor("#fffacd")
 
         self.table = qt.QTableView()
         self.table.setModel(self.model)
@@ -6915,6 +6960,7 @@ class OEExplorer(qt.QDialog):
         self.table.setAlternatingRowColors(True)
         self.table.setContextMenuPolicy(qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
+
         # Buttons
         self.button_box = qt.QDialogButtonBox()
         self.ok_button = self.button_box.addButton(
@@ -6924,6 +6970,7 @@ class OEExplorer(qt.QDialog):
         self.cancel_button = self.button_box.addButton(
                 "Cancel", qt.QDialogButtonBox.RejectRole)
 
+        self.button_box.accepted.connect(self.on_ok_clicked)
         self.ok_button.clicked.connect(self.accept)
         self.apply_button.clicked.connect(self.apply_changes)
         self.cancel_button.clicked.connect(self.reject)
@@ -6946,6 +6993,46 @@ class OEExplorer(qt.QDialog):
 #            min(table_size.height() + extra_height, max_height)
 #        )
 
+    def add_row(self, key, value):
+        key_item = qt.QStandardItem(key)
+        key_item.setEditable(False)
+        val_item = qt.QStandardItem(str(value))
+        self.model.appendRow([key_item, val_item])
+
+    def on_item_changed(self, item):
+        if item.column() != 1:
+            return
+    
+        row = item.row()
+        key = self.model.item(row, 0).text()
+        value_str = item.text()
+    
+        try:
+            import ast
+            value = ast.literal_eval(value_str)
+        except Exception:
+            value = value_str
+    
+        original_value = self.original_data.get(key)
+        value_changed = value != original_value
+    
+        # Update the changed_data dictionary
+        if value_changed:
+            self.changed_data[key] = value
+            self.set_row_highlight(row, True)
+        else:
+            self.changed_data.pop(key, None)
+            self.set_row_highlight(row, False)
+    
+    def set_row_highlight(self, row, highlight=True):
+        for col in range(self.model.columnCount()):
+            item = self.model.item(row, col)
+            if highlight:
+                item.setBackground(self.highlight_color)
+            else:
+                item.setBackground(qt.QtGui.QBrush(qt.NoBrush))
+#                item.setBackground(qt.QtGui.QColor())  # reset to default
+
     def show_context_menu(self, position):
         index = self.table.indexAt(position)
         if not index.isValid():
@@ -6962,14 +7049,31 @@ class OEExplorer(qt.QDialog):
         copy_action.triggered.connect(copy_value)
         menu.exec_(self.table.viewport().mapToGlobal(position))
 
-    def apply_changes(self):
-        self.edited_data = {
-            self.model.item(row, 0).text(): self.model.item(row, 1).text()
-            for row in range(self.model.rowCount())
-        }
-        print("Applied:", self.edited_data)
+    def on_ok_clicked(self):
+        self.apply_changes()  # apply changes before accepting
+        self.accept()
 
-    def get_values(self):
-        if not self.edited_data:
-            self.apply_changes()
-        return self.edited_data
+    def apply_changes(self):
+        if not self.changed_data:
+            return  # nothing to do
+    
+        print("Applying:", self.changed_data)
+        self.propertiesChanged.emit(self.changed_data)
+       
+        # Send to your async updater here
+        # e.g., asyncio.create_task(self.async_update(self.changed_data))
+    
+        # Update original values and clear highlights
+        for row in range(self.model.rowCount()):
+            key = self.model.item(row, 0).text()
+            if key in self.changed_data:
+                new_value = self.changed_data[key]
+                self.original_data[key] = new_value
+    
+                # Update display to ensure it's in sync (optional)
+                self.model.item(row, 1).setText(str(new_value))
+    
+                # Remove highlight
+                self.set_row_highlight(row, False)
+    
+        self.changed_data.clear()
