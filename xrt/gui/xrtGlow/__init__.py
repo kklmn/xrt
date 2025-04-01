@@ -4782,7 +4782,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
-            tpad = wEvent.source() == qt.QtCore.Qt.MouseEventSynthesizedBySystem
+            tpad = wEvent.pixelDelta().y() < 25  # Might be adjusted for smooth scroll
 
         if deltaA > 0:
             if altOn:
