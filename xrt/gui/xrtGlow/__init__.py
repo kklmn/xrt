@@ -294,7 +294,7 @@ class MessageHandler:
         self.exit = False
 
     def handle_create(self, message):
-        uuid = message.get("uuid", None)
+#        uuid = message.get("uuid", None)
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
 
@@ -303,9 +303,7 @@ class MessageHandler:
             self.bl.deserialize(kwargs)
             if self.autoUpdate:
                 self.needUpdate = True
-#            self.startEl = self.bl.flowU
 #            print("Deserialized beamline", self.bl.flowU)
-
 #        print(f"Creating {object_type} with UUID {uuid} and kwargs {kwargs}")
 
     def handle_modify(self, message):
@@ -323,9 +321,14 @@ class MessageHandler:
                 self.needUpdate = True
             if is_aperture(element[0]):
                 kwargs = list(self.bl.flowU[uuid].values())[0]
-                self.startEl = kwargs['beam']
+                modifiedEl = kwargs['beam']
             else:
-                self.startEl = uuid
+                modifiedEl = uuid
+            keys = list(self.bl.flowU.keys())
+            if self.startEl is None:
+                self.startEl = modifiedEl
+            elif keys.index(modifiedEl) < keys.index(self.startEl):
+                self.startEl = modifiedEl
 
     def handle_delete(self, message):
         uuid = message.get("uuid")
@@ -1875,6 +1878,8 @@ class xrtGlow(qt.QWidget):
                            partial(self.toBeamLocal, oeuuid))
             menu.addAction('Restore Global at {}.center'.format(oeName),
                            partial(self.toGlobal, oeuuid))
+            menu.addAction('View Properties',
+                           partial(self.runElementViewer, oeuuid))
         menu.addSeparator()
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
@@ -2455,7 +2460,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         pv_records['Acquire'] = builder.boolOut(
             'Acquire', ZNAM=0, ONAM=1,
             initial_value=0, always_update=True,
-            on_update=partial(self.update_beamline, None, 'Acquire'))
+            on_update=partial(self.update_beamline_async, None, 'Acquire'))
 
         pv_records['AcquireStatus'] = builder.boolIn(
             'AcquireStatus', ZNAM=0, ONAM=1,
@@ -2464,7 +2469,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         pv_records['AutoUpdate'] = builder.boolOut(
             'AutoUpdate', ZNAM=0, ONAM=1,
             initial_value=0, always_update=True,
-            on_update=partial(self.update_beamline, None, 'AutoUpdate'))
+            on_update=partial(self.update_beamline_async, None, 'AutoUpdate'))
 
         for oeid, oeline in self.beamline.oesDict.items():
             oeObj = oeline[0]
@@ -2486,7 +2491,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             pvname,
                             initial_value=initial_e,
                             always_update=True,
-                            on_update=partial(self.update_beamline,
+                            on_update=partial(self.update_beamline_async,
                                               oeid, e_field))
 
             if is_screen(oeObj) and oeObj.limPhysX is not None:
@@ -2507,7 +2512,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             pvname,
                             initial_value=dimObj[fIndex],
                             always_update=True,
-                            on_update=partial(self.update_beamline,
+                            on_update=partial(self.update_beamline_async,
                                               oeid, f'histShape.{field}'))
                     # print(pvname)
 
@@ -2519,7 +2524,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             pvname,
                             initial_value=str(getattr(oeObj, argName)),
                             always_update=True,
-                            on_update=partial(self.update_beamline,
+                            on_update=partial(self.update_beamline_async,
                                               oeid, argName))
                         # print(pvname)
                     elif argName in ['center']:
@@ -2529,7 +2534,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 pvname,
                                 initial_value=getattr(oeObj.center, field),
                                 always_update=True,
-                                on_update=partial(self.update_beamline, oeid,
+                                on_update=partial(self.update_beamline_async,
+                                                  oeid,
                                                   f'{argName}.{field}'))
                             # print(pvname)
                     elif argName in ['limPhysX', 'limPhysY', 'limPhysX2',
@@ -2542,9 +2548,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     pvname,
                                     initial_value=limObj[fIndex],
                                     always_update=True,
-                                    on_update=partial(self.update_beamline,
-                                                      oeid,
-                                                      f'{argName}.{field}'))
+                                    on_update=partial(
+                                            self.update_beamline_async,
+                                            oeid,
+                                            f'{argName}.{field}'))
                             # print(pvname)
                     elif argName in ['opening']:
                         for field in oeObj.kind:
@@ -2555,9 +2562,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     pvname,
                                     initial_value=getattr(limObj, field),
                                     always_update=True,
-                                    on_update=partial(self.update_beamline,
-                                                      oeid,
-                                                      f'{argName}.{field}'))
+                                    on_update=partial(
+                                            self.update_beamline_async,
+                                            oeid,
+                                            f'{argName}.{field}'))
                             # print(pvname)
                     else:
                         pvname = f'{oename}:{argName}'
@@ -2565,7 +2573,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             pvname,
                             initial_value=getattr(oeObj, argName),
                             always_update=True,
-                            on_update=partial(self.update_beamline,
+                            on_update=partial(self.update_beamline_async,
                                               oeid, argName))
                         # print(pvname)
         [print(f'{self.epicsPrefix}:{recName}') for recName in pv_records]
@@ -2573,9 +2581,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         softioc.iocInit(self.dispatcher)
         self.pv_records = pv_records
 
-    async def update_beamline(self, oeid, argName, argValue):
-        # we expect individual attributes
-        # print(oeid, argValue)
+    async def update_beamline_async(self, oeid, argName, argValue):
         if oeid is None:
             # print("no OE id provided, re-tracing from start")
             if self.epicsPrefix is not None:
@@ -3478,6 +3484,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         is2ndXtal=False, updateMesh=True)
                 self.needMeshUpdate = None
 
+            gl.glEnable(gl.GL_STENCIL_TEST)
+
             for oeuuid, mesh3D in self.meshDict.items():
                 item = getItem(oeuuid, 'surface')
                 if item.checkState() != 2:
@@ -3513,7 +3521,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         mesh3D.render_magnets(
                             mMMLoc, self.mView, self.mProj,
                             isSelected=isSelected, shader=self.shaderMag)
-
+            gl.glDisable(gl.GL_STENCIL_TEST)
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
             else:
@@ -4172,7 +4180,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def initializeGL(self):
         gl.glGetError()
-        gl.glEnable(gl.GL_STENCIL_TEST)
+#        gl.glEnable(gl.GL_STENCIL_TEST)
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         gl.glEnable(gl.GL_MULTISAMPLE)
         gl.glEnable(gl.GL_BLEND)
@@ -4716,7 +4724,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def mouseDoubleClickEvent(self, mdcevent):
         if self.selectedOE > 0:
-            self.openElViewer.emit(self.selectableOEs[self.selectedOE])
+            self.openElViewer.emit(self.selectableOEs.get(int(self.selectedOE),
+                                                          'None'))
 
     def wheelEvent(self, wEvent):
         ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
@@ -6904,7 +6913,8 @@ class OEExplorer(qt.QDialog):
         self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
         self.table.setAlternatingRowColors(True)
-
+        self.table.setContextMenuPolicy(qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
         # Buttons
         self.button_box = qt.QDialogButtonBox()
         self.ok_button = self.button_box.addButton(
@@ -6936,15 +6946,30 @@ class OEExplorer(qt.QDialog):
 #            min(table_size.height() + extra_height, max_height)
 #        )
 
+    def show_context_menu(self, position):
+        index = self.table.indexAt(position)
+        if not index.isValid():
+            return
+    
+        menu = qt.QMenu(self.table)
+        copy_action = qt.QAction("Copy value", self)
+        menu.addAction(copy_action)
+    
+        def copy_value():
+            value = self.model.item(index.row(), index.column()).text()
+            qt.QApplication.clipboard().setText(value)
+    
+        copy_action.triggered.connect(copy_value)
+        menu.exec_(self.table.viewport().mapToGlobal(position))
+
     def apply_changes(self):
         self.edited_data = {
             self.model.item(row, 0).text(): self.model.item(row, 1).text()
             for row in range(self.model.rowCount())
         }
-        print("Applied:", self.edited_data)  # Or emit a signal if needed
+        print("Applied:", self.edited_data)
 
     def get_values(self):
-        # Call this after dialog is accepted to get final edited values
         if not self.edited_data:
             self.apply_changes()
         return self.edited_data
