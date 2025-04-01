@@ -4292,12 +4292,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.colorMax = newColorMax
                 self.selColorMax = self.colorMax
 
-#        tmpMaxLen = np.max(tmpMax - tmpMin)
-#        if tmpMaxLen > maxLen:
-#            maxLen = tmpMaxLen
         self.getMinMax()
         self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
-        print(self.maxLen)
         self.newColorAxis = False
         self.labelLines = np.zeros((len(self.beamline.oesDict)*4, 3))
         self.llVBO = create_qt_buffer(self.labelLines)
@@ -4780,22 +4776,25 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def wheelEvent(self, wEvent):
         ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
         altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
+        tpad = False
+
         if qt.QtName == "PyQt4":
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
+            tpad = wEvent.source() == qt.QtCore.Qt.MouseEventSynthesizedBySystem
 
         if deltaA > 0:
             if altOn:
                 self.vScreenSize *= 1.1
-            elif ctrlOn:
+            elif ctrlOn and not tpad:
                 self.cameraAngle *= 0.9
             else:
                 self.scaleVec *= 1.1
         else:
             if altOn:
                 self.vScreenSize *= 0.9
-            elif ctrlOn:
+            elif ctrlOn and not tpad:
                 self.cameraAngle *= 1.1
             else:
                 self.scaleVec *= 0.9
