@@ -543,15 +543,29 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     x[:], y[:] = raycing.rotate_z(x, y, b0, a0)
 
     if hasattr(fromOE, 'rotationSequence'):  # OE
+        dt = 0
+        extraAnglesSign = 1.  # only for pitch and yaw
+        if hasattr(fromOE, 'local_n2'):
+            extraAnglesSign = -1.  # only for pitch and yaw
+            dt = -fromOE.t
+            raycing.rotate_xyz(
+                x, y, z, rotationSequence=fromOE.rotationSequence, yaw=-np.pi)
+
+        pitch = -fromOE.pitch
+        roll = -(fromOE.roll+fromOE.positionRoll)
+        yaw = -fromOE.yaw
         raycing.rotate_xyz(
             x, y, z, rotationSequence=fromOE.rotationSequence,
-            pitch=-fromOE.pitch, roll=-fromOE.roll-fromOE.positionRoll,
-            yaw=-fromOE.yaw)
+            pitch=pitch, roll=roll, yaw=yaw)
         if fromOE.extraPitch or fromOE.extraRoll or fromOE.extraYaw:
             raycing.rotate_xyz(
                 x, y, z, rotationSequence=fromOE.extraRotationSequence,
-                pitch=-fromOE.extraPitch, roll=-fromOE.extraRoll,
-                yaw=-fromOE.extraYaw)
+                pitch=-extraAnglesSign*fromOE.extraPitch,
+                roll=-fromOE.extraRoll,
+                yaw=-extraAnglesSign*fromOE.extraYaw)
+
+        if dt:
+            z += dt
 
     wave.xDiffr = x  # in fromOE local coordinates
     wave.yDiffr = y  # in fromOE local coordinates
@@ -601,22 +615,22 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 
     good = oeLocal.state == 1
     goodlen = good.sum()
+    toOEname = ' to ' + wave.toOE.name if hasattr(wave, 'toOE') else ''
+    print("Diffraction from {0}{1}:".format(oe.name, toOEname))
     if goodlen < 1e2:
         raycing.colorPrint("Not enough good rays at {0}: {1} of {2}".format(
               oe.name, goodlen, len(oeLocal.x)), "RED")
-        return
+        glo = rs.Beam(goodlen)
+        return glo
 #        goodIn = beam.state == 1
 #        self.beamInRays += goodIn.sum()
 #        self.beamInSumJ += (beam.Jss[goodIn] + beam.Jpp[goodIn]).sum()
 
     # this would be better in prepare_wave but energy is unknown there yet
     nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
-    toOEname = ' to ' + wave.toOE.name if hasattr(wave, 'toOE') else ''
-    print("Diffraction from {0}{1}:\n"
-          "Effective Fresnel number = {2:.3g}, {3:.3g} samples, "
-          "{5}{4:.3g} samples per zone{6}"
-          .format(oe.name, toOEname, nf, goodlen, spz,
-                  GREEN if spz > 1e4 else RED, RESET))
+    print("Effective Fresnel number = {0:.3g}, {1:.3g} samples, "
+          "{3}{2:.3g} samples per zone{4}"
+          .format(nf, goodlen, spz, GREEN if spz > 1e4 else RED, RESET))
 
     shouldCalculateArea = False
     if not hasattr(oeLocal, 'area'):
@@ -652,11 +666,15 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
               oe.name, oeLocal.area))
 
     if hasattr(oe, 'rotationSequence'):  # OE
+        if hasattr(oe, 'local_n2'):
+            local_n = oe.local_n2
+        else:
+            local_n = oe.local_n
         if oe.isParametric:
             s, phi, r = oe.xyz_to_param(oeLocal.x, oeLocal.y, oeLocal.z)
-            n = oe.local_n(s, phi)
+            n = local_n(s, phi)
         else:
-            n = oe.local_n(oeLocal.x, oeLocal.y)[-3:]
+            n = local_n(oeLocal.x, oeLocal.y)[-3:]
         nl = (oeLocal.a*np.asarray([n[-3]]) + oeLocal.b*np.asarray([n[-2]]) +
               oeLocal.c*np.asarray([n[-1]])).flatten()
 #    elif hasattr(oe, 'propagate'):  # aperture
@@ -733,7 +751,10 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
     glo.y[:] = wave.yDiffr
     glo.z[:] = wave.zDiffr
     if hasattr(oe, 'local_to_global'):
-        oe.local_to_global(glo)
+        kwargs = {}
+        if hasattr(oe, 'local_n2'):
+            kwargs['is2ndXtal'] = True
+        oe.local_to_global(glo, **kwargs)
 
 # rotate abc, coh.matrix, Es, Ep in the local system of the receiving surface
     if hasattr(wave, 'toOE'):
@@ -751,6 +772,10 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         wave.a[:], wave.b[:] = raycing.rotate_z(wave.a, wave.b, b0, a0)
 
         if hasattr(toOE, 'rotationSequence'):  # OE
+            if hasattr(toOE, 'local_n1'):
+                local_n = toOE.local_n1
+            else:
+                local_n = toOE.local_n
             if toOE.isParametric:
                 s, phi, r = toOE.xyz_to_param(wave.x, wave.y, wave.z)
                 oeNormal = list(toOE.local_n(s, phi))

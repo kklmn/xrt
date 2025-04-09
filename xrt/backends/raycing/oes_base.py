@@ -1127,11 +1127,15 @@ class OE(object):
 
         *noIntersectionSearch*: bool
             Used in wave propagation, normally should be False. Certainly
-            should be False if the OE is distorted.
+            should be False if the OE is distorted or OE is parametric.
 
 
         .. .. Returned values: beamGlobal, beamLocal
         """
+        if noIntersectionSearch and self.isParametric:
+            raycing.colorPrint(
+                'You should remove "noIntersectionSearch" for this parametric'
+                'surface ({0})'.format(self.name), "RED")
         self.footprint = []
         if self.bl is not None:
             self.bl.auto_align(self, beam)

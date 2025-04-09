@@ -2534,7 +2534,6 @@ class ParaboloidFlatLens(Plate):
         """Determines the normal vector of OE at (x, y) position. If OE is an
         asymmetric crystal, *local_n* must return 2 normals: the 1st one of the
         atomic planes and the 2nd one of the surface."""
-        # just flat:
         a = -x / (2*self.focus)  # -dz/dx
         b = -y / (2*self.focus)  # -dz/dy
         if self.zmax is not None:
@@ -2549,6 +2548,12 @@ class ParaboloidFlatLens(Plate):
 
     def local_n2(self, x, y):
         return self.local_n(x, y)
+
+    def local_z(self, x, y):
+        return self.local_z1(x, y)
+
+    def local_n(self, x, y):
+        return self.local_n1(x, y)
 
     def get_nCRL(self, f, E):
         nCRL, nFactor = 1, 1.
