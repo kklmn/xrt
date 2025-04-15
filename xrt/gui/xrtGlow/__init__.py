@@ -311,8 +311,6 @@ class MessageHandler:
 #        print(uuid, self.bl.oesDict.keys())
         element = self.bl.oesDict.get(uuid)
         kwargs = message.get("kwargs", {})
-#        print(f"Modifying object with UUID {uuid} using kwargs {kwargs}")
-#        print(element)
         if element is not None:
             for key, value in kwargs.items():
                 args = key.split('.')
@@ -371,6 +369,7 @@ class MessageHandler:
         self.stop = True
 
     def process_message(self, message):
+        print("11", message)
         # Build a dispatch dictionary mapping commands to methods.
         command_handlers = {
             "create": self.handle_create,
@@ -2636,7 +2635,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree
             setattr(oe, arg, argValue)
-
             if arg in orientationArgSet:
                 self.meshDict[oeid].update_transformation_matrix()
             elif arg in shapeArgSet:
@@ -2645,16 +2643,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
             # updating the beamline model in the runner
         if self.epicsPrefix is not None:
             self.pv_records['AcquireStatus'].set(1)
-
-        if hasattr(self, 'input_queue'):
-            self.input_queue.put({
-                        "command": "modify",
-                        "object_type": "beamline",
-                        "uuid": oeid,
-                        "kwargs": kwargs
+        message = {"command": "modify",
+                   "object_type": "beamline",
+                   "uuid": oeid,
+                   "kwargs": kwargs.copy()
 #                        "kwargs": {arg: argValue.tolist() if isinstance(
 #                                argValue, np.ndarray) else argValue}
-                        })
+                        }
+        if hasattr(self, 'input_queue'):
+            self.input_queue.put(message)
 
     def init_shaders(self):
         shaderBeam = qt.QOpenGLShaderProgram()
@@ -2961,7 +2958,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
         goodRays = np.where((state > 0))[0]
-
         update_qt_buffer(beamvbo['position'], data)
         update_qt_buffer(beamvbo['color'], dataColor)
         update_qt_buffer(beamvbo['state'], state)
