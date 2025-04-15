@@ -518,7 +518,7 @@ class xrtGlow(qt.QWidget):
             event.accept()
 
     def runElementViewer(self, oeuuid=None):
-        
+
         if oeuuid is not None and hasattr(self.customGlWidget, 'beamline'):
             oe = self.customGlWidget.beamline.oesDict.get(oeuuid, None)
             if oe is None:
@@ -629,16 +629,17 @@ class xrtGlow(qt.QWidget):
 #        rotModeCB.stateChanged.connect(self.checkEulerian)
 #        rotationLayout.addWidget(rotModeCB, 0, 0)
 
-        rotValidator = qt.QDoubleValidator()
-        rotValidator.setRange(-180., 180., 9)
         self.rotationSliders = []
         self.rotationEditors = []
-        for iaxis, axis in enumerate(['pitch (Rx)', 'roll (Ry)', 'yaw (Rz)']):
+        for iaxis, axis in enumerate(['Azimuth', 'Elevation']): #, 'yaw (Rz)']):
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit("0.")
+            rLim = 89.99 if iaxis else 180.
+            rotValidator = qt.QDoubleValidator()
+            rotValidator.setRange(-rLim, rLim, 9)
             axEdit.setValidator(rotValidator)
             axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
-            axSlider.setRange(-180, 180, 0.01)
+            axSlider.setRange(-rLim, rLim, 0.01)
             axSlider.setValue(0)
             axEdit.editingFinished.connect(
                 partial(self.updateRotationFromQLE, axEdit, axSlider))
@@ -656,10 +657,8 @@ class xrtGlow(qt.QWidget):
             rotationLayout.addLayout(layout)
 
         for axis, angles in zip(['Side', 'Front', 'Top', 'Isometric'],
-                                [[[0.], [0.], [0.]],
-                                 [[0.], [0.], [90.]],
-                                 [[0.], [90.], [0.]],
-                                 [[0.], [35.264], [-45.]]]):
+                                [(0., 0.), (89.99, 0.), (0., 89.99),
+                                 (-45., 35.)]):
             setView = qt.QPushButton(axis)
             setView.clicked.connect(partial(self.updateRotationFromGL, angles))
             fixedViewsLayout.addWidget(setView)
@@ -676,7 +675,7 @@ class xrtGlow(qt.QWidget):
 
     def fitScales(self, dims):
         minmax = self.customGlWidget.minmax
-        
+
         for dim in dims:
             dimMin = minmax[0, dim]
             dimMax = minmax[1, dim]
@@ -1624,21 +1623,20 @@ class xrtGlow(qt.QWidget):
         self.projLinePanel.setEnabled(anyOf)
 
     def updateRotation(self, slider, iax, editor, position):
-        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
             except:  # analysis:ignore
                 pass
         editor.setText("{0:.2f}".format(position))
-        self.customGlWidget.rotations[iax][0] = np.float32(position)
+        self.customGlWidget.rotations[iax] = np.float32(position)
         self.customGlWidget.updateQuats()
         self.customGlWidget.glDraw()
 
     def updateRotationFromGL(self, actPos):
         for iaxis, (slider, editor) in\
                 enumerate(zip(self.rotationSliders, self.rotationEditors)):
-            value = actPos[iaxis][0]
+            value = actPos[iaxis]
             slider.setValue(value)
             editor.setText("{0:.2f}".format(value))
 
@@ -2415,7 +2413,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.tmpOffset = np.array([0., 0., 0.])
 
         self.cameraTarget = qt.QVector3D(0., 0., 0.)
-        self.cameraPos = qt.QVector3D(3.5, 0, 0)
+        self.cameraDistance = 3.5
+        self.cameraPos = qt.QVector3D(self.cameraDistance, 0, 0)
         self.upVec = qt.QVector3D(0., 0., 1.)
 
         self.mView = qt.QMatrix4x4()
@@ -2438,12 +2437,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.mModLocal = qt.QMatrix4x4()
         self.mModLocal.setToIdentity()
 
-        self.rotations = np.float32([[0., 1., 0., 0.],
-                                     [0., 0., 1., 0.],
-                                     [0., 0., 0., 1.]])
-        self.textOrientation = [0.5, 0.5, 0.5, 0.5]
+        self.rotations = np.zeros(2)
 
-        self.updateQuats()
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
         self.signs = np.ones_like(pModelT)
@@ -2622,9 +2617,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                         "kwargs": {"value": int(argValue)}
                                         })
                 return
-    
+
             oe = self.beamline.oesDict[oeid][0]
-    
+
             args = argName.split('.')
             arg = args[0]
             if len(args) > 1:
@@ -2638,15 +2633,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     arrayValue = getattr(oe, arg)
                     setattr(arrayValue, field, argValue)
                     argValue = arrayValue
-    
+
             # updating local beamline tree
             setattr(oe, arg, argValue)
-    
+
             if arg in orientationArgSet:
                 self.meshDict[oeid].update_transformation_matrix()
             elif arg in shapeArgSet:
                 self.needMeshUpdate = oeid
-    
+
             # updating the beamline model in the runner
         if self.epicsPrefix is not None:
             self.pv_records['AcquireStatus'].set(1)
@@ -2813,7 +2808,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
 #        cData = self.getColorData(beam, beamTag)[good]
         cData = self.getColor(beam)[good]
-#        colorMin = 
+#        colorMin =
         cData01 = ((cData - self.colorMin) * 0.85 /
                    (self.colorMax - self.colorMin)).reshape(-1, 1)
 
@@ -3030,8 +3025,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if newColorMax == 0:
                         colorMinLoc, colorMaxLoc = -0.1, 0.1
                     else:
-                        colorMinLoc = colorMaxLoc * 0.99
-                        colorMaxLoc *= 1.01
+                        colorMinLoc = newColorMin * 0.99
+                        colorMaxLoc = newColorMax * 1.01
                 else:
                     colorMinLoc = newColorMin
                     colorMaxLoc = newColorMax
@@ -3342,46 +3337,59 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def glDraw(self):
         self.update()
 
-    def eulerToQ(self, rotMatrXYZ):
-        hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
-        hRoll = np.radians(rotMatrXYZ[1][0]) * 0.5
-        hYaw = np.radians(rotMatrXYZ[2][0]) * 0.5
+#    def eulerToQ(self, rotMatrXYZ):
+#        hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
+#        hRoll = np.radians(rotMatrXYZ[1][0]) * 0.5
+#        hYaw = np.radians(rotMatrXYZ[2][0]) * 0.5
+#
+#        cosPitch = np.cos(hPitch)
+#        sinPitch = np.sin(hPitch)
+#        cosRoll = np.cos(hRoll)
+#        sinRoll = np.sin(hRoll)
+#        cosYaw = np.cos(hYaw)
+#        sinYaw = np.sin(hYaw)
+#
+#        return [cosPitch*cosRoll*cosYaw - sinPitch*sinRoll*sinYaw,
+#                sinRoll*sinYaw*cosPitch + sinPitch*cosRoll*cosYaw,
+#                sinRoll*cosPitch*cosYaw - sinPitch*sinYaw*cosRoll,
+#                sinYaw*cosPitch*cosRoll + sinPitch*sinRoll*cosYaw]
 
-        cosPitch = np.cos(hPitch)
-        sinPitch = np.sin(hPitch)
-        cosRoll = np.cos(hRoll)
-        sinRoll = np.sin(hRoll)
-        cosYaw = np.cos(hYaw)
-        sinYaw = np.sin(hYaw)
+#    def qToVec(self, quat):
+#        angle = 2 * np.arccos(quat[0])
+#        q2v = np.sin(angle * 0.5)
+#        qbt1 = quat[1] / q2v if q2v != 0 else 0
+#        qbt2 = quat[2] / q2v if q2v != 0 else 0
+#        qbt3 = quat[3] / q2v if q2v != 0 else 0
+#        return [np.degrees(angle), qbt1, qbt2, qbt3]
 
-        return [cosPitch*cosRoll*cosYaw - sinPitch*sinRoll*sinYaw,
-                sinRoll*sinYaw*cosPitch + sinPitch*cosRoll*cosYaw,
-                sinRoll*cosPitch*cosYaw - sinPitch*sinYaw*cosRoll,
-                sinYaw*cosPitch*cosRoll + sinPitch*sinRoll*cosYaw]
-
-    def qToVec(self, quat):
-        angle = 2 * np.arccos(quat[0])
-        q2v = np.sin(angle * 0.5)
-        qbt1 = quat[1] / q2v if q2v != 0 else 0
-        qbt2 = quat[2] / q2v if q2v != 0 else 0
-        qbt3 = quat[3] / q2v if q2v != 0 else 0
-        return [np.degrees(angle), qbt1, qbt2, qbt3]
-
-    def rotateZYX(self):
-        if self.isEulerian:
-            gl.glRotatef(*self.rotations[0])
-            gl.glRotatef(*self.rotations[1])
-            gl.glRotatef(*self.rotations[2])
-        else:
-            gl.glRotatef(*self.rotationVec)
+#    def rotateZYX(self):
+#        if self.isEulerian:
+#            gl.glRotatef(*self.rotations[0])
+#            gl.glRotatef(*self.rotations[1])
+#            gl.glRotatef(*self.rotations[2])
+#        else:
+#            gl.glRotatef(*self.rotationVec)
 
     def updateQuats(self):
-        self.qRot = self.eulerToQ(self.rotations)
-        self.rotationVec = self.qToVec(self.qRot)
-        self.qText = self.qToVec(
-            self.quatMult([self.qRot[0], -self.qRot[1],
-                           -self.qRot[2], -self.qRot[3]],
-                          self.textOrientation))
+        cR = self.cameraDistance
+        azimuth = np.radians(self.rotations[0])
+        elevation = np.radians(self.rotations[1])
+
+        cosel = np.cos(elevation)
+
+        self.cameraPos = qt.QVector3D(
+                cR * cosel * np.cos(azimuth),
+                cR * cosel * np.sin(azimuth),
+                cR * np.sin(elevation))
+        self.mView.setToIdentity()
+        self.mView.lookAt(self.cameraPos, self.cameraTarget,
+                          self.upVec)
+
+        pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
+        newVisAx = np.argmax(pModel, axis=0)
+        if len(np.unique(newVisAx)) == 3:
+            self.visibleAxes = newVisAx
+        self.cBox.update_grid()
 
     def vecToQ(self, vec, alpha):
         """ Quaternion from vector and angle"""
@@ -3409,12 +3417,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
         maxs = -1 * mins
 
         for oeid, elline in self.beamline.oesDict.items():
+#            print(elline[0].name)
             mins = np.vstack((mins, elline[0].center))
             maxs = np.vstack((maxs, elline[0].center))
             for beamkey, beam in self.beamline.beamsDictU[oeid].items():
                 if beamkey.startswith('beamGlo'):
                     good = (beam.state == 1) | (beam.state == 2)
                     bx, by, bz = beam.x[good], beam.y[good], beam.z[good]
+                    if len(bx) == 0:
+                        continue
                     mins = np.vstack((mins, np.array([np.min(bx),
                                                       np.min(by),
                                                       np.min(bz)])))
@@ -3752,7 +3763,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.cBox.shader.setUniformValue("lineColor", self.textColor)
                 self.labelvao.bind()
                 self.cBox.shader.setUniformValue(
-                        "pvm", 
+                        "pvm",
                         qt.QMatrix4x4()
                         )
                 gl.glLineWidth(min(self.cBoxLineWidth, 1.))
@@ -3785,7 +3796,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeCenter = [trMat[12], trMat[13], trMat[14]]
                         else:
                             oeCenter = list(oeToPlot.center)
-                        
+
                         oePos = (mMMLoc*qt.QVector4D(*oeCenter,
                                                     1)).toVector3DAffine()
                         oeNorm = mesh3D.transMatrix[int(is2ndXtal)]
@@ -3799,7 +3810,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             # RENDER GRID ON SCREENS
 
             self.cBox.shader.bind()
-            self.cBox.shader.setUniformValue("lineColor", 
+            self.cBox.shader.setUniformValue("lineColor",
                                              qt.QVector3D(0.0, 1.0, 1.0))
 
             for oeuuid, mesh3D in self.meshDict.items():
@@ -4308,6 +4319,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         for oeuuid, oeLine in self.beamline.oesDict.items():
             oeToPlot = oeLine[0]
+            print(oeToPlot.name)
             if is_oe(oeToPlot) or is_screen(oeToPlot) or is_aperture(oeToPlot):
                 if not oeuuid in self.meshDict:
                     mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
@@ -4317,6 +4329,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     is2ndXtalOpts.append(True)
 
                 for is2ndXtal in is2ndXtalOpts:
+                    print(is2ndXtal)
                     mesh3D.prepare_surface_mesh(is2ndXtal)
                     mesh3D.isEnabled = True
                     if oeuuid not in self.selectableOEs.values():
@@ -4698,7 +4711,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
 #        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
         shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
-        polarAx = qt.QVector3D(0, 0, 1)
+#        polarAx = qt.QVector3D(0, 0, 1)
 
         dx = mouseX - self.prevMPos[0]
         dy = mouseY - self.prevMPos[1]
@@ -4712,30 +4725,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         if mEvent.buttons() == qt.LeftButton:
             if mEvent.modifiers() == qt.NoModifier:
-                cR = self.cameraPos.length()
-                axR = self.aPos[0]*0.707
-                scale = np.tan(np.radians(self.cameraAngle))*(cR-axR)
+                sensitivity = 120
+                self.rotations[0] -= sensitivity*self.aspect*xs
+                self.rotations[1] -= sensitivity*ys
 
-                yaw = self.aspect*dx/xView*scale/np.pi/axR  # dx / xView / cR
-                roll = dy/yView*scale/np.pi/axR  # dy / yView /cR
-                QXY = qt.QQuaternion().fromAxisAndAngle(polarAx,
-                                                        -np.degrees(yaw))
-                self.cameraPos = QXY.rotatedVector(self.cameraPos)
-                rotAx = qt.QVector3D().crossProduct(
-                    polarAx, self.cameraPos.normalized())
-                QXR = qt.QQuaternion().fromAxisAndAngle(rotAx,
-                                                        np.degrees(roll))
-                self.cameraPos = QXR.rotatedVector(self.cameraPos)
+                if self.rotations[0] < -180:
+                    self.rotations[0] += 360
 
-                self.mView.setToIdentity()
-                self.mView.lookAt(self.cameraPos, self.cameraTarget,
-                                  self.upVec)
+                if self.rotations[0] > 180:
+                    self.rotations[0] -= 360
 
-                pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
-                newVisAx = np.argmax(pModel, axis=0)
-                if len(np.unique(newVisAx)) == 3:
-                    self.visibleAxes = newVisAx
-                self.cBox.update_grid()
+                if self.rotations[1] >= 90:
+                    self.rotations[1] = 89.99
+
+                if self.rotations[1] <= -90:
+                    self.rotations[1] = -89.99
+
+                self.rotationUpdated.emit(self.rotations)
 
             elif shiftOn:
                 yShift = ym*self.maxLen/self.scaleVec[1]
@@ -4782,28 +4788,28 @@ class xrtGlWidget(qt.QOpenGLWidget):
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
-            tpad = wEvent.pixelDelta().y() < 25  # Might be adjusted for smooth scroll
+            tpad = wEvent.pixelDelta().y() > 0
 
         if deltaA > 0:
             if altOn:
                 self.vScreenSize *= 1.1
             elif ctrlOn and not tpad:
-                self.cameraAngle *= 0.9
+                self.cameraDistance *= 0.9
             else:
                 self.scaleVec *= 1.1
         else:
             if altOn:
                 self.vScreenSize *= 0.9
             elif ctrlOn and not tpad:
-                self.cameraAngle *= 1.1
+                self.cameraDistance *= 1.1
             else:
                 self.scaleVec *= 0.9
 
         if ctrlOn:
-            self.mProj.setToIdentity()
-            self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+            self.updateQuats()
         else:
             self.scaleUpdated.emit(self.scaleVec)
+
         self.cBox.update_grid()
         self.glDraw()
 
@@ -5725,18 +5731,20 @@ class OEMesh3D():
             xLimits = list(self.oe.limPhysX)
             yLimits = list(self.oe.limPhysY)
 
+        print(self.oe.limPhysY)
+
         isClosedSurface = False
-        if np.any(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+        if np.all(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
             isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
-        if np.any(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+        if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
 
         self.xLimits = copy.deepcopy(xLimits)
         self.yLimits = copy.deepcopy(yLimits)
-
+        print(self.yLimits)
         if isAperture:  # TODO: Must use physical limits
         # if isScreen or isAperture:  # Making square screen
             xSize = abs(xLimits[1] - xLimits[0])
@@ -5770,6 +5778,8 @@ class OEMesh3D():
             xLimits = yLimits  # s
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
+
+        print(xLimits, yLimits)
 
         xGridOe = np.linspace(xLimits[0], xLimits[1],
                               localTiles[0]) + oeDx
@@ -6976,7 +6986,7 @@ class OEExplorer(qt.QDialog):
 
         self.changed_data = {}
         self.model.itemChanged.connect(self.on_item_changed)
-        
+
         self.highlight_color = qt.QtGui.QColor("#fffacd")
 
         self.table = qt.QTableView()
@@ -7029,20 +7039,20 @@ class OEExplorer(qt.QDialog):
     def on_item_changed(self, item):
         if item.column() != 1:
             return
-    
+
         row = item.row()
         key = self.model.item(row, 0).text()
         value_str = item.text()
-    
+
         try:
             import ast
             value = ast.literal_eval(value_str)
         except Exception:
             value = value_str
-    
+
         original_value = self.original_data.get(key)
         value_changed = value != original_value
-    
+
         # Update the changed_data dictionary
         if value_changed:
             self.changed_data[key] = value
@@ -7050,7 +7060,7 @@ class OEExplorer(qt.QDialog):
         else:
             self.changed_data.pop(key, None)
             self.set_row_highlight(row, False)
-    
+
     def set_row_highlight(self, row, highlight=True):
         for col in range(self.model.columnCount()):
             item = self.model.item(row, col)
@@ -7064,15 +7074,15 @@ class OEExplorer(qt.QDialog):
         index = self.table.indexAt(position)
         if not index.isValid():
             return
-    
+
         menu = qt.QMenu(self.table)
         copy_action = qt.QAction("Copy value", self)
         menu.addAction(copy_action)
-    
+
         def copy_value():
             value = self.model.item(index.row(), index.column()).text()
             qt.QApplication.clipboard().setText(value)
-    
+
         copy_action.triggered.connect(copy_value)
         menu.exec_(self.table.viewport().mapToGlobal(position))
 
@@ -7083,24 +7093,24 @@ class OEExplorer(qt.QDialog):
     def apply_changes(self):
         if not self.changed_data:
             return  # nothing to do
-    
+
         print("Applying:", self.changed_data)
         self.propertiesChanged.emit(self.changed_data)
-       
+
         # Send to your async updater here
         # e.g., asyncio.create_task(self.async_update(self.changed_data))
-    
+
         # Update original values and clear highlights
         for row in range(self.model.rowCount()):
             key = self.model.item(row, 0).text()
             if key in self.changed_data:
                 new_value = self.changed_data[key]
                 self.original_data[key] = new_value
-    
+
                 # Update display to ensure it's in sync (optional)
                 self.model.item(row, 1).setText(str(new_value))
-    
+
                 # Remove highlight
                 self.set_row_highlight(row, False)
-    
+
         self.changed_data.clear()
