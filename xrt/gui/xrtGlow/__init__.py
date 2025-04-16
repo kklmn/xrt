@@ -83,8 +83,7 @@ msg_exit = {
         "command": "exit"}
 
 orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
-                    'braggOffset', 'rotationSequence',
-                    'opening'}
+                    'braggOffset', 'rotationSequence'}
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                 'R', 'r', 'Rm', 'Rs'}
@@ -196,7 +195,7 @@ shininess = {}
 
 ambient['Cu'] = qt.QVector4D(0.8, 0.4, 0., 1.)
 diffuse['Cu'] = qt.QVector4D(0.50, 0.25, 0., 1.)
-specular['Cu'] = qt.QVector4D(1., 0.5, 0.5, 1.)
+specular['Cu'] = qt.QVector4D(1., 0.9, 0.8, 1.)
 shininess['Cu'] = 100.
 
 ambient['Si'] = qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
@@ -369,7 +368,7 @@ class MessageHandler:
         self.stop = True
 
     def process_message(self, message):
-        print("11", message)
+#        print("11", message)
         # Build a dispatch dictionary mapping commands to methods.
         command_handlers = {
             "create": self.handle_create,
@@ -678,9 +677,9 @@ class xrtGlow(qt.QWidget):
         for dim in dims:
             dimMin = minmax[0, dim]
             dimMax = minmax[1, dim]
-            print(dim, dimMin, dimMax)
             newScale = 1.5 * self.customGlWidget.aPos[dim] /\
                 (dimMax - dimMin) * self.customGlWidget.maxLen
+            self.customGlWidget.coordOffset = np.zeros(3)
             self.customGlWidget.tVec[dim] = -0.5 * (dimMin + dimMax)
             self.customGlWidget.scaleVec[dim] = newScale
         self.updateScaleFromGL(self.customGlWidget.scaleVec)
@@ -2459,6 +2458,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             except ImportError:
                 print("pythonSoftIOC not installed")
                 self.epicsPrefix = None
+        self.getColorLimits()
 
     def build_epics_device(self, prefix, softioc, builder, asyncio_dispatcher):
         # Create an asyncio dispatcher, the event loop is now running
@@ -2887,7 +2887,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def init_beam_footprint(self, beam, beamTag=None):
         """beamTag: ('oeuuid', 'beamKey') """
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
-        dataColor = self.getColor(beam).copy()
+        dataColor = self.getColorData(beam, beamTag).copy()
+#        dataColor = self.getColor(beam).copy()
         state = np.where((
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
@@ -2987,7 +2988,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         return colorData.copy()
 
     def change_beam_colorax(self):
-
         if self.newColorAxis:
             newColorMax = -1e20
             newColorMin = 1e20
@@ -3049,9 +3049,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for oeuuid, beamDict in self.beamline.beamsDictU.items():
                 for beamKey, beam in beamDict:
                     self.generate_hist_texture(beam, (oeuuid, beamKey))
-#                t02 = time.time()
-#            t01 = time.time()
-#            print("total", t01-t00, "s")
 
         self.isColorAxReady = True
 
@@ -3433,6 +3430,48 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.minmax = np.vstack((mins, maxs))
         return self.minmax
 
+    def getColorLimits(self):
+        self.iMax = -1e20
+
+        if self.newColorAxis:
+            newColorMax = -1e20
+            newColorMin = 1e20
+            if self.selColorMin is None:
+                self.selColorMin = newColorMin
+            if self.selColorMax is None:
+                self.selColorMax = newColorMax
+        else:
+            newColorMax = self.colorMax
+            newColorMin = self.colorMin
+
+        for oeuuid, beamDict in self.beamline.beamsDictU.items():
+            for beamKey, startBeam in beamDict.items():
+                good = (startBeam.state == 1) | (startBeam.state == 2)
+                if len(startBeam.state[good]) > 0:
+                    startBeam.iMax = np.max(startBeam.Jss[good] +
+                                            startBeam.Jpp[good])
+                    self.iMax = max(self.iMax, startBeam.iMax)
+                    colorax = self.getColorData(startBeam, (oeuuid, beamKey))
+                    newColorMax = max(np.max(colorax[good]), newColorMax)
+                    newColorMin = min(np.min(colorax[good]), newColorMin)
+
+        if self.newColorAxis:
+            if newColorMin != self.colorMin:
+                self.colorMin = newColorMin
+                self.selColorMin = self.colorMin
+            if newColorMax != self.colorMax:
+                self.colorMax = newColorMax
+                self.selColorMax = self.colorMax
+
+        if self.colorMin == self.colorMax:
+            if self.colorMax == 0:
+                self.colorMin, self.colorMax = -0.1, 0.1
+            else:
+                self.colorMin = self.colorMax * 0.99
+                self.colorMax *= 1.01
+
+        self.newColorAxis = False
+
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
         if dimension is None:
@@ -3535,8 +3574,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.meshDict[self.needMeshUpdate].prepare_magnets(
                             updateMesh=True)
                 else:
-                    self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
-                            is2ndXtal=False, updateMesh=True)
+                    for surfIndex in self.meshDict[self.needMeshUpdate].vao.keys():
+                        self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
+                                nsIndex=surfIndex, updateMesh=True)
                 self.needMeshUpdate = None
 
             gl.glEnable(gl.GL_STENCIL_TEST)
@@ -3548,7 +3588,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 oeToPlot = mesh3D.oe
 
-                if is_oe(oeToPlot) or is_aperture(oeToPlot):
+                if is_oe(oeToPlot):
                     is2ndXtalOpts = [False]
                     if is_dcm(oeToPlot):
                         is2ndXtalOpts.append(True)
@@ -3563,8 +3603,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                  0xff)
                             mesh3D.render_surface(
                                 mMMLoc, self.mView,
-                                self.mProj, is2ndXtal, isSelected=isSelected,
+                                self.mProj, int(is2ndXtal),
+                                isSelected=isSelected,
                                 shader=self.shaderMesh)
+                elif is_aperture(oeToPlot):
+                    for blade in oeToPlot.kind:
+                        if mesh3D.isEnabled:
+                            isSelected = False
+                            if oeuuid in self.selectableOEs.values():
+                                oeNum = mesh3D.stencilNum
+                                isSelected = oeNum == self.selectedOE
+                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                                 0xff)
+                            mesh3D.render_surface(
+                                mMMLoc, self.mView,
+                                self.mProj, blade, isSelected=isSelected,
+                                shader=self.shaderMesh)                    
+
                 elif is_source(oeToPlot):
                     if mesh3D.isEnabled:
                         isSelected = False
@@ -3599,7 +3654,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                              0xff)
                         mesh3D.render_surface(
                                 mMMLoc, self.mView,
-                                self.mProj, is2ndXtal, isSelected=isSelected,
+                                self.mProj, int(is2ndXtal),
+                                isSelected=isSelected,
                                 shader=self.shaderMesh)
 
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
@@ -4251,53 +4307,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.generate_beam_texture(512)
         gl.glGetError()
         print(" Done!")
-        self.iMax = -1e20
-
-        maxLen = 1.
-        tmpMax = -1.0e12 * np.ones(3)
-        tmpMin = -1. * tmpMax
-
-        if self.newColorAxis:
-            newColorMax = -1e20
-            newColorMin = 1e20
-            if self.selColorMin is None:
-                self.selColorMin = newColorMin
-            if self.selColorMax is None:
-                self.selColorMax = newColorMax
-        else:
-            newColorMax = self.colorMax
-            newColorMin = self.colorMin
-
-        beams = self.beamline.beamsDictU
 
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
             for beamKey, startBeam in beamDict.items():
                 good = (startBeam.state == 1) | (startBeam.state == 2)
                 if len(startBeam.state[good]) > 0:
-#                    for tmpCoord, tAxis in enumerate(['x', 'y', 'z']):
-#                        axMin = np.min(getattr(startBeam, tAxis)[good])
-#                        axMax = np.max(getattr(startBeam, tAxis)[good])
-#                        if axMin < tmpMin[tmpCoord]:
-#                            tmpMin[tmpCoord] = axMin
-#                        if axMax > tmpMax[tmpCoord]:
-#                            tmpMax[tmpCoord] = axMax
-
-                    startBeam.iMax = np.max(startBeam.Jss[good] +
-                                            startBeam.Jpp[good])
-                    self.iMax = max(self.iMax, startBeam.iMax)
-                    colorax = self.getColorData(startBeam, (oeuuid, beamKey))
-                    newColorMax = max(np.max(colorax[good]), newColorMax)
-                    newColorMin = min(np.min(colorax[good]), newColorMin)
-
                     self.init_beam_footprint(startBeam, (oeuuid, beamKey))
-
-        if self.newColorAxis:
-            if newColorMin != self.colorMin:
-                self.colorMin = newColorMin
-                self.selColorMin = self.colorMin
-            if newColorMax != self.colorMax:
-                self.colorMax = newColorMax
-                self.selColorMax = self.colorMax
 
         self.getMinMax()
         self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
@@ -4315,8 +4330,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         for oeuuid, oeLine in self.beamline.oesDict.items():
             oeToPlot = oeLine[0]
-            print(oeToPlot.name)
-            if is_oe(oeToPlot) or is_screen(oeToPlot) or is_aperture(oeToPlot):
+            if is_oe(oeToPlot) or is_screen(oeToPlot):
                 if not oeuuid in self.meshDict:
                     mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
 
@@ -4325,8 +4339,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     is2ndXtalOpts.append(True)
 
                 for is2ndXtal in is2ndXtalOpts:
-                    print(is2ndXtal)
-                    mesh3D.prepare_surface_mesh(is2ndXtal)
+                    mesh3D.prepare_surface_mesh(int(is2ndXtal))
                     mesh3D.isEnabled = True
                     if oeuuid not in self.selectableOEs.values():
                         if len(self.selectableOEs):
@@ -4336,6 +4349,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
                         mesh3D.stencilNum = stencilNum
+            elif is_aperture(oeToPlot):
+                if not oeuuid in self.meshDict:
+                    mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
+                for blade in oeToPlot.kind:
+                    mesh3D.prepare_surface_mesh(blade)
+                    mesh3D.isEnabled = True
+                    if oeuuid not in self.selectableOEs.values():
+                        if len(self.selectableOEs):
+                            stencilNum = np.max(
+                                    list(self.selectableOEs.keys())) + 1
+                        else:
+                            stencilNum = 1
+                        self.selectableOEs[int(stencilNum)] = oeuuid
+                        mesh3D.stencilNum = stencilNum            
             else:  # must be the source
                 mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
                 mesh3D.prepare_magnets()
@@ -5626,7 +5653,7 @@ class OEMesh3D():
 
         return orientation
 
-    def prepare_surface_mesh(self, is2ndXtal=False, updateMesh=False):
+    def prepare_surface_mesh(self, nsIndex=0, updateMesh=False):
         def get_thickness():
 #            if self.oeThicknessForce is not None:
 #                return self.oeThicknessForce
@@ -5657,8 +5684,13 @@ class OEMesh3D():
 
         gl.glGetError()
 
-        nsIndex = int(is2ndXtal)
-        self.transMatrix[nsIndex] = self.get_loc2glo_transformation_matrix(
+        is2ndXtal = False
+
+        if is_oe(self.oe):
+            is2ndXtal = bool(nsIndex)
+
+#        nsIndex = int(is2ndXtal)
+        self.transMatrix[int(is2ndXtal)] = self.get_loc2glo_transformation_matrix(
                 self.oe, is2ndXtal=is2ndXtal)
 
         if nsIndex in self.vao.keys():
@@ -5715,10 +5747,37 @@ class OEMesh3D():
                 yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yDim = 2
         elif isAperture:
-            xLimits = [self.oe.opening[self.oe.kind.index('left')],
-                       self.oe.opening[self.oe.kind.index('right')]]
-            yLimits = [self.oe.opening[self.oe.kind.index('bottom')],
-                       self.oe.opening[self.oe.kind.index('top')]]
+            bt = 5.  # Can be set from glow UI
+            if len(set(self.oe.kind) & {'left', 'right'}) > 1:
+                awidth = np.abs(self.oe.opening[self.oe.kind.index('left')] -
+                                self.oe.opening[self.oe.kind.index('right')])
+                awidth = max(awidth, 10)
+            else:
+                awidth = 10.  # Can be set from glow UI
+
+            if len(set(self.oe.kind) & {'top', 'bottom'}) > 1:
+                aheight = np.abs(self.oe.opening[self.oe.kind.index('top')] -
+                                self.oe.opening[self.oe.kind.index('bottom')])
+                aheight = max(aheight, 10)
+            else:
+                aheight = 10.  # Can be set from glow UI
+            
+            if str(nsIndex) == 'left':
+                xLimits = [self.oe.opening[self.oe.kind.index('left')] - bt,
+                           self.oe.opening[self.oe.kind.index('left')]]
+                yLimits = [-aheight, aheight]
+            elif str(nsIndex) == 'right':
+                xLimits = [self.oe.opening[self.oe.kind.index('right')],
+                           self.oe.opening[self.oe.kind.index('right')] + bt]
+                yLimits = [-aheight, aheight]
+            elif str(nsIndex) == 'bottom':  # Limits are inverted for rendering
+                xLimits = [-awidth, awidth]
+                yLimits = [-self.oe.opening[self.oe.kind.index('bottom')],
+                           -self.oe.opening[self.oe.kind.index('bottom')] + bt]
+            elif str(nsIndex) == 'top':
+                xLimits = [-awidth, awidth]
+                yLimits = [-self.oe.opening[self.oe.kind.index('top')] - bt,
+                           -self.oe.opening[self.oe.kind.index('top')]]
             yDim = 2
         elif is2ndXtal:
             xLimits = list(self.oe.limPhysX2)
@@ -5726,8 +5785,6 @@ class OEMesh3D():
         else:
             xLimits = list(self.oe.limPhysX)
             yLimits = list(self.oe.limPhysY)
-
-        print(self.oe.limPhysY)
 
         isClosedSurface = False
         if np.all(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
@@ -5740,26 +5797,25 @@ class OEMesh3D():
 
         self.xLimits = copy.deepcopy(xLimits)
         self.yLimits = copy.deepcopy(yLimits)
-        print(self.yLimits)
-        if isAperture:  # TODO: Must use physical limits
-        # if isScreen or isAperture:  # Making square screen
-            xSize = abs(xLimits[1] - xLimits[0])
-            xCenter = 0.5*(xLimits[1] + xLimits[0])
-            ySize = abs(yLimits[1] - yLimits[0])
-            yCenter = 0.5*(yLimits[1] + yLimits[0])
-#            if isScreen:
-            newSize = max(xSize, ySize) * 1.2
-            xLimits = [xCenter-0.5*newSize, xCenter+0.5*newSize]
 
-            yLimits = [yCenter-0.5*newSize, yCenter+0.5*newSize]
-#            else:
-#                xSize *= 1.5
-#                ySize *= 1.5
-#                xLimits = [xCenter-0.5*xSize, xCenter+0.5*xSize]
-#                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]
+#        if isAperture:  # TODO: Must use physical limits
+#        # if isScreen or isAperture:  # Making square screen
+#            xSize = abs(xLimits[1] - xLimits[0])
+#            xCenter = 0.5*(xLimits[1] + xLimits[0])
+#            ySize = abs(yLimits[1] - yLimits[0])
+#            yCenter = 0.5*(yLimits[1] + yLimits[0])
+##            if isScreen:
+#            newSize = max(xSize, ySize) * 1.2
+#            xLimits = [xCenter-0.5*newSize, xCenter+0.5*newSize]
+#
+#            yLimits = [yCenter-0.5*newSize, yCenter+0.5*newSize]
+##            else:
+##                xSize *= 1.5
+##                ySize *= 1.5
+##                xLimits = [xCenter-0.5*xSize, xCenter+0.5*xSize]
+##                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]
 
         localTiles = np.array(self.tiles)
-        # print(self.oe.name, xLimits, yLimits)
 
         if oeShape == 'round':
             rX = np.abs((xLimits[1] - xLimits[0]))*0.5
@@ -5769,13 +5825,12 @@ class OEMesh3D():
             xLimits = [0, 1.]
             yLimits = [0, 2*np.pi]
             localTiles[1] *= 3
+
         if isClosedSurface:
             # the limits are in parametric coordinates
             xLimits = yLimits  # s
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
-
-        print(xLimits, yLimits)
 
         xGridOe = np.linspace(xLimits[0], xLimits[1],
                               localTiles[0]) + oeDx
@@ -5799,9 +5854,17 @@ class OEMesh3D():
         else:
             zExt = '1' if hasattr(self.oe, 'local_z1') else ''
 
-        if isScreen or isAperture:
+        if isScreen:
             local_n = lambda x, y: [0, 0, 1]
             local_z = lambda x, y: np.zeros_like(x)
+        elif isAperture:
+            local_n = lambda x, y: [0, 0, 1]
+            if str(nsIndex) in ['left', 'right']:  # Depth for rendering only
+                local_z = lambda x, y: 1 * np.ones_like(x)  # actual thickness
+                thickness = -0.1  # Inverted position of the back side
+            else:
+                local_z = lambda x, y: -1. * np.ones_like(x)
+                thickness = 0.1  # Inverted position of the back side
         else:
             local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
                 self.oe.isParametric else getattr(self.oe,
@@ -5860,7 +5923,7 @@ class OEMesh3D():
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
-        if not (isScreen or isAperture):
+        if not (isScreen): # or isAperture):
             triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
         tL[:len(zL), 2] = zL
         tL[len(zL):, 2] = bottomLine
@@ -5878,7 +5941,7 @@ class OEMesh3D():
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
-        if not (isScreen or isAperture):
+        if not (isScreen): # or isAperture):
             triFB = Delaunay(tF[:, [0, -1]])
         tF[:len(zF), 2] = zF
 
@@ -5905,7 +5968,7 @@ class OEMesh3D():
         indArrOffset = len(points)
 
         # Bottom Surface, use is2ndXtal for plates
-        if not isPlate:
+        if not (isPlate): # or isScreen or isAperture):
             allSurfaces = np.vstack((allSurfaces, bottomPoints))
             allNormals = np.vstack((nv, bottomNormals))
             allIndices = np.hstack((allIndices,
@@ -5913,7 +5976,7 @@ class OEMesh3D():
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
-        if not ((isPlate and is2ndXtal) or isScreen or isAperture):
+        if not ((isPlate and is2ndXtal) or isScreen): # or isAperture):
             if oeShape == 'round':  # Side surface
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
@@ -5964,12 +6027,16 @@ class OEMesh3D():
                 gl.glGetError()
             oldVBOpoints, oldVBOnorms, oldIBO = None, None, None
             # check existence
-            del self.vbo_vertices[nsIndex]
-            del self.vbo_normals[nsIndex]
-            del self.ibo[nsIndex]
+#            del self.vbo_vertices[nsIndex]
+#            del self.vbo_normals[nsIndex]
+#            del self.ibo[nsIndex]
+            self.vbo_vertices[nsIndex] = None
+            self.vbo_normals[nsIndex] = None
+            self.ibo[nsIndex] = None
             vao.destroy()
             gl.glGetError()
-            del self.vao[nsIndex]
+#            del self.vao[nsIndex]
+            self.vao[nsIndex] = None
 
         self.vbo_vertices[nsIndex] = create_qt_buffer(surfmesh['points'])
         self.vbo_normals[nsIndex] = create_qt_buffer(surfmesh['normals'])
@@ -6078,10 +6145,10 @@ class OEMesh3D():
         self.vao = vao
         self.num_poles = num_poles
 
-    def render_surface(self, mMod, mView, mProj, is2ndXtal=False,
+    def render_surface(self, mMod, mView, mProj, oeIndex=0,
                        isSelected=False, shader=None):
 
-        oeIndex = int(is2ndXtal)
+#        oeIndex = int(is2ndXtal)
         vao = self.vao[oeIndex]
 
         beamTexture = self.beamTexture[oeIndex] if len(self.beamTexture) > 0\
@@ -6094,10 +6161,10 @@ class OEMesh3D():
         surfOpacity = 1.0
         if is_screen(self.oe):
             surfOpacity = 0.75
-        elif is_aperture(self.oe):
-            xLimits, yLimits = self.xLimits, self.yLimits
-
-        oeOrientation = self.transMatrix[oeIndex]
+#        elif is_aperture(self.oe):
+#            xLimits, yLimits = self.xLimits, self.yLimits
+        oeOrientation = self.transMatrix[0] if is_aperture(self.oe) else\
+            self.transMatrix[oeIndex]
         arrLen = self.arrLengths[oeIndex]
 
         shader.bind()
@@ -6136,7 +6203,7 @@ class OEMesh3D():
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
         shader.setUniformValue("surfOpacity", float(surfOpacity))
-        shader.setUniformValue("isApt", int(is_aperture(self.oe)))
+        shader.setUniformValue("isApt", 0) #int(is_aperture(self.oe)))
 
         if beamTexture is not None:
             beamTexture.bind()
@@ -7090,7 +7157,7 @@ class OEExplorer(qt.QDialog):
         if not self.changed_data:
             return  # nothing to do
 
-        print("Applying:", self.changed_data)
+#        print("Applying:", self.changed_data)
         self.propertiesChanged.emit(self.changed_data)
 
         # Send to your async updater here
