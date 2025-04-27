@@ -477,8 +477,8 @@ def check_alarm(self, incoming, beam):
     if incomingSum > 0:
         badState = beam.state == self.lostNum
         badSum = badState.sum()
-        badFlux = (beam.Jss[badState] + beam.Jss[badState]).sum()
-        allFlux = (beam.Jss + beam.Jss).sum()
+        badFlux = (beam.Jss[badState] + beam.Jpp[badState]).sum()
+        allFlux = (beam.Jss + beam.Jpp).sum()
         ratio = float(badSum)/incomingSum
         ratioFlux = badFlux / allFlux
         if ratio > self.alarmLevel:
