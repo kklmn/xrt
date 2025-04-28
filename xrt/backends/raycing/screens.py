@@ -298,7 +298,7 @@ class Screen(object):
                         self.limPhysX.tolist(),
                         self.limPhysY if isinstance(self.limPhysY, list) else
                         self.limPhysY.tolist()]
-            print(limitsIn, self.histShape)
+#            print(limitsIn, self.histShape)
             hist2d, hist2dRGB, limitsOut = raycing.build_hist(
                     blo, limits=limitsIn, isScreen=True, shape=self.histShape,
                     cDataFunc=None, cLimits=None)
