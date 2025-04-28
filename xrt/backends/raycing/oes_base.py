@@ -2355,11 +2355,10 @@ class OE(object):
         if is2ndXtal:
             raycing.rotate_beam(vlb, good, roll=np.pi)
         self.footprint.extend([np.hstack((np.min(np.vstack((
-            lb.x[good], lb.y[good], lb.z[good])), axis=1),
-            np.max(np.vstack((lb.x[good], lb.y[good], lb.z[good])),
+            vlb.x[good], vlb.y[good], vlb.z[good])), axis=1),
+            np.max(np.vstack((vlb.x[good], vlb.y[good], vlb.z[good])),
                    axis=1))).reshape(2, 3)])
-
-#        print len(self.footprint)
+#        print(self.name, self.footprint)
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, vlb)
 

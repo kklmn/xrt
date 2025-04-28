@@ -1822,8 +1822,7 @@ class xrtGlow(qt.QWidget):
         mAction = qt.QAction(self)
         mAction.setText("Show Virtual Screen")
         mAction.setCheckable(True)
-        mAction.setChecked(False if glw.virtScreen is None
-                           else True)
+        mAction.setChecked(glw.showVirtualScreen)
         mAction.triggered.connect(glw.toggleVScreen)
         menu.addAction(mAction)
         for iAction, actCnt in enumerate(self.sceneControls):
@@ -2265,7 +2264,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         super().__init__(parent=parent)
         self.hsvTex = generate_hsv_texture(512, s=1.0, v=1.0)
         self.QookSignal = signal
-        self.virtScreen = None
+        self.showVirtualScreen = False
         self.virtBeam = None
         self.virtDotsArray = None
         self.virtDotsColor = None
@@ -2353,6 +2352,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oe = self.beamline.oesDict[oeid][0]
                 for func, fkwargs in meth.items():
                     getattr(oe, func)(**fkwargs)
+
+        self.virtScreen = {'uuid': rscreens.Screen(bl=self.beamline,
+                                          limPhysX=[-10, 10],
+                                          limPhysY=[-10, 10],
+                                          name="VirtualScreen").uuid,
+                           'beamStart': None,
+                           'beamEnd': None,
+                           'beamPlane': None,
+                           'offsetOn': False,
+                           'offset': np.zeros(3),
+                           'center': np.zeros(3)}
 
         self.oeContour = dict()
         self.slitEdges = dict()
@@ -2842,7 +2852,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if 'beam' in msg:
 #                print(msg['sender_name'], msg['sender_id'], msg['beam'])
                 for beamKey, beam in msg['beam'].items():
-                    self.update_beam_footprint((msg['sender_id'], beamKey), beam)
+                    self.update_beam_footprint(beam, (msg['sender_id'], beamKey))
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
             elif 'histogram' in msg and self.epicsPrefix is not None:
                 histPvName = f'{to_valid_var_name(msg["sender_name"])}:image'
@@ -2884,8 +2894,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #        meshObj.beamLimits[nsIndex] = beamLimits
 #        self.glDraw()
 
-    def init_beam_footprint(self, beam, beamTag=None):
+    def init_beam_footprint(self, beam=None, beamTag=None):
         """beamTag: ('oeuuid', 'beamKey') """
+        if beam is None:
+            beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag).copy()
 #        dataColor = self.getColor(beam).copy()
@@ -2905,6 +2917,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         goodRays = np.where((state > 0))[0]
 #        lowIntRays = np.where((intensity/self.iMax > self.cutoffI))[0]
 #        lostRays = np.where(beam.state == oeObj.lostNum)
+#        if beamTag[0] == self.virtScreen:
+#            print(data, dataColor, state, intensity, goodRays, len(goodRays))
 
         vbo['indices'] = create_qt_buffer(beam.state.copy(), isIndex=True)
         update_qt_buffer(vbo['indices'], goodRays.copy(), isIndex=True)
@@ -2951,7 +2965,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             self.beamBufferDict[beamTag[0]] = {beamTag[1]: vboStore}
 
-    def update_beam_footprint(self, beamTag, beam):
+    def update_beam_footprint(self, beam=None, beamTag=None):
+        if beam is None:
+            beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
         beamvbo = self.beamBufferDict[beamTag[0]][beamTag[1]]['vbo']
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag)
@@ -3107,7 +3123,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if self.renderingMode == 'dynamic':  # All beams are local, must be transformed
             oeuuid = beam[0]
             oe = self.beamline.oesDict[oeuuid][0]
-
             oeIndex = int(beam[1] == 'beamLocal2')
             oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
             modelStart *= oeOrientation
@@ -3205,128 +3220,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if self.beamTexture is not None:
             self.beamTexture.release()
 
-    def render_beam_obj(self, beam, model, view, projection, target=None):
-        shader = self.shaderBeam if target is not None else self.shaderFootprint
-        if not hasattr(beam, 'vbo'):
-            print("No VBO")
-            return
-
-        if target is not None and not hasattr(target, 'vbo'):
-            return
-        shader.bind()
-
-        beam.vao.bind()
-
-        if target is not None:
-            target.vbo['position'].bind()
-            gl.glVertexAttribPointer(4, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(4)
-            target.vbo['indices'].bind()
-            arrLen = target.vbo['goodLen']
-
-        else:
-            beam.vbo['indices'].bind()
-            arrLen = beam.vbo['goodLen']
-
-        isLocal = True  # TODO: Re-enable support for arrayOfRay-style rendering
-
-        if isLocal:
-            oeuuid = beam.parentId
-            oe = self.beamline.oesDict[oeuuid][0]
-
-            modelStart = copy.deepcopy(model)
-            oeIndex = int(beam.is2ndXtal)
-            oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
-            modelStart *= oeOrientation
-            if is_screen(oe) or is_aperture(oe):
-                modelStart *= scr_m
-
-            if target is not None:
-                enduuid = target.parentId
-                targetOe = self.beamline.oesDict[enduuid][0]
-                modelEnd = copy.deepcopy(model)
-                oeIndex =  int(target.is2ndXtal)
-                oeOrientation = self.meshDict[enduuid].transMatrix[oeIndex]
-                modelEnd *= oeOrientation
-                if is_screen(targetOe) or is_aperture(targetOe):
-                    modelEnd *= scr_m
-
-#        beam.vbo['color'].bind()
-
-        shader.setUniformValue("modelStart", modelStart)
-        if target is not None:
-            shader.setUniformValue("modelEnd", modelEnd)
-
-        if self.beamTexture is not None:
-            self.beamTexture.bind(0)
-            shader.setUniformValue("hsvTexture", 0)
-
-        mPV = projection*view
-
-        shader.setUniformValue("mPV", mPV)
-
-        shader.setUniformValue(
-                    "colorMinMax", qt.QVector2D(self.colorMin, self.colorMax))
-        shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
-        shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
-
-        shader.setUniformValue(
-                "pointSize",
-                float(self.pointSize if target is None else self.lineWidth))
-        shader.setUniformValue(
-                "opacity",
-                float(self.pointOpacity if target is None else
-                      self.lineOpacity))
-        shader.setUniformValue(
-                "iMax",
-                float(self.iMax if self.globalNorm else beam.iMax))
-
-        if target is not None and self.lineWidth > 0:
-            gl.glLineWidth(min(self.lineWidth, 1.))
-
-        gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                          gl.GL_UNSIGNED_INT, None)
-
-        if target is not None and self.lineProjectionWidth > 0:
-            gl.glLineWidth(min(self.lineProjectionWidth, 1.))
-
-        for dim in range(3):
-            if self.projectionsVisibility[dim] > 0:
-                gridMask = [1.]*4
-                gridMask[dim] = 0.
-                gridProjection = [0.]*4
-                gridProjection[dim] = -self.aPos[dim] *\
-                    self.cBox.axPosModifier[dim]
-                shader.setUniformValue(
-                        "gridMask",
-                        qt.QVector4D(*gridMask))
-                shader.setUniformValue(
-                        "gridProjection",
-                        qt.QVector4D(*gridProjection))
-                shader.setUniformValue(
-                        "pointSize",
-                        float(self.pointProjectionSize if target is None
-                              else self.lineProjectionWidth))
-                shader.setUniformValue(
-                        "opacity",
-                        float(self.pointProjectionOpacity if target is None
-                              else self.lineProjectionOpacity))
-
-                gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                                  gl.GL_UNSIGNED_INT, None)
-
-        if target is not None:
-            target.vbo['position'].release()
-            target.vbo['indices'].release()
-        else:
-            beam.vbo['indices'].release()
-
-        beam.vao.release()
-
-        shader.release()
-        if self.beamTexture is not None:
-            self.beamTexture.release()
-
     def glDraw(self):
         self.update()
 
@@ -3413,18 +3306,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            print(elline[0].name)
             mins = np.vstack((mins, elline[0].center))
             maxs = np.vstack((maxs, elline[0].center))
-            for beamkey, beam in self.beamline.beamsDictU[oeid].items():
-                if beamkey.startswith('beamGlo'):
-                    good = (beam.state == 1) | (beam.state == 2)
-                    bx, by, bz = beam.x[good], beam.y[good], beam.z[good]
-                    if len(bx) == 0:
-                        continue
-                    mins = np.vstack((mins, np.array([np.min(bx),
-                                                      np.min(by),
-                                                      np.min(bz)])))
-                    maxs = np.vstack((maxs, np.array([np.max(bx),
-                                                      np.max(by),
-                                                      np.max(bz)])))
+            beamDict = self.beamline.beamsDictU.get(oeid)
+            if beamDict is not None:
+                for beamkey, beam in self.beamline.beamsDictU[oeid].items():
+                    if beamkey.startswith('beamGlo'):
+                        good = (beam.state == 1) | (beam.state == 2)
+                        bx, by, bz = beam.x[good], beam.y[good], beam.z[good]
+                        if len(bx) == 0:
+                            continue
+                        mins = np.vstack((mins, np.array([np.min(bx),
+                                                          np.min(by),
+                                                          np.min(bz)])))
+                        maxs = np.vstack((maxs, np.array([np.max(bx),
+                                                          np.max(by),
+                                                          np.max(bz)])))
         mins = np.min(mins, axis=0)
         maxs = np.max(maxs, axis=0)
         self.minmax = np.vstack((mins, maxs))
@@ -3583,7 +3478,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             for oeuuid, mesh3D in self.meshDict.items():
                 item = getItem(oeuuid, 'surface')
-                if item.checkState() != 2:
+                if item is None or item.checkState() != 2:
                     continue
 
                 oeToPlot = mesh3D.oe
@@ -3618,7 +3513,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             mesh3D.render_surface(
                                 mMMLoc, self.mView,
                                 self.mProj, blade, isSelected=isSelected,
-                                shader=self.shaderMesh)                    
+                                shader=self.shaderMesh)
 
                 elif is_source(oeToPlot):
                     if mesh3D.isEnabled:
@@ -3638,10 +3533,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glDisable(gl.GL_DEPTH_TEST)
             # Screens are semi-transparent, DepthMask must be OFF
 #            for ioe in range(self.segmentModel.rowCount() - 1):
+
+#            if self.showVirtualScreen:
+#                self.positionVScreen()
+
             for oeuuid, mesh3D in self.meshDict.items():
                 item = getItem(oeuuid, 'surface')
-                if item.checkState() != 2:
-                    continue
+                if item is None or item.checkState() != 2:
+                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
+                        continue
 
                 if is_screen(mesh3D.oe):
                     is2ndXtal = False
@@ -3670,8 +3570,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for oeuuid, beamDict in self.beamline.beamsDictU.items():
 #                continue
                 item = getItem(oeuuid, 'footprint')
-                if item.checkState() != 2:
-                    continue
+                if item is None or item.checkState() != 2:
+                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
+                        continue
 
                 for bField, bObj in beamDict.items():
                     if bField == 'beamGlobal' and {
@@ -3679,6 +3580,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         continue
 
                     beam = (oeuuid, bField)
+#                    if oeuuid == self.virtScreen:
+#                        print("Plotting virtual screen", bField)
                     self.render_beam(beam, mMMLoc,
                                      self.mView, self.mProj, target=None)
 
@@ -3692,7 +3595,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if 'beam' in kwargset:
                             sourceuuid = kwargset['beam']
                             item = getItem(sourceuuid, 'beam', eluuid)
-                            if item.checkState() != 2:
+                            if item is None or item.checkState() != 2:
                                 continue
 
                             beamStartDict = self.beamline.beamsDictU[sourceuuid]
@@ -3723,7 +3626,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     sourceuuid = flowLine[0]
                     eluuid = flowLine[2]
                     item = getItem(sourceuuid, 'beam', eluuid)
-                    if item.checkState() != 2:
+                    if item is None or item.checkState() != 2:
                         continue
                     if eluuid not in [None, sourceuuid]:
                         elObj = self.beamline.oesDict[eluuid][0]
@@ -3756,7 +3659,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             for oeuuid, mesh3D in self.meshDict.items():
                 item = getItem(oeuuid, 'label')
-                if item.checkState() != 2:
+                if item is None or item.checkState() != 2:
                     continue
 
                 oeToPlot = self.beamline.oesDict[oeuuid][0]
@@ -3833,7 +3736,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 for oeuuid, mesh3D in self.meshDict.items():
                     item = getItem(oeuuid, 'surface')
-                    if item.checkState() != 2:
+                    if item is None or item.checkState() != 2:
                         continue
 
                     oeToPlot = mesh3D.oe
@@ -3868,7 +3771,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for oeuuid, mesh3D in self.meshDict.items():
                 continue
                 item = getItem(oeuuid, 'surface')
-                if item.checkState() != 2:
+                if item is None or item.checkState() != 2:
                     continue
 
                 if is_screen(mesh3D.oe):
@@ -4362,7 +4265,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         else:
                             stencilNum = 1
                         self.selectableOEs[int(stencilNum)] = oeuuid
-                        mesh3D.stencilNum = stencilNum            
+                        mesh3D.stencilNum = stencilNum
             else:  # must be the source
                 mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
                 mesh3D.prepare_magnets()
@@ -4392,332 +4295,153 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
 
     def populateVScreen(self):
-        if any([prop is None for prop in [self.virtBeam,
-                                          self.selColorMax,
-                                          self.selColorMin]]):
-            return
-        startBeam = self.virtBeam
-        try:
-            vColorArray = self.getColor(startBeam)
-        except AttributeError:
-            if _DEBUG_:
-                raise
-            else:
-                return
-
-        good = (startBeam.state == 1) | (startBeam.state == 2)
-        intensity = startBeam.Jss + startBeam.Jpp
-        intensityAll = intensity / np.max(intensity[good])
-
-        good = np.logical_and(good, intensityAll >= self.cutoffI)
-        goodC = np.logical_and(
-            vColorArray <= self.selColorMax,
-            vColorArray >= self.selColorMin)
-
-        good = np.logical_and(good, goodC)
-        if len(vColorArray[good]) == 0:
-            return
-        self.globalColorIndex = good if self.vScreenForColors else None
-
-        if self.globalNorm:
-            alphaMax = 1.
-        else:
-            if len(intensity[good]) > 0:
-                alphaMax = np.max(intensity[good])
-            else:
-                alphaMax = 1.
-        alphaMax = alphaMax if alphaMax != 0 else 1.
-#        alphaDots = intensity[good].T / alphaMax
-#        colorsDots = np.array(vColorArray[good]).T
-        alphaDots = intensity.T / alphaMax
-        colorsDots = np.array(vColorArray).T
-        if self.colorMin == self.colorMax:
-            if self.colorMax == 0:  # and self.colorMin == 0 too
-                self.colorMin, self.colorMax = -0.1, 0.1
-            else:
-                self.colorMin = self.colorMax * 0.99
-                self.colorMax *= 1.01
-        colorsDots = colorFactor * (colorsDots-self.colorMin) /\
-            (self.colorMax-self.colorMin)
-        depthDots = copy.deepcopy(colorsDots[good]) * self.depthScaler
-
-        colorsDots = np.dstack((colorsDots,
-                                np.ones_like(alphaDots)*colorSaturation,
-                                alphaDots if self.iHSV else
-                                np.ones_like(alphaDots)))
-
-        deltaY = self.virtScreen.y * depthDots[:, np.newaxis]
-
-        vertices = np.array(
-            startBeam.x[good] - deltaY[:, 0] - self.coordOffset[0])
-        vertices = np.vstack((vertices, np.array(
-            startBeam.y[good] - deltaY[:, 1] - self.coordOffset[1])))
-        vertices = np.vstack((vertices, np.array(
-            startBeam.z[good] - deltaY[:, 2] - self.coordOffset[2])))
-        self.virtDotsArray = vertices.T
-
-        colorsRGBDots = np.squeeze(mpl.colors.hsv_to_rgb(colorsDots))
-        if self.globalNorm and len(alphaDots[good]) > 0:
-            alphaMax = np.max(alphaDots[good])
-        else:
-            alphaMax = 1.
-        alphaColorDots = np.array([alphaDots / alphaMax]).T
-        if self.vScreenForColors:
-            self.globalColorArray = np.float32(np.hstack([colorsRGBDots,
-                                                          alphaColorDots]))
-        self.virtDotsColor = np.float32(np.hstack([colorsRGBDots[good],
-                                                   alphaColorDots[good]]))
-
-        histogram = np.histogram(np.array(
-            vColorArray[good]),
-            range=(self.colorMin, self.colorMax),
-            weights=intensity[good],
-            bins=100)
-        self.histogramUpdated.emit(histogram)
-        locBeam = self.virtScreen.expose(self.virtScreen.beamToExpose)
-        lbi = intensity[good]
-        self.virtScreen.FWHMstr = []
-        for axis in ['x', 'z']:
-            goodlb = getattr(locBeam, axis)[good]
-            histAxis = np.histogram(goodlb, weights=lbi, bins=100)
-            hMax = np.max(histAxis[0])
-            hNorm = histAxis[0] / hMax
-            topEl = np.where(hNorm >= 0.5)[0]
-            fwhm = np.abs(histAxis[1][topEl[0]] - histAxis[1][topEl[-1]])
-
-            order = np.floor(np.log10(fwhm)) if fwhm > 0 else -10
-            if order >= 2:
-                units = "m"
-                mplier = 1e-3
-            elif order >= -1:
-                units = "mm"
-                mplier = 1.
-            elif order >= -4:
-                units = "um"
-                mplier = 1e3
-            else:  # order >= -7:
-                units = "nm"
-                mplier = 1e6
-
-            self.virtScreen.FWHMstr.append(
-                "FWHM({0}) = {1:.3f}{2}".format(
-                    str(axis).upper(), fwhm*mplier, units))
+        pass
 
     def createVScreen(self):
-        pass
-#        try:
-#            self.virtScreen = rscreens.Screen(
-#                bl=list(self.oesList.values())[0][0].bl)
-#            self.virtScreen.center = self.worldToModel(np.array([0, 0, 0])) +\
-#                self.coordOffset
-#            self.positionVScreen()
-#            if self.vScreenForColors:
-#                self.populateVerticesOnly(self.segmentModel)
-#            self.glDraw()
-#        except:  # analysis:ignore
+        try:
+            if self.virtScreen is None:
+                self.virtScreen['uuid'] = rscreens.Screen(
+                    bl=self.beamline).uuid
+            self.positionVScreen()
+        except:  # analysis:ignore
+            raise
 #            if _DEBUG_:
 #                raise
 #            else:
 #                self.clearVScreen()
 
-    def positionVScreen(self):
+    def positionVScreen(self, cntr=None):
+
         if self.virtScreen is None:
             return
-        cntr = self.virtScreen.center
-        tmpDist = 1e12
-        totalDist = 1e12
+        if cntr is None:
+            mLoc = self.mMod * self.mModLocal
+            orgLoc = mLoc.inverted()[0] * qt.QVector3D(0.0, 0.0, 0.0)
+            cntr = [orgLoc.x(), orgLoc.y(), orgLoc.z()]
+        dist = 1e12
         cProj = None
 
-        for segment in self.arrayOfRays[0]:
-            if segment[3] is None:
-                continue
-            try:
-                beamStartTmp = self.beamsDict[segment[1]]
-                beamEndTmp = self.beamsDict[segment[3]]
+        if self.renderingMode == 'dynamic':
+            for eluuid, operations in self.beamline.flowU.items():
+                for kwargset in operations.values():
+                    if 'beam' in kwargset:
+                        tmpSource = kwargset['beam']
 
-                bStart0 = beamStartTmp.wCenter
-                bEnd0 = beamEndTmp.wCenter
+                        bStart0 = self.beamline.oesDict[tmpSource][0].center
+                        bEnd0 = self.beamline.oesDict[eluuid][0].center
 
-                beam0 = bEnd0 - bStart0
-                # Finding the projection of the VScreen.center on segments
-                cProjTmp = bStart0 + np.dot(cntr-bStart0, beam0) /\
-                    np.dot(beam0, beam0) * beam0
-                s = 0
-                for iDim in range(3):
-                    s += np.floor(np.abs(np.sign(cProjTmp[iDim] -
-                                                 bStart0[iDim]) +
-                                         np.sign(cProjTmp[iDim] -
-                                                 bEnd0[iDim]))*0.6)
+                        beam0 = bEnd0 - bStart0
+                        # Finding the projection of the VScreen.center on segments
+                        t = np.dot(cntr-bStart0, beam0) / np.dot(beam0, beam0)
+                        t = np.clip(t, 0.0, 1.0)
+                        cProjTmp = bStart0 + t * beam0
 
-                dist = np.linalg.norm(cProjTmp-cntr)
-                if dist < tmpDist:
-                    if s == 0:
-                        tmpDist = dist
-                        beamStart0 = beamStartTmp
-                        bStartC = bStart0
-                        bEndC = bEnd0
-                        cProj = cProjTmp
-                    else:
-                        if np.linalg.norm(bStart0-cntr) < totalDist:
-                            totalDist = np.linalg.norm(bStart0-cntr)
-                            self.virtScreen.center = cProjTmp
-                            self.virtScreen.beamStart = bStart0
-                            self.virtScreen.beamEnd = bEnd0
-                            self.virtScreen.beamToExpose = beamStartTmp
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
+                        tmpDist = np.linalg.norm(cProjTmp-cntr)
+                        if tmpDist < dist:
+                            dist = tmpDist
+                            sourceuuid = tmpSource
+                            bStartCenter = bStart0
+                            bEndCenter = bEnd0
+                            cProj = cProjTmp
+
+            if cProj is not None:
+                scrId = self.virtScreen['uuid']
+                screenObj = self.beamline.oesDict[scrId][0]
+                screenObj.center = cProj
+                self.virtScreen['center'] = cProj
+                self.virtScreen['beamStart'] = bStartCenter
+                self.virtScreen['beamEnd'] = bEndCenter
+                self.virtScreen['beamPlane'] = np.cross(bEndCenter-bStartCenter,
+                               np.array([0, 0, 1]))  # TODO: dynamic
+                self.meshDict[scrId].update_transformation_matrix()
+                beamToExpose =\
+                    self.beamline.beamsDictU[sourceuuid]['beamGlobal']  # TODO: DCMs
+
+                exBeam = raycing.inspect.unwrap(screenObj.expose)(
+                        screenObj,
+                        beam=beamToExpose)
+                if hasattr(beamToExpose, 'iMax'):  # TODO: check
+                    exBeam.iMax = beamToExpose.iMax
                 else:
-                    continue
-
-        if cProj is not None:
-            self.virtScreen.center = cProj
-            self.virtScreen.beamStart = bStartC
-            self.virtScreen.beamEnd = bEndC
-            self.virtScreen.beamToExpose = beamStart0
-
-        if self.isVirtScreenNormal:
-            vsX = [self.virtScreen.beamToExpose.b[0],
-                   -self.virtScreen.beamToExpose.a[0], 0]
-            vsY = [self.virtScreen.beamToExpose.a[0],
-                   self.virtScreen.beamToExpose.b[0],
-                   self.virtScreen.beamToExpose.c[0]]
-            vsZ = np.cross(vsX/np.linalg.norm(vsX),
-                           vsY/np.linalg.norm(vsY))
-        else:
-            vsX = 'auto'
-            vsZ = 'auto'
-        self.virtScreen.set_orientation(vsX, vsZ)
-        try:
-            self.virtBeam = self.virtScreen.expose_global(
-                self.virtScreen.beamToExpose)
-            self.populateVScreen()
-        except:  # analysis:ignore
-            self.clearVScreen()
+                    exBeam.iMax = self.iMax
+                self.beamline.beamsDictU[scrId] =\
+                    {'beamLocal': exBeam}
+                if self.beamBufferDict.get(scrId) is None:
+                    self.init_beam_footprint(
+                            beam=exBeam,
+                            beamTag=(scrId, 'beamLocal'))
+                else:
+                    self.update_beam_footprint(
+                            beam=exBeam,
+                            beamTag=(scrId, 'beamLocal'))
+#                self.virtScreen.beamToExpose = beamStart0
+#
+#        if self.isVirtScreenNormal:
+#            vsX = [self.virtScreen.beamToExpose.b[0],
+#                   -self.virtScreen.beamToExpose.a[0], 0]
+#            vsY = [self.virtScreen.beamToExpose.a[0],
+#                   self.virtScreen.beamToExpose.b[0],
+#                   self.virtScreen.beamToExpose.c[0]]
+#            vsZ = np.cross(vsX/np.linalg.norm(vsX),
+#                           vsY/np.linalg.norm(vsY))
+#        else:
+#            vsX = 'auto'
+#            vsZ = 'auto'
+#        self.virtScreen.set_orientation(vsX, vsZ)
+#        try:
+#            self.virtBeam = self.virtScreen.expose_global(
+#                self.virtScreen.beamToExpose)
+#        except:  # analysis:ignore
+#            self.clearVScreen()
 
     def toggleVScreen(self):
-        if self.virtScreen is None:
-            self.createVScreen()
-        else:
-            self.clearVScreen()
+        self.showVirtualScreen = not self.showVirtualScreen
+        if self.showVirtualScreen:
+            self.positionVScreen()
+        self.glDraw()
 
     def clearVScreen(self):
-        self.virtScreen = None
-        self.virtBeam = None
-        self.virtDotsArray = None
-        self.virtDotsColor = None
-        if self.globalColorIndex is not None:
-            self.globalColorIndex = None
-            self.populateVerticesOnly(self.segmentModel)
-        self.histogramUpdated.emit((None, None))
-        self.glDraw()
+        self.showVirtualScreen = False
 
     def switchVScreenTilt(self):
         self.isVirtScreenNormal = not self.isVirtScreenNormal
         self.positionVScreen()
         self.glDraw()
 
-#    def mouseMoveEvent(self, mEvent):
-#        pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-#        mouseX = mEvent.x()
-#        mouseY = pView[3] - mEvent.y()
-#        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
-#        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
-#        shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
-#
-#        if mEvent.buttons() == qt.LeftButton:
-#            if mEvent.modifiers() == qt.NoModifier:
-#                self.rotations[2][0] += np.float32(
-#                    self.signs[2][1] *
-#                    (mouseX - self.prevMPos[0]) * 36. / 90.)
-#                self.rotations[1][0] -= np.float32(
-#                    (mouseY - self.prevMPos[1]) * 36. / 90.)
-#                for ax in range(2):
-#                    if self.rotations[self.visibleAxes[ax+1]][0] > 180:
-#                        self.rotations[self.visibleAxes[ax+1]][0] -= 360
-#                    if self.rotations[self.visibleAxes[ax+1]][0] < -180:
-#                        self.rotations[self.visibleAxes[ax+1]][0] += 360
-#                self.updateQuats()
-#                self.rotationUpdated.emit(self.rotations)
-#
-#            elif altOn:
-#                mStart = np.zeros(3)
-#                mEnd = np.zeros(3)
-#                mEnd[self.visibleAxes[2]] = 1.
-##                    mEnd = -1 * mStart
-#                pStart = np.array(gl.gluProject(
-#                    *mStart, model=pModel, proj=pProjection,
-#                    view=pView)[:-1])
-#                pEnd = np.array(gl.gluProject(
-#                    *mEnd, model=pModel, proj=pProjection,
-#                    view=pView)[:-1])
-#                pScr = np.array([mouseX, mouseY])
-#                prevPScr = np.array(self.prevMPos)
-#                bDir = pEnd - pStart
-#                pProj = pStart + np.dot(pScr - pStart, bDir) /\
-#                    np.dot(bDir, bDir) * bDir
-#                pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
-#                    np.dot(bDir, bDir) * bDir
-#                self.tVec[self.visibleAxes[2]] += np.dot(
-#                    pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-#                    self.maxLen / self.scaleVec[self.visibleAxes[2]]
-#                if ctrlOn and self.virtScreen is not None:
-#                    self.virtScreen.center[self.visibleAxes[2]] -=\
-#                        np.dot(pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-#                        self.maxLen / self.scaleVec[self.visibleAxes[2]]
-#                    v0 = self.virtScreen.center
-#                    self.positionVScreen()
-#                    self.tVec -= self.virtScreen.center - v0
-#
-#            elif ctrlOn:
-#                if self.virtScreen is not None:
-#
-#                    worldPStart = self.modelToWorld(
-#                        self.virtScreen.beamStart - self.coordOffset)
-#                    worldPEnd = self.modelToWorld(
-#                        self.virtScreen.beamEnd - self.coordOffset)
-#
-#                    worldBDir = worldPEnd - worldPStart
-#
-#                    normPEnd = worldPStart + np.dot(
-#                        np.ones(3) - worldPStart, worldBDir) /\
-#                        np.dot(worldBDir, worldBDir) * worldBDir
-#
-#                    normPStart = worldPStart + np.dot(
-#                        -1. * np.ones(3) - worldPStart, worldBDir) /\
-#                        np.dot(worldBDir, worldBDir) * worldBDir
-#
-#                    normBDir = normPEnd - normPStart
-#                    normScale = np.sqrt(np.dot(normBDir, normBDir) /
-#                                        np.dot(worldBDir, worldBDir))
-#
-#                    if np.dot(normBDir, worldBDir) < 0:
-#                        normPStart, normPEnd = normPEnd, normPStart
-#
-#                    pStart = np.array(gl.gluProject(
-#                        *normPStart, model=pModel, proj=pProjection,
-#                        view=pView)[:-1])
-#                    pEnd = np.array(gl.gluProject(
-#                        *normPEnd, model=pModel, proj=pProjection,
-#                        view=pView)[:-1])
-#                    pScr = np.array([mouseX, mouseY])
-#                    prevPScr = np.array(self.prevMPos)
-#                    bDir = pEnd - pStart
-#                    pProj = pStart + np.dot(pScr - pStart, bDir) /\
-#                        np.dot(bDir, bDir) * bDir
-#                    pPrevProj = pStart + np.dot(prevPScr - pStart, bDir) /\
-#                        np.dot(bDir, bDir) * bDir
-#                    self.virtScreen.center += normScale * np.dot(
-#                        pProj - pPrevProj, bDir) / np.dot(bDir, bDir) *\
-#                        (self.virtScreen.beamEnd - self.virtScreen.beamStart)
-#                    self.positionVScreen()
-#
-#            self.glDraw()
-#        self.prevMPos[0] = mouseX
-#        self.prevMPos[1] = mouseY
+    def getPlanePoint(self, mX, mY, plane_pt, plane_n):
+        def getProjRay():
+            x_ndc = (2 * mX) / xView  - 1;
+            y_ndc = 1 - (2 * mY) / yView;
+            nearN = qt.QVector4D(x_ndc, y_ndc, -1.0, 1.0);
+            farN  = qt.QVector4D(x_ndc, y_ndc,  1.0, 1.0);
+
+            mLoc = self.mMod * self.mModLocal
+            vp   = self.mProj * self.mView * mLoc
+            inv, ok = vp.inverted()
+            if not ok:
+                return qt.QVector3D(), qt.QVector3D(0,0,-1)
+
+            nW4 = inv * nearN
+            fW4 = inv * farN
+            nW  = qt.QVector3D(nW4.x()/nW4.w(), nW4.y()/nW4.w(),
+                               nW4.z()/nW4.w())
+            fW  = qt.QVector3D(fW4.x()/fW4.w(), fW4.y()/fW4.w(),
+                               fW4.z()/fW4.w())
+
+            rd  = (fW - nW).normalized()
+            return np.array([nW.x(), nW.y(), nW.z()]), np.array([rd.x(), rd.y(), rd.z()])
+
+        xView = self.viewPortGL[2]
+        yView = self.viewPortGL[3]
+
+        r0, rd = getProjRay()
+        denom = np.dot(rd, plane_n)
+        if abs(denom) < 1e-6:
+            return None
+        t = np.dot(plane_pt - r0, plane_n) / denom
+        return r0 + rd * t
 
     def mouseMoveEvent(self, mEvent):
-
         xView = self.viewPortGL[2]
         yView = self.viewPortGL[3]
         mouseX = mEvent.x()
@@ -4731,7 +4455,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             return
         overOE = np.squeeze(np.array(outStencil))
 
-#        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
+        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
 #        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
         shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
 #        polarAx = qt.QVector3D(0, 0, 1)
@@ -4739,12 +4463,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
         dx = mouseX - self.prevMPos[0]
         dy = mouseY - self.prevMPos[1]
 
-        xs = 2*dx/xView
-        ys = 2*dy/yView
-        xsn = xs*np.tan(np.radians(60))  # divide by near clipping plane
-        ysn = ys*np.tan(np.radians(60))
-        ym = xsn*3.5  # dist to cam, multiply by near clipping plane
-        zm = ysn*3.5
+        xs = 2 * dx / xView
+        ys = 2 * dy / yView
+        xsn = xs * np.tan(np.radians(60))
+        ysn = ys * np.tan(np.radians(60))
+        ym = xsn * 3.5
+        zm = ysn * 3.5
 
         if mEvent.buttons() == qt.LeftButton:
             if mEvent.modifiers() == qt.NoModifier:
@@ -4772,6 +4496,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.tVec[1] += yShift
                 self.tVec[2] += zShift
                 self.cBox.update_grid()
+
+            elif ctrlOn:
+                tPlane = self.virtScreen['beamStart']
+                nPlane = self.virtScreen['beamPlane']
+                pPlane = self.getPlanePoint(mouseX, mouseY, tPlane, nPlane)
+                if self.virtScreen['offsetOn']:
+                    self.virtScreen['offset'] = pPlane - self.virtScreen['center']
+                    self.virtScreen['offsetOn'] = False
+                self.positionVScreen(pPlane - self.virtScreen['offset'])
 
             self.doneCurrent()
             self.glDraw()
@@ -4802,6 +4535,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.openElViewer.emit(self.selectableOEs.get(int(self.selectedOE),
                                                           'None'))
 
+    def mousePressEvent(self, mpevent):
+        ctrlOn = bool(int(mpevent.modifiers()) & int(qt.ControlModifier))
+        self.virtScreen['offsetOn'] = ctrlOn
+        super().mousePressEvent(mpevent)
+
     def wheelEvent(self, wEvent):
         ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
         altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
@@ -4815,14 +4553,26 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         if deltaA > 0:
             if altOn:
-                self.vScreenSize *= 1.1
+                scrId = self.virtScreen['uuid']
+                scrLine = self.beamline.oesDict.get(scrId)
+                if scrLine is not None:
+                    scrObj = scrLine[0]
+                    scrObj.limPhysX *= 1.1
+                    scrObj.limPhysY *= 1.1
+                self.needMeshUpdate = scrId
             elif ctrlOn and not tpad:
                 self.cameraDistance *= 0.9
             else:
                 self.scaleVec *= 1.1
         else:
             if altOn:
-                self.vScreenSize *= 0.9
+                scrId = self.virtScreen['uuid']
+                scrLine = self.beamline.oesDict.get(scrId)
+                if scrLine is not None:
+                    scrObj = scrLine[0]
+                    scrObj.limPhysX *= 0.9
+                    scrObj.limPhysY *= 0.9
+                self.needMeshUpdate = scrId
             elif ctrlOn and not tpad:
                 self.cameraDistance *= 1.1
             else:
@@ -5761,7 +5511,7 @@ class OEMesh3D():
                 aheight = max(aheight, 10)
             else:
                 aheight = 10.  # Can be set from glow UI
-            
+
             if str(nsIndex) == 'left':
                 xLimits = [self.oe.opening[self.oe.kind.index('left')] - bt,
                            self.oe.opening[self.oe.kind.index('left')]]
