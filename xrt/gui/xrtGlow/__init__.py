@@ -2916,14 +2916,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         goodRays = np.where((state > 0))[0]
 #        lowIntRays = np.where((intensity/self.iMax > self.cutoffI))[0]
-#        lostRays = np.where(beam.state == oeObj.lostNum)
+        oeObj = self.beamline.oesDict.get(beamTag[0])
+        if oeObj is not None and hasattr(oeObj[0], 'lostNum'):
+            lostRays = np.where((beam.state == oeObj[0].lostNum))[0]
+        else:
+            lostRays = np.array([])
 #        if beamTag[0] == self.virtScreen:
 #            print(data, dataColor, state, intensity, goodRays, len(goodRays))
 
+        vbo['indices_lost'] = create_qt_buffer(beam.state.copy(), isIndex=True)
+        update_qt_buffer(vbo['indices_lost'], lostRays.copy(), isIndex=True)
+        vbo['lostLen'] = len(lostRays)
+
         vbo['indices'] = create_qt_buffer(beam.state.copy(), isIndex=True)
         update_qt_buffer(vbo['indices'], goodRays.copy(), isIndex=True)
-
-#        vbo['indices'] = create_qt_buffer(goodRays.copy(), isIndex=True)
         vbo['goodLen'] = len(goodRays)
 
         gl.glGetError()
@@ -2974,6 +2980,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
         state = np.where((
                 (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
+        oeObj = self.beamline.oesDict.get(beamTag[0])
+        if oeObj is not None and hasattr(oeObj[0], 'lostNum'):
+            lostRays = np.where((beam.state == oeObj[0].lostNum))[0]
+        else:
+            lostRays = np.array([])
+        update_qt_buffer(beamvbo['indices_lost'], lostRays.copy(), isIndex=True)
         goodRays = np.where((state > 0))[0]
         update_qt_buffer(beamvbo['position'], data)
         update_qt_buffer(beamvbo['color'], dataColor)
@@ -2981,6 +2993,165 @@ class xrtGlWidget(qt.QOpenGLWidget):
         update_qt_buffer(beamvbo['intensity'], intensity)
         update_qt_buffer(beamvbo['indices'], goodRays.copy(), isIndex=True)
         beamvbo['goodLen'] = len(goodRays)
+        beamvbo['lostLen'] = len(lostRays)
+
+    def render_beam(self, beam, model, view, projection, target=None):
+        """beam: ('oeuuid', 'beamKey') """
+        shader = self.shaderBeam if target is not None else self.shaderFootprint
+        beamBuffers = self.beamBufferDict[beam[0]][beam[1]]
+
+        beamvbo = beamBuffers.get('vbo')
+        beamvao = beamBuffers.get('vao')
+#        iMax = beamBuffers.get('iMax')
+
+        if target is not None:
+            targetvbo = self.beamBufferDict[target[0]][target[1]].get('vbo')
+
+        if beamvbo is None:
+            print("No VBO")
+            return
+
+        if target is not None and targetvbo is None:
+            return
+
+        shader.bind()
+
+        beamvao.bind()
+
+        if target is not None:
+            targetvbo['position'].bind()
+            gl.glVertexAttribPointer(4, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(4)
+            targetvbo['indices'].bind()
+            arrLen = targetvbo['goodLen']
+
+        else:
+            beamvbo['indices'].bind()
+            arrLen = beamvbo['goodLen']
+
+        modelStart = copy.deepcopy(model)
+        modelEnd = copy.deepcopy(model)
+
+        if self.renderingMode == 'dynamic':  # All beams are local, must be transformed
+            oeuuid = beam[0]
+            oe = self.beamline.oesDict[oeuuid][0]
+            oeIndex = int(beam[1] == 'beamLocal2')
+            oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
+            modelStart *= oeOrientation
+            if is_screen(oe) or is_aperture(oe):
+                modelStart *= scr_m
+
+            if target is not None:
+                enduuid = target[0]
+                targetOe = self.beamline.oesDict[enduuid][0]
+                modelEnd = copy.deepcopy(model)
+                oeIndex =  int(target[1] == 'beamLocal2') #int(target.is2ndXtal)
+                oeOrientation = self.meshDict[enduuid].transMatrix[oeIndex]
+                modelEnd *= oeOrientation
+                if is_screen(targetOe) or is_aperture(targetOe):
+                    modelEnd *= scr_m
+
+        shader.setUniformValue("modelStart", modelStart)
+        if target is not None:
+            shader.setUniformValue("modelEnd", modelEnd)
+
+        if self.beamTexture is not None:
+            self.beamTexture.bind(0)
+            shader.setUniformValue("hsvTexture", 0)
+
+        mPV = projection*view
+
+        shader.setUniformValue("mPV", mPV)
+
+        if self.globalColors:
+            shader.setUniformValue(
+                        "colorMinMax", qt.QVector2D(self.colorMin,
+                                                    self.colorMax))
+        else:
+            shader.setUniformValue(
+                        "colorMinMax",
+                        qt.QVector2D(beamBuffers.get('colorMin', 0),
+                                     beamBuffers.get('colorMax', 0)))
+        shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
+        shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
+
+        shader.setUniformValue(
+                "pointSize",
+                float(self.pointSize if target is None else self.lineWidth))
+        shader.setUniformValue(
+                "opacity",
+                float(self.pointOpacity if target is None else
+                      self.lineOpacity))
+        shader.setUniformValue(
+                "iMax",
+                float(self.iMax if self.globalNorm else beamBuffers['iMax']))
+        shader.setUniformValue("isLost", int(0))
+
+        if target is not None and self.lineWidth > 0:
+            gl.glLineWidth(min(self.lineWidth, 1.))
+
+        gl.glDrawElements(gl.GL_POINTS,  arrLen,
+                          gl.GL_UNSIGNED_INT, None)
+
+        if target is not None and self.lineProjectionWidth > 0:
+            gl.glLineWidth(min(self.lineProjectionWidth, 1.))
+
+        for dim in range(3):
+            if self.projectionsVisibility[dim] > 0:
+                gridMask = [1.]*4
+                gridMask[dim] = 0.
+                gridProjection = [0.]*4
+                gridProjection[dim] = -self.aPos[dim] *\
+                    self.cBox.axPosModifier[dim]
+                shader.setUniformValue(
+                        "gridMask",
+                        qt.QVector4D(*gridMask))
+                shader.setUniformValue(
+                        "gridProjection",
+                        qt.QVector4D(*gridProjection))
+                shader.setUniformValue(
+                        "pointSize",
+                        float(self.pointProjectionSize if target is None
+                              else self.lineProjectionWidth))
+                shader.setUniformValue(
+                        "opacity",
+                        float(self.pointProjectionOpacity if target is None
+                              else self.lineProjectionOpacity))
+
+                gl.glDrawElements(gl.GL_POINTS,  arrLen,
+                                  gl.GL_UNSIGNED_INT, None)
+
+        if target is not None:
+            targetvbo['indices'].release()
+        else:
+            beamvbo['indices'].release()
+
+
+        if self.showLostRays:
+            if target is not None:
+                targetvbo['indices_lost'].bind()
+                arrLen = targetvbo['lostLen']
+            else:
+                beamvbo['indices_lost'].bind()
+                arrLen = beamvbo['lostLen']
+            shader.setUniformValue("isLost", int(0))
+
+            gl.glDrawElements(gl.GL_POINTS,  arrLen,
+                              gl.GL_UNSIGNED_INT, None)
+
+            if target is not None:
+                targetvbo['indices_lost'].release()
+            else:
+                beamvbo['indices_lost'].release()
+
+        if target is not None:
+            targetvbo['position'].release()
+
+        beamvao.release()
+
+        shader.release()
+        if self.beamTexture is not None:
+            self.beamTexture.release()
 
     def getColorData(self, beam, beamTag):
         """beamTag: ('oeuuid', 'beamKey') """
@@ -3082,143 +3253,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam.vbo['indices'].bind()
             beam.vbo['indices'].write(0, goodRays, goodRays.nbytes)
             beam.vbo['indices'].release()
-
-    def render_beam(self, beam, model, view, projection, target=None):
-        """beam: ('oeuuid', 'beamKey') """
-        shader = self.shaderBeam if target is not None else self.shaderFootprint
-        beamBuffers = self.beamBufferDict[beam[0]][beam[1]]
-
-        beamvbo = beamBuffers.get('vbo')
-        beamvao = beamBuffers.get('vao')
-#        iMax = beamBuffers.get('iMax')
-
-        if target is not None:
-            targetvbo = self.beamBufferDict[target[0]][target[1]].get('vbo')
-
-        if beamvbo is None:
-            print("No VBO")
-            return
-
-        if target is not None and targetvbo is None:
-            return
-
-        shader.bind()
-
-        beamvao.bind()
-
-        if target is not None:
-            targetvbo['position'].bind()
-            gl.glVertexAttribPointer(4, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(4)
-            targetvbo['indices'].bind()
-            arrLen = targetvbo['goodLen']
-
-        else:
-            beamvbo['indices'].bind()
-            arrLen = beamvbo['goodLen']
-
-        modelStart = copy.deepcopy(model)
-        modelEnd = copy.deepcopy(model)
-
-        if self.renderingMode == 'dynamic':  # All beams are local, must be transformed
-            oeuuid = beam[0]
-            oe = self.beamline.oesDict[oeuuid][0]
-            oeIndex = int(beam[1] == 'beamLocal2')
-            oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
-            modelStart *= oeOrientation
-            if is_screen(oe) or is_aperture(oe):
-                modelStart *= scr_m
-
-            if target is not None:
-                enduuid = target[0]
-                targetOe = self.beamline.oesDict[enduuid][0]
-                modelEnd = copy.deepcopy(model)
-                oeIndex =  int(target[1] == 'beamLocal2') #int(target.is2ndXtal)
-                oeOrientation = self.meshDict[enduuid].transMatrix[oeIndex]
-                modelEnd *= oeOrientation
-                if is_screen(targetOe) or is_aperture(targetOe):
-                    modelEnd *= scr_m
-
-        shader.setUniformValue("modelStart", modelStart)
-        if target is not None:
-            shader.setUniformValue("modelEnd", modelEnd)
-
-        if self.beamTexture is not None:
-            self.beamTexture.bind(0)
-            shader.setUniformValue("hsvTexture", 0)
-
-        mPV = projection*view
-
-        shader.setUniformValue("mPV", mPV)
-
-        if self.globalColors:
-            shader.setUniformValue(
-                        "colorMinMax", qt.QVector2D(self.colorMin,
-                                                    self.colorMax))
-        else:
-            shader.setUniformValue(
-                        "colorMinMax",
-                        qt.QVector2D(beamBuffers.get('colorMin', 0),
-                                     beamBuffers.get('colorMax', 0)))
-        shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
-        shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
-
-        shader.setUniformValue(
-                "pointSize",
-                float(self.pointSize if target is None else self.lineWidth))
-        shader.setUniformValue(
-                "opacity",
-                float(self.pointOpacity if target is None else
-                      self.lineOpacity))
-        shader.setUniformValue(
-                "iMax",
-                float(self.iMax if self.globalNorm else beamBuffers['iMax']))
-
-        if target is not None and self.lineWidth > 0:
-            gl.glLineWidth(min(self.lineWidth, 1.))
-
-        gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                          gl.GL_UNSIGNED_INT, None)
-
-        if target is not None and self.lineProjectionWidth > 0:
-            gl.glLineWidth(min(self.lineProjectionWidth, 1.))
-
-        for dim in range(3):
-            if self.projectionsVisibility[dim] > 0:
-                gridMask = [1.]*4
-                gridMask[dim] = 0.
-                gridProjection = [0.]*4
-                gridProjection[dim] = -self.aPos[dim] *\
-                    self.cBox.axPosModifier[dim]
-                shader.setUniformValue(
-                        "gridMask",
-                        qt.QVector4D(*gridMask))
-                shader.setUniformValue(
-                        "gridProjection",
-                        qt.QVector4D(*gridProjection))
-                shader.setUniformValue(
-                        "pointSize",
-                        float(self.pointProjectionSize if target is None
-                              else self.lineProjectionWidth))
-                shader.setUniformValue(
-                        "opacity",
-                        float(self.pointProjectionOpacity if target is None
-                              else self.lineProjectionOpacity))
-
-                gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                                  gl.GL_UNSIGNED_INT, None)
-
-        if target is not None:
-            targetvbo['position'].release()
-            targetvbo['indices'].release()
-        else:
-            beamvbo['indices'].release()
-
-        beamvao.release()
-
-        shader.release()
-        if self.beamTexture is not None:
-            self.beamTexture.release()
 
     def glDraw(self):
         self.update()
@@ -3395,421 +3429,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.bgColor = [0.0, 0.0, 0.0, 1.0]
             self.textColor = qt.QVector3D(1.0, 1.0, 0.0)
 
-    def paintGL(self):
-        # TODO: might be better to use dedicated dicts for sources, oes etc.
-        def makeCenterStr(centerList, prec):
-            retStr = '('
-            for dim in centerList:
-                retStr += '{0:.{1}f}, '.format(dim, prec)
-            return retStr[:-2] + ')'
-
-        def getItem(iId, itemType='beam', targetId=None):
-            item = None
-            start_index = model.index(0, 0)
-            flags = qt.MatchExactly
-            matches = model.match(start_index, qt.UserRole, iId, hits=1,
-                                  flags=flags)
-            if matches:
-                item = model.item(matches[0].row(), itemTypes[itemType])
-                if  itemType == 'beam' and item.rowCount() > 0:
-                    parent_index = model.indexFromItem(item)
-                    fcIndex = item.child(0, 0).index()
-                    tgt_matches = model.match(fcIndex, qt.UserRole, targetId,
-                                              hits=-1, flags=flags)
-                    for line in tgt_matches:
-                        if line.parent() == parent_index:
-                            item = model.itemFromIndex(line)
-                            break
-            return item
-
-        try:
-            self.setSceneColors()
-            gl.glClearColor(*self.bgColor)
-
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT |
-                       gl.GL_DEPTH_BUFFER_BIT |
-                       gl.GL_STENCIL_BUFFER_BIT)
-
-            self.mModScale.setToIdentity()
-            self.mModTrans.setToIdentity()
-            self.mModScale.scale(*(self.scaleVec/self.maxLen))
-            self.mModTrans.translate(*(self.tVec-self.coordOffset))
-            self.mMod = self.mModScale*self.mModTrans
-
-            mMMLoc = self.mMod * self.mModLocal
-
-            vpMat = self.mProj * self.mView * mMMLoc
-
-            gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
-            if self.enableAA:
-                gl.glEnable(gl.GL_LINE_SMOOTH)
-                gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-#                gl.glEnable(gl.GL_POLYGON_SMOOTH)
-#                gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-
-            if self.enableBlending:
-                gl.glEnable(gl.GL_MULTISAMPLE)
-                gl.glEnable(gl.GL_BLEND)
-                gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-#                gl.glEnable(gl.GL_POINT_SMOOTH)
-#                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
-
-#            if self.linesDepthTest:
-#                gl.glDepthMask(gl.GL_FALSE)
-            if not self.linesDepthTest:
-                gl.glDepthMask(gl.GL_TRUE)
-            gl.glEnable(gl.GL_DEPTH_TEST)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            model = self.segmentModel.model()
-            if self.needMeshUpdate is not None:
-                gl.glGetError()
-                if is_source(self.meshDict[self.needMeshUpdate].oe):
-                    self.meshDict[self.needMeshUpdate].prepare_magnets(
-                            updateMesh=True)
-                else:
-                    for surfIndex in self.meshDict[self.needMeshUpdate].vao.keys():
-                        self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
-                                nsIndex=surfIndex, updateMesh=True)
-                self.needMeshUpdate = None
-
-            gl.glEnable(gl.GL_STENCIL_TEST)
-
-            for oeuuid, mesh3D in self.meshDict.items():
-                item = getItem(oeuuid, 'surface')
-                if item is None or item.checkState() != 2:
-                    continue
-
-                oeToPlot = mesh3D.oe
-
-                if is_oe(oeToPlot):
-                    is2ndXtalOpts = [False]
-                    if is_dcm(oeToPlot):
-                        is2ndXtalOpts.append(True)
-
-                    for is2ndXtal in is2ndXtalOpts:
-                        if mesh3D.isEnabled:
-                            isSelected = False
-                            if oeuuid in self.selectableOEs.values():
-                                oeNum = mesh3D.stencilNum
-                                isSelected = oeNum == self.selectedOE
-                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                                 0xff)
-                            mesh3D.render_surface(
-                                mMMLoc, self.mView,
-                                self.mProj, int(is2ndXtal),
-                                isSelected=isSelected,
-                                shader=self.shaderMesh)
-                elif is_aperture(oeToPlot):
-                    for blade in oeToPlot.kind:
-                        if mesh3D.isEnabled:
-                            isSelected = False
-                            if oeuuid in self.selectableOEs.values():
-                                oeNum = mesh3D.stencilNum
-                                isSelected = oeNum == self.selectedOE
-                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                                 0xff)
-                            mesh3D.render_surface(
-                                mMMLoc, self.mView,
-                                self.mProj, blade, isSelected=isSelected,
-                                shader=self.shaderMesh)
-
-                elif is_source(oeToPlot):
-                    if mesh3D.isEnabled:
-                        isSelected = False
-                        if oeuuid in self.selectableOEs.values():
-                            oeNum = mesh3D.stencilNum
-                            isSelected = oeNum == self.selectedOE
-                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                             0xff)
-                        mesh3D.render_magnets(
-                            mMMLoc, self.mView, self.mProj,
-                            isSelected=isSelected, shader=self.shaderMag)
-            gl.glDisable(gl.GL_STENCIL_TEST)
-            if not self.linesDepthTest:
-                gl.glDepthMask(gl.GL_FALSE)
-            else:
-                gl.glDisable(gl.GL_DEPTH_TEST)
-            # Screens are semi-transparent, DepthMask must be OFF
-#            for ioe in range(self.segmentModel.rowCount() - 1):
-
-#            if self.showVirtualScreen:
-#                self.positionVScreen()
-
-            for oeuuid, mesh3D in self.meshDict.items():
-                item = getItem(oeuuid, 'surface')
-                if item is None or item.checkState() != 2:
-                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
-                        continue
-
-                if is_screen(mesh3D.oe):
-                    is2ndXtal = False
-                    if mesh3D.isEnabled:  # TODO: Looks like double check
-                        isSelected = False
-                        if oeuuid in self.selectableOEs.values():
-                            oeNum = mesh3D.stencilNum
-                            isSelected = oeNum == self.selectedOE
-                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                             0xff)
-                        mesh3D.render_surface(
-                                mMMLoc, self.mView,
-                                self.mProj, int(is2ndXtal),
-                                isSelected=isSelected,
-                                shader=self.shaderMesh)
-
-            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
-
-            if self.pointsDepthTest:
-                gl.glEnable(gl.GL_DEPTH_TEST)
-            else:
-                gl.glDisable(gl.GL_DEPTH_TEST)
-
-            # RENDER FOOTPRINTS
-
-            for oeuuid, beamDict in self.beamline.beamsDictU.items():
-#                continue
-                item = getItem(oeuuid, 'footprint')
-                if item is None or item.checkState() != 2:
-                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
-                        continue
-
-                for bField, bObj in beamDict.items():
-                    if bField == 'beamGlobal' and {
-                            'beamLocal', 'beamLocal1'} & beamDict.keys():
-                        continue
-
-                    beam = (oeuuid, bField)
-#                    if oeuuid == self.virtScreen:
-#                        print("Plotting virtual screen", bField)
-                    self.render_beam(beam, mMMLoc,
-                                     self.mView, self.mProj, target=None)
-
-            gl.glEnable(gl.GL_DEPTH_TEST)
-
-            # RENDER BEAMS
-
-            if self.renderingMode == 'dynamic':
-                for eluuid, operations in self.beamline.flowU.items():
-                    for kwargset in operations.values():
-                        if 'beam' in kwargset:
-                            sourceuuid = kwargset['beam']
-                            item = getItem(sourceuuid, 'beam', eluuid)
-                            if item is None or item.checkState() != 2:
-                                continue
-
-                            beamStartDict = self.beamline.beamsDictU[sourceuuid]
-                            beamEndDict = self.beamline.beamsDictU[eluuid]
-                            startField = None
-                            endField = None
-                            if 'beamLocal' in beamStartDict:
-                                startField = 'beamLocal'
-                            elif 'beamLocal2' in beamStartDict:
-                                startField = 'beamLocal2'
-                            elif 'beamGlobal' in beamStartDict:
-                                startField = 'beamGlobal'
-
-                            if 'beamLocal' in beamEndDict:
-                                endField = 'beamLocal'
-                            elif 'beamLocal1' in beamEndDict:
-                                endField = 'beamLocal1'
-                            elif 'beamGlobal' in beamEndDict:
-                                endField = 'beamGlobal'
-
-                            beamStart = (sourceuuid, startField)
-                            beamEnd = (eluuid, endField)
-                            self.render_beam(beamStart, mMMLoc,
-                                             self.mView, self.mProj,
-                                             target=beamEnd)
-            else:
-                for flowLine in self.beamline.flow:
-                    sourceuuid = flowLine[0]
-                    eluuid = flowLine[2]
-                    item = getItem(sourceuuid, 'beam', eluuid)
-                    if item is None or item.checkState() != 2:
-                        continue
-                    if eluuid not in [None, sourceuuid]:
-                        elObj = self.beamline.oesDict[eluuid][0]
-                        startField = 'beamGlobal'
-                        if is_dcm(elObj):
-                            endField = 'beamLocal1'
-                        elif is_screen(elObj) or is_aperture(elObj):
-                            endField = 'beamLocal'
-                        else:
-                            endField = 'beamGlobal'
-
-                        beamStart = (sourceuuid, startField)
-                        beamEnd = (eluuid, endField)
-                        self.render_beam(beamStart, mMMLoc,
-                                         self.mView, self.mProj,
-                                         target=beamEnd)
-
-            self.cBox.textShader.bind()
-            self.cBox.vaoText.bind()
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
-            # RENDER LABELS
-
-            sclY = self.cBox.characters[124][1][1] * 0.04 *\
-                self.cBox.fontScale / float(self.viewPortGL[3])
-            labelBounds = []
-            lineCounter = 0
-            labelLines = None
-            gl.glDisable(gl.GL_DEPTH_TEST)
-
-            for oeuuid, mesh3D in self.meshDict.items():
-                item = getItem(oeuuid, 'label')
-                if item is None or item.checkState() != 2:
-                    continue
-
-                oeToPlot = self.beamline.oesDict[oeuuid][0]
-                oeCenter = oeToPlot.center
-                oeString = oeToPlot.name
-                alignment = "middle"
-                dx = 0.1
-                oeCenterStr = makeCenterStr(oeToPlot.center,
-                                            self.labelCoordPrec)
-                oeLabel = '  {0}: {1}mm'.format(
-                    oeString, oeCenterStr)
-
-                oePos = (vpMat*qt.QVector4D(*oeCenter,
-                                            1)).toVector3DAffine()
-                lineHint = [oePos.x(), oePos.y(), oePos.z()]
-                labelPos = qt.QVector3D(*lineHint) + qt.QVector3D(dx, 0, 0)
-
-                intersecting = True
-                fbCounter = 0
-                while intersecting and fbCounter < 3*(len(labelBounds)+1):
-                    labelYmin = labelPos.y()
-                    labelYmax = labelYmin + sclY
-                    for bmin, bmax in labelBounds:
-                        if labelYmax > bmin and labelYmin < bmax:
-                            labelPos += qt.QVector3D(0, 2*sclY, 0)
-                            break
-                        elif labelYmin > bmax and labelYmax < bmin:
-                            labelPos -= qt.QVector3D(0, 2*sclY, 0)
-                            break
-                    else:
-                        intersecting = False
-                        labelBounds.append((labelPos.y(),
-                                            labelPos.y() + sclY))
-                    fbCounter += 1
-
-                endPos = self.cBox.render_text(
-                    labelPos, oeLabel, alignment=alignment,
-                    scale=0.04*self.cBox.fontScale,
-                    textColor=self.textColor)
-                labelLinesN = np.vstack(
-                    (np.array(lineHint),
-                     np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
-                     np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
-                     np.array([endPos.x(), labelPos.y()-sclY, 0.0])))
-                labelLines = labelLinesN if labelLines is None else\
-                    np.vstack((labelLines, labelLinesN))
-                lineCounter += 1
-            self.cBox.textShader.release()
-            self.cBox.vaoText.release()
-
-            if labelLines is not None:
-                update_qt_buffer(self.llVBO, labelLines)
-
-                self.cBox.shader.bind()
-                self.cBox.shader.setUniformValue("lineOpacity", 0.85)
-                self.cBox.shader.setUniformValue("lineColor", self.textColor)
-                self.labelvao.bind()
-                self.cBox.shader.setUniformValue(
-                        "pvm",
-                        qt.QMatrix4x4()
-                        )
-                gl.glLineWidth(min(self.cBoxLineWidth, 1.))
-                gl.glDrawArrays(gl.GL_LINES, 0, lineCounter*4)
-                self.labelvao.release()
-                self.cBox.shader.release()
-
-            # RENDER LOCAL AXES
-
-            if self.showLocalAxes:
-                self.cBox.origShader.bind()
-                self.cBox.vao_arrow.bind()
-                self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
-                gl.glLineWidth(min(self.cBoxLineWidth, 1.))
-
-                for oeuuid, mesh3D in self.meshDict.items():
-                    item = getItem(oeuuid, 'surface')
-                    if item is None or item.checkState() != 2:
-                        continue
-
-                    oeToPlot = mesh3D.oe
-
-                    is2ndXtalOpts = [False]
-                    if is_dcm(oeToPlot):
-                        is2ndXtalOpts.append(True)
-
-                    for is2ndXtal in is2ndXtalOpts:
-                        if is2ndXtal:
-                            trMat = mesh3D.transMatrix[int(is2ndXtal)].data()
-                            oeCenter = [trMat[12], trMat[13], trMat[14]]
-                        else:
-                            oeCenter = list(oeToPlot.center)
-
-                        oePos = (mMMLoc*qt.QVector4D(*oeCenter,
-                                                    1)).toVector3DAffine()
-                        oeNorm = mesh3D.transMatrix[int(is2ndXtal)]
-                        self.cBox.render_local_axes(
-                                mMMLoc*oeNorm, oePos, self.mView, self.mProj,
-                                self.cBox.origShader,
-                                is_screen(oeToPlot) or is_aperture(oeToPlot))
-                self.cBox.vao_arrow.release()
-                self.cBox.origShader.release()
-
-            # RENDER GRID ON SCREENS
-
-            self.cBox.shader.bind()
-            self.cBox.shader.setUniformValue("lineColor",
-                                             qt.QVector3D(0.0, 1.0, 1.0))
-
-            for oeuuid, mesh3D in self.meshDict.items():
-                continue
-                item = getItem(oeuuid, 'surface')
-                if item is None or item.checkState() != 2:
-                    continue
-
-                if is_screen(mesh3D.oe):
-                    mesh3D.grid_vbo['vertices'].bind()
-                    gl.glVertexAttribPointer(
-                            0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-                    gl.glEnableVertexAttribArray(0)
-                    oeOrientation = mesh3D.transMatrix[0]
-                    grMod = mMMLoc*oeOrientation*scr_m
-                    pvm = self.mProj*self.mView*grMod
-                    self.cBox.shader.setUniformValue("pvm", pvm)
-                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)
-                    gl.glLineWidth(1.)
-                    gl.glDrawArrays(gl.GL_LINES, 0,
-                                    mesh3D.grid_vbo['gridLen'])
-                    mesh3D.grid_vbo['vertices'].release()
-
-            self.cBox.shader.release()
-
-            # RENDER COORDINATE BOX
-
-            if not self.linesDepthTest:
-                gl.glDepthMask(gl.GL_TRUE)
-            gl.glEnable(gl.GL_DEPTH_TEST)
-            if self.drawGrid:
-                self.cBox.render_grid(self.mModAx, self.mView, self.mProj)
-
-            if self.enableAA:
-                gl.glDisable(gl.GL_LINE_SMOOTH)
-            self.eCounter = 0
-        except Exception as e:  # TODO: properly handle exceptions
-            raise
-            self.eCounter += 1
-            if self.eCounter < 10:
-                self.update()
-            else:
-                self.eCounter = 0
-                pass
 
     def quatMult(self, qf, qt):
         return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
@@ -4286,6 +3905,423 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.visibleAxes = newVisAx
         self.cBox.update_grid()
 
+    def paintGL(self):
+        # TODO: might be better to use dedicated dicts for sources, oes etc.
+        def makeCenterStr(centerList, prec):
+            retStr = '('
+            for dim in centerList:
+                retStr += '{0:.{1}f}, '.format(dim, prec)
+            return retStr[:-2] + ')'
+
+        def getItem(iId, itemType='beam', targetId=None):
+            item = None
+            start_index = model.index(0, 0)
+            flags = qt.MatchExactly
+            matches = model.match(start_index, qt.UserRole, iId, hits=1,
+                                  flags=flags)
+            if matches:
+                item = model.item(matches[0].row(), itemTypes[itemType])
+                if  itemType == 'beam' and item.rowCount() > 0:
+                    parent_index = model.indexFromItem(item)
+                    fcIndex = item.child(0, 0).index()
+                    tgt_matches = model.match(fcIndex, qt.UserRole, targetId,
+                                              hits=-1, flags=flags)
+                    for line in tgt_matches:
+                        if line.parent() == parent_index:
+                            item = model.itemFromIndex(line)
+                            break
+            return item
+
+        try:
+            self.setSceneColors()
+            gl.glClearColor(*self.bgColor)
+
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT |
+                       gl.GL_DEPTH_BUFFER_BIT |
+                       gl.GL_STENCIL_BUFFER_BIT)
+
+            self.mModScale.setToIdentity()
+            self.mModTrans.setToIdentity()
+            self.mModScale.scale(*(self.scaleVec/self.maxLen))
+            self.mModTrans.translate(*(self.tVec-self.coordOffset))
+            self.mMod = self.mModScale*self.mModTrans
+
+            mMMLoc = self.mMod * self.mModLocal
+
+            vpMat = self.mProj * self.mView * mMMLoc
+
+            gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+            if self.enableAA:
+                gl.glEnable(gl.GL_LINE_SMOOTH)
+                gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+#                gl.glEnable(gl.GL_POLYGON_SMOOTH)
+#                gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+
+            if self.enableBlending:
+                gl.glEnable(gl.GL_MULTISAMPLE)
+                gl.glEnable(gl.GL_BLEND)
+                gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+#                gl.glEnable(gl.GL_POINT_SMOOTH)
+#                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
+
+#            if self.linesDepthTest:
+#                gl.glDepthMask(gl.GL_FALSE)
+            if not self.linesDepthTest:
+                gl.glDepthMask(gl.GL_TRUE)
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            model = self.segmentModel.model()
+            if self.needMeshUpdate is not None:
+                gl.glGetError()
+                if is_source(self.meshDict[self.needMeshUpdate].oe):
+                    self.meshDict[self.needMeshUpdate].prepare_magnets(
+                            updateMesh=True)
+                else:
+                    for surfIndex in self.meshDict[self.needMeshUpdate].vao.keys():
+                        self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
+                                nsIndex=surfIndex, updateMesh=True)
+                self.needMeshUpdate = None
+
+            gl.glEnable(gl.GL_STENCIL_TEST)
+
+            for oeuuid, mesh3D in self.meshDict.items():
+                item = getItem(oeuuid, 'surface')
+                if item is None or item.checkState() != 2:
+                    continue
+
+                oeToPlot = mesh3D.oe
+
+                if is_oe(oeToPlot):
+                    is2ndXtalOpts = [False]
+                    if is_dcm(oeToPlot):
+                        is2ndXtalOpts.append(True)
+
+                    for is2ndXtal in is2ndXtalOpts:
+                        if mesh3D.isEnabled:
+                            isSelected = False
+                            if oeuuid in self.selectableOEs.values():
+                                oeNum = mesh3D.stencilNum
+                                isSelected = oeNum == self.selectedOE
+                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                                 0xff)
+                            mesh3D.render_surface(
+                                mMMLoc, self.mView,
+                                self.mProj, int(is2ndXtal),
+                                isSelected=isSelected,
+                                shader=self.shaderMesh)
+                elif is_aperture(oeToPlot):
+                    for blade in oeToPlot.kind:
+                        if mesh3D.isEnabled:
+                            isSelected = False
+                            if oeuuid in self.selectableOEs.values():
+                                oeNum = mesh3D.stencilNum
+                                isSelected = oeNum == self.selectedOE
+                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                                 0xff)
+                            mesh3D.render_surface(
+                                mMMLoc, self.mView,
+                                self.mProj, blade, isSelected=isSelected,
+                                shader=self.shaderMesh)
+
+                elif is_source(oeToPlot):
+                    if mesh3D.isEnabled:
+                        isSelected = False
+                        if oeuuid in self.selectableOEs.values():
+                            oeNum = mesh3D.stencilNum
+                            isSelected = oeNum == self.selectedOE
+                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                             0xff)
+                        mesh3D.render_magnets(
+                            mMMLoc, self.mView, self.mProj,
+                            isSelected=isSelected, shader=self.shaderMag)
+
+            if not self.linesDepthTest:
+                gl.glDepthMask(gl.GL_FALSE)
+            else:
+                gl.glDisable(gl.GL_DEPTH_TEST)
+            # Screens are semi-transparent, DepthMask must be OFF
+#            for ioe in range(self.segmentModel.rowCount() - 1):
+
+#            if self.showVirtualScreen:
+#                self.positionVScreen()
+
+            for oeuuid, mesh3D in self.meshDict.items():
+                item = getItem(oeuuid, 'surface')
+                if item is None or item.checkState() != 2:
+                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
+                        continue
+
+                if is_screen(mesh3D.oe):
+                    is2ndXtal = False
+                    if mesh3D.isEnabled:  # TODO: Looks like double check
+                        isSelected = False
+                        if oeuuid in self.selectableOEs.values():
+                            oeNum = mesh3D.stencilNum
+                            isSelected = oeNum == self.selectedOE
+                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
+                                             0xff)
+                        mesh3D.render_surface(
+                                mMMLoc, self.mView,
+                                self.mProj, int(is2ndXtal),
+                                isSelected=isSelected,
+                                shader=self.shaderMesh)
+
+            gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
+            gl.glDisable(gl.GL_STENCIL_TEST)
+
+            if self.pointsDepthTest:
+                gl.glEnable(gl.GL_DEPTH_TEST)
+            else:
+                gl.glDisable(gl.GL_DEPTH_TEST)
+
+            # RENDER FOOTPRINTS
+
+            for oeuuid, beamDict in self.beamline.beamsDictU.items():
+#                continue
+                item = getItem(oeuuid, 'footprint')
+                if item is None or item.checkState() != 2:
+                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
+                        continue
+
+                for bField, bObj in beamDict.items():
+                    if bField == 'beamGlobal' and {
+                            'beamLocal', 'beamLocal1'} & beamDict.keys():
+                        continue
+
+                    beam = (oeuuid, bField)
+#                    if oeuuid == self.virtScreen:
+#                        print("Plotting virtual screen", bField)
+                    self.render_beam(beam, mMMLoc,
+                                     self.mView, self.mProj, target=None)
+
+            gl.glEnable(gl.GL_DEPTH_TEST)
+
+            # RENDER BEAMS
+
+            if self.renderingMode == 'dynamic':
+                for eluuid, operations in self.beamline.flowU.items():
+                    for kwargset in operations.values():
+                        if 'beam' in kwargset:
+                            sourceuuid = kwargset['beam']
+                            item = getItem(sourceuuid, 'beam', eluuid)
+                            if item is None or item.checkState() != 2:
+                                continue
+
+                            beamStartDict = self.beamline.beamsDictU[sourceuuid]
+                            beamEndDict = self.beamline.beamsDictU[eluuid]
+                            startField = None
+                            endField = None
+                            if 'beamLocal' in beamStartDict:
+                                startField = 'beamLocal'
+                            elif 'beamLocal2' in beamStartDict:
+                                startField = 'beamLocal2'
+                            elif 'beamGlobal' in beamStartDict:
+                                startField = 'beamGlobal'
+
+                            if 'beamLocal' in beamEndDict:
+                                endField = 'beamLocal'
+                            elif 'beamLocal1' in beamEndDict:
+                                endField = 'beamLocal1'
+                            elif 'beamGlobal' in beamEndDict:
+                                endField = 'beamGlobal'
+
+                            beamStart = (sourceuuid, startField)
+                            beamEnd = (eluuid, endField)
+                            self.render_beam(beamStart, mMMLoc,
+                                             self.mView, self.mProj,
+                                             target=beamEnd)
+            else:
+                for flowLine in self.beamline.flow:
+                    sourceuuid = flowLine[0]
+                    eluuid = flowLine[2]
+                    item = getItem(sourceuuid, 'beam', eluuid)
+                    if item is None or item.checkState() != 2:
+                        continue
+                    if eluuid not in [None, sourceuuid]:
+                        elObj = self.beamline.oesDict[eluuid][0]
+                        startField = 'beamGlobal'
+                        if is_dcm(elObj):
+                            endField = 'beamLocal1'
+                        elif is_screen(elObj) or is_aperture(elObj):
+                            endField = 'beamLocal'
+                        else:
+                            endField = 'beamGlobal'
+
+                        beamStart = (sourceuuid, startField)
+                        beamEnd = (eluuid, endField)
+                        self.render_beam(beamStart, mMMLoc,
+                                         self.mView, self.mProj,
+                                         target=beamEnd)
+
+            self.cBox.textShader.bind()
+            self.cBox.vaoText.bind()
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+            # RENDER LABELS
+
+            sclY = self.cBox.characters[124][1][1] * 0.04 *\
+                self.cBox.fontScale / float(self.viewPortGL[3])
+            labelBounds = []
+            lineCounter = 0
+            labelLines = None
+            gl.glDisable(gl.GL_DEPTH_TEST)
+
+            for oeuuid, mesh3D in self.meshDict.items():
+                item = getItem(oeuuid, 'label')
+                if item is None or item.checkState() != 2:
+                    continue
+
+                oeToPlot = self.beamline.oesDict[oeuuid][0]
+                oeCenter = oeToPlot.center
+                oeString = oeToPlot.name
+                alignment = "middle"
+                dx = 0.1
+                oeCenterStr = makeCenterStr(oeToPlot.center,
+                                            self.labelCoordPrec)
+                oeLabel = '  {0}: {1}mm'.format(
+                    oeString, oeCenterStr)
+
+                oePos = (vpMat*qt.QVector4D(*oeCenter,
+                                            1)).toVector3DAffine()
+                lineHint = [oePos.x(), oePos.y(), oePos.z()]
+                labelPos = qt.QVector3D(*lineHint) + qt.QVector3D(dx, 0, 0)
+
+                intersecting = True
+                fbCounter = 0
+                while intersecting and fbCounter < 3*(len(labelBounds)+1):
+                    labelYmin = labelPos.y()
+                    labelYmax = labelYmin + sclY
+                    for bmin, bmax in labelBounds:
+                        if labelYmax > bmin and labelYmin < bmax:
+                            labelPos += qt.QVector3D(0, 2*sclY, 0)
+                            break
+                        elif labelYmin > bmax and labelYmax < bmin:
+                            labelPos -= qt.QVector3D(0, 2*sclY, 0)
+                            break
+                    else:
+                        intersecting = False
+                        labelBounds.append((labelPos.y(),
+                                            labelPos.y() + sclY))
+                    fbCounter += 1
+
+                endPos = self.cBox.render_text(
+                    labelPos, oeLabel, alignment=alignment,
+                    scale=0.04*self.cBox.fontScale,
+                    textColor=self.textColor)
+                labelLinesN = np.vstack(
+                    (np.array(lineHint),
+                     np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
+                     np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
+                     np.array([endPos.x(), labelPos.y()-sclY, 0.0])))
+                labelLines = labelLinesN if labelLines is None else\
+                    np.vstack((labelLines, labelLinesN))
+                lineCounter += 1
+            self.cBox.textShader.release()
+            self.cBox.vaoText.release()
+
+            if labelLines is not None:
+                update_qt_buffer(self.llVBO, labelLines)
+
+                self.cBox.shader.bind()
+                self.cBox.shader.setUniformValue("lineOpacity", 0.85)
+                self.cBox.shader.setUniformValue("lineColor", self.textColor)
+                self.labelvao.bind()
+                self.cBox.shader.setUniformValue(
+                        "pvm",
+                        qt.QMatrix4x4()
+                        )
+                gl.glLineWidth(min(self.cBoxLineWidth, 1.))
+                gl.glDrawArrays(gl.GL_LINES, 0, lineCounter*4)
+                self.labelvao.release()
+                self.cBox.shader.release()
+
+            # RENDER LOCAL AXES
+
+            if self.showLocalAxes:
+                self.cBox.origShader.bind()
+                self.cBox.vao_arrow.bind()
+                self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
+                gl.glLineWidth(min(self.cBoxLineWidth, 1.))
+
+                for oeuuid, mesh3D in self.meshDict.items():
+                    item = getItem(oeuuid, 'surface')
+                    if item is None or item.checkState() != 2:
+                        continue
+
+                    oeToPlot = mesh3D.oe
+
+                    is2ndXtalOpts = [False]
+                    if is_dcm(oeToPlot):
+                        is2ndXtalOpts.append(True)
+
+                    for is2ndXtal in is2ndXtalOpts:
+                        if is2ndXtal:
+                            trMat = mesh3D.transMatrix[int(is2ndXtal)].data()
+                            oeCenter = [trMat[12], trMat[13], trMat[14]]
+                        else:
+                            oeCenter = list(oeToPlot.center)
+
+                        oePos = (mMMLoc*qt.QVector4D(*oeCenter,
+                                                    1)).toVector3DAffine()
+                        oeNorm = mesh3D.transMatrix[int(is2ndXtal)]
+                        self.cBox.render_local_axes(
+                                mMMLoc*oeNorm, oePos, self.mView, self.mProj,
+                                self.cBox.origShader,
+                                is_screen(oeToPlot) or is_aperture(oeToPlot))
+                self.cBox.vao_arrow.release()
+                self.cBox.origShader.release()
+
+            # RENDER GRID ON SCREENS
+
+            self.cBox.shader.bind()
+            self.cBox.shader.setUniformValue("lineColor",
+                                             qt.QVector3D(0.0, 1.0, 1.0))
+
+            for oeuuid, mesh3D in self.meshDict.items():
+                continue
+                item = getItem(oeuuid, 'surface')
+                if item is None or item.checkState() != 2:
+                    continue
+
+                if is_screen(mesh3D.oe):
+                    mesh3D.grid_vbo['vertices'].bind()
+                    gl.glVertexAttribPointer(
+                            0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+                    gl.glEnableVertexAttribArray(0)
+                    oeOrientation = mesh3D.transMatrix[0]
+                    grMod = mMMLoc*oeOrientation*scr_m
+                    pvm = self.mProj*self.mView*grMod
+                    self.cBox.shader.setUniformValue("pvm", pvm)
+                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)
+                    gl.glLineWidth(1.)
+                    gl.glDrawArrays(gl.GL_LINES, 0,
+                                    mesh3D.grid_vbo['gridLen'])
+                    mesh3D.grid_vbo['vertices'].release()
+
+            self.cBox.shader.release()
+
+            # RENDER COORDINATE BOX
+
+            if not self.linesDepthTest:
+                gl.glDepthMask(gl.GL_TRUE)
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            if self.drawGrid:
+                self.cBox.render_grid(self.mModAx, self.mView, self.mProj)
+
+            if self.enableAA:
+                gl.glDisable(gl.GL_LINE_SMOOTH)
+            self.eCounter = 0
+        except Exception as e:  # TODO: properly handle exceptions
+            raise
+            self.eCounter += 1
+            if self.eCounter < 10:
+                self.update()
+            else:
+                self.eCounter = 0
+                pass
+
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
         gl.glViewport(*self.viewPortGL)
@@ -4603,6 +4639,7 @@ class Beam3D():
 
     uniform float opacity;
     uniform float iMax;
+    uniform int isLost;
     uniform vec2 colorMinMax;
 
     uniform mat4 mPV;
@@ -4627,10 +4664,13 @@ class Beam3D():
                            gridProjection);
      vs_out_end = mPV * (gridMask * (modelEnd * vec4(position_end, 1.0)) +
                          gridProjection);
+     if (isLost > 0) {
+             hrgb = vec4(0.9, 0., 0., 0.1);}
+     else {
+         hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+         intensity_v = opacity*intensity/iMax;
+         hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);}
 
-     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-     intensity_v = opacity*intensity/iMax;
-     hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
      vs_out_color = hrgb;
 
     }
@@ -4761,6 +4801,7 @@ class Beam3D():
 
     uniform float opacity;
     uniform float iMax;
+    uniform int isLost;
     uniform vec2 colorMinMax;
 
     uniform mat4 mPV;
@@ -4774,6 +4815,7 @@ class Beam3D():
 
     float hue;
     vec4 hrgb;
+    float intensity_v;
 
     void main()
     {
@@ -4782,8 +4824,16 @@ class Beam3D():
                           gridProjection);
      gl_PointSize = pointSize;
 
-     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-     hrgb = vec4(texture(hsvTexture, hue).rgb, opacity*intensity/iMax);
+//     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+//     hrgb = vec4(texture(hsvTexture, hue).rgb, opacity*intensity/iMax);
+
+     if (isLost > 0) {
+             hrgb = vec4(0.9, 0., 0., 0.1);}
+     else {
+         hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+         intensity_v = opacity*intensity/iMax;
+         hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);}
+
      vs_out_color = hrgb;
 
     }
@@ -6443,7 +6493,7 @@ class CoordinateBox():
                                   base.T))
         self.arrows = coneVertices.copy()
 
-        for rotation in [self.z2x, self.z2y]:
+        for rotation in [self.z2y, self.z2x]:
             m3rot = np.array(rotation.data()).reshape(4, 4)
             self.arrows = np.vstack((self.arrows,
                                        np.matmul(coneVertices, m3rot.T)))
@@ -6451,7 +6501,8 @@ class CoordinateBox():
         self.vbo_arrows = create_qt_buffer(self.arrows)
         colorArr = None
         for line in range(3):
-            oneColor = np.tile(np.identity(3)[line, :], self.arrowLen)
+            oneColor = np.tile(np.identity(3)[line, :],
+                               self.arrowLen)
             colorArr = np.vstack((colorArr, oneColor)) if colorArr is not None else oneColor
         self.vbo_arr_colors = create_qt_buffer(colorArr)
 
