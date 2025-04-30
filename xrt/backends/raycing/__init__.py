@@ -1661,17 +1661,44 @@ class BeamLine(object):
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
             if v2:
-                if not self.materialsDict:
-                    rmats = importlib.import_module(
-                        '.materials', package='xrt.backends.raycing')
-                    materialsDict = OrderedDict()
-                    scr_globals = inspect.stack()[1][0].f_globals
-
-                    for objName, objInstance in scr_globals.items():
-                        if isinstance(objInstance, (rmats.Element, rmats.Material,
-                                                    rmats.Multilayer)):
-                            materialsDict[objInstance.uuid] = objInstance
-                    self.materialsDict.update(materialsDict)
+#                print("Existing materials dict:", self.materialsDict)
+                materialsDict = OrderedDict()
+#                print("Populating materials dict")
+                for ename, eLine in self.oesDict.items():
+                    oe = eLine[0]
+#                    print(ename, oe.name)
+                    for attr in ['material', 'material2']:
+                        if hasattr(oe, attr):
+                            attrMat = getattr(oe, attr)
+#                            print(oe.name, "has", attrMat)
+                            if not is_sequence(attrMat):
+                                seqMat = (attrMat,)
+                            for newMat in seqMat:
+                                if not newMat.uuid in materialsDict:
+#                                    print("Found new material:", newMat.name, newMat.uuid)
+                                    materialsDict[newMat.uuid] = newMat
+                                for subAttr in ['tlayer', 'blayer',
+                                                'coating', 'substrate']:
+                                    if hasattr(newMat, subAttr):
+                                        subMat = getattr(newMat, subAttr)
+                                        if not subMat.uuid in materialsDict:
+#                                            print("Found new sub material:",
+#                                                  subMat.name, subMat.uuid)
+                                            materialsDict[subMat.uuid] = subMat
+                                            materialsDict.move_to_end(
+                                                    subMat.uuid,
+                                                    last=False)
+                                    
+#                    rmats = importlib.import_module(
+#                        '.materials', package='xrt.backends.raycing')
+#                    materialsDict = OrderedDict()
+#                    scr_globals = inspect.stack()[1][0].f_globals
+#
+#                    for objName, objInstance in scr_globals.items():
+#                        if isinstance(objInstance, (rmats.Element, rmats.Material,
+#                                                    rmats.Multilayer)):
+#                            materialsDict[objInstance.uuid] = objInstance
+                self.materialsDict.update(materialsDict)
                 _ = self.export_to_json()  # layoutStr is populated inside
 
                 self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr,
