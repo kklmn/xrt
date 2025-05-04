@@ -2213,6 +2213,12 @@ class Crystal(Material):
         where :math:`\gamma_0 = \sin(\theta_B + \alpha)`,
         :math:`\gamma_h = \mp \sin(\theta_B - \alpha)` and the upper sign is
         for Bragg and the lower sign is for Laue geometry.
+
+        Taken from [Authier]_ Eq. (8.3). See the comparison between the two
+        expressions (`get_dtheta()` and `get_dtheta_regular()`) in Fig. 8.3.
+
+        .. [Authier] A. Authier, Dynamical theory of X-ray diffraction,
+           Oxford University Press, 2001.
         """
         if alpha is None:
             alpha = 0
