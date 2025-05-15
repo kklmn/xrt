@@ -2629,8 +2629,8 @@ class ParaboloidFlatLens(Plate):
                     returnLocalAbsorbed=returnLocalAbsorbed)
 #            self.bl.flowSource = tmpFlowSource
         else:
-            tmpFlowSource = self.bl.flowSource
-            self.bl.flowSource = 'multiple_refract'
+#            tmpFlowSource = self.bl.flowSource
+#            self.bl.flowSource = 'multiple_refract'
             tempCenter = [c for c in self.center]
             beamIn = beam
             step = 2.*self.zmax + self.t\
