@@ -172,9 +172,9 @@ import sys
 import os
 import numpy as np
 # from itertools import compress
-from itertools import islice, count
+from itertools import islice
 from collections import OrderedDict
-from functools import wraps
+from functools import wraps, partial
 import re
 import copy
 import inspect
@@ -183,6 +183,7 @@ import importlib
 import json
 import xml.etree.ElementTree as ET
 import time
+import queue
 
 from matplotlib.colors import hsv_to_rgb
 
@@ -212,7 +213,7 @@ else:
     unicode = unicode
     basestring = basestring
 
-from .physconsts import SIE0  # analysis:ignore
+from .physconsts import SIE0, CH  # analysis:ignore
 
 
 safe_globals = {
@@ -255,10 +256,21 @@ allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
                  'elevation_d', 'elevation_x', 'elevation_y', 'elevation_z',
                  'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
 
+orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
+                     'braggOffset', 'rotationSequence'}
+
+shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
+               'R', 'r', 'Rm', 'Rs'}
 
 colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
     'WHITE', 'RESET'
 
+msg_start = {
+        "command": "start"}
+msg_stop = {
+        "command": "stop"}
+msg_exit = {
+        "command": "exit"}
 
 def NamedArrayFactory(names, default_dtype=float):
     class NamedArray(np.ndarray):
@@ -278,7 +290,7 @@ def NamedArrayFactory(names, default_dtype=float):
 
         def __array_finalize__(self, obj):
             if obj is None:
-                return  # nothing additional to do here
+                return
 
         def __getattr__(self, attr):
             if attr in names:
@@ -907,7 +919,7 @@ def append_to_flow(meth, bOut, frame):
 def append_to_flow_decorator(func):
     @wraps(func)
     def wrapper(self, *args, **kwargsIn):
-        meth_name = func.__name__
+        methStr = func.__name__
 
         sig = inspect.signature(func)
         bound_args = sig.bind(self, *args, **kwargsIn)
@@ -933,7 +945,7 @@ def append_to_flow_decorator(func):
                 else:
                     beamId = kwargs[beamIn].parentId
 
-                if meth_name != 'shine':
+                if methStr != 'shine':
                     self.bl.auto_align(self, kwargs[beamIn])
         if hasattr(self, 'get_orientation'):
             self.get_orientation()
@@ -941,9 +953,6 @@ def append_to_flow_decorator(func):
         result = func(self, **kwargs)
 
         if hasattr(self, 'bl') and self.bl is not None:
-#            if self.bl.flowSource != 'double_refract':
-
-#            self.bl.flowU[self.uuid] = {meth_name: kwargs}
             if isinstance(result, tuple):
                 for a in result:
                     a.parentId = self.uuid
@@ -960,14 +969,14 @@ def append_to_flow_decorator(func):
                                 'beamLocal': result[1]}
             else:
                 result.parentId = self.uuid
-                if meth_name in ['propagate', 'expose']:
+                if methStr in ['propagate', 'expose']:
                     ret_dict = {'beamLocal': result}
                 else:
                     ret_dict = {'beamGlobal' if toGlobal else 'beamLocal': result}
             if ret_dict:
                 if 'beam' in kwargs:
                     kwargs['beam'] = beamId
-                self.bl.flowU[self.uuid] = {meth_name: kwargs}
+                self.bl.flowU[self.uuid] = {methStr: kwargs}
                 self.bl.beamsDictU[self.uuid] = ret_dict
 
         return result
@@ -1134,7 +1143,7 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
 
     for paraname, paravalue in paramDictStr.items():
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
-                paravalue == 'bl':
+                paraname in ['bl', 'uuid']:
 
             if paraname == 'center':
                 paravalue = paravalue.strip('[]() ')
@@ -1155,6 +1164,7 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
             else:
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
+
     return kwargs
 
 
@@ -1243,22 +1253,29 @@ def is_valid_uuid(uuid_string):
 
 def run_process_from_file(beamLine):
     outDict = {}
-    for OE, methStr, fArgsStrDict, outArgStr in beamLine.flowList:
-        fArgs = {}
-        for argName, argVal in fArgsStrDict.items():
-            if argName == "beam":
-                fArgs[argName] = outDict[argVal]
-            else:
-                fArgs[argName] = parametrize(argVal)
-
-        outBeams = getattr(OE, methStr)(**fArgs)
-        if isinstance(outBeams, tuple):
-            for outBeam, beamName in zip(list(outBeams),
-                                         list(outArgStr)):
-                outDict[beamName] = outBeam
-        else:
-            outDict[list(outArgStr)[0]] = outBeams
-
+#    for OE, methStr, fArgsStrDict, outArgStr in beamLine.flowList:
+#        fArgs = {}
+#        for argName, argVal in fArgsStrDict.items():
+#            if argName == "beam":
+#                fArgs[argName] = outDict[argVal]
+#            else:
+#                fArgs[argName] = parametrize(argVal)
+#
+#        outBeams = getattr(OE, methStr)(**fArgs)
+#        if isinstance(outBeams, tuple):
+#            for outBeam, beamName in zip(list(outBeams),
+#                                         list(outArgStr)):
+#                outDict[beamName] = outBeam
+#        else:
+#            outDict[list(outArgStr)[0]] = outBeams
+#    print(beamLine.flowU)
+    for oeid, meth in beamLine.flowU.items():
+        oe = beamLine.oesDict[oeid][0]
+        for func, fkwargs in meth.items():
+            getattr(oe, func)(**fkwargs)
+    for beamName, beamTag in beamLine.beamNamesDict.items():
+        outDict[beamName] = beamLine.beamsDictU[beamTag[0]][beamTag[1]]
+#    print(outDict)
     return outDict
 
 
@@ -1319,6 +1336,460 @@ def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
     return hist2d, hist2dRGB, limits
 
 
+def propagationProcess(q_in, q_out):
+
+    handler = MessageHandler()
+    repeats = 0
+    while True:
+        try:
+            message = q_in.get_nowait()
+            handler.process_message(message)
+        except queue.Empty:
+            pass
+#            time.sleep(0.1)
+        if handler.exit:
+            break
+
+        if handler.stop:
+            time.sleep(0.1)
+#            continue
+        elif handler.needUpdate:
+            # TODO: run propagation downstream of the updated element
+            started = True if handler.startEl is None else False
+            for oeid, meth in handler.bl.flowU.items():
+                if not started:  # Skip until the modified element
+                    if handler.startEl == oeid:
+                        started = True
+                    else:
+                        continue
+                oe = handler.bl.oesDict[oeid][0]
+                for func, fkwargs in meth.items():
+#                    print(oe.name, func, fkwargs)
+                    getattr(oe, func)(**fkwargs)
+                    msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
+                                'sender_name': oe.name,
+                                'sender_id': oe.uuid,
+                                'status': 0}
+                    q_out.put(msg_beam)
+                    # TODO: histDict
+                    if hasattr(oe, 'expose') and hasattr(oe, 'image'):
+                        msg_hist = {'histogram': oe.image,
+                                    'sender_name': oe.name,
+                                    'sender_id': oe.uuid,
+                                    'status': 0}
+                        q_out.put(msg_hist)
+            q_out.put({"status": 0, "repeat": repeats})
+            handler.needUpdate = False
+            handler.startEl = None
+            time.sleep(0.1)
+
+#            handler.stop = True
+            repeats += 1
+        else:
+            time.sleep(0.1)
+
+
+def to_valid_var_name(name, default='unnamed'):
+    # Replace invalid characters with underscores
+    var_name = re.sub(r'\W|^(?=\d)', '_', name.strip())
+
+    # Ensure the name is not empty or a Python keyword
+    if not var_name or not re.match(r'[A-Za-z_]', var_name[0]):
+        var_name = f"{default}_{var_name}"
+
+    # Avoid Python reserved keywords
+    import keyword
+    if keyword.iskeyword(var_name):
+        var_name += '_var'
+
+    return var_name
+
+
+class MessageHandler:
+    def __init__(self, bl=None):
+        self.bl = bl
+        self.stop = True
+        self.needUpdate = False
+        self.autoUpdate = True
+        self.startEl = None
+        self.exit = False
+
+    def handle_create(self, message):
+#        uuid = message.get("uuid", None)
+        object_type = message.get("object_type")
+        kwargs = message.get("kwargs", {})
+
+        if object_type == 'beamline':
+            self.bl = BeamLine()
+            self.bl.deserialize(kwargs)
+            if self.autoUpdate:
+                self.needUpdate = True
+#            print("Deserialized beamline", self.bl.flowU)
+#        print(f"Creating {object_type} with UUID {uuid} and kwargs {kwargs}")
+
+    def handle_modify(self, message):
+        uuid = message.get("uuid")
+#        print(uuid, self.bl.oesDict.keys())
+        element = self.bl.oesDict.get(uuid)
+        kwargs = message.get("kwargs", {})
+        if element is not None:
+            for key, value in kwargs.items():
+                args = key.split('.')
+                arg = args[0]
+                if len(args) > 1:
+                    field = args[-1]
+                    if field == 'energy':
+                        if arg == 'bragg':
+                            value = [float(value)]
+                        else:
+                            value = element[0].material.get_Bragg_angle(float(value))
+                    else:
+                        arrayValue = getattr(element[0], arg)
+                        setattr(arrayValue, field, value)
+                        value = arrayValue
+                setattr(element[0], arg, value)
+            if self.autoUpdate:
+                self.needUpdate = True
+            if hasattr(element[0], 'propagate'):
+                kwargs = list(self.bl.flowU[uuid].values())[0]
+                modifiedEl = kwargs['beam']
+            else:
+                modifiedEl = uuid
+            keys = list(self.bl.flowU.keys())
+            if self.startEl is None:
+                self.startEl = modifiedEl
+            elif keys.index(modifiedEl) < keys.index(self.startEl):
+                self.startEl = modifiedEl
+
+    def handle_delete(self, message):
+        uuid = message.get("uuid")
+        print(f"Deleting object with UUID {uuid}")
+
+    def handle_start(self, message):
+        print("Starting processing loop.")
+        self.stop = False
+        self.needUpdate = True
+
+    def handle_exit(self, message):
+        print("Exiting.")
+        self.exit = True
+
+    def handle_run_once(self, message):
+        print("Starting processing loop.")
+        self.needUpdate = True
+        self.startEl = None
+
+    def handle_auto_update(self, message):
+        # print("Starting processing loop.")
+        kwargs = message.get('kwargs')
+        if kwargs is not None:
+            auto_update = kwargs.get('value')
+        self.autoUpdate = bool(auto_update)
+
+    def handle_stop(self, message):
+        print("Stopping processing loop.")
+        self.stop = True
+
+    def process_message(self, message):
+#        print("11", message)
+        # Build a dispatch dictionary mapping commands to methods.
+        command_handlers = {
+            "create": self.handle_create,
+            "modify": self.handle_modify,
+            "delete": self.handle_delete,
+            "start": self.handle_start,
+            "stop": self.handle_stop,
+            "exit": self.handle_exit,
+            "run_once": self.handle_run_once,
+            "auto_update": self.handle_auto_update,
+        }
+
+        command = message.get("command")
+        handler = command_handlers.get(command)
+        if handler:
+            handler(message)
+        else:
+            print(f"Unknown command: {command}")
+
+
+#class DynamicBeamline:
+#    """Placeholder for a headless dynamic beamline"""
+#    def __init__(self, bl, epicsPrefix=None):
+#
+#        self.epicsPrefix = epicsPrefix
+#
+#        self.beamline.deserialize(beamLayout)
+#        self.input_queue = Queue()
+#        self.output_queue = Queue()
+#
+#        self.calc_process = Process(
+#                target=propagationProcess,
+#                args=(self.input_queue, self.output_queue))
+#        self.calc_process.start()
+#        msg_init_bl = {
+#                "command": "create",
+#                "object_type": "beamline",
+#                "kwargs": beamLayout
+#                }
+#        self.input_queue.put(msg_init_bl)
+#        self.loopRunning = True
+#
+#        self.timer = qt.QTimer()
+#        self.timer.timeout.connect(
+#            partial(self.check_progress, self.output_queue))
+#        self.timer.start(10)  # Adjust the interval as needed
+#        if self.epicsPrefix is not None and self.renderingMode == 'dynamic':
+#            try:
+#                os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
+#                os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
+#                self.epicsInterface = EpicsBeamline(
+#                        bl=self.beamline,
+#                        prefix=epicsPrefix,
+#                        callback=self.update_beamline_async)
+##                self.build_epics_device(epicsPrefix, softioc, builder,
+##                                        asyncio_dispatcher)
+#            except ImportError:
+#                print("pythonSoftIOC not installed")
+#                self.epicsPrefix = None
+#
+#    async def update_beamline_async(self, oeid, argName, argValue):
+#        self.update_beamline(oeid, {argName: argValue})
+#
+#    def update_beamline(self, oeid, kwargs):
+#        for argName, argValue in kwargs.items():
+#            if oeid is None:
+#                if self.epicsPrefix is not None:
+#                    if argName == 'Acquire':
+#                        self.epicsInterface.pv_records['AcquireStatus'].set(1)
+#                        if str(argValue) == '1':
+#                            if hasattr(self, 'input_queue'):
+#                                self.input_queue.put({
+#                                            "command": "run_once",
+#                                            "object_type": "beamline"
+#                                            })
+#                    elif argName == 'AutoUpdate':
+#                        if hasattr(self, 'input_queue'):
+#                            self.input_queue.put({
+#                                        "command": "auto_update",
+#                                        "object_type": "beamline",
+#                                        "kwargs": {"value": int(argValue)}
+#                                        })
+#                return
+#
+#            oe = self.beamline.oesDict[oeid][0]
+#
+#            args = argName.split('.')
+#            arg = args[0]
+#            if len(args) > 1:
+#                field = args[-1]
+#                if field == 'energy':
+#                    if arg == 'bragg':
+#                        argValue = [float(argValue)]
+#                    else:
+#                        argValue = oe.material.get_Bragg_angle(float(argValue))
+#                else:
+#                    arrayValue = getattr(oe, arg)
+#                    setattr(arrayValue, field, argValue)
+#                    argValue = arrayValue
+#
+#            # updating local beamline tree
+#            setattr(oe, arg, argValue)
+#            if arg in orientationArgSet:
+#                self.meshDict[oeid].update_transformation_matrix()
+#            elif arg in shapeArgSet:
+#                self.needMeshUpdate = oeid
+#
+#            # updating the beamline model in the runner
+#        if self.epicsPrefix is not None:
+#            self.epicsInterface.pv_records['AcquireStatus'].set(1)
+#        message = {"command": "modify",
+#                   "object_type": "beamline",
+#                   "uuid": oeid,
+#                   "kwargs": kwargs.copy()
+##                        "kwargs": {arg: argValue.tolist() if isinstance(
+##                                argValue, np.ndarray) else argValue}
+#                        }
+#        if hasattr(self, 'input_queue'):
+#            self.input_queue.put(message)
+#
+#    def check_progress(self, progress_queue):
+##        progress = None
+#        while not progress_queue.empty():
+#            msg = progress_queue.get()
+#            if 'beam' in msg:
+##                print(msg['sender_name'], msg['sender_id'], msg['beam'])
+#                for beamKey, beam in msg['beam'].items():
+#                    self.update_beam_footprint(beam, (msg['sender_id'],
+#                                                      beamKey))
+#                    self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
+#            elif 'histogram' in msg and self.epicsPrefix is not None:
+#                histPvName = f'{to_valid_var_name(msg["sender_name"])}:image'
+#                if histPvName in self.epicsInterface.pv_records:
+#                    imgHist = np.flipud(msg['histogram'])  # Appears flipped
+#                    self.epicsInterface.pv_records[histPvName].set(
+#                            imgHist.flatten())
+#            elif 'repeat' in msg:
+#                print("Total repeats:", msg['repeat'])
+#                if self.epicsPrefix is not None:
+#                    self.epicsInterface.pv_records['AcquireStatus'].set(0)
+#                self.glDraw()
+#
+#    def close_calc_process(self):
+#        if hasattr(self, 'calc_process') and\
+#                self.calc_process is not None:
+#            self.input_queue.put(msg_exit)
+#            self.calc_process.join(timeout=1)
+#            if self.calc_process.is_alive():
+#                self.calc_process.terminate()
+#                self.calc_process.join()
+
+
+class EpicsDevice:
+    def __init__(self, bl, prefix, callback):
+
+        self.bl = bl
+        self.epicsPrefix = prefix
+        self.pv_map = {}
+        self.dbl = {}
+
+        try:
+            from softioc import softioc, builder, asyncio_dispatcher
+        except ImportError:
+            print("Missing softioc dependencies")
+            return
+        # Create an asyncio dispatcher, the event loop is now running
+        self.dispatcher = asyncio_dispatcher.AsyncioDispatcher()
+
+        # Set the record prefix
+        builder.SetDeviceName(prefix)
+        pv_records = {}
+        pvFields = {'name'} | orientationArgSet | shapeArgSet
+
+        pv_records['Acquire'] = builder.boolOut(
+            'Acquire', ZNAM=0, ONAM=1,
+            initial_value=0, always_update=True,
+            on_update=partial(callback, None, 'Acquire'))
+
+        pv_records['AcquireStatus'] = builder.boolIn(
+            'AcquireStatus', ZNAM=0, ONAM=1,
+            initial_value=0)
+
+        pv_records['AutoUpdate'] = builder.boolOut(
+            'AutoUpdate', ZNAM=0, ONAM=1,
+            initial_value=1, always_update=True,
+            on_update=partial(callback, None, 'AutoUpdate'))
+
+        for oeid, oeline in bl.oesDict.items():
+            oeObj = oeline[0]
+            oename = to_valid_var_name(oeObj.name)
+            self.pv_map[oeid] = {}
+
+            if hasattr(oeObj, 'material') and oeObj.material is not None:
+                if hasattr(oeObj.material, 'get_Bragg_angle'):
+                    if hasattr(oeObj, 'bragg'):
+                        e_field = 'bragg.energy'
+                        initial_e = np.abs(CH / (
+                                2*oeObj.material.d*np.sin(
+                                        oeObj.bragg-oeObj.braggOffset)))
+                    else:
+                        e_field = 'pitch.energy'
+                        initial_e = np.abs(CH / (
+                                2*oeObj.material.d*np.sin(oeObj.pitch)))
+                    pvname = f'{oename}:ENERGY'
+                    pv_records[pvname] = builder.aOut(
+                            pvname,
+                            initial_value=initial_e,
+                            always_update=True,
+                            on_update=partial(callback, oeid, e_field))
+                    self.pv_map[oeid]['bragg'] = pv_records[pvname]
+
+            if hasattr(oeObj, 'expose') and oeObj.limPhysX is not None:
+                pvname = f'{oename}:image'
+                histShape = getattr(oeObj, 'histShape')
+                imageLength = histShape[0]*histShape[1]
+                pv_records[pvname] = builder.WaveformIn(
+                    pvname,
+                    length=imageLength
+                    )
+
+                for fIndex, field in enumerate(['width', 'height']):
+                    pvname = f'{oename}:histShape:{field}'
+                    dimObj = getattr(oeObj, 'histShape')
+                    if dimObj is not None:
+                        pv_records[pvname] = builder.aOut(
+                            pvname,
+                            initial_value=dimObj[fIndex],
+                            always_update=True,
+                            on_update=partial(callback,
+                                              oeid, f'histShape.{field}'))
+                        self.pv_map[oeid][f'histShape.{field}'] =\
+                            pv_records[pvname]
+
+            for argName in pvFields:
+                if hasattr(oeObj, argName):
+                    if argName in ['name', 'rotationSequence']:
+                        pvname = f'{oename}:{argName}'
+                        pv_records[pvname] = builder.stringOut(
+                            pvname,
+                            initial_value=str(getattr(oeObj, argName)),
+                            always_update=True,
+                            on_update=partial(callback, oeid, argName))
+                        self.pv_map[oeid][argName] = pv_records[pvname]
+                    elif argName in ['center']:
+                        for field in ['x', 'y', 'z']:
+                            pvname = f'{oename}:{argName}:{field}'
+                            pv_records[pvname] = builder.aOut(
+                                pvname,
+                                initial_value=getattr(oeObj.center, field),
+                                always_update=True,
+                                on_update=partial(callback, oeid,
+                                                  f'{argName}.{field}'))
+                            self.pv_map[oeid][f'{argName}.{field}'] =\
+                                pv_records[pvname]
+                    elif argName in ['limPhysX', 'limPhysY', 'limPhysX2',
+                                     'limPhysY2']:  # TODO: startswith?
+                        for fIndex, field in enumerate(['lmin', 'lmax']):
+                            pvname = f'{oename}:{argName}:{field}'
+                            limObj = getattr(oeObj, argName)
+                            if limObj is not None:
+                                pv_records[pvname] = builder.aOut(
+                                    pvname,
+                                    initial_value=limObj[fIndex],
+                                    always_update=True,
+                                    on_update=partial(callback, oeid,
+                                                      f'{argName}.{field}'))
+                                self.pv_map[oeid][f'{argName}.{field}'] =\
+                                    pv_records[pvname]
+                    elif argName in ['opening']:
+                        for field in oeObj.kind:
+                            pvname = f'{oename}:{argName}:{field}'
+                            limObj = getattr(oeObj, argName)
+                            if limObj is not None:
+                                pv_records[pvname] = builder.aOut(
+                                    pvname,
+                                    initial_value=getattr(limObj, field),
+                                    always_update=True,
+                                    on_update=partial(callback, oeid,
+                                                      f'{argName}.{field}'))
+                                self.pv_map[oeid][f'{argName}.{field}'] =\
+                                    pv_records[pvname]    
+                    else:
+                        pvname = f'{oename}:{argName}'
+                        pv_records[pvname] = builder.aOut(
+                            pvname,
+                            initial_value=getattr(oeObj, argName),
+                            always_update=True,
+                            on_update=partial(callback, oeid, argName))
+                        self.pv_map[oeid][argName] = pv_records[pvname]
+
+        [print(f'{self.epicsPrefix}:{recName}') for recName in pv_records]
+        builder.LoadDatabase()
+        softioc.iocInit(self.dispatcher)
+        self.pv_records = pv_records
+        for key in self.pv_records.keys():
+            self.dbl.add(f'{prefix}:{key}')
+
+
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
@@ -1359,6 +1830,8 @@ class BeamLine(object):
         self.alarms = []
         self.name = ''
         self.oesDict = OrderedDict()
+        self.oenamesToUUIDs = {}  # Reverse lookup for oe names
+        self.matnamesToUUIDs = {}  # Reverse lookup for mat names
         self.flow = []
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
@@ -1366,6 +1839,7 @@ class BeamLine(object):
         self.forceAlign = False
         self.beamsDictU = OrderedDict()
         self.flowU = OrderedDict()
+        self.beamNamesDict = {}
         self.beamsRevDict = OrderedDict()
         self.beamsRevDictUsed = {}
         self.blViewer = None
@@ -1661,43 +2135,26 @@ class BeamLine(object):
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
             if v2:
-#                print("Existing materials dict:", self.materialsDict)
                 materialsDict = OrderedDict()
-#                print("Populating materials dict")
                 for ename, eLine in self.oesDict.items():
                     oe = eLine[0]
-#                    print(ename, oe.name)
                     for attr in ['material', 'material2']:
                         if hasattr(oe, attr):
                             attrMat = getattr(oe, attr)
-#                            print(oe.name, "has", attrMat)
                             if not is_sequence(attrMat):
                                 seqMat = (attrMat,)
                             for newMat in seqMat:
-                                if not newMat.uuid in materialsDict:
-#                                    print("Found new material:", newMat.name, newMat.uuid)
+                                if newMat is not None and not newMat.uuid in materialsDict:
                                     materialsDict[newMat.uuid] = newMat
                                 for subAttr in ['tlayer', 'blayer',
                                                 'coating', 'substrate']:
                                     if hasattr(newMat, subAttr):
                                         subMat = getattr(newMat, subAttr)
                                         if not subMat.uuid in materialsDict:
-#                                            print("Found new sub material:",
-#                                                  subMat.name, subMat.uuid)
                                             materialsDict[subMat.uuid] = subMat
                                             materialsDict.move_to_end(
                                                     subMat.uuid,
                                                     last=False)
-                                    
-#                    rmats = importlib.import_module(
-#                        '.materials', package='xrt.backends.raycing')
-#                    materialsDict = OrderedDict()
-#                    scr_globals = inspect.stack()[1][0].f_globals
-#
-#                    for objName, objInstance in scr_globals.items():
-#                        if isinstance(objInstance, (rmats.Element, rmats.Material,
-#                                                    rmats.Multilayer)):
-#                            materialsDict[objInstance.uuid] = objInstance
                 self.materialsDict.update(materialsDict)
                 _ = self.export_to_json()  # layoutStr is populated inside
 
@@ -1872,37 +2329,44 @@ class BeamLine(object):
             print(oeClass, "Init problem")
             raise
 
-        flowLine = None
-
         for methStr, methArgs in elProps.items():
             if methStr in ['properties', '_object']:
                 continue
             else:
-                flowLine = (oeObject, methStr, dict(methArgs['parameters']),
-                            list(methArgs['output'].values()))
-                break
-        self.flowList.append(flowLine)
+                fArgs = {}
+                for argName, argVal in methArgs['parameters'].items():
+                    if argName == "beam":
+                        fArgs[argName] = self.beamNamesDict[str(argVal)][0]
+                    else:
+                        fArgs[argName] = parametrize(argVal)
+
+                oeid = oeObject.uuid
+                self.flowU[oeid] = {methStr: fArgs}
+                self.beamsDictU[oeid] = {}
+                for beamType, beamName in methArgs['output'].items():
+                    self.beamNamesDict[str(beamName)] = (oeid, beamType)
+                    self.beamsDictU[oeid][beamType] = None
+                break  # Normally just one method per element.
         return oeObject
 
     def populate_oes_dict_from_json(self, dictIn):
-        self.flowList = []
         for elName, elProps in dictIn.items():
             if elName in ['properties', '_object']:
                 continue
-            oeObj = self.init_oe_from_json(elProps)
-            # TODO: Can we do it same way as materials, pass uuid at init?
             if is_valid_uuid(elName):
                 elKey = elName
-                if hasattr(oeObj, 'uuid'):
-                    self.oesDict.pop(oeObj.uuid, None)
-                oeObj.uuid = elKey
-            elif hasattr(oeObj, 'uuid'):
-                elKey = oeObj.uuid
-            else:  # Should never be here
+                self.oenamesToUUIDs[elProps['properties']['name']] = elKey
+            else:
                 elKey = str(uuid.uuid4())
-                oeObj.uuid = elKey
+                self.oenamesToUUIDs[elName] = elKey
+                elProps['properties']['name'] = elName
+            elProps['properties']['uuid'] = elKey
+            _ = self.init_oe_from_json(elProps)  # oesDict populated in oe init
 
-            self.oesDict[elKey] = [oeObj]
+
+        for elName, eluuid in self.oenamesToUUIDs.items():
+            if elName in dictIn:
+                dictIn[eluuid] = dictIn.pop(elName)
 
     def init_material_from_json(self, matName, dictIn, materialsDict):
         matModule, matClass = dictIn['_object'].rsplit('.', 1)
@@ -1913,6 +2377,8 @@ class BeamLine(object):
 
         if is_valid_uuid(matName):
             initKWArgs['uuid'] = matName
+        else:
+            initKWArgs['name'] = matName
 
         try:
             matObject = getattr(matModule, matClass)(**initKWArgs)
@@ -1923,8 +2389,16 @@ class BeamLine(object):
 
     def populate_materials_dict_from_json(self, dictIn):
         for matName, matProps in dictIn.items():
-            self.materialsDict[matName] = self.init_material_from_json(
-                    matName, matProps, self.materialsDict)
+            delay = 0.01
+            for retries in range(5):
+                try:
+                    time.sleep(delay)
+                    self.materialsDict[matName] = self.init_material_from_json(
+                            matName, matProps, self.materialsDict)
+                    break
+                except FileNotFoundError:
+                    delay *= 5
+                    print("File read retry", retries, "delay", delay, "s")
 
     def load_from_xml(self, openFileName):
         def xml_to_dict(element):
@@ -1959,8 +2433,8 @@ class BeamLine(object):
 
         self.populate_materials_dict_from_json(data['Project']['Materials'])
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
-        if 'flow' in data['Project'].keys():
-            self.flowU = data['Project']['flow']
+#        if 'flow' in data['Project'].keys():
+#            self.flowU = data['Project']['flow']
 
     def export_to_json(self):
         matDict = OrderedDict()
@@ -1988,6 +2462,7 @@ class BeamLine(object):
 
         beamsDict = {}
 
+        # TODO: replace with flowU?
         for segment in self.flow:
             method = segment[1]
             module = method.__module__
@@ -2006,8 +2481,8 @@ class BeamLine(object):
         projectDict['Beams'] = beamsDict
         projectDict['Materials'] = matDict
         projectDict['beamLine'] = beamlineDict
-        projectDict['flow'] = self.flowU
+#        projectDict['flow'] = self.flowU
 
         self.layoutStr = {'Project': projectDict}
-
+#        print("EXPORT:", self.layoutStr)
         return projectDict

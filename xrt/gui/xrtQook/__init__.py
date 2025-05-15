@@ -1286,6 +1286,7 @@ class XrtQook(qt.QWidget):
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
         child1.setFlags(self.valueFlag)
+        
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\
  for automatic alignment if \"y\" is known'
@@ -2065,7 +2066,7 @@ class XrtQook(qt.QWidget):
                         if rootModel == self.rootBLItem:
                             self.updateBeamImport()
                         if tree is not None:
-                            self.checkDefaults(None, rootModel)
+#                            self.checkDefaults(None, rootModel)
                             tmpBlColor = self.blColorCounter
                             tmpPltColor = self.pltColorCounter
                             self.addCombo(tree, rootModel)
@@ -2095,28 +2096,42 @@ class XrtQook(qt.QWidget):
 #                        'Loaded layout from {}'.format(
 #                            os.path.basename(str(self.layoutFileName))), 3000)
                     self.isEmpty = False
-                    try:
-                        self.beamLine = raycing.BeamLine()
-                        self.beamLine.flowSource = 'Qook'
-                        self.progressBar.setFormat(
-                            "Populating the beams... %p%")
-                        self.updateBeamlineBeams(item=None)
-                        self.progressBar.setValue(60)
-                        self.progressBar.setFormat(
-                            "Populating the materials... %p%")
-                        time.sleep(0.5)  # To prevent file read error in Py3
-                        self.updateBeamlineMaterials(item=None)
-                        self.progressBar.setValue(70)
-                        self.prbStart = 70
-                        self.prbRange = 30
-                        self.progressBar.setFormat(
-                            "Initializing optical elements... %p%")
-                        self.updateBeamline(item=None)
-                    except:  # analysis:ignore
-                        if _DEBUG_:
-                            raise
-                        else:
-                            pass
+                    self.beamLine.load_from_xml(openFileName)
+                    for ie in range(self.rootBLItem.rowCount()):
+                        if self.rootBLItem.child(ie, 0).text() != "properties" and\
+                                self.rootBLItem.child(ie, 0).text() != "_object":
+                            tItem = self.rootBLItem.child(ie, 0)
+                            elName = str(tItem.text())
+                            uuid = self.beamLine.oenamesToUUIDs[elName]
+                            tItem.setData(uuid, qt.UserRole)
+                    
+#                    print(self.beamLine.layoutStr)
+
+#                    time.sleep(1.)
+#                    print(self.beamLine.oesDict, '\n\n', self.beamLine.beamsDictU)
+#                    print(self.beamLine.flow, '\n\n',self.beamLine.flowU)
+#                    try:
+#                        self.beamLine = raycing.BeamLine()
+#                        self.beamLine.flowSource = 'Qook'
+#                        self.progressBar.setFormat(
+#                            "Populating the beams... %p%")
+#                        self.updateBeamlineBeams(item=None)
+#                        self.progressBar.setValue(60)
+#                        self.progressBar.setFormat(
+#                            "Populating the materials... %p%")
+#                        time.sleep(0.5)  # To prevent file read error in Py3
+#                        self.updateBeamlineMaterials(item=None)
+#                        self.progressBar.setValue(70)
+#                        self.prbStart = 70
+#                        self.prbRange = 30
+#                        self.progressBar.setFormat(
+#                            "Initializing optical elements... %p%")
+#                        self.updateBeamline(item=None)
+#                    except:  # analysis:ignore
+#                        if _DEBUG_:
+#                            raise
+#                        else:
+#                            pass
                     self.progressBar.setValue(100)
                     self.progressBar.setFormat('Loaded layout from {}'.format(
                             os.path.basename(str(self.layoutFileName))))
@@ -2914,125 +2929,126 @@ class XrtQook(qt.QWidget):
                         break
 
     def updateBeamlineMaterials(self, item, newMat=False):
-        def createParamDict(parentItem, elementString):
-            kwargs = dict()
-            for iep, arg_def in zip(range(parentItem.rowCount()), list(zip(
-                    *self.getParams(elementString)))[1]):
-                paraname = str(parentItem.child(iep, 0).text())
-                paravalue = str(parentItem.child(iep, 1).text())
-                if paravalue != str(arg_def) or\
-                        paravalue == 'bl':
-                    if paraname.lower() in ['tlayer', 'blayer', 'coating',
-                                            'substrate']:
-                        paravalue =\
-                            self.beamLine.materialsDict[paravalue]
-                    else:
-                        paravalue = self.parametrize(paravalue)
-                    kwargs[paraname] = paravalue
-            return kwargs
-
-        if item is None:
-            self.beamLine.materialsDict = OrderedDict({'None': None})
-            for ie in range(self.rootMatItem.rowCount()):
-                matItem = self.rootMatItem.child(ie, 0)
-                matName = str(matItem.text())
-                if matName != "None":
-                    matClassStr = self.getClassName(matItem)
-                    for ieph in range(matItem.rowCount()):
-                        if matItem.child(ieph, 0).text() == 'properties':
-                            kwArgs = createParamDict(
-                                matItem.child(ieph, 0), matClassStr)
-                            break
-                    try:
-                        self.beamLine.materialsDict[matName] =\
-                            eval(matClassStr)(**kwArgs)
-                        self.progressBar.setFormat(
-                            "Class {} successfully initialized.".format(
-                                matName))
-                        print("Class", matName, "successfully initialized.")
-                    except:  # analysis:ignore
-                        if _DEBUG_:
-                            raise
-                        else:
-                            self.beamLine.materialsDict[matName] = None
-                            self.progressBar.setFormat(
-                                "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
-                                    matName))
-                            print("Incorrect parameters. Class", matName,
-                                  "not initialized.")
-        else:
-            if item.index().column() == 0 and not newMat:  # Rename material
-                matValues = list(self.beamLine.materialsDict.values())
-                matKeys = list(self.beamLine.materialsDict.keys())
-                blMats = OrderedDict({'None': None})
-                counter = 0
-                for ie in range(self.rootMatItem.rowCount()):
-                    matItemStr = str(self.rootMatItem.child(
-                        ie, 0).text())
-                    if matItemStr != 'None':
-                        blMats[matItemStr] = matValues[counter]
-                        if matItemStr != matKeys[counter]:
-                            print("Material", matKeys[counter], "renamed to",
-                                  matItemStr)
-                    counter += 1
-                self.beamLine.materialsDict = blMats
-            else:  # New material or property changed, init one material
-                if newMat:
-                    matItem = item
-                    for ie in range(item.rowCount()):
-                        if item.child(ie, 0).text() == 'properties':
-                            propItem = item.child(ie, 0)
-                            break
-                else:
-                    matItem = item.parent().parent()
-                    propItem = item.parent()
-                matClassStr = self.getClassName(matItem)
-                kwArgs = createParamDict(propItem, matClassStr)
-                matName = str(matItem.text())
-                try:
-                    if newMat:
-                        self.beamLine.materialsDict[matName] = eval(
-                            matClassStr)(**kwArgs)
-                    elif self.beamLine.materialsDict[matName] is None:
-                        self.beamLine.materialsDict[matName] = eval(
-                            matClassStr)(**kwArgs)
-                    else:
-                        self.beamLine.materialsDict[matName].__init__(**kwArgs)
-                    self.progressBar.setFormat(
-                        "Class {} successfully initialized.".format(matName))
-                    print("Class", matName, "successfully initialized.")
-                except:  # analysis:ignore
-                    self.beamLine.materialsDict[matName] = None
-                    self.progressBar.setFormat(
-                        "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
-                            matName))
-                    print("Incorrect parameters. Class", matName,
-                          "not initialized.")
-                startFrom = None
-                if matName is not None:
-                    for iel in range(self.rootBLItem.rowCount()):
-                        eItem = self.rootBLItem.child(iel, 0)
-                        elNameStr = str(eItem.text())
-                        for ich1 in range(eItem.rowCount()):
-                            if str(eItem.child(ich1, 0).text()) ==\
-                                    'properties':
-                                pItem = eItem.child(ich1, 0)
-                                for ich2 in range(pItem.rowCount()):
-                                    if str(pItem.child(ich2, 1).text()) ==\
-                                            matName:
-                                        startFrom =\
-                                            self.nameToFlowPos(
-                                                elNameStr)
-                                        break
-                                else:
-                                    continue
-                                break
-                        else:
-                            continue
-                        break
-                    if self.isGlowAutoUpdate:
-                        if startFrom is not None:
-                            self.blPropagateFlow(startFrom)
+        print(item, newMat)
+#        def createParamDict(parentItem, elementString):
+#            kwargs = dict()
+#            for iep, arg_def in zip(range(parentItem.rowCount()), list(zip(
+#                    *self.getParams(elementString)))[1]):
+#                paraname = str(parentItem.child(iep, 0).text())
+#                paravalue = str(parentItem.child(iep, 1).text())
+#                if paravalue != str(arg_def) or\
+#                        paravalue == 'bl':
+#                    if paraname.lower() in ['tlayer', 'blayer', 'coating',
+#                                            'substrate']:
+#                        paravalue =\
+#                            self.beamLine.materialsDict[paravalue]
+#                    else:
+#                        paravalue = self.parametrize(paravalue)
+#                    kwargs[paraname] = paravalue
+#            return kwargs
+#
+#        if item is None:
+#            self.beamLine.materialsDict = OrderedDict({'None': None})
+#            for ie in range(self.rootMatItem.rowCount()):
+#                matItem = self.rootMatItem.child(ie, 0)
+#                matName = str(matItem.text())
+#                if matName != "None":
+#                    matClassStr = self.getClassName(matItem)
+#                    for ieph in range(matItem.rowCount()):
+#                        if matItem.child(ieph, 0).text() == 'properties':
+#                            kwArgs = createParamDict(
+#                                matItem.child(ieph, 0), matClassStr)
+#                            break
+#                    try:
+#                        self.beamLine.materialsDict[matName] =\
+#                            eval(matClassStr)(**kwArgs)
+#                        self.progressBar.setFormat(
+#                            "Class {} successfully initialized.".format(
+#                                matName))
+#                        print("Class", matName, "successfully initialized.")
+#                    except:  # analysis:ignore
+#                        if _DEBUG_:
+#                            raise
+#                        else:
+#                            self.beamLine.materialsDict[matName] = None
+#                            self.progressBar.setFormat(
+#                                "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
+#                                    matName))
+#                            print("Incorrect parameters. Class", matName,
+#                                  "not initialized.")
+#        else:
+#            if item.index().column() == 0 and not newMat:  # Rename material
+#                matValues = list(self.beamLine.materialsDict.values())
+#                matKeys = list(self.beamLine.materialsDict.keys())
+#                blMats = OrderedDict({'None': None})
+#                counter = 0
+#                for ie in range(self.rootMatItem.rowCount()):
+#                    matItemStr = str(self.rootMatItem.child(
+#                        ie, 0).text())
+#                    if matItemStr != 'None':
+#                        blMats[matItemStr] = matValues[counter]
+#                        if matItemStr != matKeys[counter]:
+#                            print("Material", matKeys[counter], "renamed to",
+#                                  matItemStr)
+#                    counter += 1
+#                self.beamLine.materialsDict = blMats
+#            else:  # New material or property changed, init one material
+#                if newMat:
+#                    matItem = item
+#                    for ie in range(item.rowCount()):
+#                        if item.child(ie, 0).text() == 'properties':
+#                            propItem = item.child(ie, 0)
+#                            break
+#                else:
+#                    matItem = item.parent().parent()
+#                    propItem = item.parent()
+#                matClassStr = self.getClassName(matItem)
+#                kwArgs = createParamDict(propItem, matClassStr)
+#                matName = str(matItem.text())
+#                try:
+#                    if newMat:
+#                        self.beamLine.materialsDict[matName] = eval(
+#                            matClassStr)(**kwArgs)
+#                    elif self.beamLine.materialsDict[matName] is None:
+#                        self.beamLine.materialsDict[matName] = eval(
+#                            matClassStr)(**kwArgs)
+#                    else:
+#                        self.beamLine.materialsDict[matName].__init__(**kwArgs)
+#                    self.progressBar.setFormat(
+#                        "Class {} successfully initialized.".format(matName))
+#                    print("Class", matName, "successfully initialized.")
+#                except:  # analysis:ignore
+#                    self.beamLine.materialsDict[matName] = None
+#                    self.progressBar.setFormat(
+#                        "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
+#                            matName))
+#                    print("Incorrect parameters. Class", matName,
+#                          "not initialized.")
+#                startFrom = None
+#                if matName is not None:
+#                    for iel in range(self.rootBLItem.rowCount()):
+#                        eItem = self.rootBLItem.child(iel, 0)
+#                        elNameStr = str(eItem.text())
+#                        for ich1 in range(eItem.rowCount()):
+#                            if str(eItem.child(ich1, 0).text()) ==\
+#                                    'properties':
+#                                pItem = eItem.child(ich1, 0)
+#                                for ich2 in range(pItem.rowCount()):
+#                                    if str(pItem.child(ich2, 1).text()) ==\
+#                                            matName:
+#                                        startFrom =\
+#                                            self.nameToFlowPos(
+#                                                elNameStr)
+#                                        break
+#                                else:
+#                                    continue
+#                                break
+#                        else:
+#                            continue
+#                        break
+#                    if self.isGlowAutoUpdate:
+#                        if startFrom is not None:
+#                            self.blPropagateFlow(startFrom)
 
     def nameToFlowPos(self, elementNameStr):
         retVal = 0
@@ -3056,367 +3072,401 @@ class XrtQook(qt.QWidget):
             return '000'
 
     def updateBeamline(self, item=None, newElement=False, newOrder=False):
-        def createParamDict(parentItem, elementString):
-            kwargs = dict()
-            for iep, arg_def in zip(range(
-                    parentItem.rowCount()),
-                    list(zip(*self.getParams(elementString)))[1]):
-                paraname = str(parentItem.child(iep, 0).text())
-                paravalue = str(parentItem.child(iep, 1).text())
-                if paravalue != str(arg_def) or\
-                        paraname == 'bl':
-                    if paraname == 'center':
-                        paravalue = paravalue.strip('[]() ')
-                        paravalue =\
-                            [self.getVal(c.strip())
-                             for c in str.split(
-                             paravalue, ',')]
-                    elif paraname.startswith('material'):
-                        paravalue =\
-                            self.beamLine.materialsDict[paravalue]
-                    elif paraname == 'bl':
-                        paravalue = self.beamLine
-                    else:
-                        paravalue = self.parametrize(paravalue)
-                    kwargs[paraname] = paravalue
-            return kwargs
-
-        def createMethodDict(elementItem, elementString):
-            methodObj = None
-            for ieph in range(elementItem.rowCount()):
-                pItem = elementItem.child(ieph, 0)
-                methodObj = None
-                if str(pItem.text()) not in ['_object', 'properties']:
-                    for namef, objf in inspect.getmembers(eval(elementString)):
-                        if (inspect.ismethod(objf) or
-                                inspect.isfunction(objf)) and\
-                                namef == str(pItem.text()).strip('()'):
-                            methodObj = objf
-                    inkwargs = {}
-                    outkwargs = OrderedDict()
-                    for imet in range(pItem.rowCount()):
-                        mItem = pItem.child(imet, 0)
-                        if str(mItem.text()) == 'parameters':
-                            for iep, arg_def in\
-                                zip(range(mItem.rowCount()),
-                                    getargspec(methodObj)[3]):
-                                paraname = str(mItem.child(
-                                    iep, 0).text())
-                                paravalue = self.parametrize(str(mItem.child(
-                                    iep, 1).text()))
-                                if len(re.findall('beam', paraname)) > 0 and\
-                                    self.beamLine.oesDict[str(elementItem.text(
-                                        ))][1] and paravalue is None:
-                                    return None, None, None
-                                inkwargs[paraname] = paravalue
-                        elif str(mItem.text()) == 'output':
-                            for iep in range(mItem.rowCount()):
-                                paraname = str(mItem.child(
-                                    iep, 0).text())
-                                paravalue = str(mItem.child(iep, 1).text())
-                                outkwargs[paraname] = paravalue
-            if methodObj is not None:
-                return methodObj, inkwargs, outkwargs
-            else:
-                return None, None, None
-
-        def buildFlow(startFrom=0):
-            blFlow = []
-            for ie in range(self.rootBLItem.rowCount()):
-                elItem = self.rootBLItem.child(ie, 0)
-                elName = str(elItem.text())
-                if elName not in ["properties", "_object"]:
-                    elStr = self.getClassName(elItem)
-                    methodObj, inkwArgs, outkwArgs = createMethodDict(
-                        elItem, elStr)
-                    if methodObj is not None:
-                        blFlow.append([elName, methodObj,
-                                       inkwArgs, outkwArgs])
-            return blFlow
-
-        def updateRegexp():
-            for iElement in range(self.rootBLItem.rowCount()):
-                elItem = self.rootBLItem.child(iElement, 0)
-                if str(elItem.text()) not in ['properties', '_object']:
-                    for iProp in range(elItem.rowCount()):
-                        propItem = elItem.child(iProp, 0)
-                        if str(propItem.text()) not in ['properties',
-                                                        '_object']:
-                            for iMeth in range(propItem.rowCount()):
-                                methItem = propItem.child(iMeth, 0)
-                                if str(methItem.text()) == 'parameters':
-                                    for iBeam in range(methItem.rowCount()):
-                                        bItem = methItem.child(iBeam, 0)
-                                        if len(re.findall(
-                                                'beam', str(
-                                                bItem.text()))) > 0:
-                                            vItem = methItem.child(iBeam, 1)
-                                            iWidget = self.tree.indexWidget(
-                                                vItem.index())
-                                            if iWidget is not None:
-                                                try:
-                                                    regexp =\
-                                                        self.intToRegexp(
-                                                            iElement)
-                                                    iWidget.model(
-                                                        ).setFilterRegExp(
-                                                            regexp)
-                                                except:  # analysis:ignore
-                                                    if _DEBUG_:
-                                                        raise
-                                                    else:
-                                                        continue
-                                elif str(methItem.text()) == 'output':
-                                    for iBeam in range(methItem.rowCount()):
-                                        bItem = methItem.child(iBeam, 0)
-                                        if len(re.findall(
-                                                'beam', str(
-                                                bItem.text()))) > 0:
-                                            vItem = methItem.child(iBeam, 1)
-                                            iWidget = self.tree.indexWidget(
-                                                vItem.index())
-                                            if iWidget is not None:
-                                                try:
-                                                    regexp = '{:03d}'.format(
-                                                        iElement)
-                                                    iWidget.model(
-                                                        ).setFilterRegExp(
-                                                            regexp)
-                                                except:  # analysis:ignore
-                                                    if _DEBUG_:
-                                                        raise
-                                                    else:
-                                                        continue
-        self.rootBLItem.model().blockSignals(True)
-        self.flattenElement(self.tree,
-                            self.rootBLItem if item is None else item)
-        self.rootBLItem.model().blockSignals(False)
-
+#        print(item, newElement, newOrder)
+        if self.blViewer is None:
+            return
+        oeid = 'None'
+        argName = 'None'
+        argValue = 'None'
+        
         if item is not None:
-            if item.index().parent().isValid():  # not the Beamline root
-                iCol = item.index().column()
-                pText = str(item.parent().text())
-                if pText == str(self.rootBLItem.text()):
-                    if newElement:  # New element added
-                        elNameStr = str(item.text())
-                        elClassStr = self.getClassName(item)
-                        for iep in range(item.rowCount()):
-                            if item.child(iep, 0).text() == 'properties':
-                                propItem = item.child(iep, 0)
-                                break
-                        oeType = 0 if len(re.findall(
-                            'raycing.sou', elClassStr)) > 0 else 1
-                        try:
-                            kwArgs = createParamDict(propItem, elClassStr)
-                            self.beamLine.oesDict[elNameStr] =\
-                                [eval(elClassStr)(**kwArgs), oeType]
-                            self.progressBar.setFormat(
-                                "Class {} successfully initialized.".format(
-                                    elNameStr))
-                            print("Class", elNameStr,
-                                  "successfully initialized.")
-                        except:  # analysis:ignore
-                            self.beamLine.oesDict[elNameStr] =\
-                                [None, oeType]
-                            self.progressBar.setFormat(
-                                "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
-                                    elNameStr))
-                            print("Incorrect parameters. Class", elNameStr,
-                                  "not initialized.")
-                        self.beamLine.flow = buildFlow(startFrom=elNameStr)
-                        startFrom = self.nameToFlowPos(elNameStr)
-                    else:  # Element renamed or moved
-                        oesValues = list(self.beamLine.oesDict.values())
-                        oesKeys = list(self.beamLine.oesDict.keys())
-                        wasDeleted = True if\
-                            len(oesKeys) + 2 < self.rootBLItem.rowCount()\
-                            else False
-                        if not wasDeleted:
-                            newDict = OrderedDict()
-                            counter = 0
-                            startElement = None
-                            rbi = self.rootBeamItem
-                            for ie in range(self.rootBLItem.rowCount()):
-                                elNameStr =\
-                                    str(self.rootBLItem.child(ie, 0).text())
-                                if elNameStr not in ["properties", "_object"]:
-                                    if newOrder:
-                                        newDict[elNameStr] =\
-                                            self.beamLine.oesDict[elNameStr]
-                                        if elNameStr != oesKeys[counter] and\
-                                                startElement is None:
-                                            startElement = elNameStr
-                                            newElName = elNameStr
-                                    else:
-                                        newDict[elNameStr] = oesValues[counter]
-                                        if elNameStr != oesKeys[counter]:
-                                            startElement = oesKeys[counter]
-                                            for ibeam in range(
-                                                    rbi.rowCount()):
-                                                if str(rbi.child(
-                                                        ibeam, 2).text()) ==\
-                                                        startElement:
-                                                    rbi.child(
-                                                        ibeam, 2).setText(
-                                                            elNameStr)
-                                            self.progressBar.setFormat(
-                                                "Element {0} renamed to {1}".format(  # analysis:ignore
-                                                    startElement, elNameStr))
-                                            print("Element", startElement,
-                                                  "renamed to", elNameStr)
-                                            newElName = elNameStr
-                                    counter += 1
-                            self.beamLine.oesDict = newDict
-                        if newOrder:
-                            self.progressBar.setFormat(
-                                "Element {} moved to new position".format(
-                                    item.text()))
-                            print("Element", item.text(),
-                                  "moved to new position")
-                            for ibeam in range(rbi.rowCount()):
-                                rbi.child(ibeam, 3).setText(str(
-                                    self.nameToBLPos(str(rbi.child(
-                                        ibeam, 2).text()))))
-                            self.beamModel.sort(3)
-                            updateRegexp()
-                        elif wasDeleted:
-                            self.progressBar.setFormat(
-                                "Element {} was removed".format(item.text()))
-                            print("Element", item.text(),
-                                  "was removed")
-                            startElement = str(item.text())
-                            startFrom = self.nameToFlowPos(startElement)
-                            self.beamLine.flow =\
-                                buildFlow(startFrom=startElement)
-                        else:
-                            for iel in range(len(self.beamLine.flow)):
-                                if self.beamLine.flow[iel][0] == startElement:
-                                    self.beamLine.flow[iel][0] =\
-                                        str(item.text())
-                        if not wasDeleted:
-                            startFrom = self.nameToFlowPos(newElName)
-                elif pText in ['properties'] and iCol > 0:
-                    elItem = item.parent().parent()
-                    elNameStr = str(elItem.text())
-                    elClassStr = self.getClassName(elItem)
-                    if len(re.findall('.BeamLine', elClassStr)) > 0:  # BL
-                        paramName = str(item.parent().child(item.index().row(),
-                                                            0).text())
-                        paramValue = self.parametrize(str(item.text()))
-                        setattr(self.beamLine, paramName, paramValue)
-                        startFrom = 0
-                    else:  # Setters and getters not implemented yet for OEs
-                        oeType = 0 if len(re.findall(
-                            'raycing.sou', elClassStr)) > 0 else 1
-                        try:
-                            kwargs = createParamDict(item.parent(),
-                                                     elClassStr)
-                            if self.beamLine.oesDict[elNameStr][0] is None:
-                                self.beamLine.oesDict[elNameStr] =\
-                                    [eval(elClassStr)(**kwargs), oeType]
-                                self.progressBar.setFormat(
-                                    "Class {} successfully initialized.".format(  # analysis:ignore
-                                        elNameStr))
-                                print("Class", elNameStr,
-                                      "successfully initialized.")
-                            else:
-                                self.beamLine.oesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
-                                self.progressBar.setFormat(
-                                    "Class {} successfully re-initialized.".format(  # analysis:ignore
-                                        elNameStr))
-                                print("Class", elNameStr,
-                                      "successfully re-initialized.")
-                        except:  # analysis:ignore
-                            self.beamLine.oesDict[elNameStr] =\
-                                [None, oeType]
-                            self.progressBar.setFormat(
-                                "Incorrect parameters. Class {} not initialized.".format(elNameStr))  # analysis:ignore
-                            print("Incorrect parameters. Class", elNameStr,
-                                  "not initialized.")
-                        if len(re.findall('raycing.aper', elClassStr)) > 0:
-                            if self.rayPath is not None:
-                                for segment in self.rayPath[0]:
-                                    if segment[2] == elNameStr:
-                                        startFrom =\
-                                            self.nameToFlowPos(segment[0])
-                                        break
-                                else:
-                                    startFrom =\
-                                        self.nameToFlowPos(elNameStr)
-                            else:
-                                startFrom = self.nameToFlowPos(elNameStr)
-                        else:
-                            startFrom = self.nameToFlowPos(elNameStr)
-                elif pText in ['parameters', 'output'] and iCol > 0:
-                    elItem = item.parent().parent().parent()
-                    elNameStr = str(elItem.text())
-                    self.progressBar.setFormat(
-                        "Method of {} was modified".format(elNameStr))
-                    print("Method of", elNameStr, "was modified")
-                    self.beamLine.flow = buildFlow(startFrom=elNameStr)
-                    startFrom = self.nameToFlowPos(elNameStr)
-                elif item.parent().parent() == self.rootBLItem and newElement:
-                    elItem = item.parent()
-                    elNameStr = str(elItem.text())
-                    self.progressBar.setFormat(
-                        "Method {0} was added to {1}".format(
-                            item.text(), elNameStr))
-                    print("Method", item.text(), "was added to", elNameStr)
-                    self.beamLine.flow = buildFlow(startFrom=elNameStr)
-                    startFrom = self.nameToFlowPos(elNameStr)
-        else:  # Rebuild beamline
-            for ie in range(self.rootBLItem.rowCount()):
-                elItem = self.rootBLItem.child(ie, 0)
-                elNameStr = str(elItem.text())
-                if elNameStr == 'properties':  # Beamline properties
-                    for iprop in range(elItem.rowCount()):
-                        paramName = str(elItem.child(iprop, 0).text())
-                        paramValue = self.parametrize(str(elItem.child(
-                            iprop, 1).text()))
-                        setattr(self.beamLine, paramName, paramValue)
-                elif elNameStr != '_object':  # Beamline element
-                    for iprop in range(elItem.rowCount()):
-                        pItem = elItem.child(iprop, 0)
-                        pText = str(pItem.text())
-                        if pText == 'properties':  # OE properties
-                            elClassStr = self.getClassName(elItem)
-                            oeType = 0 if len(re.findall(
-                                'raycing.sou', elClassStr)) > 0 else 1
-                            try:
-                                kwArgs = createParamDict(pItem, elClassStr)
-                                self.beamLine.oesDict[elNameStr] =\
-                                    [eval(elClassStr)(**kwArgs), oeType]
-                                self.progressBar.setFormat(
-                                    "Class {} successfully initialized.".format(  # analysis:ignore
-                                        elNameStr))
-                                print("Class", elNameStr,
-                                      "successfully initialized.")
-                            except:  # analysis:ignore
-                                self.beamLine.oesDict[elNameStr] =\
-                                    [None, oeType]
-                                self.progressBar.setFormat(
-                                    "Incorrect parameters. Class {} not initialized.".format(elNameStr))  # analysis:ignore
-                                print("Incorrect parameters. Class", elNameStr,
-                                      "not initialized.")
-            self.beamLine.flow = buildFlow()
-            startFrom = 0
+            iindex = item.index()
+            column = iindex.column()
+            row = iindex.row()
+            parent = item.parent()
+            if column == 1:
+                argValue_str = item.text()
+                argName = parent.child(row, 0).text()
+            
+            if str(parent.text()) == 'properties':
+                oeItem = parent.parent()
+                oeid = str(oeItem.data(qt.UserRole))
 
-        if self.isGlowAutoUpdate:
-            if startFrom is not None:
-                self.blPropagateFlow(startFrom)
+            try:  # TODO: move imports or use raycing.parametrize()
+                import ast
+                argValue = ast.literal_eval(argValue_str)
+            except Exception:
+                argValue = argValue_str
+                
+            kwargs = {argName: argValue}
+            print(oeid, kwargs)
+            self.blViewer.customGlWidget.update_beamline(oeid, kwargs)
+#            print(item.text(), row, column, parent.text())
+        
+#        self.blRunGlow()
+#        def createParamDict(parentItem, elementString):
+#            kwargs = dict()
+#            for iep, arg_def in zip(range(
+#                    parentItem.rowCount()),
+#                    list(zip(*self.getParams(elementString)))[1]):
+#                paraname = str(parentItem.child(iep, 0).text())
+#                paravalue = str(parentItem.child(iep, 1).text())
+#                if paravalue != str(arg_def) or\
+#                        paraname == 'bl':
+#                    if paraname == 'center':
+#                        paravalue = paravalue.strip('[]() ')
+#                        paravalue =\
+#                            [self.getVal(c.strip())
+#                             for c in str.split(
+#                             paravalue, ',')]
+#                    elif paraname.startswith('material'):
+#                        paravalue =\
+#                            self.beamLine.materialsDict[paravalue]
+#                    elif paraname == 'bl':
+#                        paravalue = self.beamLine
+#                    else:
+#                        paravalue = self.parametrize(paravalue)
+#                    kwargs[paraname] = paravalue
+#            return kwargs
+#
+#        def createMethodDict(elementItem, elementString):
+#            methodObj = None
+#            for ieph in range(elementItem.rowCount()):
+#                pItem = elementItem.child(ieph, 0)
+#                methodObj = None
+#                if str(pItem.text()) not in ['_object', 'properties']:
+#                    for namef, objf in inspect.getmembers(eval(elementString)):
+#                        if (inspect.ismethod(objf) or
+#                                inspect.isfunction(objf)) and\
+#                                namef == str(pItem.text()).strip('()'):
+#                            methodObj = objf
+#                    inkwargs = {}
+#                    outkwargs = OrderedDict()
+#                    for imet in range(pItem.rowCount()):
+#                        mItem = pItem.child(imet, 0)
+#                        if str(mItem.text()) == 'parameters':
+#                            for iep, arg_def in\
+#                                zip(range(mItem.rowCount()),
+#                                    getargspec(methodObj)[3]):
+#                                paraname = str(mItem.child(
+#                                    iep, 0).text())
+#                                paravalue = self.parametrize(str(mItem.child(
+#                                    iep, 1).text()))
+#                                if len(re.findall('beam', paraname)) > 0 and\
+#                                    self.beamLine.oesDict[str(elementItem.text(
+#                                        ))][1] and paravalue is None:
+#                                    return None, None, None
+#                                inkwargs[paraname] = paravalue
+#                        elif str(mItem.text()) == 'output':
+#                            for iep in range(mItem.rowCount()):
+#                                paraname = str(mItem.child(
+#                                    iep, 0).text())
+#                                paravalue = str(mItem.child(iep, 1).text())
+#                                outkwargs[paraname] = paravalue
+#            if methodObj is not None:
+#                return methodObj, inkwargs, outkwargs
+#            else:
+#                return None, None, None
+#
+#        def buildFlow(startFrom=0):
+#            blFlow = []
+#            for ie in range(self.rootBLItem.rowCount()):
+#                elItem = self.rootBLItem.child(ie, 0)
+#                elName = str(elItem.text())
+#                if elName not in ["properties", "_object"]:
+#                    elStr = self.getClassName(elItem)
+#                    methodObj, inkwArgs, outkwArgs = createMethodDict(
+#                        elItem, elStr)
+#                    if methodObj is not None:
+#                        blFlow.append([elName, methodObj,
+#                                       inkwArgs, outkwArgs])
+#            return blFlow
+#
+#        def updateRegexp():
+#            for iElement in range(self.rootBLItem.rowCount()):
+#                elItem = self.rootBLItem.child(iElement, 0)
+#                if str(elItem.text()) not in ['properties', '_object']:
+#                    for iProp in range(elItem.rowCount()):
+#                        propItem = elItem.child(iProp, 0)
+#                        if str(propItem.text()) not in ['properties',
+#                                                        '_object']:
+#                            for iMeth in range(propItem.rowCount()):
+#                                methItem = propItem.child(iMeth, 0)
+#                                if str(methItem.text()) == 'parameters':
+#                                    for iBeam in range(methItem.rowCount()):
+#                                        bItem = methItem.child(iBeam, 0)
+#                                        if len(re.findall(
+#                                                'beam', str(
+#                                                bItem.text()))) > 0:
+#                                            vItem = methItem.child(iBeam, 1)
+#                                            iWidget = self.tree.indexWidget(
+#                                                vItem.index())
+#                                            if iWidget is not None:
+#                                                try:
+#                                                    regexp =\
+#                                                        self.intToRegexp(
+#                                                            iElement)
+#                                                    iWidget.model(
+#                                                        ).setFilterRegExp(
+#                                                            regexp)
+#                                                except:  # analysis:ignore
+#                                                    if _DEBUG_:
+#                                                        raise
+#                                                    else:
+#                                                        continue
+#                                elif str(methItem.text()) == 'output':
+#                                    for iBeam in range(methItem.rowCount()):
+#                                        bItem = methItem.child(iBeam, 0)
+#                                        if len(re.findall(
+#                                                'beam', str(
+#                                                bItem.text()))) > 0:
+#                                            vItem = methItem.child(iBeam, 1)
+#                                            iWidget = self.tree.indexWidget(
+#                                                vItem.index())
+#                                            if iWidget is not None:
+#                                                try:
+#                                                    regexp = '{:03d}'.format(
+#                                                        iElement)
+#                                                    iWidget.model(
+#                                                        ).setFilterRegExp(
+#                                                            regexp)
+#                                                except:  # analysis:ignore
+#                                                    if _DEBUG_:
+#                                                        raise
+#                                                    else:
+#                                                        continue
+#        self.rootBLItem.model().blockSignals(True)
+#        self.flattenElement(self.tree,
+#                            self.rootBLItem if item is None else item)
+#        self.rootBLItem.model().blockSignals(False)
+#
+#        if item is not None:
+#            if item.index().parent().isValid():  # not the Beamline root
+#                iCol = item.index().column()
+#                pText = str(item.parent().text())
+#                if pText == str(self.rootBLItem.text()):
+#                    if newElement:  # New element added
+#                        elNameStr = str(item.text())
+#                        elClassStr = self.getClassName(item)
+#                        for iep in range(item.rowCount()):
+#                            if item.child(iep, 0).text() == 'properties':
+#                                propItem = item.child(iep, 0)
+#                                break
+#                        oeType = 0 if len(re.findall(
+#                            'raycing.sou', elClassStr)) > 0 else 1
+#                        try:
+#                            kwArgs = createParamDict(propItem, elClassStr)
+#                            self.beamLine.oesDict[elNameStr] =\
+#                                [eval(elClassStr)(**kwArgs), oeType]
+#                            self.progressBar.setFormat(
+#                                "Class {} successfully initialized.".format(
+#                                    elNameStr))
+#                            print("Class", elNameStr,
+#                                  "successfully initialized.")
+#                        except:  # analysis:ignore
+#                            self.beamLine.oesDict[elNameStr] =\
+#                                [None, oeType]
+#                            self.progressBar.setFormat(
+#                                "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
+#                                    elNameStr))
+#                            print("Incorrect parameters. Class", elNameStr,
+#                                  "not initialized.")
+#                        self.beamLine.flow = buildFlow(startFrom=elNameStr)
+#                        startFrom = self.nameToFlowPos(elNameStr)
+#                    else:  # Element renamed or moved
+#                        oesValues = list(self.beamLine.oesDict.values())
+#                        oesKeys = list(self.beamLine.oesDict.keys())
+#                        wasDeleted = True if\
+#                            len(oesKeys) + 2 < self.rootBLItem.rowCount()\
+#                            else False
+#                        if not wasDeleted:
+#                            newDict = OrderedDict()
+#                            counter = 0
+#                            startElement = None
+#                            rbi = self.rootBeamItem
+#                            for ie in range(self.rootBLItem.rowCount()):
+#                                elNameStr =\
+#                                    str(self.rootBLItem.child(ie, 0).text())
+#                                if elNameStr not in ["properties", "_object"]:
+#                                    if newOrder:
+#                                        newDict[elNameStr] =\
+#                                            self.beamLine.oesDict[elNameStr]
+#                                        if elNameStr != oesKeys[counter] and\
+#                                                startElement is None:
+#                                            startElement = elNameStr
+#                                            newElName = elNameStr
+#                                    else:
+#                                        newDict[elNameStr] = oesValues[counter]
+#                                        if elNameStr != oesKeys[counter]:
+#                                            startElement = oesKeys[counter]
+#                                            for ibeam in range(
+#                                                    rbi.rowCount()):
+#                                                if str(rbi.child(
+#                                                        ibeam, 2).text()) ==\
+#                                                        startElement:
+#                                                    rbi.child(
+#                                                        ibeam, 2).setText(
+#                                                            elNameStr)
+#                                            self.progressBar.setFormat(
+#                                                "Element {0} renamed to {1}".format(  # analysis:ignore
+#                                                    startElement, elNameStr))
+#                                            print("Element", startElement,
+#                                                  "renamed to", elNameStr)
+#                                            newElName = elNameStr
+#                                    counter += 1
+#                            self.beamLine.oesDict = newDict
+#                        if newOrder:
+#                            self.progressBar.setFormat(
+#                                "Element {} moved to new position".format(
+#                                    item.text()))
+#                            print("Element", item.text(),
+#                                  "moved to new position")
+#                            for ibeam in range(rbi.rowCount()):
+#                                rbi.child(ibeam, 3).setText(str(
+#                                    self.nameToBLPos(str(rbi.child(
+#                                        ibeam, 2).text()))))
+#                            self.beamModel.sort(3)
+#                            updateRegexp()
+#                        elif wasDeleted:
+#                            self.progressBar.setFormat(
+#                                "Element {} was removed".format(item.text()))
+#                            print("Element", item.text(),
+#                                  "was removed")
+#                            startElement = str(item.text())
+#                            startFrom = self.nameToFlowPos(startElement)
+#                            self.beamLine.flow =\
+#                                buildFlow(startFrom=startElement)
+#                        else:
+#                            for iel in range(len(self.beamLine.flow)):
+#                                if self.beamLine.flow[iel][0] == startElement:
+#                                    self.beamLine.flow[iel][0] =\
+#                                        str(item.text())
+#                        if not wasDeleted:
+#                            startFrom = self.nameToFlowPos(newElName)
+#                elif pText in ['properties'] and iCol > 0:
+#                    elItem = item.parent().parent()
+#                    elNameStr = str(elItem.text())
+#                    elClassStr = self.getClassName(elItem)
+#                    if len(re.findall('.BeamLine', elClassStr)) > 0:  # BL
+#                        paramName = str(item.parent().child(item.index().row(),
+#                                                            0).text())
+#                        paramValue = self.parametrize(str(item.text()))
+#                        setattr(self.beamLine, paramName, paramValue)
+#                        startFrom = 0
+#                    else:  # Setters and getters not implemented yet for OEs
+#                        oeType = 0 if len(re.findall(
+#                            'raycing.sou', elClassStr)) > 0 else 1
+#                        try:
+#                            kwargs = createParamDict(item.parent(),
+#                                                     elClassStr)
+#                            if self.beamLine.oesDict[elNameStr][0] is None:
+#                                self.beamLine.oesDict[elNameStr] =\
+#                                    [eval(elClassStr)(**kwargs), oeType]
+#                                self.progressBar.setFormat(
+#                                    "Class {} successfully initialized.".format(  # analysis:ignore
+#                                        elNameStr))
+#                                print("Class", elNameStr,
+#                                      "successfully initialized.")
+#                            else:
+#                                self.beamLine.oesDict[elNameStr][0].__init__(**kwargs)  # analysis:ignore
+#                                self.progressBar.setFormat(
+#                                    "Class {} successfully re-initialized.".format(  # analysis:ignore
+#                                        elNameStr))
+#                                print("Class", elNameStr,
+#                                      "successfully re-initialized.")
+#                        except:  # analysis:ignore
+#                            self.beamLine.oesDict[elNameStr] =\
+#                                [None, oeType]
+#                            self.progressBar.setFormat(
+#                                "Incorrect parameters. Class {} not initialized.".format(elNameStr))  # analysis:ignore
+#                            print("Incorrect parameters. Class", elNameStr,
+#                                  "not initialized.")
+#                        if len(re.findall('raycing.aper', elClassStr)) > 0:
+#                            if self.rayPath is not None:
+#                                for segment in self.rayPath[0]:
+#                                    if segment[2] == elNameStr:
+#                                        startFrom =\
+#                                            self.nameToFlowPos(segment[0])
+#                                        break
+#                                else:
+#                                    startFrom =\
+#                                        self.nameToFlowPos(elNameStr)
+#                            else:
+#                                startFrom = self.nameToFlowPos(elNameStr)
+#                        else:
+#                            startFrom = self.nameToFlowPos(elNameStr)
+#                elif pText in ['parameters', 'output'] and iCol > 0:
+#                    elItem = item.parent().parent().parent()
+#                    elNameStr = str(elItem.text())
+#                    self.progressBar.setFormat(
+#                        "Method of {} was modified".format(elNameStr))
+#                    print("Method of", elNameStr, "was modified")
+#                    self.beamLine.flow = buildFlow(startFrom=elNameStr)
+#                    startFrom = self.nameToFlowPos(elNameStr)
+#                elif item.parent().parent() == self.rootBLItem and newElement:
+#                    elItem = item.parent()
+#                    elNameStr = str(elItem.text())
+#                    self.progressBar.setFormat(
+#                        "Method {0} was added to {1}".format(
+#                            item.text(), elNameStr))
+#                    print("Method", item.text(), "was added to", elNameStr)
+#                    self.beamLine.flow = buildFlow(startFrom=elNameStr)
+#                    startFrom = self.nameToFlowPos(elNameStr)
+#        else:  # Rebuild beamline
+#            for ie in range(self.rootBLItem.rowCount()):
+#                elItem = self.rootBLItem.child(ie, 0)
+#                elNameStr = str(elItem.text())
+#                if elNameStr == 'properties':  # Beamline properties
+#                    for iprop in range(elItem.rowCount()):
+#                        paramName = str(elItem.child(iprop, 0).text())
+#                        paramValue = self.parametrize(str(elItem.child(
+#                            iprop, 1).text()))
+#                        setattr(self.beamLine, paramName, paramValue)
+#                elif elNameStr != '_object':  # Beamline element
+#                    for iprop in range(elItem.rowCount()):
+#                        pItem = elItem.child(iprop, 0)
+#                        pText = str(pItem.text())
+#                        if pText == 'properties':  # OE properties
+#                            elClassStr = self.getClassName(elItem)
+#                            oeType = 0 if len(re.findall(
+#                                'raycing.sou', elClassStr)) > 0 else 1
+#                            try:
+#                                kwArgs = createParamDict(pItem, elClassStr)
+#                                self.beamLine.oesDict[elNameStr] =\
+#                                    [eval(elClassStr)(**kwArgs), oeType]
+#                                self.progressBar.setFormat(
+#                                    "Class {} successfully initialized.".format(  # analysis:ignore
+#                                        elNameStr))
+#                                print("Class", elNameStr,
+#                                      "successfully initialized.")
+#                            except:  # analysis:ignore
+#                                self.beamLine.oesDict[elNameStr] =\
+#                                    [None, oeType]
+#                                self.progressBar.setFormat(
+#                                    "Incorrect parameters. Class {} not initialized.".format(elNameStr))  # analysis:ignore
+#                                print("Incorrect parameters. Class", elNameStr,
+#                                      "not initialized.")
+#            self.beamLine.flow = buildFlow()
+#            startFrom = 0
+#
+#        if self.isGlowAutoUpdate:
+#            if startFrom is not None:
+#                self.blPropagateFlow(startFrom)
 
     def blPropagateFlow(self, startFrom):
-        objThread = qt.QThread(self)
-        obj = PropagationConnect()
-        obj.emergencyRetrace.connect(partial(self.reTrace, objThread))
-        obj.finished.connect(objThread.quit)
-        obj.rayPathReady.connect(self.blRunGlow)
-        obj.propagationProceed.connect(self.updateProgressBar)
-        obj.moveToThread(objThread)
-        propagateFlowInThread = partial(
-            obj.propagateFlowThread, self.beamLine, startFrom)
-        objThread.started.connect(propagateFlowInThread)
-        objThread.start()
+#        self.blRunGlow()
+        pass
+#        objThread = qt.QThread(self)
+#        obj = PropagationConnect()
+#        obj.emergencyRetrace.connect(partial(self.reTrace, objThread))
+#        obj.finished.connect(objThread.quit)
+#        obj.rayPathReady.connect(self.blRunGlow)
+#        obj.propagationProceed.connect(self.updateProgressBar)
+#        obj.moveToThread(objThread)
+#        propagateFlowInThread = partial(
+#            obj.propagateFlowThread, self.beamLine, startFrom)
+#        objThread.started.connect(propagateFlowInThread)
+#        objThread.start()
 
     def reTrace(self, objThread):
         print('Beam structure integrity corrupted. Retracing from the Source.')
@@ -3448,19 +3498,24 @@ class XrtQook(qt.QWidget):
 
     def toggleGlow(self, status):
         self.isGlowAutoUpdate = status
-        if self.isGlowAutoUpdate:
-            self.populateBeamline()
+        self.blRunGlow()
+#        if self.isGlowAutoUpdate:
+#            self.populateBeamline()
 
-    def blRunGlow(self, rayPath):
-        self.rayPath = rayPath
+#    def blRunGlow(self, rayPath):
+    def blRunGlow(self, kwargs={}):
+#        self.rayPath = rayPath
+#        if hasattr(self.beamLine, 'layoutStr'):
+#            print(self.beamLine.layoutStr)
         if self.blViewer is None:
-            self.blViewer = xrtglow.xrtGlow(self.rayPath, self)
+            self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
+                                            **kwargs)
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.show()
             self.blViewer.parentRef = self
             self.blViewer.parentSignal = self.statusUpdate
         else:
-            self.blViewer.updateOEsList(self.rayPath)
+#            self.blViewer.updateOEsList(self.rayPath)
             if self.blViewer.isHidden():
                 self.blViewer.show()
 

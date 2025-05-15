@@ -54,8 +54,10 @@ from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict
 import freetype as ft
 from matplotlib import font_manager
-import asyncio
+#import asyncio
 from ...backends import raycing
+from ...backends.raycing import (propagationProcess, MessageHandler,
+                                 orientationArgSet, shapeArgSet, EpicsDevice)
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
 from ...backends.raycing import oes as roes
@@ -72,7 +74,6 @@ MAXRAYS = 500000
 #from ...backends.raycing import Limits
 
 from multiprocessing import Process, Queue
-import queue
 
 # epicsEnabled = False
 msg_start = {
@@ -81,12 +82,6 @@ msg_stop = {
         "command": "stop"}
 msg_exit = {
         "command": "exit"}
-
-orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
-                    'braggOffset', 'rotationSequence'}
-
-shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
-                'R', 'r', 'Rm', 'Rs'}
 
 
 def create_qt_buffer(data, isIndex=False,
@@ -214,179 +209,6 @@ ambient['selected'] = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.)
 #scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, 1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
 scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, -1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
 #scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1)
-
-def propagationProcess(q_in, q_out):
-
-    handler = MessageHandler()
-    repeats = 0
-    while True:
-        try:
-            message = q_in.get_nowait()
-            handler.process_message(message)
-        except queue.Empty:
-            pass
-#            time.sleep(0.1)
-        if handler.exit:
-            break
-
-        if handler.stop:
-            time.sleep(0.1)
-#            continue
-        elif handler.needUpdate:
-            # TODO: run propagation downstream of the updated element
-            started = True if handler.startEl is None else False
-            for oeid, meth in handler.bl.flowU.items():
-                if not started:  # Skip until the modified element
-                    if handler.startEl == oeid:
-                        started = True
-                    else:
-                        continue
-                oe = handler.bl.oesDict[oeid][0]
-                for func, fkwargs in meth.items():
-#                    print(oe.name, func, fkwargs)
-                    getattr(oe, func)(**fkwargs)
-                    msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
-                                'sender_name': oe.name,
-                                'sender_id': oe.uuid,
-                                'status': 0}
-                    q_out.put(msg_beam)
-                    # TODO: histDict
-                    if is_screen(oe) and hasattr(oe, 'image'):
-                        msg_hist = {'histogram': oe.image,
-                                    'sender_name': oe.name,
-                                    'sender_id': oe.uuid,
-                                    'status': 0}
-                        q_out.put(msg_hist)
-            q_out.put({"status": 0, "repeat": repeats})
-            handler.needUpdate = False
-            handler.startEl = None
-            time.sleep(0.1)
-
-#            handler.stop = True
-            repeats += 1
-        else:
-            time.sleep(0.1)
-
-
-def to_valid_var_name(name, default='unnamed'):
-    # Replace invalid characters with underscores
-    var_name = re.sub(r'\W|^(?=\d)', '_', name.strip())
-
-    # Ensure the name is not empty or a Python keyword
-    if not var_name or not re.match(r'[A-Za-z_]', var_name[0]):
-        var_name = f"{default}_{var_name}"
-
-    # Avoid Python reserved keywords
-    import keyword
-    if keyword.iskeyword(var_name):
-        var_name += '_var'
-
-    return var_name
-
-class MessageHandler:
-    def __init__(self, bl=None):
-        self.bl = bl
-        self.stop = False
-        self.needUpdate = False
-        self.autoUpdate = True
-        self.startEl = None
-        self.exit = False
-
-    def handle_create(self, message):
-#        uuid = message.get("uuid", None)
-        object_type = message.get("object_type")
-        kwargs = message.get("kwargs", {})
-
-        if object_type == 'beamline':
-            self.bl = raycing.BeamLine()
-            self.bl.deserialize(kwargs)
-            if self.autoUpdate:
-                self.needUpdate = True
-#            print("Deserialized beamline", self.bl.flowU)
-#        print(f"Creating {object_type} with UUID {uuid} and kwargs {kwargs}")
-
-    def handle_modify(self, message):
-        uuid = message.get("uuid")
-#        print(uuid, self.bl.oesDict.keys())
-        element = self.bl.oesDict.get(uuid)
-        kwargs = message.get("kwargs", {})
-        if element is not None:
-            for key, value in kwargs.items():
-                args = key.split('.')
-                arg = args[0]
-                if len(args) > 1:
-                    field = args[-1]
-                    if field == 'energy':
-                        if arg == 'bragg':
-                            value = [float(value)]
-                        else:
-                            value = element[0].material.get_Bragg_angle(float(value))
-                    else:
-                        arrayValue = getattr(element[0], arg)
-                        setattr(arrayValue, field, value)
-                        value = arrayValue
-                setattr(element[0], arg, value)
-            if self.autoUpdate:
-                self.needUpdate = True
-            if is_aperture(element[0]):
-                kwargs = list(self.bl.flowU[uuid].values())[0]
-                modifiedEl = kwargs['beam']
-            else:
-                modifiedEl = uuid
-            keys = list(self.bl.flowU.keys())
-            if self.startEl is None:
-                self.startEl = modifiedEl
-            elif keys.index(modifiedEl) < keys.index(self.startEl):
-                self.startEl = modifiedEl
-
-    def handle_delete(self, message):
-        uuid = message.get("uuid")
-        print(f"Deleting object with UUID {uuid}")
-
-    def handle_start(self, message):
-        print("Starting processing loop.")
-        self.stop = False
-
-    def handle_exit(self, message):
-        print("Exiting.")
-        self.exit = True
-
-    def handle_run_once(self, message):
-        print("Starting processing loop.")
-        self.needUpdate = True
-        self.startEl = None
-
-    def handle_auto_update(self, message):
-        # print("Starting processing loop.")
-        kwargs = message.get('kwargs')
-        if kwargs is not None:
-            auto_update = kwargs.get('value')
-        self.autoUpdate = bool(auto_update)
-
-    def handle_stop(self, message):
-        print("Stopping processing loop.")
-        self.stop = True
-
-    def process_message(self, message):
-#        print("11", message)
-        # Build a dispatch dictionary mapping commands to methods.
-        command_handlers = {
-            "create": self.handle_create,
-            "modify": self.handle_modify,
-            "delete": self.handle_delete,
-            "start": self.handle_start,
-            "stop": self.handle_stop,
-            "exit": self.handle_exit,
-            "run_once": self.handle_run_once,
-            "auto_update": self.handle_auto_update,
-        }
-
-        command = message.get("command")
-        handler = command_handlers.get(command)
-        if handler:
-            handler(message)
-        else:
-            print(f"Unknown command: {command}")
 
 
 class xrtGlow(qt.QWidget):
@@ -2341,7 +2163,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     "kwargs": beamLayout
                     }
             self.input_queue.put(msg_init_bl)
-            self.loopRunning = True
+            self.loopRunning = False
 
             self.timer = qt.QTimer()
             self.timer.timeout.connect(
@@ -2460,158 +2282,57 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.makeCurrent()
         if self.epicsPrefix is not None and self.renderingMode == 'dynamic':
             try:
-                from softioc import softioc, builder, asyncio_dispatcher
                 os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
                 os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
-                self.build_epics_device(epicsPrefix, softioc, builder,
-                                        asyncio_dispatcher)
+                self.epicsInterface = EpicsDevice(
+                        bl=self.beamline,
+                        prefix=epicsPrefix,
+                        callback=self.update_beamline_async)
+#                self.build_epics_device(epicsPrefix, softioc, builder,
+#                                        asyncio_dispatcher)
             except ImportError:
                 print("pythonSoftIOC not installed")
                 self.epicsPrefix = None
         self.getColorLimits()
 
-    def build_epics_device(self, prefix, softioc, builder, asyncio_dispatcher):
-        # Create an asyncio dispatcher, the event loop is now running
-        self.dispatcher = asyncio_dispatcher.AsyncioDispatcher()
-        # Set the record prefix
-        builder.SetDeviceName(prefix)
-        pv_records = {}
-        pvFields = {'name'} | orientationArgSet | shapeArgSet
-
-        pv_records['Acquire'] = builder.boolOut(
-            'Acquire', ZNAM=0, ONAM=1,
-            initial_value=0, always_update=True,
-            on_update=partial(self.update_beamline_async, None, 'Acquire'))
-
-        pv_records['AcquireStatus'] = builder.boolIn(
-            'AcquireStatus', ZNAM=0, ONAM=1,
-            initial_value=0)
-
-        pv_records['AutoUpdate'] = builder.boolOut(
-            'AutoUpdate', ZNAM=0, ONAM=1,
-            initial_value=0, always_update=True,
-            on_update=partial(self.update_beamline_async, None, 'AutoUpdate'))
-
-        for oeid, oeline in self.beamline.oesDict.items():
-            oeObj = oeline[0]
-            oename = to_valid_var_name(oeObj.name)
-
-            if hasattr(oeObj, 'material') and oeObj.material is not None:
-                if hasattr(oeObj.material, 'get_Bragg_angle'):
-                    if hasattr(oeObj, 'bragg'):
-                        e_field = 'bragg.energy'
-                        initial_e = np.abs(physconsts.CH / (
-                                2*oeObj.material.d*np.sin(
-                                        oeObj.bragg-oeObj.braggOffset)))
-                    else:
-                        e_field = 'pitch.energy'
-                        initial_e = np.abs(physconsts.CH / (
-                                2*oeObj.material.d*np.sin(oeObj.pitch)))
-                    pvname = f'{oename}:ENERGY'
-                    pv_records[pvname] = builder.aOut(
-                            pvname,
-                            initial_value=initial_e,
-                            always_update=True,
-                            on_update=partial(self.update_beamline_async,
-                                              oeid, e_field))
-
-            if is_screen(oeObj) and oeObj.limPhysX is not None:
-                pvname = f'{oename}:image'
-                # print(pvname)
-                histShape = getattr(oeObj, 'histShape')
-                imageLength = histShape[0]*histShape[1]
-                pv_records[pvname] = builder.WaveformIn(
-                    pvname,
-                    length=imageLength
-                    )
-
-                for fIndex, field in enumerate(['width', 'height']):
-                    pvname = f'{oename}:histShape:{field}'
-                    dimObj = getattr(oeObj, 'histShape')
-                    if dimObj is not None:
-                        pv_records[pvname] = builder.aOut(
-                            pvname,
-                            initial_value=dimObj[fIndex],
-                            always_update=True,
-                            on_update=partial(self.update_beamline_async,
-                                              oeid, f'histShape.{field}'))
-                    # print(pvname)
-
-            for argName in pvFields:
-                if hasattr(oeObj, argName):
-                    if argName in ['name', 'rotationSequence']:
-                        pvname = f'{oename}:{argName}'
-                        pv_records[pvname] = builder.stringOut(
-                            pvname,
-                            initial_value=str(getattr(oeObj, argName)),
-                            always_update=True,
-                            on_update=partial(self.update_beamline_async,
-                                              oeid, argName))
-                        # print(pvname)
-                    elif argName in ['center']:
-                        for field in ['x', 'y', 'z']:
-                            pvname = f'{oename}:{argName}:{field}'
-                            pv_records[pvname] = builder.aOut(
-                                pvname,
-                                initial_value=getattr(oeObj.center, field),
-                                always_update=True,
-                                on_update=partial(self.update_beamline_async,
-                                                  oeid,
-                                                  f'{argName}.{field}'))
-                            # print(pvname)
-                    elif argName in ['limPhysX', 'limPhysY', 'limPhysX2',
-                                     'limPhysY2']:
-                        for fIndex, field in enumerate(['lmin', 'lmax']):
-                            pvname = f'{oename}:{argName}:{field}'
-                            limObj = getattr(oeObj, argName)
-                            if limObj is not None:
-                                pv_records[pvname] = builder.aOut(
-                                    pvname,
-                                    initial_value=limObj[fIndex],
-                                    always_update=True,
-                                    on_update=partial(
-                                            self.update_beamline_async,
-                                            oeid,
-                                            f'{argName}.{field}'))
-                            # print(pvname)
-                    elif argName in ['opening']:
-                        for field in oeObj.kind:
-                            pvname = f'{oename}:{argName}:{field}'
-                            limObj = getattr(oeObj, argName)
-                            if limObj is not None:
-                                pv_records[pvname] = builder.aOut(
-                                    pvname,
-                                    initial_value=getattr(limObj, field),
-                                    always_update=True,
-                                    on_update=partial(
-                                            self.update_beamline_async,
-                                            oeid,
-                                            f'{argName}.{field}'))
-                            # print(pvname)
-                    else:
-                        pvname = f'{oename}:{argName}'
-                        pv_records[pvname] = builder.aOut(
-                            pvname,
-                            initial_value=getattr(oeObj, argName),
-                            always_update=True,
-                            on_update=partial(self.update_beamline_async,
-                                              oeid, argName))
-                        # print(pvname)
-        [print(f'{self.epicsPrefix}:{recName}') for recName in pv_records]
-        builder.LoadDatabase()
-        softioc.iocInit(self.dispatcher)
-        self.pv_records = pv_records
-
     async def update_beamline_async(self, oeid, argName, argValue):
-        self.update_beamline(oeid, {argName: argValue})
+        """Update from EPICS interface """
+        self.update_beamline(oeid, {argName: argValue}, sender="epics")
 
-    def update_beamline(self, oeid, kwargs):
+    def update_epics_record(self, oeid, kwargs):
+        """Update EPICS record if the value was changed from Qook or Explorer"""
+        if self.epicsPrefix is not None:
+            elementBase = self.epicsInterface.pv_map.get(oeid)
+            if elementBase is not None:
+                for key, val in kwargs.items():
+                    if key == 'center':
+                        for argVal, field in zip(val, ['x', 'y', 'z']):
+                            record = elementBase.get(f'center.{field}')
+                            if record is not None:
+                                record.set(argVal)
+                    elif key in ['limPhysX', 'limPhysY', 'limPhysX2',
+                                 'limPhysY2']:
+                        for argVal, field in zip(val, ['lmin', 'lmax']):
+                            record = elementBase.get(f'center.{field}')
+                            if record is not None:
+                                record.set(argVal)
+                    elif key == 'opening':
+                        oeObj = self.beamline.oesDict[oeid][0]
+                        for argVal, field in zip(val, oeObj.kind):
+                            record = elementBase.get(f'opening.{field}')
+                            if record is not None:
+                                record.set(argVal)
+                    else:
+                        record = elementBase.get(key)
+                        if record is not None:
+                            record.set(val)
+
+    def update_beamline(self, oeid, kwargs, sender="gui"):
         for argName, argValue in kwargs.items():
             if oeid is None:
-                # print("no OE id provided, re-tracing from start")
                 if self.epicsPrefix is not None:
                     if argName == 'Acquire':
-                        self.pv_records['AcquireStatus'].set(1)
+                        self.epicsInterface.pv_records['AcquireStatus'].set(1)
                         if str(argValue) == '1':
                             if hasattr(self, 'input_queue'):
                                 self.input_queue.put({
@@ -2652,7 +2373,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating the beamline model in the runner
         if self.epicsPrefix is not None:
-            self.pv_records['AcquireStatus'].set(1)
+            self.epicsInterface.pv_records['AcquireStatus'].set(1)
         message = {"command": "modify",
                    "object_type": "beamline",
                    "uuid": oeid,
@@ -2662,6 +2383,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         }
         if hasattr(self, 'input_queue'):
             self.input_queue.put(message)
+
+        if sender == "gui":
+            self.update_epics_record(oeid, kwargs)
 
     def init_shaders(self):
         shaderBeam = qt.QOpenGLShaderProgram()
@@ -2846,7 +2570,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.loopRunning = True
 
     def check_progress(self, progress_queue):
-#        progress = None
+
         while not progress_queue.empty():
             msg = progress_queue.get()
             if 'beam' in msg:
@@ -2855,14 +2579,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.update_beam_footprint(beam, (msg['sender_id'], beamKey))
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
             elif 'histogram' in msg and self.epicsPrefix is not None:
-                histPvName = f'{to_valid_var_name(msg["sender_name"])}:image'
-                if histPvName in self.pv_records:
+                histPvName = f'{raycing.to_valid_var_name(msg["sender_name"])}:image'
+                if histPvName in self.epicsInterface.pv_records:
                     imgHist = np.flipud(msg['histogram'])  # Appears flipped
-                    self.pv_records[histPvName].set(imgHist.flatten())
+                    self.epicsInterface.pv_records[histPvName].set(imgHist.flatten())
             elif 'repeat' in msg:
                 print("Total repeats:", msg['repeat'])
                 if self.epicsPrefix is not None:
-                    self.pv_records['AcquireStatus'].set(0)
+                    self.epicsInterface.pv_records['AcquireStatus'].set(0)
                 self.glDraw()
 
     def close_calc_process(self):
@@ -3134,7 +2858,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             else:
                 beamvbo['indices_lost'].bind()
                 arrLen = beamvbo['lostLen']
-            shader.setUniformValue("isLost", int(0))
+            shader.setUniformValue("isLost", int(0))  # TODO: controllable
 
             gl.glDrawElements(gl.GL_POINTS,  arrLen,
                               gl.GL_UNSIGNED_INT, None)
@@ -3357,6 +3081,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         mins = np.min(mins, axis=0)
         maxs = np.max(maxs, axis=0)
         self.minmax = np.vstack((mins, maxs))
+        for dim in range(3):
+            if self.minmax[0, dim] == self.minmax[1, dim]:
+                self.minmax[0, dim] -= 1.
+                self.minmax[1, dim] += 1.
         return self.minmax
 
     def getColorLimits(self):
@@ -3904,6 +3632,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if len(np.unique(newVisAx)) == 3:
             self.visibleAxes = newVisAx
         self.cBox.update_grid()
+        self.toggleLoop()
 
     def paintGL(self):
         # TODO: might be better to use dedicated dicts for sources, oes etc.
@@ -6908,7 +6637,7 @@ class OEExplorer(qt.QDialog):
         key = self.model.item(row, 0).text()
         value_str = item.text()
 
-        try:
+        try:  # TODO: move imports or use raycing.parametrize()
             import ast
             value = ast.literal_eval(value_str)
         except Exception:
