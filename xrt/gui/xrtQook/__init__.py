@@ -3508,12 +3508,15 @@ class XrtQook(qt.QWidget):
 #        if hasattr(self.beamLine, 'layoutStr'):
 #            print(self.beamLine.layoutStr)
         if self.blViewer is None:
-            self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
-                                            **kwargs)
-            self.blViewer.setWindowTitle("xrtGlow")
-            self.blViewer.show()
-            self.blViewer.parentRef = self
-            self.blViewer.parentSignal = self.statusUpdate
+            try:
+                self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
+                                                **kwargs)
+                self.blViewer.setWindowTitle("xrtGlow")
+                self.blViewer.show()
+                self.blViewer.parentRef = self
+                self.blViewer.parentSignal = self.statusUpdate
+            except:  # TODO: Handle exceptions
+                pass
         else:
 #            self.blViewer.updateOEsList(self.rayPath)
             if self.blViewer.isHidden():
@@ -3671,7 +3674,7 @@ if __name__ == '__main__':
                             if (inspect.ismethod(objf) or
                                     inspect.isfunction(objf)) and\
                                     namef == str(pItem.text()).strip('()'):
-                                methodObj = objf
+                                methodObj = inspect.unwrap(objf)
                         for imet in range(pItem.rowCount()):
                             if str(pItem.child(imet, 0).text()) ==\
                                     'parameters':

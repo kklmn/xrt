@@ -1650,7 +1650,7 @@ class EpicsDevice:
         self.bl = bl
         self.epicsPrefix = prefix
         self.pv_map = {}
-        self.dbl = {}
+        self.dbl = set()
 
         try:
             from softioc import softioc, builder, asyncio_dispatcher
