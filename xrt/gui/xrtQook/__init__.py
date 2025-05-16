@@ -1473,7 +1473,7 @@ class XrtQook(qt.QWidget):
                     continue
                 break
         elif inspect.ismethod(objRef) or inspect.isfunction(objRef):
-            argList = getargspec(objRef)
+            argList = getargspec(inspect.unwrap(objRef))
             if argList[3] is not None:
                 if objRef.__name__ == 'run_ray_tracing':
                     uArgs = OrderedDict(zip(argList[0], argList[3]))
