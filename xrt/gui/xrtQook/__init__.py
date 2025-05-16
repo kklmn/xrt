@@ -1285,7 +1285,8 @@ class XrtQook(qt.QWidget):
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
-        child1.setFlags(self.valueFlag)
+        child1.setFlags(self.paramFlag if str(paramName) == 'name' else
+                        self.valueFlag)
         
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\
@@ -1554,6 +1555,18 @@ class XrtQook(qt.QWidget):
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
             item.model().blockSignals(False)
+        elif item.column() == 0 and item.isEnabled():  # obj name
+            for i in range(item.rowCount()):
+                child0 = item.child(i, 0)
+                if str(child0.text()) == 'properties':
+                    pyname = raycing.to_valid_var_name(item.text())
+                    item.model().blockSignals(True)
+                    item.setText(pyname)
+                    item.model().blockSignals(False)
+                    for j in range(child0.rowCount()):
+                        if str(child0.child(j, 0).text()) == 'name':
+                            child0.child(j, 1).setText(pyname)
+            
 
 #    def colorizeTabText(self, item):
 #        if item.model() == self.beamLineModel:

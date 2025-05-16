@@ -1772,7 +1772,7 @@ class EpicsDevice:
                                     on_update=partial(callback, oeid,
                                                       f'{argName}.{field}'))
                                 self.pv_map[oeid][f'{argName}.{field}'] =\
-                                    pv_records[pvname]    
+                                    pv_records[pvname]
                     else:
                         pvname = f'{oename}:{argName}'
                         pv_records[pvname] = builder.aOut(
@@ -2456,7 +2456,8 @@ class BeamLine(object):
         for oeid, oeline in self.oesDict.items():
             oeObj = oeline[0]
             oeRecord = OrderedDict()
-            oeRecord['properties'] = get_init_kwargs(oeObj, blname='beamLine')
+            oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
+                    blname='beamLine')
             oeRecord['_object'] = get_obj_str(oeObj)
             beamlineDict[oeid] = oeRecord
 
