@@ -2355,6 +2355,11 @@ class BeamLine(object):
                 continue
             if is_valid_uuid(elName):
                 elKey = elName
+                if 'name' not in elProps['properties']:
+                    tmpName = "{}_{}".format(
+                            str(dictIn['_object']).split('.')[-1],
+                            np.random.randint(1000, 9999))
+                    elProps['properties']['name'] = tmpName
                 self.oenamesToUUIDs[elProps['properties']['name']] = elKey
             else:
                 elKey = str(uuid.uuid4())
@@ -2459,6 +2464,11 @@ class BeamLine(object):
             oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
                     blname='beamLine')
             oeRecord['_object'] = get_obj_str(oeObj)
+            if 'name' not in oeRecord['properties']:
+                tmpName = "{}_{}".format(
+                        str(oeRecord['_object']).split('.')[-1],
+                        np.random.randint(1000, 9999))
+                oeRecord['properties']['name'] = tmpName
             beamlineDict[oeid] = oeRecord
 
         beamsDict = {}
