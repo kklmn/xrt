@@ -1142,6 +1142,8 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
     kwargs = OrderedDict()
 
     for paraname, paravalue in paramDictStr.items():
+        if not isinstance(paravalue, str):
+            paravalue = str(paravalue)  # TODO: temporary workaround
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
                 paraname in ['bl', 'uuid']:
 
@@ -1424,6 +1426,10 @@ class MessageHandler:
             self.bl.deserialize(kwargs)
             if self.autoUpdate:
                 self.needUpdate = True
+        elif object_type == 'oe':
+            self.bl.init_oe_from_json(kwargs)
+            if self.autoUpdate:
+                self.needUpdate = True            
 #            print("Deserialized beamline", self.bl.flowU)
 #        print(f"Creating {object_type} with UUID {uuid} and kwargs {kwargs}")
 
@@ -1460,6 +1466,13 @@ class MessageHandler:
                 self.startEl = modifiedEl
             elif keys.index(modifiedEl) < keys.index(self.startEl):
                 self.startEl = modifiedEl
+
+    def handle_flow(self, message):
+        uuid = message.get('uuid')
+        kwargs = message.get('kwargs')
+        self.bl.update_flow_from_json(uuid, kwargs)
+        if self.autoUpdate:
+            self.needUpdate = True
 
     def handle_delete(self, message):
         uuid = message.get("uuid")
@@ -1500,6 +1513,7 @@ class MessageHandler:
             "start": self.handle_start,
             "stop": self.handle_stop,
             "exit": self.handle_exit,
+            "flow": self.handle_flow,
             "run_once": self.handle_run_once,
             "auto_update": self.handle_auto_update,
         }
@@ -1839,7 +1853,7 @@ class BeamLine(object):
         self.forceAlign = False
         self.beamsDictU = OrderedDict()
         self.flowU = OrderedDict()
-        self.beamNamesDict = {}
+        self.beamNamesDict = {}  # Used in run_process_from_file
         self.beamsRevDict = OrderedDict()
         self.beamsRevDictUsed = {}
         self.blViewer = None
@@ -2316,12 +2330,16 @@ class BeamLine(object):
                 calc_weighted_center(tBeam)
         return [rayPath, beamDict, oesDict]
 
-    def init_oe_from_json(self, elProps):
+    def init_oe_from_json(self, elProps, isString=True):
+        print("Creating OE from JSON", elProps)
         oeModule, oeClass = elProps['_object'].rsplit('.', 1)
         oeModule = importlib.import_module(oeModule)
         oeParams = elProps['properties']
         defArgs = dict(get_params(elProps['_object']))
-        initKWArgs = create_paramdict_oe(oeParams, defArgs, self)
+        if isString:
+            initKWArgs = create_paramdict_oe(oeParams, defArgs, self)
+        else:
+            initKWArgs = oeParams
 
         try:
             oeObject = getattr(oeModule, oeClass)(**initKWArgs)
@@ -2329,25 +2347,34 @@ class BeamLine(object):
             print(oeClass, "Init problem")
             raise
 
-        for methStr, methArgs in elProps.items():
+        self.oenamesToUUIDs[oeParams['name']] = oeParams['uuid']
+        self.update_flow_from_json(oeParams['uuid'], elProps)
+
+        return oeObject
+
+    def update_flow_from_json(self, oeid, methDict):
+
+        for methStr, methArgs in methDict.items():
             if methStr in ['properties', '_object']:
                 continue
             else:
                 fArgs = {}
                 for argName, argVal in methArgs['parameters'].items():
                     if argName == "beam":
-                        fArgs[argName] = self.beamNamesDict[str(argVal)][0]
+                        if is_valid_uuid(argVal):
+                            fArgs[argName] = argVal
+                        else:
+                            fArgs[argName] = self.beamNamesDict[str(argVal)][0]
                     else:
                         fArgs[argName] = parametrize(argVal)
 
-                oeid = oeObject.uuid
                 self.flowU[oeid] = {methStr: fArgs}
                 self.beamsDictU[oeid] = {}
                 for beamType, beamName in methArgs['output'].items():
                     self.beamNamesDict[str(beamName)] = (oeid, beamType)
                     self.beamsDictU[oeid][beamType] = None
-                break  # Normally just one method per element.
-        return oeObject
+                break  # Normally just one method per element.        
+
 
     def populate_oes_dict_from_json(self, dictIn):
         for elName, elProps in dictIn.items():
@@ -2360,10 +2387,10 @@ class BeamLine(object):
                             str(dictIn['_object']).split('.')[-1],
                             np.random.randint(1000, 9999))
                     elProps['properties']['name'] = tmpName
-                self.oenamesToUUIDs[elProps['properties']['name']] = elKey
+#                self.oenamesToUUIDs[elProps['properties']['name']] = elKey
             else:
                 elKey = str(uuid.uuid4())
-                self.oenamesToUUIDs[elName] = elKey
+#                self.oenamesToUUIDs[elName] = elKey
                 elProps['properties']['name'] = elName
             elProps['properties']['uuid'] = elKey
             _ = self.init_oe_from_json(elProps)  # oesDict populated in oe init

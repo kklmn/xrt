@@ -1287,7 +1287,7 @@ class XrtQook(qt.QWidget):
         child1 = qt.QStandardItem(str(value))
         child1.setFlags(self.paramFlag if str(paramName) == 'name' else
                         self.valueFlag)
-        
+
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\
  for automatic alignment if \"y\" is known'
@@ -1401,6 +1401,7 @@ class XrtQook(qt.QWidget):
                                                   source=copyFrom)
         elementClass.setFlags(self.objectFlag)
         elementItem.setFlags(self.valueFlag)
+
         if copyFrom is not None:
             self.cpChLevel = 0
             self.copyChildren(elementItem, copyFrom)
@@ -1410,12 +1411,15 @@ class XrtQook(qt.QWidget):
             self.addObject(self.tree, elementItem, obj)
             for arg, argVal in self.getParams(obj):
                 self.addParam(elprops, arg, argVal)
+
+        uuid = raycing.uuid.uuid4()
+        elementItem.setData(uuid, qt.UserRole)
         self.showDoc(elementItem.index())
         self.addCombo(self.tree, elementItem)
         self.tree.expand(self.rootBLItem.index())
         self.capitalize(self.tree, elementItem)
         self.blUpdateLatchOpen = True
-        self.updateBeamline(elementItem, newElement=True)
+        self.updateBeamline(elementItem, newElement=obj)
         if not self.experimentalMode:
             self.autoAssignMethod(elementItem)
         self.isEmpty = False
@@ -1566,7 +1570,7 @@ class XrtQook(qt.QWidget):
                     for j in range(child0.rowCount()):
                         if str(child0.child(j, 0).text()) == 'name':
                             child0.child(j, 1).setText(pyname)
-            
+
 
 #    def colorizeTabText(self, item):
 #        if item.model() == self.beamLineModel:
@@ -1581,6 +1585,8 @@ class XrtQook(qt.QWidget):
     def addMethod(self, name, parentItem, fdoc):
         self.beamModel.sort(3)
         elstr = str(parentItem.text())
+        eluuid = parentItem.data(qt.UserRole)
+        print("addMethod", eluuid)
         fdoc = fdoc[0].replace("Returned values: ", '').split(',')
         self.blUpdateLatchOpen = False
         methodItem = self.addProp(parentItem, name.split('.')[-1] + '()')
@@ -1599,7 +1605,8 @@ class XrtQook(qt.QWidget):
                 fModel.setSourceModel(fModel0)
                 fModel.setFilterKeyColumn(3)
                 regexp = self.intToRegexp(
-                    self.nameToBLPos(elstr))
+                    self.nameToBLPos(eluuid))
+#                    self.nameToBLPos(elstr))
                 fModel.setFilterRegExp(regexp)
                 lastIndex = fModel.rowCount() - 1
                 if arg.lower() == 'accubeam':
@@ -1611,24 +1618,25 @@ class XrtQook(qt.QWidget):
         for outstr in fdoc:
             outval = outstr.strip()
 
-            for i in range(99):
-                beamName = '{0}{1}{2:02d}'.format(elstr, outval, i+1)
-                dupl = False
-                for ibm in range(self.beamModel.rowCount()):
-                    if str(self.beamModel.index(ibm, 0).data(0)) ==\
-                            str(beamName):
-                        dupl = True
-                if not dupl:
-                    break
+#            for i in range(99):
+#                beamName = '{0}{1}{2:02d}'.format(elstr, outval, i+1)
+            beamName = '{0}_{1}'.format(elstr, outval[4:].lower())
+#            dupl = False
+#            for ibm in range(self.beamModel.rowCount()):
+#                if str(self.beamModel.index(ibm, 0).data(0)) ==\
+#                        str(beamName):
+#                    dupl = True
+#            if not dupl:
+#                break
 
             child0, child1 = self.addParam(methodOut, outval, beamName)
             if 'shine' in name:
                 outval += 'Local'
             self.beamModel.appendRow([qt.QStandardItem(beamName),
                                       qt.QStandardItem(outval),
-                                      qt.QStandardItem(elstr),
+                                      qt.QStandardItem(str(eluuid)),
                                       qt.QStandardItem(str(self.nameToBLPos(
-                                          elstr)))])
+                                          eluuid)))])
             try:
                 self.beamLine.beamsDict[beamName] = None
             except KeyError:
@@ -1645,7 +1653,7 @@ class XrtQook(qt.QWidget):
         self.tree.setCurrentIndex(methodProps.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.blUpdateLatchOpen = True
-        self.updateBeamline(methodItem, newElement=True)
+        self.updateBeamline(methodItem, newElement=True)  # TODO:
         self.isEmpty = False
 
     def addPlot(self, copyFrom=None):
@@ -1906,7 +1914,7 @@ class XrtQook(qt.QWidget):
                 del self.beamLine.oesDict[str(item.text())]
                 self.blUpdateLatchOpen = True
                 self.updateBeamModel()
-                self.updateBeamline(item, newElement=False)
+                self.updateBeamline(item, newElement=None)
             if item.parent() is not None:
                 item.parent().removeRow(item.index().row())
             else:
@@ -2052,6 +2060,10 @@ class XrtQook(qt.QWidget):
                 except (IOError, OSError, ET.ParseError) as errStr:
                     ldMsg = str(errStr)
                 if parseOK:
+
+                    self.beamLine.load_from_xml(openFileName)
+
+
                     self.blUpdateLatchOpen = False
                     root = treeImport.getroot()
                     self.ntab = 0
@@ -2077,6 +2089,13 @@ class XrtQook(qt.QWidget):
                         self.iterateImport(tree, rootModel, root[i])
                         self.beamModel.sort(3)
                         if rootModel == self.rootBLItem:
+                            for ie in range(self.rootBLItem.rowCount()):
+                                if self.rootBLItem.child(ie, 0).text() != "properties" and\
+                                        self.rootBLItem.child(ie, 0).text() != "_object":
+                                    tItem = self.rootBLItem.child(ie, 0)
+                                    elName = str(tItem.text())
+                                    uuid = self.beamLine.oenamesToUUIDs[elName]
+                                    tItem.setData(uuid, qt.UserRole)
                             self.updateBeamImport()
                         if tree is not None:
 #                            self.checkDefaults(None, rootModel)
@@ -2109,15 +2128,16 @@ class XrtQook(qt.QWidget):
 #                        'Loaded layout from {}'.format(
 #                            os.path.basename(str(self.layoutFileName))), 3000)
                     self.isEmpty = False
-                    self.beamLine.load_from_xml(openFileName)
-                    for ie in range(self.rootBLItem.rowCount()):
-                        if self.rootBLItem.child(ie, 0).text() != "properties" and\
-                                self.rootBLItem.child(ie, 0).text() != "_object":
-                            tItem = self.rootBLItem.child(ie, 0)
-                            elName = str(tItem.text())
-                            uuid = self.beamLine.oenamesToUUIDs[elName]
-                            tItem.setData(uuid, qt.UserRole)
-                    
+
+#                    if rootModel == self.rootBLItem:
+#                    self.updateBeamImport()
+                    print("Beam Model")
+                    for row in range(self.beamModel.rowCount()):
+                        line = ""
+                        for col in range(self.beamModel.columnCount()):
+                            line += "{} ".format(self.beamModel.item(
+                                    row, col).text())
+                        print(line)
 #                    print(self.beamLine.layoutStr)
 
 #                    time.sleep(1.)
@@ -2313,6 +2333,8 @@ class XrtQook(qt.QWidget):
         for ibl in range(self.rootBLItem.rowCount()):
             elItem = self.rootBLItem.child(ibl, 0)
             elNameStr = str(elItem.text())
+            eluuid = elItem.data(qt.UserRole)
+#            print(elNameStr, eluuid)
             if elNameStr not in ['properties', '_object']:
                 for iel in range(elItem.rowCount()):
                     if elItem.child(iel, 0) not in ['properties', '_object']:
@@ -2323,6 +2345,7 @@ class XrtQook(qt.QWidget):
                                 for ii in range(metChItem.rowCount()):
                                     child0 = metChItem.child(ii, 0)
                                     child1 = metChItem.child(ii, 1)
+#                                    print(child0.text(), child1.text())
                                     if child1 is not None:
                                         outBeams.append(str(child1.text()))
                                     for irow in range(
@@ -2335,12 +2358,14 @@ class XrtQook(qt.QWidget):
                                                 qt.QStandardItem(child0.text()))  # analysis:ignore
                                             self.rootBeamItem.setChild(
                                                 irow, 2,
-                                                qt.QStandardItem(elNameStr))
+                                                qt.QStandardItem(eluuid))
+#                                                qt.QStandardItem(elNameStr))
                                             self.rootBeamItem.setChild(
                                                 irow, 3,
                                                 qt.QStandardItem(str(
                                                     self.nameToBLPos(
-                                                        elNameStr))))
+                                                        eluuid))))
+#                                                        elNameStr))))
         for ibm in reversed(range(self.beamModel.rowCount())):
             beamName = str(self.beamModel.item(ibm, 0).text())
             if beamName not in outBeams:
@@ -2393,8 +2418,10 @@ class XrtQook(qt.QWidget):
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(3)
                                 regexp = self.intToRegexp(
-                                    self.nameToBLPos(str(item.parent(
-                                    ).parent().text())))
+                                    self.nameToBLPos(item.parent(
+                                    ).parent().data(qt.UserRole)))
+#                                    self.nameToBLPos(str(item.parent(
+#                                    ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
                                 fModel.setDynamicSortFilter(True)
                             elif item.text() == 'output':  # output beam
@@ -2405,8 +2432,11 @@ class XrtQook(qt.QWidget):
                                 fModel = qt.QSortFilterProxyModel()
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(3)
-                                fModel.setFilterRegExp(self.nameToBLPos(str(
-                                    item.parent().parent().text())))
+                                fModel.setFilterRegExp(
+                                    self.nameToBLPos(item.parent(
+                                    ).parent().data(qt.UserRole)))
+#                                        self.nameToBLPos(str(
+#                                    item.parent().parent().text())))
                                 fModel.setDynamicSortFilter(True)
                             else:
                                 fModel = self.beamModel
@@ -2422,7 +2452,8 @@ class XrtQook(qt.QWidget):
                             view.setIndexWidget(child1.index(), combo)
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
-                                combo.setEditable(True)
+                                combo.setEditable(False)
+#                                combo.setEditable(True)
                                 # combo.setInsertPolicy(2)
                                 combo.setInsertPolicy(
                                     qt.QComboBox.InsertAtCurrent)
@@ -2437,8 +2468,10 @@ class XrtQook(qt.QWidget):
                                 fModel.setSourceModel(fModel0)
                                 fModel.setFilterKeyColumn(3)
                                 regexp = self.intToRegexp(
-                                    self.nameToBLPos(str(item.parent(
-                                    ).parent().text())))
+                                    self.nameToBLPos(item.parent(
+                                    ).parent().data(qt.UserRole)))
+#                                    self.nameToBLPos(str(item.parent(
+#                                    ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
                                 fModel.setDynamicSortFilter(True)
                             else:
@@ -2455,7 +2488,8 @@ class XrtQook(qt.QWidget):
                             view.setIndexWidget(child1.index(), combo)
                             self.colorizeChangedParam(child1)
                             if itemTxt.lower() == "output":
-                                combo.setEditable(True)
+#                                combo.setEditable(True)
+                                combo.setEditable(False)
                                 # combo.setInsertPolicy(2)
                                 combo.setInsertPolicy(
                                     qt.QComboBox.InsertAtCurrent)
@@ -3077,45 +3111,101 @@ class XrtQook(qt.QWidget):
                 pass
         return retVal
 
-    def nameToBLPos(self, elname):
+    def nameToBLPos(self, eluuid):
         for iel in range(self.rootBLItem.rowCount()):
-            if str(self.rootBLItem.child(iel, 0).text()) == elname:
+#            if str(self.rootBLItem.child(iel, 0).text()) == elname:
+            if str(self.rootBLItem.child(iel, 0).data(qt.UserRole)) == eluuid:
                 return '{:03d}'.format(iel)
         else:
             return '000'
 
-    def updateBeamline(self, item=None, newElement=False, newOrder=False):
-#        print(item, newElement, newOrder)
-        if self.blViewer is None:
-            return
-        oeid = 'None'
+    def updateBeamline(self, item=None, newElement=None, newOrder=False):
+        def beamToUuid(beamName):
+            for ib in range(self.beamModel.rowCount()):
+                if self.beamModel.item(ib, 0).text() == beamName:
+                    return self.beamModel.item(ib, 3).text()
+        print(item, newElement, newOrder)
+        # TODO: do we need a better instruction as input arg?
+
+        oeid = None
         argName = 'None'
         argValue = 'None'
-        
-        if item is not None:
+        argValue_str = ''
+        kwargs = {}
+
+        if item is None:
+            _ = self.beamLine.export_to_json()  # TODO: new BL only?
+
+        else:
             iindex = item.index()
             column = iindex.column()
             row = iindex.row()
             parent = item.parent()
+
             if column == 1:
                 argValue_str = item.text()
                 argName = parent.child(row, 0).text()
-            
+                argValue = raycing.parametrize(argValue_str)
+                kwargs[argName] = argValue
+                outDict = kwargs
+
+            elif column == 0: # New Element?
+                if raycing.is_valid_uuid(parent.data(qt.UserRole)):
+                    oeid = str(parent.data(qt.UserRole))
+
+                    methKWArgs = OrderedDict()
+                    outKWArgs = OrderedDict()
+                    methObjStr = ''
+                    for mch in range(item.rowCount()):
+                        mchi = item.child(mch, 0)
+                        if mchi.text() == 'parameters':
+                            for mchpi in range(mchi.rowCount()):
+                                argName = mchi.child(mchpi, 0).text()
+                                argValue = raycing.parametrize(
+                                        mchi.child(mchpi, 1).text())
+                                methKWArgs[str(argName)] = argValue
+                        elif mchi.text() == 'output':
+                            for mchpi in range(mchi.rowCount()):
+                                argName = mchi.child(mchpi, 0).text()
+                                argValue = mchi.child(mchpi, 1).text()
+                                if argName == 'beam':
+                                    argValue = beamToUuid(argValue)
+                                else:
+                                    argValue = raycing.parametrize(
+                                        argValue)
+                                outKWArgs[str(argName)] = argValue
+                        elif mchi.text() == '_object':
+                            methObjStr = str(item.child(mch, 1).text())
+                    outDict = {'_object': methObjStr,
+                                'parameters': methKWArgs,
+                                'output': outKWArgs}
+
+                else:
+                    for itop in range(item.rowCount()):
+                        chitem = item.child(itop, 0)
+                        if chitem.text() == 'properties':
+                            for iprop in range(chitem.rowCount()):
+                                argName = chitem.child(iprop, 0).text()
+                                argValue = raycing.parametrize(
+                                        chitem.child(iprop, 1).text())
+                                kwargs[str(argName)] = argValue
+                        elif chitem.text() == '_object':
+                            continue
+                    outDict = {'properties': kwargs, '_object': newElement}
+
             if str(parent.text()) == 'properties':
                 oeItem = parent.parent()
                 oeid = str(oeItem.data(qt.UserRole))
+            elif raycing.is_valid_uuid(item.data(qt.UserRole)):
+                oeid = str(item.data(qt.UserRole))
 
-            try:  # TODO: move imports or use raycing.parametrize()
-                import ast
-                argValue = ast.literal_eval(argValue_str)
-            except Exception:
-                argValue = argValue_str
-                
-            kwargs = {argName: argValue}
-            print(oeid, kwargs)
-            self.blViewer.customGlWidget.update_beamline(oeid, kwargs)
+            if self.blViewer is None:
+                return
+
+            self.blViewer.customGlWidget.update_beamline(oeid, outDict)
+
 #            print(item.text(), row, column, parent.text())
-        
+
 #        self.blRunGlow()
 #        def createParamDict(parentItem, elementString):
 #            kwargs = dict()
@@ -3528,8 +3618,8 @@ class XrtQook(qt.QWidget):
                 self.blViewer.show()
                 self.blViewer.parentRef = self
                 self.blViewer.parentSignal = self.statusUpdate
-            except:  # TODO: Handle exceptions
-                pass
+            except Exception as e:  # TODO: Handle exceptions
+                raise(e)
         else:
 #            self.blViewer.updateOEsList(self.rayPath)
             if self.blViewer.isHidden():

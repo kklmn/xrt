@@ -1117,22 +1117,67 @@ class xrtGlow(qt.QWidget):
                                 continue
                 self.segmentsModelRoot.appendRow(newRow)
         else:
-            for eluuid, operations in self.customGlWidget.beamline.flowU.items():
-                element = self.customGlWidget.beamline.oesDict[eluuid][0]
-                elname = element.name
-                newRow = self.createRow(elname, 1, uuid=eluuid,
-                                        icon=self.getIcon(element))
-                for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
-                    for kwargset in targetoperations.values():
-                        if kwargset.get('beam', 'none') == eluuid:
-                            try:
-                                targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
-                                endBeamText = "to {}".format(targetName)
-                                newRow[0].appendRow(self.createRow(
-                                        endBeamText, 3, uuid=targetuuid))
-                            except:  # analysis:ignore
-                                continue
-                self.segmentsModelRoot.appendRow(newRow)
+            for eluuid, elementLine in self.customGlWidget.beamline.oesDict.items():
+                if elementLine[0].name == "VirtualScreen":
+                    continue
+                self.addElementToModel(eluuid)
+            
+#            for eluuid, operations in self.customGlWidget.beamline.flowU.items():
+#                element = self.customGlWidget.beamline.oesDict[eluuid][0]
+#                elname = element.name
+#                newRow = self.createRow(elname, 1, uuid=eluuid,
+#                                        icon=self.getIcon(element))
+#                for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
+#                    for kwargset in targetoperations.values():
+#                        if kwargset.get('beam', 'none') == eluuid:
+#                            try:
+#                                targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
+#                                endBeamText = "to {}".format(targetName)
+#                                newRow[0].appendRow(self.createRow(
+#                                        endBeamText, 3, uuid=targetuuid))
+#                            except:  # analysis:ignore
+#                                continue
+
+    def addElementToModel(self, uuid):
+        elementLine = self.customGlWidget.beamline.oesDict.get(uuid)
+        if elementLine is not None:
+            element = elementLine[0]
+            elname = element.name                
+            newRow = self.createRow(elname, 1, uuid=uuid,
+                                    icon=self.getIcon(element))
+        else:
+            return
+
+        for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
+            for kwargset in targetoperations.values():
+                if kwargset.get('beam', 'none') == uuid:
+                    try:
+                        targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
+                        endBeamText = "to {}".format(targetName)
+                        newRow[0].appendRow(self.createRow(
+                                endBeamText, 3, uuid=targetuuid))
+                    except:  # analysis:ignore
+                        continue
+        self.segmentsModelRoot.appendRow(newRow)
+
+    def updateTargets(self, targetuuid):
+        targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
+        endBeamText = "to {}".format(targetName)
+        flowRec = self.customGlWidget.beamline.flowU.get(targetuuid)
+
+        if flowRec is not None:
+            for kwargs in flowRec.values():
+                sourceBeam = kwargs.get('beam')
+
+                for i in range(self.segmentsModelRoot.rowCount()):
+                    oeItem = self.segmentsModelRoot.child(i, 0)
+                    sourceuuid = oeItem.data(qt.UserRole)
+
+                    if sourceuuid == sourceBeam:
+                        oeItem.appendRow(self.createRow(
+                            endBeamText, 3, uuid=targetuuid))
+                        break
+            
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
@@ -2084,6 +2129,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                  beamLayout=None,
                  epicsPrefix=None):
         super().__init__(parent=parent)
+        self.parent = parent
         self.hsvTex = generate_hsv_texture(512, s=1.0, v=1.0)
         self.QookSignal = signal
         self.showVirtualScreen = False
@@ -2115,6 +2161,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.oesList = oesList
         self.beamsToElements = b2els
         self.needMeshUpdate = None
+        self.needBeamUpdate = []
 
         self.beamline = raycing.BeamLine()
 
@@ -2293,7 +2340,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             except ImportError:
                 print("pythonSoftIOC not installed")
                 self.epicsPrefix = None
-        self.getColorLimits()
+#        self.getColorLimits()
 
     async def update_beamline_async(self, oeid, argName, argValue):
         """Update from EPICS interface """
@@ -2328,6 +2375,51 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             record.set(val)
 
     def update_beamline(self, oeid, kwargs, sender="gui"):
+        if '_object' in kwargs:  # from Qook
+            # new element
+            if 'properties' in kwargs:
+
+                kwargs['properties'].update({'uuid': oeid})
+                self.beamline.init_oe_from_json(kwargs)
+                self.needMeshUpdate = oeid
+                
+                if self.parent is not None:
+                    self.parent.addElementToModel(oeid)
+                
+                self.getMinMax()
+                self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
+    
+                message = {"command": "create",
+                           "object_type": "oe",
+                           "uuid": oeid,
+                           "kwargs": kwargs.copy()
+        #                        "kwargs": {arg: argValue.tolist() if isinstance(
+        #                                argValue, np.ndarray) else argValue}
+                                }
+    
+                if hasattr(self, 'input_queue'):
+                    self.input_queue.put(message)
+                    
+                self.glDraw()
+
+            elif 'parameters' in kwargs:  # update flow
+                methStr = kwargs['_object'].split('.')[-1]
+                self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
+                if self.parent is not None:
+                    self.parent.updateTargets(oeid)
+                message = {"command": "flow",
+                           "uuid": oeid,
+                           "kwargs": {methStr: kwargs.copy()}
+        #                        "kwargs": {arg: argValue.tolist() if isinstance(
+        #                                argValue, np.ndarray) else argValue}
+                                }                
+                if hasattr(self, 'input_queue'):
+                    self.input_queue.put(message)
+            
+            return
+
+
+
         for argName, argValue in kwargs.items():
             if oeid is None:
                 if self.epicsPrefix is not None:
@@ -2368,6 +2460,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             setattr(oe, arg, argValue)
             if arg in orientationArgSet:
                 self.meshDict[oeid].update_transformation_matrix()
+                self.getMinMax()
+                self.maxLen = np.max(np.abs(
+                        self.minmax[0, :] - self.minmax[1, :]))
             elif arg in shapeArgSet:
                 self.needMeshUpdate = oeid
 
@@ -2574,9 +2669,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
         while not progress_queue.empty():
             msg = progress_queue.get()
             if 'beam' in msg:
-#                print(msg['sender_name'], msg['sender_id'], msg['beam'])
+                print(msg['sender_name'], msg['sender_id'], msg['beam'])
                 for beamKey, beam in msg['beam'].items():
-                    self.update_beam_footprint(beam, (msg['sender_id'], beamKey))
+#                    self.update_beam_footprint(beam, (msg['sender_id'], beamKey))  # TODO: Must be done in the context
+                    self.needBeamUpdate.append((msg['sender_id'], beamKey))
+
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
             elif 'histogram' in msg and self.epicsPrefix is not None:
                 histPvName = f'{raycing.to_valid_var_name(msg["sender_name"])}:image'
@@ -2622,6 +2719,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         """beamTag: ('oeuuid', 'beamKey') """
         if beam is None:
             beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
+            if beam is None:
+                return
+            
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag).copy()
 #        dataColor = self.getColor(beam).copy()
@@ -2688,17 +2788,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         vboStore['vbo'] = vbo
         vboStore['vao'] = vao
-        vboStore['iMax'] = beam.iMax
-
-        if self.beamBufferDict.get(beamTag[0]) is not None:
-            self.beamBufferDict[beamTag[0]][beamTag[1]] = vboStore
+        if hasattr(beam, 'iMax'):
+            vboStore['iMax'] = beam.iMax
         else:
-            self.beamBufferDict[beamTag[0]] = {beamTag[1]: vboStore}
+            self.getColorLimits()  # TODO: VERY DIRTY WORKAROUND
+
+        self.beamBufferDict[beamTag] = vboStore
 
     def update_beam_footprint(self, beam=None, beamTag=None):
         if beam is None:
             beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
-        beamvbo = self.beamBufferDict[beamTag[0]][beamTag[1]]['vbo']
+
+        if self.beamBufferDict.get(beamTag) is None:
+            print("Buffers require init")
+            self.init_beam_footprint(beam, beamTag)
+            return
+            
+        beamvbo = self.beamBufferDict[beamTag]['vbo']
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag)
         state = np.where((
@@ -2718,18 +2824,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
         update_qt_buffer(beamvbo['indices'], goodRays.copy(), isIndex=True)
         beamvbo['goodLen'] = len(goodRays)
         beamvbo['lostLen'] = len(lostRays)
+#        self.doneCurrent()
 
-    def render_beam(self, beam, model, view, projection, target=None):
+    def render_beam(self, beamTag, model, view, projection, target=None):
         """beam: ('oeuuid', 'beamKey') """
         shader = self.shaderBeam if target is not None else self.shaderFootprint
-        beamBuffers = self.beamBufferDict[beam[0]][beam[1]]
+        beamBuffers = self.beamBufferDict.get(beamTag)
+        targetBuffers = self.beamBufferDict.get(target)
+        targetvbo = None
+
+        if beamBuffers is None:
+            return
 
         beamvbo = beamBuffers.get('vbo')
         beamvao = beamBuffers.get('vao')
-#        iMax = beamBuffers.get('iMax')
 
-        if target is not None:
-            targetvbo = self.beamBufferDict[target[0]][target[1]].get('vbo')
+        if targetBuffers is not None:
+            targetvbo = self.beamBufferDict[target].get('vbo')
 
         if beamvbo is None:
             print("No VBO")
@@ -2757,9 +2868,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         modelEnd = copy.deepcopy(model)
 
         if self.renderingMode == 'dynamic':  # All beams are local, must be transformed
-            oeuuid = beam[0]
+            oeuuid = beamTag[0]
             oe = self.beamline.oesDict[oeuuid][0]
-            oeIndex = int(beam[1] == 'beamLocal2')
+            oeIndex = int(beamTag[1] == 'beamLocal2')
             oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
             modelStart *= oeOrientation
             if is_screen(oe) or is_aperture(oe):
@@ -2813,7 +2924,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         if target is not None and self.lineWidth > 0:
             gl.glLineWidth(min(self.lineWidth, 1.))
-
+#        print(arrLen, "good rays")
         gl.glDrawElements(gl.GL_POINTS,  arrLen,
                           gl.GL_UNSIGNED_INT, None)
 
@@ -2908,8 +3019,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
             for beamKey, beam in beamDict.items():
-                if self.beamBufferDict.get(oeuuid) is not None:
-                    vboStore = self.beamBufferDict[oeuuid][beamKey]
+
+                vboStore = self.beamBufferDict.get((oeuuid, beamKey))
+                if vboStore is None:
+                    continue
 
                 good = (beam.state == 1) | (beam.state == 2)
 
@@ -2978,8 +3091,63 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam.vbo['indices'].write(0, goodRays, goodRays.nbytes)
             beam.vbo['indices'].release()
 
-    def glDraw(self):
-        self.update()
+    def init_oe_surface(self, oeuuid):
+
+        def assign_stencil_num(mesh):
+            if oeuuid not in self.selectableOEs.values():
+                if len(self.selectableOEs):
+                    stencilNum = np.max(
+                            list(self.selectableOEs.keys())) + 1
+                else:
+                    stencilNum = 1
+                self.selectableOEs[int(stencilNum)] = oeuuid
+                mesh.stencilNum = stencilNum
+
+        oeLine = self.beamline.oesDict.get(oeuuid)
+        mesh3D = None
+
+        if oeLine is not None:
+            oeToPlot = oeLine[0]
+        else:
+            return
+
+        if is_oe(oeToPlot) or is_screen(oeToPlot):
+            if not oeuuid in self.meshDict:
+                mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
+
+            is2ndXtalOpts = [False]
+            if is_dcm(oeToPlot):
+                is2ndXtalOpts.append(True)
+
+            for is2ndXtal in is2ndXtalOpts:
+                mesh3D.prepare_surface_mesh(int(is2ndXtal))
+                mesh3D.isEnabled = True
+                assign_stencil_num(mesh3D)
+
+        elif is_aperture(oeToPlot):
+            if not oeuuid in self.meshDict:
+                mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
+            for blade in oeToPlot.kind:
+                mesh3D.prepare_surface_mesh(blade)
+                mesh3D.isEnabled = True
+                assign_stencil_num(mesh3D)
+
+        else:  # must be the source
+            mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
+            mesh3D.prepare_magnets()
+            mesh3D.isEnabled = True
+            assign_stencil_num(mesh3D)
+
+        self.meshDict[oeuuid] = mesh3D
+
+    def update_oe_surface(self, oeuuid):
+        if is_source(self.meshDict[oeuuid].oe):
+            self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
+        else:
+            for surfIndex in self.meshDict[oeuuid].vao.keys():
+                self.meshDict[oeuuid].prepare_surface_mesh(
+                        nsIndex=surfIndex, updateMesh=True)
+        
 
 #    def eulerToQ(self, rotMatrXYZ):
 #        hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
@@ -3083,8 +3251,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.minmax = np.vstack((mins, maxs))
         for dim in range(3):
             if self.minmax[0, dim] == self.minmax[1, dim]:
-                self.minmax[0, dim] -= 1.
-                self.minmax[1, dim] += 1.
+                self.minmax[0, dim] -= 100.  # TODO: configurable
+                self.minmax[1, dim] += 100.
         return self.minmax
 
     def getColorLimits(self):
@@ -3103,6 +3271,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
             for beamKey, startBeam in beamDict.items():
+                if startBeam is None:
+                    continue
                 good = (startBeam.state == 1) | (startBeam.state == 2)
                 if len(startBeam.state[good]) > 0:
                     startBeam.iMax = np.max(startBeam.Jss[good] +
@@ -3539,6 +3709,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
 #            drawArrow(color, coneCP, yText)
 
+
+
     def initializeGL(self):
         gl.glGetError()
 #        gl.glEnable(gl.GL_STENCIL_TEST)
@@ -3578,53 +3750,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.llVBO.release()
         self.labelvao.release()
 
-        for oeuuid, oeLine in self.beamline.oesDict.items():
-            oeToPlot = oeLine[0]
-            if is_oe(oeToPlot) or is_screen(oeToPlot):
-                if not oeuuid in self.meshDict:
-                    mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
-
-                is2ndXtalOpts = [False]
-                if is_dcm(oeToPlot):
-                    is2ndXtalOpts.append(True)
-
-                for is2ndXtal in is2ndXtalOpts:
-                    mesh3D.prepare_surface_mesh(int(is2ndXtal))
-                    mesh3D.isEnabled = True
-                    if oeuuid not in self.selectableOEs.values():
-                        if len(self.selectableOEs):
-                            stencilNum = np.max(
-                                    list(self.selectableOEs.keys())) + 1
-                        else:
-                            stencilNum = 1
-                        self.selectableOEs[int(stencilNum)] = oeuuid
-                        mesh3D.stencilNum = stencilNum
-            elif is_aperture(oeToPlot):
-                if not oeuuid in self.meshDict:
-                    mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
-                for blade in oeToPlot.kind:
-                    mesh3D.prepare_surface_mesh(blade)
-                    mesh3D.isEnabled = True
-                    if oeuuid not in self.selectableOEs.values():
-                        if len(self.selectableOEs):
-                            stencilNum = np.max(
-                                    list(self.selectableOEs.keys())) + 1
-                        else:
-                            stencilNum = 1
-                        self.selectableOEs[int(stencilNum)] = oeuuid
-                        mesh3D.stencilNum = stencilNum
-            else:  # must be the source
-                mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
-                mesh3D.prepare_magnets()
-                mesh3D.isEnabled = True
-                if oeuuid not in self.selectableOEs.values():
-                    if len(self.selectableOEs):
-                        stencilNum = np.max(list(self.selectableOEs.keys()))+1
-                    else:
-                        stencilNum = 1
-                    self.selectableOEs[int(stencilNum)] = oeuuid
-                    mesh3D.stencilNum = stencilNum
-            self.meshDict[oeuuid] = mesh3D
+        for oeuuid in self.beamline.oesDict:
+            self.init_oe_surface(oeuuid)
 
         gl.glViewport(*self.viewPortGL)
         pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
@@ -3699,19 +3826,35 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                gl.glDepthMask(gl.GL_FALSE)
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_TRUE)
+
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             model = self.segmentModel.model()
+
             if self.needMeshUpdate is not None:
                 gl.glGetError()
-                if is_source(self.meshDict[self.needMeshUpdate].oe):
-                    self.meshDict[self.needMeshUpdate].prepare_magnets(
-                            updateMesh=True)
+                newMesh = self.meshDict.get(self.needMeshUpdate) is None
+
+                if newMesh:
+                    self.init_oe_surface(self.needMeshUpdate)
+#                    self.init_beam_footprint()
                 else:
-                    for surfIndex in self.meshDict[self.needMeshUpdate].vao.keys():
-                        self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
-                                nsIndex=surfIndex, updateMesh=True)
+                    self.update_oe_surface(self.needMeshUpdate)
                 self.needMeshUpdate = None
+            for beamTag in self.needBeamUpdate:  # TODO: deque and process one element per call
+                self.update_beam_footprint(beamTag=beamTag)
+            self.needBeamUpdate = []
+
+#            if self.needMeshUpdate is not None:
+#                gl.glGetError()
+#                if is_source(self.meshDict[self.needMeshUpdate].oe):
+#                    self.meshDict[self.needMeshUpdate].prepare_magnets(
+#                            updateMesh=True)
+#                else:
+#                    for surfIndex in self.meshDict[self.needMeshUpdate].vao.keys():
+#                        self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
+#                                nsIndex=surfIndex, updateMesh=True)
+#                self.needMeshUpdate = None
 
             gl.glEnable(gl.GL_STENCIL_TEST)
 
@@ -3819,10 +3962,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             'beamLocal', 'beamLocal1'} & beamDict.keys():
                         continue
 
-                    beam = (oeuuid, bField)
+                    beamTag = (oeuuid, bField)
 #                    if oeuuid == self.virtScreen:
 #                        print("Plotting virtual screen", bField)
-                    self.render_beam(beam, mMMLoc,
+                    self.render_beam(beamTag, mMMLoc,
                                      self.mView, self.mProj, target=None)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
@@ -3950,7 +4093,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
-            if labelLines is not None:
+            if False : #labelLines is not None:  # Must be dynamic
                 update_qt_buffer(self.llVBO, labelLines)
 
                 self.cBox.shader.bind()
@@ -4131,14 +4274,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     exBeam.iMax = self.iMax
                 self.beamline.beamsDictU[scrId] =\
                     {'beamLocal': exBeam}
-                if self.beamBufferDict.get(scrId) is None:
-                    self.init_beam_footprint(
-                            beam=exBeam,
-                            beamTag=(scrId, 'beamLocal'))
-                else:
-                    self.update_beam_footprint(
-                            beam=exBeam,
-                            beamTag=(scrId, 'beamLocal'))
+                virtBeamTag = (scrId, 'beamLocal')
+                self.update_beam_footprint(beam=exBeam, beamTag=virtBeamTag)
 #                self.virtScreen.beamToExpose = beamStart0
 #
 #        if self.isVirtScreenNormal:
@@ -4350,6 +4487,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.cBox.update_grid()
         self.glDraw()
+
+    def glDraw(self):
+        self.update()
 
 
 class Beam3D():
