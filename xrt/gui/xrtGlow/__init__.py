@@ -1160,24 +1160,23 @@ class xrtGlow(qt.QWidget):
                         continue
         self.segmentsModelRoot.appendRow(newRow)
 
-    def updateTargets(self, targetuuid):
-        targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
-        endBeamText = "to {}".format(targetName)
-        flowRec = self.customGlWidget.beamline.flowU.get(targetuuid)
+    def updateTargets(self):
 
-        if flowRec is not None:
-            for kwargs in flowRec.values():
-                sourceBeam = kwargs.get('beam')
-
-                for i in range(self.segmentsModelRoot.rowCount()):
-                    oeItem = self.segmentsModelRoot.child(i, 0)
-                    sourceuuid = oeItem.data(qt.UserRole)
-
-                    if sourceuuid == sourceBeam:
-                        oeItem.appendRow(self.createRow(
-                            endBeamText, 3, uuid=targetuuid))
-                        break
-            
+        for iel in range(self.segmentsModelRoot.rowCount()):
+            oeItem = self.segmentsModelRoot.child(iel, 0)
+            uuid = oeItem.data(qt.UserRole)
+            for iech in range(oeItem.rowCount()):
+                oeItem.model().removeRow(iech, oeItem.index())
+            for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
+                for kwargset in targetoperations.values():
+                    if kwargset.get('beam', 'none') == uuid:
+                        try:
+                            targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
+                            endBeamText = "to {}".format(targetName)
+                            oeItem.appendRow(self.createRow(
+                                    endBeamText, 3, uuid=targetuuid))
+                        except:  # analysis:ignore
+                            continue
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
@@ -2406,7 +2405,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 methStr = kwargs['_object'].split('.')[-1]
                 self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
                 if self.parent is not None:
-                    self.parent.updateTargets(oeid)
+                    self.parent.updateTargets()
                 message = {"command": "flow",
                            "uuid": oeid,
                            "kwargs": {methStr: kwargs.copy()}

@@ -3141,15 +3141,16 @@ class XrtQook(qt.QWidget):
             column = iindex.column()
             row = iindex.row()
             parent = item.parent()
+#            print(row, column)
 
-            if column == 1:
+            if column == 1:  # Existing Element
                 argValue_str = item.text()
                 argName = parent.child(row, 0).text()
                 argValue = raycing.parametrize(argValue_str)
                 kwargs[argName] = argValue
                 outDict = kwargs
 
-            elif column == 0: # New Element?
+            elif column == 0:  # New Element
                 if raycing.is_valid_uuid(parent.data(qt.UserRole)):
                     oeid = str(parent.data(qt.UserRole))
 
@@ -3183,7 +3184,7 @@ class XrtQook(qt.QWidget):
                 else:
                     for itop in range(item.rowCount()):
                         chitem = item.child(itop, 0)
-                        if chitem.text() == 'properties':
+                        if chitem.text() in ['properties']:
                             for iprop in range(chitem.rowCount()):
                                 argName = chitem.child(iprop, 0).text()
                                 argValue = raycing.parametrize(
@@ -3193,9 +3194,16 @@ class XrtQook(qt.QWidget):
                             continue
                     outDict = {'properties': kwargs, '_object': newElement}
 
-            if str(parent.text()) == 'properties':
+            if str(parent.text()) in ['properties']:
                 oeItem = parent.parent()
                 oeid = str(oeItem.data(qt.UserRole))
+            elif str(parent.text()) in ['parameters']:
+                methItem = parent.parent()
+                oeItem = methItem.parent()
+                oeid = str(oeItem.data(qt.UserRole))
+                methObjStr = methItem.text().strip('()')
+                outDict = {'_object': methObjStr,
+                           'parameters': kwargs}
             elif raycing.is_valid_uuid(item.data(qt.UserRole)):
                 oeid = str(item.data(qt.UserRole))
 
