@@ -3132,6 +3132,7 @@ class XrtQook(qt.QWidget):
         argValue = 'None'
         argValue_str = ''
         kwargs = {}
+        outDict = {}
 
         if item is None:
             _ = self.beamLine.export_to_json()  # TODO: new BL only?
@@ -3142,6 +3143,7 @@ class XrtQook(qt.QWidget):
             row = iindex.row()
             parent = item.parent()
 #            print(row, column)
+#            print(item.text())
 
             if column == 1:  # Existing Element
                 argValue_str = item.text()
@@ -3150,7 +3152,7 @@ class XrtQook(qt.QWidget):
                 kwargs[argName] = argValue
                 outDict = kwargs
 
-            elif column == 0:  # New Element
+            elif column == 0 and newElement is not None:  # New Element
                 if raycing.is_valid_uuid(parent.data(qt.UserRole)):
                     oeid = str(parent.data(qt.UserRole))
 
@@ -3207,7 +3209,7 @@ class XrtQook(qt.QWidget):
             elif raycing.is_valid_uuid(item.data(qt.UserRole)):
                 oeid = str(item.data(qt.UserRole))
 
-            if self.blViewer is None:
+            if self.blViewer is None or not outDict:
                 return
 
             self.blViewer.customGlWidget.update_beamline(oeid, outDict)
@@ -4076,6 +4078,11 @@ if __name__ == '__main__':
         self.experimentalMode = not self.experimentalMode
         self.progressBar.setFormat("Experimental Mode {}abled".format(
             "en" if self.experimentalMode else "dis"))
+
+    def closeEvent(self, event):
+        if self.blViewer is not None:
+            self.blViewer.close()
+        super().closeEvent(event)
 
 
 class PropagationConnect(qt.QObject):

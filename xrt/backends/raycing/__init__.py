@@ -257,7 +257,7 @@ allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
                  'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
 
 orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
-                     'braggOffset', 'rotationSequence'}
+                     'braggOffset', 'rotationSequence', 'positionRoll'}
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'R', 'r', 'Rm', 'Rs'}
@@ -972,7 +972,8 @@ def append_to_flow_decorator(func):
                 if methStr in ['propagate', 'expose']:
                     ret_dict = {'beamLocal': result}
                 else:
-                    ret_dict = {'beamGlobal' if toGlobal else 'beamLocal': result}
+                    ret_dict = {'beamGlobal' if toGlobal else
+                                'beamLocal': result}
             if ret_dict:
                 if 'beam' in kwargs:
                     kwargs['beam'] = beamId
@@ -1255,29 +1256,14 @@ def is_valid_uuid(uuid_string):
 
 def run_process_from_file(beamLine):
     outDict = {}
-#    for OE, methStr, fArgsStrDict, outArgStr in beamLine.flowList:
-#        fArgs = {}
-#        for argName, argVal in fArgsStrDict.items():
-#            if argName == "beam":
-#                fArgs[argName] = outDict[argVal]
-#            else:
-#                fArgs[argName] = parametrize(argVal)
-#
-#        outBeams = getattr(OE, methStr)(**fArgs)
-#        if isinstance(outBeams, tuple):
-#            for outBeam, beamName in zip(list(outBeams),
-#                                         list(outArgStr)):
-#                outDict[beamName] = outBeam
-#        else:
-#            outDict[list(outArgStr)[0]] = outBeams
-#    print(beamLine.flowU)
+
     for oeid, meth in beamLine.flowU.items():
         oe = beamLine.oesDict[oeid][0]
         for func, fkwargs in meth.items():
             getattr(oe, func)(**fkwargs)
     for beamName, beamTag in beamLine.beamNamesDict.items():
         outDict[beamName] = beamLine.beamsDictU[beamTag[0]][beamTag[1]]
-#    print(outDict)
+
     return outDict
 
 
@@ -1366,7 +1352,6 @@ def propagationProcess(q_in, q_out):
                         continue
                 oe = handler.bl.oesDict[oeid][0]
                 for func, fkwargs in meth.items():
-#                    print(oe.name, func, fkwargs)
                     getattr(oe, func)(**fkwargs)
                     msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
                                 'sender_name': oe.name,
@@ -1377,7 +1362,7 @@ def propagationProcess(q_in, q_out):
                     if hasattr(oe, 'expose') and hasattr(oe, 'image'):
                         msg_hist = {'histogram': oe.image,
                                     'sender_name': oe.name,
-                                    'sender_id': oe.uuid,
+                                    'sender_id': oeid,
                                     'status': 0}
                         q_out.put(msg_hist)
             q_out.put({"status": 0, "repeat": repeats})
@@ -1429,14 +1414,15 @@ class MessageHandler:
         elif object_type == 'oe':
             self.bl.init_oe_from_json(kwargs)
             if self.autoUpdate:
-                self.needUpdate = True            
+                self.needUpdate = True
 #            print("Deserialized beamline", self.bl.flowU)
 #        print(f"Creating {object_type} with UUID {uuid} and kwargs {kwargs}")
 
     def handle_modify(self, message):
-        uuid = message.get("uuid")
+#        print("handle_modify", message)
+        oeuuid = message.get("uuid")
 #        print(uuid, self.bl.oesDict.keys())
-        element = self.bl.oesDict.get(uuid)
+        element = self.bl.oesDict.get(oeuuid)
         kwargs = message.get("kwargs", {})
         if element is not None:
             for key, value in kwargs.items():
@@ -1456,11 +1442,13 @@ class MessageHandler:
                 setattr(element[0], arg, value)
             if self.autoUpdate:
                 self.needUpdate = True
+                if len(kwargs) == 1 and 'name' in kwargs:
+                    self.needUpdate = False
             if hasattr(element[0], 'propagate'):
-                kwargs = list(self.bl.flowU[uuid].values())[0]
+                kwargs = list(self.bl.flowU[oeuuid].values())[0]
                 modifiedEl = kwargs['beam']
             else:
-                modifiedEl = uuid
+                modifiedEl = oeuuid
             keys = list(self.bl.flowU.keys())
             if self.startEl is None:
                 self.startEl = modifiedEl
@@ -1468,14 +1456,16 @@ class MessageHandler:
                 self.startEl = modifiedEl
 
     def handle_flow(self, message):
-        uuid = message.get('uuid')
+        oeuuid = message.get('uuid')
         kwargs = message.get('kwargs')
-        self.bl.update_flow_from_json(uuid, kwargs)
+#        print("handle_flow", message)
+        self.bl.update_flow_from_json(oeuuid, kwargs)
+        self.bl.sort_flow()
         if self.autoUpdate:
             self.needUpdate = True
 
     def handle_delete(self, message):
-        uuid = message.get("uuid")
+        oeuuid = message.get("uuid")
         print(f"Deleting object with UUID {uuid}")
 
     def handle_start(self, message):
@@ -2120,6 +2110,39 @@ class BeamLine(object):
             else:
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
+    def sort_flow(self):
+        # We can add more sophisticated logic here based on paths
+
+        visited = set()
+        result = []
+        newFlow = OrderedDict()
+
+        def get_beam_id(oeid):
+            methDict = self.flowU.get(oeid)
+            if methDict is None:
+                return None
+            for kwargs in methDict.values():
+                sourceid = kwargs.get('beam')
+                return sourceid
+
+        def dfs(oeid):
+            visited.add(oeid)
+            sourceid = get_beam_id(oeid)
+            if sourceid not in visited:
+                dfs(sourceid)
+            result.insert(0, oeid)
+
+        for oe in self.flowU:
+            if oe not in visited:
+                dfs(oe)
+
+        for oeuuid in reversed(result):
+            tmpRec = self.flowU.get(oeuuid)
+            if tmpRec is not None:
+                newFlow[oeuuid] = tmpRec
+
+        self.flowU = newFlow
+
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[], v2=False,
              **kwargs):
@@ -2332,20 +2355,26 @@ class BeamLine(object):
 
     def init_oe_from_json(self, elProps, isString=True):
         print("Creating OE from JSON", elProps)
-        oeModule, oeClass = elProps['_object'].rsplit('.', 1)
-        oeModule = importlib.import_module(oeModule)
-        oeParams = elProps['properties']
-        defArgs = dict(get_params(elProps['_object']))
-        if isString:
-            initKWArgs = create_paramdict_oe(oeParams, defArgs, self)
-        else:
-            initKWArgs = oeParams
+        oeParams = elProps.get('properties')
 
-        try:
-            oeObject = getattr(oeModule, oeClass)(**initKWArgs)
-        except:  # TODO: Needs testing
-            print(oeClass, "Init problem")
-            raise
+        if elProps.get('_object') is None:
+            print("Empty object")
+            return
+        else:
+            oeModule, oeClass = elProps['_object'].rsplit('.', 1)
+            oeModule = importlib.import_module(oeModule)
+            defArgs = dict(get_params(elProps['_object']))
+
+            if isString:
+                initKWArgs = create_paramdict_oe(oeParams, defArgs, self)
+            else:
+                initKWArgs = oeParams
+
+            try:
+                oeObject = getattr(oeModule, oeClass)(**initKWArgs)
+            except:  # TODO: Needs testing
+                print(oeClass, "Init problem")
+                raise
 
         self.oenamesToUUIDs[oeParams['name']] = oeParams['uuid']
         self.update_flow_from_json(oeParams['uuid'], elProps)
@@ -2359,22 +2388,29 @@ class BeamLine(object):
                 continue
             else:
                 fArgs = {}
+                isEmpty = False
                 for argName, argVal in methArgs['parameters'].items():
                     if argName == "beam":
                         if is_valid_uuid(argVal):
                             fArgs[argName] = argVal
+                        elif argVal == 'None' or argVal is None:
+                            isEmpty = True
                         else:
                             fArgs[argName] = self.beamNamesDict[str(argVal)][0]
                     else:
                         fArgs[argName] = parametrize(argVal)
 
-                self.flowU[oeid] = {methStr: fArgs}
-                self.beamsDictU[oeid] = {}
-                for beamType, beamName in methArgs['output'].items():
-                    self.beamNamesDict[str(beamName)] = (oeid, beamType)
-                    self.beamsDictU[oeid][beamType] = None
-                break  # Normally just one method per element.        
+                if isEmpty:
+                    self.flowU.pop(oeid, None)
+                    continue
 
+                self.flowU[oeid] = {methStr: fArgs}
+                if 'output' in methArgs:
+                    self.beamsDictU[oeid] = {}
+                    for beamType, beamName in methArgs['output'].items():
+                        self.beamNamesDict[str(beamName)] = (oeid, beamType)
+                        self.beamsDictU[oeid][beamType] = None
+                    break  # Normally just one method per element.
 
     def populate_oes_dict_from_json(self, dictIn):
         for elName, elProps in dictIn.items():

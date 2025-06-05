@@ -1160,13 +1160,55 @@ class xrtGlow(qt.QWidget):
                         continue
         self.segmentsModelRoot.appendRow(newRow)
 
-    def updateTargets(self):
+    def updateNames(self):
+        def getOeName(uuid):
+            oeline = self.customGlWidget.beamline.oesDict.get(uuid)
+            return oeline[0].name if oeline is not None else None
 
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
-            uuid = oeItem.data(qt.UserRole)
+            oeid = oeItem.data(qt.UserRole)
+            newName = getOeName(oeid)
+            oeItem.setText(newName)
             for iech in range(oeItem.rowCount()):
-                oeItem.model().removeRow(iech, oeItem.index())
+                targetItem = oeItem.child(iech, 0)
+                targetId = targetItem.data(qt.UserRole)
+                targetName = getOeName(targetId)
+                targetItem.setText("to {}".format(targetName))
+
+    def updateTargets(self):
+        
+        tmpDict = dict()
+
+        # Stage 1. Remove children
+        for iel in range(self.segmentsModelRoot.rowCount()):
+            oeItem = self.segmentsModelRoot.child(iel, 0)
+            uuid = oeItem.data(qt.UserRole)
+            for iech in reversed(range(oeItem.rowCount())):
+                oeItem.removeRow(iech)
+
+        # Stage 2a. Move all element rows into a temporary dictionary 
+        for iel in reversed(range(self.segmentsModelRoot.rowCount())):
+            oeItem = self.segmentsModelRoot.child(iel, 0)
+            uuid = oeItem.data(qt.UserRole)
+            if raycing.is_valid_uuid(uuid):
+                tmpDict[uuid] = self.segmentsModelRoot.takeRow(iel)
+                
+        # Stage 2b. Return element rows according to new flow order
+        for segment in self.customGlWidget.beamline.flowU:
+            modelRow = tmpDict.pop(segment, None)
+            if modelRow is not None:
+                self.segmentsModelRoot.appendRow(modelRow)
+        
+        # Stage 2c. Return non-flow elements
+        for modelRow in tmpDict.values():
+            if modelRow is not None:
+                self.segmentsModelRoot.appendRow(modelRow)
+
+        # Stage 3. Add children 
+        for iel in range(self.segmentsModelRoot.rowCount()):
+            oeItem = self.segmentsModelRoot.child(iel, 0)
+            uuid = oeItem.data(qt.UserRole)
             for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
                 for kwargset in targetoperations.values():
                     if kwargset.get('beam', 'none') == uuid:
@@ -1175,6 +1217,7 @@ class xrtGlow(qt.QWidget):
                             endBeamText = "to {}".format(targetName)
                             oeItem.appendRow(self.createRow(
                                     endBeamText, 3, uuid=targetuuid))
+                            print(oeItem.text(), ": Appending", endBeamText)
                         except:  # analysis:ignore
                             continue
 
@@ -1949,7 +1992,10 @@ class xrtGlow(qt.QWidget):
         d.show()
 
     def centerEl(self, oeName):
-        off0 = np.array(self.customGlWidget.beamline.oesDict[str(oeName)][0].center) - np.array(
+        oeLine = self.customGlWidget.beamline.oesDict.get(oeName)
+        if oeLine is None:
+            return
+        off0 = np.array(oeLine[0].center) - np.array(
             self.customGlWidget.tmpOffset)
         cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
         off1 = self.customGlWidget.mModLocal * cOffset
@@ -2404,6 +2450,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif 'parameters' in kwargs:  # update flow
                 methStr = kwargs['_object'].split('.')[-1]
                 self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
+                self.beamline.sort_flow()
                 if self.parent is not None:
                     self.parent.updateTargets()
                 message = {"command": "flow",
@@ -2464,6 +2511,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         self.minmax[0, :] - self.minmax[1, :]))
             elif arg in shapeArgSet:
                 self.needMeshUpdate = oeid
+            elif arg in {'name'}:
+                if self.parent is not None:
+                    self.parent.updateNames()                
 
             # updating the beamline model in the runner
         if self.epicsPrefix is not None:
