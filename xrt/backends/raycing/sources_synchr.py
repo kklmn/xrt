@@ -150,9 +150,9 @@ class BendingMagnet(SourceBase):
         if self.needReset:
             self.reset()
 
-        kwArgsIn = {'toGlobal': toGlobal,
-                    'withAmplitudes': withAmplitudes,
-                    'fixedEnergy': fixedEnergy}
+#        kwArgsIn = {'toGlobal': toGlobal,
+#                    'withAmplitudes': withAmplitudes,
+#                    'fixedEnergy': fixedEnergy}
 
         if self.bl is not None:
             try:
@@ -160,15 +160,15 @@ class BendingMagnet(SourceBase):
             except ValueError:
                 self.bl._alignE = 0.5 * (self.eMin + self.eMax)
 
-            if accuBeam is None:
-                kwArgsIn['accuBeam'] = accuBeam
-            else:    
-                if raycing.is_valid_uuid(accuBeam):
-                    kwArgsIn['accuBeam'] = accuBeam
-                    accuBeam = self.bl.beamsDictU[accuBeam][
-                            'beamGlobal' if toGlobal else 'beamLocal']
-                else:
-                    kwArgsIn['accuBeam'] = accuBeam.parentId
+#            if accuBeam is None:
+#                kwArgsIn['accuBeam'] = accuBeam
+#            else:    
+#                if raycing.is_valid_uuid(accuBeam):
+#                    kwArgsIn['accuBeam'] = accuBeam
+#                    accuBeam = self.bl.beamsDictU[accuBeam][
+#                            'beamGlobal' if toGlobal else 'beamLocal']
+#                else:
+#                    kwArgsIn['accuBeam'] = accuBeam.parentId
 
 
         if self.uniformRayDensity:  # Force withAmplitudes=True
@@ -400,15 +400,15 @@ class BendingMagnet(SourceBase):
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
-            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
-        else:
-            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
+#        else:
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
             
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
 
-        self.bl.flowU[self.uuid] = {'method': self.shine,
-                                    'kwArgsIn': kwArgsIn}
+#        self.bl.flowU[self.uuid] = {'method': self.shine,
+#                                    'kwArgsIn': kwArgsIn}
         return bo
 
 
