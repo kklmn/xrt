@@ -3,8 +3,10 @@
 Version history
 ---------------
 
-Current GitHub code (27 Mar 2025):
-    - Minor bugs in help pages of xrtQook.
+Current GitHub code (10 Jun 2025):
+    - Enable wave propagation for two-side OEs (lenses).
+
+    - Minor fixes in help pages of xrtQook.
 
 1.6.1 (13 Nov 2024):
     - Minor bug fixes.
