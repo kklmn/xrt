@@ -122,7 +122,8 @@ if not starImport:
      QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
-     QPushButton, QDialog, QOpenGLWidget, QToolTip, QDialogButtonBox) = (
+     QPushButton, QDialog, QOpenGLWidget, QToolTip, QDialogButtonBox,
+     QStyledItemDelegate) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -134,7 +135,7 @@ if not starImport:
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
         myQtGUI.QDialog, myQtGUI.QOpenGLWidget, myQtGUI.QToolTip,
-        myQtGUI.QDialogButtonBox)
+        myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture, 
      QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D, 
@@ -174,24 +175,146 @@ except:  # analysis:ignore
     glowTopScale = QSlider.TicksAbove
 
 
-class QComboBox(StdQComboBox):
-    """
-    Disabling off-focus mouse wheel scroll is based on the following solution:
-    https://stackoverflow.com/questions/3241830/qt-how-to-disable-mouse-scrolling-of-qcombobox/3242107#3242107
-    """
-    def __init__(self, *args, **kwargs):
-        super(QComboBox, self).__init__(*args, **kwargs)
-#        self.scrollWidget=scrollWidget
-        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+#class QComboBox(StdQComboBox):
+#    """
+#    Disabling off-focus mouse wheel scroll is based on the following solution:
+#    https://stackoverflow.com/questions/3241830/qt-how-to-disable-mouse-scrolling-of-qcombobox/3242107#3242107
+#    """
+#    def __init__(self, *args, **kwargs):
+#        super(QComboBox, self).__init__(*args, **kwargs)
+##        self.scrollWidget=scrollWidget
+#        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+#
+#    def wheelEvent(self, *args, **kwargs):
+#        if self.hasFocus():
+#            return StdQComboBox.wheelEvent(self, *args, **kwargs)
+#        else:
+#            try:
+#                return self.parent().wheelEvent(*args, **kwargs)
+#            except RuntimeError:
+#                return
 
-    def wheelEvent(self, *args, **kwargs):
-        if self.hasFocus():
-            return StdQComboBox.wheelEvent(self, *args, **kwargs)
+QComboBox = StdQComboBox
+
+class DynamicArgumentDelegate(QStyledItemDelegate):
+    def __init__(self, nameToModel=None, parent=None, mainWidget=None):
+        super().__init__(parent)
+        self.nameToModel = nameToModel
+        self.mainWidget = mainWidget
+
+    def createEditor(self, parent, option, index):
+        model = index.model()
+        row = index.row()
+        nameIndex = model.index(row, 0, index.parent())
+        argName = str(nameIndex.data())
+        argValue = str(index.data())
+        parentIndexName = str(index.parent().data())
+
+        combo = QComboBox(parent)
+        if isinstance(self.mainWidget.getVal(argValue), bool):
+            combo.setModel(self.mainWidget.boolModel)
+            return combo
+        elif argName in ['bl', 'beamline']:
+            combo = QComboBox(parent)
+            combo.setEditable(True) 
+            combo.setModel(self.mainWidget.beamLineModel)
+            return combo
+        elif argName.startswith('beam'):
+            if parentIndexName == 'output':  # Not sure we need it if renaming is disabled
+                oeuuid = index.parent().parent().parent().data(UserRole)
+                fpModel = MultiColumnFilterProxy({1: argName,
+                                                  2: oeuuid})
+                fpModel.setSourceModel(self.mainWidget.beamModel)
+            elif parentIndexName == 'parameters':
+                fpModel = MultiColumnFilterProxy({1: "Global"})
+                fpModel.setSourceModel(self.mainWidget.beamModel)                
+            else:
+                fpModel = self.mainWidget.beamModel
+            
+            combo = QComboBox(parent)
+            combo.setModel(fpModel)
+            return combo
+        elif argName.startswith('wave'):
+            fpModel = MultiColumnFilterProxy({1: "Local"})
+            fpModel.setSourceModel(self.mainWidget.beamModel)                
+            
+            combo = QComboBox(parent)
+            combo.setModel(fpModel)
+            return combo
+        elif argName.startswith('plots'):
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.plotModel)
+            combo.setEditable(True)
+            combo.setInsertPolicy(QComboBox.InsertAtCurrent)
+            return combo
+        elif any(argName.lower().startswith(v) for v in
+                 ['mater', 'tlay', 'blay', 'coat', 'substrate']):
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.materialsModel)
+            return combo
+        elif 'density' in argName:  # uniformRayDansity would fall under bool
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.densityModel)
+            return combo
+        elif 'polarization' in argName:
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.polarizationsModel)
+            return combo
+        elif 'shape' in argName.lower():
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.shapeModel)
+            return combo
+        elif 'table' in argName.lower():
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.matTableModel)
+            return combo
+        elif 'data' in argName.lower() and 'axis' in parentIndexName:
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.fluxDataModel)
+            return combo
+        elif 'fluxkind' in argName.lower():
+            combo = QComboBox(parent)
+            combo.setModel(self.mainWidget.fluxKindModel)
+            return combo
         else:
-            try:
-                return self.parent().wheelEvent(*args, **kwargs)
-            except RuntimeError:
-                return
+            return QLineEdit(parent)
+
+    def setEditorData(self, editor, index):
+        value = index.data()
+        if isinstance(editor, QComboBox):
+            idx = editor.findText(value)
+            print_model(editor.model())
+            if idx >= 0:
+                editor.setCurrentIndex(idx)
+        elif isinstance(editor, QLineEdit):
+            editor.setText(value)
+
+    def setModelData(self, editor, model, index):
+        if isinstance(editor, QComboBox):
+            model.setData(index, editor.currentText())
+        elif isinstance(editor, QLineEdit):
+            model.setData(index, editor.text())
+
+
+class MultiColumnFilterProxy(QSortFilterProxyModel):
+    """Fields must be a dictionary {column: "filterValue"}"""
+    def __init__(self, fields={}, parent=None):
+        super().__init__(parent)
+        self.fields = fields
+
+    def setColumnFilter(self, fields):
+        self.fields.update(fields)
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, row, parent):
+        model = self.sourceModel()
+        output = []
+        for key, value in self.fields.items():
+            tabIndex = model.index(row, key, parent)
+            output.append(value is None or str(value) in
+                          str(model.data(tabIndex)))
+
+        return all(output)
 
 
 class ComboBoxFilterProxyModel(QSortFilterProxyModel):
@@ -200,3 +323,16 @@ class ComboBoxFilterProxyModel(QSortFilterProxyModel):
         if source_row == 0:
             return False
         return True
+
+    
+def print_model(model, label="Model"):
+    print(f"--- {label} ---")
+    rows = model.rowCount()
+    cols = model.columnCount()
+    for row in range(rows):
+        row_data = []
+        for col in range(cols):
+            index = model.index(row, col)
+            data = model.data(index)
+            row_data.append(str(data))
+        print(f"Row {row}: {row_data}")

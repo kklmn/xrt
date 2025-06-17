@@ -2424,7 +2424,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             # new element
             if 'properties' in kwargs:
 
-                kwargs['properties'].update({'uuid': oeid})
+#                kwargs['properties'].update({'uuid': oeid})
                 self.beamline.init_oe_from_json(kwargs)
                 self.needMeshUpdate = oeid
                 
@@ -2463,8 +2463,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.input_queue.put(message)
             
             return
-
-
 
         for argName, argValue in kwargs.items():
             if oeid is None:

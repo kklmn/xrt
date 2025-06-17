@@ -658,6 +658,7 @@ class XrtQook(qt.QWidget):
 
     def initAllTrees(self):
         self.blUpdateLatchOpen = False
+        comboDelegate = qt.DynamicArgumentDelegate(mainWidget=self)
         # runTree view
         self.runTree.setModel(self.runModel)
         self.runTree.setAlternatingRowColors(True)
@@ -689,6 +690,7 @@ class XrtQook(qt.QWidget):
         self.plotTree.setHeaderHidden(False)
         self.plotTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.plotTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.plotTree.setItemDelegateForColumn(1, comboDelegate)
 
         # materialsTree view
         self.matTree.setModel(self.materialsModel)
@@ -697,6 +699,7 @@ class XrtQook(qt.QWidget):
         self.matTree.setHeaderHidden(False)
         self.matTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.matTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.matTree.setItemDelegateForColumn(1, comboDelegate)
 
         # BLTree view
         self.tree.setModel(self.beamLineModel)
@@ -728,6 +731,8 @@ class XrtQook(qt.QWidget):
         # self.showDoc(self.rootBLItem.index())
         self.tree.expand(self.rootBLItem.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
+        self.tree.setItemDelegateForColumn(1, comboDelegate)
+        
         self.tabs.tabBar().setTabTextColor(0, qt.black)
         self.tabs.tabBar().setTabTextColor(2, qt.black)
         self.progressBar.setValue(0)
@@ -748,7 +753,7 @@ class XrtQook(qt.QWidget):
         self.glowOnly = False
         self.isEmpty = True
         self.beamLine = raycing.BeamLine()
-        self.beamLine.flowSource = 'Qook'
+#        self.beamLine.flowSource = 'Qook'
         self.updateBeamlineBeams(item=None)
         self.updateBeamlineMaterials(item=None)
         self.updateBeamline(item=None)
@@ -856,7 +861,7 @@ class XrtQook(qt.QWidget):
                                   qt.QStandardItem('000')])
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
-        self.beamModel.itemChanged.connect(self.updateBeamlineBeams)
+#        self.beamModel.itemChanged.connect(self.updateBeamlineBeams)
 
         self.fluxDataModel = qt.QStandardItemModel()
         self.fluxDataModel.appendRow(qt.QStandardItem("auto"))
@@ -933,6 +938,12 @@ class XrtQook(qt.QWidget):
         self.addProp(self.runModel.invisibleRootItem(), "run_ray_tracing()")
         self.runModel.itemChanged.connect(self.colorizeChangedParam)
         self.rootRunItem = self.runModel.item(0, 0)
+
+        self.comboModelDict = {'filamentBeam': self.boolModel,
+                               'uniformRayDensity': self.boolModel,
+                               'beam': self.beamModel,
+                               'geom': self.matGeomModel}
+
         self.blUpdateLatchOpen = True
 
     def newBL(self):
@@ -1566,11 +1577,25 @@ class XrtQook(qt.QWidget):
                     pyname = raycing.to_valid_var_name(item.text())
                     item.model().blockSignals(True)
                     item.setText(pyname)
+                    buuid = str(item.data(qt.UserRole))
                     item.model().blockSignals(False)
                     for j in range(child0.rowCount()):
                         if str(child0.child(j, 0).text()) == 'name':
                             child0.child(j, 1).setText(pyname)
-
+                    
+                    for j in range(self.beamModel.rowCount()):
+                        beams = self.beamModel.findItems(buuid, column=2)
+                        for bItem in beams:
+                            row = bItem.row()
+                            btype = self.beamModel.item(row, 1).text()
+                            bname = "{}_{}".format(pyname, btype[4:].lower())
+                            oldname = self.beamModel.item(row, 0).text()
+                            self.beamModel.item(row, 0).setText(bname)
+                            self.iterateRename(self.rootBLItem, oldname,
+                                               bname, 'beam')
+                            self.iterateRename(self.rootPlotItem, oldname,
+                                               bname, 'beam')
+                    break
 
 #    def colorizeTabText(self, item):
 #        if item.model() == self.beamLineModel:
@@ -1581,6 +1606,19 @@ class XrtQook(qt.QWidget):
 #            color = qt.red if self.pltColorCounter > 0 else\
 #                qt.black
 #            self.tabs.tabBar().setTabTextColor(2, color)
+
+    def iterateRename(self, rootItem, old_name, new_name, mask):
+        rootItem.model().blockSignals(True)
+        def recurse(item):
+            for row in range(item.rowCount()):
+                argName = item.child(row, 0)
+                argValue = item.child(row, 1)
+                if argValue is not None and argValue.text() == old_name and\
+                        mask in argName.text():
+                    argValue.setText(new_name)
+                recurse(item.child(row, 0))
+        recurse(rootItem)
+        rootItem.model().blockSignals(False)
 
     def addMethod(self, name, parentItem, fdoc):
         self.beamModel.sort(3)
@@ -1630,8 +1668,8 @@ class XrtQook(qt.QWidget):
 #                break
 
             child0, child1 = self.addParam(methodOut, outval, beamName)
-            if 'shine' in name:
-                outval += 'Local'
+#            if 'shine' in name:
+#                outval += 'Local'
             self.beamModel.appendRow([qt.QStandardItem(beamName),
                                       qt.QStandardItem(outval),
                                       qt.QStandardItem(str(eluuid)),
@@ -2385,6 +2423,7 @@ class XrtQook(qt.QWidget):
                     int(a[0]), int(a[1])-1) if int(a[1]) > 0 else ")")
 
     def addCombo(self, view, item):
+        return
         self.beamModel.sort(3)
         if item.hasChildren():
             itemTxt = str(item.text())
@@ -3112,9 +3151,11 @@ class XrtQook(qt.QWidget):
         return retVal
 
     def nameToBLPos(self, eluuid):
+#        print(eluuid)
         for iel in range(self.rootBLItem.rowCount()):
 #            if str(self.rootBLItem.child(iel, 0).text()) == elname:
-            if str(self.rootBLItem.child(iel, 0).data(qt.UserRole)) == eluuid:
+            if str(self.rootBLItem.child(iel, 0).data(qt.UserRole)) == str(eluuid):
+#                print('{:03d}'.format(iel))
                 return '{:03d}'.format(iel)
         else:
             return '000'
@@ -3134,16 +3175,32 @@ class XrtQook(qt.QWidget):
         kwargs = {}
         outDict = {}
 
-        if item is None:
-            _ = self.beamLine.export_to_json()  # TODO: new BL only?
-
-        else:
+#        if item is None:
+#            _ = self.beamLine.export_to_json()  # TODO: new BL only?
+#
+#        else:
+        if item is not None:
             iindex = item.index()
             column = iindex.column()
             row = iindex.row()
             parent = item.parent()
 #            print(row, column)
 #            print(item.text())
+
+
+
+            if str(parent.text()) in ['properties']:
+                oeItem = parent.parent()
+                oeid = str(oeItem.data(qt.UserRole))
+            elif str(parent.text()) in ['parameters']:
+                methItem = parent.parent()
+                oeItem = methItem.parent()
+                oeid = str(oeItem.data(qt.UserRole))
+                methObjStr = methItem.text().strip('()')
+                outDict = {'_object': methObjStr,
+                           'parameters': kwargs}
+            elif raycing.is_valid_uuid(item.data(qt.UserRole)):
+                oeid = str(item.data(qt.UserRole))
 
             if column == 1:  # Existing Element
                 argValue_str = item.text()
@@ -3155,7 +3212,6 @@ class XrtQook(qt.QWidget):
             elif column == 0 and newElement is not None:  # New Element
                 if raycing.is_valid_uuid(parent.data(qt.UserRole)):
                     oeid = str(parent.data(qt.UserRole))
-
                     methKWArgs = OrderedDict()
                     outKWArgs = OrderedDict()
                     methObjStr = ''
@@ -3183,6 +3239,11 @@ class XrtQook(qt.QWidget):
                                 'parameters': methKWArgs,
                                 'output': outKWArgs}
 
+                    methStr = methObjStr.split('.')[-1]
+                    self.beamLine.update_flow_from_json(oeid,
+                                                        {methStr: outDict})
+                    self.beamLine.sort_flow()
+
                 else:
                     for itop in range(item.rowCount()):
                         chitem = item.child(itop, 0)
@@ -3194,20 +3255,9 @@ class XrtQook(qt.QWidget):
                                 kwargs[str(argName)] = argValue
                         elif chitem.text() == '_object':
                             continue
+                    kwargs['uuid'] = oeid
                     outDict = {'properties': kwargs, '_object': newElement}
-
-            if str(parent.text()) in ['properties']:
-                oeItem = parent.parent()
-                oeid = str(oeItem.data(qt.UserRole))
-            elif str(parent.text()) in ['parameters']:
-                methItem = parent.parent()
-                oeItem = methItem.parent()
-                oeid = str(oeItem.data(qt.UserRole))
-                methObjStr = methItem.text().strip('()')
-                outDict = {'_object': methObjStr,
-                           'parameters': kwargs}
-            elif raycing.is_valid_uuid(item.data(qt.UserRole)):
-                oeid = str(item.data(qt.UserRole))
+                    self.beamLine.init_oe_from_json(outDict)
 
             if self.blViewer is None or not outDict:
                 return
@@ -3622,6 +3672,8 @@ class XrtQook(qt.QWidget):
 #            print(self.beamLine.layoutStr)
         if self.blViewer is None:
             try:
+                _ = self.beamLine.export_to_json()
+                print(self.beamLine.layoutStr)
                 self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
                                                 **kwargs)
                 self.blViewer.setWindowTitle("xrtGlow")

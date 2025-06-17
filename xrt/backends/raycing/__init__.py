@@ -2501,8 +2501,8 @@ class BeamLine(object):
 
         self.populate_materials_dict_from_json(data['Project']['Materials'])
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
-#        if 'flow' in data['Project'].keys():
-#            self.flowU = data['Project']['flow']
+        if 'flow' in data['Project'].keys():
+            self.flowU = data['Project']['flow']
 
     def export_to_json(self):
         matDict = OrderedDict()
@@ -2555,7 +2555,7 @@ class BeamLine(object):
         projectDict['Beams'] = beamsDict
         projectDict['Materials'] = matDict
         projectDict['beamLine'] = beamlineDict
-#        projectDict['flow'] = self.flowU
+        projectDict['flow'] = self.flowU
 
         self.layoutStr = {'Project': projectDict}
 #        print("EXPORT:", self.layoutStr)
