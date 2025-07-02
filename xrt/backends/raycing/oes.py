@@ -100,7 +100,7 @@ and the example ':ref:`warping`'.
 """
 from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "16 Mar 2017"
+__date__ = "2 Jul 2025"
 __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'JohannToroid', 'JohanssonToroid', 'GeneralBraggToroid',
            'DicedJohannToroid', 'DicedJohanssonToroid', 'LauePlate',
@@ -1528,7 +1528,7 @@ class EllipticalMirrorParam(OE):
     and *f2* points in the global coordinate system (3-sequences). Any
     combination of (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is
     supplied, not *f1*, the incoming optical axis is assumed to be along the
-    global Y axis. For a general orientation of the ellipse axes *f1* or
+    global Y axis. For a general orientation of the ellipse axes, *f1* or
     *pAxis* -- the *p* arm direction in global coordinates -- should be
     supplied.
 
@@ -1578,6 +1578,8 @@ class EllipticalMirrorParam(OE):
         *pAxis*: 3-sequence
             Used with *p*, the *p* arm direction in global coordinates,
             defaults to the global Y axis.
+
+
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
@@ -1738,7 +1740,7 @@ class EllipticalMirrorParam(OE):
 EllipticalMirror = EllipticalMirrorParam
 
 
-class ParabolicalMirrorParam(EllipticalMirrorParam):
+class ParabolicalMirrorParam(OE):
     """The parabolical mirror is implemented as a parametric surface. The
     parameterization is the following: *s* - is local coordinate along the
     paraboloid axis with origin at the focus. *phi* and *r* are local polar
@@ -1786,10 +1788,53 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
             Used with *p* or *q*, the parabola axis in global coordinates,
             defaults to the global Y axis.
 
+
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
+        self._reset_pq()
+
+    def _to_global(self, lb):
+        raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
+                            pitch=self.pitch, roll=self.roll+self.positionRoll,
+                            yaw=self.yaw, skip_xyz=True)
+        raycing.virgin_local_to_global(self.bl, lb, self.center, skip_xyz=True)
+
+    @property
+    def p(self):
+        return self._p
+
+    @p.setter
+    def p(self, p):
+        self._p = p
+        self._reset_pq()
+
+    @property
+    def q(self):
+        return self._q
+
+    @q.setter
+    def q(self, q):
+        self._q = q
+        self._reset_pq()
+
+    @property
+    def f1(self):
+        return self._f1
+
+    @f1.setter
+    def f1(self, f1):
+        self._f1 = f1
+        self._reset_pq()
+
+    @property
+    def f2(self):
+        return self._f2
+
+    @f2.setter
+    def f2(self, f2):
+        self._f2 = f2
         self._reset_pq()
 
     @property
@@ -1867,6 +1912,18 @@ class ParabolicalMirrorParam(EllipticalMirrorParam):
         self.isCylindrical = kwargs.pop('isCylindrical', False)
         self.isClosed = kwargs.pop('isClosed', False)
         return kwargs
+
+    def xyz_to_param(self, x, y, z):
+        yNew, zNew = raycing.rotate_x(y - self.y0, z - self.z0, self.cosGamma,
+                                      self.sinGamma)
+        return yNew, np.arctan2(x, zNew), np.sqrt(x**2 + zNew**2)  # s, phi, r
+
+    def param_to_xyz(self, s, phi, r):
+        x = r * np.sin(phi)
+        y = s
+        z = r * np.cos(phi)
+        yNew, zNew = raycing.rotate_x(y, z, self.cosGamma, -self.sinGamma)
+        return x, yNew + self.y0, zNew + self.z0
 
     def local_r(self, s, phi):
         r2 = self.parabParam*s + self.parabParam**2
@@ -1960,6 +2017,8 @@ class HyperbolicMirrorParam(OE):
         *pAxis*: 3-sequence
             Used with *p*, the *p* arm direction in global coordinates,
             defaults to the global Y axis.
+
+
         """
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
@@ -2856,6 +2915,7 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
         can find expressions of ellipse semi-axes based on focal lengths and
         capillary radius.
 
+
         """
         kwargs = self.__pop_kwargs(**kwargs)
         super().__init__(*args, **kwargs)
@@ -2953,6 +3013,7 @@ class HyperboloidCapillaryMirror(SurfaceOfRevolution):
         The usage is exemplified in `test_hyperboloid_tube_mirror.py`. There,
         one can find expressions of hyperbola semi-axes based on focal lengths
         and capillary radius.
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
@@ -3692,6 +3753,7 @@ class VLSLaminarGrating(OE):
 
         For the VLS density, use *gratingDensity* of the parental class
         :class:`OE` with the 1st argument 'y' (i.e. along y-axis).
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)

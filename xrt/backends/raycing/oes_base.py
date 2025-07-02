@@ -25,7 +25,7 @@ else:
     isOpenCL = False
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "06 Oct 2017"
+__date__ = "2 Jul 2025"
 
 __fdir__ = os.path.dirname(__file__)
 
@@ -44,8 +44,8 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alarmLevel',
                 'cryst2finePitch', 'cryst2perpTransl', 'cryst2longTransl',
                 'fixedOffset', 't', 'focus', 'zmax', 'nCRL', 'f', 'E', 'N',
-                'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2',
-                'phaseShift', 'vorticity', 'grazingAngle',
+                'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2', 'pAxis',
+                'parabolaAxis', 'phaseShift', 'vorticity', 'grazingAngle',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
                 'targetOpenCL', 'precisionOpenCL']
 
