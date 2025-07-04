@@ -122,7 +122,7 @@ __allSectioned__ = collections.OrderedDict([
         ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution')),
     ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
-         'ParabolicalMirrorParam',
+         'ParabolicalMirrorParam', 'HyperbolicMirrorParam',
          'ConicalMirror')),
     ('Crystal optics',
         ('JohannCylinder', 'JohanssonCylinder', 'JohannToroid',
