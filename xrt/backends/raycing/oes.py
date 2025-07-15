@@ -100,7 +100,7 @@ and the example ':ref:`warping`'.
 """
 from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "2 Jul 2025"
+__date__ = "15 Jul 2025"
 __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'JohannToroid', 'JohanssonToroid', 'GeneralBraggToroid',
            'DicedJohannToroid', 'DicedJohanssonToroid', 'LauePlate',
@@ -134,8 +134,8 @@ __allSectioned__ = collections.OrderedDict([
         ('ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
          'DoubleParaboloidLens', 'DoubleParabolicCylinderLens')),
     ('Capillary Mirrors',
-     ('ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
-      'HyperboloidCapillaryMirror')),
+        ('ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
+         'HyperboloidCapillaryMirror')),
     ('Gratings and zone plates',
         ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
          'VLSLaminarGrating'))
@@ -1535,8 +1535,8 @@ class EllipticalMirrorParam(OE):
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
-        attributes of this mirror object; the ellipse parameters parameters
-        will be recalculated automatically.
+        attributes of this mirror object; the ellipse parameters will be
+        recalculated automatically.
 
     Values of the ellipse semi-major and semi-minor axes lengths can be
     accessed after init as *ellipseA* and *ellipseB* respectively.
@@ -1767,8 +1767,8 @@ class ParabolicalMirrorParam(OE):
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *parabolaAxis* can be set as instance
-        attributes of this mirror object; the ellipsoid parameters parameters
-        will be recalculated automatically.
+        attributes of this mirror object; the ellipsoid parameters will be
+        recalculated automatically.
 
     The usage is exemplified in `test_param_mirror.py`.
 
@@ -1959,8 +1959,20 @@ class HyperbolicMirrorParam(OE):
     polar coordinates in planes normal to the major axis at every point *s*.
     The polar axis is upwards.
 
-    Unlike EllipticalMirrorParam, reflective is the *outer* surface.
+    Unlike EllipticalMirrorParam, reflective is the *outer* surface by default.
+    If the inner surface is wanted, the instance variable `invertNormal` should
+    be set equal to 1 after the class instantiation (alternatively, change it
+    in a subclass).
 
+    .. note::
+
+        In both cases -- outer or inner surface -- foci *f1* and *f2* are
+        numbered in the sense of propagation direction: from *f1* to the mirror
+        and then to imaginary focus (i.e. away from the focus) *f2* after the
+        reflection. In the outer case, *f1* is the farther focus, while in the
+        inner case it is the closer focus. See the example
+        `test_param_mirror.py`, also in 3D.
+`
     The *center* of this OE lies on the mirror surface and its *pitch* is Rx
     at this point.
 
@@ -1969,7 +1981,7 @@ class HyperbolicMirrorParam(OE):
     of revolution around the major axis.
 
     If *isClosed* is True (default is False), the mirror is a complete surface
-    of revolution. Otherwise the mirror is open, i.e. only its upper half is
+    of revolution. Otherwise the mirror is open, i.e. only its one half is
     effective. If you want a closed mirror, compare this OE with
     :class:`HyperboloidCapillaryMirror` that can produce the same surface, just
     with another meaning of *center* and *pitch* parameters.
@@ -1992,8 +2004,8 @@ class HyperbolicMirrorParam(OE):
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
-        attributes of this mirror object; the hyperbola parameters parameters
-        will be recalculated automatically.
+        attributes of this mirror object; the hyperbola parameters will be
+        recalculated automatically.
 
     Values of the hyperbola semi-major and semi-minor axes lengths can be
     accessed after init as *hyperbolaA* and *hyperbolaB* respectively.
