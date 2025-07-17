@@ -132,6 +132,15 @@ def build_beamline(nrays=1e5):
              beamLine.mirror.center[1] + dqc,
              beamLine.mirror.center[2] + dqs*np.cos(globalRoll)])
 
+    if case.startswith('hyperbolic'):  # add a screen for the real reflection
+        dqs = (q*0.1) * np.sin(2*pitch+inclination)
+        dqc = (q*0.1) * np.cos(2*pitch+inclination)
+        screenCenter = [beamLine.mirror.center[0] + dqs*np.sin(globalRoll),
+                        beamLine.mirror.center[1] + dqc,
+                        beamLine.mirror.center[2] + dqs*np.cos(globalRoll)]
+        beamLine.fsm3 = rsc.Screen(
+            beamLine, 'after M1 real reflection', screenCenter)
+
     return beamLine
 
 
@@ -142,9 +151,12 @@ def run_process(beamLine):
     # print(xprime.max()-xprime.min(), zprime.max()-zprime.min())
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     beamMglobal, beamMlocal = beamLine.mirror.reflect(beamSource)
-    print('phi', beamMlocal.phi.min(), beamMlocal.phi.max())
     outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1,
                'beamMglobal': beamMglobal, 'beamMlocal': beamMlocal}
+
+    if case.startswith('hyperbolic'):
+        beamFSM3 = beamLine.fsm3.expose(beamMglobal)
+        outDict['beamFSM3'] = beamFSM3
 
     for i, pos in enumerate(beamLine.screen3D):
         beamLine.fsm2.center = pos
