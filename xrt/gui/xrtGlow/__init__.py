@@ -2238,6 +2238,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.epicsPrefix = epicsPrefix
 
             self.beamline.deserialize(beamLayout)
+            self.beamline.flowSource = 'Qook'
             self.input_queue = Queue()
             self.output_queue = Queue()
 
@@ -2448,6 +2449,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 methStr = kwargs['_object'].split('.')[-1]
                 self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
                 self.beamline.sort_flow()
+                print("GLOW: FlowU", self.beamline.flowU)
                 if self.parent is not None:
                     self.parent.updateTargets()
                 message = {"command": "flow",
@@ -2499,7 +2501,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree
             setattr(oe, arg, argValue)
-            if arg in orientationArgSet:
+            skipUpdate = False
+            if (arg in ['pitch', 'bragg', 'center'] and 'auto' in argValue) or\
+                (arg in ['bragg', 'pitch'] and isinstance(argValue, list)):
+                    skipUpdate = True
+
+            if arg in orientationArgSet and not skipUpdate:
                 self.meshDict[oeid].update_transformation_matrix()
                 self.getMinMax()
                 self.maxLen = np.max(np.abs(
@@ -2728,6 +2735,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 print("Total repeats:", msg['repeat'])
                 if self.epicsPrefix is not None:
                     self.epicsInterface.pv_records['AcquireStatus'].set(0)
+                self.glDraw()
+            elif 'pos_attr' in msg:  # TODO: Update epics rbv
+                oeLine = self.beamline.oesDict.get(msg['sender_id'])
+                if oeLine is not None:
+                    setattr(oeLine[0], msg['pos_attr'], msg['pos_value'])
+                self.meshDict[msg['sender_id']].update_transformation_matrix()
+                self.getMinMax()
+                self.maxLen = np.max(np.abs(
+                        self.minmax[0, :] - self.minmax[1, :]))
+
+#                if self.epicsPrefix is not None:
+#                    self.epicsInterface.pv_records['AcquireStatus'].set(0)
                 self.glDraw()
 
     def close_calc_process(self):
@@ -4025,10 +4044,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             if item is None or item.checkState() != 2:
                                 continue
 
-                            beamStartDict = self.beamline.beamsDictU[sourceuuid]
-                            beamEndDict = self.beamline.beamsDictU[eluuid]
+                            beamStartDict = self.beamline.beamsDictU.get(sourceuuid)
+                            beamEndDict = self.beamline.beamsDictU.get(eluuid)
                             startField = None
                             endField = None
+                            
+                            if beamStartDict is None or beamEndDict is None:
+                                continue
+                            
                             if 'beamLocal' in beamStartDict:
                                 startField = 'beamLocal'
                             elif 'beamLocal2' in beamStartDict:

@@ -438,6 +438,7 @@ class Material(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
+        self.bl = kwargs.get('bl')
 
     @property
     def refractiveIndex(self):
@@ -762,6 +763,7 @@ class Multilayer(object):
         self.idThickness = idThickness
         self.subRough = substRoughness
         self.substThickness = substThickness
+
         if name:
             self.name = name
         else:
@@ -769,6 +771,10 @@ class Multilayer(object):
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
+
+        bl = kwargs.get('bl')
+        if bl is not None:
+            bl.materialsDict[self.uuid] = self
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:
@@ -788,6 +794,42 @@ class Multilayer(object):
         else:
             self.dbi = np.ones(self.nPairs) * float(bThickness)
 #            self.dbi = np.array([float(bThickness)] * self.nPairs)
+
+    @property
+    def tLayer(self):
+        if raycing.is_valid_uuid(self._tLayer) and self.bl is not None:
+            mat = self.bl.materialsDict.get(self._tLayer)
+        else:
+            mat = self._tLayer
+        return mat
+
+    @tLayer.setter
+    def tLayer(self, tLayer):
+        self._tLayer = tLayer
+
+    @property
+    def bLayer(self):
+        if raycing.is_valid_uuid(self._bLayer) and self.bl is not None:
+            mat = self.bl.materialsDict.get(self._bLayer)
+        else:
+            mat = self._bLayer
+        return mat
+
+    @bLayer.setter
+    def bLayer(self, bLayer):
+        self._bLayer = bLayer
+
+    @property
+    def substrate(self):
+        if raycing.is_valid_uuid(self._substrate) and self.bl is not None:
+            mat = self.bl.materialsDict.get(self._substrate)
+        else:
+            mat = self._substrate
+        return mat
+
+    @substrate.setter
+    def substrate(self, substrate):
+        self._substrate = substrate
 
     def get_sin_Bragg_angle(self, E, order=1):
         """ensures that -1 <= sin(theta) <= 1"""
