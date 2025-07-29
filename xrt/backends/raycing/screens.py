@@ -90,7 +90,7 @@ class Screen(object):
             self.image = np.zeros(np.int32(self.histShape))
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
@@ -152,14 +152,32 @@ class Screen(object):
 
     @property
     def center(self):
-        return self._center if self._centerVal is None else self._centerVal
+        if self._centerVal is None:
+#            if self.bl is not None and self.uuid in self.bl.flowU:
+#                centerRet = self.bl.auto_align_center(self)
+#            else:
+            centerRet = self._center
+        else:
+            centerRet = self._centerVal
+        return centerRet
+#        return self._center if self._centerVal is None else self._centerVal
 
     @center.setter
     def center(self, center):
+
+        if isinstance(center, str):
+            center = [x.strip().lower() for x in center.strip('[]').split(",")]
+            tmp = []
+            for value in center:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+                tmp.append(value)
+
         if any([x == 'auto' for x in center]):
-            self._center = copy.copy(center)
             self._centerVal = None
-            self._centerInit = center
+            self._center = copy.deepcopy(center)
         else:
             self._centerVal = raycing.Center(center)
 

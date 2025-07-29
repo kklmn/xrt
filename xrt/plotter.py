@@ -156,6 +156,43 @@ if hasQt:
             self.xrtplot = xrtplot
 
 
+def deserialize_plots(data):
+    plotsList = []
+    plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
+    axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
+
+    if not isinstance(data['Project']['plots'], dict):
+        print("Plots are not defined")
+        return []
+
+    for plotName, plotProps in data['Project']['plots'].items():
+        plotKwargs = {}
+
+        for pname, pval in plotProps.items():
+            if pname in ['_object']:
+                continue
+            if pname in ['xaxis', 'yaxis', 'caxis']:
+                axKwargs = {}
+                for axname, axval in pval.items():
+                    if axname == '_object':
+                        continue
+                    if pname == 'caxis' and axname == 'unit':
+                        axDefArgs[axname] = 'eV'
+                    if axname in axDefArgs and axval != str(axDefArgs[axname]):
+                        axKwargs[axname] = raycing.parametrize(axval)
+                plotKwargs[pname] = XYCAxis(**axKwargs)
+
+            else:
+                if pname in plotDefArgs and pval != str(plotDefArgs[pname]):
+                    plotKwargs[pname] = raycing.parametrize(pval)
+        try:
+            newPlot = XYCPlot(**plotKwargs)
+            plotsList.append(newPlot)
+        except:
+            print("Plot init failed")
+    return plotsList
+
+
 class XYCAxis(object):
     u"""
     Contains a generic record structure describing each of the 3 axes:

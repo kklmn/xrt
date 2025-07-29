@@ -66,6 +66,7 @@ except cl.LogicError:
     isOpenStatus = 'is installed '+redStr.format('but no OpenCL driver found')
 import platform as pythonplatform
 import webbrowser
+import copy
 
 from ..commons import ext  # analysis:ignore
 
@@ -107,6 +108,72 @@ withSlidersInTree = ['pitch', 'roll', 'yaw', 'bragg']
 slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
 # os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
+
+class LevelRestrictedModel(qt.QStandardItemModel):
+    def __init__(self):
+        super().__init__()
+        self._cached_drag_row = None
+        self._cached_drag_parent = None
+
+    def supportedDragActions(self):
+        return qt.MoveAction
+
+    def canDropMimeData(self, data, action, row, column, parent_index):
+        if str(parent_index.data(role=qt.UserRole)) == 'top' and column == 0\
+                and row > 1:
+            return True
+        return False
+
+    def mimeData(self, indexes):
+        mime = super().mimeData(indexes)
+        if indexes:
+            index = indexes[0]
+            self._cached_drag_row = index.row()
+            self._cached_drag_parent = self.itemFromIndex(index.parent()) if index.parent().isValid() else self.invisibleRootItem()
+        return mime
+
+    def dropMimeData(self, data, action, row, column, parent_index):
+        if str(parent_index.data(role=qt.UserRole)) != 'top':
+            return False
+
+        if action != qt.MoveAction:
+            return False
+
+        # decode source
+        if not data.hasFormat("application/x-qstandarditemmodeldatalist"):
+            return False
+
+        if self._cached_drag_row is None or self._cached_drag_parent is None:
+            return False
+        # locate original item
+        # retrieve via internal stored property or last hovered index
+        # OR reconstruct from data (advanced)
+
+        # For now, assume we're tracking source during drag
+        moved_row = self._cached_drag_row
+        source_parent = self._cached_drag_parent
+
+        # Move entire row (multi-column safe)
+        items = source_parent.takeRow(moved_row)
+
+        dest_parent = self.itemFromIndex(parent_index)
+
+#        if parent_index.isValid():
+#            dest_parent = self.itemFromIndex(parent_index)
+#        else:
+#            dest_parent = self.invisibleRootItem()
+
+        if row < 0:
+            dest_parent.appendRow(items)
+        else:
+            dest_parent.insertRow(row, items)
+
+        self._cached_drag_row = None
+        self._cached_drag_parent = None
+
+        return True
+
+
 try:
     QWebView = qt.QtWeb.QWebView
 except AttributeError:
@@ -281,7 +348,7 @@ class XrtQook(qt.QWidget):
         elAction.hovered.connect(
             partial(self.showObjHelp, objName))
         elAction.triggered.connect(
-            partial(afunction, elname, objName, None))
+            partial(afunction, elname, objName))
         menu.addAction(elAction)
 
     def initToolBar(self):
@@ -382,7 +449,7 @@ class XrtQook(qt.QWidget):
                 ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
                  'Add Material', 'Add Plot'],
                 [rsources, roes, rapts, rscreens, rmats, None],
-                [self.addElement]*4 + [self.addMaterial, self.addPlot],
+                [self.addElement]*5 + [self.addPlot],
                 ['add{0:1d}.png'.format(i+1) for i in range(6)]):
             amenuButton = qt.QToolButton()
             amenuButton.setIcon(qt.QIcon(os.path.join(self.iconsDir, aicon)))
@@ -656,32 +723,9 @@ class XrtQook(qt.QWidget):
         elif zoomtype == 'zoomFactor':
             self.webHelp.setZoomFactor(textSize)
 
-    def initAllTrees(self):
+    def initAllTrees(self, blProps=None, runProps=None):
         self.blUpdateLatchOpen = False
         comboDelegate = qt.DynamicArgumentDelegate(mainWidget=self)
-        # runTree view
-        self.runTree.setModel(self.runModel)
-        self.runTree.setAlternatingRowColors(True)
-        self.runTree.setSortingEnabled(False)
-        self.runTree.setHeaderHidden(False)
-        self.runTree.setAnimated(True)
-        self.runTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
-        self.runTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
-        for name, obj in inspect.getmembers(xrtrun):
-            if inspect.isfunction(obj) and name == "run_ray_tracing":
-                if getargspec(obj)[3] is not None:
-                    runStr = '{0}.{1}'.format(xrtrun.__name__, name)
-                    self.addObject(self.runTree, self.rootRunItem, runStr)
-                    for arg, argVal in self.getParams(runStr):
-                        if arg.lower() == "plots":
-                            argVal = self.rootPlotItem.text()
-                        if arg.lower() == "beamline":
-                            argVal = self.rootBLItem.text()
-                        self.addParam(self.rootRunItem, arg, argVal)
-        self.addCombo(self.runTree, self.rootRunItem)
-        self.runTree.setColumnWidth(0, int(self.runTree.width()/3))
-        index = self.runModel.indexFromItem(self.rootRunItem)
-        self.runTree.setExpanded(index, True)
 
         # plotTree view
         self.plotTree.setModel(self.plotModel)
@@ -706,38 +750,71 @@ class XrtQook(qt.QWidget):
         self.tree.setAlternatingRowColors(True)
         self.tree.setSortingEnabled(False)
         self.tree.setHeaderHidden(False)
+
+        self.tree.setDragEnabled(True)
+        self.tree.setAcceptDrops(True)
+        self.tree.setDropIndicatorShown(True)
+        self.tree.setDragDropMode(qt.QTreeView.InternalMove)
+        self.tree.setDefaultDropAction(qt.MoveAction)
+
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         headers = ['Parameter', 'Value']
         if useSlidersInTree:
             headers.append('Slider')
-        self.runTree.model().setHorizontalHeaderLabels(headers)
         self.tree.model().setHorizontalHeaderLabels(headers)
 
-        elprops = self.addProp(self.rootBLItem, 'properties')
-        for name, obj in inspect.getmembers(raycing):
-            if inspect.isclass(obj) and name == "BeamLine":
-                for namef, objf in inspect.getmembers(obj):
-                    if (inspect.ismethod(objf) or
-                        inspect.isfunction(objf)) and\
-                       namef == "__init__" and getargspec(objf)[3] is not None:
-                        self.addObject(self.tree,
-                                       self.rootBLItem,
-                                       '{0}.{1}'.format(
-                                           raycing.__name__, name))
-                        for arg, argVal in zip(getargspec(objf)[0][1:],
-                                               getargspec(objf)[3]):
-                            self.addParam(elprops, arg, argVal)
+        self.curObj = None
 
-        # self.showDoc(self.rootBLItem.index())
+        self.addElement(copyFrom=blProps,
+                        isRoot=True)
+
         self.tree.expand(self.rootBLItem.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.tree.setItemDelegateForColumn(1, comboDelegate)
-        
+
+        # runTree view
+        self.runTree.setModel(self.runModel)
+        self.runTree.setAlternatingRowColors(True)
+        self.runTree.setSortingEnabled(False)
+        self.runTree.setHeaderHidden(False)
+        self.runTree.setAnimated(True)
+        self.runTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
+#        self.runTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
+        self.runTree.model().setHorizontalHeaderLabels(headers)
+
+#        for name, obj in inspect.getmembers(xrtrun):
+#            if inspect.isfunction(obj) and name == "run_ray_tracing":
+#                if getargspec(obj)[3] is not None:
+#                    runStr = '{0}.{1}'.format(xrtrun.__name__, name)
+#                    self.addObject(self.runTree, self.rootRunItem, runStr)
+#                    for arg, argVal in self.getParams(runStr):
+#                        if arg.lower() == "plots":
+#                            argVal = self.rootPlotItem.text()
+#                        if arg.lower() == "beamline":
+#                            argVal = self.rootBLItem.text()
+#                        self.addParam(self.rootRunItem, arg, argVal)
+        if runProps is None:
+            runProps = dict(raycing.get_params('xrt.runner.run_ray_tracing'))
+            runProps['plots'] = self.rootPlotItem.text()
+            runProps['beamLine'] = self.rootBLItem.text()
+            runProps['_object'] = 'xrt.runner.run_ray_tracing'
+
+        for arg, argVal in runProps.items():
+            if arg == '_object':
+                self.addObject(self.runTree, self.rootRunItem, argVal)
+            else:
+                self.addParam(self.rootRunItem, arg, argVal)
+
+        self.addCombo(self.runTree, self.rootRunItem)
+        self.runTree.setColumnWidth(0, int(self.runTree.width()/3))
+        index = self.runModel.indexFromItem(self.rootRunItem)
+        self.runTree.setExpanded(index, True)
+
         self.tabs.tabBar().setTabTextColor(0, qt.black)
         self.tabs.tabBar().setTabTextColor(2, qt.black)
         self.progressBar.setValue(0)
         self.progressBar.setFormat("New beamline")
-        self.curObj = None
+
         self.blColorCounter = 0
         self.pltColorCounter = 0
         self.fileDescription = ""
@@ -752,8 +829,9 @@ class XrtQook(qt.QWidget):
         self.layoutFileName = ""
         self.glowOnly = False
         self.isEmpty = True
-        self.beamLine = raycing.BeamLine()
-#        self.beamLine.flowSource = 'Qook'
+        if blProps is None:
+            self.beamLine = raycing.BeamLine()
+            self.beamLine.flowSource = 'Qook'
         self.updateBeamlineBeams(item=None)
         self.updateBeamlineMaterials(item=None)
         self.updateBeamline(item=None)
@@ -768,10 +846,17 @@ class XrtQook(qt.QWidget):
 
     def initAllModels(self):
         self.blUpdateLatchOpen = False
-        self.beamLineModel = qt.QStandardItemModel()
-        self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
+#        self.beamLineModel = qt.QStandardItemModel()
+        self.beamLineModel = LevelRestrictedModel()
+
+#        self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
+
         self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
-        self.rootBLItem = self.beamLineModel.item(0, 0)
+#        self.rootBLItem = self.beamLineModel.item(0, 0)
+#        self.rootBLItem.setFlags(qt.ItemFlags(
+#            qt.ItemIsEnabled | qt.ItemIsEditable |
+#            qt.ItemIsSelectable | qt.ItemIsDropEnabled))
+#        self.rootBLItem.setData("top", qt.UserRole)
 
         self.boolModel = qt.QStandardItemModel()
         self.boolModel.appendRow(qt.QStandardItem('False'))
@@ -1314,7 +1399,7 @@ class XrtQook(qt.QWidget):
         if useSlidersInTree:
             child2 = qt.QStandardItem()
             row.append(child2)
-        if source is None:
+        if not isinstance(source, qt.QStandardItem):
             parent.appendRow(row)
         else:
             parent.insertRow(source.row() + 1, row)
@@ -1374,7 +1459,7 @@ class XrtQook(qt.QWidget):
         editItem.model().setData(editItem.index(), s, qt.EditRole)
         editItem.model().dataChanged.emit(editItem.index(), editItem.index())
 
-    def objToInstance(self, obj):
+    def objToInstance(self, obj):  # Should we rather use class name?
         instanceStr = ''
         if obj is not None:
             instanceStr = 'Instance of {0}'.format(obj.split('.')[-1])
@@ -1387,55 +1472,140 @@ class XrtQook(qt.QWidget):
         else:
             return className.lower()
 
-    def addElement(self, name, obj, copyFrom=None):
-        if copyFrom is not None:
+    def addElement(self, name=None, obj=None, copyFrom=None, isRoot=False):
+        """
+        name: class name
+        obj: class string including module
+        copyFrom: dict with init kwargs (import from file) or another item
+
+        """
+
+        if isinstance(copyFrom, qt.QStandardItem):
             for i in range(copyFrom.rowCount()):
                 if str(copyFrom.child(i, 0).text()) == '_object':
-                    obj = self.getVal(copyFrom.child(i, 1).text())
-                    name = obj.__name__
-                    obj = "{0}.{1}".format(obj.__module__, name)
+                    obj = str(copyFrom.child(i, 1).text())
+                    name = obj.split('.')[-1]
                     break
+        elif isinstance(copyFrom, dict):
+            elementName = copyFrom['properties'].get('name')
+            obj = copyFrom.get('_object')
+            name = obj.split('.')[-1]
 
-        for i in range(99):
-            elementName = self.classNameToStr(name) + '{:02d}'.format(i+1)
-            dupl = False
-            for ibm in range(self.rootBLItem.rowCount()):
-                if str(self.rootBLItem.child(ibm, 0).text()) ==\
-                        str(elementName):
-                    dupl = True
-            if not dupl:
+            methodProps = {}
+            for field, val in copyFrom.items():
+                if field in ['properties', '_object']:
+                    continue
+#                methodProps['_object'] = val.get('_object')
+                methodProps['parameters'] = val
                 break
-        self.blUpdateLatchOpen = False
-        elementItem, elementClass = self.addParam(self.rootBLItem,
-                                                  elementName,
-                                                  self.objToInstance(obj),
-                                                  source=copyFrom)
-        elementClass.setFlags(self.objectFlag)
-        elementItem.setFlags(self.valueFlag)
+        elif isRoot:
+            elementName = 'BeamLine'
+            obj = 'xrt.backends.raycing.BeamLine'
 
-        if copyFrom is not None:
-            self.cpChLevel = 0
-            self.copyChildren(elementItem, copyFrom)
+#        print(elementName, obj, name)
+
+        if isRoot:
+            tree = self.tree
+            rootItem = self.beamLineModel.invisibleRootItem()
+        elif 'materials' in obj:
+            tree = self.matTree
+            rootItem = self.rootMatItem
         else:
-            elementItem.setDragEnabled(True)
-            elprops = self.addProp(elementItem, 'properties')
-            self.addObject(self.tree, elementItem, obj)
-            for arg, argVal in self.getParams(obj):
-                self.addParam(elprops, arg, argVal)
+            tree = self.tree
+            rootItem = self.rootBLItem
 
-        uuid = raycing.uuid.uuid4()
-        elementItem.setData(uuid, qt.UserRole)
+        if not isinstance(copyFrom, dict):  # None or another item
+            if not isRoot:
+                for i in range(99):
+                    elementName = self.classNameToStr(name) + '{:02d}'.format(
+                            i+1)
+                    dupl = False
+                    for ibm in range(rootItem.rowCount()):
+                        if str(rootItem.child(ibm, 0).text()) ==\
+                                str(elementName):
+                            dupl = True
+                    if not dupl:
+                        break
+
+        self.blUpdateLatchOpen = False
+        elementItem, elementClassItem = self.addParam(rootItem,
+                                                      elementName,
+                                                      self.objToInstance(obj),
+                                                      source=copyFrom)
+        elementClassItem.setFlags(self.objectFlag)
+        if isRoot:
+            self.rootBLItem = elementItem
+
+        flags = qt.ItemFlags(
+                qt.ItemIsEnabled | qt.ItemIsEditable |
+                qt.ItemIsSelectable | qt.ItemIsDropEnabled)
+
+        flags |= qt.ItemIsDropEnabled if isRoot else qt.ItemIsDragEnabled
+
+#            self.rootBLItem.setFlags(qt.ItemFlags(
+#                qt.ItemIsEnabled | qt.ItemIsEditable |
+#                qt.ItemIsSelectable | qt.ItemIsDropEnabled))
+#        else:
+#            (qt.ItemFlags(
+#                qt.ItemIsEnabled | qt.ItemIsEditable |
+#                qt.ItemIsSelectable | qt.ItemIsDragEnabled))
+
+        elementItem.setFlags(flags)
+
+        if isinstance(copyFrom, qt.QStandardItem):
+            propsDict = OrderedDict()
+            for i in range(copyFrom.rowCount()):
+                childLevel0 = copyFrom.child(i, 0)
+                if str(childLevel0.text()) == 'properties':
+                    for j in range(childLevel0.rowCount()):
+                        propsDict[str(childLevel0.child(j, 0))] =\
+                            str(childLevel0.child(j, 1))
+                    break
+            propsDict['uuid'] = raycing.uuid.uuid4()
+        else:
+            propsDict = dict(self.getParams(obj))
+            propsDict['uuid'] = 'top' if isRoot else raycing.uuid.uuid4()
+
+        if isinstance(copyFrom, dict):
+            propsUpd = copyFrom.get('properties')
+            if propsUpd is not None:
+                propsDict.update(propsUpd)
+
+
+        elementItem.setDragEnabled(True)
+        elprops = self.addProp(elementItem, 'properties')
+        self.addObject(tree, elementItem, obj)
+
+        for arg, argVal in propsDict.items():
+            if arg == 'uuid':
+                elementItem.setData(argVal, qt.UserRole)
+                continue
+            if arg in ['material', 'material2', 'tlayer', 'blayer', 'coating',
+                       'substrate']:
+                for iMat in range(self.rootMatItem.rowCount()):
+                    matItem = self.rootMatItem.child(iMat, 0)
+                    if str(matItem.data(qt.UserRole)) == str(argVal):
+                        argVal = str(matItem.text())
+                        break
+            self.addParam(elprops, arg, argVal)
+
         self.showDoc(elementItem.index())
-        self.addCombo(self.tree, elementItem)
-        self.tree.expand(self.rootBLItem.index())
-        self.capitalize(self.tree, elementItem)
+        tree.expand(rootItem.index())
+        self.capitalize(tree, elementItem)
         self.blUpdateLatchOpen = True
         self.updateBeamline(elementItem, newElement=obj)
-        if not self.experimentalMode:
-            self.autoAssignMethod(elementItem)
+
+#        if not self.experimentalMode:
+
+        if tree is self.tree and not isRoot:
+            if isinstance(copyFrom, dict):
+               self.autoAssignMethod(elementItem, methodProps)
+            else:
+                self.autoAssignMethod(elementItem)
+
         self.isEmpty = False
-        self.tabs.setCurrentWidget(self.tree)
-        self.tree.setCurrentIndex(elementItem.index())
+        self.tabs.setCurrentWidget(tree)
+        tree.setCurrentIndex(elementItem.index())
 
     def getParams(self, obj):
         uArgs = OrderedDict()
@@ -1520,6 +1690,7 @@ class XrtQook(qt.QWidget):
                 self.updateBeamlineMaterials(item)
 
     def colorizeChangedParam(self, item):
+        """ """
         parent = item.parent()
         if parent is not None and\
                 item.column() == 1 and\
@@ -1570,7 +1741,7 @@ class XrtQook(qt.QWidget):
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
             item.model().blockSignals(False)
-        elif item.column() == 0 and item.isEnabled():  # obj name
+        elif item.column() == 0 and item.isEnabled():  # TODO: Move to method
             for i in range(item.rowCount()):
                 child0 = item.child(i, 0)
                 if str(child0.text()) == 'properties':
@@ -1582,19 +1753,27 @@ class XrtQook(qt.QWidget):
                     for j in range(child0.rowCount()):
                         if str(child0.child(j, 0).text()) == 'name':
                             child0.child(j, 1).setText(pyname)
-                    
-                    for j in range(self.beamModel.rowCount()):
-                        beams = self.beamModel.findItems(buuid, column=2)
-                        for bItem in beams:
-                            row = bItem.row()
-                            btype = self.beamModel.item(row, 1).text()
-                            bname = "{}_{}".format(pyname, btype[4:].lower())
-                            oldname = self.beamModel.item(row, 0).text()
-                            self.beamModel.item(row, 0).setText(bname)
-                            self.iterateRename(self.rootBLItem, oldname,
-                                               bname, 'beam')
-                            self.iterateRename(self.rootPlotItem, oldname,
-                                               bname, 'beam')
+
+                    if item.model() is self.materialsModel:
+                        mat = self.beamLine.materialsDict[buuid]
+                        oldname = mat.name
+                        self.iterateRename(self.rootMatItem, oldname, pyname,
+                                           ['tlay', 'blay', 'coat', 'substrate'])
+                        self.iterateRename(self.rootBLItem, oldname, pyname,
+                                           ['material'])
+                    else:
+                        for j in range(self.beamModel.rowCount()):
+                            beams = self.beamModel.findItems(buuid, column=2)
+                            for bItem in beams:
+                                row = bItem.row()
+                                btype = self.beamModel.item(row, 1).text()
+                                bname = "{}_{}".format(pyname, btype[4:].lower())
+                                oldname = self.beamModel.item(row, 0).text()
+                                self.beamModel.item(row, 0).setText(bname)
+                                self.iterateRename(self.rootBLItem, oldname,
+                                                   bname, ['beam'])
+                                self.iterateRename(self.rootPlotItem, oldname,
+                                                   bname, ['beam'])
                     break
 
 #    def colorizeTabText(self, item):
@@ -1614,62 +1793,75 @@ class XrtQook(qt.QWidget):
                 argName = item.child(row, 0)
                 argValue = item.child(row, 1)
                 if argValue is not None and argValue.text() == old_name and\
-                        mask in argName.text():
+                        any([m in argName.text() for m in mask]):
                     argValue.setText(new_name)
                 recurse(item.child(row, 0))
         recurse(rootItem)
         rootItem.model().blockSignals(False)
 
-    def addMethod(self, name, parentItem, fdoc):
+#    def addMethodFromDict(self, parentItem, paramsDict):
+#        pass
+
+    def addMethod(self, name, parentItem, outBeams, methProps=None):
         self.beamModel.sort(3)
+
         elstr = str(parentItem.text())
         eluuid = parentItem.data(qt.UserRole)
-        print("addMethod", eluuid)
-        fdoc = fdoc[0].replace("Returned values: ", '').split(',')
+
+        methodOutputDict = OrderedDict()
+
+        if methProps is not None:
+#            name = methProps.get('_object')
+            methodInputDict = methProps.get('parameters')
+            if 'beam' in methodInputDict:
+                fModel0 = qt.MultiColumnFilterProxy(
+                        {1: 'Global', 2: methodInputDict['beam']})
+                fModel0.setSourceModel(self.beamModel)
+                beamName = fModel0.data(fModel0.index(0, 0))
+                methodInputDict['beam'] = beamName
+#            methodOutputDict = methProps.get('output')
+        else:
+            methodInputDict = OrderedDict()
+            for pName, pVal in self.getParams(name):
+                if pName == 'bl':
+                    pVal = self.rootBLItem.text()  # Ever a case?
+                elif 'beam' in pName:
+                    fModel0 = qt.QSortFilterProxyModel()
+                    fModel0.setSourceModel(self.beamModel)
+                    fModel0.setFilterKeyColumn(1)
+                    fModel0.setFilterRegExp('Global')
+                    fModel = qt.QSortFilterProxyModel()
+                    fModel.setSourceModel(fModel0)
+                    fModel.setFilterKeyColumn(3)
+                    regexp = self.intToRegexp(
+                        self.nameToBLPos(eluuid))
+                    fModel.setFilterRegExp(regexp)
+                    lastIndex = fModel.rowCount() - 1
+                    if pName.lower() == 'accubeam':
+                        lastIndex = 0
+                    pVal = fModel.data(fModel.index(lastIndex, 0))
+                methodInputDict[pName] = pVal
+
+        for outstr in outBeams:  # Will always auto-generate with new naming scheme
+            outval = outstr.strip()
+            beamName = '{0}_{1}'.format(elstr, outval[4:].lower())
+            methodOutputDict[outval] = beamName
+
         self.blUpdateLatchOpen = False
         methodItem = self.addProp(parentItem, name.split('.')[-1] + '()')
         self.setIItalic(methodItem)
         methodProps = self.addProp(methodItem, 'parameters')
         self.addObject(self.tree, methodItem, name)
-        for arg, argVal in self.getParams(name):
-            if arg == 'bl':
-                argVal = self.rootBLItem.text()
-            elif 'beam' in arg:
-                fModel0 = qt.QSortFilterProxyModel()
-                fModel0.setSourceModel(self.beamModel)
-                fModel0.setFilterKeyColumn(1)
-                fModel0.setFilterRegExp('Global')
-                fModel = qt.QSortFilterProxyModel()
-                fModel.setSourceModel(fModel0)
-                fModel.setFilterKeyColumn(3)
-                regexp = self.intToRegexp(
-                    self.nameToBLPos(eluuid))
-#                    self.nameToBLPos(elstr))
-                fModel.setFilterRegExp(regexp)
-                lastIndex = fModel.rowCount() - 1
-                if arg.lower() == 'accubeam':
-                    lastIndex = 0
-                argVal = fModel.data(fModel.index(lastIndex, 0))
+
+
+        for arg, argVal in methodInputDict.items():
             child0, child1 = self.addParam(methodProps, arg, argVal)
 
         methodOut = self.addProp(methodItem, 'output')
-        for outstr in fdoc:
-            outval = outstr.strip()
 
-#            for i in range(99):
-#                beamName = '{0}{1}{2:02d}'.format(elstr, outval, i+1)
-            beamName = '{0}_{1}'.format(elstr, outval[4:].lower())
-#            dupl = False
-#            for ibm in range(self.beamModel.rowCount()):
-#                if str(self.beamModel.index(ibm, 0).data(0)) ==\
-#                        str(beamName):
-#                    dupl = True
-#            if not dupl:
-#                break
-
+        for outval, beamName in methodOutputDict.items():
             child0, child1 = self.addParam(methodOut, outval, beamName)
-#            if 'shine' in name:
-#                outval += 'Local'
+
             self.beamModel.appendRow([qt.QStandardItem(beamName),
                                       qt.QStandardItem(outval),
                                       qt.QStandardItem(str(eluuid)),
@@ -1685,84 +1877,72 @@ class XrtQook(qt.QWidget):
 
         self.showDoc(methodItem.index())
         self.addCombo(self.tree, methodItem)
-        self.tree.expand(methodItem.index())
-        self.tree.expand(methodOut.index())
-        self.tree.expand(methodProps.index())
-        self.tree.setCurrentIndex(methodProps.index())
-        self.tree.setColumnWidth(0, int(self.tree.width()/3))
+#        self.tree.expand(methodItem.index())
+#        self.tree.expand(methodOut.index())
+#        self.tree.expand(methodProps.index())
+#        self.tree.setCurrentIndex(methodProps.index())
+#        self.tree.setColumnWidth(0, int(self.tree.width()/2))
         self.blUpdateLatchOpen = True
         self.updateBeamline(methodItem, newElement=True)  # TODO:
         self.isEmpty = False
 
-    def addPlot(self, copyFrom=None):
-        for i in range(99):
-            plotName = 'plot{:02d}'.format(i+1)
-            dupl = False
-            for ibm in range(self.rootPlotItem.rowCount()):
-                if str(self.rootPlotItem.child(ibm, 0).text()) ==\
-                        str(plotName):
-                    dupl = True
-            if not dupl:
-                break
+    def addPlot(self, copyFrom=None, plotName=None):
+        if plotName is None:
+            for i in range(99):
+                plotName = 'plot{:02d}'.format(i+1)
+                dupl = False
+                for ibm in range(self.rootPlotItem.rowCount()):
+                    if str(self.rootPlotItem.child(ibm, 0).text()) ==\
+                            str(plotName):
+                        dupl = True
+                if not dupl:
+                    break
 
-        plotItem = self.addValue(self.rootPlotItem, plotName, source=copyFrom)
 
-        if copyFrom is not None:
+
+        plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
+        axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
+        plotProps = plotDefArgs
+
+        for pname in ['xaxis', 'yaxis', 'caxis']:
+            plotProps[pname] = copy.deepcopy(axDefArgs)
+            if isinstance(copyFrom, dict):
+                pval = copyFrom.pop(pname, None)
+                if pval is not None:
+                    plotProps[pname].update(pval)
+            plotProps[pname]['_object'] = "xrt.plotter.XYCAxis"                    
+            
+        if isinstance(copyFrom, dict):
+            plotProps.update(copyFrom)
+            plotItem = self.addValue(self.rootPlotItem, plotName)
+        else:
+            plotItem = self.addValue(self.rootPlotItem, plotName, source=copyFrom)
+
+        plotProps['_object'] = "xrt.plotter.XYCPlot"
+
+        if isinstance(copyFrom, qt.QStandardItem):
             self.cpChLevel = 0
             self.copyChildren(plotItem, copyFrom)
         else:
-            for name, obj in inspect.getmembers(xrtplot):
-                if name == "XYCPlot" and inspect.isclass(obj):
+            for pname, pval in plotProps.items():
+                if pname in ['_object']:
                     self.addObject(self.plotTree, plotItem,
-                                   '{0}.{1}'.format(xrtplot.__name__, name))
-                    for namef, objf in inspect.getmembers(obj):
-                        if inspect.ismethod(objf) or inspect.isfunction(objf):
-                            if namef == "__init__" and\
-                                    getargspec(objf)[3] is not None:
-                                for arg, arg_def in zip(
-                                        getargspec(objf)[0][1:],
-                                        getargspec(objf)[3]):
-                                    # child0 = qt.QStandardItem(str(arg))
-                                    # child0.setFlags(self.paramFlag)
-                                    if len(re.findall("axis",
-                                                      arg.lower())) > 0:
-                                        child0 = self.addProp(plotItem,
-                                                              str(arg))
-                                        for name2, obj2 in\
-                                                inspect.getmembers(xrtplot):
-                                            if name2 == "XYCAxis" and\
-                                                    inspect.isclass(obj2):
-                                                self.addObject(self.plotTree,
-                                                               child0,
-                                                               '{0}.{1}'.format( # analysis:ignore
-                                                                  xrtplot.__name__, # analysis:ignore
-                                                                  name2))
-                                                for namef2, objf2 in\
-                                                        inspect.getmembers(
-                                                            obj2):
-                                                    if (inspect.ismethod(
-                                                        objf2) or
-                                                        inspect.isfunction(
-                                                            objf2)):
-                                                        argsList =\
-                                                            getargspec(objf2)
-                                                        if namef2 ==\
-                                                            "__init__" and\
-                                                            argsList[3] is\
-                                                                not None:
-                                                            for arg2, arg_def2\
-                                                                in zip(
-                                                                    argsList[0][1:], # analysis:ignore
-                                                                    argsList[3]): # analysis:ignore
-                                                                if str(arg) == 'caxis' and str(arg2) == 'unit': # analysis:ignore
-                                                                    arg_def2 = 'eV' # analysis:ignore
-                                                                self.addParam(child0, arg2, arg_def2) # analysis:ignore
-                                    else:
-                                        if str(arg) == 'title':
-                                            arg_value = plotItem.text()
-                                        else:
-                                            arg_value = arg_def
-                                        self.addParam(plotItem, arg, arg_value)
+                                   "xrt.plotter.XYCPlot")
+                elif pname in ['xaxis', 'yaxis', 'caxis']:
+                    child0 = self.addProp(plotItem, pname)
+                    for axname, axval in pval.items():
+                        if axname == '_object':
+                            self.addObject(self.plotTree, child0,
+                                           "xrt.plotter.XYCAxis")
+                            continue
+                        self.addParam(child0, axname, axval)
+                else:
+                    if str(pname) == 'title':
+                        arg_value = plotItem.text()
+                    else:
+                        arg_value = pval
+                    self.addParam(plotItem, pname, arg_value)
+
         self.showDoc(plotItem.index())
         self.addCombo(self.plotTree, plotItem)
         self.capitalize(self.plotTree, plotItem)
@@ -1837,7 +2017,7 @@ class XrtQook(qt.QWidget):
 
         return sortDescr()
 
-    def addMaterial(self, name, obj, *args):
+    def addMaterial(self, name, obj, copyFrom=None):
         for i in range(99):
             matName = self.classNameToStr(name) + '{:02d}'.format(i+1)
             dupl = False
@@ -2080,6 +2260,93 @@ class XrtQook(qt.QWidget):
                     == qt.QMessageBox.Yes:
                 self.isEmpty = True
         if self.isEmpty:
+            openFileName = ""
+            openDialog = qt.QFileDialog()
+            openDialog.setFileMode(qt.QFileDialog.ExistingFile)
+            openDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
+            openDialog.setNameFilter("XML files (*.xml)")
+            if (openDialog.exec_()):
+                openFileName = openDialog.selectedFiles()[0]
+                ldMsg = 'Loading layout from {}'.format(
+                        os.path.basename(str(openFileName)))
+                parseOK = True  # False
+#                try:
+#                    treeImport = ET.parse(openFileName)
+#                    parseOK = True
+#                except (IOError, OSError, ET.ParseError) as errStr:
+#                    ldMsg = str(errStr)
+                if parseOK:
+                    self.beamLine.load_from_xml(openFileName)
+                    project = self.beamLine.export_to_json()
+                    beamlineName = next(raycing.islice(project.keys(), 2, 3))
+                    self.beamLine.name = beamlineName
+
+                    beamlineInitKWargs = project[beamlineName]['properties']
+                    beamlineInitKWargs['name'] = beamlineName
+                    self.blUpdateLatchOpen = False
+
+                    self.initAllModels()
+                    self.initAllTrees(blProps=
+                           {'properties': beamlineInitKWargs,
+                            '_object': 'xrt.backends.raycing.BeamLine'},
+                            runProps=project.get('run_ray_tracing'))
+
+                    for branch in ['Materials', beamlineName]:
+                        for element, elementDict in project.get(branch).items():
+                            if str(element) in ['properties', '_object']:
+                                continue
+
+                            if branch == beamlineName and 'flow' in project:
+                                methDict = project['flow'].get(element)
+                                elementDict.update(methDict)
+                            elementDict['properties']['uuid'] = element
+                            self.addElement(copyFrom=elementDict)
+
+                    for plotName, plotDict in project.get('plots').items():
+                        bName = plotDict.get('beam')
+                        if isinstance(bName, tuple):  # Replace name in plots
+                            beams = self.beamModel.findItems(bName[0],
+                                                             column=2)
+                            for bItem in beams:
+                                row = bItem.row()
+                                btype = str(self.beamModel.item(row, 1).text())
+                                if btype == bName[-1]:
+                                    plotDict['beam'] = self.beamModel.item(
+                                            row, 0).text()
+                                    break
+
+                        self.addPlot(copyFrom=plotDict, plotName=plotName)
+
+                    self.layoutFileName = openFileName
+                    self.fileDescription = project.get('description')
+                    if self.fileDescription is not None:
+                        self.descrEdit.setText(self.fileDescription)
+                        self.showTutorial(
+                            self.fileDescription,
+                            "Descriprion",
+                            os.path.join(os.path.dirname(os.path.abspath(str(
+                                self.layoutFileName))), "_images"))
+                    self.setWindowTitle(self.layoutFileName + " - xrtQook")
+                    self.writeCodeBox("")
+
+                    self.blUpdateLatchOpen = True
+                    self.progressBar.setValue(100)
+                    self.progressBar.setFormat('Loaded layout from {}'.format(
+                            os.path.basename(str(self.layoutFileName))))
+
+
+    def importLayout_old(self):
+        if not self.isEmpty:
+            msgBox = qt.QMessageBox()
+            if msgBox.warning(self,
+                              'Warning',
+                              'Current layout will be overwritten. Continue?',
+                              buttons=qt.QMessageBox.Yes |
+                              qt.QMessageBox.No,
+                              defaultButton=qt.QMessageBox.No)\
+                    == qt.QMessageBox.Yes:
+                self.isEmpty = True
+        if self.isEmpty:
             self.initAllModels()
             self.initAllTrees()
             openFileName = ""
@@ -2124,7 +2391,9 @@ class XrtQook(qt.QWidget):
                                 "None")
                         if rootModel in [self.rootBLItem, self.rootPlotItem]:
                             rootModel.setText(root[i].tag)
+
                         self.iterateImport(tree, rootModel, root[i])
+
                         self.beamModel.sort(3)
                         if rootModel == self.rootBLItem:
                             for ie in range(self.rootBLItem.rowCount()):
@@ -2221,7 +2490,7 @@ class XrtQook(qt.QWidget):
                 itemText = str(childImport.text)
                 child0 = qt.QStandardItem(itemTag)
                 if itemType == "flat":
-                    if rootModel.model() != self.beamModel:
+                    if rootModel.model() is not self.beamModel:
                         child0 = rootModel.appendRow(child0)
                     else:
                         rootModel.appendRow(
@@ -2232,6 +2501,10 @@ class XrtQook(qt.QWidget):
                     child0 = self.addValue(rootModel, itemTag)
                     if self.ntab == 1:
                         self.capitalize(view, child0)
+                        if rootModel is self.beamLineModel:
+                            child0.setFlags(qt.ItemFlags(
+                                qt.ItemIsEnabled | qt.ItemIsEditable |
+                                qt.ItemIsSelectable | qt.ItemIsDragEnabled))
                 elif itemType == "prop":
                     child0 = self.addProp(rootModel, itemTag)
                 elif itemType == "object":
@@ -2703,7 +2976,7 @@ class XrtQook(qt.QWidget):
         combo.setCurrentIndex(combo.findText(value))
         return combo
 
-    def autoAssignMethod(self, elItem):
+    def autoAssignMethod(self, elItem, methProps=None):
         elstr = self.getClassName(elItem)
         elcls = eval(elstr)
         if hasattr(elcls, 'hiddenMethods'):
@@ -2723,7 +2996,12 @@ class XrtQook(qt.QWidget):
                             str(objf.__name__) not in
                             self.experimentalModeFilter or
                             self.experimentalMode):
-                        self.addMethod(objfNm, elItem, fdoc)
+#                        print("fdoc:", fdoc)
+                        outBeams = fdoc[0].replace(
+                                "Returned values: ", '').split(',')
+#                        print("outbeams:", outBeams)
+#                        print(objfNm)
+                        self.addMethod(objfNm, elItem, outBeams, methProps)
                         break
 
     def openMenu(self, position):
@@ -2770,7 +3048,7 @@ class XrtQook(qt.QWidget):
             tsubmenu = menu.addMenu(self.tr("Add method"))
             menu.addSeparator()
             menu.addAction("Duplicate " + str(selectedItem.text()),
-                           partial(self.addElement, None, None, selectedItem))
+                           partial(self.addElement, copyFrom=selectedItem))
             menu.addSeparator()
             if selIndex.row() > 2:
                 menu.addAction("Move Up", partial(self.moveItem, -1,
@@ -2812,9 +3090,11 @@ class XrtQook(qt.QWidget):
                             methAction.setText(namef + '()')
                             methAction.hovered.connect(
                                 partial(self.showObjHelp, objfNm))
+                            outBeams = fdoc[0].replace(
+                                    "Returned values: ", '').split(',')
                             methAction.triggered.connect(
                                 partial(self.addMethod, objfNm,
-                                        selectedItem, fdoc))
+                                        selectedItem, outBeams))
                             tsubmenu.addAction(methAction)
         elif level == 2 and selText != "properties":
             deleteActionName = "Remove " + str(selText)
@@ -3164,7 +3444,7 @@ class XrtQook(qt.QWidget):
         def beamToUuid(beamName):
             for ib in range(self.beamModel.rowCount()):
                 if self.beamModel.item(ib, 0).text() == beamName:
-                    return self.beamModel.item(ib, 3).text()
+                    return self.beamModel.item(ib, 2).text()
         print(item, newElement, newOrder)
         # TODO: do we need a better instruction as input arg?
 
@@ -3184,6 +3464,12 @@ class XrtQook(qt.QWidget):
             column = iindex.column()
             row = iindex.row()
             parent = item.parent()
+
+            if parent is None:
+                print("No parent")
+                return
+            else:
+                print(str(parent.text()))
 #            print(row, column)
 #            print(item.text())
 
@@ -3205,7 +3491,11 @@ class XrtQook(qt.QWidget):
             if column == 1:  # Existing Element
                 argValue_str = item.text()
                 argName = parent.child(row, 0).text()
-                argValue = raycing.parametrize(argValue_str)
+                if any(argName.lower().startswith(v) for v in
+                       ['mater', 'tlay', 'blay', 'coat', 'substrate']):
+                    argValue = self.beamLine.matnamesToUUIDs.get(argValue_str)
+                else:
+                    argValue = raycing.parametrize(argValue_str)
                 kwargs[argName] = argValue
                 outDict = kwargs
 
@@ -3220,8 +3510,12 @@ class XrtQook(qt.QWidget):
                         if mchi.text() == 'parameters':
                             for mchpi in range(mchi.rowCount()):
                                 argName = mchi.child(mchpi, 0).text()
-                                argValue = raycing.parametrize(
-                                        mchi.child(mchpi, 1).text())
+                                argValue = mchi.child(mchpi, 1).text()
+                                if argName == 'beam':
+                                    argValue = beamToUuid(argValue)
+                                else:
+                                    argValue = raycing.parametrize(
+                                        argValue)
                                 methKWArgs[str(argName)] = argValue
                         elif mchi.text() == 'output':
                             for mchpi in range(mchi.rowCount()):
@@ -3243,6 +3537,7 @@ class XrtQook(qt.QWidget):
                     self.beamLine.update_flow_from_json(oeid,
                                                         {methStr: outDict})
                     self.beamLine.sort_flow()
+#                    print("flow U", self.beamLine.flowU)
 
                 else:
                     for itop in range(item.rowCount()):
@@ -3907,6 +4202,8 @@ if __name__ == '__main__':
         self.progressBar.setValue(70)
         self.progressBar.setFormat("Adding plots.")
         plotNames = []
+        plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
+        axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
         for ie in range(self.rootPlotItem.rowCount()):
             tItem = self.rootPlotItem.child(ie, 0)
             ieinit = "\n{0}{1} = ".format(myTab, tItem.text())
@@ -3914,17 +4211,19 @@ if __name__ == '__main__':
             for ieph in range(tItem.rowCount()):
                 if tItem.child(ieph, 0).text() == '_object':
                     elstr = str(tItem.child(ieph, 1).text())
+#                    print("xx0", elstr)
                     ieinit += elstr + "("
-                    for parent in (inspect.getmro(eval(elstr)))[:-1]:
-                        for namef, objf in inspect.getmembers(parent):
-                            if (inspect.ismethod(objf) or
-                                    inspect.isfunction(objf)):
-                                if namef == "__init__" and\
-                                        getargspec(objf)[3] is not None:
-                                    obj = objf
-            for iepm, arg_def in zip(range(tItem.rowCount()-1),
-                                     getargspec(obj)[3]):
-                iep = iepm + 1
+#                    for parent in (inspect.getmro(eval(elstr)))[:-1]:
+#                        for namef, objf in inspect.getmembers(parent):
+#                            if (inspect.ismethod(objf) or
+#                                    inspect.isfunction(objf)):
+#                                if namef == "__init__" and\
+#                                        getargspec(objf)[3] is not None:
+#                                    obj = objf
+#            for iepm, arg_def in zip(range(tItem.rowCount()-1),
+#                                     getargspec(obj)[3]):
+            for iep in range(tItem.rowCount()):
+#                iep = iepm + 1
                 if tItem.child(iep, 0).text() != '_object':
                     pItem = tItem.child(iep, 0)
                     if pItem.hasChildren():
@@ -3935,27 +4234,35 @@ if __name__ == '__main__':
                                 ieinit += "\n{2}{0}={1}(".format(
                                     str(tItem.child(iep, 0).text()), axstr,
                                     myTab*2)
-                                for parentAx in\
-                                        (inspect.getmro(eval(axstr)))[:-1]:
-                                    for namefAx, objfAx in\
-                                            inspect.getmembers(parentAx):
-                                        if (inspect.ismethod(objfAx) or
-                                                inspect.isfunction(objfAx)):
-                                            if namefAx == "__init__" and\
-                                                getargspec(
-                                                    objfAx)[3] is not None:
-                                                objAx = objfAx
-                        for ieaxm, arg_defAx in zip(range(pItem.rowCount()-1),
-                                                    getargspec(objAx)[3]):
-                            ieax = ieaxm + 1
-                            paraname = pItem.child(ieax, 0).text()
-                            paravalue = pItem.child(ieax, 1).text()
+#                                for parentAx in\
+#                                        (inspect.getmro(eval(axstr)))[:-1]:
+#                                    for namefAx, objfAx in\
+#                                            inspect.getmembers(parentAx):
+#                                        if (inspect.ismethod(objfAx) or
+#                                                inspect.isfunction(objfAx)):
+#                                            if namefAx == "__init__" and\
+#                                                getargspec(
+#                                                    objfAx)[3] is not None:
+#                                                objAx = objfAx
+                       
+#                        for ieaxm, arg_defAx in zip(range(pItem.rowCount()-1),
+#                                                    getargspec(objAx)[3]):
+                        for ieax in range(pItem.rowCount()):
+                            paraname = str(pItem.child(ieax, 0).text())
+                            if paraname in ['_object']:
+                                continue
+                            paravalue = str(pItem.child(ieax, 1).text())
+                            arg_defAx = str(axDefArgs.get(paraname))
+                            
+                            
                             if paraname == "data" and paravalue != "auto":
                                 paravalue = '{0}.get_{1}'.format(
                                         raycing.__name__, paravalue)
                                 ieinit += '\n{2}{0}={1},'.format(
                                         paraname, paravalue, myTab*3)
-                            elif str(paravalue) != str(arg_defAx):
+                            elif paravalue != arg_defAx:
+                                # code below parses the properties of other plots
+                                # do we need it?
                                 tmpParavalue = paravalue * 2
                                 while any(str(pltName + '.') in paravalue for
                                           pltName in plotNames) and\
@@ -3989,7 +4296,8 @@ if __name__ == '__main__':
                     else:
                         paraname = str(tItem.child(iep, 0).text())
                         paravalue = str(tItem.child(iep, 1).text())
-                        if str(paravalue) != str(arg_def):
+                        arg_def = str(plotDefArgs.get(paraname))
+                        if paravalue != arg_def:
                             if paraname == "fluxKind":
                                 ieinit += '\n{2}{0}={1},'.format(
                                     paraname, self.quotizeAll(paravalue),
@@ -4021,6 +4329,7 @@ if __name__ == '__main__':
                 myTab, tItem.text(), self.rootPlotItem.text())
         codePlots += "{0}return {1}\n\n".format(
             myTab, self.rootPlotItem.text())
+        
         self.progressBar.setValue(90)
         self.progressBar.setFormat("Preparing the main() function.")
         if not self.glowOnly:

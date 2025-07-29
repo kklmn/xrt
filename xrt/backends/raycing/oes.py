@@ -605,7 +605,17 @@ class BentLaueCylinder(OE):
 
     @property
     def material(self):
-        return self._material
+        if raycing.is_sequence(self._material):
+            matSur = self._material[self.curSurface]
+        else:
+            matSur = self._material
+
+        if raycing.is_valid_uuid(matSur) and self.bl is not None:
+            mat = self.bl.materialsDict.get(matSur)
+        else:
+            mat = matSur
+
+        return mat
 
     @material.setter
     def material(self, material):
@@ -632,10 +642,10 @@ class BentLaueCylinder(OE):
         if not all([hasattr(self, v) for v in
                     ['_R', '_material', '_alpha']]):
             return
-        if raycing.is_sequence(self.material):
-            matSur = self.material[self.curSurface]
-        else:
-            matSur = self.material
+#        if raycing.is_sequence(self.material):
+#            matSur = self.material[self.curSurface]
+#        else:
+        matSur = self.material
         if hasattr(matSur, 'set_OE_properties'):
             matSur.set_OE_properties(self.alpha, self.R, None)
 
@@ -786,7 +796,17 @@ class BentLaue2D(OE):
 
     @property
     def material(self):
-        return self._material
+        if raycing.is_sequence(self._material):
+            matSur = self._material[self.curSurface]
+        else:
+            matSur = self._material
+
+        if raycing.is_valid_uuid(matSur) and self.bl is not None:
+            mat = self.bl.materialsDict.get(matSur)
+        else:
+            mat = matSur
+
+        return mat
 
     @material.setter
     def material(self, material):
@@ -813,10 +833,10 @@ class BentLaue2D(OE):
         if not all([hasattr(self, v) for v in
                     ['_Rm', '_Rs', '_material', '_alpha']]):
             return
-        if raycing.is_sequence(self.material):
-            matSur = self.material[self.curSurface]
-        else:
-            matSur = self.material
+#        if raycing.is_sequence(self.material):
+#            matSur = self.material[self.curSurface]
+#        else:
+        matSur = self.material
         if hasattr(matSur, 'set_OE_properties'):
             matSur.set_OE_properties(self.alpha, self.Rm, self.Rs)
 
@@ -2366,7 +2386,30 @@ class Plate(DCM):
 
     @property
     def material(self):
-        return self._material
+#        if raycing.is_sequence(self._material):
+#            matSur = self._material[self.curSurface]
+#        else:
+        matSur = self._material
+
+        if raycing.is_valid_uuid(matSur) and self.bl is not None:
+            mat = self.bl.materialsDict.get(matSur)
+        else:
+            mat = matSur
+
+        return mat
+
+    @property
+    def material2(self):
+        matSur = self._material2
+        if raycing.is_valid_uuid(matSur) and self.bl is not None:
+            mat = self.bl.materialsDict.get(matSur)
+        else:
+            mat = matSur
+        return mat
+
+    @material2.setter
+    def material2(self, material2):
+        self._material2 = material2
 
     @material.setter
     def material(self, material):
@@ -2374,7 +2417,7 @@ class Plate(DCM):
         self.material2 = material
 
         if material is not None:
-            if raycing.is_sequence(material):
+            if raycing.is_sequence(material):  # why is this here? how to select material?
                 materials = material
             else:
                 materials = material,

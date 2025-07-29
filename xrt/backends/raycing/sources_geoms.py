@@ -241,7 +241,7 @@ class GeometricSource(object):
         self.energyWeights = energyWeights
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
@@ -478,7 +478,7 @@ class GaussianBeam(object):
         self.energyWeights = energyWeights
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
@@ -748,7 +748,7 @@ class MeshSource(object):
         self.energyWeights = energyWeights
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
@@ -882,7 +882,7 @@ class CollimatedMeshSource(object):
         self.energyWeights = energyWeights
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
@@ -952,7 +952,7 @@ class BeamFromFile(object):
                 str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.center = raycing.Center(center)  # 3D point in global system

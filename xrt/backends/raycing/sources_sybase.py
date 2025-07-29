@@ -126,7 +126,7 @@ class SourceBase:
                 str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.center = raycing.Center(center)  # 3D point in global system
@@ -1633,18 +1633,18 @@ class IntegratedSource(SourceBase):
             wave.Es *= mPh
             wave.Ep *= mPh
 
+        bor.parentId = self.uuid
+
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
-            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
-        else:
-            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
-
-        bor.parentId = self.uuid
+#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
+#        else:
+#            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
 
         raycing.append_to_flow(self.shine, [bor],
                                inspect.currentframe())
-
-        self.bl.flowU[self.uuid] = {'method': self.shine,
-                                    'kwArgsIn': kwArgsIn}
+#
+#        self.bl.flowU[self.uuid] = {'method': self.shine,
+#                                    'kwArgsIn': kwArgsIn}
 
         return bor

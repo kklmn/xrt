@@ -211,11 +211,12 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         parentIndexName = str(index.parent().data())
 
         combo = QComboBox(parent)
+        combo.activated.connect(lambda: self.commitData.emit(combo))
         if isinstance(self.mainWidget.getVal(argValue), bool):
             combo.setModel(self.mainWidget.boolModel)
             return combo
         elif argName in ['bl', 'beamline']:
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setEditable(True) 
             combo.setModel(self.mainWidget.beamLineModel)
             return combo
@@ -231,49 +232,49 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 fpModel = self.mainWidget.beamModel
             
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(fpModel)
             return combo
         elif argName.startswith('wave'):
             fpModel = MultiColumnFilterProxy({1: "Local"})
             fpModel.setSourceModel(self.mainWidget.beamModel)                
             
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(fpModel)
             return combo
         elif argName.startswith('plots'):
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.plotModel)
             combo.setEditable(True)
             combo.setInsertPolicy(QComboBox.InsertAtCurrent)
             return combo
         elif any(argName.lower().startswith(v) for v in
                  ['mater', 'tlay', 'blay', 'coat', 'substrate']):
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.materialsModel)
             return combo
         elif 'density' in argName:  # uniformRayDansity would fall under bool
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.densityModel)
             return combo
         elif 'polarization' in argName:
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.polarizationsModel)
             return combo
         elif 'shape' in argName.lower():
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.shapeModel)
             return combo
         elif 'table' in argName.lower():
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.matTableModel)
             return combo
         elif 'data' in argName.lower() and 'axis' in parentIndexName:
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.fluxDataModel)
             return combo
         elif 'fluxkind' in argName.lower():
-            combo = QComboBox(parent)
+#            combo = QComboBox(parent)
             combo.setModel(self.mainWidget.fluxKindModel)
             return combo
         else:

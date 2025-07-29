@@ -272,64 +272,82 @@ msg_stop = {
 msg_exit = {
         "command": "exit"}
 
-def NamedArrayFactory(names, default_dtype=float):
-    class NamedArray(np.ndarray):
-        def __new__(cls, values=None, dtype=default_dtype, **kwargs):
-            num_elements = len(names)
+#def NamedArrayFactory(names, default_dtype=float):
+#    class NamedArray(np.ndarray):
+class NamedArrayBase(np.ndarray):
+    _names = []
 
-            if values is None and kwargs:
-                values = [kwargs.get(name, 0.0) for name in names]
-            elif values is not None:
-                if len(values) != num_elements:
-                    raise ValueError(f'Expected {num_elements} elements, got {len(values)}.')
-            else:
-                values = np.zeros(num_elements, dtype=dtype)
+    def __new__(cls, values=None, dtype=float, **kwargs):
 
-            obj = np.asarray(values, dtype=dtype).view(cls)
-            return obj
+        num_elements = len(cls._names)
 
-        def __array_finalize__(self, obj):
-            if obj is None:
-                return
+        if values is None and kwargs:
+            values = [kwargs.get(name, 0.0) for name in cls._names]
+        elif values is not None:
+            if len(values) != num_elements:
+                raise ValueError(f'Expected {num_elements} elements, got {len(values)}.')
+        else:
+            values = np.zeros(num_elements, dtype=dtype)
 
-        def __getattr__(self, attr):
-            if attr in names:
-                idx = names.index(attr)
-                return self[idx]
-            raise AttributeError(f"{type(self).__name__} has no attribute '{attr}'")
+        obj = np.asarray(values, dtype=dtype).view(cls)
+        return obj
 
-        def __setattr__(self, attr, value):
-            if attr in names:
-                idx = names.index(attr)
-                self[idx] = value
-            else:
-                super().__setattr__(attr, value)
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
 
-        def __eq__(self, other):
-            return np.array_equal(self, other)
+    def __getattr__(self, attr):
+        if attr in self._names:
+            idx = self._names.index(attr)
+            return self[idx]
+        raise AttributeError(f"{type(self).__name__} has no attribute '{attr}'")
 
-        def __ne__(self, other):
-            return not np.array_equal(self, other)
+    def __setattr__(self, attr, value):
+        if attr in self._names:
+            idx = self._names.index(attr)
+            self[idx] = value
+        else:
+            super().__setattr__(attr, value)
 
-        def __repr__(self):
-            components = ', '.join(f'{name}={getattr(self, name)}'
-                                   for name in names)
-            return f'{type(self).__name__}({components})'
+    def __eq__(self, other):
+        return np.array_equal(self, other)
 
-        def __str__(self):
-            return '[' + ', '.join(str(val) for val in self) + ']'
+    def __ne__(self, other):
+        return not np.array_equal(self, other)
+
+    def __repr__(self):
+        components = ', '.join(f'{name}={getattr(self, name)}'
+                               for name in self._names)
+        return f'{type(self).__name__}({components})'
+
+    def __str__(self):
+        return '[' + ', '.join(str(val) for val in self) + ']'
 
 #        def __reduce__(self):
 #            module_name = self.__class__.__module__
 #            class_name = self.__class__.__name__
 #            return (getattr(xrt.backends.raycing, class_name), (np.asarray(self),))
 #
-    NamedArray.__name__ = 'NamedArray_' + '_'.join(names)
-#    NamedArray.__module__ = __name__  # explicitly set module
-#    globals()[NamedArray.__name__] = NamedArray  # make it visible at module level
+#    NamedArray.__name__ = 'NamedArray_' + '_'.join(names)
+##    NamedArray.__module__ = __name__  # explicitly set module
+##    globals()[NamedArray.__name__] = NamedArray  # make it visible at module level
+#
+#    return NamedArray
 
-    return NamedArray
+#def NamedArrayFactory(names, default_dtype=float):
+#    name = 'NamedArray_' + '_'.join(names)
+#    return type(name, (NamedArrayBase,), {'_names': names})
 
+def NamedArrayFactory(names, default_dtype=float):
+    class_name = 'NamedArray_' + '_'.join(names)
+    cls = type(class_name, (NamedArrayBase,), {
+        '_names': names,
+        '__module__': __name__  # Make sure it points to the real module
+    })
+
+    # Register the class in the module’s namespace so pickle can find it
+    sys.modules[__name__].__dict__[class_name] = cls
+    return cls
 
 Center = NamedArrayFactory(['x', 'y', 'z'])
 Limits = NamedArrayFactory(['lmin', 'lmax'])
@@ -975,6 +993,10 @@ def append_to_flow_decorator(func):
                     ret_dict = {'beamGlobal' if toGlobal else
                                 'beamLocal': result}
             if ret_dict:
+                if 'beamGlobal' in ret_dict:
+                    ret_dict['beamGlobal'].get_beam_vector()
+                    
+                
                 if 'beam' in kwargs:
                     kwargs['beam'] = beamId
                 self.bl.flowU[self.uuid] = {methStr: kwargs}
@@ -1161,7 +1183,11 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                      for c in str.split(
                      paravalue, ',')]
             elif paraname.startswith('material'):
-                paravalue = beamLine.materialsDict[paravalue]
+                if is_valid_uuid(paravalue):
+                    paravalue = beamLine.materialsDict[paravalue]
+                elif paravalue in beamLine.matnamesToUUIDs:
+                    paravalue = beamLine.materialsDict.get(
+                            beamLine.matnamesToUUIDs[paravalue])
             elif paraname == 'bl':
                 paravalue = beamLine
             else:
@@ -1171,7 +1197,7 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
     return kwargs
 
 
-def create_paramdict_mat(paramDictStr, defArgs, matDict=None):
+def create_paramdict_mat(paramDictStr, defArgs, bl=None):
     kwargs = OrderedDict()
 
     for paraname, paravalue in paramDictStr.items():
@@ -1179,7 +1205,11 @@ def create_paramdict_mat(paramDictStr, defArgs, matDict=None):
                 paravalue == 'bl':
             if paraname.lower() in ['tlayer', 'blayer', 'coating',
                                     'substrate']:
-                paravalue = matDict[paravalue]
+                if is_valid_uuid(paravalue):
+                    paravalue = bl.materialsDict[paravalue]
+                elif paravalue in bl.matnamesToUUIDs:
+                    paravalue = bl.materialsDict.get(
+                            bl.matnamesToUUIDs[paravalue])
             else:
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
@@ -1353,6 +1383,20 @@ def propagationProcess(q_in, q_out):
                 oe = handler.bl.oesDict[oeid][0]
                 for func, fkwargs in meth.items():
                     getattr(oe, func)(**fkwargs)
+
+                    for autoAttr in ['pitch', 'bragg', 'center']:
+                        if (hasattr(oe, f'_{autoAttr}') and hasattr(
+                                oe, f'_{autoAttr}Val')):
+                            if getattr(oe, f'_{autoAttr}') != getattr(
+                                    oe, f'_{autoAttr}Val'):
+                                msg_autopos_update = {
+                                        'pos_attr': autoAttr,
+                                        'pos_value': getattr(oe, autoAttr),
+                                        'sender_name': oe.name,
+                                        'sender_id': oe.uuid,
+                                        'status': 0}
+                                q_out.put(msg_autopos_update)
+                    
                     msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
                                 'sender_name': oe.name,
                                 'sender_id': oe.uuid,
@@ -1365,6 +1409,7 @@ def propagationProcess(q_in, q_out):
                                     'sender_id': oeid,
                                     'status': 0}
                         q_out.put(msg_hist)
+            handler.bl.forceAlign = False
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False
             handler.startEl = None
@@ -1409,6 +1454,7 @@ class MessageHandler:
         if object_type == 'beamline':
             self.bl = BeamLine()
             self.bl.deserialize(kwargs)
+            self.flowSource = 'Qook'
             if self.autoUpdate:
                 self.needUpdate = True
         elif object_type == 'oe':
@@ -1794,17 +1840,19 @@ class EpicsDevice:
             self.dbl.add(f'{prefix}:{key}')
 
 
+class AlignmentBeam(object):
+    def __init__(self):
+        for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
+            setattr(self, prop, np.zeros(2))
+
+
 class BeamLine(object):
     u"""
     Container class for beamline components. It also defines the beam line
     direction and height."""
 
-    class aBeam(object):
-        def __init__(self):
-            for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
-                setattr(self, prop, np.zeros(2))
-
-    def __init__(self, azimuth=0., height=0., alignE='auto', fileName=None):
+    def __init__(self, azimuth=0., height=0., alignE='auto', fileName=None,
+                 name='beamLine', description=''):
         u"""
         *azimuth*: float
             Is counted in cw direction from the global Y axis. At
@@ -1832,7 +1880,8 @@ class BeamLine(object):
         self.slits = []
         self.screens = []
         self.alarms = []
-        self.name = ''
+        self.name = name
+        self.description = description
         self.oesDict = OrderedDict()
         self.oenamesToUUIDs = {}  # Reverse lookup for oe names
         self.matnamesToUUIDs = {}  # Reverse lookup for mat names
@@ -1969,7 +2018,7 @@ class BeamLine(object):
 #                beam.E[0] = alignE
             intensity = beam.Jss[good] + beam.Jpp[good]
             totalI = np.sum(intensity)
-            inBeam = self.aBeam()
+            inBeam = AlignmentBeam()
             for fieldName in ['x', 'y', 'z', 'a', 'b', 'c']:
                 field = getattr(beam, fieldName)
                 if totalI == 0:
@@ -1996,7 +2045,7 @@ class BeamLine(object):
                 beam.c[0] /= dirNorm
 
         if any(autoCenter):
-            centerList = copy.copy(oe.center)
+            centerList = copy.deepcopy(oe.center)
             bStartC = np.array([inBeam.x[0], inBeam.y[0], inBeam.z[0]])
             bStartDir = np.array([inBeam.a[0], inBeam.b[0], inBeam.c[0]])
 
@@ -2354,11 +2403,11 @@ class BeamLine(object):
         return [rayPath, beamDict, oesDict]
 
     def init_oe_from_json(self, elProps, isString=True):
-        print("Creating OE from JSON", elProps)
+#        print("Creating OE from JSON", elProps)
         oeParams = elProps.get('properties')
 
         if elProps.get('_object') is None:
-            print("Empty object")
+#            print("Empty object")
             return
         else:
             oeModule, oeClass = elProps['_object'].rsplit('.', 1)
@@ -2396,7 +2445,12 @@ class BeamLine(object):
                         elif argVal == 'None' or argVal is None:
                             isEmpty = True
                         else:
-                            fArgs[argName] = self.beamNamesDict[str(argVal)][0]
+                            beamTag = self.beamNamesDict.get(str(argVal))
+                            if beamTag is not None:
+                                fArgs[argName] = beamTag[0]
+                            else:
+                                print(argVal, "missing in beamNamesDict")
+                                return
                     else:
                         fArgs[argName] = parametrize(argVal)
 
@@ -2423,6 +2477,7 @@ class BeamLine(object):
                             str(dictIn['_object']).split('.')[-1],
                             np.random.randint(1000, 9999))
                     elProps['properties']['name'] = tmpName
+                # TODO: check if the name is unique
 #                self.oenamesToUUIDs[elProps['properties']['name']] = elKey
             else:
                 elKey = str(uuid.uuid4())
@@ -2436,12 +2491,12 @@ class BeamLine(object):
             if elName in dictIn:
                 dictIn[eluuid] = dictIn.pop(elName)
 
-    def init_material_from_json(self, matName, dictIn, materialsDict):
+    def init_material_from_json(self, matName, dictIn):
         matModule, matClass = dictIn['_object'].rsplit('.', 1)
         matModule = importlib.import_module(matModule)
         matParams = dictIn['properties']
         defArgs = dict(get_params(dictIn['_object']))
-        initKWArgs = create_paramdict_mat(matParams, defArgs, materialsDict)
+        initKWArgs = create_paramdict_mat(matParams, defArgs, self)
 
         if is_valid_uuid(matName):
             initKWArgs['uuid'] = matName
@@ -2450,19 +2505,23 @@ class BeamLine(object):
 
         try:
             matObject = getattr(matModule, matClass)(**initKWArgs)
+            # TODO: should we move it into the material init?
+            self.matnamesToUUIDs[matObject.name] = matObject.uuid
+            self.materialsDict[matObject.uuid] = matObject
         except:  # TODO: Needs testing
             print(matClass, "Init problem")
             raise
-        return matObject
+#        return matObject
 
     def populate_materials_dict_from_json(self, dictIn):
         for matName, matProps in dictIn.items():
-            delay = 0.01
+            delay = 0.01  # required to prevent file read errors
             for retries in range(5):
                 try:
                     time.sleep(delay)
-                    self.materialsDict[matName] = self.init_material_from_json(
-                            matName, matProps, self.materialsDict)
+                    self.init_material_from_json(
+                        matName, matProps)
+#                    self.materialsDict[materialObj.uuid] = materialObj
                     break
                 except FileNotFoundError:
                     delay *= 5
@@ -2505,14 +2564,22 @@ class BeamLine(object):
             self.flowU = data['Project']['flow']
 
     def export_to_json(self):
+        if hasattr(self, 'layoutStr'):
+            plotsDict = self.layoutStr['Project'].get('plots')
+            runDict = self.layoutStr['Project'].get('run_ray_tracing')
+            descriptionStr = self.layoutStr['Project'].get('description')
+            if runDict is not None:
+                runDict['beamLine'] = self.name
         matDict = OrderedDict()
         for objName, objInstance in self.materialsDict.items():
             matRecord = OrderedDict()
-            matRecord['properties'] = get_init_kwargs(objInstance, compact=False)
+            matRecord['properties'] = get_init_kwargs(objInstance,
+                     compact=False)
             matRecord['_object'] = get_obj_str(objInstance)
             if not matRecord['properties']['name']:
                 matRecord['properties']['name'] = objName
-            field = objInstance.uuid if hasattr(objInstance, 'uuid') else objName
+            field = objInstance.uuid if hasattr(
+                    objInstance, 'uuid') else objName
             matDict[field] = matRecord
 
         blArgs = get_init_kwargs(self)
@@ -2525,7 +2592,7 @@ class BeamLine(object):
             oeObj = oeline[0]
             oeRecord = OrderedDict()
             oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
-                    blname='beamLine')
+                    blname=self.name)
             oeRecord['_object'] = get_obj_str(oeObj)
             if 'name' not in oeRecord['properties']:
                 tmpName = "{}_{}".format(
@@ -2534,28 +2601,40 @@ class BeamLine(object):
                 oeRecord['properties']['name'] = tmpName
             beamlineDict[oeid] = oeRecord
 
-        beamsDict = {}
+#        beamsDict = {}
 
         # TODO: replace with flowU?
-        for segment in self.flow:
-            method = segment[1]
-            module = method.__module__
-            class_name = method.__class__.__name__
-            method_name = method.__name__
-            methDict = OrderedDict()
-            methDict['_object'] = "{0}.{1}.{2}".format(module, class_name,
-                    method_name)
-            methDict['parameters'] = {k: str(v) for k, v in segment[2].items()}
-            methDict['output'] = segment[3]
-            beamlineDict[segment[0]][method_name] = methDict
-            for bname in segment[3].values():
-                beamsDict[bname] = None
+#        for segment in self.flow:
+#            method = segment[1]
+#            module = method.__module__
+#            class_name = method.__class__.__name__
+#            method_name = method.__name__
+#            methDict = OrderedDict()
+#            methDict['_object'] = "{0}.{1}.{2}".format(module, class_name,
+#                    method_name)
+#            methDict['parameters'] = {k: str(v) for k, v in segment[2].items()}
+#            methDict['output'] = segment[3]
+#            beamlineDict[segment[0]][method_name] = methDict
+#            for bname in segment[3].values():
+#                beamsDict[bname] = None
+
+
 
         projectDict = OrderedDict()
-        projectDict['Beams'] = beamsDict
+        projectDict['Beams'] = self.beamNamesDict
         projectDict['Materials'] = matDict
-        projectDict['beamLine'] = beamlineDict
+        projectDict[self.name] = beamlineDict
         projectDict['flow'] = self.flowU
+        if hasattr(self, 'layoutStr'):
+            if plotsDict is not None:
+                for plot, props in plotsDict.items():
+                    for argName, argVal in props.items():
+                        if argName == 'beam' and argVal in self.beamNamesDict:
+                            props[argName] = self.beamNamesDict.get(argVal)
+                            break
+            projectDict['plots'] = plotsDict
+            projectDict['run_ray_tracing'] = runDict
+            projectDict['description'] = descriptionStr
 
         self.layoutStr = {'Project': projectDict}
 #        print("EXPORT:", self.layoutStr)

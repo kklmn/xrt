@@ -270,11 +270,11 @@ class OE(object):
                 str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':  # should work everywhere
                 bl.oesDict[self.uuid] = [self, 1]
 
         self.shouldCheckCenter = shouldCheckCenter
-
+        self.needReCenter = False
         self.center = center
 #        if any([x == 'auto' for x in self.center]):
 #            self._center = copy.copy(self.center)
@@ -348,18 +348,35 @@ class OE(object):
 
     @property
     def center(self):
-        return self._center if self._centerVal is None else self._centerVal
+        if self._centerVal is None:
+#                centerRet = self.bl.auto_align_center(self)
+#                self._centerVal = centerRet
+#            else:
+            centerRet = self._center
+        else:
+            centerRet = self._centerVal
+        return centerRet
+#        return self._center if self._centerVal is None else self._centerVal
 
     @center.setter
     def center(self, center):
+#        self._center = copy.deepcopy(center)
+        if isinstance(center, str):
+            center = [x.strip().lower() for x in center.strip('[]').split(",")]
+            tmp = []
+            for value in center:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+                tmp.append(value)
+            center = tmp
+
         if any([x == 'auto' for x in center]):
-            self._center = copy.copy(center)
             self._centerVal = None
-            self._centerInit = copy.copy(center)  # For glow auto-recognition
+            self._center = copy.deepcopy(center)
         else:
             self._centerVal = raycing.Center(center)
-#            if not hasattr(self, '_center'):
-#                self._center = None
 
     @property
     def pitch(self):
@@ -457,6 +474,19 @@ class OE(object):
 #        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
+
+    @property
+    def material(self):
+        if raycing.is_valid_uuid(self._material) and self.bl is not None:
+            mat = self.bl.materialsDict.get(self._material)
+        else:
+            mat = self._material
+        print(self.name, type(mat), "None" if mat is None else mat.name)
+        return mat
+
+    @material.setter
+    def material(self, material):
+        self._material = material
 
     @property
     def limPhysX(self):
@@ -2429,12 +2459,15 @@ class DCM(OE):
     def bragg(self, bragg):
         bragg = raycing.auto_units_angle(bragg)
         if isinstance(bragg, (raycing.basestring, list, tuple)):
-            self._bragg = copy.copy(bragg)
+            self._bragg = copy.deepcopy(bragg)
             self._braggVal = None
-            if hasattr(self, 'material') and self.material is not None:
-                if hasattr(self.material, 'get_Bragg_angle'):
-                    self._braggVal = self.material.get_Bragg_angle(bragg[0]) - self.braggOffset
-            self._braggInit = copy.copy(bragg)  # For glow auto-recognition
+#            if hasattr(self, 'material') and self.material is not None:
+#                print("Setting auto-bragg. Material:", self.material.name)
+#                if hasattr(self.material, 'get_Bragg_angle'):
+#                    print("Calculating new Bragg value for", bragg, type(bragg))
+#                    self._braggVal = self.material.get_Bragg_angle(bragg[0]) - self.braggOffset
+#                    print(self._braggVal)
+#            self._braggInit = copy.copy(bragg)  # For glow auto-recognition
         else:
             self._braggVal = raycing.auto_units_angle(bragg)
 
@@ -2481,6 +2514,19 @@ class DCM(OE):
     def cryst2finePitch(self, cryst2finePitch):
         self._cryst2finePitch = raycing.auto_units_angle(cryst2finePitch)
 #        self.update_orientation_quaternion()
+
+    @property
+    def material2(self):
+        if raycing.is_valid_uuid(self._material2) and self.bl is not None:
+            mat = self.bl.materialsDict.get(self._material2)
+        else:
+            mat = self._material2
+            print(self.name, "2:", type(mat), "None" if mat is None else mat.name)
+        return mat
+
+    @material2.setter
+    def material2(self, material2):
+        self._material2 = material2
 
     @property
     def limPhysX2(self):

@@ -113,7 +113,7 @@ class RectangularAperture(object):
                 str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
@@ -168,10 +168,21 @@ class RectangularAperture(object):
 
     @center.setter
     def center(self, center):
+        if isinstance(center, str):
+            center = [x.strip().lower() for x in center.strip('[]').split(",")]
+            tmp = []
+            for value in center:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+                tmp.append(value)
+            center = tmp
+
         if any([x == 'auto' for x in center]):
             self._center = copy.deepcopy(center)
             self._centerVal = None
-            self._centerInit = copy.deepcopy(center)
+#            self._centerInit = copy.deepcopy(center)
         else:
             self._centerVal = raycing.Center(center)
 
@@ -630,10 +641,21 @@ class RoundAperture(object):
 
     @center.setter
     def center(self, center):
+        if isinstance(center, str):
+            center = [x.strip().lower() for x in center.strip('[]').split(",")]
+            tmp = []
+            for value in center:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+                tmp.append(value)
+            center = tmp
+
         if any([x == 'auto' for x in center]):
-            self._center = copy.copy(center)
+            self._center = copy.deepcopy(center)
             self._centerVal = None
-            self._centerInit = copy.copy(center)
+#            self._centerInit = copy.deepcopy(center)
         else:
             self._centerVal = raycing.Center(center)
 
@@ -1049,10 +1071,21 @@ class PolygonalAperture(object):
 
     @center.setter
     def center(self, center):
+        if isinstance(center, str):
+            center = [x.strip().lower() for x in center.strip('[]').split(",")]
+            tmp = []
+            for value in center:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+                tmp.append(value)
+            center = tmp
+
         if any([x == 'auto' for x in center]):
-            self._center = copy.copy(center)
+            self._center = copy.deepcopy(center)
             self._centerVal = None
-            self._centerInit = copy.copy(center)
+#            self._centerInit = copy.deepcopy(center)
         else:
             self._centerVal = raycing.Center(center)
 
