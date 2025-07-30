@@ -993,10 +993,8 @@ def append_to_flow_decorator(func):
                     ret_dict = {'beamGlobal' if toGlobal else
                                 'beamLocal': result}
             if ret_dict:
-                if 'beamGlobal' in ret_dict:
-                    ret_dict['beamGlobal'].get_beam_vector()
-                    
-                
+#                if 'beamGlobal' in ret_dict:
+#                    ret_dict['beamGlobal'].get_beam_vector()
                 if 'beam' in kwargs:
                     kwargs['beam'] = beamId
                 self.bl.flowU[self.uuid] = {methStr: kwargs}
@@ -2421,14 +2419,16 @@ class BeamLine(object):
 
             try:
                 oeObject = getattr(oeModule, oeClass)(**initKWArgs)
+                initStatus = 0
             except:  # TODO: Needs testing
                 print(oeClass, "Init problem")
-                raise
+                initStatus = 1
+#                raise
 
         self.oenamesToUUIDs[oeParams['name']] = oeParams['uuid']
         self.update_flow_from_json(oeParams['uuid'], elProps)
 
-        return oeObject
+        return initStatus
 
     def update_flow_from_json(self, oeid, methDict):
 
@@ -2503,15 +2503,23 @@ class BeamLine(object):
         else:
             initKWArgs['name'] = matName
 
+        matObject = None
         try:
             matObject = getattr(matModule, matClass)(**initKWArgs)
-            # TODO: should we move it into the material init?
-            self.matnamesToUUIDs[matObject.name] = matObject.uuid
-            self.materialsDict[matObject.uuid] = matObject
-        except:  # TODO: Needs testing
-            print(matClass, "Init problem")
+            initStatus = 0
+            print("Initalized", matObject, initKWArgs)
+        except Exception as e:
+            matObject = getattr(matModule, "EmptyMaterial")()
+            matObject.uuid = initKWArgs.get('uuid')
+            matObject.name = initKWArgs.get('name')
+            initStatus = 1
+            print(matClass, "Init problem. Falling back to EmptyMaterial")
+            print(e)
             raise
-#        return matObject
+
+        self.matnamesToUUIDs[matObject.name] = matObject.uuid
+        self.materialsDict[matObject.uuid] = matObject
+        return initStatus
 
     def populate_materials_dict_from_json(self, dictIn):
         for matName, matProps in dictIn.items():
@@ -2519,7 +2527,7 @@ class BeamLine(object):
             for retries in range(5):
                 try:
                     time.sleep(delay)
-                    self.init_material_from_json(
+                    _ = self.init_material_from_json(
                         matName, matProps)
 #                    self.materialsDict[materialObj.uuid] = materialObj
                     break

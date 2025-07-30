@@ -478,11 +478,11 @@ class XrtQook(qt.QWidget):
                                     pdfsmenu = pdflmenu.addMenu(ssec)
                                     for sname in snames:
                                         self._addAction(
-                                                mlib, sname, self.addMaterial,
+                                                mlib, sname, self.addElement,
                                                 pdfsmenu)
                                 else:
                                     self._addAction(
-                                            mlib, ssec, self.addMaterial,
+                                            mlib, ssec, self.addElement,
                                             pdflmenu)
 
                 else:  # only with __all__
@@ -1532,6 +1532,7 @@ class XrtQook(qt.QWidget):
                                                       elementName,
                                                       self.objToInstance(obj),
                                                       source=copyFrom)
+        elementItem.model().blockSignals(True)
         elementClassItem.setFlags(self.objectFlag)
         if isRoot:
             self.rootBLItem = elementItem
@@ -1541,14 +1542,6 @@ class XrtQook(qt.QWidget):
                 qt.ItemIsSelectable | qt.ItemIsDropEnabled)
 
         flags |= qt.ItemIsDropEnabled if isRoot else qt.ItemIsDragEnabled
-
-#            self.rootBLItem.setFlags(qt.ItemFlags(
-#                qt.ItemIsEnabled | qt.ItemIsEditable |
-#                qt.ItemIsSelectable | qt.ItemIsDropEnabled))
-#        else:
-#            (qt.ItemFlags(
-#                qt.ItemIsEnabled | qt.ItemIsEditable |
-#                qt.ItemIsSelectable | qt.ItemIsDragEnabled))
 
         elementItem.setFlags(flags)
 
@@ -1571,10 +1564,11 @@ class XrtQook(qt.QWidget):
             if propsUpd is not None:
                 propsDict.update(propsUpd)
 
-
         elementItem.setDragEnabled(True)
         elprops = self.addProp(elementItem, 'properties')
         self.addObject(tree, elementItem, obj)
+
+        propsDict['name'] = elementName
 
         for arg, argVal in propsDict.items():
             if arg == 'uuid':
@@ -1593,7 +1587,13 @@ class XrtQook(qt.QWidget):
         tree.expand(rootItem.index())
         self.capitalize(tree, elementItem)
         self.blUpdateLatchOpen = True
-        self.updateBeamline(elementItem, newElement=obj)
+        elementItem.model().blockSignals(False)
+
+        if not isinstance(copyFrom, dict):  # Not import from file
+            if tree is self.tree:
+                self.updateBeamline(elementItem, newElement=obj)
+            else:
+                self.updateBeamlineMaterials(elementItem, newElement=obj)
 
 #        if not self.experimentalMode:
 
@@ -1684,13 +1684,18 @@ class XrtQook(qt.QWidget):
     def beamLineItemChanged(self, item):
         self.colorizeChangedParam(item)
         if self.blUpdateLatchOpen:
-            if item.model() == self.beamLineModel:
+            if item.model() is self.beamLineModel:
                 self.updateBeamline(item)
-            elif item.model() == self.materialsModel:
+            elif item.model() is self.materialsModel:
+#                if item.index().parent().isValid():
+#                    matItem = item.parent().parent()
+#                else:
+#                    matItem = item
                 self.updateBeamlineMaterials(item)
 
     def colorizeChangedParam(self, item):
         """ """
+#        print("CCP", item.column() == 0, item.isEnabled())
         parent = item.parent()
         if parent is not None and\
                 item.column() == 1 and\
@@ -1741,7 +1746,7 @@ class XrtQook(qt.QWidget):
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
             item.model().blockSignals(False)
-        elif item.column() == 0 and item.isEnabled():  # TODO: Move to method
+        elif item.column() == 0 and item.isEnabled():  # TODO: Move to method. Rename only
             for i in range(item.rowCount()):
                 child0 = item.child(i, 0)
                 if str(child0.text()) == 'properties':
@@ -1750,13 +1755,11 @@ class XrtQook(qt.QWidget):
                     item.setText(pyname)
                     buuid = str(item.data(qt.UserRole))
                     item.model().blockSignals(False)
-                    for j in range(child0.rowCount()):
-                        if str(child0.child(j, 0).text()) == 'name':
-                            child0.child(j, 1).setText(pyname)
 
                     if item.model() is self.materialsModel:
-                        mat = self.beamLine.materialsDict[buuid]
+                        mat = self.beamLine.materialsDict.get(buuid)
                         oldname = mat.name
+#                        print(pyname, oldname)
                         self.iterateRename(self.rootMatItem, oldname, pyname,
                                            ['tlay', 'blay', 'coat', 'substrate'])
                         self.iterateRename(self.rootBLItem, oldname, pyname,
@@ -1774,6 +1777,12 @@ class XrtQook(qt.QWidget):
                                                    bname, ['beam'])
                                 self.iterateRename(self.rootPlotItem, oldname,
                                                    bname, ['beam'])
+
+                    for j in range(child0.rowCount()):
+                        if str(child0.child(j, 0).text()) == 'name':
+                            child0.child(j, 1).setText(pyname)
+                            break
+
                     break
 
 #    def colorizeTabText(self, item):
@@ -2017,33 +2026,36 @@ class XrtQook(qt.QWidget):
 
         return sortDescr()
 
-    def addMaterial(self, name, obj, copyFrom=None):
-        for i in range(99):
-            matName = self.classNameToStr(name) + '{:02d}'.format(i+1)
-            dupl = False
-            for ibm in range(self.rootMatItem.rowCount()):
-                if str(self.rootMatItem.child(ibm, 0).text()) == str(matName):
-                    dupl = True
-            if not dupl:
-                break
-        self.blUpdateLatchOpen = False
-        matItem, matClass = self.addParam(self.rootMatItem,
-                                          matName,
-                                          self.objToInstance(obj))
-        matClass.setFlags(self.objectFlag)
-        matItem.setFlags(self.valueFlag)
-        matProps = self.addProp(matItem, 'properties')
-        self.addObject(self.matTree, matItem, obj)
-
-        for arg, argVal in self.getParams(obj):
-            self.addParam(matProps, arg, argVal)
-        self.showDoc(matItem.index())
-        self.addCombo(self.matTree, matItem)
-        self.capitalize(self.matTree, matItem)
-        self.blUpdateLatchOpen = True
-        self.updateBeamlineMaterials(matItem, newMat=True)
-        self.isEmpty = False
-        self.tabs.setCurrentWidget(self.matTree)
+#    def addMaterial(self, name, obj, copyFrom=None):
+#        print("Add material", name)
+#        for i in range(99):
+#            matName = self.classNameToStr(name) + '{:02d}'.format(i+1)
+#            dupl = False
+#            for ibm in range(self.rootMatItem.rowCount()):
+#                if str(self.rootMatItem.child(ibm, 0).text()) == str(matName):
+#                    dupl = True
+#            if not dupl:
+#                break
+#        self.blUpdateLatchOpen = False
+#        self.materialsModel().blockSignals(True)
+#        matItem, matClass = self.addParam(self.rootMatItem,
+#                                          matName,
+#                                          self.objToInstance(obj))
+#        matClass.setFlags(self.objectFlag)
+#        matItem.setFlags(self.valueFlag)
+#        matProps = self.addProp(matItem, 'properties')
+#        self.addObject(self.matTree, matItem, obj)
+#
+#        for arg, argVal in self.getParams(obj):
+#            self.addParam(matProps, arg, argVal)
+#        self.showDoc(matItem.index())
+#        self.addCombo(self.matTree, matItem)
+#        self.capitalize(self.matTree, matItem)
+#        self.materialsModel().blockSignals(False)
+#        self.blUpdateLatchOpen = True
+#        self.updateBeamlineMaterials(matItem, newMat=True)
+#        self.isEmpty = False
+#        self.tabs.setCurrentWidget(self.matTree)
 
     def moveItem(self, mvDir, view, item):
         oldRowNumber = item.index().row()
@@ -3162,9 +3174,9 @@ class XrtQook(qt.QWidget):
                 if isinstance(mNames, (tuple, list)):
                     smenu = matMenu.addMenu(sec)
                     for mName in mNames:
-                        self._addAction(rmats, mName, self.addMaterial, smenu)
+                        self._addAction(rmats, mName, self.addElement, smenu)
                 else:  # as single entry itself
-                    self._addAction(rmats, sec, self.addMaterial, matMenu)
+                    self._addAction(rmats, sec, self.addElement, matMenu)
             pdmmenu = matMenu.addMenu(self.tr("Predefined"))
             for mlibname, mlib in zip(['Elemental', 'Compounds', 'Crystals'],
                                       [rmatsel, rmatsco, rmatscr]):
@@ -3173,13 +3185,13 @@ class XrtQook(qt.QWidget):
                     if isinstance(snames, (tuple, list)):
                         pdfsmenu = pdflmenu.addMenu(ssec)
                         for sname in snames:
-                            self._addAction(mlib, sname, self.addMaterial,
+                            self._addAction(mlib, sname, self.addElement,
                                             pdfsmenu)
                     else:
-                        self._addAction(mlib, ssec, self.addMaterial, pdflmenu)
+                        self._addAction(mlib, ssec, self.addElement, pdflmenu)
         else:  # only with __all__
             for mName in rmats.__all__:
-                self._addAction(rmats, mName, self.addMaterial, matMenu)
+                self._addAction(rmats, mName, self.addElement, matMenu)
 
         if level == 0 and selectedItem.text() != "None":
             menu.addSeparator()
@@ -3243,6 +3255,27 @@ class XrtQook(qt.QWidget):
                 return str(itemObject.child(iel, 1).text())
         return None
 
+    def nameToFlowPos(self, elementNameStr):
+        retVal = 0
+        try:
+            for isegment, segment in enumerate(self.beamLine.flow):
+                if segment[0] == elementNameStr:
+                    retVal = isegment
+                    break
+        except:  # analysis:ignore
+            if _DEBUG_:
+                raise
+            else:
+                pass
+        return retVal
+
+    def nameToBLPos(self, eluuid):
+        for iel in range(self.rootBLItem.rowCount()):
+            if str(self.rootBLItem.child(iel, 0).data(qt.UserRole)) == str(eluuid):
+                return '{:03d}'.format(iel)
+        else:
+            return '000'
+
     def updateBeamModel(self):
         """This function cleans the beam model. It will do nothing if
         move/delete OE procedures perform correctly."""
@@ -3294,159 +3327,59 @@ class XrtQook(qt.QWidget):
                         self.beamLine.beamsDict[str(item.text())] = value
                         break
 
-    def updateBeamlineMaterials(self, item, newMat=False):
-        print(item, newMat)
-#        def createParamDict(parentItem, elementString):
-#            kwargs = dict()
-#            for iep, arg_def in zip(range(parentItem.rowCount()), list(zip(
-#                    *self.getParams(elementString)))[1]):
-#                paraname = str(parentItem.child(iep, 0).text())
-#                paravalue = str(parentItem.child(iep, 1).text())
-#                if paravalue != str(arg_def) or\
-#                        paravalue == 'bl':
-#                    if paraname.lower() in ['tlayer', 'blayer', 'coating',
-#                                            'substrate']:
-#                        paravalue =\
-#                            self.beamLine.materialsDict[paravalue]
-#                    else:
-#                        paravalue = self.parametrize(paravalue)
-#                    kwargs[paraname] = paravalue
-#            return kwargs
-#
-#        if item is None:
-#            self.beamLine.materialsDict = OrderedDict({'None': None})
-#            for ie in range(self.rootMatItem.rowCount()):
-#                matItem = self.rootMatItem.child(ie, 0)
-#                matName = str(matItem.text())
-#                if matName != "None":
-#                    matClassStr = self.getClassName(matItem)
-#                    for ieph in range(matItem.rowCount()):
-#                        if matItem.child(ieph, 0).text() == 'properties':
-#                            kwArgs = createParamDict(
-#                                matItem.child(ieph, 0), matClassStr)
-#                            break
-#                    try:
-#                        self.beamLine.materialsDict[matName] =\
-#                            eval(matClassStr)(**kwArgs)
-#                        self.progressBar.setFormat(
-#                            "Class {} successfully initialized.".format(
-#                                matName))
-#                        print("Class", matName, "successfully initialized.")
-#                    except:  # analysis:ignore
-#                        if _DEBUG_:
-#                            raise
-#                        else:
-#                            self.beamLine.materialsDict[matName] = None
-#                            self.progressBar.setFormat(
-#                                "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
-#                                    matName))
-#                            print("Incorrect parameters. Class", matName,
-#                                  "not initialized.")
-#        else:
-#            if item.index().column() == 0 and not newMat:  # Rename material
-#                matValues = list(self.beamLine.materialsDict.values())
-#                matKeys = list(self.beamLine.materialsDict.keys())
-#                blMats = OrderedDict({'None': None})
-#                counter = 0
-#                for ie in range(self.rootMatItem.rowCount()):
-#                    matItemStr = str(self.rootMatItem.child(
-#                        ie, 0).text())
-#                    if matItemStr != 'None':
-#                        blMats[matItemStr] = matValues[counter]
-#                        if matItemStr != matKeys[counter]:
-#                            print("Material", matKeys[counter], "renamed to",
-#                                  matItemStr)
-#                    counter += 1
-#                self.beamLine.materialsDict = blMats
-#            else:  # New material or property changed, init one material
-#                if newMat:
-#                    matItem = item
-#                    for ie in range(item.rowCount()):
-#                        if item.child(ie, 0).text() == 'properties':
-#                            propItem = item.child(ie, 0)
-#                            break
-#                else:
-#                    matItem = item.parent().parent()
-#                    propItem = item.parent()
-#                matClassStr = self.getClassName(matItem)
-#                kwArgs = createParamDict(propItem, matClassStr)
-#                matName = str(matItem.text())
-#                try:
-#                    if newMat:
-#                        self.beamLine.materialsDict[matName] = eval(
-#                            matClassStr)(**kwArgs)
-#                    elif self.beamLine.materialsDict[matName] is None:
-#                        self.beamLine.materialsDict[matName] = eval(
-#                            matClassStr)(**kwArgs)
-#                    else:
-#                        self.beamLine.materialsDict[matName].__init__(**kwArgs)
-#                    self.progressBar.setFormat(
-#                        "Class {} successfully initialized.".format(matName))
-#                    print("Class", matName, "successfully initialized.")
-#                except:  # analysis:ignore
-#                    self.beamLine.materialsDict[matName] = None
-#                    self.progressBar.setFormat(
-#                        "Incorrect parameters. Class {} not initialized.".format(  # analysis:ignore
-#                            matName))
-#                    print("Incorrect parameters. Class", matName,
-#                          "not initialized.")
-#                startFrom = None
-#                if matName is not None:
-#                    for iel in range(self.rootBLItem.rowCount()):
-#                        eItem = self.rootBLItem.child(iel, 0)
-#                        elNameStr = str(eItem.text())
-#                        for ich1 in range(eItem.rowCount()):
-#                            if str(eItem.child(ich1, 0).text()) ==\
-#                                    'properties':
-#                                pItem = eItem.child(ich1, 0)
-#                                for ich2 in range(pItem.rowCount()):
-#                                    if str(pItem.child(ich2, 1).text()) ==\
-#                                            matName:
-#                                        startFrom =\
-#                                            self.nameToFlowPos(
-#                                                elNameStr)
-#                                        break
-#                                else:
-#                                    continue
-#                                break
-#                        else:
-#                            continue
-#                        break
-#                    if self.isGlowAutoUpdate:
-#                        if startFrom is not None:
-#                            self.blPropagateFlow(startFrom)
+    def updateBeamlineMaterials(self, item=None, newElement=None):
 
-    def nameToFlowPos(self, elementNameStr):
-        retVal = 0
-        try:
-            for isegment, segment in enumerate(self.beamLine.flow):
-                if segment[0] == elementNameStr:
-                    retVal = isegment
-                    break
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                pass
-        return retVal
+        kwargs = {}
+        if item is None or (item.column() == 0 and newElement is None):
+            return
 
-    def nameToBLPos(self, eluuid):
-#        print(eluuid)
-        for iel in range(self.rootBLItem.rowCount()):
-#            if str(self.rootBLItem.child(iel, 0).text()) == elname:
-            if str(self.rootBLItem.child(iel, 0).data(qt.UserRole)) == str(eluuid):
-#                print('{:03d}'.format(iel))
-                return '{:03d}'.format(iel)
+        if item.column() == 1:
+            matItem = item.parent().parent()
         else:
-            return '000'
+            matItem = item
+
+        objStr = None
+        matId = str(matItem.data(qt.UserRole))
+        print(item.column(), item.text(),  matId)
+
+        if item.column() == 1 and item.text() == matItem.text():  # renaming existing
+            self.beamLine.materialsDict[matId].name = item.text()
+            return
+            
+        
+        for itop in range(matItem.rowCount()):
+            chitem = matItem.child(itop, 0)
+            if chitem.text() in ['properties']:
+                for iprop in range(chitem.rowCount()):
+                    argName = chitem.child(iprop, 0).text()
+                    argValue = raycing.parametrize(
+                            chitem.child(iprop, 1).text())
+                    kwargs[str(argName)] = argValue
+            elif chitem.text() == '_object':
+                objStr = str(matItem.child(itop, 1).text())
+        kwargs['uuid'] = matId
+        outDict = {'properties': kwargs, '_object': objStr}
+        initStatus = 0
+        try:
+            initStatus = self.beamLine.init_material_from_json(matId, outDict)
+        except:
+            raise
+        
+        self.paintStatus(matItem, initStatus)
+
+    def paintStatus(self, item, status):
+        if status:
+            color = qt.QColor(255, 200, 200)  # pale red
+        else:
+            color = qt.QColor(200, 255, 200)  # pale green
+        item.setBackground(qt.QBrush(color))
+            
 
     def updateBeamline(self, item=None, newElement=None, newOrder=False):
         def beamToUuid(beamName):
             for ib in range(self.beamModel.rowCount()):
                 if self.beamModel.item(ib, 0).text() == beamName:
                     return self.beamModel.item(ib, 2).text()
-        print(item, newElement, newOrder)
-        # TODO: do we need a better instruction as input arg?
 
         oeid = None
         argName = 'None'
@@ -3455,10 +3388,6 @@ class XrtQook(qt.QWidget):
         kwargs = {}
         outDict = {}
 
-#        if item is None:
-#            _ = self.beamLine.export_to_json()  # TODO: new BL only?
-#
-#        else:
         if item is not None:
             iindex = item.index()
             column = iindex.column()
@@ -3469,11 +3398,7 @@ class XrtQook(qt.QWidget):
                 print("No parent")
                 return
             else:
-                print(str(parent.text()))
-#            print(row, column)
-#            print(item.text())
-
-
+                print(str(parent.text()))  # TODO: print
 
             if str(parent.text()) in ['properties']:
                 oeItem = parent.parent()
@@ -3552,7 +3477,8 @@ class XrtQook(qt.QWidget):
                             continue
                     kwargs['uuid'] = oeid
                     outDict = {'properties': kwargs, '_object': newElement}
-                    self.beamLine.init_oe_from_json(outDict)
+                    initStatus = self.beamLine.init_oe_from_json(outDict)
+                    self.paintStatus(item, initStatus)
 
             if self.blViewer is None or not outDict:
                 return
