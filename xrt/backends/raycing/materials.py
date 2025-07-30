@@ -693,6 +693,8 @@ class EmptyMaterial(object):
     def __init__(self, kind='grating'):
         self.kind = kind
         self.geom = ''
+        self.name = ''
+        self.uuid = ''
 
 
 class Multilayer(object):

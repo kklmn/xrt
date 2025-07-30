@@ -137,16 +137,17 @@ if not starImport:
         myQtGUI.QDialog, myQtGUI.QOpenGLWidget, myQtGUI.QToolTip,
         myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
-     QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture, 
-     QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D, 
+     QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture,
+     QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D,
      QVector2D, QMatrix3x3,
-     QQuaternion, QOpenGLVertexArrayObject, QOpenGLBuffer) = (
+     QQuaternion, QOpenGLVertexArrayObject, QOpenGLBuffer, QBrush, QColor) = (
         QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
         QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
-        QtGui.QIntValidator, QtGui.QDrag, QtGui.QImage, QtGui.QOpenGLTexture, 
+        QtGui.QIntValidator, QtGui.QDrag, QtGui.QImage, QtGui.QOpenGLTexture,
         QtGui.QMatrix4x4, QtGui.QVector4D, QtGui.QOpenGLShaderProgram,
         QtGui.QOpenGLShader, QtGui.QVector3D, QtGui.QVector2D, QtGui.QMatrix3x3,
-        QtGui.QQuaternion, QtGui.QOpenGLVertexArrayObject, QtGui.QOpenGLBuffer)
+        QtGui.QQuaternion, QtGui.QOpenGLVertexArrayObject, QtGui.QOpenGLBuffer,
+        QtGui.QBrush, QtGui.QColor)
 
 
 class mySlider(QSlider):
@@ -217,7 +218,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             return combo
         elif argName in ['bl', 'beamline']:
 #            combo = QComboBox(parent)
-            combo.setEditable(True) 
+            combo.setEditable(True)
             combo.setModel(self.mainWidget.beamLineModel)
             return combo
         elif argName.startswith('beam'):
@@ -228,17 +229,17 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 fpModel.setSourceModel(self.mainWidget.beamModel)
             elif parentIndexName == 'parameters':
                 fpModel = MultiColumnFilterProxy({1: "Global"})
-                fpModel.setSourceModel(self.mainWidget.beamModel)                
+                fpModel.setSourceModel(self.mainWidget.beamModel)
             else:
                 fpModel = self.mainWidget.beamModel
-            
+
 #            combo = QComboBox(parent)
             combo.setModel(fpModel)
             return combo
         elif argName.startswith('wave'):
             fpModel = MultiColumnFilterProxy({1: "Local"})
-            fpModel.setSourceModel(self.mainWidget.beamModel)                
-            
+            fpModel.setSourceModel(self.mainWidget.beamModel)
+
 #            combo = QComboBox(parent)
             combo.setModel(fpModel)
             return combo
@@ -325,7 +326,7 @@ class ComboBoxFilterProxyModel(QSortFilterProxyModel):
             return False
         return True
 
-    
+
 def print_model(model, label="Model"):
     print(f"--- {label} ---")
     rows = model.rowCount()
