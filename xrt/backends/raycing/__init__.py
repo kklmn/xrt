@@ -2515,7 +2515,7 @@ class BeamLine(object):
             initStatus = 1
             print(matClass, "Init problem. Falling back to EmptyMaterial")
             print(e)
-            raise
+#            raise
 
         self.matnamesToUUIDs[matObject.name] = matObject.uuid
         self.materialsDict[matObject.uuid] = matObject

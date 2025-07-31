@@ -2434,6 +2434,9 @@ class CrystalSi(CrystalDiamond):
         self.a0 = 5.430710
         self.dl_l0 = self.dl_l(273.15 + 19.9)
         self.sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
+        if 'a' in kwargs and kwargs['a'] is None:
+            kwargs.pop('a')
+            
         kwargs['d'] = self.get_a() / self.sqrthkl2
         kwargs['elements'] = 'Si'
         kwargs['hkl'] = self.hkl

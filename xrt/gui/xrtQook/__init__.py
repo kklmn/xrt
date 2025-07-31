@@ -3340,7 +3340,8 @@ class XrtQook(qt.QWidget):
 
         objStr = None
         matId = str(matItem.data(qt.UserRole))
-        print(item.column(), item.text(),  matId)
+        paintItem = self.rootMatItem.child(matItem.row(), 1)
+#        print(item.column(), item.text(),  item.parent())
 
         if item.column() == 1 and item.text() == matItem.text():  # renaming existing
             self.beamLine.materialsDict[matId].name = item.text()
@@ -3365,15 +3366,18 @@ class XrtQook(qt.QWidget):
         except:
             raise
         
-        self.paintStatus(matItem, initStatus)
+        self.paintStatus(paintItem, initStatus)
 
     def paintStatus(self, item, status):
+        updateStatus = item.model().signalsBlocked()
+        if not updateStatus:
+            item.model().blockSignals(True)
         if status:
             color = qt.QColor(255, 200, 200)  # pale red
         else:
             color = qt.QColor(200, 255, 200)  # pale green
         item.setBackground(qt.QBrush(color))
-            
+        item.model().blockSignals(updateStatus)
 
     def updateBeamline(self, item=None, newElement=None, newOrder=False):
         def beamToUuid(beamName):
@@ -3478,7 +3482,9 @@ class XrtQook(qt.QWidget):
                     kwargs['uuid'] = oeid
                     outDict = {'properties': kwargs, '_object': newElement}
                     initStatus = self.beamLine.init_oe_from_json(outDict)
-                    self.paintStatus(item, initStatus)
+
+                    paintItem = item.parent().child(item.row(), 1)
+                    self.paintStatus(paintItem, initStatus)
 
             if self.blViewer is None or not outDict:
                 return
