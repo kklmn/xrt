@@ -106,6 +106,8 @@ class Screen(object):
         self.histShape = kwargs.pop('histShape', [256, 256])
 #        print(self.name, self.limPhysX, self.limPhysY)
 
+    center = raycing.center_property()
+
     @property
     def limPhysX(self):
         return self._limPhysX
@@ -149,37 +151,6 @@ class Screen(object):
             self._histShape = raycing.Image2D([256, 256])
         else:
             self._histShape = raycing.Image2D(histShape)
-
-    @property
-    def center(self):
-        if self._centerVal is None:
-#            if self.bl is not None and self.uuid in self.bl.flowU:
-#                centerRet = self.bl.auto_align_center(self)
-#            else:
-            centerRet = self._center
-        else:
-            centerRet = self._centerVal
-        return centerRet
-#        return self._center if self._centerVal is None else self._centerVal
-
-    @center.setter
-    def center(self, center):
-
-        if isinstance(center, str):
-            center = [x.strip().lower() for x in center.strip('[]').split(",")]
-            tmp = []
-            for value in center:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-                tmp.append(value)
-
-        if any([x == 'auto' for x in center]):
-            self._centerVal = None
-            self._center = copy.deepcopy(center)
-        else:
-            self._centerVal = raycing.Center(center)
 
     @property
     def x(self):

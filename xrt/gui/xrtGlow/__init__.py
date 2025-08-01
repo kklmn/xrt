@@ -2505,7 +2505,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             # updating local beamline tree
             setattr(oe, arg, argValue)
             skipUpdate = False
-            if (arg in ['pitch', 'bragg', 'center'] and 'auto' in argValue) or\
+            if (arg in ['pitch', 'bragg', 'center'] and 'auto' in str(argValue)) or\
                 (arg in ['bragg', 'pitch'] and isinstance(argValue, list)):
                     skipUpdate = True
 

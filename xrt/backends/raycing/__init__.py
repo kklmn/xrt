@@ -289,7 +289,10 @@ class NamedArrayBase(np.ndarray):
         else:
             values = np.zeros(num_elements, dtype=dtype)
 
-        obj = np.asarray(values, dtype=dtype).view(cls)
+        try:
+            obj = np.asarray(values, dtype=dtype).view(cls)
+        except ValueError:
+            obj = values
         return obj
 
     def __array_finalize__(self, obj):
@@ -353,6 +356,29 @@ Center = NamedArrayFactory(['x', 'y', 'z'])
 Limits = NamedArrayFactory(['lmin', 'lmax'])
 Opening = NamedArrayFactory(['left', 'right', 'bottom', 'top'])
 Image2D = NamedArrayFactory(['width', 'height'], default_dtype=int)
+
+
+def center_property():
+    def getter(self):
+        return self._center if self._centerVal is None else self._centerVal
+
+    def setter(self, center):
+        if isinstance(center, str):
+            center = [x.strip().lower() for x in center.strip('[]').split(",")]
+            tmp = []
+            for value in center:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+                tmp.append(value)
+
+        if any(['auto' in str(x) for x in center]):
+            self._centerVal = None
+            self._center = copy.deepcopy(center)
+        else:
+            self._centerVal = Center(center)
+    return property(getter, setter)
 
 def colorPrint(s, fcolor=None, bcolor=None):
     style = getattr(colorama.Fore, fcolor) if fcolor in colors else \
@@ -1060,6 +1086,18 @@ def quat_vec_rotate(vec, q):
 def get_init_val(value):
     if str(value) == 'round':
         return str(value)
+    
+    if "," in str(value):  # mixed list
+        paravalue = str(value).strip('[]() ')
+        listvalue = []
+        for c in paravalue.split(','):
+            try:
+                v = eval(str(c).strip(), safe_globals)
+            except (NameError, SyntaxError):
+                v = str(c).strip()
+            listvalue.append(v)
+        return listvalue
+
     try:
         return eval(str(value), safe_globals)
     except (NameError, SyntaxError):  # Intentionally string
@@ -1989,7 +2027,7 @@ class BeamLine(object):
         alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
 
         if hasattr(oe, '_center'):
-            autoCenter = [x == 'auto' for x in oe._center]
+            autoCenter = ['auto' in str(x) for x in oe._center]
 
         if hasattr(oe, '_pitch'):
             try:

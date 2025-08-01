@@ -162,29 +162,7 @@ class RectangularAperture(object):
         self._set_orientation()
 #        self.update_orientation_quaternion()
 
-    @property
-    def center(self):
-        return self._center if self._centerVal is None else self._centerVal
-
-    @center.setter
-    def center(self, center):
-        if isinstance(center, str):
-            center = [x.strip().lower() for x in center.strip('[]').split(",")]
-            tmp = []
-            for value in center:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-                tmp.append(value)
-            center = tmp
-
-        if any([x == 'auto' for x in center]):
-            self._center = copy.deepcopy(center)
-            self._centerVal = None
-#            self._centerInit = copy.deepcopy(center)
-        else:
-            self._centerVal = raycing.Center(center)
+    center = raycing.center_property()
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
@@ -635,29 +613,7 @@ class RoundAperture(object):
         self._set_orientation()
 #        self.update_orientation_quaternion()
 
-    @property
-    def center(self):
-        return self._center if self._centerVal is None else self._centerVal
-
-    @center.setter
-    def center(self, center):
-        if isinstance(center, str):
-            center = [x.strip().lower() for x in center.strip('[]').split(",")]
-            tmp = []
-            for value in center:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-                tmp.append(value)
-            center = tmp
-
-        if any([x == 'auto' for x in center]):
-            self._center = copy.deepcopy(center)
-            self._centerVal = None
-#            self._centerInit = copy.deepcopy(center)
-        else:
-            self._centerVal = raycing.Center(center)
+    center = raycing.center_property()
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
@@ -1065,29 +1021,7 @@ class PolygonalAperture(object):
         self._set_orientation()
 #        self.update_orientation_quaternion()
 
-    @property
-    def center(self):
-        return self._center if self._centerVal is None else self._centerVal
-
-    @center.setter
-    def center(self, center):
-        if isinstance(center, str):
-            center = [x.strip().lower() for x in center.strip('[]').split(",")]
-            tmp = []
-            for value in center:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-                tmp.append(value)
-            center = tmp
-
-        if any([x == 'auto' for x in center]):
-            self._center = copy.deepcopy(center)
-            self._centerVal = None
-#            self._centerInit = copy.deepcopy(center)
-        else:
-            self._centerVal = raycing.Center(center)
+    center = raycing.center_property()
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
