@@ -346,37 +346,7 @@ class OE(object):
                     self.cl_mf = self.ucl.cl_mf
                     self.cl_is_blocking = self.ucl.cl_is_blocking
 
-    @property
-    def center(self):
-        if self._centerVal is None:
-#                centerRet = self.bl.auto_align_center(self)
-#                self._centerVal = centerRet
-#            else:
-            centerRet = self._center
-        else:
-            centerRet = self._centerVal
-        return centerRet
-#        return self._center if self._centerVal is None else self._centerVal
-
-    @center.setter
-    def center(self, center):
-#        self._center = copy.deepcopy(center)
-        if isinstance(center, str):
-            center = [x.strip().lower() for x in center.strip('[]').split(",")]
-            tmp = []
-            for value in center:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-                tmp.append(value)
-            center = tmp
-
-        if any([x == 'auto' for x in center]):
-            self._centerVal = None
-            self._center = copy.deepcopy(center)
-        else:
-            self._centerVal = raycing.Center(center)
+    center = raycing.center_property()
 
     @property
     def pitch(self):
