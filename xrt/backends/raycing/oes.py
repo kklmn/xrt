@@ -2421,7 +2421,17 @@ class Plate(DCM):
                 materials = material
             else:
                 materials = material,
-            for mat in materials:
+
+            for matSur in materials:
+                if raycing.is_valid_uuid(matSur) and self.bl is not None:
+                    mat = self.bl.materialsDict.get(matSur)
+                elif isinstance(matSur, str) and self.bl is not None and\
+                        matSur in self.bl.matnamesToUUIDs:
+                    mat = self.bl.materialsDict.get(
+                            self.bl.matnamesToUUIDs.get(matSur))
+                else:
+                    mat = matSur
+
                 if mat.kind not in "plate lens FZP":
                     try:
                         name = self.name

@@ -2420,9 +2420,21 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if record is not None:
                             record.set(val)
 
-    def update_beamline(self, oeid, kwargs, sender="gui"):
+    def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
         if '_object' in kwargs:  # from Qook
             # new element
+            if 'material' in kwargs['_object']:
+                self.beamline.init_material_from_json(oeid, kwargs)                
+                message = {"command": "modify",
+                           "object_type": "mat",
+                           "uuid": oeid,
+                           "kwargs": kwargs.copy()
+        #                        "kwargs": {arg: argValue.tolist() if isinstance(
+        #                                argValue, np.ndarray) else argValue}
+                                }
+                if hasattr(self, 'input_queue'):
+                    self.input_queue.put(message)
+
             if 'properties' in kwargs:
 
 #                kwargs['properties'].update({'uuid': oeid})
@@ -2452,7 +2464,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 methStr = kwargs['_object'].split('.')[-1]
                 self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
                 self.beamline.sort_flow()
-                print("GLOW: FlowU", self.beamline.flowU)
+#                print("GLOW: FlowU", self.beamline.flowU)
                 if self.parent is not None:
                     self.parent.updateTargets()
                 message = {"command": "flow",
@@ -2524,7 +2536,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if self.epicsPrefix is not None:
             self.epicsInterface.pv_records['AcquireStatus'].set(1)
         message = {"command": "modify",
-                   "object_type": "beamline",
+                   "object_type": "oe",
                    "uuid": oeid,
                    "kwargs": kwargs.copy()
 #                        "kwargs": {arg: argValue.tolist() if isinstance(
@@ -5474,16 +5486,19 @@ class OEMesh3D():
 
         yDim = 1
         if isScreen:
-            if self.oe.limPhysX is not None and np.sum(np.abs(self.oe.limPhysX)):
+            print(self.oe.limPhysX, self.oe.limPhysY)
+            if self.oe.limPhysX is not None and np.sum(np.abs(self.oe.limPhysX)) > 0:
                 xLimits = self.oe.limPhysX if isinstance(
                     self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
             else:
-                xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
-            if self.oe.limPhysY is not None and np.sum(np.abs(self.oe.limPhysX)):
+#                xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
+                xLimits = [-10, 10]
+            if self.oe.limPhysY is not None and np.sum(np.abs(self.oe.limPhysY))  > 0:
                 yLimits = self.oe.limPhysY if isinstance(
                     self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
             else:
-                yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
+                yLimits = [-10, 10]
+#                yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yDim = 2
         elif isAperture:
             bt = 5.  # Can be set from glow UI
@@ -5536,7 +5551,7 @@ class OEMesh3D():
 
         self.xLimits = copy.deepcopy(xLimits)
         self.yLimits = copy.deepcopy(yLimits)
-
+        print(self.xLimits, self.yLimits)
 #        if isAperture:  # TODO: Must use physical limits
 #        # if isScreen or isAperture:  # Making square screen
 #            xSize = abs(xLimits[1] - xLimits[0])

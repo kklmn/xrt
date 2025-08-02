@@ -285,7 +285,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         value = index.data()
         if isinstance(editor, QComboBox):
             idx = editor.findText(value)
-            print_model(editor.model())
+#            print_model(editor.model())
             if idx >= 0:
                 editor.setCurrentIndex(idx)
         elif isinstance(editor, QLineEdit):

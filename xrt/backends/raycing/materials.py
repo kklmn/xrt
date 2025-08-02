@@ -774,9 +774,9 @@ class Multilayer(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        bl = kwargs.get('bl')
-        if bl is not None:
-            bl.materialsDict[self.uuid] = self
+        self.bl = kwargs.get('bl')
+#        if bl is not None:
+#            bl.materialsDict[self.uuid] = self
 
         layers = np.arange(1, nPairs+1)
         if tThicknessLow:

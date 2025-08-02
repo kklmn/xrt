@@ -1219,11 +1219,13 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                      for c in str.split(
                      paravalue, ',')]
             elif paraname.startswith('material'):
-                if is_valid_uuid(paravalue):
-                    paravalue = beamLine.materialsDict[paravalue]
-                elif paravalue in beamLine.matnamesToUUIDs:
-                    paravalue = beamLine.materialsDict.get(
-                            beamLine.matnamesToUUIDs[paravalue])
+                if str(paravalue) in beamLine.matnamesToUUIDs:
+                    paravalue = beamLine.matnamesToUUIDs[paravalue]
+#                if is_valid_uuid(paravalue):
+#                    paravalue = beamLine.materialsDict[paravalue]
+#                elif paravalue in beamLine.matnamesToUUIDs:
+#                    paravalue = beamLine.materialsDict.get(
+#                            beamLine.matnamesToUUIDs[paravalue])
             elif paraname == 'bl':
                 paravalue = beamLine
             else:
@@ -1241,11 +1243,13 @@ def create_paramdict_mat(paramDictStr, defArgs, bl=None):
                 paravalue == 'bl':
             if paraname.lower() in ['tlayer', 'blayer', 'coating',
                                     'substrate']:
-                if is_valid_uuid(paravalue):
-                    paravalue = bl.materialsDict[paravalue]
-                elif paravalue in bl.matnamesToUUIDs:
-                    paravalue = bl.materialsDict.get(
-                            bl.matnamesToUUIDs[paravalue])
+                if str(paravalue) in bl.matnamesToUUIDs:
+                    paravalue = bl.matnamesToUUIDs[paravalue]
+#                if is_valid_uuid(paravalue):
+#                    paravalue = bl.materialsDict[paravalue]
+#                elif paravalue in bl.matnamesToUUIDs:
+#                    paravalue = bl.materialsDict.get(
+#                            bl.matnamesToUUIDs[paravalue])
             else:
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
@@ -1410,6 +1414,7 @@ def propagationProcess(q_in, q_out):
         elif handler.needUpdate:
             # TODO: run propagation downstream of the updated element
             started = True if handler.startEl is None else False
+
             for oeid, meth in handler.bl.flowU.items():
                 if not started:  # Skip until the modified element
                     if handler.startEl == oeid:
@@ -1417,6 +1422,7 @@ def propagationProcess(q_in, q_out):
                     else:
                         continue
                 oe = handler.bl.oesDict[oeid][0]
+
                 for func, fkwargs in meth.items():
                     getattr(oe, func)(**fkwargs)
 
@@ -1483,59 +1489,72 @@ class MessageHandler:
         self.exit = False
 
     def handle_create(self, message):
-#        uuid = message.get("uuid", None)
+
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
 
         if object_type == 'beamline':
             self.bl = BeamLine()
             self.bl.deserialize(kwargs)
-            self.flowSource = 'Qook'
-            if self.autoUpdate:
-                self.needUpdate = True
+            self.bl.flowSource = 'Qook'
         elif object_type == 'oe':
             self.bl.init_oe_from_json(kwargs)
-            if self.autoUpdate:
+        elif object_type == 'mat':
+            self.bl.init_material_from_json(kwargs)
+
+        if self.autoUpdate:
+            if object_type != 'mat':
                 self.needUpdate = True
-#            print("Deserialized beamline", self.bl.flowU)
-#        print(f"Creating {object_type} with UUID {uuid} and kwargs {kwargs}")
 
     def handle_modify(self, message):
 #        print("handle_modify", message)
-        oeuuid = message.get("uuid")
-#        print(uuid, self.bl.oesDict.keys())
-        element = self.bl.oesDict.get(oeuuid)
+        objuuid = message.get("uuid")
+        object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
-        if element is not None:
-            for key, value in kwargs.items():
-                args = key.split('.')
-                arg = args[0]
-                if len(args) > 1:
-                    field = args[-1]
-                    if field == 'energy':
-                        if arg == 'bragg':
-                            value = [float(value)]
+#        print(uuid, self.bl.oesDict.keys())
+        if object_type == 'oe': 
+            element = self.bl.oesDict.get(objuuid)
+            if element is not None:
+                for key, value in kwargs.items():
+                    args = key.split('.')
+                    arg = args[0]
+                    if len(args) > 1:
+                        field = args[-1]
+                        if field == 'energy':
+                            if arg == 'bragg':
+                                value = [float(value)]
+                            else:
+                                value = element[0].material.get_Bragg_angle(float(value))
                         else:
-                            value = element[0].material.get_Bragg_angle(float(value))
-                    else:
-                        arrayValue = getattr(element[0], arg)
-                        setattr(arrayValue, field, value)
-                        value = arrayValue
-                setattr(element[0], arg, value)
+                            arrayValue = getattr(element[0], arg)
+                            setattr(arrayValue, field, value)
+                            value = arrayValue
+                    setattr(element[0], arg, value)
+                if self.autoUpdate:
+                    self.needUpdate = True
+                    if len(kwargs) == 1 and 'name' in kwargs:
+                        self.needUpdate = False
+                if hasattr(element[0], 'propagate'):
+                    kwargs = list(self.bl.flowU[objuuid].values())[0]
+                    modifiedEl = kwargs['beam']
+                else:
+                    modifiedEl = objuuid
+                keys = list(self.bl.flowU.keys())
+                if self.startEl is None:
+                    self.startEl = modifiedEl
+                elif keys.index(modifiedEl) < keys.index(self.startEl):
+                    self.startEl = modifiedEl
+        elif object_type == 'mat':
+#            element = self.bl.materialsDict.get(objuuid)
+            # We reinstantiate the material object instead of updating. Single-
+            # property update not supported yet for materials.
+            # object will use the same uuid
+            if objuuid in self.bl.materialsDict:
+                del self.bl.materialsDict[objuuid]
+            self.bl.init_material_from_json(objuuid, kwargs)
+            self.startEl = None  # TODO: find an element that uses this mat
             if self.autoUpdate:
-                self.needUpdate = True
-                if len(kwargs) == 1 and 'name' in kwargs:
-                    self.needUpdate = False
-            if hasattr(element[0], 'propagate'):
-                kwargs = list(self.bl.flowU[oeuuid].values())[0]
-                modifiedEl = kwargs['beam']
-            else:
-                modifiedEl = oeuuid
-            keys = list(self.bl.flowU.keys())
-            if self.startEl is None:
-                self.startEl = modifiedEl
-            elif keys.index(modifiedEl) < keys.index(self.startEl):
-                self.startEl = modifiedEl
+                self.needUpdate = True            
 
     def handle_flow(self, message):
         oeuuid = message.get('uuid')
@@ -1933,6 +1952,7 @@ class BeamLine(object):
         self.beamsRevDictUsed = {}
         self.blViewer = None
         self.statusSignal = None
+        self.layoutStr = None
         if fileName:
             if str(fileName).lower().endswith("xml"):
                 self.load_from_xml(fileName)
@@ -2084,7 +2104,6 @@ class BeamLine(object):
             centerList = copy.deepcopy(oe.center)
             bStartC = np.array([inBeam.x[0], inBeam.y[0], inBeam.z[0]])
             bStartDir = np.array([inBeam.a[0], inBeam.b[0], inBeam.c[0]])
-
             fixedCoord = np.where(np.invert(np.array(autoCenter)))[0]
             autoCoord = np.where(autoCenter)[0]
             for dim in fixedCoord:
@@ -2458,8 +2477,8 @@ class BeamLine(object):
             try:
                 oeObject = getattr(oeModule, oeClass)(**initKWArgs)
                 initStatus = 0
-            except:  # TODO: Needs testing
-                print(oeClass, "Init problem")
+            except Exception as e:  # TODO: Needs testing
+                print(oeClass, "Init problem:", e)
                 initStatus = 1
 #                raise
 
@@ -2468,8 +2487,48 @@ class BeamLine(object):
 
         return initStatus
 
-    def update_flow_from_json(self, oeid, methDict):
+    def delete_oe_by_id(self, elid):
+        for oename, oeid in self.oenamesToUUIDs.items():
+            if oeid == elid:
+                del self.oenamesToUUIDs[oename]
+                break
+            
+        if elid in self.flowU:
+            del self.flowU[elid]
+            for eluuid, props in self.flowU.items():
+                for methName, methArgs in props.items():
+                    if 'beam' in methArgs and methArgs.get('beam') == elid:
+                        props['beam'] = None
+            
+        if elid in self.beamsDictU:
+            del self.beamsDictU[elid]
 
+        if elid in self.oesDict:
+            del self.oesDict[elid]
+
+    def delete_mat_by_id(self, matid):
+        for matname, tmpid in self.matnamesToUUIDs.items():
+            if tmpid == matid:
+                del self.matnamesToUUIDs[matname]
+                break
+            
+        for elid, elLine in self.oesDict.items():
+            elObj = elLine[0]
+            for prop in ['material', 'material2']:
+                if hasattr(elObj, prop) and elObj.getattr(prop) == self.materialsDict[matid]:
+                    setattr(elObj, prop, None)
+
+        for tmpid, matobj in self.materialsDict.items():
+            elObj = elLine[0]
+            for prop in ['tLayer', 'bLayer', 'coating', 'substrate']:
+                if hasattr(matobj, prop) and matobj.getattr(prop) == self.materialsDict[matid]:
+                    setattr(matobj, prop, None)
+            
+        if matid in self.materialsDict:
+            del self.materialsDict[matid]
+
+
+    def update_flow_from_json(self, oeid, methDict):
         for methStr, methArgs in methDict.items():
             if methStr in ['properties', '_object']:
                 continue
@@ -2542,10 +2601,11 @@ class BeamLine(object):
             initKWArgs['name'] = matName
 
         matObject = None
+        initKWArgs['bl'] = self
         try:
             matObject = getattr(matModule, matClass)(**initKWArgs)
             initStatus = 0
-            print("Initalized", matObject, initKWArgs)
+#            print("Initalized", matObject, initKWArgs)
         except Exception as e:
             matObject = getattr(matModule, "EmptyMaterial")()
             matObject.uuid = initKWArgs.get('uuid')
@@ -2610,10 +2670,14 @@ class BeamLine(object):
             self.flowU = data['Project']['flow']
 
     def export_to_json(self):
-        if hasattr(self, 'layoutStr'):
+        if self.layoutStr is not None:
             plotsDict = self.layoutStr['Project'].get('plots')
             runDict = self.layoutStr['Project'].get('run_ray_tracing')
             descriptionStr = self.layoutStr['Project'].get('description')
+            
+            if not isinstance(plotsDict, dict):
+                plotsDict = {}
+            
             if runDict is not None:
                 runDict['beamLine'] = self.name
         matDict = OrderedDict()
@@ -2671,7 +2735,7 @@ class BeamLine(object):
         projectDict['Materials'] = matDict
         projectDict[self.name] = beamlineDict
         projectDict['flow'] = self.flowU
-        if hasattr(self, 'layoutStr'):
+        if self.layoutStr is not None:
             if plotsDict is not None:
                 for plot, props in plotsDict.items():
                     for argName, argVal in props.items():

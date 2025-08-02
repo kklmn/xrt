@@ -363,7 +363,6 @@ class OE(object):
             self._pitchInit = copy.copy(pitch)  # For glow auto-recognition
         else:  # also after auto-calculation
             self._pitchVal = pitch
-#            self.update_orientation_quaternion()
 
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
@@ -392,7 +391,6 @@ class OE(object):
     @roll.setter
     def roll(self, roll):
         self._roll = raycing.auto_units_angle(roll)
-#        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -403,7 +401,6 @@ class OE(object):
     @yaw.setter
     def yaw(self, yaw):
         self._yaw = raycing.auto_units_angle(yaw)
-#        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -447,11 +444,14 @@ class OE(object):
 
     @property
     def material(self):
-        if raycing.is_valid_uuid(self._material) and self.bl is not None:
-            mat = self.bl.materialsDict.get(self._material)
+        if raycing.is_valid_uuid(self._material):
+            if self.bl is not None:
+                mat = self.bl.materialsDict.get(self._material)
+            else:
+                mat = None
+                print(f"Material with UUID {self._material} doesn't exist!")
         else:
             mat = self._material
-        print(self.name, type(mat), "None" if mat is None else mat.name)
         return mat
 
     @material.setter
@@ -2416,7 +2416,7 @@ class DCM(OE):
             'limPhysY2', [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE])
         self.limOptX2 = kwargs.pop('limOptX2', None)
         self.limOptY2 = kwargs.pop('limOptY2', None)
-        self.material = kwargs.get('material', None)
+#        self.material = kwargs.get('material', None)
         self.material2 = kwargs.pop('material2', None)
         self.fixedOffset = kwargs.pop('fixedOffset', None)
         return kwargs
