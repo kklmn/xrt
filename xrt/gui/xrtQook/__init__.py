@@ -246,7 +246,7 @@ class XrtQook(qt.QWidget):
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
 
-    def __init__(self):
+    def __init__(self, loadLayout=None):
         super(XrtQook, self).__init__()
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
@@ -324,6 +324,8 @@ class XrtQook(qt.QWidget):
         canvasSplitter.addWidget(self.helptab)
         self.setLayout(canvasBox)
         self.initAllTrees()
+        if loadLayout is not None:
+            self.importLayout()
 
     def check_pypi_version(self):
         try:
@@ -2342,7 +2344,9 @@ class XrtQook(qt.QWidget):
                     self.progressBar.setValue(100)
                     self.progressBar.setFormat('Loaded layout from {}'.format(
                             os.path.basename(str(self.layoutFileName))))
-
+                    
+                    if self.isGlowAutoUpdate:
+                        self.blRunGlow()
 
     def importLayout_old(self):
         if not self.isEmpty:
@@ -3365,16 +3369,10 @@ class XrtQook(qt.QWidget):
         
         self.paintStatus(paintItem, initStatus)
 
-    def paintStatus(self, item, status):
-        updateStatus = item.model().signalsBlocked()
-        if not updateStatus:
-            item.model().blockSignals(True)
-        if status:
-            color = qt.QColor(255, 200, 200)  # pale red
-        else:
-            color = qt.QColor(200, 255, 200)  # pale green
-        item.setBackground(qt.QBrush(color))
-        item.model().blockSignals(updateStatus)
+        if self.blViewer is None or not outDict:
+            return
+
+        self.blViewer.customGlWidget.update_beamline(matId, outDict)
 
     def updateBeamline(self, item=None, newElement=None, newOrder=False):
         def beamToUuid(beamName):
@@ -3488,6 +3486,16 @@ class XrtQook(qt.QWidget):
 
             self.blViewer.customGlWidget.update_beamline(oeid, outDict)
 
+    def paintStatus(self, item, status):
+        updateStatus = item.model().signalsBlocked()
+        if not updateStatus:
+            item.model().blockSignals(True)
+        if status:
+            color = qt.QColor(255, 200, 200)  # pale red
+        else:
+            color = qt.QColor(200, 255, 200)  # pale green
+        item.setBackground(qt.QBrush(color))
+        item.model().blockSignals(updateStatus)
 #            print(item.text(), row, column, parent.text())
 
 #        self.blRunGlow()
@@ -3889,15 +3897,12 @@ class XrtQook(qt.QWidget):
 #        if self.isGlowAutoUpdate:
 #            self.populateBeamline()
 
-#    def blRunGlow(self, rayPath):
     def blRunGlow(self, kwargs={}):
-#        self.rayPath = rayPath
-#        if hasattr(self.beamLine, 'layoutStr'):
-#            print(self.beamLine.layoutStr)
         if self.blViewer is None:
             try:
+#                if self.beamLine.layoutStr is None:
                 _ = self.beamLine.export_to_json()
-                print(self.beamLine.layoutStr)
+#                print(self.beamLine.layoutStr)
                 self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
                                                 **kwargs)
                 self.blViewer.setWindowTitle("xrtGlow")
@@ -3908,6 +3913,7 @@ class XrtQook(qt.QWidget):
                 raise(e)
         else:
 #            self.blViewer.updateOEsList(self.rayPath)
+#            self.blViewer.updateBeamline(self.beamLine.layoutStr)
             if self.blViewer.isHidden():
                 self.blViewer.show()
 
