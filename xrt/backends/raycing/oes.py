@@ -1972,7 +1972,7 @@ class HyperbolicMirrorParam(OE):
         reflection. In the outer case, *f1* is the farther focus, while in the
         inner case it is the closer focus. See the example
         `test_param_mirror.py`, also in 3D.
-`
+
     The *center* of this OE lies on the mirror surface and its *pitch* is Rx
     at this point.
 
