@@ -584,6 +584,8 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
 
 
 def qualify_sampling(wave, E, goodlen):
+    if len(wave.xDiffr) == 0:
+        return 0, 0
     a = wave.xDiffr / wave.rDiffr  # a and c of wave change in diffract
     c = wave.zDiffr / wave.rDiffr
     if hasattr(wave, 'amin') and hasattr(wave, 'amax'):
@@ -625,6 +627,10 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 #        goodIn = beam.state == 1
 #        self.beamInRays += goodIn.sum()
 #        self.beamInSumJ += (beam.Jss[goodIn] + beam.Jpp[goodIn]).sum()
+    if len(wave.xDiffr) == 0:
+        raycing.colorPrint("No wave samples on {0}".format(oe.name), "RED")
+        glo = rs.Beam(goodlen)
+        return glo
 
     # this would be better in prepare_wave but energy is unknown there yet
     nf, spz = qualify_sampling(wave, oeLocal.E[0], goodlen)
