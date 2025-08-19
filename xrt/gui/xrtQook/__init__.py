@@ -254,7 +254,8 @@ class XrtQook(qt.QWidget):
         self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
 
         self.prepareViewer = False
-        self.isGlowAutoUpdate = False
+        self.isGlowAutoUpdate = True
+#        self.isGlowAutoUpdate = False
         self.experimentalMode = False
         self.experimentalModeFilter = ['propagate_wave',
                                        'diffract', 'expose_wave']
@@ -327,6 +328,9 @@ class XrtQook(qt.QWidget):
         self.initAllTrees()
         if loadLayout is not None:
             self.importLayout()
+            
+        self.blRunGlow()
+        self.catchViewer()
 
     def check_pypi_version(self):
         try:
@@ -1591,11 +1595,12 @@ class XrtQook(qt.QWidget):
         self.blUpdateLatchOpen = True
         elementItem.model().blockSignals(False)
 
-        if not isinstance(copyFrom, dict):  # Not import from file
-            if tree is self.tree:
-                self.updateBeamline(elementItem, newElement=obj)
-            else:
-                self.updateBeamlineMaterials(elementItem, newElement=obj)
+#        if not isinstance(copyFrom, dict):  # Not import from file
+#       TODO: load all elements first, then run propagation
+        if tree is self.tree:
+            self.updateBeamline(elementItem, newElement=obj)
+        else:
+            self.updateBeamlineMaterials(elementItem, newElement=obj)
 
 #        if not self.experimentalMode:
 
@@ -1603,7 +1608,7 @@ class XrtQook(qt.QWidget):
             if isinstance(copyFrom, dict):
                self.autoAssignMethod(elementItem, methodProps)
             else:
-                self.autoAssignMethod(elementItem)
+               self.autoAssignMethod(elementItem)
 
         self.isEmpty = False
         self.tabs.setCurrentWidget(tree)
@@ -3012,11 +3017,10 @@ class XrtQook(qt.QWidget):
                             str(objf.__name__) not in
                             self.experimentalModeFilter or
                             self.experimentalMode):
-#                        print("fdoc:", fdoc)
+
                         outBeams = fdoc[0].replace(
                                 "Returned values: ", '').split(',')
-#                        print("outbeams:", outBeams)
-#                        print(objfNm)
+
                         self.addMethod(objfNm, elItem, outBeams, methProps)
                         break
 

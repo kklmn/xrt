@@ -51,7 +51,7 @@ import copy
 import time
 from scipy.spatial import Delaunay
 from scipy.spatial.transform import Rotation as scprot
-from collections import OrderedDict
+from collections import OrderedDict, deque
 import freetype as ft
 from matplotlib import font_manager
 #import asyncio
@@ -2205,8 +2205,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.segmentModel = modelRoot
         self.oesList = oesList
         self.beamsToElements = b2els
-        self.needMeshUpdate = None
-        self.needBeamUpdate = []
+        self.needMeshUpdate = deque()
+        self.needBeamUpdate = deque()
 
         self.beamline = raycing.BeamLine()
 
@@ -2439,12 +2439,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
 #                kwargs['properties'].update({'uuid': oeid})
                 self.beamline.init_oe_from_json(kwargs)
-                self.needMeshUpdate = oeid
+                self.needMeshUpdate.append(oeid)
                 
                 if self.parent is not None:
                     self.parent.addElementToModel(oeid)
-                
-                self.getMinMax()
+                try:
+                    self.getMinMax()
+                except:
+                    pass
                 self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
     
                 message = {"command": "create",
@@ -2527,7 +2529,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.maxLen = np.max(np.abs(
                         self.minmax[0, :] - self.minmax[1, :]))
             elif arg in shapeArgSet:
-                self.needMeshUpdate = oeid
+                self.needMeshUpdate.append(oeid)
             elif arg in {'name'}:
                 if self.parent is not None:
                     self.parent.updateNames()                
@@ -2756,9 +2758,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if oeLine is not None:
                     setattr(oeLine[0], msg['pos_attr'], msg['pos_value'])
                 self.meshDict[msg['sender_id']].update_transformation_matrix()
-                self.getMinMax()
-                self.maxLen = np.max(np.abs(
-                        self.minmax[0, :] - self.minmax[1, :]))
+                try:
+                    self.getMinMax()
+                    self.maxLen = np.max(np.abs(
+                            self.minmax[0, :] - self.minmax[1, :]))
+                except TypeError:
+                    print("Cannot find limits")
 
 #                if self.epicsPrefix is not None:
 #                    self.epicsInterface.pv_records['AcquireStatus'].set(0)
@@ -3313,7 +3318,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beamDict = self.beamline.beamsDictU.get(oeid)
             if beamDict is not None:
                 for beamkey, beam in self.beamline.beamsDictU[oeid].items():
-                    if beamkey.startswith('beamGlo'):
+                    if beamkey.startswith('beamGlo') and beam is not None:
                         good = (beam.state == 1) | (beam.state == 2)
                         bx, by, bz = beam.x[good], beam.y[good], beam.z[good]
                         if len(bx) == 0:
@@ -3909,19 +3914,23 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             model = self.segmentModel.model()
 
-            if self.needMeshUpdate is not None:
+            while self.needMeshUpdate:
+                elementId = self.needMeshUpdate.popleft()
+                
                 gl.glGetError()
-                newMesh = self.meshDict.get(self.needMeshUpdate) is None
+                newMesh = self.meshDict.get(elementId) is None
 
                 if newMesh:
-                    self.init_oe_surface(self.needMeshUpdate)
+                    self.init_oe_surface(elementId)
 #                    self.init_beam_footprint()
                 else:
-                    self.update_oe_surface(self.needMeshUpdate)
-                self.needMeshUpdate = None
-            for beamTag in self.needBeamUpdate:  # TODO: deque and process one element per call
+                    self.update_oe_surface(elementId)
+#                self.needMeshUpdate = None
+
+            while self.needBeamUpdate:  # TODO: deque and process one element per call
+                beamTag = self.needBeamUpdate.popleft()
                 self.update_beam_footprint(beamTag=beamTag)
-            self.needBeamUpdate = []
+#            self.needBeamUpdate = []
 
 #            if self.needMeshUpdate is not None:
 #                gl.glGetError()
@@ -4269,12 +4278,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.eCounter = 0
         except Exception as e:  # TODO: properly handle exceptions
             raise
-            self.eCounter += 1
-            if self.eCounter < 10:
-                self.update()
-            else:
-                self.eCounter = 0
-                pass
+#            pass
+#            self.eCounter += 1
+#            if self.eCounter < 10:
+#                self.update()
+#            else:
+#                self.eCounter = 0
+#                pass
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
@@ -4543,7 +4553,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     scrObj = scrLine[0]
                     scrObj.limPhysX *= 1.1
                     scrObj.limPhysY *= 1.1
-                self.needMeshUpdate = scrId
+                self.needMeshUpdate.append(scrId)  # TODO: check for duplicates
             elif ctrlOn and not tpad:
                 self.cameraDistance *= 0.9
             else:
@@ -4556,7 +4566,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     scrObj = scrLine[0]
                     scrObj.limPhysX *= 0.9
                     scrObj.limPhysY *= 0.9
-                self.needMeshUpdate = scrId
+                self.needMeshUpdate.append(scrId)  # TODO: check for duplicates
             elif ctrlOn and not tpad:
                 self.cameraDistance *= 1.1
             else:
@@ -5319,10 +5329,15 @@ class OEMesh3D():
         if is_oe(oe):
             dx, dy, dz = 0, 0, 0
             extraAnglesSign = 1.  # only for pitch and yaw
+
             if is_dcm(oe):
                 if is2ndXtal:
-                    pitch = -oe.pitch - oe.bragg + oe.cryst2pitch +\
-                        oe.cryst2finePitch
+                    try:
+                        pitch = -oe.pitch - oe.bragg + oe.cryst2pitch +\
+                            oe.cryst2finePitch
+                    except (ValueError, TypeError):
+                        pitch = 0
+                        print("Unresolved value in", oe.name, "pitch")
                     roll = oe.roll + oe.cryst2roll + oe.positionRoll
                     yaw = -oe.yaw
                     dx = -oe.dx
@@ -5330,7 +5345,11 @@ class OEMesh3D():
                     dz = -oe.cryst2perpTransl
                     extraAnglesSign = -1.
                 else:
-                    pitch = oe.pitch + oe.bragg
+                    try:
+                        pitch = oe.pitch + oe.bragg
+                    except (ValueError, TypeError):
+                        pitch = 0
+                        print("Unresolved value in", oe.name, "pitch")
                     roll = oe.roll + oe.positionRoll + oe.cryst1roll
                     yaw = oe.yaw
                     dx = oe.dx
@@ -5349,11 +5368,19 @@ class OEMesh3D():
             rotSeq = (oe.rotationSequence[slice(1, None, 2)])[::-1]
             extraRotSeq = (oe.extraRotationSequence[slice(1, None, 2)])[::-1]
 
-            rotation = (scprot.from_euler(
-                    rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
-            extraRot = (scprot.from_euler(
-                    extraRotSeq,
-                    [extraRotAx[i] for i in extraRotSeq])).as_quat()
+            try:
+                rotation = (scprot.from_euler(
+                        rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
+                extraRot = (scprot.from_euler(
+                        extraRotSeq,
+                        [extraRotAx[i] for i in extraRotSeq])).as_quat()
+            except ValueError:
+                rotation = (scprot.from_euler(
+                        rotSeq, [0, 0, 0])).as_quat()
+                extraRot = (scprot.from_euler(
+                        extraRotSeq, [0, 0, 0])).as_quat()
+                print("Unresolved values in", oe.name, "rotation sequence:",
+                      [rotAx[i] for i in rotSeq])
             rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
             extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
 
@@ -5377,8 +5404,10 @@ class OEMesh3D():
 
             # 5. Move to position in global coordinates
             mTranslation = qt.QMatrix4x4()
-            mTranslation.translate(*oe.center)
-
+            try:
+                mTranslation.translate(*oe.center)
+            except TypeError:  # Unresolved 'auto' in the center list
+                print("Unresolved values in", oe.name, "center:", oe.center)
             orientation = mTranslation * m2ndXtalRot * mRotation *\
                 mExtraRot * m2ndXtalPos
         elif is_screen(oe) or is_aperture(oe):  # Screens, Apertures
@@ -5395,7 +5424,10 @@ class OEMesh3D():
             mRotation.rotate(qt.QQuaternion(*rotationQ))
 
             posMatr = qt.QMatrix4x4()
-            posMatr.translate(*oe.center)
+            try:
+                posMatr.translate(*oe.center)
+            except TypeError:  # Unresolved 'auto' in the center list
+                print("Unresolved values in", oe.name, "center:", oe.center)
             orientation = posMatr*mRotation
         else:  # source
             posMatr = qt.QMatrix4x4()

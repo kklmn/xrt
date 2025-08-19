@@ -1401,6 +1401,7 @@ def propagationProcess(q_in, q_out):
     while True:
         try:
             message = q_in.get_nowait()
+#            print("MH", message)
             handler.process_message(message)
         except queue.Empty:
             pass
@@ -1552,8 +1553,20 @@ class MessageHandler:
             if objuuid in self.bl.materialsDict:
                 del self.bl.materialsDict[objuuid]
             self.bl.init_material_from_json(objuuid, kwargs)
-            self.startEl = None  # TODO: find an element that uses this mat
-            if self.autoUpdate:
+
+            self.startEl = None
+            for oeid, oeLine in self.bl.oesDict.items():
+                oeObj = oeLine[0]
+                for prop in ["_material", "_material2"]:
+                    try:
+                        matProp = getattr(oeObj, prop)
+                        if matProp == objuuid:
+                            self.startEl = oeid
+                            break
+                    except AttributeError:
+                        pass
+                        
+            if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True            
 
     def handle_flow(self, message):
