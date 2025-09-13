@@ -2528,6 +2528,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.getMinMax()
                 self.maxLen = np.max(np.abs(
                         self.minmax[0, :] - self.minmax[1, :]))
+                if arg in ['pitch'] and hasattr(oe, 'reset_pq'):
+                    self.needMeshUpdate.append(oeid)
             elif arg in shapeArgSet:
                 self.needMeshUpdate.append(oeid)
             elif arg in {'name'}:
@@ -3203,22 +3205,31 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 is2ndXtalOpts.append(True)
 
             for is2ndXtal in is2ndXtalOpts:
-                mesh3D.prepare_surface_mesh(int(is2ndXtal))
-                mesh3D.isEnabled = True
+                try:
+                    mesh3D.prepare_surface_mesh(int(is2ndXtal))
+                    mesh3D.isEnabled = True
+                except:
+                    mesh3D.isEnabled = False
                 assign_stencil_num(mesh3D)
 
         elif is_aperture(oeToPlot):
             if not oeuuid in self.meshDict:
                 mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
             for blade in oeToPlot.kind:
-                mesh3D.prepare_surface_mesh(blade)
-                mesh3D.isEnabled = True
+                try:
+                    mesh3D.prepare_surface_mesh(blade)
+                    mesh3D.isEnabled = True
+                except:
+                    mesh3D.isEnabled = False
                 assign_stencil_num(mesh3D)
 
         else:  # must be the source
-            mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
-            mesh3D.prepare_magnets()
-            mesh3D.isEnabled = True
+            try:
+                mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
+                mesh3D.prepare_magnets()
+                mesh3D.isEnabled = True
+            except:
+                mesh3D.isEnabled = False
             assign_stencil_num(mesh3D)
 
         self.meshDict[oeuuid] = mesh3D
@@ -3228,8 +3239,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
         else:
             for surfIndex in self.meshDict[oeuuid].vao.keys():
-                self.meshDict[oeuuid].prepare_surface_mesh(
-                        nsIndex=surfIndex, updateMesh=True)
+                try:
+                    print("Trying to update mesh")
+                    self.meshDict[oeuuid].prepare_surface_mesh(
+                            nsIndex=surfIndex, updateMesh=True)
+                    self.meshDict[oeuuid].isEnabled = True
+                    print("Enabling mesh")
+                except Exception as e:
+                    print(e)
+                    print("Update failed, disabling mesh")
+                    self.meshDict[oeuuid].isEnabled = False
         
 
 #    def eulerToQ(self, rotMatrXYZ):
@@ -5476,11 +5495,12 @@ class OEMesh3D():
         self.transMatrix[int(is2ndXtal)] = self.get_loc2glo_transformation_matrix(
                 self.oe, is2ndXtal=is2ndXtal)
 
-        if nsIndex in self.vao.keys():
+        if nsIndex in self.vao.keys():  # Updating existing
             vao = self.vao[nsIndex]
         else:
             vao = qt.QOpenGLVertexArrayObject()
             vao.create()
+            self.vao[nsIndex] = None  # Will be updated after generation
 
 #        if hasattr(self.oe, 'stl_mesh'):
 #            vao.bind()
@@ -5518,7 +5538,7 @@ class OEMesh3D():
 
         yDim = 1
         if isScreen:
-            print(self.oe.limPhysX, self.oe.limPhysY)
+#            print(self.oe.limPhysX, self.oe.limPhysY)
             if self.oe.limPhysX is not None and np.sum(np.abs(self.oe.limPhysX)) > 0:
                 xLimits = self.oe.limPhysX if isinstance(
                     self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
@@ -5583,7 +5603,7 @@ class OEMesh3D():
 
         self.xLimits = copy.deepcopy(xLimits)
         self.yLimits = copy.deepcopy(yLimits)
-        print(self.xLimits, self.yLimits)
+#        print(self.xLimits, self.yLimits)
 #        if isAperture:  # TODO: Must use physical limits
 #        # if isScreen or isAperture:  # Making square screen
 #            xSize = abs(xLimits[1] - xLimits[0])
@@ -5819,7 +5839,8 @@ class OEMesh3D():
             self.vbo_vertices[nsIndex] = None
             self.vbo_normals[nsIndex] = None
             self.ibo[nsIndex] = None
-            vao.destroy()
+            if vao is not None:
+                vao.destroy()
             gl.glGetError()
 #            del self.vao[nsIndex]
             self.vao[nsIndex] = None

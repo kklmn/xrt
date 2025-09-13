@@ -260,7 +260,8 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
                      'braggOffset', 'rotationSequence', 'positionRoll'}
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
-               'R', 'r', 'Rm', 'Rs'}
+               'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
+               'parabolaAxis'}
 
 colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
     'WHITE', 'RESET'
@@ -1086,15 +1087,18 @@ def quat_vec_rotate(vec, q):
 def get_init_val(value):
     if str(value) == 'round':
         return str(value)
-    
+
     if "," in str(value):  # mixed list
         paravalue = str(value).strip('[]() ')
         listvalue = []
         for c in paravalue.split(','):
+            c_strip = str(c).strip()
             try:
-                v = eval(str(c).strip(), safe_globals)
+                if not c_strip:
+                    continue
+                v = eval(c_strip, safe_globals)
             except (NameError, SyntaxError):
-                v = str(c).strip()
+                v = c_strip
             listvalue.append(v)
         return listvalue
 
@@ -2577,6 +2581,8 @@ class BeamLine(object):
                     break  # Normally just one method per element.
 
     def populate_oes_dict_from_json(self, dictIn):
+        if not isinstance(dictIn, dict):
+            return
         for elName, elProps in dictIn.items():
             if elName in ['properties', '_object']:
                 continue
@@ -2633,6 +2639,8 @@ class BeamLine(object):
         return initStatus
 
     def populate_materials_dict_from_json(self, dictIn):
+        if not isinstance(dictIn, dict):
+            return
         for matName, matProps in dictIn.items():
             delay = 0.01  # required to prevent file read errors
             for retries in range(5):
