@@ -262,6 +262,7 @@ class GenericProcessOrThread(object):
             dummy_output = dummy.run_process()
             self.alarmQueue.put([])
         elif self.card.backend.startswith('raycing'):
+            self.card.beamLine.iteration = self.card.iteration + self.idN
             raycing_output = raycing.run.run_process(self.card.beamLine)
             self.alarmQueue.put(self.card.beamLine.alarms)
 
