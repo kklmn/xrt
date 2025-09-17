@@ -261,7 +261,7 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
-               'parabolaAxis'}
+               'parabolaAxis', 'shape'}
 
 colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
     'WHITE', 'RESET'

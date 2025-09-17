@@ -848,13 +848,15 @@ class xrtGlow(qt.QWidget):
         for it, (what, tt, defv) in enumerate(zip(
                 ['Default OE thickness, mm',
                  'Force OE thickness, mm',
-                 'Aperture frame size, %'],
+                 'Aperture frame size, %',
+                 'Scene limit, mm'],
                 ['For OEs that do not have thickness',
                  'For OEs that have thickness, e.g. plates or lenses',
-                 ''],
+                 '', ''],
                 [self.customGlWidget.oeThickness,
                  self.customGlWidget.oeThicknessForce,
-                 self.customGlWidget.slitThicknessFraction])):
+                 self.customGlWidget.slitThicknessFraction,
+                 self.customGlWidget.maxLen])):
             tLabel = qt.QLabel(what)
             tLabel.setToolTip(tt)
             tEdit = qt.QLineEdit()
@@ -863,11 +865,13 @@ class xrtGlow(qt.QWidget):
                 tEdit.setText(str(defv))
             tEdit.editingFinished.connect(
                 partial(self.updateThicknessFromQLE, tEdit, it))
+            if it == 3:
+                self.maxLenEditor = tEdit
 
             layout = qt.QHBoxLayout()
             tLabel.setMinimumWidth(145)
             layout.addWidget(tLabel)
-            tEdit.setMaximumWidth(48)
+            tEdit.setMaximumWidth(96)
             layout.addWidget(tEdit)
             layout.addStretch()
             sceneLayout.addLayout(layout)
@@ -1121,7 +1125,7 @@ class xrtGlow(qt.QWidget):
                 if elementLine[0].name == "VirtualScreen":
                     continue
                 self.addElementToModel(eluuid)
-            
+
 #            for eluuid, operations in self.customGlWidget.beamline.flowU.items():
 #                element = self.customGlWidget.beamline.oesDict[eluuid][0]
 #                elname = element.name
@@ -1142,7 +1146,7 @@ class xrtGlow(qt.QWidget):
         elementLine = self.customGlWidget.beamline.oesDict.get(uuid)
         if elementLine is not None:
             element = elementLine[0]
-            elname = element.name                
+            elname = element.name
             newRow = self.createRow(elname, 1, uuid=uuid,
                                     icon=self.getIcon(element))
         else:
@@ -1177,7 +1181,7 @@ class xrtGlow(qt.QWidget):
                 targetItem.setText("to {}".format(targetName))
 
     def updateTargets(self):
-        
+
         tmpDict = dict()
 
         # Stage 1. Remove children
@@ -1187,25 +1191,25 @@ class xrtGlow(qt.QWidget):
             for iech in reversed(range(oeItem.rowCount())):
                 oeItem.removeRow(iech)
 
-        # Stage 2a. Move all element rows into a temporary dictionary 
+        # Stage 2a. Move all element rows into a temporary dictionary
         for iel in reversed(range(self.segmentsModelRoot.rowCount())):
             oeItem = self.segmentsModelRoot.child(iel, 0)
             uuid = oeItem.data(qt.UserRole)
             if raycing.is_valid_uuid(uuid):
                 tmpDict[uuid] = self.segmentsModelRoot.takeRow(iel)
-                
+
         # Stage 2b. Return element rows according to new flow order
         for segment in self.customGlWidget.beamline.flowU:
             modelRow = tmpDict.pop(segment, None)
             if modelRow is not None:
                 self.segmentsModelRoot.appendRow(modelRow)
-        
+
         # Stage 2c. Return non-flow elements
         for modelRow in tmpDict.values():
             if modelRow is not None:
                 self.segmentsModelRoot.appendRow(modelRow)
 
-        # Stage 3. Add children 
+        # Stage 3. Add children
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
             uuid = oeItem.data(qt.UserRole)
@@ -1576,6 +1580,16 @@ class xrtGlow(qt.QWidget):
         # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
+
+    def updateMaxLenFromGL(self, value):
+#        if isinstance(scale, (int, float)):
+#            scale = [scale, scale, scale]
+#        for iaxis, (slider, editor) in \
+#                enumerate(zip(self.zoomSliders, self.zoomEditors)):
+#            value = np.log10(scale[iaxis])
+#            slider.setValue(value)
+#            editor.setText("{0:.2f}".format(value))
+        self.maxLenEditor.setText("{0:.2f}".format(float(value)))
 
     def updateFontSize(self, slider, position):
         # slider = self.sender()
@@ -2113,6 +2127,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.oeThicknessForce = value
         elif ia == 2:
             self.customGlWidget.slitThicknessFraction = value
+        elif ia == 3:
+            self.customGlWidget.maxLen = value
         else:
             return
         self.customGlWidget.glDraw()
@@ -2424,7 +2440,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if '_object' in kwargs:  # from Qook
             # new element
             if 'material' in kwargs['_object']:
-                self.beamline.init_material_from_json(oeid, kwargs)                
+                self.beamline.init_material_from_json(oeid, kwargs)
                 message = {"command": "modify",
                            "object_type": "mat",
                            "uuid": oeid,
@@ -2440,7 +2456,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                kwargs['properties'].update({'uuid': oeid})
                 self.beamline.init_oe_from_json(kwargs)
                 self.needMeshUpdate.append(oeid)
-                
+
                 if self.parent is not None:
                     self.parent.addElementToModel(oeid)
                 try:
@@ -2448,7 +2464,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 except:
                     pass
                 self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
-    
+                self.parent.updateMaxLenFromGL(self.maxLen)  # TODO: replace with signal
+
                 message = {"command": "create",
                            "object_type": "oe",
                            "uuid": oeid,
@@ -2456,10 +2473,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         #                        "kwargs": {arg: argValue.tolist() if isinstance(
         #                                argValue, np.ndarray) else argValue}
                                 }
-    
+
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
-                    
+
                 self.glDraw()
 
             elif 'parameters' in kwargs:  # update flow
@@ -2474,10 +2491,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                            "kwargs": {methStr: kwargs.copy()}
         #                        "kwargs": {arg: argValue.tolist() if isinstance(
         #                                argValue, np.ndarray) else argValue}
-                                }                
+                                }
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
-            
+
             return
 
         for argName, argValue in kwargs.items():
@@ -2528,13 +2545,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.getMinMax()
                 self.maxLen = np.max(np.abs(
                         self.minmax[0, :] - self.minmax[1, :]))
+                self.parent.updateMaxLenFromGL(self.maxLen)
                 if arg in ['pitch'] and hasattr(oe, 'reset_pq'):
                     self.needMeshUpdate.append(oeid)
             elif arg in shapeArgSet:
                 self.needMeshUpdate.append(oeid)
             elif arg in {'name'}:
                 if self.parent is not None:
-                    self.parent.updateNames()                
+                    self.parent.updateNames()
 
             # updating the beamline model in the runner
         if self.epicsPrefix is not None:
@@ -2764,6 +2782,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.getMinMax()
                     self.maxLen = np.max(np.abs(
                             self.minmax[0, :] - self.minmax[1, :]))
+                    self.parent.updateMaxLenFromGL(self.maxLen)
                 except TypeError:
                     print("Cannot find limits")
 
@@ -2806,7 +2825,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
             if beam is None:
                 return
-            
+
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag).copy()
 #        dataColor = self.getColor(beam).copy()
@@ -2888,7 +2907,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             print("Buffers require init")
             self.init_beam_footprint(beam, beamTag)
             return
-            
+
         beamvbo = self.beamBufferDict[beamTag]['vbo']
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag)
@@ -3249,7 +3268,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     print(e)
                     print("Update failed, disabling mesh")
                     self.meshDict[oeuuid].isEnabled = False
-        
+
 
 #    def eulerToQ(self, rotMatrXYZ):
 #        hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
@@ -3840,6 +3859,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.getMinMax()
         self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
+        self.parent.updateMaxLenFromGL(self.maxLen)
         self.newColorAxis = False
         self.labelLines = np.zeros((len(self.beamline.oesDict)*4, 3))
         self.llVBO = create_qt_buffer(self.labelLines)
@@ -3935,7 +3955,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             while self.needMeshUpdate:
                 elementId = self.needMeshUpdate.popleft()
-                
+
                 gl.glGetError()
                 newMesh = self.meshDict.get(elementId) is None
 
@@ -4091,10 +4111,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             beamEndDict = self.beamline.beamsDictU.get(eluuid)
                             startField = None
                             endField = None
-                            
+
                             if beamStartDict is None or beamEndDict is None:
                                 continue
-                            
+
                             if 'beamLocal' in beamStartDict:
                                 startField = 'beamLocal'
                             elif 'beamLocal2' in beamStartDict:
@@ -5693,7 +5713,7 @@ class OEMesh3D():
         if len(nv) == 3:  # flat
             nv = np.ones_like(zv)[:, np.newaxis] * np.array(nv)
 
-        if isOeParametric:
+        if isOeParametric and not isClosedSurface:
             xv, yv, zv = self.oe.param_to_xyz(xv, yv, zv)
 
 #        zmax = np.max(zv)
@@ -5718,37 +5738,61 @@ class OEMesh3D():
             bottomNormals = np.zeros((len(points), 3))
             bottomNormals[:, 2] = -1
 
-        zL = np.array(local_z(sideL[:, 0], sideL[:, -1]))
-        zR = np.array(local_z(sideR[:, 0], sideR[:, -1]))
-        zF = np.array(local_z(sideF[:, 0], sideF[:, -1]))
-        zB = np.array(local_z(sideB[:, 0], sideB[:, -1]))
+        # side: x, y
+        zs = []
+        xs = []
+        ys = []
 
-        tL = np.vstack((sideL.T, np.ones_like(zL)*thickness))
+        for elSide in (sideL, sideR, sideF, sideB):
+            tmpx, tmpy, tmpz = elSide[:, 0], elSide[:, -1], np.zeros_like(elSide[:, 0])
+            if isOeParametric and not isClosedSurface:
+                tmpx, tmpy, tmpz = self.oe.xyz_to_param(tmpx, tmpy, tmpz)
+            tmpz = np.array(local_z(tmpx, tmpy))
+            if isOeParametric and not isClosedSurface:
+                tmpx, tmpy, tmpz = self.oe.param_to_xyz(tmpx, tmpy, tmpz)
+            xs.append(tmpx)
+            ys.append(tmpy)
+            zs.append(tmpz)
+
+        zL = zs[0]
+        zR = zs[1]
+        zF = zs[2]
+        zB = zs[3]
+
+        tL = np.vstack((xs[0], ys[0], np.ones_like(zL)*thickness))
         bottomLine = zL - thickness if isPlate else -np.ones_like(zL)*thickness
-        tL = np.hstack((tL, np.vstack((np.flip(sideL.T, axis=1),
+        tL = np.hstack((tL, np.vstack((np.flip(xs[0]), np.flip(ys[0]),
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
-        if not (isScreen): # or isAperture):
-            triLR = Delaunay(tL[:, [1, -1]])  # Used for round elements also
+        if not (isScreen):  # or isAperture):
+            try:
+                triLR = Delaunay(tL[:, [1, -1]])  # Works for round elements
+                useLR = True
+            except:
+                useLR = False
         tL[:len(zL), 2] = zL
         tL[len(zL):, 2] = bottomLine
 
-        tR = np.vstack((sideR.T, zR))
+        tR = np.vstack((xs[1], ys[1], zR))
         bottomLine = zR - thickness if isPlate else -np.ones_like(zR)*thickness
-        tR = np.hstack((tR, np.vstack((np.flip(sideR.T, axis=1),
+        tR = np.hstack((tR, np.vstack((np.flip(xs[1]), np.flip(ys[1]),
                                        bottomLine)))).T
         normsR = np.zeros((len(zR)*2, 3))
         normsR[:, 0] = 1
 
-        tF = np.vstack((sideF.T, np.ones_like(zF)*thickness))
+        tF = np.vstack((xs[2], ys[2], np.ones_like(zF)*thickness))
         bottomLine = zF - thickness if isPlate else -np.ones_like(zF)*thickness
-        tF = np.hstack((tF, np.vstack((np.flip(sideF.T, axis=1),
+        tF = np.hstack((tF, np.vstack((np.flip(xs[2]), np.flip(ys[2]),
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
-        if not (isScreen): # or isAperture):
-            triFB = Delaunay(tF[:, [0, -1]])
+        if not (isScreen):  # or isAperture):
+            try:
+                triFB = Delaunay(tF[:, [0, -1]])
+                useFB = True
+            except:
+                useFB = False
         tF[:len(zF), 2] = zF
 
         if oeShape == 'round':
@@ -5760,10 +5804,10 @@ class OEMesh3D():
             norms = np.linalg.norm(normsB, axis=1, keepdims=True)
             normsB /= norms
         else:
-            tB = np.vstack((sideB.T, zB))
+            tB = np.vstack((xs[3], ys[3], zB))
             bottomLine = zB - thickness if isPlate else\
                 -np.ones_like(zB)*thickness
-            tB = np.hstack((tB, np.vstack((np.flip(sideB.T, axis=1),
+            tB = np.hstack((tB, np.vstack((np.flip(xs[3]), np.flip(ys[3]),
                                            bottomLine)))).T
             normsB = np.zeros((len(zB)*2, 3))
             normsB[:, 1] = 1
@@ -5790,18 +5834,23 @@ class OEMesh3D():
                                         triLR.simplices.flatten() +
                                         indArrOffset))
             else:
-                allSurfaces = np.vstack((allSurfaces, tL, tF, tR, tB))
-                allNormals = np.vstack((allNormals, normsL, normsF,
-                                        normsR, normsB))
-                allIndices = np.hstack((allIndices,
-                                        triLR.simplices.flatten() +
-                                        indArrOffset,
-                                        triFB.simplices.flatten() +
-                                        indArrOffset+len(tL),
-                                        triLR.simplices.flatten() +
-                                        indArrOffset+len(tL)+len(tF),
-                                        triFB.simplices.flatten() +
-                                        indArrOffset+len(tL)*2+len(tF)))
+                if useLR:
+                    allSurfaces = np.vstack((allSurfaces, tL, tR))
+                    allNormals = np.vstack((allNormals, normsL, normsR))
+                    allIndices = np.hstack((allIndices,
+                                            triLR.simplices.flatten() +
+                                            indArrOffset,
+                                            triLR.simplices.flatten() +
+                                            indArrOffset+len(tL)))
+                    indArrOffset += len(tL)*2
+                if useFB:
+                    allSurfaces = np.vstack((allSurfaces, tF, tB))
+                    allNormals = np.vstack((allNormals, normsF, normsB))
+                    allIndices = np.hstack((allIndices,
+                                            triFB.simplices.flatten() +
+                                            indArrOffset,
+                                            triFB.simplices.flatten() +
+                                            indArrOffset+len(tF)))
 
         surfmesh['points'] = allSurfaces.copy()
         surfmesh['normals'] = allNormals.copy()
