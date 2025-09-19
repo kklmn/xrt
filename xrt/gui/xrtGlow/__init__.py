@@ -3419,6 +3419,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.colorMax *= 1.01
 
         self.newColorAxis = False
+        if self.parent is not None:
+#            print("Setting new color limits in Qt controls")
+            self.parent.changeColorAxis(None, newLimits=True)
 
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
@@ -4544,11 +4547,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             if int(overOE) in self.selectableOEs:
                 oe = self.beamline.oesDict[self.selectableOEs[int(overOE)]][0]
+                try:
+                    oePitchStr = np.degrees(
+                        oe.pitch + (oe.bragg if hasattr(oe, 'bragg')
+                        else 0)) if hasattr(oe, 'pitch') else 0
+                except TypeError:
+                    oePitchStr = 0
                 tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
                         oe.name, *oe.center,
-                        np.degrees(oe.pitch +
-                                   (oe.bragg if hasattr(oe, 'bragg') else 0))
-                        if hasattr(oe, 'pitch') else 0,
+                        oePitchStr,
                         np.degrees(oe.roll+oe.positionRoll)
                         if is_oe(oe) else 0,
                         np.degrees(oe.yaw)

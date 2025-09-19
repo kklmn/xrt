@@ -108,6 +108,8 @@ withSlidersInTree = ['pitch', 'roll', 'yaw', 'bragg']
 slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
 # os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
+isUnitsEnabled = False  # TODO:
+
 
 class LevelRestrictedModel(qt.QStandardItemModel):
     def __init__(self):
@@ -765,6 +767,8 @@ class XrtQook(qt.QWidget):
 
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         headers = ['Parameter', 'Value']
+        if isUnitsEnabled:
+            headers.append('Unit')
         if useSlidersInTree:
             headers.append('Slider')
         self.tree.model().setHorizontalHeaderLabels(headers)
@@ -1381,7 +1385,7 @@ class XrtQook(qt.QWidget):
         view.setRowHidden(child0.index().row(), parent.index(), True)
         return child0, child1
 
-    def addParam(self, parent, paramName, value, source=None):
+    def addParam(self, parent, paramName, value, source=None, unit=None):
         """Add a pair of Parameter-Value Items"""
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
@@ -1389,7 +1393,9 @@ class XrtQook(qt.QWidget):
         child1 = qt.QStandardItem(str(value))
         child1.setFlags(self.paramFlag if str(paramName) == 'name' else
                         self.valueFlag)
-
+        if unit is not None:
+            child1u = qt.QStandardItem(str(unit))
+            child1u.setFlags(self.valueFlag)
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\
  for automatic alignment if \"y\" is known'
@@ -1402,9 +1408,12 @@ class XrtQook(qt.QWidget):
             child1.setToolTip(toolTip)
             # self.setIItalic(child0)
         row = [child0, child1]
+        if unit is not None:
+            row.append(child1u)
         if useSlidersInTree:
             child2 = qt.QStandardItem()
             row.append(child2)
+
         if not isinstance(source, qt.QStandardItem):
             parent.appendRow(row)
         else:
@@ -1418,7 +1427,7 @@ class XrtQook(qt.QWidget):
                 slider.setValue(0)
                 slider.valueChanged.connect(
                     partial(self.updateSlider, child1, paramName))
-                self.tree.setIndexWidget(ind, slider)
+                self.tree.setIndexWidget(ind, slider)  # to be replaced with delegates
 
         return child0, child1
 

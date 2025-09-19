@@ -273,8 +273,68 @@ msg_stop = {
 msg_exit = {
         "command": "exit"}
 
-#def NamedArrayFactory(names, default_dtype=float):
-#    class NamedArray(np.ndarray):
+allUnitsAng = {'rad': 1.,
+               'mrad': 1e-3,
+               'urad': 1e-6,
+               'deg': np.pi/180.,
+               'mdeg': 1e-3*np.pi/180.,
+               'arcsec': np.pi/180./3600.}
+
+allUnitsAngStr = {'urad': r'µrad',
+                  'mrad': r'mrad',
+                  'deg': r'°',
+                  'mdeg': r'm°',
+                  'arcsec': r'arcsec'}
+
+allUnitsLen = {'angstroem': 1e-7,
+               'nm': 1e-6,
+               'um': 1e-3,
+               'mm': 1.,
+               'm': 1e3,
+               'km': 1e6}
+
+allUnitsLenStr = {'angstroem': r'Å',
+                  'nm': r'nm',
+                  'um': r'µrad',
+                  'mm': r'mm',
+                  'm': r'm',
+                  'km': r'km'}
+
+allUnitsEnergy = {'meV': 1e-3,
+                  'eV': 1,
+                  'keV': 1e3,
+                  'MeV': 1e6,
+                  'GeV': 1}
+
+allUnitsEnergyStr = {'meV': 'meV',
+                     'eV': 'eV',
+                     'keV': 'keV',
+                     'MeV': 'MeV',
+                     'GeV': 'GeV'}
+
+allUnitsEmittance = {'pmrad': 1e-3,
+                     'nmrad': 1}
+
+allUnitsEmittanceStr = {'pmrad': 'pm⋅rad',
+                        'nmrad': 'nm⋅rad'}
+
+allUnitsCurrent = {'mA': 1e-3,
+                   'A': 1}
+
+allUnitsCurrentStr = {'mA': 'mA',
+                      'A': 'A'}
+
+lengthUnitParams = {'center': 'mm',
+                    'R': 'mm',
+                    'r': 'mm',
+                    'Rm': 'mm',
+                    'Rs': 'mm',
+                    'dx': 'mm',
+                    'dy': 'mm',
+                    'dz': 'mm',
+                    'beta': 'm'}  # WIP
+
+
 class NamedArrayBase(np.ndarray):
     _names = []
 
@@ -327,20 +387,6 @@ class NamedArrayBase(np.ndarray):
     def __str__(self):
         return '[' + ', '.join(str(val) for val in self) + ']'
 
-#        def __reduce__(self):
-#            module_name = self.__class__.__module__
-#            class_name = self.__class__.__name__
-#            return (getattr(xrt.backends.raycing, class_name), (np.asarray(self),))
-#
-#    NamedArray.__name__ = 'NamedArray_' + '_'.join(names)
-##    NamedArray.__module__ = __name__  # explicitly set module
-##    globals()[NamedArray.__name__] = NamedArray  # make it visible at module level
-#
-#    return NamedArray
-
-#def NamedArrayFactory(names, default_dtype=float):
-#    name = 'NamedArray_' + '_'.join(names)
-#    return type(name, (NamedArrayBase,), {'_names': names})
 
 def NamedArrayFactory(names, default_dtype=float):
     class_name = 'NamedArray_' + '_'.join(names)
@@ -353,6 +399,7 @@ def NamedArrayFactory(names, default_dtype=float):
     sys.modules[__name__].__dict__[class_name] = cls
     return cls
 
+
 Center = NamedArrayFactory(['x', 'y', 'z'])
 Limits = NamedArrayFactory(['lmin', 'lmax'])
 Opening = NamedArrayFactory(['left', 'right', 'bottom', 'top'])
@@ -364,6 +411,7 @@ def center_property():
         return self._center if self._centerVal is None else self._centerVal
 
     def setter(self, center):
+        self._centerInit = copy.deepcopy(center)
         if isinstance(center, str):
             center = [x.strip().lower() for x in center.strip('[]').split(",")]
             tmp = []
@@ -379,6 +427,7 @@ def center_property():
             self._center = copy.deepcopy(center)
         else:
             self._centerVal = Center(center)
+
     return property(getter, setter)
 
 def colorPrint(s, fcolor=None, bcolor=None):
@@ -1277,7 +1326,11 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
             if hasattr(oeObj, arg):
                 if arg == 'data':
                     continue
-                realval = getattr(oeObj, arg)
+                if hasattr(oeObj, f'_{arg}Init'): # and hasattr(oeObj, f'_{arg}Val'):
+                    realval = getattr(oeObj, f'_{arg}Init')
+                else:
+                    realval = getattr(oeObj, arg)
+
                 if arg == 'bl':
                     realval = blname
                 if arg == 'elements':
@@ -1634,6 +1687,7 @@ class MessageHandler:
         command = message.get("command")
         handler = command_handlers.get(command)
         if handler:
+#            print(message)
             handler(message)
         else:
             print(f"Unknown command: {command}")

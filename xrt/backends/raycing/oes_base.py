@@ -356,11 +356,11 @@ class OE(object):
 
     @pitch.setter
     def pitch(self, pitch):
+        self._pitchInit = copy.deepcopy(pitch)  # For glow auto-recognition
         pitch = raycing.auto_units_angle(pitch)
         if isinstance(pitch, (raycing.basestring, list, tuple)):
-            self._pitch = copy.copy(pitch)
+            self._pitch = copy.deepcopy(pitch)
             self._pitchVal = None
-            self._pitchInit = copy.copy(pitch)  # For glow auto-recognition
         else:  # also after auto-calculation
             self._pitchVal = pitch
 
@@ -411,7 +411,6 @@ class OE(object):
     @extraPitch.setter
     def extraPitch(self, extraPitch):
         self._extraPitch = raycing.auto_units_angle(extraPitch)
-#        self.update_orientation_quaternion()
 
     @property
     def extraRoll(self):
@@ -420,7 +419,6 @@ class OE(object):
     @extraRoll.setter
     def extraRoll(self, extraRoll):
         self._extraRoll = raycing.auto_units_angle(extraRoll)
-#        self.update_orientation_quaternion()
 
     @property
     def extraYaw(self):
@@ -429,7 +427,6 @@ class OE(object):
     @extraYaw.setter
     def extraYaw(self, extraYaw):
         self._extraYaw = raycing.auto_units_angle(extraYaw)
-#        self.update_orientation_quaternion()
 
     @property
     def positionRoll(self):
@@ -438,7 +435,6 @@ class OE(object):
     @positionRoll.setter
     def positionRoll(self, positionRoll):
         self._positionRoll = raycing.auto_units_angle(positionRoll)
-#        self.update_orientation_quaternion()
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -2427,6 +2423,7 @@ class DCM(OE):
 
     @bragg.setter
     def bragg(self, bragg):
+        self._braggInit = copy.deepcopy(bragg)  # For glow auto-recognition
         bragg = raycing.auto_units_angle(bragg)
         if isinstance(bragg, (raycing.basestring, list, tuple)):
             self._bragg = copy.deepcopy(bragg)
@@ -2437,7 +2434,6 @@ class DCM(OE):
 #                    print("Calculating new Bragg value for", bragg, type(bragg))
 #                    self._braggVal = self.material.get_Bragg_angle(bragg[0]) - self.braggOffset
 #                    print(self._braggVal)
-#            self._braggInit = copy.copy(bragg)  # For glow auto-recognition
         else:
             self._braggVal = raycing.auto_units_angle(bragg)
 
