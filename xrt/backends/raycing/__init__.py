@@ -1494,6 +1494,8 @@ class MessageHandler:
         self.exit = False
 
     def handle_create(self, message):
+        
+        objuuid = message.get("uuid")
 
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
@@ -1510,15 +1512,17 @@ class MessageHandler:
         if self.autoUpdate:
             if object_type != 'mat':
                 self.needUpdate = True
+                self.startEl = objuuid
 
     def handle_modify(self, message):
 #        print("handle_modify", message)
         objuuid = message.get("uuid")
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
-#        print(uuid, self.bl.oesDict.keys())
+
         if object_type == 'oe': 
             element = self.bl.oesDict.get(objuuid)
+
             if element is not None:
                 for key, value in kwargs.items():
                     args = key.split('.')
@@ -1581,6 +1585,7 @@ class MessageHandler:
         self.bl.sort_flow()
         if self.autoUpdate:
             self.needUpdate = True
+            self.startEl = oeuuid
 
     def handle_delete(self, message):
         oeuuid = message.get("uuid")

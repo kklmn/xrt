@@ -5617,9 +5617,15 @@ class OEMesh3D():
             isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
+            elif self.oe.limOptX is not None and not\
+                np.all(np.abs(self.oe.limOptX) == raycing.maxHalfSizeOfOE):
+                    xLimits = list(self.oe.limOptX)
         if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
             if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
+            elif self.oe.limOptY is not None and not\
+                np.all(np.abs(self.oe.limOptY) == raycing.maxHalfSizeOfOE):
+                    yLimits = list(self.oe.limOptY)
 
         self.xLimits = copy.deepcopy(xLimits)
         self.yLimits = copy.deepcopy(yLimits)
