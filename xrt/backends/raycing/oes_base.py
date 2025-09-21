@@ -363,6 +363,7 @@ class OE(object):
             self._pitchVal = None
         else:  # also after auto-calculation
             self._pitchVal = pitch
+            self._pitch = None
 
         if hasattr(self, '_reset_pq'):
             self._reset_pq()

@@ -169,7 +169,7 @@ Find more generators in the supplied examples.
 from __future__ import print_function
 import types
 import sys
-import os
+# import os
 import numpy as np
 # from itertools import compress
 from itertools import islice
@@ -186,13 +186,13 @@ import time
 import queue
 
 from matplotlib.colors import hsv_to_rgb
-
+import colorama
 if sys.version_info < (3, 1):
     from inspect import getargspec
 else:
     from inspect import getfullargspec as getargspec
 
-import colorama
+
 colorama.init(autoreset=True)
 
 __module__ = "raycing"
@@ -218,7 +218,6 @@ from .physconsts import SIE0, CH  # analysis:ignore
 
 safe_globals = {
     'np': np,
-#    'math': math,
     '__builtins__': {}  # Disable built-in functions
 }
 
@@ -346,7 +345,8 @@ class NamedArrayBase(np.ndarray):
             values = [kwargs.get(name, 0.0) for name in cls._names]
         elif values is not None:
             if len(values) != num_elements:
-                raise ValueError(f'Expected {num_elements} elements, got {len(values)}.')
+                raise ValueError(
+                    f'Expected {num_elements} elements, got {len(values)}.')
         else:
             values = np.zeros(num_elements, dtype=dtype)
 
@@ -364,7 +364,8 @@ class NamedArrayBase(np.ndarray):
         if attr in self._names:
             idx = self._names.index(attr)
             return self[idx]
-        raise AttributeError(f"{type(self).__name__} has no attribute '{attr}'")
+        raise AttributeError(
+            f"{type(self).__name__} has no attribute '{attr}'")
 
     def __setattr__(self, attr, value):
         if attr in self._names:
@@ -429,6 +430,7 @@ def center_property():
             self._centerVal = Center(center)
 
     return property(getter, setter)
+
 
 def colorPrint(s, fcolor=None, bcolor=None):
     style = getattr(colorama.Fore, fcolor) if fcolor in colors else \
@@ -1069,8 +1071,6 @@ def append_to_flow_decorator(func):
                     ret_dict = {'beamGlobal' if toGlobal else
                                 'beamLocal': result}
             if ret_dict:
-#                if 'beamGlobal' in ret_dict:
-#                    ret_dict['beamGlobal'].get_beam_vector()
                 if 'beam' in kwargs:
                     kwargs['beam'] = beamId
                 self.bl.flowU[self.uuid] = {methStr: kwargs}
@@ -1326,7 +1326,7 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
             if hasattr(oeObj, arg):
                 if arg == 'data':
                     continue
-                if hasattr(oeObj, f'_{arg}Init'): # and hasattr(oeObj, f'_{arg}Val'):
+                if hasattr(oeObj, f'_{arg}Init'):
                     realval = getattr(oeObj, f'_{arg}Init')
                 else:
                     realval = getattr(oeObj, arg)
@@ -1359,19 +1359,6 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
 
     return initArgs if compact else defArgs
 
-#def prepare_beams(run_prc):
-#    def collect_beams(bl):
-#        run_prc(bl)
-#        outDict = {}
-#        for _, oeLn in bl.oesDict.items():
-#            oe = oeLn[0]
-#            if hasattr(oe, 'beamsOut'):
-#                for bName, bObj in oe.beamsOut.items():
-#                    if bName not in ['beamIn']:
-#                        outDict[f"{oe.name}_{bName}"] = bObj
-#        return outDict
-#    return collect_beams
-
 
 def is_valid_uuid(uuid_string):
     try:
@@ -1395,7 +1382,7 @@ def run_process_from_file(beamLine):
 
 
 def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
-                    cDataFunc=None, cLimits=None):
+               cDataFunc=None, cLimits=None):
     """This is a simplified standalone implementation of
     multipro.do_hist2d()
     cData is one of get_NNN methods or None. In the latter case the function
@@ -1408,7 +1395,7 @@ def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
     else:
         x, y, z = beam.x[good], beam.y[good], beam.z[good]
     goodlen = len(beam.x[good])
-    hist2dRGB=None
+    hist2dRGB = None
     hist2d = np.zeros((shape[1], shape[0]), dtype=np.float64)
 
     if limits is None and goodlen > 0:
@@ -1420,7 +1407,7 @@ def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
         beamLimits = [limits[1], limits[0]] or None
         flux = beam.Jss[good]+beam.Jpp[good]
         hist2d, yedges, xedges = np.histogram2d(
-            y, x, bins=[shape[1],shape[0]], range=beamLimits, weights=flux)
+            y, x, bins=[shape[1], shape[0]], range=beamLimits, weights=flux)
 
     if cDataFunc is not None:
         hist2dRGB = np.zeros((shape[1], shape[0], 3), dtype=np.float64)
@@ -1496,7 +1483,7 @@ def propagationProcess(q_in, q_out):
                                         'sender_id': oe.uuid,
                                         'status': 0}
                                 q_out.put(msg_autopos_update)
-                    
+
                     msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
                                 'sender_name': oe.name,
                                 'sender_id': oe.uuid,
@@ -1547,7 +1534,7 @@ class MessageHandler:
         self.exit = False
 
     def handle_create(self, message):
-        
+
         objuuid = message.get("uuid")
 
         object_type = message.get("object_type")
@@ -1568,12 +1555,11 @@ class MessageHandler:
                 self.startEl = objuuid
 
     def handle_modify(self, message):
-#        print("handle_modify", message)
         objuuid = message.get("uuid")
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
 
-        if object_type == 'oe': 
+        if object_type == 'oe':
             element = self.bl.oesDict.get(objuuid)
 
             if element is not None:
@@ -1586,7 +1572,8 @@ class MessageHandler:
                             if arg == 'bragg':
                                 value = [float(value)]
                             else:
-                                value = element[0].material.get_Bragg_angle(float(value))
+                                value = element[0].material.get_Bragg_angle(
+                                        float(value))
                         else:
                             arrayValue = getattr(element[0], arg)
                             setattr(arrayValue, field, value)
@@ -1607,7 +1594,7 @@ class MessageHandler:
                 elif keys.index(modifiedEl) < keys.index(self.startEl):
                     self.startEl = modifiedEl
         elif object_type == 'mat':
-#            element = self.bl.materialsDict.get(objuuid)
+            # element = self.bl.materialsDict.get(objuuid)
             # We reinstantiate the material object instead of updating. Single-
             # property update not supported yet for materials.
             # object will use the same uuid
@@ -1626,9 +1613,9 @@ class MessageHandler:
                             break
                     except AttributeError:
                         pass
-                        
+
             if self.autoUpdate and self.startEl is not None:
-                self.needUpdate = True            
+                self.needUpdate = True
 
     def handle_flow(self, message):
         oeuuid = message.get('uuid')
@@ -1641,7 +1628,7 @@ class MessageHandler:
             self.startEl = oeuuid
 
     def handle_delete(self, message):
-        oeuuid = message.get("uuid")
+        # oeuuid = message.get("uuid")
         print(f"Deleting object with UUID {uuid}")
 
     def handle_start(self, message):
@@ -1670,7 +1657,6 @@ class MessageHandler:
         self.stop = True
 
     def process_message(self, message):
-#        print("11", message)
         # Build a dispatch dictionary mapping commands to methods.
         command_handlers = {
             "create": self.handle_create,
@@ -1687,7 +1673,7 @@ class MessageHandler:
         command = message.get("command")
         handler = command_handlers.get(command)
         if handler:
-#            print(message)
+            # print(message)
             handler(message)
         else:
             print(f"Unknown command: {command}")
@@ -2027,6 +2013,7 @@ class BeamLine(object):
         self.beamsRevDict = OrderedDict()
         self.beamsRevDictUsed = {}
         self.blViewer = None
+        self.blExplorer = None
         self.statusSignal = None
         self.layoutStr = None
         if fileName:
@@ -2129,7 +2116,7 @@ class BeamLine(object):
             try:
                 if isinstance(oe._pitch, (list, tuple)):
                     alignE = float(oe._pitch[-1])
-                autoPitch = True
+                autoPitch = oe._pitch is not None
             except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
@@ -2166,6 +2153,7 @@ class BeamLine(object):
                 except Exception:
                     print("Cannot find direction for automatic alignment.")
                     raise
+
             dirNorm = np.sqrt(inBeam.a[0]**2 + inBeam.b[0]**2 + inBeam.c[0]**2)
             inBeam.a[0] /= dirNorm
             inBeam.b[0] /= dirNorm
@@ -2204,6 +2192,12 @@ class BeamLine(object):
                     mat = oe.material[oe.curSurface]
                 else:
                     mat = oe.material
+                if not hasattr(mat, 'get_Bragg_angle'):
+                    if autoPitch:
+                        oe.pitch = 0
+                    elif autoBragg:
+                        oe.bragg = 0
+                    return
                 braggT = mat.get_Bragg_angle(alignE)
                 alphaT = 0.
                 lauePitch = 0.
@@ -2323,6 +2317,30 @@ class BeamLine(object):
 
         self.flowU = newFlow
 
+    def index_materials(self):
+        materialsDict = OrderedDict()
+        for ename, eLine in self.oesDict.items():
+            oe = eLine[0]
+            for attr in ['material', 'material2']:
+                if hasattr(oe, attr):
+                    attrMat = getattr(oe, attr)
+                    if not is_sequence(attrMat):
+                        seqMat = (attrMat,)
+                    for newMat in seqMat:
+                        if newMat is not None and newMat.uuid not in\
+                                materialsDict:
+                            materialsDict[newMat.uuid] = newMat
+                        for subAttr in ['tlayer', 'blayer',
+                                        'coating', 'substrate']:
+                            if hasattr(newMat, subAttr):
+                                subMat = getattr(newMat, subAttr)
+                                if subMat.uuid not in materialsDict:
+                                    materialsDict[subMat.uuid] = subMat
+                                    materialsDict.move_to_end(
+                                            subMat.uuid,
+                                            last=False)
+        self.materialsDict.update(materialsDict)
+
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[], v2=False,
              **kwargs):
@@ -2352,27 +2370,29 @@ class BeamLine(object):
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
             if v2:
-                materialsDict = OrderedDict()
-                for ename, eLine in self.oesDict.items():
-                    oe = eLine[0]
-                    for attr in ['material', 'material2']:
-                        if hasattr(oe, attr):
-                            attrMat = getattr(oe, attr)
-                            if not is_sequence(attrMat):
-                                seqMat = (attrMat,)
-                            for newMat in seqMat:
-                                if newMat is not None and not newMat.uuid in materialsDict:
-                                    materialsDict[newMat.uuid] = newMat
-                                for subAttr in ['tlayer', 'blayer',
-                                                'coating', 'substrate']:
-                                    if hasattr(newMat, subAttr):
-                                        subMat = getattr(newMat, subAttr)
-                                        if not subMat.uuid in materialsDict:
-                                            materialsDict[subMat.uuid] = subMat
-                                            materialsDict.move_to_end(
-                                                    subMat.uuid,
-                                                    last=False)
-                self.materialsDict.update(materialsDict)
+                self.index_materials()
+#                materialsDict = OrderedDict()
+#                for ename, eLine in self.oesDict.items():
+#                    oe = eLine[0]
+#                    for attr in ['material', 'material2']:
+#                        if hasattr(oe, attr):
+#                            attrMat = getattr(oe, attr)
+#                            if not is_sequence(attrMat):
+#                                seqMat = (attrMat,)
+#                            for newMat in seqMat:
+#                                if newMat is not None and newMat.uuid not in\
+#                                        materialsDict:
+#                                    materialsDict[newMat.uuid] = newMat
+#                                for subAttr in ['tlayer', 'blayer',
+#                                                'coating', 'substrate']:
+#                                    if hasattr(newMat, subAttr):
+#                                        subMat = getattr(newMat, subAttr)
+#                                        if subMat.uuid not in materialsDict:
+#                                            materialsDict[subMat.uuid] = subMat
+#                                            materialsDict.move_to_end(
+#                                                    subMat.uuid,
+#                                                    last=False)
+#                self.materialsDict.update(materialsDict)
                 _ = self.export_to_json()  # layoutStr is populated inside
 
                 self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr,
@@ -2414,6 +2434,28 @@ class BeamLine(object):
             sys.exit(app.exec_())
         else:
             self.blViewer.show()
+
+    def explore(self):
+        try:
+            from ...gui import xrtQook as xrtqook
+        except ImportError as e:
+            print("Cannot import xrtGlow. "
+                  "If you run your script from an IDE, don't.")
+            print(e)
+            return
+
+        from .run import run_process
+        run_process(self)
+
+        if self.blExplorer is None:
+            app = xrtqook.qt.QApplication.instance()
+            if app is None:
+                app = xrtqook.qt.QApplication(sys.argv)
+            self.index_materials()
+            layout = self.export_to_json()
+            self.blExplorer = xrtqook.XrtQook(loadLayout=layout)
+            self.blExplorer.setWindowTitle("xrtQook")
+            self.blExplorer.show()
 
     def export_to_glow(self, signal=None):
         def calc_weighted_center(beam):
@@ -2534,11 +2576,9 @@ class BeamLine(object):
         return [rayPath, beamDict, oesDict]
 
     def init_oe_from_json(self, elProps, isString=True):
-#        print("Creating OE from JSON", elProps)
         oeParams = elProps.get('properties')
 
         if elProps.get('_object') is None:
-#            print("Empty object")
             return
         else:
             oeModule, oeClass = elProps['_object'].rsplit('.', 1)
@@ -2551,12 +2591,12 @@ class BeamLine(object):
                 initKWArgs = oeParams
 
             try:
-                oeObject = getattr(oeModule, oeClass)(**initKWArgs)
+                _ = getattr(oeModule, oeClass)(**initKWArgs)
                 initStatus = 0
             except Exception as e:  # TODO: Needs testing
                 print(oeClass, "Init problem:", e)
                 initStatus = 1
-#                raise
+                # raise
 
         self.oenamesToUUIDs[oeParams['name']] = oeParams['uuid']
         self.update_flow_from_json(oeParams['uuid'], elProps)
@@ -2568,14 +2608,14 @@ class BeamLine(object):
             if oeid == elid:
                 del self.oenamesToUUIDs[oename]
                 break
-            
+
         if elid in self.flowU:
             del self.flowU[elid]
             for eluuid, props in self.flowU.items():
                 for methName, methArgs in props.items():
                     if 'beam' in methArgs and methArgs.get('beam') == elid:
                         props['beam'] = None
-            
+
         if elid in self.beamsDictU:
             del self.beamsDictU[elid]
 
@@ -2587,22 +2627,23 @@ class BeamLine(object):
             if tmpid == matid:
                 del self.matnamesToUUIDs[matname]
                 break
-            
+
         for elid, elLine in self.oesDict.items():
             elObj = elLine[0]
             for prop in ['material', 'material2']:
-                if hasattr(elObj, prop) and elObj.getattr(prop) == self.materialsDict[matid]:
+                if hasattr(elObj, prop) and elObj.getattr(
+                        prop) == self.materialsDict[matid]:
                     setattr(elObj, prop, None)
 
         for tmpid, matobj in self.materialsDict.items():
             elObj = elLine[0]
             for prop in ['tLayer', 'bLayer', 'coating', 'substrate']:
-                if hasattr(matobj, prop) and matobj.getattr(prop) == self.materialsDict[matid]:
+                if hasattr(matobj, prop) and matobj.getattr(
+                        prop) == self.materialsDict[matid]:
                     setattr(matobj, prop, None)
-            
+
         if matid in self.materialsDict:
             del self.materialsDict[matid]
-
 
     def update_flow_from_json(self, oeid, methDict):
         for methStr, methArgs in methDict.items():
@@ -2656,11 +2697,9 @@ class BeamLine(object):
 #                self.oenamesToUUIDs[elProps['properties']['name']] = elKey
             else:
                 elKey = str(uuid.uuid4())
-#                self.oenamesToUUIDs[elName] = elKey
                 elProps['properties']['name'] = elName
             elProps['properties']['uuid'] = elKey
             _ = self.init_oe_from_json(elProps)  # oesDict populated in oe init
-
 
         for elName, eluuid in self.oenamesToUUIDs.items():
             if elName in dictIn:
@@ -2701,7 +2740,7 @@ class BeamLine(object):
         if not isinstance(dictIn, dict):
             return
         for matName, matProps in dictIn.items():
-            delay = 0.01  # required to prevent file read errors
+            delay = 0.05  # required to prevent file read errors
             for retries in range(5):
                 try:
                     time.sleep(delay)
@@ -2750,22 +2789,28 @@ class BeamLine(object):
             self.flowU = data['Project']['flow']
 
     def export_to_json(self):
-        if self.layoutStr is not None:
+        if self.layoutStr is None:
+            plotsDict = {}
+            runDict = {}
+            descriptionStr = None
+        else:
             plotsDict = self.layoutStr['Project'].get('plots')
             runDict = self.layoutStr['Project'].get('run_ray_tracing')
             descriptionStr = self.layoutStr['Project'].get('description')
-            
+
             if not isinstance(plotsDict, dict):
                 plotsDict = {}
-            
+
             if runDict is not None:
                 runDict['beamLine'] = self.name
+
         matDict = OrderedDict()
         for objName, objInstance in self.materialsDict.items():
             matRecord = OrderedDict()
             matRecord['properties'] = get_init_kwargs(objInstance,
-                     compact=False)
+                                                      compact=False)
             matRecord['_object'] = get_obj_str(objInstance)
+
             if not matRecord['properties']['name']:
                 matRecord['properties']['name'] = objName
             field = objInstance.uuid if hasattr(
@@ -2782,7 +2827,7 @@ class BeamLine(object):
             oeObj = oeline[0]
             oeRecord = OrderedDict()
             oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
-                    blname=self.name)
+                                                     blname=self.name)
             oeRecord['_object'] = get_obj_str(oeObj)
             if 'name' not in oeRecord['properties']:
                 tmpName = "{}_{}".format(
@@ -2792,8 +2837,8 @@ class BeamLine(object):
             beamlineDict[oeid] = oeRecord
 
 #        beamsDict = {}
-
-        # TODO: replace with flowU?
+#
+#        # TODO: replace with flowU?
 #        for segment in self.flow:
 #            method = segment[1]
 #            module = method.__module__
@@ -2801,30 +2846,29 @@ class BeamLine(object):
 #            method_name = method.__name__
 #            methDict = OrderedDict()
 #            methDict['_object'] = "{0}.{1}.{2}".format(module, class_name,
-#                    method_name)
-#            methDict['parameters'] = {k: str(v) for k, v in segment[2].items()}
+#                                                       method_name)
+#            methDict['parameters'] = {k: str(v) for k, v
+#                                      in segment[2].items()}
 #            methDict['output'] = segment[3]
 #            beamlineDict[segment[0]][method_name] = methDict
 #            for bname in segment[3].values():
 #                beamsDict[bname] = None
-
-
 
         projectDict = OrderedDict()
         projectDict['Beams'] = self.beamNamesDict
         projectDict['Materials'] = matDict
         projectDict[self.name] = beamlineDict
         projectDict['flow'] = self.flowU
-        if self.layoutStr is not None:
-            if plotsDict is not None:
-                for plot, props in plotsDict.items():
-                    for argName, argVal in props.items():
-                        if argName == 'beam' and argVal in self.beamNamesDict:
-                            props[argName] = self.beamNamesDict.get(argVal)
-                            break
-            projectDict['plots'] = plotsDict
-            projectDict['run_ray_tracing'] = runDict
-            projectDict['description'] = descriptionStr
+
+        if plotsDict is not None:
+            for plot, props in plotsDict.items():
+                for argName, argVal in props.items():
+                    if argName == 'beam' and argVal in self.beamNamesDict:
+                        props[argName] = self.beamNamesDict.get(argVal)
+                        break
+        projectDict['plots'] = plotsDict
+        projectDict['run_ray_tracing'] = runDict
+        projectDict['description'] = descriptionStr
 
         self.layoutStr = {'Project': projectDict}
 #        print("EXPORT:", self.layoutStr)
