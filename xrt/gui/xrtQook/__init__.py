@@ -329,6 +329,7 @@ class XrtQook(qt.QWidget):
         self.setLayout(canvasBox)
         self.initAllTrees()
         if loadLayout is not None:
+            self.importLayout(layoutJSON=loadLayout)
 
         self.blRunGlow()
         self.catchViewer()
