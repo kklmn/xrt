@@ -100,7 +100,6 @@ def run_process(myTestBeamline):
 rrun.run_process = run_process
 
 
-
 def define_plots():
     plots = []
 
@@ -121,11 +120,12 @@ def define_plots():
 
 def main():
     myTestBeamline = build_beamline()
-    myTestBeamline.explore()
     E0 = 0.5 * (myTestBeamline.bendingMagnet01.eMin +
                 myTestBeamline.bendingMagnet01.eMax)
-    myTestBeamline.alignE=E0
+    myTestBeamline.alignE = E0
     plots = define_plots()
+    myTestBeamline.explore(plots=xrtplot.serialize_plots(plots))
+
     xrtrun.run_ray_tracing(
         plots=plots,
         backend=r"raycing",

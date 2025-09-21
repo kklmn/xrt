@@ -156,6 +156,21 @@ if hasQt:
             self.xrtplot = xrtplot
 
 
+def serialize_plots(data):
+    plotsDict = raycing.OrderedDict()
+    for iplot, plot in enumerate(data):
+        plotname = 'plot{:02d}'.format(iplot+1)
+        kwargs = raycing.get_init_kwargs(plot)
+        kwargs['_object'] = "xrt.plotter.XYCPlot"
+
+        for ax in ['xaxis', 'yaxis', 'caxis']:
+            axkwargs = raycing.get_init_kwargs(getattr(plot, ax))
+            axkwargs['_object'] = "xrt.plotter.XYCAxis"
+            kwargs[ax] = axkwargs
+        plotsDict[plotname] = kwargs
+    return plotsDict
+
+
 def deserialize_plots(data):
     plotsList = []
     plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))

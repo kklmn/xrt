@@ -2435,7 +2435,7 @@ class BeamLine(object):
         else:
             self.blViewer.show()
 
-    def explore(self):
+    def explore(self, plots=None):
         try:
             from ...gui import xrtQook as xrtqook
         except ImportError as e:
@@ -2453,6 +2453,8 @@ class BeamLine(object):
                 app = xrtqook.qt.QApplication(sys.argv)
             self.index_materials()
             layout = self.export_to_json()
+            if plots is not None and not layout['plots']:
+                layout['plots'].update(plots)
             self.blExplorer = xrtqook.XrtQook(loadLayout=layout)
             self.blExplorer.setWindowTitle("xrtQook")
             self.blExplorer.show()
