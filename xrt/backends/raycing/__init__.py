@@ -2791,11 +2791,14 @@ class BeamLine(object):
             self.flowU = data['Project']['flow']
 
     def export_to_json(self):
-        if self.layoutStr is None:
-            plotsDict = {}
-            runDict = {}
-            descriptionStr = None
-        else:
+
+        matDict = OrderedDict()
+        beamlineDict = OrderedDict()
+        plotsDict = OrderedDict()
+        runDict = None
+        descriptionStr = None
+
+        if self.layoutStr is not None:
             plotsDict = self.layoutStr['Project'].get('plots')
             runDict = self.layoutStr['Project'].get('run_ray_tracing')
             descriptionStr = self.layoutStr['Project'].get('description')
@@ -2806,7 +2809,6 @@ class BeamLine(object):
             if runDict is not None:
                 runDict['beamLine'] = self.name
 
-        matDict = OrderedDict()
         for objName, objInstance in self.materialsDict.items():
             matRecord = OrderedDict()
             matRecord['properties'] = get_init_kwargs(objInstance,
@@ -2821,7 +2823,6 @@ class BeamLine(object):
 
         blArgs = get_init_kwargs(self)
 
-        beamlineDict = OrderedDict()
         beamlineDict['properties'] = blArgs
         beamlineDict['_object'] = get_obj_str(self)
 
