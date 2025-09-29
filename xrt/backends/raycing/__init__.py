@@ -1472,6 +1472,7 @@ def propagationProcess(q_in, q_out):
                     try:
                         getattr(oe, func)(**fkwargs)
                     except Exception as e:
+#                        raise
                         print(e)
                         continue
 
@@ -1632,8 +1633,29 @@ class MessageHandler:
             self.startEl = oeuuid
 
     def handle_delete(self, message):
-        # oeuuid = message.get("uuid")
-        print(f"Deleting object with UUID {uuid}")
+        objuuid = message.get("uuid")
+        object_type = message.get("object_type")
+        if object_type == "oe":
+            self.bl.delete_oe_by_id(objuuid)
+            if self.autoUpdate:
+                self.needUpdate = True
+                self.startEl = objuuid
+        elif object_type == "mat":
+            self.startEl = None
+            for oeid, oeLine in self.bl.oesDict.items():
+                oeObj = oeLine[0]
+                for prop in ["_material", "_material2"]:
+                    try:
+                        matProp = getattr(oeObj, prop)
+                        if matProp == objuuid:
+                            self.startEl = oeid
+                            break
+                    except AttributeError:
+                        pass
+            self.bl.delete_mat_by_id(objuuid)
+
+            if self.autoUpdate and self.startEl is not None:
+                self.needUpdate = True
 
     def handle_start(self, message):
         print("Starting processing loop.")
@@ -1650,10 +1672,16 @@ class MessageHandler:
         self.startEl = None
 
     def handle_auto_update(self, message):
-        # print("Starting processing loop.")
+#         print("Starting processing loop.")
+        print("modifying auto-update.", message)
         kwargs = message.get('kwargs')
         if kwargs is not None:
             auto_update = kwargs.get('value')
+
+        if bool(auto_update):
+            self.needUpdate = True
+            self.startEl = None
+
         self.autoUpdate = bool(auto_update)
 
     def handle_stop(self, message):
@@ -2617,10 +2645,10 @@ class BeamLine(object):
 
         if elid in self.flowU:
             del self.flowU[elid]
-            for eluuid, props in self.flowU.items():
-                for methName, methArgs in props.items():
-                    if 'beam' in methArgs and methArgs.get('beam') == elid:
-                        props['beam'] = None
+            for eluuid, props in list(self.flowU.items()):
+                for methName, methArgs in list(props.items()):
+                    if methArgs.get('beam') == elid:
+                        methArgs['beam'] = None
 
         if elid in self.beamsDictU:
             del self.beamsDictU[elid]
@@ -2637,14 +2665,14 @@ class BeamLine(object):
         for elid, elLine in self.oesDict.items():
             elObj = elLine[0]
             for prop in ['material', 'material2']:
-                if hasattr(elObj, prop) and elObj.getattr(
+                if hasattr(elObj, prop) and getattr(elObj,
                         prop) == self.materialsDict[matid]:
                     setattr(elObj, prop, None)
 
         for tmpid, matobj in self.materialsDict.items():
             elObj = elLine[0]
             for prop in ['tLayer', 'bLayer', 'coating', 'substrate']:
-                if hasattr(matobj, prop) and matobj.getattr(
+                if hasattr(matobj, prop) and getattr(matobj,
                         prop) == self.materialsDict[matid]:
                     setattr(matobj, prop, None)
 

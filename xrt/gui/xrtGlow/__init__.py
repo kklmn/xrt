@@ -1207,7 +1207,9 @@ class xrtGlow(qt.QWidget):
         # Stage 2c. Return non-flow elements
         for modelRow in tmpDict.values():
             if modelRow is not None:
-                self.segmentsModelRoot.appendRow(modelRow)
+                elementId = str(modelRow[0].data(qt.UserRole))
+                if elementId in self.customGlWidget.beamline.oesDict:
+                    self.segmentsModelRoot.appendRow(modelRow)
 
         # Stage 3. Add children
         for iel in range(self.segmentsModelRoot.rowCount()):
@@ -1224,6 +1226,9 @@ class xrtGlow(qt.QWidget):
                             print(oeItem.text(), ": Appending", endBeamText)
                         except:  # analysis:ignore
                             continue
+        
+        # Stage 4. Clear dead references
+        tmpDict.clear()
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
@@ -2922,7 +2927,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if vao is not None:
             vao.destroy()
             gl.glGetError()
-            vao.clear()
+#            vao.clear()
             
         beamBuffer.clear()
 
@@ -2937,10 +2942,27 @@ class xrtGlWidget(qt.QOpenGLWidget):
             mesh.delete_mesh(oeid)
 #            del self.meshDict[oeid]  # what about mesh.oe?
             
-    def delete_oe(self, oeid):  # to be triggered by a signal after deleting the buffers
+    def delete_object(self, objuuid):  # to be triggered by a signal after deleting the buffers
         try:
-            del self.meshDict[oeid] 
-            self.beamline.delete_oe_by_id(oeid)
+            objType = None
+            if objuuid in self.beamline.oesDict: 
+                del self.meshDict[objuuid] 
+                self.beamline.delete_oe_by_id(objuuid)
+                if self.parent is not None:
+                    self.parent.updateTargets()
+                objType = "oe"
+            elif objuuid in self.beamline.materialsDict:
+                self.beamline.delete_mat_by_id(objuuid)
+                objType = "mat"
+
+            if objType is not None:
+                message = {"command": "delete",
+                           "object_type": objType,
+                           "uuid": objuuid,
+                                }
+    
+                if hasattr(self, 'input_queue'):
+                    self.input_queue.put(message)
         except:
             raise
 
@@ -4600,13 +4622,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         else 0)) if hasattr(oe, 'pitch') else 0
                 except TypeError:
                     oePitchStr = 0
-                tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
-                        oe.name, *oe.center,
-                        oePitchStr,
-                        np.degrees(oe.roll+oe.positionRoll)
-                        if is_oe(oe) else 0,
-                        np.degrees(oe.yaw)
-                        if hasattr(oe, 'yaw') else 0)
+                
+                try:
+                    tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
+                            oe.name, *oe.center,
+                            oePitchStr,
+                            np.degrees(oe.roll+oe.positionRoll)
+                            if is_oe(oe) else 0,
+                            np.degrees(oe.yaw)
+                            if hasattr(oe, 'yaw') else 0)
+                except ValueError:
+                    tooltipStr = str(oe.name)
                 qt.QToolTip.showText(mEvent.globalPos(), tooltipStr, self)
             else:
                 qt.QToolTip.hideText()

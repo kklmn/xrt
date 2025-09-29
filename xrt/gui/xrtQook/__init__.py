@@ -131,7 +131,8 @@ class LevelRestrictedModel(qt.QStandardItemModel):
         if indexes:
             index = indexes[0]
             self._cached_drag_row = index.row()
-            self._cached_drag_parent = self.itemFromIndex(index.parent()) if index.parent().isValid() else self.invisibleRootItem()
+            self._cached_drag_parent = self.itemFromIndex(
+                    index.parent()) if index.parent().isValid() else self.invisibleRootItem()
         return mime
 
     def dropMimeData(self, data, action, row, column, parent_index):
@@ -424,7 +425,7 @@ class XrtQook(qt.QWidget):
         if gl.isOpenGL:
             glowAction.setShortcut('CTRL+F1')
             glowAction.setCheckable(True)
-            glowAction.setChecked(False)
+            glowAction.setChecked(True)
             glowAction.toggled.connect(self.toggleGlow)
 
         OCLAction = qt.QAction(
@@ -862,6 +863,7 @@ class XrtQook(qt.QWidget):
 #        self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
 
         self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
+        self.beamLineModel.rowsInserted.connect(self.updateOrder)
 #        self.rootBLItem = self.beamLineModel.item(0, 0)
 #        self.rootBLItem.setFlags(qt.ItemFlags(
 #            qt.ItemIsEnabled | qt.ItemIsEditable |
@@ -2069,27 +2071,27 @@ class XrtQook(qt.QWidget):
 #        self.isEmpty = False
 #        self.tabs.setCurrentWidget(self.matTree)
 
-    def moveItem(self, mvDir, view, item):
-        oldRowNumber = item.index().row()
-        statusExpanded = view.isExpanded(item.index())
-        parent = item.parent()
-        item.model().blockSignals(True)
-        self.flattenElement(view, item)
-        item.model().blockSignals(False)
-        tmpGlowUpdate = False
-        if self.isGlowAutoUpdate:
-            tmpGlowUpdate = True
-            self.isGlowAutoUpdate = False
-        newItem = parent.takeRow(oldRowNumber)
-        parent.insertRow(oldRowNumber + mvDir, newItem)
-        self.addCombo(view, newItem[0])
-        view.setExpanded(newItem[0].index(), statusExpanded)
-        self.updateBeamline(newItem[0], newOrder=True)
-        if tmpGlowUpdate:
-            self.isGlowAutoUpdate = True
-            startFrom = self.nameToFlowPos(newItem[0].text())
-            if startFrom is not None:
-                self.blPropagateFlow(startFrom)
+#    def moveItem(self, mvDir, view, item):
+#        oldRowNumber = item.index().row()
+#        statusExpanded = view.isExpanded(item.index())
+#        parent = item.parent()
+#        item.model().blockSignals(True)
+#        self.flattenElement(view, item)
+#        item.model().blockSignals(False)
+#        tmpGlowUpdate = False
+#        if self.isGlowAutoUpdate:
+#            tmpGlowUpdate = True
+#            self.isGlowAutoUpdate = False
+#        newItem = parent.takeRow(oldRowNumber)
+#        parent.insertRow(oldRowNumber + mvDir, newItem)
+#        self.addCombo(view, newItem[0])
+#        view.setExpanded(newItem[0].index(), statusExpanded)
+#        self.updateBeamline(newItem[0], newOrder=True)
+#        if tmpGlowUpdate:
+#            self.isGlowAutoUpdate = True
+#            startFrom = self.nameToFlowPos(newItem[0].text())
+#            if startFrom is not None:
+#                self.blPropagateFlow(startFrom)
 
     def copyChildren(self, itemTo, itemFrom):
         if itemFrom.hasChildren():
@@ -2123,8 +2125,29 @@ class XrtQook(qt.QWidget):
         then item.parent.removeRow(item.index().row())
         
         """
-        pass
-#        if item.model() == self.materialsModel and\
+        objuuid = item.data(qt.UserRole)
+        if self.blViewer is not None:
+            if view is self.tree:
+                self.blViewer.customGlWidget.deletionQueue.append(objuuid)
+                # only delete oe when it is safe
+            self.blViewer.customGlWidget.delete_object(objuuid)
+
+        oldname = str(item.text())
+        
+
+        if item.parent() is not None:
+            item.parent().removeRow(item.index().row())
+        else:
+            self.iterateRename(
+                    self.rootMatItem, oldname, "None",
+                    ['tlay', 'blay', 'coat', 'substrate'])
+            self.iterateRename(self.rootBLItem, oldname, "None",
+                               ['material'])
+            item.model().invisibleRootItem().removeRow(item.index().row())
+
+            
+        # TODO: consider non-glow case, beamline belongs to Qook widget?
+
 #                item.parent() is None:
 #            del self.beamLine.materialsDict[str(item.text())]
 #        if item.parent() == self.rootBLItem:
@@ -2329,6 +2352,16 @@ class XrtQook(qt.QWidget):
                             "No layout")
                 return
 
+            tmpAutoUpdate = self.isGlowAutoUpdate
+            if tmpAutoUpdate:
+                self.toggleGlow(False)
+                
+            for row in reversed(range(self.rootBLItem.rowCount())):
+                oeItem = self.rootBLItem.child(row, 0)
+                self.deleteElement(self.tree, oeItem)
+                
+            # Deleting existing elements  
+
             beamlineName = next(raycing.islice(project.keys(), 2, 3))
             self.beamLine.name = beamlineName
 
@@ -2392,8 +2425,11 @@ class XrtQook(qt.QWidget):
                 0, int(self.plotTree.width()/3))
             self.tabs.setCurrentWidget(self.tree)
 
-            if self.isGlowAutoUpdate:
-                self.blRunGlow()
+            if tmpAutoUpdate:
+                self.toggleGlow(True)
+
+#            if self.isGlowAutoUpdate:
+#                self.blRunGlow()
 
     def iterateImport(self, view, rootModel, rootImport):
         if ET.iselement(rootImport):
@@ -2962,15 +2998,15 @@ class XrtQook(qt.QWidget):
             menu.addAction("Duplicate " + str(selectedItem.text()),
                            partial(self.addElement, copyFrom=selectedItem))
             menu.addSeparator()
-            if selIndex.row() > 2:
-                menu.addAction("Move Up", partial(self.moveItem, -1,
-                                                  self.tree,
-                                                  selectedItem))
-            if selIndex.row() < selectedItem.parent().rowCount()-1:
-                menu.addAction("Move Down", partial(self.moveItem, 1,
-                                                    self.tree,
-                                                    selectedItem))
-            menu.addSeparator()
+#            if selIndex.row() > 2:
+#                menu.addAction("Move Up", partial(self.moveItem, -1,
+#                                                  self.tree,
+#                                                  selectedItem))
+#            if selIndex.row() < selectedItem.parent().rowCount()-1:
+#                menu.addAction("Move Down", partial(self.moveItem, 1,
+#                                                    self.tree,
+#                                                    selectedItem))
+#            menu.addSeparator()
             deleteActionName = "Remove " + str(selectedItem.text())
             menu.addAction(deleteActionName, partial(self.deleteElement,
                                                      self.tree,
@@ -3229,7 +3265,7 @@ class XrtQook(qt.QWidget):
 #                        break
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
-
+        # TODO: move deletion here
         kwargs = {}
         if item is None or (item.column() == 0 and newElement is None):
             return
@@ -3397,6 +3433,10 @@ class XrtQook(qt.QWidget):
         item.setBackground(qt.QBrush(color))
         item.model().blockSignals(updateStatus)
 
+    def updateOrder(self, *args, **kwargs):
+        print("Rows Moved")
+        print(args)
+
     def blPropagateFlow(self, startFrom):
         pass
 #        self.blRunGlow()
@@ -3443,8 +3483,13 @@ class XrtQook(qt.QWidget):
     def toggleGlow(self, status):
         self.isGlowAutoUpdate = status
         self.blRunGlow()
-#        if self.isGlowAutoUpdate:
-#            self.populateBeamline()
+        if self.blViewer is not None:
+            if hasattr(self.blViewer.customGlWidget, 'input_queue'):
+                self.blViewer.customGlWidget.input_queue.put({
+                            "command": "auto_update",
+                            "object_type": "beamline",
+                            "kwargs": {"value": int(status)}
+                            })
 
     def blRunGlow(self, kwargs={}):
         if self.blViewer is None:
