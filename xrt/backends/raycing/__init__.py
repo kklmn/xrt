@@ -1224,7 +1224,7 @@ def get_params(objStr):  # Returns a collection of default parameters
                 continue
             break
     elif inspect.ismethod(objRef) or inspect.isfunction(objRef):
-        argList = inspect.getargspec(objRef)
+        argList = getargspec(objRef)
         if argList[3] is not None:
             if objRef.__name__ == 'run_ray_tracing':
                 uArgs = OrderedDict(zip(argList[0], argList[3]))
@@ -1469,7 +1469,11 @@ def propagationProcess(q_in, q_out):
                 oe = handler.bl.oesDict[oeid][0]
 
                 for func, fkwargs in meth.items():
-                    getattr(oe, func)(**fkwargs)
+                    try:
+                        getattr(oe, func)(**fkwargs)
+                    except Exception as e:
+                        print(e)
+                        continue
 
                     for autoAttr in ['pitch', 'bragg', 'center']:
                         if (hasattr(oe, f'_{autoAttr}') and hasattr(

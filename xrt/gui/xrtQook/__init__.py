@@ -842,7 +842,7 @@ class XrtQook(qt.QWidget):
         if blProps is None:
             self.beamLine = raycing.BeamLine()
             self.beamLine.flowSource = 'Qook'
-        self.updateBeamlineBeams(item=None)
+#        self.updateBeamlineBeams(item=None)
         self.updateBeamlineMaterials(item=None)
         self.updateBeamline(item=None)
         self.rayPath = None
@@ -2118,49 +2118,55 @@ class XrtQook(qt.QWidget):
             pass
 
     def deleteElement(self, view, item):
-        if item.model() == self.materialsModel and\
-                item.parent() is None:
-            del self.beamLine.materialsDict[str(item.text())]
-        if item.parent() == self.rootBLItem:
-            self.blUpdateLatchOpen = False
-
-        while item.hasChildren():
-            iItem = item.child(0, 0)
-            if item.child(0, 1) is not None:
-                if str(iItem.text()) == 'beam' and\
-                        str(item.child(0, 1).text()) == 'None':
-                    if iItem.model() == self.beamLineModel:
-                        self.blColorCounter -= 1
-                    elif iItem.model() == self.plotModel:
-                        self.pltColorCounter -= 1
-                iWidget = view.indexWidget(item.child(0, 1).index())
-                if iWidget is not None:
-                    if item.text() == "output":
-                        try:
-                            del self.beamLine.beamsDict[str(
-                                iWidget.currentText())]
-                        except Exception:
-                            print("Failed to delete", iWidget.currentText())
-                            if _DEBUG_:
-                                raise
-                            else:
-                                pass
-                        beamInModel = self.beamModel.findItems(
-                            iWidget.currentText())
-                        if len(beamInModel) > 0:
-                            self.beamModel.takeRow(beamInModel[0].row())
-
-            self.deleteElement(view, iItem)
-        else:
-            if item.parent() == self.rootBLItem:
-                del self.beamLine.oesDict[str(item.text())]
-                self.blUpdateLatchOpen = True
-                self.updateBeamModel()
-                self.updateBeamline(item, newElement=None)
-            if item.parent() is not None:
-                item.parent().removeRow(item.index().row())
-            else:
-                item.model().invisibleRootItem().removeRow(item.index().row())
+        """
+        call beamline.delete_element_by_id(item.uuid)
+        then item.parent.removeRow(item.index().row())
+        
+        """
+        pass
+#        if item.model() == self.materialsModel and\
+#                item.parent() is None:
+#            del self.beamLine.materialsDict[str(item.text())]
+#        if item.parent() == self.rootBLItem:
+#            self.blUpdateLatchOpen = False
+#
+#        while item.hasChildren():
+#            iItem = item.child(0, 0)
+#            if item.child(0, 1) is not None:
+#                if str(iItem.text()) == 'beam' and\
+#                        str(item.child(0, 1).text()) == 'None':
+#                    if iItem.model() == self.beamLineModel:
+#                        self.blColorCounter -= 1
+#                    elif iItem.model() == self.plotModel:
+#                        self.pltColorCounter -= 1
+#                iWidget = view.indexWidget(item.child(0, 1).index())
+#                if iWidget is not None:
+#                    if item.text() == "output":
+#                        try:
+#                            del self.beamLine.beamsDict[str(
+#                                iWidget.currentText())]
+#                        except Exception:
+#                            print("Failed to delete", iWidget.currentText())
+#                            if _DEBUG_:
+#                                raise
+#                            else:
+#                                pass
+#                        beamInModel = self.beamModel.findItems(
+#                            iWidget.currentText())
+#                        if len(beamInModel) > 0:
+#                            self.beamModel.takeRow(beamInModel[0].row())
+#
+#            self.deleteElement(view, iItem)
+#        else:
+#            if item.parent() == self.rootBLItem:
+#                del self.beamLine.oesDict[str(item.text())]
+#                self.blUpdateLatchOpen = True
+#                self.updateBeamModel()
+#                self.updateBeamline(item, newElement=None)
+#            if item.parent() is not None:
+#                item.parent().removeRow(item.index().row())
+#            else:
+#                item.model().invisibleRootItem().removeRow(item.index().row())
 
     def exportLayout(self):
         saveStatus = False
@@ -2273,7 +2279,7 @@ class XrtQook(qt.QWidget):
             pass
 
     def importLayout(self, layoutJSON=None, filename=None):
-        print(layoutJSON, filename)
+#        print(layoutJSON, filename)
         project = None
         if not self.isEmpty:
             msgBox = qt.QMessageBox()
@@ -2312,9 +2318,11 @@ class XrtQook(qt.QWidget):
                 self.progressBar.setFormat(ldMsg)
 
                 parseOK = True  # False
-                if parseOK:
-                    self.beamLine.load_from_xml(openFileName)
-                    project = self.beamLine.export_to_json()
+                if parseOK:  # TODO: clear existing structure
+                    tmpBL = raycing.BeamLine(fileName=openFileName)
+
+#                    self.beamLine.load_from_xml(openFileName)
+                    project = tmpBL.export_to_json()
 
             if project is None:
                 self.progressBar.setFormat(
@@ -2327,6 +2335,9 @@ class XrtQook(qt.QWidget):
             beamlineInitKWargs = project[beamlineName]['properties']
             beamlineInitKWargs['name'] = beamlineName
             self.blUpdateLatchOpen = False
+            
+            
+            # INIT THE BEAMLINE HERE
 
             self.initAllModels()
             self.initAllTrees(
@@ -3189,33 +3200,33 @@ class XrtQook(qt.QWidget):
             if beamName not in outBeams:
                 self.beamModel.takeRow(ibm)
 
-    def updateBeamlineBeams(self, item=None):
-        # sender = self.sender()
-        # if sender is not None:
-        if True:
-            if item is None:  # Create empty beam dict
-                beamsDict = OrderedDict()
-                for ib in range(self.rootBeamItem.rowCount()):
-                    beamsDict[str(
-                        self.rootBeamItem.child(ib, 0).text())] = None
-                self.beamLine.beamsDict = beamsDict
-#            elif sender.staticMetaObject.className() == 'QComboBox':
-#                currentIndex = int(sender.currentIndex())
-#                beamValues = list(self.beamLine.beamsDict.values())
-#                beamKeys = list(self.beamLine.beamsDict.keys())
-#                beamKeys[currentIndex] = item.text()
-#                self.beamLine.beamsDict = OrderedDict(
-#                    zip(beamKeys, beamValues))
-            else:  # Beam renamed
-                bList = []
-                for ib in range(self.rootBeamItem.rowCount()):
-                    bList.append(self.rootBeamItem.child(ib, 0).text())
-
-                for key, value in self.beamLine.beamsDict.items():
-                    if key not in bList:
-                        del self.beamLine.beamsDict[key]
-                        self.beamLine.beamsDict[str(item.text())] = value
-                        break
+#    def updateBeamlineBeams(self, item=None):
+#        # sender = self.sender()
+#        # if sender is not None:
+#        if True:
+#            if item is None:  # Create empty beam dict
+#                beamsDict = OrderedDict()
+#                for ib in range(self.rootBeamItem.rowCount()):
+#                    beamsDict[str(
+#                        self.rootBeamItem.child(ib, 0).text())] = None
+#                self.beamLine.beamsDict = beamsDict
+##            elif sender.staticMetaObject.className() == 'QComboBox':
+##                currentIndex = int(sender.currentIndex())
+##                beamValues = list(self.beamLine.beamsDict.values())
+##                beamKeys = list(self.beamLine.beamsDict.keys())
+##                beamKeys[currentIndex] = item.text()
+##                self.beamLine.beamsDict = OrderedDict(
+##                    zip(beamKeys, beamValues))
+#            else:  # Beam renamed
+#                bList = []
+#                for ib in range(self.rootBeamItem.rowCount()):
+#                    bList.append(self.rootBeamItem.child(ib, 0).text())
+#
+#                for key, value in self.beamLine.beamsDict.items():
+#                    if key not in bList:
+#                        del self.beamLine.beamsDict[key]
+#                        self.beamLine.beamsDict[str(item.text())] = value
+#                        break
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
 
@@ -3259,7 +3270,8 @@ class XrtQook(qt.QWidget):
         if self.blViewer is None or not outDict:
             return
 
-        self.blViewer.customGlWidget.update_beamline(matId, outDict)
+        self.blViewer.customGlWidget.update_beamline(
+                matId, outDict, sender='Qook')
 
     def updateBeamline(self, item=None, newElement=None, newOrder=False):
         def beamToUuid(beamName):
@@ -3311,7 +3323,7 @@ class XrtQook(qt.QWidget):
                 outDict = kwargs
 
             elif column == 0 and newElement is not None:  # New Element
-                if raycing.is_valid_uuid(parent.data(qt.UserRole)):
+                if raycing.is_valid_uuid(parent.data(qt.UserRole)):  # flow
                     oeid = str(parent.data(qt.UserRole))
                     methKWArgs = OrderedDict()
                     outKWArgs = OrderedDict()
@@ -3345,12 +3357,12 @@ class XrtQook(qt.QWidget):
                                'output': outKWArgs}
 
                     methStr = methObjStr.split('.')[-1]
-                    self.beamLine.update_flow_from_json(oeid,
-                                                        {methStr: outDict})
+                    self.beamLine.update_flow_from_json(
+                            oeid, {methStr: outDict})
                     self.beamLine.sort_flow()
 #                    print("flow U", self.beamLine.flowU)
 
-                else:
+                else:  # element
                     for itop in range(item.rowCount()):
                         chitem = item.child(itop, 0)
                         if chitem.text() in ['properties']:
@@ -3363,7 +3375,7 @@ class XrtQook(qt.QWidget):
                             continue
                     kwargs['uuid'] = oeid
                     outDict = {'properties': kwargs, '_object': newElement}
-                    initStatus = self.beamLine.init_oe_from_json(outDict)
+                    initStatus = self.beamLine.init_oe_from_json(outDict)  # TODO: avoid duplication
 
                     paintItem = item.parent().child(item.row(), 1)
                     self.paintStatus(paintItem, initStatus)
@@ -3371,7 +3383,8 @@ class XrtQook(qt.QWidget):
             if self.blViewer is None or not outDict:
                 return
 
-            self.blViewer.customGlWidget.update_beamline(oeid, outDict)
+            self.blViewer.customGlWidget.update_beamline(
+                    oeid, outDict, sender='Qook')
 
     def paintStatus(self, item, status):
         updateStatus = item.model().signalsBlocked()
@@ -3410,22 +3423,22 @@ class XrtQook(qt.QWidget):
                 pass
         self.populateBeamline(item=None)
 
-    def populateBeamline(self, item=None):
-        self.blUpdateLatchOpen = False
-        self.prbStart = 0
-        self.prbRange = 100
-        try:
-            self.beamLine = raycing.BeamLine()
-            self.beamLine.flowSource = 'Qook'
-            self.updateBeamlineBeams(item=None)
-            self.updateBeamlineMaterials(item=None)
-            self.updateBeamline(item=None)
-        except:  # analysis:ignore
-            if _DEBUG_:
-                raise
-            else:
-                pass
-        self.blUpdateLatchOpen = True
+#    def populateBeamline(self, item=None):
+#        self.blUpdateLatchOpen = False
+#        self.prbStart = 0
+#        self.prbRange = 100
+#        try:
+#            self.beamLine = raycing.BeamLine()
+#            self.beamLine.flowSource = 'Qook'
+#            self.updateBeamlineBeams(item=None)
+#            self.updateBeamlineMaterials(item=None)
+#            self.updateBeamline(item=None)
+#        except:  # analysis:ignore
+#            if _DEBUG_:
+#                raise
+#            else:
+#                pass
+#        self.blUpdateLatchOpen = True
 
     def toggleGlow(self, status):
         self.isGlowAutoUpdate = status
@@ -3436,13 +3449,14 @@ class XrtQook(qt.QWidget):
     def blRunGlow(self, kwargs={}):
         if self.blViewer is None:
             try:
-                _ = self.beamLine.export_to_json()
+                _ = self.beamLine.export_to_json()  # Init Gl.bl and move there
                 self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
                                                 **kwargs)
                 self.blViewer.setWindowTitle("xrtGlow")
                 self.blViewer.show()
                 self.blViewer.parentRef = self
                 self.blViewer.parentSignal = self.statusUpdate
+                self.beamLine = self.blViewer.customGlWidget.beamline  # Assume glow is here forever
             except Exception as e:  # TODO: Handle exceptions
                 raise(e)
         else:

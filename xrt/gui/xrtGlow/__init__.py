@@ -44,26 +44,26 @@ import numpy as np
 from functools import partial
 import matplotlib as mpl
 
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 # import inspect
 import re
 import copy
-import time
+# import time
 from scipy.spatial import Delaunay
 from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict, deque
 import freetype as ft
 from matplotlib import font_manager
-#import asyncio
+# import asyncio
 from ...backends import raycing
-from ...backends.raycing import (propagationProcess, MessageHandler,
+from ...backends.raycing import (propagationProcess,
                                  orientationArgSet, shapeArgSet, EpicsDevice)
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
 from ...backends.raycing import oes as roes
 from ...backends.raycing import apertures as rapertures
 from ...backends.raycing import materials as rmats
-from ...backends.raycing import physconsts
+# from ...backends.raycing import physconsts
 from ..commons import qt
 from ..commons import gl
 from ...plotter import colorFactor, colorSaturation
@@ -2179,6 +2179,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
     scaleUpdated = qt.Signal(np.ndarray)
     histogramUpdated = qt.Signal(tuple)
     openElViewer = qt.Signal(str)
+#    safeToDelete = qt.Signal(str)
 
     def __init__(self,
                  parent=None,
@@ -2223,6 +2224,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.beamsToElements = b2els
         self.needMeshUpdate = deque()
         self.needBeamUpdate = deque()
+        self.deletionQueue = deque()
 
         self.beamline = raycing.BeamLine()
 
@@ -2452,9 +2454,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.input_queue.put(message)
 
             if 'properties' in kwargs:
-
-#                kwargs['properties'].update({'uuid': oeid})
-                self.beamline.init_oe_from_json(kwargs)
+                if sender != 'Qook':  # Already called in Qook.update_beamline
+                    self.beamline.init_oe_from_json(kwargs)
                 self.needMeshUpdate.append(oeid)
 
                 if self.parent is not None:
@@ -2481,8 +2482,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             elif 'parameters' in kwargs:  # update flow
                 methStr = kwargs['_object'].split('.')[-1]
-                self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
-                self.beamline.sort_flow()
+                if sender != 'Qook':  # Already called in Qook.update_beamline
+                    self.beamline.update_flow_from_json(oeid, {methStr: kwargs})
+                    self.beamline.sort_flow()
 #                print("GLOW: FlowU", self.beamline.flowU)
                 if self.parent is not None:
                     self.parent.updateTargets()
@@ -2799,19 +2801,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.calc_process.terminate()
                 self.calc_process.join()
 
-    def generate_hist_texture(self, oe, beam, is2ndXtal=False):
-        nsIndex = int(is2ndXtal)
-        if not hasattr(oe, 'mesh3D'):
-            return
-        meshObj = oe.mesh3D
-        lb = rsources.Beam(copyFrom=beam)
+#    def generate_hist_texture(self, oe, beam, is2ndXtal=False):
+#        nsIndex = int(is2ndXtal)
+#        if not hasattr(oe, 'mesh3D'):
+#            return
+#        meshObj = oe.mesh3D
+#        lb = rsources.Beam(copyFrom=beam)
+#
+#        beamLimits = oe.footprint if hasattr(oe, 'footprint') else None
+#
+#        histAlpha, hist2dRGB, beamLimits = self.build_histRGB(
+#                lb, beam, beamLimits[nsIndex])
+#
+#        texture = qt.QImage(hist2dRGB, 256, 256, qt.QImage.Format_RGB888)
 
-        beamLimits = oe.footprint if hasattr(oe, 'footprint') else None
-
-        histAlpha, hist2dRGB, beamLimits = self.build_histRGB(
-                lb, beam, beamLimits[nsIndex])
-
-        texture = qt.QImage(hist2dRGB, 256, 256, qt.QImage.Format_RGB888)
 #        texture.save(str(oe.name)+"_beam_hist.png")
 #        if hasattr(meshObj, 'beamTexture'):
 #            oe.beamTexture.setData(texture)
@@ -2898,6 +2901,48 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.getColorLimits()  # TODO: VERY DIRTY WORKAROUND
 
         self.beamBufferDict[beamTag] = vboStore
+
+    def delete_beam_footprint(self, beamTag):
+        beamBuffer = self.beamBufferDict.get(beamTag)
+        if beamBuffer is None:
+            return
+
+        vbo = beamBuffer.get('vbo')
+        if vbo is not None:
+            for buffKey in ['position', 'color', 'state', 'intensity', 'indices',
+                         'indices_lost']:
+                buff = vbo.get(buffKey)
+                if buff is not None:
+                    buff.destroy()
+                    gl.glGetError()
+                buff = None
+            vbo.clear()
+
+        vao = beamBuffer.get('vao')
+        if vao is not None:
+            vao.destroy()
+            gl.glGetError()
+            vao.clear()
+            
+        beamBuffer.clear()
+
+    def delete_all_oe_buffers(self, oeid):
+        for beamTag in list(self.beamBufferDict):
+            if beamTag[0] == oeid:
+                self.delete_beam_footprint(beamTag)
+                del self.beamBufferDict[beamTag]
+                
+        mesh = self.meshDict.get(oeid)
+        if mesh is not None:
+            mesh.delete_mesh(oeid)
+#            del self.meshDict[oeid]  # what about mesh.oe?
+            
+    def delete_oe(self, oeid):  # to be triggered by a signal after deleting the buffers
+        try:
+            del self.meshDict[oeid] 
+            self.beamline.delete_oe_by_id(oeid)
+        except:
+            raise
 
     def update_beam_footprint(self, beam=None, beamTag=None):
         if beam is None:
@@ -3173,10 +3218,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.colorMin = self.colorMax * 0.99
                 self.colorMax *= 1.01
 
-        if False:  # Updating textures with histograms
-            for oeuuid, beamDict in self.beamline.beamsDictU.items():
-                for beamKey, beam in beamDict:
-                    self.generate_hist_texture(beam, (oeuuid, beamKey))
+#        if False:  # Updating textures with histograms
+#            for oeuuid, beamDict in self.beamline.beamsDictU.items():
+#                for beamKey, beam in beamDict:
+#                    self.generate_hist_texture(beam, (oeuuid, beamKey))
 
         self.isColorAxReady = True
 
@@ -3956,7 +4001,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             model = self.segmentModel.model()
 
-            while self.needMeshUpdate:
+            while self.needMeshUpdate:  # TODO: process one element per call?
                 elementId = self.needMeshUpdate.popleft()
 
                 gl.glGetError()
@@ -3964,14 +4009,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 if newMesh:
                     self.init_oe_surface(elementId)
-#                    self.init_beam_footprint()
                 else:
                     self.update_oe_surface(elementId)
-#                self.needMeshUpdate = None
 
-            while self.needBeamUpdate:  # TODO: deque and process one element per call
+            while self.needBeamUpdate:  # TODO: process one element per call?
                 beamTag = self.needBeamUpdate.popleft()
                 self.update_beam_footprint(beamTag=beamTag)
+                
+            while self.deletionQueue:
+                oeid = self.deletionQueue.popleft()
+                self.delete_all_oe_buffers(oeid)
 #            self.needBeamUpdate = []
 
 #            if self.needMeshUpdate is not None:
@@ -5947,6 +5994,35 @@ class OEMesh3D():
 
 #        gridvao = qt.QOpenGLVertexArrayObject()
 #        gridvao.create()
+
+    def delete_mesh(self):
+        for nsIndex in self.vao.keys():  # Updating existing
+            vao = self.vao[nsIndex]
+
+            oldVBOpoints = self.vbo_vertices[nsIndex] if\
+                nsIndex in self.vbo_vertices.keys() else None
+            oldVBOnorms = self.vbo_normals[nsIndex] if\
+                nsIndex in self.vbo_normals.keys() else None
+            oldIBO = self.ibo[nsIndex] if nsIndex in self.ibo.keys() else None
+            if oldVBOpoints is not None:
+                oldVBOpoints.destroy()
+                gl.glGetError()
+            if oldVBOnorms is not None:
+                oldVBOnorms.destroy()
+                gl.glGetError()
+            if oldIBO is not None:
+                oldIBO.destroy()
+                gl.glGetError()
+            oldVBOpoints, oldVBOnorms, oldIBO = None, None, None
+
+            self.vbo_vertices[nsIndex] = None
+            self.vbo_normals[nsIndex] = None
+            self.ibo[nsIndex] = None
+            if vao is not None:
+                vao.destroy()
+            gl.glGetError()
+            self.vao[nsIndex] = None
+
 
     def generate_instance_data(self, num):
         period = self.oe.period if hasattr(self.oe, 'period') else 40  # [mm]
