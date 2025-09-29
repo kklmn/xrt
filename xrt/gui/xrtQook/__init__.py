@@ -952,10 +952,10 @@ class XrtQook(qt.QWidget):
         self.addProp(self.materialsModel.invisibleRootItem(), "None")
 
         self.beamModel = qt.QStandardItemModel()
-        self.beamModel.appendRow([qt.QStandardItem("None"),
-                                  qt.QStandardItem("GlobalLocal"),
-                                  qt.QStandardItem("None"),
-                                  qt.QStandardItem('000')])
+        self.beamModel.appendRow([qt.QStandardItem("None"),  # name
+                                  qt.QStandardItem("GlobalLocal"),  # type
+                                  qt.QStandardItem("None"),  # uuid
+                                  qt.QStandardItem('000')])  # Ordinal number
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
 #        self.beamModel.itemChanged.connect(self.updateBeamlineBeams)
@@ -2137,6 +2137,14 @@ class XrtQook(qt.QWidget):
 
         if item.parent() is not None:
             item.parent().removeRow(item.index().row())
+            beams = self.beamModel.findItems(objuuid, column=2)
+            bRows = []
+            for bItem in beams:
+                bRows.append(bItem.row())
+            
+            for row in sorted(bRows, reverse=True):
+                self.beamModel.removeRow(row)
+
         else:
             self.iterateRename(
                     self.rootMatItem, oldname, "None",
@@ -2144,7 +2152,6 @@ class XrtQook(qt.QWidget):
             self.iterateRename(self.rootBLItem, oldname, "None",
                                ['material'])
             item.model().invisibleRootItem().removeRow(item.index().row())
-
             
         # TODO: consider non-glow case, beamline belongs to Qook widget?
 
@@ -3342,8 +3349,8 @@ class XrtQook(qt.QWidget):
                 oeItem = methItem.parent()
                 oeid = str(oeItem.data(qt.UserRole))
                 methObjStr = methItem.text().strip('()')
-                outDict = {'_object': methObjStr,
-                           'parameters': kwargs}
+                outDict = {'_object': methObjStr}
+
             elif raycing.is_valid_uuid(item.data(qt.UserRole)):
                 oeid = str(item.data(qt.UserRole))
 
@@ -3353,10 +3360,25 @@ class XrtQook(qt.QWidget):
                 if any(argName.lower().startswith(v) for v in
                        ['mater', 'tlay', 'blay', 'coat', 'substrate']):
                     argValue = self.beamLine.matnamesToUUIDs.get(argValue_str)
+                elif argName == 'beam':
+                    argValue = beamToUuid(argValue_str)
                 else:
                     argValue = raycing.parametrize(argValue_str)
                 kwargs[argName] = argValue
-                outDict = kwargs
+
+                if outDict:  # updating flow
+                    flowRec = self.beamLine.flowU.get(oeid)
+
+                    for methParams in flowRec.values():
+                        methParams.update(kwargs)
+                    outDict['parameters'] = methParams
+
+                    self.beamLine.update_flow_from_json(
+                            oeid, {methObjStr: outDict})
+                    self.beamLine.sort_flow()
+                   
+                else:
+                    outDict = kwargs
 
             elif column == 0 and newElement is not None:  # New Element
                 if raycing.is_valid_uuid(parent.data(qt.UserRole)):  # flow
@@ -3434,8 +3456,25 @@ class XrtQook(qt.QWidget):
         item.model().blockSignals(updateStatus)
 
     def updateOrder(self, *args, **kwargs):
-        print("Rows Moved")
-        print(args)
+        if not hasattr(self, 'rootBLItem'):
+            return
+
+        try:
+            for iel in range(self.rootBLItem.rowCount()):
+                elItem = self.rootBLItem.child(iel, 0)
+                if elItem.text() == "properties":
+                    continue
+                eluuid = str(elItem.data(qt.UserRole))
+                iBeams = self.beamModel.findItems(eluuid, column=2)
+                for bItem in iBeams:
+                    row = bItem.row()
+                    self.beamModel.item(row, 3).setText(f"{iel:03d}")
+            self.beamModel.sort(3)
+#            for iel in range(self.rootBeamItem.rowCount()):
+#                for n in range(4):
+#                    print(self.rootBeamItem.child(iel, n).text())
+        except RuntimeError:
+            pass
 
     def blPropagateFlow(self, startFrom):
         pass
