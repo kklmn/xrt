@@ -88,6 +88,7 @@ from ..commons import gl  # analysis:ignore
 from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
+    from ..xrtGlow import OEExplorer
 
 try:
     from ...backends.raycing import materials_elemental as rmatsel
@@ -175,6 +176,26 @@ class LevelRestrictedModel(qt.QStandardItemModel):
         self._cached_drag_parent = None
 
         return True
+
+
+class TreeViewEx(qt.QTreeView):
+    objDoubleClicked = qt.Signal(str)
+
+    def mouseDoubleClickEvent(self, event):
+        index = self.indexAt(event.pos())
+
+        if index.isValid():
+            column = index.column()
+            row = index.row()
+            item = self.model().itemFromIndex(index)
+            if column == 1 and str(item.text()).startswith("Instance"):
+                objIndex = index.sibling(row, 0)
+                objItem = self.model().itemFromIndex(objIndex)
+                objid = str(objItem.data(qt.UserRole))
+                if raycing.is_valid_uuid(objid):
+                    self.objDoubleClicked.emit(objid)
+                    return
+        super().mouseDoubleClickEvent(event)
 
 
 try:
@@ -581,8 +602,10 @@ class XrtQook(qt.QWidget):
         sender.setMenu(subMenu)
 
     def initTabs(self):
-        self.tree = qt.QTreeView()
-        self.matTree = qt.QTreeView()
+        self.tree = TreeViewEx()
+        self.matTree = TreeViewEx()
+#        self.tree = qt.QTreeView()
+#        self.matTree = qt.QTreeView()
         self.plotTree = qt.QTreeView()
         self.runTree = qt.QTreeView()
 
@@ -607,7 +630,9 @@ class XrtQook(qt.QWidget):
 
         self.plotTree.customContextMenuRequested.connect(self.plotMenu)
         self.matTree.customContextMenuRequested.connect(self.matMenu)
+        self.matTree.objDoubleClicked.connect(self.runMaterialViewer)
         self.tree.customContextMenuRequested.connect(self.openMenu)
+        self.tree.objDoubleClicked.connect(self.runElementViewer)
 
         if ext.isSpyderlib:
             self.codeEdit = ext.codeeditor.CodeEditor(self)
@@ -668,6 +693,45 @@ class XrtQook(qt.QWidget):
         self.tabs.addTab(self.codeEdit, "Code")
         self.tabs.addTab(self.codeConsole, "Console")
         self.tabs.currentChanged.connect(self.showDescrByTab)
+
+    def runElementViewer(self, oeuuid=None):
+        oe = self.beamLine.oesDict.get(oeuuid)
+        if oe is None:
+            return
+        oeObj = oe[0]
+        blName = self.beamLine.name
+        oeProps = raycing.get_init_kwargs(oeObj, compact=False,
+                                          blname=blName)
+        oeProps.update({'uuid': oeuuid})
+        for argName, argValue in oeProps.items():
+            if any(argName.lower().startswith(v) for v in
+                    ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
+                    raycing.is_valid_uuid(argValue):
+                argMat = self.beamLine.materialsDict.get(argValue)
+                if argMat is not None:
+                    oeProps[argName] = argMat.name
+        elViewer = OEExplorer(oeProps, self, viewOnly=True)
+        if (elViewer.exec_()):
+            pass
+
+    def runMaterialViewer(self, matuuid=None):
+        matobj = self.beamLine.materialsDict.get(matuuid)
+        if matobj is None:
+            return
+        blName = self.beamLine.name
+        matProps = raycing.get_init_kwargs(matobj, compact=False,
+                                           blname=blName)
+        matProps.update({'uuid': matuuid})
+        for argName, argValue in matProps.items():
+            if any(argName.lower().startswith(v) for v in
+                    ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
+                   raycing.is_valid_uuid(str(argValue)):
+                argMat = self.beamLine.materialsDict.get(argValue)
+                if argMat is not None:
+                    matProps[argName] = argMat.name
+        matViewer = OEExplorer(matProps, self, viewOnly=True)
+        if (matViewer.exec_()):
+            pass
 
     def adjustUndockedPos(self, isFloating):
         if isFloating:
@@ -1551,6 +1615,8 @@ class XrtQook(qt.QWidget):
                                                       source=copyFrom)
         elementItem.model().blockSignals(True)
         elementClassItem.setFlags(self.objectFlag)
+        elementClassItem.setToolTip(
+                "Double click to see live object properties")
         if isRoot:
             self.rootBLItem = elementItem
 
@@ -2123,7 +2189,7 @@ class XrtQook(qt.QWidget):
         """
         call beamline.delete_element_by_id(item.uuid)
         then item.parent.removeRow(item.index().row())
-        
+
         """
         objuuid = item.data(qt.UserRole)
         if self.blViewer is not None:
@@ -2133,7 +2199,7 @@ class XrtQook(qt.QWidget):
             self.blViewer.customGlWidget.delete_object(objuuid)
 
         oldname = str(item.text())
-        
+
 
         if item.parent() is not None:
             item.parent().removeRow(item.index().row())
@@ -2141,7 +2207,7 @@ class XrtQook(qt.QWidget):
             bRows = []
             for bItem in beams:
                 bRows.append(bItem.row())
-            
+
             for row in sorted(bRows, reverse=True):
                 self.beamModel.removeRow(row)
 
@@ -2152,7 +2218,7 @@ class XrtQook(qt.QWidget):
             self.iterateRename(self.rootBLItem, oldname, "None",
                                ['material'])
             item.model().invisibleRootItem().removeRow(item.index().row())
-            
+
         # TODO: consider non-glow case, beamline belongs to Qook widget?
 
 #                item.parent() is None:
@@ -2362,12 +2428,12 @@ class XrtQook(qt.QWidget):
             tmpAutoUpdate = self.isGlowAutoUpdate
             if tmpAutoUpdate:
                 self.toggleGlow(False)
-                
+
             for row in reversed(range(self.rootBLItem.rowCount())):
                 oeItem = self.rootBLItem.child(row, 0)
                 self.deleteElement(self.tree, oeItem)
-                
-            # Deleting existing elements  
+
+            # Deleting existing elements
 
             beamlineName = next(raycing.islice(project.keys(), 2, 3))
             self.beamLine.name = beamlineName
@@ -2375,8 +2441,8 @@ class XrtQook(qt.QWidget):
             beamlineInitKWargs = project[beamlineName]['properties']
             beamlineInitKWargs['name'] = beamlineName
             self.blUpdateLatchOpen = False
-            
-            
+
+
             # INIT THE BEAMLINE HERE
 
             self.initAllModels()
@@ -3376,7 +3442,7 @@ class XrtQook(qt.QWidget):
                     self.beamLine.update_flow_from_json(
                             oeid, {methObjStr: outDict})
                     self.beamLine.sort_flow()
-                   
+
                 else:
                     outDict = kwargs
 

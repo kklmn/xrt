@@ -348,9 +348,17 @@ class xrtGlow(qt.QWidget):
             oeProps = raycing.get_init_kwargs(oeObj, compact=False,
                                               blname=blName)
             oeProps.update({'uuid': oeuuid})
-        elViewer = OEExplorer(oeProps, self)
-        elViewer.propertiesChanged.connect(
-                partial(self.customGlWidget.update_beamline, oeuuid))
+            for argName, argValue in oeProps.items():
+                if any(argName.lower().startswith(v) for v in
+                        ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
+                        raycing.is_valid_uuid(argValue):
+                    argMat = self.customGlWidget.beamline.materialsDict.get(
+                            argValue)
+                    if argMat is not None:
+                        oeProps[argName] = argMat.name
+        elViewer = OEExplorer(oeProps, self, viewOnly=True)
+#        elViewer.propertiesChanged.connect(
+#                partial(self.customGlWidget.update_beamline, oeuuid))
         if (elViewer.exec_()):
             pass
 
@@ -6987,15 +6995,19 @@ class CoordinateBox():
 
 
 class OEExplorer(qt.QDialog):
+    """
+    This is a basic version of element editor.
+    """
     propertiesChanged = qt.Signal(dict)
 
-    def __init__(self, data_dict, parent=None):
+    def __init__(self, data_dict, parent=None, viewOnly=False):
         super().__init__(parent)
-        self.setWindowTitle("Edit Class Properties")
+        self.setWindowTitle("Live Object Properties")
 
         self.model = qt.QStandardItemModel()
         self.original_data = raycing.OrderedDict()
         self.model.setHorizontalHeaderLabels(["Property", "Value"])
+        self.viewOnly = viewOnly
         for key, value in data_dict.items():
             if key in ['center']:
                 spVal = value.strip('([])')
@@ -7037,15 +7049,16 @@ class OEExplorer(qt.QDialog):
         self.button_box = qt.QDialogButtonBox()
         self.ok_button = self.button_box.addButton(
                 "OK", qt.QDialogButtonBox.AcceptRole)
-        self.apply_button = self.button_box.addButton(
-                "Apply", qt.QDialogButtonBox.ApplyRole)
-        self.cancel_button = self.button_box.addButton(
-                "Cancel", qt.QDialogButtonBox.RejectRole)
+        if not viewOnly:
+            self.apply_button = self.button_box.addButton(
+                    "Apply", qt.QDialogButtonBox.ApplyRole)
+            self.cancel_button = self.button_box.addButton(
+                    "Cancel", qt.QDialogButtonBox.RejectRole)
+            self.apply_button.clicked.connect(self.apply_changes)
+            self.cancel_button.clicked.connect(self.reject)
 
         self.button_box.accepted.connect(self.on_ok_clicked)
         self.ok_button.clicked.connect(self.accept)
-        self.apply_button.clicked.connect(self.apply_changes)
-        self.cancel_button.clicked.connect(self.reject)
 
         layout = qt.QVBoxLayout(self)
         layout.addWidget(self.table)
@@ -7069,6 +7082,7 @@ class OEExplorer(qt.QDialog):
         key_item = qt.QStandardItem(key)
         key_item.setEditable(False)
         val_item = qt.QStandardItem(str(value))
+        val_item.setEditable(not self.viewOnly)
         self.model.appendRow([key_item, val_item])
 
     def on_item_changed(self, item):
