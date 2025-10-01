@@ -525,7 +525,7 @@ class xrtGlow(qt.QWidget):
         for iaxis, (axis, rstart, rend, rstep, val) in enumerate(zip(
                 ('Line opacity', 'Line width', 'Point opacity', 'Point size'),
                 (0, 0, 0, 0), (1., 20., 1., 20.), (0.001, 0.01, 0.001, 0.01),
-                (0.2, 2., 0.75, 3.))):
+                (0.2, 2., 0.2, 3.))):
             axLabel = qt.QLabel(axis)
             opacityValidator = qt.QDoubleValidator()
             axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
@@ -2392,6 +2392,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.mModLocal.setToIdentity()
 
         self.rotations = np.zeros(2)
+
+        self.fixProj = qt.QMatrix4x4()
+        self.fixProj.perspective(self.cameraAngle*1.5, 1, 0.001, 1000)
+
 
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
@@ -4395,6 +4399,49 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if self.enableAA:
                 gl.glDisable(gl.GL_LINE_SMOOTH)
             self.eCounter = 0
+
+            # RENDER DIRECTIONAL AXES WIDGET
+
+            gl.glViewport(0, 0, int(0.2*self.viewPortGL[-1]),
+                          int(0.2*self.viewPortGL[-1]))
+            gl.glClear(gl.GL_DEPTH_BUFFER_BIT)
+
+            self.cBox.origShader.bind()
+            self.cBox.vao_arrow.bind()
+            self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
+            gl.glLineWidth(min(self.cBoxLineWidth, 1.))
+
+            fixView = qt.QMatrix4x4()
+            fixView.lookAt(self.cameraPos/self.cameraDistance,
+                           self.cameraTarget,
+                           self.upVec)
+
+            self.cBox.render_local_axes(
+                    None, None, fixView, self.fixProj,
+                    self.cBox.origShader, False)
+
+            self.cBox.vao_arrow.release()
+            self.cBox.origShader.release()
+
+            self.cBox.textShader.bind()
+            self.cBox.vaoText.bind()
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+            gl.glDisable(gl.GL_DEPTH_TEST)
+#            labelPos = qt.QVector3D(0.05, 0, 0) + qt.QVector3D(0, 0, 0.4)
+            for label, labelPos, labelColor in zip(
+                    ["x", "y", "z"],
+                    [[0.5, 0, 0], [0, 0.5, 0], [0, 0, -0.6]],
+                    [[0.5, 0.5, 1], [0.3, 1, 0.3], [1, 0.3, 0.3]]):
+
+                endPos = self.cBox.render_text(
+                    (fixView*self.fixProj*qt.QVector4D(*labelPos, 0)).toVector3D(),
+                    label, alignment=None,
+                    scale=0.04*self.cBox.fontScale,
+                    textColor=qt.QVector3D(*labelColor))
+
+            self.cBox.textShader.release()
+            self.cBox.vaoText.release()
+
         except Exception as e:  # TODO: properly handle exceptions
             raise
 #            pass
@@ -6519,7 +6566,7 @@ class CoordinateBox():
 #                    fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
 #                fineGridArray.extend([fineGrid - self.parent.coordOffset[iAx]])
 
-        self.axisL, self.axGrid = self.populateGrid(axisGridArray)
+        self.axisL, self.axGrid = self.populate_grid(axisGridArray)
         self.gridLen = len(self.axGrid)
 
 #        for iAx in range(3):
@@ -6702,7 +6749,7 @@ class CoordinateBox():
         vao.release()
         self.vao_arrow = vao
 
-    def populateGrid(self, grids):
+    def populate_grid(self, grids):
         pModel = np.array(self.parent.mView.data()).reshape(4, 4)[:-1, :-1]
 #                print(pModel)
 #        self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
@@ -6902,28 +6949,31 @@ class CoordinateBox():
 
     def render_local_axes(self, moe, trans, view, proj, shader, isScreen):
 
-        moe_np = np.array(moe.data()).reshape((4, 4), order=('F'))
-
-        if isScreen:
-            bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
-            x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
-            y = np.matmul(moe_np, np.array([0, -1, 0, 0]))[:-1]
-        else:
-            bStart = np.column_stack(([1, 0, 0], [0, 1, 0], [0, 0, 1]))
-            x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
-            y = np.matmul(moe_np, np.array([0, 1, 0, 0]))[:-1]
-
-        x = x / np.linalg.norm(x)
-        y = y / np.linalg.norm(y)
-        z = np.cross(x, y)
-        z = z / np.linalg.norm(z)
-
-        bEnd = np.column_stack((x, y, z))
-        rotationQ = basis_rotation_q(bStart, bEnd)
-
         mRotation = qt.QMatrix4x4()
-        mRotation.translate(trans)
-        mRotation.rotate(qt.QQuaternion(*rotationQ))
+
+        if moe is not None:
+            moe_np = np.array(moe.data()).reshape((4, 4), order=('F'))
+    
+            if isScreen:
+                bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
+                x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
+                y = np.matmul(moe_np, np.array([0, -1, 0, 0]))[:-1]
+            else:
+                bStart = np.column_stack(([1, 0, 0], [0, 1, 0], [0, 0, 1]))
+                x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
+                y = np.matmul(moe_np, np.array([0, 1, 0, 0]))[:-1]
+    
+            x = x / np.linalg.norm(x)
+            y = y / np.linalg.norm(y)
+            z = np.cross(x, y)
+            z = z / np.linalg.norm(z)
+    
+            bEnd = np.column_stack((x, y, z))
+            rotationQ = basis_rotation_q(bStart, bEnd)
+    
+            mRotation.translate(trans)
+            mRotation.rotate(qt.QQuaternion(*rotationQ))
+
         shader.setUniformValue("pvm", proj*view*mRotation)
 
         gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 1, self.arrowLen-1)
