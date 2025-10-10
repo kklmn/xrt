@@ -880,7 +880,7 @@ class XrtQook(qt.QWidget):
             else:
                 self.addParam(self.rootRunItem, arg, argVal)
 
-        self.addCombo(self.runTree, self.rootRunItem)
+#        self.addCombo(self.runTree, self.rootRunItem)
         self.runTree.setColumnWidth(0, int(self.runTree.width()/3))
         index = self.runModel.indexFromItem(self.rootRunItem)
         self.runTree.setExpanded(index, True)
@@ -904,7 +904,7 @@ class XrtQook(qt.QWidget):
         self.layoutFileName = ""
         self.glowOnly = False
         self.isEmpty = True
-        if blProps is None:
+        if getattr(self, 'beamLine', None) is None:
             self.beamLine = raycing.BeamLine()
             self.beamLine.flowSource = 'Qook'
 #        self.updateBeamlineBeams(item=None)
@@ -1117,6 +1117,9 @@ class XrtQook(qt.QWidget):
                               qt.QMessageBox.No,
                               defaultButton=qt.QMessageBox.No)\
                     == qt.QMessageBox.Yes:
+                for row in reversed(range(self.rootBLItem.rowCount())):
+                    oeItem = self.rootBLItem.child(row, 0)
+                    self.deleteElement(self.tree, oeItem)
                 self.initAllModels()
                 self.initAllTrees()
                 self.tabs.setCurrentWidget(self.tree)
@@ -1637,10 +1640,10 @@ class XrtQook(qt.QWidget):
                         propsDict[str(childLevel0.child(j, 0))] =\
                             str(childLevel0.child(j, 1))
                     break
-            propsDict['uuid'] = raycing.uuid.uuid4()
+            propsDict['uuid'] = str(raycing.uuid.uuid4())
         else:
             propsDict = dict(self.getParams(obj))
-            propsDict['uuid'] = 'top' if isRoot else raycing.uuid.uuid4()
+            propsDict['uuid'] = 'top' if isRoot else str(raycing.uuid.uuid4())
 
         if isinstance(copyFrom, dict):
             propsUpd = copyFrom.get('properties')
@@ -2429,11 +2432,11 @@ class XrtQook(qt.QWidget):
             if tmpAutoUpdate:
                 self.toggleGlow(False)
 
+            # Deleting existing elements
+
             for row in reversed(range(self.rootBLItem.rowCount())):
                 oeItem = self.rootBLItem.child(row, 0)
                 self.deleteElement(self.tree, oeItem)
-
-            # Deleting existing elements
 
             beamlineName = next(raycing.islice(project.keys(), 2, 3))
             self.beamLine.name = beamlineName
@@ -2441,7 +2444,6 @@ class XrtQook(qt.QWidget):
             beamlineInitKWargs = project[beamlineName]['properties']
             beamlineInitKWargs['name'] = beamlineName
             self.blUpdateLatchOpen = False
-
 
             # INIT THE BEAMLINE HERE
 
