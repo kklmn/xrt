@@ -2333,10 +2333,31 @@ class BeamLine(object):
 
         def dfs(oeid):
             visited.add(oeid)
+#            sourceid = get_beam_id(oeid)
+            for rcv in receivers.get(oeid, []):
+                if rcv not in visited:
+                    dfs(rcv)
+            result.append(oeid)
+
+        def distance(id1, id2):
+            # TODO: consider 'auto' in 'center'
+            eid1c = np.array(self.flowU[id1].get('center', [0, 0, 0]))
+            eid2c = np.array(self.flowU[id2].get('center', [0, 0, 0]))
+            return np.linalg.norm(eid1c - eid2c)
+
+        receivers = {}
+        for oeid in self.flowU:
             sourceid = get_beam_id(oeid)
-            if sourceid not in visited:
-                dfs(sourceid)
-            result.insert(0, oeid)
+            if sourceid is not None:
+                receivers.setdefault(sourceid, []).append(oeid)
+
+        for sourceid, rcv in receivers.items():
+            if sourceid in self.flowU:
+                srcCenter = np.array(self.flowU[sourceid].get(
+                        "center", [0, 0, 0]))
+                rcv.sort(key=lambda oid: np.linalg.norm(
+                    np.array(self.flowU[oid].get(
+                            "center", [0, 0, 0]))-srcCenter))
 
         for oe in self.flowU:
             if oe not in visited:
@@ -2347,6 +2368,7 @@ class BeamLine(object):
             if tmpRec is not None:
                 newFlow[oeuuid] = tmpRec
 
+#        print("sort_flow", self.flowU)
         self.flowU = newFlow
 
     def index_materials(self):
