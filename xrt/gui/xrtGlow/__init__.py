@@ -910,7 +910,7 @@ class xrtGlow(qt.QWidget):
         sceneLayout.addLayout(layout)
 
         oeTileValidator = qt.QIntValidator()
-        oeTileValidator.setRange(1, 20)
+        oeTileValidator.setRange(1, 200)
         for ia, (axis, defv) in enumerate(zip(
                 ['OE tessellation X', 'OE tessellation Y'],
                 self.customGlWidget.tiles)):
@@ -1234,7 +1234,7 @@ class xrtGlow(qt.QWidget):
                             print(oeItem.text(), ": Appending", endBeamText)
                         except:  # analysis:ignore
                             continue
-        
+
         # Stage 4. Clear dead references
         tmpDict.clear()
 
@@ -2144,12 +2144,20 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.maxLen = value
         else:
             return
+        for oeid, oeLine in self.customGlWidget.beamline.oesDict.items():
+            if is_oe(oeLine[0]) and oeid not in self.customGlWidget.needMeshUpdate:
+                self.customGlWidget.needMeshUpdate.append(oeid)
         self.customGlWidget.glDraw()
 
     def updateTileFromQLE(self, editor, ia):
         # editor = self.sender()
         value = float(str(editor.text()))
+        if self.customGlWidget.tiles[ia] == np.int32(value):
+            return
         self.customGlWidget.tiles[ia] = np.int32(value)
+        for oeid, oeLine in self.customGlWidget.beamline.oesDict.items():
+            if is_oe(oeLine[0]) and oeid not in self.customGlWidget.needMeshUpdate:
+                self.customGlWidget.needMeshUpdate.append(oeid)
         self.customGlWidget.glDraw()
 
     def updateProjectionOpacity(self, slider, iax, editor, position):
@@ -2226,7 +2234,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.surfCPOrder = 4
         self.oesToPlot = []
         self.labelsToPlot = []
-        self.tiles = [2, 2]
+        self.tiles = [25, 25]
 
         self.meshDict = OrderedDict()
         self.beamBufferDict = OrderedDict()
@@ -2483,7 +2491,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if 'properties' in kwargs:
                 if sender != 'Qook':  # Already called in Qook.update_beamline
                     self.beamline.init_oe_from_json(kwargs)
-                self.needMeshUpdate.append(oeid)
+                if oeid not in self.needMeshUpdate:
+                    self.needMeshUpdate.append(oeid)
 
                 if self.parent is not None:
                     self.parent.addElementToModel(oeid)
@@ -2576,9 +2585,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         self.minmax[0, :] - self.minmax[1, :]))
                 self.parent.updateMaxLenFromGL(self.maxLen)
                 if arg in ['pitch'] and hasattr(oe, 'reset_pq'):
-                    self.needMeshUpdate.append(oeid)
+                    if oeid not in self.needMeshUpdate:
+                        self.needMeshUpdate.append(oeid)
             elif arg in shapeArgSet:
-                self.needMeshUpdate.append(oeid)
+                if oeid not in self.needMeshUpdate:
+                    self.needMeshUpdate.append(oeid)
             elif arg in {'name'}:
                 if self.parent is not None:
                     self.parent.updateNames()
@@ -2950,7 +2961,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             vao.destroy()
             gl.glGetError()
 #            vao.clear()
-            
+
         beamBuffer.clear()
 
     def delete_all_oe_buffers(self, oeid):
@@ -2958,17 +2969,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if beamTag[0] == oeid:
                 self.delete_beam_footprint(beamTag)
                 del self.beamBufferDict[beamTag]
-                
+
         mesh = self.meshDict.get(oeid)
         if mesh is not None:
             mesh.delete_mesh(oeid)
 #            del self.meshDict[oeid]  # what about mesh.oe?
-            
+
     def delete_object(self, objuuid):  # to be triggered by a signal after deleting the buffers
         try:
             objType = None
-            if objuuid in self.beamline.oesDict: 
-                del self.meshDict[objuuid] 
+            if objuuid in self.beamline.oesDict:
+                del self.meshDict[objuuid]
                 self.beamline.delete_oe_by_id(objuuid)
                 if self.parent is not None:
                     self.parent.updateTargets()
@@ -2982,7 +2993,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                            "object_type": objType,
                            "uuid": objuuid,
                                 }
-    
+
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
         except:
@@ -3348,14 +3359,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             for surfIndex in self.meshDict[oeuuid].vao.keys():
                 try:
-                    print("Trying to update mesh")
+#                    print("Trying to update mesh")
                     self.meshDict[oeuuid].prepare_surface_mesh(
                             nsIndex=surfIndex, updateMesh=True)
                     self.meshDict[oeuuid].isEnabled = True
-                    print("Enabling mesh")
+#                    print("Enabling mesh")
                 except Exception as e:
                     print(e)
-                    print("Update failed, disabling mesh")
+                    print("Update failed, disabling mesh for", oeuuid)
                     self.meshDict[oeuuid].isEnabled = False
 
 
@@ -4019,7 +4030,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.mProj.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight,
                                  0.01, 1000)
 
-
             self.mModScale.setToIdentity()
             self.mModTrans.setToIdentity()
             self.mModScale.scale(*(self.scaleVec/self.maxLen))
@@ -4069,7 +4079,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             while self.needBeamUpdate:  # TODO: process one element per call?
                 beamTag = self.needBeamUpdate.popleft()
                 self.update_beam_footprint(beamTag=beamTag)
-                
+
             while self.deletionQueue:
                 oeid = self.deletionQueue.popleft()
                 self.delete_all_oe_buffers(oeid)
@@ -4703,7 +4713,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         else 0)) if hasattr(oe, 'pitch') else 0
                 except TypeError:
                     oePitchStr = 0
-                
+
                 try:
                     tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
                             oe.name, *oe.center,
@@ -4753,7 +4763,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     scrObj = scrLine[0]
                     scrObj.limPhysX *= 1.1
                     scrObj.limPhysY *= 1.1
-                self.needMeshUpdate.append(scrId)  # TODO: check for duplicates
+                if scrId not in self.needMeshUpdate:
+                    self.needMeshUpdate.append(scrId)
             elif ctrlOn and not tpad:
                 self.cameraDistance *= 0.9
             else:
@@ -5445,6 +5456,7 @@ class OEMesh3D():
 #        meshObj.beamTexture[nsIndex] = qg.QOpenGLTexture(texture)
 #        meshObj.beamLimits[nsIndex] = beamLimits
         self.oe = parentOE
+        print(parentWidget)
         self.parent = parentWidget
         self.isStl = False
         self.shader = {}
@@ -5461,8 +5473,12 @@ class OEMesh3D():
         self.vbo_normals = {}
         self.vbo_contour = {}
 
-        self.oeThickness = 5
-        self.tiles = [25, 25]
+        if self.parent is not None:
+            self.oeThickness = self.parent.oeThickness
+            self.tiles = self.parent.tiles
+        else:
+            self.oeThickness = 5
+            self.tiles = [25, 25]
         self.showLocalAxes = False
         self.isEnabled = False
         self.stencilNum = 0
@@ -5640,9 +5656,12 @@ class OEMesh3D():
 
     def prepare_surface_mesh(self, nsIndex=0, updateMesh=False):
         def get_thickness():
-#            if self.oeThicknessForce is not None:
-#                return self.oeThicknessForce
-            thickness = self.oeThickness
+
+            thsrc = self.parent or self
+            if thsrc.oeThicknessForce is not None:
+                return thsrc.oeThicknessForce
+            thickness = thsrc.oeThickness
+
             if isScreen or isAperture:
                 return 0
             if isPlate:
@@ -5665,6 +5684,7 @@ class OEMesh3D():
                             if hasattr(self.oe.material.substrate, 't'):
                                 if self.oe.material.substrate.t is not None:
                                     thickness = self.oe.material.substrate.t
+
             return thickness
 
         gl.glGetError()
@@ -5809,8 +5829,8 @@ class OEMesh3D():
 ##                ySize *= 1.5
 ##                xLimits = [xCenter-0.5*xSize, xCenter+0.5*xSize]
 ##                yLimits = [yCenter-0.5*ySize, yCenter+0.5*ySize]
-
-        localTiles = np.array(self.tiles)
+        tiles = self.parent.tiles if self.parent is not None else self.tiles
+        localTiles = np.array(tiles)
 
         if oeShape == 'round':
             rX = np.abs((xLimits[1] - xLimits[0]))*0.5
@@ -6981,7 +7001,7 @@ class CoordinateBox():
 
         if moe is not None:
             moe_np = np.array(moe.data()).reshape((4, 4), order=('F'))
-    
+
             if isScreen:
                 bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
                 x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
@@ -6990,15 +7010,15 @@ class CoordinateBox():
                 bStart = np.column_stack(([1, 0, 0], [0, 1, 0], [0, 0, 1]))
                 x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
                 y = np.matmul(moe_np, np.array([0, 1, 0, 0]))[:-1]
-    
+
             x = x / np.linalg.norm(x)
             y = y / np.linalg.norm(y)
             z = np.cross(x, y)
             z = z / np.linalg.norm(z)
-    
+
             bEnd = np.column_stack((x, y, z))
             rotationQ = basis_rotation_q(bStart, bEnd)
-    
+
             mRotation.translate(trans)
             mRotation.rotate(qt.QQuaternion(*rotationQ))
 
