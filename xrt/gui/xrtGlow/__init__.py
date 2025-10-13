@@ -2376,8 +2376,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                           self.cameraTarget,
                           self.upVec)
 
+        self.orthoScale = 2.0 * self.cameraDistance * np.tan(
+            np.radians(self.cameraAngle*0.5))
+
         self.mProj = qt.QMatrix4x4()
-        self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+        self.mProj.setToIdentity()
+        if self.perspectiveEnabled:
+            self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+        else:
+            halfHeight = self.orthoScale * 0.5
+            halfWidth = halfHeight * self.aspect
+            self.mProj.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight,
+                             0.01, 1000)
 
         self.mModScale = qt.QMatrix4x4()
         self.mModTrans = qt.QMatrix4x4()
@@ -4000,6 +4010,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                        gl.GL_DEPTH_BUFFER_BIT |
                        gl.GL_STENCIL_BUFFER_BIT)
 
+            self.mProj.setToIdentity()
+            if self.perspectiveEnabled:
+                self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+            else:
+                halfHeight = self.orthoScale * 0.5
+                halfWidth = halfHeight * self.aspect
+                self.mProj.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight,
+                                 0.01, 1000)
+
+
             self.mModScale.setToIdentity()
             self.mModTrans.setToIdentity()
             self.mModScale.scale(*(self.scaleVec/self.maxLen))
@@ -4458,7 +4478,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.aspect = np.float32(widthInPixels)/np.float32(heightInPixels)
 
         self.mProj.setToIdentity()
-        self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+        if self.perspectiveEnabled:
+            self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+        else:
+            halfHeight = self.orthoScale * 0.5
+            halfWidth = halfHeight * self.aspect
+            self.mProj.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight,
+                             0.01, 1000)
 
     def populateVScreen(self):
         pass
@@ -4747,6 +4773,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.scaleVec *= 0.9
 
         if ctrlOn:
+            self.orthoScale = 2.0 * self.cameraDistance * np.tan(
+                np.radians(self.cameraAngle*0.5))
             self.updateQuats()
         else:
             self.scaleUpdated.emit(self.scaleVec)
