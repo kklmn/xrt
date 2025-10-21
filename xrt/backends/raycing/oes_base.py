@@ -544,7 +544,7 @@ class OE(object):
 
                 orientationQ = raycing.multiply_quats(rotation, extraRot)
 
-                new_norm = raycing.quat_vec_rotate(np.array([0, 0, 1]), rotation)
+#                new_norm = raycing.quat_vec_rotate(np.array([0, 0, 1]), rotation)
 
                 return orientationQ
         except Exception as e:
@@ -1687,7 +1687,7 @@ class OE(object):
             f0_in[iNel, :] = matcr.elements[iNel].f0coeffs
 
         lattice_in = np.array([matcr.a, matcr.b, matcr.c, 0,
-                               matcr.alpha, matcr.beta, matcr.gamma, 0],
+                               matcr.alphaRad, matcr.betaRad, matcr.gammaRad, 0],
                               dtype=self.cl_precisionF)
         calctype = 0
         if matcr.kind == "powder":

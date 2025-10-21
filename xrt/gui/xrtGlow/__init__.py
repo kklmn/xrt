@@ -252,7 +252,6 @@ class xrtGlow(qt.QWidget):
                      })
         elif layout is not None:
             glwInitKwargs.update({'beamLayout': layout})
-#            print("FLOW", layout['Project']['flow'])
 
         self.customGlWidget = xrtGlWidget(**glwInitKwargs)
 
@@ -291,11 +290,10 @@ class xrtGlow(qt.QWidget):
         self.canvasSplitter.addWidget(sideWidget)
 
         self.setLayout(mainLayout)
-#        self.customGlWidget.oesList = self.oesList
+
         toggleHelp = qt.QShortcut(self)
         toggleHelp.setKey("F1")
         toggleHelp.activated.connect(self.openHelpDialog)
-#        toggleHelp.activated.connect(self.customGlWidget.toggleHelp)
         fastSave = qt.QShortcut(self)
         fastSave.setKey("F5")
         fastSave.activated.connect(partial(self.saveScene, '_xrtScnTmp_.npy'))
@@ -2023,7 +2021,7 @@ class xrtGlow(qt.QWidget):
         if oeLine is None:
             return
         off0 = np.array(oeLine[0].center) - np.array(
-            self.customGlWidget.tmpOffset)
+            self.customGlWidget.tmpOffset)  # TODO: fails on raw 'auto'
         cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
         off1 = self.customGlWidget.mModLocal * cOffset
         self.customGlWidget.coordOffset = np.array(

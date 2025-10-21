@@ -162,7 +162,7 @@ class BendingMagnet(SourceBase):
 
 #            if accuBeam is None:
 #                kwArgsIn['accuBeam'] = accuBeam
-#            else:    
+#            else:
 #                if raycing.is_valid_uuid(accuBeam):
 #                    kwArgsIn['accuBeam'] = accuBeam
 #                    accuBeam = self.bl.beamsDictU[accuBeam][
@@ -392,10 +392,10 @@ class BendingMagnet(SourceBase):
         bo.a /= norm
         bo.b /= norm
         bo.c /= norm
-        
+
         bo.basis = np.identity(3)
         bo.parentId = self.uuid
-        
+
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
@@ -403,7 +403,7 @@ class BendingMagnet(SourceBase):
 #            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
 #        else:
 #            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
-            
+
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
 
@@ -418,7 +418,7 @@ class Wiggler(BendingMagnet):
     is not required and is not implemented.
     """
 
-    hiddenParams = ['B0', 'rho']
+    hiddenParams = getattr(BendingMagnet, 'hiddenParams', set()) | {'B0', 'rho'}
 
     def __init__(self, *args, **kwargs):
         u"""Parameters are the same as in BendingMagnet except *B0* and *rho*

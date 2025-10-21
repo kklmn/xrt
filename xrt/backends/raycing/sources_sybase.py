@@ -29,7 +29,7 @@ else:
 class SourceBase:
     """Base class for the Synchrotron Sources. Not to be called explicitly."""
 
-    hiddenParams = ['eN', 'nx', 'nz']
+    hiddenParams = {'eN', 'nx', 'nz'}
 
     def __init__(self, bl=None, name='GenericSource', center=(0, 0, 0),
                  nrays=raycing.nrays,
@@ -217,9 +217,13 @@ class SourceBase:
             print('Beam vert. diverg. dzprime = {0} rad'.format(self.dzprime))
 
         # Left here for compatibility
-        self.eN = eN + 1
-        self.nx = 2*nx + 1
-        self.nz = 2*nz + 1
+#        self.eN = eN + 1
+#        self.nx = 2*nx + 1
+#        self.nz = 2*nz + 1
+
+        self.eN = eN
+        self.nx = nx
+        self.nz = nz
 
         self.needReset = True
 
@@ -397,9 +401,9 @@ class SourceBase:
         self.E_max = float(max(self.eMin, self.eMax))
 
         try:  # Left here for compatibility
-            self.dE = (self.E_max - self.E_min) / float(self.eN-1)
-            self.dTheta = (self.Theta_max - self.Theta_min) / float(self.nx-1)
-            self.dPsi = (self.Psi_max - self.Psi_min) / float(self.nz-1)
+            self.dE = (self.E_max - self.E_min) / float(self.eN)
+            self.dTheta = (self.Theta_max - self.Theta_min) / float(2*self.nx)
+            self.dPsi = (self.Psi_max - self.Psi_min) / float(2*self.nz)
         except Exception:
             pass
 
@@ -824,7 +828,7 @@ class IntegratedSource(SourceBase):
     :class:`SourceFromField` and :class:`Undulator`.
     Not to be called explicitly."""
 
-    hiddenParams = ['gIntervals']
+    hiddenParams = getattr(SourceBase, 'hiddenParams', set()) | {'gIntervals'}
 
     def __init__(self, *args, **kwargs):
         """

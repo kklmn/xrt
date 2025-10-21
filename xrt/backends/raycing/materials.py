@@ -704,8 +704,8 @@ class Multilayer(object):
     functions of local *x* and *y* and/or as a function of the layer number.
     """
 
-    hiddenParams = ['power', 'substRoughness', 'tThicknessLow',
-                    'bThicknessLow']
+    hiddenParams = {'power', 'substRoughness', 'tThicknessLow',
+                    'bThicknessLow'}
 
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
@@ -1137,7 +1137,7 @@ class GradedMultilayer(Multilayer):
     Derivative class from :class:`Mutilayer` with graded layer thicknesses.
     """
 
-    hiddenParams = ['substRoughness']
+    hiddenParams = {'substRoughness'}
 
 
 class Coated(Multilayer):
@@ -1146,9 +1146,9 @@ class Coated(Multilayer):
     a substrate.
     """
 
-    hiddenParams = ['tLayer', 'tThickness', 'bLayer', 'bThickness', 'power',
+    hiddenParams = {'tLayer', 'tThickness', 'bLayer', 'bThickness', 'power',
                     'tThicknessLow', 'bThicknessLow', 'idThickness',
-                    'thicknessError', 'nPairs']
+                    'thicknessError', 'nPairs'}
 
     def __init__(self, *args, **kwargs):
         u"""
@@ -1203,6 +1203,8 @@ class Crystal(Material):
     u"""The parent class for crystals. The descendants must define
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
+
+    hiddenParams = {'kind'}
 
     def __init__(self, hkl=[1, 1, 1], d=0, V=None, elements='Si',
                  quantities=None, rho=0, t=None, factDW=1.,
@@ -1330,7 +1332,7 @@ class Crystal(Material):
             # print(geom)
         self.geom = geom
         self.geometry = 2*int(geom.startswith('Bragg')) +\
-            int(geom.endswith('transmitted'))
+            int(geom.endswith('transmitted'))  # Key for OpenCL calculations
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
@@ -2402,7 +2404,7 @@ class CrystalDiamond(CrystalFcc):
             sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
             a = self.d * sqrthkl2
         self.a = self.b = self.c = a
-        self.alpha = self.beta = self.gamma = np.pi*0.5
+        self.alphaRad = self.betaRad = self.gammaRad = np.pi*0.5
 
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         diamondToFcc = 1 + np.exp(0.5j * PI * sum(self.hkl))
@@ -2518,6 +2520,8 @@ class CrystalFromCell(Crystal):
 
     """
 
+    hiddenParams = {'d', 'V', 'kind'}
+
     def __init__(self, name='', hkl=[1, 1, 1],
                  a=5.430710, b=None, c=None, alpha=90, beta=90, gamma=90,
                  atoms=[14]*8,
@@ -2536,7 +2540,7 @@ class CrystalFromCell(Crystal):
                  **kwargs):
         u"""
         *name*: str
-            Crystal name. Not used by xrt.
+            Crystal name.
 
         *hkl*: sequence
             hkl indices.
@@ -2579,9 +2583,14 @@ class CrystalFromCell(Crystal):
         self.a = a
         self.b = a if b is None else b
         self.c = a if c is None else c
-        self.alpha = np.radians(alpha)
-        self.beta = np.radians(beta)
-        self.gamma = np.radians(gamma)
+
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+
+        self.alphaRad = np.radians(alpha)
+        self.betaRad = np.radians(beta)
+        self.gammaRad = np.radians(gamma)
         self.atoms = atoms
         self.elements = []
         self.atomsXYZ = atomsXYZ
@@ -2597,8 +2606,8 @@ class CrystalFromCell(Crystal):
         self.atomsFraction =\
             [1 for atom in atoms] if atomsFraction is None else atomsFraction
         self.quantities = self.atomsFraction
-        ca, cb, cg = np.cos((self.alpha, self.beta, self.gamma))
-        sa, sb, sg = np.sin((self.alpha, self.beta, self.gamma))
+        ca, cb, cg = np.cos((self.alphaRad, self.betaRad, self.gammaRad))
+        sa, sb, sg = np.sin((self.alphaRad, self.betaRad, self.gammaRad))
         self.V = self.a * self.b * self.c *\
             (1 - ca**2 - cb**2 - cg**2 + 2*ca*cb*cg)**0.5
         self.mass = 0.

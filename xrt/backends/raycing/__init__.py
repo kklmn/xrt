@@ -1166,7 +1166,7 @@ def get_params(objStr):  # Returns a collection of default parameters
     module_path = '.'.join(components[:-1])
     class_name = components[-1]
     moduleObj = importlib.import_module(module_path)
-
+    print("get_params for", class_name)
     try:
         objRef = getattr(moduleObj, class_name)
     except:  # TODO: remove if works correctly
@@ -1177,7 +1177,7 @@ def get_params(objStr):  # Returns a collection of default parameters
         hpList = objRef.hiddenParams
     else:
         hpList = []
-
+    print("hidden params", hpList)
     if inspect.isclass(objRef):
         for parent in (inspect.getmro(objRef))[:-1]:
             for namef, objf in inspect.getmembers(parent):
@@ -1232,6 +1232,8 @@ def get_params(objStr):  # Returns a collection of default parameters
                 isMethod = True
                 uArgs = OrderedDict(zip(argList[0][1:], argList[3]))
 
+#    print("get_params 8, name:", "name" in uArgs)
+
     if hasattr(moduleObj, 'allArguments') and not isMethod:
         for argName in moduleObj.allArguments:
             if str(argName) in uArgs.keys():
@@ -1240,6 +1242,8 @@ def get_params(objStr):  # Returns a collection of default parameters
     else:
         args = list(uArgs.keys())
         argVals = list(uArgs.values())
+        
+#    print("get_params 9, name:", "name" in args)
     return zip(args, argVals)
 
 

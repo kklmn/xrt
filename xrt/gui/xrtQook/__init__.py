@@ -2353,7 +2353,7 @@ class XrtQook(qt.QWidget):
                 self.exportModel(child0)
                 child1 = item.child(ii, 1)
                 if child1 is not None and item.model() not in [self.beamModel]:
-                    if child1.flags() != self.paramFlag:
+                    if child1.flags() != self.paramFlag or str(child0.text()) == "name":
                         if child1.isEnabled():
                             itemType = "param"
                         else:
