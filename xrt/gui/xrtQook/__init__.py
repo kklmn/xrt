@@ -2274,50 +2274,57 @@ class XrtQook(qt.QWidget):
             saveDialog = qt.QFileDialog()
             saveDialog.setFileMode(qt.QFileDialog.AnyFile)
             saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
-            saveDialog.setNameFilter("XML files (*.xml)")
+            saveDialog.setNameFilter("XML files (*.xml);;JSON files (*.json)")
             if (saveDialog.exec_()):
                 self.layoutFileName = saveDialog.selectedFiles()[0]
         if self.layoutFileName != "":
-            self.confText = "<?xml version=\"1.0\"?>\n"
-            self.confText += "<Project>\n"
-            for item, view in zip([self.rootBeamItem,
-                                   self.rootMatItem,
-                                   self.rootBLItem,
-                                   self.rootPlotItem,
-                                   self.rootRunItem],
-                                  [None,
-                                   self.matTree,
-                                   self.tree,
-                                   self.plotTree,
-                                   self.runTree]):
-                item.model().blockSignals(True)
-                self.flattenElement(view, item)
-                item.model().blockSignals(False)
-                if item == self.rootBeamItem:
-                    self.updateBeamModel()
-                if item == self.rootPlotItem and\
-                        self.rootPlotItem.rowCount() == 0:
-                    item = self.plotModel.invisibleRootItem()
-                    item.setEditable(True)
-                self.exportModel(item)
-            self.confText += '<description>{0}</description>\n'.format(
-                self.fileDescription)
-            self.confText += "</Project>\n"
-            if not str(self.layoutFileName).endswith('.xml'):
-                self.layoutFileName += '.xml'
-            try:
-                fileObject = open(self.layoutFileName, 'w')
-                fileObject.write(self.confText)
-                fileObject.close
-                saveStatus = True
-                self.setWindowTitle(self.layoutFileName + " - xrtQook")
-                messageStr = 'Layout saved to {}'.format(
-                    os.path.basename(str(self.layoutFileName)))
-            except (IOError, OSError) as errs:
-                messageStr = 'Failed to save layout to {0}, {1}'.format(
-                    os.path.basename(str(self.layoutFileName)), str(errs))
-                self.progressBar.setValue(0)
-                self.progressBar.setFormat(messageStr)
+            if self.layoutFileName.lower().endswith("json"):
+                _ = self.beamLine.export_to_json()
+                with open(self.layoutFileName, 'w') as json_file:
+                    raycing.json.dump(
+                        self.beamLine.layoutStr, json_file, indent=4)
+                    # TODO: plots, run, description
+            elif self.layoutFileName.lower().endswith("xml"):
+                self.confText = "<?xml version=\"1.0\"?>\n"
+                self.confText += "<Project>\n"
+                for item, view in zip([self.rootBeamItem,
+                                       self.rootMatItem,
+                                       self.rootBLItem,
+                                       self.rootPlotItem,
+                                       self.rootRunItem],
+                                      [None,
+                                       self.matTree,
+                                       self.tree,
+                                       self.plotTree,
+                                       self.runTree]):
+                    item.model().blockSignals(True)
+                    self.flattenElement(view, item)
+                    item.model().blockSignals(False)
+                    if item == self.rootBeamItem:
+                        self.updateBeamModel()
+                    if item == self.rootPlotItem and\
+                            self.rootPlotItem.rowCount() == 0:
+                        item = self.plotModel.invisibleRootItem()
+                        item.setEditable(True)
+                    self.exportModel(item)
+                self.confText += '<description>{0}</description>\n'.format(
+                    self.fileDescription)
+                self.confText += "</Project>\n"
+                if not str(self.layoutFileName).endswith('.xml'):
+                    self.layoutFileName += '.xml'
+                try:
+                    fileObject = open(self.layoutFileName, 'w')
+                    fileObject.write(self.confText)
+                    fileObject.close
+                    saveStatus = True
+                    self.setWindowTitle(self.layoutFileName + " - xrtQook")
+                    messageStr = 'Layout saved to {}'.format(
+                        os.path.basename(str(self.layoutFileName)))
+                except (IOError, OSError) as errs:
+                    messageStr = 'Failed to save layout to {0}, {1}'.format(
+                        os.path.basename(str(self.layoutFileName)), str(errs))
+                    self.progressBar.setValue(0)
+                    self.progressBar.setFormat(messageStr)
 #            self.statusBar.showMessage(messageStr, 3000)
         return saveStatus
 
@@ -2378,7 +2385,6 @@ class XrtQook(qt.QWidget):
             pass
 
     def importLayout(self, layoutJSON=None, filename=None):
-#        print(layoutJSON, filename)
         project = None
         if not self.isEmpty:
             msgBox = qt.QMessageBox()
@@ -2403,7 +2409,8 @@ class XrtQook(qt.QWidget):
                     openDialog = qt.QFileDialog()
                     openDialog.setFileMode(qt.QFileDialog.ExistingFile)
                     openDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
-                    openDialog.setNameFilter("XML files (*.xml)")
+                    openDialog.setNameFilter(
+                            "XML and JSON files (*.xml *.json)")
                     if (openDialog.exec_()):
                         openFileName = openDialog.selectedFiles()[0]
 
@@ -2419,10 +2426,7 @@ class XrtQook(qt.QWidget):
                 parseOK = True  # False
                 if parseOK:  # TODO: clear existing structure
                     tmpBL = raycing.BeamLine(fileName=openFileName)
-
-#                    self.beamLine.load_from_xml(openFileName)
                     project = tmpBL.export_to_json()
-
             if project is None:
                 self.progressBar.setFormat(
                             "No layout")

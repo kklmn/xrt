@@ -690,11 +690,13 @@ class EmptyMaterial(object):
     material. For other kinds of empty materials just use None.
     """
 
-    def __init__(self, kind='grating'):
+    def __init__(self, kind='grating', **kwargs):
         self.kind = kind
         self.geom = ''
         self.name = ''
-        self.uuid = ''
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
 
 class Multilayer(object):

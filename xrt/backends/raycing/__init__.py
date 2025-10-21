@@ -1166,7 +1166,7 @@ def get_params(objStr):  # Returns a collection of default parameters
     module_path = '.'.join(components[:-1])
     class_name = components[-1]
     moduleObj = importlib.import_module(module_path)
-    print("get_params for", class_name)
+#    print("get_params for", class_name)
     try:
         objRef = getattr(moduleObj, class_name)
     except:  # TODO: remove if works correctly
@@ -1177,7 +1177,7 @@ def get_params(objStr):  # Returns a collection of default parameters
         hpList = objRef.hiddenParams
     else:
         hpList = []
-    print("hidden params", hpList)
+#    print("hidden params", hpList)
     if inspect.isclass(objRef):
         for parent in (inspect.getmro(objRef))[:-1]:
             for namef, objf in inspect.getmembers(parent):
@@ -2779,18 +2779,27 @@ class BeamLine(object):
 
         matObject = None
         initKWArgs['bl'] = self
-        try:
-            matObject = getattr(matModule, matClass)(**initKWArgs)
-            initStatus = 0
-#            print("Initalized", matObject, initKWArgs)
-        except Exception as e:
-            matObject = getattr(matModule, "EmptyMaterial")()
-            matObject.uuid = initKWArgs.get('uuid')
-            matObject.name = initKWArgs.get('name')
-            initStatus = 1
-            print(matClass, "Init problem. Falling back to EmptyMaterial")
-            print(e)
-#            raise
+        max_retries = 5
+        delay = 0.001
+        for retry in range(max_retries):
+            try:
+                matObject = getattr(matModule, matClass)(**initKWArgs)
+                initStatus = 0
+                break
+    #            print("Initalized", matObject, initKWArgs)
+            except FileNotFoundError:
+                delay *= 5
+                print("File read retry", retry, "delay", delay, "s")
+                time.sleep(delay)
+            except Exception as e:
+                matObject = getattr(matModule, "EmptyMaterial")()
+                matObject.uuid = initKWArgs.get('uuid')
+                matObject.name = initKWArgs.get('name')
+                initStatus = 1
+                print(matClass, "Init problem. Falling back to EmptyMaterial")
+                print(e)
+                break
+    #            raise
 
         self.matnamesToUUIDs[matObject.name] = matObject.uuid
         self.materialsDict[matObject.uuid] = matObject
@@ -2799,18 +2808,9 @@ class BeamLine(object):
     def populate_materials_dict_from_json(self, dictIn):
         if not isinstance(dictIn, dict):
             return
+
         for matName, matProps in dictIn.items():
-            delay = 0.05  # required to prevent file read errors
-            for retries in range(5):
-                try:
-                    time.sleep(delay)
-                    _ = self.init_material_from_json(
-                        matName, matProps)
-#                    self.materialsDict[materialObj.uuid] = materialObj
-                    break
-                except FileNotFoundError:
-                    delay *= 5
-                    print("File read retry", retries, "delay", delay, "s")
+            _ = self.init_material_from_json(matName, matProps)
 
     def load_from_xml(self, openFileName):
         def xml_to_dict(element):
