@@ -2280,6 +2280,15 @@ class XrtQook(qt.QWidget):
         if self.layoutFileName != "":
             if self.layoutFileName.lower().endswith("json"):
                 _ = self.beamLine.export_to_json()
+                plotsDict = self.treeToDict(self.rootPlotItem)
+                runDict = self.treeToDict(self.rootRunItem)
+#                elementsDict = self.treeToDict(self.rootBLItem)
+#                print(elementsDict)
+                if 'Project' in self.beamLine.layoutStr:
+                    self.beamLine.layoutStr['Project']['plots'] = plotsDict
+                    self.beamLine.layoutStr['Project']['run_ray_tracing'] = runDict
+                    self.beamLine.layoutStr['Project']['description'] = self.fileDescription
+
                 with open(self.layoutFileName, 'w') as json_file:
                     raycing.json.dump(
                         self.beamLine.layoutStr, json_file, indent=4)
@@ -2337,6 +2346,29 @@ class XrtQook(qt.QWidget):
                     os.path.basename(str(self.layoutFileName))))
             self.layoutFileName = tmpName
 
+    def treeToDict(self, rootItem):
+        outDict = OrderedDict()
+        for pn in range(rootItem.rowCount()):
+            pnItem = rootItem.child(pn, 0)
+            itemDict = OrderedDict()
+            if not pnItem.hasChildren():
+                outDict[str(pnItem.text())] = str(rootItem.child(pn, 1).text())
+                continue
+            for pnp in range(pnItem.rowCount()):
+                pltPropItem = pnItem.child(pnp, 0)
+                if pltPropItem.hasChildren():
+                    axDict = OrderedDict()
+                    for axn in range(pltPropItem.rowCount()):
+                        axPropName = pltPropItem.child(axn, 0).text()
+                        axPropValue = pltPropItem.child(axn, 1).text()
+                        axDict[axPropName] = axPropValue
+                    itemDict[str(pltPropItem.text())] = axDict
+                else:
+                    itemDict[str(pltPropItem.text())] = str(
+                            pnItem.child(pnp, 1).text())
+            outDict[str(pnItem.text())] = itemDict
+        return outDict
+
     def exportModel(self, item):
         def despace(pStr):
             return re.sub(' ', '_', pStr)
@@ -2344,6 +2376,7 @@ class XrtQook(qt.QWidget):
         flatModel = False
         if item.model() in [self.beamModel]:
             flatModel = True
+
         if item.hasChildren():
             self.prefixtab = self.ntab * '\t'
             if item.isEditable():
@@ -2427,6 +2460,7 @@ class XrtQook(qt.QWidget):
                 if parseOK:  # TODO: clear existing structure
                     tmpBL = raycing.BeamLine(fileName=openFileName)
                     project = tmpBL.export_to_json()
+
             if project is None:
                 self.progressBar.setFormat(
                             "No layout")
@@ -2456,7 +2490,6 @@ class XrtQook(qt.QWidget):
                    blProps={'properties': beamlineInitKWargs,
                             '_object': 'xrt.backends.raycing.BeamLine'},
                    runProps=project.get('run_ray_tracing'))
-
             for branch in ['Materials', beamlineName]:
                 for element, elementDict in project.get(branch).items():
                     if str(element) in ['properties', '_object']:
@@ -2464,6 +2497,8 @@ class XrtQook(qt.QWidget):
 
                     if branch == beamlineName and 'flow' in project:
                         methDict = project['flow'].get(element)
+                        if methDict is None:  # VirtualScreen
+                            continue
                         elementDict.update(methDict)
                     elementDict['properties']['uuid'] = element
                     self.addElement(copyFrom=elementDict)

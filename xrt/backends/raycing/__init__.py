@@ -1137,7 +1137,15 @@ def get_init_val(value):
     if str(value) == 'round':
         return str(value)
 
-    if "," in str(value):  # mixed list
+    if "," in str(value):  # mixed list.
+        s = str(value).replace(" ", "").replace("(", "[").replace(")", "]")
+        if s.startswith('[['):  # nested list
+            try:
+                v = eval(s, safe_globals)
+            except (NameError, SyntaxError):
+                v = s
+            return v
+
         paravalue = str(value).strip('[]() ')
         listvalue = []
         for c in paravalue.split(','):
@@ -1177,7 +1185,7 @@ def get_params(objStr):  # Returns a collection of default parameters
         hpList = objRef.hiddenParams
     else:
         hpList = []
-#    print("hidden params", hpList)
+
     if inspect.isclass(objRef):
         for parent in (inspect.getmro(objRef))[:-1]:
             for namef, objf in inspect.getmembers(parent):
@@ -1232,8 +1240,6 @@ def get_params(objStr):  # Returns a collection of default parameters
                 isMethod = True
                 uArgs = OrderedDict(zip(argList[0][1:], argList[3]))
 
-#    print("get_params 8, name:", "name" in uArgs)
-
     if hasattr(moduleObj, 'allArguments') and not isMethod:
         for argName in moduleObj.allArguments:
             if str(argName) in uArgs.keys():
@@ -1242,8 +1248,7 @@ def get_params(objStr):  # Returns a collection of default parameters
     else:
         args = list(uArgs.keys())
         argVals = list(uArgs.values())
-        
-#    print("get_params 9, name:", "name" in args)
+
     return zip(args, argVals)
 
 
@@ -2769,6 +2774,7 @@ class BeamLine(object):
         matModule, matClass = dictIn['_object'].rsplit('.', 1)
         matModule = importlib.import_module(matModule)
         matParams = dictIn['properties']
+
         defArgs = dict(get_params(dictIn['_object']))
         initKWArgs = create_paramdict_mat(matParams, defArgs, self)
 
@@ -2844,6 +2850,7 @@ class BeamLine(object):
             setattr(self, key, get_init_val(value))
 
         self.populate_materials_dict_from_json(data['Project']['Materials'])
+
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
         if 'flow' in data['Project'].keys():
             self.flowU = data['Project']['flow']
