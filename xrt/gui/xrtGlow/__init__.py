@@ -2233,6 +2233,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.oesToPlot = []
         self.labelsToPlot = []
         self.tiles = [25, 25]
+        self.autoSizeOe = True
 
         self.meshDict = OrderedDict()
         self.beamBufferDict = OrderedDict()
@@ -2815,14 +2816,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
                     setattr(oeLine[0], msg['pos_attr'], msg['pos_value'])
-                self.meshDict[msg['sender_id']].update_transformation_matrix()
-                try:
-                    self.getMinMax()
-                    self.maxLen = np.max(np.abs(
-                            self.minmax[0, :] - self.minmax[1, :]))
-                    self.parent.updateMaxLenFromGL(self.maxLen)
-                except TypeError:
-                    print("Cannot find limits")
+                if msg['pos_attr'] in ['footprint'] and self.autoSizeOe:  # need better controls
+                    self.needMeshUpdate.append(msg['sender_id'])
+                else:
+                    self.meshDict[msg['sender_id']].update_transformation_matrix()
+                    try:
+                        self.getMinMax()
+                        self.maxLen = np.max(np.abs(
+                                self.minmax[0, :] - self.minmax[1, :]))
+                        self.parent.updateMaxLenFromGL(self.maxLen)
+                    except TypeError:
+                        print("Cannot find limits")
 
 #                if self.epicsPrefix is not None:
 #                    self.epicsInterface.pv_records['AcquireStatus'].set(0)

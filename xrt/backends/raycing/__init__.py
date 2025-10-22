@@ -1501,6 +1501,17 @@ def propagationProcess(q_in, q_out):
                                         'status': 0}
                                 q_out.put(msg_autopos_update)
 
+                    for autoAttr in ['footprint']:
+                        if (hasattr(oe, autoAttr) and len(
+                                getattr(oe, autoAttr)) > 0):
+                            msg_autopos_update = {
+                                    'pos_attr': autoAttr,
+                                    'pos_value': getattr(oe, autoAttr),
+                                    'sender_name': oe.name,
+                                    'sender_id': oe.uuid,
+                                    'status': 0}
+                            q_out.put(msg_autopos_update)
+
                     msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
                                 'sender_name': oe.name,
                                 'sender_id': oe.uuid,
