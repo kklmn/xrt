@@ -356,7 +356,9 @@ class OE(object):
 
     @pitch.setter
     def pitch(self, pitch):
-        self._pitchInit = copy.deepcopy(pitch)  # For glow auto-recognition
+        if isinstance(pitch, (raycing.basestring, list, tuple)):
+            self._pitchInit = copy.deepcopy(pitch)  # For glow auto-recognition
+
         pitch = raycing.auto_units_angle(pitch)
         if isinstance(pitch, (raycing.basestring, list, tuple)):
             self._pitch = copy.deepcopy(pitch)
@@ -2424,7 +2426,8 @@ class DCM(OE):
 
     @bragg.setter
     def bragg(self, bragg):
-        self._braggInit = copy.deepcopy(bragg)  # For glow auto-recognition
+        if isinstance(bragg, (raycing.basestring, list, tuple)):
+            self._braggInit = copy.deepcopy(bragg)  # For glow auto-recognition
         bragg = raycing.auto_units_angle(bragg)
         if isinstance(bragg, (raycing.basestring, list, tuple)):
             self._bragg = copy.deepcopy(bragg)

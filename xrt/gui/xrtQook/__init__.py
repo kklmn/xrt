@@ -2457,7 +2457,7 @@ class XrtQook(qt.QWidget):
                 self.progressBar.setFormat(ldMsg)
 
                 parseOK = True  # False
-                if parseOK:  # TODO: clear existing structure
+                if parseOK:
                     tmpBL = raycing.BeamLine(fileName=openFileName)
                     project = tmpBL.export_to_json()
 

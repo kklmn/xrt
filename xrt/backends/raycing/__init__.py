@@ -412,7 +412,7 @@ def center_property():
         return self._center if self._centerVal is None else self._centerVal
 
     def setter(self, center):
-        self._centerInit = copy.deepcopy(center)
+        centerInit = copy.deepcopy(center)
         if isinstance(center, str):
             center = [x.strip().lower() for x in center.strip('[]').split(",")]
             tmp = []
@@ -424,6 +424,7 @@ def center_property():
                 tmp.append(value)
 
         if any(['auto' in str(x) for x in center]):
+            self._centerInit = centerInit
             self._centerVal = None
             self._center = copy.deepcopy(center)
         else:
@@ -1322,7 +1323,8 @@ def get_obj_str(obj):
     return "{0}.{1}".format(obj.__module__, type(obj).__name__)
 
 
-def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
+def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
+                    resolveAuto=True):
 
     if needRevG:
         globRev = {str(v): k for k, v in globals().items()}
@@ -1335,8 +1337,9 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None):
             if hasattr(oeObj, arg):
                 if arg == 'data':
                     continue
-                if hasattr(oeObj, f'_{arg}Init'):
+                if hasattr(oeObj, f'_{arg}Init') and not resolveAuto:
                     realval = getattr(oeObj, f'_{arg}Init')
+                    print(oeObj.name, f'_{arg}Init', realval)
                 else:
                     realval = getattr(oeObj, arg)
 
@@ -2895,14 +2898,16 @@ class BeamLine(object):
             oeObj = oeline[0]
             oeRecord = OrderedDict()
             oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
-                                                     blname=self.name)
+                                                     blname=self.name,
+                                                     resolveAuto=False)
             oeRecord['_object'] = get_obj_str(oeObj)
             if 'name' not in oeRecord['properties']:
                 tmpName = "{}_{}".format(
                         str(oeRecord['_object']).split('.')[-1],
                         np.random.randint(1000, 9999))
                 oeRecord['properties']['name'] = tmpName
-            beamlineDict[oeid] = oeRecord
+            beamlineDict[oeid] = oeRecord                
+#            print("Exporting to json", oeRecord['properties']['name'], oeRecord['properties'])
 
 #        beamsDict = {}
 #
