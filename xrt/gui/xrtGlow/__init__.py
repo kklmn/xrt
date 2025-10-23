@@ -832,7 +832,7 @@ class xrtGlow(qt.QWidget):
                  'Invert scene color',
                  'Use scalable font',
                  'Show Virtual Screen label',
-                 'Virtual Screen for Indexing',
+                 'OE size match beam',
                  'Show lost rays',
                  'Show local axes'],
                 [self.checkAA,
@@ -842,7 +842,7 @@ class xrtGlow(qt.QWidget):
                  self.invertSceneColor,
                  self.checkScalableFont,
                  self.checkShowLabels,
-                 self.checkVSColor,
+                 self.checkOEAutoSize,
                  self.checkShowLost,
                  self.checkShowLocalAxes])):
             aaCheckBox = qt.QCheckBox(cbText)
@@ -1350,14 +1350,14 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.showOeLabels = True if state > 0 else False
         self.customGlWidget.glDraw()
 
-    def checkVSColor(self, state):
-        self.customGlWidget.vScreenForColors = True if state > 0 else False
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
+    def checkOEAutoSize(self, state):
+        self.customGlWidget.autoSizeOe = True if state > 0 else False
+        self.customGlWidget.needMeshUpdate.extend(
+                list(self.customGlWidget.beamline.oesDict.keys()))
         self.customGlWidget.glDraw()
 
     def checkShowLost(self, state):
         self.customGlWidget.showLostRays = True if state > 0 else False
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.customGlWidget.glDraw()
 
     def checkShowLocalAxes(self, state):
@@ -2233,7 +2233,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.oesToPlot = []
         self.labelsToPlot = []
         self.tiles = [25, 25]
-        self.autoSizeOe = True
+        self.autoSizeOe = False
 
         self.meshDict = OrderedDict()
         self.beamBufferDict = OrderedDict()
@@ -3327,7 +3327,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             for is2ndXtal in is2ndXtalOpts:
                 try:
-                    mesh3D.prepare_surface_mesh(int(is2ndXtal))
+                    mesh3D.prepare_surface_mesh(nsIndex=int(is2ndXtal),
+                                                autoSize=self.autoSizeOe)
                     mesh3D.isEnabled = True
                 except:
                     mesh3D.isEnabled = False
@@ -3363,7 +3364,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 try:
 #                    print("Trying to update mesh")
                     self.meshDict[oeuuid].prepare_surface_mesh(
-                            nsIndex=surfIndex, updateMesh=True)
+                            nsIndex=surfIndex, updateMesh=True,
+                            autoSize=self.autoSizeOe)
                     self.meshDict[oeuuid].isEnabled = True
 #                    print("Enabling mesh")
                 except Exception as e:
@@ -5656,7 +5658,8 @@ class OEMesh3D():
 
         return orientation
 
-    def prepare_surface_mesh(self, nsIndex=0, updateMesh=False):
+    def prepare_surface_mesh(self, nsIndex=0, updateMesh=False,
+                             autoSize=False):
         def get_thickness():
 
             thsrc = self.parent or self
@@ -5743,19 +5746,21 @@ class OEMesh3D():
 
         yDim = 1
         if isScreen:
-#            print(self.oe.limPhysX, self.oe.limPhysY)
-            if self.oe.limPhysX is not None and np.sum(np.abs(self.oe.limPhysX)) > 0:
+            if autoSize and hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
+                xLimits = self.oe.footprint[nsIndex][:, 0]
+            elif self.oe.limPhysX is not None and np.sum(np.abs(self.oe.limPhysX)) > 0:
                 xLimits = self.oe.limPhysX if isinstance(
                     self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
             else:
-#                xLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
                 xLimits = [-10, 10]
-            if self.oe.limPhysY is not None and np.sum(np.abs(self.oe.limPhysY))  > 0:
+
+            if autoSize and hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
+                yLimits = self.oe.footprint[nsIndex][:, 2]
+            elif self.oe.limPhysY is not None and np.sum(np.abs(self.oe.limPhysY))  > 0:
                 yLimits = self.oe.limPhysY if isinstance(
                     self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
             else:
                 yLimits = [-10, 10]
-#                yLimits = [-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE]
             yDim = 2
         elif isAperture:
             bt = 5.  # Can be set from glow UI
@@ -5800,13 +5805,13 @@ class OEMesh3D():
         isClosedSurface = False
         if np.all(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
             isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
-            if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
+            if autoSize and hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
             elif self.oe.limOptX is not None and not\
                 np.all(np.abs(self.oe.limOptX) == raycing.maxHalfSizeOfOE):
                     xLimits = list(self.oe.limOptX)
         if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-            if hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
+            if autoSize and hasattr(self.oe, 'footprint') and len(self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
             elif self.oe.limOptY is not None and not\
                 np.all(np.abs(self.oe.limOptY) == raycing.maxHalfSizeOfOE):
