@@ -2340,8 +2340,6 @@ class BeamLine(object):
                 self.beamsDict[str(list(segment[3].values())[0])] = outBeams
 
     def sort_flow(self):
-        # We can add more sophisticated logic here based on paths
-
         visited = set()
         result = []
         newFlow = OrderedDict()
@@ -2356,17 +2354,19 @@ class BeamLine(object):
 
         def dfs(oeid):
             visited.add(oeid)
-#            sourceid = get_beam_id(oeid)
             for rcv in receivers.get(oeid, []):
                 if rcv not in visited:
                     dfs(rcv)
             result.append(oeid)
 
         def distance(id1, id2):
-            # TODO: consider 'auto' in 'center'
             eid1c = np.array(self.flowU[id1].get('center', [0, 0, 0]))
             eid2c = np.array(self.flowU[id2].get('center', [0, 0, 0]))
-            return np.linalg.norm(eid1c - eid2c)
+            try:
+                dist = np.linalg.norm(eid1c - eid2c)
+            except:
+                dist = 0
+            return dist
 
         receivers = {}
         for oeid in self.flowU:
@@ -2374,25 +2374,64 @@ class BeamLine(object):
             if sourceid is not None:
                 receivers.setdefault(sourceid, []).append(oeid)
 
-        for sourceid, rcv in receivers.items():
-            if sourceid in self.flowU:
-                srcCenter = np.array(self.flowU[sourceid].get(
-                        "center", [0, 0, 0]))
-                rcv.sort(key=lambda oid: np.linalg.norm(
-                    np.array(self.flowU[oid].get(
-                            "center", [0, 0, 0]))-srcCenter))
-
         for oe in self.flowU:
             if oe not in visited:
                 dfs(oe)
+
+        for sourceid, rcv in receivers.items():
+            if sourceid in self.flowU:
+                rcv.sort(key=lambda oid: distance(oid, sourceid))
 
         for oeuuid in reversed(result):
             tmpRec = self.flowU.get(oeuuid)
             if tmpRec is not None:
                 newFlow[oeuuid] = tmpRec
 
-#        print("sort_flow", self.flowU)
         self.flowU = newFlow
+
+    def sort_materials(self, matDict, fromJSON=True):
+        visited = set()
+        visiting = set()
+        sorted_list = []
+        matDeps = ['tlayer', 'blayer', 'coating', 'substrate']
+
+        def get_dep_obj(matObj):
+            deps = []
+            for attr in matDeps:
+                if hasattr(matObj, attr):
+                    v = getattr(matObj, attr)
+                    if v is not None:
+                        deps.append(v)
+            return deps
+
+        def get_dep_json(pDict):
+            deps = []
+            for attr in matDeps:
+                props = pDict.get('properties')
+                if props is not None:
+                    v = props.get(attr)
+                    if v is not None:
+                        deps.append(v)
+            return deps
+    
+        def dfs(mId, mProps):
+            if mId in visited:
+                return
+            if mId in visiting:
+                raise ValueError(f"Circular dependency detected involving {mId}")
+            visiting.add(mId)
+            for dep in get_dependencies(mId, mProps):
+                dfs(dep, mProps)
+            visiting.remove(mId)
+            visited.add(mId)
+            sorted_list.append(mId)
+
+        get_dependencies = get_dep_json if fromJSON else get_dep_obj
+    
+        for mId, mProps in matDict.items():
+            dfs(mId, mProps)
+
+        return sorted_list        
 
     def index_materials(self):
         materialsDict = OrderedDict()
@@ -2828,6 +2867,8 @@ class BeamLine(object):
     def populate_materials_dict_from_json(self, dictIn):
         if not isinstance(dictIn, dict):
             return
+
+        matSorted = self.sort_materials(dictIn)
 
         for matName, matProps in dictIn.items():
             _ = self.init_material_from_json(matName, matProps)

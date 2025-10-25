@@ -711,7 +711,7 @@ class Multilayer(object):
 
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
                  nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
-                 idThickness=0., power=2., substRoughness=0,
+                 idThickness=0., power=2., substRoughness=0.,
                  substThickness=np.inf, name='', geom='reflected', **kwargs):
         u"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
@@ -750,22 +750,25 @@ class Multilayer(object):
 
         """
         self.tLayer = tLayer
-        self.tThicknessHigh = float(tThickness)  # in Å
-        self.tThicknessLow = float(tThicknessLow)  # in Å
         self.bLayer = bLayer
-        self.bThicknessHigh = float(bThickness)
-        self.bThicknessLow = float(bThicknessLow)  # in Å
-        self.nPairs = nPairs
         self.substrate = substrate
-        self.d = float(tThickness + bThickness)
-        # self.tb = tThicknessTop/self.d
-        # self.dLow = float(tThicknessLow + bThicknessLow)
+
+        self.nPairs = nPairs
+        self.power = power
+
+        self.tThicknessLow = tThicknessLow  # in Å
+        self.bThicknessLow = bThicknessLow  # in Å        
+
+        self.tThickness = tThickness  # in Å
+        self.bThickness = bThickness  # in Å
+
         self.kind = 'multilayer'
         self.geom = geom
         if not self.geom:
             self.geom = 'reflected'
+
         self.idThickness = idThickness
-        self.subRough = substRoughness
+        self.substRoughness = substRoughness
         self.substThickness = substThickness
 
         if name:
@@ -780,24 +783,73 @@ class Multilayer(object):
 #        if bl is not None:
 #            bl.materialsDict[self.uuid] = self
 
-        layers = np.arange(1, nPairs+1)
-        if tThicknessLow:
-            tqRoot = (self.tThicknessHigh/self.tThicknessLow)**(1./power)
-            tqB = (nPairs-tqRoot) / (tqRoot-1.)
-            tqA = self.tThicknessHigh * (tqB+1)**power
-            self.dti = tqA * (tqB+layers)**(-power)
-        else:
-            self.dti = np.ones(self.nPairs) * float(tThickness)
-#            self.dti = np.array([float(tThickness)] * self.nPairs)
+    @property
+    def d(self):
+        return float(self.tThickness + self.bThickness)
 
-        if bThicknessLow:
-            bqRoot = (self.bThicknessHigh/self.bThicknessLow)**(1./power)
-            bqB = (nPairs-bqRoot) / (bqRoot-1.)
-            bqA = self.bThicknessHigh * (bqB+1)**power
-            self.dbi = bqA * (bqB+layers)**(-power)
-        else:
-            self.dbi = np.ones(self.nPairs) * float(bThickness)
-#            self.dbi = np.array([float(bThickness)] * self.nPairs)
+    @property
+    def power(self):
+        return self._power
+
+    @power.setter
+    def power(self, p):
+        self._power = p
+        self.set_dti()
+        self.set_dbi()
+
+    @property
+    def nPairs(self):
+        return self._nPairs
+
+    @nPairs.setter
+    def nPairs(self, n):
+        self._nPairs = n
+        self.set_dti()
+        self.set_dbi()
+
+    @property
+    def tThickness(self):
+        return self.tThicknessHigh
+
+    @tThickness.setter
+    def tThickness(self, t):
+        self.tThicknessHigh = float(t)
+        self.set_dti()
+
+    @property
+    def tThicknessLow(self):
+        return self._tThicknessLow
+
+    @tThicknessLow.setter
+    def tThicknessLow(self, t):
+        self._tThicknessLow = float(t)
+        self.set_dti()
+
+    @property
+    def bThickness(self):
+        return self.bThicknessHigh
+
+    @bThickness.setter
+    def bThickness(self, t):
+        self.bThicknessHigh = float(t)
+        self.set_dbi()
+
+    @property
+    def bThicknessLow(self):
+        return self._bThicknessLow
+
+    @bThicknessLow.setter
+    def bThicknessLow(self, t):
+        self._bThicknessLow = float(t)
+        self.set_dbi()
+
+    @property
+    def substRoughness(self):
+        return self.subRough
+
+    @substRoughness.setter
+    def substRoughness(self, t):
+        self.subRough = float(t)
 
     @property
     def tLayer(self):
@@ -834,6 +886,36 @@ class Multilayer(object):
     @substrate.setter
     def substrate(self, substrate):
         self._substrate = substrate
+
+    def set_dti(self):
+        if not all([hasattr(self, v) for v in
+                    ['_nPairs', 'tThicknessHigh', '_tThicknessLow',
+                     '_power']]):
+            return
+
+        if self.tThicknessLow:
+            layers = np.arange(1, self.nPairs+1)
+            tqRoot = (self.tThicknessHigh/self.tThicknessLow)**(1./self.power)
+            tqB = (self.nPairs-tqRoot) / (tqRoot-1.)
+            tqA = self.tThicknessHigh * (tqB+1)**self.power
+            self.dti = tqA * (tqB+layers)**(-self.power)
+        else:
+            self.dti = np.ones(self.nPairs) * float(self.tThickness)
+    
+    def set_dbi(self):
+        if not all([hasattr(self, v) for v in
+                    ['_nPairs', 'bThicknessHigh', '_bThicknessLow',
+                     '_power']]):
+            return
+
+        if self.bThicknessLow:
+            layers = np.arange(1, self.nPairs+1)
+            bqRoot = (self.bThicknessHigh/self.bThicknessLow)**(1./self.power)
+            bqB = (self.nPairs-bqRoot) / (bqRoot-1.)
+            bqA = self.bThicknessHigh * (bqB+1)**self.power
+            self.dbi = bqA * (bqB+layers)**(-self.power)
+        else:
+            self.dbi = np.ones(self.nPairs) * float(self.bThickness)
 
     def get_sin_Bragg_angle(self, E, order=1):
         """ensures that -1 <= sin(theta) <= 1"""
@@ -1018,7 +1100,7 @@ class Multilayer(object):
             tbt_s = np.complex128(2*Qb / (Qt+Qb) * roughtb)
             tbt_p = np.complex128(2*Qb/nb*nt / (Qt/nt*nb + Qb/nb*nt) * roughtb)
 
-        rmsbs = id2 if self.tLayer else self.subRough**2
+        rmsbs = id2 if self.tLayer else self.substRoughness**2
         roughbs = np.exp(-0.5 * Qb * Qs * rmsbs)
         rbs_s = np.complex128((Qb-Qs) / (Qb+Qs) * roughbs)
         rbs_p = np.complex128((Qb/nb*ns - Qs/ns*nb) / (Qb/nb*ns + Qs/ns*nb) *
