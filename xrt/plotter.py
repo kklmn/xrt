@@ -457,6 +457,10 @@ class XYCAxis(object):
             factor = 1.0e3
         elif self.unit in [r'$\mu$rad', u'µrad', u'urad']:
             factor = 1.0e6
+        elif self.unit in ['MeV']:
+            factor = 1.0e-6
+        elif self.unit in ['GeV']:
+            factor = 1.0e-9
         else:
             if backend == 'shadow':
                 if self.unit in ['m', ]:
@@ -470,20 +474,28 @@ class XYCAxis(object):
             elif backend == 'raycing':
                 if self.unit in ['m', ]:
                     factor = 1e-3
+                elif self.unit in ['km', ]:
+                    factor = 1e-6
                 elif self.unit in ['mm', ]:
                     factor = 1.
                 elif self.unit in [r'$\mu$m', u'µm', 'um']:
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6
+                elif self.unit in [u'Å', 'angstroem']:
+                    factor = 1.0e7
                 elif self.unit in ['pm', 'nrad']:
                     factor = 1.0e9
                 elif self.unit in ['fm', ]:
                     factor = 1.0e12
-                elif self.unit.startswith('deg'):
+                elif self.unit in ['deg', u'°']:
                     factor = np.degrees(1)
-                elif self.unit.startswith('mdeg'):
+                elif self.unit in ['mdeg', u'm°']:
                     factor = np.degrees(1)*1e3
+                elif self.unit in ['arcsec']:
+                    factor = 180*3600/np.pi
+
+
         self.factor = factor
 
 

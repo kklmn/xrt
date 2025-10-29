@@ -209,7 +209,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         nameIndex = model.index(row, 0, index.parent())
         argName = str(nameIndex.data())
         argValue = str(index.data())
-        parentIndexName = str(index.parent().data())
+        parentIndex = index.parent()
+        parentIndexName = str(parentIndex.data())
 
         combo = QComboBox(parent)
         combo.activated.connect(lambda: self.commitData.emit(combo))
@@ -265,9 +266,33 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif 'fluxkind' in argName.lower():
             combo.setModel(self.mainWidget.fluxKindModel)
             return combo
-        elif argName.lower().endswith('label') and 'axis' in parentIndexName:
-            combo.setModel(self.mainWidget.fluxLabelModel)
+        elif argName.lower().endswith('label'):
+            if parentIndexName.lower() in ['xaxis', 'yaxis']:
+                combo.setModel(self.mainWidget.plotAxisModel)
+            else:  # caxis
+                combo.setModel(self.mainWidget.fluxLabelModel)
             return combo
+        elif argName.lower().endswith('unit') and parentIndexName.lower() in [
+                'xaxis', 'yaxis', 'caxis']:
+
+#    row_count = model.rowCount(parent_index)
+#    siblings = [model.index(row, index.column(), parent_index) for row in range(row_count)]
+
+            for i in range(model.rowCount(parentIndex)):
+                fieldName = str(model.index(i, 0, parentIndex).data())
+                fieldVal = str(model.index(i, 1, parentIndex).data())
+                if fieldName == 'label':
+                    if fieldVal in ['x', 'y', 'z']:
+                        combo.setModel(self.mainWidget.lengthUnitModel)
+                    elif fieldVal in ['x\'', 'z\'']:
+                        combo.setModel(self.mainWidget.angleUnitModel)
+                    elif fieldVal in ['energy']:                        
+                        combo.setModel(self.mainWidget.energyUnitModel)
+                    else:
+                        return QLineEdit(parent)
+                    break
+            return combo
+
         else:
             return QLineEdit(parent)
 

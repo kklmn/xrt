@@ -279,10 +279,11 @@ allUnitsAng = {'rad': 1.,
                'mdeg': 1e-3*np.pi/180.,
                'arcsec': np.pi/180./3600.}
 
-allUnitsAngStr = {'urad': r'µrad',
-                  'mrad': r'mrad',
-                  'deg': r'°',
-                  'mdeg': r'm°',
+allUnitsAngStr = {'rad': u'rad',
+                  'mrad': u'mrad',
+                  'urad': u'µrad',
+                  'deg': u'°',
+                  'mdeg': u'm°',
                   'arcsec': r'arcsec'}
 
 allUnitsLen = {'angstroem': 1e-7,
@@ -292,9 +293,9 @@ allUnitsLen = {'angstroem': 1e-7,
                'm': 1e3,
                'km': 1e6}
 
-allUnitsLenStr = {'angstroem': r'Å',
+allUnitsLenStr = {'angstroem': u'Å',
                   'nm': r'nm',
-                  'um': r'µrad',
+                  'um': u'µm',
                   'mm': r'mm',
                   'm': r'm',
                   'km': r'km'}
@@ -303,7 +304,7 @@ allUnitsEnergy = {'meV': 1e-3,
                   'eV': 1,
                   'keV': 1e3,
                   'MeV': 1e6,
-                  'GeV': 1}
+                  'GeV': 1e9}
 
 allUnitsEnergyStr = {'meV': 'meV',
                      'eV': 'eV',
@@ -423,7 +424,8 @@ def center_property():
                     pass
                 tmp.append(value)
 
-        if any(['auto' in str(x) for x in center]):
+#        if any(['auto' in str(x) for x in center]):
+        if any([isinstance(x, str) for x in center]):
             self._centerInit = centerInit
             self._centerVal = None
             self._center = copy.deepcopy(center)
@@ -2168,7 +2170,8 @@ class BeamLine(object):
         alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
 
         if hasattr(oe, '_center'):
-            autoCenter = ['auto' in str(x) for x in oe._center]
+            autoCenter = [isinstance(x, str) for x in oe._center]
+#            autoCenter = ['auto' in str(x) for x in oe._center]
 
         if hasattr(oe, '_pitch'):
             try:
@@ -2907,14 +2910,17 @@ class BeamLine(object):
 
             return result
 
-        treeImport = ET.parse(openFileName)
+        with open(openFileName, "r", encoding="utf-8") as f:
+            treeImport = ET.parse(f)
+
+#        treeImport = ET.parse(openFileName)
         root = treeImport.getroot()
         xml_dict = OrderedDict()
         xml_dict[root.tag] = xml_to_dict(root)
         self.deserialize(xml_dict)
 
     def load_from_json(self, openFileName):
-        with open(openFileName, 'r') as file:
+        with open(openFileName, 'r', encoding="utf-8") as file:
             data = json.load(file)
         self.deserialize(data)
 

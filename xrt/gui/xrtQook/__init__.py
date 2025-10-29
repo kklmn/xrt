@@ -42,7 +42,7 @@ import os
 import sys
 import textwrap
 import numpy as np  # analysis:ignore , really needed
-import time
+#import time
 from datetime import date
 import inspect
 if sys.version_info < (3, 1):
@@ -88,7 +88,7 @@ from ..commons import gl  # analysis:ignore
 from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
-    from ..xrtGlow import (OEExplorer, is_oe, is_screen, is_aperture)
+    from ..xrtGlow import (OEExplorer, is_screen, is_aperture)
 
 try:
     from ...backends.raycing import materials_elemental as rmatsel
@@ -1032,7 +1032,6 @@ class XrtQook(qt.QWidget):
                 flItem = qt.QStandardItem(rfName.replace("get_", ''))
                 self.fluxDataModel.appendRow(flItem)
 
-        #  TODO: limit possible options in the GUI.
         self.fluxLabelModel = qt.QStandardItemModel()
         for rfName, rfObj in inspect.getmembers(raycing):
             if rfName.startswith('get_') and\
@@ -1112,6 +1111,18 @@ class XrtQook(qt.QWidget):
                                'uniformRayDensity': self.boolModel,
                                'beam': self.beamModel,
                                'geom': self.matGeomModel}
+
+        self.lengthUnitModel = qt.QStandardItemModel()
+        for val in raycing.allUnitsLenStr.values():
+            self.lengthUnitModel.appendRow(qt.QStandardItem(val))
+
+        self.angleUnitModel = qt.QStandardItemModel()
+        for val in raycing.allUnitsAngStr.values():
+            self.angleUnitModel.appendRow(qt.QStandardItem(val))
+
+        self.energyUnitModel = qt.QStandardItemModel()
+        for val in raycing.allUnitsEnergyStr.values():
+            self.energyUnitModel.appendRow(qt.QStandardItem(val))
 
         self.blUpdateLatchOpen = True
 
@@ -2002,8 +2013,11 @@ class XrtQook(qt.QWidget):
                         dupl = True
                 if not dupl:
                     break
-                
+
         plotProps['title'] = plotName
+        axHints = {'xaxis': {'label': 'x', 'unit': 'mm'},
+                   'yaxis': {'label': 'y', 'unit': 'mm'},
+                   'caxis': {'label': 'energy', 'unit': 'eV'}}
 
         if beamName is not None:
             plotProps['beam'] = beamName
@@ -2011,25 +2025,24 @@ class XrtQook(qt.QWidget):
             oeobj = None
             beamType = 'local'
             beams = self.beamModel.findItems(beamName, column=0)
-            axHints = {'xaxis': {'label': 'x'},
-                       'yaxis': {'label': 'y'},
-                       'caxis': {'label': 'energy'}}
-            
+
             for bItem in beams:
                 row = bItem.row()
                 oeid = str(self.beamModel.item(row, 2).text())
                 beamType = str(self.beamModel.item(row, 1).text())
                 break
-            
+
             if oeid is not None:
                 oeLine = self.beamLine.oesDict.get(oeid)
                 if oeLine is not None:
                     oeobj = oeLine[0]
-    
-            if 'global' in beamType or is_screen(oeobj) or is_aperture(oeobj):
+
+            if beamType.endswith('lobal') or is_screen(oeobj) or\
+                    is_aperture(oeobj):
                 axHints['yaxis']['label'] = 'z'
-                
-            plotProps['title'] = f'{plotName}-{beamName}-{axHints["caxis"]["label"]}'
+
+            plotProps['title'] =\
+                f'{plotName}-{beamName}-{axHints["caxis"]["label"]}'
 
 
         for pname in ['xaxis', 'yaxis', 'caxis']:
@@ -2069,9 +2082,6 @@ class XrtQook(qt.QWidget):
                             continue
                         self.addParam(child0, axname, axval)
                 else:
-#                    if str(pname) == 'title':
-#                        arg_value = plotItem.text()
-#                    else:
                     arg_value = pval
                     self.addParam(plotItem, pname, arg_value)
 
@@ -2085,35 +2095,6 @@ class XrtQook(qt.QWidget):
 
     def addPlotBeam(self, beamName):
         self.addPlot(beamName=beamName)
-#        oeid = None
-#        oeobj = None
-#        beamType = 'local'
-#        beams = self.beamModel.findItems(beamName, column=0)
-#        axHints = {'xaxis': {'label': 'x'},
-#                   'yaxis': {'label': 'y'},
-#                   'caxis': {'label': 'energy'}}
-#        
-#        for bItem in beams:
-#            row = bItem.row()
-#            oeid = str(self.beamModel.item(row, 2).text())
-#            beamType = str(self.beamModel.item(row, 1).text())
-#            break
-#        
-#        if oeid is not None:
-#            oeLine = self.beamLine.oesDict.get(oeid)
-#            if oeLine is not None:
-#                oeobj = oeLine[0]
-#
-#        if 'global' in beamType or is_screen(oeobj) or is_aperture(oeobj):
-#            axHints['yaxis']['label'] = 'z'
-#        
-#        tItem = self.rootPlotItem.child(self.rootPlotItem.rowCount() - 1, 0)
-#        for ie in range(tItem.rowCount()):
-#            if tItem.child(ie, 0).text() == 'beam':
-#                child1 = tItem.child(ie, 1)
-#                if child1 is not None:
-#                    child1.setText(beamName)
-#                break
 
     def getArgDescr(self, obj):
         argDesc = dict()
@@ -2348,12 +2329,13 @@ class XrtQook(qt.QWidget):
                     self.beamLine.layoutStr['Project']['run_ray_tracing'] = runDict
                     self.beamLine.layoutStr['Project']['description'] = self.fileDescription
 
-                with open(self.layoutFileName, 'w') as json_file:
+                with open(self.layoutFileName, 'w',
+                          encoding="utf-8") as json_file:
                     raycing.json.dump(
                         self.beamLine.layoutStr, json_file, indent=4)
                     # TODO: plots, run, description
             elif self.layoutFileName.lower().endswith("xml"):
-                self.confText = "<?xml version=\"1.0\"?>\n"
+                self.confText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                 self.confText += "<Project>\n"
                 for item, view in zip([self.rootBeamItem,
                                        self.rootMatItem,
@@ -2381,7 +2363,8 @@ class XrtQook(qt.QWidget):
                 if not str(self.layoutFileName).endswith('.xml'):
                     self.layoutFileName += '.xml'
                 try:
-                    fileObject = open(self.layoutFileName, 'w')
+                    fileObject = open(self.layoutFileName, 'w',
+                                      encoding="utf-8")
                     fileObject.write(self.confText)
                     fileObject.close
                     saveStatus = True
@@ -4028,7 +4011,7 @@ if __name__ == '__main__':
                                                                 1).text()),
                                                         paravalue)
 
-                                ieinit += '\n{2}{0}={1},'.format(
+                                ieinit += u'\n{2}{0}={1},'.format(
                                     paraname, self.quotize(paravalue), myTab*3)
                         ieinit = ieinit.rstrip(",") + "),"
                     else:
@@ -4078,16 +4061,18 @@ if __name__ == '__main__':
                     break
 
             ieinit = ""
-            for iem, (argNm, argVal) in zip(range(
-                    self.rootRunItem.rowCount() - 1), self.getParams(elstr)):
-                ie = iem + 1
+
+            runParams = dict(self.getParams(elstr))
+
+            for ie in range(self.rootRunItem.rowCount()):
                 if self.rootRunItem.child(ie, 0).text() != '_object':
-                    paraname = self.rootRunItem.child(ie, 0).text()
-                    paravalue = self.rootRunItem.child(ie, 1).text()
+                    paraname = str(self.rootRunItem.child(ie, 0).text())
+                    paravalue = str(self.rootRunItem.child(ie, 1).text())
                     if paraname == "plots":
-                        paravalue = self.rootPlotItem.text()
+                        paravalue = str(self.rootPlotItem.text())
                     if paraname == "backend":
                         paravalue = 'r\"{0}\"'.format(paravalue)
+                    argVal = runParams.get(paraname)
                     if str(paravalue) != str(argVal):
                         if paravalue == 'auto':
                             paravalue = self.quotize(paravalue)
@@ -4129,7 +4114,8 @@ if __name__ == '__main__':
             if not str(self.saveFileName).endswith('.py'):
                 self.saveFileName += '.py'
             try:
-                fileObject = open(self.saveFileName, 'w')
+                fileObject = open(self.saveFileName, 'w',
+                                  encoding="utf-8")
                 fileObject.write(self.codeEdit.toPlainText())
                 fileObject.close
                 saveStatus = True

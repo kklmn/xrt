@@ -3465,9 +3465,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
         maxs = -1 * mins
 
         for oeid, elline in self.beamline.oesDict.items():
-#            print(elline[0].name)
-            mins = np.vstack((mins, elline[0].center))
-            maxs = np.vstack((maxs, elline[0].center))
+            elCenter = elline[0].center
+            for ic, coord in enumerate(elCenter):
+                if isinstance(coord, str):
+                    elCenter[ic] = 0
+            mins = np.vstack((mins, elCenter))
+            maxs = np.vstack((maxs, elCenter))
             beamDict = self.beamline.beamsDictU.get(oeid)
             if beamDict is not None:
                 for beamkey, beam in self.beamline.beamsDictU[oeid].items():
