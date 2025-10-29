@@ -88,7 +88,7 @@ from ..commons import gl  # analysis:ignore
 from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
-    from ..xrtGlow import OEExplorer
+    from ..xrtGlow import (OEExplorer, is_oe, is_screen, is_aperture)
 
 try:
     from ...backends.raycing import materials_elemental as rmatsel
@@ -1018,7 +1018,7 @@ class XrtQook(qt.QWidget):
         self.beamModel = qt.QStandardItemModel()
         self.beamModel.appendRow([qt.QStandardItem("None"),  # name
                                   qt.QStandardItem("GlobalLocal"),  # type
-                                  qt.QStandardItem("None"),  # uuid
+                                  qt.QStandardItem("None"),  # OE uuid
                                   qt.QStandardItem('000')])  # Ordinal number
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
@@ -1031,6 +1031,14 @@ class XrtQook(qt.QWidget):
                     rfName != "get_output":
                 flItem = qt.QStandardItem(rfName.replace("get_", ''))
                 self.fluxDataModel.appendRow(flItem)
+
+        #  TODO: limit possible options in the GUI.
+        self.fluxLabelModel = qt.QStandardItemModel()
+        for rfName, rfObj in inspect.getmembers(raycing):
+            if rfName.startswith('get_') and\
+                    rfName != "get_output":
+                flItem = qt.QStandardItem(rfName.replace("get_", ''))
+                self.fluxLabelModel.appendRow(flItem)
 
         self.fluxKindModel = qt.QStandardItemModel()
         for flKind in ['total', 'power', 's', 'p',
@@ -1979,7 +1987,11 @@ class XrtQook(qt.QWidget):
         self.updateBeamline(methodItem, newElement=True)  # TODO:
         self.isEmpty = False
 
-    def addPlot(self, copyFrom=None, plotName=None):
+    def addPlot(self, copyFrom=None, plotName=None, beamName=None):
+        plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
+        axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
+        plotProps = plotDefArgs
+
         if plotName is None:
             for i in range(99):
                 plotName = 'plot{:02d}'.format(i+1)
@@ -1990,10 +2002,35 @@ class XrtQook(qt.QWidget):
                         dupl = True
                 if not dupl:
                     break
+                
+        plotProps['title'] = plotName
 
-        plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
-        axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
-        plotProps = plotDefArgs
+        if beamName is not None:
+            plotProps['beam'] = beamName
+            oeid = None
+            oeobj = None
+            beamType = 'local'
+            beams = self.beamModel.findItems(beamName, column=0)
+            axHints = {'xaxis': {'label': 'x'},
+                       'yaxis': {'label': 'y'},
+                       'caxis': {'label': 'energy'}}
+            
+            for bItem in beams:
+                row = bItem.row()
+                oeid = str(self.beamModel.item(row, 2).text())
+                beamType = str(self.beamModel.item(row, 1).text())
+                break
+            
+            if oeid is not None:
+                oeLine = self.beamLine.oesDict.get(oeid)
+                if oeLine is not None:
+                    oeobj = oeLine[0]
+    
+            if 'global' in beamType or is_screen(oeobj) or is_aperture(oeobj):
+                axHints['yaxis']['label'] = 'z'
+                
+            plotProps['title'] = f'{plotName}-{beamName}-{axHints["caxis"]["label"]}'
+
 
         for pname in ['xaxis', 'yaxis', 'caxis']:
             plotProps[pname] = copy.deepcopy(axDefArgs)
@@ -2001,6 +2038,9 @@ class XrtQook(qt.QWidget):
                 pval = copyFrom.pop(pname, None)
                 if pval is not None:
                     plotProps[pname].update(pval)
+            else:
+                plotProps[pname].update(axHints[pname])
+
             plotProps[pname]['_object'] = "xrt.plotter.XYCAxis"
 
         if isinstance(copyFrom, dict):
@@ -2029,10 +2069,10 @@ class XrtQook(qt.QWidget):
                             continue
                         self.addParam(child0, axname, axval)
                 else:
-                    if str(pname) == 'title':
-                        arg_value = plotItem.text()
-                    else:
-                        arg_value = pval
+#                    if str(pname) == 'title':
+#                        arg_value = plotItem.text()
+#                    else:
+                    arg_value = pval
                     self.addParam(plotItem, pname, arg_value)
 
         self.showDoc(plotItem.index())
@@ -2044,17 +2084,36 @@ class XrtQook(qt.QWidget):
         self.tabs.setCurrentWidget(self.plotTree)
 
     def addPlotBeam(self, beamName):
-        self.addPlot()
-        tItem = self.rootPlotItem.child(self.rootPlotItem.rowCount() - 1, 0)
-        for ie in range(tItem.rowCount()):
-            if tItem.child(ie, 0).text() == 'beam':
-                child1 = tItem.child(ie, 1)
-                if child1 is not None:
-                    child1.setText(beamName)
-                    iWidget = self.plotTree.indexWidget(child1.index())
-                    if iWidget is not None:
-                        iWidget.setCurrentIndex(iWidget.findText(beamName))
-                break
+        self.addPlot(beamName=beamName)
+#        oeid = None
+#        oeobj = None
+#        beamType = 'local'
+#        beams = self.beamModel.findItems(beamName, column=0)
+#        axHints = {'xaxis': {'label': 'x'},
+#                   'yaxis': {'label': 'y'},
+#                   'caxis': {'label': 'energy'}}
+#        
+#        for bItem in beams:
+#            row = bItem.row()
+#            oeid = str(self.beamModel.item(row, 2).text())
+#            beamType = str(self.beamModel.item(row, 1).text())
+#            break
+#        
+#        if oeid is not None:
+#            oeLine = self.beamLine.oesDict.get(oeid)
+#            if oeLine is not None:
+#                oeobj = oeLine[0]
+#
+#        if 'global' in beamType or is_screen(oeobj) or is_aperture(oeobj):
+#            axHints['yaxis']['label'] = 'z'
+#        
+#        tItem = self.rootPlotItem.child(self.rootPlotItem.rowCount() - 1, 0)
+#        for ie in range(tItem.rowCount()):
+#            if tItem.child(ie, 0).text() == 'beam':
+#                child1 = tItem.child(ie, 1)
+#                if child1 is not None:
+#                    child1.setText(beamName)
+#                break
 
     def getArgDescr(self, obj):
         argDesc = dict()
@@ -3471,11 +3530,6 @@ class XrtQook(qt.QWidget):
                     argValue = beamToUuid(argValue_str)
                 else:
                     argValue = raycing.parametrize(argValue_str)
-
-                if argName.lower().startswith('center'):
-                    print("Qook: center updated. Sorting flow")
-                    self.beamLine.sort_flow()
-                    print("New flow:", self.beamLine.flowU)
 
                 kwargs[argName] = argValue
 
