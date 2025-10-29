@@ -3248,13 +3248,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if self.globalColors:
                     newColorMax = max(np.max(
                         colorax[good]),
-                        newColorMax)
+                        newColorMax) if len(colorax[good]) else newColorMax
                     newColorMin = min(np.min(
                         colorax[good]),
-                        newColorMin)
+                        newColorMin) if len(colorax[good]) else newColorMin
                 else:
-                    newColorMax = np.max(colorax[good])
-                    newColorMin = np.min(colorax[good])
+                    newColorMax = np.max(
+                            colorax[good]) if len(colorax[good]) else newColorMax
+                    newColorMin = np.min(
+                            colorax[good]) if len(colorax[good]) else newColorMin
 
                 if newColorMin == newColorMax:
                     if newColorMax == 0:
@@ -4036,11 +4038,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.mProj.setToIdentity()
             if self.perspectiveEnabled:
-                self.mProj.perspective(self.cameraAngle, self.aspect, 0.01, 1000)
+                self.mProj.perspective(
+                        self.cameraAngle, self.aspect, 0.01, 1000)
             else:
                 halfHeight = self.orthoScale * 0.5
                 halfWidth = halfHeight * self.aspect
-                self.mProj.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight,
+                self.mProj.ortho(-halfWidth, halfWidth,
+                                 -halfHeight, halfHeight,
                                  0.01, 1000)
 
             self.mModScale.setToIdentity()
@@ -4175,7 +4179,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for oeuuid, mesh3D in self.meshDict.items():
                 item = getItem(oeuuid, 'surface')
                 if item is None or item.checkState() != 2:
-                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
+                    if not (self.showVirtualScreen and
+                            oeuuid == self.virtScreen['uuid']):
                         continue
 
                 if is_screen(mesh3D.oe):
@@ -4207,7 +4212,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                continue
                 item = getItem(oeuuid, 'footprint')
                 if item is None or item.checkState() != 2:
-                    if not (self.showVirtualScreen and oeuuid == self.virtScreen['uuid']):
+                    if not (self.showVirtualScreen and
+                            oeuuid == self.virtScreen['uuid']):
                         continue
 
                 for bField, bObj in beamDict.items():
@@ -4234,7 +4240,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             if item is None or item.checkState() != 2:
                                 continue
 
-                            beamStartDict = self.beamline.beamsDictU.get(sourceuuid)
+                            beamStartDict = self.beamline.beamsDictU.get(
+                                    sourceuuid)
                             beamEndDict = self.beamline.beamsDictU.get(eluuid)
                             startField = None
                             endField = None
@@ -4304,6 +4311,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 oeToPlot = self.beamline.oesDict[oeuuid][0]
                 oeCenter = oeToPlot.center
+                if any([isinstance(val, str) for val in oeCenter]):
+                    continue
+
                 oeString = oeToPlot.name
                 alignment = "middle"
                 dx = 0.1
@@ -4358,9 +4368,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.cBox.shader.setUniformValue("lineColor", self.textColor)
                 self.labelvao.bind()
                 self.cBox.shader.setUniformValue(
-                        "pvm",
-                        qt.QMatrix4x4()
-                        )
+                        "pvm", qt.QMatrix4x4())
                 gl.glLineWidth(min(self.cBoxLineWidth, 1.))
                 gl.glDrawArrays(gl.GL_LINES, 0, lineCounter*4)
                 self.labelvao.release()
@@ -4391,6 +4399,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeCenter = [trMat[12], trMat[13], trMat[14]]
                         else:
                             oeCenter = list(oeToPlot.center)
+                            
+                        if any([isinstance(val, str) for val in oeCenter]):
+                            continue
 
                         oePos = (mMMLoc*qt.QVector4D(*oeCenter,
                                                     1)).toVector3DAffine()
