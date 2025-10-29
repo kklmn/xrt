@@ -3443,10 +3443,10 @@ class XrtQook(qt.QWidget):
             parent = item.parent()
 
             if parent is None:
-                print("No parent")
+#                print("No parent")
                 return
-            else:
-                print(str(parent.text()))  # TODO: print
+#            else:
+#                print(str(parent.text()))  # TODO: print
 
             if str(parent.text()) in ['properties']:
                 oeItem = parent.parent()
@@ -3471,6 +3471,12 @@ class XrtQook(qt.QWidget):
                     argValue = beamToUuid(argValue_str)
                 else:
                     argValue = raycing.parametrize(argValue_str)
+
+                if argName.lower().startswith('center'):
+                    print("Qook: center updated. Sorting flow")
+                    self.beamLine.sort_flow()
+                    print("New flow:", self.beamLine.flowU)
+
                 kwargs[argName] = argValue
 
                 if outDict:  # updating flow
@@ -3711,141 +3717,148 @@ if __name__ == '__main__':
     main()\n"""
         self.progressBar.setValue(20)
         self.progressBar.setFormat("Defining materials.")
-        for ie in range(self.rootMatItem.rowCount()):
-            if str(self.rootMatItem.child(ie, 0).text()) != "None":
-                matItem = self.rootMatItem.child(ie, 0)
-                ieinit = ""
-                for ieph in range(matItem.rowCount()):
-                    if matItem.child(ieph, 0).text() == '_object':
-                        elstr = str(matItem.child(ieph, 1).text())
-                        klass = eval(elstr)
-                        if klass.__module__.startswith('xrt'):
-                            ieinit = elstr + "(" + ieinit
-                        else:
-                            # import of custom materials
-                            importStr = 'import {0}'.format(klass.__module__)
-                            # if importStr not in codeHeader:
-                            codeHeader += importStr + '\n'
-                            ieinit = "{0}.{1}({2}".format(
-                                klass.__module__, klass.__name__, ieinit)
-                for ieph in range(matItem.rowCount()):
-                    if matItem.child(ieph, 0).text() != '_object':
-                        if matItem.child(ieph, 0).text() == 'properties':
-                            pItem = matItem.child(ieph, 0)
+
+        for matId in self.beamLine.sort_materials():
+            for ie in range(self.rootMatItem.rowCount()):
+                if str(self.rootMatItem.child(ie, 0).data(qt.UserRole)) == matId:
+#                if str(self.rootMatItem.child(ie, 0).text()) != "None":
+                    matItem = self.rootMatItem.child(ie, 0)
+                    ieinit = ""
+                    for ieph in range(matItem.rowCount()):
+                        if matItem.child(ieph, 0).text() == '_object':
+                            elstr = str(matItem.child(ieph, 1).text())
+                            klass = eval(elstr)
+                            if klass.__module__.startswith('xrt'):
+                                ieinit = elstr + "(" + ieinit
+                            else:
+                                # import of custom materials
+                                importStr = 'import {0}'.format(klass.__module__)
+                                # if importStr not in codeHeader:
+                                codeHeader += importStr + '\n'
+                                ieinit = "{0}.{1}({2}".format(
+                                    klass.__module__, klass.__name__, ieinit)
+                    for ieph in range(matItem.rowCount()):
+                        if matItem.child(ieph, 0).text() != '_object':
+                            if matItem.child(ieph, 0).text() == 'properties':
+                                pItem = matItem.child(ieph, 0)
+                                for iep, arg_def in zip(range(
+                                        pItem.rowCount()),
+                                        list(zip(*self.getParams(elstr)))[1]):
+                                    paraname = str(pItem.child(iep, 0).text())
+                                    paravalue = str(pItem.child(iep, 1).text())
+                                    if paravalue != str(arg_def) or\
+                                            paravalue == 'bl':
+                                        if paraname.lower() not in\
+                                                ['tlayer', 'blayer',
+                                                 'coating', 'substrate']:
+                                            paravalue = self.quotize(paravalue)
+                                        ieinit += '\n{2}{0}={1},'.format(
+                                            paraname, paravalue, myTab)
+                    codeDeclarations += '{0} = {1})\n\n'.format(
+                        matItem.text(), str.rstrip(ieinit, ","))
+
+        self.progressBar.setValue(30)
+        self.progressBar.setFormat("Adding optical elements.")
+        outBeams = ['None']
+
+        for oeId in self.beamLine.flowU:
+            for ie in range(self.rootBLItem.rowCount()):
+                if str(self.rootBLItem.child(ie, 0).data(qt.UserRole)) == oeId:
+#                if self.rootBLItem.child(ie, 0).text() != "properties" and\
+#                        self.rootBLItem.child(ie, 0).text() != "_object":
+                    tItem = self.rootBLItem.child(ie, 0)
+                    ieinit = ""
+                    ierun = ""
+                    for ieph in range(tItem.rowCount()):
+                        if tItem.child(ieph, 0).text() == '_object':
+                            elstr = str(tItem.child(ieph, 1).text())
+                            klass = eval(elstr)
+                            if klass.__module__.startswith('xrt'):
+                                ieinit = elstr + "(" + ieinit
+                            else:
+                                # import of custom OEs
+                                importStr = 'import {0}'.format(klass.__module__)
+                                # if importStr not in codeHeader:
+                                codeHeader += importStr + '\n'
+                                ieinit = "{0}.{1}({2}".format(
+                                    klass.__module__, klass.__name__, ieinit)
+
+                    for ieph in range(tItem.rowCount()):
+                        if tItem.child(ieph, 0).text() == 'properties':
+                            pItem = tItem.child(ieph, 0)
                             for iep, arg_def in zip(range(
                                     pItem.rowCount()),
                                     list(zip(*self.getParams(elstr)))[1]):
                                 paraname = str(pItem.child(iep, 0).text())
                                 paravalue = str(pItem.child(iep, 1).text())
+                                if paraname == 'center':
+                                    if paravalue.startswith('['):
+                                        paravalue = re.findall(r'\[(.*)\]',
+                                                               paravalue)[0]
+                                    elif paravalue.startswith('('):
+                                        paravalue = re.findall(r'\((.*)\)',
+                                                               paravalue)[0]
+                                    cCoord = [self.getVal(c.strip()) for c in
+                                              str.split(paravalue, ',')]
+                                    paravalue = re.sub('\'', '', str(
+                                        [self.quotize(c) for c in cCoord]))
                                 if paravalue != str(arg_def) or\
-                                        paravalue == 'bl':
+                                        paraname == 'bl':
                                     if paraname.lower() not in\
-                                            ['tlayer', 'blayer',
-                                             'coating', 'substrate']:
+                                            ['bl', 'center', 'material',
+                                             'material2']:
                                         paravalue = self.quotize(paravalue)
                                     ieinit += '\n{2}{0}={1},'.format(
-                                        paraname, paravalue, myTab)
-                codeDeclarations += '{0} = {1})\n\n'.format(
-                    matItem.text(), str.rstrip(ieinit, ","))
-        self.progressBar.setValue(30)
-        self.progressBar.setFormat("Adding optical elements.")
-        outBeams = ['None']
-        for ie in range(self.rootBLItem.rowCount()):
-            if self.rootBLItem.child(ie, 0).text() != "properties" and\
-                    self.rootBLItem.child(ie, 0).text() != "_object":
-                tItem = self.rootBLItem.child(ie, 0)
-                ieinit = ""
-                ierun = ""
-                for ieph in range(tItem.rowCount()):
-                    if tItem.child(ieph, 0).text() == '_object':
-                        elstr = str(tItem.child(ieph, 1).text())
-                        klass = eval(elstr)
-                        if klass.__module__.startswith('xrt'):
-                            ieinit = elstr + "(" + ieinit
-                        else:
-                            # import of custom OEs
-                            importStr = 'import {0}'.format(klass.__module__)
-                            # if importStr not in codeHeader:
-                            codeHeader += importStr + '\n'
-                            ieinit = "{0}.{1}({2}".format(
-                                klass.__module__, klass.__name__, ieinit)
+                                        paraname, paravalue, myTab*2)
+                    for ieph in range(tItem.rowCount()):
+                        if tItem.child(ieph, 0).text() != '_object' and\
+                                tItem.child(ieph, 0).text() != 'properties':
+                            pItem = tItem.child(ieph, 0)
+                            tmpSourceName = ""
+                            for namef, objf in inspect.getmembers(eval(elstr)):
+                                if (inspect.ismethod(objf) or
+                                        inspect.isfunction(objf)) and\
+                                        namef == str(pItem.text()).strip('()'):
+                                    methodObj = inspect.unwrap(objf)
+                            for imet in range(pItem.rowCount()):
+                                if str(pItem.child(imet, 0).text()) ==\
+                                        'parameters':
+                                    mItem = pItem.child(imet, 0)
+                                    for iep, arg_def in\
+                                        zip(range(mItem.rowCount()),
+                                            getargspec(methodObj)[3]):
+                                        paraname = str(mItem.child(iep, 0).text())
+                                        paravalue = str(mItem.child(iep, 1).text())
+                                        if paravalue != str(arg_def):
+                                            ierun += '\n{2}{0}={1},'.format(
+                                                paraname, paravalue, myTab*2)
+                                elif pItem.child(imet, 0).text() == 'output':
+                                    mItem = pItem.child(imet, 0)
+                                    paraOutput = ""
+                                    paraOutBeams = []
+                                    for iep in range(mItem.rowCount()):
+                                        paravalue = mItem.child(iep, 1).text()
+                                        paraOutBeams.append(str(paravalue))
+                                        outBeams.append(str(paravalue))
+                                        paraOutput += str(paravalue)+", "
+                                        if len(re.findall('sources', elstr)) > 0\
+                                                and tmpSourceName == "":
+                                            tmpSourceName = str(paravalue)
+                                            if len(re.findall('Source',
+                                                              elstr)) > 0:
+                                                e0str = '{2}E0 = list({0}.{1}.energies)[0]\n'.format( # analysis:ignore
+                                                    BLName, tItem.text(), myTab)
+                                            else:
+                                                e0str = '{2}E0 = 0.5 * ({0}.{1}.eMin +\n{3}{0}.{1}.eMax)\n'.format( # analysis:ignore
+                                                    BLName, tItem.text(), myTab,
+                                                    myTab*4)
+                            codeRunProcess += '{5}{0} = {1}.{2}.{3}({4})\n\n'.format( # analysis:ignore
+                                paraOutput.rstrip(', '), BLName, tItem.text(),
+                                str(pItem.text()).strip('()'),
+                                ierun.rstrip(','), myTab)
 
-                for ieph in range(tItem.rowCount()):
-                    if tItem.child(ieph, 0).text() == 'properties':
-                        pItem = tItem.child(ieph, 0)
-                        for iep, arg_def in zip(range(
-                                pItem.rowCount()),
-                                list(zip(*self.getParams(elstr)))[1]):
-                            paraname = str(pItem.child(iep, 0).text())
-                            paravalue = str(pItem.child(iep, 1).text())
-                            if paraname == 'center':
-                                if paravalue.startswith('['):
-                                    paravalue = re.findall(r'\[(.*)\]',
-                                                           paravalue)[0]
-                                elif paravalue.startswith('('):
-                                    paravalue = re.findall(r'\((.*)\)',
-                                                           paravalue)[0]
-                                cCoord = [self.getVal(c.strip()) for c in
-                                          str.split(paravalue, ',')]
-                                paravalue = re.sub('\'', '', str(
-                                    [self.quotize(c) for c in cCoord]))
-                            if paravalue != str(arg_def) or\
-                                    paraname == 'bl':
-                                if paraname.lower() not in\
-                                        ['bl', 'center', 'material',
-                                         'material2']:
-                                    paravalue = self.quotize(paravalue)
-                                ieinit += '\n{2}{0}={1},'.format(
-                                    paraname, paravalue, myTab*2)
-                for ieph in range(tItem.rowCount()):
-                    if tItem.child(ieph, 0).text() != '_object' and\
-                            tItem.child(ieph, 0).text() != 'properties':
-                        pItem = tItem.child(ieph, 0)
-                        tmpSourceName = ""
-                        for namef, objf in inspect.getmembers(eval(elstr)):
-                            if (inspect.ismethod(objf) or
-                                    inspect.isfunction(objf)) and\
-                                    namef == str(pItem.text()).strip('()'):
-                                methodObj = inspect.unwrap(objf)
-                        for imet in range(pItem.rowCount()):
-                            if str(pItem.child(imet, 0).text()) ==\
-                                    'parameters':
-                                mItem = pItem.child(imet, 0)
-                                for iep, arg_def in\
-                                    zip(range(mItem.rowCount()),
-                                        getargspec(methodObj)[3]):
-                                    paraname = str(mItem.child(iep, 0).text())
-                                    paravalue = str(mItem.child(iep, 1).text())
-                                    if paravalue != str(arg_def):
-                                        ierun += '\n{2}{0}={1},'.format(
-                                            paraname, paravalue, myTab*2)
-                            elif pItem.child(imet, 0).text() == 'output':
-                                mItem = pItem.child(imet, 0)
-                                paraOutput = ""
-                                paraOutBeams = []
-                                for iep in range(mItem.rowCount()):
-                                    paravalue = mItem.child(iep, 1).text()
-                                    paraOutBeams.append(str(paravalue))
-                                    outBeams.append(str(paravalue))
-                                    paraOutput += str(paravalue)+", "
-                                    if len(re.findall('sources', elstr)) > 0\
-                                            and tmpSourceName == "":
-                                        tmpSourceName = str(paravalue)
-                                        if len(re.findall('Source',
-                                                          elstr)) > 0:
-                                            e0str = '{2}E0 = list({0}.{1}.energies)[0]\n'.format( # analysis:ignore
-                                                BLName, tItem.text(), myTab)
-                                        else:
-                                            e0str = '{2}E0 = 0.5 * ({0}.{1}.eMin +\n{3}{0}.{1}.eMax)\n'.format( # analysis:ignore
-                                                BLName, tItem.text(), myTab,
-                                                myTab*4)
-                        codeRunProcess += '{5}{0} = {1}.{2}.{3}({4})\n\n'.format( # analysis:ignore
-                            paraOutput.rstrip(', '), BLName, tItem.text(),
-                            str(pItem.text()).strip('()'),
-                            ierun.rstrip(','), myTab)
-
-                codeBuildBeamline += '{3}{0}.{1} = {2})\n\n'.format(
-                    BLName, str(tItem.text()), ieinit.rstrip(','), myTab)
+                    codeBuildBeamline += '{3}{0}.{1} = {2})\n\n'.format(
+                        BLName, str(tItem.text()), ieinit.rstrip(','), myTab)
         codeBuildBeamline += "{0}return {1}\n\n".format(myTab, BLName)
         codeRunProcess += r"{0}outDict = ".format(myTab) + "{"
         self.progressBar.setValue(60)

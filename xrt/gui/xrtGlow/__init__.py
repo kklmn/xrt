@@ -2499,6 +2499,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.getMinMax()
                 except:
                     pass
+
                 self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
                 self.parent.updateMaxLenFromGL(self.maxLen)  # TODO: replace with signal
 
@@ -2572,6 +2573,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree
             setattr(oe, arg, argValue)
+
+            if arg.lower().startswith('center'):
+                print("Qook: center updated. Sorting flow")
+                self.beamline.sort_flow()
+                if self.parent is not None:
+                    print("Center updated. Updating targets")
+                    self.parent.updateTargets()
+
             skipUpdate = False
             if (arg in ['pitch', 'bragg', 'center'] and 'auto' in str(argValue)) or\
                 (arg in ['bragg', 'pitch'] and isinstance(argValue, list)):
