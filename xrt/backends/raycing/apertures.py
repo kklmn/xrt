@@ -378,6 +378,7 @@ class RectangularAperture(object):
         wave.area = dX * dZ
         wave.dS = wave.area / nrays
         wave.toOE = self
+        wave.parentId = self.uuid
 
         glo = rs.Beam(copyFrom=wave)
         self.local_to_global(glo)

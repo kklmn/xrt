@@ -580,6 +580,7 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     wave.beamReflSumJ = 0.
     wave.beamReflSumJnl = 0.
     wave.diffract_repeats = np.int64(0)
+#    wave.parentId = 
     return wave
 
 
@@ -753,6 +754,7 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         wave.seededI = oeLocal.seededI * len(wave.x) / len(oeLocal.x)
 
     glo = rs.Beam(copyFrom=wave)
+    glo.parentId = oe.uuid
     glo.x[:] = wave.xDiffr
     glo.y[:] = wave.yDiffr
     glo.z[:] = wave.zDiffr

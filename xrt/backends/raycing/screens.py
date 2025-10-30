@@ -360,6 +360,7 @@ class Screen(object):
         wave.dS = dS
         wave.toOE = self
         wave.area = (np.ones_like(d1s) * dS).sum()
+        wave.parentId = prevOE.uuid
         return rw.prepare_wave(prevOE, wave, xglo, yglo+dy, zglo)
 
     def expose_wave(self, wave=None, beam=None, dim1=0, dim2=0):
@@ -421,7 +422,7 @@ class HemisphericScreen(Screen):
     """Hemispheric screen for beam visualization."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0], R=1000.,
-                 x='auto', z='auto', phiOffset=0, thetaOffset=0):
+                 x='auto', z='auto', phiOffset=0, thetaOffset=0, **kwargs):
         u"""
         *x, z*: 3-tuples or 'auto'. Normalized 3D vectors in the global system
             which determine the local x and z axes of the hemispheric screen.
@@ -447,6 +448,10 @@ class HemisphericScreen(Screen):
         self._x = x
         self._z = z
         self._set_orientation()
+
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook':

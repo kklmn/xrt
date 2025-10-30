@@ -1413,6 +1413,7 @@ class OE(object):
             raise ValueError('wrong type of `nrays`!')
 
         lb = rs.Beam(nrays=nsamples, forceState=1, withAmplitudes=True)
+        lb.parentId = prevOE.uuid
         if isinstance(nrays, (int, float)):
             xy = np.random.rand(nsamples, 2)
             if shape == 'auto':

@@ -1357,13 +1357,12 @@ class IntegratedSource(SourceBase):
             else:
                 kwArgsIn['accuBeam'] = None
 
-
         if wave is not None:
             if raycing.is_valid_uuid(wave):
                 kwArgsIn['wave'] = wave
                 wave = self.bl.beamsDictU[accuBeam]['wave']
             else:
-                kwArgsIn['wave'] = accuBeam.parentId
+                kwArgsIn['wave'] = wave.parentId
 
             if not hasattr(wave, 'rDiffr'):
                 raise ValueError("If you want to use a `wave`, run a" +
