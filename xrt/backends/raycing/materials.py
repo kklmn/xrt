@@ -239,6 +239,16 @@ class Element(object):
 
 
            """
+
+        self.table = table
+        self.elem = elem  # For compatibility and dynamic update
+
+    @property
+    def elem(self):
+        return self._elem
+
+    @elem.setter
+    def elem(self, elem):
         if isinstance(elem, basestring):
             self.name = elem
             self.Z = elementsList.index(elem)
@@ -247,12 +257,22 @@ class Element(object):
             self.Z = elem
         else:
             raise NameError('Wrong chemical element')
+        self._elem = elem
         self.f0coeffs = self.read_f0_Kissel()
-        self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
-        self.table = table
         self.mass = read_atomic_data(self.Z)
-        self.elem = elem  # For compatibility and dynamic update
+        if hasattr(self, '_table'):
+            self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=self.table)
 
+    @property
+    def table(self):
+        return self._table
+
+    @table.setter
+    def table(self, table):
+        self._table = table
+        if hasattr(self, 'name'):
+            self.E, self.f1, self.f2 = self.read_f1f2_vs_E(table=table)
+        
     def read_f0_Kissel(self):
         r"""
         Reads f0 scattering factors from the tabulation of XOP [XOP]_. These
