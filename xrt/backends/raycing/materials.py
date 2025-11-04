@@ -486,36 +486,35 @@ class Material(object):
 
 
         """
-        if isinstance(elements, basestring):
-            elements = elements,
-        if quantities is None:
-            self.quantities = [1. for elem in elements]
-        else:
-            self.quantities = quantities
-        self.elements = []
+        
+        self.name = name
         self.mass = 0.
+        self.table = table
+        self.elements = elements
+        self.quantities = quantities
+
+#        if isinstance(elements, basestring):
+#            elements = elements,
+#
+#        if quantities is None:
+#            self.quantities = [1. for elem in elements]
+#        else:
+#            self.quantities = quantities
+#        self.elements = []
+#        self.mass = 0.
         self.refractiveIndex = refractiveIndex
-        if name:
-            self.name = name
-            autoName = False
-        else:
-            self.name = r''
-            autoName = True
-        for elem, xi in zip(elements, self.quantities):
-            newElement = Element(elem, table)
-            self.elements.append(newElement)
-            self.mass += xi * newElement.mass
-            if autoName:
-                self.name += elem
-                if xi != 1:
-                    self.name += '$_{' + '{0}'.format(xi) + '}$'
+
+#        for elem, xi in zip(elements, self.quantities):
+#            newElement = Element(elem, table)
+#            self.elements.append(newElement)
+#            self.mass += xi * newElement.mass
+#            if autoName:
+#                self.name += elem
+#                if xi != 1:
+#                    self.name += '$_{' + '{0}'.format(xi) + '}$'
+        self.t = t
         self.kind = kind  # 'mirror', 'thin mirror', 'plate', 'lens'
-        if self.kind == 'thin mirror':
-            if t is None:
-                raise ValueError('Give the thin mirror a thickness!')
-            self.t = t  # t in mm
-        else:
-            self.t = t
+
         self.rho = rho  # density g/cm^3
         self.geom = ''
         self.efficiency = efficiency
@@ -527,6 +526,82 @@ class Material(object):
                 str(raycing.uuid.uuid4())
 
         self.bl = kwargs.get('bl')
+
+    @property
+    def kind(self):
+        return self._kind
+    
+    @kind.setter
+    def kind(self, kind):
+        if kind == 'thin mirror' and hasattr(self, '_t'):
+            if self.t is None:
+                print('Cannot change type for None thickness')
+#                raise ValueError('Give the thin mirror a thickness!')
+            else:
+                self._kind = kind
+        else:
+            self._kind = kind        
+
+    @property
+    def t(self):
+        return self._t
+    
+    @t.setter
+    def t(self, t):
+        if hasattr(self, '_kind') and self.kind == 'thin mirror' and t is None:
+            print('Cannot assign None thickness to thin mirror')
+#            raise ValueError('Give the thin mirror a thickness!')
+        else:
+            self._t = t
+
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, name):
+        if name:
+            self._name = name
+            self.autoName = False
+        else:
+            self._name = r''
+            self.autoName = True        
+
+    @property
+    def elements(self):
+        return self._elements
+
+    @elements.setter
+    def elements(self, elements):
+        self._elements = []
+        if isinstance(elements, basestring):
+            elements = elements,
+        if hasattr(self, 'table'):
+            for elem in elements:
+                newElement = Element(elem, self.table)
+                self._elements.append(newElement)
+        self.set_mass()
+
+    @property
+    def quantities(self):
+        return self._quantities
+
+    @quantities.setter
+    def quantities(self, quantities):
+        if quantities is None:
+            self._quantities = [1. for elem in self.elements]
+        else:
+            self._quantities = quantities        
+        self.set_mass()
+
+    @property
+    def table(self):
+        return self._table
+
+    @table.setter
+    def table(self, table):
+        self._table = table
+        self.set_mass()
 
     @property
     def refractiveIndex(self):
@@ -557,6 +632,21 @@ class Material(object):
                     self._refractiveIndexVal = None
         else:
             self._refractiveIndexVal = None
+
+    def set_mass(self):
+        self.mass = 0.
+        if self.autoName:
+            self.name = ''
+        if not all([hasattr(self, v) for v in
+                    ['_elements', '_quantities']]):
+            return
+
+        for elem, xi in zip(self.elements, self.quantities):
+            self.mass += xi * elem.mass
+            if self.autoName:
+                self.name += elem.name
+                if xi != 1:
+                    self.name += '$_{' + '{0}'.format(xi) + '}$'
 
     def read_ri_file(self, fname):
         # dataDir = os.path.dirname(__file__)
