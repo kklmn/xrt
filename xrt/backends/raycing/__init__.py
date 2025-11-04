@@ -260,7 +260,10 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
-               'parabolaAxis', 'shape'}
+               'parabolaAxis', 'shape', 'renderStyle'}
+
+renderOnlyArgSet = {'renderStyle', 'name'}
+
 
 colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
     'WHITE', 'RESET'
@@ -1468,7 +1471,7 @@ def propagationProcess(q_in, q_out):
             break
 
         if handler.stop:
-            time.sleep(0.1)
+            time.sleep(0.01)
 #            continue
         elif handler.needUpdate:
             # TODO: run propagation downstream of the updated element
@@ -1530,7 +1533,7 @@ def propagationProcess(q_in, q_out):
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False
             handler.startEl = None
-            time.sleep(0.1)
+            time.sleep(0.01)
 
 #            handler.stop = True
             repeats += 1
@@ -1614,18 +1617,20 @@ class MessageHandler:
 
                 if self.autoUpdate:
                     self.needUpdate = True
-                    if len(kwargs) == 1 and 'name' in kwargs:
+                    if len(kwargs) == 1 and (kwargs.keys() & renderOnlyArgSet):
                         self.needUpdate = False
-                if hasattr(element[0], 'propagate'):
+                if hasattr(element[0], 'propagate') and objuuid in self.bl.flowU:
                     kwargs = list(self.bl.flowU[objuuid].values())[0]
                     modifiedEl = kwargs['beam']
                 else:
                     modifiedEl = objuuid
-                keys = list(self.bl.flowU.keys())
-                if self.startEl is None:
-                    self.startEl = modifiedEl
-                elif keys.index(modifiedEl) < keys.index(self.startEl):
-                    self.startEl = modifiedEl
+                    
+                if self.needUpdate:
+                    keys = list(self.bl.flowU.keys())
+                    if self.startEl is None:
+                        self.startEl = modifiedEl
+                    elif keys.index(modifiedEl) < keys.index(self.startEl):
+                        self.startEl = modifiedEl
         elif object_type == 'mat':
             # element = self.bl.materialsDict.get(objuuid)
             # We reinstantiate the material object instead of updating. Single-
@@ -2403,8 +2408,6 @@ class BeamLine(object):
             tmpRec = self.flowU.get(oeuuid)
             if tmpRec is not None:
                 newFlow[oeuuid] = tmpRec
-                
-        print("NEW FLOW:", newFlow)
 
         self.flowU = newFlow
 

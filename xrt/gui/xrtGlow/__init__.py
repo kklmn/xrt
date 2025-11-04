@@ -56,7 +56,7 @@ import freetype as ft
 from matplotlib import font_manager
 # import asyncio
 from ...backends import raycing
-from ...backends.raycing import (propagationProcess,
+from ...backends.raycing import (propagationProcess, renderOnlyArgSet,
                                  orientationArgSet, shapeArgSet, EpicsDevice)
 from ...backends.raycing import sources as rsources
 from ...backends.raycing import screens as rscreens
@@ -1576,6 +1576,7 @@ class xrtGlow(qt.QWidget):
                 pass
         editor.setText("{0:.2f}".format(position))
         self.customGlWidget.scaleVec[iax] = np.float32(np.power(10, position))
+        self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
     def updateScaleFromGL(self, scale):
@@ -2575,10 +2576,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             setattr(oe, arg, argValue)
 
             if arg.lower().startswith('center'):
-                print("Qook: center updated. Sorting flow")
+#                print("Qook: center updated. Sorting flow")
                 self.beamline.sort_flow()
                 if self.parent is not None:
-                    print("Center updated. Updating targets")
+#                    print("Center updated. Updating targets")
                     self.parent.updateTargets()
 
             skipUpdate = False
@@ -2601,6 +2602,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif arg in {'name'}:
                 if self.parent is not None:
                     self.parent.updateNames()
+
+            if arg in renderOnlyArgSet:
+                self.glDraw()
 
             # updating the beamline model in the runner
         if self.epicsPrefix is not None:
@@ -4402,7 +4406,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             oeCenter = [trMat[12], trMat[13], trMat[14]]
                         else:
                             oeCenter = list(oeToPlot.center)
-                            
+
                         if any([isinstance(val, str) for val in oeCenter]):
                             continue
 
@@ -5786,20 +5790,26 @@ class OEMesh3D():
                 yLimits = [-10, 10]
             yDim = 2
         elif isAperture:
-            bt = 5.  # Can be set from glow UI
+            renderStyle = getattr(self.oe, 'renderStyle', 'mask')
+
+            bt = 5.  # TODO: Must be configurable in glow UI
+            defaultWidth = 10
+
             if len(set(self.oe.kind) & {'left', 'right'}) > 1:
                 awidth = np.abs(self.oe.opening[self.oe.kind.index('left')] -
                                 self.oe.opening[self.oe.kind.index('right')])
-                awidth = max(awidth, 10)
+                awidth = 0.5*awidth + bt if renderStyle == 'mask' else\
+                    max(awidth, defaultWidth)
             else:
-                awidth = 10.  # Can be set from glow UI
+                awidth = defaultWidth
 
             if len(set(self.oe.kind) & {'top', 'bottom'}) > 1:
                 aheight = np.abs(self.oe.opening[self.oe.kind.index('top')] -
                                 self.oe.opening[self.oe.kind.index('bottom')])
-                aheight = max(aheight, 10)
+                aheight =  0.5*aheight if renderStyle == 'mask' else\
+                   max(aheight, defaultWidth)
             else:
-                aheight = 10.  # Can be set from glow UI
+                aheight = defaultWidth
 
             if str(nsIndex) == 'left':
                 xLimits = [self.oe.opening[self.oe.kind.index('left')] - bt,
@@ -5903,13 +5913,15 @@ class OEMesh3D():
             local_n = lambda x, y: [0, 0, 1]
             local_z = lambda x, y: np.zeros_like(x)
         elif isAperture:
+            apThick = 0.1
             local_n = lambda x, y: [0, 0, 1]
-            if str(nsIndex) in ['left', 'right']:  # Depth for rendering only
-                local_z = lambda x, y: 1 * np.ones_like(x)  # actual thickness
-                thickness = -0.1  # Inverted position of the back side
+            if str(nsIndex) in ['left', 'right'] and renderStyle != 'mask':  # Depth for rendering only
+                local_z = lambda x, y: 0 * np.ones_like(x)  # actual thickness
+                thickness = -apThick*0.5  # Inverted position of the back side
             else:
-                local_z = lambda x, y: -1. * np.ones_like(x)
-                thickness = 0.1  # Inverted position of the back side
+                zsurf = apThick*0.5 if renderStyle == 'mask' else 0
+                local_z = lambda x, y: zsurf * np.ones_like(x)
+                thickness = apThick*0.5  # Inverted position of the back side
         else:
             local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
                 self.oe.isParametric else getattr(self.oe,

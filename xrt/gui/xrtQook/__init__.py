@@ -938,17 +938,17 @@ class XrtQook(qt.QWidget):
         self.boolModel.appendRow(qt.QStandardItem('False'))
         self.boolModel.appendRow(qt.QStandardItem('True'))
 
-        self.densityModel = qt.QStandardItemModel()
-        self.densityModel.appendRow(qt.QStandardItem('histogram'))
-        self.densityModel.appendRow(qt.QStandardItem('kde'))
+#        self.densityModel = qt.QStandardItemModel()
+#        self.densityModel.appendRow(qt.QStandardItem('histogram'))
+#        self.densityModel.appendRow(qt.QStandardItem('kde'))
 
-        self.oclPrecnModel = qt.QStandardItemModel()
-        for opm in ['auto', 'float32', 'float64']:
-            self.oclPrecnModel.appendRow(qt.QStandardItem(opm))
+#        self.oclPrecnModel = qt.QStandardItemModel()
+#        for opm in ['auto', 'float32', 'float64']:
+#            self.oclPrecnModel.appendRow(qt.QStandardItem(opm))
 
-        self.plotAxisModel = qt.QStandardItemModel()
-        for ax in ['x', 'y', 'z', 'x\'', 'z\'', 'energy']:
-            self.addValue(self.plotAxisModel, ax)
+#        self.plotAxisModel = qt.QStandardItemModel()
+#        for ax in ['x', 'y', 'z', 'x\'', 'z\'', 'energy']:
+#            self.addValue(self.plotAxisModel, ax)
 
         self.OCLModel = qt.QStandardItemModel()
         oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
@@ -1026,46 +1026,50 @@ class XrtQook(qt.QWidget):
 
         self.fluxDataModel = qt.QStandardItemModel()
         self.fluxDataModel.appendRow(qt.QStandardItem("auto"))
-        for rfName, rfObj in inspect.getmembers(raycing):
-            if rfName.startswith('get_') and\
-                    rfName != "get_output":
-                flItem = qt.QStandardItem(rfName.replace("get_", ''))
-                self.fluxDataModel.appendRow(flItem)
+        for element in raycing.allBeamFields:
+            self.fluxDataModel.appendRow(qt.QStandardItem(element))
+#        for rfName, rfObj in inspect.getmembers(raycing):
+#            if rfName.startswith('get_') and\
+#                    rfName != "get_output":
+#                flItem = qt.QStandardItem(rfName.replace("get_", ''))
+#                self.fluxDataModel.appendRow(flItem)
 
         self.fluxLabelModel = qt.QStandardItemModel()
-        for rfName, rfObj in inspect.getmembers(raycing):
-            if rfName.startswith('get_') and\
-                    rfName != "get_output":
-                flItem = qt.QStandardItem(rfName.replace("get_", ''))
-                self.fluxLabelModel.appendRow(flItem)
+        for element in raycing.allBeamFields:
+            self.fluxLabelModel.appendRow(qt.QStandardItem(element))
+#        for rfName, rfObj in inspect.getmembers(raycing):
+#            if rfName.startswith('get_') and\
+#                    rfName != "get_output":
+#                flItem = qt.QStandardItem(rfName.replace("get_", ''))
+#                self.fluxLabelModel.appendRow(flItem)
 
-        self.fluxKindModel = qt.QStandardItemModel()
-        for flKind in ['total', 'power', 's', 'p',
-                       '+45', '-45', 'left', 'right']:
-            flItem = qt.QStandardItem(flKind)
-            self.fluxKindModel.appendRow(flItem)
+#        self.fluxKindModel = qt.QStandardItemModel()
+#        for flKind in ['total', 'power', 's', 'p',
+#                       '+45', '-45', 'left', 'right']:
+#            flItem = qt.QStandardItem(flKind)
+#            self.fluxKindModel.appendRow(flItem)
 
-        self.polarizationsModel = qt.QStandardItemModel()
-        for pol in ['horizontal', 'vertical',
-                    '+45', '-45', 'left', 'right', 'None']:
-            polItem = qt.QStandardItem(pol)
-            self.polarizationsModel.appendRow(polItem)
+#        self.polarizationsModel = qt.QStandardItemModel()
+#        for pol in ['horizontal', 'vertical',
+#                    '+45', '-45', 'left', 'right', 'None']:
+#            polItem = qt.QStandardItem(pol)
+#            self.polarizationsModel.appendRow(polItem)
 
-        self.matKindModel = qt.QStandardItemModel()
-        for mtKind in ['mirror', 'thin mirror',
-                       'plate', 'lens', 'grating', 'FZP', 'auto']:
-            mtItem = qt.QStandardItem(mtKind)
-            self.matKindModel.appendRow(mtItem)
+#        self.matKindModel = qt.QStandardItemModel()
+#        for mtKind in ['mirror', 'thin mirror',
+#                       'plate', 'lens', 'grating', 'FZP', 'auto']:
+#            mtItem = qt.QStandardItem(mtKind)
+#            self.matKindModel.appendRow(mtItem)
 
-        self.matTableModel = qt.QStandardItemModel()
-        for mtTable in ['Chantler', 'Chantler total', 'Henke', 'BrCo']:
-            mtTItem = qt.QStandardItem(mtTable)
-            self.matTableModel.appendRow(mtTItem)
+#        self.matTableModel = qt.QStandardItemModel()
+#        for mtTable in ['Chantler', 'Chantler total', 'Henke', 'BrCo']:
+#            mtTItem = qt.QStandardItem(mtTable)
+#            self.matTableModel.appendRow(mtTItem)
 
-        self.shapeModel = qt.QStandardItemModel()
-        for shpEl in ['rect', 'round']:
-            shpItem = qt.QStandardItem(shpEl)
-            self.shapeModel.appendRow(shpItem)
+#        self.shapeModel = qt.QStandardItemModel()
+#        for shpEl in ['rect', 'round']:
+#            shpItem = qt.QStandardItem(shpEl)
+#            self.shapeModel.appendRow(shpItem)
 
         self.matGeomModel = qt.QStandardItemModel()
         for mtGeom in ['Bragg reflected', 'Bragg transmitted',
@@ -1074,10 +1078,10 @@ class XrtQook(qt.QWidget):
             mtGItem = qt.QStandardItem(mtGeom)
             self.matGeomModel.appendRow(mtGItem)
 
-        self.aspectModel = qt.QStandardItemModel()
-        for aspect in ['equal', 'auto']:
-            aspItem = qt.QStandardItem(aspect)
-            self.aspectModel.appendRow(aspItem)
+#        self.aspectModel = qt.QStandardItemModel()
+#        for aspect in ['equal', 'auto']:
+#            aspItem = qt.QStandardItem(aspect)
+#            self.aspectModel.appendRow(aspItem)
 
         self.distEModelG = qt.QStandardItemModel()
         for distEMod in ['None', 'normal', 'flat', 'lines']:
@@ -2941,11 +2945,11 @@ class XrtQook(qt.QWidget):
                             combo = self.addEditableCombo(
                                 self.polarizationsModel, value)
                             view.setIndexWidget(child1.index(), combo)
-                        elif len(re.findall("shape",
-                                            paramName.lower())) > 0:
-                            combo = self.addEditableCombo(
-                                self.shapeModel, value)
-                            view.setIndexWidget(child1.index(), combo)
+#                        elif len(re.findall("shape",
+#                                            paramName.lower())) > 0:
+#                            combo = self.addEditableCombo(
+#                                self.shapeModel, value)
+#                            view.setIndexWidget(child1.index(), combo)
                         elif len(re.findall("table",
                                             paramName.lower())) > 0:
                             combo = self.addStandardCombo(
@@ -3568,7 +3572,6 @@ class XrtQook(qt.QWidget):
                     self.beamLine.update_flow_from_json(
                             oeid, {methStr: outDict})
                     self.beamLine.sort_flow()
-#                    print("flow U", self.beamLine.flowU)
 
                 else:  # element
                     for itop in range(item.rowCount()):

@@ -204,6 +204,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         self.mainWidget = mainWidget
 
     def createEditor(self, parent, option, index):
+        # TODO: split into oe/mat/plot
         model = index.model()
         row = index.row()
         nameIndex = model.index(row, 0, index.parent())
@@ -215,7 +216,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         combo = QComboBox(parent)
         combo.activated.connect(lambda: self.commitData.emit(combo))
         if isinstance(self.mainWidget.getVal(argValue), bool):
-            combo.setModel(self.mainWidget.boolModel)
+            combo.addItems(['False', 'True'])
             return combo
         elif argName in ['bl', 'beamline']:
             combo.setEditable(True)
@@ -248,27 +249,47 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                  ['mater', 'tlay', 'blay', 'coat', 'substrate']):
             combo.setModel(self.mainWidget.materialsModel)
             return combo
+        elif 'kind' in argName.lower() and model is self.mainWidget.materialsModel:  # mat kind
+            combo.addItems(['mirror', 'thin mirror',
+                            'plate', 'lens', 'grating', 'FZP', 'auto'])
+            return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool
-            combo.setModel(self.mainWidget.densityModel)
+            combo.addItems(['histogram', 'kde'])
             return combo
         elif 'polarization' in argName:
-            combo.setModel(self.mainWidget.polarizationsModel)
+            combo.addItems(['horizontal', 'vertical',
+                            '+45', '-45', 'left', 'right', 'None'])
             return combo
         elif 'shape' in argName.lower():
-            combo.setModel(self.mainWidget.shapeModel)
+            combo.addItems(['rect', 'round'])
+            return combo
+        elif 'renderstyle' in argName.lower():
+            combo.addItems(['mask', 'blades'])
             return combo
         elif 'table' in argName.lower():
-            combo.setModel(self.mainWidget.matTableModel)
+            combo.addItems(['Chantler', 'Chantler total', 'Henke', 'BrCo'])
             return combo
         elif 'data' in argName.lower() and 'axis' in parentIndexName:
             combo.setModel(self.mainWidget.fluxDataModel)
             return combo
+        elif 'geom' in argName.lower():
+            combo.addItems(['Bragg reflected', 'Bragg transmitted',
+                            'Laue reflected', 'Laue transmitted',
+                            'Fresnel'])
+            return combo
         elif 'fluxkind' in argName.lower():
-            combo.setModel(self.mainWidget.fluxKindModel)
+            combo.addItems(['total', 'power', 's', 'p',
+                            '+45', '-45', 'left', 'right'])
+            return combo
+        elif 'aspect' in argName.lower():
+            combo.addItems(['equal', 'auto'])
+            return combo
+        elif 'precisionopencl' in argName.lower():
+            combo.addItems(['auto', 'float32', 'float64'])
             return combo
         elif argName.lower().endswith('label'):
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
-                combo.setModel(self.mainWidget.plotAxisModel)
+                combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy'])
             else:  # caxis
                 combo.setModel(self.mainWidget.fluxLabelModel)
             return combo

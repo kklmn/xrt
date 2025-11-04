@@ -43,6 +43,7 @@ import copy
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
+from itertools import product
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Nov 2019"
@@ -52,7 +53,8 @@ __all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
 allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
-                'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial')
+                'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
+                'renderStyle')
 
 
 class RectangularAperture(object):
@@ -62,7 +64,7 @@ class RectangularAperture(object):
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=['left', 'right', 'bottom', 'top'],
                  opening=[-10, 10, -10, 10], x='auto', z='auto',
-                 alarmLevel=None, **kwargs):
+                 alarmLevel=None, renderStyle='mask', **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -94,6 +96,9 @@ class RectangularAperture(object):
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
 
+        *renderStyle*: str
+            Controls rendering style in xrtGlow. Can be either single-piece
+            'mask' or a set of individual 'blades'.
 
         """
         self.bl = bl
@@ -133,14 +138,18 @@ class RectangularAperture(object):
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
-        self.limOptX = [-500, 500]
-        self.limOptY = [-500, 500]
-        self.limPhysX = raycing.Limits(self.limOptX)
-        self.limPhysY = raycing.Limits(self.limOptY)
+
+        self.limOptX = kwargs.get('limOptX', [-500, 500])
+        self.limOptY = kwargs.get('limOptY', [-500, 500])
+        self.limPhysX = raycing.Limits(kwargs.get('limPhysX', self.limOptX))
+        self.limPhysY = raycing.Limits(kwargs.get('limPhysY', self.limOptY))
+
         if opening is not None:
             self.set_optical_limits()
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
+        
+        self.renderStyle = renderStyle
 
     @property
     def x(self):
