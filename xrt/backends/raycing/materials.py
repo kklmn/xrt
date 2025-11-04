@@ -122,6 +122,8 @@ except ImportError:
     isPyTTE = False
 #    print("pyTTE not found")
 
+tablesCaching = True
+
 elementsList = (
     'none', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
     'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V',
@@ -131,6 +133,59 @@ elementsList = (
     'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu',
     'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
     'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U')
+
+
+def read_f0_all():
+    f0data = {}    
+    dataDir = os.path.dirname(__file__)
+    with open(os.path.join(dataDir, 'data', 'f0_xop.dat')) as f:
+        field_symbol = field_data = None
+        for li in f:
+            if li.startswith("#S"):
+                fields = li.split()
+#                field_z = int(fields[1])
+                field_symbol = str(fields[-1]).strip()
+
+            if li.startswith("#UP"):
+                if sys.version_info < (3, 1):
+                    li = f.next()
+                else:
+                    li = next(f)
+                field_data = [float(x) for x in li.split()]
+            if field_data and field_symbol:
+                f0data[field_symbol] = field_data
+                field_symbol = field_data = None
+    return f0data
+
+
+def read_f1f2_all():
+    f1f2tables = {}
+    dataDir = os.path.dirname(__file__)
+    for tableFName in ['Henke', 'Chantler', 'BrCo']:
+        pname = os.path.join(dataDir, 'data', tableFName+'.npz')
+        with open(pname, 'rb') as f:
+            res = np.load(f)
+            f1f2tables[tableFName] = {k: np.array(v) for k, v in res.items()}
+    return f1f2tables
+
+
+def read_atomic_data_all():
+    atomicDataDict = {}
+    dataDir = os.path.dirname(__file__)
+    with open(os.path.join(dataDir, 'data', 'AtomicData.dat')) as f:
+        for li in f:
+            fields = li.split()
+            Z = int(fields[0])
+            if Z > 0:
+                atomicData = [float(x) for x in fields]
+                atomicDataDict[Z] = atomicData[3]
+    return atomicDataDict
+
+
+if tablesCaching:
+    table_f0 = read_f0_all()
+    tables_f1f2 = read_f1f2_all()
+    table_atomicData = read_atomic_data_all()
 
 
 def read_atomic_data(elem):
@@ -151,6 +206,12 @@ def read_atomic_data(elem):
         Z = elem
     else:
         raise NameError('Wrong element')
+
+    if tablesCaching:
+        atomicData = table_atomicData.get(Z)
+        if atomicData is not None:
+            return atomicData
+
     dataDir = os.path.dirname(__file__)
     with open(os.path.join(dataDir, 'data', 'AtomicData.dat')) as f:
         for li in f:
@@ -159,7 +220,6 @@ def read_atomic_data(elem):
                 atomicData = [float(x) for x in fields]
                 break
     return atomicData[3]
-
 
 class Element(object):
     """This class serves for accessing the scattering factors f0, f1 and f2 of
@@ -213,6 +273,11 @@ class Element(object):
         .. [Waasmaier] D. Waasmaier & A. Kirfel, Acta Cryst. **A51** (1995)
            416-413
         """
+        if tablesCaching and self.Z < len(elementsList):
+            f0data = table_f0.get(elementsList[self.Z])
+            if f0data is not None:
+                return f0data
+
         dataDir = os.path.dirname(__file__)
         with open(os.path.join(dataDir, 'data', 'f0_xop.dat')) as f:
             for li in f:
@@ -243,17 +308,20 @@ class Element(object):
     def read_f1f2_vs_E(self, table):
         """Reads f1 and f2 scattering factors from the given *table* at the
         instantiation time."""
-        dataDir = os.path.dirname(__file__)
-
-#        pname = os.path.join(dataDir, 'data', table+'.pickle')
-#        with open(pname, 'rb') as f:
-#            res = pickle.load(f, encoding='bytes') if isPython3 else\
-#                pickle.load(f)
-#        return res[self.Z]
-
         table_fn = table.split()[0]
-        pname = os.path.join(dataDir, 'data', table_fn+'.npz')
         f2key = '_f2tot' if 'total' in table else '_f2'
+
+        if tablesCaching:
+            f1f2data = tables_f1f2.get(table_fn)
+            if f1f2data is not None:
+                ef1f2 = (np.array(f1f2data[self.name+'_E']),
+                         np.array(f1f2data[self.name+'_f1']),
+                         np.array(f1f2data[self.name+f2key]))
+                return ef1f2        
+        
+        dataDir = os.path.dirname(__file__)
+        pname = os.path.join(dataDir, 'data', table_fn+'.npz')
+
         with open(pname, 'rb') as f:
             res = np.load(f)
             ef1f2 = (np.array(res[self.name+'_E']),
