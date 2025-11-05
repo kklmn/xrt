@@ -1581,20 +1581,11 @@ class Crystal(Material):
         """
         super().__init__(elements, quantities, rho=rho, table=table, name=name,
              **kwargs)
+
         self.hkl = hkl
-        self.sqrthkl2 = (sum(i**2 for i in hkl))**0.5
         self.d = d
-        if V is None:
-            V = (d * self.sqrthkl2)**3
         self.V = V
-        self.chiToF = -R0 / PI / self.V  # minus!
-        self.chiToFd2 = abs(self.chiToF) * self.d**2
-        if len(geom) < 6:
-            geom = geom.strip()+" reflected"
-            # print(geom)
         self.geom = geom
-        self.geometry = 2*int(geom.startswith('Bragg')) +\
-            int(geom.endswith('transmitted'))  # Key for OpenCL calculations
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
@@ -1602,6 +1593,63 @@ class Crystal(Material):
         self.useTT = useTT
         self.nu = nu
         self.mosaicity = mosaicity
+
+    @property
+    def geom(self):
+        return self._geom
+    
+    @geom.setter
+    def geom(self, geom):
+        if len(geom) < 6:
+            geom = geom.strip()+" reflected"
+        self._geom = geom    
+        self.geometry = 2*int(geom.startswith('Bragg')) +\
+            int(geom.endswith('transmitted'))  # Key for OpenCL calculations
+
+    @property
+    def hkl(self):
+        return self._hkl
+    
+    @hkl.setter
+    def hkl(self, hkl):
+        self._hkl = hkl
+        self.sqrthkl2 = (sum(i**2 for i in hkl))**0.5
+        
+        if not hasattr(self, '_d'):
+            return
+
+        if hasattr(self, '_VInit') and self._VInit is None:
+            self.V = (self.d * self.sqrthkl2)**3
+
+        if hasattr(self, '_V'):
+            self.chiToF = -R0 / PI / self.V  # minus!
+            self.chiToFd2 = abs(self.chiToF) * self.d**2
+
+    @property
+    def d(self):
+        return self._d
+    
+    @d.setter
+    def d(self, d):
+        self._d = d
+        if hasattr(self, '_V') and self.V is not None:
+            self.chiToF = -R0 / PI / self.V  # minus!
+            self.chiToFd2 = abs(self.chiToF) * d**2
+        
+    @property
+    def V(self):
+        return self._V
+    
+    @V.setter
+    def V(self, V):
+        self._VInit = V
+        if V is None and hasattr(self, '_d') and hasattr(self, 'sqrthkl2'):
+            V = (self.d * self.sqrthkl2)**3
+        self._V = V
+        if hasattr(self, '_d') and V is not None:
+            self.chiToF = -R0 / PI / V  # minus!
+            self.chiToFd2 = abs(self.chiToF) * self.d**2
+
 
 #    def get_amplitude_Authie(self, E, gamma0, gammah, beamInDotHNormal):
 #        """A. Authier, Dynamical Theory of X-ray Diffraction -1. Perfect
@@ -2706,8 +2754,6 @@ class CrystalSi(CrystalDiamond):
         kwargs['hkl'] = self.hkl
         if 'name' not in kwargs:
             kwargs['name'] = 'Si'
-# Mechanics of Materials, 23 (1996), p.314
-#        kwargs['nuPoisson'] = 0.22
         super().__init__(*args, **kwargs)
 
     def dl_l(self, t=None):
@@ -2833,7 +2879,7 @@ class CrystalFromCell(Crystal):
 
 
         """
-
+        self.table = table
         self.name = name
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
@@ -2843,49 +2889,52 @@ class CrystalFromCell(Crystal):
         h, k, l = hkl  # analysis:ignore
         self.tK = 0
         self.a = a
-        self.b = a if b is None else b
-        self.c = a if c is None else c
+        self.b = b or a  # if b is None else b
+        self.c = c or a  # if c is None else c
 
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
 
-        self.alphaRad = np.radians(alpha)
-        self.betaRad = np.radians(beta)
-        self.gammaRad = np.radians(gamma)
-        self.atoms = atoms
-        self.elements = []
-        self.atomsXYZ = atomsXYZ
-        uniqueElements = {}
-        for atom in atoms:
-            if atom in uniqueElements:
-                element = uniqueElements[atom]
-            else:
-                element = Element(atom, table)
-                uniqueElements[atom] = element
-            self.elements.append(element)
+#        self.alphaRad = np.radians(alpha)
+#        self.betaRad = np.radians(beta)
+#        self.gammaRad = np.radians(gamma)
 
-        self.atomsFraction =\
-            [1 for atom in atoms] if atomsFraction is None else atomsFraction
-        self.quantities = self.atomsFraction
-        ca, cb, cg = np.cos((self.alphaRad, self.betaRad, self.gammaRad))
-        sa, sb, sg = np.sin((self.alphaRad, self.betaRad, self.gammaRad))
-        self.V = self.a * self.b * self.c *\
-            (1 - ca**2 - cb**2 - cg**2 + 2*ca*cb*cg)**0.5
-        self.mass = 0.
-        for atom, xi in zip(atoms, self.atomsFraction):
-            self.mass += xi * element.mass
-        self.rho = self.mass / AVOGADRO / self.V * 1e24
-        self.d = self.V / (self.a * self.b * self.c) *\
-            ((h*sa/self.a)**2 + (k*sb/self.b)**2 + (l*sg/self.c)**2 +
-             2*h*k * (ca*cb - cg) / (self.a*self.b) +
-             2*h*l * (ca*cg - cb) / (self.a*self.c) +
-             2*k*l * (cb*cg - ca) / (self.b*self.c))**(-0.5)
-        self.chiToF = -R0 / PI / self.V  # minus!
-        self.chiToFd2 = abs(self.chiToF) * self.d**2
+        self.atomsXYZ = atomsXYZ
+        self.atoms = atoms
+        self.atomsFraction = atomsFraction
+#        self.elements = []
+#        uniqueElements = {}
+#        for atom in atoms:
+#            if atom in uniqueElements:
+#                element = uniqueElements[atom]
+#            else:
+#                element = Element(atom, table)
+#                uniqueElements[atom] = element
+#            self.elements.append(element)
+
+#        self.atomsFraction =\
+#            [1 for atom in atoms] if atomsFraction is None else atomsFraction
+#        self.quantities = self.atomsFraction
+#        ca, cb, cg = np.cos((self.alphaRad, self.betaRad, self.gammaRad))
+#        sa, sb, sg = np.sin((self.alphaRad, self.betaRad, self.gammaRad))
+#        self.V = self.a * self.b * self.c *\
+#            (1 - ca**2 - cb**2 - cg**2 + 2*ca*cb*cg)**0.5
+#
+#        self.mass = 0.
+#        for atom, xi in zip(atoms, self.atomsFraction):
+#            self.mass += xi * element.mass
+#        self.rho = self.mass / AVOGADRO / self.V * 1e24
+#        self.d = self.V / (self.a * self.b * self.c) *\
+#            ((h*sa/self.a)**2 + (k*sb/self.b)**2 + (l*sg/self.c)**2 +
+#             2*h*k * (ca*cb - cg) / (self.a*self.b) +
+#             2*h*l * (ca*cg - cb) / (self.a*self.c) +
+#             2*k*l * (cb*cg - ca) / (self.b*self.c))**(-0.5)
+#        self.chiToF = -R0 / PI / self.V  # minus!
+#        self.chiToFd2 = abs(self.chiToF) * self.d**2
         self.geom = geom
-        self.geometry = 2*int(geom.startswith('Bragg')) +\
-            int(geom.endswith('transmitted'))
+#        self.geometry = 2*int(geom.startswith('Bragg')) +\
+#            int(geom.endswith('transmitted'))
         self.factDW = factDW
         self.kind = 'crystal'
         self.t = t  # in mm
@@ -2893,6 +2942,126 @@ class CrystalFromCell(Crystal):
         self.nu = nu
         self.useTT = useTT
         self.mosaicity = mosaicity
+
+    @property
+    def table(self):
+        return self._table
+
+    @table.setter
+    def table(self, table):
+        self._table = table
+        self.set_elements()
+
+    @property
+    def a(self):
+        return self._a
+    
+    @a.setter
+    def a(self, a):
+        self._a = a
+        self.set_cell_volume()
+
+    @property
+    def b(self):
+        return self._b
+    
+    @b.setter
+    def b(self, b):
+        self._b = b
+        self.set_cell_volume()
+
+    @property
+    def c(self):
+        return self._c
+    
+    @c.setter
+    def c(self, c):
+        self._c = c
+        self.set_cell_volume()
+
+    @property
+    def alpha(self):
+        return self._alpha
+    
+    @alpha.setter
+    def alpha(self, alpha):
+        self.alphaRad = np.radians(alpha)
+        self._alpha = alpha
+        self.set_cell_volume()
+
+    @property
+    def beta(self):
+        return self._beta
+    
+    @beta.setter
+    def beta(self, beta):
+        self.betaRad = np.radians(beta)
+        self._beta = beta
+        self.set_cell_volume()
+
+    @property
+    def gamma(self):
+        return self._gamma
+    
+    @gamma.setter
+    def gamma(self, gamma):
+        self.gammaRad = np.radians(gamma)
+        self._gamma = gamma
+        self.set_cell_volume()
+
+    @property
+    def atomsFraction(self):
+        return self._atomsFraction
+    
+    @atomsFraction.setter
+    def atomsFraction(self, atomsFraction):
+        self._atomsFraction = atomsFraction or [1 for atom in self.atoms] 
+        self.quantities = self._atomsFraction
+        self.set_cell_volume()
+
+    @property
+    def atoms(self):
+        return self._atoms
+    
+    @atoms.setter
+    def atoms(self, atoms):
+        self._atoms = atoms
+        self.set_elements()
+        self.set_cell_volume()
+
+    def set_elements(self):
+        if hasattr(self, '_table') and hasattr(self, '_atoms'):
+            self.elements = []
+            uniqueElements = {}
+            for atom in self._atoms:
+                if atom in uniqueElements:
+                    element = uniqueElements[atom]
+                else:
+                    element = Element(atom, self._table)
+                    uniqueElements[atom] = element
+                self.elements.append(element)
+
+    def set_cell_volume(self):
+        if not all([hasattr(self, v) for v in
+                    ['_a', '_b', '_c',
+                     '_alpha', '_beta', '_gamma',
+                     '_atoms', '_atomsFraction', '_hkl']]):
+            return        
+        
+        ca, cb, cg = np.cos((self.alphaRad, self.betaRad, self.gammaRad))
+        sa, sb, sg = np.sin((self.alphaRad, self.betaRad, self.gammaRad))
+        self.V = self.a * self.b * self.c *\
+            (1 - ca**2 - cb**2 - cg**2 + 2*ca*cb*cg)**0.5
+        h, k, l = self.hkl
+        self.mass = 0.
+        for element, xi in zip(self.elements, self.atomsFraction):
+            self.mass += xi * element.mass
+        self.rho = self.mass / AVOGADRO / self.V * 1e24
+        self.d = self.V / (self.a * self.b * self.c) *\
+            ((h*sa/self.a)**2 + (k*sb/self.b)**2 + (l*sg/self.c)**2 +
+             2*h*k * (ca*cb - cg) / (self.a*self.b) +
+             2*h*l * (ca*cg - cb) / (self.a*self.c) +
+             2*k*l * (cb*cg - ca) / (self.b*self.c))**(-0.5)
 
     def get_structure_factor(self, E, sinThetaOverLambda=0, needFhkl=True):
         F0, Fhkl, Fhkl_ = 0, 0, 0
