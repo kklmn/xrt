@@ -43,9 +43,6 @@ import os
 import numpy as np
 from functools import partial
 import matplotlib as mpl
-
-# from matplotlib import pyplot as plt
-# import inspect
 import re
 import copy
 # import time
@@ -54,7 +51,6 @@ from scipy.spatial.transform import Rotation as scprot
 from collections import OrderedDict, deque
 import freetype as ft
 from matplotlib import font_manager
-# import asyncio
 from ...backends import raycing
 from ...backends.raycing import (propagationProcess, renderOnlyArgSet,
                                  orientationArgSet, shapeArgSet, EpicsDevice)
@@ -70,12 +66,8 @@ from ...plotter import colorFactor, colorSaturation
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 MAXRAYS = 500000
 
-#from ...backends.raycing import Center
-#from ...backends.raycing import Limits
-
 from multiprocessing import Process, Queue
 
-# epicsEnabled = False
 msg_start = {
         "command": "start"}
 msg_stop = {
@@ -158,14 +150,18 @@ def basis_rotation_q(xyz_start, xyz_end):
 def is_oe(oe):
     return isinstance(oe, roes.OE)
 
+
 def is_dcm(oe):
     return isinstance(oe, roes.DCM)
+
 
 def is_plate(oe):
     return isinstance(oe, roes.Plate)
 
+
 def is_screen(oe):
     return isinstance(oe, rscreens.Screen)
+
 
 def is_aperture(oe):
     res = isinstance(oe, (rapertures.RectangularAperture,
@@ -173,12 +169,18 @@ def is_aperture(oe):
                           rapertures.PolygonalAperture))
     return res
 
+
 def is_source(oe):
     res = isinstance(oe, (rsources.SourceBase, rsources.GeometricSource,
                           rsources.GaussianBeam, rsources.MeshSource,
                           rsources.CollimatedMeshSource,
                           rsources.BeamFromFile))
     return res
+
+
+def snsc(angleDeg, phDeg):
+    angleRad = np.radians(angleDeg-phDeg)
+    return 0.5*(np.sign(np.cos(angleRad))+np.sign(np.sin(angleRad)))
 
 
 itemTypes = {'beam': 0, 'footprint': 1, 'surface': 2, 'label': 3}
@@ -4718,13 +4720,19 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.rotationUpdated.emit(self.rotations)
 
             elif shiftOn:
-                yShift = ym*self.maxLen/self.scaleVec[1]
-                zShift = zm*self.maxLen/self.scaleVec[2]
-                self.tVec[1] += yShift
-                self.tVec[2] += zShift
+                mouse_h = np.array([-snsc(self.rotations[0], 45),
+                                    snsc(self.rotations[0], -45),
+                                    0])
+                psgn = -snsc(self.rotations[1], 45)
+                mouse_v = np.array([psgn*snsc(self.rotations[0], -45),
+                                    psgn*snsc(self.rotations[0], 45),
+                                    snsc(self.rotations[1], -45)])
+                shifts = xsn * mouse_h + ysn * mouse_v
+
+                self.tVec += shifts*self.maxLen/self.scaleVec
                 self.cBox.update_grid()
 
-            elif ctrlOn:
+            elif ctrlOn and self.showVirtualScreen:
                 tPlane = self.virtScreen['beamStart']
                 nPlane = self.virtScreen['beamPlane']
                 pPlane = self.getPlanePoint(mouseX, mouseY, tPlane, nPlane)
