@@ -386,7 +386,8 @@ class xrtGlow(qt.QWidget):
         self.oeTree.setIconSize(qt.QSize(32, 32))
         self.oeTree.setContextMenuPolicy(qt.CustomContextMenu)
         self.oeTree.customContextMenuRequested.connect(self.oeTreeMenu)
-        self.oeTree.resizeColumnToContents(0)
+        for clmn in range(4):
+            self.oeTree.resizeColumnToContents(clmn)
         self.navigationLayout.addWidget(self.oeTree)
         self.navigationPanel = qt.QWidget(self)
         self.navigationPanel.setLayout(self.navigationLayout)
@@ -2974,15 +2975,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.delete_beam_footprint(beamTag)
                 del self.beamBufferDict[beamTag]
 
-        mesh = self.meshDict.get(oeid)
-        if mesh is not None:
-            mesh.delete_mesh(oeid)
+#        mesh = self.meshDict.get(oeid)
+#        if mesh is not None:
+#            mesh.delete_mesh()
 #            del self.meshDict[oeid]  # what about mesh.oe?
 
     def delete_object(self, objuuid):  # to be triggered by a signal after deleting the buffers
         try:
             objType = None
             if objuuid in self.beamline.oesDict:
+                mesh = self.meshDict.get(objuuid)
+                if mesh is not None:
+                    mesh.delete_mesh()                
                 del self.meshDict[objuuid]
                 self.beamline.delete_oe_by_id(objuuid)
                 if self.parent is not None:
@@ -3362,7 +3366,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def update_oe_surface(self, oeuuid):
         if is_source(self.meshDict[oeuuid].oe):
-            self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
+            try:
+                self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
+            except Exception as e:
+                print(e)
+                print("Update failed, disabling mesh for", oeuuid)
+                self.meshDict[oeuuid].isEnabled = False
         else:
             for surfIndex in self.meshDict[oeuuid].vao.keys():
                 try:
@@ -4077,7 +4086,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             model = self.segmentModel.model()
-            
+
             while self.needMeshUpdate:  # TODO: process one element per call?
                 elementId = self.needMeshUpdate.popleft()
 
@@ -5495,6 +5504,9 @@ class OEMesh3D():
 
         self.vbo_vertices = {}
         self.vbo_normals = {}
+        self.vbo_positions = {}
+        self.vbo_colors = {}
+
         self.vbo_contour = {}
 
         if self.parent is not None:
@@ -6160,7 +6172,7 @@ class OEMesh3D():
 #        gridvao.create()
 
     def delete_mesh(self):
-        for nsIndex in self.vao.keys():  # Updating existing
+        for nsIndex in self.vao.keys():
             vao = self.vao[nsIndex]
 
             oldVBOpoints = self.vbo_vertices[nsIndex] if\
@@ -6168,6 +6180,11 @@ class OEMesh3D():
             oldVBOnorms = self.vbo_normals[nsIndex] if\
                 nsIndex in self.vbo_normals.keys() else None
             oldIBO = self.ibo[nsIndex] if nsIndex in self.ibo.keys() else None
+            oldVBOcolors = self.vbo_colors[nsIndex] if\
+                nsIndex in self.vbo_colors.keys() else None            
+            oldVBOpositions = self.vbo_positions[nsIndex] if\
+                nsIndex in self.vbo_positions.keys() else None
+
             if oldVBOpoints is not None:
                 oldVBOpoints.destroy()
                 gl.glGetError()
@@ -6177,16 +6194,24 @@ class OEMesh3D():
             if oldIBO is not None:
                 oldIBO.destroy()
                 gl.glGetError()
+            if oldVBOcolors is not None:
+                oldVBOcolors.destroy()
+                gl.glGetError()
+            if oldVBOpositions is not None:
+                oldVBOpositions.destroy()
+                gl.glGetError()
             oldVBOpoints, oldVBOnorms, oldIBO = None, None, None
+            oldVBOcolors, oldVBOpositions = None, None
 
             self.vbo_vertices[nsIndex] = None
             self.vbo_normals[nsIndex] = None
             self.ibo[nsIndex] = None
+            self.vbo_colors[nsIndex] = None
+            self.vbo_positions[nsIndex] = None
             if vao is not None:
                 vao.destroy()
             gl.glGetError()
             self.vao[nsIndex] = None
-
 
     def generate_instance_data(self, num):
         period = self.oe.period if hasattr(self.oe, 'period') else 40  # [mm]
@@ -6195,7 +6220,7 @@ class OEMesh3D():
         instancePositions = np.zeros((int(num*2), 3), dtype=np.float32)
         instanceColors = np.zeros((int(num*2), 3), dtype=np.float32)
 
-        for n in range(num):
+        for n in range(int(num)):
             pos_x = 0
             dy = n - 0.5*num if num > 1 else 0
             pos_y = period * dy
@@ -6210,48 +6235,62 @@ class OEMesh3D():
 
         return instancePositions, instanceColors
 
-    def prepare_magnets(self, updateMesh=False):  # TODO: update mesh
+    def prepare_magnets(self, updateMesh=False):
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
+        nsIndex = 0  # to unify syntax
 
-        num_poles = self.oe.n*2 if hasattr(self.oe, 'n') else 1
+        num_poles = int(self.oe.n*2) if hasattr(self.oe, 'n') else 1
         self.mag_z_size = 20
-        self.vbo_vertices = create_qt_buffer(
-                self.cube_vertices.reshape(-1, 6)[:, :3].copy())
-        self.vbo_normals = create_qt_buffer(
-                self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+
+        if updateMesh:
+            if self.vbo_positions.get(nsIndex) is not None:
+                self.vbo_positions[nsIndex].destroy()
+                self.vbo_positions[nsIndex] = None
+                gl.glGetError()
+            if self.vbo_colors.get(nsIndex) is not None:
+                self.vbo_colors[nsIndex].destroy()
+                self.vbo_colors[nsIndex] = None
+                gl.glGetError()
+        else:
+            self.vbo_vertices[nsIndex] = create_qt_buffer(
+                    self.cube_vertices.reshape(-1, 6)[:, :3].copy())
+            self.vbo_normals[nsIndex] = create_qt_buffer(
+                    self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+
         instancePositions, instanceColors = self.generate_instance_data(
                 num_poles)
 
-        self.vbo_positions = create_qt_buffer(instancePositions.copy())
-        self.vbo_colors = create_qt_buffer(instanceColors.copy())
+        self.vbo_positions[nsIndex] = create_qt_buffer(instancePositions.copy())
+        self.vbo_colors[nsIndex] = create_qt_buffer(instanceColors.copy())
 
-        vao = qt.QOpenGLVertexArrayObject()
-        vao.create()
-        vao.bind()
+        if not self.vao:
+            self.vao[nsIndex] = qt.QOpenGLVertexArrayObject()
+            self.vao[nsIndex].create()
 
-        self.vbo_vertices.bind()
+        self.vao[nsIndex].bind()
+
+        self.vbo_vertices[nsIndex].bind()
         gl.glEnableVertexAttribArray(0)
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        self.vbo_vertices.release()
+        self.vbo_vertices[nsIndex].release()
         # Normal attribute
-        self.vbo_normals.bind()
+        self.vbo_normals[nsIndex].bind()
         gl.glEnableVertexAttribArray(1)
         gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        self.vbo_normals.release()
+        self.vbo_normals[nsIndex].release()
         # Instance arrays
-        self.vbo_positions.bind()
+        self.vbo_positions[nsIndex].bind()
         gl.glEnableVertexAttribArray(2)
         gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
         gl.glVertexAttribDivisor(2, 1)
-        self.vbo_positions.release()
-        self.vbo_colors.bind()
+        self.vbo_positions[nsIndex].release()
+        self.vbo_colors[nsIndex].bind()
         gl.glEnableVertexAttribArray(3)
         gl.glVertexAttribPointer(3, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
         gl.glVertexAttribDivisor(3, 1)
-        self.vbo_colors.release()
-        vao.release()
-        self.vao = vao
+        self.vbo_colors[nsIndex].release()
+        self.vao[nsIndex].release()
         self.num_poles = num_poles
 
     def render_surface(self, mMod, mView, mProj, oeIndex=0,
@@ -6332,9 +6371,13 @@ class OEMesh3D():
                        shader=None):
         if shader is None:
             return
+        nsIndex = 0
 
         shader.bind()
-        self.vao.bind()
+        if not self.vao:
+            return
+
+        self.vao[nsIndex].bind()
 
         shader.setUniformValue("model", mMod)
         shader.setUniformValue("view", mView)
@@ -6361,7 +6404,7 @@ class OEMesh3D():
         shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
         gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, self.num_poles*2)
-        self.vao.release()
+        self.vao[nsIndex].release()
         shader.release()
 
 

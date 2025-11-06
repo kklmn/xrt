@@ -2248,7 +2248,6 @@ class XrtQook(qt.QWidget):
 
         oldname = str(item.text())
 
-
         if item.parent() is not None:
             item.parent().removeRow(item.index().row())
             beams = self.beamModel.findItems(objuuid, column=2)
