@@ -260,7 +260,7 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
-               'parabolaAxis', 'shape', 'renderStyle'}
+               'parabolaAxis', 'shape', 'renderStyle'}  # TODO: sources
 
 renderOnlyArgSet = {'renderStyle', 'name'}
 
@@ -2415,7 +2415,7 @@ class BeamLine(object):
         visited = set()
         visiting = set()
         sortedMatList = []
-        matDeps = ['tlayer', 'blayer', 'coating', 'substrate']
+        matDeps = ['tLayer', 'bLayer', 'coating', 'substrate']
 
         def get_dep_obj(matObj):
             deps = []
@@ -2442,8 +2442,9 @@ class BeamLine(object):
             if mId in visiting:
                 raise ValueError(f"Circular dependency detected involving {mId}")
             visiting.add(mId)
-            for dep in get_dependencies(mProps):
-                dfs(dep, mProps)
+            if mProps is not None:
+                for dep in get_dependencies(mProps):
+                    dfs(dep, None)
             visiting.remove(mId)
             visited.add(mId)
             sortedMatList.append(mId)

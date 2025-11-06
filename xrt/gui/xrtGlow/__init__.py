@@ -338,7 +338,6 @@ class xrtGlow(qt.QWidget):
             event.accept()
 
     def runElementViewer(self, oeuuid=None):
-
         if oeuuid is not None and hasattr(self.customGlWidget, 'beamline'):
             oe = self.customGlWidget.beamline.oesDict.get(oeuuid, None)
             if oe is None:
@@ -368,23 +367,10 @@ class xrtGlow(qt.QWidget):
         centerCBLabel = qt.QLabel('Center view at:')
         self.centerCB = qt.QComboBox()
         self.centerCB.setMaxVisibleItems(48)
-#        for key in self.oesList.keys():
-#            self.centerCB.addItem(str(key))
-#        centerCB.addItem('customXYZ')
-
-
-        # Create your proxy model and set your main model as the source.
         proxy_model = qt.ComboBoxFilterProxyModel()
         proxy_model.setSourceModel(self.segmentsModel)
-
-        # Set the proxy model to the combo box.
         self.centerCB.setModel(proxy_model)
-        self.centerCB.setModelColumn(0)  # display text is in column 0
-
-#        self.centerCB.setModel(self.segmentsModel)
-#        self.centerCB.setModelColumn(0)
-
-#        self.centerCB.currentIndexChanged['QString'].connect(self.centerEl)
+        self.centerCB.setModelColumn(0)
         self.centerCB.currentIndexChanged['int'].connect(
                 lambda elementid: self.centerEl(
                         self.centerCB.itemData(elementid, role=qt.UserRole)))
@@ -1231,12 +1217,13 @@ class xrtGlow(qt.QWidget):
                             endBeamText = "to {}".format(targetName)
                             oeItem.appendRow(self.createRow(
                                     endBeamText, 3, uuid=targetuuid))
-                            print(oeItem.text(), ": Appending", endBeamText)
+#                            print(oeItem.text(), ": Appending", endBeamText)
                         except:  # analysis:ignore
                             continue
 
         # Stage 4. Clear dead references
         tmpDict.clear()
+        self.oeTree.resizeColumnToContents(0)
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
@@ -4090,7 +4077,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             model = self.segmentModel.model()
-
+            
             while self.needMeshUpdate:  # TODO: process one element per call?
                 elementId = self.needMeshUpdate.popleft()
 
@@ -4720,13 +4707,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.rotationUpdated.emit(self.rotations)
 
             elif shiftOn:
-                mouse_h = np.array([-snsc(self.rotations[0], 45),
-                                    snsc(self.rotations[0], -45),
-                                    0])
-                psgn = -snsc(self.rotations[1], 45)
-                mouse_v = np.array([psgn*snsc(self.rotations[0], -45),
-                                    psgn*snsc(self.rotations[0], 45),
-                                    snsc(self.rotations[1], -45)])
+                az, el = self.rotations
+                mouse_h = np.array([-snsc(az, 45), snsc(az, -45), 0])
+                psgn = -snsc(el, 45)
+                mouse_v = np.array([psgn*snsc(az, -45), psgn*snsc(az, 45),
+                                    snsc(el, -45)])
                 shifts = xsn * mouse_h + ysn * mouse_v
 
                 self.tVec += shifts*self.maxLen/self.scaleVec
@@ -6225,7 +6210,7 @@ class OEMesh3D():
 
         return instancePositions, instanceColors
 
-    def prepare_magnets(self, updateMesh=False):
+    def prepare_magnets(self, updateMesh=False):  # TODO: update mesh
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
 

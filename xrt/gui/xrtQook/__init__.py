@@ -1716,6 +1716,7 @@ class XrtQook(qt.QWidget):
         self.isEmpty = False
         self.tabs.setCurrentWidget(tree)
         tree.setCurrentIndex(elementItem.index())
+        tree.resizeColumnToContents(0)
 
     def getParams(self, obj):
         uArgs = OrderedDict()

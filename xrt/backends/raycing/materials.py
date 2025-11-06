@@ -589,7 +589,12 @@ class Material(object):
     @quantities.setter
     def quantities(self, quantities):
         if quantities is None:
-            self._quantities = [1. for elem in self.elements]
+            if hasattr(self, '_elements'):
+                self._quantities = [1. for elem in self.elements]
+            else:
+                self._quantities = [1]
+        elif not isinstance(quantities, (list, tuple)):
+            self._quantities = [quantities]
         else:
             self._quantities = quantities        
         self.set_mass()
@@ -888,7 +893,7 @@ class Multilayer(object):
                     'bThicknessLow'}
 
     def __init__(self, tLayer=None, tThickness=0., bLayer=None, bThickness=0.,
-                 nPairs=0., substrate=None, tThicknessLow=0., bThicknessLow=0.,
+                 nPairs=0, substrate=None, tThicknessLow=0., bThicknessLow=0.,
                  idThickness=0., power=2., substRoughness=0.,
                  substThickness=np.inf, name='', geom='reflected', **kwargs):
         u"""
@@ -981,7 +986,7 @@ class Multilayer(object):
 
     @nPairs.setter
     def nPairs(self, n):
-        self._nPairs = n
+        self._nPairs = int(n)
         self.set_dti()
         self.set_dbi()
 

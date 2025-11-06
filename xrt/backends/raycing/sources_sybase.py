@@ -338,6 +338,7 @@ class SourceBase:
         else:
             self._xPrimeMax = abs(xPrimeMax) * 1e-3
             self._xPrimeMin = -self._xPrimeMax
+        self.needReset = True
 
     @property
     def zPrimeMax(self):
@@ -358,6 +359,7 @@ class SourceBase:
         else:
             self._zPrimeMax = abs(zPrimeMax) * 1e-3
             self._zPrimeMin = -self._zPrimeMax
+        self.needReset = True
 
     @property
     def eE(self):
