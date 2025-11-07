@@ -62,7 +62,9 @@ from ...backends.raycing import materials as rmats
 # from ...backends.raycing import physconsts
 from ..commons import qt
 from ..commons import gl
-from ...plotter import colorFactor, colorSaturation
+from ...plotter import colorFactor, colorSaturation, XYCPlot, XYCAxis
+from ...multipro import GenericProcessOrThread as GP
+from ...runner import RunCardVals
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 MAXRAYS = 500000
 
@@ -2986,7 +2988,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if objuuid in self.beamline.oesDict:
                 mesh = self.meshDict.get(objuuid)
                 if mesh is not None:
-                    mesh.delete_mesh()                
+                    mesh.delete_mesh()
                 del self.meshDict[objuuid]
                 self.beamline.delete_oe_by_id(objuuid)
                 if self.parent is not None:
@@ -4692,8 +4694,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         ys = 2 * dy / yView
         xsn = xs * np.tan(np.radians(60))
         ysn = ys * np.tan(np.radians(60))
-        ym = xsn * 3.5
-        zm = ysn * 3.5
+        xm = xsn * self.cameraDistance / 3.5
+        ym = ysn * self.cameraDistance / 3.5
 
         if mEvent.buttons() == qt.LeftButton:
             if mEvent.modifiers() == qt.NoModifier:
@@ -4721,7 +4723,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 psgn = -snsc(el, 45)
                 mouse_v = np.array([psgn*snsc(az, -45), psgn*snsc(az, 45),
                                     snsc(el, -45)])
-                shifts = xsn * mouse_h + ysn * mouse_v
+                shifts = xm * mouse_h + ym * mouse_v
 
                 self.tVec += shifts*self.maxLen/self.scaleVec
                 self.cBox.update_grid()
@@ -6181,7 +6183,7 @@ class OEMesh3D():
                 nsIndex in self.vbo_normals.keys() else None
             oldIBO = self.ibo[nsIndex] if nsIndex in self.ibo.keys() else None
             oldVBOcolors = self.vbo_colors[nsIndex] if\
-                nsIndex in self.vbo_colors.keys() else None            
+                nsIndex in self.vbo_colors.keys() else None
             oldVBOpositions = self.vbo_positions[nsIndex] if\
                 nsIndex in self.vbo_positions.keys() else None
 
@@ -7179,6 +7181,7 @@ class OEExplorer(qt.QDialog):
     def __init__(self, data_dict, parent=None, viewOnly=False):
         super().__init__(parent)
         self.setWindowTitle("Live Object Properties")
+#        print(self.parent())
 
         self.model = qt.QStandardItemModel()
         self.original_data = raycing.OrderedDict()
@@ -7236,11 +7239,51 @@ class OEExplorer(qt.QDialog):
         self.button_box.accepted.connect(self.on_ok_clicked)
         self.ok_button.clicked.connect(self.accept)
 
-        layout = qt.QVBoxLayout(self)
-        layout.addWidget(self.table)
-        layout.addWidget(self.button_box)
+        elementId = self.original_data.get('uuid')
+        bdu = self.parent().customGlWidget.beamline.beamsDictU
+        self.beamDict = bdu.get(elementId)
+
+        self.plotControlPanel = qt.QGroupBox(self)
+        self.plotControlPanel.setFlat(False)
+        self.plotControlPanel.setTitle("Plot Controls")
+        combo = qt.QComboBox()
+        combo.addItems(list(self.beamDict.keys()))
+#        combo.activated.connect(self.set_beam_key)
+        combo.currentTextChanged.connect(self.set_beam_key)
+#        combo.activated.connect(lambda: self.commitData.emit(combo))
+        controlLayout = qt.QVBoxLayout(self.plotControlPanel)
+        controlLayout.addWidget(combo)
+
+        button = qt.QPushButton("Update Plot")
+        button.clicked.connect(self.plot_beam)
+        controlLayout.addWidget(button)
+
+        if self.beamDict:
+             defBeam = list(self.beamDict.keys())[0]
+        self.dynamicPlot = XYCPlot(beam=defBeam, useQtWidget=True)
+
+        canvasSplitter = qt.QSplitter()
+        canvasSplitter.setChildrenCollapsible(False)
+
+        layout = qt.QHBoxLayout(self)
+
+        widgetL = qt.QWidget()
+        layoutL = qt.QVBoxLayout(widgetL)
+        layoutL.addWidget(self.table)
+        layoutL.addWidget(self.button_box)
+
+        widgetR = qt.QWidget()
+        layoutR = qt.QVBoxLayout(widgetR)
+        layoutR.addWidget(self.dynamicPlot.canvas)
+        layoutR.addWidget(self.plotControlPanel)
+
+        layout.addWidget(canvasSplitter)
+
+        canvasSplitter.addWidget(widgetL)
+        canvasSplitter.addWidget(widgetR)
 
         self.edited_data = {}
+        self.plot_beam()
 
 #        table_size = self.table.sizeHint()
 #        extra_height = self.button_box.sizeHint().height() + 40  # add padding
@@ -7339,3 +7382,85 @@ class OEExplorer(qt.QDialog):
                 self.set_row_highlight(row, False)
 
         self.changed_data.clear()
+
+    def update_plot(self, outList, iteration=0):
+        self.dynamicPlot.nRaysAll += outList[13]
+        nRaysVarious = outList[14]
+        self.dynamicPlot.nRaysAlive += nRaysVarious[0]
+        self.dynamicPlot.nRaysGood += nRaysVarious[1]
+        self.dynamicPlot.nRaysOut += nRaysVarious[2]
+        self.dynamicPlot.nRaysOver += nRaysVarious[3]
+        self.dynamicPlot.nRaysDead += nRaysVarious[4]
+        self.dynamicPlot.nRaysAccepted += nRaysVarious[5]
+        self.dynamicPlot.nRaysAcceptedE += nRaysVarious[6]
+        self.dynamicPlot.nRaysSeeded += nRaysVarious[7]
+        self.dynamicPlot.nRaysSeededI += nRaysVarious[8]
+        self.dynamicPlot.displayAsAbsorbedPower = outList[15]
+
+        for iaxis, axis in enumerate(
+                [self.dynamicPlot.xaxis,
+                 self.dynamicPlot.yaxis,
+                 self.dynamicPlot.caxis]):
+            if (iaxis == 2) and (not self.dynamicPlot.ePos):
+                continue
+            axis.total1D += outList[0+iaxis*3]
+            axis.total1D_RGB += outList[1+iaxis*3]
+            if iteration == 0:
+                axis.binEdges = outList[2+iaxis*3]
+
+        self.dynamicPlot.total2D += outList[9]
+        self.dynamicPlot.total2D_RGB += outList[10]
+        if self.dynamicPlot.fluxKind.lower().endswith('4d'):
+            self.dynamicPlot.total4D += outList[11]
+        elif self.dynamicPlot.fluxKind.lower().endswith('pca'):
+            self.dynamicPlot.total4D.append(outList[11])
+        self.dynamicPlot.intensity += outList[12]
+
+        if self.dynamicPlot.fluxKind.startswith('E') and \
+                self.dynamicPlot.fluxKind.lower().endswith('pca'):
+            xbin, zbin = self.dynamicPlot.xaxis.bins, self.dynamicPlot.yaxis.bins
+            self.dynamicPlot.total4D = np.concatenate(self.dynamicPlot.total4D).reshape(-1, xbin, zbin)
+            self.dynamicPlot.field3D = self.dynamicPlot.total4D
+        self.dynamicPlot.textStatus.set_text('')
+        self.dynamicPlot.plot_plots()
+
+    def set_beam_key(self, beamKey):
+        self.dynamicPlot.beam = str(beamKey)
+        self.dynamicPlot.clean_plots()
+        self.plot_beam()
+
+    def plot_beam(self, key=None):
+        locCard = RunCardVals(threads=0,
+                             processes=1,
+                             repeats=1,
+                             updateEvery=1,
+                             pickleEvery=0,
+                             backend='raycing',
+                             globalNorm=False,
+                             runfile=None)
+
+        locCard.beamLine = self.parent().customGlWidget.beamline
+
+        self.dynamicPlot.runCardVals = locCard
+#        self.dynamicPlot.beam=r"screen01_local"
+        self.dynamicPlot.xaxis.label=r"x"
+        self.dynamicPlot.xaxis.unit=r"mm"
+        if self.dynamicPlot.beam.endswith('lobal'):
+            self.dynamicPlot.yaxis.label=r"z"
+            self.dynamicPlot.yaxis.unit=r"mm"
+        else:
+            self.dynamicPlot.yaxis.label=r"y"
+            self.dynamicPlot.yaxis.unit=r"mm"
+
+        self.dynamicPlot.caxis.label=r"energy"
+        self.dynamicPlot.caxis.unit=r"eV"
+
+        sproc = GP(locCard=locCard,
+                   plots=[self.dynamicPlot.card_copy()],
+                   outPlotQueues=[None],
+                   alarmQueue=[None],
+                   idLoc=0,
+                   beamDict=self.beamDict)
+
+        outList = sproc.run()
+        self.update_plot(outList)

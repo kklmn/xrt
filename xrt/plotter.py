@@ -360,35 +360,85 @@ class XYCAxis(object):
         """
         self.label = label
         self.unit = unit
-        if self.label:
-            self.displayLabel = self.label
-        else:
-            self.displayLabel = ''
-        if self.unit:
-            self.displayLabel += ' (' + self.unit + ')'
         self.factor = factor
         self.data = data
         self.limits = limits
         self.offset = offset
-        self.offsetDisplayUnit = self.unit
-        self.offsetDisplayFactor = 1
         self.bins = bins
         self.ppb = ppb
-        self.pixels = bins * ppb
         self.density = density
         self.extraMargin = extraMargin
         self.invertAxis = invertAxis
-        if outline < 0:
-            outline = 0
-        if outline > 1:
-            outline = 1
         self.outline = outline
         self.fwhmFormatStr = fwhmFormatStr
+
+        self.offsetDisplayFactor = 1
         self.max1D = 0
         self.max1D_RGB = 0
         self.globalMax1D = 0
         self.globalMax1D_RGB = 0
         self.useCategory = False
+
+    @property
+    def label(self):
+        return self._label
+    
+    @label.setter
+    def label(self, label):
+        self._label = label
+        self.set_display_label()
+
+    @property
+    def unit(self):
+        return self._unit
+    
+    @unit.setter
+    def unit(self, unit):
+        self._unit = unit
+        self.offsetDisplayUnit = unit
+        self.set_display_label()
+
+    @property
+    def bins(self):
+        return self._bins
+    
+    @bins.setter
+    def bins(self, bins):
+        self._bins = bins
+        if hasattr(self, '_ppb'):
+            self.pixels = bins * self._ppb
+            # also defines the fig size
+
+    @property
+    def ppb(self):
+        return self._ppb
+    
+    @ppb.setter
+    def ppb(self, ppb):
+        self._ppb = ppb
+        if hasattr(self, '_bins'):
+            self.pixels = self._bins * ppb
+
+    @property
+    def outline(self):
+        return self._outline
+    
+    @outline.setter
+    def outline(self, outline):
+        if outline < 0:
+            outline = 0
+        if outline > 1:
+            outline = 1
+        self._outline = outline
+
+    def set_display_label(self):
+        if hasattr(self, '_label') and self._label:
+            self.displayLabel = self._label
+        else:
+            self.displayLabel = ''
+
+        if hasattr(self, '_unit') and self._unit:
+            self.displayLabel += ' (' + self._unit + ')'
 
     def auto_assign_data(self, backend):
         """
@@ -494,7 +544,6 @@ class XYCAxis(object):
                     factor = np.degrees(1)*1e3
                 elif self.unit in ['arcsec']:
                     factor = 180*3600/np.pi
-
 
         self.factor = factor
 
@@ -757,6 +806,8 @@ class XYCPlot(object):
             plt.ion()
         self.colorSaturation = colorSaturation
 
+        self.runCardVals = None
+
         self.beam = beam  # binary shadow image: star, mirr or screen
         if beam is None:
             self.backend = 'raycing'
@@ -768,6 +819,7 @@ class XYCPlot(object):
             self.backend = 'raycing'
         else:
             self.backend = 'dummy'
+
         self.beamState = beamState
         self.beamC = beamC
         self.rayFlag = rayFlag
@@ -854,6 +906,7 @@ class XYCPlot(object):
             self.title = beam
         else:
             self.title = ' '
+
         if useQtWidget:
             self.canvas = MyQtFigCanvas(figure=self.fig, xrtplot=self)
 
@@ -1304,6 +1357,7 @@ class XYCPlot(object):
             *center*, *fwhm*: floats
                 the center and fwhm values for later displaying.
         """
+        runCardVals = self.runCardVals or runner.runCardVals
         if what_axis_char == 'x':
             axis = self.xaxis
             graph = self.ax1dHistX
@@ -1329,14 +1383,14 @@ class XYCPlot(object):
         t1D = axis.total1D
         axis.max1D = float(np.max(t1D))
         if axis.max1D > epsHist:
-            if runner.runCardVals.passNo > 0:
+            if runCardVals.passNo > 0:
                 mult = 1.0 / axis.globalMax1D
             else:
                 mult = 1.0 / axis.max1D
             xx = t1D * mult
         else:
             xx = t1D
-        if runner.runCardVals.passNo > 0:
+        if runCardVals.passNo > 0:
             xxMaxHalf = float(np.max(xx)) * 0.5  # for calculating FWHM
         else:
             xxMaxHalf = 0.5
@@ -1344,7 +1398,7 @@ class XYCPlot(object):
         t1D_RGB = axis.total1D_RGB
         axis.max1D_RGB = float(np.max(t1D_RGB))
         if axis.max1D_RGB > epsHist:
-            if runner.runCardVals.passNo > 1:
+            if runCardVals.passNo > 1:
                 mult = 1.0 / axis.globalMax1D_RGB
             else:
                 mult = 1.0 / axis.max1D_RGB
@@ -1495,10 +1549,11 @@ class XYCPlot(object):
         """
         Plots the 2D histogram as imshow.
         """
+        runCardVals = self.runCardVals or runner.runCardVals
         tRGB = self.total2D_RGB
         self.max2D_RGB = float(np.max(tRGB))
         if self.max2D_RGB > 0:
-            if runner.runCardVals.passNo > 1:
+            if runCardVals.passNo > 1:
                 mult = 1.0 / self.globalMax2D_RGB
             else:
                 mult = 1.0 / self.max2D_RGB
@@ -1623,6 +1678,7 @@ class XYCPlot(object):
         """
         Does all graphics update.
         """
+        runCardVals = self.runCardVals or runner.runCardVals
         self.cx, self.dx = self.plot_hist1d('x')
         self.cy, self.dy = self.plot_hist1d('y')
 
@@ -1636,7 +1692,7 @@ class XYCPlot(object):
         if self.textNrays:
             self.textNrays.set_text(r'$N_{\rm all} = $%s' % self.nRaysAll)
         if self.textGoodrays:
-            if (runner.runCardVals.backend == 'shadow'):
+            if (runCardVals.backend == 'shadow'):
                 strDict = {0: r'lost', 1: r'good'}
                 self.textGoodrays.set_text(
                     ''.join([r'$N_{\rm ', strDict[self.rayFlag[0]],
@@ -1645,7 +1701,7 @@ class XYCPlot(object):
             if self.fluxFormatStr == 'auto':
                 cond = (self.fluxUnit is None) or \
                     self.fluxKind.startswith('power')
-                if (runner.runCardVals.backend == 'raycing'):
+                if (runCardVals.backend == 'raycing'):
                     cond = cond or (self.nRaysSeeded == 0)
                 if cond:
                     fluxFormatStr = '%g'
@@ -1659,7 +1715,7 @@ class XYCPlot(object):
                 if 0 < pos+1 < len(fluxFormatStr):
                     isPowerOfTen = True
                     powerOfTenDecN = int(fluxFormatStr[pos+1])
-        if (runner.runCardVals.backend == 'raycing'):
+        if (runCardVals.backend == 'raycing'):
             for iTextPanel, iEnergy, iN, substr in zip(
                 [self.textGood, self.textOut, self.textOver, self.textAlive,
                  self.textDead],
@@ -1713,7 +1769,7 @@ class XYCPlot(object):
                                 r'$\Phi = ${0} ph/s'.format(intensityStr)
                             self.textI.set_text(intensityStr)
             self.update_user_elements()
-        if (runner.runCardVals.backend == 'shadow'):
+        if (runCardVals.backend == 'shadow'):
             if self.textI:
                 intensityStr = r'$I = $'
                 if isPowerOfTen:
@@ -1727,6 +1783,9 @@ class XYCPlot(object):
             self.textFWHM(self.xaxis, self.textDx, self.cx, self.dx/2)
         if self.yaxis.fwhmFormatStr is not None:
             self.textFWHM(self.yaxis, self.textDy, self.cy, self.dy/2)
+
+        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)
+        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)
 
         self.fig.canvas.draw()
 
@@ -1753,9 +1812,10 @@ class XYCPlot(object):
         """
         Cleans the graph in order to prepare it for the next ray tracing.
         """
-        runner.runCardVals.iteration = 0
-        runner.runCardVals.stop_event.clear()
-        runner.runCardVals.finished_event.clear()
+        runCardVals = self.runCardVals or runner.runCardVals
+        runCardVals.iteration = 0
+        runCardVals.stop_event.clear()
+        runCardVals.finished_event.clear()
         for axis in [self.xaxis, self.yaxis, self.caxis]:
             axis.total1D[:] = np.zeros(axis.bins)
             axis.total1D_RGB[:] = np.zeros((axis.bins, 3))

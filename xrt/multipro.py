@@ -35,7 +35,8 @@ class GenericProcessOrThread(object):
     thread is changed to the corresponding 'tmpNN' directory (see
     mod:`shadow`).
     """
-    def __init__(self, locCard, plots, outPlotQueues, alarmQueue, idLoc):
+    def __init__(self, locCard, plots, outPlotQueues, alarmQueue, idLoc,
+                 beamDict={}):
         self.status = -1
         if locCard.backend.startswith('shadow'):
             self.runDir = locCard.cwd + os.sep + 'tmp' + str(idLoc)
@@ -47,6 +48,7 @@ class GenericProcessOrThread(object):
         self.card = locCard
         if self.card.backend.startswith('raycing'):
             self.card.beamLine.flow = []
+        self.beamDict = beamDict
 
     def do_hist1d(self, x, intensity, cDataRGB, axis):
         """
@@ -263,8 +265,11 @@ class GenericProcessOrThread(object):
             self.alarmQueue.put([])
         elif self.card.backend.startswith('raycing'):
             self.card.beamLine.iteration = self.card.iteration + self.idN
-            raycing_output = raycing.run.run_process(self.card.beamLine)
-            self.alarmQueue.put(self.card.beamLine.alarms)
+            if self.beamDict:
+                raycing_output = self.beamDict
+            else:
+                raycing_output = raycing.run.run_process(self.card.beamLine)
+                self.alarmQueue.put(self.card.beamLine.alarms)
 
         for plot, queue in zip(self.plots, self.outPlotQueues):
             displayAsAbsorbedPower = False
@@ -362,6 +367,8 @@ class GenericProcessOrThread(object):
             outList.append(displayAsAbsorbedPower)
             if self.card.iteration == 0:  # needed for multiprocessing
                 outList.append((xmin, xmax, ymin, ymax, emin, emax))
+            if self.beamDict:
+                return outList
             queue.put(outList)
 
 
