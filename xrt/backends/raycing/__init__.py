@@ -713,17 +713,17 @@ def get_z(beam):
 
 def get_s(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.s
+    return beam.s if hasattr(beam, 's') else np.zeros_like(beam.x)
 
 
 def get_phi(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.phi
+    return beam.phi if hasattr(beam, 'phi') else np.zeros_like(beam.x)
 
 
 def get_r(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.r
+    return beam.r if hasattr(beam, 'r') else np.zeros_like(beam.x)
 
 
 def get_a(beam):
@@ -768,23 +768,23 @@ def get_reflection_number(beam):
 
 def get_elevation_d(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationD
+    return beam.elevationD if hasattr(beam, 'elevationD') else np.zeros_like(beam.x)
 # if hasattr(beam, 'elevationD') else np.zeros_like(beam.x)
 
 
 def get_elevation_x(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationX  # if hasattr(beam, 'elevationX') else beam.x
+    return beam.elevationX  if hasattr(beam, 'elevationX') else beam.x
 
 
 def get_elevation_y(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationY  # if hasattr(beam, 'elevationY') else beam.y
+    return beam.elevationY  if hasattr(beam, 'elevationY') else beam.y
 
 
 def get_elevation_z(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationZ  # if hasattr(beam, 'elevationZ') else beam.z
+    return beam.elevationZ  if hasattr(beam, 'elevationZ') else beam.z
 
 
 def get_Es_amp(beam):

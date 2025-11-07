@@ -7212,13 +7212,11 @@ class OEExplorer(qt.QDialog):
 
         self.changed_data = {}
         self.model.itemChanged.connect(self.on_item_changed)
-
         self.highlight_color = qt.QtGui.QColor("#fffacd")
 
         self.table = qt.QTableView()
         self.table.setModel(self.model)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
         self.table.setAlternatingRowColors(True)
         self.table.setContextMenuPolicy(qt.CustomContextMenu)
@@ -7248,19 +7246,44 @@ class OEExplorer(qt.QDialog):
         self.plotControlPanel.setTitle("Plot Controls")
         combo = qt.QComboBox()
         combo.addItems(list(self.beamDict.keys()))
-#        combo.activated.connect(self.set_beam_key)
-        combo.currentTextChanged.connect(self.set_beam_key)
+#        combo.activated.connect(self.set_beam)
+        combo.currentTextChanged.connect(self.set_beam)
 #        combo.activated.connect(lambda: self.commitData.emit(combo))
         controlLayout = qt.QVBoxLayout(self.plotControlPanel)
-        controlLayout.addWidget(combo)
+        c1layout = qt.QHBoxLayout()
+        c1layout.addWidget(qt.QLabel("beam"))
+        c1layout.addWidget(combo)
+        c1layout.addStretch()
+        controlLayout.addLayout(c1layout)
+        
+        combo2 = qt.QComboBox()
+        combo2.addItems(['auto', 'equal'])
+        combo2.currentTextChanged.connect(self.set_aspect)
+        c2layout = qt.QHBoxLayout()
+        c2layout.addWidget(qt.QLabel("aspect"))
+        c2layout.addWidget(combo2)
+        c2layout.addStretch()
+        controlLayout.addLayout(c2layout)
 
-        button = qt.QPushButton("Update Plot")
-        button.clicked.connect(self.plot_beam)
-        controlLayout.addWidget(button)
+        combo3 = qt.QComboBox()
+        combo3.addItems(list(raycing.allBeamFields))
+        combo3.currentTextChanged.connect(self.set_cdata)
+        c3layout = qt.QHBoxLayout()
+        c3layout.addWidget(qt.QLabel("caxis"))
+        c3layout.addWidget(combo3)
+        c3layout.addStretch()
+        controlLayout.addLayout(c3layout)
+
+#        button = qt.QPushButton("Re-trace")
+#        button.clicked.connect(self.plot_beam)
+#        controlLayout.addWidget(button)
 
         if self.beamDict:
              defBeam = list(self.beamDict.keys())[0]
-        self.dynamicPlot = XYCPlot(beam=defBeam, useQtWidget=True)
+        self.dynamicPlot = XYCPlot(beam=defBeam, aspect='auto', useQtWidget=True)
+
+        self.dynamicPlot.caxis.label=r"energy"
+        self.dynamicPlot.caxis.unit=r"eV"
 
         canvasSplitter = qt.QSplitter()
         canvasSplitter.setChildrenCollapsible(False)
@@ -7424,8 +7447,18 @@ class OEExplorer(qt.QDialog):
         self.dynamicPlot.textStatus.set_text('')
         self.dynamicPlot.plot_plots()
 
-    def set_beam_key(self, beamKey):
+    def set_beam(self, beamKey):
         self.dynamicPlot.beam = str(beamKey)
+        self.dynamicPlot.clean_plots()
+        self.plot_beam()
+
+    def set_aspect(self, aspect):
+        self.dynamicPlot.aspect = str(aspect)
+        self.dynamicPlot.clean_plots()
+        self.plot_beam()        
+
+    def set_cdata(self, data):
+        self.dynamicPlot.caxis.label = str(data)
         self.dynamicPlot.clean_plots()
         self.plot_beam()
 
@@ -7442,18 +7475,18 @@ class OEExplorer(qt.QDialog):
         locCard.beamLine = self.parent().customGlWidget.beamline
 
         self.dynamicPlot.runCardVals = locCard
-#        self.dynamicPlot.beam=r"screen01_local"
         self.dynamicPlot.xaxis.label=r"x"
         self.dynamicPlot.xaxis.unit=r"mm"
         if self.dynamicPlot.beam.endswith('lobal'):
             self.dynamicPlot.yaxis.label=r"z"
-            self.dynamicPlot.yaxis.unit=r"mm"
         else:
-            self.dynamicPlot.yaxis.label=r"y"
-            self.dynamicPlot.yaxis.unit=r"mm"
-
-        self.dynamicPlot.caxis.label=r"energy"
-        self.dynamicPlot.caxis.unit=r"eV"
+            if len(self.beamDict) > 1:
+                print(1)
+                self.dynamicPlot.yaxis.label=r"y"
+            else:   # screen or aperture
+                print(2)
+                self.dynamicPlot.yaxis.label=r"z"                
+        self.dynamicPlot.yaxis.unit=r"mm"
 
         sproc = GP(locCard=locCard,
                    plots=[self.dynamicPlot.card_copy()],
@@ -7461,6 +7494,6 @@ class OEExplorer(qt.QDialog):
                    alarmQueue=[None],
                    idLoc=0,
                    beamDict=self.beamDict)
-
+        
         outList = sproc.run()
         self.update_plot(outList)

@@ -387,6 +387,9 @@ class XYCAxis(object):
     def label(self, label):
         self._label = label
         self.set_display_label()
+        self.auto_assign_unit()
+        if hasattr(self, '_dataInit') and self._dataInit == 'auto':
+            self.auto_assign_data()
 
     @property
     def unit(self):
@@ -397,6 +400,39 @@ class XYCAxis(object):
         self._unit = unit
         self.offsetDisplayUnit = unit
         self.set_display_label()
+        if hasattr(self, '_factorInit') and self._factorInit is None:
+            self.auto_assign_factor()
+
+    @property
+    def factor(self):
+        return self._factor
+    
+    @factor.setter
+    def factor(self, factor):
+        self._factor = factor
+        self._factorInit = factor
+        if hasattr(self, '_unit') and factor is None:
+            self.auto_assign_factor()  # called with default backend
+
+    @property
+    def data(self):
+        return self._data
+    
+    @data.setter
+    def data(self, data):
+        self._data = data
+        self._dataInit = data
+        if hasattr(self, '_label') and data == 'auto':
+            self.auto_assign_data()  # called with default backend
+
+    @property
+    def limits(self):
+        return self._limits
+    
+    @limits.setter
+    def limits(self, limits):
+        self._limits = limits
+        self._limitsInit = limits
 
     @property
     def bins(self):
@@ -440,64 +476,83 @@ class XYCAxis(object):
         if hasattr(self, '_unit') and self._unit:
             self.displayLabel += ' (' + self._unit + ')'
 
-    def auto_assign_data(self, backend):
+    def auto_assign_unit(self):
+        if hasattr(self, '_label') and hasattr(self, '_unit'):
+            if self._label in ['x', 'y', 'z']:
+                if self.unit not in set(raycing.allUnitsLenStr.keys()) | set(raycing.allUnitsLenStr.values()):
+                    self.unit = 'mm'
+            elif self._label in ["x'", "y'", "z'"]:
+                if self.unit not in set(raycing.allUnitsAngStr.keys()) | set(raycing.allUnitsAngStr.values()):
+                    self.unit = 'mrad'
+            elif self._label in ['energy']:
+                if self.unit not in set(raycing.allUnitsEnergyStr.keys()) | set(raycing.allUnitsEnergyStr.values()):
+                    self.unit = 'eV'
+            else:
+                self.unit = ''
+
+    def auto_assign_data(self, backend='raycing'):
         """
         Automatically assign data arrays given the axis label."""
-        if "energy" in self.label:
+
+        if self.label.strip("$ _") in ["energy"]:
             if backend == 'shadow':
-                self.data = 10
+                 data = 10
             elif backend == 'raycing':
-                self.data = raycing.get_energy
-        elif "x'" in self.label:
+                data = raycing.get_energy
+        elif self.label.strip("$ _") in ["x'", "xprime"]:
             if backend == 'shadow':
-                self.data = 3
+                data = 3
             elif backend == 'raycing':
-                self.data = raycing.get_xprime
-        elif "z'" in self.label:
+                data = raycing.get_xprime
+        elif self.label.strip("$ _") in ["z'", "zprime"]:
             if backend == 'shadow':
-                self.data = 5
+                data = 5
             elif backend == 'raycing':
-                self.data = raycing.get_zprime
-        elif "x" in self.label:
+                data = raycing.get_zprime
+        elif self.label.strip("$ _") in ["x"]:
             if backend == 'shadow':
-                self.data = 0
+                data = 0
             elif backend == 'raycing':
-                self.data = raycing.get_x
-        elif "y" in self.label:
+                data = raycing.get_x
+        elif self.label.strip("$ _") in ["y"]:
             if backend == 'shadow':
                 self.data = 1
             elif backend == 'raycing':
-                self.data = raycing.get_y
-        elif "z" in self.label:
+                data = raycing.get_y
+        elif self.label.strip("$ _") in ["z"]:
             if backend == 'shadow':
-                self.data = 2
+                data = 2
             elif backend == 'raycing':
-                self.data = raycing.get_z
-        elif "degree" in self.label:
-            self.data = raycing.get_polarization_degree
-        elif "circular" in self.label:
-            self.data = raycing.get_circular_polarization_rate
-        elif "incid" in self.label or "theta" in self.label:
-            self.data = raycing.get_incidence_angle
-        elif "phi" in self.label:
-            self.data = raycing.get_phi
-        elif "order" in self.label:
-            self.data = raycing.get_order
-        elif "s" in self.label:
-            self.data = raycing.get_s
-        elif "path" in self.label:
-            self.data = raycing.get_path
-        elif "r" in self.label:
-            self.data = raycing.get_r
-        elif "a" in self.label:
-            self.data = raycing.get_a
-        elif "b" in self.label:
-            self.data = raycing.get_b
+                data = raycing.get_z
+        elif self.label in raycing.allBeamFields:
+            data = getattr(raycing, 'get_{}'.format(self.label))
+
+#        elif "degree" in self.label:
+#            data = raycing.get_polarization_degree
+#        elif "circular" in self.label:
+#            data = raycing.get_circular_polarization_rate
+#        elif "incid" in self.label or "theta" in self.label:
+#            data = raycing.get_incidence_angle
+#        elif "phi" in self.label:
+#            data = raycing.get_phi
+#        elif "order" in self.label:
+#            data = raycing.get_order
+#        elif "s" in self.label:
+#            data = raycing.get_s
+#        elif "path" in self.label:
+#            data = raycing.get_path
+#        elif "r" in self.label:
+#            data = raycing.get_r
+#        elif "a" in self.label:
+#            data = raycing.get_a
+#        elif "b" in self.label:
+#            data = raycing.get_b
         else:
             raise ValueError(
                 'cannot auto-assign data for axis "{0}"!'.format(self.label))
+        self._data = data
 
-    def auto_assign_factor(self, backend):
+    def auto_assign_factor(self, backend='raycing'):
         """
         Automatically assign factor given the axis label."""
         factor = 1.
@@ -545,7 +600,7 @@ class XYCAxis(object):
                 elif self.unit in ['arcsec']:
                     factor = 180*3600/np.pi
 
-        self.factor = factor
+        self._factor = factor
 
 
 class XYCPlot(object):
@@ -825,6 +880,7 @@ class XYCPlot(object):
         self.rayFlag = rayFlag
         self.fluxKind = fluxKind
         self.fluxUnit = fluxUnit
+
         if xaxis is None:
             self.xaxis = XYCAxis(defaultXTitle, defaultXUnit)
         else:
@@ -897,6 +953,7 @@ class XYCPlot(object):
         else:
             self.fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi),
                                   dpi=dpi)
+
         self.local_size_inches = self.fig.get_size_inches()
 
         self.fig.delaxes(self.fig.gca())
@@ -931,10 +988,12 @@ class XYCPlot(object):
         rect2d = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
                   (self.xaxis.pixels-1+xExtra) / xFigSize,
                   (self.yaxis.pixels-1+yExtra) / yFigSize]
+
         self.ax2dHist = self.fig.add_axes(
             rect2d, aspect=aspect, xlabel=self.xaxis.displayLabel,
             ylabel=self.yaxis.displayLabel, autoscale_on=False,
             frameon=frameon, **kwmpl)
+
         self.ax2dHist.xaxis.labelpad = xlabelpad
         self.ax2dHist.yaxis.labelpad = ylabelpad
 
@@ -1165,6 +1224,7 @@ class XYCPlot(object):
         self.oeSurfaceLabels = []
         self.raycingParam = raycingParam
         self.draw_footprint_area()
+
         if self.xaxis.limits is not None:
             if not isinstance(self.xaxis.limits, str):
                 self.ax2dHist.set_xlim(self.xaxis.limits)
@@ -1678,6 +1738,7 @@ class XYCPlot(object):
         """
         Does all graphics update.
         """
+
         runCardVals = self.runCardVals or runner.runCardVals
         self.cx, self.dx = self.plot_hist1d('x')
         self.cy, self.dy = self.plot_hist1d('y')
@@ -1715,6 +1776,7 @@ class XYCPlot(object):
                 if 0 < pos+1 < len(fluxFormatStr):
                     isPowerOfTen = True
                     powerOfTenDecN = int(fluxFormatStr[pos+1])
+
         if (runCardVals.backend == 'raycing'):
             for iTextPanel, iEnergy, iN, substr in zip(
                 [self.textGood, self.textOut, self.textOver, self.textAlive,
@@ -1769,6 +1831,7 @@ class XYCPlot(object):
                                 r'$\Phi = ${0} ph/s'.format(intensityStr)
                             self.textI.set_text(intensityStr)
             self.update_user_elements()
+
         if (runCardVals.backend == 'shadow'):
             if self.textI:
                 intensityStr = r'$I = $'
@@ -1784,9 +1847,12 @@ class XYCPlot(object):
         if self.yaxis.fwhmFormatStr is not None:
             self.textFWHM(self.yaxis, self.textDy, self.cy, self.dy/2)
 
-        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)
-        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)
-
+        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)  # dynamic updates
+        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)  # dynamic updates
+        if self.ePos == 1:
+            self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
+        elif self.ePos == 2:
+            self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
         self.fig.canvas.draw()
 
     def save(self, suffix=''):

@@ -176,7 +176,7 @@ class GenericProcessOrThread(object):
         """
         Updates the *axis* limits given the data in *x*. Used at the 1st
         iteration."""
-        if (axis.limits is None) or isinstance(axis.limits, str):
+        if (axis._limitsInit is None) or isinstance(axis._limitsInit, str):
             if len(x) > 1:
                 xmin, xmax = np.min(x), np.max(x)
                 dx = axis.extraMargin * (xmax-xmin) / axis.bins
@@ -187,10 +187,10 @@ class GenericProcessOrThread(object):
                     xmax += 1.
             else:
                 xmin, xmax = 1., 10.
-            if isinstance(axis.limits, str):
+            if isinstance(axis._limitsInit, str):
                 xmm = max(abs(xmin), abs(xmax))
                 xmin, xmax = -xmm, xmm
-            axis.limits = [xmin, xmax]
+            axis._limits = [xmin, xmax]
         else:
             xmin, xmax = axis.limits[0], axis.limits[1]
         return xmin, xmax
@@ -220,11 +220,11 @@ class GenericProcessOrThread(object):
         if leadingLimits == 'x':
             yMid = (yaxis.limits[1]+yaxis.limits[0]) / 2.
             dy2 = dx / aspect / 2
-            yaxis.limits = [yMid-dy2, yMid+dy2]
+            yaxis._limits = [yMid-dy2, yMid+dy2]
         else:
             xMid = (xaxis.limits[1]+xaxis.limits[0]) / 2.
             dx2 = dy * aspect / 2
-            xaxis.limits = [xMid-dx2, xMid+dx2]
+            xaxis._limits = [xMid-dx2, xMid+dx2]
         return xaxis.limits[0], xaxis.limits[1], yaxis.limits[0],\
             yaxis.limits[1]
 
@@ -292,10 +292,10 @@ class GenericProcessOrThread(object):
 
             if self.card.iteration == 0:
                 leadingLimits = None
-                xLimitsDefined = (plot.xaxis.limits is not None) and \
-                    (not isinstance(plot.xaxis.limits, str))
-                yLimitsDefined = (plot.yaxis.limits is not None) and \
-                    (not isinstance(plot.yaxis.limits, str))
+                xLimitsDefined = (plot.xaxis._limitsInit is not None) and \
+                    (not isinstance(plot.xaxis._limitsInit, str))
+                yLimitsDefined = (plot.yaxis._limitsInit is not None) and \
+                    (not isinstance(plot.yaxis._limitsInit, str))
                 if xLimitsDefined and (not yLimitsDefined):
                     leadingLimits = 'x'
                 elif yLimitsDefined and (not xLimitsDefined):
