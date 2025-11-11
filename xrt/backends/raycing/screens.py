@@ -384,7 +384,7 @@ class Screen(object):
         .. Returned values: beamLocal
         """
         from . import waves as rw
-        prevOE = self.bl.oesDict[wave.parentId]
+        prevOE = self.bl.oesDict[wave.parentId][0]
         if self.bl is not None:
             if beam is not None:
                 self.bl.auto_align(self, beam)
