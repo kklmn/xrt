@@ -191,17 +191,15 @@ def deserialize_plots(data):
                 for axname, axval in pval.items():
                     if axname == '_object':
                         continue
-                    if pname == 'caxis' and axname == 'unit':
-                        axDefArgs[axname] = 'eV'
                     if axname in axDefArgs and axval != str(axDefArgs[axname]):
                         axKwargs[axname] = raycing.parametrize(axval)
                 plotKwargs[pname] = XYCAxis(**axKwargs)
-
             else:
                 if pname in plotDefArgs and pval != str(plotDefArgs[pname]):
                     plotKwargs[pname] = raycing.parametrize(pval)
         try:
             newPlot = XYCPlot(**plotKwargs)
+            print(f"{plotKwargs=}")
             plotsList.append(newPlot)
         except:
             print("Plot init failed")
@@ -382,19 +380,20 @@ class XYCAxis(object):
     @property
     def label(self):
         return self._label
-    
+
     @label.setter
     def label(self, label):
         self._label = label
-        self.set_display_label()
         self.auto_assign_unit()
-        if hasattr(self, '_dataInit') and self._dataInit == 'auto':
+        self.set_display_label()
+        if hasattr(self, '_dataInit') and self._dataInit == 'auto' and\
+                self.label.strip("$ _") in raycing.allBeamFields:
             self.auto_assign_data()
 
     @property
     def unit(self):
         return self._unit
-    
+
     @unit.setter
     def unit(self, unit):
         self._unit = unit
@@ -406,7 +405,7 @@ class XYCAxis(object):
     @property
     def factor(self):
         return self._factor
-    
+
     @factor.setter
     def factor(self, factor):
         self._factor = factor
@@ -417,7 +416,7 @@ class XYCAxis(object):
     @property
     def data(self):
         return self._data
-    
+
     @data.setter
     def data(self, data):
         self._data = data
@@ -428,7 +427,7 @@ class XYCAxis(object):
     @property
     def limits(self):
         return self._limits
-    
+
     @limits.setter
     def limits(self, limits):
         self._limits = limits
@@ -437,7 +436,7 @@ class XYCAxis(object):
     @property
     def bins(self):
         return self._bins
-    
+
     @bins.setter
     def bins(self, bins):
         self._bins = bins
@@ -448,7 +447,7 @@ class XYCAxis(object):
     @property
     def ppb(self):
         return self._ppb
-    
+
     @ppb.setter
     def ppb(self, ppb):
         self._ppb = ppb
@@ -458,7 +457,7 @@ class XYCAxis(object):
     @property
     def outline(self):
         return self._outline
-    
+
     @outline.setter
     def outline(self, outline):
         if outline < 0:
@@ -478,13 +477,14 @@ class XYCAxis(object):
 
     def auto_assign_unit(self):
         if hasattr(self, '_label') and hasattr(self, '_unit'):
-            if self._label in ['x', 'y', 'z']:
+            lbl = self._label.strip("$ _").lower()
+            if lbl in ['x', 'y', 'z']:
                 if self.unit not in set(raycing.allUnitsLenStr.keys()) | set(raycing.allUnitsLenStr.values()):
                     self.unit = 'mm'
-            elif self._label in ["x'", "y'", "z'"]:
+            elif lbl in ["x'", "y'", "z'"]:
                 if self.unit not in set(raycing.allUnitsAngStr.keys()) | set(raycing.allUnitsAngStr.values()):
                     self.unit = 'mrad'
-            elif self._label in ['energy']:
+            elif lbl in ['energy', 'e']:
                 if self.unit not in set(raycing.allUnitsEnergyStr.keys()) | set(raycing.allUnitsEnergyStr.values()):
                     self.unit = 'eV'
             else:
@@ -494,59 +494,39 @@ class XYCAxis(object):
         """
         Automatically assign data arrays given the axis label."""
 
-        if self.label.strip("$ _") in ["energy"]:
+        lbl = self.label.strip("$ _").lower()
+        if lbl in ["energy", "e"]:
             if backend == 'shadow':
                  data = 10
             elif backend == 'raycing':
                 data = raycing.get_energy
-        elif self.label.strip("$ _") in ["x'", "xprime"]:
+        elif lbl in ["x'", "xprime"]:
             if backend == 'shadow':
                 data = 3
             elif backend == 'raycing':
                 data = raycing.get_xprime
-        elif self.label.strip("$ _") in ["z'", "zprime"]:
+        elif lbl in ["z'", "zprime"]:
             if backend == 'shadow':
                 data = 5
             elif backend == 'raycing':
                 data = raycing.get_zprime
-        elif self.label.strip("$ _") in ["x"]:
+        elif lbl in ["x"]:
             if backend == 'shadow':
                 data = 0
             elif backend == 'raycing':
                 data = raycing.get_x
-        elif self.label.strip("$ _") in ["y"]:
+        elif lbl in ["y"]:
             if backend == 'shadow':
-                self.data = 1
+                data = 1
             elif backend == 'raycing':
                 data = raycing.get_y
-        elif self.label.strip("$ _") in ["z"]:
+        elif lbl in ["z"]:
             if backend == 'shadow':
                 data = 2
             elif backend == 'raycing':
                 data = raycing.get_z
         elif self.label in raycing.allBeamFields:
             data = getattr(raycing, 'get_{}'.format(self.label))
-
-#        elif "degree" in self.label:
-#            data = raycing.get_polarization_degree
-#        elif "circular" in self.label:
-#            data = raycing.get_circular_polarization_rate
-#        elif "incid" in self.label or "theta" in self.label:
-#            data = raycing.get_incidence_angle
-#        elif "phi" in self.label:
-#            data = raycing.get_phi
-#        elif "order" in self.label:
-#            data = raycing.get_order
-#        elif "s" in self.label:
-#            data = raycing.get_s
-#        elif "path" in self.label:
-#            data = raycing.get_path
-#        elif "r" in self.label:
-#            data = raycing.get_r
-#        elif "a" in self.label:
-#            data = raycing.get_a
-#        elif "b" in self.label:
-#            data = raycing.get_b
         else:
             raise ValueError(
                 'cannot auto-assign data for axis "{0}"!'.format(self.label))
@@ -889,6 +869,7 @@ class XYCPlot(object):
             self.yaxis = XYCAxis(defaultYTitle, defaultYUnit)
         else:
             self.yaxis = yaxis
+
         if (caxis is None) or isinstance(caxis, basestring):
             self.caxis = XYCAxis(defaultCTitle, defaultCUnit, factor=1.,)
             self.caxis.fwhmFormatStr = defaultFwhmFormatStrForCAxis
@@ -910,12 +891,14 @@ class XYCPlot(object):
         if isinstance(aspect, (int, float)):
             if aspect <= 0:
                 aspect = 1.
+
         self.aspect = aspect
         self.dpi = dpi
 
         self.ePos = ePos  # Position of E histogram, 1=right, 2=top, 0=none
 
         self.negative = negative
+
         if self.negative:
             facecolor = 'w'  # white
         else:
@@ -945,6 +928,7 @@ class XYCPlot(object):
             xFigSize += xspace1dtoE1d + heightE1d + heightE1dbar
         elif self.ePos == 2:
             yFigSize += yspace1dtoE1d + heightE1d + heightE1dbar
+
         if self.ePos != 1:
             xFigSize += xSpaceExtraWhenNoEHistogram
 
@@ -1038,6 +1022,9 @@ class XYCPlot(object):
             0.01, rect1dX[1]+rect1dX[3], '', rotation=90, ha='left', va='top',
             color='gray')  # , fontweight='bold')
 
+        self.ax1dHistE = None
+        self.ax1dHistEbar = None
+    
         if self.ePos == 1:  # right
             rect1dE = copy.deepcopy(rect1dY)
             rect1dE[0] = rect1dY[0] + rect1dY[2] + xspace1dtoE1d/xFigSize
@@ -1207,6 +1194,7 @@ class XYCPlot(object):
         self.ax1dHistY.imshow(
             np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
             origin='lower', figure=self.fig)
+
         if self.ePos != 0:
             self.ax1dHistE.imshow(
                 np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
@@ -1239,6 +1227,136 @@ class XYCPlot(object):
         if not useQtWidget:
             plt.ioff()
         self.fig.canvas.draw()
+
+    def reset_fig_layout(self):  # axis bins, ppb; ePos. QtWidget only
+        xFigSize = float(xOrigin2d + self.xaxis.pixels + space2dto1d +
+                         height1d + xSpaceExtra)        
+        if self.ePos == 1:
+            xFigSize += xspace1dtoE1d + heightE1d + heightE1dbar
+        else:
+            xFigSize += xSpaceExtraWhenNoEHistogram
+
+        yFigSize = float(yOrigin2d + self.yaxis.pixels + space2dto1d +
+                         height1d + ySpaceExtra)
+        if self.ePos == 2:
+            yFigSize += yspace1dtoE1d + heightE1d + heightE1dbar
+
+        self.fig.set_size_inches(xFigSize/dpi, yFigSize/dpi)
+
+        self.local_size_inches = self.fig.get_size_inches()
+
+        rect2d = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
+                  (self.xaxis.pixels-1) / xFigSize,
+                  (self.yaxis.pixels+1) / yFigSize]
+        
+        self.ax2dHist.set_position(rect2d)
+
+        rect1dX = copy.deepcopy(rect2d)
+        rect1dX[1] = rect2d[1] + rect2d[3] + space2dto1d/yFigSize
+        rect1dX[3] = height1d / yFigSize
+        self.ax1dHistX.set_position(rect1dX)
+
+        rect1dY = copy.deepcopy(rect2d)
+        rect1dY[0] = rect2d[0] + rect2d[2] + space2dto1d/xFigSize
+        rect1dY[2] = height1d / xFigSize
+        self.ax1dHistY.set_position(rect1dY)
+        self.ax1dHistXOffset.set_position((rect1dY[0]+rect1dY[2], 0.01))
+        self.ax1dHistYOffset.set_position((0.01, rect1dX[1]+rect1dX[3]))
+
+        kwmpl = {'facecolor': 'w' if self.negative else 'k'}
+        pset = plt.setp
+        if self.ePos > 0:
+            pset(
+                self.ax1dHistX.get_xticklabels() +
+                self.ax1dHistX.get_yticklabels() +
+                self.ax1dHistY.get_xticklabels() +
+                self.ax1dHistY.get_yticklabels(),
+                visible=False)
+
+        if self.ePos == 1:  # right
+            rect1dE = copy.deepcopy(rect1dY)
+            rect1dE[0] = rect1dY[0] + rect1dY[2] + xspace1dtoE1d/xFigSize
+            rect1dE[2] = heightE1dbar / xFigSize
+            rect1dE[3] *= float(self.caxis.pixels) / self.yaxis.pixels
+
+            if self.ax1dHistE is None:
+                self.ax1dHistEbar = self.fig.add_axes(
+                    rect1dE, ylabel=self.caxis.displayLabel,
+                    autoscale_on=False,
+                    frameon=True, **kwmpl)
+                self.ax1dHistEbar.yaxis.labelpad = xlabelpad
+                self.ax1dHistEOffset = self.fig.text(
+                    rect1dE[0], rect1dE[1]+rect1dE[3], '', ha='left',
+                    va='bottom',
+                    color='g')  # , fontweight='bold')
+                rect1dE[0] += rect1dE[2]
+                rect1dE[2] = heightE1d / xFigSize
+                self.ax1dHistE = self.fig.add_axes(
+                    rect1dE, sharey=self.ax1dHistEbar, autoscale_on=False,
+                    frameon=True, **kwmpl)
+                pset(
+                    self.ax1dHistEbar.get_xticklabels() +
+                    self.ax1dHistE.get_xticklabels() +
+                    self.ax1dHistE.get_yticklabels(), visible=False)
+                pset(self.ax1dHistEbar, xticks=())
+                self.ax1dHistE.yaxis.set_major_formatter(
+                    mpl.ticker.ScalarFormatter(useOffset=False))
+                if self.caxis.limits is not None:
+                    self.ax1dHistE.set_ylim(self.caxis.limits)
+                self.ax1dHistE.set_xticks([])                
+            else:
+                self.ax1dHistEbar.set_position(rect1dE)
+                self.ax1dHistEOffset.set_position((rect1dE[0],
+                                                   rect1dE[1]+rect1dE[3]))
+                rect1dE[0] += rect1dE[2]
+                rect1dE[2] = heightE1d / xFigSize
+                self.ax1dHistE.set_position(rect1dE)
+
+        elif self.ePos == 2:  # top
+            rect1dE = copy.deepcopy(rect1dX)
+            rect1dE[1] = rect1dX[1] + rect1dX[3] + yspace1dtoE1d/yFigSize
+            rect1dE[3] = heightE1dbar / yFigSize
+            rect1dE[2] *= float(self.caxis.pixels) / self.xaxis.pixels
+
+            if self.ax1dHistE is None:
+                self.ax1dHistEbar = self.fig.add_axes(
+                    rect1dE, xlabel=self.caxis.displayLabel,
+                    autoscale_on=False,
+                    frameon=True, **kwmpl)
+                self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+                self.ax1dHistEOffset = self.fig.text(
+                    rect1dE[0]+rect1dE[2]+0.01, rect1dE[1]-0.01, '',
+                    ha='left', va='top', color='g')
+                rect1dE[1] += rect1dE[3]
+                rect1dE[3] = heightE1d / yFigSize
+                self.ax1dHistE = self.fig.add_axes(
+                    rect1dE, sharex=self.ax1dHistEbar, autoscale_on=False,
+                    frameon=True, **kwmpl)
+                pset(
+                    self.ax1dHistEbar.get_yticklabels() +
+                    self.ax1dHistE.get_yticklabels() +
+                    self.ax1dHistE.get_xticklabels(), visible=False)
+                pset(self.ax1dHistEbar, yticks=())
+                self.ax1dHistE.xaxis.set_major_formatter(
+                    mpl.ticker.ScalarFormatter(useOffset=False))
+                if self.caxis.limits is not None:
+                    self.ax1dHistE.set_xlim(self.caxis.limits)
+                self.ax1dHistE.set_yticks([])                
+            else:
+                self.ax1dHistEbar.set_position(rect1dE)
+                self.ax1dHistEOffset.set_position((rect1dE[0]+rect1dE[2]+0.01,
+                                                   rect1dE[1]-0.01))
+                rect1dE[1] += rect1dE[3]
+                rect1dE[3] = heightE1d / yFigSize
+                self.ax1dHistE.set_position(rect1dE)
+
+        if self.ePos == 0:
+            for ax in [self.ax1dHistE, self.ax1dHistEbar]:
+                ax.set_visible(False)
+        else:
+            for ax in [self.ax1dHistE, self.ax1dHistEbar]:
+                if ax is not None:
+                    ax.set_visible(True)
 
     def reset_bins2D(self):
         if self.fluxKind.startswith('E'):
@@ -1632,6 +1750,7 @@ class XYCPlot(object):
 # #test:
 #        xyRGB[:,:,:]=0
 #        xyRGB[1::2,1::2,0]=1
+        self.ax2dHist.set_aspect(self.aspect)
         extent = None
         if (self.xaxis.limits is not None) and (self.yaxis.limits is not None):
             if (not isinstance(self.xaxis.limits, str)) and\
@@ -1648,6 +1767,9 @@ class XYCPlot(object):
             self.ax2dHist.set_xlim(self.ax2dHist.get_xlim()[::-1])
         if self.yaxis.invertAxis:
             self.ax2dHist.set_ylim(self.ax2dHist.get_ylim()[::-1])
+
+        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)  # dynamic updates
+        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)  # dynamic updates
 
         if self.contourLevels is not None:
             if self.contours2D is not None:
@@ -1846,9 +1968,9 @@ class XYCPlot(object):
             self.textFWHM(self.xaxis, self.textDx, self.cx, self.dx/2)
         if self.yaxis.fwhmFormatStr is not None:
             self.textFWHM(self.yaxis, self.textDy, self.cy, self.dy/2)
-
-        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)  # dynamic updates
-        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)  # dynamic updates
+#        self.ax2Hist.set_aspect(self.aspect)
+#        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)  # dynamic updates
+#        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)  # dynamic updates
         if self.ePos == 1:
             self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
         elif self.ePos == 2:
@@ -1958,15 +2080,17 @@ class XYCPlot(object):
         """
         self.negative = not self.negative
         if self.negative:
-            facecolor = 'w'  # previously - axisbg (depreceted)
+            facecolor = 'w'  # previously - axisbg (deprecated)
         else:
             facecolor = 'k'
         axesList = [self.ax2dHist, self.ax1dHistX, self.ax1dHistY]
         if self.ePos != 0:
             axesList.append(self.ax1dHistE)
             axesList.append(self.ax1dHistEbar)
+
         for axes in axesList:
-            axes.set_axis_bgcolor(facecolor)
+            axes.set_facecolor(facecolor)
+#            axes.set_axis_bgcolor(facecolor)  # deprecated
         self.plot_plots()
 
     def set_invert_colors(self):

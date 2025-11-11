@@ -88,7 +88,7 @@ from ..commons import gl  # analysis:ignore
 from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
-    from ..xrtGlow import (OEExplorer, is_screen, is_aperture)
+    from ..xrtGlow import (OEExplorer, is_screen, is_aperture, RunCardVals, GP)
 
 try:
     from ...backends.raycing import materials_elemental as rmatsel
@@ -188,11 +188,18 @@ class TreeViewEx(qt.QTreeView):
             column = index.column()
             row = index.row()
             item = self.model().itemFromIndex(index)
-            if column == 1 and str(item.text()).startswith("Instance"):
-                objIndex = index.sibling(row, 0)
-                objItem = self.model().itemFromIndex(objIndex)
-                objid = str(objItem.data(qt.UserRole))
-                if raycing.is_valid_uuid(objid):
+            if column == 1:
+                if str(item.text()).startswith("Instance"):
+                    objIndex = index.sibling(row, 0)
+                    objItem = self.model().itemFromIndex(objIndex)
+                    objid = str(objItem.data(qt.UserRole))
+                    if raycing.is_valid_uuid(objid):
+                        self.objDoubleClicked.emit(objid)
+                        return
+                elif str(item.text()).startswith("Preview"):
+                    objIndex = index.sibling(row, 0)
+                    objItem = self.model().itemFromIndex(objIndex)
+                    objid = str(objItem.text())
                     self.objDoubleClicked.emit(objid)
                     return
         super().mouseDoubleClickEvent(event)
@@ -267,6 +274,7 @@ class SphinxWorker(qt.QObject):
 
 
 class XrtQook(qt.QWidget):
+    plotParamUpdate = qt.Signal(tuple)
     statusUpdate = qt.Signal(tuple)
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
@@ -604,9 +612,10 @@ class XrtQook(qt.QWidget):
     def initTabs(self):
         self.tree = TreeViewEx()
         self.matTree = TreeViewEx()
+        self.plotTree = TreeViewEx()
 #        self.tree = qt.QTreeView()
 #        self.matTree = qt.QTreeView()
-        self.plotTree = qt.QTreeView()
+#        self.plotTree = qt.QTreeView()
         self.runTree = qt.QTreeView()
 
         self.defaultFont = qt.QFont("Courier New", 9)
@@ -629,6 +638,7 @@ class XrtQook(qt.QWidget):
             itree.clicked.connect(self.showDoc)
 
         self.plotTree.customContextMenuRequested.connect(self.plotMenu)
+        self.plotTree.objDoubleClicked.connect(self.runPlotViewer)
         self.matTree.customContextMenuRequested.connect(self.matMenu)
         self.matTree.objDoubleClicked.connect(self.runMaterialViewer)
         self.tree.customContextMenuRequested.connect(self.openMenu)
@@ -732,6 +742,34 @@ class XrtQook(qt.QWidget):
         matViewer = OEExplorer(matProps, self, viewOnly=True)
         if (matViewer.exec_()):
             pass
+
+    def runPlotViewer(self, plotName):
+
+        for i in range(self.rootPlotItem.rowCount()):
+            plotItem = self.rootPlotItem.child(i, 0)
+            if str(plotItem.text()) == plotName:
+                break
+        else:
+            return
+
+        plotsDict = self.treeToDict(plotItem)
+        plotsDict['beam'] = self.getBeamTag(plotsDict.get('beam'))
+
+        plotViewer = PlotViewer(plotsDict, self, viewOnly=True)
+        self.plotParamUpdate.connect(plotViewer.update_plot_param)
+        if (plotViewer.show()):
+            pass
+
+    def getBeamTag(self, beamName):
+        beams = self.beamModel.findItems(beamName, column=0)
+        beamTag = []
+        for bItem in beams:
+            row = bItem.row()
+            btype = self.beamModel.item(row, 1).text()
+            oeid = self.beamModel.item(row, 2).text()
+            beamTag = (oeid, btype)
+            break
+        return beamTag        
 
     def adjustUndockedPos(self, isFloating):
         if isFloating:
@@ -917,6 +955,9 @@ class XrtQook(qt.QWidget):
             self.blViewer.customGlWidget.selColorMax = None
             self.blViewer.customGlWidget.tVec = np.array([0., 0., 0.])
             self.blViewer.customGlWidget.coordOffset = [0., 0., 0.]
+            self.blViewer.customGlWidget.iMax = -1e20
+            self.blViewer.customGlWidget.colorMax = -1e20
+            self.blViewer.customGlWidget.colorMin = 1e20
         self.blUpdateLatchOpen = True
 
     def initAllModels(self):
@@ -1103,8 +1144,10 @@ class XrtQook(qt.QWidget):
         self.addValue(self.plotModel.invisibleRootItem(), "plots")
         # self.plotModel.appendRow(qt.QStandardItem("plots"))
         self.rootPlotItem = self.plotModel.item(0, 0)
-        self.plotModel.itemChanged.connect(self.colorizeChangedParam)
+#        self.plotModel.itemChanged.connect(self.colorizeChangedParam)
+        self.plotModel.itemChanged.connect(self.plotItemChanged)
         self.plotModel.invisibleRootItem().setText("plots")
+        
 
         self.runModel = qt.QStandardItemModel()
         self.addProp(self.runModel.invisibleRootItem(), "run_ray_tracing()")
@@ -1800,6 +1843,23 @@ class XrtQook(qt.QWidget):
             elif item.model() is self.materialsModel:
                 self.updateBeamlineMaterials(item)
 
+    def plotItemChanged(self, item):
+        parent = item.parent()
+        if item.column() == 0:
+            return
+        elif str(parent.text()) == 'plots' and\
+                str(item.text()).startswith('Preview'):
+            return
+        elif item.column() == 1 and item.isEnabled():
+            paramValue = raycing.parametrize(item.text())
+            objChng = str(parent.text())
+            row = item.row()
+            paramName = str(parent.child(row, 0).text())
+            if paramName == 'beam':
+                paramValue = self.getBeamTag(paramValue)
+            plotParamTuple = objChng, paramName, paramValue
+            self.plotParamUpdate.emit(plotParamTuple)
+
     def colorizeChangedParam(self, item):
         """ """
 #        print("CCP", item.column() == 0, item.isEnabled())
@@ -2049,7 +2109,6 @@ class XrtQook(qt.QWidget):
             plotProps['title'] =\
                 f'{plotName}-{beamName}-{axHints["caxis"]["label"]}'
 
-
         for pname in ['xaxis', 'yaxis', 'caxis']:
             plotProps[pname] = copy.deepcopy(axDefArgs)
             if isinstance(copyFrom, dict):
@@ -2061,13 +2120,24 @@ class XrtQook(qt.QWidget):
 
             plotProps[pname]['_object'] = "xrt.plotter.XYCAxis"
 
+#        if isinstance(copyFrom, dict):
+#            plotProps.update(copyFrom)
+#            plotItem = self.addValue(self.rootPlotItem, plotName)
+#        else:
+#            plotItem = self.addValue(
+#                    self.rootPlotItem, plotName, source=copyFrom)
+
         if isinstance(copyFrom, dict):
             plotProps.update(copyFrom)
-            plotItem = self.addValue(self.rootPlotItem, plotName)
+            plotItem, plotViewItem = self.addParam(
+                    self.rootPlotItem, plotName, "Preview plot")
         else:
-            plotItem = self.addValue(
-                    self.rootPlotItem, plotName, source=copyFrom)
-
+            plotItem, plotViewItem = self.addParam(
+                    self.rootPlotItem, plotName, "Preview plot",
+                    source=copyFrom)
+        self.paintStatus(plotViewItem, 0)
+        plotViewItem.setToolTip(
+                "Double click to preview")
         plotProps['_object'] = "xrt.plotter.XYCPlot"
 
         if isinstance(copyFrom, qt.QStandardItem):
@@ -2093,8 +2163,9 @@ class XrtQook(qt.QWidget):
         self.showDoc(plotItem.index())
         self.addCombo(self.plotTree, plotItem)
         self.capitalize(self.plotTree, plotItem)
-        self.plotTree.expand(self.rootPlotItem.index())
-        self.plotTree.setColumnWidth(0, int(self.plotTree.width()/3))
+#        self.plotTree.expand(self.rootPlotItem.index())
+        self.plotTree.resizeColumnToContents(0)
+#        self.plotTree.setColumnWidth(0, int(self.plotTree.width()/3))
         self.isEmpty = False
         self.tabs.setCurrentWidget(self.plotTree)
 
@@ -2581,8 +2652,8 @@ class XrtQook(qt.QWidget):
             self.progressBar.setFormat('Loaded layout from {}'.format(
                     os.path.basename(str(self.layoutFileName))))
 
-            self.plotTree.setColumnWidth(
-                0, int(self.plotTree.width()/3))
+#            self.plotTree.setColumnWidth(
+#                0, int(self.plotTree.width()/3))
             self.tabs.setCurrentWidget(self.tree)
 
             if tmpAutoUpdate:
@@ -4197,6 +4268,116 @@ class PropagationConnect(qt.QObject):
             else:
                 if startFrom != 0:
                     self.emergencyRetrace.emit()
+
+
+class PlotViewer(qt.QDialog):
+
+    def __init__(self, plotProps, parent=None, viewOnly=False):
+        super().__init__(parent)
+        self.setWindowTitle("Live Plot Builder")
+        plotProps['useQtWidget'] = True
+        plotInit = {'Project': {'plots': {'plot': plotProps}}}
+        plotObj = xrtplot.deserialize_plots(plotInit)
+
+        self.dynamicPlot = plotObj[0]
+        self.set_beam(plotProps.get('beam'))
+
+        layout = qt.QHBoxLayout(self)
+        layout.addWidget(self.dynamicPlot.canvas)
+        
+        self.plot_beam()
+
+    def update_plot_param(self, paramTuple):
+        if paramTuple[1] == 'beam':
+            self.set_beam(paramTuple[2])
+        elif paramTuple[0].endswith('axis'):
+
+            axis = getattr(self.dynamicPlot, paramTuple[0])
+            setattr(axis, paramTuple[1], paramTuple[2])
+        elif paramTuple[1] in ['negative']:
+            self.dynamicPlot.set_negative()
+        elif paramTuple[1] in ['invertColorMap']:
+            self.dynamicPlot.set_invert_colors()
+        else:
+            setattr(self.dynamicPlot, paramTuple[1], paramTuple[2])
+            
+        if paramTuple[1] in ['bins', 'ppb', 'ePos']:
+            self.dynamicPlot.reset_bins2D()
+            self.dynamicPlot.reset_fig_layout()
+        
+        if paramTuple[1] not in ['negative', 'invertColorMap']:
+            self.dynamicPlot.clean_plots()
+            self.plot_beam()
+            
+    def set_beam(self, beamTag):
+        elementId, beamKey = beamTag
+        bdu = self.parent().beamLine.beamsDictU
+        self.beamDict = bdu.get(elementId)
+        self.dynamicPlot.beam = str(beamKey)            
+
+    def update_plot(self, outList, iteration=0):
+        self.dynamicPlot.nRaysAll += outList[13]
+        nRaysVarious = outList[14]
+        self.dynamicPlot.nRaysAlive += nRaysVarious[0]
+        self.dynamicPlot.nRaysGood += nRaysVarious[1]
+        self.dynamicPlot.nRaysOut += nRaysVarious[2]
+        self.dynamicPlot.nRaysOver += nRaysVarious[3]
+        self.dynamicPlot.nRaysDead += nRaysVarious[4]
+        self.dynamicPlot.nRaysAccepted += nRaysVarious[5]
+        self.dynamicPlot.nRaysAcceptedE += nRaysVarious[6]
+        self.dynamicPlot.nRaysSeeded += nRaysVarious[7]
+        self.dynamicPlot.nRaysSeededI += nRaysVarious[8]
+        self.dynamicPlot.displayAsAbsorbedPower = outList[15]
+
+        for iaxis, axis in enumerate(
+                [self.dynamicPlot.xaxis,
+                 self.dynamicPlot.yaxis,
+                 self.dynamicPlot.caxis]):
+            if (iaxis == 2) and (not self.dynamicPlot.ePos):
+                continue
+            axis.total1D += outList[0+iaxis*3]
+            axis.total1D_RGB += outList[1+iaxis*3]
+            if iteration == 0:
+                axis.binEdges = outList[2+iaxis*3]
+
+        self.dynamicPlot.total2D += outList[9]
+        self.dynamicPlot.total2D_RGB += outList[10]
+        if self.dynamicPlot.fluxKind.lower().endswith('4d'):
+            self.dynamicPlot.total4D += outList[11]
+        elif self.dynamicPlot.fluxKind.lower().endswith('pca'):
+            self.dynamicPlot.total4D.append(outList[11])
+        self.dynamicPlot.intensity += outList[12]
+
+        if self.dynamicPlot.fluxKind.startswith('E') and \
+                self.dynamicPlot.fluxKind.lower().endswith('pca'):
+            xbin, zbin = self.dynamicPlot.xaxis.bins, self.dynamicPlot.yaxis.bins
+            self.dynamicPlot.total4D = np.concatenate(self.dynamicPlot.total4D).reshape(-1, xbin, zbin)
+            self.dynamicPlot.field3D = self.dynamicPlot.total4D
+        self.dynamicPlot.textStatus.set_text('')
+        self.dynamicPlot.plot_plots()
+
+    def plot_beam(self, key=None):
+        locCard = RunCardVals(threads=0,
+                             processes=1,
+                             repeats=1,
+                             updateEvery=1,
+                             pickleEvery=0,
+                             backend='raycing',
+                             globalNorm=False,
+                             runfile=None)
+
+        locCard.beamLine = self.parent().beamLine
+
+        self.dynamicPlot.runCardVals = locCard
+        sproc = GP(locCard=locCard,
+                   plots=[self.dynamicPlot.card_copy()],
+                   outPlotQueues=[None],
+                   alarmQueue=[None],
+                   idLoc=0,
+                   beamDict=self.beamDict)
+        
+        outList = sproc.run()
+        self.update_plot(outList)
 
 
 if __name__ == '__main__':

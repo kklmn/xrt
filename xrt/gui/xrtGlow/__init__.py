@@ -2341,6 +2341,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.newColorAxis = True
         self.colorMin = -1e20
         self.colorMax = 1e20
+        self.iMax = -1e20
         self.selColorMin = None
         self.selColorMax = None
         self.scaleVec = np.array([1e3, 1e1, 1e3])
@@ -2940,10 +2941,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         vboStore['vbo'] = vbo
         vboStore['vao'] = vao
-        if hasattr(beam, 'iMax'):
-            vboStore['iMax'] = beam.iMax
-        else:
-            self.getColorLimits()  # TODO: VERY DIRTY WORKAROUND
+
+        if not hasattr(beam, 'iMax'):
+            beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays])
+            self.updateGlobalIntensity(beam.iMax)
+        vboStore['iMax'] = beam.iMax
+        self.updateColorLimits(np.min(dataColor[goodRays]),
+                               np.max(dataColor[goodRays]))
+
+#        else:
+#        self.getColorLimits()  # TODO: VERY DIRTY WORKAROUND
 
         self.beamBufferDict[beamTag] = vboStore
 
@@ -3038,7 +3045,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
         update_qt_buffer(beamvbo['indices'], goodRays.copy(), isIndex=True)
         beamvbo['goodLen'] = len(goodRays)
         beamvbo['lostLen'] = len(lostRays)
-#        self.doneCurrent()
+
+        beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays])
+        self.updateGlobalIntensity(beam.iMax)
+        beamvbo['iMax'] = beam.iMax
+        self.updateColorLimits(np.min(dataColor[goodRays]),
+                               np.max(dataColor[goodRays]))
 
     def render_beam(self, beamTag, model, view, projection, target=None):
         """beam: ('oeuuid', 'beamKey') """
@@ -3497,6 +3509,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.minmax[0, dim] -= 100.  # TODO: configurable
                 self.minmax[1, dim] += 100.
         return self.minmax
+
+    def updateGlobalIntensity(self, newIMax):
+        # TODO: consider decreasing globals
+        if newIMax > self.iMax:
+            self.iMax = newIMax
+
+    def updateColorLimits(self, colorMin, colorMax):
+        # TODO: consider decreasing globals
+        if colorMin < self.colorMin:
+            self.colorMin = colorMin
+        if colorMax > self.colorMax:
+            self.colorMax = colorMax
+        if self.parent is not None:
+            self.parent.changeColorAxis(None, newLimits=True)
 
     def getColorLimits(self):
         self.iMax = -1e20
@@ -7255,7 +7281,7 @@ class OEExplorer(qt.QDialog):
         c1layout.addWidget(combo)
         c1layout.addStretch()
         controlLayout.addLayout(c1layout)
-        
+
         combo2 = qt.QComboBox()
         combo2.addItems(['auto', 'equal'])
         combo2.currentTextChanged.connect(self.set_aspect)
@@ -7455,7 +7481,7 @@ class OEExplorer(qt.QDialog):
     def set_aspect(self, aspect):
         self.dynamicPlot.aspect = str(aspect)
         self.dynamicPlot.clean_plots()
-        self.plot_beam()        
+        self.plot_beam()
 
     def set_cdata(self, data):
         self.dynamicPlot.caxis.label = str(data)
@@ -7485,7 +7511,7 @@ class OEExplorer(qt.QDialog):
                 self.dynamicPlot.yaxis.label=r"y"
             else:   # screen or aperture
                 print(2)
-                self.dynamicPlot.yaxis.label=r"z"                
+                self.dynamicPlot.yaxis.label=r"z"
         self.dynamicPlot.yaxis.unit=r"mm"
 
         sproc = GP(locCard=locCard,
@@ -7494,6 +7520,6 @@ class OEExplorer(qt.QDialog):
                    alarmQueue=[None],
                    idLoc=0,
                    beamDict=self.beamDict)
-        
+
         outList = sproc.run()
         self.update_plot(outList)
