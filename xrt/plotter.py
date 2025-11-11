@@ -199,7 +199,6 @@ def deserialize_plots(data):
                     plotKwargs[pname] = raycing.parametrize(pval)
         try:
             newPlot = XYCPlot(**plotKwargs)
-            print(f"{plotKwargs=}")
             plotsList.append(newPlot)
         except:
             print("Plot init failed")
@@ -1294,23 +1293,42 @@ class XYCPlot(object):
                 self.ax1dHistE = self.fig.add_axes(
                     rect1dE, sharey=self.ax1dHistEbar, autoscale_on=False,
                     frameon=True, **kwmpl)
-                pset(
-                    self.ax1dHistEbar.get_xticklabels() +
-                    self.ax1dHistE.get_xticklabels() +
-                    self.ax1dHistE.get_yticklabels(), visible=False)
-                pset(self.ax1dHistEbar, xticks=())
-                self.ax1dHistE.yaxis.set_major_formatter(
-                    mpl.ticker.ScalarFormatter(useOffset=False))
-                if self.caxis.limits is not None:
-                    self.ax1dHistE.set_ylim(self.caxis.limits)
-                self.ax1dHistE.set_xticks([])                
+               
             else:
                 self.ax1dHistEbar.set_position(rect1dE)
+                self.ax1dHistEbar.yaxis.labelpad = xlabelpad
+                self.ax1dHistEbar.set_xlabel("")
+                self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
                 self.ax1dHistEOffset.set_position((rect1dE[0],
                                                    rect1dE[1]+rect1dE[3]))
+                self.ax1dHistEOffset.set_ha('left')
+                self.ax1dHistEOffset.set_va('bottom')
                 rect1dE[0] += rect1dE[2]
                 rect1dE[2] = heightE1d / xFigSize
                 self.ax1dHistE.set_position(rect1dE)
+#                self.ax1dHistE.yaxis.set_major_formatter(
+#                    mpl.ticker.ScalarFormatter(useOffset=False))
+#                if self.caxis.limits is not None:
+#                    self.ax1dHistE.set_ylim(self.caxis.limits)
+#                self.ax1dHistE.set_xticks([])
+                self.textDE.set_position((xTextPosDy, yTextPosDy))
+                self.textDE.set_rotation('vertical')
+                self.textDE.set_transform(self.ax1dHistE.transAxes)
+                self.textDE.set_ha('left')
+                self.textDE.set_va('center')
+            pset(
+                self.ax1dHistEbar.get_xticklabels() +
+                self.ax1dHistE.get_xticklabels() +
+                self.ax1dHistE.get_yticklabels(), visible=False)
+            pset(
+                self.ax1dHistEbar.get_yticklabels(), visible=True)
+            pset(self.ax1dHistEbar, xticks=())
+            self.ax1dHistE.yaxis.set_major_formatter(
+                mpl.ticker.ScalarFormatter(useOffset=False))
+            if self.caxis.limits is not None:
+                self.ax1dHistE.set_ylim(self.caxis.limits)
+            self.ax1dHistE.set_xticks([])
+
 
         elif self.ePos == 2:  # top
             rect1dE = copy.deepcopy(rect1dX)
@@ -1332,31 +1350,54 @@ class XYCPlot(object):
                 self.ax1dHistE = self.fig.add_axes(
                     rect1dE, sharex=self.ax1dHistEbar, autoscale_on=False,
                     frameon=True, **kwmpl)
-                pset(
-                    self.ax1dHistEbar.get_yticklabels() +
-                    self.ax1dHistE.get_yticklabels() +
-                    self.ax1dHistE.get_xticklabels(), visible=False)
-                pset(self.ax1dHistEbar, yticks=())
-                self.ax1dHistE.xaxis.set_major_formatter(
-                    mpl.ticker.ScalarFormatter(useOffset=False))
-                if self.caxis.limits is not None:
-                    self.ax1dHistE.set_xlim(self.caxis.limits)
-                self.ax1dHistE.set_yticks([])                
+              
             else:
                 self.ax1dHistEbar.set_position(rect1dE)
+                self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+                self.ax1dHistEbar.set_ylabel("")
+                self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
                 self.ax1dHistEOffset.set_position((rect1dE[0]+rect1dE[2]+0.01,
                                                    rect1dE[1]-0.01))
+                self.ax1dHistEOffset.set_ha('left')
+                self.ax1dHistEOffset.set_va('top')
                 rect1dE[1] += rect1dE[3]
                 rect1dE[3] = heightE1d / yFigSize
                 self.ax1dHistE.set_position(rect1dE)
+#                self.ax1dHistE.xaxis.set_major_formatter(
+#                    mpl.ticker.ScalarFormatter(useOffset=False))
+#                if self.caxis.limits is not None:
+#                    self.ax1dHistE.set_xlim(self.caxis.limits)
+#                self.ax1dHistE.set_yticks([])
+                self.textDE.set_position((xTextPosDx, yTextPosDx))
+                self.textDE.set_rotation('horizontal')
+                self.textDE.set_transform(self.ax1dHistE.transAxes)
+                self.textDE.set_ha('center')
+                self.textDE.set_va('bottom')
+
+            pset(
+                self.ax1dHistEbar.get_yticklabels() +
+                self.ax1dHistE.get_yticklabels() +
+                self.ax1dHistE.get_xticklabels(), visible=False)
+            pset(
+                self.ax1dHistEbar.get_xticklabels(), visible=True)
+            pset(self.ax1dHistEbar, yticks=())
+            self.ax1dHistE.xaxis.set_major_formatter(
+                mpl.ticker.ScalarFormatter(useOffset=False))
+            if self.caxis.limits is not None:
+                self.ax1dHistE.set_xlim(self.caxis.limits)
+            self.ax1dHistE.set_yticks([]) 
 
         if self.ePos == 0:
             for ax in [self.ax1dHistE, self.ax1dHistEbar]:
                 ax.set_visible(False)
+            for txt in [self.textDE]:
+                txt.set_visible(False)
         else:
             for ax in [self.ax1dHistE, self.ax1dHistEbar]:
                 if ax is not None:
                     ax.set_visible(True)
+            for txt in [self.textDE]:
+                txt.set_visible(True)
 
     def reset_bins2D(self):
         if self.fluxKind.startswith('E'):
@@ -1973,7 +2014,9 @@ class XYCPlot(object):
 #        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)  # dynamic updates
         if self.ePos == 1:
             self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
+            self.ax1dHistEbar.set_xlabel("")
         elif self.ePos == 2:
+            self.ax1dHistEbar.set_ylabel("")
             self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
         self.fig.canvas.draw()
 
