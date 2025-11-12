@@ -78,14 +78,14 @@ else:
 
 # otherwise it does not work correctly on my Ubuntu9.10 and mpl 0.99.1.1:
 mpl.rcParams['axes.unicode_minus'] = False
-#mpl.rcParams['text.usetex'] = True
-#mpl.rcParams['font.family'] = 'serif'
-#mpl.rcParams['font.serif'] = 'cm'
+# mpl.rcParams['text.usetex'] = True
+# mpl.rcParams['font.family'] = 'serif'
+# mpl.rcParams['font.serif'] = 'cm'
 mpl.rcParams['axes.linewidth'] = 0.75
-#mpl.rcParams['backend'] = 'Qt5agg'
-#mpl.rcParams['backend'] = 'Agg'
-#mpl.rcParams['xtick.major.pad'] = '5'
-#mpl.rcParams['ytick.major.pad'] = '5'
+# mpl.rcParams['backend'] = 'Qt5agg'
+# mpl.rcParams['backend'] = 'Agg'
+# mpl.rcParams['xtick.major.pad'] = '5'
+# mpl.rcParams['ytick.major.pad'] = '5'
 import matplotlib.pyplot as plt
 
 epsHist = 1e-100  # prevents problem with normalization of histograms
@@ -105,6 +105,8 @@ ySpaceExtra = 28
 # [Sizes and positions of texts]
 xlabelpad = 4  # x-axis label to axis
 ylabelpad = 4  # y-axis label to axis
+
+frameon = True
 
 xTextPos = 1.02  # 0 to 1 relative to the figure size
 yTextPosNrays = 1.0
@@ -140,6 +142,18 @@ defaultFwhmFormatStrForCAxis = '%.2f'
 colorFactor = 0.85  # 2./3 for red-to-blue
 colorSaturation = 0.85
 # # end of rc-file ##
+
+if plt.get_backend().lower() in (
+        x.lower() for x in mpl.rcsetup.non_interactive_bk):
+    xExtra = 0  # mpl backend-dependent (don't know why) pixel sizes
+    yExtra = 0  # mpl backend-dependent (don't know why) pixel sizes
+else:  # interactive backends:
+    if True:  # runner.runCardVals.repeats > 1:
+        xExtra = 0
+        yExtra = 2
+    else:
+        xExtra = 0
+        yExtra = 0
 
 
 def versiontuple(v):
@@ -478,13 +492,16 @@ class XYCAxis(object):
         if hasattr(self, '_label') and hasattr(self, '_unit'):
             lbl = self._label.strip("$ _").lower()
             if lbl in ['x', 'y', 'z']:
-                if self.unit not in set(raycing.allUnitsLenStr.keys()) | set(raycing.allUnitsLenStr.values()):
+                if self.unit not in (raycing.allUnitsLenStr.keys() |
+                                     raycing.allUnitsLenStr.values()):
                     self.unit = 'mm'
             elif lbl in ["x'", "y'", "z'"]:
-                if self.unit not in set(raycing.allUnitsAngStr.keys()) | set(raycing.allUnitsAngStr.values()):
+                if self.unit not in (raycing.allUnitsAngStr.keys() |
+                                     raycing.allUnitsAngStr.values()):
                     self.unit = 'mrad'
             elif lbl in ['energy', 'e']:
-                if self.unit not in set(raycing.allUnitsEnergyStr.keys()) | set(raycing.allUnitsEnergyStr.values()):
+                if self.unit not in (raycing.allUnitsEnergyStr.keys() |
+                                     raycing.allUnitsEnergyStr.values()):
                     self.unit = 'eV'
             else:
                 self.unit = ''
@@ -496,7 +513,7 @@ class XYCAxis(object):
         lbl = self.label.strip("$ _").lower()
         if lbl in ["energy", "e"]:
             if backend == 'shadow':
-                 data = 10
+                data = 10
             elif backend == 'raycing':
                 data = raycing.get_energy
         elif lbl in ["x'", "xprime"]:
@@ -894,22 +911,18 @@ class XYCPlot(object):
         self.aspect = aspect
         self.dpi = dpi
 
+        if title != '':
+            self.title = title
+        elif isinstance(beam, basestring):
+            self.title = beam
+        else:
+            self.title = ' '
+
+        self.xPos = xPos
+        self.yPos = yPos
         self.ePos = ePos  # Position of E histogram, 1=right, 2=top, 0=none
 
         self.negative = negative
-
-        if self.negative:
-            facecolor = 'w'  # white
-        else:
-            facecolor = 'k'  # black
-        # MatplotlibDeprecationWarning: The axisbg attribute was deprecated in
-        # version 2.0. Use facecolor instead.
-        kwmpl = {}
-        if versiontuple(mpl.__version__) >= versiontuple("2.0.0"):
-            kwmpl['facecolor'] = facecolor
-        else:
-            kwmpl['axisbg'] = facecolor
-
         self.invertColorMap = invertColorMap
         self.utilityInvertColorMap = False
         self.fluxFormatStr = fluxFormatStr
@@ -919,17 +932,8 @@ class XYCPlot(object):
         self.cy, self.dy = 0, 0
         self.cE, self.dE = 0, 0
 
-        xFigSize = float(xOrigin2d + self.xaxis.pixels + space2dto1d +
-                         height1d + xSpaceExtra)
-        yFigSize = float(yOrigin2d + self.yaxis.pixels + space2dto1d +
-                         height1d + ySpaceExtra)
-        if self.ePos == 1:
-            xFigSize += xspace1dtoE1d + heightE1d + heightE1dbar
-        elif self.ePos == 2:
-            yFigSize += yspace1dtoE1d + heightE1d + heightE1dbar
-
-        if self.ePos != 1:
-            xFigSize += xSpaceExtraWhenNoEHistogram
+        self.fig = None
+        xFigSize, yFigSize = self.reset_fig_size()
 
         if useQtWidget:
             self.fig = Figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi)
@@ -938,14 +942,7 @@ class XYCPlot(object):
                                   dpi=dpi)
 
         self.local_size_inches = self.fig.get_size_inches()
-
         self.fig.delaxes(self.fig.gca())
-        if title != '':
-            self.title = title
-        elif isinstance(beam, basestring):
-            self.title = beam
-        else:
-            self.title = ' '
 
         if useQtWidget:
             self.canvas = MyQtFigCanvas(figure=self.fig, xrtplot=self)
@@ -955,141 +952,17 @@ class XYCPlot(object):
         except AttributeError:
             pass
 
-        if plt.get_backend().lower() in (
-                x.lower() for x in mpl.rcsetup.non_interactive_bk):
-            xExtra = 0  # mpl backend-dependent (don't know why) pixel sizes
-            yExtra = 0  # mpl backend-dependent (don't know why) pixel sizes
-        else:  # interactive backends:
-            if True:  # runner.runCardVals.repeats > 1:
-                xExtra = 0
-                yExtra = 2
-            else:
-                xExtra = 0
-                yExtra = 0
-
-        frameon = True
-        rect2d = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
-                  (self.xaxis.pixels-1+xExtra) / xFigSize,
-                  (self.yaxis.pixels-1+yExtra) / yFigSize]
-
-        self.ax2dHist = self.fig.add_axes(
-            rect2d, aspect=aspect, xlabel=self.xaxis.displayLabel,
-            ylabel=self.yaxis.displayLabel, autoscale_on=False,
-            frameon=frameon, **kwmpl)
-
-        self.ax2dHist.xaxis.labelpad = xlabelpad
-        self.ax2dHist.yaxis.labelpad = ylabelpad
-
-        rect1dX = copy.deepcopy(rect2d)
-        rect1dX[1] = rect2d[1] + rect2d[3] + space2dto1d/yFigSize
-        rect1dX[3] = height1d / yFigSize
-        self.ax1dHistX = self.fig.add_axes(
-            rect1dX, sharex=self.ax2dHist, autoscale_on=False, frameon=frameon,
-            visible=(xPos != 0), **kwmpl)
-
-        rect1dY = copy.deepcopy(rect2d)
-        rect1dY[0] = rect2d[0] + rect2d[2] + space2dto1d/xFigSize
-        rect1dY[2] = height1d / xFigSize
-        self.ax1dHistY = self.fig.add_axes(
-            rect1dY, sharey=self.ax2dHist, autoscale_on=False, frameon=frameon,
-            visible=(yPos != 0), **kwmpl)
-
-        # make some labels invisible
-        pset = plt.setp
-        pset(
-            self.ax1dHistX.get_xticklabels() +
-            self.ax1dHistX.get_yticklabels() +
-            self.ax1dHistY.get_xticklabels() +
-            self.ax1dHistY.get_yticklabels(),
-            visible=False)
-
-        self.ax1dHistX.set_yticks([])
-        self.ax1dHistY.set_xticks([])
-
-        self.ax1dHistX.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter(
-            useOffset=False))
-        self.ax1dHistY.yaxis.set_major_formatter(mpl.ticker.ScalarFormatter(
-            useOffset=False))
-#        for tick in (self.ax2dHist.xaxis.get_major_ticks() + \
-#          self.ax2dHist.yaxis.get_major_ticks()):
-#            tick.label1.set_fontsize(axisLabelFontSize)
-
-        self.ax1dHistXOffset = self.fig.text(
-            rect1dY[0]+rect1dY[2], 0.01, '', ha='right', va='bottom',
-            color='gray')  # , fontweight='bold')
-        self.ax1dHistYOffset = self.fig.text(
-            0.01, rect1dX[1]+rect1dX[3], '', rotation=90, ha='left', va='top',
-            color='gray')  # , fontweight='bold')
-
+        self.ax2dHist = None
+        self.ax1dHistX = None
+        self.ax1dHistY = None
         self.ax1dHistE = None
         self.ax1dHistEbar = None
-    
-        if self.ePos == 1:  # right
-            rect1dE = copy.deepcopy(rect1dY)
-            rect1dE[0] = rect1dY[0] + rect1dY[2] + xspace1dtoE1d/xFigSize
-            rect1dE[2] = heightE1dbar / xFigSize
-            rect1dE[3] *= float(self.caxis.pixels) / self.yaxis.pixels
-            self.ax1dHistEbar = self.fig.add_axes(
-                rect1dE, ylabel=self.caxis.displayLabel, autoscale_on=False,
-                frameon=frameon, **kwmpl)
-            self.ax1dHistEbar.yaxis.labelpad = xlabelpad
-            self.ax1dHistEOffset = self.fig.text(
-                rect1dE[0], rect1dE[1]+rect1dE[3], '', ha='left', va='bottom',
-                color='g')  # , fontweight='bold')
-            rect1dE[0] += rect1dE[2]
-            rect1dE[2] = heightE1d / xFigSize
-            self.ax1dHistE = self.fig.add_axes(
-                rect1dE, sharey=self.ax1dHistEbar, autoscale_on=False,
-                frameon=frameon, **kwmpl)
-            pset(
-                self.ax1dHistEbar.get_xticklabels() +
-                self.ax1dHistE.get_xticklabels() +
-                self.ax1dHistE.get_yticklabels(), visible=False)
-            pset(self.ax1dHistEbar, xticks=())
-            self.ax1dHistE.yaxis.set_major_formatter(
-                mpl.ticker.ScalarFormatter(useOffset=False))
-            if self.caxis.limits is not None:
-                self.ax1dHistE.set_ylim(self.caxis.limits)
-            self.ax1dHistE.set_xticks([])
-        elif self.ePos == 2:  # top
-            rect1dE = copy.deepcopy(rect1dX)
-            rect1dE[1] = rect1dX[1] + rect1dX[3] + yspace1dtoE1d/yFigSize
-            rect1dE[3] = heightE1dbar / yFigSize
-            rect1dE[2] *= float(self.caxis.pixels) / self.xaxis.pixels
-            self.ax1dHistEbar = self.fig.add_axes(
-                rect1dE, xlabel=self.caxis.displayLabel, autoscale_on=False,
-                frameon=frameon, **kwmpl)
-            self.ax1dHistEbar.xaxis.labelpad = xlabelpad
-            self.ax1dHistEOffset = self.fig.text(
-                rect1dE[0]+rect1dE[2]+0.01, rect1dE[1]-0.01, '',
-                ha='left', va='top', color='g')  # , fontweight='bold')
-            rect1dE[1] += rect1dE[3]
-            rect1dE[3] = heightE1d / yFigSize
-            self.ax1dHistE = self.fig.add_axes(
-                rect1dE, sharex=self.ax1dHistEbar, autoscale_on=False,
-                frameon=frameon, **kwmpl)
-            pset(
-                self.ax1dHistEbar.get_yticklabels() +
-                self.ax1dHistE.get_yticklabels() +
-                self.ax1dHistE.get_xticklabels(), visible=False)
-            pset(self.ax1dHistEbar, yticks=())
-            self.ax1dHistE.xaxis.set_major_formatter(
-                mpl.ticker.ScalarFormatter(useOffset=False))
-            if self.caxis.limits is not None:
-                self.ax1dHistE.set_xlim(self.caxis.limits)
-            self.ax1dHistE.set_yticks([])
-
-        allAxes = [self.ax1dHistX, self.ax1dHistY, self.ax2dHist]
-        if self.ePos != 0:
-            allAxes.append(self.ax1dHistE)
-            allAxes.append(self.ax1dHistEbar)
-        for ax in allAxes:
-            for axXY in (ax.xaxis, ax.yaxis):
-                for line in axXY.get_ticklines():
-                    line.set_color('grey')
+        self.textDE = None
+        p2, px, py, peb, pe = self.get_axes_positions(xFigSize, yFigSize)
+        self.reset_xy_axes(p2, px, py)
+        self.reset_e_axes(peb, pe)
 
         mplTxt = self.ax1dHistX.text if useQtWidget else plt.text
-
         if self.ePos == 1:
             self.textDE = mplTxt(
                 xTextPosDy, yTextPosDy, ' ', rotation='vertical',
@@ -1098,6 +971,11 @@ class XYCPlot(object):
             self.textDE = mplTxt(
                 xTextPosDx, yTextPosDx, ' ',
                 transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
+        else:
+            self.textDE = mplTxt(
+                xTextPosDx, yTextPosDx, ' ',
+                transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
+            self.textDE.set_visible(False)
 
         self.nRaysAll = np.int64(0)
         self.nRaysAllRestored = np.int64(-1)
@@ -1227,9 +1105,9 @@ class XYCPlot(object):
             plt.ioff()
         self.fig.canvas.draw()
 
-    def reset_fig_layout(self):  # axis bins, ppb; ePos. QtWidget only
+    def reset_fig_size(self):
         xFigSize = float(xOrigin2d + self.xaxis.pixels + space2dto1d +
-                         height1d + xSpaceExtra)        
+                         height1d + xSpaceExtra)
         if self.ePos == 1:
             xFigSize += xspace1dtoE1d + heightE1d + heightE1dbar
         else:
@@ -1240,164 +1118,207 @@ class XYCPlot(object):
         if self.ePos == 2:
             yFigSize += yspace1dtoE1d + heightE1d + heightE1dbar
 
-        self.fig.set_size_inches(xFigSize/dpi, yFigSize/dpi)
+        if self.fig is not None:
+            self.local_size_inches = self.fig.get_size_inches()
 
-        self.local_size_inches = self.fig.get_size_inches()
+        return xFigSize, yFigSize
 
+    def get_axes_positions(self, xFigSize, yFigSize):
         rect2d = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
-                  (self.xaxis.pixels-1) / xFigSize,
-                  (self.yaxis.pixels+1) / yFigSize]
-        
-        self.ax2dHist.set_position(rect2d)
+                  (self.xaxis.pixels-1+xExtra) / xFigSize,
+                  (self.yaxis.pixels-1+yExtra) / yFigSize]
 
         rect1dX = copy.deepcopy(rect2d)
         rect1dX[1] = rect2d[1] + rect2d[3] + space2dto1d/yFigSize
         rect1dX[3] = height1d / yFigSize
-        self.ax1dHistX.set_position(rect1dX)
 
         rect1dY = copy.deepcopy(rect2d)
         rect1dY[0] = rect2d[0] + rect2d[2] + space2dto1d/xFigSize
         rect1dY[2] = height1d / xFigSize
-        self.ax1dHistY.set_position(rect1dY)
-        self.ax1dHistXOffset.set_position((rect1dY[0]+rect1dY[2], 0.01))
-        self.ax1dHistYOffset.set_position((0.01, rect1dX[1]+rect1dX[3]))
 
-        kwmpl = {'facecolor': 'w' if self.negative else 'k'}
-        pset = plt.setp
-        if self.ePos > 0:
-            pset(
+        if self.ePos == 1:  # right
+            rect1dEbar = copy.deepcopy(rect1dY)
+            rect1dEbar[0] = rect1dY[0] + rect1dY[2] + xspace1dtoE1d/xFigSize
+            rect1dEbar[2] = heightE1dbar / xFigSize
+            rect1dEbar[3] *= float(self.caxis.pixels) / self.yaxis.pixels
+
+            rect1dE = copy.deepcopy(rect1dEbar)
+            rect1dE[0] += rect1dE[2]
+            rect1dE[2] = heightE1d / xFigSize
+
+        elif self.ePos == 2:
+            rect1dEbar = copy.deepcopy(rect1dX)
+            rect1dEbar[1] = rect1dX[1] + rect1dX[3] + yspace1dtoE1d/yFigSize
+            rect1dEbar[3] = heightE1dbar / yFigSize
+            rect1dEbar[2] *= float(self.caxis.pixels) / self.xaxis.pixels
+
+            rect1dE = copy.deepcopy(rect1dEbar)
+            rect1dE[1] += rect1dE[3]
+            rect1dE[3] = heightE1d / yFigSize
+        else:
+            rect1dEbar = None
+            rect1dE = None
+
+        return rect2d, rect1dX, rect1dY, rect1dEbar, rect1dE
+
+    def reset_xy_axes(self, rect2d, rect1dX, rect1dY):
+        if self.ax2dHist is None:  # also ax1dHistX and Y will be None
+            kwmpl = {'facecolor': 'w' if self.negative else 'k'}
+
+            self.ax2dHist = self.fig.add_axes(
+                rect2d, aspect=self.aspect, xlabel=self.xaxis.displayLabel,
+                ylabel=self.yaxis.displayLabel, autoscale_on=False,
+                frameon=frameon, **kwmpl)
+
+            self.ax1dHistX = self.fig.add_axes(
+                rect1dX, sharex=self.ax2dHist, autoscale_on=False,
+                frameon=frameon, visible=(self.xPos != 0), **kwmpl)
+
+            self.ax1dHistY = self.fig.add_axes(
+                rect1dY, sharey=self.ax2dHist, autoscale_on=False,
+                frameon=frameon, visible=(self.yPos != 0), **kwmpl)
+
+            self.ax2dHist.xaxis.labelpad = xlabelpad
+            self.ax2dHist.yaxis.labelpad = ylabelpad
+
+            self.ax1dHistX.set_yticks([])
+            self.ax1dHistY.set_xticks([])
+
+            self.ax1dHistX.xaxis.set_major_formatter(
+                    mpl.ticker.ScalarFormatter(useOffset=False))
+            self.ax1dHistY.yaxis.set_major_formatter(
+                    mpl.ticker.ScalarFormatter(useOffset=False))
+
+            plt.setp(
                 self.ax1dHistX.get_xticklabels() +
                 self.ax1dHistX.get_yticklabels() +
                 self.ax1dHistY.get_xticklabels() +
                 self.ax1dHistY.get_yticklabels(),
                 visible=False)
 
-        if self.ePos == 1:  # right
-            rect1dE = copy.deepcopy(rect1dY)
-            rect1dE[0] = rect1dY[0] + rect1dY[2] + xspace1dtoE1d/xFigSize
-            rect1dE[2] = heightE1dbar / xFigSize
-            rect1dE[3] *= float(self.caxis.pixels) / self.yaxis.pixels
+            self.ax1dHistXOffset = self.fig.text(
+                rect1dY[0]+rect1dY[2], 0.01, '',
+                ha='right', va='bottom', color='gray')  # , fontweight='bold')
+            self.ax1dHistYOffset = self.fig.text(
+                0.01, rect1dX[1]+rect1dX[3], '', rotation=90,
+                ha='left', va='top', color='gray')  # , fontweight='bold')
 
-            if self.ax1dHistE is None:
+        else:
+            self.ax2dHist.set_position(rect2d)
+            self.ax1dHistX.set_position(rect1dX)
+            self.ax1dHistY.set_position(rect1dY)
+            self.ax1dHistXOffset.set_position((rect1dY[0]+rect1dY[2], 0.01))
+            self.ax1dHistYOffset.set_position((0.01, rect1dX[1]+rect1dX[3]))
+
+    def reset_e_axes(self, rect1dEbar, rect1dE):
+        kwmpl = {'facecolor': 'w' if self.negative else 'k'}
+        if self.ePos == 1:  # right
+            if self.ax1dHistEbar is None:
                 self.ax1dHistEbar = self.fig.add_axes(
-                    rect1dE, ylabel=self.caxis.displayLabel,
-                    autoscale_on=False,
-                    frameon=True, **kwmpl)
+                    rect1dEbar, ylabel=self.caxis.displayLabel,
+                    autoscale_on=False, frameon=frameon, **kwmpl)
                 self.ax1dHistEbar.yaxis.labelpad = xlabelpad
                 self.ax1dHistEOffset = self.fig.text(
-                    rect1dE[0], rect1dE[1]+rect1dE[3], '', ha='left',
-                    va='bottom',
-                    color='g')  # , fontweight='bold')
-                rect1dE[0] += rect1dE[2]
-                rect1dE[2] = heightE1d / xFigSize
+                    rect1dEbar[0], rect1dEbar[1]+rect1dEbar[3], '',
+                    ha='left', va='bottom', color='g')  # , fontweight='bold')
+
                 self.ax1dHistE = self.fig.add_axes(
-                    rect1dE, sharey=self.ax1dHistEbar, autoscale_on=False,
-                    frameon=True, **kwmpl)
-               
+                    rect1dE, sharey=self.ax1dHistEbar,
+                    autoscale_on=False, frameon=frameon, **kwmpl)
+                plt.setp(
+                    self.ax1dHistE.get_xticklabels() +
+                    self.ax1dHistE.get_yticklabels(), visible=False)
+                self.ax1dHistE.yaxis.set_major_formatter(
+                    mpl.ticker.ScalarFormatter(useOffset=False))
+                if self.caxis.limits is not None:
+                    self.ax1dHistE.set_ylim(self.caxis.limits)
+                    self.ax1dHistE.set_xticks([])
             else:
-                self.ax1dHistEbar.set_position(rect1dE)
-                self.ax1dHistEbar.yaxis.labelpad = xlabelpad
+                self.ax1dHistEbar.set_visible(True)
+                self.ax1dHistEbar.set_position(rect1dEbar)
                 self.ax1dHistEbar.set_xlabel("")
                 self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
-                self.ax1dHistEOffset.set_position((rect1dE[0],
-                                                   rect1dE[1]+rect1dE[3]))
+
+                self.ax1dHistEOffset.set_position(
+                        (rect1dEbar[0], rect1dEbar[1]+rect1dEbar[3]))
                 self.ax1dHistEOffset.set_ha('left')
                 self.ax1dHistEOffset.set_va('bottom')
-                rect1dE[0] += rect1dE[2]
-                rect1dE[2] = heightE1d / xFigSize
+
+                self.ax1dHistE.set_visible(True)
                 self.ax1dHistE.set_position(rect1dE)
-#                self.ax1dHistE.yaxis.set_major_formatter(
-#                    mpl.ticker.ScalarFormatter(useOffset=False))
-#                if self.caxis.limits is not None:
-#                    self.ax1dHistE.set_ylim(self.caxis.limits)
-#                self.ax1dHistE.set_xticks([])
+
+                self.textDE.set_visible(True)
                 self.textDE.set_position((xTextPosDy, yTextPosDy))
                 self.textDE.set_rotation('vertical')
                 self.textDE.set_transform(self.ax1dHistE.transAxes)
                 self.textDE.set_ha('left')
                 self.textDE.set_va('center')
-            pset(
-                self.ax1dHistEbar.get_xticklabels() +
-                self.ax1dHistE.get_xticklabels() +
-                self.ax1dHistE.get_yticklabels(), visible=False)
-            pset(
-                self.ax1dHistEbar.get_yticklabels(), visible=True)
-            pset(self.ax1dHistEbar, xticks=())
-            self.ax1dHistE.yaxis.set_major_formatter(
-                mpl.ticker.ScalarFormatter(useOffset=False))
-            if self.caxis.limits is not None:
-                self.ax1dHistE.set_ylim(self.caxis.limits)
-            self.ax1dHistE.set_xticks([])
-
 
         elif self.ePos == 2:  # top
-            rect1dE = copy.deepcopy(rect1dX)
-            rect1dE[1] = rect1dX[1] + rect1dX[3] + yspace1dtoE1d/yFigSize
-            rect1dE[3] = heightE1dbar / yFigSize
-            rect1dE[2] *= float(self.caxis.pixels) / self.xaxis.pixels
-
-            if self.ax1dHistE is None:
+            if self.ax1dHistEbar is None:
                 self.ax1dHistEbar = self.fig.add_axes(
-                    rect1dE, xlabel=self.caxis.displayLabel,
-                    autoscale_on=False,
-                    frameon=True, **kwmpl)
+                    rect1dEbar, xlabel=self.caxis.displayLabel,
+                    autoscale_on=False, frameon=frameon, **kwmpl)
                 self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+
                 self.ax1dHistEOffset = self.fig.text(
-                    rect1dE[0]+rect1dE[2]+0.01, rect1dE[1]-0.01, '',
-                    ha='left', va='top', color='g')
-                rect1dE[1] += rect1dE[3]
-                rect1dE[3] = heightE1d / yFigSize
+                    rect1dEbar[0]+rect1dEbar[2]+0.01, rect1dEbar[1]-0.01, '',
+                    ha='left', va='top', color='g')  # , fontweight='bold')
+
                 self.ax1dHistE = self.fig.add_axes(
-                    rect1dE, sharex=self.ax1dHistEbar, autoscale_on=False,
-                    frameon=True, **kwmpl)
-              
+                    rect1dE, sharex=self.ax1dHistEbar,
+                    autoscale_on=False, frameon=frameon, **kwmpl)
+                plt.setp(
+                    self.ax1dHistE.get_yticklabels() +
+                    self.ax1dHistE.get_xticklabels(), visible=False)
+                self.ax1dHistE.xaxis.set_major_formatter(
+                    mpl.ticker.ScalarFormatter(useOffset=False))
+                if self.caxis.limits is not None:
+                    self.ax1dHistE.set_xlim(self.caxis.limits)
+                self.ax1dHistE.set_yticks([])
             else:
-                self.ax1dHistEbar.set_position(rect1dE)
-                self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+                self.ax1dHistEbar.set_visible(True)
+                self.ax1dHistEbar.set_position(rect1dEbar)
                 self.ax1dHistEbar.set_ylabel("")
                 self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
-                self.ax1dHistEOffset.set_position((rect1dE[0]+rect1dE[2]+0.01,
-                                                   rect1dE[1]-0.01))
+
+                self.ax1dHistEOffset.set_position(
+                        (rect1dEbar[0]+rect1dEbar[2]+0.01, rect1dEbar[1]-0.01))
                 self.ax1dHistEOffset.set_ha('left')
                 self.ax1dHistEOffset.set_va('top')
-                rect1dE[1] += rect1dE[3]
-                rect1dE[3] = heightE1d / yFigSize
+
+                self.ax1dHistE.set_visible(True)
                 self.ax1dHistE.set_position(rect1dE)
-#                self.ax1dHistE.xaxis.set_major_formatter(
-#                    mpl.ticker.ScalarFormatter(useOffset=False))
-#                if self.caxis.limits is not None:
-#                    self.ax1dHistE.set_xlim(self.caxis.limits)
-#                self.ax1dHistE.set_yticks([])
+
+                self.textDE.set_visible(True)
                 self.textDE.set_position((xTextPosDx, yTextPosDx))
                 self.textDE.set_rotation('horizontal')
                 self.textDE.set_transform(self.ax1dHistE.transAxes)
                 self.textDE.set_ha('center')
                 self.textDE.set_va('bottom')
+        else:
+            if self.textDE is not None:
+                self.textDE.set_visible(False)
 
-            pset(
-                self.ax1dHistEbar.get_yticklabels() +
-                self.ax1dHistE.get_yticklabels() +
-                self.ax1dHistE.get_xticklabels(), visible=False)
-            pset(
-                self.ax1dHistEbar.get_xticklabels(), visible=True)
-            pset(self.ax1dHistEbar, yticks=())
-            self.ax1dHistE.xaxis.set_major_formatter(
-                mpl.ticker.ScalarFormatter(useOffset=False))
-            if self.caxis.limits is not None:
-                self.ax1dHistE.set_xlim(self.caxis.limits)
-            self.ax1dHistE.set_yticks([]) 
-
-        if self.ePos == 0:
             for ax in [self.ax1dHistE, self.ax1dHistEbar]:
                 ax.set_visible(False)
-            for txt in [self.textDE]:
-                txt.set_visible(False)
-        else:
-            for ax in [self.ax1dHistE, self.ax1dHistEbar]:
-                if ax is not None:
-                    ax.set_visible(True)
-            for txt in [self.textDE]:
-                txt.set_visible(True)
+
+        allAxes = [self.ax1dHistX, self.ax1dHistY, self.ax2dHist]
+
+        if self.ePos != 0:
+            allAxes.append(self.ax1dHistE)
+            allAxes.append(self.ax1dHistEbar)
+
+        for ax in allAxes:
+            for axXY in (ax.xaxis, ax.yaxis):
+                for line in axXY.get_ticklines():
+                    line.set_color('grey')
+
+    def reset_fig_layout(self):  # axis bins, ppb; ePos. QtWidget only
+        xs, ys = self.reset_fig_size()
+        p2, px, py, peb, pe = self.get_axes_positions(xs, ys)
+        self.reset_xy_axes(p2, px, py)
+        self.reset_e_axes(peb, pe)
 
     def reset_bins2D(self):
         if self.fluxKind.startswith('E'):
@@ -1744,11 +1665,26 @@ class XYCPlot(object):
             return
         eMin, eMax = [lim-self.caxis.offset for lim in self.caxis.limits]
         a = np.vstack((a, a))
+
         if self.ePos == 1:
             a = a.T
             extent = [0, 1, eMin, eMax]
+            self.ax1dHistEbar.set_ylim([eMin, eMax])
+            self.ax1dHistEbar.set_xlim([0, 1])
+            self.ax1dHistEbar.tick_params(
+                    bottom=False, top=False,
+                    left=True, right=False,   # tick marks
+                    labelbottom=False, labeltop=False,
+                    labelleft=True, labelright=False)
         else:
             extent = [eMin, eMax, 0, 1]
+            self.ax1dHistEbar.set_xlim([eMin, eMax])
+            self.ax1dHistEbar.set_ylim([0, 1])
+            self.ax1dHistEbar.tick_params(
+                    bottom=True, top=False,
+                    left=False, right=False,   # tick marks
+                    labelbottom=True, labeltop=False,
+                    labelleft=False, labelright=False)
 
         a = np.dstack(
             (a, np.ones_like(a) * self.colorSaturation, np.ones_like(a)))
