@@ -720,7 +720,8 @@ class XrtQook(qt.QWidget):
                 argMat = self.beamLine.materialsDict.get(argValue)
                 if argMat is not None:
                     oeProps[argName] = argMat.name
-        elViewer = OEExplorer(oeProps, self, viewOnly=True)
+        elViewer = OEExplorer(oeProps, self, viewOnly=True,
+                              beamLine=self.beamLine)
         if (elViewer.exec_()):
             pass
 

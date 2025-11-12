@@ -357,7 +357,8 @@ class xrtGlow(qt.QWidget):
                             argValue)
                     if argMat is not None:
                         oeProps[argName] = argMat.name
-        elViewer = OEExplorer(oeProps, self, viewOnly=True)
+        elViewer = OEExplorer(oeProps, self, viewOnly=True,
+                              beamLine=self.customGlWidget.beamline)
 #        elViewer.propertiesChanged.connect(
 #                partial(self.customGlWidget.update_beamline, oeuuid))
         if (elViewer.exec_()):
@@ -7204,10 +7205,9 @@ class OEExplorer(qt.QDialog):
     """
     propertiesChanged = qt.Signal(dict)
 
-    def __init__(self, data_dict, parent=None, viewOnly=False):
+    def __init__(self, data_dict, parent=None, viewOnly=False, beamLine=None):
         super().__init__(parent)
         self.setWindowTitle("Live Object Properties")
-#        print(self.parent())
 
         self.model = qt.QStandardItemModel()
         self.original_data = raycing.OrderedDict()
@@ -7264,55 +7264,6 @@ class OEExplorer(qt.QDialog):
         self.ok_button.clicked.connect(self.accept)
 
         elementId = self.original_data.get('uuid')
-        bdu = self.parent().customGlWidget.beamline.beamsDictU
-        self.beamDict = bdu.get(elementId)
-
-        self.plotControlPanel = qt.QGroupBox(self)
-        self.plotControlPanel.setFlat(False)
-        self.plotControlPanel.setTitle("Plot Controls")
-        combo = qt.QComboBox()
-        combo.addItems(list(self.beamDict.keys()))
-#        combo.activated.connect(self.set_beam)
-        combo.currentTextChanged.connect(self.set_beam)
-#        combo.activated.connect(lambda: self.commitData.emit(combo))
-        controlLayout = qt.QVBoxLayout(self.plotControlPanel)
-        c1layout = qt.QHBoxLayout()
-        c1layout.addWidget(qt.QLabel("beam"))
-        c1layout.addWidget(combo)
-        c1layout.addStretch()
-        controlLayout.addLayout(c1layout)
-
-        combo2 = qt.QComboBox()
-        combo2.addItems(['auto', 'equal'])
-        combo2.currentTextChanged.connect(self.set_aspect)
-        c2layout = qt.QHBoxLayout()
-        c2layout.addWidget(qt.QLabel("aspect"))
-        c2layout.addWidget(combo2)
-        c2layout.addStretch()
-        controlLayout.addLayout(c2layout)
-
-        combo3 = qt.QComboBox()
-        combo3.addItems(list(raycing.allBeamFields))
-        combo3.currentTextChanged.connect(self.set_cdata)
-        c3layout = qt.QHBoxLayout()
-        c3layout.addWidget(qt.QLabel("caxis"))
-        c3layout.addWidget(combo3)
-        c3layout.addStretch()
-        controlLayout.addLayout(c3layout)
-
-#        button = qt.QPushButton("Re-trace")
-#        button.clicked.connect(self.plot_beam)
-#        controlLayout.addWidget(button)
-
-        if self.beamDict:
-             defBeam = list(self.beamDict.keys())[0]
-        self.dynamicPlot = XYCPlot(beam=defBeam, aspect='auto', useQtWidget=True)
-
-        self.dynamicPlot.caxis.label=r"energy"
-        self.dynamicPlot.caxis.unit=r"eV"
-
-        canvasSplitter = qt.QSplitter()
-        canvasSplitter.setChildrenCollapsible(False)
 
         layout = qt.QHBoxLayout(self)
 
@@ -7320,19 +7271,74 @@ class OEExplorer(qt.QDialog):
         layoutL = qt.QVBoxLayout(widgetL)
         layoutL.addWidget(self.table)
         layoutL.addWidget(self.button_box)
+        self.beamLine = beamLine
 
-        widgetR = qt.QWidget()
-        layoutR = qt.QVBoxLayout(widgetR)
-        layoutR.addWidget(self.dynamicPlot.canvas)
-        layoutR.addWidget(self.plotControlPanel)
-
-        layout.addWidget(canvasSplitter)
-
-        canvasSplitter.addWidget(widgetL)
-        canvasSplitter.addWidget(widgetR)
+        if self.beamLine is None:
+            layout.addWidget(widgetL)
+        else:
+            bdu = self.beamLine.beamsDictU
+            self.beamDict = bdu.get(elementId)
+    
+            self.plotControlPanel = qt.QGroupBox(self)
+            self.plotControlPanel.setFlat(False)
+            self.plotControlPanel.setTitle("Plot Controls")
+            combo = qt.QComboBox()
+            combo.addItems(list(self.beamDict.keys()))
+    #        combo.activated.connect(self.set_beam)
+            combo.currentTextChanged.connect(self.set_beam)
+    #        combo.activated.connect(lambda: self.commitData.emit(combo))
+            controlLayout = qt.QVBoxLayout(self.plotControlPanel)
+            c1layout = qt.QHBoxLayout()
+            c1layout.addWidget(qt.QLabel("beam"))
+            c1layout.addWidget(combo)
+            c1layout.addStretch()
+            controlLayout.addLayout(c1layout)
+    
+            combo2 = qt.QComboBox()
+            combo2.addItems(['auto', 'equal'])
+            combo2.currentTextChanged.connect(self.set_aspect)
+            c2layout = qt.QHBoxLayout()
+            c2layout.addWidget(qt.QLabel("aspect"))
+            c2layout.addWidget(combo2)
+            c2layout.addStretch()
+            controlLayout.addLayout(c2layout)
+    
+            combo3 = qt.QComboBox()
+            combo3.addItems(list(raycing.allBeamFields))
+            combo3.currentTextChanged.connect(self.set_cdata)
+            c3layout = qt.QHBoxLayout()
+            c3layout.addWidget(qt.QLabel("caxis"))
+            c3layout.addWidget(combo3)
+            c3layout.addStretch()
+            controlLayout.addLayout(c3layout)
+    
+    #        button = qt.QPushButton("Re-trace")
+    #        button.clicked.connect(self.plot_beam)
+    #        controlLayout.addWidget(button)
+    
+            if self.beamDict:
+                 defBeam = list(self.beamDict.keys())[0]
+            self.dynamicPlot = XYCPlot(beam=defBeam, aspect='auto', useQtWidget=True)
+    
+            self.dynamicPlot.caxis.label=r"energy"
+            self.dynamicPlot.caxis.unit=r"eV"
+    
+            canvasSplitter = qt.QSplitter()
+            canvasSplitter.setChildrenCollapsible(False)
+    
+            widgetR = qt.QWidget()
+            layoutR = qt.QVBoxLayout(widgetR)
+            layoutR.addWidget(self.dynamicPlot.canvas)
+            layoutR.addWidget(self.plotControlPanel)
+    
+            layout.addWidget(canvasSplitter)
+    
+            canvasSplitter.addWidget(widgetL)
+            canvasSplitter.addWidget(widgetR)
+    
+            self.plot_beam()
 
         self.edited_data = {}
-        self.plot_beam()
 
 #        table_size = self.table.sizeHint()
 #        extra_height = self.button_box.sizeHint().height() + 40  # add padding
@@ -7498,7 +7504,7 @@ class OEExplorer(qt.QDialog):
                              globalNorm=False,
                              runfile=None)
 
-        locCard.beamLine = self.parent().customGlWidget.beamline
+        locCard.beamLine = self.beamLine
 
         self.dynamicPlot.runCardVals = locCard
         self.dynamicPlot.xaxis.label=r"x"
