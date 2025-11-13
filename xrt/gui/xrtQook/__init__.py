@@ -709,6 +709,7 @@ class XrtQook(qt.QWidget):
         if oe is None:
             return
         oeObj = oe[0]
+        oeType = oe[-1]
         blName = self.beamLine.name
         oeProps = raycing.get_init_kwargs(oeObj, compact=False,
                                           blname=blName)
@@ -723,6 +724,20 @@ class XrtQook(qt.QWidget):
                 argMat = self.beamLine.materialsDict.get(argValue)
                 if argMat is not None:
                     oeProps[argName] = argMat.name
+
+        catDict = {'Orientation': raycing.orientationArgSet}
+        if oeType == 0:  # source
+            if hasattr(oeObj, 'eE'):
+                catDict.update({
+                    'Electron Beam': rsources.electronBeamArgSet,
+                    'Magnetic Structure': rsources.magneticStructureArgSet})
+
+            catDict.update({
+                    'Distributions': rsources.distributionsArgSet,
+                    'Source Limits': rsources.sourceLimitsArgSet})
+        else:
+            catDict.update({'Shape': raycing.shapeArgSet})
+
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget')
         elViewer = OEExplorer(self, oeProps,
@@ -730,7 +745,8 @@ class XrtQook(qt.QWidget):
                               epicsDict=getattr(glWidget,
                                                 'epicsInterface', None),
                               viewOnly=True,
-                              beamLine=self.beamLine)
+                              beamLine=self.beamLine,
+                              categoriesDict=catDict)
         if (elViewer.exec_()):
             pass
 

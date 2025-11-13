@@ -738,3 +738,18 @@ from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
     UndulatorSRW, SourceFromFieldSRW
 from .sources_synchr import BendingMagnet, Wiggler, Undulator, SourceFromField
 from .sources_sybase import SourceBase, IntegratedSource
+
+electronBeamArgSet = {'eE', 'eI', 'eEspread', 'eSigmaX', 'eSigmaZ',
+                      'eEpsilonX', 'eEpsilonZ', 'betaX', 'betaZ'}
+
+magneticStructureArgSet = {'targetE', 'B0', 'rho', 'K', 'Kx', 'Ky', 'period',
+                           'n', 'phaseDeg', 'taper'}
+
+sourceLimitsArgSet = {'dx', 'dy', 'dz',
+                      'dxprime', 'dzprime',
+                      'xPrimeMax', 'zPrimeMax', 'minxprime', 'maxxprime',
+                      'minzprime', 'maxzprime',
+                      'eMin', 'eMax'}
+
+distributionsArgSet = {'distx', 'disty', 'distz', 'distxprime', 'distzprime',
+                       'distE', 'energies', 'nrays'}

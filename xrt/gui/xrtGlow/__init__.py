@@ -341,6 +341,7 @@ class xrtGlow(qt.QWidget):
             if oe is None:
                 return
             oeObj = oe[0]
+            oeType = oe[-1]
             blName = self.customGlWidget.beamline.name
             oeProps = raycing.get_init_kwargs(oeObj, compact=False,
                                               blname=blName)
@@ -356,18 +357,33 @@ class xrtGlow(qt.QWidget):
                             argValue)
                     if argMat is not None:
                         oeProps[argName] = argMat.name
-        elViewer = OEExplorer(self, oeProps,
-                              initDict=oeInitProps,
-                              epicsDict=getattr(self.customGlWidget,
-                                                'epicsInterface', None),
-                              viewOnly=True,
-                              beamLine=self.customGlWidget.beamline)
-        self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
-#        elViewer.propertiesChanged.connect(
-#                partial(self.customGlWidget.update_beamline, oeuuid))
-#        if (elViewer.exec_()):
-        if (elViewer.show()):
-            pass
+
+            catDict = {'Orientation': raycing.orientationArgSet}
+            if oeType == 0:  # source
+                if hasattr(oeObj, 'eE'):
+                    catDict.update({
+                        'Electron Beam': rsources.electronBeamArgSet,
+                        'Magnetic Structure': rsources.magneticStructureArgSet})
+
+                catDict.update({
+                        'Distributions': rsources.distributionsArgSet,
+                        'Source Limits': rsources.sourceLimitsArgSet})
+            else:
+                catDict.update({'Shape': raycing.shapeArgSet})
+
+            elViewer = OEExplorer(self, oeProps,
+                                  initDict=oeInitProps,
+                                  epicsDict=getattr(self.customGlWidget,
+                                                    'epicsInterface', None),
+                                  viewOnly=True,
+                                  beamLine=self.customGlWidget.beamline,
+                                  categoriesDict=catDict)
+            self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
+    #        elViewer.propertiesChanged.connect(
+    #                partial(self.customGlWidget.update_beamline, oeuuid))
+    #        if (elViewer.exec_()):
+            if (elViewer.show()):
+                pass
 
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
@@ -7128,7 +7144,8 @@ class OEExplorer(qt.QDialog):
     propertiesChanged = qt.Signal(dict)
 
     def __init__(self, parent=None, dataDict=None, initDict=None,
-                 epicsDict=None, viewOnly=False, beamLine=None):
+                 epicsDict=None, viewOnly=False, beamLine=None,
+                 categoriesDict=None):
         super().__init__(parent)
         self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
                 'name'))
@@ -7158,20 +7175,22 @@ class OEExplorer(qt.QDialog):
         self.model.setHorizontalHeaderLabels(headerLine)
         self.itemGroups = {}
         # We can pass different categories at init for oes/sources/mats
-        if beamLine is not None:
-            for groupName in ['Orientation', 'Shape', 'Other']:
+        if categoriesDict is not None:
+            for groupName in categoriesDict.keys():
                 self.itemGroups[groupName] = self.add_prop(
                         self.modelRoot, groupName)
+            self.itemGroups['Other'] = self.add_prop(self.modelRoot, 'Other')
 
         for key, value in dataDict.items():
-            if key in raycing.orientationArgSet:
-                parentItem = self.itemGroups.get('Orientation')
-            elif key in raycing.shapeArgSet and 'Shape' in self.itemGroups:
-                parentItem = self.itemGroups.get('Shape')
+            if categoriesDict is not None:
+                for igName, igSet in categoriesDict.items():
+                    if key in igSet:
+                        parentItem = self.itemGroups.get(igName)
+                        break
+                else:
+                    parentItem = self.itemGroups.get('Other')
             else:
-                parentItem = self.itemGroups.get('Other')
-
-            parentItem = parentItem or self.modelRoot
+                parentItem = self.modelRoot
 
             if key in ['center']:
                 spVal = value.strip('([])')
