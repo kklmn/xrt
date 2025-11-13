@@ -84,11 +84,14 @@ class RunCardVals(object):
         self.iteration = 0
         self.lastRunsPickleName = os.path.join(__fdir__, 'lastRuns.pickle')
         self.lastRuns = []
-        try:
-            with open(self.lastRunsPickleName, 'rb') as f:
-                self.lastRuns = pickle.load(f)
-        except:  # analysis:ignore
-            pass
+
+        if runfile is not None:
+            try:
+                with open(self.lastRunsPickleName, 'rb') as f:
+                    self.lastRuns = pickle.load(f)
+            except:  # analysis:ignore
+                pass
+
         if self.lastRuns:
             raycing.colorPrint("The last {0} run{1}".format(
                 len(self.lastRuns), 's' if len(self.lastRuns) > 1 else ''),

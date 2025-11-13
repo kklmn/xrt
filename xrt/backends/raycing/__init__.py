@@ -1406,7 +1406,7 @@ def build_hist(beam, limits=None, isScreen=False, shape=[256, 256],
     cData is one of get_NNN methods or None. In the latter case the function
     returns only intensity histogram
     """
-
+    shape = [int(val) for val in shape]  # sometimes arrives as float
     good = (beam.state == 1) | (beam.state == 2)
     if isScreen:
         x, y, z = beam.x[good], beam.z[good], beam.y[good]
@@ -1939,7 +1939,7 @@ class EpicsDevice:
             if hasattr(oeObj, 'expose') and oeObj.limPhysX is not None:
                 pvname = f'{oename}:image'
                 histShape = getattr(oeObj, 'histShape')
-                imageLength = histShape[0]*histShape[1]
+                imageLength = int(histShape[0]*histShape[1])
                 pv_records[pvname] = builder.WaveformIn(
                     pvname,
                     length=imageLength
@@ -1959,6 +1959,8 @@ class EpicsDevice:
                             pv_records[pvname]
 
             for argName in pvFields:
+                if argName in ['shape', 'renderStyle']:
+                    continue
                 if hasattr(oeObj, argName):
                     if argName in ['name', 'rotationSequence']:
                         pvname = f'{oename}:{argName}'
