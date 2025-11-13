@@ -345,7 +345,10 @@ class xrtGlow(qt.QWidget):
             oeProps = raycing.get_init_kwargs(oeObj, compact=False,
                                               blname=blName)
             oeProps.update({'uuid': oeuuid})
+            oeInitProps = {}
             for argName, argValue in oeProps.items():
+                if hasattr(oeObj, f'_{argName}Init'):
+                    oeInitProps[argName] = argValue
                 if any(argName.lower().startswith(v) for v in
                         ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
                         raycing.is_valid_uuid(argValue):
@@ -353,7 +356,11 @@ class xrtGlow(qt.QWidget):
                             argValue)
                     if argMat is not None:
                         oeProps[argName] = argMat.name
-        elViewer = OEExplorer(oeProps, self, viewOnly=True,
+        elViewer = OEExplorer(self, oeProps,
+                              initDict=oeInitProps,
+                              epicsDict=getattr(self.customGlWidget,
+                                                'epicsInterface', None),
+                              viewOnly=True,
                               beamLine=self.customGlWidget.beamline)
         self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
 #        elViewer.propertiesChanged.connect(
@@ -7120,28 +7127,76 @@ class OEExplorer(qt.QDialog):
     """
     propertiesChanged = qt.Signal(dict)
 
-    def __init__(self, data_dict, parent=None, viewOnly=False, beamLine=None):
+    def __init__(self, parent=None, dataDict=None, initDict=None,
+                 epicsDict=None, viewOnly=False, beamLine=None):
         super().__init__(parent)
-        self.setWindowTitle("Live Object Properties")
+        self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
+                'name'))
+        self.setWindowTitle(self.windowTitleStr)
 
         self.model = qt.QStandardItemModel()
+        self.modelRoot = self.model.invisibleRootItem()
         self.original_data = raycing.OrderedDict()
-        self.model.setHorizontalHeaderLabels(["Property", "Value"])
+        headerLine = ["Property", "Value"]
         self.viewOnly = viewOnly
         self.liveUpdateEnabled = True  # TODO: configurable
-        for key, value in data_dict.items():
+
+        self.objectFlag = qt.ItemFlags(0)
+        self.paramFlag = qt.ItemFlags(qt.ItemIsEnabled | qt.ItemIsSelectable)
+        self.valueFlag = qt.ItemFlags(
+            qt.ItemIsEnabled | qt.ItemIsEditable | qt.ItemIsSelectable)
+        self.checkFlag = qt.ItemFlags(
+            qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
+
+        elementId = dataDict.get('uuid')
+        epicsTree = None
+        if epicsDict is not None:
+            epicsTree = epicsDict.pv_map.get(elementId)
+            if epicsTree:
+                headerLine.append('EPICS PV')
+
+        self.model.setHorizontalHeaderLabels(headerLine)
+        self.itemGroups = {}
+        # We can pass different categories at init for oes/sources/mats
+        if beamLine is not None:
+            for groupName in ['Orientation', 'Shape', 'Other']:
+                self.itemGroups[groupName] = self.add_prop(
+                        self.modelRoot, groupName)
+
+        for key, value in dataDict.items():
+            if key in raycing.orientationArgSet:
+                parentItem = self.itemGroups.get('Orientation')
+            elif key in raycing.shapeArgSet and 'Shape' in self.itemGroups:
+                parentItem = self.itemGroups.get('Shape')
+            else:
+                parentItem = self.itemGroups.get('Other')
+
+            parentItem = parentItem or self.modelRoot
+
             if key in ['center']:
                 spVal = value.strip('([])')
                 for field, val in zip(['x', 'y', 'z'], spVal.split(",")):
                     nkey = f"{key}.{field}"
                     nvalue = val.strip()
-                    self.add_row(nkey, nvalue)
+                    if epicsTree is not None:
+                        epv = epicsTree.get(nkey)
+                    else:
+                        epv = None
+                    self.add_param(parentItem, nkey, nvalue, epv=epv)
+                    self.original_data[nkey] = nvalue
+#                    self.add_row(nkey, nvalue)
             elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
                 spVal = value.strip('([])')
                 for field, val in zip(['lmin', 'lmax'], spVal.split(",")):
                     nkey = f"{key}.{field}"
                     nvalue = val.strip()
-                    self.add_row(nkey, nvalue)
+                    if epicsTree is not None:
+                        epv = epicsTree.get(nkey)
+                    else:
+                        epv = None
+                    self.add_param(parentItem, nkey, nvalue, epv=epv)
+                    self.original_data[nkey] = nvalue
+#                    self.add_row(nkey, nvalue)
 #            if hasattr(value, "_fields"):
 #                for subfield in value._fields:
 #                    subkey = f"{key}.{subfield}"
@@ -7149,17 +7204,22 @@ class OEExplorer(qt.QDialog):
 #                    self.add_row(subkey, subval)
 #                    self.original_data[subkey] = subval
             else:
-                self.add_row(key, value)
+                if epicsTree is not None:
+                    epv = epicsTree.get(key)
+                else:
+                    epv = None
+                self.add_param(parentItem, key, value, epv=epv)
                 self.original_data[key] = value
 
         self.changed_data = {}
         self.model.itemChanged.connect(self.on_item_changed)
         self.highlight_color = qt.QtGui.QColor("#fffacd")
 
-        self.table = qt.QTableView()
+#        self.table = qt.QTableView()
+        self.table = qt.QTreeView()
         self.table.setModel(self.model)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.resizeRowsToContents()
+#        self.table.horizontalHeader().setStretchLastSection(True)
+#        self.table.resizeRowsToContents()
         self.table.setAlternatingRowColors(True)
         self.table.setContextMenuPolicy(qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
@@ -7178,8 +7238,6 @@ class OEExplorer(qt.QDialog):
 
         self.button_box.accepted.connect(self.on_ok_clicked)
         self.ok_button.clicked.connect(self.accept)
-
-        elementId = self.original_data.get('uuid')
 
         layout = qt.QHBoxLayout(self)
 
@@ -7239,6 +7297,21 @@ class OEExplorer(qt.QDialog):
 
             self.dynamicPlot.caxis.label = r"energy"
             self.dynamicPlot.caxis.unit = r"eV"
+#            self.dynamicPlot.caxis.limits = [parent.customGlWidget.colorMin,
+#                                             parent.customGlWidget.colorMax]
+
+            # TODO: controls to fix limits?
+
+#            xLims = raycing.parametrize(dataDict.get('limPhysX'))
+#            yLims = raycing.parametrize(dataDict.get('limPhysY'))
+#
+#            if xLims is not None:
+#                if not np.all(np.abs(xLims) == raycing.maxHalfSizeOfOE):
+#                    self.dynamicPlot.xaxis.limits = xLims
+#
+#            if yLims is not None:
+#                if not np.all(np.abs(yLims) == raycing.maxHalfSizeOfOE):
+#                    self.dynamicPlot.yaxis.limits = yLims
 
             canvasSplitter = qt.QSplitter()
             canvasSplitter.setChildrenCollapsible(False)
@@ -7268,6 +7341,75 @@ class OEExplorer(qt.QDialog):
 #            min(table_size.width() + 40, max_width),
 #            min(table_size.height() + extra_height, max_height)
 #        )
+
+    def add_prop(self, parent, propName):
+        """Add non-editable Item"""
+        child0 = qt.QStandardItem(str(propName))
+        child0.setFlags(self.paramFlag)
+        child1 = qt.QStandardItem()
+        child1.setFlags(self.paramFlag)
+        child0.setDropEnabled(False)
+        child0.setDragEnabled(False)
+        child0.setBackground(qt.QColor("#001a66"))   # dark blue
+        child0.setForeground(qt.QColor("white"))     # font color
+        child1.setBackground(qt.QColor("#001a66"))   # dark blue
+        parent.appendRow([child0, child1])
+        return child0
+
+    def add_value(self, parent, value, source=None):
+        """Add editable Item"""
+        child0 = qt.QStandardItem(str(value))
+        child0.setFlags(self.valueFlag)
+        child1 = qt.QStandardItem()
+        child1.setFlags(self.paramFlag)
+        child0.setDropEnabled(False)
+        child0.setDragEnabled(False)
+        if source is None:
+            parent.appendRow([child0, child1])
+        else:
+            parent.insertRow(source.row() + 1, [child0, child1])
+        return child0
+
+    def add_param(self, parent, paramName, value, epv=None, source=None,
+                  unit=None):
+        """Add a pair of Parameter-Value Items"""
+        toolTip = None
+        child0 = qt.QStandardItem(str(paramName))
+        child0.setFlags(self.paramFlag)
+        child1 = qt.QStandardItem(str(value))
+        child1.setFlags(self.paramFlag if str(paramName) == 'name' else
+                        self.valueFlag)
+        if unit is not None:
+            child1u = qt.QStandardItem(str(unit))
+            child1u.setFlags(self.valueFlag)
+
+        if epv is not None:
+            child1e = qt.QStandardItem(str(epv))
+            child1e.setFlags(self.valueFlag)
+
+        if str(paramName) == "center":
+            toolTip = '\"x\" and \"z\" can be set to "auto"\
+ for automatic alignment if \"y\" is known'
+#        if str(paramName) == "pitch":
+#            toolTip = 'For single OEs \"pitch\" can be set to "auto"\
+# for automatic alignment with known \"roll\", \"yaw\"'
+        child0.setDropEnabled(False)
+        child0.setDragEnabled(False)
+        if toolTip is not None:
+            child1.setToolTip(toolTip)
+            # self.setIItalic(child0)
+        row = [child0, child1]
+        if unit is not None:
+            row.append(child1u)
+        if epv is not None:
+            row.append(child1e)
+
+        if not isinstance(source, qt.QStandardItem):
+            parent.appendRow(row)
+        else:
+            parent.insertRow(source.row() + 1, row)
+
+        return child0, child1
 
     def add_row(self, key, value):
         key_item = qt.QStandardItem(key)
@@ -7397,6 +7539,7 @@ class OEExplorer(qt.QDialog):
             self.dynamicPlot.field3D = self.dynamicPlot.total4D
         self.dynamicPlot.textStatus.set_text('')
         self.dynamicPlot.plot_plots()
+        self.setWindowTitle(self.windowTitleStr)
 
     def set_beam(self, beamKey):
         self.dynamicPlot.beam = str(beamKey)

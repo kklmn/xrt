@@ -713,14 +713,23 @@ class XrtQook(qt.QWidget):
         oeProps = raycing.get_init_kwargs(oeObj, compact=False,
                                           blname=blName)
         oeProps.update({'uuid': oeuuid})
+        oeInitProps = {}
         for argName, argValue in oeProps.items():
+            if hasattr(oeObj, f'_{argName}Init'):
+                oeInitProps[argName] = argValue
             if any(argName.lower().startswith(v) for v in
                     ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
                     raycing.is_valid_uuid(argValue):
                 argMat = self.beamLine.materialsDict.get(argValue)
                 if argMat is not None:
                     oeProps[argName] = argMat.name
-        elViewer = OEExplorer(oeProps, self, viewOnly=True,
+        glowObj = getattr(self, 'blViewer', None)
+        glWidget = getattr(glowObj, 'customGlWidget')
+        elViewer = OEExplorer(self, oeProps,
+                              initDict=oeInitProps,
+                              epicsDict=getattr(glWidget,
+                                                'epicsInterface', None),
+                              viewOnly=True,
                               beamLine=self.beamLine)
         if (elViewer.exec_()):
             pass
@@ -740,7 +749,7 @@ class XrtQook(qt.QWidget):
                 argMat = self.beamLine.materialsDict.get(argValue)
                 if argMat is not None:
                     matProps[argName] = argMat.name
-        matViewer = OEExplorer(matProps, self, viewOnly=True)
+        matViewer = OEExplorer(self, matProps, viewOnly=True)
         if (matViewer.exec_()):
             pass
 
