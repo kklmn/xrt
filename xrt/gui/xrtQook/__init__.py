@@ -287,7 +287,7 @@ class XrtQook(qt.QWidget):
         self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
 
         self.prepareViewer = False
-        self.callWizard = False
+        self.callWizard = True
         self.isGlowAutoUpdate = True
 #        self.isGlowAutoUpdate = False
         self.experimentalMode = False
