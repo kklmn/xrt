@@ -7302,6 +7302,9 @@ class OEExplorer(qt.QDialog):
             self.beamDict = self.beamLine.beamsDictU.get(elementId)
 
             self.plotControlPanel = qt.QGroupBox(self)
+            self.plotControlPanel.setSizePolicy(qt.QSizePolicy.Minimum,
+                                                qt.QSizePolicy.Minimum)
+
             self.plotControlPanel.setFlat(False)
             self.plotControlPanel.setTitle("Plot Controls")
             combo = qt.QComboBox()
@@ -7355,9 +7358,9 @@ class OEExplorer(qt.QDialog):
                                   backend='raycing',
                                   globalNorm=False,
                                   runfile=None)
-    
+
             locCard.beamLine = self.beamLine
-    
+
             self.dynamicPlot.runCardVals = locCard
             self.dynamicPlot.xaxis.label = r"x"
             self.dynamicPlot.xaxis.unit = r"mm"
@@ -7385,6 +7388,9 @@ class OEExplorer(qt.QDialog):
             widgetR = qt.QWidget()
             layoutR = qt.QVBoxLayout(widgetR)
             layoutR.addWidget(self.dynamicPlot.canvas)
+            self.dynamicPlot.canvas.setSizePolicy(qt.QSizePolicy.Expanding,
+                                                  qt.QSizePolicy.Expanding)
+
             layoutR.addWidget(self.plotControlPanel)
 
             layout.addWidget(canvasSplitter)
@@ -7392,6 +7398,7 @@ class OEExplorer(qt.QDialog):
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
             self.liveUpdateEnabled = True
+
             self.plot_beam()
 
         self.edited_data = {}
