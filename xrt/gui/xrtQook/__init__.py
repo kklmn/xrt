@@ -276,6 +276,7 @@ class SphinxWorker(qt.QObject):
 class XrtQook(qt.QWidget):
     plotParamUpdate = qt.Signal(tuple)
     statusUpdate = qt.Signal(tuple)
+    newElementCreated = qt.Signal(str)
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
 
@@ -286,6 +287,7 @@ class XrtQook(qt.QWidget):
         self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
 
         self.prepareViewer = False
+        self.callWizard = False
         self.isGlowAutoUpdate = True
 #        self.isGlowAutoUpdate = False
         self.experimentalMode = False
@@ -363,6 +365,7 @@ class XrtQook(qt.QWidget):
 
         self.blRunGlow()
         self.catchViewer()
+        self.newElementCreated.connect(self.runElementViewer)
 
     def check_pypi_version(self):
         try:
@@ -747,7 +750,12 @@ class XrtQook(qt.QWidget):
                               viewOnly=True,
                               beamLine=self.beamLine,
                               categoriesDict=catDict)
-        if (elViewer.exec_()):
+
+        if glWidget is not None:
+            glWidget.beamUpdated.connect(elViewer.update_beam)
+
+#        if (elViewer.exec_()):
+        if (elViewer.show()):
             pass
 
     def runMaterialViewer(self, matuuid=None):
@@ -1789,6 +1797,9 @@ class XrtQook(qt.QWidget):
         self.tabs.setCurrentWidget(tree)
         tree.setCurrentIndex(elementItem.index())
         tree.resizeColumnToContents(0)
+
+        if not copyFrom and not isRoot and tree is self.tree and self.callWizard:
+            self.newElementCreated.emit(propsDict['uuid'])
 
     def getParams(self, obj):
         uArgs = OrderedDict()

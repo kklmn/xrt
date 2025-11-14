@@ -378,7 +378,9 @@ class xrtGlow(qt.QWidget):
                                   viewOnly=True,
                                   beamLine=self.customGlWidget.beamline,
                                   categoriesDict=catDict)
+
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
+
     #        elViewer.propertiesChanged.connect(
     #                partial(self.customGlWidget.update_beamline, oeuuid))
     #        if (elViewer.exec_()):
@@ -2138,6 +2140,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
     rotationUpdated = qt.Signal(np.ndarray)
     scaleUpdated = qt.Signal(np.ndarray)
     beamUpdated = qt.Signal(tuple)
+    colorsUpdated = qt.Signal()
+    oePropsUpdated = qt.Signal(tuple)
     histogramUpdated = qt.Signal(tuple)
     openElViewer = qt.Signal(str)
 
@@ -2384,6 +2388,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             except ImportError:
                 print("pythonSoftIOC not installed")
                 self.epicsPrefix = None
+
+        self.colorsUpdated.connect(self.getColorLimits)
+        self.oePropsUpdated.connect(self.update_oe_transform)
+
 #        self.getColorLimits()
 
     async def update_beamline_async(self, oeid, argName, argValue):
@@ -2436,7 +2444,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.beamline.init_oe_from_json(kwargs)
                 if oeid not in self.needMeshUpdate:
                     self.needMeshUpdate.append(oeid)
-
+                self.glDraw()
                 if self.parent is not None:
                     self.parent.addElementToModel(oeid)
                 try:
@@ -2456,8 +2464,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
-
-                self.glDraw()
 
             elif 'parameters' in kwargs:  # update flow
                 methStr = kwargs['_object'].split('.')[-1]
@@ -2750,7 +2756,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         while not progress_queue.empty():
             msg = progress_queue.get()
             if 'beam' in msg:
-                print(msg['sender_name'], msg['sender_id'], msg['beam'])
+#                print(msg['sender_name'], msg['sender_id'], msg['beam'])
                 for beamKey, beam in msg['beam'].items():
                     self.needBeamUpdate.append((msg['sender_id'], beamKey))
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
@@ -2764,26 +2770,31 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 print("Total repeats:", msg['repeat'])
                 if self.epicsPrefix is not None:
                     self.epicsInterface.pv_records['AcquireStatus'].set(0)
-                self.glDraw()
+                self.colorsUpdated.emit()
+#                self.getColorLimits()
+#                self.glDraw()
             elif 'pos_attr' in msg:  # TODO: Update epics rbv
+                print("updated props:", msg['sender_id'], msg['pos_attr'])
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
                     setattr(oeLine[0], msg['pos_attr'], msg['pos_value'])
-                if msg['pos_attr'] in ['footprint'] and self.autoSizeOe:  # need better controls
-                    self.needMeshUpdate.append(msg['sender_id'])
+                if msg['pos_attr'] in ['footprint']:  # need better controls
+                    if self.autoSizeOe:
+                        self.needMeshUpdate.append(msg['sender_id'])
                 else:
-                    self.meshDict[msg['sender_id']].update_transformation_matrix()
-                    try:
-                        self.getMinMax()
-                        self.maxLen = np.max(np.abs(
-                                self.minmax[0, :] - self.minmax[1, :]))
-                        self.parent.updateMaxLenFromGL(self.maxLen)
-                    except TypeError:
-                        print("Cannot find limits")
+                    self.oePropsUpdated.emit((msg['sender_id'], msg['pos_attr']))
+#                    self.meshDict[msg['sender_id']].update_transformation_matrix()
+#                    try:
+#                        self.getMinMax()
+#                        self.maxLen = np.max(np.abs(
+#                                self.minmax[0, :] - self.minmax[1, :]))
+#                        self.parent.updateMaxLenFromGL(self.maxLen)
+#                    except TypeError:
+#                        print("Cannot find limits")
 
 #                if self.epicsPrefix is not None:
 #                    self.epicsInterface.pv_records['AcquireStatus'].set(0)
-                self.glDraw()
+#                self.glDraw()
 
     def close_calc_process(self):
         if hasattr(self, 'calc_process') and\
@@ -2893,8 +2904,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays])
             self.updateGlobalIntensity(beam.iMax)
         vboStore['iMax'] = beam.iMax
-        self.updateColorLimits(np.min(dataColor[goodRays]),
-                               np.max(dataColor[goodRays]))
+#        self.updateColorLimits(np.min(dataColor[goodRays]),
+#                               np.max(dataColor[goodRays]))
 
 #        else:
 #        self.getColorLimits()  # TODO: VERY DIRTY WORKAROUND
@@ -2997,8 +3008,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays])
         self.updateGlobalIntensity(beam.iMax)
         beamvbo['iMax'] = beam.iMax
-        self.updateColorLimits(np.min(dataColor[goodRays]),
-                               np.max(dataColor[goodRays]))
+#        self.updateColorLimits(np.min(dataColor[goodRays]),
+#                               np.max(dataColor[goodRays]))
 
     def render_beam(self, beamTag, model, view, projection, target=None):
         """beam: ('oeuuid', 'beamKey') """
@@ -3270,7 +3281,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam.vbo['indices'].release()
 
     def init_oe_surface(self, oeuuid):
-
         def assign_stencil_num(mesh):
             if oeuuid not in self.selectableOEs.values():
                 if len(self.selectableOEs):
@@ -3327,6 +3337,21 @@ class xrtGlWidget(qt.QOpenGLWidget):
             assign_stencil_num(mesh3D)
 
         self.meshDict[oeuuid] = mesh3D
+
+    def update_oe_transform(self, posData):
+        oeid, pName = posData
+        if pName in ['center']:
+            try:
+                self.getMinMax()
+                self.maxLen = np.max(np.abs(
+                        self.minmax[0, :] - self.minmax[1, :]))
+                self.parent.updateMaxLenFromGL(self.maxLen)
+            except TypeError:
+                print("Cannot find limits")
+        mesh = self.meshDict.get(oeid)
+        if mesh is not None:  # TODO: may miss initial positioning
+            mesh.update_transformation_matrix()
+        self.glDraw()
 
     def update_oe_surface(self, oeuuid):
         if is_source(self.meshDict[oeuuid].oe):
@@ -3491,6 +3516,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if startBeam is None:
                     continue
                 good = (startBeam.state == 1) | (startBeam.state == 2)
+
                 if len(startBeam.state[good]) > 0:
                     startBeam.iMax = np.max(startBeam.Jss[good] +
                                             startBeam.Jpp[good])
@@ -3499,13 +3525,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     newColorMax = max(np.max(colorax[good]), newColorMax)
                     newColorMin = min(np.min(colorax[good]), newColorMin)
 
-        if self.newColorAxis:
-            if newColorMin != self.colorMin:
-                self.colorMin = newColorMin
-                self.selColorMin = self.colorMin
-            if newColorMax != self.colorMax:
-                self.colorMax = newColorMax
-                self.selColorMax = self.colorMax
+#        if self.newColorAxis:
+        if newColorMin != self.colorMin:
+            self.colorMin = newColorMin
+            self.selColorMin = self.colorMin
+        if newColorMax != self.colorMax:
+            self.colorMax = newColorMax
+            self.selColorMax = self.colorMax
 
         if self.colorMin == self.colorMax:
             if self.colorMax == 0:
@@ -7230,6 +7256,7 @@ class OEExplorer(qt.QDialog):
                 self.add_param(parentItem, key, value, epv=epv)
                 self.original_data[key] = value
 
+#        for item in self.itemGroups.values():
         self.changed_data = {}
         self.model.itemChanged.connect(self.on_item_changed)
         self.highlight_color = qt.QtGui.QColor("#fffacd")
@@ -7242,7 +7269,7 @@ class OEExplorer(qt.QDialog):
         self.table.setAlternatingRowColors(True)
         self.table.setContextMenuPolicy(qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
-
+        self.table.expandAll()
         # Buttons
         self.button_box = qt.QDialogButtonBox()
         self.ok_button = self.button_box.addButton(
@@ -7316,6 +7343,22 @@ class OEExplorer(qt.QDialog):
 
             self.dynamicPlot.caxis.label = r"energy"
             self.dynamicPlot.caxis.unit = r"eV"
+            locCard = RunCardVals(threads=0,
+                                  processes=1,
+                                  repeats=1,
+                                  updateEvery=1,
+                                  pickleEvery=0,
+                                  backend='raycing',
+                                  globalNorm=False,
+                                  runfile=None)
+    
+            locCard.beamLine = self.beamLine
+    
+            self.dynamicPlot.runCardVals = locCard
+            self.dynamicPlot.xaxis.label = r"x"
+            self.dynamicPlot.xaxis.unit = r"mm"
+            self.locCard = locCard
+
 #            self.dynamicPlot.caxis.limits = [parent.customGlWidget.colorMin,
 #                                             parent.customGlWidget.colorMax]
 
@@ -7345,9 +7388,10 @@ class OEExplorer(qt.QDialog):
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
 
-            self.plot_beam()
+#            self.plot_beam()
 
         self.edited_data = {}
+        print("init complete")
 
 #        table_size = self.table.sizeHint()
 #        extra_height = self.button_box.sizeHint().height() + 40  # add padding
@@ -7582,20 +7626,6 @@ class OEExplorer(qt.QDialog):
         self.plot_beam()
 
     def plot_beam(self, key=None):
-        locCard = RunCardVals(threads=0,
-                              processes=1,
-                              repeats=1,
-                              updateEvery=1,
-                              pickleEvery=0,
-                              backend='raycing',
-                              globalNorm=False,
-                              runfile=None)
-
-        locCard.beamLine = self.beamLine
-
-        self.dynamicPlot.runCardVals = locCard
-        self.dynamicPlot.xaxis.label = r"x"
-        self.dynamicPlot.xaxis.unit = r"mm"
         if self.dynamicPlot.beam.endswith('lobal'):
             self.dynamicPlot.yaxis.label = r"z"
         else:
@@ -7605,12 +7635,13 @@ class OEExplorer(qt.QDialog):
                 self.dynamicPlot.yaxis.label = r"z"
         self.dynamicPlot.yaxis.unit = r"mm"
 
-        sproc = GP(locCard=locCard,
+        sproc = GP(locCard=self.locCard,
                    plots=[self.dynamicPlot.card_copy()],
                    outPlotQueues=[None],
                    alarmQueue=[None],
                    idLoc=0,
                    beamDict=self.beamDict)
+
         try:
             outList = sproc.run()
             self.update_plot(outList)
