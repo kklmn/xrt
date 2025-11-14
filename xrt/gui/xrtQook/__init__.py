@@ -1007,7 +1007,7 @@ class XrtQook(qt.QWidget):
 #        self.addValue(self.beamLineModel.invisibleRootItem(), "beamLine")
 
         self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
-        self.beamLineModel.rowsInserted.connect(self.updateOrder)
+#        self.beamLineModel.rowsInserted.connect(self.updateOrder)
 #        self.rootBLItem = self.beamLineModel.item(0, 0)
 #        self.rootBLItem.setFlags(qt.ItemFlags(
 #            qt.ItemIsEnabled | qt.ItemIsEditable |
@@ -2061,7 +2061,8 @@ class XrtQook(qt.QWidget):
                     lastIndex = fModel.rowCount() - 1
                     if pName.lower() == 'accubeam':
                         lastIndex = 0
-                    pVal = fModel.data(fModel.index(lastIndex, 0))
+                    pVal = fModel.data(fModel.index(lastIndex, 0)) if\
+                        fModel.rowCount() > 0 else "None"
                 methodInputDict[pName] = pVal
 
         # Will always auto-generate with new naming scheme
@@ -3493,6 +3494,7 @@ class XrtQook(qt.QWidget):
     def updateBeamModel(self):
         """This function cleans the beam model. It will do nothing if
         move/delete OE procedures perform correctly."""
+
         outBeams = ['None']
         for ie in range(self.rootBLItem.rowCount()):
             if self.rootBLItem.child(ie, 0).text() != "properties" and\
@@ -3592,6 +3594,39 @@ class XrtQook(qt.QWidget):
                 if self.beamModel.item(ib, 0).text() == beamName:
                     return self.beamModel.item(ib, 2).text()
 
+        def buildMethodDict(mItem):
+            methKWArgs = OrderedDict()
+            outKWArgs = OrderedDict()
+            methObjStr = ''
+            for mch in range(mItem.rowCount()):
+                mchi = mItem.child(mch, 0)
+                if str(mchi.text()) == 'parameters':
+                    for mchpi in range(mchi.rowCount()):
+                        argName = str(mchi.child(mchpi, 0).text())
+                        argValue = str(mchi.child(mchpi, 1).text())
+                        if argName == 'beam':
+                            argValue = beamToUuid(argValue)
+                        else:
+                            argValue = raycing.parametrize(
+                                argValue)
+                        methKWArgs[argName] = argValue
+                elif str(mchi.text()) == 'output':
+                    for mchpi in range(mchi.rowCount()):
+                        argName = str(mchi.child(mchpi, 0).text())
+                        argValue = str(mchi.child(mchpi, 1).text())
+                        if argName == 'beam':
+                            argValue = beamToUuid(argValue)
+                        else:
+                            argValue = raycing.parametrize(
+                                argValue)
+                        outKWArgs[argName] = argValue
+                elif str(mchi.text()) == '_object':
+                    methObjStr = str(mItem.child(mch, 1).text())
+            outDict = {'_object': methObjStr,
+                       'parameters': methKWArgs,
+                       'output': outKWArgs}
+            return outDict
+
         oeid = None
         argName = 'None'
         argValue = 'None'
@@ -3639,10 +3674,13 @@ class XrtQook(qt.QWidget):
 
                 if outDict:  # updating flow
                     flowRec = self.beamLine.flowU.get(oeid)
-
-                    for methParams in flowRec.values():
-                        methParams.update(kwargs)
-                    outDict['parameters'] = methParams
+                    
+                    if flowRec is None:
+                        outDict = buildMethodDict(methItem)
+                    else:
+                        for methParams in flowRec.values():
+                            methParams.update(kwargs)
+                        outDict['parameters'] = methParams
 
                     self.beamLine.update_flow_from_json(
                             oeid, {methObjStr: outDict})
@@ -3654,38 +3692,39 @@ class XrtQook(qt.QWidget):
             elif column == 0 and newElement is not None:  # New Element
                 if raycing.is_valid_uuid(parent.data(qt.UserRole)):  # flow
                     oeid = str(parent.data(qt.UserRole))
-                    methKWArgs = OrderedDict()
-                    outKWArgs = OrderedDict()
-                    methObjStr = ''
-                    for mch in range(item.rowCount()):
-                        mchi = item.child(mch, 0)
-                        if mchi.text() == 'parameters':
-                            for mchpi in range(mchi.rowCount()):
-                                argName = mchi.child(mchpi, 0).text()
-                                argValue = mchi.child(mchpi, 1).text()
-                                if argName == 'beam':
-                                    argValue = beamToUuid(argValue)
-                                else:
-                                    argValue = raycing.parametrize(
-                                        argValue)
-                                methKWArgs[str(argName)] = argValue
-                        elif mchi.text() == 'output':
-                            for mchpi in range(mchi.rowCount()):
-                                argName = mchi.child(mchpi, 0).text()
-                                argValue = mchi.child(mchpi, 1).text()
-                                if argName == 'beam':
-                                    argValue = beamToUuid(argValue)
-                                else:
-                                    argValue = raycing.parametrize(
-                                        argValue)
-                                outKWArgs[str(argName)] = argValue
-                        elif mchi.text() == '_object':
-                            methObjStr = str(item.child(mch, 1).text())
-                    outDict = {'_object': methObjStr,
-                               'parameters': methKWArgs,
-                               'output': outKWArgs}
+#                    methKWArgs = OrderedDict()
+#                    outKWArgs = OrderedDict()
+#                    methObjStr = ''
+                    outDict = buildMethodDict(item)
+#                    for mch in range(item.rowCount()):
+#                        mchi = item.child(mch, 0)
+#                        if mchi.text() == 'parameters':
+#                            for mchpi in range(mchi.rowCount()):
+#                                argName = mchi.child(mchpi, 0).text()
+#                                argValue = mchi.child(mchpi, 1).text()
+#                                if argName == 'beam':
+#                                    argValue = beamToUuid(argValue)
+#                                else:
+#                                    argValue = raycing.parametrize(
+#                                        argValue)
+#                                methKWArgs[str(argName)] = argValue
+#                        elif mchi.text() == 'output':
+#                            for mchpi in range(mchi.rowCount()):
+#                                argName = mchi.child(mchpi, 0).text()
+#                                argValue = mchi.child(mchpi, 1).text()
+#                                if argName == 'beam':
+#                                    argValue = beamToUuid(argValue)
+#                                else:
+#                                    argValue = raycing.parametrize(
+#                                        argValue)
+#                                outKWArgs[str(argName)] = argValue
+#                        elif mchi.text() == '_object':
+#                            methObjStr = str(item.child(mch, 1).text())
+#                    outDict = {'_object': methObjStr,
+#                               'parameters': methKWArgs,
+#                               'output': outKWArgs}
 
-                    methStr = methObjStr.split('.')[-1]
+                    methStr = outDict['_object'].split('.')[-1]
                     self.beamLine.update_flow_from_json(
                             oeid, {methStr: outDict})
                     self.beamLine.sort_flow()

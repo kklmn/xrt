@@ -358,7 +358,7 @@ class xrtGlow(qt.QWidget):
                     if argMat is not None:
                         oeProps[argName] = argMat.name
 
-            catDict = {'Orientation': raycing.orientationArgSet}
+            catDict = {'Position': raycing.orientationArgSet}
             if oeType == 0:  # source
                 if hasattr(oeObj, 'eE'):
                     catDict.update({
@@ -2901,14 +2901,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         vboStore['vao'] = vao
 
         if not hasattr(beam, 'iMax'):
-            beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays])
-            self.updateGlobalIntensity(beam.iMax)
-        vboStore['iMax'] = beam.iMax
-#        self.updateColorLimits(np.min(dataColor[goodRays]),
-#                               np.max(dataColor[goodRays]))
+            beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays]) if\
+                len(goodRays) > 0 else 0
 
-#        else:
-#        self.getColorLimits()  # TODO: VERY DIRTY WORKAROUND
+        vboStore['iMax'] = beam.iMax
 
         self.beamBufferDict[beamTag] = vboStore
 
@@ -3005,11 +3001,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beamvbo['goodLen'] = len(goodRays)
         beamvbo['lostLen'] = len(lostRays)
 
-        beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays])
-        self.updateGlobalIntensity(beam.iMax)
+        beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays]) if\
+            len(goodRays) > 0 else 0
+
         beamvbo['iMax'] = beam.iMax
-#        self.updateColorLimits(np.min(dataColor[goodRays]),
-#                               np.max(dataColor[goodRays]))
 
     def render_beam(self, beamTag, model, view, projection, target=None):
         """beam: ('oeuuid', 'beamKey') """
@@ -7270,6 +7265,10 @@ class OEExplorer(qt.QDialog):
         self.table.setContextMenuPolicy(qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         self.table.expandAll()
+
+#        comboDelegate = qt.DynamicArgumentDelegate(mainWidget=self)
+#        self.table.setItemDelegateForColumn(1, comboDelegate)
+
         # Buttons
         self.button_box = qt.QDialogButtonBox()
         self.ok_button = self.button_box.addButton(
@@ -7295,15 +7294,20 @@ class OEExplorer(qt.QDialog):
 
         if self.beamLine is None:
             layout.addWidget(widgetL)
+            self.liveUpdateEnabled = False
+        elif self.beamLine.beamsDictU.get(elementId) is None:
+            layout.addWidget(widgetL)
+            self.liveUpdateEnabled = False
         else:
-            bdu = self.beamLine.beamsDictU
-            self.beamDict = bdu.get(elementId)
+            self.beamDict = self.beamLine.beamsDictU.get(elementId)
 
             self.plotControlPanel = qt.QGroupBox(self)
             self.plotControlPanel.setFlat(False)
             self.plotControlPanel.setTitle("Plot Controls")
             combo = qt.QComboBox()
-            combo.addItems(list(self.beamDict.keys()))
+            allBeams = list(self.beamDict.keys())
+            combo.addItems(allBeams)
+            combo.setCurrentText(str(allBeams[-1]))
     #        combo.activated.connect(self.set_beam)
             combo.currentTextChanged.connect(self.set_beam)
     #        combo.activated.connect(lambda: self.commitData.emit(combo))
@@ -7336,8 +7340,8 @@ class OEExplorer(qt.QDialog):
     #        button.clicked.connect(self.plot_beam)
     #        controlLayout.addWidget(button)
 
-            if self.beamDict:
-                defBeam = list(self.beamDict.keys())[0]
+
+            defBeam = str(combo.currentText())
             self.dynamicPlot = XYCPlot(beam=defBeam, aspect='auto',
                                        useQtWidget=True)
 
@@ -7387,11 +7391,11 @@ class OEExplorer(qt.QDialog):
 
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
-
-#            self.plot_beam()
+            self.liveUpdateEnabled = True
+            self.plot_beam()
 
         self.edited_data = {}
-        print("init complete")
+#        print("init complete")
 
 #        table_size = self.table.sizeHint()
 #        extra_height = self.button_box.sizeHint().height() + 40  # add padding
@@ -7603,6 +7607,15 @@ class OEExplorer(qt.QDialog):
         self.dynamicPlot.textStatus.set_text('')
         self.dynamicPlot.plot_plots()
         self.setWindowTitle(self.windowTitleStr)
+
+#    def getVal(self, value):
+#        if str(value) == 'round':
+#            return str(value)
+#
+#        try:
+#            return eval(str(value))
+#        except:  # analysis:ignore
+#            return str(value)
 
     def set_beam(self, beamKey):
         self.dynamicPlot.beam = str(beamKey)
