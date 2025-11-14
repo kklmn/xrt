@@ -1475,7 +1475,6 @@ def propagationProcess(q_in, q_out):
             time.sleep(0.01)
 #            continue
         elif handler.needUpdate:
-            # TODO: run propagation downstream of the updated element
             started = True if handler.startEl is None else False
 
             for oeid, meth in handler.bl.flowU.items():
@@ -1491,7 +1490,7 @@ def propagationProcess(q_in, q_out):
                         getattr(oe, func)(**fkwargs)
                     except Exception as e:
 #                        raise
-                        print(e)
+                        print("Error in PropagationProcess\n", e)
                         continue
 
                     for autoAttr in ['pitch', 'bragg', 'center']:

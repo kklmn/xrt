@@ -2385,6 +2385,44 @@ class Plate(DCM):
         self.cryst2perpTransl = -t
 
     @property
+    def limPhysX(self):
+        return self._limPhysX
+
+    @limPhysX.setter
+    def limPhysX(self, limPhysX):
+        if limPhysX is None:
+            self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE])
+            self._limPhysX2 = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE])
+#        elif isinstance(limPhysX, (list, tuple)): # np.arrays?
+#            self._limPhysX = raycing.Limits(limPhysX)
+#            self._limPhysX2 = raycing.Limits(
+#                    [-x for x in reversed(limPhysX)])
+        else:
+            self._limPhysX = raycing.Limits(limPhysX)
+            self._limPhysX2 = raycing.Limits(
+                    [-x for x in reversed(limPhysX)])
+        self.get_surface_limits()
+
+    @property
+    def limPhysY(self):
+        return self._limPhysY
+
+    @limPhysY.setter
+    def limPhysY(self, limPhysY):
+        if limPhysY is None:
+            self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE])
+            self._limPhysY2 = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                              raycing.maxHalfSizeOfOE])
+        else:
+            self._limPhysY = raycing.Limits(limPhysY)
+            self._limPhysY2 = raycing.Limits(
+                    [-x for x in reversed(limPhysY)])
+        self.get_surface_limits()
+
+    @property
     def material(self):
 #        if raycing.is_sequence(self._material):
 #            matSur = self._material[self.curSurface]

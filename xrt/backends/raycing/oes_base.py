@@ -2004,6 +2004,7 @@ class OE(object):
                     toWhere = 6
                 elif matSur.kind == 'crystal harmonics':
                     toWhere = 7
+
             if toWhere == 5:
                 oeNormal = list(
                     self.local_n_random(len(lb.E[goodN]), matSur.chi))
@@ -2269,8 +2270,8 @@ class OE(object):
                 lb.Es[goodN] *= ras
                 lb.Ep[goodN] *= rap
 
-            if (not fromVacuum) and\
-                    not (matSur.kind in ('crystal', 'multilayer')):
+            if (not fromVacuum) and material is not None and\
+                    matSur.kind  not in ('crystal', 'multilayer'):
                 # tMax in mm, refl[2]=mu0 in 1/cm
                 att = np.exp(-refl[2] * tMax[goodN] * 0.1)
                 lb.Jss[goodN] *= att
