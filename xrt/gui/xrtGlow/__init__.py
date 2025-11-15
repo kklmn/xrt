@@ -4781,7 +4781,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
         tpad = False
 
-        if qt.QtName == "PyQt4":
+        if 'pyqt4' in qt.BINDING.lower():
             deltaA = wEvent.delta()
         else:
             deltaA = wEvent.angleDelta().y() + wEvent.angleDelta().x()
@@ -7236,7 +7236,7 @@ class OEExplorer(qt.QDialog):
                     self.add_param(parentItem, nkey, nvalue, epv=epv)
                     self.original_data[nkey] = nvalue
                 self.add_param(parentItem, f"{key} rbk", value)
-                
+
             elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
                 spVal = value.strip('([])')
                 for field, val in zip(['lmin', 'lmax'], spVal.split(",")):

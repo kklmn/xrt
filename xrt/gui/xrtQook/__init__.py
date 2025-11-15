@@ -653,23 +653,23 @@ class XrtQook(qt.QWidget):
                                        tab_mode=False, language='py',
                                        font=self.defaultFont,
                                        color_scheme='Pydev')
-            if qt.QtName == "PyQt5":
-                self.codeEdit.zoom_in.connect(lambda: self.zoom(1))
-                self.codeEdit.zoom_out.connect(lambda: self.zoom(-1))
-                self.codeEdit.zoom_reset.connect(lambda: self.zoom(0))
-            else:
+            if 'pyqt5' in qt.BINDING.lower():
+                self.codeEdit.zoom_in.connect(partial(self.zoom, 1))
+                self.codeEdit.zoom_out.connect(partial(self.zoom, -1))
+                self.codeEdit.zoom_reset.connect(partial(self.zoom, 0))
+            elif 'pyqt4' in qt.BINDING.lower():
                 self.connect(self.codeEdit,
                              qt.SIGNAL('zoom_in()'),
-                             lambda: self.zoom(1))
+                             partial(self.zoom, 1))
                 self.connect(self.codeEdit,
                              qt.SIGNAL('zoom_out()'),
-                             lambda: self.zoom(-1))
+                             partial(self.zoom, -1))
                 self.connect(self.codeEdit,
                              qt.SIGNAL('zoom_reset()'),
-                             lambda: self.zoom(0))
-            qt.QShortcut(qt.QKeySequence.ZoomIn, self, lambda: self.zoom(1))
-            qt.QShortcut(qt.QKeySequence.ZoomOut, self, lambda: self.zoom(-1))
-            qt.QShortcut("Ctrl+0", self, lambda: self.zoom(0))
+                             partial(self.zoom, 0))
+            qt.QShortcut(qt.QKeySequence.ZoomIn, self, partial(self.zoom, 1))
+            qt.QShortcut(qt.QKeySequence.ZoomOut, self, partial(self.zoom, -1))
+            qt.QShortcut("Ctrl+0", self, partial(self.zoom, 0))
             for action in self.codeEdit.menu.actions()[-3:]:
                 self.codeEdit.menu.removeAction(action)
         else:
@@ -836,9 +836,9 @@ class XrtQook(qt.QWidget):
 
     def docMenu(self, position):
         menu = qt.QMenu()
-        menu.addAction("Zoom In", lambda: self.zoomDoc(1))
-        menu.addAction("Zoom Out", lambda: self.zoomDoc(-1))
-        menu.addAction("Zoom reset", lambda: self.zoomDoc(0))
+        menu.addAction("Zoom In", partial(self.zoomDoc, 1))
+        menu.addAction("Zoom Out", partial(self.zoomDoc, -1))
+        menu.addAction("Zoom reset", partial(self.zoomDoc, 0))
 #        menu.addSeparator()
 #        if str(self.webHelp.url().toString()).startswith('http:'):
 #            menu.addAction("Back", self.goBack)
@@ -3550,7 +3550,7 @@ class XrtQook(qt.QWidget):
     def updateBeamlineModel(self, oeid, kwargs):
         self.beamLineModel.blockSignals(True)
         print(oeid, kwargs)
-        
+
         self.beamLineModel.blockSignals(False)
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
@@ -3684,7 +3684,7 @@ class XrtQook(qt.QWidget):
 
                 if outDict:  # updating flow
                     flowRec = self.beamLine.flowU.get(oeid)
-                    
+
                     if flowRec is None:
                         outDict = buildMethodDict(methItem)
                     else:
