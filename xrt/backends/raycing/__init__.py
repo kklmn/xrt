@@ -1611,8 +1611,15 @@ class MessageHandler:
                                         float(value))
                         else:
                             arrayValue = getattr(element[0], arg)
-                            setattr(arrayValue, field, value)
+                            # avoid writing string to numpy array
+                            if hasattr(arrayValue, 'tolist'):
+                                idx = arrayValue._names.index(field)
+                                arrayValue = arrayValue.tolist()
+                                arrayValue[idx] = value
+                            else:
+                                setattr(arrayValue, field, value)
                             value = arrayValue
+
                     setattr(element[0], arg, value)
                     if arg.lower().startswith('center'):
                         self.bl.sort_flow()
