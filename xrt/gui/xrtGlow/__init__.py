@@ -2506,24 +2506,30 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             oe = self.beamline.oesDict[oeid][0]
 
-            args = argName.split('.')
-            arg = args[0]
-            if len(args) > 1:
-                field = args[-1]
+            argComps = argName.split('.')
+            arg0 = argComps[0]
+            if len(argComps) > 1:  # compound args: center, limits
+                field = argComps[-1]
                 if field == 'energy':
-                    if arg == 'bragg':
+                    if arg0 == 'bragg':
                         argValue = [float(argValue)]
                     else:
                         argValue = oe.material.get_Bragg_angle(float(argValue))
                 else:
-                    arrayValue = getattr(oe, arg)
-                    setattr(arrayValue, field, argValue)
+                    arrayValue = getattr(oe, arg0)
+                    # avoid writing string to numpy array
+                    if hasattr(arrayValue, 'tolist'):
+                        idx = arrayValue._names.index(field)
+                        arrayValue = arrayValue.tolist()
+                        arrayValue[idx] = argValue
+                    else:
+                        setattr(arrayValue, field, argValue)
                     argValue = arrayValue
 
             # updating local beamline tree
-            setattr(oe, arg, argValue)
+            setattr(oe, arg0, argValue)
 
-            if arg.lower().startswith('center'):
+            if arg0.lower().startswith('center'):
                 flow = copy.deepcopy(self.beamline.flowU)
                 self.beamline.sort_flow()
                 if self.parent is not None and flow != self.beamline.flowU:
@@ -2531,29 +2537,29 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.parent.updateTargets()
 
             skipUpdate = False
-            if (arg in ['pitch', 'bragg', 'center'] and
+            if (arg0 in ['pitch', 'bragg', 'center'] and
                 'auto' in str(argValue)) or\
-                (arg in ['bragg', 'pitch'] and
+                (arg0 in ['bragg', 'pitch'] and
                  isinstance(argValue, list)):
                     skipUpdate = True
 
-            if arg in orientationArgSet and not skipUpdate:
+            if arg0 in orientationArgSet and not skipUpdate:
                 self.meshDict[oeid].update_transformation_matrix()
                 self.getMinMax()
                 self.maxLen = np.max(np.abs(
                         self.minmax[0, :] - self.minmax[1, :]))
                 self.parent.updateMaxLenFromGL(self.maxLen)
-                if arg in ['pitch'] and hasattr(oe, 'reset_pq'):
+                if arg0 in ['pitch'] and hasattr(oe, 'reset_pq'):
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
-            elif arg in shapeArgSet:
+            elif arg0 in shapeArgSet:
                 if oeid not in self.needMeshUpdate:
                     self.needMeshUpdate.append(oeid)
-            elif arg in {'name'}:
+            elif arg0 in {'name'}:
                 if self.parent is not None:
                     self.parent.updateNames()
 
-            if arg in renderOnlyArgSet:
+            if arg0 in renderOnlyArgSet:
                 self.glDraw()
 
             # updating the beamline model in the runner
