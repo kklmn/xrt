@@ -123,7 +123,7 @@ if not starImport:
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
      QPushButton, QDialog, QOpenGLWidget, QToolTip, QDialogButtonBox,
-     QStyledItemDelegate, QDockWidget, QMainWindow, QStyle) = (
+     QStyledItemDelegate, QDockWidget, QMainWindow, QStyle, QTabBar) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -136,7 +136,8 @@ if not starImport:
         myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
         myQtGUI.QDialog, myQtGUI.QOpenGLWidget, myQtGUI.QToolTip,
         myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate,
-        myQtGUI.QDockWidget, myQtGUI.QMainWindow, myQtGUI.QStyle)
+        myQtGUI.QDockWidget, myQtGUI.QMainWindow, myQtGUI.QStyle,
+        myQtGUI.QTabBar)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture,
      QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D,

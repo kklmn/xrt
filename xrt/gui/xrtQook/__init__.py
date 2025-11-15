@@ -111,6 +111,8 @@ slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 # os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
 isUnitsEnabled = False  # TODO:
 
+TAB_ICON_SIZE = 32
+
 
 class LevelRestrictedModel(qt.QStandardItemModel):
     def __init__(self):
@@ -306,6 +308,8 @@ class QDockWidgetNoClose(qt.QDockWidget):  # ignores Alt+F4 on undocked widget
             bSize = height // 2
             self.buttonSize = qt.QSize(bSize, bSize)
             self.titleIcon = qt.QLabel()
+            if hasattr(self, 'dockIcon'):
+                self.titleIcon.setPixmap(self.dockIcon.pixmap(self.buttonSize))
             self.titleIcon.setVisible(True)
             layout.addWidget(self.titleIcon, 0)
             self.title = qt.QLabel(self.windowTitle())
@@ -333,6 +337,7 @@ class QDockWidgetNoClose(qt.QDockWidget):  # ignores Alt+F4 on undocked widget
             self.setTitleBarWidget(self.titleBar)
         else:
             self.setTitleBarWidget(None)
+            self.parent().setTabIcons()
 
     def toggleFloating(self):
         self.setFloating(not self.isFloating())
@@ -446,21 +451,55 @@ class XrtQook(qt.QMainWindow):
         dockFeatures = (qt.QDockWidget.DockWidgetMovable |
                         qt.QDockWidget.DockWidgetFloatable)
 
-        tabNames = "Live Doc", "xrtGlow"
+        self.tabNames = "Live Doc", "xrtGlow"
         tabWidgets = self.webHelp, self.blViewer
+        tabIcons = "icon-help.png", "3dg_256.png"
         self.docks = []
-        for i, (tabName, w) in enumerate(zip(tabNames, tabWidgets)):
+        for i, (tabName, w, tabIcon) in enumerate(zip(
+                self.tabNames, tabWidgets, tabIcons)):
             dock = QDockWidgetNoClose(tabName, self)
             dock.setAllowedAreas(qt.QtCore.Qt.RightDockWidgetArea)
             dock.setFeatures(dockFeatures)
             dock.topLevelChanged.connect(dock.changeWindowFlags)
             self.addDockWidget(qt.QtCore.Qt.RightDockWidgetArea, dock)
             dock.setWidget(w)
+            dock.dockIcon = qt.QIcon(os.path.join(self.iconsDir, tabIcon))
             if i == 0:
                 dock0 = dock
             else:
                 self.tabifyDockWidget(dock0, dock)
             self.docks.append(dock)
+
+        self.tabWidget = None
+        for tab in self.findChildren(qt.QTabBar):
+            if tab.tabText(0) == self.tabNames[0]:
+                self.tabWidget = tab
+                break
+        style = "QTabWidget>QWidget>QWidget {background: palette(window);}"\
+            "QTabBar::tab {padding: 2px 10px 0px 10px;"\
+            "margin-left: 1px; margin-right: 1px; IB} "\
+            "QTabBar::tab:hover {background: #6087cefa;}"\
+            "QTabBar::tab:selected {border-top: 3px solid lightblue; "\
+            "font-weight: 700; AB}"
+        # if csi.onMac:
+        AB = f"background: white; height: {TAB_ICON_SIZE+2};"
+        IB = f"height: {TAB_ICON_SIZE};"
+        style = style.replace("AB", AB).replace("IB", IB)
+        self.tabWidget.setStyleSheet(style)
+        iconSize = int(TAB_ICON_SIZE*0.9)
+        self.tabWidget.setIconSize(qt.QSize(iconSize, iconSize))
+
+        self.setTabIcons()
+
+    def setTabIcons(self):
+        for dock, tabName in zip(self.docks, self.tabNames):
+            # tab order is unknown:
+            for itab in range(self.tabWidget.count()):
+                if self.tabWidget.tabText(itab) == tabName:
+                    break
+            else:
+                continue
+            self.tabWidget.setTabIcon(itab, dock.dockIcon)
 
     def check_pypi_version(self):
         try:
@@ -554,7 +593,7 @@ class XrtQook(qt.QMainWindow):
             OCLAction.triggered.connect(self.showOCLinfo)
 
         tutorAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, 'home.png')),
+            qt.QIcon(os.path.join(self.iconsDir, 'icon-info.png')),
             'Show Welcome Screen',
             self)
         tutorAction.setShortcut('Ctrl+H')
