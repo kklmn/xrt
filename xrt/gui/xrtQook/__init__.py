@@ -1347,6 +1347,11 @@ class XrtQook(qt.QMainWindow):
         objRoot = None
         obj = None
         model = selItem.model()
+        if selItem.column() > 0:
+            ind = selItem.index().siblingAtColumn(0)
+            testItem = model.itemFromIndex(ind)
+            if testItem is not None:
+                selItem = testItem
         if model == self.beamLineModel:
             if selItem.hasChildren():
                 if level < 3 and selItem.text() != 'properties':
@@ -3387,6 +3392,8 @@ class XrtQook(qt.QMainWindow):
                 if selectedItem.child(ic, 0).text() == "_object":
                     elstr = str(selectedItem.child(ic, 1).text())
                     break
+            else:
+                return
             elcls = eval(elstr)
             if hasattr(elcls, 'hiddenMethods'):
                 hmList = elcls.hiddenMethods
