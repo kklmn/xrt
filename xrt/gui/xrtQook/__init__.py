@@ -924,7 +924,7 @@ class XrtQook(qt.QWidget):
         self.addElement(copyFrom=blProps,
                         isRoot=True)
 
-        self.tree.expand(self.rootBLItem.index())
+        # self.tree.expand(self.rootBLItem.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.tree.setItemDelegateForColumn(1, comboDelegate)
 
@@ -1255,7 +1255,7 @@ class XrtQook(qt.QWidget):
     def capitalize(self, view, item):
         self.setIBold(item)
         view.setCurrentIndex(item.index())
-        view.expand(item.index())
+        # view.expand(item.index())
         view.setColumnWidth(0, int(view.width()/3))
 
     def getObjStr(self, selItem, level):
