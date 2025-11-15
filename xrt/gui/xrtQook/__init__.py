@@ -728,7 +728,7 @@ class XrtQook(qt.QWidget):
                 if argMat is not None:
                     oeProps[argName] = argMat.name
 
-        catDict = {'Orientation': raycing.orientationArgSet}
+        catDict = {'Position': raycing.orientationArgSet}
         if oeType == 0:  # source
             if hasattr(oeObj, 'eE'):
                 catDict.update({
@@ -757,9 +757,10 @@ class XrtQook(qt.QWidget):
             # TODO: update tree
             elViewer.propertiesChanged.connect(
                     partial(glWidget.update_beamline, oeuuid))
+            elViewer.propertiesChanged.connect(
+                    partial(self.updateBeamlineModel, oeuuid))
 #        if (elViewer.exec_()):
-        if (elViewer.show()):
-            pass
+        elViewer.show()
 
     def runMaterialViewer(self, matuuid=None):
         matobj = self.beamLine.materialsDict.get(matuuid)
@@ -3546,6 +3547,12 @@ class XrtQook(qt.QWidget):
 #                        self.beamLine.beamsDict[str(item.text())] = value
 #                        break
 
+    def updateBeamlineModel(self, oeid, kwargs):
+        self.beamLineModel.blockSignals(True)
+        print(oeid, kwargs)
+        
+        self.beamLineModel.blockSignals(False)
+
     def updateBeamlineMaterials(self, item=None, newElement=None):
         # TODO: move deletion here
         kwargs = {}
@@ -4363,6 +4370,7 @@ class PlotViewer(qt.QDialog):
     def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
                  plotId=None):
         super().__init__(parent)
+        self.setAttribute(qt.WA_DeleteOnClose)
         self.setWindowTitle("Live Plot Builder")
         plotProps['useQtWidget'] = True
         plotInit = {'Project': {'plots': {'plot': plotProps}}}

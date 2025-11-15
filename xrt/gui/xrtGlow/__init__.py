@@ -7172,6 +7172,7 @@ class OEExplorer(qt.QDialog):
                  epicsDict={}, viewOnly=False, beamLine=None,
                  categoriesDict=None):
         super().__init__(parent)
+        self.setAttribute(qt.WA_DeleteOnClose)
         self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
                 'name'))
         self.setWindowTitle(self.windowTitleStr)
