@@ -371,13 +371,13 @@ class OE(object):
             self._reset_pq()
 
         if hasattr(self, '_RPQ'):
-            if self._RPQ is not None:
-                self._R = self.get_Rmer_from_Coddington(self._RPQ[0],
-                                                        self._RPQ[1])
+            if self._RInit is not None:
+                self._R = self.get_Rmer_from_Coddington(self._RInit[0],
+                                                        self._RInit[1])
         if hasattr(self, '_rPQ'):
-            if self._rPQ is not None:
-                self._r = self.get_rsag_from_Coddington(self._rPQ[0],
-                                                        self._rPQ[1])
+            if self._rInit is not None:
+                self._r = self.get_rsag_from_Coddington(self._rInit[0],
+                                                        self._rInit[1])
         if hasattr(self, '_RmPQ'):
             if self._RmPQ is not None:
                 self._Rm = self.get_Rmer_from_Coddington(self._RmPQ[0],

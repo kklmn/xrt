@@ -593,13 +593,13 @@ class BentLaueCylinder(OE):
     @R.setter
     def R(self, R):
         if isinstance(R, (list, tuple)):
-            self._RPQ = R
+            self._RInit = R
             self._R = self.get_Rmer_from_Coddington(R[0], R[1])
         elif R is None:
-            self._RPQ = None
+            self._RInit = None
             self._R = 1e100
         else:
-            self._RPQ = None
+            self._RInit = R
             self._R = R
         self._reset_material()
 
@@ -1065,13 +1065,13 @@ class BentFlatMirror(OE):
     @R.setter
     def R(self, R):
         if isinstance(R, (list, tuple)):
-            self._RPQ = R
+            self._RInit = R
             self._R = self.get_Rmer_from_Coddington(R[0], R[1])
         elif R is None:
-            self._RPQ = None
+            self._RInit = None
             self._R = 1e100
         else:
-            self._RPQ = None
+            self._RInit = R
             self._R = R
 
     def __pop_kwargs(self, **kwargs):
@@ -1157,13 +1157,13 @@ class ToroidMirror(OE):
     @R.setter
     def R(self, R):
         if isinstance(R, (list, tuple)):
-            self._RPQ = R
+            self._RInit = R
             self._R = self.get_Rmer_from_Coddington(*R)
         elif R is None:
-            self._RPQ = None
+            self._RInit = None
             self._R = 1e100
         else:
-            self._RPQ = None
+            self._RInit = R
             self._R = R
 
     @property
@@ -1175,13 +1175,13 @@ class ToroidMirror(OE):
         if r == 0:
             raise ValueError("r must be non-zero")
         if isinstance(r, (list, tuple)):
-            self._rPQ = r
+            self._rInit = r
             self._r = self.get_rsag_from_Coddington(*r)
         elif r is None:
-            self._rPQ = None
+            self._rInit = None
             self._r = 1e100
         else:
-            self._rPQ = None
+            self._rInit = r
             self._r = r
 
     def __pop_kwargs(self, **kwargs):

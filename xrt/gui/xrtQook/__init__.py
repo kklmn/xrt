@@ -720,7 +720,7 @@ class XrtQook(qt.QWidget):
         oeInitProps = {}
         for argName, argValue in oeProps.items():
             if hasattr(oeObj, f'_{argName}Init'):
-                oeInitProps[argName] = argValue
+                oeInitProps[argName] = getattr(oeObj, f'_{argName}Init')
             if any(argName.lower().startswith(v) for v in
                     ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
                     raycing.is_valid_uuid(argValue):
@@ -747,13 +747,16 @@ class XrtQook(qt.QWidget):
                               initDict=oeInitProps,
                               epicsDict=getattr(glWidget,
                                                 'epicsInterface', None),
-                              viewOnly=True,
+                              viewOnly=False,
                               beamLine=self.beamLine,
                               categoriesDict=catDict)
 
         if glWidget is not None:
             glWidget.beamUpdated.connect(elViewer.update_beam)
-
+            glWidget.oePropsUpdated.connect(elViewer.update_param)
+            # TODO: update tree
+            elViewer.propertiesChanged.connect(
+                    partial(glWidget.update_beamline, oeuuid))
 #        if (elViewer.exec_()):
         if (elViewer.show()):
             pass
@@ -773,7 +776,7 @@ class XrtQook(qt.QWidget):
                 argMat = self.beamLine.materialsDict.get(argValue)
                 if argMat is not None:
                     matProps[argName] = argMat.name
-        matViewer = OEExplorer(self, matProps, viewOnly=True)
+        matViewer = OEExplorer(self, matProps, viewOnly=False)
         if (matViewer.exec_()):
             pass
 

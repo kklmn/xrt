@@ -349,7 +349,7 @@ class xrtGlow(qt.QWidget):
             oeInitProps = {}
             for argName, argValue in oeProps.items():
                 if hasattr(oeObj, f'_{argName}Init'):
-                    oeInitProps[argName] = argValue
+                    oeInitProps[argName] = getattr(oeObj, f'_{argName}Init')
                 if any(argName.lower().startswith(v) for v in
                         ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
                         raycing.is_valid_uuid(argValue):
@@ -375,14 +375,15 @@ class xrtGlow(qt.QWidget):
                                   initDict=oeInitProps,
                                   epicsDict=getattr(self.customGlWidget,
                                                     'epicsInterface', None),
-                                  viewOnly=True,
+                                  viewOnly=False,
                                   beamLine=self.customGlWidget.beamline,
                                   categoriesDict=catDict)
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
-
-    #        elViewer.propertiesChanged.connect(
-    #                partial(self.customGlWidget.update_beamline, oeuuid))
+            self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
+            # TODO: update tree
+            elViewer.propertiesChanged.connect(
+                    partial(self.customGlWidget.update_beamline, oeuuid))
     #        if (elViewer.exec_()):
             if (elViewer.show()):
                 pass
@@ -2765,7 +2766,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 histPvName = f'{raycing.to_valid_var_name(msg["sender_name"])}:image'
                 if histPvName in self.epicsInterface.pv_records:
                     imgHist = np.flipud(msg['histogram'])  # Appears flipped
-                    self.epicsInterface.pv_records[histPvName].set(imgHist.flatten())
+                    self.epicsInterface.pv_records[histPvName].set(
+                            imgHist.flatten())
             elif 'repeat' in msg:
                 print("Total repeats:", msg['repeat'])
                 if self.epicsPrefix is not None:
@@ -2774,7 +2776,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                self.getColorLimits()
 #                self.glDraw()
             elif 'pos_attr' in msg:  # TODO: Update epics rbv
-                print("updated props:", msg['sender_id'], msg['pos_attr'])
+#                print("updated props:", msg['sender_id'], msg['pos_attr'])
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
                     setattr(oeLine[0], msg['pos_attr'], msg['pos_value'])
@@ -2782,7 +2784,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if self.autoSizeOe:
                         self.needMeshUpdate.append(msg['sender_id'])
                 else:
-                    self.oePropsUpdated.emit((msg['sender_id'], msg['pos_attr']))
+                    self.oePropsUpdated.emit((msg['sender_id'],
+                                              msg['pos_attr'],
+                                              msg['pos_value']))
 #                    self.meshDict[msg['sender_id']].update_transformation_matrix()
 #                    try:
 #                        self.getMinMax()
@@ -3334,7 +3338,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.meshDict[oeuuid] = mesh3D
 
     def update_oe_transform(self, posData):
-        oeid, pName = posData
+        oeid, pName, pValue = posData
         if pName in ['center']:
             try:
                 self.getMinMax()
@@ -7164,8 +7168,8 @@ class OEExplorer(qt.QDialog):
     """
     propertiesChanged = qt.Signal(dict)
 
-    def __init__(self, parent=None, dataDict=None, initDict=None,
-                 epicsDict=None, viewOnly=False, beamLine=None,
+    def __init__(self, parent=None, dataDict={}, initDict={},
+                 epicsDict={}, viewOnly=False, beamLine=None,
                  categoriesDict=None):
         super().__init__(parent)
         self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
@@ -7187,14 +7191,16 @@ class OEExplorer(qt.QDialog):
             qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
 
         elementId = dataDict.get('uuid')
+        self.elementId = elementId
         epicsTree = None
-        if epicsDict is not None:
+        if epicsDict:
             epicsTree = epicsDict.pv_map.get(elementId)
             if epicsTree:
                 headerLine.append('EPICS PV')
 
         self.model.setHorizontalHeaderLabels(headerLine)
         self.itemGroups = {}
+        self.categoriesDict = categoriesDict
         # We can pass different categories at init for oes/sources/mats
         if categoriesDict is not None:
             for groupName in categoriesDict.keys():
@@ -7214,17 +7220,22 @@ class OEExplorer(qt.QDialog):
                 parentItem = self.modelRoot
 
             if key in ['center']:
-                spVal = value.strip('([])')
-                for field, val in zip(['x', 'y', 'z'], spVal.split(",")):
+                if initDict.get(key) is not None:
+                    spVal = raycing.parametrize(initDict.get(key))
+                else:
+                    spVal = value.strip('([])').split(",")
+
+                for field, val in zip(['x', 'y', 'z'], spVal):
                     nkey = f"{key}.{field}"
-                    nvalue = val.strip()
+                    nvalue = str(val).strip()
                     if epicsTree is not None:
                         epv = epicsTree.get(nkey)
                     else:
                         epv = None
                     self.add_param(parentItem, nkey, nvalue, epv=epv)
                     self.original_data[nkey] = nvalue
-#                    self.add_row(nkey, nvalue)
+                self.add_param(parentItem, f"{key} rbk", value)
+                
             elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
                 spVal = value.strip('([])')
                 for field, val in zip(['lmin', 'lmax'], spVal.split(",")):
@@ -7248,8 +7259,15 @@ class OEExplorer(qt.QDialog):
                     epv = epicsTree.get(key)
                 else:
                     epv = None
-                self.add_param(parentItem, key, value, epv=epv)
                 self.original_data[key] = value
+                if key in raycing.derivedArgSet:
+                    spVal = raycing.parametrize(initDict.get(key))
+                    if spVal is None:
+                        spVal = value
+                    self.add_param(parentItem, key, spVal, epv=epv)
+                    self.add_param(parentItem, f"{key} rbk", value)
+                else:
+                    self.add_param(parentItem, key, value, epv=epv)
 
 #        for item in self.itemGroups.values():
         self.changed_data = {}
@@ -7430,19 +7448,19 @@ class OEExplorer(qt.QDialog):
         parent.appendRow([child0, child1])
         return child0
 
-    def add_value(self, parent, value, source=None):
-        """Add editable Item"""
-        child0 = qt.QStandardItem(str(value))
-        child0.setFlags(self.valueFlag)
-        child1 = qt.QStandardItem()
-        child1.setFlags(self.paramFlag)
-        child0.setDropEnabled(False)
-        child0.setDragEnabled(False)
-        if source is None:
-            parent.appendRow([child0, child1])
-        else:
-            parent.insertRow(source.row() + 1, [child0, child1])
-        return child0
+#    def add_value(self, parent, value, source=None):
+#        """Add editable Item"""
+#        child0 = qt.QStandardItem(str(value))
+#        child0.setFlags(self.valueFlag)
+#        child1 = qt.QStandardItem()
+#        child1.setFlags(self.paramFlag)
+#        child0.setDropEnabled(False)
+#        child0.setDragEnabled(False)
+#        if source is None:
+#            parent.appendRow([child0, child1])
+#        else:
+#            parent.insertRow(source.row() + 1, [child0, child1])
+#        return child0
 
     def add_param(self, parent, paramName, value, epv=None, source=None,
                   unit=None):
@@ -7451,8 +7469,11 @@ class OEExplorer(qt.QDialog):
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
-        child1.setFlags(self.paramFlag if str(paramName) == 'name' else
-                        self.valueFlag)
+        child1.setFlags(self.paramFlag if (str(paramName) == 'name' or
+               paramName.endswith('rbk')) else self.valueFlag)
+        if paramName.endswith('rbk'):
+            child1.setBackground(qt.QColor('#E0F7FA'))
+            child0.setBackground(qt.QColor('#E0F7FA'))
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
             child1u.setFlags(self.valueFlag)
@@ -7497,12 +7518,13 @@ class OEExplorer(qt.QDialog):
             return
 
         row = item.row()
-        key = self.model.item(row, 0).text()
-        value_str = item.text()
+        key = str(item.parent().child(row, 0).text())
+        if key.endswith('rbk'):
+            return
+        value_str = str(item.text())
 
-        try:  # TODO: move imports or use raycing.parametrize()
-            import ast
-            value = ast.literal_eval(value_str)
+        try:
+            value = raycing.parametrize(value_str)
         except Exception:
             value = value_str
 
@@ -7512,18 +7534,19 @@ class OEExplorer(qt.QDialog):
         # Update the changed_data dictionary
         if value_changed:
             self.changed_data[key] = value
-            self.set_row_highlight(row, True)
+            self.set_row_highlight(item, True)
         else:
             self.changed_data.pop(key, None)
-            self.set_row_highlight(row, False)
+            self.set_row_highlight(item, False)
 
-    def set_row_highlight(self, row, highlight=True):
+    def set_row_highlight(self, item, highlight=True):
+        row = item.row()
         for col in range(self.model.columnCount()):
-            item = self.model.item(row, col)
+            itemH = item.parent().child(row, col)
             if highlight:
-                item.setBackground(self.highlight_color)
+                itemH.setBackground(self.highlight_color)
             else:
-                item.setBackground(qt.QtGui.QBrush(qt.NoBrush))
+                itemH.setBackground(qt.QtGui.QBrush(qt.NoBrush))
 #                item.setBackground(qt.QtGui.QColor())  # reset to default
 
     def show_context_menu(self, position):
@@ -7570,6 +7593,24 @@ class OEExplorer(qt.QDialog):
                 self.set_row_highlight(row, False)
 
         self.changed_data.clear()
+
+    def update_param(self, pTuple):
+        print(pTuple)
+        parentItem = None
+        if pTuple[0] == self.elementId:
+            if self.categoriesDict is not None:
+                for igName, igSet in self.categoriesDict.items():
+                    if pTuple[1] in igSet:
+                        parentItem = self.itemGroups.get(igName)
+                        break
+                else:
+                    parentItem = self.itemGroups.get('Other')
+            if parentItem is not None:
+                for i in range(parentItem.rowCount()):
+                    child0 = parentItem.child(i, 0)
+                    if str(child0.text()) == f'{pTuple[1]} rbk':
+                        child1 = parentItem.child(i, 1)
+                        child1.setText(str(pTuple[2]))
 
     def update_plot(self, outList, iteration=0):
         self.dynamicPlot.nRaysAll += outList[13]
@@ -7631,7 +7672,7 @@ class OEExplorer(qt.QDialog):
 
     def update_beam(self, beamTag):
         if self.liveUpdateEnabled and beamTag == (
-                self.original_data.get('uuid'), self.dynamicPlot.beam):
+                self.elementId, self.dynamicPlot.beam):
             self.dynamicPlot.clean_plots()
             self.plot_beam()
 

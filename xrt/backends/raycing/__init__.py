@@ -263,6 +263,8 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'parabolaAxis', 'shape', 'renderStyle',
                'n', 'period'}  # TODO: sources
 
+derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}               
+               
 renderOnlyArgSet = {'renderStyle', 'name'}
 
 
