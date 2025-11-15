@@ -438,12 +438,13 @@ class XrtQook(qt.QMainWindow):
         self.initAllTrees()
         self.blRunGlow()
         self.initDocWidgets()
-        self.showWelcomeScreen()
 
         if loadLayout is not None:
             self.importLayout(layoutJSON=loadLayout)
 
         self.newElementCreated.connect(self.runElementViewer)
+
+        self.showWelcomeScreen()
 
     def initDocWidgets(self):
         self.setTabPosition(qt.QtCore.Qt.AllDockWidgetAreas,
@@ -1862,7 +1863,9 @@ class XrtQook(qt.QMainWindow):
                         break
             self.addParam(elprops, arg, argVal)
 
-        self.showDoc(elementItem.index())
+        if not isRoot:
+            self.showDoc(elementItem.index())
+
         tree.expand(rootItem.index())
         self.capitalize(tree, elementItem)
         self.blUpdateLatchOpen = True
@@ -3636,7 +3639,6 @@ class XrtQook(qt.QMainWindow):
     def updateBeamlineModel(self, oeid, kwargs):
         self.beamLineModel.blockSignals(True)
         print(oeid, kwargs)
-
         self.beamLineModel.blockSignals(False)
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
@@ -3931,10 +3933,12 @@ class XrtQook(qt.QMainWindow):
                 self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
                                                 **kwargs)
                 self.blViewer.setWindowTitle("xrtGlow")
-                self.blViewer.show()
+                # self.blViewer.show()
                 self.blViewer.parentRef = self
                 self.blViewer.parentSignal = self.statusUpdate
                 self.beamLine = self.blViewer.customGlWidget.beamline
+            except AttributeError:
+                pass
             except Exception as e:
                 print('Cannot create xrtGlow')
                 raise e

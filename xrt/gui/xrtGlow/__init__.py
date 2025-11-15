@@ -5468,7 +5468,6 @@ class OEMesh3D():
 #        meshObj.beamTexture[nsIndex] = qg.QOpenGLTexture(texture)
 #        meshObj.beamLimits[nsIndex] = beamLimits
         self.oe = parentOE
-        print(parentWidget)
         self.parent = parentWidget
         self.isStl = False
         self.shader = {}
