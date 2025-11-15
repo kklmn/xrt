@@ -394,6 +394,7 @@ class xrtGlow(qt.QWidget):
         centerCBLabel = qt.QLabel('Center view at:')
         self.centerCB = qt.QComboBox()
         self.centerCB.setMaxVisibleItems(48)
+        self.centerCB.setSizeAdjustPolicy(qt.QComboBox.AdjustToContents)
         proxy_model = qt.ComboBoxFilterProxyModel()
         proxy_model.setSourceModel(self.segmentsModel)
         self.centerCB.setModel(proxy_model)
