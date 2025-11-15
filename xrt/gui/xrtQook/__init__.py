@@ -362,7 +362,7 @@ class XrtQook(qt.QMainWindow):
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
 
-    def __init__(self, parent=None, loadLayout=None):
+    def __init__(self, parent=None, loadLayout=None, projectFile=None):
         super().__init__(parent)
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
@@ -439,8 +439,8 @@ class XrtQook(qt.QMainWindow):
         self.blRunGlow()
         self.initDocWidgets()
 
-        if loadLayout is not None:
-            self.importLayout(layoutJSON=loadLayout)
+        if loadLayout is not None or projectFile is not None:
+            self.importLayout(layoutJSON=loadLayout, filename=projectFile)
 
         self.newElementCreated.connect(self.runElementViewer)
 

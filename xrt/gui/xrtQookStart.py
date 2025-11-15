@@ -5,6 +5,8 @@ optical elements and materials to be visible in xrtQook."""
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "12 Sep 2024"
 
+import argparse
+
 import sys
 import os
 sys.path.append(os.path.join('..', '..'))
@@ -32,6 +34,16 @@ material classes, see below."""
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="starter of xrtQook")
+    parser.add_argument("-p", "--projectFile", metavar='NNN.xml',
+                        help="load an xml project file")
+    parser.add_argument("-v", "--verbosity", type=int, default=0,
+                        help="verbosity level for diagnostic purpose, "
+                        "int 0 (default) to 50")
+    args = parser.parse_args()
+
+    # DEBUG_LEVEL = args.verbosity
+
     if any('spyder' in name.lower() for name in os.environ):
         pass  # spyder is present
     else:
@@ -43,11 +55,10 @@ if __name__ == '__main__':
     # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" # means "yes", not factor
     # os.environ["QT_SCALE_FACTOR"] = "1.5"
 
-    args = sys.argv
     # args.append("--disable-web-security")
-    app = xQ.qt.QApplication(args)
+    app = xQ.qt.QApplication(sys.argv)
 
-    ex = xQ.XrtQook()
+    ex = xQ.XrtQook(projectFile=args.projectFile)
     ex.setWindowTitle("xrtQook")
     ex.show()
     sys.exit(app.exec_())
