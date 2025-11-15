@@ -311,29 +311,13 @@ class xrtGlow(qt.QWidget):
         toggleLoop.setKey("F8")
         toggleLoop.activated.connect(self.customGlWidget.toggleLoop)
 
-        self.dockToQook = qt.QShortcut(self)
-        self.dockToQook.setKey("F4")
-        self.dockToQook.activated.connect(self.toggleDock)
         tiltScreen = qt.QShortcut(self)
         tiltScreen.setKey("Ctrl+T")
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
     def closeEvent(self, event):
-        if self.parentRef is not None:
-            try:
-                parentAlive = self.parentRef.isVisible()
-                if parentAlive:
-                    event.ignore()
-                    self.setVisible(False)
-                else:
-                    self.customGlWidget.close_calc_process()
-                    event.accept()
-            except:
-                self.customGlWidget.close_calc_process()
-                event.accept()
-        else:
-            self.customGlWidget.close_calc_process()
-            event.accept()
+        self.customGlWidget.close_calc_process()
+        event.accept()
 
     def runElementViewer(self, oeuuid=None):
         if oeuuid is not None and hasattr(self.customGlWidget, 'beamline'):
@@ -394,6 +378,7 @@ class xrtGlow(qt.QWidget):
         centerCBLabel = qt.QLabel('Center view at:')
         self.centerCB = qt.QComboBox()
         self.centerCB.setMaxVisibleItems(48)
+        self.centerCB.setSizeAdjustPolicy(qt.QComboBox.AdjustToContents)
         proxy_model = qt.ComboBoxFilterProxyModel()
         proxy_model.setSourceModel(self.segmentsModel)
         self.centerCB.setModel(proxy_model)
@@ -941,11 +926,6 @@ class xrtGlow(qt.QWidget):
         self.scenePanel = qt.QWidget(self)
         sceneLayout.addStretch()
         self.scenePanel.setLayout(sceneLayout)
-
-    def toggleDock(self):
-        if self.parentRef is not None:
-            self.parentRef.catchViewer()
-            self.parentRef = None
 
     def initSegmentsModel(self, isNewModel=True):
         newModel = qt.QStandardItemModel()
@@ -5494,7 +5474,6 @@ class OEMesh3D():
 #        meshObj.beamTexture[nsIndex] = qg.QOpenGLTexture(texture)
 #        meshObj.beamLimits[nsIndex] = beamLimits
         self.oe = parentOE
-        print(parentWidget)
         self.parent = parentWidget
         self.isStl = False
         self.shader = {}
@@ -7242,7 +7221,7 @@ class OEExplorer(qt.QDialog):
                     self.add_param(parentItem, nkey, nvalue, epv=epv)
                     self.original_data[nkey] = nvalue
                 self.add_param(parentItem, f"{key} rbk", value)
-                
+
             elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
                 spVal = value.strip('([])')
                 for field, val in zip(['lmin', 'lmax'], spVal.split(",")):

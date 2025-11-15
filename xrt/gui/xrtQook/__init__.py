@@ -111,6 +111,8 @@ slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 # os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
 isUnitsEnabled = False  # TODO:
 
+TAB_ICON_SIZE = 32
+
 
 class LevelRestrictedModel(qt.QStandardItemModel):
     def __init__(self):
@@ -273,15 +275,95 @@ class SphinxWorker(qt.QObject):
         self.html_ready.emit()
 
 
-class XrtQook(qt.QWidget):
+class QDockWidgetNoClose(qt.QDockWidget):  # ignores Alt+F4 on undocked widget
+    def closeEvent(self, evt):
+        evt.setAccepted(not evt.spontaneous())
+
+    def changeWindowFlags(self, evt):
+        if self.isFloating():
+            # The dockWidget will automatically regain it's Qt::widget flag
+            # when it becomes docked again
+            self.setWindowFlags(qt.QtCore.Qt.Window |
+                                qt.QtCore.Qt.CustomizeWindowHint |
+                                qt.QtCore.Qt.WindowMaximizeButtonHint)
+            # setWindowFlags calls setParent() when changing the flags for a
+            # window, causing the widget to be hidden, so:
+            self.show()
+
+            # Custom title bar:
+            self.titleBar = qt.QWidget(self)
+            self.titleBar.setAutoFillBackground(True)
+            # self.titleBar.setStyleSheet(
+            #     "QWidget {font: bold; font-size: " + str(fontSize) + "pt;}")
+
+            # pal = self.titleBar.palette()
+            # pal.setColor(qt.QPalette.Window, qt.QColor("lightgray"))
+            # self.titleBar.setPalette(pal)
+            height = qt.QApplication.style().pixelMetric(
+                qt.QStyle.PM_TitleBarHeight)
+            self.titleBar.setMaximumHeight(height)
+            layout = qt.QHBoxLayout()
+            self.titleBar.setLayout(layout)
+
+            bSize = height // 2
+            self.buttonSize = qt.QSize(bSize, bSize)
+            self.titleIcon = qt.QLabel()
+            if hasattr(self, 'dockIcon'):
+                self.titleIcon.setPixmap(self.dockIcon.pixmap(self.buttonSize))
+            self.titleIcon.setVisible(True)
+            layout.addWidget(self.titleIcon, 0)
+            self.title = qt.QLabel(self.windowTitle())
+            layout.addWidget(self.title, 0)
+            layout.setContentsMargins(4, 4, 4, 4)
+            layout.addStretch()
+
+            self.dockButton = qt.QToolButton(self)
+            self.dockButton.setIcon(qt.QApplication.style().standardIcon(
+                qt.QStyle.SP_ToolBarVerticalExtensionButton))
+            self.dockButton.setMaximumSize(self.buttonSize)
+            self.dockButton.setAutoRaise(True)
+            self.dockButton.clicked.connect(self.toggleFloating)
+            self.dockButton.setToolTip('dock into the main window')
+            layout.addWidget(self.dockButton, 0)
+
+            self.maxButton = qt.QToolButton(self)
+            self.maxButton.setIcon(qt.QApplication.style().standardIcon(
+                qt.QStyle.SP_TitleBarMaxButton))
+            self.maxButton.setMaximumSize(self.buttonSize)
+            self.maxButton.setAutoRaise(True)
+            self.maxButton.clicked.connect(self.toggleMax)
+            layout.addWidget(self.maxButton, 0)
+
+            self.setTitleBarWidget(self.titleBar)
+        else:
+            self.setTitleBarWidget(None)
+            self.parent().setTabIcons()
+
+    def toggleFloating(self):
+        self.setFloating(not self.isFloating())
+        self.raise_()
+
+    def toggleMax(self):
+        if self.isMaximized():
+            self.showNormal()
+            self.maxButton.setIcon(qt.QApplication.style().standardIcon(
+                qt.QStyle.SP_TitleBarMaxButton))
+        else:
+            self.showMaximized()
+            self.maxButton.setIcon(qt.QApplication.style().standardIcon(
+                qt.QStyle.SP_TitleBarNormalButton))
+
+
+# class XrtQook(qt.QWidget):
+class XrtQook(qt.QMainWindow):
     plotParamUpdate = qt.Signal(tuple)
     statusUpdate = qt.Signal(tuple)
     newElementCreated = qt.Signal(str)
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
 
-    def __init__(self, loadLayout=None):
-        super(XrtQook, self).__init__()
+    def __init__(self, parent=None, loadLayout=None):
+        super().__init__(parent)
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
         self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
@@ -314,21 +396,7 @@ class XrtQook(qt.QWidget):
         self.initTabs()
 
         self.blViewer = None
-        canvasBox = qt.QHBoxLayout()
-        canvasSplitter = qt.QSplitter()
-        canvasSplitter.setChildrenCollapsible(False)
 
-        mainWidget = qt.QWidget()
-        mainWidget.setMinimumWidth(430)
-        mainBox = qt.QVBoxLayout()
-        mainBox.setContentsMargins(0, 0, 0, 0)
-        docBox = qt.QVBoxLayout()
-        docBox.setContentsMargins(0, 0, 0, 0)
-
-        self.helptab = qt.QTabWidget()
-        docWidget = qt.QWidget()
-        docWidget.setMinimumWidth(500)
-        docWidget.setMinimumHeight(620)
         # Add worker thread for handling rich text rendering
         self.sphinxThread = qt.QThread(self)
         self.sphinxWorker = SphinxWorker()
@@ -336,6 +404,8 @@ class XrtQook(qt.QWidget):
         self.sphinxThread.started.connect(self.sphinxWorker.render)
         self.sphinxWorker.html_ready.connect(self._on_sphinx_thread_html_ready)
 
+        mainBox = qt.QVBoxLayout()
+        mainBox.setContentsMargins(0, 0, 0, 0)
         mainBox.addWidget(self.toolBar)
         tabsLayout = qt.QHBoxLayout()
         tabsLayout.addWidget(self.vToolBar)
@@ -344,28 +414,93 @@ class XrtQook(qt.QWidget):
         mainBox.addItem(tabsLayout)
 #        mainBox.addWidget(self.statusBar)
         mainBox.addWidget(self.progressBar)
-        docBox.addWidget(self.webHelp)
-
+        mainWidget = qt.QWidget()
+        mainWidget.setMinimumWidth(430)
         mainWidget.setLayout(mainBox)
-        docWidget.setLayout(docBox)
-#        docWidget.setStyleSheet("border:1px solid rgb(20, 20, 20);")
-        self.helptab.addTab(docWidget, "Live Doc")
-        self.helptab.tabBar().setVisible(False)
-#        self.helptab.setTabsClosable(True)
-#        self.helptab.setWidget(docWidget)
 
-        canvasBox.addWidget(canvasSplitter)
+        if ext.isSphinx:
+            self.webHelp = QWebView()
+            self.webHelp.page().setLinkDelegationPolicy(2)
+            self.webHelp.setContextMenuPolicy(qt.CustomContextMenu)
+            self.webHelp.customContextMenuRequested.connect(self.docMenu)
 
-        canvasSplitter.addWidget(mainWidget)
-        canvasSplitter.addWidget(self.helptab)
-        self.setLayout(canvasBox)
+            self.lastBrowserLink = ''
+            self.webHelp.page().linkClicked.connect(
+                partial(self.linkClicked), type=qt.UniqueConnection)
+        else:
+            self.webHelp = qt.QTextEdit()
+            self.webHelp.setFont(self.defaultFont)
+            self.webHelp.setReadOnly(True)
+        self.webHelp.setMinimumWidth(500)
+        self.webHelp.setMinimumHeight(620)
+
+        self.setCentralWidget(mainWidget)
         self.initAllTrees()
+        self.blRunGlow()
+        self.initDocWidgets()
+
         if loadLayout is not None:
             self.importLayout(layoutJSON=loadLayout)
 
-        self.blRunGlow()
-        self.catchViewer()
         self.newElementCreated.connect(self.runElementViewer)
+
+        self.showWelcomeScreen()
+
+    def initDocWidgets(self):
+        self.setTabPosition(qt.QtCore.Qt.AllDockWidgetAreas,
+                            qt.QTabWidget.North)
+        dockFeatures = (qt.QDockWidget.DockWidgetMovable |
+                        qt.QDockWidget.DockWidgetFloatable)
+
+        self.tabNames = "Live Doc", "xrtGlow"
+        tabWidgets = self.webHelp, self.blViewer
+        tabIcons = "icon-help.png", "3dg_256.png"
+        self.docks = []
+        for i, (tabName, w, tabIcon) in enumerate(zip(
+                self.tabNames, tabWidgets, tabIcons)):
+            dock = QDockWidgetNoClose(tabName, self)
+            dock.setAllowedAreas(qt.QtCore.Qt.RightDockWidgetArea)
+            dock.setFeatures(dockFeatures)
+            dock.topLevelChanged.connect(dock.changeWindowFlags)
+            self.addDockWidget(qt.QtCore.Qt.RightDockWidgetArea, dock)
+            dock.setWidget(w)
+            dock.dockIcon = qt.QIcon(os.path.join(self.iconsDir, tabIcon))
+            if i == 0:
+                dock0 = dock
+            else:
+                self.tabifyDockWidget(dock0, dock)
+            self.docks.append(dock)
+
+        self.tabWidget = None
+        for tab in self.findChildren(qt.QTabBar):
+            if tab.tabText(0) == self.tabNames[0]:
+                self.tabWidget = tab
+                break
+        style = "QTabWidget>QWidget>QWidget {background: palette(window);}"\
+            "QTabBar::tab {padding: 2px 10px 0px 10px;"\
+            "margin-left: 1px; margin-right: 1px; IB} "\
+            "QTabBar::tab:hover {background: #6087cefa;}"\
+            "QTabBar::tab:selected {border-top: 3px solid lightblue; "\
+            "font-weight: 700; AB}"
+        # if csi.onMac:
+        AB = f"background: white; height: {TAB_ICON_SIZE+2};"
+        IB = f"height: {TAB_ICON_SIZE};"
+        style = style.replace("AB", AB).replace("IB", IB)
+        self.tabWidget.setStyleSheet(style)
+        iconSize = int(TAB_ICON_SIZE*0.9)
+        self.tabWidget.setIconSize(qt.QSize(iconSize, iconSize))
+
+        self.setTabIcons()
+
+    def setTabIcons(self):
+        for dock, tabName in zip(self.docks, self.tabNames):
+            # tab order is unknown:
+            for itab in range(self.tabWidget.count()):
+                if self.tabWidget.tabText(itab) == tabName:
+                    break
+            else:
+                continue
+            self.tabWidget.setTabIcon(itab, dock.dockIcon)
 
     def check_pypi_version(self):
         try:
@@ -450,16 +585,6 @@ class XrtQook(qt.QWidget):
         runScriptAction.setShortcut('Ctrl+R')
         runScriptAction.triggered.connect(self.execCode)
 
-        glowAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),
-            'Enable xrtGlow Live Update',
-            self)
-        if gl.isOpenGL:
-            glowAction.setShortcut('CTRL+F1')
-            glowAction.setCheckable(True)
-            glowAction.setChecked(True)
-            glowAction.toggled.connect(self.toggleGlow)
-
         OCLAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
             'OpenCL Info',
@@ -469,7 +594,7 @@ class XrtQook(qt.QWidget):
             OCLAction.triggered.connect(self.showOCLinfo)
 
         tutorAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, 'home.png')),
+            qt.QIcon(os.path.join(self.iconsDir, 'icon-info.png')),
             'Show Welcome Screen',
             self)
         tutorAction.setShortcut('Ctrl+H')
@@ -563,40 +688,14 @@ class XrtQook(qt.QWidget):
         self.toolBar.addAction(saveScriptAsAction)
         self.toolBar.addAction(runScriptAction)
         self.toolBar.addSeparator()
-        if gl.isOpenGL:
-            self.toolBar.addAction(glowAction)
         if isOpenCL:
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
 #        self.toolBar.addAction(aboutAction)
-        bbl = qt.QShortcut(self)
-        # bbl.setKey(qt.Key_F4)
-        bbl.setKey("F4")
-        bbl.activated.connect(self.catchViewer)
+
         amt = qt.QShortcut(self)
         amt.setKey(qt.CTRL + qt.Key_E)
         amt.activated.connect(self.toggleExperimentalMode)
-
-    def catchViewer(self):
-        if self.blViewer is not None:
-            if self.helptab.count() < 2:
-                self.helptab.tabBar().setVisible(True)
-                self.blViewer.oldPos = [self.blViewer.x(), self.blViewer.y()]
-                self.blViewer.dockToQook.setEnabled(False)
-                self.helptab.addTab(self.blViewer, "Glow")
-                self.blViewer.parentRef = None
-                self.helptab.setCurrentIndex(1)
-            else:
-                self.blViewer.setParent(None)
-                self.helptab.tabBar().setVisible(False)
-                self.blViewer.show()
-                self.blViewer.dockToQook.setEnabled(True)
-                try:
-                    self.blViewer.move(self.blViewer.oldPos[0],
-                                       self.blViewer.oldPos[1])
-                except:  # analysis:ignore
-                    self.blViewer.move(100, 100)
-                self.blViewer.parentRef = self
 
     def populateBeamsMenu(self, sender, beamType):
         # sender = self.sender()
@@ -622,19 +721,6 @@ class XrtQook(qt.QWidget):
         self.runTree = qt.QTreeView()
 
         self.defaultFont = qt.QFont("Courier New", 9)
-        if ext.isSphinx:
-            self.webHelp = QWebView()
-            self.webHelp.page().setLinkDelegationPolicy(2)
-            self.webHelp.setContextMenuPolicy(qt.CustomContextMenu)
-            self.webHelp.customContextMenuRequested.connect(self.docMenu)
-
-            self.lastBrowserLink = ''
-            self.webHelp.page().linkClicked.connect(
-                partial(self.linkClicked), type=qt.UniqueConnection)
-        else:
-            self.webHelp = qt.QTextEdit()
-            self.webHelp.setFont(self.defaultFont)
-            self.webHelp.setReadOnly(True)
 
         for itree in [self.tree, self.matTree, self.plotTree, self.runTree]:
             itree.setContextMenuPolicy(qt.CustomContextMenu)
@@ -654,22 +740,22 @@ class XrtQook(qt.QWidget):
                                        font=self.defaultFont,
                                        color_scheme='Pydev')
             if qt.QtName == "PyQt5":
-                self.codeEdit.zoom_in.connect(lambda: self.zoom(1))
-                self.codeEdit.zoom_out.connect(lambda: self.zoom(-1))
-                self.codeEdit.zoom_reset.connect(lambda: self.zoom(0))
-            else:
+                self.codeEdit.zoom_in.connect(partial(self.zoom, 1))
+                self.codeEdit.zoom_out.connect(partial(self.zoom, -1))
+                self.codeEdit.zoom_reset.connect(partial(self.zoom, 0))
+            elif qt.QtName == "PyQt4":
                 self.connect(self.codeEdit,
                              qt.SIGNAL('zoom_in()'),
-                             lambda: self.zoom(1))
+                             partial(self.zoom, 1))
                 self.connect(self.codeEdit,
                              qt.SIGNAL('zoom_out()'),
-                             lambda: self.zoom(-1))
+                             partial(self.zoom, -1))
                 self.connect(self.codeEdit,
                              qt.SIGNAL('zoom_reset()'),
-                             lambda: self.zoom(0))
-            qt.QShortcut(qt.QKeySequence.ZoomIn, self, lambda: self.zoom(1))
-            qt.QShortcut(qt.QKeySequence.ZoomOut, self, lambda: self.zoom(-1))
-            qt.QShortcut("Ctrl+0", self, lambda: self.zoom(0))
+                             partial(self.zoom, 0))
+            qt.QShortcut(qt.QKeySequence.ZoomIn, self, partial(self.zoom, 1))
+            qt.QShortcut(qt.QKeySequence.ZoomOut, self, partial(self.zoom, -1))
+            qt.QShortcut("Ctrl+0", self, partial(self.zoom, 0))
             for action in self.codeEdit.menu.actions()[-3:]:
                 self.codeEdit.menu.removeAction(action)
         else:
@@ -836,9 +922,9 @@ class XrtQook(qt.QWidget):
 
     def docMenu(self, position):
         menu = qt.QMenu()
-        menu.addAction("Zoom In", lambda: self.zoomDoc(1))
-        menu.addAction("Zoom Out", lambda: self.zoomDoc(-1))
-        menu.addAction("Zoom reset", lambda: self.zoomDoc(0))
+        menu.addAction("Zoom In", partial(self.zoomDoc, 1))
+        menu.addAction("Zoom Out", partial(self.zoomDoc, -1))
+        menu.addAction("Zoom reset", partial(self.zoomDoc, 0))
 #        menu.addSeparator()
 #        if str(self.webHelp.url().toString()).startswith('http:'):
 #            menu.addAction("Back", self.goBack)
@@ -924,7 +1010,7 @@ class XrtQook(qt.QWidget):
         self.addElement(copyFrom=blProps,
                         isRoot=True)
 
-        self.tree.expand(self.rootBLItem.index())
+        # self.tree.expand(self.rootBLItem.index())
         self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.tree.setItemDelegateForColumn(1, comboDelegate)
 
@@ -975,7 +1061,6 @@ class XrtQook(qt.QWidget):
         self.pltColorCounter = 0
         self.fileDescription = ""
 #        self.descrEdit.setText("")
-        self.showWelcomeScreen()
         self.writeCodeBox("")
         self.setWindowTitle("xrtQook")
         self.prefixtab = "\t"
@@ -1255,7 +1340,7 @@ class XrtQook(qt.QWidget):
     def capitalize(self, view, item):
         self.setIBold(item)
         view.setCurrentIndex(item.index())
-        view.expand(item.index())
+        # view.expand(item.index())
         view.setColumnWidth(0, int(view.width()/3))
 
     def getObjStr(self, selItem, level):
@@ -1459,6 +1544,7 @@ class XrtQook(qt.QWidget):
             locos, pythonplatform.python_version(), Qt_version, qt.QtName,
             PyQt_version, strOpenGL, strOpenCL, strSphinx, strXrt)
         self.showTutorial(txt, "xrtQook", img_path='../_images')
+        self.docks[0].raise_()
 
     def showDescrByTab(self, tab):
         if tab == 4:
@@ -1547,6 +1633,7 @@ class XrtQook(qt.QWidget):
             argDocStr = "OpenCL Platforms and Devices\n\n" + argDocStr
             self.webHelp.setText(textwrap.dedent(argDocStr))
             self.webHelp.setReadOnly(True)
+        self.docks[0].raise_()
 
     def addObject(self, view, parent, obj):
         child0 = qt.QStandardItem('_object')
@@ -1776,7 +1863,9 @@ class XrtQook(qt.QWidget):
                         break
             self.addParam(elprops, arg, argVal)
 
-        self.showDoc(elementItem.index())
+        if not isRoot:
+            self.showDoc(elementItem.index())
+
         tree.expand(rootItem.index())
         self.capitalize(tree, elementItem)
         self.blUpdateLatchOpen = True
@@ -2636,7 +2725,7 @@ class XrtQook(qt.QWidget):
 
             tmpAutoUpdate = self.isGlowAutoUpdate
             if tmpAutoUpdate:
-                self.toggleGlow(False)
+                self.docks[1].raise_()
 
             # Deleting existing elements
 
@@ -2708,7 +2797,7 @@ class XrtQook(qt.QWidget):
             self.tabs.setCurrentWidget(self.tree)
 
             if tmpAutoUpdate:
-                self.toggleGlow(True)
+                self.docks[1].raise_()
 
 #            if self.isGlowAutoUpdate:
 #                self.blRunGlow()
@@ -3550,7 +3639,6 @@ class XrtQook(qt.QWidget):
     def updateBeamlineModel(self, oeid, kwargs):
         self.beamLineModel.blockSignals(True)
         print(oeid, kwargs)
-        
         self.beamLineModel.blockSignals(False)
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
@@ -3684,7 +3772,7 @@ class XrtQook(qt.QWidget):
 
                 if outDict:  # updating flow
                     flowRec = self.beamLine.flowU.get(oeid)
-                    
+
                     if flowRec is None:
                         outDict = buildMethodDict(methItem)
                     else:
@@ -3838,17 +3926,6 @@ class XrtQook(qt.QWidget):
 #                pass
 #        self.blUpdateLatchOpen = True
 
-    def toggleGlow(self, status):
-        self.isGlowAutoUpdate = status
-        self.blRunGlow()
-        if self.blViewer is not None:
-            if hasattr(self.blViewer.customGlWidget, 'input_queue'):
-                self.blViewer.customGlWidget.input_queue.put({
-                            "command": "auto_update",
-                            "object_type": "beamline",
-                            "kwargs": {"value": int(status)}
-                            })
-
     def blRunGlow(self, kwargs={}):
         if self.blViewer is None:
             try:
@@ -3856,15 +3933,15 @@ class XrtQook(qt.QWidget):
                 self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
                                                 **kwargs)
                 self.blViewer.setWindowTitle("xrtGlow")
-                self.blViewer.show()
+                # self.blViewer.show()
                 self.blViewer.parentRef = self
                 self.blViewer.parentSignal = self.statusUpdate
-                self.beamLine = self.blViewer.customGlWidget.beamline  # Assume glow is here forever
-            except Exception as e:  # TODO: Handle exceptions
-                raise(e)
-        else:
-            if self.blViewer.isHidden():
-                self.blViewer.show()
+                self.beamLine = self.blViewer.customGlWidget.beamline
+            except AttributeError:
+                pass
+            except Exception as e:
+                print('Cannot create xrtGlow')
+                raise e
 
     def updateProgressBar(self, dataTuple):
         self.progressBar.setValue(self.prbStart +

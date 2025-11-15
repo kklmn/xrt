@@ -123,7 +123,7 @@ if not starImport:
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
      QPushButton, QDialog, QOpenGLWidget, QToolTip, QDialogButtonBox,
-     QStyledItemDelegate) = (
+     QStyledItemDelegate, QDockWidget, QMainWindow, QStyle, QTabBar) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -135,7 +135,9 @@ if not starImport:
         myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
         myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
         myQtGUI.QDialog, myQtGUI.QOpenGLWidget, myQtGUI.QToolTip,
-        myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate)
+        myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate,
+        myQtGUI.QDockWidget, myQtGUI.QMainWindow, myQtGUI.QStyle,
+        myQtGUI.QTabBar)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture,
      QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D,
@@ -196,6 +198,7 @@ except:  # analysis:ignore
 #                return
 
 QComboBox = StdQComboBox
+
 
 class DynamicArgumentDelegate(QStyledItemDelegate):
     def __init__(self, nameToModel=None, parent=None, mainWidget=None):
@@ -307,7 +310,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                         combo.setModel(self.mainWidget.lengthUnitModel)
                     elif fieldVal in ['x\'', 'z\'']:
                         combo.setModel(self.mainWidget.angleUnitModel)
-                    elif fieldVal in ['energy']:                        
+                    elif fieldVal in ['energy']:
                         combo.setModel(self.mainWidget.energyUnitModel)
                     else:
                         return QLineEdit(parent)
