@@ -70,12 +70,9 @@ MAXRAYS = 500000
 
 from multiprocessing import Process, Queue
 
-msg_start = {
-        "command": "start"}
-msg_stop = {
-        "command": "stop"}
-msg_exit = {
-        "command": "exit"}
+msg_start = {"command": "start"}
+msg_stop = {"command": "stop"}
+msg_exit = {"command": "exit"}
 
 
 def create_qt_buffer(data, isIndex=False,
@@ -260,7 +257,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
-        self.customGlWidget.setContextMenuPolicy(qt.CustomContextMenu)
+        self.customGlWidget.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
         self.customGlWidget.openElViewer.connect(self.runElementViewer)
 
@@ -282,7 +279,7 @@ class xrtGlow(qt.QWidget):
         sideLayout.addWidget(tabs)
         self.canvasSplitter = qt.QSplitter()
         self.canvasSplitter.setChildrenCollapsible(False)
-        self.canvasSplitter.setOrientation(qt.Horizontal)
+        self.canvasSplitter.setOrientation(qt.Qt.Horizontal)
         mainLayout.addWidget(self.canvasSplitter)
         sideWidget = qt.QWidget()
         sideWidget.setLayout(sideLayout)
@@ -385,7 +382,8 @@ class xrtGlow(qt.QWidget):
         self.centerCB.setModelColumn(0)
         self.centerCB.currentIndexChanged['int'].connect(
                 lambda elementid: self.centerEl(
-                        self.centerCB.itemData(elementid, role=qt.UserRole)))
+                        self.centerCB.itemData(elementid,
+                                               role=qt.Qt.UserRole)))
         self.centerCB.setCurrentIndex(0)
 
         layout = qt.QHBoxLayout()
@@ -396,7 +394,7 @@ class xrtGlow(qt.QWidget):
         self.oeTree = qt.QTreeView()
         self.oeTree.setModel(self.segmentsModel)
         self.oeTree.setIconSize(qt.QSize(32, 32))
-        self.oeTree.setContextMenuPolicy(qt.CustomContextMenu)
+        self.oeTree.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.oeTree.customContextMenuRequested.connect(self.oeTreeMenu)
         for clmn in range(4):
             self.oeTree.resizeColumnToContents(clmn)
@@ -417,7 +415,7 @@ class xrtGlow(qt.QWidget):
         for iaxis, axis in enumerate(['x', 'y', 'z']):
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit()
-            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
             axSlider.setRange(0, 7, 0.01)
             value = 1 if iaxis == 1 else 3
             axSlider.setValue(value)
@@ -461,7 +459,7 @@ class xrtGlow(qt.QWidget):
             rotValidator = qt.QDoubleValidator()
             rotValidator.setRange(-rLim, rLim, 9)
             axEdit.setValidator(rotValidator)
-            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
             axSlider.setRange(-rLim, rLim, 0.01)
             axSlider.setValue(0)
             axEdit.editingFinished.connect(
@@ -523,7 +521,7 @@ class xrtGlow(qt.QWidget):
                 (0.2, 2., 0.2, 3.))):
             axLabel = qt.QLabel(axis)
             opacityValidator = qt.QDoubleValidator()
-            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
 
             axSlider.setRange(rstart, rend, rstep)
             axSlider.setValue(val)
@@ -630,7 +628,7 @@ class xrtGlow(qt.QWidget):
             layout.addWidget(selQLE)
         colorLayout.addLayout(layout)
 
-        selSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+        selSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
         rStep = (self.customGlWidget.colorMax -
                  self.customGlWidget.colorMin) / 100.
         rValue = (self.customGlWidget.colorMax +
@@ -673,7 +671,7 @@ class xrtGlow(qt.QWidget):
         colorLayout.addLayout(layout)
 
 #        axSlider = qt.glowSlider(
-#            self, qt.Horizontal, qt.glowTopScale)
+#            self, qt.Qt.Horizontal, qt.glowTopScale)
 #        axSlider.setRange(0, 1, 0.001)
 #        axSlider.setValue(0.01)
 #        axSlider.valueChanged.connect(self.updateCutoff)
@@ -716,7 +714,7 @@ class xrtGlow(qt.QWidget):
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit("0.9")
             axEdit.setValidator(scaleValidator)
-            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
             axSlider.setRange(0, 10, 0.01)
             axSlider.setValue(0.9)
             axEdit.editingFinished.connect(
@@ -779,7 +777,7 @@ class xrtGlow(qt.QWidget):
                 ['Line opacity', 'Line width', 'Point opacity', 'Point size']):
             axLabel = qt.QLabel(axis)
             projectionValidator = qt.QDoubleValidator()
-            axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+            axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
 
             if iaxis in [0, 2]:
                 axSlider.setRange(0, 1., 0.001)
@@ -880,7 +878,7 @@ class xrtGlow(qt.QWidget):
             sceneLayout.addLayout(layout)
 
         axLabel = qt.QLabel('Font Size')
-        axSlider = qt.glowSlider(self, qt.Horizontal, qt.glowTopScale)
+        axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
         axSlider.setRange(1, 20, 0.5)
         axSlider.setValue(4)
         axSlider.valueChanged.connect(partial(self.updateFontSize, axSlider))
@@ -939,7 +937,8 @@ class xrtGlow(qt.QWidget):
                 child = qt.QStandardItem("")
                 child.setEditable(False)
                 child.setCheckable(True)
-                child.setCheckState(qt.Checked if i < 3 else qt.Unchecked)
+                child.setCheckState(
+                    qt.Qt.Checked if i < 3 else qt.Qt.Unchecked)
                 headerRow.append(child)
             newModel.invisibleRootItem().appendRow(headerRow)
         newModel.itemChanged.connect(self.updateRaysList)
@@ -950,13 +949,14 @@ class xrtGlow(qt.QWidget):
         for iCol in range(4):
             newItem = qt.QStandardItem(str(text) if iCol == 0 else "")
             if iCol == 0:
-                newItem.setData(uuid, qt.UserRole)
+                newItem.setData(uuid, qt.Qt.UserRole)
                 if icon is not None:
                     newItem.setIcon(icon)
             newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
                                  (segMode == 1 and iCol > 0) else False)
             if newItem.isCheckable():
-                newItem.setCheckState(qt.Checked if iCol < 3 else qt.Unchecked)
+                newItem.setCheckState(
+                    qt.Qt.Checked if iCol < 3 else qt.Qt.Unchecked)
             newItem.setEditable(False)
             newRow.append(newItem)
         return newRow
@@ -1096,12 +1096,12 @@ class xrtGlow(qt.QWidget):
 
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
-            oeid = oeItem.data(qt.UserRole)
+            oeid = oeItem.data(qt.Qt.UserRole)
             newName = getOeName(oeid)
             oeItem.setText(newName)
             for iech in range(oeItem.rowCount()):
                 targetItem = oeItem.child(iech, 0)
-                targetId = targetItem.data(qt.UserRole)
+                targetId = targetItem.data(qt.Qt.UserRole)
                 targetName = getOeName(targetId)
                 targetItem.setText("to {}".format(targetName))
 
@@ -1112,14 +1112,14 @@ class xrtGlow(qt.QWidget):
         # Stage 1. Remove children
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
-            uuid = oeItem.data(qt.UserRole)
+            uuid = oeItem.data(qt.Qt.UserRole)
             for iech in reversed(range(oeItem.rowCount())):
                 oeItem.removeRow(iech)
 
         # Stage 2a. Move all element rows into a temporary dictionary
         for iel in reversed(range(self.segmentsModelRoot.rowCount())):
             oeItem = self.segmentsModelRoot.child(iel, 0)
-            uuid = oeItem.data(qt.UserRole)
+            uuid = oeItem.data(qt.Qt.UserRole)
             if raycing.is_valid_uuid(uuid):
                 tmpDict[uuid] = self.segmentsModelRoot.takeRow(iel)
 
@@ -1132,14 +1132,14 @@ class xrtGlow(qt.QWidget):
         # Stage 2c. Return non-flow elements
         for modelRow in tmpDict.values():
             if modelRow is not None:
-                elementId = str(modelRow[0].data(qt.UserRole))
+                elementId = str(modelRow[0].data(qt.Qt.UserRole))
                 if elementId in self.customGlWidget.beamline.oesDict:
                     self.segmentsModelRoot.appendRow(modelRow)
 
         # Stage 3. Add children
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
-            uuid = oeItem.data(qt.UserRole)
+            uuid = oeItem.data(qt.Qt.UserRole)
             for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
                 for kwargset in targetoperations.values():
                     if kwargset.get('beam', 'none') == uuid:
@@ -1620,19 +1620,19 @@ class xrtGlow(qt.QWidget):
             menu = qt.QMenu()
             menu.addAction('Center here',
                            partial(self.centerEl,
-                                   str(selectedItem.data(qt.UserRole))))
+                                   str(selectedItem.data(qt.Qt.UserRole))))
             menu.addAction('to Local',
                            partial(self.toLocal,
-                                   str(selectedItem.data(qt.UserRole))))
+                                   str(selectedItem.data(qt.Qt.UserRole))))
             menu.addAction('to Beam Local',
                            partial(self.toBeamLocal,
-                                   str(selectedItem.data(qt.UserRole))))
+                                   str(selectedItem.data(qt.Qt.UserRole))))
             menu.addAction('restore Global',
                            partial(self.toGlobal,
-                                   str(selectedItem.data(qt.UserRole))))
+                                   str(selectedItem.data(qt.Qt.UserRole))))
             menu.addAction('View Properties',
                            partial(self.runElementViewer,
-                                   str(selectedItem.data(qt.UserRole))))
+                                   str(selectedItem.data(qt.Qt.UserRole))))
 
             menu.exec_(self.oeTree.viewport().mapToGlobal(position))
         else:
@@ -4000,16 +4000,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
         def getItem(iId, itemType='beam', targetId=None):
             item = None
             start_index = model.index(0, 0)
-            flags = qt.MatchExactly
-            matches = model.match(start_index, qt.UserRole, iId, hits=1,
+            flags = qt.Qt.MatchExactly
+            matches = model.match(start_index, qt.Qt.UserRole, iId, hits=1,
                                   flags=flags)
             if matches:
                 item = model.item(matches[0].row(), itemTypes[itemType])
                 if itemType == 'beam' and item.rowCount() > 0:
                     parent_index = model.indexFromItem(item)
                     fcIndex = item.child(0, 0).index()
-                    tgt_matches = model.match(fcIndex, qt.UserRole, targetId,
-                                              hits=-1, flags=flags)
+                    tgt_matches = model.match(fcIndex, qt.Qt.UserRole,
+                                              targetId, hits=-1, flags=flags)
                     for line in tgt_matches:
                         if line.parent() == parent_index:
                             item = model.itemFromIndex(line)
@@ -4664,9 +4664,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             return
         overOE = np.squeeze(np.array(outStencil))
 
-        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.ControlModifier))
-#        altOn = bool(int(mEvent.modifiers()) & int(qt.AltModifier))
-        shiftOn = bool(int(mEvent.modifiers()) & int(qt.ShiftModifier))
+        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ControlModifier))
+#        altOn = bool(int(mEvent.modifiers()) & int(qt.Qt.AltModifier))
+        shiftOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ShiftModifier))
 #        polarAx = qt.QVector3D(0, 0, 1)
 
         dx = mouseX - self.prevMPos[0]
@@ -4679,8 +4679,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         xm = xsn * self.cameraDistance / 3.5
         ym = ysn * self.cameraDistance / 3.5
 
-        if mEvent.buttons() == qt.LeftButton:
-            if mEvent.modifiers() == qt.NoModifier:
+        if mEvent.buttons() == qt.Qt.LeftButton:
+            if mEvent.modifiers() == qt.Qt.NoModifier:
                 sensitivity = 120
                 self.rotations[0] -= sensitivity*self.aspect*xs
                 self.rotations[1] -= sensitivity*ys
@@ -4758,13 +4758,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                           'None'))
 
     def mousePressEvent(self, mpevent):
-        ctrlOn = bool(int(mpevent.modifiers()) & int(qt.ControlModifier))
+        ctrlOn = bool(int(mpevent.modifiers()) & int(qt.Qt.ControlModifier))
         self.virtScreen['offsetOn'] = ctrlOn
         super().mousePressEvent(mpevent)
 
     def wheelEvent(self, wEvent):
-        ctrlOn = bool(int(wEvent.modifiers()) & int(qt.ControlModifier))
-        altOn = bool(int(wEvent.modifiers()) & int(qt.AltModifier))
+        ctrlOn = bool(int(wEvent.modifiers()) & int(qt.Qt.ControlModifier))
+        altOn = bool(int(wEvent.modifiers()) & int(qt.Qt.AltModifier))
         tpad = False
 
         if qt.QtName == "PyQt4":
@@ -7157,7 +7157,7 @@ class OEExplorer(qt.QDialog):
                  epicsDict={}, viewOnly=False, beamLine=None,
                  categoriesDict=None):
         super().__init__(parent)
-        self.setAttribute(qt.WA_DeleteOnClose)
+        self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
                 'name'))
         self.setWindowTitle(self.windowTitleStr)
@@ -7169,12 +7169,15 @@ class OEExplorer(qt.QDialog):
         self.viewOnly = viewOnly
         self.liveUpdateEnabled = True  # TODO: configurable
 
-        self.objectFlag = qt.ItemFlags(0)
-        self.paramFlag = qt.ItemFlags(qt.ItemIsEnabled | qt.ItemIsSelectable)
-        self.valueFlag = qt.ItemFlags(
-            qt.ItemIsEnabled | qt.ItemIsEditable | qt.ItemIsSelectable)
-        self.checkFlag = qt.ItemFlags(
-            qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
+        self.objectFlag = qt.Qt.ItemFlags(0)
+        self.paramFlag = qt.Qt.ItemFlags(
+            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+        self.valueFlag = qt.Qt.ItemFlags(
+            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsEditable |
+            qt.Qt.ItemIsSelectable)
+        self.checkFlag = qt.Qt.ItemFlags(
+            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsUserCheckable |
+            qt.Qt.ItemIsSelectable)
 
         elementId = dataDict.get('uuid')
         self.elementId = elementId
@@ -7258,7 +7261,7 @@ class OEExplorer(qt.QDialog):
 #        for item in self.itemGroups.values():
         self.changed_data = {}
         self.model.itemChanged.connect(self.on_item_changed)
-        self.highlight_color = qt.QtGui.QColor("#fffacd")
+        self.highlight_color = qt.QColor("#fffacd")
 
 #        self.table = qt.QTableView()
         self.table = qt.QTreeView()
@@ -7266,10 +7269,10 @@ class OEExplorer(qt.QDialog):
 #        self.table.horizontalHeader().setStretchLastSection(True)
 #        self.table.resizeRowsToContents()
         self.table.setAlternatingRowColors(True)
-        self.table.setContextMenuPolicy(qt.CustomContextMenu)
+        self.table.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         self.table.expandAll()
-#        self.table.setUniformRowHeights(False)
+        self.table.setUniformRowHeights(False)
 
         comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine)
         self.table.setItemDelegateForColumn(1, comboDelegate)
@@ -7533,7 +7536,7 @@ class OEExplorer(qt.QDialog):
             if highlight:
                 itemH.setBackground(self.highlight_color)
             else:
-                itemH.setBackground(qt.QtGui.QBrush(qt.NoBrush))
+                itemH.setBackground(qt.QBrush(qt.Qt.NoBrush))
 #                item.setBackground(qt.QtGui.QColor())  # reset to default
 
     def show_context_menu(self, position):

@@ -32,8 +32,7 @@ See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
 
 from __future__ import print_function
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "18 Jan 2023"
-__version__ = "1.4"
+__date__ = "16 Nov 2025"
 
 _DEBUG_ = False  # If False, exceptions inside the module are ignored
 redStr = ':red:`{0}`'
@@ -121,11 +120,11 @@ class LevelRestrictedModel(qt.QStandardItemModel):
         self._cached_drag_parent = None
 
     def supportedDragActions(self):
-        return qt.MoveAction
+        return qt.Qt.MoveAction
 
     def canDropMimeData(self, data, action, row, column, parent_index):
-        if str(parent_index.data(role=qt.UserRole)) == 'top' and column == 0\
-                and row > 1:
+        if str(parent_index.data(role=qt.Qt.UserRole)) == 'top' and \
+                column == 0 and row > 1:
             return True
         return False
 
@@ -134,15 +133,15 @@ class LevelRestrictedModel(qt.QStandardItemModel):
         if indexes:
             index = indexes[0]
             self._cached_drag_row = index.row()
-            self._cached_drag_parent = self.itemFromIndex(
-                    index.parent()) if index.parent().isValid() else self.invisibleRootItem()
+            self._cached_drag_parent = self.itemFromIndex(index.parent()) \
+                if index.parent().isValid() else self.invisibleRootItem()
         return mime
 
     def dropMimeData(self, data, action, row, column, parent_index):
-        if str(parent_index.data(role=qt.UserRole)) != 'top':
+        if str(parent_index.data(role=qt.Qt.UserRole)) != 'top':
             return False
 
-        if action != qt.MoveAction:
+        if action != qt.Qt.MoveAction:
             return False
 
         # decode source
@@ -194,7 +193,7 @@ class TreeViewEx(qt.QTreeView):
                 if str(item.text()).startswith("Instance"):
                     objIndex = index.sibling(row, 0)
                     objItem = self.model().itemFromIndex(objIndex)
-                    objid = str(objItem.data(qt.UserRole))
+                    objid = str(objItem.data(qt.Qt.UserRole))
                     if raycing.is_valid_uuid(objid):
                         self.objDoubleClicked.emit(objid)
                         return
@@ -283,9 +282,9 @@ class QDockWidgetNoClose(qt.QDockWidget):  # ignores Alt+F4 on undocked widget
         if self.isFloating():
             # The dockWidget will automatically regain it's Qt::widget flag
             # when it becomes docked again
-            self.setWindowFlags(qt.QtCore.Qt.Window |
-                                qt.QtCore.Qt.CustomizeWindowHint |
-                                qt.QtCore.Qt.WindowMaximizeButtonHint)
+            self.setWindowFlags(qt.Qt.Window |
+                                qt.Qt.CustomizeWindowHint |
+                                qt.Qt.WindowMaximizeButtonHint)
             # setWindowFlags calls setParent() when changing the flags for a
             # window, causing the widget to be hidden, so:
             self.show()
@@ -384,12 +383,15 @@ class XrtQook(qt.QMainWindow):
                            'roes', 'rapts',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
-        self.objectFlag = qt.ItemFlags(0)
-        self.paramFlag = qt.ItemFlags(qt.ItemIsEnabled | qt.ItemIsSelectable)
-        self.valueFlag = qt.ItemFlags(
-            qt.ItemIsEnabled | qt.ItemIsEditable | qt.ItemIsSelectable)
-        self.checkFlag = qt.ItemFlags(
-            qt.ItemIsEnabled | qt.ItemIsUserCheckable | qt.ItemIsSelectable)
+        self.objectFlag = qt.Qt.ItemFlags(0)
+        self.paramFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled |
+                                         qt.Qt.ItemIsSelectable)
+        self.valueFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled |
+                                         qt.Qt.ItemIsEditable |
+                                         qt.Qt.ItemIsSelectable)
+        self.checkFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled |
+                                         qt.Qt.ItemIsUserCheckable |
+                                         qt.Qt.ItemIsSelectable)
 
         self.initAllModels()
         self.initToolBar()
@@ -415,18 +417,18 @@ class XrtQook(qt.QMainWindow):
 #        mainBox.addWidget(self.statusBar)
         mainBox.addWidget(self.progressBar)
         mainWidget = qt.QWidget()
-        mainWidget.setMinimumWidth(830)
+        mainWidget.setMinimumWidth(430)
         mainWidget.setLayout(mainBox)
 
         if ext.isSphinx:
             self.webHelp = QWebView()
             self.webHelp.page().setLinkDelegationPolicy(2)
-            self.webHelp.setContextMenuPolicy(qt.CustomContextMenu)
+            self.webHelp.setContextMenuPolicy(qt.Qt.CustomContextMenu)
             self.webHelp.customContextMenuRequested.connect(self.docMenu)
 
             self.lastBrowserLink = ''
             self.webHelp.page().linkClicked.connect(
-                partial(self.linkClicked), type=qt.UniqueConnection)
+                partial(self.linkClicked), type=qt.Qt.UniqueConnection)
         else:
             self.webHelp = qt.QTextEdit()
             self.webHelp.setFont(self.defaultFont)
@@ -447,7 +449,7 @@ class XrtQook(qt.QMainWindow):
         self.showWelcomeScreen()
 
     def initDocWidgets(self):
-        self.setTabPosition(qt.QtCore.Qt.AllDockWidgetAreas,
+        self.setTabPosition(qt.Qt.AllDockWidgetAreas,
                             qt.QTabWidget.North)
         dockFeatures = (qt.QDockWidget.DockWidgetMovable |
                         qt.QDockWidget.DockWidgetFloatable)
@@ -459,10 +461,10 @@ class XrtQook(qt.QMainWindow):
         for i, (tabName, w, tabIcon) in enumerate(zip(
                 self.tabNames, tabWidgets, tabIcons)):
             dock = QDockWidgetNoClose(tabName, self)
-            dock.setAllowedAreas(qt.QtCore.Qt.RightDockWidgetArea)
+            dock.setAllowedAreas(qt.Qt.RightDockWidgetArea)
             dock.setFeatures(dockFeatures)
             dock.topLevelChanged.connect(dock.changeWindowFlags)
-            self.addDockWidget(qt.QtCore.Qt.RightDockWidgetArea, dock)
+            self.addDockWidget(qt.Qt.RightDockWidgetArea, dock)
             dock.setWidget(w)
             dock.dockIcon = qt.QIcon(os.path.join(self.iconsDir, tabIcon))
             if i == 0:
@@ -608,8 +610,8 @@ class XrtQook(qt.QMainWindow):
 #        aboutAction.triggered.connect(self.aboutCode)
 
         self.vToolBar = qt.QToolBar('Add Elements buttons')
-        self.vToolBar.setOrientation(qt.QtCore.Qt.Vertical)
-        self.vToolBar.setIconSize(qt.QtCore.QSize(56, 56))
+        self.vToolBar.setOrientation(qt.Qt.Vertical)
+        self.vToolBar.setIconSize(qt.QSize(56, 56))
 
         for menuName, amodule, afunction, aicon in zip(
                 ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
@@ -677,7 +679,7 @@ class XrtQook(qt.QMainWindow):
         self.progressBar = qt.QProgressBar()
         self.progressBar.setTextVisible(True)
         self.progressBar.setRange(0, 100)
-        self.progressBar.setAlignment(qt.AlignCenter)
+        self.progressBar.setAlignment(qt.Qt.AlignCenter)
         self.toolBar.addAction(newBLAction)
         self.toolBar.addAction(loadBLAction)
         self.toolBar.addAction(saveBLAction)
@@ -694,7 +696,7 @@ class XrtQook(qt.QMainWindow):
 #        self.toolBar.addAction(aboutAction)
 
         amt = qt.QShortcut(self)
-        amt.setKey(qt.CTRL + qt.Key_E)
+        amt.setKey(qt.Qt.CTRL + qt.Qt.Key_E)
         amt.activated.connect(self.toggleExperimentalMode)
 
     def populateBeamsMenu(self, sender, beamType):
@@ -723,7 +725,7 @@ class XrtQook(qt.QMainWindow):
         self.defaultFont = qt.QFont("Courier New", 9)
 
         for itree in [self.tree, self.matTree, self.plotTree, self.runTree]:
-            itree.setContextMenuPolicy(qt.CustomContextMenu)
+            itree.setContextMenuPolicy(qt.Qt.CustomContextMenu)
             itree.clicked.connect(self.showDoc)
 
         self.plotTree.customContextMenuRequested.connect(self.plotMenu)
@@ -744,14 +746,11 @@ class XrtQook(qt.QMainWindow):
                 self.codeEdit.zoom_out.connect(partial(self.zoom, -1))
                 self.codeEdit.zoom_reset.connect(partial(self.zoom, 0))
             elif qt.QtName == "PyQt4":
-                self.connect(self.codeEdit,
-                             qt.SIGNAL('zoom_in()'),
+                self.connect(self.codeEdit, qt.Signal('zoom_in()'),
                              partial(self.zoom, 1))
-                self.connect(self.codeEdit,
-                             qt.SIGNAL('zoom_out()'),
+                self.connect(self.codeEdit, qt.Signal('zoom_out()'),
                              partial(self.zoom, -1))
-                self.connect(self.codeEdit,
-                             qt.SIGNAL('zoom_reset()'),
+                self.connect(self.codeEdit, qt.Signal('zoom_reset()'),
                              partial(self.zoom, 0))
             qt.QShortcut(qt.QKeySequence.ZoomIn, self, partial(self.zoom, 1))
             qt.QShortcut(qt.QKeySequence.ZoomOut, self, partial(self.zoom, -1))
@@ -877,7 +876,7 @@ class XrtQook(qt.QMainWindow):
             return
 
         plotsDict = self.treeToDict(plotItem)
-        plotId = plotItem.data(qt.UserRole)
+        plotId = plotItem.data(qt.Qt.UserRole)
         plotsDict['beam'] = self.getBeamTag(plotsDict.get('beam'))
 
         plotViewer = PlotViewer(plotsDict, self, viewOnly=True,
@@ -995,8 +994,8 @@ class XrtQook(qt.QMainWindow):
         self.tree.setAcceptDrops(True)
         self.tree.setDropIndicatorShown(True)
         self.tree.setDragDropMode(qt.QTreeView.InternalMove)
-        self.tree.setDefaultDropAction(qt.MoveAction)
-#        self.tree.setUniformRowHeights(False)
+        self.tree.setDefaultDropAction(qt.Qt.MoveAction)
+        # self.tree.setUniformRowHeights(False)
 
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         headers = ['Parameter', 'Value']
@@ -1053,8 +1052,8 @@ class XrtQook(qt.QMainWindow):
         index = self.runModel.indexFromItem(self.rootRunItem)
         self.runTree.setExpanded(index, True)
 
-        self.tabs.tabBar().setTabTextColor(0, qt.black)
-        self.tabs.tabBar().setTabTextColor(2, qt.black)
+        self.tabs.tabBar().setTabTextColor(0, qt.Qt.black)
+        self.tabs.tabBar().setTabTextColor(2, qt.Qt.black)
         self.progressBar.setValue(0)
         self.progressBar.setFormat("New beamline")
 
@@ -1099,10 +1098,10 @@ class XrtQook(qt.QMainWindow):
         self.beamLineModel.itemChanged.connect(self.beamLineItemChanged)
 #        self.beamLineModel.rowsInserted.connect(self.updateOrder)
 #        self.rootBLItem = self.beamLineModel.item(0, 0)
-#        self.rootBLItem.setFlags(qt.ItemFlags(
-#            qt.ItemIsEnabled | qt.ItemIsEditable |
-#            qt.ItemIsSelectable | qt.ItemIsDropEnabled))
-#        self.rootBLItem.setData("top", qt.UserRole)
+#        self.rootBLItem.setFlags(qt.Qt.ItemFlags(
+#            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsEditable |
+#            qt.Qt.ItemIsSelectable | qt.Qt.ItemIsDropEnabled))
+#        self.rootBLItem.setData("top", qt.Qt.UserRole)
 
         self.boolModel = qt.QStandardItemModel()
         self.boolModel.appendRow(qt.QStandardItem('False'))
@@ -1267,7 +1266,7 @@ class XrtQook(qt.QMainWindow):
         for iray, ray in enumerate(['Good', 'Out', 'Over', 'Alive']):
             rayItem, rItemStr = self.addParam(self.rayModel, ray, iray+1)
             rayItem.setCheckable(True)
-            rayItem.setCheckState(qt.Checked)
+            rayItem.setCheckState(qt.Qt.Checked)
 
         self.plotModel = qt.QStandardItemModel()
         self.addValue(self.plotModel.invisibleRootItem(), "plots")
@@ -1691,7 +1690,7 @@ class XrtQook(qt.QMainWindow):
         if useSlidersInTree:  # to be replaced with delegates
             if paramName in withSlidersInTree:
                 ind = child0.index().sibling(child0.index().row(), 2)
-                slider = qt.QSlider(qt.Horizontal)
+                slider = qt.QSlider(qt.Qt.Horizontal)
                 slider.setRange(-10, 10)
                 slider.setValue(0)
                 slider.valueChanged.connect(
@@ -1727,7 +1726,7 @@ class XrtQook(qt.QMainWindow):
 
 # useSlidersInTree
     def updateSlider(self, editItem, paramName, position):
-        s = editItem.model().data(editItem.index(), qt.DisplayRole)
+        s = editItem.model().data(editItem.index(), qt.Qt.DisplayRole)
         withBrackets = False
         if paramName.lower() == 'bragg' and s[0] == '[' and s[-1] == ']':
             withBrackets = True
@@ -1740,7 +1739,7 @@ class XrtQook(qt.QMainWindow):
             s += ' {0} {1:.8g}'.format("*" if position > 0 else "/", factor)
         if withBrackets:
             s = '[' + s + ']'
-        editItem.model().setData(editItem.index(), s, qt.EditRole)
+        editItem.model().setData(editItem.index(), s, qt.Qt.EditRole)
         editItem.model().dataChanged.emit(editItem.index(), editItem.index())
 
     def objToInstance(self, obj):  # Should we rather use class name?
@@ -1823,11 +1822,11 @@ class XrtQook(qt.QMainWindow):
         if isRoot:
             self.rootBLItem = elementItem
 
-        flags = qt.ItemFlags(
-                qt.ItemIsEnabled | qt.ItemIsEditable |
-                qt.ItemIsSelectable | qt.ItemIsDropEnabled)
+        flags = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled | qt.Qt.ItemIsEditable |
+                                qt.Qt.ItemIsSelectable |
+                                qt.Qt.ItemIsDropEnabled)
 
-        flags |= qt.ItemIsDropEnabled if isRoot else qt.ItemIsDragEnabled
+        flags |= qt.Qt.ItemIsDropEnabled if isRoot else qt.Qt.ItemIsDragEnabled
 
         elementItem.setFlags(flags)
 
@@ -1858,13 +1857,13 @@ class XrtQook(qt.QMainWindow):
 
         for arg, argVal in propsDict.items():
             if arg == 'uuid':
-                elementItem.setData(argVal, qt.UserRole)
+                elementItem.setData(argVal, qt.Qt.UserRole)
                 continue
             if arg in ['material', 'material2', 'tlayer', 'blayer', 'coating',
                        'substrate']:
                 for iMat in range(self.rootMatItem.rowCount()):
                     matItem = self.rootMatItem.child(iMat, 0)
-                    if str(matItem.data(qt.UserRole)) == str(argVal):
+                    if str(matItem.data(qt.Qt.UserRole)) == str(argVal):
                         argVal = str(matItem.text())
                         break
             self.addParam(elprops, arg, argVal)
@@ -1897,7 +1896,8 @@ class XrtQook(qt.QMainWindow):
         tree.setCurrentIndex(elementItem.index())
         tree.resizeColumnToContents(0)
 
-        if not copyFrom and not isRoot and tree is self.tree and self.callWizard:
+        if not copyFrom and not isRoot and tree is self.tree and \
+                self.callWizard:
             self.newElementCreated.emit(propsDict['uuid'])
 
     def getParams(self, obj):
@@ -1994,9 +1994,9 @@ class XrtQook(qt.QMainWindow):
             objChng = str(parent.text())
             if objChng.endswith('axis'):
                 plotParent = parent.parent()
-                plotId = str(plotParent.data(qt.UserRole))
+                plotId = str(plotParent.data(qt.Qt.UserRole))
             else:
-                plotId = str(parent.data(qt.UserRole))
+                plotId = str(parent.data(qt.Qt.UserRole))
             row = item.row()
             paramName = str(parent.child(row, 0).text())
             if paramName == 'beam':
@@ -2029,11 +2029,11 @@ class XrtQook(qt.QMainWindow):
                 if str(parent.child(itemRow, 0).text()) == 'beam':
                     color = None
                     if str(item.text()) == 'None':
-                        color = qt.red
+                        color = qt.Qt.red
 #                        counter = 1
                     elif parent.child(itemRow, 0).foreground().color() ==\
-                            qt.red:
-                        color = qt.black
+                            qt.Qt.red:
+                        color = qt.Qt.black
 #                        counter = -1
 #                    else:
 #                        counter = 0
@@ -2046,14 +2046,13 @@ class XrtQook(qt.QMainWindow):
                         self.setIFontColor(parent.child(itemRow, 0), color)
                         if parent.parent() != self.rootPlotItem:
                             self.setIFontColor(parent.parent(), color)
-                if parent.child(itemRow, 0).foreground().color() !=\
-                        qt.red:
+                if parent.child(itemRow, 0).foreground().color() != qt.Qt.red:
                     for defArg, defArgVal in self.getParams(obj):
                         if str(defArg) == str(parent.child(itemRow, 0).text()):
                             if str(defArgVal) != str(item.text()):
-                                color = qt.blue
+                                color = qt.Qt.blue
                             else:
-                                color = qt.black
+                                color = qt.Qt.black
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
             item.model().blockSignals(False)
@@ -2064,7 +2063,7 @@ class XrtQook(qt.QMainWindow):
                     pyname = raycing.to_valid_var_name(item.text())
                     item.model().blockSignals(True)
                     item.setText(pyname)
-                    buuid = str(item.data(qt.UserRole))
+                    buuid = str(item.data(qt.Qt.UserRole))
                     item.model().blockSignals(False)
 
                     if item.model() is self.materialsModel:
@@ -2100,12 +2099,12 @@ class XrtQook(qt.QMainWindow):
 
 #    def colorizeTabText(self, item):
 #        if item.model() == self.beamLineModel:
-#            color = qt.red if self.blColorCounter > 0 else\
-#                qt.black
+#            color = qt.Qt.red if self.blColorCounter > 0 else\
+#                qt.Qt.black
 #            self.tabs.tabBar().setTabTextColor(0, color)
 #        elif item.model() == self.plotModel:
-#            color = qt.red if self.pltColorCounter > 0 else\
-#                qt.black
+#            color = qt.Qt.red if self.pltColorCounter > 0 else\
+#                qt.Qt.black
 #            self.tabs.tabBar().setTabTextColor(2, color)
 
     def iterateRename(self, rootItem, old_name, new_name, mask):
@@ -2129,7 +2128,7 @@ class XrtQook(qt.QMainWindow):
         self.beamModel.sort(3)
 
         elstr = str(parentItem.text())
-        eluuid = parentItem.data(qt.UserRole)
+        eluuid = parentItem.data(qt.Qt.UserRole)
 
         methodOutputDict = OrderedDict()
 
@@ -2280,7 +2279,7 @@ class XrtQook(qt.QMainWindow):
             plotItem, plotViewItem = self.addParam(
                     self.rootPlotItem, plotName, "Preview plot",
                     source=copyFrom)
-        plotItem.setData(str(raycing.uuid.uuid4()), qt.UserRole)
+        plotItem.setData(str(raycing.uuid.uuid4()), qt.Qt.UserRole)
         self.paintStatus(plotViewItem, 0)
         plotViewItem.setToolTip(
                 "Double click to preview")
@@ -2456,7 +2455,7 @@ class XrtQook(qt.QMainWindow):
         then item.parent.removeRow(item.index().row())
 
         """
-        objuuid = item.data(qt.UserRole)
+        objuuid = item.data(qt.Qt.UserRole)
         if self.blViewer is not None:
             if view is self.tree:
                 self.blViewer.customGlWidget.deletionQueue.append(objuuid)
@@ -2547,8 +2546,10 @@ class XrtQook(qt.QMainWindow):
 #                print(elementsDict)
                 if 'Project' in self.beamLine.layoutStr:
                     self.beamLine.layoutStr['Project']['plots'] = plotsDict
-                    self.beamLine.layoutStr['Project']['run_ray_tracing'] = runDict
-                    self.beamLine.layoutStr['Project']['description'] = self.fileDescription
+                    self.beamLine.layoutStr['Project']['run_ray_tracing'] = \
+                        runDict
+                    self.beamLine.layoutStr['Project']['description'] = \
+                        self.fileDescription
 
                 with open(self.layoutFileName, 'w',
                           encoding="utf-8") as json_file:
@@ -2656,7 +2657,8 @@ class XrtQook(qt.QMainWindow):
                 self.exportModel(child0)
                 child1 = item.child(ii, 1)
                 if child1 is not None and item.model() not in [self.beamModel]:
-                    if child1.flags() != self.paramFlag or str(child0.text()) == "name":
+                    if child1.flags() != self.paramFlag or \
+                            str(child0.text()) == "name":
                         if child1.isEnabled():
                             itemType = "param"
                         else:
@@ -2829,9 +2831,10 @@ class XrtQook(qt.QMainWindow):
                     if self.ntab == 1:
                         self.capitalize(view, child0)
                         if rootModel is self.beamLineModel:
-                            child0.setFlags(qt.ItemFlags(
-                                qt.ItemIsEnabled | qt.ItemIsEditable |
-                                qt.ItemIsSelectable | qt.ItemIsDragEnabled))
+                            child0.setFlags(qt.Qt.ItemFlags(
+                                qt.Qt.ItemIsEnabled | qt.Qt.ItemIsEditable |
+                                qt.Qt.ItemIsSelectable |
+                                qt.Qt.ItemIsDragEnabled))
                 elif itemType == "prop":
                     child0 = self.addProp(rootModel, itemTag)
                 elif itemType == "object":
@@ -2892,7 +2895,7 @@ class XrtQook(qt.QMainWindow):
                                         loadedParams[counter][1]) and\
                                         not loadedParams[counter][2]:
                                     self.setIFontColor(child0,
-                                                       qt.blue)
+                                                       qt.Qt.blue)
                             else:
                                 for ix in range(len(loadedParams)):
                                     if str(argName) == str(
@@ -2903,7 +2906,7 @@ class XrtQook(qt.QMainWindow):
                                             argVal = loadedParams[ix][1]
                                             self.setIFontColor(
                                                 child0,
-                                                qt.blue)
+                                                qt.Qt.blue)
                                         break
                                 child0.setText(str(argName))
                                 child0.setFlags(self.paramFlag)
@@ -2959,19 +2962,13 @@ class XrtQook(qt.QMainWindow):
 
     def updateBeamImport(self):
         outBeams = ['None']
-        self.rootBeamItem.setChild(
-            0, 1,
-            qt.QStandardItem("beamGlobalLocal"))
-        self.rootBeamItem.setChild(
-            0, 2,
-            qt.QStandardItem("None"))
-        self.rootBeamItem.setChild(
-            0, 3,
-            qt.QStandardItem('000'))
+        self.rootBeamItem.setChild(0, 1, qt.QStandardItem("beamGlobalLocal"))
+        self.rootBeamItem.setChild(0, 2, qt.QStandardItem("None"))
+        self.rootBeamItem.setChild(0, 3, qt.QStandardItem('000'))
         for ibl in range(self.rootBLItem.rowCount()):
             elItem = self.rootBLItem.child(ibl, 0)
             elNameStr = str(elItem.text())
-            eluuid = elItem.data(qt.UserRole)
+            eluuid = elItem.data(qt.Qt.UserRole)
 #            print(elNameStr, eluuid)
             if elNameStr not in ['properties', '_object']:
                 for iel in range(elItem.rowCount()):
@@ -3058,7 +3055,7 @@ class XrtQook(qt.QMainWindow):
                                 fModel.setFilterKeyColumn(3)
                                 regexp = self.intToRegexp(
                                     self.nameToBLPos(item.parent(
-                                    ).parent().data(qt.UserRole)))
+                                    ).parent().data(qt.Qt.UserRole)))
 #                                    self.nameToBLPos(str(item.parent(
 #                                    ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
@@ -3073,7 +3070,7 @@ class XrtQook(qt.QMainWindow):
                                 fModel.setFilterKeyColumn(3)
                                 fModel.setFilterRegExp(
                                     self.nameToBLPos(item.parent(
-                                    ).parent().data(qt.UserRole)))
+                                    ).parent().data(qt.Qt.UserRole)))
 #                                        self.nameToBLPos(str(
 #                                    item.parent().parent().text())))
                                 fModel.setDynamicSortFilter(True)
@@ -3108,7 +3105,7 @@ class XrtQook(qt.QMainWindow):
                                 fModel.setFilterKeyColumn(3)
                                 regexp = self.intToRegexp(
                                     self.nameToBLPos(item.parent(
-                                    ).parent().data(qt.UserRole)))
+                                    ).parent().data(qt.Qt.UserRole)))
 #                                    self.nameToBLPos(str(item.parent(
 #                                    ).parent().text())))
                                 fModel.setFilterRegExp(regexp)
@@ -3236,9 +3233,9 @@ class XrtQook(qt.QMainWindow):
                                 rayItem = qt.QListWidgetItem(str(ray))
                                 if len(re.findall(str(iray + 1),
                                                   str(value))) > 0:
-                                    rayItem.setCheckState(qt.Checked)
+                                    rayItem.setCheckState(qt.Qt.Checked)
                                 else:
-                                    rayItem.setCheckState(qt.Unchecked)
+                                    rayItem.setCheckState(qt.Qt.Unchecked)
                                 combo.addItem(rayItem)
                             combo.setMaximumHeight((
                                 combo.sizeHintForRow(1) + 1) *
@@ -3249,7 +3246,7 @@ class XrtQook(qt.QMainWindow):
                             combo = qt.QComboBox()
                             combo.setModel(self.OCLModel)
                             oclInd = self.OCLModel.findItems(
-                                value, flags=qt.MatchExactly, column=1)
+                                value, flags=qt.Qt.MatchExactly, column=1)
                             if len(oclInd) > 0:
                                 oclInd = oclInd[0].row()
                             else:
@@ -3587,7 +3584,7 @@ class XrtQook(qt.QMainWindow):
     def nameToBLPos(self, eluuid):
         for iel in range(self.rootBLItem.rowCount()):
             if str(self.rootBLItem.child(iel, 0).data(
-                    qt.UserRole)) == str(eluuid):
+                    qt.Qt.UserRole)) == str(eluuid):
                 return '{:03d}'.format(iel)
         else:
             return '000'
@@ -3661,7 +3658,7 @@ class XrtQook(qt.QMainWindow):
             matItem = item
 
         objStr = None
-        matId = str(matItem.data(qt.UserRole))
+        matId = str(matItem.data(qt.Qt.UserRole))
         paintItem = self.rootMatItem.child(matItem.row(), 1)
         # renaming existing
         if item.column() == 1 and item.text() == matItem.text():
@@ -3683,7 +3680,7 @@ class XrtQook(qt.QMainWindow):
         initStatus = 0
         try:
             initStatus = self.beamLine.init_material_from_json(matId, outDict)
-        except:
+        except Exception:
             raise
 
         self.paintStatus(paintItem, initStatus)
@@ -3747,23 +3744,23 @@ class XrtQook(qt.QMainWindow):
             parent = item.parent()
 
             if parent is None:
-#                print("No parent")
+                # print("No parent")
                 return
-#            else:
-#                print(str(parent.text()))  # TODO: print
+            # else:
+            #     print(str(parent.text()))  # TODO: print
 
             if str(parent.text()) in ['properties']:
                 oeItem = parent.parent()
-                oeid = str(oeItem.data(qt.UserRole))
+                oeid = str(oeItem.data(qt.Qt.UserRole))
             elif str(parent.text()) in ['parameters']:
                 methItem = parent.parent()
                 oeItem = methItem.parent()
-                oeid = str(oeItem.data(qt.UserRole))
+                oeid = str(oeItem.data(qt.Qt.UserRole))
                 methObjStr = methItem.text().strip('()')
                 outDict = {'_object': methObjStr}
 
-            elif raycing.is_valid_uuid(item.data(qt.UserRole)):
-                oeid = str(item.data(qt.UserRole))
+            elif raycing.is_valid_uuid(item.data(qt.Qt.UserRole)):
+                oeid = str(item.data(qt.Qt.UserRole))
 
             if column == 1:  # Existing Element
                 argValue_str = item.text()
@@ -3796,8 +3793,8 @@ class XrtQook(qt.QMainWindow):
                     outDict = kwargs
 
             elif column == 0 and newElement is not None:  # New Element
-                if raycing.is_valid_uuid(parent.data(qt.UserRole)):  # flow
-                    oeid = str(parent.data(qt.UserRole))
+                if raycing.is_valid_uuid(parent.data(qt.Qt.UserRole)):  # flow
+                    oeid = str(parent.data(qt.Qt.UserRole))
 #                    methKWArgs = OrderedDict()
 #                    outKWArgs = OrderedDict()
 #                    methObjStr = ''
@@ -3879,7 +3876,7 @@ class XrtQook(qt.QMainWindow):
                 elItem = self.rootBLItem.child(iel, 0)
                 if elItem.text() == "properties":
                     continue
-                eluuid = str(elItem.data(qt.UserRole))
+                eluuid = str(elItem.data(qt.Qt.UserRole))
                 iBeams = self.beamModel.findItems(eluuid, column=2)
                 for bItem in iBeams:
                     row = bItem.row()
@@ -4011,8 +4008,8 @@ if __name__ == '__main__':
 
         for matId in self.beamLine.sort_materials():
             for ie in range(self.rootMatItem.rowCount()):
-                if str(self.rootMatItem.child(ie, 0).data(qt.UserRole)) == matId:
-#                if str(self.rootMatItem.child(ie, 0).text()) != "None":
+                if str(self.rootMatItem.child(ie, 0).data(qt.Qt.UserRole)) == \
+                        matId:
                     matItem = self.rootMatItem.child(ie, 0)
                     ieinit = ""
                     for ieph in range(matItem.rowCount()):
@@ -4023,7 +4020,8 @@ if __name__ == '__main__':
                                 ieinit = elstr + "(" + ieinit
                             else:
                                 # import of custom materials
-                                importStr = 'import {0}'.format(klass.__module__)
+                                importStr = 'import {0}'.format(
+                                    klass.__module__)
                                 # if importStr not in codeHeader:
                                 codeHeader += importStr + '\n'
                                 ieinit = "{0}.{1}({2}".format(
@@ -4054,9 +4052,8 @@ if __name__ == '__main__':
 
         for oeId in self.beamLine.flowU:
             for ie in range(self.rootBLItem.rowCount()):
-                if str(self.rootBLItem.child(ie, 0).data(qt.UserRole)) == oeId:
-#                if self.rootBLItem.child(ie, 0).text() != "properties" and\
-#                        self.rootBLItem.child(ie, 0).text() != "_object":
+                if str(self.rootBLItem.child(ie, 0).data(qt.Qt.UserRole)) == \
+                        oeId:
                     tItem = self.rootBLItem.child(ie, 0)
                     ieinit = ""
                     ierun = ""
@@ -4068,7 +4065,8 @@ if __name__ == '__main__':
                                 ieinit = elstr + "(" + ieinit
                             else:
                                 # import of custom OEs
-                                importStr = 'import {0}'.format(klass.__module__)
+                                importStr = 'import {0}'.format(
+                                    klass.__module__)
                                 # if importStr not in codeHeader:
                                 codeHeader += importStr + '\n'
                                 ieinit = "{0}.{1}({2}".format(
@@ -4118,8 +4116,10 @@ if __name__ == '__main__':
                                     for iep, arg_def in\
                                         zip(range(mItem.rowCount()),
                                             getargspec(methodObj)[3]):
-                                        paraname = str(mItem.child(iep, 0).text())
-                                        paravalue = str(mItem.child(iep, 1).text())
+                                        paraname = str(
+                                            mItem.child(iep, 0).text())
+                                        paravalue = str(
+                                            mItem.child(iep, 1).text())
                                         if paravalue != str(arg_def):
                                             ierun += '\n{2}{0}={1},'.format(
                                                 paraname, paravalue, myTab*2)
@@ -4132,7 +4132,8 @@ if __name__ == '__main__':
                                         paraOutBeams.append(str(paravalue))
                                         outBeams.append(str(paravalue))
                                         paraOutput += str(paravalue)+", "
-                                        if len(re.findall('sources', elstr)) > 0\
+                                        if len(re.findall(
+                                                'sources', elstr)) > 0\
                                                 and tmpSourceName == "":
                                             tmpSourceName = str(paravalue)
                                             if len(re.findall('Source',
@@ -4455,7 +4456,7 @@ class PlotViewer(qt.QDialog):
     def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
                  plotId=None):
         super().__init__(parent)
-        self.setAttribute(qt.WA_DeleteOnClose)
+        self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Live Plot Builder")
         plotProps['useQtWidget'] = True
         plotInit = {'Project': {'plots': {'plot': plotProps}}}

@@ -1,156 +1,38 @@
 # -*- coding: utf-8 -*-
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "01 Nov 2017"
+__date__ = "16 Nov 2025"
 
-#try:
-#    from matplotlib.backends import qt_compat
-#except ImportError:
-#    from matplotlib.backends import qt4_compat
-#    qt_compat = qt4_compat
+import qtpy
+from qtpy.QtCore import *
+from qtpy.QtGui import *
+from qtpy.QtWidgets import *
+from qtpy.QtOpenGL import *
 
-QtImports = 'PyQt5', 'PyQt4', 'PySide2', 'PySide6'
+from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
+                        QSqlQueryModel)
 
-for QtImport in QtImports:
-    try:
-        __import__(QtImport)
-        QtName = QtImport
-        break
-    except ImportError:
-        QtName = None
-else:
-    raise ImportError("Cannot import any PyQt package!")
+QtName = qtpy.API_NAME
 
-starImport = False  # star import doesn't work with mock import needed for rtfd
-
-#if 'pyqt4' in qt_compat.QT_API.lower():  # also 'PyQt4v2'
 if QtName == "PyQt4":
-    from PyQt4 import QtGui, QtCore
-    import PyQt4.QtGui as myQtGUI
-
-    if starImport:
-        from PyQt4.QtGui import *
-        from PyQt4.QtCore import *
-        Signal = pyqtSignal
-    else:
-        from PyQt4.QtCore import (
-            SIGNAL, QUrl, QObject, QTimer, QProcess,
-            QThread, QT_VERSION_STR, PYQT_VERSION_STR, QSize)
-        from PyQt4.QtGui import QSortFilterProxyModel
-        try:
-            from PyQt4.QtCore import Signal
-        except ImportError:
-            from PyQt4.QtCore import pyqtSignal as Signal
-    import PyQt4.QtCore
-    locals().update(vars(PyQt4.QtCore.Qt))
-
-    from PyQt4.QtOpenGL import QGLWidget
-    from PyQt4.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
-                             QSqlQueryModel)
     import PyQt4.QtWebKit as QtWeb
-    try:
-        import PyQt4.Qwt5 as Qwt
-    except:  # analysis:ignore
-        pass
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as\
-        FigCanvas
-#elif 'pyqt5' in qt_compat.QT_API.lower():
-elif QtName == "PyQt5":
-    from PyQt5 import QtGui, QtCore
-    import PyQt5.QtWidgets as myQtGUI
-
-    if starImport:
-        from PyQt5.QtGui import *
-        from PyQt5.QtCore import *
-        from PyQt5.QtWidgets import *
-        Signal = pyqtSignal
-    else:
-        from PyQt5.QtCore import (
-            pyqtSignal, QUrl, QObject, QTimer, QProcess, QThread,
-            QT_VERSION_STR, PYQT_VERSION_STR, QSortFilterProxyModel, QSize)
-        try:
-            from PyQt5.QtCore import Signal
-        except ImportError:
-            from PyQt5.QtCore import pyqtSignal as Signal
-    import PyQt5.QtCore
-    locals().update(vars(PyQt5.QtCore.Qt))
-
-    from PyQt5.QtOpenGL import QGLWidget
-    from PyQt5.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
-                             QSqlQueryModel)
-    try:
-        import PyQt5.QtWebEngineWidgets as QtWeb
-    except ImportError:
-        import PyQt5.QtWebKitWidgets as QtWeb
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as\
-        FigCanvas
-elif QtName == "PySide2":
-    from PySide2 import QtGui, QtCore
-    import PySide2.QtWidgets as myQtGUI
-
-    if starImport:
-        from PySide2.QtGui import *
-        from PySide2.QtCore import *
-        from PySide2.QtWidgets import *
-    else:
-        from PySide2.QtCore import (
-            QUrl, QObject, QTimer, QProcess, QThread, QSortFilterProxyModel,
-            QSize)
-        try:
-            from PySide2.QtCore import Signal
-        except ImportError:
-            from PySide2.QtCore import pyqtSignal as Signal
-    import PySide2.QtCore
-    QT_VERSION_STR = PySide2.QtCore.qVersion()
-    PYQT_VERSION_STR = PySide2.__version__
-    locals().update(vars(PySide2.QtCore.Qt))
-
-    from PySide2.QtOpenGL import QGLWidget
-    from PySide2.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
-                              QSqlQueryModel)
-    try:
-        import PySide2.QtWebEngineWidgets as QtWeb
-    except ImportError:
-        import PySide2.QtWebKitWidgets as QtWeb
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as\
-        FigCanvas
+    from matplotlib.backends.backend_qt4agg import (
+        FigureCanvasQTAgg as FigCanvas,
+        NavigationToolbar2QT as NavigationToolbar)
 else:
-    raise ImportError("Cannot import any Python Qt package!")
+    # import PyQt5.QtCore
+    # print(list(vars(PyQt5.QtCore.Qt)))
+    # locals().update(vars(PyQt5.QtCore.Qt))
+    try:
+        from qtpy import QtWebEngineWidgets as QtWeb
+    except ImportError:
+        from qtpy import QtWebKitWidgets as QtWeb
 
-if not starImport:
-    (QWidget, QApplication, QAction, QTabWidget, QToolBar, QStatusBar,
-     QTreeView, QShortcut, QAbstractItemView, QHBoxLayout, QVBoxLayout,
-     QSplitter, StdQComboBox, QMenu, QListWidget, QTextEdit, QMessageBox,
-     QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
-     QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
-     QPushButton, QDialog, QOpenGLWidget, QToolTip, QDialogButtonBox,
-     QStyledItemDelegate, QDockWidget, QMainWindow, QStyle, QTabBar,
-     QFrame) = (
-        myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
-        myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
-        myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
-        myQtGUI.QHBoxLayout, myQtGUI.QVBoxLayout, myQtGUI.QSplitter,
-        myQtGUI.QComboBox, myQtGUI.QMenu, myQtGUI.QListWidget,
-        myQtGUI.QTextEdit, myQtGUI.QMessageBox, myQtGUI.QFileDialog,
-        myQtGUI.QListWidgetItem, myQtGUI.QGroupBox, myQtGUI.QProgressBar,
-        myQtGUI.QLabel, myQtGUI.QTableView, myQtGUI.QSizePolicy,
-        myQtGUI.QLineEdit, myQtGUI.QCheckBox, myQtGUI.QSpinBox,
-        myQtGUI.QSlider, myQtGUI.QToolButton, myQtGUI.QPushButton,
-        myQtGUI.QDialog, myQtGUI.QOpenGLWidget, myQtGUI.QToolTip,
-        myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate,
-        myQtGUI.QDockWidget, myQtGUI.QMainWindow, myQtGUI.QStyle,
-        myQtGUI.QTabBar, myQtGUI.QFrame)
-    (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
-     QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture,
-     QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D,
-     QVector2D, QMatrix3x3,
-     QQuaternion, QOpenGLVertexArrayObject, QOpenGLBuffer, QBrush, QColor) = (
-        QtGui.QIcon, QtGui.QFont, QtGui.QKeySequence, QtGui.QStandardItemModel,
-        QtGui.QStandardItem, QtGui.QPixmap, QtGui.QDoubleValidator,
-        QtGui.QIntValidator, QtGui.QDrag, QtGui.QImage, QtGui.QOpenGLTexture,
-        QtGui.QMatrix4x4, QtGui.QVector4D, QtGui.QOpenGLShaderProgram,
-        QtGui.QOpenGLShader, QtGui.QVector3D, QtGui.QVector2D, QtGui.QMatrix3x3,
-        QtGui.QQuaternion, QtGui.QOpenGLVertexArrayObject, QtGui.QOpenGLBuffer,
-        QtGui.QBrush, QtGui.QColor)
+    from matplotlib.backends.backend_qt5agg import (
+        FigureCanvasQTAgg as FigCanvas,
+        NavigationToolbar2QT as NavigationToolbar)
+
+QT_VERSION_STR = qtpy.API_NAME
+PYQT_VERSION_STR = qtpy.QT_VERSION
 
 
 class mySlider(QSlider):
@@ -171,12 +53,8 @@ class mySlider(QSlider):
         super(mySlider, self).setValue(int(value*self.scale))
 
 
-try:
-    glowSlider = Qwt.QwtSlider
-    glowTopScale = Qwt.QwtSlider.TopScale
-except:  # analysis:ignore
-    glowSlider = mySlider
-    glowTopScale = QSlider.TicksAbove
+glowSlider = mySlider
+glowTopScale = QSlider.TicksAbove
 
 
 #class QComboBox(StdQComboBox):
@@ -198,8 +76,6 @@ except:  # analysis:ignore
 #            except RuntimeError:
 #                return
 
-QComboBox = StdQComboBox
-
 
 class DynamicArgumentDelegate(QStyledItemDelegate):
     def __init__(self, nameToModel=None, parent=None, mainWidget=None,
@@ -218,11 +94,11 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         argValue = str(index.data())
         parentIndex = index.parent()
         parentIndexName = str(parentIndex.data())
-        
+
         # beamModel - only in propagation and plots
         # fluxLabels - only in plots
         # units - only in plots
-        
+
         combo = QComboBox(parent)
         combo.activated.connect(lambda: self.commitData.emit(combo))
 #        if isinstance(self.mainWidget.getVal(argValue), bool):
@@ -377,7 +253,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             model.setData(index, text)
 
     def updateEditorGeometry(self, editor, option, index):
-        editor.setGeometry(option.rect)            
+        editor.setGeometry(option.rect)
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):
     """Fields must be a dictionary {column: "filterValue"}"""
