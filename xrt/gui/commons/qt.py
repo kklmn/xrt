@@ -123,7 +123,8 @@ if not starImport:
      QFileDialog, QListWidgetItem, QGroupBox, QProgressBar, QLabel, QTableView,
      QSizePolicy, QLineEdit, QCheckBox, QSpinBox, QSlider, QToolButton,
      QPushButton, QDialog, QOpenGLWidget, QToolTip, QDialogButtonBox,
-     QStyledItemDelegate, QDockWidget, QMainWindow, QStyle, QTabBar) = (
+     QStyledItemDelegate, QDockWidget, QMainWindow, QStyle, QTabBar,
+     QFrame) = (
         myQtGUI.QWidget, myQtGUI.QApplication, myQtGUI.QAction,
         myQtGUI.QTabWidget, myQtGUI.QToolBar, myQtGUI.QStatusBar,
         myQtGUI.QTreeView, myQtGUI.QShortcut, myQtGUI.QAbstractItemView,
@@ -137,7 +138,7 @@ if not starImport:
         myQtGUI.QDialog, myQtGUI.QOpenGLWidget, myQtGUI.QToolTip,
         myQtGUI.QDialogButtonBox, myQtGUI.QStyledItemDelegate,
         myQtGUI.QDockWidget, myQtGUI.QMainWindow, myQtGUI.QStyle,
-        myQtGUI.QTabBar)
+        myQtGUI.QTabBar, myQtGUI.QFrame)
     (QIcon, QFont, QKeySequence, QStandardItemModel, QStandardItem, QPixmap,
      QDoubleValidator, QIntValidator, QDrag, QImage, QOpenGLTexture,
      QMatrix4x4, QVector4D, QOpenGLShaderProgram, QOpenGLShader, QVector3D,
@@ -201,10 +202,12 @@ QComboBox = StdQComboBox
 
 
 class DynamicArgumentDelegate(QStyledItemDelegate):
-    def __init__(self, nameToModel=None, parent=None, mainWidget=None):
+    def __init__(self, nameToModel=None, parent=None, mainWidget=None,
+                 bl=None):
         super().__init__(parent)
         self.nameToModel = nameToModel
         self.mainWidget = mainWidget
+        self.bl = bl
 
     def createEditor(self, parent, option, index):
         # TODO: split into oe/mat/plot
@@ -215,23 +218,28 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         argValue = str(index.data())
         parentIndex = index.parent()
         parentIndexName = str(parentIndex.data())
-
+        
+        # beamModel - only in propagation and plots
+        # fluxLabels - only in plots
+        # units - only in plots
+        
         combo = QComboBox(parent)
         combo.activated.connect(lambda: self.commitData.emit(combo))
-        if isinstance(self.mainWidget.getVal(argValue), bool):
+#        if isinstance(self.mainWidget.getVal(argValue), bool):
+        if str(argValue).lower() in ['false', 'true']:
             combo.addItems(['False', 'True'])
             return combo
-        elif argName in ['bl', 'beamline']:
-            combo.setEditable(True)
-            combo.setModel(self.mainWidget.beamLineModel)
-            return combo
+#        elif argName in ['bl', 'beamline']:
+#            combo.setEditable(True)
+#            combo.setModel(self.mainWidget.beamLineModel)
+#            return combo
         elif argName.startswith('beam'):
-            if parentIndexName == 'output':  # Not sure we need it if renaming is disabled
-                oeuuid = index.parent().parent().parent().data(UserRole)
-                fpModel = MultiColumnFilterProxy({1: argName,
-                                                  2: oeuuid})
-                fpModel.setSourceModel(self.mainWidget.beamModel)
-            elif parentIndexName == 'parameters':
+#            if parentIndexName == 'output':  # Not sure we need it if renaming is disabled
+#                oeuuid = index.parent().parent().parent().data(UserRole)
+#                fpModel = MultiColumnFilterProxy({1: argName,
+#                                                  2: oeuuid})
+#                fpModel.setSourceModel(self.mainWidget.beamModel)
+            if parentIndexName == 'parameters':
                 fpModel = MultiColumnFilterProxy({1: "Global"})
                 fpModel.setSourceModel(self.mainWidget.beamModel)
             else:
@@ -243,54 +251,76 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             fpModel.setSourceModel(self.mainWidget.beamModel)
             combo.setModel(fpModel)
             return combo
-        elif argName.startswith('plots'):
-            combo.setModel(self.mainWidget.plotModel)
-            combo.setEditable(True)
-            combo.setInsertPolicy(QComboBox.InsertAtCurrent)
-            return combo
+#        elif argName.startswith('plots'):
+#            combo.setModel(self.mainWidget.plotModel)
+#            combo.setEditable(True)
+#            combo.setInsertPolicy(QComboBox.InsertAtCurrent)
+#            return combo
         elif any(argName.lower().startswith(v) for v in
-                 ['mater', 'tlay', 'blay', 'coat', 'substrate']):
-            combo.setModel(self.mainWidget.materialsModel)
+                 ['mater', 'tlay', 'blay', 'coat', 'substrate']):  # mat and bl
+            if self.bl is not None:
+                combo.addItems(['None']+list(
+                        self.bl.matnamesToUUIDs.keys()))
+            elif self.mainWidget is not None:
+                combo.setModel(self.mainWidget.materialsModel)
+            else:
+                return QLineEdit(parent)
             return combo
-        elif 'kind' in argName.lower() and model is self.mainWidget.materialsModel:  # mat kind
-            combo.addItems(['mirror', 'thin mirror',
-                            'plate', 'lens', 'grating', 'FZP', 'auto'])
+        elif 'kind' in argName.lower():  # material and bl
+            if str(model.index(0, 0).data()).lower() == 'none':  # material
+                combo.addItems(['mirror', 'thin mirror',
+                                'plate', 'lens', 'grating', 'FZP', 'auto'])
+            else:  # aperture
+                group = QFrame(parent)
+                group.setAutoFillBackground(True)
+                layout = QHBoxLayout()
+                layout.setContentsMargins(2, 2, 2, 2)
+                layout.setSpacing(4)
+                group.cb = []
+                for name in ['left', 'right', 'bottom', 'top']:
+                    cb = QCheckBox(name, group)
+                    layout.addWidget(cb)
+                    group.cb.append(cb)
+
+                layout.addStretch()
+                group.setLayout(layout)
+                return group
             return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool
             combo.addItems(['histogram', 'kde'])
             return combo
-        elif 'polarization' in argName:
+        elif 'polarization' in argName:  # bl only
             combo.addItems(['horizontal', 'vertical',
                             '+45', '-45', 'left', 'right', 'None'])
             return combo
-        elif 'shape' in argName.lower():
+        elif 'shape' in argName.lower():  # bl only
             combo.addItems(['rect', 'round'])
             return combo
-        elif 'renderstyle' in argName.lower():
+        elif 'renderstyle' in argName.lower():  # bl only
             combo.addItems(['mask', 'blades'])
             return combo
-        elif 'table' in argName.lower():
+        elif 'table' in argName.lower():  # material only
             combo.addItems(['Chantler', 'Chantler total', 'Henke', 'BrCo'])
             return combo
-        elif 'data' in argName.lower() and 'axis' in parentIndexName:
+        elif 'data' in argName.lower() and 'axis' in parentIndexName:  # plot
             combo.setModel(self.mainWidget.fluxDataModel)
             return combo
-        elif 'geom' in argName.lower():
+        elif 'geom' in argName.lower():  # mat only
             combo.addItems(['Bragg reflected', 'Bragg transmitted',
                             'Laue reflected', 'Laue transmitted',
                             'Fresnel'])
             return combo
-        elif 'fluxkind' in argName.lower():
+        elif 'fluxkind' in argName.lower():  # plot only
             combo.addItems(['total', 'power', 's', 'p',
                             '+45', '-45', 'left', 'right'])
             return combo
-        elif 'aspect' in argName.lower():
+        elif 'aspect' in argName.lower():  # plot only
             combo.addItems(['equal', 'auto'])
             return combo
-        elif 'precisionopencl' in argName.lower():
+        elif 'precisionopencl' in argName.lower():  # bl only
             combo.addItems(['auto', 'float32', 'float64'])
             return combo
-        elif argName.lower().endswith('label'):
+        elif argName.lower().endswith('label'):  # plot only
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy'])
             else:  # caxis
@@ -328,13 +358,26 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 editor.setCurrentIndex(idx)
         elif isinstance(editor, QLineEdit):
             editor.setText(value)
+        elif isinstance(editor, QWidget):  # TODO: need better condition
+            for cb in editor.cb:
+                cb.setChecked(str(cb.text()) in value)
 
     def setModelData(self, editor, model, index):
         if isinstance(editor, QComboBox):
             model.setData(index, editor.currentText())
         elif isinstance(editor, QLineEdit):
             model.setData(index, editor.text())
+        elif isinstance(editor, QWidget):
+            text = "["
+            for cb in editor.cb:
+                if cb.isChecked():
+                    text += "'{}',".format(cb.text())
+            text = text.strip(",")
+            text += "]"
+            model.setData(index, text)
 
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)            
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):
     """Fields must be a dictionary {column: "filterValue"}"""

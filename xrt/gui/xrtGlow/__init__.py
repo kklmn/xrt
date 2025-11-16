@@ -7269,9 +7269,10 @@ class OEExplorer(qt.QDialog):
         self.table.setContextMenuPolicy(qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         self.table.expandAll()
+#        self.table.setUniformRowHeights(False)
 
-#        comboDelegate = qt.DynamicArgumentDelegate(mainWidget=self)
-#        self.table.setItemDelegateForColumn(1, comboDelegate)
+        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine)
+        self.table.setItemDelegateForColumn(1, comboDelegate)
 
         # Buttons
         self.button_box = qt.QDialogButtonBox()

@@ -415,7 +415,7 @@ class XrtQook(qt.QMainWindow):
 #        mainBox.addWidget(self.statusBar)
         mainBox.addWidget(self.progressBar)
         mainWidget = qt.QWidget()
-        mainWidget.setMinimumWidth(430)
+        mainWidget.setMinimumWidth(830)
         mainWidget.setLayout(mainBox)
 
         if ext.isSphinx:
@@ -996,6 +996,7 @@ class XrtQook(qt.QMainWindow):
         self.tree.setDropIndicatorShown(True)
         self.tree.setDragDropMode(qt.QTreeView.InternalMove)
         self.tree.setDefaultDropAction(qt.MoveAction)
+#        self.tree.setUniformRowHeights(False)
 
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         headers = ['Parameter', 'Value']

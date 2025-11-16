@@ -2791,7 +2791,6 @@ class BeamLine(object):
                     setattr(elObj, prop, None)
 
         for tmpid, matobj in self.materialsDict.items():
-            elObj = elLine[0]
             for prop in ['tLayer', 'bLayer', 'coating', 'substrate']:
                 if hasattr(matobj, prop) and getattr(matobj,
                         prop) == self.materialsDict[matid]:
