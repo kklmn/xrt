@@ -263,12 +263,12 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'parabolaAxis', 'shape', 'renderStyle',
                'n', 'period'}  # TODO: sources
 
-derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}               
-               
+derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
+
 renderOnlyArgSet = {'renderStyle', 'name'}
 
 
-colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',\
+colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN', \
     'WHITE', 'RESET'
 
 msg_start = {
@@ -770,23 +770,24 @@ def get_reflection_number(beam):
 
 def get_elevation_d(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationD if hasattr(beam, 'elevationD') else np.zeros_like(beam.x)
+    return beam.elevationD if hasattr(beam, 'elevationD') else \
+        np.zeros_like(beam.x)
 # if hasattr(beam, 'elevationD') else np.zeros_like(beam.x)
 
 
 def get_elevation_x(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationX  if hasattr(beam, 'elevationX') else beam.x
+    return beam.elevationX if hasattr(beam, 'elevationX') else beam.x
 
 
 def get_elevation_y(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationY  if hasattr(beam, 'elevationY') else beam.y
+    return beam.elevationY if hasattr(beam, 'elevationY') else beam.y
 
 
 def get_elevation_z(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
-    return beam.elevationZ  if hasattr(beam, 'elevationZ') else beam.z
+    return beam.elevationZ if hasattr(beam, 'elevationZ') else beam.z
 
 
 def get_Es_amp(beam):
@@ -965,8 +966,8 @@ def get_output(plot, beamsReturnedBy_run_process):
         if not plot.fluxKind.startswith('E'):
             flux = intensity
 
-    return x[part], y[part], intensity[part], flux[part], cData[part], nrays,\
-        locAlive, locGood, locOut, locOver, locDead,\
+    return x[part], y[part], intensity[part], flux[part], cData[part], nrays, \
+        locAlive, locGood, locOut, locOver, locDead, \
         locAccepted, locAcceptedE, locSeeded, locSeededI
 
 
@@ -1087,6 +1088,7 @@ def append_to_flow_decorator(func):
 
         return result
     return wrapper
+
 
 def is_auto_align_required(oe):
     needAutoAlign = False
@@ -1491,7 +1493,6 @@ def propagationProcess(q_in, q_out):
                     try:
                         getattr(oe, func)(**fkwargs)
                     except Exception as e:
-#                        raise
                         print("Error in PropagationProcess\n", e)
                         continue
 
@@ -1628,12 +1629,13 @@ class MessageHandler:
                     self.needUpdate = True
                     if len(kwargs) == 1 and (kwargs.keys() & renderOnlyArgSet):
                         self.needUpdate = False
-                if hasattr(element[0], 'propagate') and objuuid in self.bl.flowU:
+                if hasattr(element[0], 'propagate') and \
+                        objuuid in self.bl.flowU:
                     kwargs = list(self.bl.flowU[objuuid].values())[0]
                     modifiedEl = kwargs['beam']
                 else:
                     modifiedEl = objuuid
-                    
+
                 if self.needUpdate:
                     keys = list(self.bl.flowU.keys())
                     if self.startEl is None:
@@ -2105,8 +2107,8 @@ class BeamLine(object):
     @azimuth.setter
     def azimuth(self, value):
         self._azimuth = value
-        self.sinAzimuth = np.sin(value)
-        self.cosAzimuth = np.cos(value)
+        self.sinAzimuth = float(np.sin(value))
+        self.cosAzimuth = float(np.cos(value))
 
     def orient_along_global_Y(self, center='auto'):
         if center == 'auto':
@@ -2398,7 +2400,7 @@ class BeamLine(object):
                 dist = np.linalg.norm(eid1c - eid2c)
             except:
                 dist = 0
-                
+
             return dist
 
         receivers = {}
@@ -2446,12 +2448,13 @@ class BeamLine(object):
                     if v is not None:
                         deps.append(v)
             return deps
-    
+
         def dfs(mId, mProps):
             if mId in visited:
                 return
             if mId in visiting:
-                raise ValueError(f"Circular dependency detected involving {mId}")
+                raise ValueError(
+                    f"Circular dependency detected involving {mId}")
             visiting.add(mId)
             if mProps is not None:
                 for dep in get_dependencies(mProps):
@@ -2464,11 +2467,11 @@ class BeamLine(object):
             matDict = self.materialsDict
 
         get_dependencies = get_dep_json if fromJSON else get_dep_obj
-    
+
         for mId, mProps in matDict.items():
             dfs(mId, mProps)
 
-        return sortedMatList        
+        return sortedMatList
 
     def index_materials(self):
         materialsDict = OrderedDict()
@@ -2577,8 +2580,9 @@ class BeamLine(object):
                     pass
             if colorAxisLimits:
                 try:
-                    self.blViewer.customGlWidget.colorMin,\
-                        self.blViewer.customGlWidget.colorMax = colorAxisLimits
+                    self.blViewer.customGlWidget.colorMin, \
+                        self.blViewer.customGlWidget.colorMax = \
+                        colorAxisLimits
                     self.blViewer.changeColorAxis(None, newLimits=True)
                 except Exception:
                     pass
@@ -2786,14 +2790,14 @@ class BeamLine(object):
         for elid, elLine in self.oesDict.items():
             elObj = elLine[0]
             for prop in ['material', 'material2']:
-                if hasattr(elObj, prop) and getattr(elObj,
-                        prop) == self.materialsDict[matid]:
+                if hasattr(elObj, prop) and \
+                        getattr(elObj, prop) == self.materialsDict[matid]:
                     setattr(elObj, prop, None)
 
         for tmpid, matobj in self.materialsDict.items():
             for prop in ['tLayer', 'bLayer', 'coating', 'substrate']:
-                if hasattr(matobj, prop) and getattr(matobj,
-                        prop) == self.materialsDict[matid]:
+                if hasattr(matobj, prop) and \
+                        getattr(matobj, prop) == self.materialsDict[matid]:
                     setattr(matobj, prop, None)
 
         if matid in self.materialsDict:
@@ -3000,7 +3004,7 @@ class BeamLine(object):
                         str(oeRecord['_object']).split('.')[-1],
                         np.random.randint(1000, 9999))
                 oeRecord['properties']['name'] = tmpName
-            beamlineDict[oeid] = oeRecord                
+            beamlineDict[oeid] = oeRecord
 #            print("Exporting to json", oeRecord['properties']['name'], oeRecord['properties'])
 
 #        beamsDict = {}
