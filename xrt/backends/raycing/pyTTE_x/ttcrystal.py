@@ -362,9 +362,9 @@ class TTcrystal:
                         'b': self.xrt_crystal.b,
                         'c': self.xrt_crystal.c,
                         'd': self.xrt_crystal.d,
-                        'alpha': np.degrees(self.xrt_crystal.alpha),
-                        'beta': np.degrees(self.xrt_crystal.beta),
-                        'gamma': np.degrees(self.xrt_crystal.gamma)}
+                        'alpha': np.degrees(self.xrt_crystal.alphaRad),
+                        'beta': np.degrees(self.xrt_crystal.betaRad),
+                        'gamma': np.degrees(self.xrt_crystal.gammaRad)}
                 else:
                     raise NotImplementedError(
                         "Elastic constants for this kind of crystal not available")
