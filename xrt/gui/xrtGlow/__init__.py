@@ -2150,7 +2150,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.globalColors = True
         self.isVirtScreenNormal = False
         self.vScreenSize = 0.5
-        self.setMinimumSize(400, 400)
+        self.setMinimumSize(240, 400)
         self.aspect = 1.
         self.depthScaler = 0.
         self.viewPortGL = [0, 0, 500, 500]
@@ -2514,7 +2514,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 # GUIs need names, bl objects need uuids
                 argValue = self.beamline.matnamesToUUIDs.get(qookValue)
                 kwargs[arg0] = argValue
-                
+
             # updating local beamline tree
             setattr(oe, arg0, argValue)
             if sender == 'OEE':
@@ -7532,7 +7532,7 @@ class OEExplorer(qt.QDialog):
 
         original_value = self.original_data.get(key)
         value_changed = value != original_value
-        
+
         print(value_changed)
 
         # Update the changed_data dictionary

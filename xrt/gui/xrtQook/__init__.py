@@ -417,7 +417,7 @@ class XrtQook(qt.QMainWindow):
 #        mainBox.addWidget(self.statusBar)
         mainBox.addWidget(self.progressBar)
         mainWidget = qt.QWidget()
-        mainWidget.setMinimumWidth(430)
+        mainWidget.setMinimumWidth(240)
         mainWidget.setLayout(mainBox)
 
         if ext.isSphinx:
@@ -433,13 +433,16 @@ class XrtQook(qt.QMainWindow):
             self.webHelp = qt.QTextEdit()
             self.webHelp.setFont(self.defaultFont)
             self.webHelp.setReadOnly(True)
-        self.webHelp.setMinimumWidth(500)
+        self.webHelp.setMinimumWidth(240)
         self.webHelp.setMinimumHeight(620)
 
         self.setCentralWidget(mainWidget)
         self.initAllTrees()
         self.blRunGlow()
         self.initDocWidgets()
+        style = "QMainWindow::separator {width: 7px;} " \
+            "QMainWindow::separator:hover {background-color: #6087cefa;}"
+        self.setStyleSheet(style)
 
         if loadLayout is not None or projectFile is not None:
             self.importLayout(layoutJSON=loadLayout, filename=projectFile)
