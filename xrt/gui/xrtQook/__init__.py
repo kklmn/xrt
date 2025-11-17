@@ -841,9 +841,10 @@ class XrtQook(qt.QMainWindow):
             glWidget.oePropsUpdated.connect(elViewer.update_param)
             # TODO: update tree
             elViewer.propertiesChanged.connect(
-                    partial(glWidget.update_beamline, oeuuid))
-            elViewer.propertiesChanged.connect(
-                    partial(self.updateBeamlineModel, oeuuid))
+                    partial(glWidget.update_beamline, oeuuid,
+                            sender='OEE'))
+#            elViewer.propertiesChanged.connect(
+#                    partial(self.updateBeamlineModel, oeuuid))
 #        if (elViewer.exec_()):
         elViewer.show()
 
@@ -3641,9 +3642,23 @@ class XrtQook(qt.QMainWindow):
 #                        self.beamLine.beamsDict[str(item.text())] = value
 #                        break
 
-    def updateBeamlineModel(self, oeid, kwargs):
+    def updateBeamlineModel(self, data):
+        oeid, kwargs = data
         self.beamLineModel.blockSignals(True)
-        print(oeid, kwargs)
+        for i in range(self.rootBLItem.rowCount()):
+            elItem = self.rootBLItem.child(i, 0)
+            elUUID = str(elItem.data(qt.Qt.UserRole))
+            if elUUID == oeid:
+                for j in range(elItem.rowCount()):
+                    pItem = elItem.child(0, j)
+                    if str(pItem.text()) in 'properties':
+                        for k in range(pItem.rowCount()):
+                            pNItem = pItem.child(k, 0)
+                            if str(pNItem.text()) in kwargs:
+                                pVItem = pItem.child(k, 1)
+                                pVItem.setText(str(kwargs[str(pNItem.text())]))
+                        break
+                break
         self.beamLineModel.blockSignals(False)
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
@@ -3765,10 +3780,10 @@ class XrtQook(qt.QMainWindow):
             if column == 1:  # Existing Element
                 argValue_str = item.text()
                 argName = parent.child(row, 0).text()
-                if any(argName.lower().startswith(v) for v in
-                       ['mater', 'tlay', 'blay', 'coat', 'substrate']):
-                    argValue = self.beamLine.matnamesToUUIDs.get(argValue_str)
-                elif argName == 'beam':
+#                if any(argName.lower().startswith(v) for v in
+#                       ['mater', 'tlay', 'blay', 'coat', 'substrate']):
+#                    argValue = self.beamLine.matnamesToUUIDs.get(argValue_str)
+                if argName == 'beam':
                     argValue = beamToUuid(argValue_str)
                 else:
                     argValue = raycing.parametrize(argValue_str)
@@ -3845,7 +3860,7 @@ class XrtQook(qt.QMainWindow):
                             continue
                     kwargs['uuid'] = oeid
                     outDict = {'properties': kwargs, '_object': newElement}
-                    initStatus = self.beamLine.init_oe_from_json(outDict)  # TODO: avoid duplication
+                    initStatus = self.beamLine.init_oe_from_json(outDict)
 
                     paintItem = item.parent().child(item.row(), 1)
                     self.paintStatus(paintItem, initStatus)
@@ -3942,6 +3957,8 @@ class XrtQook(qt.QMainWindow):
                 self.blViewer.parentRef = self
                 self.blViewer.parentSignal = self.statusUpdate
                 self.beamLine = self.blViewer.customGlWidget.beamline
+                self.blViewer.customGlWidget.updateQookTree.connect(
+                    self.updateBeamlineModel)
             except AttributeError:
                 pass
             except Exception as e:

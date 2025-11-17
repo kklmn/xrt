@@ -364,7 +364,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
             # TODO: update tree
             elViewer.propertiesChanged.connect(
-                    partial(self.customGlWidget.update_beamline, oeuuid))
+                    partial(self.customGlWidget.update_beamline, oeuuid,
+                            sender='OEE'))
     #        if (elViewer.exec_()):
             if (elViewer.show()):
                 pass
@@ -2123,6 +2124,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
     beamUpdated = qt.Signal(tuple)
     colorsUpdated = qt.Signal()
     oePropsUpdated = qt.Signal(tuple)
+    updateQookTree = qt.Signal(tuple)
     histogramUpdated = qt.Signal(tuple)
     openElViewer = qt.Signal(str)
 
@@ -2408,6 +2410,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             record.set(val)
 
     def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
+        qookValue = None
         if '_object' in kwargs:  # from Qook
             # new element
             if 'material' in kwargs['_object']:
@@ -2505,9 +2508,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     else:
                         setattr(arrayValue, field, argValue)
                     argValue = arrayValue
-
+            elif any(arg0.lower().startswith(v) for v in
+                   ['mater', 'tlay', 'blay', 'coat', 'substrate']):
+                qookValue = argValue  # TODO: need better logic
+                # GUIs need names, bl objects need uuids
+                argValue = self.beamline.matnamesToUUIDs.get(qookValue)
+                kwargs[arg0] = argValue
+                
             # updating local beamline tree
             setattr(oe, arg0, argValue)
+            if sender == 'OEE':
+                self.updateQookTree.emit((oeid, {arg0: qookValue or argValue}))
 
             if arg0.lower().startswith('center'):
                 flow = copy.deepcopy(self.beamline.flowU)
@@ -7504,6 +7515,7 @@ class OEExplorer(qt.QDialog):
         self.model.appendRow([key_item, val_item])
 
     def on_item_changed(self, item):
+        print("OEE", item.text())
         if item.column() != 1:
             return
 
@@ -7520,6 +7532,8 @@ class OEExplorer(qt.QDialog):
 
         original_value = self.original_data.get(key)
         value_changed = value != original_value
+        
+        print(value_changed)
 
         # Update the changed_data dictionary
         if value_changed:
@@ -7563,29 +7577,21 @@ class OEExplorer(qt.QDialog):
         if not self.changed_data:
             return  # nothing to do
 
-#        print("Applying:", self.changed_data)
-        self.propertiesChanged.emit(self.changed_data)
+        self.propertiesChanged.emit(copy.deepcopy(self.changed_data))
 
-        # Send to your async updater here
-        # e.g., asyncio.create_task(self.async_update(self.changed_data))
-
-        # Update original values and clear highlights
-        for row in range(self.model.rowCount()):
-            key = self.model.item(row, 0).text()
-            if key in self.changed_data:
-                new_value = self.changed_data[key]
-                self.original_data[key] = new_value
-
-                # Update display to ensure it's in sync (optional)
-                self.model.item(row, 1).setText(str(new_value))
-
-                # Remove highlight
-                self.set_row_highlight(row, False)
+        for row in range(self.modelRoot.rowCount()):
+            catItem = self.modelRoot.child(row, 0)
+            for j in range(catItem.rowCount()):
+                key = str(catItem.child(j, 0).text())
+                if key in self.changed_data:
+                    new_value = self.changed_data[key]
+                    self.original_data[key] = new_value
+                    catItem.child(j, 1).setText(str(new_value))
+                    self.set_row_highlight(catItem.child(j, 1), False)
 
         self.changed_data.clear()
 
     def update_param(self, pTuple):
-        print(pTuple)
         parentItem = None
         if pTuple[0] == self.elementId:
             if self.categoriesDict is not None:
