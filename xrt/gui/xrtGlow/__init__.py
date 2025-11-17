@@ -7471,7 +7471,7 @@ class OEExplorer(qt.QDialog):
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
         child1.setFlags(self.paramFlag if (str(paramName) == 'name' or
-               paramName.endswith('rbk')) else self.valueFlag)
+                        paramName.endswith('rbk')) else self.valueFlag)
         if paramName.endswith('rbk'):
             child1.setBackground(qt.QColor('#E0F7FA'))
             child0.setBackground(qt.QColor('#E0F7FA'))
@@ -7563,7 +7563,7 @@ class OEExplorer(qt.QDialog):
         menu.addAction(copy_action)
 
         def copy_value():
-            value = self.model.item(index.row(), index.column()).text()
+            value = self.model.itemFromIndex(index).text()
             qt.QApplication.clipboard().setText(value)
 
         copy_action.triggered.connect(copy_value)
