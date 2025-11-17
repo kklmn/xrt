@@ -7470,11 +7470,20 @@ class OEExplorer(qt.QDialog):
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
-        child1.setFlags(self.paramFlag if (str(paramName) == 'name' or
-                        paramName.endswith('rbk')) else self.valueFlag)
+
+        if str(paramName) == 'name' or paramName.endswith('rbk'):
+            ch1flag = self.paramFlag
+        elif str(paramName) in ['uuid']:
+            ch1flag = self.objectFlag
+        else:
+            ch1flag = self.valueFlag
+            
+        child1.setFlags(ch1flag)
+
         if paramName.endswith('rbk'):
             child1.setBackground(qt.QColor('#E0F7FA'))
             child0.setBackground(qt.QColor('#E0F7FA'))
+
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
             child1u.setFlags(self.valueFlag)

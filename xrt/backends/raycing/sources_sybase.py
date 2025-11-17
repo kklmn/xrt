@@ -129,7 +129,7 @@ class SourceBase:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
-        self.center = raycing.Center(center)  # 3D point in global system
+        self.center = center
         self._pitch = raycing.auto_units_angle(pitch)
         self._yaw = raycing.auto_units_angle(yaw)
         self.nrays = np.int64(nrays)
@@ -226,6 +226,8 @@ class SourceBase:
         self.nz = nz
 
         self.needReset = True
+
+    center = raycing.center_property()
 
     @property
     def pitch(self):

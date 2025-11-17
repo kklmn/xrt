@@ -220,7 +220,7 @@ class GeometricSource(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = raycing.Center(center)  # 3D point in global system
+        self.center = center
         self.nrays = np.int64(nrays)
 
         self.distx = distx
@@ -250,6 +250,8 @@ class GeometricSource(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
+
+    center = raycing.center_property()
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
@@ -321,7 +323,7 @@ class GeometricSource(object):
 
 #            if accuBeam is None:
 #                kwArgsIn['accuBeam'] = accuBeam
-#            else:    
+#            else:
 #                if raycing.is_valid_uuid(accuBeam):
 #                    kwArgsIn['accuBeam'] = accuBeam
 #                    accuBeam = self.bl.beamsDictU[accuBeam][
@@ -465,7 +467,7 @@ class GaussianBeam(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = raycing.Center(center)  # 3D point in global system
+        self.center = center
         self.w0 = w0
         if raycing.is_sequence(self.w0):
             if len(self.w0) != 2:
@@ -487,6 +489,8 @@ class GaussianBeam(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
+
+    center = raycing.center_property()
 
     def rayleigh_range(self, E, w0=None):
         if w0 is None:
@@ -732,7 +736,7 @@ class MeshSource(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = raycing.Center(center)  # 3D point in global system
+        self.center = center
         self.minxprime = raycing.auto_units_angle(minxprime)
         self.maxxprime = raycing.auto_units_angle(maxxprime)
         self.minzprime = raycing.auto_units_angle(minzprime)
@@ -752,6 +756,8 @@ class MeshSource(object):
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
+
+    center = raycing.center_property()
 
     @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
@@ -868,7 +874,7 @@ class CollimatedMeshSource(object):
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self.center = raycing.Center(center)  # 3D point in global system
+        self.center = center
         self.dx = dx
         self.dz = dz
         self.nx = nx
@@ -886,6 +892,8 @@ class CollimatedMeshSource(object):
                 bl.oesDict[self.uuid] = [self, 0]
 
         self.polarization = polarization
+
+    center = raycing.center_property()
 
     @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
@@ -933,8 +941,8 @@ class BeamFromFile(object):
     beam object. Can be used as a reproducible source or to save time on
     synchrotron source beam generation. Provides the shine() method for
     compatibility with other sources.
-    
-    
+
+
     """
 
     def __init__(self, bl=None, name='', center=(0, 0, 0),
@@ -955,7 +963,7 @@ class BeamFromFile(object):
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
 
-        self.center = raycing.Center(center)  # 3D point in global system
+        self.center = center
         self.nrays = np.int64(nrays)
         self.fileName = fileName
         if self.fileName:
@@ -964,7 +972,9 @@ class BeamFromFile(object):
             print("No filename provided, using an empty beam")
             self.fbeam = raycing.Beam()
 
-    @raycing.append_to_flow_decorator        
+    center = raycing.center_property()
+
+    @raycing.append_to_flow_decorator
     def shine(self):
         u"""
         Returns the beam loaded from file.
