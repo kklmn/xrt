@@ -50,23 +50,12 @@ from datetime import datetime
 # from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import make_interp_spline, PPoly
 
-QtName = "PyQt5"
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout,\
-    QPushButton, QMenu, QComboBox, QFileDialog, QToolButton,\
-    QSplitter, QTreeView, QMessageBox, QProgressBar, QLabel, QFrame
-from PyQt5.QtCore import Qt, QThread, QTimer
-from PyQt5.QtCore import pyqtSignal as Signal
-from PyQt5.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
+sys.path.append('commons')  # analysis:ignore
+import qt  # analysis:ignore
 
-from PyQt5.QtGui import QIcon, QStandardItemModel, QStandardItem, QBrush,\
-    QPixmap, QColor
 import matplotlib as mpl
 #from matplotlib.backend_tools import ToolBase
 
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 import matplotlib.colors as mcolors
@@ -111,13 +100,13 @@ def run_calculation(params, progress_queue):
 
 
 def raise_warning(text, infoText):
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Warning)
+    msg = qt.QMessageBox()
+    msg.setIcon(qt.QMessageBox.Warning)
     msg.setText(text)
     msg.setInformativeText(infoText)
     msg.setWindowTitle(text)
-    proceed_button = msg.addButton('Proceed', QMessageBox.AcceptRole)
-    cancel_button = msg.addButton(QMessageBox.Cancel)
+    proceed_button = msg.addButton('Proceed', qt.QMessageBox.AcceptRole)
+    cancel_button = msg.addButton(qt.QMessageBox.Cancel)
     msg.exec_()
 
     # Check which button was clicked
@@ -127,8 +116,8 @@ def raise_warning(text, infoText):
         return False
 
 
-class PlotWidget(QWidget):
-    statusUpdate = Signal(tuple)
+class PlotWidget(qt.QWidget):
+    statusUpdate = qt.Signal(tuple)
 
     allCrystals = []
     for ck in CRYSTALS.keys():
@@ -183,25 +172,24 @@ class PlotWidget(QWidget):
         ("Curves", ['σ', ], True, allCurves)  # 16
         ]
 
-
     def __init__(self):
         super().__init__()
 
         try:
-            self.setWindowIcon(QIcon(
+            self.setWindowIcon(qt.QIcon(
                 os.path.join('xrtQook', '_icons', 'xbcc.png')))
         except Exception:
             # icon not found. who cares?
             pass
         self.statusUpdate.connect(self.update_progress_bar)
-        self.layout = QHBoxLayout()
-        self.mainSplitter = QSplitter(Qt.Horizontal, self)
+        self.layout = qt.QHBoxLayout()
+        self.mainSplitter = qt.QSplitter(qt.Qt.Horizontal, self)
 
         self.proc_nr = max(multiprocessing.cpu_count()-2, 1)
 
         # Create a QVBoxLayout for the plot and the toolbar
-        plot_widget = QWidget(self)
-        self.plot_layout = QVBoxLayout()
+        plot_widget = qt.QWidget(self)
+        self.plot_layout = qt.QVBoxLayout()
 
         self.allIcons = {}
         for colorName, colorCode in zip(
@@ -211,7 +199,7 @@ class PlotWidget(QWidget):
         self.poolsDict = {}
 
         self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
+        self.canvas = qt.FigCanvas(self.figure)
         self.axes = self.figure.add_subplot(111)
         self.ax2 = self.axes.twinx()
         self.axes.set_ylabel('|Amplitude|²', color='k')
@@ -223,13 +211,13 @@ class PlotWidget(QWidget):
         self.plot_lines = {}
 
         # Add the Matplotlib toolbar to the QVBoxLayout
-        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.toolbar = qt.NavigationToolbar(self.canvas, self)
         self.plot_layout.addWidget(self.toolbar)
-        self.aboutButton = QToolButton(self)
-        icon = QIcon()
-        icon.addPixmap(QPixmap(os.path.join(os.path.dirname(mpl.__file__),
-                               'mpl-data', 'images', 'help_large.png')),
-                       QIcon.Normal, QIcon.Off)
+        self.aboutButton = qt.QToolButton(self)
+        icon = qt.QIcon()
+        icon.addPixmap(qt.QPixmap(os.path.join(os.path.dirname(mpl.__file__),
+                                  'mpl-data', 'images', 'help_large.png')),
+                       qt.QIcon.Normal, qt.QIcon.Off)
         # adding icon to the toolbutton
         self.aboutButton.setIcon(icon)
         self.aboutButton.clicked.connect(self.about)
@@ -241,12 +229,12 @@ class PlotWidget(QWidget):
         plot_widget.setLayout(self.plot_layout)
         self.mainSplitter.addWidget(plot_widget)
 
-        tree_widget = QWidget(self)
-        self.tree_layout = QVBoxLayout()
-        self.model = QStandardItemModel()
+        tree_widget = qt.QWidget(self)
+        self.tree_layout = qt.QVBoxLayout()
+        self.model = qt.QStandardItemModel()
         self.model.itemChanged.connect(self.on_tree_item_changed)
 
-        self.tree_view = QTreeView(self)
+        self.tree_view = qt.QTreeView(self)
         self.tree_view.setModel(self.model)
 
         # self.model.setHorizontalHeaderLabels(["Name", "Value"])
@@ -254,26 +242,26 @@ class PlotWidget(QWidget):
         self.tree_view.setHeaderHidden(True)
 
         self.tree_view.setAlternatingRowColors(True)
-        self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_view.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.tree_view.customContextMenuRequested.connect(
                 self.show_context_menu)
         self.tree_view.clicked.connect(self.on_item_clicked)
 
-        self.add_plot_button = QPushButton("Add curve")
+        self.add_plot_button = qt.QPushButton("Add curve")
         self.add_plot_button.clicked.connect(self.add_plot)
 
-        self.export_button = QPushButton("Export curve")
+        self.export_button = qt.QPushButton("Export curve")
         self.export_button.clicked.connect(self.export_curve)
 
-        self.buttons_layout = QHBoxLayout()
+        self.buttons_layout = qt.QHBoxLayout()
         self.buttons_layout.addWidget(self.add_plot_button)
         self.buttons_layout.addWidget(self.export_button)
         self.tree_layout.addLayout(self.buttons_layout)
         self.tree_layout.addWidget(self.tree_view)
-        self.progressBar = QProgressBar()
+        self.progressBar = qt.QProgressBar()
         self.progressBar.setTextVisible(True)
         self.progressBar.setRange(0, 100)
-        self.progressBar.setAlignment(Qt.AlignCenter)
+        self.progressBar.setAlignment(qt.Qt.AlignCenter)
         self.tree_layout.addWidget(self.progressBar)
 
         tree_widget.setLayout(self.tree_layout)
@@ -344,23 +332,23 @@ class PlotWidget(QWidget):
             </ul>""".format(
                 __version__, __author__.split(','), __license__,
                 locos, platform.python_version(),
-                QT_VERSION_STR, QtName, PYQT_VERSION_STR,
+                qt.QT_VERSION_STR, qt.QtName, qt.PYQT_VERSION_STR,
                 strXrt)
 
-        msg = QMessageBox()
+        msg = qt.QMessageBox()
         msg.setStyleSheet("QLabel{min-width: 300px;}")
         msg.setWindowIcon(self.windowIcon())
-        msg.setIconPixmap(QPixmap(os.path.join(
+        msg.setIconPixmap(qt.QPixmap(os.path.join(
             'xrtQook', '_icons', 'xbcc.png')).scaledToHeight(
-                256, Qt.SmoothTransformation))
+                256, qt.Qt.SmoothTransformation))
         msg.setText(txt)
         msg.setWindowTitle(title)
         msg.exec_()
 
     def create_colored_icon(self, color):
-        pixmap = QPixmap(16, 16)
-        pixmap.fill(QColor(color))
-        return QIcon(pixmap)
+        pixmap = qt.QPixmap(16, 16)
+        pixmap.fill(qt.QColor(color))
+        return qt.QIcon(pixmap)
 
     def add_legend(self):
         if self.axes.get_legend() is not None:
@@ -399,15 +387,15 @@ class PlotWidget(QWidget):
         self.plot_lines[plot_uuid] = plots
 
         previousPlot = None
-        plot_item = QStandardItem()
-        plot_item.setFlags(plot_item.flags() | Qt.ItemIsEditable)
+        plot_item = qt.QStandardItem()
+        plot_item.setFlags(plot_item.flags() | qt.Qt.ItemIsEditable)
         plot_item.plot_index = plot_uuid
         plot_item.skipRecalculation = False
         plot_item.prevUnits = "angle"
         plot_item.fwhms = [None for label in self.allCurves]
 
-        cbk_item = QStandardItem()
-        cbk_item.setFlags(Qt.NoItemFlags)
+        cbk_item = qt.QStandardItem()
+        cbk_item.setFlags(qt.Qt.NoItemFlags)
         self.model.appendRow([plot_item, cbk_item])
         plot_number = plot_item.row()
 
@@ -436,21 +424,21 @@ class PlotWidget(QWidget):
                             ival = self.allColors[prevIndex+1]
 
             if iname.startswith("Separator"):
-                sep_item = QStandardItem()
+                sep_item = qt.QStandardItem()
                 sep_item.setText(ival)
-                sep_item.setFlags(Qt.NoItemFlags)
-                sep_item.setBackground(QBrush(QColor(idata)))
-                sep_item2 = QStandardItem()
-                sep_item2.setFlags(Qt.NoItemFlags)
-                sep_item2.setBackground(QBrush(QColor(idata)))
+                sep_item.setFlags(qt.Qt.NoItemFlags)
+                sep_item.setBackground(qt.QBrush(qt.QColor(idata)))
+                sep_item2 = qt.QStandardItem()
+                sep_item2.setFlags(qt.Qt.NoItemFlags)
+                sep_item2.setBackground(qt.QBrush(qt.QColor(idata)))
                 plot_item.appendRow([sep_item, sep_item2])
-                lab = QLabel()
+                lab = qt.QLabel()
                 self.tree_view.setIndexWidget(sep_item2.index(), lab)
             else:
-                item_name = QStandardItem(iname)
-                item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
+                item_name = qt.QStandardItem(iname)
+                item_name.setFlags(item_name.flags() & ~qt.Qt.ItemIsEditable)
                 if iname.startswith("Curves"):
-                    item_value = QStandardItem()
+                    item_value = qt.QStandardItem()
                     item_value.setFlags(item_value.flags())
                     w = StateButtons(self.tree_view, list(idata.keys()), ival)
                     w.statesActive.connect(partial(
@@ -458,19 +446,20 @@ class PlotWidget(QWidget):
                     plot_item.appendRow([item_name, item_value])
                     self.tree_view.setIndexWidget(item_value.index(), w)
                 else:
-                    item_value = QStandardItem(str(ival))
-                    item_value.setFlags(item_value.flags() | Qt.ItemIsEditable)
+                    item_value = qt.QStandardItem(str(ival))
+                    item_value.setFlags(item_value.flags() |
+                                        qt.Qt.ItemIsEditable)
                     item_value.prevValue = str(ival)
                     plot_item.appendRow([item_name, item_value])
 
             if isinstance(idata, list):
-                cb = QComboBox()
+                cb = qt.QComboBox()
                 cb.setMaxVisibleItems(25)
                 if iname == "Curve Color":
-                    model = QStandardItemModel()
+                    model = qt.QStandardItemModel()
                     cb.setModel(model)
                     for color in idata:
-                        item = QStandardItem(color)
+                        item = qt.QStandardItem(color)
                         item.setIcon(self.allIcons[color])
                         model.appendRow(item)
                     plot_item.setIcon(self.allIcons[str(ival)])
@@ -773,7 +762,7 @@ class PlotWidget(QWidget):
         if item.parent() is not None:  # Ignore child items
             return
 
-        context_menu = QMenu(self.tree_view)
+        context_menu = qt.QMenu(self.tree_view)
         delete_action = context_menu.addAction("Delete plot")
         delete_action.triggered.connect(partial(self.delete_plot, item))
         context_menu.exec_(self.tree_view.viewport().mapToGlobal(point))
@@ -810,7 +799,8 @@ class PlotWidget(QWidget):
     def export_curve(self):
         selected_indexes = self.tree_view.selectedIndexes()
         if not selected_indexes:
-            QMessageBox.warning(self, "Warning", "No plot selected for export")
+            qt.QMessageBox.warning(
+                self, "Warning", "No plot selected for export")
             return
 
         selected_index = selected_indexes[0]
@@ -847,9 +837,9 @@ class PlotWidget(QWidget):
 
         fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
 
-        options = QFileDialog.Options()
-        options |= QFileDialog.ReadOnly
-        file_name, _ = QFileDialog.getSaveFileName(
+        options = qt.QFileDialog.Options()
+        options |= qt.QFileDialog.ReadOnly
+        file_name, _ = qt.QFileDialog.getSaveFileName(
                 self, "Save File", fileName,
                 "Text Files (*.txt);;All Files (*)", options=options)
         if file_name:
@@ -858,7 +848,6 @@ class PlotWidget(QWidget):
             outLines, outNames = [theta/convFactor], [f"{xaxis}({units})"]
             for line, name in zip(lines, names):
                 if line.get_visible():
-                # if True:
                     outLines.append(line.get_ydata())
                     outNames.append(name)
             what = "Transmittivity" if geometry.endswith("mitted") else \
@@ -1131,7 +1120,7 @@ class PlotWidget(QWidget):
                         run_calculation, args=(args, progress_queue))
                 self.tasks.append(task)
 
-            self.timer = QTimer()
+            self.timer = qt.QTimer()
             self.timer.timeout.connect(
                 partial(self.check_progress, progress_queue))
             self.timer.start(200)  # Adjust the interval as needed
@@ -1272,9 +1261,9 @@ class PlotWidget(QWidget):
         self.progressBar.setFormat(updStr)
 
 
-class AmpCalculator(QThread):
-    progress = Signal(tuple)
-    result = Signal(tuple)
+class AmpCalculator(qt.QThread):
+    progress = qt.Signal(tuple)
+    result = qt.Signal(tuple)
 
     def __init__(self, crystal, xaxis, energy, gamma0, gammah, hns0,
                  alpha, ipr_rad, Rm, Rs, precision, plot_nr):
@@ -1310,8 +1299,8 @@ class AmpCalculator(QThread):
                           self.plot_nr))
 
 
-class StateButtons(QFrame):
-    statesActive = Signal(list)
+class StateButtons(qt.QFrame):
+    statesActive = qt.Signal(list)
 
     def __init__(self, parent, names, active=None):
         """
@@ -1326,7 +1315,7 @@ class StateButtons(QFrame):
         super().__init__(parent)
         self.names = names
         self.buttons = []
-        layout = QHBoxLayout()
+        layout = qt.QHBoxLayout()
         styleSheet = """
         QPushButton {
             border-style: outset;
@@ -1346,7 +1335,7 @@ class StateButtons(QFrame):
         """
         for name in names:
             strName = str(name)
-            but = QPushButton(strName)
+            but = qt.QPushButton(strName)
             but.setCheckable(True)
 
             bbox = but.fontMetrics().boundingRect(strName)
@@ -1376,7 +1365,7 @@ class StateButtons(QFrame):
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    app = qt.QApplication(sys.argv)
     main_widget = PlotWidget()
     main_widget.setWindowTitle("xrt Crystal reflectivity calculator")
     main_widget.show()
