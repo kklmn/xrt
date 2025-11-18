@@ -116,6 +116,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #                                                  2: oeuuid})
 #                fpModel.setSourceModel(self.mainWidget.beamModel)
             if parentIndexName == 'parameters':
+                
                 fpModel = MultiColumnFilterProxy({1: "Global"})
                 fpModel.setSourceModel(self.mainWidget.beamModel)
             else:
@@ -160,6 +161,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
                 layout.addStretch()
                 group.setLayout(layout)
+                group.setProperty('fieldName', 'kind')
                 return group
             return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool
@@ -202,6 +204,22 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:  # caxis
                 combo.setModel(self.mainWidget.fluxLabelModel)
             return combo
+        elif 'rayflag' in argName.lower():  # plot only
+            group = QWidget(parent)
+            group.setAutoFillBackground(True)
+            layout = QHBoxLayout()
+            layout.setContentsMargins(2, 2, 2, 2)
+            layout.setSpacing(4)
+            group.cb = []
+            for ix, name in enumerate(['lost', 'good', 'out', 'over']):
+                cb = QCheckBox(name, group)
+                layout.addWidget(cb)
+                group.cb.append((cb, ix))
+
+            layout.addStretch()
+            group.setLayout(layout)
+            group.setProperty('fieldName', 'rayflag')
+            return group
         elif argName.lower().endswith('unit') and parentIndexName.lower() in [
                 'xaxis', 'yaxis', 'caxis']:
 
@@ -234,22 +252,35 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 editor.setCurrentIndex(idx)
         elif isinstance(editor, QLineEdit):
             editor.setText(value)
-        elif isinstance(editor, QWidget):  # TODO: need better condition
+#        elif isinstance(editor, QWidget):  # TODO: need better condition
+        elif editor.property('fieldName') == 'kind':
             for cb in editor.cb:
                 cb.setChecked(str(cb.text()) in value)
+        elif editor.property('fieldName') == 'rayflag':
+            for cb in editor.cb:
+                cb[0].setChecked(str(cb[1]) in value)
 
     def setModelData(self, editor, model, index):
         if isinstance(editor, QComboBox):
             model.setData(index, editor.currentText())
         elif isinstance(editor, QLineEdit):
             model.setData(index, editor.text())
-        elif isinstance(editor, QWidget):
+#        elif isinstance(editor, QWidget):
+        elif editor.property('fieldName') == 'kind':
             text = "["
             for cb in editor.cb:
                 if cb.isChecked():
                     text += "'{}',".format(cb.text())
             text = text.strip(",")
             text += "]"
+            model.setData(index, text)
+        elif editor.property('fieldName') == 'rayflag':
+            text = "("
+            for cb in editor.cb:
+                if cb[0].isChecked():
+                    text += "{},".format(cb[1])
+#            text = text.strip(",")
+            text += ")"
             model.setData(index, text)
 
     def updateEditorGeometry(self, editor, option, index):

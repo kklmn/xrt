@@ -1663,8 +1663,15 @@ class XrtQook(qt.QMainWindow):
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
-        child1.setFlags(self.paramFlag if str(paramName) == 'name' else
-                        self.valueFlag)
+        if str(paramName) == 'name':
+            ch1flag = self.paramFlag
+        elif isinstance(parent, qt.QStandardItem) and str(parent.text()) == 'output':
+            ch1flag = self.paramFlag
+        else:
+            ch1flag = self.valueFlag
+
+        child1.setFlags(ch1flag)
+
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
             child1u.setFlags(self.valueFlag)
