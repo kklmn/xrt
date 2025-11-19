@@ -367,6 +367,9 @@ class XrtQook(qt.QMainWindow):
         self.setAcceptDrops(True)
         self.xrt_pypi_version = self.check_pypi_version()  # pypi_ver, cur_ver
 
+        self.prbStart = 0
+        self.prbRange = 100
+
         self.prepareViewer = False
         self.callWizard = True
         self.isGlowAutoUpdate = True
@@ -590,6 +593,16 @@ class XrtQook(qt.QMainWindow):
         runScriptAction.setShortcut('Ctrl+R')
         runScriptAction.triggered.connect(self.execCode)
 
+        glowAction = qt.QAction(
+            qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),
+            'Enable xrtGlow Live Update',
+            self)
+        if gl.isOpenGL:
+            glowAction.setShortcut('CTRL+F1')
+            glowAction.setCheckable(True)
+            glowAction.setChecked(True)
+            glowAction.toggled.connect(self.toggleGlow)
+
         OCLAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'GPU4.png')),
             'OpenCL Info',
@@ -693,6 +706,8 @@ class XrtQook(qt.QMainWindow):
         self.toolBar.addAction(saveScriptAsAction)
         self.toolBar.addAction(runScriptAction)
         self.toolBar.addSeparator()
+        if gl.isOpenGL:
+            self.toolBar.addAction(glowAction)
         if isOpenCL:
             self.toolBar.addAction(OCLAction)
         self.toolBar.addAction(tutorAction)
@@ -2753,6 +2768,7 @@ class XrtQook(qt.QMainWindow):
 
             tmpAutoUpdate = self.isGlowAutoUpdate
             if tmpAutoUpdate:
+                self.toggleGlow(False)
                 self.docks[1].raise_()
 
             # Deleting existing elements
@@ -2823,8 +2839,13 @@ class XrtQook(qt.QMainWindow):
 #            self.plotTree.setColumnWidth(
 #                0, int(self.plotTree.width()/3))
             self.tabs.setCurrentWidget(self.tree)
+            self.prbStart = 0
+            self.prbRange = 100
+            self.progressBar.setValue(0)
+            self.progressBar.setFormat('Running propagation')
 
             if tmpAutoUpdate:
+                self.toggleGlow(True)
                 self.docks[1].raise_()
 
 #            if self.isGlowAutoUpdate:
@@ -3973,16 +3994,29 @@ class XrtQook(qt.QMainWindow):
 #                pass
 #        self.blUpdateLatchOpen = True
 
+    def toggleGlow(self, status):
+        self.isGlowAutoUpdate = status
+        self.blRunGlow()
+        if self.blViewer is not None:
+            if hasattr(self.blViewer.customGlWidget, 'input_queue'):
+                self.blViewer.customGlWidget.input_queue.put({
+                            "command": "auto_update",
+                            "object_type": "beamline",
+                            "kwargs": {"value": int(status)}
+                            })
+
     def blRunGlow(self, kwargs={}):
         if self.blViewer is None:
             try:
                 _ = self.beamLine.export_to_json()  # Init Gl.bl and move there
-                self.blViewer = xrtglow.xrtGlow(layout=self.beamLine.layoutStr,
-                                                **kwargs)
+                self.blViewer = xrtglow.xrtGlow(
+                        layout=self.beamLine.layoutStr,
+                        progressSignal=self.statusUpdate,
+                        **kwargs)
                 self.blViewer.setWindowTitle("xrtGlow")
                 # self.blViewer.show()
                 self.blViewer.parentRef = self
-                self.blViewer.parentSignal = self.statusUpdate
+#                self.blViewer.parentSignal = self.statusUpdate
                 self.beamLine = self.blViewer.customGlWidget.beamline
                 self.blViewer.customGlWidget.updateQookTree.connect(
                     self.updateBeamlineModel)

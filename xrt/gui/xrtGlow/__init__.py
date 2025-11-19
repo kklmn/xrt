@@ -241,7 +241,7 @@ class xrtGlow(qt.QWidget):
             self.fluxDataModel.appendRow(qt.QStandardItem(colorField))
 
         glwInitKwargs = {'parent': self, 'modelRoot': self.segmentsModelRoot,
-                         'epicsPrefix': epicsPrefix}
+                         'epicsPrefix': epicsPrefix, 'signal': progressSignal}
 
         if arrayOfRays is not None:
             glwInitKwargs.update(
@@ -2782,6 +2782,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if self.epicsPrefix is not None:
                     self.epicsInterface.pv_records['AcquireStatus'].set(0)
                 self.colorsUpdated.emit()
+                if self.QookSignal is not None:
+                    self.QookSignal.emit((1., "Propagation complete"))
             elif 'pos_attr' in msg:  # TODO: Update epics rbv
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
@@ -2797,7 +2799,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.oePropsUpdated.emit((msg['sender_id'],
                                           msg['diag_attr'],
                                           msg['diag_value']))
-
+            elif 'progress' in msg and self.QookSignal is not None:
+                    self.QookSignal.emit((msg['progress'],
+                                          "Running propagation"))
 #            elif 'depend_attr' in msg:
 #                self.oePropsUpdated.emit((msg['sender_id'],
 #                                          msg['depend_attr'],

@@ -1491,7 +1491,8 @@ def propagationProcess(q_in, q_out):
 #            continue
         elif handler.needUpdate:
             started = True if handler.startEl is None else False
-
+            flowLen = len(handler.bl.flowU)
+            flowCounter = 0
             for oeid, meth in handler.bl.flowU.items():
                 if not started:  # Skip until the modified element
                     if handler.startEl == oeid:
@@ -1507,7 +1508,7 @@ def propagationProcess(q_in, q_out):
                         raise
                         print("Error in PropagationProcess\n", e)
                         continue
-
+                    flowCounter += 1
                     for autoAttr in derivedArgSet:  # ['pitch', 'bragg', 'center']:
                         if (hasattr(oe, f'_{autoAttr}') and hasattr(
                                 oe, f'_{autoAttr}Val')):
@@ -1568,6 +1569,7 @@ def propagationProcess(q_in, q_out):
                                     'sender_id': oeid,
                                     'status': 0}
                         q_out.put(msg_hist)
+                    q_out.put({"status": 0, "progress": flowCounter/flowLen})
             handler.bl.forceAlign = False
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False
