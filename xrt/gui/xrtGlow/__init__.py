@@ -2787,7 +2787,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif 'pos_attr' in msg:  # TODO: Update epics rbv
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
-                    setattr(oeLine[0], f"_{msg['pos_attr']}", msg['pos_value'])
+                    setattr(oeLine[0],
+                            f"{msg['pos_attr']}" if msg['pos_attr'] in
+                            ['footprint'] else f"_{msg['pos_attr']}Val",
+                            msg['pos_value'])
                 if msg['pos_attr'] in ['footprint']:
                     if self.autoSizeOe:
                         self.needMeshUpdate.append(msg['sender_id'])
