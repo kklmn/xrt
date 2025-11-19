@@ -262,6 +262,14 @@ class SourceBase:
         self.dz = eSigmaZ * 1e-3  # conversion from mkm to mm
 
     @property
+    def eSigmaXprime(self):
+        return self.dxprime
+
+    @property
+    def eSigmaZprime(self):
+        return self.dzprime
+
+    @property
     def eEpsilonX(self):
         return self._eEpsilonX * 1e6  # returns in nmrad
 

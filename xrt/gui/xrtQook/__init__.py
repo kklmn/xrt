@@ -829,6 +829,15 @@ class XrtQook(qt.QMainWindow):
         else:
             catDict.update({'Shape': raycing.shapeArgSet})
 
+        if any([hasattr(oeObj, arg) for arg in raycing.diagnosticArgs]):
+            catDict.update({
+                'Diagnostic': raycing.diagnosticArgs})
+            diagProps = {argName: getattr(oeObj, argName) for
+                                argName in raycing.diagnosticArgs if
+                                hasattr(oeObj, argName)}
+            oeProps.update(diagProps)
+
+
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget')
         elViewer = OEExplorer(self, oeProps,
@@ -3655,21 +3664,29 @@ class XrtQook(qt.QMainWindow):
     def updateBeamlineModel(self, data):
         oeid, kwargs = data
         self.beamLineModel.blockSignals(True)
-        for i in range(self.rootBLItem.rowCount()):
-            elItem = self.rootBLItem.child(i, 0)
-            elUUID = str(elItem.data(qt.Qt.UserRole))
-            if elUUID == oeid:
-                for j in range(elItem.rowCount()):
-                    pItem = elItem.child(0, j)
-                    if str(pItem.text()) in 'properties':
-                        for k in range(pItem.rowCount()):
-                            pNItem = pItem.child(k, 0)
-                            if str(pNItem.text()) in kwargs:
-                                pVItem = pItem.child(k, 1)
-                                pVItem.setText(str(kwargs[str(pNItem.text())]))
-                        break
-                break
+        for argName, argValue in kwargs.items():
+            if any(argName.lower().startswith(v) for v in
+                   ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
+                raycing.is_valid_uuid(argValue):
+                    matObj = self.beamLine.materialsDict.get(argValue)
+                    argValue = matObj.name
+
+            for i in range(self.rootBLItem.rowCount()):
+                elItem = self.rootBLItem.child(i, 0)
+                elUUID = str(elItem.data(qt.Qt.UserRole))
+                if elUUID == oeid:
+                    for j in range(elItem.rowCount()):
+                        pItem = elItem.child(0, j)
+                        if str(pItem.text()) in 'properties':
+                            for k in range(pItem.rowCount()):
+                                pNItem = pItem.child(k, 0)
+                                if str(pNItem.text()) == argName:
+                                    pVItem = pItem.child(k, 1)
+                                    pVItem.setText(str(argValue))
+                            break
+                    break
         self.beamLineModel.blockSignals(False)
+        self.tree.update()
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
         # TODO: move deletion here

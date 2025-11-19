@@ -370,22 +370,35 @@ class OE(object):
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
-        if hasattr(self, '_RPQ'):
-            if self._RInit is not None:
-                self._R = self.get_Rmer_from_Coddington(self._RInit[0],
-                                                        self._RInit[1])
-        if hasattr(self, '_rPQ'):
-            if self._rInit is not None:
-                self._r = self.get_rsag_from_Coddington(self._rInit[0],
-                                                        self._rInit[1])
-        if hasattr(self, '_RmPQ'):
-            if self._RmPQ is not None:
-                self._Rm = self.get_Rmer_from_Coddington(self._RmPQ[0],
-                                                         self._RmPQ[1])
-        if hasattr(self, '_RsPQ'):
-            if self._RsPQ is not None:
-                self._Rs = self.get_rsag_from_Coddington(self._RsPQ[0],
-                                                         self._RsPQ[1])
+        if hasattr(self, '_R') and isinstance(self._R, (tuple, list)):
+            if hasattr(self, '_braggVal'):
+                pass
+            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RVal = self.get_Rmer_from_Coddington(
+                        self._R[0], self._R[1], self._pitchVal)
+            else:
+                self._RVal = np.inf
+
+        if hasattr(self, '_r') and isinstance(self._r, (list, tuple)):
+                self._rVal = self.get_rsag_from_Coddington(*self._r)
+
+        if hasattr(self, '_Rm') and isinstance(self._Rm, (tuple, list)):
+            if hasattr(self, '_braggVal'):
+                pass
+            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RmVal = self.get_Rmer_from_Coddington(
+                        self._Rm[0], self._Rm[1], self._pitchVal)
+            else:
+                self._RmVal = np.inf
+
+        if hasattr(self, '_Rs') and isinstance(self._Rs, (tuple, list)):
+            if hasattr(self, '_braggVal'):
+                pass
+            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RsVal = self.get_rsag_from_Coddington(
+                        self._Rs[0], self._Rs[1], self._pitchVal)
+            else:
+                self._RsVal = np.inf
 
     @property
     def roll(self):

@@ -352,6 +352,14 @@ class xrtGlow(qt.QWidget):
             else:
                 catDict.update({'Shape': raycing.shapeArgSet})
 
+            if any([hasattr(oeObj, arg) for arg in raycing.diagnosticArgs]):
+                catDict.update({
+                    'Diagnostic': raycing.diagnosticArgs})
+                diagProps = {argName: getattr(oeObj, argName) for
+                                    argName in raycing.diagnosticArgs if
+                                    hasattr(oeObj, argName)}
+                oeProps.update(diagProps)
+
             elViewer = OEExplorer(self, oeProps,
                                   initDict=oeInitProps,
                                   epicsDict=getattr(self.customGlWidget,
@@ -2410,8 +2418,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             record.set(val)
 
     def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
-        qookValue = None
-        if '_object' in kwargs:  # from Qook
+        if '_object' in kwargs:  # only Qook can create new elements for now
             # new element
             if 'material' in kwargs['_object']:
                 self.beamline.init_material_from_json(oeid, kwargs)
@@ -2491,7 +2498,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             argComps = argName.split('.')
             arg0 = argComps[0]
-            if len(argComps) > 1:  # compound args: center, limits
+            if len(argComps) > 1:  # compound args: center, limits, opening
                 field = argComps[-1]
                 if field == 'energy':
                     if arg0 == 'bragg':
@@ -2499,26 +2506,31 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     else:
                         argValue = oe.material.get_Bragg_angle(float(argValue))
                 else:
-                    arrayValue = getattr(oe, arg0)
+                    argIn = getattr(oe, f'_{arg0}', None)
+                    arrayValue = getattr(oe, arg0) if argIn is None else argIn
+
                     # avoid writing string to numpy array
                     if hasattr(arrayValue, 'tolist'):
-                        idx = arrayValue._names.index(field)
                         arrayValue = arrayValue.tolist()
-                        arrayValue[idx] = argValue
-                    else:
-                        setattr(arrayValue, field, argValue)
+
+                    for fList in raycing.compoundArgs.values():
+                        if field in fList:
+                            idx = fList.index(field)
+                            break
+                    arrayValue[idx] = argValue
                     argValue = arrayValue
+
             elif any(arg0.lower().startswith(v) for v in
                    ['mater', 'tlay', 'blay', 'coat', 'substrate']):
-                qookValue = argValue  # TODO: need better logic
-                # GUIs need names, bl objects need uuids
-                argValue = self.beamline.matnamesToUUIDs.get(qookValue)
-                kwargs[arg0] = argValue
+                if not raycing.is_valid_uuid(argValue):
+                    # objects need material uuid rather than name
+                    argValue = self.beamline.matnamesToUUIDs.get(argValue)
+                    kwargs[arg0] = argValue
 
-            # updating local beamline tree
+            # updating local beamline tree here
             setattr(oe, arg0, argValue)
             if sender == 'OEE':
-                self.updateQookTree.emit((oeid, {arg0: qookValue or argValue}))
+                self.updateQookTree.emit((oeid, {arg0: argValue}))
 
             if arg0.lower().startswith('center'):
                 flow = copy.deepcopy(self.beamline.flowU)
@@ -2535,6 +2547,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     skipUpdate = True
 
             if arg0 in orientationArgSet and not skipUpdate:
+#                self.oePropsUpdated.emit((oeid, arg0, argValue))
                 self.meshDict[oeid].update_transformation_matrix()
                 self.getMinMax()
                 self.maxLen = np.max(np.abs(
@@ -2754,7 +2767,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         while not progress_queue.empty():
             msg = progress_queue.get()
             if 'beam' in msg:
-#                print(msg['sender_name'], msg['sender_id'], msg['beam'])
                 for beamKey, beam in msg['beam'].items():
                     self.needBeamUpdate.append((msg['sender_id'], beamKey))
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
@@ -2770,20 +2782,26 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if self.epicsPrefix is not None:
                     self.epicsInterface.pv_records['AcquireStatus'].set(0)
                 self.colorsUpdated.emit()
-#                self.getColorLimits()
-#                self.glDraw()
             elif 'pos_attr' in msg:  # TODO: Update epics rbv
-#                print("updated props:", msg['sender_id'], msg['pos_attr'])
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
-                    setattr(oeLine[0], msg['pos_attr'], msg['pos_value'])
-                if msg['pos_attr'] in ['footprint']:  # need better controls
+                    setattr(oeLine[0], f"_{msg['pos_attr']}", msg['pos_value'])
+                if msg['pos_attr'] in ['footprint']:
                     if self.autoSizeOe:
                         self.needMeshUpdate.append(msg['sender_id'])
                 else:
                     self.oePropsUpdated.emit((msg['sender_id'],
                                               msg['pos_attr'],
                                               msg['pos_value']))
+            elif 'diag_attr' in msg:
+                self.oePropsUpdated.emit((msg['sender_id'],
+                                          msg['diag_attr'],
+                                          msg['diag_value']))
+
+#            elif 'depend_attr' in msg:
+#                self.oePropsUpdated.emit((msg['sender_id'],
+#                                          msg['depend_attr'],
+#                                          msg['depend_value']))
 #                    self.meshDict[msg['sender_id']].update_transformation_matrix()
 #                    try:
 #                        self.getMinMax()
@@ -3344,9 +3362,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.parent.updateMaxLenFromGL(self.maxLen)
             except TypeError:
                 print("Cannot find limits")
-        mesh = self.meshDict.get(oeid)
-        if mesh is not None:  # TODO: may miss initial positioning
-            mesh.update_transformation_matrix()
+        if pName in raycing.orientationArgSet:
+            mesh = self.meshDict.get(oeid)
+            if mesh is not None:  # TODO: may miss initial positioning
+                mesh.update_transformation_matrix()
+
         self.glDraw()
 
     def update_oe_surface(self, oeuuid):
@@ -7267,6 +7287,8 @@ class OEExplorer(qt.QDialog):
                     self.add_param(parentItem, key, spVal, epv=epv)
                     self.add_param(parentItem, f"{key} rbk", value)
                 else:
+                    if key in raycing.diagnosticArgs:
+                        print(key, value)
                     self.add_param(parentItem, key, value, epv=epv)
 
 #        for item in self.itemGroups.values():
@@ -7471,16 +7493,18 @@ class OEExplorer(qt.QDialog):
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
 
-        if str(paramName) == 'name' or paramName.endswith('rbk'):
+        if str(paramName) == 'name' or paramName.endswith('rbk') or\
+                parent is self.itemGroups.get('Diagnostic'):
             ch1flag = self.paramFlag
         elif str(paramName) in ['uuid']:
             ch1flag = self.objectFlag
         else:
             ch1flag = self.valueFlag
-            
+
         child1.setFlags(ch1flag)
 
-        if paramName.endswith('rbk'):
+        if paramName.endswith('rbk') or\
+                parent is self.itemGroups.get('Diagnostic'):
             child1.setBackground(qt.QColor('#E0F7FA'))
             child0.setBackground(qt.QColor('#E0F7FA'))
 
@@ -7524,13 +7548,13 @@ class OEExplorer(qt.QDialog):
         self.model.appendRow([key_item, val_item])
 
     def on_item_changed(self, item):
-        print("OEE", item.text())
+#        print("OEE", item.text())
         if item.column() != 1:
             return
 
         row = item.row()
         key = str(item.parent().child(row, 0).text())
-        if key.endswith('rbk'):
+        if key.endswith('rbk') or key in raycing.diagnosticArgs:
             return
         value_str = str(item.text())
 
@@ -7542,7 +7566,7 @@ class OEExplorer(qt.QDialog):
         original_value = self.original_data.get(key)
         value_changed = value != original_value
 
-        print(value_changed)
+#        print(value_changed)
 
         # Update the changed_data dictionary
         if value_changed:
@@ -7616,6 +7640,13 @@ class OEExplorer(qt.QDialog):
                     if str(child0.text()) == f'{pTuple[1]} rbk':
                         child1 = parentItem.child(i, 1)
                         child1.setText(str(pTuple[2]))
+                    elif parentItem is self.itemGroups.get('Diagnostic') and\
+                            str(child0.text()) == f'{pTuple[1]}':
+                        child1 = parentItem.child(i, 1)
+                        child1.setText(str(pTuple[2]))
+#                    else:  # all other params? need more conditions?
+#                        child1 = parentItem.child(i, 1)
+#                        child1.setText(str(pTuple[2]))                        
 
     def update_plot(self, outList, iteration=0):
         self.dynamicPlot.nRaysAll += outList[13]
@@ -7660,15 +7691,6 @@ class OEExplorer(qt.QDialog):
         self.dynamicPlot.textStatus.set_text('')
         self.dynamicPlot.plot_plots()
         self.setWindowTitle(self.windowTitleStr)
-
-#    def getVal(self, value):
-#        if str(value) == 'round':
-#            return str(value)
-#
-#        try:
-#            return eval(str(value))
-#        except:  # analysis:ignore
-#            return str(value)
 
     def set_beam(self, beamKey):
         self.dynamicPlot.beam = str(beamKey)

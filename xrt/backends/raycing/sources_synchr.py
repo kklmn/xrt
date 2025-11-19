@@ -1280,7 +1280,7 @@ class Undulator(IntegratedSource):
         B0y = kwargs.pop('B0y', 0)
         phaseDeg = kwargs.pop('phaseDeg', 0)
         taper = kwargs.pop('taper', None)
-        targetE = kwargs.pop('targetE', None)
+        targetE = kwargs.pop('targetE', (5050, 9))
         xPrimeMaxAutoReduce = kwargs.pop('xPrimeMaxAutoReduce', True)
         zPrimeMaxAutoReduce = kwargs.pop('zPrimeMaxAutoReduce', True)
         super(Undulator, self).__init__(*args, **kwargs)

@@ -588,19 +588,27 @@ class BentLaueCylinder(OE):
 
     @property
     def R(self):
-        return self._R
+        return self._R if self._RVal is None else self._RVal
 
     @R.setter
     def R(self, R):
-        if isinstance(R, (list, tuple)):
-            self._RInit = R
-            self._R = self.get_Rmer_from_Coddington(R[0], R[1])
-        elif R is None:
-            self._RInit = None
-            self._R = 1e100
-        else:
-            self._RInit = R
+        if R in [None, 0]:
+            self._RVal = np.inf
+            self._R = None
+        elif isinstance(R, (tuple, list)):
+            if hasattr(self, '_braggVal') and self._braggVal != 0:
+                self._RVal = self.get_Rmer_from_Coddington(
+                        R[0], R[1], self._braggVal)
+            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RVal = self.get_Rmer_from_Coddington(
+                        R[0], R[1], self._pitchVal)
+            else:
+                self._RVal = np.inf
             self._R = R
+        else:
+            self._RVal = R
+            self._R = None
+
         self._reset_material()
 
     @property
@@ -778,20 +786,52 @@ class BentLaue2D(OE):
 
     @property
     def Rm(self):
-        return self._Rm
+        return self._Rm if self._RmVal is None else self._RmVal 
 
     @Rm.setter
     def Rm(self, Rm):
-        self._Rm = np.inf if Rm in [None, 0] else Rm
+        if Rm in [None, 0]:
+            self._RmVal = np.inf
+            self._Rm = None
+        elif isinstance(Rm, (tuple, list)):
+            if hasattr(self, '_braggVal') and self._braggVal != 0:
+                self._RmVal = self.get_Rmer_from_Coddington(
+                        Rm[0], Rm[1], self._braggVal)
+            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RmVal = self.get_Rmer_from_Coddington(
+                        Rm[0], Rm[1], self._pitchVal)
+            else:
+                self._RmVal = np.inf
+            self._Rm = Rm
+        else:
+            self._RmVal = Rm
+            self._Rm = None
+                
         self._reset_material()
 
     @property
     def Rs(self):
-        return self._Rs
+        return self._Rs if self._RsVal is None else self._RsVal
 
     @Rs.setter
     def Rs(self, Rs):
-        self._Rs = np.inf if Rs in [None, 0] else Rs
+        if Rs in [None, 0]:
+            self._RsVal = np.inf
+            self._Rs = None
+        elif isinstance(Rs, (tuple, list)):
+            if hasattr(self, '_braggVal') and self._braggVal != 0:
+                self._RsVal = self.get_rsag_from_Coddington(
+                        Rs[0], Rs[1], self._braggVal)
+            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RsVal = self.get_rsag_from_Coddington(
+                        Rs[0], Rs[1], self._pitchVal)
+            else:
+                self._RsVal = np.inf
+            self._Rs = Rs
+        else:
+            self._RsVal = Rs
+            self._Rs = None
+
         self._reset_material()
 
     @property
@@ -1060,19 +1100,19 @@ class BentFlatMirror(OE):
 
     @property
     def R(self):
-        return self._R
+        return self._R if self._RVal is None else self._RVal
 
     @R.setter
     def R(self, R):
         if isinstance(R, (list, tuple)):
-            self._RInit = R
-            self._R = self.get_Rmer_from_Coddington(R[0], R[1])
-        elif R is None:
-            self._RInit = None
-            self._R = 1e100
-        else:
-            self._RInit = R
             self._R = R
+            self._RVal = self.get_Rmer_from_Coddington(*R)
+        elif R is None:
+            self._R = None
+            self._RVal = 1e100
+        else:
+            self._R = None
+            self._RVal = R
 
     def __pop_kwargs(self, **kwargs):
         self.R = kwargs.pop('R', 5.0e6)
@@ -1152,37 +1192,35 @@ class ToroidMirror(OE):
 
     @property
     def R(self):
-        return self._R
+        return self._R if self._RVal is None else self._RVal
 
     @R.setter
     def R(self, R):
         if isinstance(R, (list, tuple)):
-            self._RInit = R
-            self._R = self.get_Rmer_from_Coddington(*R)
-        elif R is None:
-            self._RInit = None
-            self._R = 1e100
-        else:
-            self._RInit = R
             self._R = R
+            self._RVal = self.get_Rmer_from_Coddington(*R)
+        elif R in [0, None]:
+            self._R = None
+            self._RVal = 1e100
+        else:
+            self._R = None
+            self._RVal = R
 
     @property
     def r(self):
-        return self._r
+        return self._r if self._rVal is None else self._rVal
 
     @r.setter
     def r(self, r):
-        if r == 0:
-            raise ValueError("r must be non-zero")
         if isinstance(r, (list, tuple)):
-            self._rInit = r
-            self._r = self.get_rsag_from_Coddington(*r)
-        elif r is None:
-            self._rInit = None
-            self._r = 1e100
-        else:
-            self._rInit = r
             self._r = r
+            self._rVal = self.get_rsag_from_Coddington(*r)
+        elif r in [0, None]:
+            self._r = None
+            self._rVal = 1e100
+        else:
+            self._r = None
+            self._rVal = r
 
     def __pop_kwargs(self, **kwargs):
         self.R = kwargs.pop('R', 5.0e6)

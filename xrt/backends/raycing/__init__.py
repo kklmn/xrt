@@ -267,6 +267,16 @@ derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
 
 renderOnlyArgSet = {'renderStyle', 'name'}
 
+compoundArgs = {'center': ['x', 'y', 'z'],
+                'lim': ['lmin', 'lmax'],
+                'opening': ['left', 'right', 'bottom', 'top'],
+                'image': ['width', 'height']}
+
+dependentArgs = {'eSigmaX', 'eSigmaZ', 'betaX', 'betaZ',
+                'K', 'B0', 'rho', 'Kx', 'Ky', 'B0x', 'B0y'}
+
+diagnosticArgs = {'gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
+                  'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB'}
 
 colors = 'BLACK', 'RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN', \
     'WHITE', 'RESET'
@@ -430,13 +440,14 @@ def center_property():
                     pass
                 tmp.append(value)
 
-#        if any(['auto' in str(x) for x in center]):
         if any([isinstance(x, str) for x in center]):
             self._centerInit = centerInit
             self._centerVal = None
-            self._center = copy.deepcopy(center)
+#            self._center = copy.deepcopy(center)
         else:
             self._centerVal = Center(center)
+
+        self._center = copy.deepcopy(center)
 
     return property(getter, setter)
 
@@ -1349,7 +1360,7 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     continue
                 if hasattr(oeObj, f'_{arg}Init') and not resolveAuto:
                     realval = getattr(oeObj, f'_{arg}Init')
-                    print(oeObj.name, f'_{arg}Init', realval)
+#                    print(oeObj.name, f'_{arg}Init', realval)
                 else:
                     realval = getattr(oeObj, arg)
 
@@ -1365,8 +1376,8 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     elif needRevG:
                         realval = globRev[str(realval)]
                     else:
-                        print("Do something with your material")
-                        raise
+                        print("Cannot resolve material")
+#                        raise
                 if realval != val:
                     defArgs[arg] = str(realval)
                     if compact:
@@ -1493,14 +1504,15 @@ def propagationProcess(q_in, q_out):
                     try:
                         getattr(oe, func)(**fkwargs)
                     except Exception as e:
+                        raise
                         print("Error in PropagationProcess\n", e)
                         continue
 
-                    for autoAttr in ['pitch', 'bragg', 'center']:
+                    for autoAttr in derivedArgSet:  # ['pitch', 'bragg', 'center']:
                         if (hasattr(oe, f'_{autoAttr}') and hasattr(
                                 oe, f'_{autoAttr}Val')):
-                            if getattr(oe, f'_{autoAttr}') != getattr(
-                                    oe, f'_{autoAttr}Val'):
+                            if True:  # getattr(oe, f'_{autoAttr}') != getattr(
+#                                    oe, f'_{autoAttr}Val'):
                                 msg_autopos_update = {
                                         'pos_attr': autoAttr,
                                         'pos_value': getattr(oe, autoAttr),
@@ -1519,6 +1531,30 @@ def propagationProcess(q_in, q_out):
                                     'sender_id': oe.uuid,
                                     'status': 0}
                             q_out.put(msg_autopos_update)
+
+                    for diagAttrName in diagnosticArgs:
+                        if hasattr(oe, diagAttrName):
+                            diagAttrValue = getattr(oe, diagAttrName, None)
+                            if diagAttrValue is not None:
+                                msg_diagparam_update = {
+                                        'diag_attr': diagAttrName,
+                                        'diag_value': diagAttrValue,
+                                        'sender_name': oe.name,
+                                        'sender_id': oe.uuid,
+                                        'status': 0}
+                                q_out.put(msg_diagparam_update)                            
+
+#                    for dependAttrName in dependentArgs:
+#                        if hasattr(oe, dependAttrName):
+#                            dependAttrValue = getattr(oe, dependAttrName, None)
+#                            if dependAttrValue is not None:
+#                                msg_dependparam_update = {
+#                                        'depend_attr': dependAttrName,
+#                                        'depend_value': dependAttrValue,
+#                                        'sender_name': oe.name,
+#                                        'sender_id': oe.uuid,
+#                                        'status': 0}
+#                                q_out.put(msg_dependparam_update)
 
                     msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
                                 'sender_name': oe.name,
@@ -1596,9 +1632,10 @@ class MessageHandler:
         kwargs = message.get("kwargs", {})
 
         if object_type == 'oe':
-            element = self.bl.oesDict.get(objuuid)
+            eLine = self.bl.oesDict.get(objuuid)
 
-            if element is not None:
+            if eLine is not None:
+                element = eLine[0]
                 for key, value in kwargs.items():
                     args = key.split('.')
                     arg = args[0]
@@ -1608,20 +1645,24 @@ class MessageHandler:
                             if arg == 'bragg':
                                 value = [float(value)]
                             else:
-                                value = element[0].material.get_Bragg_angle(
+                                value = element.material.get_Bragg_angle(
                                         float(value))
                         else:
-                            arrayValue = getattr(element[0], arg)
-                            # avoid writing string to numpy array
+                            argIn = getattr(element, f'_{arg}', None)
+                            arrayValue = getattr(element, arg) if\
+                                argIn is None else argIn
+
                             if hasattr(arrayValue, 'tolist'):
-                                idx = arrayValue._names.index(field)
                                 arrayValue = arrayValue.tolist()
-                                arrayValue[idx] = value
-                            else:
-                                setattr(arrayValue, field, value)
+
+                            for fList in compoundArgs.values():
+                                if field in fList:
+                                    idx = fList.index(field)
+                                    break
+                            arrayValue[idx] = value
                             value = arrayValue
 
-                    setattr(element[0], arg, value)
+                    setattr(element, arg, value)
                     if arg.lower().startswith('center'):
                         self.bl.sort_flow()
 
@@ -1629,7 +1670,7 @@ class MessageHandler:
                     self.needUpdate = True
                     if len(kwargs) == 1 and (kwargs.keys() & renderOnlyArgSet):
                         self.needUpdate = False
-                if hasattr(element[0], 'propagate') and \
+                if hasattr(element, 'propagate') and \
                         objuuid in self.bl.flowU:
                     kwargs = list(self.bl.flowU[objuuid].values())[0]
                     modifiedEl = kwargs['beam']
@@ -2187,7 +2228,7 @@ class BeamLine(object):
         autoPitch = autoBragg = False
         alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
 
-        if hasattr(oe, '_center'):
+        if hasattr(oe, '_center') and isinstance(oe._center, list):
             autoCenter = [isinstance(x, str) for x in oe._center]
 #            autoCenter = ['auto' in str(x) for x in oe._center]
 
@@ -2259,7 +2300,7 @@ class BeamLine(object):
                         break
             for dim in autoCoord:
                 centerList[dim] = newCenter[dim]
-            oe.center = centerList
+            oe._centerVal = Center(centerList)
             if _VERBOSITY_ > 0:
                 print(oe.name, "center:", oe.center)
 
@@ -2300,12 +2341,12 @@ class BeamLine(object):
                 if autoBragg:
                     if autoPitch:
                         oe.pitch = 0
-                    oe.bragg = targetPitch - oe.pitch
+                    oe._braggVal = targetPitch - oe.pitch
                     if _VERBOSITY_ > 0:
                         print("{0}: Bragg={1} at E={2}".format(
                                 oe.name, oe.bragg, alignE))
                 else:  # autoPitch
-                    oe.pitch = targetPitch
+                    oe._pitchVal = targetPitch
                     if _VERBOSITY_ > 0:
                         print(oe.name, "pitch:", oe.pitch)
             except Exception as e:
