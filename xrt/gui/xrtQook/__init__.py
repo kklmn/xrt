@@ -41,7 +41,7 @@ import os
 import sys
 import textwrap
 import numpy as np  # analysis:ignore , really needed
-#import time
+import time
 from datetime import date
 import inspect
 if sys.version_info < (3, 1):
@@ -109,8 +109,6 @@ slidersInTreeScale = {'pitch': 0.1, 'roll': 0.1, 'yaw': 0.1, 'bragg': 1e-3}
 
 # os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
 isUnitsEnabled = False  # TODO:
-
-TAB_ICON_SIZE = 32
 
 
 class LevelRestrictedModel(qt.QStandardItemModel):
@@ -274,6 +272,50 @@ class SphinxWorker(qt.QObject):
         self.html_ready.emit()
 
 
+class BusyIconWorker(qt.QObject):
+    BUSYICONDT = 0.050  # s
+
+    def prepare(self, parent):
+        self.parent = parent  # XrtQook QMainWindow
+        iconPath = os.path.join(parent.iconsDir, 'icon-busy.png')
+        self.busyPixmap0 = qt.QPixmap(iconPath)
+        self.busyVarLim = 0.01, 1.5, 0.2  # min, max, mult
+        self.busyVar = self.busyVarLim[0]
+        self.busyParticleScales = [1, 1.5, 1.5, 1.5, 1.5]
+        self.shouldRedraw = True
+
+    def render(self):
+        while self.shouldRedraw:
+            pixBusy = qt.QPixmap(self.busyPixmap0.size())
+            pixBusy.fill(qt.QColor("#000000ff"))
+            painter = qt.QPainter(pixBusy)
+            # painter.setRenderHint(qt.QPainter.SmoothPixmapTransform)
+            if self.busyVar > self.busyVarLim[1]:
+                self.busyVar = self.busyVarLim[0]
+            scale = self.busyVar
+            painter.scale(scale, scale)
+            for sc in self.busyParticleScales:
+                painter.scale(sc, sc)
+                painter.drawPixmap(32, 32, self.busyPixmap0)
+            painter.end()
+            self.busyVar += self.busyVar*self.busyVarLim[2]
+            icon = qt.QIcon(pixBusy)
+
+            # tab order is unknown:
+            tabWidget = self.parent.tabWidget
+            for itab in range(tabWidget.count()):
+                if tabWidget.tabText(itab) == self.parent.tabNameGlow:
+                    break
+            else:
+                return
+            tabWidget.setTabIcon(itab, icon)
+
+            time.sleep(self.BUSYICONDT)  # waiting in a separate thread is ok
+
+    def halt(self):
+        self.shouldRedraw = False
+
+
 class QDockWidgetNoClose(qt.QDockWidget):  # ignores Alt+F4 on undocked widget
     def closeEvent(self, evt):
         evt.setAccepted(not evt.spontaneous())
@@ -361,6 +403,8 @@ class XrtQook(qt.QMainWindow):
     sig_resized = qt.Signal("QResizeEvent")
     sig_moved = qt.Signal("QMoveEvent")
 
+    TABICONSIZE = 36
+
     def __init__(self, parent=None, loadLayout=None, projectFile=None):
         super().__init__(parent)
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
@@ -369,6 +413,7 @@ class XrtQook(qt.QMainWindow):
 
         self.prbStart = 0
         self.prbRange = 100
+        self.busyIconThread = None
 
         self.prepareViewer = False
         self.callWizard = True
@@ -461,6 +506,7 @@ class XrtQook(qt.QMainWindow):
                         qt.QDockWidget.DockWidgetFloatable)
 
         self.tabNames = "Live Doc", "xrtGlow"
+        self.tabNameGlow = self.tabNames[1]
         tabWidgets = self.webHelp, self.blViewer
         tabIcons = "icon-help.png", "3dg_256.png"
         self.docks = []
@@ -491,11 +537,11 @@ class XrtQook(qt.QMainWindow):
             "QTabBar::tab:selected {border-top: 3px solid lightblue; "\
             "font-weight: 700; AB}"
         # if csi.onMac:
-        AB = f"background: white; height: {TAB_ICON_SIZE+2};"
-        IB = f"height: {TAB_ICON_SIZE};"
+        AB = f"background: white; height: {self.TABICONSIZE};"
+        IB = f"height: {self.TABICONSIZE};"
         style = style.replace("AB", AB).replace("IB", IB)
         self.tabWidget.setStyleSheet(style)
-        iconSize = int(TAB_ICON_SIZE*0.9)
+        iconSize = int(self.TABICONSIZE)
         self.tabWidget.setIconSize(qt.QSize(iconSize, iconSize))
 
         self.setTabIcons()
@@ -2841,8 +2887,7 @@ class XrtQook(qt.QMainWindow):
             self.tabs.setCurrentWidget(self.tree)
             self.prbStart = 0
             self.prbRange = 100
-            self.progressBar.setValue(0)
-            self.progressBar.setFormat('Running propagation')
+            self.statusUpdate.emit((0., 'Running propagation'))
 
             if tmpAutoUpdate:
                 self.toggleGlow(True)
@@ -4030,6 +4075,22 @@ class XrtQook(qt.QMainWindow):
         self.progressBar.setValue(self.prbStart +
                                   int(dataTuple[0] * self.prbRange))
         self.progressBar.setFormat(dataTuple[1])
+
+        if dataTuple[0] <= 0:
+            self.busyIconThread = qt.QThread(self)
+            self.busyIconWorker = BusyIconWorker()
+            self.busyIconWorker.moveToThread(self.busyIconThread)
+            self.busyIconWorker.prepare(self)
+            self.busyIconThread.started.connect(self.busyIconWorker.render)
+            self.busyIconThread.finished.connect(self.busyIconWorker.halt)
+            self.busyIconThread.start()
+        elif dataTuple[0] >= 1:
+            if self.busyIconThread is not None:
+                self.busyIconWorker.shouldRedraw = False
+                self.busyIconThread.quit()
+                self.busyIconThread.deleteLater()
+                self.busyIconThread = None
+                self.setTabIcons()
 
     def generateCode(self):
         self.progressBar.setValue(0)
