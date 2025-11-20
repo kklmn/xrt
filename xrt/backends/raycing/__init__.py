@@ -186,7 +186,8 @@ else:
     from inspect import getfullargspec as getargspec
 
 from .singletons import (
-    colorPrint, colors, unicode, basestring, is_sequence, _VERBOSITY_)
+    colorama, colorPrint, colors, unicode, basestring, is_sequence,
+    _VERBOSITY_)
 
 from .physconsts import SIE0, CH  # analysis:ignore
 
