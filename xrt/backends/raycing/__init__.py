@@ -170,11 +170,20 @@ __module__ = "raycing"
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "20 Nov 2025"
 
+import sys
 import types
 import numpy as np
 import copy
+import json
+import inspect
 import uuid  # analysis:ignore
 from itertools import islice  # analysis:ignore
+from collections import OrderedDict
+
+if sys.version_info < (3, 1):
+    from inspect import getargspec
+else:
+    from inspect import getfullargspec as getargspec
 
 from .singletons import (
     colorPrint, colors, unicode, basestring, is_sequence, _VERBOSITY_)
