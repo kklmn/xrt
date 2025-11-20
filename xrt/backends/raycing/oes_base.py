@@ -380,7 +380,7 @@ class OE(object):
                 self._RVal = np.inf
 
         if hasattr(self, '_r') and isinstance(self._r, (list, tuple)):
-                self._rVal = self.get_rsag_from_Coddington(*self._r)
+            self._rVal = self.get_rsag_from_Coddington(*self._r)
 
         if hasattr(self, '_Rm') and isinstance(self._Rm, (tuple, list)):
             if hasattr(self, '_braggVal'):
@@ -478,7 +478,7 @@ class OE(object):
     def limPhysX(self, limPhysX):
         if limPhysX is None:
             self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE])
+                                             raycing.maxHalfSizeOfOE])
         else:
             self._limPhysX = raycing.Limits(limPhysX)
         self.get_surface_limits()
@@ -491,7 +491,7 @@ class OE(object):
     def limPhysY(self, limPhysY):
         if limPhysY is None:
             self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE])
+                                             raycing.maxHalfSizeOfOE])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
         self.get_surface_limits()
@@ -548,22 +548,26 @@ class OE(object):
                               'y': self.extraRoll,
                               'z': self.extraYaw}
                 rotSeq = (self.rotationSequence[slice(1, None, 2)])[::-1]
-                extraRotSeq = (self.extraRotationSequence[slice(1, None, 2)])[::-1]
+                extraRotSeq = (
+                    self.extraRotationSequence[slice(1, None, 2)])[::-1]
                 rotation = scprot.from_euler(
                         rotSeq, [rotAx[i] for i in rotSeq]).as_quat()
                 extraRot = scprot.from_euler(
                     extraRotSeq,
                     [extraRotAx[i] for i in extraRotSeq]).as_quat()
-                rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
-                extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
+                rotation = \
+                    [rotation[-1], rotation[0], rotation[1], rotation[2]]
+                extraRot = \
+                    [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
 
                 orientationQ = raycing.multiply_quats(rotation, extraRot)
 
-#                new_norm = raycing.quat_vec_rotate(np.array([0, 0, 1]), rotation)
+                # new_norm = raycing.quat_vec_rotate(
+                #     np.array([0, 0, 1]), rotation)
 
                 return orientationQ
         except Exception as e:
-#            raise
+            # raise
             print(e)
 
     def _update_bounding_box(self):
@@ -974,8 +978,8 @@ class OE(object):
     def get_surface_limits(self):
         """Returns surface_limits."""
 
-        if not all([hasattr(self, arg) for arg in ['curSurface', 'limPhysX',
-                'limPhysY', 'limOptX', 'limOptY']]):
+        if not all([hasattr(self, arg) for arg in [
+                'curSurface', 'limPhysX', 'limPhysY', 'limOptX', 'limOptY']]):
             return
         cs = self.curSurface
         self.surfPhysX = self.limPhysX
@@ -1343,7 +1347,8 @@ class OE(object):
     def local_to_global(self, lb, returnBeam=False, **kwargs):
         dx, dy, dz = 0, 0, 0
         extraAnglesSign = 1.  # only for pitch and yaw
-        if isinstance(self, DCM):
+        # if isinstance(self, DCM):
+        if hasattr(self, 'cryst2pitch'):
             is2ndXtal = kwargs.get('is2ndXtal', False)
             if is2ndXtal:
                 pitch = -self.pitch - self.bragg + self.cryst2pitch +\
@@ -1379,7 +1384,8 @@ class OE(object):
 
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=pitch, roll=roll, yaw=yaw, **kwargs)
-        if isinstance(self, DCM):
+        # if isinstance(self, DCM):
+        if hasattr(self, 'cryst2pitch'):
             if is2ndXtal:
                 raycing.rotate_beam(lb, roll=np.pi)
 
@@ -1703,8 +1709,8 @@ class OE(object):
             f0_in[iNel, :] = matcr.elements[iNel].f0coeffs
 
         lattice_in = np.array([matcr.a, matcr.b, matcr.c, 0,
-                               matcr.alphaRad, matcr.betaRad, matcr.gammaRad, 0],
-                              dtype=self.cl_precisionF)
+                               matcr.alphaRad, matcr.betaRad, matcr.gammaRad,
+                               0], dtype=self.cl_precisionF)
         calctype = 0
         if matcr.kind == "powder":
             calctype = 5
@@ -2284,7 +2290,7 @@ class OE(object):
                 lb.Ep[goodN] *= rap
 
             if (not fromVacuum) and material is not None and\
-                    matSur.kind  not in ('crystal', 'multilayer'):
+                    matSur.kind not in ('crystal', 'multilayer'):
                 # tMax in mm, refl[2]=mu0 in 1/cm
                 att = np.exp(-refl[2] * tMax[goodN] * 0.1)
                 lb.Jss[goodN] *= att

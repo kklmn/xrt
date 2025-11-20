@@ -6,7 +6,7 @@ import inspect
 from .. import raycing
 from . import sources as rs
 
-from .oes_base import DCM
+from .oes_dcm import DCM
 
 
 class Plate(DCM):
