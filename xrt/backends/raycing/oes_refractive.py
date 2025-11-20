@@ -63,9 +63,9 @@ class Plate(DCM):
     def limPhysX(self, limPhysX):
         if limPhysX is None:
             self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE])
+                                             raycing.maxHalfSizeOfOE])
             self._limPhysX2 = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE])
+                                              raycing.maxHalfSizeOfOE])
 #        elif isinstance(limPhysX, (list, tuple)): # np.arrays?
 #            self._limPhysX = raycing.Limits(limPhysX)
 #            self._limPhysX2 = raycing.Limits(
@@ -84,9 +84,9 @@ class Plate(DCM):
     def limPhysY(self, limPhysY):
         if limPhysY is None:
             self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE])
+                                             raycing.maxHalfSizeOfOE])
             self._limPhysY2 = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                              raycing.maxHalfSizeOfOE])
+                                              raycing.maxHalfSizeOfOE])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
             self._limPhysY2 = raycing.Limits(
@@ -95,9 +95,9 @@ class Plate(DCM):
 
     @property
     def material(self):
-#        if raycing.is_sequence(self._material):
-#            matSur = self._material[self.curSurface]
-#        else:
+        # if raycing.is_sequence(self._material):
+        #     matSur = self._material[self.curSurface]
+        # else:
         matSur = self._material
 
         if raycing.is_valid_uuid(matSur) and self.bl is not None:
@@ -126,7 +126,7 @@ class Plate(DCM):
         self.material2 = material
 
         if material is not None:
-            if raycing.is_sequence(material):  # why is this here? how to select material?
+            if raycing.is_sequence(material):
                 materials = material
             else:
                 materials = material,

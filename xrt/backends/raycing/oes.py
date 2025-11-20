@@ -150,13 +150,34 @@ from . import myopencl as mcl
 from . import stages as rst
 from .physconsts import CH  # keep it  # analysis:ignore
 
-from .oes_base import OE, DCM, allArguments
-from .oes_bragg import *
-from .oes_laue import *
-from .oes_parametric import *
-from .oes_refractive import *
-from .oes_gratings import *
-from .oes_3d import *
+from .oes_base import OE, allArguments
+
+from .oes_dcm import DCM
+
+from .oes_bragg import (
+    DicedOE, JohannCylinder, JohanssonCylinder, JohannToroid, JohanssonToroid,
+    GeneralBraggToroid, DicedJohannToroid, DicedJohanssonToroid)
+
+from .oes_laue import (
+    LauePlate, BentLaueCylinder, BentLaue2D, GroundBentLaueCylinder,
+    BentLaueSphere)
+
+from .oes_parametric import (
+    EllipticalMirrorParam, EllipticalMirror,
+    ParabolicalMirrorParam, ParabolicMirror,
+    HyperbolicMirrorParam, HyperbolicMirror,
+    SurfaceOfRevolution, ParaboloidCapillaryMirror, EllipsoidCapillaryMirror,
+    HyperboloidCapillaryMirror)
+
+from .oes_refractive import (
+    Plate, ParaboloidFlatLens, ParabolicCylinderFlatLens, DoubleParaboloidLens,
+    DoubleParabolicCylinderLens)
+
+from .oes_gratings import (
+    NormalFZP, GeneralFZPin0YZ, BlazedGrating, LaminarGrating,
+    VLSLaminarGrating, VLSGrating)
+
+from .oes_3d import OEfrom3DModel
 
 # try:
 #     import pyopencl as cl  # analysis:ignore
