@@ -4630,7 +4630,7 @@ class PlotViewer(qt.QDialog):
         else:
             setattr(self.dynamicPlot, paramTuple[2], paramTuple[3])
 
-        if paramTuple[2] in ['bins', 'ppb', 'ePos']:
+        if paramTuple[2] in ['bins', 'ppb', 'ePos', 'xPos', 'yPos']:
             self.dynamicPlot.reset_bins2D()
             self.dynamicPlot.reset_fig_layout()
 

@@ -138,8 +138,6 @@ class DCM(OE):
             mat = self.bl.materialsDict.get(self._material2)
         else:
             mat = self._material2
-            print(self.name, "2:", type(mat),
-                  "None" if mat is None else mat.name)
         return mat
 
     @material2.setter

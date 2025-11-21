@@ -133,8 +133,9 @@ class RectangularAperture(object):
             self.opening = [opening, ]
         else:
             self.kind = kind
-            Opening = raycing.NamedArrayFactory(kind)
-            self.opening = Opening(opening)
+            self.opening = opening
+#            Opening = raycing.NamedArrayFactory(kind)
+#            self.opening = Opening(opening)
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
