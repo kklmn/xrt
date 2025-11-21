@@ -1072,13 +1072,13 @@ class XYCPlot(object):
             np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
             origin='lower', figure=self.fig)
 
-        if self.ePos != 0:
-            self.ax1dHistE.imshow(
-                np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
-                origin='lower', figure=self.fig)
-            self.ax1dHistEbar.imshow(
-                np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
-                origin='lower', figure=self.fig)
+        self.ax1dHistE.imshow(
+            np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
+            origin='lower', figure=self.fig)
+        self.ax1dHistEbar.imshow(
+            np.zeros((2, 2, 3)), aspect='auto', interpolation='nearest',
+            origin='lower', figure=self.fig)
+
         self.ax2dHist.imshow(
             np.zeros((2, 2, 3)), aspect=self.aspect, interpolation='nearest',
             origin='lower', figure=self.fig)
@@ -1207,46 +1207,52 @@ class XYCPlot(object):
             self.ax2dHist.set_position(rect2d)
             self.ax1dHistX.set_position(rect1dX)
             self.ax1dHistY.set_position(rect1dY)
+            self.ax1dHistX.set_visible(self.xPos != 0)
+            self.ax1dHistY.set_visible(self.yPos != 0)
             self.ax1dHistXOffset.set_position((rect1dY[0]+rect1dY[2], 0.01))
             self.ax1dHistYOffset.set_position((0.01, rect1dX[1]+rect1dX[3]))
 
     def reset_e_axes(self, rect1dEbar, rect1dE):
         kwmpl = {'facecolor': 'w' if self.negative else 'k'}
+
+        if self.ax1dHistEbar is None:
+            self.ax1dHistEbar = self.fig.add_axes(
+                [0,0,1,1], xlabel='', ylabel='',
+                autoscale_on=False, frameon=frameon, **kwmpl)
+            self.ax1dHistEbar.yaxis.labelpad = xlabelpad
+            self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+            self.ax1dHistEOffset = self.fig.text(
+                0, 0, '', ha='left', va='bottom', color='g')
+            self.ax1dHistE = self.fig.add_axes(
+                [0,0,1,1], sharey=self.ax1dHistEbar, sharex=self.ax1dHistEbar,
+                autoscale_on=False, frameon=frameon, **kwmpl)
+            plt.setp(
+                self.ax1dHistE.get_xticklabels() +
+                self.ax1dHistE.get_yticklabels(), visible=False)
+            self.ax1dHistE.yaxis.set_major_formatter(
+                mpl.ticker.ScalarFormatter(useOffset=False))
+            self.ax1dHistE.xaxis.set_major_formatter(
+                mpl.ticker.ScalarFormatter(useOffset=False))
+            if self.caxis.limits is not None:
+                self.ax1dHistE.set_ylim(self.caxis.limits)
+                self.ax1dHistE.set_xlim(self.caxis.limits)
+                self.ax1dHistE.set_xticks([])
+                self.ax1dHistE.set_yticks([])
+
         if self.ePos == 1:  # right
-            if self.ax1dHistEbar is None:
-                self.ax1dHistEbar = self.fig.add_axes(
-                    rect1dEbar, ylabel=self.caxis.displayLabel,
-                    autoscale_on=False, frameon=frameon, **kwmpl)
-                self.ax1dHistEbar.yaxis.labelpad = xlabelpad
-                self.ax1dHistEOffset = self.fig.text(
-                    rect1dEbar[0], rect1dEbar[1]+rect1dEbar[3], '',
-                    ha='left', va='bottom', color='g')  # , fontweight='bold')
+            self.ax1dHistEbar.set_visible(True)
+            self.ax1dHistEbar.set_position(rect1dEbar)
+            self.ax1dHistEbar.set_xlabel("")
+            self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
 
-                self.ax1dHistE = self.fig.add_axes(
-                    rect1dE, sharey=self.ax1dHistEbar,
-                    autoscale_on=False, frameon=frameon, **kwmpl)
-                plt.setp(
-                    self.ax1dHistE.get_xticklabels() +
-                    self.ax1dHistE.get_yticklabels(), visible=False)
-                self.ax1dHistE.yaxis.set_major_formatter(
-                    mpl.ticker.ScalarFormatter(useOffset=False))
-                if self.caxis.limits is not None:
-                    self.ax1dHistE.set_ylim(self.caxis.limits)
-                    self.ax1dHistE.set_xticks([])
-            else:
-                self.ax1dHistEbar.set_visible(True)
-                self.ax1dHistEbar.set_position(rect1dEbar)
-                self.ax1dHistEbar.set_xlabel("")
-                self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
+            self.ax1dHistEOffset.set_position(
+                    (rect1dEbar[0], rect1dEbar[1]+rect1dEbar[3]))
+            self.ax1dHistEOffset.set_ha('left')
+            self.ax1dHistEOffset.set_va('bottom')
 
-                self.ax1dHistEOffset.set_position(
-                        (rect1dEbar[0], rect1dEbar[1]+rect1dEbar[3]))
-                self.ax1dHistEOffset.set_ha('left')
-                self.ax1dHistEOffset.set_va('bottom')
-
-                self.ax1dHistE.set_visible(True)
-                self.ax1dHistE.set_position(rect1dE)
-
+            self.ax1dHistE.set_visible(True)
+            self.ax1dHistE.set_position(rect1dE)
+            if self.textDE is not None:
                 self.textDE.set_visible(True)
                 self.textDE.set_position((xTextPosDy, yTextPosDy))
                 self.textDE.set_rotation('vertical')
@@ -1255,41 +1261,19 @@ class XYCPlot(object):
                 self.textDE.set_va('center')
 
         elif self.ePos == 2:  # top
-            if self.ax1dHistEbar is None:
-                self.ax1dHistEbar = self.fig.add_axes(
-                    rect1dEbar, xlabel=self.caxis.displayLabel,
-                    autoscale_on=False, frameon=frameon, **kwmpl)
-                self.ax1dHistEbar.xaxis.labelpad = xlabelpad
+            self.ax1dHistEbar.set_visible(True)
+            self.ax1dHistEbar.set_position(rect1dEbar)
+            self.ax1dHistEbar.set_ylabel("")
+            self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
 
-                self.ax1dHistEOffset = self.fig.text(
-                    rect1dEbar[0]+rect1dEbar[2]+0.01, rect1dEbar[1]-0.01, '',
-                    ha='left', va='top', color='g')  # , fontweight='bold')
+            self.ax1dHistEOffset.set_position(
+                    (rect1dEbar[0]+rect1dEbar[2]+0.01, rect1dEbar[1]-0.01))
+            self.ax1dHistEOffset.set_ha('left')
+            self.ax1dHistEOffset.set_va('top')
 
-                self.ax1dHistE = self.fig.add_axes(
-                    rect1dE, sharex=self.ax1dHistEbar,
-                    autoscale_on=False, frameon=frameon, **kwmpl)
-                plt.setp(
-                    self.ax1dHistE.get_yticklabels() +
-                    self.ax1dHistE.get_xticklabels(), visible=False)
-                self.ax1dHistE.xaxis.set_major_formatter(
-                    mpl.ticker.ScalarFormatter(useOffset=False))
-                if self.caxis.limits is not None:
-                    self.ax1dHistE.set_xlim(self.caxis.limits)
-                self.ax1dHistE.set_yticks([])
-            else:
-                self.ax1dHistEbar.set_visible(True)
-                self.ax1dHistEbar.set_position(rect1dEbar)
-                self.ax1dHistEbar.set_ylabel("")
-                self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
-
-                self.ax1dHistEOffset.set_position(
-                        (rect1dEbar[0]+rect1dEbar[2]+0.01, rect1dEbar[1]-0.01))
-                self.ax1dHistEOffset.set_ha('left')
-                self.ax1dHistEOffset.set_va('top')
-
-                self.ax1dHistE.set_visible(True)
-                self.ax1dHistE.set_position(rect1dE)
-
+            self.ax1dHistE.set_visible(True)
+            self.ax1dHistE.set_position(rect1dE)
+            if self.textDE is not None:
                 self.textDE.set_visible(True)
                 self.textDE.set_position((xTextPosDx, yTextPosDx))
                 self.textDE.set_rotation('horizontal')
