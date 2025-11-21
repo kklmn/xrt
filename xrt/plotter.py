@@ -143,18 +143,6 @@ colorFactor = 0.85  # 2./3 for red-to-blue
 colorSaturation = 0.85
 # # end of rc-file ##
 
-if plt.get_backend().lower() in (
-        x.lower() for x in mpl.rcsetup.non_interactive_bk):
-    xExtra = 0  # mpl backend-dependent (don't know why) pixel sizes
-    yExtra = 0  # mpl backend-dependent (don't know why) pixel sizes
-else:  # interactive backends:
-    if True:  # runner.runCardVals.repeats > 1:
-        xExtra = 0
-        yExtra = 2
-    else:
-        xExtra = 0
-        yExtra = 0
-
 
 def versiontuple(v):
     a = v.split(".")
@@ -214,7 +202,7 @@ def deserialize_plots(data):
         try:
             newPlot = XYCPlot(**plotKwargs)
             plotsList.append(newPlot)
-        except:
+        except Exception:
             print("Plot init failed")
     return plotsList
 
@@ -1125,8 +1113,7 @@ class XYCPlot(object):
 
     def get_axes_positions(self, xFigSize, yFigSize):
         rect2d = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
-                  (self.xaxis.pixels-1+xExtra) / xFigSize,
-                  (self.yaxis.pixels-1+yExtra) / yFigSize]
+                  self.xaxis.pixels / xFigSize, self.yaxis.pixels / yFigSize]
 
         rect1dX = copy.deepcopy(rect2d)
         rect1dX[1] = rect2d[1] + rect2d[3] + space2dto1d/yFigSize
