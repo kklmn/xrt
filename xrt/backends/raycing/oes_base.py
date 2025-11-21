@@ -607,6 +607,8 @@ class OE(object):
                     return None
             else:
                 return None
+        elif isinstance(pitch, str):
+            pitch = raycing.auto_units_angle(pitch)
         return 2 * p * q / (p+q) / np.sin(abs(pitch))
 
     def get_rsag_from_Coddington(self, p, q, pitch=None):
@@ -618,6 +620,8 @@ class OE(object):
                     return None
             else:
                 return None
+        elif isinstance(pitch, str):
+            pitch = raycing.auto_units_angle(pitch)
         return 2 * p * q / (p+q) * np.sin(abs(pitch))
 
     def local_z(self, x, y):

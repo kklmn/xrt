@@ -10,7 +10,8 @@ allBeamFields = ('energy', 'x', 'xprime', 'y', 'z', 'zprime', 'xzprime',
                  'Ep_amp', 'Ep_phase', 'Es_amp', 'Es_phase')
 
 orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
-                     'braggOffset', 'rotationSequence', 'positionRoll'}
+                     'braggOffset', 'rotationSequence', 'positionRoll',
+                     'x', 'z'}
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
