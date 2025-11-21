@@ -116,7 +116,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #                                                  2: oeuuid})
 #                fpModel.setSourceModel(self.mainWidget.beamModel)
             if parentIndexName == 'parameters':
-                
+
                 fpModel = MultiColumnFilterProxy({1: "Global"})
                 fpModel.setSourceModel(self.mainWidget.beamModel)
             else:
@@ -194,6 +194,11 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             return combo
         elif 'aspect' in argName.lower():  # plot only
             combo.addItems(['equal', 'auto'])
+            return combo
+        elif argName.lower().endswith('pos'):  # plot only
+            combo.addItems(['0', '1'])
+            if argName.startswith('e'):
+                combo.addItems(['2'])
             return combo
         elif 'precisionopencl' in argName.lower():  # bl only
             combo.addItems(['auto', 'float32', 'float64'])
