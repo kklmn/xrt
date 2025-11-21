@@ -2738,7 +2738,7 @@ class XrtQook(qt.QMainWindow):
                 self.exportModel(child0)
                 child1 = item.child(ii, 1)
                 if child1 is not None and item.model() not in [self.beamModel]:
-                    if child1.flags() != self.paramFlag or \
+                    if child1.flags() != self.paramFlag or\
                             str(child0.text()) == "name" or\
                             str(child0.text()).startswith('beam'):
                         if child1.isEnabled():
@@ -2746,12 +2746,13 @@ class XrtQook(qt.QMainWindow):
                         else:
                             itemType = "object"
                         if int(child1.isEnabled()) == int(child0.isEnabled()):
-                            self.confText +=\
-                                '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
-                                    self.prefixtab,
-                                    despace(str(child0.text())),
-                                    child1.text(),
-                                    itemType)
+                            if not str(child1.text()).endswith('plot'):  # view
+                                self.confText +=\
+                                    '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
+                                        self.prefixtab,
+                                        despace(str(child0.text())),
+                                        child1.text(),
+                                        itemType)
                 elif flatModel:
                     self.confText +=\
                         '{0}<{1} type=\"flat\"></{1}>\n'.format(
