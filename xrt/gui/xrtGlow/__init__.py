@@ -3079,7 +3079,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             oe = self.beamline.oesDict[oeuuid][0]
             oeIndex = int(beamTag[1] == 'beamLocal2')
             oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
-            modelStart *= oeOrientation
+            if not 'Global' in beamTag[1]:
+                modelStart *= oeOrientation
             if is_screen(oe) or is_aperture(oe):
                 modelStart *= scr_m
 
@@ -5764,23 +5765,33 @@ class OEMesh3D():
             vao.create()
             self.vao[nsIndex] = None  # Will be updated after generation
 
-#        if hasattr(self.oe, 'stl_mesh'):
-#            vao.bind()
-#            shader.bind()  # WARNING: Will fail here if shader is none
-#
-#            self.isStl = True
-#            self.vbo_vertices[nsIndex] = setVertexBuffer(
-#                    self.oe.stl_mesh[0].copy(), 3, shader, "position")
-#            self.vbo_normals[nsIndex] = setVertexBuffer(
-#                    self.oe.stl_mesh[1].copy(), 3, shader, "normals")
-#            self.arrLengths[nsIndex] = len(self.oe.stl_mesh[0])
-#
-#            shader.release()
-#            vao.release()
-#
-#            self.vao[nsIndex] = vao
-#            self.ibo[nsIndex] = None  # Check if works with glDrawElements
-#            return
+        if hasattr(self.oe, 'stl_mesh'):
+            self.isStl = True
+
+            self.vbo_vertices[nsIndex] = create_qt_buffer(
+                    self.oe.stl_mesh[0].copy())
+            self.vbo_normals[nsIndex] = create_qt_buffer(
+                    self.oe.stl_mesh[1].copy())
+            self.arrLengths[nsIndex] = len(self.oe.stl_mesh[0])
+            gl.glGetError()
+
+            vao.bind()
+
+            self.vbo_vertices[nsIndex].bind()
+            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(0)
+            self.vbo_vertices[nsIndex].release()
+    
+            self.vbo_normals[nsIndex].bind()
+            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(1)
+            self.vbo_normals[nsIndex].release()
+
+            vao.release()
+
+            self.vao[nsIndex] = vao
+            self.ibo[nsIndex] = None  # Check if works with glDrawElements
+            return
 
         isPlate = is_plate(self.oe)
         isScreen = is_screen(self.oe)
@@ -6391,9 +6402,11 @@ class OEMesh3D():
         if not self.vao:
             return
 
+        oeOrientation = self.transMatrix[0]
+
         self.vao[nsIndex].bind()
 
-        shader.setUniformValue("model", mMod)
+        shader.setUniformValue("model", mMod*oeOrientation)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
         mModScale = qt.QMatrix4x4()
