@@ -33,6 +33,7 @@ class OEfrom3DModel(OE):
         recenter = kwargs.pop('recenter', True)
         super().__init__(*args, **kwargs)
 
+        self.filename = filename
         self.orientation = orientation
         self.recenter = recenter
         if isSTLsupported:
@@ -42,17 +43,17 @@ class OEfrom3DModel(OE):
                 "numpy-stl must be installed to work with STL models")
 
     def load_STL(self, filename):
-        self.stl_mesh = mesh.Mesh.from_file(filename)
+        stl_mesh = mesh.Mesh.from_file(filename)
 
-        normals = np.array(self.stl_mesh.normals)
-        faces = self.stl_mesh.data
+        normals = np.array(stl_mesh.normals)
+        faces = stl_mesh.data
         xrt_ax = {'X': 0, 'Y': 1, 'Z': 2}
         # TODO: catch exception
         z_ax = xrt_ax[self.orientation[2].upper()]
 
-        x_arr = getattr(self.stl_mesh, self.orientation[0].lower())
-        y_arr = getattr(self.stl_mesh, self.orientation[1].lower())
-        z_arr = getattr(self.stl_mesh, self.orientation[2].lower())
+        x_arr = getattr(stl_mesh, self.orientation[0].lower())
+        y_arr = getattr(stl_mesh, self.orientation[1].lower())
+        z_arr = getattr(stl_mesh, self.orientation[2].lower())
 
         topSurfIndex = np.where(normals[:, z_ax] > 0.01)[0]
         # we take z-coord of the last point in triangle. arbitrary choice
@@ -82,7 +83,7 @@ class OEfrom3DModel(OE):
         self.limPhysX = np.array([np.min(xs), np.max(xs)])
         self.limPhysY = np.array([np.min(ys), np.max(ys)])
 
-        if self.recenter:
+        if self.recenter:  # first stage
             self.dcx = 0.5*(self.limPhysX[-1]+self.limPhysX[0])
             self.dcy = 0.5*(self.limPhysY[-1]+self.limPhysY[0])
             xs -= self.dcx
@@ -91,13 +92,17 @@ class OEfrom3DModel(OE):
             self.limPhysY -= self.dcy
             zs -= np.min(zs)
 
+        self.dcz = 0
+
         planeCoords = np.vstack((xs, ys)).T
 
         uxy, ui = np.unique(planeCoords, axis=0, return_index=True)
         uz = zs[ui]
 
-        # TODO: catch exception
-        self.z_spline = interpolate.RBFInterpolator(uxy, uz, kernel='cubic')
+        # TODO: catch exceptions
+#        self.z_spline = interpolate.RBFInterpolator(uxy, uz, kernel='cubic')
+        self.z_spline = interpolate.SmoothBivariateSpline(
+                uxy[:, 0], uxy[:, 1], uz, s=len(uz) * 1e-6)
 
         self.gridsizeX = int(10 * (self.limPhysX[-1] - self.limPhysX[0]))
         self.gridsizeY = int(10 * (self.limPhysY[-1] - self.limPhysY[0]))
@@ -107,26 +112,22 @@ class OEfrom3DModel(OE):
         ygrid = np.linspace(self.limPhysY[0], self.limPhysY[-1],
                             self.gridsizeY)
         xmesh, ymesh = np.meshgrid(xgrid, ygrid, indexing='ij')
+        zgrid = self.z_spline.ev(xmesh, ymesh)
 
-        xygrid = np.vstack((xmesh.flatten(), ymesh.flatten())).T
-        zgrid = self.z_spline(xygrid).reshape(self.gridsizeX, self.gridsizeY)
+        if self.recenter:
+            self.dcz = np.min(zgrid)
 
-        self.x_grad, self.y_grad = np.gradient(zgrid)
-        # self.a_spline = ndimage.spline_filter(x_grad/(xgrid[1]-xgrid[0]))
-        # self.b_spline = ndimage.spline_filter(y_grad/(ygrid[1]-ygrid[0]))
+        self.points = np.array(stl_mesh.vectors).reshape(-1, 3) - np.array(
+                [self.dcx, self.dcy, self.dcz])
+        self.normals = np.repeat(stl_mesh.normals, 3, axis=0)
 
     def local_z(self, x, y):
-        pnt = np.array((x, y)).T
-        z = self.z_spline(pnt)
+        z = self.z_spline.ev(x, y) - self.dcz
         return z
 
     def local_n(self, x, y):
-        coords = np.array(
-            [(x-self.limPhysX[0]) /
-             (self.limPhysX[-1]-self.limPhysX[0]) * (self.gridsizeX-1),
-             (y-self.limPhysY[0]) /
-             (self.limPhysY[-1]-self.limPhysY[0]) * (self.gridsizeY-1)])
-        a = ndimage.map_coordinates(self.x_grad, coords, order=1)
-        b = ndimage.map_coordinates(self.y_grad, coords, order=1)
+        a = self.z_spline.ev(x, y, dx=1, dy=0)
+        b = self.z_spline.ev(x, y, dx=0, dy=1)
+
         norm = np.sqrt(a**2+b**2+1.)
         return [-a/norm, -b/norm, 1./norm]

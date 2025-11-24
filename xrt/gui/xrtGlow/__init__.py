@@ -4107,6 +4107,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
             model = self.segmentModel.model()
 
             while self.needMeshUpdate:  # TODO: process one element per call?
@@ -5769,10 +5770,10 @@ class OEMesh3D():
             self.isStl = True
 
             self.vbo_vertices[nsIndex] = create_qt_buffer(
-                    self.oe.stl_mesh[0].copy())
+                    self.oe.points.copy())
             self.vbo_normals[nsIndex] = create_qt_buffer(
-                    self.oe.stl_mesh[1].copy())
-            self.arrLengths[nsIndex] = len(self.oe.stl_mesh[0])
+                    self.oe.normals.copy())
+            self.arrLengths[nsIndex] = len(self.oe.points)
             gl.glGetError()
 
             vao.bind()
@@ -5781,7 +5782,7 @@ class OEMesh3D():
             gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
             gl.glEnableVertexAttribArray(0)
             self.vbo_vertices[nsIndex].release()
-    
+
             self.vbo_normals[nsIndex].bind()
             gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
             gl.glEnableVertexAttribArray(1)
@@ -6116,6 +6117,14 @@ class OEMesh3D():
         surfmesh['normals'] = allNormals.copy()
         surfmesh['indices'] = allIndices
 
+#        export to STL
+#        triangles = allSurfaces[allIndices].reshape(-1, 3, 3)
+#        from stl import mesh
+#        m = mesh.Mesh(np.zeros(triangles.shape[0], dtype=mesh.Mesh.dtype))
+#        m.vectors[:] = triangles
+#        m.update_normals()
+#        m.save(f'{self.oe.name}.stl')
+
         if oeShape == 'round':
             surfmesh['contour'] = tB
         else:
@@ -6382,7 +6391,7 @@ class OEMesh3D():
             beamTexture.bind()
 
         if self.isStl:
-            gl.glDrawArrays(gl.GL_TRIANGLES, 0, arrLen)  #
+            gl.glDrawArrays(gl.GL_TRIANGLES, 0, arrLen)
         else:
             gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
                               gl.GL_UNSIGNED_INT, [])
@@ -7666,7 +7675,7 @@ class OEExplorer(qt.QDialog):
                         child1.setText(str(pTuple[2]))
 #                    else:  # all other params? need more conditions?
 #                        child1 = parentItem.child(i, 1)
-#                        child1.setText(str(pTuple[2]))                        
+#                        child1.setText(str(pTuple[2]))
 
     def update_plot(self, outList, iteration=0):
         self.dynamicPlot.nRaysAll += outList[13]
