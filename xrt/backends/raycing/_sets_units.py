@@ -30,8 +30,8 @@ compoundArgs = {'center': ['x', 'y', 'z'],
 dependentArgs = {'eSigmaX', 'eSigmaZ', 'betaX', 'betaZ',
                  'K', 'B0', 'rho', 'Kx', 'Ky', 'B0x', 'B0y'}
 
-diagnosticArgs = {'gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
-                  'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB'}
+diagnosticArgs = ('gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
+                  'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB')
 
 allUnitsAng = {'rad': 1.,
                'mrad': 1e-3,

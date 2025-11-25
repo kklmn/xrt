@@ -62,7 +62,8 @@ from ...backends.raycing import materials as rmats
 # from ...backends.raycing import physconsts
 from ..commons import qt
 from ..commons import gl
-from ...plotter import colorFactor, colorSaturation, XYCPlot, XYCAxis
+from ...plotter import (colorFactor, colorSaturation, XYCPlot, XYCAxis,
+                        deserialize_plots)
 from ...multipro import GenericProcessOrThread as GP
 from ...runner import RunCardVals
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
@@ -276,6 +277,7 @@ class xrtGlow(qt.QWidget):
         tabs.addTab(self.colorOpacityPanel, "Colors")
         tabs.addTab(self.projectionPanel, "Grid/Projections")
         tabs.addTab(self.scenePanel, "Scene")
+#        tabs.setTabPosition(qt.QTabWidget.West)
         sideLayout.addWidget(tabs)
         self.canvasSplitter = qt.QSplitter()
         self.canvasSplitter.setChildrenCollapsible(False)
@@ -287,6 +289,31 @@ class xrtGlow(qt.QWidget):
         self.canvasSplitter.addWidget(sideWidget)
 
         self.setLayout(mainLayout)
+        tabs.tabBar().setStyleSheet("""
+            QTabBar::tab {
+                padding: 6px 12px;
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255,255,255,12%),
+                    stop:0.45 transparent,
+                    stop:1 rgba(0,0,0,12%)
+                );
+                border-left: 1px solid rgba(255,255,255,20%);
+                border-right: 1px solid rgba(0,0,0,15%);
+            }
+            QTabBar::tab:hover {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255,255,255,20%),
+                    stop:0.45 transparent,
+                    stop:1 rgba(0,0,0,20%)
+                );
+                }
+
+            QTabBar::tab:selected {
+                border-bottom: 2px solid rgba(0,0,0,40%);
+            }
+        """)
 
         toggleHelp = qt.QShortcut(self)
         toggleHelp.setKey("F1")
@@ -7316,8 +7343,8 @@ class OEExplorer(qt.QDialog):
                     self.add_param(parentItem, key, spVal, epv=epv)
                     self.add_param(parentItem, f"{key} rbk", value)
                 else:
-                    if key in raycing.diagnosticArgs:
-                        print(key, value)
+#                    if key in raycing.diagnosticArgs:
+#                        print(key, value)
                     self.add_param(parentItem, key, value, epv=epv)
 
 #        for item in self.itemGroups.values():
@@ -7335,7 +7362,12 @@ class OEExplorer(qt.QDialog):
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         self.table.expandAll()
         self.table.setUniformRowHeights(False)
-
+#        self.table.setStyleSheet("""
+#            QHeaderView::section {
+#                background-color: #002080;
+#                color: white;
+#            }
+#            """)
         comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine)
         self.table.setItemDelegateForColumn(1, comboDelegate)
 
@@ -7368,123 +7400,70 @@ class OEExplorer(qt.QDialog):
         elif self.beamLine.beamsDictU.get(elementId) is None:
             layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
-        else:
-            self.beamDict = self.beamLine.beamsDictU.get(elementId)
+        else:  # create dynamicPlotWidget
+            plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
+            axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
+            plotProps = plotDefArgs
+            axHints = {'xaxis': {'label': 'x', 'unit': 'mm'},
+                       'yaxis': {'label': 'y', 'unit': 'mm'},
+                       'caxis': {'label': 'energy', 'unit': 'eV'}}
 
-            self.plotControlPanel = qt.QGroupBox(self)
-            self.plotControlPanel.setSizePolicy(qt.QSizePolicy.Minimum,
-                                                qt.QSizePolicy.Minimum)
+            beamDict = self.beamLine.beamsDictU.get(elementId)
+            defBeam = list(beamDict.keys())[-1]
+            plotProps['beam'] = (elementId, defBeam)
 
-            self.plotControlPanel.setFlat(False)
-            self.plotControlPanel.setTitle("Plot Controls")
-            combo = qt.QComboBox()
-            allBeams = list(self.beamDict.keys())
-            combo.addItems(allBeams)
-            combo.setCurrentText(str(allBeams[-1]))
-    #        combo.activated.connect(self.set_beam)
-            combo.currentTextChanged.connect(self.set_beam)
-    #        combo.activated.connect(lambda: self.commitData.emit(combo))
-            controlLayout = qt.QVBoxLayout(self.plotControlPanel)
-            c1layout = qt.QHBoxLayout()
-            c1layout.addWidget(qt.QLabel("beam"))
-            c1layout.addWidget(combo)
-            c1layout.addStretch()
-            controlLayout.addLayout(c1layout)
+            if defBeam.endswith('lobal'):
+                axHints['yaxis']['label'] = 'z'
+            else:
+                if len(beamDict) > 1:
+                    axHints['yaxis']['label'] = r"y"
+                else:   # screen or aperture
+                    axHints['yaxis']['label'] = r"z"
 
-            combo2 = qt.QComboBox()
-            combo2.addItems(['auto', 'equal'])
-            combo2.currentTextChanged.connect(self.set_aspect)
-            c2layout = qt.QHBoxLayout()
-            c2layout.addWidget(qt.QLabel("aspect"))
-            c2layout.addWidget(combo2)
-            c2layout.addStretch()
-            controlLayout.addLayout(c2layout)
+            for pname in ['xaxis', 'yaxis', 'caxis']:
+                plotProps[pname] = copy.deepcopy(axDefArgs)
+                plotProps[pname].update(axHints[pname])
 
-            combo3 = qt.QComboBox()
-            combo3.addItems(list(raycing.allBeamFields))
-            combo3.currentTextChanged.connect(self.set_cdata)
-            c3layout = qt.QHBoxLayout()
-            c3layout.addWidget(qt.QLabel("caxis"))
-            c3layout.addWidget(combo3)
-            c3layout.addStretch()
-            controlLayout.addLayout(c3layout)
+            hiddenProps = {'xPos', 'yPos', 'ePos', 'contourLevels',
+                           'contourColors', 'contourFmt', 'contourFactor',
+                           'saveName', 'persistentName', 'oe', 'raycingParam',
+                           'beamState', 'beamC', 'useQtWidget', 'title',
+                           'rayFlag',
+                           'density', 'outline'}
 
-    #        button = qt.QPushButton("Re-trace")
-    #        button.clicked.connect(self.plot_beam)
-    #        controlLayout.addWidget(button)
-
-
-            defBeam = str(combo.currentText())
-            self.dynamicPlot = XYCPlot(beam=defBeam, aspect='auto',
-                                       useQtWidget=True)
-
-            self.dynamicPlot.caxis.label = r"energy"
-            self.dynamicPlot.caxis.unit = r"eV"
-            locCard = RunCardVals(threads=0,
-                                  processes=1,
-                                  repeats=1,
-                                  updateEvery=1,
-                                  pickleEvery=0,
-                                  backend='raycing',
-                                  globalNorm=False,
-                                  runfile=None)
-
-            locCard.beamLine = self.beamLine
-
-            self.dynamicPlot.runCardVals = locCard
-            self.dynamicPlot.xaxis.label = r"x"
-            self.dynamicPlot.xaxis.unit = r"mm"
-            self.locCard = locCard
-
-#            self.dynamicPlot.caxis.limits = [parent.customGlWidget.colorMin,
-#                                             parent.customGlWidget.colorMax]
-
-            # TODO: controls to fix limits?
-
-#            xLims = raycing.parametrize(dataDict.get('limPhysX'))
-#            yLims = raycing.parametrize(dataDict.get('limPhysY'))
-#
-#            if xLims is not None:
-#                if not np.all(np.abs(xLims) == raycing.maxHalfSizeOfOE):
-#                    self.dynamicPlot.xaxis.limits = xLims
-#
-#            if yLims is not None:
-#                if not np.all(np.abs(yLims) == raycing.maxHalfSizeOfOE):
-#                    self.dynamicPlot.yaxis.limits = yLims
+            self.dynamicPlotWidget = ConfigurablePlotWidget(
+                    plotProps, parent=self, viewOnly=False,
+                    beamLine=self.beamLine,
+                    plotId=self.elementId,
+                    hiddenProps=hiddenProps)
 
             canvasSplitter = qt.QSplitter()
             canvasSplitter.setChildrenCollapsible(False)
 
             widgetR = qt.QWidget()
             layoutR = qt.QVBoxLayout(widgetR)
-            layoutR.addWidget(self.dynamicPlot.canvas)
-            self.dynamicPlot.canvas.setSizePolicy(qt.QSizePolicy.Expanding,
-                                                  qt.QSizePolicy.Expanding)
-
-            layoutR.addWidget(self.plotControlPanel)
-
+            layoutR.addWidget(self.dynamicPlotWidget)
             layout.addWidget(canvasSplitter)
-
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
-            self.liveUpdateEnabled = True
 
-            self.plot_beam()
+#            self.plotExportControlPanel = qt.QGroupBox(self)
+#            self.plotExportControlPanel.setSizePolicy(qt.QSizePolicy.Minimum,
+#                                                qt.QSizePolicy.Minimum)
+#
+#            self.plotExportControlPanel.setFlat(False)
+#            self.plotExportControlPanel.setTitle("File Export")
+#
+#            exportLayout = qt.QVBoxLayout(self.plotExportControlPanel)
+#
+#            for label in ['Save plot', 'Pickle plot', 'Export beam',
+#                          'Export OE shape']:
+#                button = qt.QPushButton(label)
+#                func = getattr(self, label.lower().replace(' ', '_'))
+#                button.clicked.connect(func)
+#                exportLayout.addWidget(button)
 
         self.edited_data = {}
-#        print("init complete")
-
-#        table_size = self.table.sizeHint()
-#        extra_height = self.button_box.sizeHint().height() + 40  # add padding
-#        self.resize(table_size.width() + 40, table_size.height() + extra_height)
-#        screen_geometry = qt.QApplication.primaryScreen().availableGeometry()
-#        max_width = screen_geometry.width() * 0.8
-#        max_height = screen_geometry.height() * 0.8
-#
-#        self.resize(
-#            min(table_size.width() + 40, max_width),
-#            min(table_size.height() + extra_height, max_height)
-#        )
 
     def add_prop(self, parent, propName):
         """Add non-editable Item"""
@@ -7499,20 +7478,6 @@ class OEExplorer(qt.QDialog):
         child1.setBackground(qt.QColor("#001a66"))   # dark blue
         parent.appendRow([child0, child1])
         return child0
-
-#    def add_value(self, parent, value, source=None):
-#        """Add editable Item"""
-#        child0 = qt.QStandardItem(str(value))
-#        child0.setFlags(self.valueFlag)
-#        child1 = qt.QStandardItem()
-#        child1.setFlags(self.paramFlag)
-#        child0.setDropEnabled(False)
-#        child0.setDragEnabled(False)
-#        if source is None:
-#            parent.appendRow([child0, child1])
-#        else:
-#            parent.insertRow(source.row() + 1, [child0, child1])
-#        return child0
 
     def add_param(self, parent, paramName, value, epv=None, source=None,
                   unit=None):
@@ -7595,8 +7560,6 @@ class OEExplorer(qt.QDialog):
         original_value = self.original_data.get(key)
         value_changed = value != original_value
 
-#        print(value_changed)
-
         # Update the changed_data dictionary
         if value_changed:
             self.changed_data[key] = value
@@ -7677,6 +7640,242 @@ class OEExplorer(qt.QDialog):
 #                        child1 = parentItem.child(i, 1)
 #                        child1.setText(str(pTuple[2]))
 
+    def update_beam(self, beamTag):
+        self.dynamicPlotWidget.update_beam(beamTag)
+
+    def save_plot(self):
+        # open file dialog: mpl image formats
+        # set self.dynamicPlot.saveName
+        # self.dynamicPlot.save() -> plot.saveName
+        # unset self.dynamicPlot.saveName
+        pass
+
+    def pickle_plot(self):
+        # open file dialog: npy, mat, pickle
+        # set self.dynamicPlot.persistentName
+        # self.dynamicPlot.store_plots() -> plot.persistentName
+        # unset self.dynamicPlot.persistentName
+        pass
+
+    def export_beam(self):
+        # open file dialog:   npy, mat pickle
+        # get current beam object
+        # beam.export_beam(filename)
+        pass
+
+    def export_oe_shape(self):
+        # open file dialog: stl, obj
+        # get glow.meshdict[oeid]
+        # mesh.export()
+        pass
+
+
+class ConfigurablePlotWidget(qt.QWidget):
+    def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
+                 plotId=None, hiddenProps={}):
+        super().__init__(parent)
+#        self.setAttribute(qt.Qt.WA_DeleteOnClose)
+#        self.setWindowTitle("Live Plot Builder")
+        self.plotId = plotId
+        self.hiddenProps = hiddenProps
+        plotProps['useQtWidget'] = True
+        plotInit = {'Project': {'plots': {'plot': plotProps}}}
+        plotObj = deserialize_plots(plotInit)
+
+        self.objectFlag = qt.Qt.ItemFlags(0)
+        self.paramFlag = qt.Qt.ItemFlags(
+            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+        self.valueFlag = qt.Qt.ItemFlags(
+            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsEditable |
+            qt.Qt.ItemIsSelectable)
+        self.checkFlag = qt.Qt.ItemFlags(
+            qt.Qt.ItemIsEnabled | qt.Qt.ItemIsUserCheckable |
+            qt.Qt.ItemIsSelectable)
+
+        self.plotProps = plotProps
+        self.liveUpdateEnabled = True  # TODO: configurable
+        self.beamLine = beamLine
+        self.dynamicPlot = plotObj[0]
+
+        self.set_beam(plotProps.get('beam'))
+
+        layout = qt.QHBoxLayout(self)
+        layout.addWidget(self.dynamicPlot.canvas)
+
+        self.fluxLabelList = raycing.allBeamFields
+        self.fluxDataList = ['auto'] + list(self.fluxLabelList)
+        self.lengthUnitList = list(raycing.allUnitsLenStr.values())
+        self.angleUnitList = list(raycing.allUnitsAngStr.values())
+        self.energyUnitList = list(raycing.allUnitsEnergyStr.values())
+
+        self.init_tabs()
+
+        tabs = qt.QTabWidget()
+        tabs.addTab(self.trees['top'], "Plot")
+        tabs.addTab(self.trees['xaxis'], "X-Axis")
+        tabs.addTab(self.trees['yaxis'], "Y-Axis")
+        tabs.addTab(self.trees['caxis'], "Color Axis")
+#        tabs.addTab(self.exportsPanel, "Exports")
+        tabs.setTabPosition(qt.QTabWidget.West)
+        layout.addWidget(tabs)
+
+#        tabs.tabBar().setStyleSheet("""
+#            QTabBar::tab {
+#                background: #001a66;
+#                color: white;
+#                padding: 6px 12px;
+#                margin-right: 2px;
+#                border: 1px solid #009999;
+#            }
+#        
+#            QTabBar::tab:selected {
+#                background: #0033cc;
+#                color: white;
+#            }
+#        
+#            QTabBar::tab:hover {
+#                background: #0033cc;
+#                color: white;
+#            }
+#        """)
+
+
+        self.plot_beam()
+
+    def init_tabs(self):
+        headerLine = ["Property", "Value"]
+
+        comboDelegate = qt.DynamicArgumentDelegate(bl=self.beamLine,
+                                                   mainWidget=self)
+        self.models = {}
+        self.trees = {}
+        for mLabel in ['top', 'xaxis', 'yaxis', 'caxis']:
+            model = qt.QStandardItemModel()
+            model.setHorizontalHeaderLabels(headerLine)
+            model.itemChanged.connect(self.on_item_changed)
+            model.invisibleRootItem().setData(mLabel, qt.Qt.UserRole)
+            self.models[mLabel] = model
+
+            table = qt.QTreeView()
+            table.setModel(model)
+            table.setAlternatingRowColors(True)
+            table.setItemDelegateForColumn(1, comboDelegate)
+            table.expandAll()
+            table.setUniformRowHeights(False)
+#            table.setStyleSheet("""
+#                QHeaderView::section {
+#                    background-color: #002080;
+#                    color: white;
+#                }
+#                """)
+            self.trees[mLabel] = table
+
+        for key, value in self.plotProps.items():
+            if key.endswith('axis'):
+                model = self.models[key]
+                parentItem = model.invisibleRootItem()
+                for axkey, axval in value.items():
+                    if axkey not in self.hiddenProps:
+                        self.add_param(parentItem, axkey, axval)
+            else:
+                model = self.models['top']
+                parentItem = model.invisibleRootItem()
+                if key in ['beam'] and raycing.is_valid_uuid(self.elementId):
+                    value = value[-1]
+
+                if key not in self.hiddenProps:
+                    self.add_param(parentItem, key, value)
+
+
+
+    def add_param(self, parent, paramName, value):
+        """Add a pair of Parameter-Value Items"""
+        toolTip = None
+        child0 = qt.QStandardItem(str(paramName))
+        child0.setFlags(self.paramFlag)
+        child1 = qt.QStandardItem(str(value))
+
+        ch1flag = self.valueFlag
+        child1.setFlags(ch1flag)
+
+        child0.setDropEnabled(False)
+        child0.setDragEnabled(False)
+#        if toolTip is not None:
+#            child1.setToolTip(toolTip)
+        row = [child0, child1]
+        parent.appendRow(row)
+
+        return child0, child1
+
+    def on_item_changed(self, item):
+        parent = item.model().invisibleRootItem()
+        if item.column() == 0:
+            return
+
+        elif item.column() == 1 and item.isEnabled():
+            paramValue = raycing.parametrize(item.text())
+            objChng = str(parent.data(qt.Qt.UserRole))
+
+            row = item.row()
+            paramName = str(parent.child(row, 0).text())
+            if paramName == 'beam':
+                paramValue = self.get_beam_tag(paramValue)
+            plotParamTuple = self.plotId, objChng, paramName, paramValue
+            self.update_plot_param(plotParamTuple)
+
+    def get_beam_tag(self, value):
+        if raycing.is_valid_uuid(self.plotId):  # oe id
+            return (self.plotId, value)
+        else:  # plot name, run from Qook. value contains beam name
+            pass
+#            beams = self.beamModel.findItems(beamName, column=0)
+#            beamTag = []
+#            for bItem in beams:
+#                row = bItem.row()
+#                btype = self.beamModel.item(row, 1).text()
+#                oeid = self.beamModel.item(row, 2).text()
+#                beamTag = (oeid, btype)
+#                break
+#            return beamTag
+
+    def update_plot_param(self, paramTuple):
+        """(PlotUUID, obj: XYCPlot or XYCAxis, pName, pValue)"""
+        if paramTuple[0] != self.plotId:
+            return
+
+        if paramTuple[2] == 'beam':
+            self.set_beam(paramTuple[3])
+        elif paramTuple[1].endswith('axis'):  # we only check if it's 'axis'
+            axis = getattr(self.dynamicPlot, paramTuple[1])
+            setattr(axis, paramTuple[2], paramTuple[3])
+        elif paramTuple[2] in ['negative']:
+            self.dynamicPlot.set_negative()
+        elif paramTuple[2] in ['invertColorMap']:
+            self.dynamicPlot.set_invert_colors()
+        else:
+            setattr(self.dynamicPlot, paramTuple[2], paramTuple[3])
+
+        if paramTuple[2] in ['bins', 'ppb', 'ePos', 'xPos', 'yPos']:
+            self.dynamicPlot.reset_bins2D()
+            self.dynamicPlot.reset_fig_layout()
+
+        if paramTuple[2] not in ['negative', 'invertColorMap']:
+            self.dynamicPlot.clean_plots()
+            self.plot_beam()
+
+    def set_beam(self, beamTag):
+        elementId, beamKey = beamTag
+        self.elementId = elementId
+        bdu = self.beamLine.beamsDictU
+        self.beamDict = bdu.get(elementId)
+        self.dynamicPlot.beam = str(beamKey)
+
+    def update_beam(self, beamTag):
+        currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
+        if self.liveUpdateEnabled and beamTag == currentTag:
+            self.dynamicPlot.clean_plots()
+            self.plot_beam()
+
     def update_plot(self, outList, iteration=0):
         self.dynamicPlot.nRaysAll += outList[13]
         nRaysVarious = outList[14]
@@ -7719,46 +7918,26 @@ class OEExplorer(qt.QDialog):
             self.dynamicPlot.field3D = self.dynamicPlot.total4D
         self.dynamicPlot.textStatus.set_text('')
         self.dynamicPlot.plot_plots()
-        self.setWindowTitle(self.windowTitleStr)
-
-    def set_beam(self, beamKey):
-        self.dynamicPlot.beam = str(beamKey)
-        self.dynamicPlot.clean_plots()
-        self.plot_beam()
-
-    def update_beam(self, beamTag):
-        if self.liveUpdateEnabled and beamTag == (
-                self.elementId, self.dynamicPlot.beam):
-            self.dynamicPlot.clean_plots()
-            self.plot_beam()
-
-    def set_aspect(self, aspect):
-        self.dynamicPlot.aspect = str(aspect)
-        self.dynamicPlot.clean_plots()
-        self.plot_beam()
-
-    def set_cdata(self, data):
-        self.dynamicPlot.caxis.label = str(data)
-        self.dynamicPlot.clean_plots()
-        self.plot_beam()
 
     def plot_beam(self, key=None):
-        if self.dynamicPlot.beam.endswith('lobal'):
-            self.dynamicPlot.yaxis.label = r"z"
-        else:
-            if len(self.beamDict) > 1:
-                self.dynamicPlot.yaxis.label = r"y"
-            else:   # screen or aperture
-                self.dynamicPlot.yaxis.label = r"z"
-        self.dynamicPlot.yaxis.unit = r"mm"
+        locCard = RunCardVals(threads=0,
+                              processes=1,
+                              repeats=1,
+                              updateEvery=1,
+                              pickleEvery=0,
+                              backend='raycing',
+                              globalNorm=False,
+                              runfile=None)
 
-        sproc = GP(locCard=self.locCard,
+        locCard.beamLine = self.beamLine
+
+        self.dynamicPlot.runCardVals = locCard
+        sproc = GP(locCard=locCard,
                    plots=[self.dynamicPlot.card_copy()],
                    outPlotQueues=[None],
                    alarmQueue=[None],
                    idLoc=0,
                    beamDict=self.beamDict)
-
         try:
             outList = sproc.run()
             self.update_plot(outList)

@@ -93,7 +93,13 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         argName = str(nameIndex.data())
         argValue = str(index.data())
         parentIndex = index.parent()
-        parentIndexName = str(parentIndex.data())
+        if parentIndex is not None:
+            parentIndexName = parentIndex.data()
+
+        if parentIndexName is None:
+            parentIndexName = str(model.invisibleRootItem().data(Qt.UserRole))
+
+        parentIndexName = str(parentIndexName)
 
         # beamModel - only in propagation and plots
         # fluxLabels - only in plots
@@ -110,18 +116,18 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #            combo.setModel(self.mainWidget.beamLineModel)
 #            return combo
         elif argName.startswith('beam'):
-#            if parentIndexName == 'output':  # Not sure we need it if renaming is disabled
-#                oeuuid = index.parent().parent().parent().data(UserRole)
-#                fpModel = MultiColumnFilterProxy({1: argName,
-#                                                  2: oeuuid})
-#                fpModel.setSourceModel(self.mainWidget.beamModel)
-            if parentIndexName == 'parameters':
+            if hasattr(self.mainWidget, 'beamModel'):
+                if parentIndexName == 'parameters':
+                    fpModel = MultiColumnFilterProxy({1: "Global"})
+                    fpModel.setSourceModel(self.mainWidget.beamModel)
+                else:
 
-                fpModel = MultiColumnFilterProxy({1: "Global"})
-                fpModel.setSourceModel(self.mainWidget.beamModel)
+                    fpModel = self.mainWidget.beamModel
+                combo.setModel(fpModel)
+            elif hasattr(self.mainWidget, 'beamDict'):
+                combo.addItems(list(self.mainWidget.beamDict.keys()))
             else:
-                fpModel = self.mainWidget.beamModel
-            combo.setModel(fpModel)
+                return QLineEdit(parent)
             return combo
         elif argName.startswith('wave'):
             fpModel = MultiColumnFilterProxy({1: "Local"})
@@ -143,7 +149,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return QLineEdit(parent)
             return combo
-        elif 'kind' in argName.lower():  # material and bl
+        elif argName.lower() == 'kind':  # material and bl
             if str(model.index(0, 0).data()).lower() == 'none':  # material
                 combo.addItems(['mirror', 'thin mirror',
                                 'plate', 'lens', 'grating', 'FZP', 'auto'])
@@ -181,7 +187,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.addItems(['Chantler', 'Chantler total', 'Henke', 'BrCo'])
             return combo
         elif 'data' in argName.lower() and 'axis' in parentIndexName:  # plot
-            combo.setModel(self.mainWidget.fluxDataModel)
+            combo.addItems(self.mainWidget.fluxDataList)
             return combo
         elif 'geom' in argName.lower():  # mat only
             combo.addItems(['Bragg reflected', 'Bragg transmitted',
@@ -206,8 +212,10 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif argName.lower().endswith('label'):  # plot only
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy'])
-            else:  # caxis
-                combo.setModel(self.mainWidget.fluxLabelModel)
+            elif hasattr(self.mainWidget, 'fluxLabelList'):  # caxis
+                combo.addItems(self.mainWidget.fluxLabelList)
+            else:
+                return QLineEdit(parent)
             return combo
         elif 'rayflag' in argName.lower():  # plot only
             group = QWidget(parent)
@@ -225,26 +233,25 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             group.setLayout(layout)
             group.setProperty('fieldName', 'rayflag')
             return group
-        elif argName.lower().endswith('unit') and parentIndexName.lower() in [
-                'xaxis', 'yaxis', 'caxis']:
-
-#    row_count = model.rowCount(parent_index)
-#    siblings = [model.index(row, index.column(), parent_index) for row in range(row_count)]
-
-            for i in range(model.rowCount(parentIndex)):
-                fieldName = str(model.index(i, 0, parentIndex).data())
-                fieldVal = str(model.index(i, 1, parentIndex).data())
-                if fieldName == 'label':
-                    if fieldVal in ['x', 'y', 'z']:
-                        combo.setModel(self.mainWidget.lengthUnitModel)
-                    elif fieldVal in ['x\'', 'z\'']:
-                        combo.setModel(self.mainWidget.angleUnitModel)
-                    elif fieldVal in ['energy']:
-                        combo.setModel(self.mainWidget.energyUnitModel)
-                    else:
-                        return QLineEdit(parent)
-                    break
-            return combo
+        elif argName.lower().endswith('unit'):
+            if parentIndexName.lower() in ['xaxis', 'yaxis', 'caxis']:
+                for i in range(model.rowCount(parentIndex)):
+                    fieldName = str(model.index(i, 0, parentIndex).data())
+                    fieldVal = str(model.index(i, 1, parentIndex).data())
+                    if fieldName == 'label':
+                        if fieldVal in ['x', 'y', 'z']:
+                            combo.addItems(self.mainWidget.lengthUnitList)
+#                            combo.setModel(self.mainWidget.lengthUnitModel)
+                        elif fieldVal in ['x\'', 'z\'']:
+                            combo.addItems(self.mainWidget.angleUnitList)
+#                            combo.setModel(self.mainWidget.angleUnitModel)
+                        elif fieldVal in ['energy']:
+                            combo.addItems(self.mainWidget.energyUnitList)
+#                            combo.setModel(self.mainWidget.energyUnitModel)
+                        else:
+                            return QLineEdit(parent)
+                        break
+                return combo
 
         else:
             return QLineEdit(parent)
