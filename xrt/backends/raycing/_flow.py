@@ -282,7 +282,6 @@ class MessageHandler:
 
     def handle_auto_update(self, message):
         # print("Starting processing loop.")
-        print("modifying auto-update.", message)
         kwargs = message.get('kwargs')
         if kwargs is not None:
             auto_update = kwargs.get('value')

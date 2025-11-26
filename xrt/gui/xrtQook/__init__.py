@@ -87,7 +87,8 @@ from ..commons import gl  # analysis:ignore
 from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
-    from ..xrtGlow import (OEExplorer, is_screen, is_aperture, RunCardVals, GP)
+    from ..xrtGlow import (OEExplorer, is_screen, is_aperture, RunCardVals, GP,
+                           ConfigurablePlotWidget)
 
 try:
     from ...backends.raycing import materials_elemental as rmatsel
@@ -953,7 +954,7 @@ class XrtQook(qt.QMainWindow):
         plotId = plotItem.data(qt.Qt.UserRole)
         plotsDict['beam'] = self.getBeamTag(plotsDict.get('beam'))
 
-        plotViewer = PlotViewer(plotsDict, self, viewOnly=True,
+        plotViewer = PlotViewer(plotsDict, self, viewOnly=False,
                                 beamLine=self.beamLine, plotId=plotId)
         self.plotParamUpdate.connect(plotViewer.update_plot_param)
         if hasattr(self, 'blViewer') and self.blViewer is not None:
@@ -4530,133 +4531,23 @@ class PropagationConnect(qt.QObject):
 
 
 class PlotViewer(qt.QDialog):
-
     def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
                  plotId=None):
         super().__init__(parent)
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Live Plot Builder")
-        plotProps['useQtWidget'] = True
-        plotInit = {'Project': {'plots': {'plot': plotProps}}}
-        plotObj = xrtplot.deserialize_plots(plotInit)
-        self.plotId = plotId
-#        print(self.plotId)
-        self.liveUpdateEnabled = True  # TODO: configurable
-        self.beamLine = beamLine
-        self.dynamicPlot = plotObj[0]
-        self.set_beam(plotProps.get('beam'))
 
-        layout = qt.QHBoxLayout(self)
-        layout.addWidget(self.dynamicPlot.canvas)
-
-        self.plot_beam()
+        self.dynamicPlot = ConfigurablePlotWidget(
+                plotProps, parent, viewOnly, beamLine,
+                plotId, hiddenProps={'_object'})
+        layout = qt.QVBoxLayout(self)
+        layout.addWidget(self.dynamicPlot)
 
     def update_plot_param(self, paramTuple):
-        """(PlotUUID, obj: XYCPlot or XYCAxis, pName, pValue)"""
-        if paramTuple[0] != self.plotId:
-            return
-
-        if paramTuple[2] == 'beam':
-            self.set_beam(paramTuple[3])
-        elif paramTuple[1].endswith('axis'):
-
-            axis = getattr(self.dynamicPlot, paramTuple[1])
-            setattr(axis, paramTuple[2], paramTuple[3])
-        elif paramTuple[2] in ['negative']:
-            self.dynamicPlot.set_negative()
-        elif paramTuple[2] in ['invertColorMap']:
-            self.dynamicPlot.set_invert_colors()
-        else:
-            setattr(self.dynamicPlot, paramTuple[2], paramTuple[3])
-
-        if paramTuple[2] in ['bins', 'ppb', 'ePos', 'xPos', 'yPos']:
-            self.dynamicPlot.reset_bins2D()
-            self.dynamicPlot.reset_fig_layout()
-
-        if paramTuple[2] not in ['negative', 'invertColorMap']:
-            self.dynamicPlot.clean_plots()
-            self.plot_beam()
-
-    def set_beam(self, beamTag):
-        elementId, beamKey = beamTag
-        self.elementId = elementId
-        bdu = self.beamLine.beamsDictU
-        self.beamDict = bdu.get(elementId)
-        self.dynamicPlot.beam = str(beamKey)
-
+        self.dynamicPlot.update_plot_param(paramTuple)
+        
     def update_beam(self, beamTag):
-        currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
-        if self.liveUpdateEnabled and beamTag == currentTag:
-            self.dynamicPlot.clean_plots()
-            self.plot_beam()
-
-    def update_plot(self, outList, iteration=0):
-        self.dynamicPlot.nRaysAll += outList[13]
-        nRaysVarious = outList[14]
-        self.dynamicPlot.nRaysAlive += nRaysVarious[0]
-        self.dynamicPlot.nRaysGood += nRaysVarious[1]
-        self.dynamicPlot.nRaysOut += nRaysVarious[2]
-        self.dynamicPlot.nRaysOver += nRaysVarious[3]
-        self.dynamicPlot.nRaysDead += nRaysVarious[4]
-        self.dynamicPlot.nRaysAccepted += nRaysVarious[5]
-        self.dynamicPlot.nRaysAcceptedE += nRaysVarious[6]
-        self.dynamicPlot.nRaysSeeded += nRaysVarious[7]
-        self.dynamicPlot.nRaysSeededI += nRaysVarious[8]
-        self.dynamicPlot.displayAsAbsorbedPower = outList[15]
-
-        for iaxis, axis in enumerate(
-                [self.dynamicPlot.xaxis,
-                 self.dynamicPlot.yaxis,
-                 self.dynamicPlot.caxis]):
-            if (iaxis == 2) and (not self.dynamicPlot.ePos):
-                continue
-            axis.total1D += outList[0+iaxis*3]
-            axis.total1D_RGB += outList[1+iaxis*3]
-            if iteration == 0:
-                axis.binEdges = outList[2+iaxis*3]
-
-        self.dynamicPlot.total2D += outList[9]
-        self.dynamicPlot.total2D_RGB += outList[10]
-        if self.dynamicPlot.fluxKind.lower().endswith('4d'):
-            self.dynamicPlot.total4D += outList[11]
-        elif self.dynamicPlot.fluxKind.lower().endswith('pca'):
-            self.dynamicPlot.total4D.append(outList[11])
-        self.dynamicPlot.intensity += outList[12]
-
-        if self.dynamicPlot.fluxKind.startswith('E') and \
-                self.dynamicPlot.fluxKind.lower().endswith('pca'):
-            xbin, zbin =\
-                self.dynamicPlot.xaxis.bins, self.dynamicPlot.yaxis.bins
-            self.dynamicPlot.total4D = np.concatenate(
-                    self.dynamicPlot.total4D).reshape(-1, xbin, zbin)
-            self.dynamicPlot.field3D = self.dynamicPlot.total4D
-        self.dynamicPlot.textStatus.set_text('')
-        self.dynamicPlot.plot_plots()
-
-    def plot_beam(self, key=None):
-        locCard = RunCardVals(threads=0,
-                              processes=1,
-                              repeats=1,
-                              updateEvery=1,
-                              pickleEvery=0,
-                              backend='raycing',
-                              globalNorm=False,
-                              runfile=None)
-
-        locCard.beamLine = self.beamLine
-
-        self.dynamicPlot.runCardVals = locCard
-        sproc = GP(locCard=locCard,
-                   plots=[self.dynamicPlot.card_copy()],
-                   outPlotQueues=[None],
-                   alarmQueue=[None],
-                   idLoc=0,
-                   beamDict=self.beamDict)
-        try:
-            outList = sproc.run()
-            self.update_plot(outList)
-        except Exception as e:
-            print(e)
+        self.dynamicPlot.update_beam(beamTag)
 
 
 if __name__ == '__main__':

@@ -69,6 +69,12 @@ from ...runner import RunCardVals
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 MAXRAYS = 500000
 
+try:
+    from stl import mesh
+    isSTLsupported = True
+except ImportError:
+    isSTLsupported = False
+
 from multiprocessing import Process, Queue
 
 msg_start = {"command": "start"}
@@ -289,31 +295,31 @@ class xrtGlow(qt.QWidget):
         self.canvasSplitter.addWidget(sideWidget)
 
         self.setLayout(mainLayout)
-        tabs.tabBar().setStyleSheet("""
-            QTabBar::tab {
-                padding: 6px 12px;
-                background: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255,255,255,12%),
-                    stop:0.45 transparent,
-                    stop:1 rgba(0,0,0,12%)
-                );
-                border-left: 1px solid rgba(255,255,255,20%);
-                border-right: 1px solid rgba(0,0,0,15%);
-            }
-            QTabBar::tab:hover {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255,255,255,20%),
-                    stop:0.45 transparent,
-                    stop:1 rgba(0,0,0,20%)
-                );
-                }
-
-            QTabBar::tab:selected {
-                border-bottom: 2px solid rgba(0,0,0,40%);
-            }
-        """)
+#        tabs.tabBar().setStyleSheet("""
+#            QTabBar::tab {
+#                padding: 6px 12px;
+#                background: qlineargradient(
+#                    x1:0, y1:0, x2:0, y2:1,
+#                    stop:0 rgba(255,255,255,12%),
+#                    stop:0.45 transparent,
+#                    stop:1 rgba(0,0,0,12%)
+#                );
+#                border-left: 1px solid rgba(255,255,255,20%);
+#                border-right: 1px solid rgba(0,0,0,15%);
+#            }
+#            QTabBar::tab:hover {
+#                background: qlineargradient(
+#                    x1:0, y1:0, x2:0, y2:1,
+#                    stop:0 rgba(255,255,255,20%),
+#                    stop:0.45 transparent,
+#                    stop:1 rgba(0,0,0,20%)
+#                );
+#                }
+#
+#            QTabBar::tab:selected {
+#                border-bottom: 2px solid rgba(0,0,0,40%);
+#            }
+#        """)
 
         toggleHelp = qt.QShortcut(self)
         toggleHelp.setKey("F1")
@@ -1804,6 +1810,22 @@ class xrtGlow(qt.QWidget):
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             image.save(filename)
+
+    def exportOeShape(self, oeid):
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+#        saveDialog.selectFile("oe_name.stl")
+        saveDialog.setNameFilter("STL files (*.stl)")
+        saveDialog.selectNameFilter("STL files (*.stl)")
+        if (saveDialog.exec_()):
+            filename = saveDialog.selectedFiles()[0]
+            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            if not filename.endswith(extension):
+                filename = "{0}.{1}".format(filename, extension)
+            mesh = self.customGlWidget.meshDict.get(oeid)
+            if mesh is not None:
+                mesh.export_to_stl(filename)
 
     def saveSceneDialog(self):
         saveDialog = qt.QFileDialog()
@@ -6143,14 +6165,9 @@ class OEMesh3D():
         surfmesh['points'] = allSurfaces.copy()
         surfmesh['normals'] = allNormals.copy()
         surfmesh['indices'] = allIndices
-
-#        export to STL
-#        triangles = allSurfaces[allIndices].reshape(-1, 3, 3)
-#        from stl import mesh
-#        m = mesh.Mesh(np.zeros(triangles.shape[0], dtype=mesh.Mesh.dtype))
-#        m.vectors[:] = triangles
-#        m.update_normals()
-#        m.save(f'{self.oe.name}.stl')
+        
+        self.allSurfaces = allSurfaces
+        self.allIndices = allIndices
 
         if oeShape == 'round':
             surfmesh['contour'] = tB
@@ -6469,6 +6486,18 @@ class OEMesh3D():
         gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, self.num_poles*2)
         self.vao[nsIndex].release()
         shader.release()
+
+    def export_stl(self, filename):
+        if isSTLsupported and hasattr(self, 'allSurfaces'):
+            try:
+                triangles = self.allSurfaces[self.allIndices].reshape(-1, 3, 3)
+                m = mesh.Mesh(np.zeros(triangles.shape[0],
+                                       dtype=mesh.Mesh.dtype))
+                m.vectors[:] = triangles
+                m.update_normals()
+                m.save(filename)
+            except Exception as e:
+                print(e)
 
 
 class CoordinateBox():
@@ -7447,22 +7476,6 @@ class OEExplorer(qt.QDialog):
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
 
-#            self.plotExportControlPanel = qt.QGroupBox(self)
-#            self.plotExportControlPanel.setSizePolicy(qt.QSizePolicy.Minimum,
-#                                                qt.QSizePolicy.Minimum)
-#
-#            self.plotExportControlPanel.setFlat(False)
-#            self.plotExportControlPanel.setTitle("File Export")
-#
-#            exportLayout = qt.QVBoxLayout(self.plotExportControlPanel)
-#
-#            for label in ['Save plot', 'Pickle plot', 'Export beam',
-#                          'Export OE shape']:
-#                button = qt.QPushButton(label)
-#                func = getattr(self, label.lower().replace(' ', '_'))
-#                button.clicked.connect(func)
-#                exportLayout.addWidget(button)
-
         self.edited_data = {}
 
     def add_prop(self, parent, propName):
@@ -7643,32 +7656,6 @@ class OEExplorer(qt.QDialog):
     def update_beam(self, beamTag):
         self.dynamicPlotWidget.update_beam(beamTag)
 
-    def save_plot(self):
-        # open file dialog: mpl image formats
-        # set self.dynamicPlot.saveName
-        # self.dynamicPlot.save() -> plot.saveName
-        # unset self.dynamicPlot.saveName
-        pass
-
-    def pickle_plot(self):
-        # open file dialog: npy, mat, pickle
-        # set self.dynamicPlot.persistentName
-        # self.dynamicPlot.store_plots() -> plot.persistentName
-        # unset self.dynamicPlot.persistentName
-        pass
-
-    def export_beam(self):
-        # open file dialog:   npy, mat pickle
-        # get current beam object
-        # beam.export_beam(filename)
-        pass
-
-    def export_oe_shape(self):
-        # open file dialog: stl, obj
-        # get glow.meshdict[oeid]
-        # mesh.export()
-        pass
-
 
 class ConfigurablePlotWidget(qt.QWidget):
     def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
@@ -7708,37 +7695,38 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.angleUnitList = list(raycing.allUnitsAngStr.values())
         self.energyUnitList = list(raycing.allUnitsEnergyStr.values())
 
-        self.init_tabs()
+        if not viewOnly:
+            self.init_tabs()
+            tabs = qt.QTabWidget()
+            tabs.addTab(self.trees['top'], "Plot")
+            tabs.addTab(self.trees['xaxis'], "X-Axis")
+            tabs.addTab(self.trees['yaxis'], "Y-Axis")
+            tabs.addTab(self.trees['caxis'], "Color Axis")
+            tabs.setTabPosition(qt.QTabWidget.West)
+            tabs.tabBar().setStyleSheet("""
+                QTabBar::tab {
+                    background: #001a66;
+                    color: white;
+                    padding: 6px 12px;
+                    margin-top: 2px;
+                    border: 1px solid #009999;
+                }
 
-        tabs = qt.QTabWidget()
-        tabs.addTab(self.trees['top'], "Plot")
-        tabs.addTab(self.trees['xaxis'], "X-Axis")
-        tabs.addTab(self.trees['yaxis'], "Y-Axis")
-        tabs.addTab(self.trees['caxis'], "Color Axis")
-#        tabs.addTab(self.exportsPanel, "Exports")
-        tabs.setTabPosition(qt.QTabWidget.West)
-        layout.addWidget(tabs)
+                QTabBar::tab:selected {
+                    background: #0033cc;
+                    color: white;
+                }
 
-#        tabs.tabBar().setStyleSheet("""
-#            QTabBar::tab {
-#                background: #001a66;
-#                color: white;
-#                padding: 6px 12px;
-#                margin-right: 2px;
-#                border: 1px solid #009999;
-#            }
-#        
-#            QTabBar::tab:selected {
-#                background: #0033cc;
-#                color: white;
-#            }
-#        
-#            QTabBar::tab:hover {
-#                background: #0033cc;
-#                color: white;
-#            }
-#        """)
+                QTabBar::tab:hover {
+                    background: #0033cc;
+                    color: white;
+                }
+            """)
 
+            layoutCtrl = qt.QVBoxLayout()
+            layoutCtrl.addWidget(tabs)
+            layoutCtrl.addWidget(self.exportsPanel)
+            layout.addLayout(layoutCtrl)
 
         self.plot_beam()
 
@@ -7786,7 +7774,20 @@ class ConfigurablePlotWidget(qt.QWidget):
                 if key not in self.hiddenProps:
                     self.add_param(parentItem, key, value)
 
+        self.exportsPanel = qt.QGroupBox(self)
+        self.exportsPanel.setSizePolicy(qt.QSizePolicy.Minimum,
+                                        qt.QSizePolicy.Minimum)
+        self.exportsPanel.setFlat(False)
+        self.exportsPanel.setTitle("File Export")
+        exportLayout = qt.QHBoxLayout(self.exportsPanel)
+        exportLayout.setSpacing(0)
+        exportLayout.setContentsMargins(0, 0, 0, 0)
 
+        for label in ['Save plot', 'Pickle plot', 'Export beam']:
+            button = qt.QPushButton(label)
+            func = getattr(self, label.lower().replace(' ', '_'))
+            button.clicked.connect(func)
+            exportLayout.addWidget(button)
 
     def add_param(self, parent, paramName, value):
         """Add a pair of Parameter-Value Items"""
@@ -7943,3 +7944,66 @@ class ConfigurablePlotWidget(qt.QWidget):
             self.update_plot(outList)
         except Exception as e:
             print(e)
+
+    def save_plot(self):
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+#        saveDialog.selectFile("plotname.jpg")
+        saveDialog.setNameFilter(
+            "JPG files (*.jpg);;PDF files (*.pdf);;SVG files (*.svg);;"
+            "PNG files (*.png);;TIFF files (*.tif)")
+        saveDialog.selectNameFilter("JPG files (*.jpg)")
+        if (saveDialog.exec_()):
+            filename = saveDialog.selectedFiles()[0]
+            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            if not filename.endswith(extension):
+                filename = "{0}.{1}".format(filename, extension)
+            try:
+                self.dynamicPlot.saveName = filename
+                self.dynamicPlot.save()
+                self.dynamicPlot.saveName = None
+            except Exception as e:
+                print(e)
+
+    def pickle_plot(self):
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+#        saveDialog.selectFile("plotname.pickle")
+        saveDialog.setNameFilter(
+            "Matlab files (*.mat);;"
+            "Pickle files (*.pickle)")
+        saveDialog.selectNameFilter("Pickle files (*.pickle)")
+        if (saveDialog.exec_()):
+            filename = saveDialog.selectedFiles()[0]
+            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            if not filename.endswith(extension):
+                filename = "{0}.{1}".format(filename, extension)
+            try:
+                self.dynamicPlot.persistentName = filename
+                self.dynamicPlot.store_plots()
+                self.dynamicPlot.persistentName = None
+            except Exception as e:
+                print(e)
+
+    def export_beam(self):
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+#        saveDialog.selectFile("beamname.npy")
+        saveDialog.setNameFilter(
+            "Matlab files (*.mat);;NPY files (*.npy);;"
+            "Pickle files (*.pickle)")
+        saveDialog.selectNameFilter("NPY files (*.npy)")
+        if (saveDialog.exec_()):
+            filename = saveDialog.selectedFiles()[0]
+            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            if not filename.endswith(extension):
+                filename = "{0}.{1}".format(filename, extension)
+            beam = self.beamDict.get(self.dynamicPlot.beam)
+            if beam is not None:
+                try:
+                    beam.export_beam(filename, fformat=extension)
+                except Exception as e:
+                    print(e)
