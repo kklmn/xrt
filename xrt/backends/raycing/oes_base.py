@@ -91,7 +91,7 @@ class OE(object):
         self, bl=None, name='', center=[0, 0, 0],
         pitch=0, roll=0, yaw=0, positionRoll=0, rotationSequence='RzRyRx',
         extraPitch=0, extraRoll=0, extraYaw=0, extraRotationSequence='RzRyRx',
-        alarmLevel=None, surface=None, material=None,
+        alarmLevel=None, surface=None, material=None, roughness=None,
         alpha=None,
         limPhysX=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptX=None,
@@ -295,6 +295,7 @@ class OE(object):
 
         self.surface = surface
         self.material = material  # can be uuid
+        self.roughness = roughness
         self.alpha = alpha
         self.curSurface = 0
         self.dx = 0
@@ -631,7 +632,10 @@ class OE(object):
         return np.zeros_like(y)  # just flat
 
     def local_z_distorted(self, x, y):
-        return
+        if self.roughness is not None and hasattr(self.roughness, 'local_z'):
+            return self.roughness.local_z(x, y)
+        else:
+            return
 
     def local_g(self, x, y, rho=-100.):
         """For a grating, gives the local reciprocal groove vector (without
@@ -710,7 +714,10 @@ class OE(object):
            calculating the reflected beam direction. A tuple of 3 arrays must
            be returned.
         """
-        return
+        if self.roughness is not None and hasattr(self.roughness, 'local_n'):
+            return self.roughness.local_n(x, y)
+        else:
+            return
 
     _h = 20.
 

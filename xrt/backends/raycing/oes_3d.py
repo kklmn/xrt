@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import copy
 import numpy as np
-from scipy import interpolate, ndimage
+from scipy import interpolate
 
 from .oes_base import OE
 
