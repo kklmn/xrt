@@ -21,7 +21,7 @@ allArguments = ('bl', 'name', 'center', 'pitch', 'roll', 'yaw', 'nrays',
                 'polarization', 'filamentBeam',
                 'uniformRayDensity', 'nx', 'nz', 'withCentralRay',
                 'autoAppendToBL', 'customField', 'gp', 'gIntervals', 'nRK',
-                'targetOpenCL', 'precisionOpenCL')
+                'targetOpenCL', 'precisionOpenCL', 'fileName')
 
 
 class BeamProxy(object):

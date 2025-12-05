@@ -35,8 +35,8 @@ class SourceBase:
                  nrays=raycing.nrays,
                  eE=6.0, eI=0.1, eEspread=0., eSigmaX=None, eSigmaZ=None,
                  eEpsilonX=1., eEpsilonZ=0.01, betaX=9., betaZ=2.,
-                 eMin=5000., eMax=15000., distE='eV',
-                 xPrimeMax=0.5, zPrimeMax=0.5, R0=None,
+                 eMin=9000, eMax=9100, distE='eV',
+                 xPrimeMax=0.01, zPrimeMax=0.01, R0=None,
                  uniformRayDensity=False, filamentBeam=False,
                  pitch=0, yaw=0, eN=51, nx=25, nz=25, **kwargs):
         u"""

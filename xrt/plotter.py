@@ -498,7 +498,7 @@ class XYCAxis(object):
         """
         Automatically assign data arrays given the axis label."""
 
-        lbl = self.label.strip("$ _").lower()
+        lbl = self.label.strip("$ _\\").lower()
         if lbl in ["energy", "e"]:
             if backend == 'shadow':
                 data = 10
@@ -529,8 +529,8 @@ class XYCAxis(object):
                 data = 2
             elif backend == 'raycing':
                 data = raycing.get_z
-        elif self.label in raycing.allBeamFields:
-            data = getattr(raycing, 'get_{}'.format(self.label))
+        elif lbl in raycing.allBeamFields:
+            data = getattr(raycing, 'get_{}'.format(lbl))
         else:
             raise ValueError(
                 'cannot auto-assign data for axis "{0}"!'.format(self.label))

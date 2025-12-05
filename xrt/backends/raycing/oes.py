@@ -85,6 +85,8 @@ elements with various geometries.
 .. autoclass:: LaminarGrating(OE)
 .. autoclass:: VLSLaminarGrating(OE)
    :members: __init__
+.. autoclass:: MeshOE(OE)
+   :members: __init__
 
 .. _distorted:
 
@@ -115,11 +117,11 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
            'SurfaceOfRevolution', 'NormalFZP',
            'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
-           'VLSLaminarGrating')
+           'VLSLaminarGrating', 'MeshOE')
 import collections
 __allSectioned__ = collections.OrderedDict([
     ('Generic',
-        ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution')),
+        ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution', 'MeshOE')),
     ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
          'ParabolicalMirrorParam', 'HyperbolicMirrorParam',
@@ -177,7 +179,7 @@ from .oes_gratings import (
     NormalFZP, GeneralFZPin0YZ, BlazedGrating, LaminarGrating,
     VLSLaminarGrating, VLSGrating)
 
-from .oes_3d import OEfrom3DModel
+from .oes_3d import MeshOE
 
 # try:
 #     import pyopencl as cl  # analysis:ignore

@@ -7,6 +7,7 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 from qtpy.QtOpenGL import *
+from functools import partial
 
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
@@ -252,7 +253,16 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                             return QLineEdit(parent)
                         break
                 return combo
-
+        elif argName.lower() in ['filename', 'customField']:
+            fExts = ["STL"]
+            for i in range(model.invisibleRootItem().rowCount()):
+                fieldName = str(model.invisibleRootItem().child(i, 0).text())
+                if fieldName.lower() == 'distributions':
+                    fExts = ["NPY", "NPZ"]
+                    break
+            btn = QPushButton("Open file...", parent)
+            btn.clicked.connect(partial(self.openDialog, index, fExts))
+            return btn
         else:
             return QLineEdit(parent)
 
@@ -277,7 +287,6 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             model.setData(index, editor.currentText())
         elif isinstance(editor, QLineEdit):
             model.setData(index, editor.text())
-#        elif isinstance(editor, QWidget):
         elif editor.property('fieldName') == 'kind':
             text = "["
             for cb in editor.cb:
@@ -297,6 +306,20 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
+
+    def openDialog(self, index, fileFormats):
+        openDialog = QFileDialog()
+        openDialog.setFileMode(QFileDialog.ExistingFile)
+        openDialog.setAcceptMode(QFileDialog.AcceptOpen)
+        exts = " ".join(f"{e}" for e in fileFormats)
+        mask = " ".join(f"*.{e.lower()}" for e in fileFormats)
+        openDialog.setNameFilter(
+                f"{exts} files ({mask})")
+        if (openDialog.exec_()):
+            openFileName = openDialog.selectedFiles()[0]
+            if openFileName:
+                index.model().setData(index, openFileName)
+
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):
     """Fields must be a dictionary {column: "filterValue"}"""

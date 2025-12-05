@@ -5815,7 +5815,7 @@ class OEMesh3D():
             vao.create()
             self.vao[nsIndex] = None  # Will be updated after generation
 
-        if hasattr(self.oe, 'stl_mesh'):
+        if hasattr(self.oe, 'stl_mesh') and hasattr(self.oe, 'points'):
             self.isStl = True
 
             self.vbo_vertices[nsIndex] = create_qt_buffer(
@@ -6165,7 +6165,7 @@ class OEMesh3D():
         surfmesh['points'] = allSurfaces.copy()
         surfmesh['normals'] = allNormals.copy()
         surfmesh['indices'] = allIndices
-        
+
         self.allSurfaces = allSurfaces
         self.allIndices = allIndices
 

@@ -12,48 +12,92 @@ except ImportError:
     isSTLsupported = False
 
 
-class OEfrom3DModel(OE):
+class MeshOE(OE):
     def __init__(self, *args, **kwargs):
-        """
-        *filename*: str
-            Path to STL file.
+        u"""
+        Optical element loaded from an STL mesh. The algorithm identifies the
+        “top” surface by selecting triangles whose surface normals have the
+        largest z-component. The extracted points are then fitted with
+        `scipy.interpolate.SmoothBivariateSpline` on a 10x10 µm² grid to obtain
+        a smooth optical surface suitable for propagation and visualization.
+
+        *fileName*: str
+            Path to the STL file.
 
         *orientation*: str
-            Sequence of axes to match xrt standard (X right-left,
-            Y forward-backward, Z top-down). Default 'XYZ'.
+            Axis-remapping string for converting STL coordinates into the xrt
+            coordinate system. (X right-left, Y forward-backward, Z top-down).
+            Default 'XYZ'.
 
         *recenter*: bool
-            Parameter defines whether to move local origin to the center of OE
+            If True, the mesh is recentered so that the local origin
+            corresponds to the geometric center of the top surface of the
+            optical element.
 
 
         """
 
-        filename = kwargs.pop('filename', None)
+        fileName = kwargs.pop('fileName', None)
         orientation = kwargs.pop('orientation', 'XYZ')
         recenter = kwargs.pop('recenter', True)
         super().__init__(*args, **kwargs)
-
-        self.filename = filename
+        self.stl_mesh = None
         self.orientation = orientation
         self.recenter = recenter
+
+        self.fileName = fileName
+
+    @property
+    def orientation(self):
+        return self._orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        self._orientation = orientation
+        if self.stl_mesh is not None:
+            self.build_surface_spline()
+
+    @property
+    def recenter(self):
+        return self._recenter
+
+    @recenter.setter
+    def recenter(self, recenter):
+        self._recenter = recenter
+        if self.stl_mesh is not None:
+            self.build_surface_spline()
+
+    @property
+    def fileName(self):
+        return self._fileName
+
+    @fileName.setter
+    def fileName(self, fileName):
         if isSTLsupported:
-            self.load_STL(filename)
+            try:
+                self.read_file(fileName)
+                self._fileName = fileName
+                self.build_surface_spline()
+            except Exception as e:
+                print("STL file improt error", e)
         else:
-            raise ImportError(
-                "numpy-stl must be installed to work with STL models")
+            print("numpy-stl must be installed to work with STL models")
 
-    def load_STL(self, filename):
-        stl_mesh = mesh.Mesh.from_file(filename)
+    def read_file(self, filename):
+        self.stl_mesh = mesh.Mesh.from_file(filename)
 
-        normals = np.array(stl_mesh.normals)
-        faces = stl_mesh.data
+    def build_surface_spline(self):
+        if self.stl_mesh is None:
+            return
+        normals = np.array(self.stl_mesh.normals)
+        faces = self.stl_mesh.data
         xrt_ax = {'X': 0, 'Y': 1, 'Z': 2}
         # TODO: catch exception
         z_ax = xrt_ax[self.orientation[2].upper()]
 
-        x_arr = getattr(stl_mesh, self.orientation[0].lower())
-        y_arr = getattr(stl_mesh, self.orientation[1].lower())
-        z_arr = getattr(stl_mesh, self.orientation[2].lower())
+        x_arr = getattr(self.stl_mesh, self.orientation[0].lower())
+        y_arr = getattr(self.stl_mesh, self.orientation[1].lower())
+        z_arr = getattr(self.stl_mesh, self.orientation[2].lower())
 
         topSurfIndex = np.where(normals[:, z_ax] > 0.01)[0]
         # we take z-coord of the last point in triangle. arbitrary choice
@@ -99,8 +143,6 @@ class OEfrom3DModel(OE):
         uxy, ui = np.unique(planeCoords, axis=0, return_index=True)
         uz = zs[ui]
 
-        # TODO: catch exceptions
-#        self.z_spline = interpolate.RBFInterpolator(uxy, uz, kernel='cubic')
         self.z_spline = interpolate.SmoothBivariateSpline(
                 uxy[:, 0], uxy[:, 1], uz, s=len(uz) * 1e-6)
 
@@ -117,17 +159,23 @@ class OEfrom3DModel(OE):
         if self.recenter:
             self.dcz = np.min(zgrid)
 
-        self.points = np.array(stl_mesh.vectors).reshape(-1, 3) - np.array(
+        self.points = np.array(self.stl_mesh.vectors).reshape(-1, 3) - np.array(
                 [self.dcx, self.dcy, self.dcz])
-        self.normals = np.repeat(stl_mesh.normals, 3, axis=0)
+        self.normals = np.repeat(self.stl_mesh.normals, 3, axis=0)
 
     def local_z(self, x, y):
-        z = self.z_spline.ev(x, y) - self.dcz
+        if hasattr(self, 'z_spline'):
+            z = self.z_spline.ev(x, y) - self.dcz
+        else:
+            z = np.zeros_like(x)
         return z
 
     def local_n(self, x, y):
-        a = self.z_spline.ev(x, y, dx=1, dy=0)
-        b = self.z_spline.ev(x, y, dx=0, dy=1)
+        if hasattr(self, 'z_spline'):
+            a = self.z_spline.ev(x, y, dx=1, dy=0)
+            b = self.z_spline.ev(x, y, dx=0, dy=1)
+        else:
+            a = b = np.zeros_like(x)
 
         norm = np.sqrt(a**2+b**2+1.)
         return [-a/norm, -b/norm, 1./norm]

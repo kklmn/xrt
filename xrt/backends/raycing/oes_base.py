@@ -48,7 +48,8 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2', 'pAxis',
                 'parabolaAxis', 'phaseShift', 'vorticity', 'grazingAngle',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
-                'targetOpenCL', 'precisionOpenCL']
+                'targetOpenCL', 'precisionOpenCL', 'fileName', 'recenter',
+                'orientation']
 
 
 def flatten(x):

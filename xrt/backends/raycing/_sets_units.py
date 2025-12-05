@@ -16,7 +16,7 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
                'parabolaAxis', 'shape', 'renderStyle',
-               'n', 'period'}  # TODO: sources
+               'n', 'period', 'fileName', 'orientation'}  # TODO: sources
 
 derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
 

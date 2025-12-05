@@ -936,11 +936,14 @@ class CollimatedMeshSource(object):
         return bo
 
 
-class BeamFromFile(object):
+class BeamFromFile():
     r"""Convenience class to simulate beam generation from a previously saved
     beam object. Can be used as a reproducible source or to save time on
     synchrotron source beam generation. Provides the shine() method for
     compatibility with other sources.
+
+         *fileName*: str
+            Path to the the *.npy file with previously exported `Beam`
 
 
     """
@@ -966,13 +969,22 @@ class BeamFromFile(object):
         self.center = center
         self.nrays = np.int64(nrays)
         self.fileName = fileName
-        if self.fileName:
-            self.fbeam = raycing.Beam(copyFrom=self.fileName)
-        else:
-            print("No filename provided, using an empty beam")
-            self.fbeam = raycing.Beam()
 
     center = raycing.center_property()
+
+    @property
+    def fileName(self):
+        return self._fileName
+    
+    @fileName.setter
+    def fileName(self, fileName):
+        self._fileName = fileName
+        if fileName is not None:
+            self.fbeam = Beam(copyFrom=fileName)
+        else:
+            print("No filename provided, using an empty beam")
+            self.fbeam = Beam()
+
 
     @raycing.append_to_flow_decorator
     def shine(self):
