@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 import time
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))
-from xrt.backends.raycing.roughness import RandomRoughness, GaussianBump, Waviness 
+from xrt.backends.raycing.figure_error import RandomRoughness, GaussianBump, Waviness 
 
 t0 = time.time()
 rghR = RandomRoughness(limPhysX=[-20, 20], limPhysY=[-100, 100],

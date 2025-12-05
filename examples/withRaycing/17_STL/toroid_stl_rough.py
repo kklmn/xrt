@@ -26,7 +26,7 @@ import xrt.backends.raycing.run as rrun
 import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
-from xrt.backends.raycing.roughness import RandomRoughness, GaussianBump, Waviness 
+from xrt.backends.raycing.figure_error import RandomRoughness, GaussianBump, Waviness 
 
 rghR = RandomRoughness(name='RRandom',limPhysX=[-10, 10], limPhysY=[-40, 40],
                       rms=100., corrLength=1, seed=20251201)

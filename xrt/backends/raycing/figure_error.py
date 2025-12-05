@@ -16,15 +16,15 @@ from scipy import interpolate
 from .. import raycing
 
 
-class Roughness():
-    """ Base class for surface roughness. Provides the functionality for
+class FigureError():
+    """ Base class for distorted surfaces. Provides the functionality for
     height maps generation and diagnostics. Height map calculation function
     must be implemented in a subclass.
     
         *name*: str
             Attribute to store instance name
 
-        *base*: None of instance of `Roughness` subclass
+        *base*: None or instance of `FigureError` subclass
             Can be used to create complex maps (see examples).
 
         *gridStep*: float.
@@ -37,11 +37,14 @@ class Roughness():
             Physical dimension = local coordinate of the corresponding edge.
             Same as in `OE`. Ideally should be the same as in the base optical
             element, or at least not smaller than the expected beam footprint.
+
+        *fileName*: str, path.
+            path to surface distortion map file.
             
     
     """
     def __init__(self, name='', base=None,
-                 limPhysX=None, limPhysY=None, gridStep=0.5,
+                 limPhysX=None, limPhysY=None, gridStep=0.5, fileName=None,
                  **kwargs):
         self.name = name
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
@@ -52,6 +55,7 @@ class Roughness():
         self._gridStep = gridStep  # [mm]
         self._limPhysX = limPhysX
         self._limPhysY = limPhysY
+        self._fileName = fileName
         self.build_spline()
 
     @property
@@ -95,6 +99,12 @@ class Roughness():
         zAvg = z - z.mean()
         rms = np.sqrt((zAvg**2).mean())
         return rms
+
+    def get_rms_slope(self):
+        xm, ym = self.get_grids()
+        a, b, c = self.local_n(xm, ym)
+        rms_slope = np.sqrt((b**2).mean())
+        return rms_slope
 
     def get_z_grid(self):
         xm, ym = self.get_grids()
@@ -209,7 +219,7 @@ class Roughness():
         return 1 << int(np.ceil(np.log2(n)))
 
 
-class RandomRoughness(Roughness):
+class RandomRoughness(FigureError):
     """Random roughness map.
     
         *rms*: float
@@ -288,8 +298,8 @@ class RandomRoughness(Roughness):
         return z + base_z
 
 
-class GaussianBump(Roughness):
-    """Height profile define by the Gaussian function.
+class GaussianBump(FigureError):
+    """Height profile defined by the Gaussian function.
     
         *bumpHeight*: float
             Hight at the peak in [nm]
@@ -343,8 +353,8 @@ class GaussianBump(Roughness):
         return z + base_z
 
 
-class Waviness(Roughness):
-    """Random roughness map.
+class Waviness(FigureError):
+    """Surface waviness following 2d cosine law.
     
         *amplitude*: float
             Cosine amplitude in [nm]
