@@ -24,7 +24,7 @@ class FigureError():
         *name*: str
             Attribute to store instance name
 
-        *base*: None or instance of `FigureError` subclass
+        *baseFE*: None or instance of `FigureError` subclass
             Can be used to create complex maps (see examples).
 
         *gridStep*: float.
@@ -43,7 +43,7 @@ class FigureError():
             
     
     """
-    def __init__(self, name='', base=None,
+    def __init__(self, name='', baseFE=None,
                  limPhysX=None, limPhysY=None, gridStep=0.5, fileName=None,
                  **kwargs):
         self.name = name
@@ -51,7 +51,7 @@ class FigureError():
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
 
-        self._base = base
+        self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
         self._limPhysX = limPhysX
         self._limPhysY = limPhysY
@@ -59,12 +59,12 @@ class FigureError():
         self.build_spline()
 
     @property
-    def base(self):
-        return self._base
+    def baseFE(self):
+        return self._baseFE
 
-    @base.setter
-    def base(self, base):
-        self._base = base
+    @baseFE.setter
+    def baseFE(self, baseFE):
+        self._baseFE = baseFE
         self.build_spline()
 
     @property
@@ -276,8 +276,8 @@ class RandomRoughness(FigureError):
 
         base_z = np.zeros_like(xg)
 
-        if self.base is not None and hasattr(self.base, 'local_z'):
-            base_z = self.base.local_z(yg, xg) * 1e6  # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
+            base_z = self.baseFE.local_z(yg, xg) * 1e6  # local_z returns z in mm
 
         z = rng.normal(loc=0.0, scale=1.0, size=(self.ny, self.nx))
         if self.corrLength is not None:
@@ -345,8 +345,8 @@ class GaussianBump(FigureError):
         x, y = self.get_grids()
 
         base_z = np.zeros_like(x)
-        if self.base is not None and hasattr(self.base, 'local_z'):
-            base_z = self.base.local_z(x, y) * 1e6  # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
+            base_z = self.baseFE.local_z(x, y) * 1e6  # local_z returns z in mm
 
         z = self.bumpHeight *\
             np.exp(-x**2/self.sigmaX**2 - y**2/self.sigmaY**2)
@@ -374,8 +374,8 @@ class Waviness(FigureError):
         x, y = self.get_grids()
 
         base_z = np.zeros_like(x)
-        if self.base is not None and hasattr(self.base, 'local_z'):
-            base_z = self.base.local_z(x, y) * 1e6   # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
+            base_z = self.baseFE.local_z(x, y) * 1e6   # local_z returns z in mm
 
         z = self.amplitude * np.cos(2*np.pi*x/self.xWaveLength) *\
             np.cos(2*np.pi*y/self.yWaveLength)

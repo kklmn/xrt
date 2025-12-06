@@ -28,13 +28,13 @@ import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 from xrt.backends.raycing.figure_error import RandomRoughness, GaussianBump, Waviness 
 
-rghR = RandomRoughness(name='RRandom',limPhysX=[-10, 10], limPhysY=[-40, 40],
+rghR = RandomRoughness(name='RRandom', limPhysX=[-10, 10], limPhysY=[-40, 40],
                       rms=100., corrLength=1, seed=20251201)
 
-rghG = GaussianBump(name='RGauss', base=rghR, limPhysX=[-10, 10], limPhysY=[-40, 40],
+rghG = GaussianBump(name='RGauss', baseFE=rghR, limPhysX=[-10, 10], limPhysY=[-40, 40],
                    bumpHeight=300., sigmaX=10, sigmaY=30)
 
-rghW = Waviness(name='RWavy', base=rghG, limPhysX=[-10, 10], limPhysY=[-40, 40],
+rghW = Waviness(name='RWavy', baseFE=rghG, limPhysX=[-10, 10], limPhysY=[-40, 40],
                amplitude=200., xWaveLength=40, yWaveLength=1)
 
 
@@ -80,7 +80,7 @@ def build_beamline():
         limPhysX=[-10.0, 10.0],
         limPhysY=[-40.0, 40.0],
         order=1,
-        roughness=rghW,
+        figureError=rghW,
         R=200,
         r=50)
 
@@ -268,9 +268,12 @@ BeamLine = build_beamline()
 
 def main():
     BeamLine = build_beamline()
-#    BeamLine.glow(v2=True)
-    plots = define_plots()
-    xrtrun.run_ray_tracing(plots, repeats=5, beamLine=BeamLine)
+#    BeamLine.index_materials()
+#    prj = BeamLine.export_to_json()
+#    print(prj)
+    BeamLine.glow(v2=True)
+#    plots = define_plots()
+#    xrtrun.run_ray_tracing(plots, repeats=5, beamLine=BeamLine)
     
 if __name__ == '__main__':
     main()

@@ -70,17 +70,18 @@ def build_beamline():
 #        order=1,
 #        R=200,
 #        r=50)
-    print(1)
-    BeamLine.toroidMirrorSTL = roes.OEfrom3DModel(
+
+    BeamLine.toroidMirrorSTL = roes.MeshOE(
         bl=BeamLine,
         name=r"toroidMirrorSTL",
         center=[100, 100.0, 0.0],
         pitch=r"30deg",
 #        filename="mirror_cut_400x100.stl",
-        filename="toroidMirror01.stl",
+        fileName="toroidMirror01.stl",
         orientation='XYZ',
+        recenter=True,
         )
-    print(2)
+
 
 #    print("lim X", BeamLine.toroidMirrorSTL.limPhysX,
 #          "\nlim Y", BeamLine.toroidMirrorSTL.limPhysY)

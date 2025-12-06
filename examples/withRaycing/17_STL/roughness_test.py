@@ -13,12 +13,12 @@ from xrt.backends.raycing.figure_error import RandomRoughness, GaussianBump, Wav
 
 t0 = time.time()
 rghR = RandomRoughness(limPhysX=[-20, 20], limPhysY=[-100, 100],
-                      rms=1., corrLength=1, seed=20251201)
+                      rms=1., corrLength=3, seed=20251201)
 t1 = time.time()
-rghG = GaussianBump(base=rghR, limPhysX=[-20, 20], limPhysY=[-100, 100],
+rghG = GaussianBump(baseFE=rghR, limPhysX=[-20, 20], limPhysY=[-100, 100],
                    bumpHeight=3., sigmaX=20, sigmaY=30)
 
-rghW = Waviness(base=rghG, limPhysX=[-20, 20], limPhysY=[-100, 100],
+rghW = Waviness(baseFE=rghG, limPhysX=[-20, 20], limPhysY=[-100, 100],
                amplitude=2., xWaveLength=80, yWaveLength=20)
 #print(rgh)
 x = np.linspace(-20, 20, 200)

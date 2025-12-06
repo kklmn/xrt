@@ -335,6 +335,9 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
             elif paraname.startswith('material'):
                 if str(paravalue) in beamLine.matnamesToUUIDs:
                     paravalue = beamLine.matnamesToUUIDs[paravalue]
+            elif paraname.startswith('figure'):
+                if str(paravalue) in beamLine.fenamesToUUIDs:
+                    paravalue = beamLine.fenamesToUUIDs[paravalue]
 #                if is_valid_uuid(paravalue):
 #                    paravalue = beamLine.materialsDict[paravalue]
 #                elif paravalue in beamLine.matnamesToUUIDs:
@@ -369,6 +372,19 @@ def create_paramdict_mat(paramDictStr, defArgs, bl=None):
             kwargs[paraname] = paravalue
     return kwargs
 
+def create_paramdict_fe(paramDictStr, defArgs, bl=None):
+    kwargs = OrderedDict()
+
+    for paraname, paravalue in paramDictStr.items():
+        if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
+                paravalue == 'bl':
+            if paraname.lower() in ['basefe']:
+                if str(paravalue) in bl.fenamesToUUIDs:
+                    paravalue = bl.fenamesToUUIDs[paravalue]
+            else:
+                paravalue = parametrize(paravalue)
+            kwargs[paraname] = paravalue
+    return kwargs
 
 def get_obj_str(obj):
     return "{0}.{1}".format(obj.__module__, type(obj).__name__)
@@ -408,6 +424,14 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     else:
                         print("Cannot resolve material")
 #                        raise
+                if str(arg).lower().startswith(
+                        ('figureerr', 'basefe')):
+                    if hasattr(realval, 'uuid'):
+                        realval = realval.uuid
+                    elif needRevG:
+                        realval = globRev[str(realval)]
+                    else:
+                        print("Cannot resolve material")
                 if realval != val:
                     defArgs[arg] = str(realval)
                     if compact:

@@ -150,6 +150,16 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return QLineEdit(parent)
             return combo
+        elif any(argName.lower().startswith(v) for v in
+                 ['figureerr', 'basefe']):  # mat and bl
+            if self.bl is not None:
+                combo.addItems(['None']+list(
+                        self.bl.fenamesToUUIDs.keys()))
+            elif self.mainWidget is not None:
+                combo.setModel(self.mainWidget.fesModel)
+            else:
+                return QLineEdit(parent)
+            return combo
         elif argName.lower() == 'kind':  # material and bl
             if str(model.index(0, 0).data()).lower() == 'none':  # material
                 combo.addItems(['mirror', 'thin mirror',

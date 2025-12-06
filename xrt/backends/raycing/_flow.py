@@ -144,6 +144,8 @@ class MessageHandler:
             self.bl.init_oe_from_json(kwargs)
         elif object_type == 'mat':
             self.bl.init_material_from_json(kwargs)
+        elif object_type == 'fe':
+            self.bl.init_fe_from_json(kwargs)
 
         if self.autoUpdate:
             if object_type != 'mat':

@@ -371,6 +371,13 @@ class xrtGlow(qt.QWidget):
                             argValue)
                     if argMat is not None:
                         oeProps[argName] = argMat.name
+                if any(argName.lower().startswith(v) for v in
+                        ['figureer', 'basefe']) and\
+                        raycing.is_valid_uuid(argValue):
+                    argFE = self.customGlWidget.beamline.fesDict.get(
+                            argValue)
+                    if argFE is not None:
+                        oeProps[argName] = argFE.name
 
             catDict = {'Position': raycing.orientationArgSet}
             if oeType == 0:  # source
@@ -2574,6 +2581,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if not raycing.is_valid_uuid(argValue):
                     # objects need material uuid rather than name
                     argValue = self.beamline.matnamesToUUIDs.get(argValue)
+                    kwargs[arg0] = argValue
+            elif any(arg0.lower().startswith(v) for v in
+                   ['figureerr', 'basefe']):
+                if not raycing.is_valid_uuid(argValue):
+                    # objects need material uuid rather than name
+                    argValue = self.beamline.fenamesToUUIDs.get(argValue)
                     kwargs[arg0] = argValue
 
             # updating local beamline tree here

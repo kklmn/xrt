@@ -21,7 +21,8 @@ from .physconsts import SIE0, CH  # analysis:ignore
 
 from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
-    create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str)
+    create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
+    create_paramdict_fe)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
 
@@ -193,9 +194,11 @@ class BeamLine(object):
         self.oesDict = OrderedDict()
         self.oenamesToUUIDs = {}  # Reverse lookup for oe names
         self.matnamesToUUIDs = {}  # Reverse lookup for mat names
+        self.fenamesToUUIDs = {}
         self.flow = []
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
+        self.fesDict = OrderedDict()
         self.flowSource = 'legacy'
         self.forceAlign = False
         self.beamsDictU = OrderedDict()
@@ -586,29 +589,118 @@ class BeamLine(object):
 
         return sortedMatList
 
-    def index_materials(self):
+    def sort_figerrors(self, feDict=None, fromJSON=False):
+        visited = set()
+        visiting = set()
+        sortedFEList = []
+        feDeps = ['baseFE']
+
+        def get_dep_obj(feObj):
+            deps = []
+            for attr in feDeps:
+                if hasattr(feObj, attr):
+                    v = getattr(feObj, attr)
+                    if v is not None and hasattr(v, 'uuid'):
+                        deps.append(getattr(v, 'uuid'))
+            return deps
+
+        def get_dep_json(pDict):
+            deps = []
+            props = pDict.get('properties')
+            if props is not None:
+                for attr in feDeps:
+                    v = props.get(attr)
+                    if v is not None:
+                        deps.append(v)
+            return deps
+
+        def dfs(mId, mProps):
+            if mId in visited:
+                return
+            if mId in visiting:
+                raise ValueError(
+                    f"Circular dependency detected involving {mId}")
+            visiting.add(mId)
+            if mProps is not None:
+                for dep in get_dependencies(mProps):
+                    dfs(dep, None)
+            visiting.remove(mId)
+            visited.add(mId)
+            sortedFEList.append(mId)
+
+        if feDict is None:
+            feDict = self.fesDict
+
+        get_dependencies = get_dep_json if fromJSON else get_dep_obj
+
+        for mId, mProps in feDict.items():
+            dfs(mId, mProps)
+
+        return sortedFEList
+
+    def index_materials(self):  # materials and figure error objects
         materialsDict = OrderedDict()
-        for ename, eLine in self.oesDict.items():
-            oe = eLine[0]
-            for attr in ['material', 'material2']:
-                if hasattr(oe, attr):
-                    attrMat = getattr(oe, attr)
-                    if not is_sequence(attrMat):
-                        seqMat = (attrMat,)
-                    for newMat in seqMat:
-                        if newMat is not None and newMat.uuid not in\
-                                materialsDict:
-                            materialsDict[newMat.uuid] = newMat
-                        for subAttr in ['tlayer', 'blayer',
-                                        'coating', 'substrate']:
-                            if hasattr(newMat, subAttr):
-                                subMat = getattr(newMat, subAttr)
-                                if subMat.uuid not in materialsDict:
-                                    materialsDict[subMat.uuid] = subMat
-                                    materialsDict.move_to_end(
-                                            subMat.uuid,
-                                            last=False)
+        feDict = OrderedDict()
+
+        rmats = importlib.import_module(
+            '.materials', package='xrt.backends.raycing')
+        rfe = importlib.import_module(
+            '.figure_error', package='xrt.backends.raycing')
+        for i in range(len(inspect.stack())):
+            scr_globals = inspect.stack()[i][0].f_globals
+    
+            for objName, objInstance in scr_globals.items():
+                if isinstance(objInstance, (rmats.Element, rmats.Material,
+                                            rmats.Multilayer)):
+                    objId = getattr(objInstance, 'uuid', None)
+                    if is_valid_uuid(objId) and objId not in materialsDict:
+                        materialsDict[objId] = objInstance
+                elif isinstance(objInstance, (rfe.FigureError)):
+                    objId = getattr(objInstance, 'uuid', None)
+                    if is_valid_uuid(objId) and objId not in feDict:
+                        feDict[objId] = objInstance
+
+#        for ename, eLine in self.oesDict.items():
+#            oe = eLine[0]
+#            for attr in ['material', 'material2']:
+#                if hasattr(oe, attr):
+#                    attrMat = getattr(oe, attr)
+#                    if not is_sequence(attrMat):
+#                        seqMat = (attrMat,)
+#                    for newMat in seqMat:
+#                        if newMat is not None and newMat.uuid not in\
+#                                materialsDict:
+#                            materialsDict[newMat.uuid] = newMat
+#                        for subAttr in ['tlayer', 'blayer',
+#                                        'coating', 'substrate']:
+#                            if hasattr(newMat, subAttr):
+#                                subMat = getattr(newMat, subAttr)
+#                                if hasattr(subMat, 'uuid') and\
+#                                        subMat.uuid not in materialsDict:
+#                                    materialsDict[subMat.uuid] = subMat
+#                                    materialsDict.move_to_end(
+#                                            subMat.uuid,
+#                                            last=False)
+#            for attr in ['figureError']:
+#                if hasattr(oe, attr):
+#                    attrMat = getattr(oe, attr)
+#                    if not is_sequence(attrMat):
+#                        seqMat = (attrMat,)
+#                    for newMat in seqMat:
+#                        if newMat is not None and newMat.uuid not in\
+#                                feDict:
+#                            feDict[newMat.uuid] = newMat
+#                        for subAttr in ['baseFE']:
+#                            if hasattr(newMat, subAttr):
+#                                subMat = getattr(newMat, subAttr)
+#                                if hasattr(subMat, 'uuid') and\
+#                                        subMat.uuid not in feDict:
+#                                    feDict[subMat.uuid] = subMat
+#                                    feDict.move_to_end(
+#                                            subMat.uuid,
+#                                            last=False)
         self.materialsDict.update(materialsDict)
+        self.fesDict.update(feDict)
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[], v2=False,
@@ -1029,6 +1121,40 @@ class BeamLine(object):
             if matProps is not None:
                 _ = self.init_material_from_json(matName, matProps)
 
+    def init_fe_from_json(self, feName, dictIn):
+        feModule, feClass = dictIn['_object'].rsplit('.', 1)
+        feModule = importlib.import_module(feModule)
+        feParams = dictIn['properties']
+
+        defArgs = dict(get_params(dictIn['_object']))
+        initKWArgs = create_paramdict_fe(feParams, defArgs, self)
+
+        if is_valid_uuid(feName):
+            initKWArgs['uuid'] = feName
+        else:
+            initKWArgs['name'] = feName
+
+        feObject = None
+        initKWArgs['bl'] = self
+        feObject = getattr(feModule, feClass)(**initKWArgs)
+        initStatus = 0
+
+        self.fenamesToUUIDs[feObject.name] = feObject.uuid
+        self.fesDict[feObject.uuid] = feObject
+        return initStatus
+
+    def populate_figerrors_dict_from_json(self, dictIn):
+        if not isinstance(dictIn, dict):
+            return
+
+        feSorted = self.sort_figerrors(feDict=dictIn, fromJSON=True)
+
+#        for matName, matProps in dictIn.items():
+        for feName in feSorted:
+            feProps = dictIn.get(feName)
+            if feProps is not None:
+                _ = self.init_fe_from_json(feName, feProps)
+
     def load_from_xml(self, openFileName):
         def xml_to_dict(element):
             # Recursively convert XML elements into a dictionary
@@ -1064,6 +1190,7 @@ class BeamLine(object):
             setattr(self, key, get_init_val(value))
 
         self.populate_materials_dict_from_json(data['Project']['Materials'])
+        self.populate_figerrors_dict_from_json(data['Project']['FigureErrors'])
 
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
         if 'flow' in data['Project'].keys():
@@ -1072,6 +1199,7 @@ class BeamLine(object):
     def export_to_json(self):
 
         matDict = OrderedDict()
+        feDict = OrderedDict()
         beamlineDict = OrderedDict()
         plotsDict = OrderedDict()
         runDict = None
@@ -1099,6 +1227,18 @@ class BeamLine(object):
             field = objInstance.uuid if hasattr(
                     objInstance, 'uuid') else objName
             matDict[field] = matRecord
+
+        for objName, objInstance in self.fesDict.items():
+            feRecord = OrderedDict()
+            feRecord['properties'] = get_init_kwargs(objInstance,
+                                                     compact=False)
+            feRecord['_object'] = get_obj_str(objInstance)
+
+            if not feRecord['properties']['name']:
+                feRecord['properties']['name'] = objName
+            field = objInstance.uuid if hasattr(
+                    objInstance, 'uuid') else objName
+            feDict[field] = feRecord
 
         blArgs = get_init_kwargs(self)
 
@@ -1141,6 +1281,7 @@ class BeamLine(object):
         projectDict['Beams'] = self.beamNamesDict
         projectDict['Materials'] = matDict
         projectDict[self.name] = beamlineDict
+        projectDict['FigureErrors'] = feDict
         projectDict['flow'] = self.flowU
 
         if plotsDict is not None:

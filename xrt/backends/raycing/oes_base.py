@@ -49,7 +49,7 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'parabolaAxis', 'phaseShift', 'vorticity', 'grazingAngle',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
                 'targetOpenCL', 'precisionOpenCL', 'fileName', 'recenter',
-                'orientation']
+                'orientation', 'figureError']
 
 
 def flatten(x):
@@ -92,7 +92,7 @@ class OE(object):
         self, bl=None, name='', center=[0, 0, 0],
         pitch=0, roll=0, yaw=0, positionRoll=0, rotationSequence='RzRyRx',
         extraPitch=0, extraRoll=0, extraYaw=0, extraRotationSequence='RzRyRx',
-        alarmLevel=None, surface=None, material=None, roughness=None,
+        alarmLevel=None, surface=None, material=None, figureError=None,
         alpha=None,
         limPhysX=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptX=None,
@@ -153,6 +153,9 @@ class OE(object):
             :meth:`get_amplitude` or :meth:`get_refractive_index` method. If
             not None, must correspond to *surface*. If None, the reflectivities
             are equal to 1.
+
+        *figureError*: None or FigureError object.
+            
 
         *alpha*: float
             Asymmetry angle for a crystal OE (rad). Positive sign is for the
@@ -296,7 +299,7 @@ class OE(object):
 
         self.surface = surface
         self.material = material  # can be uuid
-        self.roughness = roughness
+        self.figureError = figureError
         self.alpha = alpha
         self.curSurface = 0
         self.dx = 0
@@ -473,6 +476,22 @@ class OE(object):
         self._material = material
 
     @property
+    def figureError(self):
+        if raycing.is_valid_uuid(self._figureError):
+            if self.bl is not None:
+                fe = self.bl.fesDict.get(self._figureError)
+            else:
+                fe = None
+                print(f"Figure Error instance with UUID {self._material} doesn't exist!")
+        else:
+            fe = self._figureError
+        return fe
+
+    @figureError.setter
+    def figureError(self, figureError):
+        self._figureError = figureError
+
+    @property
     def limPhysX(self):
         return self._limPhysX
 
@@ -633,8 +652,8 @@ class OE(object):
         return np.zeros_like(y)  # just flat
 
     def local_z_distorted(self, x, y):
-        if self.roughness is not None and hasattr(self.roughness, 'local_z'):
-            return self.roughness.local_z(x, y)
+        if self.figureError is not None and hasattr(self.figureError, 'local_z'):
+            return self.figureError.local_z(x, y)
         else:
             return
 
@@ -715,8 +734,8 @@ class OE(object):
            calculating the reflected beam direction. A tuple of 3 arrays must
            be returned.
         """
-        if self.roughness is not None and hasattr(self.roughness, 'local_n'):
-            return self.roughness.local_n(x, y)
+        if self.figureError is not None and hasattr(self.figureError, 'local_n'):
+            return self.figureError.local_n(x, y)
         else:
             return
 
