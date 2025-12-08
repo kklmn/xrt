@@ -324,7 +324,7 @@ class BeamLine(object):
             except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
-
+        print(oe.name, any(autoCenter), autoPitch, autoBragg)
         if any(autoCenter) or autoPitch or autoBragg:
             good = (beam.state == 1) | (beam.state == 2)
             if self.flowSource == 'Qook':
@@ -389,10 +389,12 @@ class BeamLine(object):
                     mat = oe.material
                 if not hasattr(mat, 'get_Bragg_angle'):
                     if autoPitch:
-                        oe.pitch = 0
+                        oe._pitchVal = 0
                     elif autoBragg:
-                        oe.bragg = 0
+                        oe._braggVal = 0
                     return
+                print("HKL", oe.material.hkl)
+                print("HKL2", mat.hkl)
                 braggT = mat.get_Bragg_angle(alignE)
                 alphaT = 0.
                 lauePitch = 0.
@@ -421,6 +423,7 @@ class BeamLine(object):
                         print("{0}: Bragg={1} at E={2}".format(
                                 oe.name, oe.bragg, alignE))
                 else:  # autoPitch
+                    print("target pitch:", targetPitch)
                     oe._pitchVal = targetPitch
                     if _VERBOSITY_ > 0:
                         print(oe.name, "pitch:", oe.pitch)

@@ -1255,7 +1255,7 @@ class XrtQook(qt.QMainWindow):
 
         self.fesModel = qt.QStandardItemModel()
         self.rootFEItem = self.fesModel.invisibleRootItem()
-        self.rootFEItem.setText("Figure Error Maps")
+        self.rootFEItem.setText("FigureErrors")
         self.fesModel.itemChanged.connect(self.beamLineItemChanged)
         self.addProp(self.fesModel.invisibleRootItem(), "None")
 

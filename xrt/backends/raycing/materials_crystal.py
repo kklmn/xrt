@@ -170,15 +170,22 @@ class Crystal(Material):
         self._hkl = hkl
         self.sqrthkl2 = (sum(i**2 for i in hkl))**0.5
 
-        if not hasattr(self, '_d'):
-            return
+        if hasattr(self, 'get_a'):
+            d = self.get_a() / self.sqrthkl2
+            if hasattr(self, '_VInit') and self._VInit is None:
+                self.V = (d * self.sqrthkl2)**3
+            self.d = d
+        elif hasattr(self, 'set_cell_volume'):
+            self.set_cell_volume()
+        elif hasattr(self, 'a'):
+            self.d = self.a / self.sqrthkl2
 
-        if hasattr(self, '_VInit') and self._VInit is None:
-            self.V = (self.d * self.sqrthkl2)**3
-
-        if hasattr(self, '_V'):
-            self.chiToF = -R0 / PI / self.V  # minus!
-            self.chiToFd2 = abs(self.chiToF) * self.d**2
+            if hasattr(self, '_VInit') and self._VInit is None:
+                self.V = (self.d * self.sqrthkl2)**3
+    
+            if hasattr(self, '_V'):
+                self.chiToF = -R0 / PI / self.V  # minus!
+                self.chiToFd2 = abs(self.chiToF) * self.d**2
 
     @property
     def d(self):

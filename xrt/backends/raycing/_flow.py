@@ -130,7 +130,6 @@ class MessageHandler:
         self.exit = False
 
     def handle_create(self, message):
-        print(message)
         objuuid = message.get("uuid")
 
         object_type = message.get("object_type")
@@ -153,7 +152,7 @@ class MessageHandler:
                 self.startEl = objuuid
 
     def handle_modify(self, message):
-        print(message)
+#        print(message)
         objuuid = message.get("uuid")
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
@@ -219,22 +218,22 @@ class MessageHandler:
 #                del self.bl.materialsDict[objuuid]
 #            self.bl.init_material_from_json(objuuid, kwargs)
 #
-#            self.startEl = None
-#            for oeid, oeLine in self.bl.oesDict.items():
-#                oeObj = oeLine[0]
-#                for prop in ["_material", "_material2"]:
-#                    try:
-#                        matProp = getattr(oeObj, prop)
-#                        if matProp == objuuid:
-#                            self.startEl = oeid
-#                            break
-#                    except AttributeError:
-#                        pass
-
             matObj = self.bl.materialsDict.get(objuuid)
             if matObj is not None:
                 for key, value in kwargs.items():
                     setattr(matObj, key, value)
+
+            self.startEl = None
+            for oeid, oeLine in self.bl.oesDict.items():
+                oeObj = oeLine[0]
+                for prop in ["_material", "_material2"]:
+                    try:
+                        matProp = getattr(oeObj, prop)
+                        if matProp == objuuid:
+                            self.startEl = oeid
+                            break
+                    except AttributeError:
+                        pass
 
             if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True
@@ -261,6 +260,18 @@ class MessageHandler:
                         value = arrayValue
 
                     setattr(feObj, arg, value)
+
+            for oeid, oeLine in self.bl.oesDict.items():
+                oeObj = oeLine[0]
+                for prop in ["_figureError"]:
+                    try:
+                        feProp = getattr(oeObj, prop)
+                        if feProp == objuuid:
+                            self.startEl = oeid
+                            break
+                    except AttributeError:
+                        pass
+
             if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True
 

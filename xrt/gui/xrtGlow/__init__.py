@@ -2474,12 +2474,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             record.set(val)
 
     def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
-        print("GLOW UPDATE BL KWARGS", kwargs)
         if '_object' in kwargs:  # only Qook can create new elements for now
             # new element
-            print("CREATING NEW OBJECT")
             if 'material' in kwargs['_object']:
-                print("New Material")
                 self.beamline.init_material_from_json(oeid, kwargs)
                 message = {"command": "create",
                            "object_type": "mat",
@@ -2489,7 +2486,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
             elif 'figure' in kwargs['_object']:
-                print("New Figure Error")
                 self.beamline.init_fe_from_json(oeid, kwargs)
                 message = {"command": "create",
                            "object_type": "fe",
@@ -2530,7 +2526,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.beamline.update_flow_from_json(
                             oeid, {methStr: kwargs})
                     self.beamline.sort_flow()
-#                print("GLOW: FlowU", self.beamline.flowU)
                 if self.parent is not None:
                     self.parent.updateTargets()
                 message = {"command": "flow",
@@ -2565,75 +2560,78 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             if oeid in self.beamline.oesDict:
                 obj_type = "oe"
+                updObj = self.beamline.oesDict[oeid][0]
             elif oeid in self.beamline.materialsDict:
                 obj_type = "mat"
+                updObj = self.beamline.materialsDict[oeid]
             elif oeid in self.beamline.fesDict:
                 obj_type = "fe"
+                updObj = self.beamline.fesDict[oeid]
             else:
                 obj_type = None
-                
+
             if obj_type is None:
                 return
-            
-            if obj_type == "oe":
-                oe = self.beamline.oesDict[oeid][0]
-    
-                argComps = argName.split('.')
-                arg0 = argComps[0]
-                if len(argComps) > 1:  # compound args: center, limits, opening
-                    field = argComps[-1]
-                    if field == 'energy':
-                        if arg0 == 'bragg':
-                            argValue = [float(argValue)]
-                        else:
-                            argValue = oe.material.get_Bragg_angle(float(argValue))
+
+            argComps = argName.split('.')
+            arg0 = argComps[0]
+            if len(argComps) > 1:  # compound args: center, limits, opening
+                field = argComps[-1]
+                if field == 'energy':
+                    if arg0 == 'bragg':
+                        argValue = [float(argValue)]
                     else:
-                        argIn = getattr(oe, f'_{arg0}', None)
-                        arrayValue = getattr(oe, arg0) if argIn is None else argIn
-    
-                        # avoid writing string to numpy array
-                        if hasattr(arrayValue, 'tolist'):
-                            arrayValue = arrayValue.tolist()
-    
-                        for fList in raycing.compoundArgs.values():
-                            if field in fList:
-                                idx = fList.index(field)
-                                break
-                        arrayValue[idx] = argValue
-                        argValue = arrayValue
-    
-                elif any(arg0.lower().startswith(v) for v in
-                       ['mater', 'tlay', 'blay', 'coat', 'substrate']):
-                    if not raycing.is_valid_uuid(argValue):
-                        # objects need material uuid rather than name
-                        argValue = self.beamline.matnamesToUUIDs.get(argValue)
-                        kwargs[arg0] = argValue
-                elif any(arg0.lower().startswith(v) for v in
-                       ['figureerr', 'basefe']):
-                    if not raycing.is_valid_uuid(argValue):
-                        # objects need material uuid rather than name
-                        argValue = self.beamline.fenamesToUUIDs.get(argValue)
-                        kwargs[arg0] = argValue
-    
-                # updating local beamline tree here
-                setattr(oe, arg0, argValue)
+                        argValue = updObj.material.get_Bragg_angle(
+                                float(argValue))
+                else:
+                    argIn = getattr(updObj, f'_{arg0}', None)
+                    arrayValue = getattr(updObj,
+                                         arg0) if argIn is None else argIn
+
+                    # avoid writing string to numpy array
+                    if hasattr(arrayValue, 'tolist'):
+                        arrayValue = arrayValue.tolist()
+
+                    for fList in raycing.compoundArgs.values():
+                        if field in fList:
+                            idx = fList.index(field)
+                            break
+                    arrayValue[idx] = argValue
+                    argValue = arrayValue
+
+            elif any(arg0.lower().startswith(v) for v in
+                   ['mater', 'tlay', 'blay', 'coat', 'substrate']):
+                if not raycing.is_valid_uuid(argValue):
+                    # objects need material uuid rather than name
+                    argValue = self.beamline.matnamesToUUIDs.get(argValue)
+                    kwargs[arg0] = argValue
+            elif any(arg0.lower().startswith(v) for v in
+                   ['figureerr', 'basefe']):
+                if not raycing.is_valid_uuid(argValue):
+                    # objects need fe uuid rather than name
+                    argValue = self.beamline.fenamesToUUIDs.get(argValue)
+                    kwargs[arg0] = argValue
+
+            # updating local beamline tree here
+            setattr(updObj, arg0, argValue)
+            if obj_type == "oe":
                 if sender == 'OEE':
                     self.updateQookTree.emit((oeid, {arg0: argValue}))
-    
+
                 if arg0.lower().startswith('center'):
                     flow = copy.deepcopy(self.beamline.flowU)
                     self.beamline.sort_flow()
                     if self.parent is not None and flow != self.beamline.flowU:
                         print("Flow updated. Updating targets")
                         self.parent.updateTargets()
-    
+
                 skipUpdate = False
                 if (arg0 in ['pitch', 'bragg', 'center'] and
                     'auto' in str(argValue)) or\
                     (arg0 in ['bragg', 'pitch'] and
                      isinstance(argValue, list)):
                         skipUpdate = True
-    
+
                 if arg0 in orientationArgSet and not skipUpdate:
     #                self.oePropsUpdated.emit((oeid, arg0, argValue))
                     self.meshDict[oeid].update_transformation_matrix()
@@ -2641,7 +2639,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.maxLen = np.max(np.abs(
                             self.minmax[0, :] - self.minmax[1, :]))
                     self.parent.updateMaxLenFromGL(self.maxLen)
-                    if arg0 in ['pitch'] and hasattr(oe, 'reset_pq'):
+                    if arg0 in ['pitch'] and hasattr(updObj, 'reset_pq'):
                         if oeid not in self.needMeshUpdate:
                             self.needMeshUpdate.append(oeid)
                 elif arg0 in shapeArgSet:
@@ -2650,15 +2648,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 elif arg0 in {'name'}:
                     if self.parent is not None:
                         self.parent.updateNames()
-    
+
                 if arg0 in renderOnlyArgSet:
                     self.glDraw()
-    
+
                 # updating the beamline model in the runner
             if self.epicsPrefix is not None:
                 self.epicsInterface.pv_records['AcquireStatus'].set(1)
-
-
 
         message = {"command": "modify",
                    "object_type": obj_type,

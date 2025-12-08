@@ -94,13 +94,13 @@ class CrystalSi(CrystalDiamond):
 
 
         """
+        self.a0 = 5.430710
+        self.dl_l0 = self.dl_l(273.15 + 19.9)
         self.tK = kwargs.pop('tK', 297.15)
         self.hkl = kwargs.get('hkl', (1, 1, 1))
 # O'Mara, William C. Handbook of Semiconductor Silicon Technology.
 # William Andrew Inc. (1990) pp. 349–352.
-        self.a0 = 5.430710
-        self.dl_l0 = self.dl_l(273.15 + 19.9)
-        self.sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
+#        self.sqrthkl2 = (sum(i**2 for i in self.hkl))**0.5
         if 'a' in kwargs and kwargs['a'] is None:
             kwargs.pop('a')
 
@@ -412,7 +412,7 @@ class CrystalFromCell(Crystal):
         for element, xi in zip(self.elements, self.atomsFraction):
             self.mass += xi * element.mass
         self.rho = self.mass / AVOGADRO / self.V * 1e24
-        self.d = self.V / (self.a * self.b * self.c) *\
+        self._d = self.V / (self.a * self.b * self.c) *\
             ((h*sa/self.a)**2 + (k*sb/self.b)**2 + (l*sg/self.c)**2 +
              2*h*k * (ca*cb - cg) / (self.a*self.b) +
              2*h*l * (ca*cg - cb) / (self.a*self.c) +
