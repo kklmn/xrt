@@ -130,7 +130,7 @@ class MessageHandler:
         self.exit = False
 
     def handle_create(self, message):
-
+        print(message)
         objuuid = message.get("uuid")
 
         object_type = message.get("object_type")
@@ -143,20 +143,20 @@ class MessageHandler:
         elif object_type == 'oe':
             self.bl.init_oe_from_json(kwargs)
         elif object_type == 'mat':
-            self.bl.init_material_from_json(kwargs)
+            self.bl.init_material_from_json(objuuid, kwargs)
         elif object_type == 'fe':
-            self.bl.init_fe_from_json(kwargs)
+            self.bl.init_fe_from_json(objuuid, kwargs)
 
         if self.autoUpdate:
-            if object_type != 'mat':
+            if object_type in ['oe']:
                 self.needUpdate = True
                 self.startEl = objuuid
 
     def handle_modify(self, message):
+        print(message)
         objuuid = message.get("uuid")
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
-
         if object_type == 'oe':
             eLine = self.bl.oesDict.get(objuuid)
 
@@ -214,22 +214,53 @@ class MessageHandler:
             # We reinstantiate the material object instead of updating. Single-
             # property update not supported yet for materials.
             # object will use the same uuid
-            if objuuid in self.bl.materialsDict:
-                del self.bl.materialsDict[objuuid]
-            self.bl.init_material_from_json(objuuid, kwargs)
 
-            self.startEl = None
-            for oeid, oeLine in self.bl.oesDict.items():
-                oeObj = oeLine[0]
-                for prop in ["_material", "_material2"]:
-                    try:
-                        matProp = getattr(oeObj, prop)
-                        if matProp == objuuid:
-                            self.startEl = oeid
-                            break
-                    except AttributeError:
-                        pass
+#            if objuuid in self.bl.materialsDict:
+#                del self.bl.materialsDict[objuuid]
+#            self.bl.init_material_from_json(objuuid, kwargs)
+#
+#            self.startEl = None
+#            for oeid, oeLine in self.bl.oesDict.items():
+#                oeObj = oeLine[0]
+#                for prop in ["_material", "_material2"]:
+#                    try:
+#                        matProp = getattr(oeObj, prop)
+#                        if matProp == objuuid:
+#                            self.startEl = oeid
+#                            break
+#                    except AttributeError:
+#                        pass
 
+            matObj = self.bl.materialsDict.get(objuuid)
+            if matObj is not None:
+                for key, value in kwargs.items():
+                    setattr(matObj, key, value)
+
+            if self.autoUpdate and self.startEl is not None:
+                self.needUpdate = True
+        elif object_type == 'fe':
+            feObj = self.bl.fesDict.get(objuuid)
+            if feObj is not None:
+                for key, value in kwargs.items():
+                    args = key.split('.')
+                    arg = args[0]
+                    if len(args) > 1:
+                        field = args[-1]
+                        argIn = getattr(element, f'_{arg}', None)
+                        arrayValue = getattr(element, arg) if\
+                            argIn is None else argIn
+
+                        if hasattr(arrayValue, 'tolist'):
+                            arrayValue = arrayValue.tolist()
+
+                        for fList in compoundArgs.values():
+                            if field in fList:
+                                idx = fList.index(field)
+                                break
+                        arrayValue[idx] = value
+                        value = arrayValue
+
+                    setattr(feObj, arg, value)
             if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True
 

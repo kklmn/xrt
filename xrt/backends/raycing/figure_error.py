@@ -10,6 +10,8 @@ Basic containers for surface roughness generators.
 from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "29 Nov 2025"
+__all__ = ('RandomRoughness', 'GaussianBump', 'Waviness')
+
 
 import numpy as np
 from scipy import interpolate
@@ -53,8 +55,16 @@ class FigureError():
 
         self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
-        self._limPhysX = limPhysX
-        self._limPhysY = limPhysY
+        if limPhysX is None:
+            self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                                             raycing.maxHalfSizeOfOE])
+        else:
+            self._limPhysX = raycing.Limits(limPhysX)
+        if limPhysY is None:
+            self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                                             raycing.maxHalfSizeOfOE])
+        else:
+            self._limPhysY = raycing.Limits(limPhysY)
         self._fileName = fileName
         self.build_spline()
 
@@ -82,7 +92,11 @@ class FigureError():
 
     @limPhysX.setter
     def limPhysX(self, limPhysX):
-        self._limPhysX = limPhysX
+        if limPhysX is None:
+            self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                                             raycing.maxHalfSizeOfOE])
+        else:
+            self._limPhysX = raycing.Limits(limPhysX)
         self.build_spline()
 
     @property
@@ -91,7 +105,11 @@ class FigureError():
 
     @limPhysY.setter
     def limPhysY(self, limPhysY):
-        self._limPhysY = limPhysY
+        if limPhysY is None:
+            self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
+                                             raycing.maxHalfSizeOfOE])
+        else:
+            self._limPhysY = raycing.Limits(limPhysY)
         self.build_spline()
 
     def get_rms(self):

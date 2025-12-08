@@ -1188,9 +1188,14 @@ class BeamLine(object):
         beamlineInitKWargs = data['Project'][beamlineName]['properties']
         for key, value in beamlineInitKWargs.items():
             setattr(self, key, get_init_val(value))
-
-        self.populate_materials_dict_from_json(data['Project']['Materials'])
-        self.populate_figerrors_dict_from_json(data['Project']['FigureErrors'])
+            
+        matDict = data['Project'].get('Materials')
+        if matDict is not None:
+            self.populate_materials_dict_from_json(matDict)
+        
+        feDict = data['Project'].get('FigureErrors')
+        if feDict is not None:
+            self.populate_figerrors_dict_from_json(feDict)
 
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
         if 'flow' in data['Project'].keys():
