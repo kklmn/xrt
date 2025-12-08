@@ -220,18 +220,18 @@ class FigureError():
             y = y.flatten()
         # z spline is built in nm, x, y in mm
         if spl == 'RBS':
-            a = self.local_z_spline.ev(y, x, dx=1, dy=0) * 1e-6
-            b = self.local_z_spline.ev(y, x, dx=0, dy=1) * 1e-6
-        else:
-            a = self.local_z_spline.ev(x, y, dx=1, dy=0) * 1e-6
-            b = self.local_z_spline.ev(x, y, dx=0, dy=1) * 1e-6
+            a = -self.local_z_spline.ev(y, x, dx=0, dy=1) * 1e-6
+            b = -self.local_z_spline.ev(y, x, dx=1, dy=0) * 1e-6
+#        else:
+#            a = self.local_z_spline.ev(x, y, dx=1, dy=0) * 1e-6
+#            b = self.local_z_spline.ev(x, y, dx=0, dy=1) * 1e-6
 
         if shape is not None:
             a = a.reshape(shape)
             b = b.reshape(shape)
 
         norm = np.sqrt(a**2+b**2+1.)
-        return [-a/norm, -b/norm, 1./norm]
+        return [a/norm, b/norm, 1./norm]
 
     def next_pow2(self, n):
         return 1 << int(np.ceil(np.log2(n)))
