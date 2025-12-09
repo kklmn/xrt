@@ -2560,13 +2560,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             if oeid in self.beamline.oesDict:
                 obj_type = "oe"
-                updObj = self.beamline.oesDict[oeid][0]
+                elLine = self.beamline.oesDict.get(oeid)
+                updObj = elLine[0]
             elif oeid in self.beamline.materialsDict:
                 obj_type = "mat"
-                updObj = self.beamline.materialsDict[oeid]
+                updObj = self.beamline.materialsDict.get(oeid)
             elif oeid in self.beamline.fesDict:
                 obj_type = "fe"
-                updObj = self.beamline.fesDict[oeid]
+                updObj = self.beamline.fesDict.get(oeid)
             else:
                 obj_type = None
 

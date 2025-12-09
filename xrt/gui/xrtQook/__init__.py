@@ -430,7 +430,7 @@ class XrtQook(qt.QMainWindow):
 
         self.xrtModules = ['rsources', 'rscreens',
                            'rmats', 'rmatsel', 'rmatsco', 'rmatscr',
-                           'roes', 'rapts',
+                           'roes', 'rapts', 'rfe',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
         self.objectFlag = qt.Qt.ItemFlags(0)
@@ -4240,6 +4240,41 @@ if __name__ == '__main__':
                     codeDeclarations += '{0} = {1})\n\n'.format(
                         matItem.text(), str.rstrip(ieinit, ","))
 
+        self.progressBar.setValue(25)
+        self.progressBar.setFormat("Defining figure errors.")
+ 
+        for feId in self.beamLine.sort_figerrors():
+            print(feId, self.beamLine.fesDict[feId].name)
+            for ie in range(self.rootFEItem.rowCount()):
+                if str(self.rootFEItem.child(ie, 0).data(qt.Qt.UserRole)) == \
+                        feId:
+                    feItem = self.rootFEItem.child(ie, 0)
+                    ieinit = ""
+                    for ieph in range(feItem.rowCount()):
+                        if feItem.child(ieph, 0).text() == '_object':
+                            elstr = str(feItem.child(ieph, 1).text())
+                            klass = eval(elstr)
+                            ieinit = elstr + "(" + ieinit
+                    for ieph in range(feItem.rowCount()):
+                        if feItem.child(ieph, 0).text() != '_object':
+                            if feItem.child(ieph, 0).text() == 'properties':
+                                pItem = feItem.child(ieph, 0)
+                                for iep, arg_def in zip(range(
+                                        pItem.rowCount()),
+                                        list(zip(*self.getParams(elstr)))[1]):
+                                    paraname = str(pItem.child(iep, 0).text())
+                                    paravalue = str(pItem.child(iep, 1).text())
+                                    if paravalue != str(arg_def) or\
+                                            paravalue == 'bl':
+                                        if paraname.lower() not in\
+                                                ['basefe']:
+                                            paravalue = self.quotize(paravalue)
+                                        ieinit += '\n{2}{0}={1},'.format(
+                                            paraname, paravalue, myTab)
+                    codeDeclarations += '{0} = {1})\n\n'.format(
+                        feItem.text(), str.rstrip(ieinit, ","))
+#                    break
+
         self.progressBar.setValue(30)
         self.progressBar.setFormat("Adding optical elements.")
         outBeams = ['None']
@@ -4289,7 +4324,7 @@ if __name__ == '__main__':
                                         paraname == 'bl':
                                     if paraname.lower() not in\
                                             ['bl', 'center', 'material',
-                                             'material2']:
+                                             'material2', 'figureerror']:
                                         paravalue = self.quotize(paravalue)
                                     ieinit += '\n{2}{0}={1},'.format(
                                         paraname, paravalue, myTab*2)
@@ -4382,19 +4417,8 @@ if __name__ == '__main__':
             for ieph in range(tItem.rowCount()):
                 if tItem.child(ieph, 0).text() == '_object':
                     elstr = str(tItem.child(ieph, 1).text())
-#                    print("xx0", elstr)
                     ieinit += elstr + "("
-#                    for parent in (inspect.getmro(eval(elstr)))[:-1]:
-#                        for namef, objf in inspect.getmembers(parent):
-#                            if (inspect.ismethod(objf) or
-#                                    inspect.isfunction(objf)):
-#                                if namef == "__init__" and\
-#                                        getargspec(objf)[3] is not None:
-#                                    obj = objf
-#            for iepm, arg_def in zip(range(tItem.rowCount()-1),
-#                                     getargspec(obj)[3]):
             for iep in range(tItem.rowCount()):
-                # iep = iepm + 1
                 if tItem.child(iep, 0).text() != '_object':
                     pItem = tItem.child(iep, 0)
                     if pItem.hasChildren():
@@ -4405,19 +4429,6 @@ if __name__ == '__main__':
                                 ieinit += "\n{2}{0}={1}(".format(
                                     str(tItem.child(iep, 0).text()), axstr,
                                     myTab*2)
-#                                for parentAx in\
-#                                        (inspect.getmro(eval(axstr)))[:-1]:
-#                                    for namefAx, objfAx in\
-#                                            inspect.getmembers(parentAx):
-#                                        if (inspect.ismethod(objfAx) or
-#                                                inspect.isfunction(objfAx)):
-#                                            if namefAx == "__init__" and\
-#                                                getargspec(
-#                                                    objfAx)[3] is not None:
-#                                                objAx = objfAx
-
-#                        for ieaxm, arg_defAx in zip(range(pItem.rowCount()-1),
-#                                                    getargspec(objAx)[3]):
                         for ieax in range(pItem.rowCount()):
                             paraname = str(pItem.child(ieax, 0).text())
                             if paraname in ['_object']:
@@ -4571,7 +4582,7 @@ if __name__ == '__main__':
                 saveMsg = 'Script saved to {}'.format(
                     os.path.basename(str(self.saveFileName)))
                 self.tabs.setTabText(
-                    5, os.path.basename(str(self.saveFileName)))
+                    6, os.path.basename(str(self.saveFileName)))
                 if ext.isSpyderConsole:
                     self.codeConsole.wdir = os.path.dirname(
                         str(self.saveFileName))

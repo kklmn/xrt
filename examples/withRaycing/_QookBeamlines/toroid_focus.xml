@@ -12,7 +12,7 @@
 			<properties type="prop">
 				<tK type="param">297.15</tK>
 				<a type="param">5.4307717932001225</a>
-				<hkl type="param">[1, 1, 1]</hkl>
+				<hkl type="param">(1, 1, 1)</hkl>
 				<d type="param">3.1354575567115175</d>
 				<V type="param">160.17128543981727</V>
 				<elements type="param">['Si']</elements>
@@ -117,7 +117,7 @@
 				<alarmLevel type="param">None</alarmLevel>
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float64</precisionOpenCL>
-				<figureError type="param">gaussianBump01</figureError>
+				<figureError type="param">waviness01</figureError>
 			</properties>
 			<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
 			<reflect type="prop">
@@ -167,14 +167,42 @@
 				<sigmaX type="param">10</sigmaX>
 				<sigmaY type="param">20</sigmaY>
 				<name type="param">gaussianBump01</name>
-				<baseFE type="param">None</baseFE>
-				<limPhysX type="param">-20, 20</limPhysX>
-				<limPhysY type="param">-100, 100</limPhysY>
+				<baseFE type="param">randomRoughness01</baseFE>
+				<limPhysX type="param">[-20.0, 20.0]</limPhysX>
+				<limPhysY type="param">[-100.0, 100.0]</limPhysY>
 				<gridStep type="param">0.5</gridStep>
 				<fileName type="param">None</fileName>
 			</properties>
 			<_object type="object">xrt.backends.raycing.figure_error.GaussianBump</_object>
 		</gaussianBump01>
+		<randomRoughness01 type="value">
+			<properties type="prop">
+				<rms type="param">1.0</rms>
+				<corrLength type="param">None</corrLength>
+				<seed type="param">None</seed>
+				<name type="param">randomRoughness01</name>
+				<baseFE type="param">None</baseFE>
+				<limPhysX type="param">None</limPhysX>
+				<limPhysY type="param">None</limPhysY>
+				<gridStep type="param">0.5</gridStep>
+				<fileName type="param">None</fileName>
+			</properties>
+			<_object type="object">xrt.backends.raycing.figure_error.RandomRoughness</_object>
+		</randomRoughness01>
+		<waviness01 type="value">
+			<properties type="prop">
+				<amplitude type="param">10.0</amplitude>
+				<xWaveLength type="param">20.0</xWaveLength>
+				<yWaveLength type="param">50.0</yWaveLength>
+				<name type="param">waviness01</name>
+				<baseFE type="param">gaussianBump01</baseFE>
+				<limPhysX type="param">None</limPhysX>
+				<limPhysY type="param">None</limPhysY>
+				<gridStep type="param">0.5</gridStep>
+				<fileName type="param">None</fileName>
+			</properties>
+			<_object type="object">xrt.backends.raycing.figure_error.Waviness</_object>
+		</waviness01>
 	</FigureErrors>
 	<plots type="value">
 		<plot01 type="prop">

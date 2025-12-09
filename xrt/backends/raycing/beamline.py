@@ -324,7 +324,7 @@ class BeamLine(object):
             except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
-        print(oe.name, any(autoCenter), autoPitch, autoBragg)
+
         if any(autoCenter) or autoPitch or autoBragg:
             good = (beam.state == 1) | (beam.state == 2)
             if self.flowSource == 'Qook':
@@ -393,8 +393,6 @@ class BeamLine(object):
                     elif autoBragg:
                         oe._braggVal = 0
                     return
-                print("HKL", oe.material.hkl)
-                print("HKL2", mat.hkl)
                 braggT = mat.get_Bragg_angle(alignE)
                 alphaT = 0.
                 lauePitch = 0.
@@ -423,7 +421,6 @@ class BeamLine(object):
                         print("{0}: Bragg={1} at E={2}".format(
                                 oe.name, oe.bragg, alignE))
                 else:  # autoPitch
-                    print("target pitch:", targetPitch)
                     oe._pitchVal = targetPitch
                     if _VERBOSITY_ > 0:
                         print(oe.name, "pitch:", oe.pitch)
@@ -554,7 +551,9 @@ class BeamLine(object):
             for attr in matDeps:
                 if hasattr(matObj, attr):
                     v = getattr(matObj, attr)
-                    if v is not None and hasattr(v, 'uuid'):
+                    if is_valid_uuid(v):
+                        deps.append(v)
+                    elif v is not None and hasattr(v, 'uuid'):
                         deps.append(getattr(v, 'uuid'))
             return deps
 
@@ -603,7 +602,9 @@ class BeamLine(object):
             for attr in feDeps:
                 if hasattr(feObj, attr):
                     v = getattr(feObj, attr)
-                    if v is not None and hasattr(v, 'uuid'):
+                    if is_valid_uuid(v):
+                        deps.append(v)
+                    elif v is not None and hasattr(v, 'uuid'):
                         deps.append(getattr(v, 'uuid'))
             return deps
 
