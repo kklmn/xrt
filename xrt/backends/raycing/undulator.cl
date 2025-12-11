@@ -625,7 +625,7 @@ float3 f_traj_filament(float revgamma2, float2 beta)
     return (float3)(beta.x,
                     beta.y,
 //                     sqrt(1. - smTerm));
-                    1. - 0.5*smTerm);// - 0.125*smTerm*smTerm);
+                    1. - 0.5*smTerm - 0.125*smTerm*smTerm - 0.0625*smTerm*smTerm*smTerm);
 }
 
 float3 f_traj(float2 beta)
@@ -856,7 +856,7 @@ __kernel void custom_field_filament(const int jend,
         betaC.x = betax[j];
         betaC.y = betay[j];
         smTerm = revg2 + betaC.x*betaC.x + betaC.y*betaC.y;
-        betaC.z = 1. - 0.5*smTerm + 0.125*smTerm*smTerm;
+        betaC.z = 1. - 0.5*smTerm - 0.125*smTerm*smTerm - 0.0625*smTerm*smTerm*smTerm;
 //        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
         if (R0 > 0) {
             dr = r0 - traj;
@@ -1028,7 +1028,7 @@ __kernel void custom_field(const int jend,
         betaC.x = emcg*betax[j];
         betaC.y = emcg*betay[j];
         smTerm = revg2 + betaC.x*betaC.x + betaC.y*betaC.y;
-        betaC.z = 1. - 0.5*smTerm + 0.125*smTerm*smTerm;
+        betaC.z = 1. - 0.5*smTerm - 0.125*smTerm*smTerm - 0.0625*smTerm*smTerm*smTerm;
 //        betaC.z = sqrt(1 - revg2 - betaC.x*betaC.x - betaC.y*betaC.y);
         if (R0 > 0) {
             dr = r0 - traj;

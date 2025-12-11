@@ -721,7 +721,7 @@ class SourceFromField(IntegratedSource):
             dirz = direction[2, :]
 
         smTerm = 1./gS**2 + betax_**2 + betay_**2
-        betaz = 1 - 0.5*smTerm + 0.125*smTerm**2
+        betaz = 1 - 0.5*smTerm - 0.125*smTerm**2 - 0.0625*smTerm**3
 
         betaPx = betay_*Bz - betaz*By
         betaPy = -betax_*Bz + betaz*Bx
@@ -810,7 +810,7 @@ class SourceFromField(IntegratedSource):
                 dirz = direction[2, :]
 
             smTerm = revgamma2 + betax_**2 + betay_**2
-            betaz = 1. - 0.5*smTerm + 0.125*smTerm**2
+            betaz = 1. - 0.5*smTerm - 0.125*smTerm**2 - 0.0625*smTerm**3
 
             betaPx = betay_*Bz[i] - betaz*By[i]
             betaPy = -betax_*Bz[i] + betaz*Bx[i]
@@ -905,7 +905,7 @@ class SourceFromField(IntegratedSource):
         def f_traj(beta):
             if self.filamentBeam:
                 smTerm = 1./gamma**2 + beta[0]**2 + beta[1]**2
-                betaz = 1.-0.5*smTerm-0.125*smTerm**2
+                betaz = 1. - 0.5*smTerm - 0.125*smTerm**2 - 0.0625*smTerm**3
             else:
                 betaz = -0.5*(beta[0]**2 + beta[1]**2)
             return np.array((beta[0], beta[1], betaz))
