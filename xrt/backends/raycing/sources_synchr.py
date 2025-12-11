@@ -635,23 +635,23 @@ class SourceFromField(IntegratedSource):
 
         dataShape = self.customFieldData.shape
         if dataShape[1] == 2:
-            By = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
-#            By = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
+#            By = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
+            By = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
             Bx = np.zeros_like(By)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 3:
-            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
-            By = UnivariateSpline(dataz, self.customFieldData[:, 2], s=1e-6)(z)
-#            Bx = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
-#            By = interp1d(dataz, self.customFieldData[:, 2], **self.spl_kw)(z)
+#            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
+#            By = UnivariateSpline(dataz, self.customFieldData[:, 2], s=1e-6)(z)
+            Bx = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
+            By = interp1d(dataz, self.customFieldData[:, 2], **self.spl_kw)(z)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 4:
-            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
-            By = UnivariateSpline(dataz, self.customFieldData[:, 2], s=1e-6)(z)
-            Bz = UnivariateSpline(dataz, self.customFieldData[:, 3], s=1e-6)(z)
-#            Bx = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
-#            By = interp1d(dataz, self.customFieldData[:, 2], **self.spl_kw)(z)
-#            Bz = interp1d(dataz, self.customFieldData[:, 3], **self.spl_kw)(z)
+#            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
+#            By = UnivariateSpline(dataz, self.customFieldData[:, 2], s=1e-6)(z)
+#            Bz = UnivariateSpline(dataz, self.customFieldData[:, 3], s=1e-6)(z)
+            Bx = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
+            By = interp1d(dataz, self.customFieldData[:, 2], **self.spl_kw)(z)
+            Bz = interp1d(dataz, self.customFieldData[:, 3], **self.spl_kw)(z)
         else:
             print("Unknown file structure.")
             raise
@@ -755,7 +755,7 @@ class SourceFromField(IntegratedSource):
             dirz = direction[2, :]
 
         smTerm = 1./gS**2 + betax_**2 + betay_**2
-        betaz = 1 - 0.5*smTerm + 0.125*smTerm**2
+        betaz = 1 - 0.5*smTerm - 0.125*smTerm**2 - 0.0625*smTerm**3
 
         betaPx = betay_*Bz - betaz*By
         betaPy = -betax_*Bz + betaz*Bx
@@ -844,7 +844,7 @@ class SourceFromField(IntegratedSource):
                 dirz = direction[2, :]
 
             smTerm = revgamma2 + betax_**2 + betay_**2
-            betaz = 1. - 0.5*smTerm + 0.125*smTerm**2
+            betaz = 1. - 0.5*smTerm - 0.125*smTerm**2 - 0.0625*smTerm**3
 
             betaPx = betay_*Bz[i] - betaz*By[i]
             betaPy = -betax_*Bz[i] + betaz*Bx[i]
@@ -925,16 +925,16 @@ class SourceFromField(IntegratedSource):
             clKernel, scalarArgs, None, nonSlicedROArgs,
             None, nonSlicedRWArgs, 1)
 
-        betaxTg = UnivariateSpline(self.wtGrid, betax, s=1e-6)(self.tg)
-        betayTg = UnivariateSpline(self.wtGrid, betay, s=1e-6)(self.tg)
-        trajxTg = UnivariateSpline(self.wtGrid, trajx, s=1e-6)(self.tg)
-        trajyTg = UnivariateSpline(self.wtGrid, trajy, s=1e-6)(self.tg)
-        trajzTg = UnivariateSpline(self.wtGrid, trajz, s=1e-6)(self.tg)
-#        betaxTg = interp1d(self.wtGrid, betax, **self.spl_kw)(self.tg)
-#        betayTg = interp1d(self.wtGrid, betay, **self.spl_kw)(self.tg)
-#        trajxTg = interp1d(self.wtGrid, trajx, **self.spl_kw)(self.tg)
-#        trajyTg = interp1d(self.wtGrid, trajy, **self.spl_kw)(self.tg)
-#        trajzTg = interp1d(self.wtGrid, trajz, **self.spl_kw)(self.tg)
+#        betaxTg = UnivariateSpline(self.wtGrid, betax, s=1e-6)(self.tg)
+#        betayTg = UnivariateSpline(self.wtGrid, betay, s=1e-6)(self.tg)
+#        trajxTg = UnivariateSpline(self.wtGrid, trajx, s=1e-6)(self.tg)
+#        trajyTg = UnivariateSpline(self.wtGrid, trajy, s=1e-6)(self.tg)
+#        trajzTg = UnivariateSpline(self.wtGrid, trajz, s=1e-6)(self.tg)
+        betaxTg = interp1d(self.wtGrid, betax, **self.spl_kw)(self.tg)
+        betayTg = interp1d(self.wtGrid, betay, **self.spl_kw)(self.tg)
+        trajxTg = interp1d(self.wtGrid, trajx, **self.spl_kw)(self.tg)
+        trajyTg = interp1d(self.wtGrid, trajy, **self.spl_kw)(self.tg)
+        trajzTg = interp1d(self.wtGrid, trajz, **self.spl_kw)(self.tg)
         return betaxTg, betayTg, [betazav[-1]], trajxTg, trajyTg, trajzTg
 
     def _build_trajectory_conv(self, Bx, By, Bz, gamma=None):
@@ -944,7 +944,7 @@ class SourceFromField(IntegratedSource):
         def f_traj(beta):
             if self.filamentBeam:
                 smTerm = 1./gamma**2 + beta[0]**2 + beta[1]**2
-                betaz = 1.-0.5*smTerm-0.125*smTerm**2
+                betaz = 1. - 0.5*smTerm - 0.125*smTerm**2 - 0.0625*smTerm**3
             else:
                 betaz = -0.5*(beta[0]**2 + beta[1]**2)
             return np.array((beta[0], beta[1], betaz))
@@ -1025,16 +1025,16 @@ class SourceFromField(IntegratedSource):
             trajy.append(traj_next[1])
             trajz.append(traj_next[2])
 
-        betaxTg = UnivariateSpline(self.wtGrid, betax, s=1e-6)(self.tg)
-        betayTg = UnivariateSpline(self.wtGrid, betay, s=1e-6)(self.tg)
-        trajxTg = UnivariateSpline(self.wtGrid, trajx, s=1e-6)(self.tg)
-        trajyTg = UnivariateSpline(self.wtGrid, trajy, s=1e-6)(self.tg)
-        trajzTg = UnivariateSpline(self.wtGrid, trajz, s=1e-6)(self.tg)
-#        betaxTg = interp1d(self.wtGrid, betax, **self.spl_kw)(self.tg)
-#        betayTg = interp1d(self.wtGrid, betay, **self.spl_kw)(self.tg)
-#        trajxTg = interp1d(self.wtGrid, trajx, **self.spl_kw)(self.tg)
-#        trajyTg = interp1d(self.wtGrid, trajy, **self.spl_kw)(self.tg)
-#        trajzTg = interp1d(self.wtGrid, trajz, **self.spl_kw)(self.tg)
+#        betaxTg = UnivariateSpline(self.wtGrid, betax, s=1e-6)(self.tg)
+#        betayTg = UnivariateSpline(self.wtGrid, betay, s=1e-6)(self.tg)
+#        trajxTg = UnivariateSpline(self.wtGrid, trajx, s=1e-6)(self.tg)
+#        trajyTg = UnivariateSpline(self.wtGrid, trajy, s=1e-6)(self.tg)
+#        trajzTg = UnivariateSpline(self.wtGrid, trajz, s=1e-6)(self.tg)
+        betaxTg = interp1d(self.wtGrid, betax, **self.spl_kw)(self.tg)
+        betayTg = interp1d(self.wtGrid, betay, **self.spl_kw)(self.tg)
+        trajxTg = interp1d(self.wtGrid, trajx, **self.spl_kw)(self.tg)
+        trajyTg = interp1d(self.wtGrid, trajy, **self.spl_kw)(self.tg)
+        trajzTg = interp1d(self.wtGrid, trajz, **self.spl_kw)(self.tg)
         return betaxTg, betayTg, [betam_int], trajxTg, trajyTg, trajzTg
 
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
