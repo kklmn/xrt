@@ -1204,14 +1204,15 @@ class XYCPlot(object):
 
         if self.ax1dHistEbar is None:
             self.ax1dHistEbar = self.fig.add_axes(
-                [0,0,1,1], xlabel='', ylabel='',
+                [0, 0, 1, 1], xlabel='', ylabel='',
                 autoscale_on=False, frameon=frameon, **kwmpl)
             self.ax1dHistEbar.yaxis.labelpad = xlabelpad
             self.ax1dHistEbar.xaxis.labelpad = xlabelpad
             self.ax1dHistEOffset = self.fig.text(
                 0, 0, '', ha='left', va='bottom', color='g')
             self.ax1dHistE = self.fig.add_axes(
-                [0,0,1,1], sharey=self.ax1dHistEbar, sharex=self.ax1dHistEbar,
+                [0, 0, 1, 1],
+                sharey=self.ax1dHistEbar, sharex=self.ax1dHistEbar,
                 autoscale_on=False, frameon=frameon, **kwmpl)
             plt.setp(
                 self.ax1dHistE.get_xticklabels() +
@@ -1220,17 +1221,15 @@ class XYCPlot(object):
                 mpl.ticker.ScalarFormatter(useOffset=False))
             self.ax1dHistE.xaxis.set_major_formatter(
                 mpl.ticker.ScalarFormatter(useOffset=False))
-            if self.caxis.limits is not None:
-                self.ax1dHistE.set_ylim(self.caxis.limits)
-                self.ax1dHistE.set_xlim(self.caxis.limits)
-                self.ax1dHistE.set_xticks([])
-                self.ax1dHistE.set_yticks([])
 
         if self.ePos == 1:  # right
             self.ax1dHistEbar.set_visible(True)
             self.ax1dHistEbar.set_position(rect1dEbar)
             self.ax1dHistEbar.set_xlabel("")
             self.ax1dHistEbar.set_ylabel(self.caxis.displayLabel)
+            if self.caxis.limits is not None:
+                self.ax1dHistE.set_ylim(self.caxis.limits)
+                self.ax1dHistE.set_xticks([])
 
             self.ax1dHistEOffset.set_position(
                     (rect1dEbar[0], rect1dEbar[1]+rect1dEbar[3]))
@@ -1252,6 +1251,9 @@ class XYCPlot(object):
             self.ax1dHistEbar.set_position(rect1dEbar)
             self.ax1dHistEbar.set_ylabel("")
             self.ax1dHistEbar.set_xlabel(self.caxis.displayLabel)
+            if self.caxis.limits is not None:
+                self.ax1dHistE.set_xlim(self.caxis.limits)
+                self.ax1dHistE.set_yticks([])
 
             self.ax1dHistEOffset.set_position(
                     (rect1dEbar[0]+rect1dEbar[2]+0.01, rect1dEbar[1]-0.01))
