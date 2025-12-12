@@ -1,6 +1,6 @@
 numpy
 scipy
 matplotlib
-sphinx-tabs
+sphinx-tabs>=3.4.7
 sphinxcontrib-jquery
 colorama
