@@ -26,6 +26,9 @@ __constant float E2WC = 5067.7309392068091;
 __constant float SIE0 = 1.602176565e-19;
 __constant float SIM0 = 9.10938291e-31;
 __constant float EMC = 0.5866791802416487;
+
+__constant float NEAR_CENTER = 5.0;
+
 //__constant float RK4_STEPS[3] = {0.5, 0.5, 1.};
 //__constant float RK4_B[4] = {1./6., 1./3., 1./3., 1./6.};
 //__constant float RK4_A[9] = {0.5, 0.0, 0.0,
@@ -747,7 +750,8 @@ __kernel void get_trajectory_filament(const int jend,
     float betam_int = 0;
     float emcg = EMC/gamma;
     float2 beta, beta0;
-    float3 traj, traj0;
+    float3 traj, traj0, trajC;
+    int trajCN = 0;
     float8 betaTraj;
     beta = zero2;
     beta0 = zero2;
@@ -762,6 +766,7 @@ __kernel void get_trajectory_filament(const int jend,
     beta = beta0;
     traj = (float3)(0., 0., 0.);
     traj0 = (float3)(0., 0., 0.);
+    trajC = (float3)(0., 0., 0.);
 
     for (j=0; j<jend-1; j++) {
         rkStep = tg[j+1] - tg[j];
@@ -797,8 +802,20 @@ __kernel void get_trajectory_filament(const int jend,
         betazav[j+1] = betam_int;
         trajx[j+1] = traj.x;
         trajy[j+1] = traj.y;
-        trajz[j+1] = traj.z; }
-
+        trajz[j+1] = traj.z;
+        if (fabs(traj.z) < NEAR_CENTER) {
+            trajC += traj;
+            trajCN += 1;
+        }
+    }
+    if (trajCN > 0) {
+        trajC /= trajCN;
+        for (j=0; j<jend; j++) {
+            trajx[j] -= trajC.x;
+            trajy[j] -= trajC.y;
+            trajz[j] -= trajC.z;
+        }
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
@@ -865,7 +882,7 @@ __kernel void custom_field_filament(const int jend,
             dr = r0 - traj;
             rdrz = 1./dr.z;
             drs = (dr.x*dr.x+dr.y*dr.y)*rdrz;
-            
+
             LRS = 0.5*drs - 0.125*drs*drs*rdrz + 0.0625*drs*drs*drs*rdrz*rdrz;
             LR = length(dr);
 
@@ -914,7 +931,8 @@ __kernel void get_trajectory(const int jend,
     float rkStep;
     float betam_int = 0;
     float2 beta, beta0;
-    float3 traj, traj0;
+    float3 traj, traj0, trajC;
+    int trajCN = 0;
     float8 betaTraj;
     beta = zero2;
     beta0 = zero2;
@@ -929,6 +947,7 @@ __kernel void get_trajectory(const int jend,
     beta = beta0;
     traj = (float3)(0., 0., 0.);
     traj0 = (float3)(0., 0., 0.);
+    trajC = (float3)(0., 0., 0.);
 
     for (j=0; j<jend-1; j++) {
         rkStep = tg[j+1] - tg[j];
@@ -962,8 +981,20 @@ __kernel void get_trajectory(const int jend,
         betazav[j+1] = betam_int;
         trajx[j+1] = traj.x;
         trajy[j+1] = traj.y;
-        trajz[j+1] = traj.z; }
-
+        trajz[j+1] = traj.z;
+        if (fabs(traj.z) < NEAR_CENTER) {
+            trajC += traj;
+            trajCN += 1;
+        }
+    }
+    if (trajCN > 0) {
+        trajC /= trajCN;
+        for (j=0; j<jend; j++) {
+            trajx[j] -= trajC.x;
+            trajy[j] -= trajC.y;
+            trajz[j] -= trajC.z;
+        }
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
