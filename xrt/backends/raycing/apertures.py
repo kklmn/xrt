@@ -730,6 +730,7 @@ class RoundAperture(object):
         wave.area = np.pi * self.r**2
         wave.dS = wave.area / nrays
         wave.toOE = self
+        wave.parentId = self.uuid
 
         glo = rs.Beam(copyFrom=wave)
         self.local_to_global(glo)
@@ -1160,6 +1161,7 @@ class PolygonalAperture(object):
                 np.dot(self.vertices[:, 1], np.roll(self.vertices[:, 0], 1)))
         wave.dS = wave.area / nrays
         wave.toOE = self
+        wave.parentId = self.uuid
 
         glo = rs.Beam(copyFrom=wave)
         self.local_to_global(glo)
