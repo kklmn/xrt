@@ -825,7 +825,7 @@ __kernel void custom_field_filament(const int jend,
     unsigned int ii = get_global_id(0);
     int j;
 
-    float ucos, sinucos, cosucos, krel, LR, LRS, drs;
+    float ucos, sinucos, cosucos, krel, LR, LRS, drs, zq;
     float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
     float smTerm, rdrz;
 
@@ -837,7 +837,9 @@ __kernel void custom_field_filament(const int jend,
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
-    n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
+    zq = n.x*n.x + n.y*n.y;
+    n.z = 1. - HALF*zq - 0.125*zq*zq - 0.0625*zq*zq*zq;
+//    n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
 //    n /= length(n);
 
     if (R0>0) {
@@ -987,7 +989,7 @@ __kernel void custom_field(const int jend,
     unsigned int ii = get_global_id(0);
     int j;
 
-    float ucos, sinucos, cosucos, krel, LR, LRS, drs;
+    float ucos, sinucos, cosucos, krel, LR, LRS, drs, zq;
     float sinr0z, cosr0z, sinzloc, coszloc, sindrs, cosdrs;
     float gamma2 = gamma[ii]*gamma[ii];
     float revg2 = 1./gamma2;
@@ -1009,7 +1011,9 @@ __kernel void custom_field(const int jend,
 
     n.x = ddphi[ii];
     n.y = ddpsi[ii];
-    n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
+    zq = n.x*n.x + n.y*n.y;
+    n.z = 1. - HALF*zq - 0.125*zq*zq - 0.0625*zq*zq*zq;
+//    n.z = 1. - HALF*(n.x*n.x + n.y*n.y);
 //    n /= length(n);
 
     if (R0>0) {

@@ -664,7 +664,8 @@ class SourceFromField(IntegratedSource):
 
         dirx = ddphiS
         diry = ddpsiS
-        dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
+        dirz = np.sqrt(1. - ddphiS**2 - ddpsiS**2)
+#        dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
         revgamma2 = 1./gS**2
 
         if self.filamentBeam:
@@ -752,7 +753,8 @@ class SourceFromField(IntegratedSource):
         gamma_ = gamma[0] if self.filamentBeam else gamma
         dirx = ddphi
         diry = ddpsi
-        dirz = 1. - 0.5*(ddphi**2 + ddpsi**2)
+        dirz = np.sqrt(1. - ddphi**2 - ddpsi**2)
+#        dirz = 1. - 0.5*(ddphi**2 + ddpsi**2)
         revgamma2 = 1./gamma_**2
 
         wc = w * E2WC / (1. + (betam*EMC**2 - 0.5)*revgamma2) if\
