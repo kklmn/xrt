@@ -1,6 +1,7 @@
 numpy
 scipy
 matplotlib
+docutils<0.22
 sphinx-tabs>=3.4.7
 sphinxcontrib-jquery
 colorama
