@@ -1639,14 +1639,15 @@ class IntegratedSource(SourceBase):
         if self.pitch or self.yaw:
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         bor = Beam(copyFrom=bo)
-        if wave is not None and self.R0 is None:
+        if wave is not None:
             bor.x[:] = dxR
-            bor.y[:] = 0
+            bor.y[:] = 0.
             bor.z[:] = dzR
-            bor.path[:] = 0
-            mPh = np.exp(1e7j * wave.E/CHBAR * wave.rDiffr)
-            wave.Es *= mPh
-            wave.Ep *= mPh
+            if self.R0 is None:
+                bor.path[:] = 0.
+                mPh = np.exp(1e7j * wave.E/CHBAR * wave.rDiffr)
+                wave.Es *= mPh
+                wave.Ep *= mPh
 
         bor.parentId = self.uuid
 
