@@ -580,7 +580,7 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     wave.beamReflSumJ = 0.
     wave.beamReflSumJnl = 0.
     wave.diffract_repeats = np.int64(0)
-#    wave.parentId = 
+#    wave.parentId =
     return wave
 
 
@@ -759,10 +759,14 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
     glo.y[:] = wave.yDiffr
     glo.z[:] = wave.zDiffr
     if hasattr(oe, 'local_to_global'):
-        kwargs = {}
-        if hasattr(oe, 'local_n2'):
-            kwargs['is2ndXtal'] = True
-        oe.local_to_global(glo, **kwargs)
+        if hasattr(oe, 'expose'):  # is a Screen
+            glo.x[:], glo.y[:], glo.z[:] = \
+                oe.local_to_global(glo.x, glo.y, glo.z)
+        else:  # is an OE
+            kwargs = {}
+            if hasattr(oe, 'local_n2'):
+                kwargs['is2ndXtal'] = True
+            oe.local_to_global(glo, **kwargs)
 
 # rotate abc, coh.matrix, Es, Ep in the local system of the receiving surface
     if hasattr(wave, 'toOE'):
