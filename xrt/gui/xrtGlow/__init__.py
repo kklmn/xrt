@@ -63,7 +63,7 @@ from ...backends.raycing import materials as rmats
 from ..commons import qt
 from ..commons import gl
 from ...plotter import (colorFactor, colorSaturation, XYCPlot, XYCAxis,
-                        deserialize_plots)
+                        deserialize_plots, height1d, heightE1d, heightE1dbar)
 from ...multipro import GenericProcessOrThread as GP
 from ...runner import RunCardVals
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
@@ -1547,7 +1547,10 @@ class xrtGlow(qt.QWidget):
                 pass
         editor.setText("{0:.2f}".format(position))
         self.customGlWidget.scaleVec[iax] = np.float32(np.power(10, position))
-        self.customGlWidget.cBox.update_grid()
+        try:
+            self.customGlWidget.cBox.update_grid()
+        except AttributeError:
+            pass
         self.customGlWidget.glDraw()
 
     def updateScaleFromGL(self, scale):
@@ -2239,6 +2242,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.deletionQueue = deque()
 
         self.beamline = raycing.BeamLine()
+        self.loopRunning = False
 
         if arrayOfRays is not None:
             self.renderingMode = 'static'
@@ -2290,7 +2294,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     "kwargs": beamLayout
                     }
             self.input_queue.put(msg_init_bl)
-            self.loopRunning = False
 
             self.timer = qt.QTimer()
             self.timer.timeout.connect(
@@ -7486,6 +7489,7 @@ class OEExplorer(qt.QDialog):
             else:
                 if len(beamDict) > 1:
                     axHints['yaxis']['label'] = r"y"
+                    plotProps['aspect'] = 'auto'
                 else:   # screen or aperture
                     axHints['yaxis']['label'] = r"z"
 
@@ -7727,7 +7731,9 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.set_beam(plotProps.get('beam'))
 
         layout = qt.QHBoxLayout(self)
-        layout.addWidget(self.dynamicPlot.canvas)
+        self.dynamicPlot.canvas.setSizePolicy(
+            qt.QSizePolicy.Minimum, qt.QSizePolicy.Minimum)
+        layout.addWidget(self.dynamicPlot.canvas, 1)
 
         self.fluxLabelList = raycing.allBeamFields
         self.fluxDataList = ['auto'] + list(self.fluxLabelList)
@@ -7766,7 +7772,7 @@ class ConfigurablePlotWidget(qt.QWidget):
             layoutCtrl = qt.QVBoxLayout()
             layoutCtrl.addWidget(tabs)
             layoutCtrl.addWidget(self.exportsPanel)
-            layout.addLayout(layoutCtrl)
+            layout.addLayout(layoutCtrl, 0)
 
         self.plot_beam()
 
@@ -7863,6 +7869,9 @@ class ConfigurablePlotWidget(qt.QWidget):
                 paramValue = self.get_beam_tag(paramValue)
             plotParamTuple = self.plotId, objChng, paramName, paramValue
             self.update_plot_param(plotParamTuple)
+            if paramName == 'aspect':
+                self.resizeEvent()
+                self.dynamicPlot.plot_plots()
 
     def get_beam_tag(self, value):
         if raycing.is_valid_uuid(self.plotId):  # oe id
@@ -8047,3 +8056,29 @@ class ConfigurablePlotWidget(qt.QWidget):
                     beam.export_beam(filename, fformat=extension)
                 except Exception as e:
                     print(e)
+
+    def resizeEvent(self, event=None):
+        bbox = self.dynamicPlot.ax2dHist.get_window_extent().transformed(
+            self.dynamicPlot.fig.dpi_scale_trans.inverted())
+        dpi = self.dynamicPlot.fig.dpi
+        width, height = bbox.width*dpi, bbox.height*dpi
+
+        saxes = ['ax1dHistX', 'ax1dHistY']
+        sizes = [(self.dynamicPlot.xaxis.pixels, height1d),
+                 (height1d, self.dynamicPlot.yaxis.pixels)]
+        if self.dynamicPlot.ePos == 1:
+            sizes.append((heightE1dbar, self.dynamicPlot.caxis.pixels))
+            sizes.append((heightE1d, self.dynamicPlot.caxis.pixels))
+            saxes += ['ax1dHistEbar', 'ax1dHistE']
+        elif self.dynamicPlot.ePos == 2:
+            sizes.append((self.dynamicPlot.caxis.pixels, heightE1dbar))
+            sizes.append((self.dynamicPlot.caxis.pixels, heightE1d))
+            saxes += ['ax1dHistEbar', 'ax1dHistE']
+
+        for splot, size in zip(saxes, sizes):
+            ax = getattr(self.dynamicPlot, splot)
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+            aspect = (xlim[1]-xlim[0]) / (ylim[1]-ylim[0]) * size[1] / size[0]
+            aspect *= height / width
+            ax.set_aspect(aspect)
