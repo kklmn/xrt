@@ -7728,7 +7728,6 @@ class OEExplorer(qt.QDialog):
     def update_beam(self, beamTag):
         self.dynamicPlotWidget.update_beam(beamTag)
 
-
 class ConfigurablePlotWidget(qt.QWidget):
     def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
                  plotId=None, hiddenProps={}):
@@ -8084,6 +8083,33 @@ class ConfigurablePlotWidget(qt.QWidget):
                     beam.export_beam(filename, fformat=extension)
                 except Exception as e:
                     print(e)
+
+    def resizeEvent(self, event=None):
+        bbox = self.dynamicPlot.ax2dHist.get_window_extent().transformed(
+            self.dynamicPlot.fig.dpi_scale_trans.inverted())
+        dpi = self.dynamicPlot.fig.dpi
+        width, height = bbox.width*dpi, bbox.height*dpi
+
+        saxes = ['ax1dHistX', 'ax1dHistY']
+        sizes = [(self.dynamicPlot.xaxis.pixels, height1d),
+                 (height1d, self.dynamicPlot.yaxis.pixels)]
+        if self.dynamicPlot.ePos == 1:
+            sizes.append((heightE1dbar, self.dynamicPlot.caxis.pixels))
+            sizes.append((heightE1d, self.dynamicPlot.caxis.pixels))
+            saxes += ['ax1dHistEbar', 'ax1dHistE']
+        elif self.dynamicPlot.ePos == 2:
+            sizes.append((self.dynamicPlot.caxis.pixels, heightE1dbar))
+            sizes.append((self.dynamicPlot.caxis.pixels, heightE1d))
+            saxes += ['ax1dHistEbar', 'ax1dHistE']
+
+        for splot, size in zip(saxes, sizes):
+            ax = getattr(self.dynamicPlot, splot)
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+            aspect = (xlim[1]-xlim[0]) / (ylim[1]-ylim[0]) * size[1] / size[0]
+            aspect *= height / width
+            ax.set_aspect(aspect)
+
 
 class Curve1dWidget(qt.QWidget):
 
@@ -8683,28 +8709,3 @@ class Curve1dWidget(qt.QWidget):
 #                ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
             line.set_label("{0} {1}{2}".format(item.text(), label, tt))
         self.add_legend()
-    def resizeEvent(self, event=None):
-        bbox = self.dynamicPlot.ax2dHist.get_window_extent().transformed(
-            self.dynamicPlot.fig.dpi_scale_trans.inverted())
-        dpi = self.dynamicPlot.fig.dpi
-        width, height = bbox.width*dpi, bbox.height*dpi
-
-        saxes = ['ax1dHistX', 'ax1dHistY']
-        sizes = [(self.dynamicPlot.xaxis.pixels, height1d),
-                 (height1d, self.dynamicPlot.yaxis.pixels)]
-        if self.dynamicPlot.ePos == 1:
-            sizes.append((heightE1dbar, self.dynamicPlot.caxis.pixels))
-            sizes.append((heightE1d, self.dynamicPlot.caxis.pixels))
-            saxes += ['ax1dHistEbar', 'ax1dHistE']
-        elif self.dynamicPlot.ePos == 2:
-            sizes.append((self.dynamicPlot.caxis.pixels, heightE1dbar))
-            sizes.append((self.dynamicPlot.caxis.pixels, heightE1d))
-            saxes += ['ax1dHistEbar', 'ax1dHistE']
-
-        for splot, size in zip(saxes, sizes):
-            ax = getattr(self.dynamicPlot, splot)
-            xlim = ax.get_xlim()
-            ylim = ax.get_ylim()
-            aspect = (xlim[1]-xlim[0]) / (ylim[1]-ylim[0]) * size[1] / size[0]
-            aspect *= height / width
-            ax.set_aspect(aspect)
