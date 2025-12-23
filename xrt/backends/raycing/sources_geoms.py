@@ -579,13 +579,15 @@ class GaussianBeam(object):
 
         if self.vortex is not None:
             phi = np.arctan2(wave.zDiffr, wave.xDiffr)
-            clp = (np.math.factorial(p)*1. / np.math.factorial(abs(l)+p))**0.5
+            clp = (sp.special.factorial(p)*1. /
+                   sp.special.factorial(abs(l)+p))**0.5
             amp *= clp * ((rSquare*2)**0.5/w)**abs(l) * np.exp(1j*l*phi)
             if p > 0:
                 lg = sp.special.eval_genlaguerre(p, abs(l), 2*rSquare/w**2)
                 amp *= lg
         elif self.tem is not None:
-            clp = (2**(m+n)*np.math.factorial(m)*np.math.factorial(n))**(-0.5)
+            clp = (2**(m+n)*sp.special.factorial(m) *
+                   sp.special.factorial(n))**(-0.5)
             amp *= clp
             if m > 0:
                 hm = sp.special.eval_hermite(m, 2**0.5*wave.xDiffr/wx)
@@ -975,7 +977,7 @@ class BeamFromFile():
     @property
     def fileName(self):
         return self._fileName
-    
+
     @fileName.setter
     def fileName(self, fileName):
         self._fileName = fileName

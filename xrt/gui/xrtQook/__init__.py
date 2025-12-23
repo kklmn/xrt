@@ -576,10 +576,8 @@ class XrtQook(qt.QMainWindow):
         objName = '{0}.{1}'.format(module.__name__, elname)
         elAction = qt.QAction(self)
         elAction.setText(elname)
-        elAction.hovered.connect(
-            partial(self.showObjHelp, objName))
-        elAction.triggered.connect(
-            partial(afunction, elname, objName))
+        elAction.hovered.connect(partial(self.showObjHelp, objName))
+        elAction.triggered.connect(partial(afunction, elname, objName))
         menu.addAction(elAction)
 
     def initToolBar(self):
@@ -676,15 +674,19 @@ class XrtQook(qt.QMainWindow):
         self.vToolBar.setOrientation(qt.Qt.Vertical)
         self.vToolBar.setIconSize(qt.QSize(56, 56))
 
-        for menuName, amodule, afunction, aicon in zip(
-                ['Add Source', 'Add OE', 'Add Aperture', 'Add Screen',
-                 'Add Material', 'Add Plot'],
-                [rsources, roes, rapts, rscreens, rmats, None],
-                [self.addElement]*5 + [self.addPlot],
-                ['add{0:1d}.png'.format(i+1) for i in range(6)]):
+        menuNames = ['Add Source', 'Add Optic', 'Add Aperture', 'Add Screen',
+                     'Add Material', 'Add Figure Error', 'Add Plot']
+        tabNames = ['Beamline']*4 + ['Materials', 'Figure Error', 'Plots']
+        modules = [rsources, roes, rapts, rscreens, rmats, rfe, None]
+        methods = [self.addElement]*6 + [self.addPlot]
+        pngs = ['add-source.png', 'add-oe.png', 'add-aperture.png',
+                'add-screen.png', 'add-material.png', 'add-figure-error.png',
+                'add-plot.png']
+        for menuName, amodule, afunction, aicon, tabName in zip(
+                menuNames, modules, methods, pngs, tabNames):
             amenuButton = qt.QToolButton()
             amenuButton.setIcon(qt.QIcon(os.path.join(self.iconsDir, aicon)))
-            amenuButton.setToolTip(menuName)
+            amenuButton.setToolTip(menuName + ' to tab ' + tabName)
 
             tmenu = qt.QMenu(amenuButton)
             if amodule is not None:
@@ -729,7 +731,7 @@ class XrtQook(qt.QMainWindow):
             amenuButton.setMenu(tmenu)
             amenuButton.setPopupMode(qt.QToolButton.InstantPopup)
             self.vToolBar.addWidget(amenuButton)
-            if menuName in ['Add Screen', 'Add Material']:
+            if menuName in ['Add Screen', 'Add Figure Error']:
                 self.vToolBar.addSeparator()
 
         self.tabs = qt.QTabWidget()
