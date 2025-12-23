@@ -360,6 +360,71 @@ class ComboBoxFilterProxyModel(QSortFilterProxyModel):
         return True
 
 
+class StateButtons(QFrame):
+    statesActive = Signal(list)
+
+    def __init__(self, parent, names, active=None):
+        """
+        *names*: a list of any objects that will be displayed as str(object),
+
+        *active*: a subset of names that will be displayed as checked,
+
+        The signal *statesActive* is emitted on pressing a button. It sends a
+        list of selected names, as a subset of *names*.
+        """
+
+        super().__init__(parent)
+        self.names = names
+        self.buttons = []
+        layout = QHBoxLayout()
+        styleSheet = """
+        QPushButton {
+            border-style: outset;
+            border-width: 2px;
+            border-radius: 5px;
+            border-color: lightsalmon;}
+        QPushButton:checked {
+            border-style: inset;
+            border-width: 2px;
+            border-radius: 5px;
+            border-color: lightgreen;}
+        QPushButton:hover {
+            border-style: solid;
+            border-width: 2px;
+            border-radius: 5px;
+            border-color: lightblue;}
+        """
+        for name in names:
+            strName = str(name)
+            but = QPushButton(strName)
+            but.setCheckable(True)
+
+            bbox = but.fontMetrics().boundingRect(strName)
+            but.setFixedSize(bbox.width()+12, bbox.height()+4)
+            # but.setToolTip("go to the key frame")
+            but.clicked.connect(self.buttonClicked)
+            but.setStyleSheet(styleSheet)
+
+            self.buttons.append(but)
+            layout.addWidget(but)
+        self.setLayout(layout)
+
+        self.setActive(active)
+
+    def getActive(self):
+        return [name for (button, name) in
+                zip(self.buttons, self.names) if button.isChecked()]
+
+    def setActive(self, active):
+        if not isinstance(active, (list, tuple)):
+            return
+        for button, name in zip(self.buttons, self.names):
+            button.setChecked(name in active)
+
+    def buttonClicked(self, checked):
+        self.statesActive.emit(self.getActive())
+
+
 def print_model(model, label="Model"):
     print(f"--- {label} ---")
     rows = model.rowCount()

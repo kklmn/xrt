@@ -100,7 +100,6 @@ except ImportError:
     pdfMats = False
     raise ImportError("no predef mats")
 
-
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 myTab = 4*" "
@@ -907,7 +906,7 @@ class XrtQook(qt.QMainWindow):
 
 
         glowObj = getattr(self, 'blViewer', None)
-        glWidget = getattr(glowObj, 'customGlWidget')
+        glWidget = getattr(glowObj, 'customGlWidget', None)
         elViewer = OEExplorer(self, oeProps,
                               initDict=oeInitProps,
                               epicsDict=getattr(glWidget,
@@ -943,9 +942,18 @@ class XrtQook(qt.QMainWindow):
                 argMat = self.beamLine.materialsDict.get(argValue)
                 if argMat is not None:
                     matProps[argName] = argMat.name
-        matViewer = OEExplorer(self, matProps, viewOnly=False)
-        if (matViewer.exec_()):
-            pass
+        glowObj = getattr(self, 'blViewer', None)
+        glWidget = getattr(glowObj, 'customGlWidget', None)
+        matViewer = OEExplorer(self, matProps, beamLine=self.beamLine,
+                               viewOnly=False)
+        if glWidget is not None:
+
+            matViewer.propertiesChanged.connect(
+                    partial(glWidget.update_beamline, matuuid,
+                            sender='OEE'))
+            matViewer.propertiesChanged.connect(
+                    matViewer.dynamicPlotWidget.calculate_amps_in_thread)
+        matViewer.show()
 
     def runPlotViewer(self, plotName):
 
@@ -3822,7 +3830,7 @@ class XrtQook(qt.QMainWindow):
                 initStatus = self.beamLine.init_material_from_json(matId, outDict)
             except Exception:
                 raise
-    
+
             self.paintStatus(paintItem, initStatus)
 
         if self.blViewer is None or not outDict:
@@ -4242,7 +4250,7 @@ if __name__ == '__main__':
 
         self.progressBar.setValue(25)
         self.progressBar.setFormat("Defining figure errors.")
- 
+
         for feId in self.beamLine.sort_figerrors():
             print(feId, self.beamLine.fesDict[feId].name)
             for ie in range(self.rootFEItem.rowCount()):
