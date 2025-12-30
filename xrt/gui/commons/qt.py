@@ -161,9 +161,11 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 return QLineEdit(parent)
             return combo
         elif argName.lower() == 'kind':  # material and bl
-            if str(model.index(0, 0).data()).lower() == 'none':  # material
-                combo.addItems(['mirror', 'thin mirror',
-                                'plate', 'lens', 'grating', 'FZP', 'auto'])
+            matKindItems = ['mirror', 'thin mirror',
+                            'plate', 'lens', 'grating', 'FZP', 'auto']
+#            if str(model.index(0, 0).data()).lower() == 'none':  # material
+            if argValue in matKindItems:
+                combo.addItems(matKindItems)
             else:  # aperture
                 group = QFrame(parent)
                 group.setAutoFillBackground(True)
@@ -263,6 +265,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                             return QLineEdit(parent)
                         break
                 return combo
+            else:
+                combo.addItems(self.mainWidget.angleUnitList)
+                return combo
         elif argName.lower() in ['filename', 'customField']:
             fExts = ["STL"]
             for i in range(model.invisibleRootItem().rowCount()):
@@ -273,6 +278,25 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             btn = QPushButton("Open file...", parent)
             btn.clicked.connect(partial(self.openDialog, index, fExts))
             return btn
+        elif "from source" in argName.lower():
+            elList = ['None']
+            if self.bl is not None:
+                for key, val in self.bl.oesDict.items():
+                    oeObj = val[0]
+                    if hasattr(oeObj, 'nrays'):  # Source
+                        elList.append(oeObj.name)
+            combo.addItems(elList)
+            return combo
+
+        elif "from oe" in argName.lower():     
+            elList = ['None']
+            if self.bl is not None:
+                for key, val in self.bl.oesDict.items():
+                    oeObj = val[0]
+                    if hasattr(oeObj, 'material'):  # OE
+                        elList.append(oeObj.name)
+            combo.addItems(elList)
+            return combo
         else:
             return QLineEdit(parent)
 

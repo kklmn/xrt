@@ -52,6 +52,7 @@ import copy
 import time
 from scipy.spatial import Delaunay
 from scipy.spatial.transform import Rotation as scprot
+from scipy.interpolate import make_interp_spline, PPoly
 from collections import OrderedDict, deque
 import freetype as ft
 from matplotlib import font_manager
@@ -7473,7 +7474,7 @@ class OEExplorer(qt.QDialog):
 #        print(self.beamLine)
 #        print(elementId)
         if self.beamLine is not None:
-            print(self.beamLine.materialsDict.keys(), 
+            print(self.beamLine.materialsDict.keys(),
                   self.beamLine.materialsDict.get(elementId))
 
 
@@ -7874,8 +7875,8 @@ class ConfigurablePlotWidget(qt.QWidget):
 
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
-#        if toolTip is not None:
-#            child1.setToolTip(toolTip)
+        if toolTip is not None:
+            child1.setToolTip(str(toolTip))
         row = [child0, child1]
         parent.appendRow(row)
 
@@ -8113,20 +8114,20 @@ class ConfigurablePlotWidget(qt.QWidget):
 
 class Curve1dWidget(qt.QWidget):
 
-#    allColors = []
-#    for color in mcolors.TABLEAU_COLORS.keys():
-#        colorName = color.split(":")[-1]
-#        allColors.append(colorName)
-
     allCurves = {'σ': '-', 'π': '--'}
 
     initParams = [
         # (param name, param value, copy from previous, param data (optional))
         ("Emin (eV)", "5000", False),  # 0
         ("Emax (eV)", "15000", False),  # 1
-        (u"θ (mrad)", "10", False),  # 2        
-        ("N points", "1000", False),  # 3
-        ("Curves", ['σ', ], True, allCurves)  # 4
+        ("E from Source", "None", False),  # 2
+        (u"Grazing angle θ", "10", False),  # 3
+        (u"Angular unit", "mrad", False),  # 4
+        (u"θ from OE pitch", "None", False),  # 5
+        (u"θ from Bragg at", "None", False),  # 6
+        ("Asymmetry angle", "0", False),  # 7
+        ("N points", "1000", False),  # 8
+        ("Curves", ['σ', ], True, allCurves)  # 9
         ]
 
     def __init__(self, beamLine=None, elementId=None):
@@ -8134,8 +8135,6 @@ class Curve1dWidget(qt.QWidget):
 
         self.beamLine = beamLine
         self.elementId = elementId
-#        self.eLimits = [5000, 15000]
-        self.thetaLimits = [1, 10]
         self.layout = qt.QHBoxLayout()
         self.mainSplitter = qt.QSplitter(qt.Qt.Horizontal, self)
 
@@ -8144,10 +8143,6 @@ class Curve1dWidget(qt.QWidget):
         self.plot_layout = qt.QVBoxLayout()
 
         self.allIcons = {}
-#        for colorName, colorCode in zip(
-#                self.allColors, mcolors.TABLEAU_COLORS.values()):
-#            self.allIcons[colorName] = self.create_colored_icon(colorCode)
-
         self.figure = Figure()
         self.canvas = qt.FigCanvas(self.figure)
         self.axes = self.figure.add_subplot(111)
@@ -8157,6 +8152,7 @@ class Curve1dWidget(qt.QWidget):
         self.ax2.set_ylabel('Phase', color='b')
         self.ax2.tick_params(axis='y', labelcolor='b')
         self.figure.tight_layout()
+        self.angleUnitList = list(raycing.allUnitsAng.keys())
 
         self.plot_lines = {}
 
@@ -8173,8 +8169,6 @@ class Curve1dWidget(qt.QWidget):
         tree_widget = qt.QWidget(self)
         self.tree_layout = qt.QVBoxLayout()
         self.model = qt.QStandardItemModel()
-        self.model.itemChanged.connect(self.on_tree_item_changed)
-
         self.tree_view = qt.QTreeView(self)
         self.tree_view.setModel(self.model)
         self.tree_view.setHeaderHidden(True)
@@ -8183,13 +8177,13 @@ class Curve1dWidget(qt.QWidget):
 #        self.tree_view.setContextMenuPolicy(qt.Qt.CustomContextMenu)
 #        self.tree_view.customContextMenuRequested.connect(
 #                self.show_context_menu)
-        self.tree_view.clicked.connect(self.on_item_clicked)
-
+        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
+                                                   mainWidget=self)
+        self.tree_view.setItemDelegateForColumn(1, comboDelegate)
 #        self.add_plot_button = qt.QPushButton("Add curve")
 #        self.add_plot_button.clicked.connect(self.add_plot)
 
         self.export_button = qt.QPushButton("Export curve")
-        self.export_button.clicked.connect(self.export_curve)
 
         self.buttons_layout = qt.QHBoxLayout()
 #        self.buttons_layout.addWidget(self.add_plot_button)
@@ -8207,10 +8201,13 @@ class Curve1dWidget(qt.QWidget):
         self.xlabel_base_e = r'$E$'
         self.axes.set_xlabel('{0} (eV)'.format(self.xlabel_base_e))
 
-        self.add_plot()
+        self.default_plot = self.add_plot()
 #        self.resize(1100, 700)
 #        self.mainSplitter.setSizes([700, 400])
         self.tree_view.resizeColumnToContents(0)
+        self.tree_view.clicked.connect(self.on_item_clicked)
+        self.model.itemChanged.connect(self.on_item_changed)
+        self.export_button.clicked.connect(self.export_curve)
 
     def add_legend(self):
         if self.axes.get_legend() is not None:
@@ -8225,7 +8222,7 @@ class Curve1dWidget(qt.QWidget):
                     if line.axes is self.ax2:
                         showPhase = True
                     lgs.append(line.get_label())
-        leg = self.axes.legend(lns, lgs)
+#        leg = self.axes.legend(lns, lgs)
 #        for text in leg.get_texts():
 #            if 'Δφ' in text.get_text():
 #                text.set_color('b')
@@ -8233,9 +8230,30 @@ class Curve1dWidget(qt.QWidget):
         self.ax2.set_visible(showPhase)
 
     def add_plot(self):
+        eMin = eMax = None
+        angle_rad = None
+        srcName = "None"
+        oeName = "None"
         if self.beamLine is not None and self.elementId is not None:
             material = self.beamLine.materialsDict.get(self.elementId)
             matName = material.name if material is not None else ''
+
+            for oeLine in self.beamLine.oesDict.values():
+                oeObj = oeLine[0]
+                if hasattr(oeObj, 'nrays') and eMin is None:
+                    srcName = oeObj.name
+                    eMin, eMax = self.get_source_range(srcName)
+
+                if hasattr(oeObj, 'material') and angle_rad in [0, None]:
+                    if raycing.is_valid_uuid(oeObj.material):
+                        oeMatId = oeObj.material
+                    else:
+                        oeMatId = getattr(oeObj.material, 'uuid', None)
+
+                    if oeMatId == self.elementId:
+                        oeName = oeObj.name
+                        angle_rad = self.get_oe_angle(oeName)
+
         plot_name = f"{matName} Reflectivity"
         plot_uuid = raycing.uuid.uuid4()
         plots = []
@@ -8275,7 +8293,7 @@ class Curve1dWidget(qt.QWidget):
                 item_value.setFlags(item_value.flags())
                 w = qt.StateButtons(self.tree_view, list(idata.keys()), ival)
                 w.statesActive.connect(partial(
-                    self.on_tree_item_changed, item_value))
+                    self.on_item_changed, item_value))
                 plot_item.appendRow([item_name, item_value])
                 self.tree_view.setIndexWidget(item_value.index(), w)
             else:
@@ -8284,6 +8302,35 @@ class Curve1dWidget(qt.QWidget):
                                     qt.Qt.ItemIsEditable)
                 item_value.prevValue = str(ival)
                 plot_item.appendRow([item_name, item_value])
+
+            if "emin" in iname.lower() and eMin is not None:
+                item_value.setText(str(eMin))
+
+            if "emax" in iname.lower() and eMin is not None:
+                item_value.setText(str(eMax))
+
+            if "angle θ" in iname.lower():  # assume default mrad
+                angle_val = angle_rad if angle_rad not in [0, None]\
+                    else float(ival)*1e-3
+                item_value.setText(str(angle_val*1e3))
+                item_value.setData(float(angle_val), role=qt.Qt.UserRole)
+
+            if "source" in iname.lower():
+                item_value.setText(srcName)
+
+            if "pitch" in iname.lower():
+                item_value.setText(oeName)
+
+            if "bragg" in iname.lower():
+                if not hasattr(material, 'get_Bragg_angle'):
+                    item_name.setEnabled(False)
+                    item_value.setEnabled(False)
+
+            if "asymmetry" in iname.lower():
+                if not hasattr(material, 'get_Bragg_angle'):
+                    item_name.setEnabled(False)
+                    item_value.setEnabled(False)
+                item_value.setData(0, role=qt.Qt.UserRole)
 
             if isinstance(idata, list):
                 cb = qt.QComboBox()
@@ -8315,6 +8362,7 @@ class Curve1dWidget(qt.QWidget):
         self.tree_view.expand(plot_index)
 
         self.calculate_amps_in_thread(plot_item)
+        return plot_item
 
     def get_fwhm(self, x, y):
         # simple implementation, quantized by dx:
@@ -8359,37 +8407,115 @@ class Curve1dWidget(qt.QWidget):
         return [layout.itemAt(i).widget().isChecked()
                 for i in range(layout.count())]
 
-    def on_tree_item_changed(self, item):
-        if item.index().column() == 0:
-            plot_index = item.plot_index
-            if plot_index is not None:
-                self.update_legend(item)
-                self.canvas.draw()
-        else:
-            parent = item.parent()
-            if parent:
-                plot_index = parent.plot_index
-                lines = self.plot_lines[plot_index]
-                param_name = parent.child(item.index().row(), 0).text()
-                param_value = item.text()
-                convFactor = 1. #self.allUnits[self.get_units(parent)]
+    def on_item_changed(self, item):
+        if item.index().column() == 1:
+            param_name = str(self.default_plot.child(
+                    item.index().row(), 0).text())
+            param_value = str(item.text())
+            
+            if "grazing angle" in param_name.lower():
+                convFactor = raycing.allUnitsAng[
+                        self.default_plot.child(4, 1).text()] 
+                try:
+                    angle = float(self.default_plot.child(3, 1).text())
+                    self.default_plot.child(3, 1).setData(
+                            angle*convFactor, role=qt.Qt.UserRole)
+                except ValueError:
+                    pass
 
-                xaxis, curS, curP = copy.copy(parent.curves)
+            elif "asymmetry" in param_name.lower():
+                convFactor = raycing.allUnitsAng[
+                        self.default_plot.child(4, 1).text()] 
+                try:
+                    angle = float(self.default_plot.child(7, 1).text())
+                    self.default_plot.child(7, 1).setData(
+                            angle*convFactor, role=qt.Qt.UserRole)
+                except ValueError:
+                    pass
+            elif param_name.lower().endswith("source"):
+                eMin, eMax = self.get_source_range(param_value)
 
-                if param_name not in ["Scan Range", "Scan Units",
-                                      "Curve Color", "Curves"]:
-                    self.calculate_amps_in_thread(parent)
+                self.model.blockSignals(True)
+                if eMin is not None:
+                    self.default_plot.child(0, 1).setText(str(eMin))
+                if eMax is not None:
+                    self.default_plot.child(1, 1).setText(str(eMax))
+                self.model.blockSignals(False)
 
-#                if param_name.endswith("Color"):
-#                    for line in lines:
-#                        line.set_color("tab:"+param_value)
-#                    parent.setIcon(self.allIcons[param_value])
-#                    self.add_legend()
-#                    self.canvas.draw()
-#
-#                else:
-#                    self.on_calculation_result((xaxis, curS, curP,
-#                                                parent.row()))
+            elif param_name.lower().endswith("pitch"):
+                angle_rad = self.get_oe_angle(param_value)
+
+                if angle_rad not in [0, None]:
+                    convFactor = raycing.allUnitsAng[
+                            self.default_plot.child(4, 1).text()]
+                    self.model.blockSignals(True)
+                    self.default_plot.child(3, 1).setText(
+                            str(angle_rad/convFactor))
+                    self.default_plot.child(3, 1).setData(
+                            angle_rad, role=qt.Qt.UserRole)
+                    self.model.blockSignals(False)
+
+            elif param_name.endswith("nit"):
+                angle_rad = float(self.default_plot.child(3, 1).data(
+                        qt.Qt.UserRole))
+                alpha_rad = float(self.default_plot.child(7, 1).data(
+                        qt.Qt.UserRole))
+                convFactor = raycing.allUnitsAng[
+                        self.default_plot.child(4, 1).text()]
+                self.model.blockSignals(True)
+                self.default_plot.child(3, 1).setText(
+                        str(angle_rad/convFactor))
+                self.default_plot.child(7, 1).setText(
+                        str(alpha_rad/convFactor))
+                self.model.blockSignals(False)
+
+            if param_name not in ["Curves", "Angular unit"]:
+                self.calculate_amps_in_thread()
+            else:
+                xaxis, curS, curP = copy.copy(self.default_plot.curves)
+                self.on_calculation_result((xaxis, curS, curP, 0))
+
+    def get_oe_angle(self, oeName):
+        angle_rad = None
+        if self.beamLine is not None and oeName != 'None':
+            oeid = self.beamLine.oenamesToUUIDs.get(oeName)
+            oeLn = self.beamLine.oesDict.get(oeid)
+            if oeLn is not None:
+                oeObj = oeLn[0]
+                angle_rad = getattr(oeObj, '_braggVal', None)
+                if angle_rad in [0, None]:
+                    angle_rad = getattr(oeObj, '_pitchVal', None)
+        return angle_rad if angle_rad is None else abs(angle_rad)
+
+    def get_source_range(self, srcName):
+        eMin = eMax = None
+        if self.beamLine is not None and srcName != 'None':
+            oeid = self.beamLine.oenamesToUUIDs.get(srcName)
+            srcLn = self.beamLine.oesDict.get(oeid)
+            if srcLn is not None:
+                srcObj = srcLn[0]
+            if hasattr(srcObj, 'eMin'):
+                eMin = getattr(srcObj, 'eMin', None)
+                eMax = getattr(srcObj, 'eMax', None)
+            elif hasattr(srcObj, 'energies'):
+                energies = getattr(srcObj, 'energies', None)
+                distE = getattr(srcObj, 'distE', None)
+                if distE == 'flat':
+                    eMin = np.min(energies)
+                    eMax = np.max(energies)
+                elif distE == 'normal':
+                    try:
+                        eMin = energies[0] - energies[-1]*5
+                        eMax = energies[0] + energies[-1]*5
+                    except:  # TODO: add fail-safe evaluation
+                        pass
+                elif distE == 'lines':
+                    eMin = np.min(energies)
+                    eMax = np.max(energies)
+                    if eMin == eMax:
+                        eMin = eMin * 0.9
+                        eMax = eMax * 1.1
+        return eMin, eMax
 
     def rescale_axes(self):
         self.axes.set_autoscalex_on(True)
@@ -8402,145 +8528,61 @@ class Curve1dWidget(qt.QWidget):
         self.ax2.autoscale_view()
 
     def export_curve(self):
-        selected_indexes = self.tree_view.selectedIndexes()
-        if not selected_indexes:
-            qt.QMessageBox.warning(
-                self, "Warning", "No plot selected for export")
-            return
+        pass
+#        selected_indexes = self.tree_view.selectedIndexes()
+#        if not selected_indexes:
+#            qt.QMessageBox.warning(
+#                self, "Warning", "No plot selected for export")
+#            return
+#
+#        selected_index = selected_indexes[0]
+#        while selected_index.parent().isValid():
+#            selected_index = selected_index.parent()
+#        root_item = self.model.itemFromIndex(selected_index)
+#
+#        units = self.get_units(root_item)
+#        convFactor = self.allUnits[units]
+#        xaxis = "dE" if units == 'eV' else "dtheta"
+#
+#        theta = root_item.curves[0]
+#
+#        fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
+#
+#        options = qt.QFileDialog.Options()
+#        options |= qt.QFileDialog.ReadOnly
+#        file_name, _ = qt.QFileDialog.getSaveFileName(
+#                self, "Save File", fileName,
+#                "Text Files (*.txt);;All Files (*)", options=options)
+#        if file_name:
+#            lines = self.plot_lines[root_item.plot_index]
+#            names = self.allCurves.keys()
+#            outLines, outNames = [theta/convFactor], [f"{xaxis}({units})"]
+#            for line, name in zip(lines, names):
+#                if line.get_visible():
+#                    outLines.append(line.get_ydata())
+#                    outNames.append(name)
+#            what = "Transmittivity" if geometry.endswith("mitted") else \
+#                "Reflectivity"
+#            now = datetime.now()
+#            nowStr = now.strftime("%d/%m/%Y %H:%M:%S")
+#            header = \
+#                f"{what} calculated by xrtBentXtal on {nowStr}\n"\
+#                f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
+#                f"Asymmetry: {asymmetry:.8g}°\tIn-plane rotation: {ipr:.8g}°\n"\
+#                f"Rm: {RmStr}\tRs: {RsStr}\n"\
+#                f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
+#                f"Geometry: {geometry}\n"
+#            header += "\t".join(outNames)
+#            np.savetxt(file_name, np.array(outLines).T, fmt='%#.7g',
+#                       delimiter='\t', header=header, encoding='utf-8')
 
-        selected_index = selected_indexes[0]
-        while selected_index.parent().isValid():
-            selected_index = selected_index.parent()
-        root_item = self.model.itemFromIndex(selected_index)
 
-        units = self.get_units(root_item)
-        convFactor = self.allUnits[units]
-        xaxis = "dE" if units == 'eV' else "dtheta"
-
-        theta = root_item.curves[0]
-
-        fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', root_item.text())
-
-        options = qt.QFileDialog.Options()
-        options |= qt.QFileDialog.ReadOnly
-        file_name, _ = qt.QFileDialog.getSaveFileName(
-                self, "Save File", fileName,
-                "Text Files (*.txt);;All Files (*)", options=options)
-        if file_name:
-            lines = self.plot_lines[root_item.plot_index]
-            names = self.allCurves.keys()
-            outLines, outNames = [theta/convFactor], [f"{xaxis}({units})"]
-            for line, name in zip(lines, names):
-                if line.get_visible():
-                    outLines.append(line.get_ydata())
-                    outNames.append(name)
-            what = "Transmittivity" if geometry.endswith("mitted") else \
-                "Reflectivity"
-            now = datetime.now()
-            nowStr = now.strftime("%d/%m/%Y %H:%M:%S")
-            header = \
-                f"{what} calculated by xrtBentXtal on {nowStr}\n"\
-                f"Crystal: {crystal}[{hkl}]\tThickness: {thck:.8g}mm\n"\
-                f"Asymmetry: {asymmetry:.8g}°\tIn-plane rotation: {ipr:.8g}°\n"\
-                f"Rm: {RmStr}\tRs: {RsStr}\n"\
-                f"Energy: {energy}eV\tθ_B: {thetaB:.8g}°\n"\
-                f"Geometry: {geometry}\n"
-            header += "\t".join(outNames)
-            np.savetxt(file_name, np.array(outLines).T, fmt='%#.7g',
-                       delimiter='\t', header=header, encoding='utf-8')
-
-    def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
-                             asymmetry,  radius, energy, npoints, limits,
-                             backendStr):  # Left here for debug purpose only
-        useTT = False
-        if backendStr == "auto":
-            if radius == "inf":
-                backend = "xrt"
-            elif geometry.startswith("B") and geometry.endswith("mitted"):
-                backend = "pytte"
-            elif isOpenCL:
-                useTT = True
-                backend = "xrtCL"
-                precision = "float64"
-                if geometry.startswith("B"):
-                    precision = "float32"
-            else:
-                backend = "pytte"
-        elif backendStr == "pyTTE":
-            backend = "pytte"
-        elif backendStr == "xrtCL FP32":
-            backend = "xrtCL"
-            precision = "float32"
-            useTT = True
-        elif backendStr == "xrtCL FP64":
-            backend = "xrtCL"
-            precision = "float64"
-            useTT = True
-        else:
-            return
-
-        hklList = parse_hkl(hkl)
-        crystalClass = getattr(rxtl, crystal)
-        crystalInstance = crystalClass(hkl=hklList, t=float(thickness),
-                                       geom=geometry,
-                                       useTT=useTT)
-
-        theta0 = crystalInstance.get_Bragg_angle(energy)
-        alpha = np.radians(float(asymmetry))
-
-        if limits is None:
-            theta = np.linspace(-100, 100, npoints)*1e-6 + theta0
-        else:
-            theta = np.linspace(limits[0], limits[-1], npoints) + theta0
-
-        if geometry.startswith("B"):
-            gamma0 = -np.sin(theta+alpha)
-            gammah = np.sin(theta-alpha)
-        else:
-            gamma0 = -np.cos(theta+alpha)
-            gammah = -np.cos(theta-alpha)
-        hns0 = np.sin(alpha)*np.cos(theta+alpha) -\
-            np.cos(alpha)*np.sin(theta+alpha)
-
-        if backend == "xrtCL":
-            matCL = mcl.XRT_CL(r'materials.cl',
-                               precisionOpenCL=precision,
-                               targetOpenCL=targetOpenCL)
-            ampS, ampP = crystalInstance.get_amplitude_pytte(
-                    energy, gamma0, gammah, hns0, ucl=matCL, alphaAsym=alpha,
-                    Ry=float(radius)*1000.)
-#        elif backend == "pytte":
-#            geotag = 0 if geometry.startswith('B') else np.pi*0.5
-#            ttx = TTcrystal(crystal='Si', hkl=crystalInstance.hkl,
-#                            thickness=Quantity(float(thickness), 'mm'),
-#                            debye_waller=1, xrt_crystal=crystalInstance,
-#                            Rx=Quantity(float(radius), 'm'),
-#                            asymmetry=Quantity(alpha+geotag, 'rad'))
-#            tts = TTscan(constant=Quantity(E, 'eV'),
-#                         scan=Quantity(theta-theta0, 'rad'),
-#                         polarization='sigma')
-#            amps_calculator = TakagiTaupin(ttx, tts)
-#            integrationParams = amps_calculator.prepare_arrays()
-
-#            scan_tt_s = TakagiTaupin(ttx, tts)
-#            scan_tt_p = TakagiTaupin(ttx, ttp)
-#            scan_vector, Rs, Ts, ampS = scan_tt_s.run()
-#            scan_vector, Rp, Tp, ampP = scan_tt_p.run()
-        else:
-            ampS, ampP = crystalInstance.get_amplitude(
-                    energy, gamma0, gammah, hns0)
-#        return theta - theta0, abs(ampS)**2, abs(ampP)**2
-        return theta - theta0, ampS, ampP
-
-#    def calculate_amps_in_thread(self, crystal, geometry, hkl, thickness,
-#                                 asymmetry, radius, energy, npoints, limits,
-#                                 backendStr, plot_nr):
     def get_e_min(self, item):
         ind = self.findIndexFromText("Emin")
         try:
             return float(item.child(ind, 1).text())
         except ValueError:
-            return float(self.initParams[ind][1])        
+            return float(self.initParams[ind][1])
 
     def get_e_max(self, item):
         ind = self.findIndexFromText("Emax")
@@ -8550,11 +8592,20 @@ class Curve1dWidget(qt.QWidget):
             return float(self.initParams[ind][1])
 
     def get_theta0(self, item):
-        ind = self.findIndexFromText("θ")
+        ind = 3
         try:
-            return float(item.child(ind, 1).text())
+            theta = float(item.child(ind, 1).data(qt.Qt.UserRole))
+            return theta
         except ValueError:
-            return float(self.initParams[ind][1])
+            return 1e-2
+
+    def get_alpha(self, item):
+        ind = 7
+        try:
+            alpha = float(item.child(ind, 1).data(qt.Qt.UserRole))
+            return alpha
+        except ValueError:
+            return 0
 
     def get_npoints(self, item):
         ind = self.findIndexFromText("N")
@@ -8564,75 +8615,47 @@ class Curve1dWidget(qt.QWidget):
             return int(self.initParams[ind][1])
 
     def calculate_amps_in_thread(self, plot_item=None):
-#        plot_nr = plot_item.row()
-#        print(plot_item)
-        npoints = 1000
+
+        if plot_item is None or isinstance(plot_item, dict):
+            plot_item = self.default_plot
         eMin = self.get_e_min(plot_item)
         eMax = self.get_e_max(plot_item)
         nPoints = self.get_npoints(plot_item)
-#        eLimits = self.eLimits
+
         xenergy = np.linspace(
                 eMin, eMax, nPoints)
-        theta0 = self.get_theta0(plot_item) * 1e-3
+        theta0 = self.get_theta0(plot_item)
         xaxis = xenergy
         material = self.beamLine.materialsDict.get(self.elementId)
-#        if isinstance(plot_item, dict):  # needs testing
-#            upd = False
-#            for n in range(10):
-#                for key, val in plot_item.items():
-#                    newval = getattr(material, key, None)
-#                    if str(newval) == str(val):
-#                        upd = True
-#                if upd:
-#                    print(n)
-#                    break
-#                else:
-#                    time.sleep(0.1)
 
         try:
-            if isinstance(material, rmats.Multilayer):
+            if isinstance(material, rmats.Crystal):
+                geometry = getattr(material, 'geom', None)
+                alpha = self.get_alpha(plot_item)
+                if geometry is not None:
+                    if geometry.startswith("B"):
+                        gamma0 = -np.sin(theta0+alpha)
+                        gammah = np.sin(theta0-alpha)
+                    else:
+                        gamma0 = -np.cos(theta0+alpha)
+                        gammah = -np.cos(theta0-alpha)
+                    hns0 = np.sin(alpha)*np.cos(theta0+alpha) -\
+                        np.cos(alpha)*np.sin(theta0+alpha)
+
+                    ampS, ampP = material.get_amplitude(
+                        xenergy, gamma0, gammah, hns0)
+            elif isinstance(material, rmats.Multilayer):
                 ampS, ampP = material.get_amplitude(
-                    xenergy, theta0)
-#            elif isinstance(material, rmats.Crystal):
-#                ampS, ampP = material.get_amplitude(
-#                    xenergy, theta0,)                
+                    xenergy, np.sin(theta0))
             else:
                 ampS, ampP, _, _ = material.get_amplitude(
-                    xenergy, theta0)
+                    xenergy, np.sin(theta0))
         except ValueError as e:
             print(e)
             ampS = np.zeros_like(xaxis)
             ampP = ampS
-#        self.statusUpdate.emit(("Ready", 100))
         self.on_calculation_result(
                 (xaxis, ampS, ampP, 0))
-
-
-    def check_progress(self, progress_queue):
-        progress = None
-        while not progress_queue.empty():
-            progress = 1
-            xp, aS, aP, plot_nr = progress_queue.get()
-            plot_item = self.model.item(plot_nr)
-            plot_item.curProgress += 1
-            theta, curS, curP = plot_item.curves
-            curS[xp] = aS
-            curP[xp] = aP
-
-        if progress is not None:
-            self.on_calculation_result((theta, curS, curP, plot_nr))
-            progressPercentage = 100*plot_item.curProgress/float(len(theta))
-            self.statusUpdate.emit(("Calculating on CPU",
-                                    progressPercentage))
-            if plot_item.curProgress >= len(theta):
-                self.statusUpdate.emit((
-                        "Calculation completed in {:.3f}s".format(
-                                time.time()-self.t0), 100))
-                self.timer.stop()
-                self.poolsDict[plot_nr].close()
-#        if not any(task.ready() is False for task in self.tasks):
-#            self.statusUpdate.emit(("Calculation completed in {:.3f}s".format(
-#                    time.time()-self.t0), 100))
 
     def parse_limits(self, limstr):
         return np.array([float(pp) for pp in limstr.split(',')])
@@ -8656,24 +8679,12 @@ class Curve1dWidget(qt.QWidget):
                 ydata = curS2
             elif label == 'π':
                 ydata = curP2
-            elif label == 'σ*σ':
-                ydata = np.convolve(curS2, curS2, 'same') / curS2.sum()
-            elif label == 'π*π':
-                ydata = np.convolve(curP2, curP2, 'same') / curP2.sum()
-            elif label == 'Δφ':
-                ydata = np.angle(curS * curP.conj())
-
-#            if label != 'Δφ':
-#                fwhm = self.get_fwhm(theta, ydata)
-#            else:
-#                fwhm = None
-#            fwhms.append(fwhm)
-#            if fwhm is not None:
-#                unit = self.allUnitsStr[unitsStr]
-#                sp = '' if unit == '°' else ' '
-#                t = '' if fwhm is None else\
-#                    ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
-#                line.set_label("{0} {1}{2}".format(plot_item.text(), label, t))
+#            elif label == 'σ*σ':
+#                ydata = np.convolve(curS2, curS2, 'same') / curS2.sum()
+#            elif label == 'π*π':
+#                ydata = np.convolve(curP2, curP2, 'same') / curP2.sum()
+#            elif label == 'Δφ':
+#                ydata = np.angle(curS * curP.conj())
 
             line.set_ydata(ydata)
             line.set_visible(curveType)
@@ -8691,7 +8702,7 @@ class Curve1dWidget(qt.QWidget):
             index = index.parent()  # of plot_item
         if index.column() == 1:  # the empty cell near the plot title
             return
-        plot_item = self.model.itemFromIndex(index)
+#        plot_item = self.model.itemFromIndex(index)
 #        self.update_thetaB(plot_item)
         self.canvas.draw()
 
