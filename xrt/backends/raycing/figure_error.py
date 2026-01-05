@@ -15,14 +15,15 @@ __all__ = ('RandomRoughness', 'GaussianBump', 'Waviness')
 
 import numpy as np
 from scipy import interpolate
+from pathlib import Path
 from .. import raycing
 
 
-class FigureError():
+class FigureErrorBase():
     """ Base class for distorted surfaces. Provides the functionality for
     height maps generation and diagnostics. Height map calculation function
     must be implemented in a subclass.
-    
+
         *name*: str
             Attribute to store instance name
 
@@ -42,8 +43,8 @@ class FigureError():
 
         *fileName*: str, path.
             path to surface distortion map file.
-            
-    
+
+
     """
     def __init__(self, name='', baseFE=None,
                  limPhysX=None, limPhysY=None, gridStep=0.5, fileName=None,
@@ -65,7 +66,6 @@ class FigureError():
                                              raycing.maxHalfSizeOfOE])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
-        self._fileName = fileName
         self.build_spline()
 
     @property
@@ -167,11 +167,12 @@ class FigureError():
         return KX, KY, PSD
 
     def generate_profile(self):
+        """This function must be overriden in subclass."""
         x, y = self.get_grids()
         return np.zeros_like(x)
 
     def build_spline(self):
-        x, y = self.get_grids()
+#        x, y = self.get_grids()
         z = self.generate_profile()
 
         xgrid = np.linspace(np.min(self.limPhysX),
@@ -180,6 +181,7 @@ class FigureError():
         ygrid = np.linspace(np.min(self.limPhysY),
                             np.max(self.limPhysY),
                             self.ny)
+
         self.local_z_spline = interpolate.RectBivariateSpline(
                 ygrid, xgrid, z)
 
@@ -237,9 +239,125 @@ class FigureError():
         return 1 << int(np.ceil(np.log2(n)))
 
 
-class RandomRoughness(FigureError):
+class FigureError(FigureErrorBase):
+    def __init__(self, fileName=None, recenter=False, orientation="XYZ",
+                 **kwargs):
+
+        self.surfArrays = {}
+        self.zGrid = None
+        super().__init__(**kwargs)
+        self._recenter = recenter
+        self._orientation = orientation
+        self.fileName = fileName
+
+    @property
+    def orientation(self):
+        return self._orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        self._orientation = orientation
+        if self.surfArrays:
+            self.align_arrays()
+            self.build_spline()
+
+    @property
+    def recenter(self):
+        return self._recenter
+
+    @recenter.setter
+    def recenter(self, recenter):
+        self._recenter = recenter
+        if self.surfArrays:
+            self.align_arrays()
+            self.build_spline()
+
+    @property
+    def fileName(self):
+        return self._fileName
+
+    @fileName.setter
+    def fileName(self, fileName):
+        self._fileName = fileName
+        if fileName is not None:
+            self.read_file(fileName)
+            self.align_arrays()
+            self.build_spline()
+
+    def read_file(self, fileName):
+        path = Path(fileName)
+        if not path.is_file():
+            return
+
+        data = np.loadtxt(path)
+        if data.ndim != 2 or data.shape[1] < 3:
+            return
+
+        try:
+            xL, yL, zL = np.loadtxt(path, unpack=True)
+        except Exception as e:  # TODO: better exceptions
+            print(e)
+            return
+
+        self.surfArrays = {'x': xL, 'y': yL, 'z': zL}
+
+    def align_arrays(self):
+        orientlc = str(self.orientation).lower()
+        axes = {'x': orientlc[0], 'y': orientlc[1], 'z': orientlc[-1]}
+        xL = self.surfArrays.get(axes['x'])
+        yL = self.surfArrays.get(axes['y'])
+        zL = self.surfArrays.get(axes['z'])
+
+        dx = dy = 0
+        xmin, xmax = np.min(xL), np.max(xL)
+        ymin, ymax = np.min(yL), np.max(yL)
+        if self.recenter:
+            dx = -0.5*(xmin+xmax)
+            dy = -0.5*(ymin+ymax)
+
+        self._limPhysX = [xmin+dx, xmax+dx]
+        self._limPhysY = [ymin+dy, ymax+dy]
+
+        tol = None  # rounding for real-world positions. try 1e-3 for noisy xs
+        if tol is not None:
+            x_rounded = np.round(xL/tol)*tol
+            y_rounded = np.round(yL/tol)*tol
+            ux = np.unique(x_rounded)
+            uy = np.unique(y_rounded)
+        else:
+            ux = np.unique(xL)
+            uy = np.unique(yL)
+
+        nx, ny = len(ux), len(uy)
+
+        if nx*ny != len(xL):
+            print("Input data does not form a grid")
+            return
+
+        self.nx = nx
+        self.ny = ny
+
+        row_maj = np.all(np.diff(xL[:nx]) > 0) and np.all(yL[:nx] == yL[0])
+
+        if row_maj:
+            zm = zL.reshape((ny, nx))
+        else:
+            zm = zL.reshape((nx, ny)).T
+
+        self.zGrid = zm
+
+    def generate_profile(self):
+        """This function must be overriden in subclass."""
+        if self.surfArrays and self.zGrid is not None:
+            z = self.zGrid
+        else:  # fallback to flat
+            x, y = self.get_grids()
+            z = np.zeros_like(x)
+        return z
+
+class RandomRoughness(FigureErrorBase):
     """Random roughness map.
-    
+
         *rms*: float
             Root Mean Square roughness in [nm]
 
@@ -249,7 +367,7 @@ class RandomRoughness(FigureError):
         *seed*: None or int.
             Seed number for numpy random number generator. Any number
             0 < seed < 2^128-1
-    
+
     """
     def __init__(self, rms=1., corrLength=None, seed=None, **kwargs):
         self._rms = rms
@@ -316,15 +434,15 @@ class RandomRoughness(FigureError):
         return z + base_z
 
 
-class GaussianBump(FigureError):
+class GaussianBump(FigureErrorBase):
     """Height profile defined by the Gaussian function.
-    
+
         *bumpHeight*: float
             Hight at the peak in [nm]
 
         *sigmaX*, *sigmaY*: float
             Standard deviation along X and Y axes in [mm].
-    
+
     """
     def __init__(self, bumpHeight=100., sigmaX=1., sigmaY=1., **kwargs):
         self._bumpHeight = bumpHeight
@@ -371,15 +489,15 @@ class GaussianBump(FigureError):
         return z + base_z
 
 
-class Waviness(FigureError):
+class Waviness(FigureErrorBase):
     """Surface waviness following 2d cosine law.
-    
+
         *amplitude*: float
             Cosine amplitude in [nm]
 
         *xWaveLength*, *yWaveLength*: float
             Wave period along the X and Y axes in [mm].
-    
+
     """
     def __init__(self, amplitude=10., xWaveLength=20., yWaveLength=50.,
                  **kwargs):
