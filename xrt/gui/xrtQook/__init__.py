@@ -802,7 +802,7 @@ class XrtQook(qt.QMainWindow):
         self.matTree.customContextMenuRequested.connect(self.matMenu)
         self.matTree.objDoubleClicked.connect(self.runMaterialViewer)
         self.feTree.customContextMenuRequested.connect(self.feMenu)
-        self.feTree.objDoubleClicked.connect(self.runMaterialViewer)
+        self.feTree.objDoubleClicked.connect(self.runSurfViewer)
         self.tree.customContextMenuRequested.connect(self.openMenu)
         self.tree.objDoubleClicked.connect(self.runElementViewer)
 
@@ -978,6 +978,34 @@ class XrtQook(qt.QMainWindow):
                     plotViewer.update_beam)
         if (plotViewer.show()):
             pass
+
+    def runSurfViewer(self, surfuuid=None):
+        surfobj = self.beamLine.fesDict.get(surfuuid)
+        if surfobj is None:
+            return
+        blName = self.beamLine.name
+        surfProps = raycing.get_init_kwargs(surfobj, compact=False,
+                                           blname=blName)
+        surfProps.update({'uuid': surfuuid})
+        for argName, argValue in surfProps.items():
+            if any(argName.lower().startswith(v) for v in
+                    ['basefe']) and\
+                   raycing.is_valid_uuid(str(argValue)):
+                argFE = self.beamLine.fesDict.get(argValue)
+                if argFE is not None:
+                    surfProps[argName] = argFE.name
+        glowObj = getattr(self, 'blViewer', None)
+        glWidget = getattr(glowObj, 'customGlWidget', None)
+        surfViewer = OEExplorer(self, surfProps, beamLine=self.beamLine,
+                                viewOnly=False)
+        if glWidget is not None:
+
+            surfViewer.propertiesChanged.connect(
+                    partial(glWidget.update_beamline, surfuuid,
+                            sender='OEE'))
+#            surfViewer.propertiesChanged.connect(
+#                    surfViewer.dynamicPlotWidget.calculate_amps_in_thread)
+        surfViewer.show()
 
     def getBeamTag(self, beamName):
         beams = self.beamModel.findItems(beamName, column=0)

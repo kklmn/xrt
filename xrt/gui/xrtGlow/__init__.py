@@ -7473,9 +7473,9 @@ class OEExplorer(qt.QDialog):
         self.beamLine = beamLine
 #        print(self.beamLine)
 #        print(elementId)
-        if self.beamLine is not None:
-            print(self.beamLine.materialsDict.keys(),
-                  self.beamLine.materialsDict.get(elementId))
+#        if self.beamLine is not None:
+#            print(self.beamLine.materialsDict.keys(),
+#                  self.beamLine.materialsDict.get(elementId))
 
 
         if self.beamLine is None:  # materials. need better config
@@ -7487,6 +7487,21 @@ class OEExplorer(qt.QDialog):
 #            material = self.beamLine.materialsDict.get(elementId)
 #            print(material.name)
             self.dynamicPlotWidget = Curve1dWidget(
+                    beamLine=beamLine, elementId=elementId)
+#            self.propertiesChanged.connect(
+#                    self.dynamicPlotWidget.calculate_amps_in_thread)
+            widgetR = qt.QWidget()
+            layoutR = qt.QVBoxLayout(widgetR)
+            layoutR.addWidget(self.dynamicPlotWidget)
+            layout.addWidget(canvasSplitter)
+            canvasSplitter.addWidget(widgetL)
+            canvasSplitter.addWidget(widgetR)
+        elif self.beamLine.fesDict.get(elementId) is not None:
+            canvasSplitter = qt.QSplitter()
+            canvasSplitter.setChildrenCollapsible(False)
+#            material = self.beamLine.materialsDict.get(elementId)
+#            print(material.name)
+            self.dynamicPlotWidget = SurfacePlotWidget(
                     beamLine=beamLine, elementId=elementId)
 #            self.propertiesChanged.connect(
 #                    self.dynamicPlotWidget.calculate_amps_in_thread)
@@ -8412,10 +8427,10 @@ class Curve1dWidget(qt.QWidget):
             param_name = str(self.default_plot.child(
                     item.index().row(), 0).text())
             param_value = str(item.text())
-            
+
             if "grazing angle" in param_name.lower():
                 convFactor = raycing.allUnitsAng[
-                        self.default_plot.child(4, 1).text()] 
+                        self.default_plot.child(4, 1).text()]
                 try:
                     angle = float(self.default_plot.child(3, 1).text())
                     self.default_plot.child(3, 1).setData(
@@ -8425,7 +8440,7 @@ class Curve1dWidget(qt.QWidget):
 
             elif "asymmetry" in param_name.lower():
                 convFactor = raycing.allUnitsAng[
-                        self.default_plot.child(4, 1).text()] 
+                        self.default_plot.child(4, 1).text()]
                 try:
                     angle = float(self.default_plot.child(7, 1).text())
                     self.default_plot.child(7, 1).setData(
@@ -8720,3 +8735,100 @@ class Curve1dWidget(qt.QWidget):
 #                ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
             line.set_label("{0} {1}{2}".format(item.text(), label, tt))
         self.add_legend()
+
+
+class SurfacePlotWidget(qt.QWidget):
+    def __init__(self, parent=None, beamLine=None, elementId=None):
+        super().__init__(parent)
+
+        self.beamLine = beamLine
+        self.elementId = elementId
+        self.surfObj = None
+
+        self.figure = Figure()
+        self.canvas = qt.FigCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111, projection="3d")
+        self.toolbar = qt.NavigationToolbar(self.canvas, self)
+
+        layout = qt.QVBoxLayout(self)
+        layout.addWidget(self.toolbar)
+        layout.addWidget(self.canvas)
+
+        self.surface = None
+        self.cbar = None
+
+        self.dims = [500, 500]
+        self.init_plot()
+
+    def init_plot(self):
+        if self.beamLine is not None:
+            self.surfObj = self.beamLine.fesDict.get(self.elementId)
+
+        if self.surfObj is None:
+            return
+
+        xLim, yLim = self.surfObj.limPhysX, self.surfObj.limPhysY
+
+        x = np.linspace(min(xLim), max(xLim), self.dims[0])
+        y = np.linspace(min(yLim), max(yLim), self.dims[-1])
+
+        xm, ym = np.meshgrid(x, y)
+
+        z = self.surfObj.local_z(xm.flatten(), ym.flatten())
+
+        self.surface = self.ax.plot_surface(
+            xm, ym, z.reshape(self.dims[-1], self.dims[0])*1e6,
+            cmap="jet",
+            linewidth=0,
+            antialiased=True
+        )
+#        self.ax.set_box_aspect((1, 10, 0.2))
+        self.cbar = self.figure.colorbar(
+            self.surface,
+            ax=self.ax,
+            shrink=0.7,
+            pad=0.1
+        )
+        self.cbar.set_label("height (nm)")
+
+        self.ax.set_title("3D surface with colorbar")
+        self.canvas.draw_idle()
+
+    def update_surface(self, phase):
+        xLim, yLim = self.surfObj.limPhysX, self.surfObj.limPhysY
+
+        x = np.linspace(min(xLim), max(xLim), self.dims[0])
+        y = np.linspace(min(yLim), max(yLim), self.dims[-1])
+
+        xm, ym = np.meshgrid(x, y)
+
+        z = self.surfObj.local_z(xm.flatten(), ym.flatten())
+
+        self.surface.remove()
+        self.surface = self.ax.plot_surface(
+            xm, ym, z.reshape(self.dims[-1], self.dims[0])*1e6,
+            cmap="jet",
+            linewidth=0,
+            antialiased=True
+        )
+        self.ax.set_box_aspect((1, 10, 0.2))
+        self.cbar.update_normal(self.surface)
+
+        self.canvas.draw_idle()
+
+#        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+#        surf = ax.plot_surface(xm, ym,
+#                               z.reshape(1000, 200),
+#                               cmap=cm.jet,
+#                           linewidth=0, antialiased=False)
+#        ax.set_box_aspect((1, 10, 0.2))
+#        #fig.colorbar(surf, shrink=0.5, aspect=5)
+#
+#        plt.figure()
+#        #plt.imshow(z, origin='lower', aspect='equal')
+#        plt.imshow(z.reshape((1000, 200)),
+#                   origin='lower',
+#                   aspect='equal',
+#                   cmap='jet',
+#                   extent=[-20, 20, -100, 100]
+#                   )
