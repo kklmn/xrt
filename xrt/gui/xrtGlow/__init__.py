@@ -8743,7 +8743,7 @@ class SurfacePlotWidget(qt.QWidget):
 
         self.beamLine = beamLine
         self.elementId = elementId
-        self.surfObj = None
+#        self.surfObj = None
 
         self.figure = Figure()
         self.canvas = qt.FigCanvas(self.figure)
@@ -8758,23 +8758,31 @@ class SurfacePlotWidget(qt.QWidget):
         self.cbar = None
 
         self.dims = [500, 500]
-        self.init_plot()
+        self.update_surface(data=None, newPlot=True)
 
-    def init_plot(self):
+    def update_surface(self, data, newPlot=False):
         if self.beamLine is not None:
-            self.surfObj = self.beamLine.fesDict.get(self.elementId)
+            surfObj = self.beamLine.fesDict.get(self.elementId)
 
-        if self.surfObj is None:
+        if surfObj is None:
             return
+        
+        print('baseFE', getattr(surfObj, 'baseFE', None))
 
-        xLim, yLim = self.surfObj.limPhysX, self.surfObj.limPhysY
+        xLim, yLim = surfObj.limPhysX, surfObj.limPhysY
 
         x = np.linspace(min(xLim), max(xLim), self.dims[0])
         y = np.linspace(min(yLim), max(yLim), self.dims[-1])
 
         xm, ym = np.meshgrid(x, y)
 
-        z = self.surfObj.local_z(xm.flatten(), ym.flatten())
+        z = surfObj.local_z(xm.flatten(), ym.flatten())
+
+        if not newPlot:
+            self.cbar.remove()
+            self.cbar = None
+            self.surface.remove()
+            self.surface = None
 
         self.surface = self.ax.plot_surface(
             xm, ym, z.reshape(self.dims[-1], self.dims[0])*1e6,
@@ -8782,37 +8790,18 @@ class SurfacePlotWidget(qt.QWidget):
             linewidth=0,
             antialiased=True
         )
-#        self.ax.set_box_aspect((1, 10, 0.2))
+
         self.cbar = self.figure.colorbar(
             self.surface,
             ax=self.ax,
             shrink=0.7,
             pad=0.1
         )
-        self.cbar.set_label("height (nm)")
-
-        self.ax.set_title("3D surface with colorbar")
-        self.canvas.draw_idle()
-
-    def update_surface(self, phase):
-        xLim, yLim = self.surfObj.limPhysX, self.surfObj.limPhysY
-
-        x = np.linspace(min(xLim), max(xLim), self.dims[0])
-        y = np.linspace(min(yLim), max(yLim), self.dims[-1])
-
-        xm, ym = np.meshgrid(x, y)
-
-        z = self.surfObj.local_z(xm.flatten(), ym.flatten())
-
-        self.surface.remove()
-        self.surface = self.ax.plot_surface(
-            xm, ym, z.reshape(self.dims[-1], self.dims[0])*1e6,
-            cmap="jet",
-            linewidth=0,
-            antialiased=True
-        )
-        self.ax.set_box_aspect((1, 10, 0.2))
-        self.cbar.update_normal(self.surface)
+        self.cbar.set_label("Height [nm]")
+        self.ax.set_title(f"{surfObj.name} height profile")
+        self.ax.set_xlabel("X [mm]")
+        self.ax.set_ylabel("Y [mm]")
+        self.ax.set_zlabel("Z [nm]")
 
         self.canvas.draw_idle()
 

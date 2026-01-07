@@ -245,8 +245,8 @@ class MessageHandler:
                     arg = args[0]
                     if len(args) > 1:
                         field = args[-1]
-                        argIn = getattr(element, f'_{arg}', None)
-                        arrayValue = getattr(element, arg) if\
+                        argIn = getattr(feObj, f'_{arg}', None)
+                        arrayValue = getattr(feObj, arg) if\
                             argIn is None else argIn
 
                         if hasattr(arrayValue, 'tolist'):

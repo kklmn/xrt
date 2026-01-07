@@ -270,10 +270,19 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 return combo
         elif argName.lower() in ['filename', 'customField']:
             fExts = ["STL"]
-            for i in range(model.invisibleRootItem().rowCount()):
-                fieldName = str(model.invisibleRootItem().child(i, 0).text())
+            if parentIndex is not None:
+                prtItem = model.itemFromIndex(parentIndex)
+            
+            if prtItem is None:
+                prtItem = model.invisibleRootItem()
+
+            for i in range(prtItem.rowCount()):
+                fieldName = str(prtItem.child(i, 0).text())
                 if fieldName.lower() == 'distributions':
                     fExts = ["NPY", "NPZ"]
+                    break
+                elif fieldName.lower() == 'basefe':
+                    fExts = ["All"]
                     break
             btn = QPushButton("Open file...", parent)
             btn.clicked.connect(partial(self.openDialog, index, fExts))
@@ -288,7 +297,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.addItems(elList)
             return combo
 
-        elif "from oe" in argName.lower():     
+        elif "from oe" in argName.lower():
             elList = ['None']
             if self.bl is not None:
                 for key, val in self.bl.oesDict.items():
@@ -345,8 +354,12 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         openDialog = QFileDialog()
         openDialog.setFileMode(QFileDialog.ExistingFile)
         openDialog.setAcceptMode(QFileDialog.AcceptOpen)
-        exts = " ".join(f"{e}" for e in fileFormats)
-        mask = " ".join(f"*.{e.lower()}" for e in fileFormats)
+        if 'All' in fileFormats:
+            exts = 'All'
+            mask = '*'
+        else:
+            exts = " ".join(f"{e}" for e in fileFormats)
+            mask = " ".join(f"*.{e.lower()}" for e in fileFormats)
         openDialog.setNameFilter(
                 f"{exts} files ({mask})")
         if (openDialog.exec_()):

@@ -987,6 +987,7 @@ class XrtQook(qt.QMainWindow):
         surfProps = raycing.get_init_kwargs(surfobj, compact=False,
                                            blname=blName)
         surfProps.update({'uuid': surfuuid})
+#        print(surfProps)
         for argName, argValue in surfProps.items():
             if any(argName.lower().startswith(v) for v in
                     ['basefe']) and\
@@ -1003,8 +1004,8 @@ class XrtQook(qt.QMainWindow):
             surfViewer.propertiesChanged.connect(
                     partial(glWidget.update_beamline, surfuuid,
                             sender='OEE'))
-#            surfViewer.propertiesChanged.connect(
-#                    surfViewer.dynamicPlotWidget.calculate_amps_in_thread)
+            surfViewer.propertiesChanged.connect(
+                    surfViewer.dynamicPlotWidget.update_surface)
         surfViewer.show()
 
     def getBeamTag(self, beamName):

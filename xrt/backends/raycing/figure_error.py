@@ -10,7 +10,8 @@ Basic containers for surface roughness generators.
 from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "29 Nov 2025"
-__all__ = ('RandomRoughness', 'GaussianBump', 'Waviness')
+__all__ = ('RandomRoughness', 'GaussianBump', 'Waviness',
+           'FigureErrorImported')
 
 
 import numpy as np
@@ -41,19 +42,15 @@ class FigureErrorBase():
             Same as in `OE`. Ideally should be the same as in the base optical
             element, or at least not smaller than the expected beam footprint.
 
-        *fileName*: str, path.
-            path to surface distortion map file.
-
-
     """
     def __init__(self, name='', baseFE=None,
-                 limPhysX=None, limPhysY=None, gridStep=0.5, fileName=None,
+                 limPhysX=None, limPhysY=None, gridStep=0.5,
                  **kwargs):
         self.name = name
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
-
+        self.bl = kwargs.get('bl')
         self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
         if limPhysX is None:
@@ -70,7 +67,11 @@ class FigureErrorBase():
 
     @property
     def baseFE(self):
-        return self._baseFE
+        if raycing.is_valid_uuid(self._baseFE) and self.bl is not None:
+            fe = self.bl.fesDict.get(self._baseFE)
+        else:
+            fe = self._baseFE
+        return fe
 
     @baseFE.setter
     def baseFE(self, baseFE):
@@ -239,7 +240,18 @@ class FigureErrorBase():
         return 1 << int(np.ceil(np.log2(n)))
 
 
-class FigureError(FigureErrorBase):
+class FigureErrorImported(FigureErrorBase):
+    """
+
+        *fileName*: str, path.
+            path to surface distortion map file.
+        *recenter*: bool
+            moves center to (0, 0)
+        *orientation*: str
+            redefines the order of columns in the input file. default "XYZ".
+
+    """
+
     def __init__(self, fileName=None, recenter=False, orientation="XYZ",
                  **kwargs):
 
@@ -346,14 +358,31 @@ class FigureError(FigureErrorBase):
 
         self.zGrid = zm
 
+    def get_dimensions(self):
+        xlength = np.abs(self.limPhysX[-1] - self.limPhysX[0])
+        ylength = np.abs(self.limPhysY[-1] - self.limPhysY[0])
+        nxi = xlength / self.gridStep
+        nyi = ylength / self.gridStep
+        if not hasattr(self, 'nx'):
+            self.nx = max(self.next_pow2(nxi), 128)
+        if not hasattr(self, 'ny'):
+            self.ny = max(self.next_pow2(nyi), 128)
+        self.dx = xlength / self.nx
+        self.dy = ylength / self.ny
+        return
+
     def generate_profile(self):
         """This function must be overriden in subclass."""
+        xg, yg = self.get_grids()
+        base_z = np.zeros_like(xg)
+        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
+            base_z = self.baseFE.local_z(xg, yg) * 1e6  # local_z returns z in mm
+
         if self.surfArrays and self.zGrid is not None:
             z = self.zGrid
         else:  # fallback to flat
-            x, y = self.get_grids()
-            z = np.zeros_like(x)
-        return z
+            z = np.zeros_like(xg)
+        return z + base_z
 
 class RandomRoughness(FigureErrorBase):
     """Random roughness map.
@@ -411,9 +440,8 @@ class RandomRoughness(FigureErrorBase):
         xg, yg = self.get_grids()
 
         base_z = np.zeros_like(xg)
-
         if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
-            base_z = self.baseFE.local_z(yg, xg) * 1e6  # local_z returns z in mm
+            base_z = self.baseFE.local_z(xg, yg) * 1e6  # local_z returns z in mm
 
         z = rng.normal(loc=0.0, scale=1.0, size=(self.ny, self.nx))
         if self.corrLength is not None:
@@ -479,8 +507,8 @@ class GaussianBump(FigureErrorBase):
 
     def generate_profile(self):
         x, y = self.get_grids()
-
         base_z = np.zeros_like(x)
+
         if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
             base_z = self.baseFE.local_z(x, y) * 1e6  # local_z returns z in mm
 
@@ -508,8 +536,8 @@ class Waviness(FigureErrorBase):
 
     def generate_profile(self):
         x, y = self.get_grids()
-
         base_z = np.zeros_like(x)
+
         if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
             base_z = self.baseFE.local_z(x, y) * 1e6   # local_z returns z in mm
 
