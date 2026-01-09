@@ -19,6 +19,8 @@ from scipy import interpolate
 from pathlib import Path
 from .. import raycing
 
+maxFeHalfSize = 100  # Intentionally smaller size than OE to speed up spline
+
 
 class FigureErrorBase():
     """ Base class for distorted surfaces. Provides the functionality for
@@ -54,13 +56,13 @@ class FigureErrorBase():
         self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
         if limPhysX is None:
-            self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                                             raycing.maxHalfSizeOfOE])
+            self._limPhysX = raycing.Limits([-maxFeHalfSize,
+                                             maxFeHalfSize])
         else:
             self._limPhysX = raycing.Limits(limPhysX)
         if limPhysY is None:
-            self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                                             raycing.maxHalfSizeOfOE])
+            self._limPhysY = raycing.Limits([-maxFeHalfSize,
+                                             maxFeHalfSize])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
         self.build_spline()
@@ -94,8 +96,8 @@ class FigureErrorBase():
     @limPhysX.setter
     def limPhysX(self, limPhysX):
         if limPhysX is None:
-            self._limPhysX = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                                             raycing.maxHalfSizeOfOE])
+            self._limPhysX = raycing.Limits([-maxFeHalfSize,
+                                             maxFeHalfSize])
         else:
             self._limPhysX = raycing.Limits(limPhysX)
         self.build_spline()
@@ -107,8 +109,8 @@ class FigureErrorBase():
     @limPhysY.setter
     def limPhysY(self, limPhysY):
         if limPhysY is None:
-            self._limPhysY = raycing.Limits([-raycing.maxHalfSizeOfOE,
-                                             raycing.maxHalfSizeOfOE])
+            self._limPhysY = raycing.Limits([-maxFeHalfSize,
+                                             maxFeHalfSize])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
         self.build_spline()
@@ -221,7 +223,7 @@ class FigureErrorBase():
             shape = x.shape
             x = x.flatten()
             y = y.flatten()
-        # z spline is built in nm, x, y in mm
+        # z spline is built in nm; x, y in mm
         if spl == 'RBS':
             a = -self.local_z_spline.ev(y, x, dx=0, dy=1) * 1e-6
             b = -self.local_z_spline.ev(y, x, dx=1, dy=0) * 1e-6
