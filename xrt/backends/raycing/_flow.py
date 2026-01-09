@@ -54,7 +54,8 @@ def propagationProcess(q_in, q_out):
                                 # oe, f'_{autoAttr}Val'):
                                 msg_autopos_update = {
                                         'pos_attr': autoAttr,
-                                        'pos_value': getattr(oe, autoAttr),
+                                        'pos_value': getattr(
+                                                oe, autoAttr, None),
                                         'sender_name': oe.name,
                                         'sender_id': oe.uuid,
                                         'status': 0}
@@ -65,7 +66,7 @@ def propagationProcess(q_in, q_out):
                                 getattr(oe, autoAttr)) > 0):
                             msg_autopos_update = {
                                     'pos_attr': autoAttr,
-                                    'pos_value': getattr(oe, autoAttr),
+                                    'pos_value': getattr(oe, autoAttr, None),
                                     'sender_name': oe.name,
                                     'sender_id': oe.uuid,
                                     'status': 0}
@@ -174,7 +175,7 @@ class MessageHandler:
                                         float(value))
                         else:
                             argIn = getattr(element, f'_{arg}', None)
-                            arrayValue = getattr(element, arg) if\
+                            arrayValue = getattr(element, arg, None) if\
                                 argIn is None else argIn
 
                             if hasattr(arrayValue, 'tolist'):
@@ -228,7 +229,7 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_material", "_material2"]:
                     try:
-                        matProp = getattr(oeObj, prop)
+                        matProp = getattr(oeObj, prop, None)
                         if matProp == objuuid:
                             self.startEl = oeid
                             break
@@ -246,7 +247,7 @@ class MessageHandler:
                     if len(args) > 1:
                         field = args[-1]
                         argIn = getattr(feObj, f'_{arg}', None)
-                        arrayValue = getattr(feObj, arg) if\
+                        arrayValue = getattr(feObj, arg, None) if\
                             argIn is None else argIn
 
                         if hasattr(arrayValue, 'tolist'):
@@ -265,7 +266,7 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_figureError"]:
                     try:
-                        feProp = getattr(oeObj, prop)
+                        feProp = getattr(oeObj, prop, None)
                         if feProp == objuuid:
                             self.startEl = oeid
                             break
@@ -299,13 +300,29 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_material", "_material2"]:
                     try:
-                        matProp = getattr(oeObj, prop)
+                        matProp = getattr(oeObj, prop, None)
                         if matProp == objuuid:
                             self.startEl = oeid
                             break
                     except AttributeError:
                         pass
             self.bl.delete_mat_by_id(objuuid)
+
+            if self.autoUpdate and self.startEl is not None:
+                self.needUpdate = True
+        elif object_type == "fe":
+            self.startEl = None
+            for oeid, oeLine in self.bl.oesDict.items():
+                oeObj = oeLine[0]
+                for prop in ["_figureError"]:
+                    try:
+                        feProp = getattr(oeObj, prop, None)
+                        if feProp == objuuid:
+                            self.startEl = oeid
+                            break
+                    except AttributeError:
+                        pass
+            self.bl.delete_fe_by_id(objuuid)
 
             if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True

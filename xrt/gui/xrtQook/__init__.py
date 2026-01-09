@@ -882,8 +882,14 @@ class XrtQook(qt.QMainWindow):
                     ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
                     raycing.is_valid_uuid(argValue):
                 argMat = self.beamLine.materialsDict.get(argValue)
-                if argMat is not None:
+                if hasattr(argMat, 'name'):
                     oeProps[argName] = argMat.name
+            if any(argName.lower().startswith(v) for v in
+                    ['figureerror']) and\
+                    raycing.is_valid_uuid(argValue):
+                argFE = self.beamLine.fesDict.get(argValue)
+                if hasattr(argFE, 'name'):
+                    oeProps[argName] = argFE.name
 
         catDict = {'Position': raycing.orientationArgSet}
         if oeType == 0:  # source
@@ -942,7 +948,7 @@ class XrtQook(qt.QMainWindow):
                     ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
                    raycing.is_valid_uuid(str(argValue)):
                 argMat = self.beamLine.materialsDict.get(argValue)
-                if argMat is not None:
+                if hasattr(argMat, 'name'):
                     matProps[argName] = argMat.name
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)
@@ -993,7 +999,7 @@ class XrtQook(qt.QMainWindow):
                     ['basefe']) and\
                    raycing.is_valid_uuid(str(argValue)):
                 argFE = self.beamLine.fesDict.get(argValue)
-                if argFE is not None:
+                if hasattr(argFE, 'name'):
                     surfProps[argName] = argFE.name
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)

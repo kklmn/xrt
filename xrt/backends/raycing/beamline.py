@@ -1012,6 +1012,28 @@ class BeamLine(object):
         if matid in self.materialsDict:
             del self.materialsDict[matid]
 
+    def delete_fe_by_id(self, feid):
+        for fename, tmpid in self.fenamesToUUIDs.items():
+            if tmpid == feid:
+                del self.fenamesToUUIDs[fename]
+                break
+
+        for elid, elLine in self.oesDict.items():
+            elObj = elLine[0]
+            for prop in ['figureError']:
+                if hasattr(elObj, prop) and \
+                        getattr(elObj, prop) == self.fesDict[feid]:
+                    setattr(elObj, prop, None)
+
+        for tmpid, feobj in self.fesDict.items():
+            for prop in ['baseFE']:
+                if hasattr(feobj, prop) and \
+                        getattr(feobj, prop) == self.fesDict[feid]:
+                    setattr(feobj, prop, None)
+
+        if feid in self.fesDict:
+            del self.fesDict[feid]
+
     def update_flow_from_json(self, oeid, methDict):
         for methStr, methArgs in methDict.items():
             if methStr in ['properties', '_object']:

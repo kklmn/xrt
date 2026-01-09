@@ -3082,6 +3082,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif objuuid in self.beamline.materialsDict:
                 self.beamline.delete_mat_by_id(objuuid)
                 objType = "mat"
+            elif objuuid in self.beamline.fesDict:
+                self.beamline.delete_fe_by_id(objuuid)
+                objType = "fe"
 
             if objType is not None:
                 message = {"command": "delete",
@@ -7333,7 +7336,7 @@ class OEExplorer(qt.QDialog):
         headerLine = ["Property", "Value"]
         self.viewOnly = viewOnly
         self.liveUpdateEnabled = True  # TODO: configurable
-
+        self.widgetType = 'oe'
         self.objectFlag = qt.Qt.ItemFlags(0)
         self.paramFlag = qt.Qt.ItemFlags(
             qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
@@ -7413,7 +7416,7 @@ class OEExplorer(qt.QDialog):
                     epv = epicsTree.get(key)
                 else:
                     epv = None
-                self.original_data[key] = value
+                self.original_data[key] = str(value)
                 if key in raycing.derivedArgSet:
                     spVal = raycing.parametrize(initDict.get(key))
                     if spVal is None:
@@ -7471,25 +7474,16 @@ class OEExplorer(qt.QDialog):
         layoutL.addWidget(self.table)
         layoutL.addWidget(self.button_box)
         self.beamLine = beamLine
-#        print(self.beamLine)
-#        print(elementId)
-#        if self.beamLine is not None:
-#            print(self.beamLine.materialsDict.keys(),
-#                  self.beamLine.materialsDict.get(elementId))
 
-
-        if self.beamLine is None:  # materials. need better config
+        if self.beamLine is None:
             layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
         elif self.beamLine.materialsDict.get(elementId) is not None:
+            self.widgetType = 'mat'
             canvasSplitter = qt.QSplitter()
             canvasSplitter.setChildrenCollapsible(False)
-#            material = self.beamLine.materialsDict.get(elementId)
-#            print(material.name)
             self.dynamicPlotWidget = Curve1dWidget(
                     beamLine=beamLine, elementId=elementId)
-#            self.propertiesChanged.connect(
-#                    self.dynamicPlotWidget.calculate_amps_in_thread)
             widgetR = qt.QWidget()
             layoutR = qt.QVBoxLayout(widgetR)
             layoutR.addWidget(self.dynamicPlotWidget)
@@ -7497,24 +7491,22 @@ class OEExplorer(qt.QDialog):
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
         elif self.beamLine.fesDict.get(elementId) is not None:
+            self.widgetType = 'fe'
             canvasSplitter = qt.QSplitter()
             canvasSplitter.setChildrenCollapsible(False)
-#            material = self.beamLine.materialsDict.get(elementId)
-#            print(material.name)
             self.dynamicPlotWidget = SurfacePlotWidget(
                     beamLine=beamLine, elementId=elementId)
-#            self.propertiesChanged.connect(
-#                    self.dynamicPlotWidget.calculate_amps_in_thread)
             widgetR = qt.QWidget()
             layoutR = qt.QVBoxLayout(widgetR)
             layoutR.addWidget(self.dynamicPlotWidget)
             layout.addWidget(canvasSplitter)
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
-        elif self.beamLine.beamsDictU.get(elementId) is None:
+        elif self.beamLine.beamsDictU.get(elementId) is None:  # nothing to show
             layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
         else:  # create dynamicPlotWidget
+            self.widgetType = 'plot'
             plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
             axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
             plotProps = plotDefArgs
@@ -7658,7 +7650,7 @@ class OEExplorer(qt.QDialog):
             value = value_str
 
         original_value = self.original_data.get(key)
-        value_changed = value != original_value
+        value_changed = value_str != original_value
 
         # Update the changed_data dictionary
         if value_changed:
@@ -7705,16 +7697,25 @@ class OEExplorer(qt.QDialog):
 
         self.propertiesChanged.emit(copy.deepcopy(self.changed_data))
 
-        for row in range(self.modelRoot.rowCount()):
-            catItem = self.modelRoot.child(row, 0)
-            for j in range(catItem.rowCount()):
-                key = str(catItem.child(j, 0).text())
+        if self.widgetType == 'oe':
+            for row in range(self.modelRoot.rowCount()):  # for categorized trees
+                catItem = self.modelRoot.child(row, 0)
+                for j in range(catItem.rowCount()):
+                    key = str(catItem.child(j, 0).text())
+                    if key in self.changed_data:
+                        new_value = self.changed_data[key]
+                        self.original_data[key] = new_value
+                        catItem.child(j, 1).setText(str(new_value))
+                        self.set_row_highlight(catItem.child(j, 1), False)
+        elif self.widgetType in ['mat', 'fe']:
+            rootItem = self.modelRoot
+            for j in range(rootItem.rowCount()):
+                key = str(rootItem.child(j, 0).text())
                 if key in self.changed_data:
                     new_value = self.changed_data[key]
-                    self.original_data[key] = new_value
-                    catItem.child(j, 1).setText(str(new_value))
-                    self.set_row_highlight(catItem.child(j, 1), False)
-
+                    self.original_data[key] = str(new_value)
+                    rootItem.child(j, 1).setText(str(new_value))
+                    self.set_row_highlight(rootItem.child(j, 1), False)
         self.changed_data.clear()
 
     def update_param(self, pTuple):
@@ -8743,7 +8744,6 @@ class SurfacePlotWidget(qt.QWidget):
 
         self.beamLine = beamLine
         self.elementId = elementId
-#        self.surfObj = None
 
         self.figure = Figure()
         self.canvas = qt.FigCanvas(self.figure)
@@ -8766,8 +8766,6 @@ class SurfacePlotWidget(qt.QWidget):
 
         if surfObj is None:
             return
-        
-        print('baseFE', getattr(surfObj, 'baseFE', None))
 
         xLim, yLim = surfObj.limPhysX, surfObj.limPhysY
 
@@ -8804,20 +8802,3 @@ class SurfacePlotWidget(qt.QWidget):
         self.ax.set_zlabel("Z [nm]")
 
         self.canvas.draw_idle()
-
-#        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-#        surf = ax.plot_surface(xm, ym,
-#                               z.reshape(1000, 200),
-#                               cmap=cm.jet,
-#                           linewidth=0, antialiased=False)
-#        ax.set_box_aspect((1, 10, 0.2))
-#        #fig.colorbar(surf, shrink=0.5, aspect=5)
-#
-#        plt.figure()
-#        #plt.imshow(z, origin='lower', aspect='equal')
-#        plt.imshow(z.reshape((1000, 200)),
-#                   origin='lower',
-#                   aspect='equal',
-#                   cmap='jet',
-#                   extent=[-20, 20, -100, 100]
-#                   )
