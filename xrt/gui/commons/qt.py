@@ -142,21 +142,43 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #            return combo
         elif any(argName.lower().startswith(v) for v in
                  ['mater', 'tlay', 'blay', 'coat', 'substrate']):  # mat and bl
+            currentElement = None
+            for i in range(model.rowCount(parentIndex)):
+                fieldName = str(model.index(i, 0, parentIndex).data())
+                fieldVal = str(model.index(i, 1, parentIndex).data())
+                if fieldName == 'name':
+                    currentElement = fieldVal
+                    break
             if self.bl is not None:
-                combo.addItems(['None']+list(
-                        self.bl.matnamesToUUIDs.keys()))
+                allElements = list(self.bl.matnamesToUUIDs.keys())
+                if currentElement in allElements:
+                    allElements.remove(currentElement)
+                combo.addItems(['None'] + allElements)
             elif self.mainWidget is not None:
-                combo.setModel(self.mainWidget.materialsModel)
+                proxy = ComboFilterText({currentElement,})
+                proxy.setSourceModel(self.mainWidget.materialsModel)
+                combo.setModel(proxy)
             else:
                 return QLineEdit(parent)
             return combo
         elif any(argName.lower().startswith(v) for v in
                  ['figureerr', 'basefe']):  # mat and bl
+            currentElement = None
+            for i in range(model.rowCount(parentIndex)):
+                fieldName = str(model.index(i, 0, parentIndex).data())
+                fieldVal = str(model.index(i, 1, parentIndex).data())
+                if fieldName == 'name':
+                    currentElement = fieldVal
+                    break
             if self.bl is not None:
-                combo.addItems(['None']+list(
-                        self.bl.fenamesToUUIDs.keys()))
+                allElements = list(self.bl.fenamesToUUIDs.keys())
+                if currentElement in allElements:
+                    allElements.remove(currentElement)
+                combo.addItems(['None'] + allElements)
             elif self.mainWidget is not None:
-                combo.setModel(self.mainWidget.fesModel)
+                proxy = ComboFilterText({currentElement,})
+                proxy.setSourceModel(self.mainWidget.fesModel)
+                combo.setModel(proxy)
             else:
                 return QLineEdit(parent)
             return combo
@@ -395,6 +417,17 @@ class ComboBoxFilterProxyModel(QSortFilterProxyModel):
         if source_row == 0:
             return False
         return True
+
+
+class ComboFilterText(QSortFilterProxyModel):
+    def __init__(self, hiddenText, parent=None):
+        super().__init__(parent)
+        self.hiddenText = set(hiddenText)
+
+    def filterAcceptsRow(self, row, parent):
+        index = self.sourceModel().index(row, 0, parent)
+        text = self.sourceModel().data(index)
+        return text not in self.hiddenText
 
 
 class StateButtons(QFrame):
