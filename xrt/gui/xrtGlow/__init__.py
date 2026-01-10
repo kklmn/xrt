@@ -233,13 +233,15 @@ class xrtGlow(qt.QWidget):
         mplFont = {'size': self.cAxisLabelSize}
         mpl.rc('font', **mplFont)
         self.setWindowTitle('xrtGlow')
-        iconsDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '_icons')
+        iconsDir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
+        iconsQookDir = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'xrtQook', '_icons')
         self.iconLib = {}
-        for oeInd, oeType in enumerate(['source', 'oe', 'aperture', 'screen']):
+        for oeType in ['source', 'oe', 'aperture', 'screen']:
             self.iconLib[oeType] = qt.QIcon(os.path.join(
-                    iconsDir, f'add{oeInd+1}.png'))
+                    iconsQookDir, f'add-{oeType}.png'))
 
 #        if arrayOfRays is not None:
 #            self.populateOEsList(arrayOfRays)
