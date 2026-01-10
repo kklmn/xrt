@@ -493,12 +493,12 @@ class XrtQook(qt.QMainWindow):
             "QMainWindow::separator:hover {background-color: #6087cefa;}"
         self.setStyleSheet(style)
 
-        if loadLayout is not None or projectFile is not None:
-            self.importLayout(layoutJSON=loadLayout, filename=projectFile)
-
         self.newElementCreated.connect(self.runElementViewer)
 
         self.showWelcomeScreen()
+
+        if loadLayout is not None or projectFile is not None:
+            self.importLayout(layoutJSON=loadLayout, filename=projectFile)
 
     def initDocWidgets(self):
         self.setTabPosition(qt.Qt.AllDockWidgetAreas,

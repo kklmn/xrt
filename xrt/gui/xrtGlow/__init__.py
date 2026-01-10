@@ -4099,11 +4099,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glGetError()
         print(" Done!")
 
-        for oeuuid, beamDict in self.beamline.beamsDictU.items():
-            for beamKey, startBeam in beamDict.items():
-                good = (startBeam.state == 1) | (startBeam.state == 2)
-                if len(startBeam.state[good]) > 0:
-                    self.init_beam_footprint(startBeam, (oeuuid, beamKey))
+        try:
+            for oeuuid, beamDict in self.beamline.beamsDictU.items():
+                for beamKey, startBeam in beamDict.items():
+                    good = (startBeam.state == 1) | (startBeam.state == 2)
+                    if len(startBeam.state[good]) > 0:
+                        self.init_beam_footprint(startBeam, (oeuuid, beamKey))
+        except AttributeError:
+            pass
 
         self.getMinMax()
         self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
