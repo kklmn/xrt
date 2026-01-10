@@ -8012,6 +8012,8 @@ class ConfigurablePlotWidget(qt.QWidget):
             self.dynamicPlot.field3D = self.dynamicPlot.total4D
         self.dynamicPlot.textStatus.set_text('')
         self.dynamicPlot.plot_plots()
+        self.resizeEvent()
+        self.dynamicPlot.plot_plots()
 
     def plot_beam(self, key=None):
         locCard = RunCardVals(threads=0,
