@@ -432,7 +432,7 @@ class XrtQook(qt.QMainWindow):
                            'roes', 'rapts', 'rfe',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
-        self.objectFlag = qt.Qt.ItemFlags(0)
+        self.objectFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled)
         self.paramFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled |
                                          qt.Qt.ItemIsSelectable)
         self.valueFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled |
@@ -2386,8 +2386,7 @@ class XrtQook(qt.QMainWindow):
                     source=copyFrom)
         plotItem.setData(str(raycing.uuid.uuid4()), qt.Qt.UserRole)
         self.paintStatus(plotViewItem, 0)
-        plotViewItem.setToolTip(
-                "Double click to preview")
+        plotViewItem.setToolTip("Double click to preview")
         plotProps['_object'] = "xrt.plotter.XYCPlot"
 
         if isinstance(copyFrom, qt.QStandardItem):
@@ -4068,8 +4067,9 @@ class XrtQook(qt.QMainWindow):
         if status:
             color = qt.QColor(255, 200, 200)  # pale red
         else:
-            color = qt.QColor(200, 255, 200)  # pale green
+            color = qt.QColor(200, 255, 192)  # pale green
         item.setBackground(qt.QBrush(color))
+        item.setIcon(qt.QIcon(os.path.join(self.iconsDir, 'double-click.png')))
         item.model().blockSignals(updateStatus)
 
     def updateOrder(self, *args, **kwargs):
