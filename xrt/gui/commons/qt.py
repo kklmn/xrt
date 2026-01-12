@@ -294,7 +294,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             fExts = ["STL"]
             if parentIndex is not None:
                 prtItem = model.itemFromIndex(parentIndex)
-            
+
             if prtItem is None:
                 prtItem = model.invisibleRootItem()
 
@@ -477,6 +477,7 @@ class StateButtons(QFrame):
 
             self.buttons.append(but)
             layout.addWidget(but)
+        layout.addStretch()
         self.setLayout(layout)
 
         self.setActive(active)

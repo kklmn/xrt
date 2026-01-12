@@ -955,12 +955,10 @@ class XrtQook(qt.QMainWindow):
         matViewer = OEExplorer(self, matProps, beamLine=self.beamLine,
                                viewOnly=False)
         if glWidget is not None:
-
             matViewer.propertiesChanged.connect(
-                    partial(glWidget.update_beamline, matuuid,
-                            sender='OEE'))
+                    partial(glWidget.update_beamline, matuuid, sender='OEE'))
             matViewer.propertiesChanged.connect(
-                    matViewer.dynamicPlotWidget.calculate_amps_in_thread)
+                matViewer.dynamicPlotWidget.calculate)
         matViewer.show()
 
     def runPlotViewer(self, plotName):
