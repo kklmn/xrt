@@ -7542,8 +7542,7 @@ class OEExplorer(qt.QDialog):
                            'contourColors', 'contourFmt', 'contourFactor',
                            'saveName', 'persistentName', 'oe', 'raycingParam',
                            'beamState', 'beamC', 'useQtWidget', 'title',
-                           'rayFlag',
-                           'density', 'outline'}
+                           'rayFlag', 'density', 'outline', 'fluxUnit'}
 
             self.dynamicPlotWidget = ConfigurablePlotWidget(
                     plotProps, parent=self, viewOnly=False,
@@ -7920,7 +7919,10 @@ class ConfigurablePlotWidget(qt.QWidget):
             if paramName == 'beam':
                 paramValue = self.get_beam_tag(paramValue)
             plotParamTuple = self.plotId, objChng, paramName, paramValue
-            self.update_plot_param(plotParamTuple)
+            try:
+                self.update_plot_param(plotParamTuple)
+            except Exception as e:
+                print(e)
             if paramName == 'aspect':
                 self.resizeEvent()
                 self.dynamicPlot.plot_plots()

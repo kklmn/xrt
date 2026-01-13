@@ -4705,10 +4705,11 @@ class PlotViewer(qt.QDialog):
         super().__init__(parent)
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.setWindowTitle("Live Plot Builder")
+        hiddenProps = {'_object', 'fluxUnit'}
 
         self.dynamicPlot = ConfigurablePlotWidget(
                 plotProps, parent, viewOnly, beamLine,
-                plotId, hiddenProps={'_object'})
+                plotId, hiddenProps=hiddenProps)
         layout = qt.QVBoxLayout(self)
         layout.addWidget(self.dynamicPlot)
 
