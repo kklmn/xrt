@@ -8661,7 +8661,7 @@ class Curve1dWidget(qt.QWidget):
         what = self.axes.get_ylabel()
         now = datetime.now()
         nowStr = now.strftime("%d/%m/%Y %H:%M:%S")
-        header = f"{what} calculated by xrtBentXtal on {nowStr}\n"
+        header = f"{what} calculated by xrt on {nowStr}\n"
         header += "\t".join(outNames)
         np.savetxt(file_name, np.array(outLines).T, fmt='%#.7g',
                    delimiter='\t', header=header, encoding='utf-8')
