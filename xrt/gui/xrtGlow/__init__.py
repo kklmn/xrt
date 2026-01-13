@@ -8112,30 +8112,29 @@ class ConfigurablePlotWidget(qt.QWidget):
                     print(e)
 
     def resizeEvent(self, event=None):
-        bbox = self.dynamicPlot.ax2dHist.get_window_extent().transformed(
-            self.dynamicPlot.fig.dpi_scale_trans.inverted())
-        dpi = self.dynamicPlot.fig.dpi
-        width, height = bbox.width*dpi, bbox.height*dpi
+        b2 = self.dynamicPlot.ax2dHist.get_position().bounds
+        x1 = self.dynamicPlot.ax1dHistX.get_position().bounds
+        y1 = self.dynamicPlot.ax1dHistY.get_position().bounds
+        xp = self.dynamicPlot.xaxis.pixels
+        yp = self.dynamicPlot.yaxis.pixels
+        if self.dynamicPlot.ePos != 0:
+            e1 = self.dynamicPlot.ax1dHistE.get_position().bounds
+            b1 = self.dynamicPlot.ax1dHistEbar.get_position().bounds
+            ep = self.dynamicPlot.caxis.pixels
 
-        saxes = ['ax1dHistX', 'ax1dHistY']
-        sizes = [(self.dynamicPlot.xaxis.pixels, height1d),
-                 (height1d, self.dynamicPlot.yaxis.pixels)]
+        self.dynamicPlot.ax1dHistX.set_position([b2[0], x1[1], b2[2], x1[3]])
+        self.dynamicPlot.ax1dHistY.set_position([y1[0], b2[1], y1[2], b2[3]])
+
         if self.dynamicPlot.ePos == 1:
-            sizes.append((heightE1dbar, self.dynamicPlot.caxis.pixels))
-            sizes.append((heightE1d, self.dynamicPlot.caxis.pixels))
-            saxes += ['ax1dHistEbar', 'ax1dHistE']
+            self.dynamicPlot.ax1dHistE.set_position(
+                [e1[0], b2[1], e1[2], b2[3]*ep/yp])
+            self.dynamicPlot.ax1dHistEbar.set_position(
+                [b1[0], b2[1], b1[2], b2[3]*ep/yp])
         elif self.dynamicPlot.ePos == 2:
-            sizes.append((self.dynamicPlot.caxis.pixels, heightE1dbar))
-            sizes.append((self.dynamicPlot.caxis.pixels, heightE1d))
-            saxes += ['ax1dHistEbar', 'ax1dHistE']
-
-        for splot, size in zip(saxes, sizes):
-            ax = getattr(self.dynamicPlot, splot)
-            xlim = ax.get_xlim()
-            ylim = ax.get_ylim()
-            aspect = (xlim[1]-xlim[0]) / (ylim[1]-ylim[0]) * size[1] / size[0]
-            aspect *= height / width
-            ax.set_aspect(aspect)
+            self.dynamicPlot.ax1dHistE.set_position(
+                [b2[0], e1[1], b2[2]*ep/xp, e1[3]])
+            self.dynamicPlot.ax1dHistEbar.set_position(
+                [b2[0], b1[1], b2[2]*ep/xp, b1[3]])
 
 
 class Curve1dWidget(qt.QWidget):
