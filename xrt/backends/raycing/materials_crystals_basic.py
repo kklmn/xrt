@@ -412,7 +412,7 @@ class CrystalFromCell(Crystal):
         for element, xi in zip(self.elements, self.atomsFraction):
             self.mass += xi * element.mass
         self.rho = self.mass / AVOGADRO / self.V * 1e24
-        self._d = self.V / (self.a * self.b * self.c) *\
+        self.d = self.V / (self.a * self.b * self.c) *\
             ((h*sa/self.a)**2 + (k*sb/self.b)**2 + (l*sg/self.c)**2 +
              2*h*k * (ca*cb - cg) / (self.a*self.b) +
              2*h*l * (ca*cg - cb) / (self.a*self.c) +
