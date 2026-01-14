@@ -989,7 +989,7 @@ class XrtQook(qt.QMainWindow):
             return
         blName = self.beamLine.name
         surfProps = raycing.get_init_kwargs(surfobj, compact=False,
-                                           blname=blName)
+                                            blname=blName)
         surfProps.update({'uuid': surfuuid})
 #        print(surfProps)
         for argName, argValue in surfProps.items():
@@ -2778,7 +2778,8 @@ class XrtQook(qt.QMainWindow):
                         else:
                             itemType = "object"
                         if int(child1.isEnabled()) == int(child0.isEnabled()):
-                            if not str(child1.text()).endswith('plot'):  # view
+                            if not str(child1.text()).endswith('plot') and not\
+                                    str(child1.text()).startswith('Instance'):
                                 self.confText +=\
                                     '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
                                         self.prefixtab,
