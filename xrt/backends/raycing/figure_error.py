@@ -531,10 +531,37 @@ class Waviness(FigureErrorBase):
     """
     def __init__(self, amplitude=10., xWaveLength=20., yWaveLength=50.,
                  **kwargs):
-        self.amplitude = amplitude
-        self.xWaveLength = xWaveLength
-        self.yWaveLength = yWaveLength
+        self._amplitude = amplitude
+        self._xWaveLength = xWaveLength
+        self._yWaveLength = yWaveLength
         super().__init__(**kwargs)
+
+    @property
+    def amplitude(self):
+        return self._amplitude
+
+    @amplitude.setter
+    def amplitude(self, amplitude):
+        self._amplitude = amplitude
+        self.build_spline()
+
+    @property
+    def xWaveLength(self):
+        return self._xWaveLength
+
+    @xWaveLength.setter
+    def xWaveLength(self, xWaveLength):
+        self._xWaveLength = xWaveLength
+        self.build_spline()
+
+    @property
+    def yWaveLength(self):
+        return self._yWaveLength
+
+    @yWaveLength.setter
+    def yWaveLength(self, yWaveLength):
+        self._yWaveLength = yWaveLength
+        self.build_spline()
 
     def generate_profile(self):
         x, y = self.get_grids()
