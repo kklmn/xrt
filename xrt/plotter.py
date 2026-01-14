@@ -950,17 +950,19 @@ class XYCPlot(object):
         self.reset_xy_axes(p2, px, py)
         self.reset_e_axes(peb, pe)
 
-        mplTxt = self.ax1dHistX.text if useQtWidget else plt.text
+        mplTxtX = self.ax1dHistX.text if useQtWidget else plt.text
+        mplTxtY = self.ax1dHistY.text if useQtWidget else plt.text
+        mplTxtE = self.ax1dHistE.text if useQtWidget else plt.text
         if self.ePos == 1:
-            self.textDE = mplTxt(
+            self.textDE = mplTxtE(
                 xTextPosDy, yTextPosDy, ' ', rotation='vertical',
                 transform=self.ax1dHistE.transAxes, ha='left', va='center')
         elif self.ePos == 2:
-            self.textDE = mplTxt(
+            self.textDE = mplTxtE(
                 xTextPosDx, yTextPosDx, ' ',
                 transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
         else:
-            self.textDE = mplTxt(
+            self.textDE = mplTxtE(
                 xTextPosDx, yTextPosDx, ' ',
                 transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
             self.textDE.set_visible(False)
@@ -981,15 +983,15 @@ class XYCPlot(object):
 
         self.textNrays = None
         if self.backend == 'shadow' or self.backend == 'dummy':
-            self.textNrays = mplTxt(
+            self.textNrays = mplTxtX(
                 xTextPos, yTextPosNrays, ' ', transform=transform, ha='left',
                 va='top')
             self.nRaysNeeded = np.int64(0)
             if self.rayFlag != 2:
-                self.textGoodrays = mplTxt(
+                self.textGoodrays = mplTxtX(
                     xTextPos, yTextPosGoodrays, ' ', transform=transform,
                     ha='left', va='top')
-            self.textI = mplTxt(
+            self.textI = mplTxtX(
                 xTextPos, yTextPosI, ' ', transform=transform, ha='left',
                 va='top')
         elif self.backend == 'raycing':
@@ -1008,7 +1010,7 @@ class XYCPlot(object):
             self.nRaysAcceptedE = 0.
             self.nRaysSeeded = np.int64(0)
             self.nRaysSeededI = 0.
-            self.textNrays = mplTxt(
+            self.textNrays = mplTxtX(
                 xTextPos, yTextPosNraysR, ' ', transform=transform, ha='left',
                 va='top')
             self.textGood = None
@@ -1017,38 +1019,38 @@ class XYCPlot(object):
             self.textAlive = None
             self.textDead = None
             if 1 in self.rayFlag:
-                self.textGood = mplTxt(
+                self.textGood = mplTxtX(
                     xTextPos, yTextPosNrays1, ' ', transform=transform,
                     ha='left', va='top')
             if 2 in self.rayFlag:
-                self.textOut = mplTxt(
+                self.textOut = mplTxtX(
                     xTextPos, yTextPosNrays2, ' ', transform=transform,
                     ha='left', va='top')
             if 3 in self.rayFlag:
-                self.textOver = mplTxt(
+                self.textOver = mplTxtX(
                     xTextPos, yTextPosNrays3, ' ', transform=transform,
                     ha='left', va='top')
             if 4 in self.rayFlag:
-                self.textAlive = mplTxt(
+                self.textAlive = mplTxtX(
                     xTextPos, yTextPosGoodraysR, ' ', transform=transform,
                     ha='left', va='top')
             if not self.caxis.useCategory:
-                self.textI = mplTxt(
+                self.textI = mplTxtX(
                     xTextPos, yTextPosNrays4, ' ', transform=transform,
                     ha='left', va='top')
             else:
                 if (np.array(self.rayFlag) < 0).sum() > 0:
-                    self.textDead = mplTxt(
+                    self.textDead = mplTxtX(
                         xTextPos, yTextPosNrays4, ' ', transform=transform,
                         ha='left', va='top')
 
-        self.textDx = mplTxt(
+        self.textDx = mplTxtX(
             xTextPosDx, yTextPosDx, ' ', transform=self.ax1dHistX.transAxes,
             ha='center', va='bottom')
-        self.textDy = mplTxt(
+        self.textDy = mplTxtY(
             xTextPosDy, yTextPosDy, ' ', rotation='vertical',
             transform=self.ax1dHistY.transAxes, ha='left', va='center')
-        self.textStatus = mplTxt(
+        self.textStatus = mplTxtX(
             xTextPosStatus, yTextPosStatus, '', transform=self.fig.transFigure,
             ha='right', va='bottom', fontsize=9)
         self.textStatus.set_color('r')
