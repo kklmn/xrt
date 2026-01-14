@@ -92,6 +92,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         row = index.row()
         nameIndex = model.index(row, 0, index.parent())
         argName = str(nameIndex.data())
+        argNameL = argName.lower()
         argValue = str(index.data())
         parentIndex = index.parent()
         if parentIndex is not None:
@@ -140,7 +141,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #            combo.setEditable(True)
 #            combo.setInsertPolicy(QComboBox.InsertAtCurrent)
 #            return combo
-        elif any(argName.lower().startswith(v) for v in
+        elif any(argNameL.startswith(v) for v in
                  ['mater', 'tlay', 'blay', 'coat', 'substrate']):  # mat and bl
             currentElement = None
             for i in range(model.rowCount(parentIndex)):
@@ -161,7 +162,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return QLineEdit(parent)
             return combo
-        elif any(argName.lower().startswith(v) for v in
+        elif any(argNameL.startswith(v) for v in
                  ['figureerr', 'basefe']):  # mat and bl
             currentElement = None
             for i in range(model.rowCount(parentIndex)):
@@ -182,7 +183,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return QLineEdit(parent)
             return combo
-        elif argName.lower() == 'kind':  # material and bl
+        elif argNameL == 'kind':  # material and bl
             matKindItems = ['mirror', 'thin mirror',
                             'plate', 'lens', 'grating', 'FZP', 'auto']
 #            if str(model.index(0, 0).data()).lower() == 'none':  # material
@@ -212,39 +213,39 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.addItems(['horizontal', 'vertical',
                             '+45', '-45', 'left', 'right', 'None'])
             return combo
-        elif 'shape' in argName.lower():  # bl only
+        elif 'shape' in argNameL:  # bl only
             combo.addItems(['rect', 'round'])
             return combo
-        elif 'renderstyle' in argName.lower():  # bl only
+        elif 'renderstyle' in argNameL:  # bl only
             combo.addItems(['mask', 'blades'])
             return combo
-        elif 'table' in argName.lower():  # material only
+        elif 'table' in argNameL:  # material only
             combo.addItems(['Chantler', 'Chantler total', 'Henke', 'BrCo'])
             return combo
-        elif 'data' in argName.lower() and 'axis' in parentIndexName:  # plot
+        elif 'data' in argNameL and 'axis' in parentIndexName:  # plot
             combo.addItems(self.mainWidget.fluxDataList)
             return combo
-        elif 'geom' in argName.lower():  # mat only
+        elif 'geom' in argNameL:  # mat only
             combo.addItems(['Bragg reflected', 'Bragg transmitted',
                             'Laue reflected', 'Laue transmitted',
                             'Fresnel'])
             return combo
-        elif 'fluxkind' in argName.lower():  # plot only
+        elif 'fluxkind' in argNameL:  # plot only
             combo.addItems(['total', 'power', 's', 'p',
                             '+45', '-45', 'left', 'right'])
             return combo
-        elif 'aspect' in argName.lower():  # plot only
+        elif 'aspect' in argNameL:  # plot only
             combo.addItems(['equal', 'auto'])
             return combo
-        elif argName.lower().endswith('pos'):  # plot only
+        elif argNameL.endswith('pos'):  # plot only
             combo.addItems(['0', '1'])
             if argName.startswith('e'):
                 combo.addItems(['2'])
             return combo
-        elif 'precisionopencl' in argName.lower():  # bl only
+        elif 'precisionopencl' in argNameL:  # bl only
             combo.addItems(['auto', 'float32', 'float64'])
             return combo
-        elif argName.lower().endswith('label'):  # plot only
+        elif argNameL.endswith('label'):  # plot only
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy'])
             elif hasattr(self.mainWidget, 'fluxLabelList'):  # caxis
@@ -252,7 +253,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return QLineEdit(parent)
             return combo
-        elif 'rayflag' in argName.lower():  # plot only
+        elif 'rayflag' in argNameL:  # plot only
             group = QWidget(parent)
             group.setAutoFillBackground(True)
             layout = QHBoxLayout()
@@ -268,7 +269,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             group.setLayout(layout)
             group.setProperty('fieldName', 'rayflag')
             return group
-        elif argName.lower().endswith('unit'):
+        elif argNameL.endswith('unit'):
             if parentIndexName.lower() in ['xaxis', 'yaxis', 'caxis']:
                 for i in range(model.rowCount(parentIndex)):
                     fieldName = str(model.index(i, 0, parentIndex).data())
@@ -290,7 +291,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 combo.addItems(self.mainWidget.angleUnitList)
                 return combo
-        elif argName.lower() in ['filename', 'customField']:
+        elif argNameL in ['filename', 'customField']:
             fExts = ["STL"]
             if parentIndex is not None:
                 prtItem = model.itemFromIndex(parentIndex)
@@ -309,7 +310,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             btn = QPushButton("Open file...", parent)
             btn.clicked.connect(partial(self.openDialog, index, fExts))
             return btn
-        elif "from source" in argName.lower():
+        elif "from source" in argNameL:
             elList = ['None']
             if self.bl is not None:
                 for key, val in self.bl.oesDict.items():
@@ -319,14 +320,16 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.addItems(elList)
             return combo
 
-        elif "from oe" in argName.lower():
+        elif "from oe" in argNameL:
             elList = ['None']
             if self.bl is not None:
                 for key, val in self.bl.oesDict.items():
                     oeObj = val[0]
                     if hasattr(oeObj, 'material'):  # OE
-                        elList.append(oeObj.name)
+                        elList.append(oeObj.name+': local beam')
+                        elList.append(oeObj.name+': pitch')
             combo.addItems(elList)
+            combo.setMaxVisibleItems(30)
             return combo
         else:
             return QLineEdit(parent)

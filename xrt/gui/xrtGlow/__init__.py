@@ -8152,9 +8152,9 @@ class Curve1dWidget(qt.QWidget):
         common1=[("E from Source", None), ("Emin (eV)", 5000.),
                  ("Emax (eV)", 15000.), ("N points", 1000)],
         plate=[],
-        mirror=[(u"θ from OE pitch", None), (u"Grazing angle θ (mrad)", 5.),
+        mirror=[(u"θ from OE", None), (u"Grazing angle θ (mrad)", 5.),
                 ("Curves", ['σ', ])],
-        crystal=[(u"θ from OE pitch", None), (u"Grazing angle θ (°)", 15.),
+        crystal=[(u"θ from OE", None), (u"Grazing angle θ (°)", 15.),
                 ("Asymmetry angle", 0), ("Curves", ['σ', ])],
         common2=[("Curve Color", "blue")],
         )
@@ -8243,7 +8243,7 @@ class Curve1dWidget(qt.QWidget):
         eMin = eMax = None
         angle_rad = None
         srcName = "None"
-        oeName = "None"
+        fromOeTxt = "None"
         self.kindParams = None
         if self.beamLine is not None and self.elementId is not None:
             mat = self.beamLine.materialsDict.get(self.elementId)
@@ -8286,7 +8286,11 @@ class Curve1dWidget(qt.QWidget):
 
                     if oeMatId == self.elementId:
                         oeName = oeObj.name
-                        angle_rad = self.get_oe_angle(oeName)
+                        angle_rad = self.get_oe_angle(oeName, 'beam')
+                        fromOeTxt = oeName + ': local beam'
+                        if angle_rad is None:
+                            angle_rad = self.get_oe_angle(oeName, 'pitch')
+                            fromOeTxt = oeName + ': pitch'
 
         plot_uuid = raycing.uuid.uuid4()
         plots = []
@@ -8355,8 +8359,8 @@ class Curve1dWidget(qt.QWidget):
                 item_value.setData(float(angle_rad), role=qt.Qt.UserRole)
             elif "from source" in iname.lower():
                 item_value.setText(srcName)
-            elif "from oe pitch" in iname.lower():
-                item_value.setText(oeName)
+            elif "from oe" in iname.lower():
+                item_value.setText(fromOeTxt)
             elif "asymmetry" in iname.lower():
                 # if not hasattr(mat, 'get_Bragg_angle'):
                 #     item_name.setEnabled(False)
@@ -8430,7 +8434,7 @@ class Curve1dWidget(qt.QWidget):
                 self.model.blockSignals(True)
                 dest.setData(angle, role=qt.Qt.UserRole)
                 self.model.blockSignals(False)
-            elif pname.lower().endswith("from source"):
+            elif "from source" in pname.lower():
                 eMin, eMax = self.get_source_range(pvalue)
                 self.model.blockSignals(True)
                 if eMin is not None:
@@ -8440,8 +8444,9 @@ class Curve1dWidget(qt.QWidget):
                     ind = self.findIndexFromText("Emax")
                     self.default_plot.child(ind, 1).setText(str(eMax))
                 self.model.blockSignals(False)
-            elif pname.lower().endswith("from oe pitch"):
-                angle_rad = self.get_oe_angle(pvalue)
+            elif "from oe" in pname.lower():
+                oeName, fromWhat = pvalue.split(': ')
+                angle_rad = self.get_oe_angle(oeName, fromWhat)
                 if angle_rad is None:
                     return
                 self.model.blockSignals(True)
@@ -8457,22 +8462,36 @@ class Curve1dWidget(qt.QWidget):
                 grdest.setData(angle_rad, role=qt.Qt.UserRole)
                 self.model.blockSignals(False)
 
-            if pname not in ["Curves",]:
+            if pname not in ["Curves", "Curve Color"]:
                 self.calculate()
             else:
                 xaxis, curS, curP = copy.copy(self.default_plot.curves)
                 self.on_calculation_result((xaxis, curS, curP, 0))
 
-    def get_oe_angle(self, oeName):
+    def get_oe_angle(self, oeName, fromWhat='pitch'):
         angle_rad = None
         if self.beamLine is not None and oeName != 'None':
             oeid = self.beamLine.oenamesToUUIDs.get(oeName)
             oeLn = self.beamLine.oesDict.get(oeid)
             if oeLn is not None:
                 oeObj = oeLn[0]
-                angle_rad = getattr(oeObj, '_braggVal', None)
-                if angle_rad in [0, None]:
-                    angle_rad = getattr(oeObj, '_pitchVal', None)
+                if fromWhat == 'pitch':
+                    angle_rad = getattr(oeObj, '_braggVal', None)
+                    if angle_rad in [0, None]:
+                        angle_rad = getattr(oeObj, '_pitchVal', None)
+                else:  # from 'beam.theta'
+                    try:
+                        beamDict = self.beamLine.beamsDictU[oeid]
+                        if 'beamLocal1' in beamDict:
+                            beam = beamDict['beamLocal1']
+                        elif 'beamLocal' in beamDict:
+                            beam = beamDict['beamLocal']
+                        else:
+                            beam = beamDict['beamGlobal']
+                        good = (beam.state == 1)
+                        angle_rad = beam.theta[good].mean()
+                    except Exception:
+                        angle_rad = None
         if angle_rad is not None:
             angle_rad = abs(angle_rad)
         return angle_rad
@@ -8568,6 +8587,8 @@ class Curve1dWidget(qt.QWidget):
         color = "tab:" + txt
         for line in plots:
             line.set_color(color)
+        if self.kindParams != 'plate':
+            self.add_legend()
         self.canvas.draw()
 
     def calculate(self):
@@ -8676,20 +8697,20 @@ class Curve1dWidget(qt.QWidget):
 #        self.update_thetaB(plot_item)
         self.canvas.draw()
 
-    def update_legend(self, item):
-        plot_index = item.plot_index
-        for line, label, fwhm in zip(
-                self.plot_lines[plot_index], self.allCurves.keys(),
-                item.fwhms):
-            tt = ''
-#            convFactor = self.allUnits[self.get_units(item)]
-#            unitsStr = self.get_units(item)
-#            unit = self.allUnitsStr[unitsStr]
-#            sp = '' if unit == '°' else ' '
-#            tt = '' if fwhm is None else\
-#                ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
-            line.set_label("{0} {1}{2}".format(item.text(), label, tt))
-        self.add_legend()
+#     def update_legend(self, item):
+#         plot_index = item.plot_index
+#         for line, label, fwhm in zip(
+#                 self.plot_lines[plot_index], self.allCurves.keys(),
+#                 item.fwhms):
+#             tt = ''
+# #            convFactor = self.allUnits[self.get_units(item)]
+# #            unitsStr = self.get_units(item)
+# #            unit = self.allUnitsStr[unitsStr]
+# #            sp = '' if unit == '°' else ' '
+# #            tt = '' if fwhm is None else\
+# #                ": {0:#.3g}{1}{2}".format(fwhm/convFactor, sp, unit)
+#             line.set_label("{0} {1}{2}".format(item.text(), label, tt))
+#         self.add_legend()
 
 
 class SurfacePlotWidget(qt.QWidget):
