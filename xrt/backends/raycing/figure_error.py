@@ -235,8 +235,9 @@ class FigureErrorBase():
             a = a.reshape(shape)
             b = b.reshape(shape)
 
-        norm = np.sqrt(a**2+b**2+1.)
-        return [a/norm, b/norm, 1./norm]
+#        return [np.zeros_like(a), 1e-3*np.ones_like(b)]
+        return [np.arctan(b), np.arctan(a)]  # [d_pitch, d_roll]
+
 
     def next_pow2(self, n):
         return 1 << int(np.ceil(np.log2(n)))
