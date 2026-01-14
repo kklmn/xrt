@@ -8445,7 +8445,10 @@ class Curve1dWidget(qt.QWidget):
                     self.default_plot.child(ind, 1).setText(str(eMax))
                 self.model.blockSignals(False)
             elif "from oe" in pname.lower():
-                oeName, fromWhat = pvalue.split(': ')
+                try:
+                    oeName, fromWhat = pvalue.split(': ')
+                except ValueError:
+                    return
                 angle_rad = self.get_oe_angle(oeName, fromWhat)
                 if angle_rad is None:
                     return
