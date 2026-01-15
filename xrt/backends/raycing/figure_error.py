@@ -13,6 +13,10 @@ __date__ = "29 Nov 2025"
 __all__ = ('RandomRoughness', 'GaussianBump', 'Waviness',
            'FigureErrorImported')
 
+allArguments = ('bl', 'name', 'baseFE', 'limPhysX', 'limPhysY', 'gridStep',
+                'fileName', 'recenter', 'orientation',
+                'rms', 'corrLength', 'seed', 'bumpHeight', 'sigmaX', 'sigmaY',
+                'cX', 'cY', 'amplitude', 'xWaveLength', 'yWaveLength')
 
 import numpy as np
 from scipy import interpolate
@@ -471,14 +475,21 @@ class GaussianBump(FigureErrorBase):
         *bumpHeight*: float
             Hight at the peak in [nm]
 
+        *cX*, *cY*: float
+            Position of the peak in local coordinates in [mm].
+
         *sigmaX*, *sigmaY*: float
             Standard deviation along X and Y axes in [mm].
 
+
     """
-    def __init__(self, bumpHeight=100., sigmaX=1., sigmaY=1., **kwargs):
+    def __init__(self, bumpHeight=100., cX=0., cY=0.,
+                 sigmaX=1., sigmaY=1., **kwargs):
         self._bumpHeight = bumpHeight
         self._sigmaX = sigmaX
         self._sigmaY = sigmaY
+        self._cX = cX
+        self._cY = cY
         super().__init__(**kwargs)
 
     @property
@@ -508,6 +519,24 @@ class GaussianBump(FigureErrorBase):
         self._sigmaY = sigmaY
         self.build_spline()
 
+    @property
+    def cX(self):
+        return self._cX
+
+    @cX.setter
+    def cX(self, cX):
+        self._cX = cX
+        self.build_spline()
+
+    @property
+    def cY(self):
+        return self._cY
+
+    @cY.setter
+    def cY(self, cY):
+        self._cY = cY
+        self.build_spline()
+
     def generate_profile(self):
         x, y = self.get_grids()
         base_z = np.zeros_like(x)
@@ -516,7 +545,8 @@ class GaussianBump(FigureErrorBase):
             base_z = self.baseFE.local_z(x, y) * 1e6  # local_z returns z in mm
 
         z = self.bumpHeight *\
-            np.exp(-x**2/self.sigmaX**2 - y**2/self.sigmaY**2)
+            np.exp(-(x-self.cX)**2/self.sigmaX**2 -
+                   (y-self.cY)**2/self.sigmaY**2)
         return z + base_z
 
 
