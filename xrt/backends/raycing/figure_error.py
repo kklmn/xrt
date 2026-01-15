@@ -418,6 +418,7 @@ class FigureErrorImported(FigureErrorBase):
             z = np.zeros_like(xg)
         return z + base_z
 
+
 class RandomRoughness(FigureErrorBase):
     """
     Random surface roughness model.
