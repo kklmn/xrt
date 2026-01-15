@@ -27,10 +27,16 @@ maxFeHalfSize = 100  # Intentionally smaller size than OE to speed up spline
 
 
 class FigureErrorBase():
-    """ Base class for distorted surfaces. Provides the functionality for
+    """
+    Base class for distorted surfaces. Provides the functionality for
     height maps generation and diagnostics. Height map calculation function
     must be implemented in a subclass.
 
+    """
+    def __init__(self, name='', baseFE=None,
+                 limPhysX=None, limPhysY=None, gridStep=0.5,
+                 **kwargs):
+        """
         *name*: str
             Attribute to store instance name
 
@@ -48,10 +54,8 @@ class FigureErrorBase():
             Same as in `OE`. Ideally should be the same as in the base optical
             element, or at least not smaller than the expected beam footprint.
 
-    """
-    def __init__(self, name='', baseFE=None,
-                 limPhysX=None, limPhysY=None, gridStep=0.5,
-                 **kwargs):
+
+        """
         self.name = name
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
@@ -242,14 +246,16 @@ class FigureErrorBase():
 #        return [np.zeros_like(a), 1e-3*np.ones_like(b)]
         return [np.arctan(b), np.arctan(a)]  # [d_pitch, d_roll]
 
-
     def next_pow2(self, n):
         return 1 << int(np.ceil(np.log2(n)))
 
 
 class FigureErrorImported(FigureErrorBase):
-    """
+    """Figure error from file."""
 
+    def __init__(self, fileName=None, recenter=False, orientation="XYZ",
+                 **kwargs):
+        """
         *fileName*: str, path.
             path to surface distortion map file.
         *recenter*: bool
@@ -257,11 +263,8 @@ class FigureErrorImported(FigureErrorBase):
         *orientation*: str
             redefines the order of columns in the input file. default "XYZ".
 
-    """
 
-    def __init__(self, fileName=None, recenter=False, orientation="XYZ",
-                 **kwargs):
-
+        """
         self.surfArrays = {}
         self.zGrid = None
         super().__init__(**kwargs)
@@ -392,8 +395,10 @@ class FigureErrorImported(FigureErrorBase):
         return z + base_z
 
 class RandomRoughness(FigureErrorBase):
-    """Random roughness map.
+    """Random roughness map."""
 
+    def __init__(self, rms=1., corrLength=None, seed=None, **kwargs):
+        """
         *rms*: float
             Root Mean Square roughness in [nm]
 
@@ -404,8 +409,8 @@ class RandomRoughness(FigureErrorBase):
             Seed number for numpy random number generator. Any number
             0 < seed < 2^128-1
 
-    """
-    def __init__(self, rms=1., corrLength=None, seed=None, **kwargs):
+
+        """
         self._rms = rms
         self._corrLength = corrLength
         if seed is None:
@@ -470,8 +475,11 @@ class RandomRoughness(FigureErrorBase):
 
 
 class GaussianBump(FigureErrorBase):
-    """Height profile defined by the Gaussian function.
+    """Height profile defined by the Gaussian function."""
 
+    def __init__(self, bumpHeight=100., cX=0., cY=0.,
+                 sigmaX=1., sigmaY=1., **kwargs):
+        """
         *bumpHeight*: float
             Hight at the peak in [nm]
 
@@ -482,9 +490,7 @@ class GaussianBump(FigureErrorBase):
             Standard deviation along X and Y axes in [mm].
 
 
-    """
-    def __init__(self, bumpHeight=100., cX=0., cY=0.,
-                 sigmaX=1., sigmaY=1., **kwargs):
+        """
         self._bumpHeight = bumpHeight
         self._sigmaX = sigmaX
         self._sigmaY = sigmaY
@@ -551,17 +557,19 @@ class GaussianBump(FigureErrorBase):
 
 
 class Waviness(FigureErrorBase):
-    """Surface waviness following 2d cosine law.
+    """Surface waviness following 2d cosine law."""
 
+    def __init__(self, amplitude=10., xWaveLength=20., yWaveLength=50.,
+                 **kwargs):
+        """
         *amplitude*: float
             Cosine amplitude in [nm]
 
         *xWaveLength*, *yWaveLength*: float
             Wave period along the X and Y axes in [mm].
 
-    """
-    def __init__(self, amplitude=10., xWaveLength=20., yWaveLength=50.,
-                 **kwargs):
+
+        """
         self._amplitude = amplitude
         self._xWaveLength = xWaveLength
         self._yWaveLength = yWaveLength
