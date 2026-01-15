@@ -2028,7 +2028,8 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.coordOffset = np.array(
             [off1.x(), off1.y(), off1.z()])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-        self.customGlWidget.cBox.update_grid()
+        if hasattr(self.customGlWidget, 'cBox'):
+            self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 
     def toLocal(self, oeuuid):
