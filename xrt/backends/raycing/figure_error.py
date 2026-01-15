@@ -426,7 +426,7 @@ class RandomRoughness(FigureErrorBase):
     and optional spatial correlation length.
     """
 
-    def __init__(self, rms=1., corrLength=None, seed=None, **kwargs):
+    def __init__(self, rms=1., corrLength=5., seed=None, **kwargs):
         """
         *rms*: float
             Root Mean Square amplitude roughness in [nm]
@@ -510,8 +510,8 @@ class RandomRoughness(FigureErrorBase):
 class GaussianBump(FigureErrorBase):
     """Localized surface deformation defined by a Gaussian profile."""
 
-    def __init__(self, bumpHeight=100., cX=0., cY=0.,
-                 sigmaX=1., sigmaY=1., **kwargs):
+    def __init__(self, bumpHeight=10., cX=0., cY=0.,
+                 sigmaX=10., sigmaY=10., **kwargs):
         """
         *bumpHeight*: float
             Peak height of the Gaussian bump in [nm]
