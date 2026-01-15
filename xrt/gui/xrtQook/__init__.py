@@ -991,7 +991,7 @@ class XrtQook(qt.QMainWindow):
         surfProps = raycing.get_init_kwargs(surfobj, compact=False,
                                             blname=blName)
         surfProps.update({'uuid': surfuuid})
-#        print(surfProps)
+
         for argName, argValue in surfProps.items():
             if any(argName.lower().startswith(v) for v in
                     ['basefe']) and\
@@ -3793,30 +3793,51 @@ class XrtQook(qt.QMainWindow):
 
     def updateBeamlineModel(self, data):
         oeid, kwargs = data
-        self.beamLineModel.blockSignals(True)
-        for argName, argValue in kwargs.items():
-            if any(argName.lower().startswith(v) for v in
-                   ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
-                raycing.is_valid_uuid(argValue):
-                    matObj = self.beamLine.materialsDict.get(argValue)
-                    argValue = matObj.name
+        
+        if oeid in self.beamLine.oesDict:
+            model = self.beamLineModel
+            tree = self.tree
+            rootItem = self.rootBLItem
+        elif oeid in self.beamLine.materialsDict:
+            model = self.materialsModel
+            tree = self.matTree
+            rootItem = self.rootMatItem
+        elif oeid in self.beamLine.fesDict:
+            model = self.fesModel
+            tree = self.feTree
+            rootItem = self.rootFEItem
+        else:
+            return
 
-            for i in range(self.rootBLItem.rowCount()):
-                elItem = self.rootBLItem.child(i, 0)
-                elUUID = str(elItem.data(qt.Qt.UserRole))
-                if elUUID == oeid:
-                    for j in range(elItem.rowCount()):
-                        pItem = elItem.child(0, j)
-                        if str(pItem.text()) in 'properties':
-                            for k in range(pItem.rowCount()):
-                                pNItem = pItem.child(k, 0)
+        model.blockSignals(True)        
+        for i in range(rootItem.rowCount()):
+            elItem = rootItem.child(i, 0)
+            elUUID = str(elItem.data(qt.Qt.UserRole))
+            if elUUID == oeid:
+                for j in range(elItem.rowCount()):
+                    pItem = elItem.child(0, j)
+                    if str(pItem.text()) in 'properties':
+                        for k in range(pItem.rowCount()):
+                            pNItem = pItem.child(k, 0)
+                            for argName, argValue in kwargs.items():
                                 if str(pNItem.text()) == argName:
+                                    if any(argName.lower().startswith(v) for v in
+                                           ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
+                                        raycing.is_valid_uuid(argValue):
+                                            matObj = self.beamLine.materialsDict.get(argValue)
+                                            argValue = matObj.name
+                                    elif any(argName.lower().startswith(v) for v in
+                                           ['figureerr', 'basefe']):
+                                        if raycing.is_valid_uuid(argValue):
+                                            feObj = self.beamline.fenamesToUUIDs.get(argValue)
+                                            argValue = feObj.name
+
                                     pVItem = pItem.child(k, 1)
                                     pVItem.setText(str(argValue))
-                            break
-                    break
-        self.beamLineModel.blockSignals(False)
-        self.tree.update()
+                        break
+                break
+        model.blockSignals(False)
+        tree.update()
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
         # TODO: move deletion here

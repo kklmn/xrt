@@ -2626,12 +2626,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     kwargs[arg0] = argValue
 
             # updating local beamline tree here
-            print("glow update_beamline", updObj, arg0, argValue)
             setattr(updObj, arg0, argValue)
+            if sender == 'OEE':
+                self.updateQookTree.emit((oeid, {arg0: argValue}))
             if obj_type == "oe":
-                if sender == 'OEE':
-                    self.updateQookTree.emit((oeid, {arg0: argValue}))
-
                 if arg0.lower().startswith('center'):
                     flow = copy.deepcopy(self.beamline.flowU)
                     self.beamline.sort_flow()
@@ -7513,7 +7511,6 @@ class OEExplorer(qt.QDialog):
             layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
         else:  # create dynamicPlotWidget
-            self.widgetType = 'plot'
             plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
             axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
             plotProps = plotDefArgs
@@ -7639,7 +7636,6 @@ class OEExplorer(qt.QDialog):
         self.model.appendRow([key_item, val_item])
 
     def on_item_changed(self, item):
-#        print("OEE", item.text())
         if item.column() != 1:
             return
 
@@ -7669,13 +7665,14 @@ class OEExplorer(qt.QDialog):
     def set_row_highlight(self, item, highlight=True):
         row = item.row()
         parent = item.parent() or item.model().invisibleRootItem()
+        item.model().blockSignals(True)
         for col in range(self.model.columnCount()):
             itemH = parent.child(row, col)
             if highlight:
                 itemH.setBackground(self.highlight_color)
             else:
                 itemH.setBackground(qt.QBrush(qt.Qt.NoBrush))
-#                item.setBackground(qt.QtGui.QColor())  # reset to default
+        item.model().blockSignals(False)
 
     def show_context_menu(self, position):
         index = self.table.indexAt(position)
@@ -7712,7 +7709,7 @@ class OEExplorer(qt.QDialog):
                         new_value = self.changed_data[key]
                         self.original_data[key] = new_value
                         catItem.child(j, 1).setText(str(new_value))
-                        self.set_row_highlight(catItem.child(j, 1), False)
+                        self.set_row_highlight(catItem.child(j, 0), False)
         elif self.widgetType in ['mat', 'fe']:
             rootItem = self.modelRoot
             for j in range(rootItem.rowCount()):
@@ -7721,7 +7718,7 @@ class OEExplorer(qt.QDialog):
                     new_value = self.changed_data[key]
                     self.original_data[key] = str(new_value)
                     rootItem.child(j, 1).setText(str(new_value))
-                    self.set_row_highlight(rootItem.child(j, 1), False)
+                    self.set_row_highlight(rootItem.child(j, 0), False)
         self.changed_data.clear()
 
     def update_param(self, pTuple):
@@ -8752,7 +8749,7 @@ class SurfacePlotWidget(qt.QWidget):
 
         xm, ym = np.meshgrid(x, y)
 
-        z = surfObj.local_z(xm.flatten(), ym.flatten())
+        z = surfObj.local_z_distorted(xm.flatten(), ym.flatten())
 
         if not newPlot:
             self.cbar.remove()
