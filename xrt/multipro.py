@@ -314,9 +314,6 @@ class GenericProcessOrThread(object):
                        (limits[1] - limits[0])).reshape(-1, 1)
             cData01[cData01 < 0] = 0.
             cData01[cData01 > 1] = 1.
-            if plot.invertColorMap:
-                cData01 -= 0.5
-                cData01[cData01 < 0] += 1
 
             cDataHSV = np.dstack(
                 (cData01, np.ones_like(cData01) * plot.colorSaturation,

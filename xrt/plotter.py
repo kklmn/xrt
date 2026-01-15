@@ -912,7 +912,7 @@ class XYCPlot(object):
 
         self.negative = negative
         self.invertColorMap = invertColorMap
-        self.utilityInvertColorMap = False
+
         self.fluxFormatStr = fluxFormatStr
         self.saveName = saveName
         self.persistentName = persistentName
@@ -1558,7 +1558,7 @@ class XYCPlot(object):
 
         if self.negative:
             map2d = 1 - map2d
-        if self.utilityInvertColorMap:
+        if self.invertColorMap:
             map2d = mpl.colors.rgb_to_hsv(map2d)
             map2d[:, :, 0] -= 0.5
             map2d[map2d < 0] += 1
@@ -1692,7 +1692,7 @@ class XYCPlot(object):
             xyRGB = tRGB
         if self.negative:
             xyRGB = 1 - xyRGB
-        if self.utilityInvertColorMap:
+        if self.invertColorMap:
             xyRGB = mpl.colors.rgb_to_hsv(xyRGB)
             xyRGB[:, :, 0] -= 0.5
             xyRGB[xyRGB < 0] += 1
@@ -2051,12 +2051,7 @@ class XYCPlot(object):
         """
         Utility function. Inverts the color map.
         """
-        self.invertColorMap = not self.invertColorMap  # this variable is used
-        # at the time of handling the ray-tracing arrays, as it is cheaper
-        # there but needs an additional inversion at the time of plotting if
-        # requested by user.
-        self.utilityInvertColorMap = not self.utilityInvertColorMap  # this
-        # variable is used at the time of plotting
+        self.invertColorMap = not self.invertColorMap
         self.plot_plots()
 
     def card_copy(self):
