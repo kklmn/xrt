@@ -652,8 +652,9 @@ class OE(object):
         return np.zeros_like(y)  # just flat
 
     def local_z_distorted(self, x, y):
-        if self.figureError is not None and hasattr(self.figureError, 'local_z'):
-            return self.figureError.local_z(x, y)
+        if self.figureError is not None and hasattr(
+                self.figureError, 'local_z_distorted'):
+            return self.figureError.local_z_distorted(x, y)
         else:
             return
 
@@ -734,8 +735,12 @@ class OE(object):
            calculating the reflected beam direction. A tuple of 3 arrays must
            be returned.
         """
-        if self.figureError is not None and hasattr(self.figureError, 'local_n'):
-            return self.figureError.local_n(x, y)
+        if self.figureError is not None and hasattr(
+                self.figureError, 'local_n_distorted'):
+            if self.isParametric:
+                r = self.local_r(x, y)
+                x, y, _ = self.param_to_xyz(x, y, r)
+            return self.figureError.local_n_distorted(x, y)
         else:
             return
 
@@ -756,7 +761,15 @@ class OE(object):
         return self._h / np.cos(phi)
 
     def local_r_distorted(self, s, phi):
-        return
+        if self.figureError is not None and hasattr(
+                self.figureError, 'local_z_distorted'):
+            r = self.local_r(s, phi)
+            x, y, z = self.param_to_xyz(s, phi, r)
+            z += self.figureError.local_z_distorted(x, y)
+            _, _, r1 = self.xyz_to_param(x, y, z)
+            return r1 - r  # TODO: Check if this is correct
+        else:
+            return
 
     def find_dz(
             self, local_f, t, x0, y0, z0, a, b, c, invertNormal, derivOrder=0):

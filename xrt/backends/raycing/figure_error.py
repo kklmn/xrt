@@ -28,31 +28,41 @@ maxFeHalfSize = 100  # Intentionally smaller size than OE to speed up spline
 
 class FigureErrorBase():
     """
-    Base class for distorted surfaces. Provides the functionality for
-    height maps generation and diagnostics. Height map calculation function
-    must be implemented in a subclass.
+    Base class for distorted optical surfaces.
 
+    This class provides common functionality for generating height maps
+    and related diagnostics. Subclasses must implement the
+    :meth:`generate_profile` method, which defines how the surface
+    distortion is computed.
+
+    Instances can optionally be combined with another figure error
+    object via *baseFE* to construct more complex surface maps.
     """
     def __init__(self, name='', baseFE=None,
                  limPhysX=None, limPhysY=None, gridStep=0.5,
                  **kwargs):
         """
         *name*: str
-            Attribute to store instance name
+            Human-readable name of the instance.
 
-        *baseFE*: None or instance of `FigureError` subclass
-            Can be used to create complex maps (see examples).
+        *baseFE*: `FigureErrorBase` subclass or None
+            Base figure error object used to build composite surface
+            maps. If provided, the generated profile of this instance
+            is added to the base figure error.
 
         *gridStep*: float.
-            Grid step in [mm]. Used indirectly to control the grid size. Real
-            number of nodes will be picked as the next power of 2 in order to
-            accelerate Fourier Transforms widely used for map generation. TBD
+            Grid spacing in [mm]. This value indirectly controls
+            the number of grid points used for the height map. The
+            actual number of nodes is rounded up to the next power of
+            two in order to optimize Fourier-transform-based
+            operations commonly used in map generation.
 
-        *limPhysX* and *limPhysY*: [*min*, *max*] where *min*, *max* are
-            floats floats. All in [mm].
-            Physical dimension = local coordinate of the corresponding edge.
-            Same as in `OE`. Ideally should be the same as in the base optical
-            element, or at least not smaller than the expected beam footprint.
+        *limPhysX* and *limPhysY*: sequence of floats.
+            Physical limits `[min, max]` of the surface in the local
+            coordinate system, in [mm]. These define the
+            physical extent of the height map. Ideally, they should
+            match the corresponding optical element dimensions, or at
+            least fully cover the expected beam footprint.
 
 
         """
@@ -139,7 +149,7 @@ class FigureErrorBase():
         xm, ym = self.get_grids()
 #        xf = xm.flatten()
 #        yf = ym.flatten()
-        return self.local_z(xm, ym)
+        return self.local_z_distorted(xm, ym)
 
     def get_dimensions(self):
         xlength = np.abs(self.limPhysX[-1] - self.limPhysX[0])
@@ -196,7 +206,7 @@ class FigureErrorBase():
         self.local_z_spline = interpolate.RectBivariateSpline(
                 ygrid, xgrid, z)
 
-    def local_z(self, x, y):
+    def local_z_distorted(self, x, y):
         spl = 'RBS'  # 'SBS'
         shape = None
 
@@ -219,7 +229,7 @@ class FigureErrorBase():
 
         return z * 1e-6  # convert from nm to mm
 
-    def local_n(self, x, y):
+    def local_n_distorted(self, x, y):
         spl = 'RBS'  # 'SBS'
         shape = None
 
@@ -251,17 +261,30 @@ class FigureErrorBase():
 
 
 class FigureErrorImported(FigureErrorBase):
-    """Figure error from file."""
+    """
+    Figure error defined by an external data file.
+
+    This class loads a surface distortion (height map) from a file and
+    exposes it through the standard :class:`FigureErrorBase` interface.
+    The input file is expected to contain three columns representing a grid of
+    surface coordinates in [mm] and height values in [nm], with the order
+    specified by *orientation*.
+    """
 
     def __init__(self, fileName=None, recenter=False, orientation="XYZ",
                  **kwargs):
         """
         *fileName*: str, path.
-            path to surface distortion map file.
+            Path to the file containing the surface distortion map.
+
         *recenter*: bool
-            moves center to (0, 0)
+            If True, shifts the coordinate system so that the geometric
+            center of the imported map is located at (0, 0).
+
         *orientation*: str
-            redefines the order of columns in the input file. default "XYZ".
+            Defines the order of columns in the input file. The default
+            value "XYZ" means that the file columns are interpreted
+            as ``x, y, z`` in xrt coordinate system.
 
 
         """
@@ -385,8 +408,9 @@ class FigureErrorImported(FigureErrorBase):
         """This function must be overriden in subclass."""
         xg, yg = self.get_grids()
         base_z = np.zeros_like(xg)
-        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
-            base_z = self.baseFE.local_z(xg, yg) * 1e6  # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE,
+                                               'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(xg, yg) * 1e6  # local_z returns z in mm
 
         if self.surfArrays and self.zGrid is not None:
             z = self.zGrid
@@ -395,19 +419,27 @@ class FigureErrorImported(FigureErrorBase):
         return z + base_z
 
 class RandomRoughness(FigureErrorBase):
-    """Random roughness map."""
+    """
+    Random surface roughness model.
+
+    Generates a stochastic height-error map with a given RMS amplitude
+    and optional spatial correlation length.
+    """
 
     def __init__(self, rms=1., corrLength=None, seed=None, **kwargs):
         """
         *rms*: float
-            Root Mean Square roughness in [nm]
+            Root Mean Square amplitude roughness in [nm]
 
-        *corrLength*: float
-            Correlation length in [mm].
+        *corrLength*: float or None
+            Spatial correlation length of the roughness in [mm].
+            If None, the roughness is generated without spatial
+            correlation (white noise).
 
-        *seed*: None or int.
+        *seed*: int or None
             Seed number for numpy random number generator. Any number
-            0 < seed < 2^128-1
+            from zero to 2^128-1. If provided, ensures reproducible roughness
+            maps.
 
 
         """
@@ -452,8 +484,9 @@ class RandomRoughness(FigureErrorBase):
         xg, yg = self.get_grids()
 
         base_z = np.zeros_like(xg)
-        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
-            base_z = self.baseFE.local_z(xg, yg) * 1e6  # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE,
+                                               'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(xg, yg) * 1e6  # local_z returns z in mm
 
         z = rng.normal(loc=0.0, scale=1.0, size=(self.ny, self.nx))
         if self.corrLength is not None:
@@ -475,19 +508,20 @@ class RandomRoughness(FigureErrorBase):
 
 
 class GaussianBump(FigureErrorBase):
-    """Height profile defined by the Gaussian function."""
+    """Localized surface deformation defined by a Gaussian profile."""
 
     def __init__(self, bumpHeight=100., cX=0., cY=0.,
                  sigmaX=1., sigmaY=1., **kwargs):
         """
         *bumpHeight*: float
-            Hight at the peak in [nm]
+            Peak height of the Gaussian bump in [nm]
 
         *cX*, *cY*: float
-            Position of the peak in local coordinates in [mm].
+            Position of the bump in local surface coordinates in [mm].
 
         *sigmaX*, *sigmaY*: float
-            Standard deviation along X and Y axes in [mm].
+            Standard deviation of the Gaussian profile along the X and Y
+            axes in [mm]. These values control the spatial extent of the bump.
 
 
         """
@@ -547,8 +581,9 @@ class GaussianBump(FigureErrorBase):
         x, y = self.get_grids()
         base_z = np.zeros_like(x)
 
-        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
-            base_z = self.baseFE.local_z(x, y) * 1e6  # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE,
+                                               'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(x, y) * 1e6  # local_z returns z in mm
 
         z = self.bumpHeight *\
             np.exp(-(x-self.cX)**2/self.sigmaX**2 -
@@ -557,16 +592,22 @@ class GaussianBump(FigureErrorBase):
 
 
 class Waviness(FigureErrorBase):
-    """Surface waviness following 2d cosine law."""
+    """
+    Periodic surface waviness model.
+
+    Generates a smooth, deterministic height-error map based on a
+    two-dimensional cosine function.
+    """
 
     def __init__(self, amplitude=10., xWaveLength=20., yWaveLength=50.,
                  **kwargs):
         """
         *amplitude*: float
-            Cosine amplitude in [nm]
+            Amplitude of the cosine modulation in [nm]
 
         *xWaveLength*, *yWaveLength*: float
-            Wave period along the X and Y axes in [mm].
+            Spatial period of the waviness along the X and Y axes,
+            respectively, in [mm].
 
 
         """
@@ -606,8 +647,9 @@ class Waviness(FigureErrorBase):
         x, y = self.get_grids()
         base_z = np.zeros_like(x)
 
-        if self.baseFE is not None and hasattr(self.baseFE, 'local_z'):
-            base_z = self.baseFE.local_z(x, y) * 1e6   # local_z returns z in mm
+        if self.baseFE is not None and hasattr(self.baseFE,
+                                               'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(x, y) * 1e6   # local_z returns z in mm
 
         z = self.amplitude * np.cos(2*np.pi*x/self.xWaveLength) *\
             np.cos(2*np.pi*y/self.yWaveLength)
