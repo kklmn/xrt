@@ -289,12 +289,14 @@ class EpicsDevice:
                                     pv_records[pvname]
                     else:
                         pvname = f'{oename}:{argName}'
-                        pv_records[pvname] = builder.aOut(
-                            pvname,
-                            initial_value=getattr(oeObj, argName),
-                            always_update=True,
-                            on_update=partial(callback, oeid, argName))
-                        self.pv_map[oeid][argName] = pv_records[pvname]
+                        initial_value = getattr(oeObj, argName)
+                        if isinstance(initial_value, (int, float)):  # TODO: process sequence args
+                            pv_records[pvname] = builder.aOut(
+                                pvname,
+                                initial_value=initial_value,
+                                always_update=True,
+                                on_update=partial(callback, oeid, argName))
+                            self.pv_map[oeid][argName] = pv_records[pvname]
 
         [print(f'{self.epicsPrefix}:{recName}') for recName in pv_records]
         builder.LoadDatabase()

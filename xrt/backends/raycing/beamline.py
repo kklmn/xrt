@@ -659,7 +659,7 @@ class BeamLine(object):
                     objId = getattr(objInstance, 'uuid', None)
                     if is_valid_uuid(objId) and objId not in materialsDict:
                         materialsDict[objId] = objInstance
-                elif isinstance(objInstance, (rfe.FigureError)):
+                elif isinstance(objInstance, (rfe.FigureErrorBase)):
                     objId = getattr(objInstance, 'uuid', None)
                     if is_valid_uuid(objId) and objId not in feDict:
                         feDict[objId] = objInstance
