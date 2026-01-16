@@ -9,7 +9,7 @@ Basic containers for surface roughness generators.
 
 from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "29 Nov 2025"
+__date__ = "16 Jan 2026"
 __all__ = ('RandomRoughness', 'GaussianBump', 'Waviness',
            'FigureErrorImported')
 
@@ -38,9 +38,8 @@ class FigureErrorBase():
     Instances can optionally be combined with another figure error
     object via *baseFE* to construct more complex surface maps.
     """
-    def __init__(self, name='', baseFE=None,
-                 limPhysX=None, limPhysY=None, gridStep=0.5,
-                 **kwargs):
+    def __init__(self, name='', baseFE=None,limPhysX=None, limPhysY=None,
+                 gridStep=0.5, **kwargs):
         """
         *name*: str
             Human-readable name of the instance.
@@ -74,13 +73,11 @@ class FigureErrorBase():
         self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
         if limPhysX is None:
-            self._limPhysX = raycing.Limits([-maxFeHalfSize,
-                                             maxFeHalfSize])
+            self._limPhysX = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
             self._limPhysX = raycing.Limits(limPhysX)
         if limPhysY is None:
-            self._limPhysY = raycing.Limits([-maxFeHalfSize,
-                                             maxFeHalfSize])
+            self._limPhysY = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
         self.build_spline()
@@ -114,8 +111,7 @@ class FigureErrorBase():
     @limPhysX.setter
     def limPhysX(self, limPhysX):
         if limPhysX is None:
-            self._limPhysX = raycing.Limits([-maxFeHalfSize,
-                                             maxFeHalfSize])
+            self._limPhysX = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
             self._limPhysX = raycing.Limits(limPhysX)
         self.build_spline()
@@ -127,29 +123,20 @@ class FigureErrorBase():
     @limPhysY.setter
     def limPhysY(self, limPhysY):
         if limPhysY is None:
-            self._limPhysY = raycing.Limits([-maxFeHalfSize,
-                                             maxFeHalfSize])
+            self._limPhysY = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
         self.build_spline()
 
     def get_rms(self):
-        z = self.get_z_grid()
+        z = self.local_z_distorted(self.x2d, self.y2d) * 1e6
         zAvg = z - z.mean()
         rms = np.sqrt((zAvg**2).mean())
         return rms
 
     def get_rms_slope(self):
-        xm, ym = self.get_grids()
-        a, b, c = self.local_n(xm, ym)
-        rms_slope = np.sqrt((b**2).mean())
-        return rms_slope
-
-    def get_z_grid(self):
-        xm, ym = self.get_grids()
-#        xf = xm.flatten()
-#        yf = ym.flatten()
-        return self.local_z_distorted(xm, ym)
+        d_pitch, d_roll = self.local_n(self.x2d, self.y2d)
+        return np.sqrt((d_pitch**2).mean()), np.sqrt((d_roll**2).mean())
 
     def get_dimensions(self):
         xlength = np.abs(self.limPhysX[-1] - self.limPhysX[0])
@@ -160,21 +147,20 @@ class FigureErrorBase():
         self.ny = max(self.next_pow2(nyi), 128)
         self.dx = xlength / self.nx
         self.dy = ylength / self.ny
-        return
 
     def get_grids(self):
         self.get_dimensions()
-        xgrid = np.linspace(np.min(self.limPhysX),
-                            np.max(self.limPhysX),
-                            self.nx)
-        ygrid = np.linspace(np.min(self.limPhysY),
-                            np.max(self.limPhysY),
-                            self.ny)
-        xm, ym = np.meshgrid(xgrid, ygrid)
-        return xm, ym
+        self.x1d = np.linspace(min(self.limPhysX), max(self.limPhysX), self.nx)
+        self.y1d = np.linspace(min(self.limPhysY), max(self.limPhysY), self.ny)
+        self.x2d, self.y2d = np.meshgrid(self.x1d, self.y1d)
+
+    def get_angles(self):
+        self.a2d, self.b2d = np.gradient(self.z2d*1e-6, self.y1d, self.x1d)
+        self.a2d = np.arctan(self.a2d)
+        self.b2d = np.arctan(self.b2d)
 
     def get_psd(self):  # TODO: untested
-        z = self.get_z_grid()
+        z = self.local_z_distorted(self.x2d, self.y2d) * 1e6
         nx, ny = z.shape
         zAvg = z - z.mean()
         H = np.fft.fft2(zAvg)
@@ -189,22 +175,15 @@ class FigureErrorBase():
 
     def generate_profile(self):
         """This function must be overriden in subclass."""
-        x, y = self.get_grids()
-        return np.zeros_like(x)
+        self.get_grids()
+        return np.zeros_like(self.x2d)
 
     def build_spline(self):
-#        x, y = self.get_grids()
         z = self.generate_profile()
-
-        xgrid = np.linspace(np.min(self.limPhysX),
-                            np.max(self.limPhysX),
-                            self.nx)
-        ygrid = np.linspace(np.min(self.limPhysY),
-                            np.max(self.limPhysY),
-                            self.ny)
-
         self.local_z_spline = interpolate.RectBivariateSpline(
-                ygrid, xgrid, z)
+            self.y1d, self.x1d, z)
+        self.z2d = self.local_z_distorted(self.x2d, self.y2d) * 1e6 #  in nm
+        self.get_angles()
 
     def local_z_distorted(self, x, y):
         spl = 'RBS'  # 'SBS'
@@ -243,8 +222,8 @@ class FigureErrorBase():
             y = y.flatten()
         # z spline is built in nm; x, y in mm
         if spl == 'RBS':
-            a = -self.local_z_spline.ev(y, x, dx=0, dy=1) * 1e-6
-            b = -self.local_z_spline.ev(y, x, dx=1, dy=0) * 1e-6
+            a = self.local_z_spline.ev(y, x, dx=0, dy=1) * 1e-6
+            b = self.local_z_spline.ev(y, x, dx=1, dy=0) * 1e-6
 #        else:
 #            a = self.local_z_spline.ev(x, y, dx=1, dy=0) * 1e-6
 #            b = self.local_z_spline.ev(x, y, dx=0, dy=1) * 1e-6
@@ -253,8 +232,7 @@ class FigureErrorBase():
             a = a.reshape(shape)
             b = b.reshape(shape)
 
-#        return [np.zeros_like(a), 1e-3*np.ones_like(b)]
-        return [np.arctan(b), np.arctan(a)]  # [d_pitch, d_roll]
+        return [np.arctan(b), -np.arctan(a)]  # [d_pitch, d_roll]
 
     def next_pow2(self, n):
         return 1 << int(np.ceil(np.log2(n)))
@@ -272,7 +250,7 @@ class FigureErrorImported(FigureErrorBase):
     """
 
     def __init__(self, fileName=None, recenter=False, orientation="XYZ",
-                 **kwargs):
+                 columnFactors=[1, 1, 1], **kwargs):
         """
         *fileName*: str, path.
             Path to the file containing the surface distortion map.
@@ -286,14 +264,19 @@ class FigureErrorImported(FigureErrorBase):
             value "XYZ" means that the file columns are interpreted
             as ``x, y, z`` in xrt coordinate system.
 
+        *columnFactors*: 3-list
+            Optional multiplicative factors that bring the x and y column to mm
+            and the z column to nm.
 
         """
         self.surfArrays = {}
-        self.zGrid = None
-        super().__init__(**kwargs)
+        kwargs['name'] = kwargs.get('name', 'NOM surface')
         self._recenter = recenter
         self._orientation = orientation
+        self._baseFE = None
+        self.columnFactors = columnFactors
         self.fileName = fileName
+        super().__init__(**kwargs)
 
     @property
     def orientation(self):
@@ -339,83 +322,80 @@ class FigureErrorImported(FigureErrorBase):
             return
 
         try:
-            xL, yL, zL = np.loadtxt(path, unpack=True)
+            x, y, z = np.loadtxt(path, unpack=True)
+            x, y, z = [c*f for c, f in zip((x, y, z), self.columnFactors)]
         except Exception as e:  # TODO: better exceptions
             print(e)
             return
 
-        self.surfArrays = {'x': xL, 'y': yL, 'z': zL}
+        self.surfArrays = {'x': x, 'y': y, 'z': z}
 
     def align_arrays(self):
         orientlc = str(self.orientation).lower()
         axes = {'x': orientlc[0], 'y': orientlc[1], 'z': orientlc[-1]}
-        xL = self.surfArrays.get(axes['x'])
-        yL = self.surfArrays.get(axes['y'])
-        zL = self.surfArrays.get(axes['z'])
+        x = self.surfArrays.get(axes['x'])
+        y = self.surfArrays.get(axes['y'])
+        z = self.surfArrays.get(axes['z'])
 
-        dx = dy = 0
-        xmin, xmax = np.min(xL), np.max(xL)
-        ymin, ymax = np.min(yL), np.max(yL)
+        xmin, xmax = np.min(x), np.max(x)
+        ymin, ymax = np.min(y), np.max(y)
         if self.recenter:
-            dx = -0.5*(xmin+xmax)
-            dy = -0.5*(ymin+ymax)
+            x -= 0.5*(xmin+xmax)
+            y -= 0.5*(ymin+ymax)
+            xmin, xmax = np.min(x), np.max(x)
+            ymin, ymax = np.min(y), np.max(y)
 
-        self._limPhysX = [xmin+dx, xmax+dx]
-        self._limPhysY = [ymin+dy, ymax+dy]
+        self._limPhysX = [xmin, xmax]
+        self._limPhysY = [ymin, ymax]
 
         tol = None  # rounding for real-world positions. try 1e-3 for noisy xs
         if tol is not None:
-            x_rounded = np.round(xL/tol)*tol
-            y_rounded = np.round(yL/tol)*tol
-            ux = np.unique(x_rounded)
-            uy = np.unique(y_rounded)
+            x_rounded = np.round(x/tol)*tol
+            y_rounded = np.round(y/tol)*tol
+            x1d = np.unique(x_rounded)
+            y1d = np.unique(y_rounded)
         else:
-            ux = np.unique(xL)
-            uy = np.unique(yL)
+            x1d = np.unique(x)
+            y1d = np.unique(y)
 
-        nx, ny = len(ux), len(uy)
+        nx, ny = len(x1d), len(y1d)
 
-        if nx*ny != len(xL):
+        if nx*ny != len(x):
             print("Input data does not form a grid")
             return
 
         self.nx = nx
         self.ny = ny
 
-        row_maj = np.all(np.diff(xL[:nx]) > 0) and np.all(yL[:nx] == yL[0])
-
+        row_maj = np.all(np.diff(x[:nx]) > 0) and np.all(y[:nx] == y[0])
         if row_maj:
-            zm = zL.reshape((ny, nx))
+            z2d = z.reshape((ny, nx))
         else:
-            zm = zL.reshape((nx, ny)).T
+            z2d = z.reshape((nx, ny)).T
 
-        self.zGrid = zm
+        self.x1d = x1d
+        self.y1d = y1d
+        self.x2d, self.y2d = np.meshgrid(self.x1d, self.y1d)
+        self.z2d = z2d
+        self.get_angles()
+
+    def get_grids(self):
+        pass
 
     def get_dimensions(self):
-        xlength = np.abs(self.limPhysX[-1] - self.limPhysX[0])
-        ylength = np.abs(self.limPhysY[-1] - self.limPhysY[0])
-        nxi = xlength / self.gridStep
-        nyi = ylength / self.gridStep
-        if not hasattr(self, 'nx'):
-            self.nx = max(self.next_pow2(nxi), 128)
-        if not hasattr(self, 'ny'):
-            self.ny = max(self.next_pow2(nyi), 128)
-        self.dx = xlength / self.nx
-        self.dy = ylength / self.ny
-        return
+        pass
 
     def generate_profile(self):
         """This function must be overriden in subclass."""
-        xg, yg = self.get_grids()
-        base_z = np.zeros_like(xg)
-        if self.baseFE is not None and hasattr(self.baseFE,
-                                               'local_z_distorted'):
-            base_z = self.baseFE.local_z_distorted(xg, yg) * 1e6  # local_z returns z in mm
+        base_z = np.zeros_like(self.x2d)
+        if self.baseFE is not None and \
+                hasattr(self.baseFE, 'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(self.x2d, self.y2d) * 1e6
 
-        if self.surfArrays and self.zGrid is not None:
-            z = self.zGrid
+        if self.surfArrays and self.z2d is not None:
+            z = self.z2d
         else:  # fallback to flat
-            z = np.zeros_like(xg)
+            z = np.zeros_like(self.x2d)
         return z + base_z
 
 
@@ -449,6 +429,7 @@ class RandomRoughness(FigureErrorBase):
         if seed is None:
             seed = np.random.SeedSequence().entropy
         self._seed = seed
+        kwargs['name'] = kwargs.get('name', 'random roughness')
         super().__init__(**kwargs)
 
     @property
@@ -482,12 +463,12 @@ class RandomRoughness(FigureErrorBase):
 
     def generate_profile(self):
         rng = np.random.default_rng(self.seed)
-        xg, yg = self.get_grids()
+        self.get_grids()
 
-        base_z = np.zeros_like(xg)
-        if self.baseFE is not None and hasattr(self.baseFE,
-                                               'local_z_distorted'):
-            base_z = self.baseFE.local_z_distorted(xg, yg) * 1e6  # local_z returns z in mm
+        base_z = np.zeros_like(self.x2d)
+        if self.baseFE is not None and \
+                hasattr(self.baseFE, 'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(self.x2d, self.y2d) * 1e6
 
         z = rng.normal(loc=0.0, scale=1.0, size=(self.ny, self.nx))
         if self.corrLength is not None:
@@ -504,7 +485,6 @@ class RandomRoughness(FigureErrorBase):
         current_rms = np.sqrt((z**2).mean())
         if current_rms > 0:
             z *= (self.rms / current_rms)
-
         return z + base_z
 
 
@@ -531,6 +511,7 @@ class GaussianBump(FigureErrorBase):
         self._sigmaY = sigmaY
         self._cX = cX
         self._cY = cY
+        kwargs['name'] = kwargs.get('name', 'gaussian bump')
         super().__init__(**kwargs)
 
     @property
@@ -579,16 +560,16 @@ class GaussianBump(FigureErrorBase):
         self.build_spline()
 
     def generate_profile(self):
-        x, y = self.get_grids()
-        base_z = np.zeros_like(x)
+        self.get_grids()
+        base_z = np.zeros_like(self.x2d)
 
-        if self.baseFE is not None and hasattr(self.baseFE,
-                                               'local_z_distorted'):
-            base_z = self.baseFE.local_z_distorted(x, y) * 1e6  # local_z returns z in mm
+        if self.baseFE is not None and \
+                hasattr(self.baseFE, 'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(self.x2d, self.y2d) * 1e6
 
         z = self.bumpHeight *\
-            np.exp(-(x-self.cX)**2/self.sigmaX**2 -
-                   (y-self.cY)**2/self.sigmaY**2)
+            np.exp(-(self.x2d-self.cX)**2/self.sigmaX**2
+                   -(self.y2d-self.cY)**2/self.sigmaY**2)
         return z + base_z
 
 
@@ -615,6 +596,7 @@ class Waviness(FigureErrorBase):
         self._amplitude = amplitude
         self._xWaveLength = xWaveLength
         self._yWaveLength = yWaveLength
+        kwargs['name'] = kwargs.get('name', 'waviness')
         super().__init__(**kwargs)
 
     @property
@@ -645,13 +627,13 @@ class Waviness(FigureErrorBase):
         self.build_spline()
 
     def generate_profile(self):
-        x, y = self.get_grids()
-        base_z = np.zeros_like(x)
+        self.get_grids()
+        base_z = np.zeros_like(self.x2d)
 
-        if self.baseFE is not None and hasattr(self.baseFE,
-                                               'local_z_distorted'):
-            base_z = self.baseFE.local_z_distorted(x, y) * 1e6   # local_z returns z in mm
+        if self.baseFE is not None and \
+                hasattr(self.baseFE, 'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(self.x2d, self.y2d) * 1e6
 
-        z = self.amplitude * np.cos(2*np.pi*x/self.xWaveLength) *\
-            np.cos(2*np.pi*y/self.yWaveLength)
+        z = self.amplitude * np.cos(2*np.pi*self.x2d/self.xWaveLength) *\
+            np.cos(2*np.pi*self.y2d/self.yWaveLength)
         return z + base_z
