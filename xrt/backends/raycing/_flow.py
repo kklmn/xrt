@@ -180,6 +180,8 @@ class MessageHandler:
 
                             if hasattr(arrayValue, 'tolist'):
                                 arrayValue = arrayValue.tolist()
+                            elif isinstance(arrayValue, tuple):
+                                arrayValue = list(arrayValue)
 
                             for fList in compoundArgs.values():
                                 if field in fList:
@@ -252,6 +254,8 @@ class MessageHandler:
 
                         if hasattr(arrayValue, 'tolist'):
                             arrayValue = arrayValue.tolist()
+                        elif isinstance(arrayValue, tuple):
+                            arrayValue = list(arrayValue)
 
                         for fList in compoundArgs.values():
                             if field in fList:

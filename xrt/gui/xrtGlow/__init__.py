@@ -2606,6 +2606,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     # avoid writing string to numpy array
                     if hasattr(arrayValue, 'tolist'):
                         arrayValue = arrayValue.tolist()
+                    elif isinstance(arrayValue, tuple):
+                        arrayValue = list(arrayValue)
 
                     for fList in raycing.compoundArgs.values():
                         if field in fList:
@@ -7670,6 +7672,8 @@ class OEExplorer(qt.QDialog):
         item.model().blockSignals(True)
         for col in range(self.model.columnCount()):
             itemH = parent.child(row, col)
+            if itemH is None:
+                continue
             if highlight:
                 itemH.setBackground(self.highlight_color)
             else:

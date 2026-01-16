@@ -6,7 +6,7 @@ import re
 
 from .physconsts import SIE0, CH  # analysis:ignore
 from ._sets_units import orientationArgSet, shapeArgSet
-
+from ._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
 
 def to_valid_var_name(name, default='unnamed'):
     # Replace invalid characters with underscores
@@ -250,11 +250,15 @@ class EpicsDevice:
                             on_update=partial(callback, oeid, argName))
                         self.pv_map[oeid][argName] = pv_records[pvname]
                     elif argName in ['center']:
+                        cntrObj = getattr(oeObj, argName)
+                        if isinstance(cntrObj, (list, tuple)) and\
+                                len(cntrObj) == 3:
+                            cntrObj = Center(cntrObj)
                         for field in ['x', 'y', 'z']:
                             pvname = f'{oename}:{argName}:{field}'
                             pv_records[pvname] = builder.aOut(
                                 pvname,
-                                initial_value=getattr(oeObj.center, field),
+                                initial_value=getattr(cntrObj, field),
                                 always_update=True,
                                 on_update=partial(callback, oeid,
                                                   f'{argName}.{field}'))
@@ -265,7 +269,7 @@ class EpicsDevice:
                         for fIndex, field in enumerate(['lmin', 'lmax']):
                             pvname = f'{oename}:{argName}:{field}'
                             limObj = getattr(oeObj, argName)
-                            if limObj is not None:
+                            if isinstance(limObj, Limits):
                                 pv_records[pvname] = builder.aOut(
                                     pvname,
                                     initial_value=limObj[fIndex],
@@ -275,10 +279,13 @@ class EpicsDevice:
                                 self.pv_map[oeid][f'{argName}.{field}'] =\
                                     pv_records[pvname]
                     elif argName in ['opening']:
+                        limObj = getattr(oeObj, argName)
+                        if isinstance(limObj, (list, tuple)) and\
+                                len(limObj) == 4:
+                            limObj = Opening(limObj)
                         for field in oeObj.kind:
                             pvname = f'{oename}:{argName}:{field}'
-                            limObj = getattr(oeObj, argName)
-                            if limObj is not None:
+                            if isinstance(limObj, Opening):  # Requiring type
                                 pv_records[pvname] = builder.aOut(
                                     pvname,
                                     initial_value=getattr(limObj, field),
