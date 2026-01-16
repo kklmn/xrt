@@ -51,10 +51,10 @@ Increase the energy range...
 
 
 """
+import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 
 import numpy as np
-import sys
-sys.path.append(r"C:\GitHub\xrt")
+
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats
@@ -216,7 +216,7 @@ def build_beamline():
         x=[1.0, -0.0, 0.0],
         z=[0.0, 0.0, 1.0])
 
-    BioXAS_Main.SSRL_DCM = raycing.oes_base.DCM(
+    BioXAS_Main.SSRL_DCM = raycing.oes.DCM(
         bl=BioXAS_Main,
         name=r"SSRL_DCM",
         center=[0, 25300, r"auto"],
