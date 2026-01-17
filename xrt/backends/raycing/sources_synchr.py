@@ -1298,7 +1298,7 @@ class Undulator(IntegratedSource):
         B0y = kwargs.pop('B0y', 0)
         phaseDeg = kwargs.pop('phaseDeg', 0)
         taper = kwargs.pop('taper', None)
-        targetE = kwargs.pop('targetE', (9050, 9))
+        targetE = kwargs.pop('targetE', None)
         xPrimeMaxAutoReduce = kwargs.pop('xPrimeMaxAutoReduce', True)
         zPrimeMaxAutoReduce = kwargs.pop('zPrimeMaxAutoReduce', True)
         super(Undulator, self).__init__(*args, **kwargs)
@@ -1318,7 +1318,7 @@ class Undulator(IntegratedSource):
             if len(targetE) > 2:
                 isElliptical = targetE[2]
                 if isElliptical:
-                    Kx = Ky / 2**0.5
+                    Kx = Ky = Ky / 2**0.5
                     if raycing._VERBOSITY_ > 10:
                         print("Kx = Ky = {0}".format(Kx))
 
@@ -1417,19 +1417,22 @@ class Undulator(IntegratedSource):
         Ky = np.sqrt(targetE[1] * 8 * PI * self.gamma2 /
                      self.L0 / targetE[0] / E2WC - 2)
         Kx = 0
-        if raycing._VERBOSITY_ > 10:
-            print("K = {0}".format(Ky))
         if np.isnan(Ky):
             raise ValueError("Cannot calculate K, try to increase the "
                              "undulator harmonic number")
         if len(targetE) > 2:
             isElliptical = targetE[2]
             if isElliptical:
-                Kx = Ky / 2**0.5
+                Kx = Ky = Ky / 2**0.5
                 if raycing._VERBOSITY_ > 10:
                     print("Kx = Ky = {0}".format(Kx))
         self._Kx = Kx
         self._Ky = Ky
+        if raycing._VERBOSITY_ > 10:
+            if Kx == 0:
+                print("K = {0}".format(Ky))
+            else:
+                print("Kx = {0}, Ky = {1}".format(Kx, Ky))
         self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
@@ -1454,7 +1457,6 @@ class Undulator(IntegratedSource):
     @Ky.setter
     def Ky(self, Ky):
         self._Ky = float(Ky)
-        self._K = float(Ky)
         self._B0y = K2B * Ky / self.L0
         if hasattr(self, '_Kx'):
             self.report_E1()

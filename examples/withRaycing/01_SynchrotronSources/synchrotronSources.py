@@ -323,7 +323,7 @@ import xrt.runner as xrtr
 showIn3D = False
 
 # one of 'u', 'w', 'bm', 'eu', 'wu':
-sourceType = 'u'
+sourceType = 'eu'
 # one of 'mono', '1harmonic', 'smaller', 'wide'
 energyRange = '1harmonic'
 # energyRange = 'mono'
@@ -438,7 +438,7 @@ elif sourceType == 'wu':  # wiggler by undulator code
 else:
     raise ValueError('Unknown source type!')
 
-if False:  # force zero source size:
+if True:  # force zero source size:
     kwargs['eSigmaX'] = 0
     kwargs['eSigmaZ'] = 0
     kwargs['eEpsilonX'] = 0
@@ -746,4 +746,5 @@ def main():
 
 
 if __name__ == '__main__':
+    raycing._VERBOSITY_ = 100
     main()
