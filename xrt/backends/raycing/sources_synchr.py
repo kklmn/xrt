@@ -1281,6 +1281,8 @@ class Undulator(IntegratedSource):
         *targetE*: a tuple (Energy, harmonic{, isElliptical})
             Can be given for automatic calculation of the deflection parameter.
             If isElliptical is not given, it is assumed as False (as planar).
+            *isElliptical* here can also be an angle in radians between the
+            resulting K and Kx (=np.pi/4 for a circular case).
 
         *xPrimeMaxAutoReduce*, *zPrimeMaxAutoReduce*: bool
             Whether to reduce too large angular ranges down to the feasible
@@ -1316,11 +1318,17 @@ class Undulator(IntegratedSource):
                 raise ValueError("Cannot calculate K, try to increase the "
                                  "undulator harmonic number")
             if len(targetE) > 2:
-                isElliptical = targetE[2]
-                if isElliptical:
-                    Kx = Ky = Ky / 2**0.5
-                    if raycing._VERBOSITY_ > 10:
-                        print("Kx = Ky = {0}".format(Kx))
+                elliptical = targetE[2]
+                if elliptical:
+                    if isinstance(elliptical, float):
+                        Kx = Ky * np.cos(elliptical)
+                        Ky = Ky * np.sin(elliptical)
+                        if raycing._VERBOSITY_ > 10:
+                            print("Kx = {0}, Ky = {1}".format(Kx, Ky))
+                    else:
+                        Kx = Ky = Ky / 2**0.5
+                        if raycing._VERBOSITY_ > 10:
+                            print("Kx = Ky = {0}".format(Kx))
 
         phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
             isinstance(phaseDeg, raycing.basestring) else phaseDeg
