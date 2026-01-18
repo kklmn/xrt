@@ -336,7 +336,7 @@ isInternalSource = True  # xrt source or (Urgent or WS)
 limitsFSM0X = 'symmetric'
 limitsFSM0Z = 'symmetric'
 E0 = 6900  # eV
-R0 = 25000.  # Distance to the screen [mm]
+R0 = 20000.  # Distance to the screen [mm]
 bins = 256  # Number of bins in the plot histogram
 ppb = 1  # Number of pixels per histogram bin
 
@@ -415,6 +415,9 @@ elif sourceType == 'eu':
         kwargs['phaseDeg'] = 90
         kwargs['xPrimeMaxAutoReduce'] = False
         kwargs['zPrimeMaxAutoReduce'] = False
+        # kwargs['filamentBeam'] = True
+    else:
+        kwargs['icalc'] = 3
     xlimits = [-12, 12]
     zlimits = [-12, 12]
     xlimitsZoom = [-5, 5]
@@ -443,7 +446,8 @@ if True:  # force zero source size:
     kwargs['eSigmaZ'] = 0
     kwargs['eEpsilonX'] = 0
     kwargs['eEpsilonZ'] = 0
-    kwargs['eEspread'] = 0
+    if isInternalSource:
+        kwargs['eEspread'] = 0
 
     eEpsilonC = '0'
 else:
@@ -475,7 +479,7 @@ if Source == rs.UndulatorUrgent:
 def build_beamline(nrays=1e5):
     beamLine = raycing.BeamLine()
     beamLine.source = Source(
-        beamLine, eN=1000, nx=40, nz=20, nrays=nrays, **kwargs)
+        beamLine, eN=1000, nx=50, nz=50, nrays=nrays, **kwargs)
     beamLine.fsm0 = rsc.Screen(beamLine, 'FSM0', (0, 0, 0))
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, R0, 0))
     return beamLine
@@ -740,7 +744,8 @@ def main():
         beamLine.glow()
     else:
         plots, plotsE = define_plots(beamLine)
-        xrtr.run_ray_tracing(plots, repeats=1,
+        # beamLine.explore(plots=xrtp.serialize_plots(plots))
+        xrtr.run_ray_tracing(plots, repeats=10,
                              # afterScript=afterScript, afterScriptArgs=plots,
                              beamLine=beamLine)
 

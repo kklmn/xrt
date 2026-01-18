@@ -107,9 +107,9 @@ def read_output(tmpwd, outName, skiprows, usecols, comments, useZip, msg=None):
         return np.loadtxt(
             os.path.join(tmpwd, outName+('.gz' if useZip else '')),
             skiprows=skiprows, unpack=True, usecols=usecols, comments=comments,
-            converters={2: lambda s: s.replace(b'D', b'e').replace(b'd', b'e')}
-            )
-    except:
+            converters=lambda s: s.replace('D', 'e').replace('d', 'e'))
+    except Exception as e:
+        print('Exception in read_output:', e)
         pass
 
 
@@ -230,6 +230,9 @@ class UndulatorUrgent(object):
         except:
             pass
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = str(raycing.uuid.uuid4())
+
         self.bl = bl
         if bl is not None:
             bl.sources.append(self)
@@ -328,9 +331,10 @@ class UndulatorUrgent(object):
         # 4) D, XPC, YPC, XPS, YPS, NXP, NYP
         # 5) MODE, ICALC, IHARM
         # 6) NPHI, NSIG, NALPHA, DALPHA, NOMEGA, DOMEGA
+        phaseDeg = 90. if self.Kx > 0 else 0.
         infile = ''
-        infile += '1 {0} {1} {2} 0. {3}\n'.format(
-            self.period*1e-3, self.Kx, self.K, self.n)
+        infile += '1 {0} {1} {2} {3} {4}\n'.format(
+            self.period*1e-3, self.Kx, self.K, phaseDeg, self.n)
         infile += '{0} {1} {2}\n'.format(E, self.eMax, self.eN)
         eSigmaXP = self.eEpsilonX/self.eSigmaX if self.eSigmaX > 0 else 0.
         eSigmaZP = self.eEpsilonZ/self.eSigmaZ if self.eSigmaZ > 0 else 0.
@@ -745,6 +749,9 @@ class UndulatorUrgent(object):
         bo.a /= norm
         bo.b /= norm
         bo.c /= norm
+
+        bo.parentId = self.uuid
+
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         return bo
@@ -951,7 +958,7 @@ class SourceFromFieldSRW(GenericSourceSRW, SourceFromField):
         self.magFldCnt = SRWLMagFldC() #Container
         self.magFldCnt.allocate(1) #Magnetic Field consists of 1 part
 
-        dataz = self.customFieldData[:, 0]        
+        dataz = self.customFieldData[:, 0]
         Bx, By, Bz = self._magnetic_field(grid=dataz)
 
         self.magFldCnt.arMagFld[0] = SRWLMagFld3D(
