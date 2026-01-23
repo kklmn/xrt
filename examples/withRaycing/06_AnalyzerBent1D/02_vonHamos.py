@@ -57,7 +57,7 @@ dphi = 0
 beamV = 0.1/2.35  # vertical beam size
 beamH = 0.1/2.35  # horizontal beam size
 
-isDiced = False
+isDiced = True
 
 yAxesLim = 20
 
@@ -222,8 +222,8 @@ def define_plots(beamLine):
         limits = [-3, 3]
     plot = xrtp.XYCPlot(
         'beamAnalyzerLocal', (1,),
-        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limits),
-        yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limits),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limits, fwhmFormatStr='%.2f'),
+        yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limits, fwhmFormatStr='%.2f'),
         caxis=xrtp.XYCAxis('energy', 'eV', fwhmFormatStr='%.2f'),
         title='xtal_E_zoom', oe=beamLine.analyzer, raycingParam=1000)
     plot.caxis.fwhmFormatStr = fwhmFormatStrE
@@ -236,8 +236,8 @@ def define_plots(beamLine):
     if isDiced:
         plot = xrtp.XYCPlot(
             'beamAnalyzerLocal', (1,),
-            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limits),
-            yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limits),
+            xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limits, fwhmFormatStr='%.2f'),
+            yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limits, fwhmFormatStr='%.2f'),
             caxis=xrtp.XYCAxis('stripe number', '', data=stripe_number),
             title='xtal_stripes_zoom', oe=beamLine.analyzer,
             raycingParam=1000)
@@ -340,7 +340,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
             for plot in plotsDetector:
                 plot.xaxis.limits = -6, 6
             txt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
-                   '\delta E = ${3:.3f} eV').format(
+                   r'\delta E = ${3:.3f} eV').format(
                        crystalLabel, '\n', thetaDegree, dELine)
             for plot in plots:
                 plot.textPanel.set_text(txt)
@@ -395,6 +395,7 @@ def main():
         plots, generator=plot_generator, generatorArgs=args,
         beamLine=beamLine,
         processes=1 if useTT else nprocesses)
+
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:
