@@ -1725,11 +1725,11 @@ class XYCPlot(object):
 
         if self.contourLevels is not None:
             if self.contours2D is not None:
-                for contour in self.contours2D.collections:
-                    try:
+                if hasattr(self.contours2D, 'collections'):  # mpl < 3.10.0
+                    for contour in self.contours2D.collections:
                         contour.remove()
-                    except ValueError:
-                        pass
+                else:
+                    self.contours2D.remove()
                 for label in self.contours2DLabels:
                     try:
                         label.remove()
@@ -2019,8 +2019,11 @@ class XYCPlot(object):
             self.textDy.set_text('')
         self.clean_user_elements()
         if self.contours2D is not None:
-            for contour in self.contours2D.collections:
-                contour.remove()
+            if hasattr(self.contours2D, 'collections'):  # mpl < 3.10.0
+                for contour in self.contours2D.collections:
+                    contour.remove()
+            else:
+                self.contours2D.remove()
             for label in self.contours2DLabels:
                 label.remove()
             for artist in self.ax2dHist.collections:
