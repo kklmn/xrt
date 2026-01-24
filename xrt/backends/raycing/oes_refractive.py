@@ -46,6 +46,20 @@ class Plate(DCM):
         self.limOptY2 = self.limOptY
 #        self.material2 = self.material
 
+    def _resolve_material(self, mat):
+        if mat is None:
+            return None
+
+        if raycing.is_valid_uuid(mat) and self.bl is not None:
+            return self.bl.materialsDict.get(mat)
+
+        if isinstance(mat, str) and self.bl is not None and \
+                mat in self.bl.matnamesToUUIDs:
+            uuid = self.bl.matnamesToUUIDs.get(mat)
+            return self.bl.materialsDict.get(uuid)
+
+        return mat
+
     @property
     def t(self):
         return self._t
@@ -95,26 +109,19 @@ class Plate(DCM):
 
     @property
     def material(self):
-        # if raycing.is_sequence(self._material):
-        #     matSur = self._material[self.curSurface]
-        # else:
-        matSur = self._material
-
-        if raycing.is_valid_uuid(matSur) and self.bl is not None:
-            mat = self.bl.materialsDict.get(matSur)
+        m = self._material
+        if raycing.is_sequence(m):
+            return [self._resolve_material(x) for x in m]
         else:
-            mat = matSur
-
-        return mat
+            return self._resolve_material(m)
 
     @property
     def material2(self):
-        matSur = self._material2
-        if raycing.is_valid_uuid(matSur) and self.bl is not None:
-            mat = self.bl.materialsDict.get(matSur)
+        m = self._material2
+        if raycing.is_sequence(m):
+            return [self._resolve_material(x) for x in m]
         else:
-            mat = matSur
-        return mat
+            return self._resolve_material(m)
 
     @material2.setter
     def material2(self, material2):
@@ -123,36 +130,30 @@ class Plate(DCM):
     @material.setter
     def material(self, material):
         self._material = material
-        self.material2 = material
+        self._material2 = material
 
-        if material is not None:
-            if raycing.is_sequence(material):
-                materials = material
-            else:
-                materials = material,
+        mats = material if raycing.is_sequence(material) else (material,)
 
-            for matSur in materials:
-                if raycing.is_valid_uuid(matSur) and self.bl is not None:
-                    mat = self.bl.materialsDict.get(matSur)
-                elif isinstance(matSur, str) and self.bl is not None and\
-                        matSur in self.bl.matnamesToUUIDs:
-                    mat = self.bl.materialsDict.get(
-                            self.bl.matnamesToUUIDs.get(matSur))
-                else:
-                    mat = matSur
+        for m in mats:
+            mat = self._resolve_material(m)
 
-                if mat.kind not in "plate lens FZP":
-                    try:
-                        name = self.name
-                    except AttributeError:
-                        name = self.__class__.__name__
-                    raycing.colorPrint(
-                        'Warning: material of {0} is not of kind {1}!'
-                        .format(name, "plate or lens or FZP"), "YELLOW")
+            if mat is None:
+                continue
 
-        if hasattr(self, '_nCRLlist'):
-            if self._nCRLlist is not None:
-                self.nCRL = self._nCRLlist
+            if mat.kind not in "plate lens FZP":
+                try:
+                    name = self.name
+                except AttributeError:
+                    name = self.__class__.__name__
+
+                raycing.colorPrint(
+                    'Warning: material of {0} is not of kind {1}!'
+                    .format(name, "plate or lens or FZP"),
+                    "YELLOW"
+                )
+
+        if hasattr(self, '_nCRLlist') and self._nCRLlist is not None:
+            self.nCRL = self._nCRLlist
 
     @property
     def wedgeAngle(self):

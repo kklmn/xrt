@@ -16,9 +16,13 @@ import xrt.backends.raycing.screens as rsc
 
 showIn3D = False
 
-stripeSi = rm.Material('Si', rho=2.33)
-stripeSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2)
-stripeIr = rm.Material('Ir', rho=22.42)
+hkl=(1, 1, 1)
+stripeSi = rm.Material('Si', rho=2.33, name="stripeSi")
+stripeSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2, name="stripeSiO2")
+stripeIr = rm.Material('Ir', rho=22.42, name="stripeIr")
+filterDiamond = rm.Material('C', rho=3.52, kind='plate', name="filterDiamond")
+si_1 = rm.CrystalSi(hkl=hkl, tK=-171+273.15, name="Si_1")
+si_2 = rm.CrystalSi(hkl=hkl, tK=-140+273.15, name="Si_2")
 
 
 def build_beamline(nrays=raycing.nrays, hkl=(1, 1, 1), stripe='Si',

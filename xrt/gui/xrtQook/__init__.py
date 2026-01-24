@@ -2897,6 +2897,10 @@ class XrtQook(qt.QMainWindow):
                             plotDict['beam'] = self.beamModel.item(
                                     row, 0).text()
                             break
+                elif isinstance(bName, str):
+                    beams = self.beamModel.findItems(bName, column=0)
+                    if len(beams) < 1:
+                        plotDict['beam'] = 'None'
 
                 self.addPlot(copyFrom=plotDict, plotName=plotName)
 
