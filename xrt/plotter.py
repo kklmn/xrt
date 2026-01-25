@@ -1757,14 +1757,15 @@ class XYCPlot(object):
                     * self.contourFactor
                 self.contourMax = np.max(Z)
                 if True:  # self.contourMax > 1e-4:
-                    contourLevels =\
-                        [lev*self.contourMax for lev in self.contourLevels]
-                    self.contours2D = self.ax2dHist.contour(
-                        X, Y, Z, levels=contourLevels,
-                        colors=self.contourColors)
-                    self.contours2DLabels = self.ax2dHist.clabel(
-                        self.contours2D, fmt=self.contourFmt, inline=True,
-                        fontsize=10)
+                    contourLevels = [float(lev*self.contourMax)
+                                     for lev in self.contourLevels]
+                    if all(contourLevels):
+                        self.contours2D = self.ax2dHist.contour(
+                            X, Y, Z, levels=contourLevels,
+                            colors=self.contourColors)
+                        self.contours2DLabels = self.ax2dHist.clabel(
+                            self.contours2D, fmt=self.contourFmt, inline=True,
+                            fontsize=10)
 
     def textFWHM(self, axis, textD, average, hwhm):
         """Updates the text field that has average of the *axis* plus-minus the
