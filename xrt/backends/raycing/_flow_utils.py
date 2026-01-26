@@ -191,6 +191,10 @@ def get_init_val(value):
         return str(value)
 
     if "," in str(value):  # mixed list.
+        while 'np.float64(' in value:
+            pos1 = value.find('np.float64(')
+            pos2 = value.find(')', pos1+1)
+            value = value[:pos1] + value[pos1+11:pos2] + value[pos2+1:]
         s = str(value).replace(" ", "").replace("(", "[").replace(")", "]")
         if s.startswith('[['):  # nested list
             try:
@@ -341,7 +345,7 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                     paravalue =\
                         [get_init_val(c.strip())
                          for c in str.split(
-                         paravalue, ',')]                    
+                         paravalue, ',')]
             elif paraname.startswith('figure'):
                 if str(paravalue) in beamLine.fenamesToUUIDs:
                     paravalue = beamLine.fenamesToUUIDs[paravalue]
