@@ -49,7 +49,7 @@ if sys.version_info < (3, 1):
 else:
     from inspect import getfullargspec as getargspec
 import re
-import xml.etree.ElementTree as ET
+
 from functools import partial
 from collections import OrderedDict
 try:
@@ -88,7 +88,7 @@ from ..commons import gl  # analysis:ignore
 from . import tutorial
 if gl.isOpenGL:
     from .. import xrtGlow as xrtglow  # analysis:ignore
-    from ..xrtGlow import (OEExplorer, is_screen, is_aperture, RunCardVals, GP,
+    from ..xrtGlow import (InstanceInspector, is_screen, is_aperture,
                            ConfigurablePlotWidget)
 
 try:
@@ -915,7 +915,7 @@ class XrtQook(qt.QMainWindow):
 
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)
-        elViewer = OEExplorer(self, oeProps,
+        elViewer = InstanceInspector(self, oeProps,
                               initDict=oeInitProps,
                               epicsDict=getattr(glWidget,
                                                 'epicsInterface', None),
@@ -952,7 +952,7 @@ class XrtQook(qt.QMainWindow):
                     matProps[argName] = argMat.name
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)
-        matViewer = OEExplorer(self, matProps, beamLine=self.beamLine,
+        matViewer = InstanceInspector(self, matProps, beamLine=self.beamLine,
                                viewOnly=False)
         if glWidget is not None:
             matViewer.propertiesChanged.connect(
@@ -1001,7 +1001,7 @@ class XrtQook(qt.QMainWindow):
                     surfProps[argName] = argFE.name
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)
-        surfViewer = OEExplorer(self, surfProps, beamLine=self.beamLine,
+        surfViewer = InstanceInspector(self, surfProps, beamLine=self.beamLine,
                                 viewOnly=False)
         if glWidget is not None:
 
@@ -3797,7 +3797,7 @@ class XrtQook(qt.QMainWindow):
 
     def updateBeamlineModel(self, data):
         oeid, kwargs = data
-        
+
         if oeid in self.beamLine.oesDict:
             model = self.beamLineModel
             tree = self.tree
@@ -3813,7 +3813,7 @@ class XrtQook(qt.QMainWindow):
         else:
             return
 
-        model.blockSignals(True)        
+        model.blockSignals(True)
         for i in range(rootItem.rowCount()):
             elItem = rootItem.child(i, 0)
             elUUID = str(elItem.data(qt.Qt.UserRole))
