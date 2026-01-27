@@ -1439,7 +1439,7 @@ class Undulator(IntegratedSource):
 
     @property
     def taper(self):
-        return self._taperVal
+        return self._taper
 
     @taper.setter
     def taper(self, taper):
@@ -1447,9 +1447,12 @@ class Undulator(IntegratedSource):
             self._taper = taper
             self._taperVal = taper[0] / self.Np / self.L0 / taper[1]
             self.gap = taper[1]
-        else:
+        elif taper is None:
             self._taperVal = None
             self._taper = None
+        else:  # must be float
+            self._taperVal = taper
+            self._taper = taper
         self.needReset = True
 
     @property
@@ -1530,9 +1533,9 @@ class Undulator(IntegratedSource):
             print("E9 = {0}".format(E1*9))
             print("E11 = {0}".format(E1*11))
             print("B0 = {0}".format(self.B0y))
-            if self.taper is not None:
+            if self._taperVal is not None:
                 print("dB/dx/B = {0}".format(
-                    -PI * self.gap * self.taper / self.L0 * 1e3))
+                    -PI * self.gap * self._taperVal / self.L0 * 1e3))
         self.E1 = E1
 
     def prefix_save_name(self):
@@ -1662,7 +1665,7 @@ class Undulator(IntegratedSource):
         taperC = 1
         alphaS = 0
 
-        if (R0 is not None) or (self.taper is not None):
+        if (R0 is not None) or (self._taperVal is not None):
             dI = np.arange(0.5*self.dstep - PI*self.Np, PI*self.Np, self.dstep)
             tg = (dI[:, None] + 0.5*self.dstep*self.tg_n).ravel()
             ag = np.tile(self.ag, self.Np)
@@ -1687,8 +1690,8 @@ class Undulator(IntegratedSource):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        if self.taper is not None:
-            alphaS = self.taper/E2WC
+        if self._taperVal is not None:
+            alphaS = self._taperVal/E2WC
             taperC = 1 - alphaS*tg/wuS
             ucos = ww1S*tg + \
                 wwuS*revgamma*(
@@ -1778,20 +1781,20 @@ class Undulator(IntegratedSource):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
+        Nmx = self.Np if (R0 is not None or self._taperVal is not None) else 1
 
         if R0 is not None:
             sinr0z = np.sin(R0[-1])
             cosr0z = np.cos(R0[-1])
 
         for Nperiod in range(Nmx):
-            if raycing._VERBOSITY_ > 80 and (self.taper is not None or
+            if raycing._VERBOSITY_ > 80 and (self._taperVal is not None or
                                              R0 is not None):
                 print("Period {} out of {}".format(Nperiod+1, Nmx))
             for i in range(len(self.tg)):
-                if self.taper is not None:
+                if self._taperVal is not None:
                     zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + self.tg[i]
-                    alphaS = self.taper/E2WC
+                    alphaS = self._taperVal/E2WC
                     taperC = 1. - alphaS*zloc/wuS
                     ucos = ww1S*zloc +\
                         wwuS*revgamma *\
@@ -1898,7 +1901,7 @@ class Undulator(IntegratedSource):
         ww1 = w * ((1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) +
                    gamma2 * (ddtheta**2 + ddpsi**2)) / (2. * gamma2 * wu)
 
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self._taperVal is not None) or (self.R0 is not None):
             ab = 1. / PI2 / wu
         else:
             ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
@@ -1960,7 +1963,7 @@ class Undulator(IntegratedSource):
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
 
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self._taperVal is not None) or (self.R0 is not None):
             ab = 1. / PI2 / wu
         else:
             ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
@@ -1969,13 +1972,13 @@ class Undulator(IntegratedSource):
 
         if self.R0 is not None:
             scalarArgs = [self.cl_precisionF(self.R0*np.pi*2/self.L0)]
-        elif self.taper:
-            scalarArgs = [self.cl_precisionF(self.taper)]
+        elif self._taperVal:
+            scalarArgs = [self.cl_precisionF(self._taperVal)]
 
         scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
                            self.cl_precisionF(self.Ky),  # Ky
                            np.int32(len(self.tg))])  # jend
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self._taperVal is not None) or (self.R0 is not None):
             scalarArgs.extend([np.int32(self.Np)])
 
         slicedROArgs = [self.cl_precisionF(gamma),  # gamma
@@ -1994,7 +1997,7 @@ class Undulator(IntegratedSource):
         slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
                         np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
 
-        if self.taper is not None:
+        if self._taperVal is not None:
             clKernel = 'undulator_taper'
         elif self.R0 is not None:
             clKernel = 'undulator_nf'
