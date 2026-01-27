@@ -14,7 +14,7 @@ __all__ = ('RandomRoughness', 'GaussianBump', 'Waviness',
            'FigureErrorImported', 'PlanarRidge')
 
 allArguments = ('bl', 'name', 'baseFE', 'limPhysX', 'limPhysY', 'gridStep',
-                'fileName', 'recenter', 'orientation',
+                'fileName', 'columnFactors', 'recenter', 'orientation',
                 'rms', 'corrLength', 'seed', 'bumpHeight', 'sigmaX', 'sigmaY',
                 'cX', 'cY', 'amplitude', 'xWaveLength', 'yWaveLength',
                 'slopeAngle', 'orientationAngle')
@@ -285,6 +285,7 @@ class FigureErrorImported(FigureErrorBase):
         self._recenter = recenter
         self._orientation = orientation
         self._baseFE = None
+        self._fileName = None
         self.columnFactors = columnFactors
         self.fileName = fileName
         super().__init__(**kwargs)
@@ -312,13 +313,31 @@ class FigureErrorImported(FigureErrorBase):
             self.build_spline()
 
     @property
+    def columnFactors(self):
+        return self._columnFactors
+
+    @columnFactors.setter
+    def columnFactors(self, columnFactors):
+        try:
+            self._columnFactors = [cf*1.0 for cf in columnFactors[:3]]
+        except Exception:  # not a 3-sequence of floats
+            self._columnFactors = [1, 1, 1]
+        if self._fileName is None:
+            return
+        self.read_file(self.fileName)
+        self.align_arrays()
+        self.build_spline()
+
+    @property
     def fileName(self):
         return self._fileName
 
     @fileName.setter
     def fileName(self, fileName):
         self._fileName = fileName
-        if fileName is not None:
+        if fileName is None:
+            self._init_empty()
+        else:
             self.read_file(fileName)
             self.align_arrays()
             self.build_spline()
@@ -390,6 +409,14 @@ class FigureErrorImported(FigureErrorBase):
         self.z2d = z2d
         self.get_angles()
 
+    def _init_empty(self):
+        self.x1d = np.array(np.linspace(-1, 1, 5))
+        self.y1d = np.array(np.linspace(-1, 1, 5))
+        self.nx, self.ny = len(self.x1d), len(self.y1d)
+        self.x2d, self.y2d = np.meshgrid(self.x1d, self.y1d)
+        self.z2d = np.zeros((self.ny, self.nx))
+        self.get_angles()
+
     def get_grids(self):
         pass
 
@@ -397,7 +424,6 @@ class FigureErrorImported(FigureErrorBase):
         pass
 
     def generate_profile(self):
-        """This function must be overriden in subclass."""
         base_z = np.zeros_like(self.x2d)
         if self.baseFE is not None and \
                 hasattr(self.baseFE, 'local_z_distorted'):

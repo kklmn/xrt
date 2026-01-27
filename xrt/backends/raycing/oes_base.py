@@ -155,7 +155,7 @@ class OE(object):
             are equal to 1.
 
         *figureError*: None or FigureError object.
-            
+
 
         *alpha*: float
             Asymmetry angle for a crystal OE (rad). Positive sign is for the
@@ -461,15 +461,22 @@ class OE(object):
 
     @property
     def material(self):
-        if raycing.is_valid_uuid(self._material):
-            if self.bl is not None:
-                mat = self.bl.materialsDict.get(self._material)
-            else:
-                mat = None
-                print(f"Material with UUID {self._material} doesn't exist!")
+        def resolve(mat):
+            if not raycing.is_valid_uuid(mat):
+                return mat
+
+            if self.bl is None:
+                print(f"Material with UUID {mat} doesn't exist!")
+                return None
+
+            return self.bl.materialsDict.get(mat)
+
+        m = self._material
+
+        if raycing.is_sequence(m):
+            return [resolve(x) for x in m]
         else:
-            mat = self._material
-        return mat
+            return resolve(m)
 
     @material.setter
     def material(self, material):
@@ -2044,6 +2051,7 @@ class OE(object):
                     matSur = material[self.curSurface]
                 else:
                     matSur = material
+
                 if matSur.kind == 'auto':
                     self.assign_auto_material_kind(matSur)
                 if matSur.kind in ('plate', 'lens'):

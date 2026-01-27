@@ -17,6 +17,7 @@ if sys.version_info < (3, 1):
 else:
     from inspect import getfullargspec as getargspec
 
+from .singletons import is_sequence
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
     renderOnlyArgSet, compoundArgs, dependentArgs, diagnosticArgs, allUnitsAng,
@@ -190,6 +191,10 @@ def get_init_val(value):
         return str(value)
 
     if "," in str(value):  # mixed list.
+        while 'np.float64(' in value:
+            pos1 = value.find('np.float64(')
+            pos2 = value.find(')', pos1+1)
+            value = value[:pos1] + value[pos1+11:pos2] + value[pos2+1:]
         s = str(value).replace(" ", "").replace("(", "[").replace(")", "]")
         if s.startswith('[['):  # nested list
             try:
@@ -335,6 +340,12 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
             elif paraname.startswith('material'):
                 if str(paravalue) in beamLine.matnamesToUUIDs:
                     paravalue = beamLine.matnamesToUUIDs[paravalue]
+                else:
+                    paravalue = paravalue.strip('[]() ')
+                    paravalue =\
+                        [get_init_val(c.strip())
+                         for c in str.split(
+                         paravalue, ',')]
             elif paraname.startswith('figure'):
                 if str(paravalue) in beamLine.fenamesToUUIDs:
                     paravalue = beamLine.fenamesToUUIDs[paravalue]
@@ -417,13 +428,25 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
 
                 if str(arg).lower().startswith(
                         ('material', 'coating', 'substrate', 'tlay', 'blay')):
-                    if hasattr(realval, 'uuid'):
-                        realval = realval.uuid
-                    elif needRevG:
-                        realval = globRev[str(realval)]
+                    if is_sequence(realval):
+                        outv = []
+                        for trval in realval:
+                            if hasattr(trval, 'uuid'):
+                                trval = trval.uuid
+                            elif needRevG:
+                                trval = globRev[str(trval)]
+                            else:  # already uuid or something is wrong
+                                pass
+                            outv.append(trval)
+                        realval = outv
                     else:
-                        print("Cannot resolve material")
-#                        raise
+                        if hasattr(realval, 'uuid'):
+                            realval = realval.uuid
+                        elif needRevG:
+                            realval = globRev[str(realval)]
+                        else:  # already uuid or something is wrong
+                            pass
+
                 if str(arg).lower().startswith(
                         ('figureerr', 'basefe')):
                     if hasattr(realval, 'uuid'):
@@ -431,8 +454,11 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     elif needRevG:
                         realval = globRev[str(realval)]
                     else:
-                        print("Cannot resolve material")
+                        pass
+#                        print("Cannot resolve material")
                 if realval != val:
+                    if isinstance(realval, tuple):
+                        realval = list(realval)
                     defArgs[arg] = str(realval)
                     if compact:
                         initArgs[arg] = str(realval)

@@ -149,7 +149,6 @@ class RectangularAperture(object):
             self.set_optical_limits()
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
-        
         self.renderStyle = renderStyle
 
     @property

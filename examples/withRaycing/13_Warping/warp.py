@@ -300,6 +300,52 @@ def see_the_bump():
     plt.show()
 
 
+def see_the_bump_3D():
+    from matplotlib import cm
+    from matplotlib.colors import LightSource
+
+    beamLine = raycing.BeamLine()
+    oe = ToroidMirrorDistorted(beamLine, 'warped')
+    xi, yi = np.meshgrid(oe.warpX, oe.warpY, indexing='ij')
+    zi = oe.warpZ * 1e6
+    print(xi.shape, yi.shape, zi.shape)
+    rmsA = ((oe.warpA**2).sum() / (oe.warpNX*oe.warpNY))**0.5
+    rmsB = ((oe.warpB**2).sum() / (oe.warpNX*oe.warpNY))**0.5
+
+    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+    ax.view_init(elev=35, azim=35)
+    fig.set_facecolor('black')
+    ax.set_facecolor('black')
+    ax.grid(True)
+    ax.xaxis.pane.fill = False
+    ax.yaxis.pane.fill = False
+    ax.zaxis.pane.fill = False
+    fig.suptitle('{0}\n'.format(oe.distortedSurfaceName) +
+                 u'rms slope errors:\ndz/dx = {0:.2f} µrad, '
+                 u'dz/dy = {1:.2f} µrad'.format(rmsA*1e6, rmsB*1e6),
+                 fontsize=14, color='w')
+    for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
+        axis.line.set_linewidth(0.2)
+        axis.line.set_color("white")
+
+    ls = LightSource(270, 45)
+    ax.plot_surface(xi, yi, -zi, cmap=cm.CMRmap, linewidth=0, lightsource=ls,
+                    antialiased=True)
+    # ax.plot_trisurf(xi.ravel(), yi.ravel(), zi.ravel(),
+    #                 # linewidth=0.02, edgecolor="limegreen",
+    #                 cmap=cm.CMRmap, antialiased=True)
+
+    # ax.contour(xi, yi, zi, zdir='z', offset=-60, cmap='coolwarm')
+    # ax.contour(xi, yi, zi, zdir='x', offset=-5, cmap='coolwarm')
+    # ax.contour(xi, yi, zi, zdir='y', offset=150, cmap='coolwarm')
+
+    ax.set(xlim=(-5, 5), ylim=(-150, 150), zlim=(-30, 60),
+           xlabel='X', ylabel='Y', zlabel='Z')
+
+    fig.savefig('surf_{0}_3d.png'.format(oe.distortedSurfaceName))
+    plt.show()
+
+
 def build_beamline():
     beamLine = raycing.BeamLine()
     beamLine.oe = ToroidMirrorDistorted(
@@ -425,5 +471,6 @@ def main():
 
 
 if __name__ == '__main__':
-    see_the_bump()
+    # see_the_bump()
+    see_the_bump_3D()
     # main()

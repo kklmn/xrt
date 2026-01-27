@@ -152,37 +152,13 @@ class SourceBase:
         self._eMin = float(eMin)
         self._eMax = float(eMax)
 
+        self.xPrimeMax = xPrimeMax
+        self.zPrimeMax = zPrimeMax
+
         # Beam size and divergence conversion
-        if isinstance(xPrimeMax, (tuple, list)):
-            # if units are not provided, we expect mrad here
-            xPrimeMax = [raycing.auto_units_angle(xPrimeMax[0],
-                                                  defaultFactor=1e-3),
-                         raycing.auto_units_angle(xPrimeMax[-1],
-                                                  defaultFactor=1e-3)]
-            self._xPrimeMin, self._xPrimeMax = min(xPrimeMax), max(xPrimeMax)
-        elif isinstance(xPrimeMax, raycing.basestring):
-            self._xPrimeMax = abs(raycing.auto_units_angle(xPrimeMax))
-            self._xPrimeMin = -self._xPrimeMax
-        else:
-            self._xPrimeMax = abs(xPrimeMax) * 1e-3
-            self._xPrimeMin = -self._xPrimeMax
-
-        if isinstance(zPrimeMax, (tuple, list)):
-            # if units are not provided, we expect mrad here
-            zPrimeMax = [raycing.auto_units_angle(zPrimeMax[0],
-                                                  defaultFactor=1e-3),
-                         raycing.auto_units_angle(zPrimeMax[-1],
-                                                  defaultFactor=1e-3)]
-            self._zPrimeMin, self._zPrimeMax = min(zPrimeMax), max(zPrimeMax)
-        elif isinstance(zPrimeMax, raycing.basestring):
-            self._zPrimeMax = abs(raycing.auto_units_angle(zPrimeMax))
-            self._zPrimeMin = -self._zPrimeMax
-        else:
-            self._zPrimeMax = abs(zPrimeMax) * 1e-3
-            self._zPrimeMin = -self._zPrimeMax
-
         self._betaX = betaX * 1e3 if betaX else None  # input in m
         self._betaZ = betaZ * 1e3 if betaX else None  # input in m
+
         if (self.dx is not None) and (self._betaX is None):
             self._betaX = self.dx**2 / self._eEpsilonX if self._eEpsilonX\
                 else 0.
@@ -331,7 +307,27 @@ class SourceBase:
 
     @property
     def xPrimeMax(self):
-        return self._xPrimeMax * 1e3  # return in mrad
+        xPrimeMinVal = self._xPrimeMin
+        xPrimeMaxVal = self._xPrimeMax
+
+        if hasattr(self, '_xPrimeMaxAutoReduce') and self._xPrimeMaxAutoReduce:
+            if all([hasattr(self, x) for x in ['_Ky', '_gamma']]):
+                K0 = self.Ky if abs(self.Ky) > 0 else 2.
+                xPrimeMaxTmp = K0 / self.gamma
+                if abs(self._xPrimeMax) > abs(xPrimeMaxTmp):
+                    print("Reducing xPrimeMax from {0} down to {1} mrad".format(
+                          self._xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
+                    xPrimeMaxVal = xPrimeMaxTmp
+                if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
+                    print("Reducing xPrimeMin from {0} down to {1} mrad".format(
+                          self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
+                    xPrimeMinVal = np.sign(self._xPrimeMin) * xPrimeMaxTmp
+
+        # return in mrad
+        if abs(xPrimeMinVal) == abs(xPrimeMaxVal):
+            return xPrimeMaxVal * 1e3
+        else:
+            return [xPrimeMinVal * 1e3, xPrimeMaxVal * 1e3]
 
     @xPrimeMax.setter
     def xPrimeMax(self, xPrimeMax):
@@ -352,7 +348,27 @@ class SourceBase:
 
     @property
     def zPrimeMax(self):
-        return self._zPrimeMax * 1e3  # return in mrad
+        zPrimeMinVal = self._zPrimeMin
+        zPrimeMaxVal = self._zPrimeMax
+
+        if hasattr(self, '_zPrimeMaxAutoReduce') and self._zPrimeMaxAutoReduce:
+            if all([hasattr(self, x) for x in ['_Kx', '_gamma']]):
+                K0 = self.Kx if abs(self.Kx) > 0 else 2.
+                zPrimeMaxTmp = K0 / self.gamma
+                if abs(self._zPrimeMax) > abs(zPrimeMaxTmp):
+                    print("Reducing zPrimeMax from {0} down to {1} mrad".format(
+                          self._zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
+                    zPrimeMaxVal = zPrimeMaxTmp
+                if abs(self._zPrimeMin) > abs(zPrimeMaxTmp):
+                    print("Reducing xPrimeMin from {0} down to {1} mrad".format(
+                          self._zPrimeMin * 1e3, zPrimeMaxTmp * 1e3))
+                    zPrimeMinVal = np.sign(self._zPrimeMin) * zPrimeMaxTmp
+
+        # return in mrad
+        if abs(zPrimeMinVal) == abs(zPrimeMaxVal):
+            return zPrimeMaxVal * 1e3
+        else:
+            return [zPrimeMinVal * 1e3, zPrimeMaxVal * 1e3]
 
     @zPrimeMax.setter
     def zPrimeMax(self, zPrimeMax):
@@ -396,19 +412,31 @@ class SourceBase:
     def _reset_limits(self):
         if not self._xPrimeMax:
             print("No Theta range specified, using default +/- 1 mrad")
-            self._xPrimeMax = 1e-3
-            self._xPrimeMin = -1e-3
+            xpMin = -1e-3
+            xpMax = 1e-3
+        elif isinstance(self.xPrimeMax, (tuple, list)):
+            xpMin = self.xPrimeMax[0] * 1e-3  # xPrimeMax returns in mrad
+            xpMax = self.xPrimeMax[-1] * 1e-3
+        else:
+            xpMin = -self.xPrimeMax * 1e-3
+            xpMax = self.xPrimeMax * 1e-3
+
         if not self._zPrimeMax:
             print("No Psi range specified, using default +/- 1 mrad")
-            self._zPrimeMax = 1e-3
-            self._zPrimeMin = -1e-3
+            zpMin = -1e-3
+            zpMax = 1e-3
+        elif isinstance(self.zPrimeMax, (tuple, list)):
+            zpMin = self.zPrimeMax[0] * 1e-3
+            zpMax = self.zPrimeMax[-1] * 1e-3
+        else:
+            zpMin = -self.zPrimeMax * 1e-3
+            zpMax = self.zPrimeMax * 1e-3
 
         # Limits corrected for divergence
-#        print(self._xPrimeMax, self.dxprime)
-        self.Theta_min = float(self._xPrimeMin-self.dxprime)
-        self.Theta_max = float(self._xPrimeMax+self.dxprime)
-        self.Psi_min = float(self._zPrimeMin-self.dzprime)
-        self.Psi_max = float(self._zPrimeMax+self.dzprime)
+        self.Theta_min = float(xpMin-self.dxprime)
+        self.Theta_max = float(xpMax+self.dxprime)
+        self.Psi_min = float(zpMin-self.dzprime)
+        self.Psi_max = float(zpMax+self.dzprime)
         self.E_min = float(min(self.eMin, self.eMax))
         self.E_max = float(max(self.eMin, self.eMax))
 
@@ -959,7 +987,6 @@ class IntegratedSource(SourceBase):
     def gNodes(self, gNodes):
         self.quadm = int(gNodes)
         self._build_integration_grid()
-
         # Need to recalculate the integration parameters
 
     def _clenshaw_curtis(self, n):

@@ -42,6 +42,7 @@ class BendingMagnet(SourceBase):
             self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
             self.X0 = 0.5 * self.K * self.L0 / self.gamma / PI
             self.isMPW = True
+            self._xPrimeMaxAutoReduce = True
         else:
             self.Np = 0.5
             self.B = B0
@@ -52,17 +53,6 @@ class BendingMagnet(SourceBase):
             elif self.B:
                 self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
             self.isMPW = False
-
-        if self.isMPW:  # xPrimeMaxAutoReduce
-            xPrimeMaxTmp = self.K / self.gamma
-            if abs(self._xPrimeMax) > xPrimeMaxTmp:
-                print("Reducing xPrimeMax from {0} down to {1} mrad".format(
-                      self.xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMax = xPrimeMaxTmp
-            if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
-                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
-                      self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMin = np.sign(self._xPrimeMin) * xPrimeMaxTmp
 
     @property
     def B0(self):
@@ -436,6 +426,7 @@ class Wiggler(BendingMagnet):
 
         """
         self._K = kwargs.pop('K', 8.446)
+        self._Ky = self._K
         self.L0 = kwargs.pop('period', 50)
         self.Np = kwargs.pop('n', 40)
         name = kwargs.pop('name', 'wiggler')
@@ -470,6 +461,7 @@ class Wiggler(BendingMagnet):
     @K.setter
     def K(self, K):
         self._K = float(K)
+        self._Ky = float(K)
         self._B = K2B * K / self.L0
         self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
         self.X0 = 0.5 * K * self.L0 / self.gamma / PI
@@ -1271,8 +1263,9 @@ class Undulator(IntegratedSource):
             value will be used.
 
         *phaseDeg*: float
-            Phase difference between horizontal and vertical magnetic arrays.
-            Used in the elliptical case where it should be equal to 90 or -90.
+            Phase difference between horizontal and vertical magnetic arrays in
+            degrees. Used in the elliptical case where it should be equal
+            to 90 or -90.
 
         *taper*: tuple(dgap(mm), gap(mm))
             Linear variation in undulator gap. None if tapering is not used.
@@ -1307,6 +1300,8 @@ class Undulator(IntegratedSource):
 
         self.L0 = period
         self.Np = n
+        self.taper = taper
+        self.phaseDeg = phaseDeg
 
         if targetE is not None:
             self._targetE = targetE
@@ -1329,16 +1324,6 @@ class Undulator(IntegratedSource):
                         Kx = Ky = Ky / 2**0.5
                         if raycing._VERBOSITY_ > 10:
                             print("Kx = Ky = {0}".format(Kx))
-
-        phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
-            isinstance(phaseDeg, raycing.basestring) else phaseDeg
-        self.phase = np.radians(phaseDeg)
-
-        if taper is not None:
-            self.taper = taper[0] / self.Np / self.L0 / taper[1]
-            self.gap = taper[1]
-        else:
-            self.taper = None
 
         self.Kbase = True
 
@@ -1364,28 +1349,35 @@ class Undulator(IntegratedSource):
             self.xPrimeMaxAutoReduce = True
             self.zPrimeMaxAutoReduce = True
 
-        if xPrimeMaxAutoReduce:
-            K0 = self.Ky if abs(self.Ky) > 0 else 2.
-            xPrimeMaxTmp = K0 / self.gamma
-            if abs(self._xPrimeMax) > abs(xPrimeMaxTmp):
-                print("Reducing xPrimeMax from {0} down to {1} mrad".format(
-                      self._xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMax = xPrimeMaxTmp
-            if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
-                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
-                      self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMin = np.sign(self._xPrimeMin) * xPrimeMaxTmp
-        if zPrimeMaxAutoReduce:
-            K0 = self.Kx if abs(self.Kx) > 0 else 2.
-            zPrimeMaxTmp = K0 / self.gamma
-            if abs(self._zPrimeMax) > abs(zPrimeMaxTmp):
-                print("Reducing zPrimeMax from {0} down to {1} mrad".format(
-                      self._zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
-                self._zPrimeMax = zPrimeMaxTmp
-            if abs(self._zPrimeMin) > abs(zPrimeMaxTmp):
-                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
-                      self._zPrimeMin * 1e3, zPrimeMaxTmp * 1e3))
-                self._zPrimeMin = np.sign(self._zPrimeMin) * zPrimeMaxTmp
+    @property
+    def xPrimeMaxAutoReduce(self):
+        return self._xPrimeMaxAutoReduce
+
+    @xPrimeMaxAutoReduce.setter
+    def xPrimeMaxAutoReduce(self, xPrimeMaxAutoReduce):
+        self._xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
+        self.needReset = True
+
+    @property
+    def zPrimeMaxAutoReduce(self):
+        return self._zPrimeMaxAutoReduce
+
+    @zPrimeMaxAutoReduce.setter
+    def zPrimeMaxAutoReduce(self, zPrimeMaxAutoReduce):
+        self._zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
+        self.needReset = True
+
+    @property
+    def phaseDeg(self):
+        return self._phaseDeg
+
+    @phaseDeg.setter
+    def phaseDeg(self, phaseDeg):
+        phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
+            isinstance(phaseDeg, raycing.basestring) else phaseDeg
+        self._phaseDeg = phaseDeg
+        self.phase = np.radians(phaseDeg)
+        self.needReset = True
 
     @property
     def period(self):
@@ -1444,6 +1436,24 @@ class Undulator(IntegratedSource):
         self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
+
+    @property
+    def taper(self):
+        return self._taper
+
+    @taper.setter
+    def taper(self, taper):
+        if isinstance(taper, (list, tuple)) and len(taper) == 2:
+            self._taper = taper
+            self._taperVal = taper[0] / self.Np / self.L0 / taper[1]
+            self.gap = taper[1]
+        elif taper is None:
+            self._taperVal = None
+            self._taper = None
+        else:  # must be float
+            self._taperVal = taper
+            self._taper = taper
+        self.needReset = True
 
     @property
     def Kx(self):
@@ -1523,9 +1533,9 @@ class Undulator(IntegratedSource):
             print("E9 = {0}".format(E1*9))
             print("E11 = {0}".format(E1*11))
             print("B0 = {0}".format(self.B0y))
-            if self.taper is not None:
+            if self._taperVal is not None:
                 print("dB/dx/B = {0}".format(
-                    -PI * self.gap * self.taper / self.L0 * 1e3))
+                    -PI * self.gap * self._taperVal / self.L0 * 1e3))
         self.E1 = E1
 
     def prefix_save_name(self):
@@ -1655,7 +1665,7 @@ class Undulator(IntegratedSource):
         taperC = 1
         alphaS = 0
 
-        if (R0 is not None) or (self.taper is not None):
+        if (R0 is not None) or (self._taperVal is not None):
             dI = np.arange(0.5*self.dstep - PI*self.Np, PI*self.Np, self.dstep)
             tg = (dI[:, None] + 0.5*self.dstep*self.tg_n).ravel()
             ag = np.tile(self.ag, self.Np)
@@ -1680,8 +1690,8 @@ class Undulator(IntegratedSource):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        if self.taper is not None:
-            alphaS = self.taper/E2WC
+        if self._taperVal is not None:
+            alphaS = self._taperVal/E2WC
             taperC = 1 - alphaS*tg/wuS
             ucos = ww1S*tg + \
                 wwuS*revgamma*(
@@ -1771,20 +1781,20 @@ class Undulator(IntegratedSource):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        Nmx = self.Np if (R0 is not None or self.taper is not None) else 1
+        Nmx = self.Np if (R0 is not None or self._taperVal is not None) else 1
 
         if R0 is not None:
             sinr0z = np.sin(R0[-1])
             cosr0z = np.cos(R0[-1])
 
         for Nperiod in range(Nmx):
-            if raycing._VERBOSITY_ > 80 and (self.taper is not None or
+            if raycing._VERBOSITY_ > 80 and (self._taperVal is not None or
                                              R0 is not None):
                 print("Period {} out of {}".format(Nperiod+1, Nmx))
             for i in range(len(self.tg)):
-                if self.taper is not None:
+                if self._taperVal is not None:
                     zloc = -(Nmx-1)*np.pi + Nperiod*PI2 + self.tg[i]
-                    alphaS = self.taper/E2WC
+                    alphaS = self._taperVal/E2WC
                     taperC = 1. - alphaS*zloc/wuS
                     ucos = ww1S*zloc +\
                         wwuS*revgamma *\
@@ -1891,7 +1901,7 @@ class Undulator(IntegratedSource):
         ww1 = w * ((1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) +
                    gamma2 * (ddtheta**2 + ddpsi**2)) / (2. * gamma2 * wu)
 
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self._taperVal is not None) or (self.R0 is not None):
             ab = 1. / PI2 / wu
         else:
             ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
@@ -1953,7 +1963,7 @@ class Undulator(IntegratedSource):
                    gamma2 * (ddtheta * ddtheta + ddpsi * ddpsi)) /\
             (2. * gamma2 * wu)
 
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self._taperVal is not None) or (self.R0 is not None):
             ab = 1. / PI2 / wu
         else:
             ab = 1. / PI2 / wu * np.sin(PI * self.Np * ww1) / np.sin(PI * ww1)
@@ -1962,13 +1972,13 @@ class Undulator(IntegratedSource):
 
         if self.R0 is not None:
             scalarArgs = [self.cl_precisionF(self.R0*np.pi*2/self.L0)]
-        elif self.taper:
-            scalarArgs = [self.cl_precisionF(self.taper)]
+        elif self._taperVal:
+            scalarArgs = [self.cl_precisionF(self._taperVal)]
 
         scalarArgs.extend([self.cl_precisionF(self.Kx),  # Kx
                            self.cl_precisionF(self.Ky),  # Ky
                            np.int32(len(self.tg))])  # jend
-        if (self.taper is not None) or (self.R0 is not None):
+        if (self._taperVal is not None) or (self.R0 is not None):
             scalarArgs.extend([np.int32(self.Np)])
 
         slicedROArgs = [self.cl_precisionF(gamma),  # gamma
@@ -1987,7 +1997,7 @@ class Undulator(IntegratedSource):
         slicedRWArgs = [np.zeros(NRAYS, dtype=self.cl_precisionC),  # Is
                         np.zeros(NRAYS, dtype=self.cl_precisionC)]  # Ip
 
-        if self.taper is not None:
+        if self._taperVal is not None:
             clKernel = 'undulator_taper'
         elif self.R0 is not None:
             clKernel = 'undulator_nf'

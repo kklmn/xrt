@@ -60,6 +60,7 @@ def build_beamline(nrays=1e4):
         ilens += 1
         if nCRL - ilens < 0.5:
             break
+
     beamLine.fsmF = rsc.Screen(beamLine, 'FSM-focus', [0, p+q, 0])
     return beamLine
 
@@ -79,17 +80,15 @@ def run_process(beamLine):
 
     outDict['beamFSM2'] = beamLine.fsmF.expose(lglobal)
 
-#    beamLine.prepare_flow()
+    beamLine.prepare_flow()
     return outDict
 rr.run_process = run_process
 
 
 def main():
-    myTestBeamline = build_beamline()
-    myTestBeamline.glow(v2=True)
-#    myTestBeamline.glow(v2=True, epicsPrefix="CRL")
-#    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1),
-#                  colorAxis='xzprime')
+    beamLine = build_beamline()
+    beamLine.glow(centerAt='Lens{0:02d}_Exit'.format(len(beamLine.lenses)-1),
+                  colorAxis='xzprime')
 
 
 if __name__ == '__main__':

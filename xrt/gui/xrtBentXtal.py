@@ -582,6 +582,7 @@ class PlotWidget(qt.QWidget):
         w = self.tree_view.indexWidget(modelIndex)
         layout = w.layout()
         return [layout.itemAt(i).widget().isChecked()
+                if layout.itemAt(i).widget() is not None else False
                 for i in range(layout.count())]
 
     def on_tree_item_changed(self, item):

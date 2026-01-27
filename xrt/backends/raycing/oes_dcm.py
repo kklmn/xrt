@@ -134,11 +134,22 @@ class DCM(OE):
 
     @property
     def material2(self):
-        if raycing.is_valid_uuid(self._material2) and self.bl is not None:
-            mat = self.bl.materialsDict.get(self._material2)
+        def resolve(mat):
+            if not raycing.is_valid_uuid(mat):
+                return mat
+
+            if self.bl is None:
+                print(f"Material with UUID {mat} doesn't exist!")
+                return None
+
+            return self.bl.materialsDict.get(mat)
+
+        m = self._material2
+
+        if raycing.is_sequence(m):
+            return [resolve(x) for x in m]
         else:
-            mat = self._material2
-        return mat
+            return resolve(m)
 
     @material2.setter
     def material2(self, material2):

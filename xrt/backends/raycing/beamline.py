@@ -643,8 +643,31 @@ class BeamLine(object):
         return sortedFEList
 
     def index_materials(self):  # materials and figure error objects
+        def register_material(mat):
+            if mat is None:
+                return None
+
+            for subAttr in ['tLayer', 'bLayer', 'coating', 'substrate']:
+                if hasattr(mat, subAttr):
+                    subMat = getattr(mat, subAttr)
+        
+                    if subMat is not None and hasattr(subMat, 'uuid'):
+                        if subMat.uuid not in materialsDict:
+                            materialsDict[subMat.uuid] = subMat
+                            matNamesDict[subMat.name] = subMat.uuid
+                            materialsDict.move_to_end(subMat.uuid, last=False)
+                        setattr(mat, subAttr, subMat.uuid)
+
+            if mat.uuid not in materialsDict:
+                materialsDict[mat.uuid] = mat
+                matNamesDict[mat.name] = mat.uuid
+
+            return mat.uuid
+
         materialsDict = OrderedDict()
+        matNamesDict = OrderedDict()
         feDict = OrderedDict()
+        feNamesDict = OrderedDict()
 
         rmats = importlib.import_module(
             '.materials', package='xrt.backends.raycing')
@@ -664,47 +687,45 @@ class BeamLine(object):
                     if is_valid_uuid(objId) and objId not in feDict:
                         feDict[objId] = objInstance
 
-#        for ename, eLine in self.oesDict.items():
-#            oe = eLine[0]
-#            for attr in ['material', 'material2']:
-#                if hasattr(oe, attr):
-#                    attrMat = getattr(oe, attr)
-#                    if not is_sequence(attrMat):
-#                        seqMat = (attrMat,)
-#                    for newMat in seqMat:
-#                        if newMat is not None and newMat.uuid not in\
-#                                materialsDict:
-#                            materialsDict[newMat.uuid] = newMat
-#                        for subAttr in ['tlayer', 'blayer',
-#                                        'coating', 'substrate']:
-#                            if hasattr(newMat, subAttr):
-#                                subMat = getattr(newMat, subAttr)
-#                                if hasattr(subMat, 'uuid') and\
-#                                        subMat.uuid not in materialsDict:
-#                                    materialsDict[subMat.uuid] = subMat
-#                                    materialsDict.move_to_end(
-#                                            subMat.uuid,
-#                                            last=False)
-#            for attr in ['figureError']:
-#                if hasattr(oe, attr):
-#                    attrMat = getattr(oe, attr)
-#                    if not is_sequence(attrMat):
-#                        seqMat = (attrMat,)
-#                    for newMat in seqMat:
-#                        if newMat is not None and newMat.uuid not in\
-#                                feDict:
-#                            feDict[newMat.uuid] = newMat
-#                        for subAttr in ['baseFE']:
-#                            if hasattr(newMat, subAttr):
-#                                subMat = getattr(newMat, subAttr)
-#                                if hasattr(subMat, 'uuid') and\
-#                                        subMat.uuid not in feDict:
-#                                    feDict[subMat.uuid] = subMat
-#                                    feDict.move_to_end(
-#                                            subMat.uuid,
-#                                            last=False)
+        for ename, eLine in self.oesDict.items():
+            oe = eLine[0]
+            for attr in ['material', 'material2']:
+                if not hasattr(oe, attr):
+                    continue
+            
+                attrMat = getattr(oe, attr)
+            
+                if is_sequence(attrMat):
+                    new_val = [register_material(m) for m in attrMat]
+                else:
+                    new_val = register_material(attrMat)
+            
+                setattr(oe, attr, new_val)
+
+            for attr in ['figureError']:
+                if hasattr(oe, attr):
+                    newFE = getattr(oe, attr, None)
+                    if hasattr(newFE, 'uuid') and newFE.uuid not in feDict:
+                        feDict[newFE.uuid] = newFE
+                        feNamesDict[newFE.name] = newFE.uuid
+                        setattr(oe, 'figureError', newFE.uuid)
+
+                    for subAttr in ['baseFE']:
+                        if hasattr(newFE, subAttr):
+                            subFE = getattr(newFE, subAttr, None)
+                            if hasattr(subFE, 'uuid') and\
+                                    subFE.uuid not in feDict:
+                                feDict[subFE.uuid] = subFE
+                                feNamesDict[subFE.name] = subFE.uuid
+                                feDict.move_to_end(
+                                        subFE.uuid,
+                                        last=False)
+                                setattr(subFE, 'baseFE', subFE.uuid)
+
         self.materialsDict.update(materialsDict)
+        # self.matnamesToUUIDs.update(matNamesDict)
         self.fesDict.update(feDict)
+        # self.fenamesToUUIDs.update(feNamesDict)
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[], v2=False,
@@ -819,8 +840,10 @@ class BeamLine(object):
                 app = xrtqook.qt.QApplication(sys.argv)
             self.index_materials()
             layout = self.export_to_json()
+
             if plots is not None and not layout['plots']:
                 layout['plots'].update(plots)
+
             self.blExplorer = xrtqook.XrtQook(loadLayout=layout)
             self.blExplorer.setWindowTitle("xrtQook")
             self.blExplorer.show()
@@ -1214,10 +1237,16 @@ class BeamLine(object):
         self.deserialize(data)
 
     def deserialize(self, data):
+        if 'Project' not in data:
+            data = {'Project': data}
+
         self.layoutStr = data
         beamlineName = next(islice(data['Project'].keys(), 2, 3))
         self.name = beamlineName
-        beamlineInitKWargs = data['Project'][beamlineName]['properties']
+        beamlineInitKWargs = data['Project'][beamlineName].get('properties')
+        if beamlineInitKWargs is None:
+            beamlineInitKWargs = {}
+
         for key, value in beamlineInitKWargs.items():
             setattr(self, key, get_init_val(value))
 
@@ -1277,7 +1306,7 @@ class BeamLine(object):
                     objInstance, 'uuid') else objName
             feDict[field] = feRecord
 
-        blArgs = get_init_kwargs(self)
+        blArgs = get_init_kwargs(self, compact=False)
 
         beamlineDict['properties'] = blArgs
         beamlineDict['_object'] = get_obj_str(self)
