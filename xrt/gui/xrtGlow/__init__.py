@@ -2254,6 +2254,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.beamline = raycing.BeamLine()
         self.loopRunning = False
+        self.input_queue = Queue()
+        self.output_queue = Queue()
 
         if arrayOfRays is not None:
             self.renderingMode = 'static'
@@ -2291,8 +2293,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.beamline.deserialize(beamLayout)
             self.beamline.flowSource = 'Qook'
-            self.input_queue = Queue()
-            self.output_queue = Queue()
 
             self.calc_process = Process(
                     target=propagationProcess,
