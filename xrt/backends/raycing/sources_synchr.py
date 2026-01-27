@@ -42,6 +42,7 @@ class BendingMagnet(SourceBase):
             self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
             self.X0 = 0.5 * self.K * self.L0 / self.gamma / PI
             self.isMPW = True
+            self._xPrimeMaxAutoReduce = True
         else:
             self.Np = 0.5
             self.B = B0
@@ -52,17 +53,6 @@ class BendingMagnet(SourceBase):
             elif self.B:
                 self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
             self.isMPW = False
-
-        if self.isMPW:  # xPrimeMaxAutoReduce
-            xPrimeMaxTmp = self.K / self.gamma
-            if abs(self._xPrimeMax) > xPrimeMaxTmp:
-                print("Reducing xPrimeMax from {0} down to {1} mrad".format(
-                      self.xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMax = xPrimeMaxTmp
-            if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
-                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
-                      self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMin = np.sign(self._xPrimeMin) * xPrimeMaxTmp
 
     @property
     def B0(self):
@@ -436,6 +426,7 @@ class Wiggler(BendingMagnet):
 
         """
         self._K = kwargs.pop('K', 8.446)
+        self._Ky = self._K
         self.L0 = kwargs.pop('period', 50)
         self.Np = kwargs.pop('n', 40)
         name = kwargs.pop('name', 'wiggler')
@@ -470,6 +461,7 @@ class Wiggler(BendingMagnet):
     @K.setter
     def K(self, K):
         self._K = float(K)
+        self._Ky = float(K)
         self._B = K2B * K / self.L0
         self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
         self.X0 = 0.5 * K * self.L0 / self.gamma / PI
@@ -1271,8 +1263,9 @@ class Undulator(IntegratedSource):
             value will be used.
 
         *phaseDeg*: float
-            Phase difference between horizontal and vertical magnetic arrays.
-            Used in the elliptical case where it should be equal to 90 or -90.
+            Phase difference between horizontal and vertical magnetic arrays in
+            degrees. Used in the elliptical case where it should be equal
+            to 90 or -90.
 
         *taper*: tuple(dgap(mm), gap(mm))
             Linear variation in undulator gap. None if tapering is not used.
@@ -1307,6 +1300,8 @@ class Undulator(IntegratedSource):
 
         self.L0 = period
         self.Np = n
+        self.taper = taper
+        self.phaseDeg = phaseDeg
 
         if targetE is not None:
             self._targetE = targetE
@@ -1329,16 +1324,6 @@ class Undulator(IntegratedSource):
                         Kx = Ky = Ky / 2**0.5
                         if raycing._VERBOSITY_ > 10:
                             print("Kx = Ky = {0}".format(Kx))
-
-        phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
-            isinstance(phaseDeg, raycing.basestring) else phaseDeg
-        self.phase = np.radians(phaseDeg)
-
-        if taper is not None:
-            self.taper = taper[0] / self.Np / self.L0 / taper[1]
-            self.gap = taper[1]
-        else:
-            self.taper = None
 
         self.Kbase = True
 
@@ -1364,28 +1349,35 @@ class Undulator(IntegratedSource):
             self.xPrimeMaxAutoReduce = True
             self.zPrimeMaxAutoReduce = True
 
-        if xPrimeMaxAutoReduce:
-            K0 = self.Ky if abs(self.Ky) > 0 else 2.
-            xPrimeMaxTmp = K0 / self.gamma
-            if abs(self._xPrimeMax) > abs(xPrimeMaxTmp):
-                print("Reducing xPrimeMax from {0} down to {1} mrad".format(
-                      self._xPrimeMax * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMax = xPrimeMaxTmp
-            if abs(self._xPrimeMin) > abs(xPrimeMaxTmp):
-                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
-                      self._xPrimeMin * 1e3, xPrimeMaxTmp * 1e3))
-                self._xPrimeMin = np.sign(self._xPrimeMin) * xPrimeMaxTmp
-        if zPrimeMaxAutoReduce:
-            K0 = self.Kx if abs(self.Kx) > 0 else 2.
-            zPrimeMaxTmp = K0 / self.gamma
-            if abs(self._zPrimeMax) > abs(zPrimeMaxTmp):
-                print("Reducing zPrimeMax from {0} down to {1} mrad".format(
-                      self._zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
-                self._zPrimeMax = zPrimeMaxTmp
-            if abs(self._zPrimeMin) > abs(zPrimeMaxTmp):
-                print("Reducing xPrimeMin from {0} down to {1} mrad".format(
-                      self._zPrimeMin * 1e3, zPrimeMaxTmp * 1e3))
-                self._zPrimeMin = np.sign(self._zPrimeMin) * zPrimeMaxTmp
+    @property
+    def xPrimeMaxAutoReduce(self):
+        return self._xPrimeMaxAutoReduce
+
+    @xPrimeMaxAutoReduce.setter
+    def xPrimeMaxAutoReduce(self, xPrimeMaxAutoReduce):
+        self._xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
+        self.needReset = True
+
+    @property
+    def zPrimeMaxAutoReduce(self):
+        return self._zPrimeMaxAutoReduce
+
+    @zPrimeMaxAutoReduce.setter
+    def zPrimeMaxAutoReduce(self, zPrimeMaxAutoReduce):
+        self._zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
+        self.needReset = True
+
+    @property
+    def phaseDeg(self):
+        return self._phaseDeg
+
+    @phaseDeg.setter
+    def phaseDeg(self, phaseDeg):
+        phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
+            isinstance(phaseDeg, raycing.basestring) else phaseDeg
+        self._phaseDeg = phaseDeg
+        self.phase = np.radians(phaseDeg)
+        self.needReset = True
 
     @property
     def period(self):
@@ -1444,6 +1436,21 @@ class Undulator(IntegratedSource):
         self.report_E1()
         self.needReset = True
         # Need to recalculate the integration parameters
+
+    @property
+    def taper(self):
+        return self._taperVal
+
+    @taper.setter
+    def taper(self, taper):
+        if isinstance(taper, (list, tuple)) and len(taper) == 2:
+            self._taper = taper
+            self._taperVal = taper[0] / self.Np / self.L0 / taper[1]
+            self.gap = taper[1]
+        else:
+            self._taperVal = None
+            self._taper = None
+        self.needReset = True
 
     @property
     def Kx(self):
