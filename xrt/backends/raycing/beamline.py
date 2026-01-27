@@ -652,7 +652,7 @@ class BeamLine(object):
             '.figure_error', package='xrt.backends.raycing')
         for i in range(len(inspect.stack())):
             scr_globals = inspect.stack()[i][0].f_globals
-    
+
             for objName, objInstance in scr_globals.items():
                 if isinstance(objInstance, (rmats.Element, rmats.Material,
                                             rmats.Multilayer)):
@@ -1113,7 +1113,10 @@ class BeamLine(object):
         delay = 0.001
         for retry in range(max_retries):
             try:
-                matObject = getattr(matModule, matClass)(**initKWArgs)
+                matClass = getattr(matModule, matClass, None)
+                if matClass is None:
+                    return 1
+                matObject = matClass(**initKWArgs)
                 initStatus = 0
                 break
     #            print("Initalized", matObject, initKWArgs)
@@ -1141,7 +1144,6 @@ class BeamLine(object):
 
         matSorted = self.sort_materials(matDict=dictIn, fromJSON=True)
 
-#        for matName, matProps in dictIn.items():
         for matName in matSorted:
             matProps = dictIn.get(matName)
             if matProps is not None:
@@ -1162,7 +1164,12 @@ class BeamLine(object):
 
         feObject = None
         initKWArgs['bl'] = self
-        feObject = getattr(feModule, feClass)(**initKWArgs)
+        feClass = getattr(feModule, feClass, None)
+
+        if feClass is None:
+            return 1
+
+        feObject = feClass(**initKWArgs)
         initStatus = 0
 
         self.fenamesToUUIDs[feObject.name] = feObject.uuid
@@ -1175,7 +1182,6 @@ class BeamLine(object):
 
         feSorted = self.sort_figerrors(feDict=dictIn, fromJSON=True)
 
-#        for matName, matProps in dictIn.items():
         for feName in feSorted:
             feProps = dictIn.get(feName)
             if feProps is not None:
@@ -1214,11 +1220,11 @@ class BeamLine(object):
         beamlineInitKWargs = data['Project'][beamlineName]['properties']
         for key, value in beamlineInitKWargs.items():
             setattr(self, key, get_init_val(value))
-            
+
         matDict = data['Project'].get('Materials')
         if matDict is not None:
             self.populate_materials_dict_from_json(matDict)
-        
+
         feDict = data['Project'].get('FigureErrors')
         if feDict is not None:
             self.populate_figerrors_dict_from_json(feDict)

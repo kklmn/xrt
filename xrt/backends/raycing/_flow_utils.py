@@ -230,7 +230,7 @@ def get_params(objStr):  # Returns a collection of default parameters
     try:
         objRef = getattr(moduleObj, class_name)
     except:  # TODO: remove if works correctly
-        raise
+        return {}
 
     isMethod = False
     if hasattr(objRef, 'hiddenParams'):

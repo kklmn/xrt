@@ -11,12 +11,13 @@ from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Jan 2026"
 __all__ = ('RandomRoughness', 'GaussianBump', 'Waviness',
-           'FigureErrorImported')
+           'FigureErrorImported', 'PlanarRidge')
 
 allArguments = ('bl', 'name', 'baseFE', 'limPhysX', 'limPhysY', 'gridStep',
                 'fileName', 'recenter', 'orientation',
                 'rms', 'corrLength', 'seed', 'bumpHeight', 'sigmaX', 'sigmaY',
-                'cX', 'cY', 'amplitude', 'xWaveLength', 'yWaveLength')
+                'cX', 'cY', 'amplitude', 'xWaveLength', 'yWaveLength',
+                'slopeAngle', 'orientationAngle')
 
 import numpy as np
 from scipy import interpolate
@@ -72,6 +73,7 @@ class FigureErrorBase():
         self.bl = kwargs.get('bl')
         self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
+        self._splineOrder = 3
         if limPhysX is None:
             self._limPhysX = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
@@ -128,6 +130,15 @@ class FigureErrorBase():
             self._limPhysY = raycing.Limits(limPhysY)
         self.build_spline()
 
+    @property
+    def splineOrder(self):
+        return self._splineOrder
+
+    @splineOrder.setter
+    def splineOrder(self, splineOrder):
+        self._splineOrder = splineOrder
+        self.build_spline()
+
     def get_rms(self):
         z = self.local_z_distorted(self.x2d, self.y2d) * 1e6
         zAvg = z - z.mean()
@@ -181,7 +192,7 @@ class FigureErrorBase():
     def build_spline(self):
         z = self.generate_profile()
         self.local_z_spline = interpolate.RectBivariateSpline(
-            self.y1d, self.x1d, z)
+            self.y1d, self.x1d, z, kx=self.splineOrder, ky=self.splineOrder)
         self.z2d = self.local_z_distorted(self.x2d, self.y2d) * 1e6 #  in nm
         self.get_angles()
 
@@ -637,3 +648,79 @@ class Waviness(FigureErrorBase):
         z = self.amplitude * np.cos(2*np.pi*self.x2d/self.xWaveLength) *\
             np.cos(2*np.pi*self.y2d/self.yWaveLength)
         return z + base_z
+
+class PlanarRidge(FigureErrorBase):
+    """
+    Planar ridge (V-shaped prism) surface profile.
+
+    Represents a surface with a linear ridge: two planar faces meeting along
+    a straight ridge line, with constant slope angle relative to the base plane.
+    The ridge can be arbitrarily oriented in the (x, y) plane.
+    
+    Used for testing the underlying figure error calculations.
+    """
+
+    def __init__(self, amplitude=1., slopeAngle=1e-3, orientationAngle=0,
+                 **kwargs):
+        """
+        *amplitude*: float
+            Ridge height at the apex line in [mm].
+            This is the maximum surface deviation at the ridge center.
+
+        *slopeAngle*: float
+            Face inclination angle relative to the base (x, y) plane in [rad].
+            The local surface slope magnitude is tan(slopeAngle).
+
+        *orientationAngle*: float
+            Orientation angle of the ridge line in the (x, y) plane in [rad],
+            measured counter-clockwise from the local x axis.
+            The slope is applied perpendicular to this direction.
+
+        """
+        self._amplitude = amplitude
+        self._slopeAngle = slopeAngle
+        self._orientationAngle = orientationAngle
+        kwargs['name'] = kwargs.get('name', 'ridge')
+        super().__init__(**kwargs)
+
+    @property
+    def amplitude(self):
+        return self._amplitude
+
+    @amplitude.setter
+    def amplitude(self, amplitude):
+        self._amplitude = amplitude
+        self.build_spline()
+
+    @property
+    def slopeAngle(self):
+        return self._slopeAngle
+
+    @slopeAngle.setter
+    def slopeAngle(self, slopeAngle):
+        self._slopeAngle = raycing.auto_units_angle(slopeAngle)
+        self.build_spline()
+
+    @property
+    def orientationAngle(self):
+        return self._orientationAngle
+
+    @orientationAngle.setter
+    def orientationAngle(self, orientationAngle):
+        self._orientationAngle = raycing.auto_units_angle(orientationAngle)
+        self.build_spline()
+
+    def generate_profile(self):
+        self.get_grids()
+        base_z = np.zeros_like(self.x2d)
+
+        if self.baseFE is not None and \
+                hasattr(self.baseFE, 'local_z_distorted'):
+            base_z = self.baseFE.local_z_distorted(self.x2d, self.y2d) * 1e6
+
+        Yp = -self.x2d*np.sin(self.orientationAngle) +\
+                self.y2d*np.cos(self.orientationAngle)
+
+        z = self.amplitude - np.tan(self.slopeAngle)*np.abs(Yp)
+        return z*1e6 + base_z
+
