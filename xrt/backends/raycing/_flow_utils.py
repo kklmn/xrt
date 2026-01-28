@@ -8,6 +8,7 @@ from collections import OrderedDict
 from functools import wraps
 import re
 import inspect
+import ast
 import uuid
 import importlib
 
@@ -31,6 +32,17 @@ safe_globals = {
     'np': np,
     '__builtins__': {}  # Disable built-in functions
 }
+
+
+class NameAsString(ast.NodeTransformer):
+    """Replace unknown names with string literals."""
+    def __init__(self, allowed_names):
+        self.allowed_names = allowed_names
+
+    def visit_Name(self, node):
+        if node.id in self.allowed_names:
+            return node
+        return ast.Constant(node.id)
 
 
 def auto_units_angle(angle, defaultFactor=1.):
@@ -186,40 +198,37 @@ def quat_vec_rotate(vec, q):
         q, vec_to_quat(vec, np.pi*0.25)), qn)[1:]
 
 
+def normalize_string_input(v):
+    if isinstance(v, np.generic):
+        return v.item()
+
+    if isinstance(v, np.ndarray):
+        return [normalize_string_input(x) for x in v.tolist()]
+
+    if isinstance(v, list):
+        return [normalize_string_input(x) for x in v]
+
+    if isinstance(v, tuple):
+        return tuple(normalize_string_input(x) for x in v)
+
+    return v
+
+
 def get_init_val(value):
-    if str(value) == 'round':
-        return str(value)
 
-    if "," in str(value):  # mixed list.
-        while 'np.float64(' in value:
-            pos1 = value.find('np.float64(')
-            pos2 = value.find(')', pos1+1)
-            value = value[:pos1] + value[pos1+11:pos2] + value[pos2+1:]
-        s = str(value).replace(" ", "").replace("(", "[").replace(")", "]")
-        if s.startswith('[['):  # nested list
-            try:
-                v = eval(s, safe_globals)
-            except (NameError, SyntaxError):
-                v = s
-            return v
-
-        paravalue = str(value).strip('[]() ')
-        listvalue = []
-        for c in paravalue.split(','):
-            c_strip = str(c).strip()
-            try:
-                if not c_strip:
-                    continue
-                v = eval(c_strip, safe_globals)
-            except (NameError, SyntaxError):
-                v = c_strip
-            listvalue.append(v)
-        return listvalue
-
+    text = str(value).strip()
+    
     try:
-        return eval(str(value), safe_globals)
-    except (NameError, SyntaxError):  # Intentionally string
-        return str(value)
+        tree = ast.parse(text, mode="eval")
+        tree = NameAsString(safe_globals.keys()).visit(tree)
+        ast.fix_missing_locations(tree)
+
+        v = eval(compile(tree, "<init>", "eval"), safe_globals)
+        return normalize_string_input(v)
+
+    except Exception:
+        # intentional string
+        return text
 
 
 def get_params(objStr):  # Returns a collection of default parameters
