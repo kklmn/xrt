@@ -2580,36 +2580,3 @@ class XrtQookBase(qt.QMainWindow):
         if self.blViewer is not None:
             self.blViewer.close()
         super().closeEvent(event)
-
-    def addElement(self, name=None, obj=None, copyFrom=None, isRoot=False):
-        pass
-
-    def addMethod(self, name, parentItem, outBeams, methProps=None):
-        pass
-
-    def addPlot(self, copyFrom=None, plotName=None, beamName=None):
-        pass
-
-    def addPlotBeam(self, beamName):
-        pass
-
-    def deleteElement(self, view, item):
-        pass
-
-    def updateBeamModel(self):
-        pass
-
-    def updateBeamlineModel(self, data):
-        pass
-
-    def updateBeamlineMaterials(self, item=None, newElement=None):
-        pass
-
-    def updateBeamlineFEs(self, item=None, newElement=None):
-        pass
-
-    def updateBeamline(self, item=None, newElement=None, newOrder=False):
-        pass
-
-    def generateCode(self):
-        pass
