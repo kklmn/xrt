@@ -7,22 +7,22 @@ Created on Tue Jan 27 13:28:37 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-import re
-import copy
-import numpy as np
-from datetime import datetime
-from functools import partial
-from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
-from matplotlib.colors import TABLEAU_COLORS
+import re  # analysis:ignore
+import copy  # analysis:ignore
+import numpy as np  # analysis:ignore
+from datetime import datetime  # analysis:ignore
+from functools import partial  # analysis:ignore
+from matplotlib.figure import Figure  # analysis:ignore
+from matplotlib.lines import Line2D  # analysis:ignore
+from matplotlib.colors import TABLEAU_COLORS  # analysis:ignore
 
-from ..commons import qt
+from ..commons import qt  # analysis:ignore
 
-from ...backends import raycing
-from ...backends.raycing import materials as rmats
-from ...multipro import GenericProcessOrThread as GP
-from ...runner import RunCardVals
-from ...plotter import deserialize_plots
+from ...backends import raycing  # analysis:ignore
+from ...backends.raycing import materials as rmats  # analysis:ignore
+from ...multipro import GenericProcessOrThread as GP  # analysis:ignore
+from ...runner import RunCardVals  # analysis:ignore
+from ...plotter import deserialize_plots  # analysis:ignore
 
 
 class InstanceInspector(qt.QDialog):
@@ -134,8 +134,6 @@ class InstanceInspector(qt.QDialog):
                     self.add_param(parentItem, key, spVal, epv=epv)
                     self.add_param(parentItem, f"{key} rbk", value)
                 else:
-#                    if key in raycing.diagnosticArgs:
-#                        print(key, value)
                     self.add_param(parentItem, key, value, epv=epv)
 
 #        for item in self.itemGroups.values():
@@ -212,7 +210,7 @@ class InstanceInspector(qt.QDialog):
             layout.addWidget(canvasSplitter)
             canvasSplitter.addWidget(widgetL)
             canvasSplitter.addWidget(widgetR)
-        elif self.beamLine.beamsDictU.get(elementId) is None:  # nothing to show
+        elif self.beamLine.beamsDictU.get(elementId) is None:
             layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
         else:  # create dynamicPlotWidget
@@ -408,7 +406,7 @@ class InstanceInspector(qt.QDialog):
         self.propertiesChanged.emit(copy.deepcopy(self.changed_data))
 
         if self.widgetType == 'oe':
-            for row in range(self.modelRoot.rowCount()):  # for categorized trees
+            for row in range(self.modelRoot.rowCount()):
                 catItem = self.modelRoot.child(row, 0)
                 for j in range(catItem.rowCount()):
                     key = str(catItem.child(j, 0).text())
@@ -859,7 +857,7 @@ class Curve1dWidget(qt.QWidget):
         mirror=[(u"θ from OE", None), (u"Grazing angle θ (mrad)", 5.),
                 ("Curves", ['σ', ])],
         crystal=[(u"θ from OE", None), (u"Grazing angle θ (°)", 15.),
-                ("Asymmetry angle", 0), ("Curves", ['σ', ])],
+                 ("Asymmetry angle", 0), ("Curves", ['σ', ])],
         common2=[("Curve Color", "blue")],
         )
 

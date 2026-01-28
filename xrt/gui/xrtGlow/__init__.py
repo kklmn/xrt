@@ -39,6 +39,6 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-from ._widgets_main import xrtGlow
-from ._widgets_inspector import InstanceInspector, ConfigurablePlotWidget
-from ._utils import is_screen, is_aperture
+from ._widgets_main import xrtGlow  # analysis:ignore
+from ._widgets_inspector import InstanceInspector, ConfigurablePlotWidget  # analysis:ignore
+from ._utils import is_screen, is_aperture  # analysis:ignore

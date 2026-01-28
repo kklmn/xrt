@@ -1557,7 +1557,7 @@ class OEMesh3D():
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
         shader.setUniformValue("surfOpacity", float(surfOpacity))
-        shader.setUniformValue("isApt", 0) #int(is_aperture(self.oe)))
+        shader.setUniformValue("isApt", 0)
 
         if beamTexture is not None:
             beamTexture.bind()

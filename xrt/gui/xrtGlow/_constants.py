@@ -7,7 +7,7 @@ Created on Tue Jan 27 15:56:58 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-from ..commons import qt
+from ..commons import qt  # analysis:ignore
 
 msg_start = {"command": "start"}
 msg_stop = {"command": "stop"}

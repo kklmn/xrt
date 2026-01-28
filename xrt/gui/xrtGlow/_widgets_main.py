@@ -7,25 +7,25 @@ Created on Tue Jan 27 13:03:13 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-import os
-import re
-import numpy as np
-from functools import partial
-import matplotlib as mpl
-from matplotlib.colors import hsv_to_rgb
-from matplotlib.figure import Figure
-from matplotlib.widgets import RectangleSelector
+import os  # analysis:ignore
+import re  # analysis:ignore
+import numpy as np  # analysis:ignore
+from functools import partial  # analysis:ignore
+import matplotlib as mpl  # analysis:ignore
+from matplotlib.colors import hsv_to_rgb  # analysis:ignore
+from matplotlib.figure import Figure  # analysis:ignore
+from matplotlib.widgets import RectangleSelector  # analysis:ignore
 
-from ._constants import _DEBUG_
-from ._utils import is_source, is_oe, is_aperture, is_screen, basis_rotation_q
-from ._widgets_inspector import InstanceInspector
-from ._widgets_opengl import xrtGlWidget
+from ._constants import _DEBUG_  # analysis:ignore
+from ._utils import is_source, is_oe, is_aperture, is_screen, basis_rotation_q  # analysis:ignore
+from ._widgets_inspector import InstanceInspector  # analysis:ignore
+from ._widgets_opengl import xrtGlWidget  # analysis:ignore
 
-from ..commons import qt
+from ..commons import qt  # analysis:ignore
 
-from ...backends import raycing
-from ...backends.raycing import sources as rsources
-from ...plotter import colorFactor, colorSaturation
+from ...backends import raycing  # analysis:ignore
+from ...backends.raycing import sources as rsources  # analysis:ignore
+from ...plotter import colorFactor, colorSaturation  # analysis:ignore
 
 
 class xrtGlow(qt.QWidget):
@@ -195,7 +195,8 @@ class xrtGlow(qt.QWidget):
                 if hasattr(oeObj, 'eE'):
                     catDict.update({
                         'Electron Beam': rsources.electronBeamArgSet,
-                        'Magnetic Structure': rsources.magneticStructureArgSet})
+                        'Magnetic Structure': rsources.magneticStructureArgSet
+                        })
 
                 catDict.update({
                         'Distributions': rsources.distributionsArgSet,
@@ -207,17 +208,18 @@ class xrtGlow(qt.QWidget):
                 catDict.update({
                     'Diagnostic': raycing.diagnosticArgs})
                 diagProps = {argName: getattr(oeObj, argName) for
-                                    argName in raycing.diagnosticArgs if
-                                    hasattr(oeObj, argName)}
+                             argName in raycing.diagnosticArgs if
+                             hasattr(oeObj, argName)}
                 oeProps.update(diagProps)
 
-            elViewer = InstanceInspector(self, oeProps,
-                                  initDict=oeInitProps,
-                                  epicsDict=getattr(self.customGlWidget,
-                                                    'epicsInterface', None),
-                                  viewOnly=False,
-                                  beamLine=self.customGlWidget.beamline,
-                                  categoriesDict=catDict)
+            elViewer = InstanceInspector(
+                    self, oeProps,
+                    initDict=oeInitProps,
+                    epicsDict=getattr(self.customGlWidget,
+                                      'epicsInterface', None),
+                    viewOnly=False,
+                    beamLine=self.customGlWidget.beamline,
+                    categoriesDict=catDict)
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
@@ -906,7 +908,8 @@ class xrtGlow(qt.QWidget):
                                 continue
                 self.segmentsModelRoot.appendRow(newRow)
         else:
-            for eluuid, elementLine in self.customGlWidget.beamline.oesDict.items():
+            for eluuid, elementLine in\
+                    self.customGlWidget.beamline.oesDict.items():
                 if elementLine[0].name == "VirtualScreen":
                     continue
                 self.addElementToModel(eluuid)
@@ -937,11 +940,13 @@ class xrtGlow(qt.QWidget):
         else:
             return
 
-        for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
+        for targetuuid, targetoperations in\
+                self.customGlWidget.beamline.flowU.items():
             for kwargset in targetoperations.values():
                 if kwargset.get('beam', 'none') == uuid:
                     try:
-                        targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
+                        targetName = self.customGlWidget.beamline.oesDict[
+                                targetuuid][0].name
                         endBeamText = "to {}".format(targetName)
                         newRow[0].appendRow(self.createRow(
                                 endBeamText, 3, uuid=targetuuid))
@@ -1000,12 +1005,13 @@ class xrtGlow(qt.QWidget):
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
             uuid = oeItem.data(qt.Qt.UserRole)
-            for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
+            for targetuuid, targetoperations in\
+                    self.customGlWidget.beamline.flowU.items():
                 for kwargset in targetoperations.values():
                     if kwargset.get('beam', 'none') == uuid:
                         try:
-                            targetName =\
-                                self.customGlWidget.beamline.oesDict[targetuuid][0].name
+                            targetName = self.customGlWidget.beamline.oesDict[
+                                        targetuuid][0].name
                             endBeamText = "to {}".format(targetName)
                             oeItem.appendRow(self.createRow(
                                     endBeamText, 3, uuid=targetuuid))
@@ -1379,6 +1385,7 @@ class xrtGlow(qt.QWidget):
         slider.setValue(value)
 
     def updateMaxLenFromGL(self, value):
+        self.maxLenEditor.setText("{0:.2f}".format(float(value)))
 #        if isinstance(scale, (int, float)):
 #            scale = [scale, scale, scale]
 #        for iaxis, (slider, editor) in \
@@ -1386,7 +1393,6 @@ class xrtGlow(qt.QWidget):
 #            value = np.log10(scale[iaxis])
 #            slider.setValue(value)
 #            editor.setText("{0:.2f}".format(value))
-        self.maxLenEditor.setText("{0:.2f}".format(float(value)))
 
     def updateFontSize(self, slider, position):
         # slider = self.sender()
@@ -1948,7 +1954,8 @@ class xrtGlow(qt.QWidget):
         else:
             return
         for oeid, oeLine in self.customGlWidget.beamline.oesDict.items():
-            if is_oe(oeLine[0]) and oeid not in self.customGlWidget.needMeshUpdate:
+            if is_oe(oeLine[0]) and\
+                    oeid not in self.customGlWidget.needMeshUpdate:
                 self.customGlWidget.needMeshUpdate.append(oeid)
         self.customGlWidget.glDraw()
 
@@ -1959,7 +1966,8 @@ class xrtGlow(qt.QWidget):
             return
         self.customGlWidget.tiles[ia] = np.int32(value)
         for oeid, oeLine in self.customGlWidget.beamline.oesDict.items():
-            if is_oe(oeLine[0]) and oeid not in self.customGlWidget.needMeshUpdate:
+            if is_oe(oeLine[0]) and\
+                    oeid not in self.customGlWidget.needMeshUpdate:
                 self.customGlWidget.needMeshUpdate.append(oeid)
         self.customGlWidget.glDraw()
 

@@ -7,29 +7,29 @@ Created on Tue Jan 27 13:21:08 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-import os
-import copy
-import numpy as np
-from functools import partial
-from multiprocessing import Process, Queue
-from collections import OrderedDict, deque
-from matplotlib.colors import hsv_to_rgb
+import os  # analysis:ignore
+import copy  # analysis:ignore
+import numpy as np  # analysis:ignore
+from functools import partial  # analysis:ignore
+from multiprocessing import Process, Queue  # analysis:ignore
+from collections import OrderedDict, deque  # analysis:ignore
+from matplotlib.colors import hsv_to_rgb  # analysis:ignore
 
-from ._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,
+from ._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,  # analysis:ignore
                          scr_m)
-from ._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
-                    is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)
-from ._ogl_objects import Beam3D, OEMesh3D
-from ._ogl_axes import CoordinateBox
+from ._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,  # analysis:ignore
+                    is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)  # analysis:ignore
+from ._ogl_objects import Beam3D, OEMesh3D  # analysis:ignore
+from ._ogl_axes import CoordinateBox  # analysis:ignore
 
-from ..commons import qt
-from ..commons import gl
+from ..commons import qt  # analysis:ignore
+from ..commons import gl  # analysis:ignore
 
-from ...backends import raycing
-from ...backends.raycing import (propagationProcess, renderOnlyArgSet,
-                                 orientationArgSet, shapeArgSet, EpicsDevice)
-from ...backends.raycing import sources as rsources
-from ...backends.raycing import screens as rscreens
+from ...backends import raycing  # analysis:ignore
+from ...backends.raycing import (propagationProcess, renderOnlyArgSet,  # analysis:ignore
+                                 orientationArgSet, shapeArgSet, EpicsDevice)  # analysis:ignore
+from ...backends.raycing import sources as rsources  # analysis:ignore
+from ...backends.raycing import screens as rscreens  # analysis:ignore
 
 
 class xrtGlWidget(qt.QOpenGLWidget):
@@ -296,7 +296,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.update_beamline(oeid, {argName: argValue}, sender="epics")
 
     def update_epics_record(self, oeid, kwargs):
-        """Update EPICS record if the value was changed from Qook or Explorer"""
+        """Update EPICS record if the value was changed from Qook or Explorer
+        """
         if self.epicsPrefix is not None:
             elementBase = self.epicsInterface.pv_map.get(oeid)
             if elementBase is not None:
@@ -453,13 +454,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     argValue = arrayValue
 
             elif any(arg0.lower().startswith(v) for v in
-                   ['mater', 'tlay', 'blay', 'coat', 'substrate']):
+                     ['mater', 'tlay', 'blay', 'coat', 'substrate']):
                 if not raycing.is_valid_uuid(argValue):
                     # objects need material uuid rather than name
                     argValue = self.beamline.matnamesToUUIDs.get(argValue)
                     kwargs[arg0] = argValue
             elif any(arg0.lower().startswith(v) for v in
-                   ['figureerr', 'basefe']):
+                     ['figureerr', 'basefe']):
                 if not raycing.is_valid_uuid(argValue):
                     # objects need fe uuid rather than name
                     argValue = self.beamline.fenamesToUUIDs.get(argValue)
@@ -485,7 +486,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         skipUpdate = True
 
                 if arg0 in orientationArgSet and not skipUpdate:
-    #                self.oePropsUpdated.emit((oeid, arg0, argValue))
                     self.meshDict[oeid].update_transformation_matrix()
                     self.getMinMax()
                     self.maxLen = np.max(np.abs(
@@ -1022,7 +1022,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             oe = self.beamline.oesDict[oeuuid][0]
             oeIndex = int(beamTag[1] == 'beamLocal2')
             oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
-            if not 'Global' in beamTag[1]:
+            if 'Global' not in beamTag[1]:
                 modelStart *= oeOrientation
             if is_screen(oe) or is_aperture(oe):
                 modelStart *= scr_m
@@ -1031,7 +1031,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 enduuid = target[0]
                 targetOe = self.beamline.oesDict[enduuid][0]
                 modelEnd = copy.deepcopy(model)
-                oeIndex =  int(target[1] == 'beamLocal2')
+                oeIndex = int(target[1] == 'beamLocal2')
                 oeOrientation = self.meshDict[enduuid].transMatrix[oeIndex]
                 modelEnd *= oeOrientation
                 if is_screen(targetOe) or is_aperture(targetOe):
@@ -2461,7 +2461,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     [[0.5, 0.5, 1], [0.3, 1, 0.3], [1, 0.3, 0.3]]):
 
                 endPos = self.cBox.render_text(
-                    (fixView*self.fixProj*qt.QVector4D(*labelPos, 0)).toVector3D(),
+                    (fixView * self.fixProj *
+                     qt.QVector4D(*labelPos, 0)).toVector3D(),
                     label, alignment=None,
                     scale=0.04*self.cBox.fontScale,
                     textColor=qt.QVector3D(*labelColor))
@@ -2530,7 +2531,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         bEnd0 = self.beamline.oesDict[eluuid][0].center
 
                         beam0 = bEnd0 - bStart0
-                        # Finding the projection of the VScreen.center on segments
+                        # Finding the projection of the VScreen.center on
+                        # segments
                         t = np.dot(cntr-bStart0, beam0) / np.dot(beam0, beam0)
                         t = np.clip(t, 0.0, 1.0)
                         cProjTmp = bStart0 + t * beam0
@@ -2714,7 +2716,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 try:
                     oePitchStr = np.degrees(
                         oe.pitch + (oe.bragg if hasattr(oe, 'bragg')
-                        else 0)) if hasattr(oe, 'pitch') else 0
+                                    else 0)) if hasattr(oe, 'pitch') else 0
                 except TypeError:
                     oePitchStr = 0
 

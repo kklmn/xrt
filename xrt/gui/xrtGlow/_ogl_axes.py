@@ -7,16 +7,15 @@ Created on Tue Jan 27 13:27:01 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-import os
-import numpy as np
-from freetype import Face, FT_LOAD_RENDER
-from matplotlib import font_manager
+import os  # analysis:ignore
+import numpy as np  # analysis:ignore
+from freetype import Face, FT_LOAD_RENDER  # analysis:ignore
+from matplotlib import font_manager  # analysis:ignore
 
-from ._utils import (create_qt_buffer, update_qt_buffer, basis_rotation_q)
+from ._utils import (create_qt_buffer, update_qt_buffer, basis_rotation_q)  # analysis:ignore
 
-from ..commons import qt
-from ..commons import gl
-
+from ..commons import qt  # analysis:ignore
+from ..commons import gl  # analysis:ignore
 
 
 class CoordinateBox():

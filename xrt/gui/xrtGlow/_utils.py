@@ -7,15 +7,15 @@ Created on Tue Jan 27 13:17:55 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-import numpy as np
-from matplotlib.colors import hsv_to_rgb
+import numpy as np  # analysis:ignore
+from matplotlib.colors import hsv_to_rgb  # analysis:ignore
 
-from ..commons import qt
+from ..commons import qt  # analysis:ignore
 
-from ...backends.raycing import sources as rsources
-from ...backends.raycing import screens as rscreens
-from ...backends.raycing import oes as roes
-from ...backends.raycing import apertures as rapertures
+from ...backends.raycing import sources as rsources  # analysis:ignore
+from ...backends.raycing import screens as rscreens  # analysis:ignore
+from ...backends.raycing import oes as roes  # analysis:ignore
+from ...backends.raycing import apertures as rapertures  # analysis:ignore
 
 
 def create_qt_buffer(data, isIndex=False,
