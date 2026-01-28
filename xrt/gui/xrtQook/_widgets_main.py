@@ -2491,7 +2491,6 @@ class XrtQook(qt.QMainWindow):
             self.blUpdateLatchOpen = False
 
             # INIT THE BEAMLINE HERE
-
             self.initAllModels()
             self.initAllTrees(
                    blProps={'properties': beamlineInitKWargs,

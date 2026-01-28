@@ -349,7 +349,9 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
             elif paraname.startswith('material'):
                 if str(paravalue) in beamLine.matnamesToUUIDs:
                     paravalue = beamLine.matnamesToUUIDs[paravalue]
-                else:
+                elif is_valid_uuid(paravalue):
+                    pass
+                else:  # tuple or list
                     paravalue = paravalue.strip('[]() ')
                     paravalue =\
                         [get_init_val(c.strip())
@@ -358,11 +360,6 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
             elif paraname.startswith('figure'):
                 if str(paravalue) in beamLine.fenamesToUUIDs:
                     paravalue = beamLine.fenamesToUUIDs[paravalue]
-#                if is_valid_uuid(paravalue):
-#                    paravalue = beamLine.materialsDict[paravalue]
-#                elif paravalue in beamLine.matnamesToUUIDs:
-#                    paravalue = beamLine.materialsDict.get(
-#                            beamLine.matnamesToUUIDs[paravalue])
             elif paraname == 'bl':
                 paravalue = beamLine
             else:
