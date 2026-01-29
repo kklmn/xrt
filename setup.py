@@ -162,7 +162,7 @@ For getting help and/or reporting a bug please use `GitHub xrt Issues`.
 
 setup(
     name='xrt',
-    version='1.6.1',
+    version='2.0.0b0',
     description='Ray tracing and wave propagation in x-ray regime, primarily '
                 'meant for modeling synchrotron sources, beamlines and '
                 'beamline elements. Includes a GUI for creating a beamline '
@@ -202,11 +202,10 @@ setup(
     extras_require={
                     'pyqt5': ['pyqt5', 'PyQtWebEngine']
                     },
-    classifiers=['Development Status :: 5 - Production/Stable',
+    classifiers=['Development Status :: 4 - Beta',
                  'Intended Audience :: Science/Research',
                  'Natural Language :: English',
                  'Operating System :: OS Independent',
-                 'Programming Language :: Python :: 2',
                  'Programming Language :: Python :: 3',
                  'License :: OSI Approved :: MIT License',
                  'Topic :: Scientific/Engineering :: Physics',
