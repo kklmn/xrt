@@ -13,17 +13,17 @@ from scipy.spatial import Delaunay
 from scipy.spatial.transform import Rotation as scprot
 
 
-from ._ogl_axes import CoordinateBox
-from ._utils import (create_qt_buffer, basis_rotation_q)
-from ._utils import (is_oe, is_dcm, is_plate, is_aperture, is_screen)
-from ._constants import (ambient, diffuse, specular, shininess)
+from .axes import CoordinateBox
+from .._utils import (create_qt_buffer, basis_rotation_q)
+from .._utils import (is_oe, is_dcm, is_plate, is_aperture, is_screen)
+from .._constants import (ambient, diffuse, specular, shininess)
 
-from ..commons import qt
-from ..commons import gl
+from ...commons import qt
+from ...commons import gl
 
-from ...backends import raycing
-from ...backends.raycing import oes as roes
-from ...backends.raycing import materials as rmats
+from ....backends import raycing
+from ....backends.raycing import oes as roes
+from ....backends.raycing import materials as rmats
 
 try:
     from stl import mesh

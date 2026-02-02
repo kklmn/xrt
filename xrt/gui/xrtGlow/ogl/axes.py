@@ -12,10 +12,10 @@ import numpy as np  # analysis:ignore
 from freetype import Face, FT_LOAD_RENDER  # analysis:ignore
 from matplotlib import font_manager  # analysis:ignore
 
-from ._utils import (create_qt_buffer, update_qt_buffer, basis_rotation_q)  # analysis:ignore
+from .._utils import (create_qt_buffer, update_qt_buffer, basis_rotation_q)  # analysis:ignore
 
-from ..commons import qt  # analysis:ignore
-from ..commons import gl  # analysis:ignore
+from ...commons import qt  # analysis:ignore
+from ...commons import gl  # analysis:ignore
 
 
 class CoordinateBox():

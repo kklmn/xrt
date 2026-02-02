@@ -19,8 +19,7 @@ from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,  # 
                           scr_m)
 from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,  # analysis:ignore
                       is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)  # analysis:ignore
-from .._ogl_objects import Beam3D, OEMesh3D  # analysis:ignore
-from .._ogl_axes import CoordinateBox  # analysis:ignore
+from ..ogl import CoordinateBox, Beam3D, OEMesh3D  # analysis:ignore
 
 from ...commons import qt  # analysis:ignore
 from ...commons import gl  # analysis:ignore
