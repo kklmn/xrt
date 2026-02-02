@@ -16,13 +16,13 @@ from matplotlib.figure import Figure  # analysis:ignore
 from matplotlib.lines import Line2D  # analysis:ignore
 from matplotlib.colors import TABLEAU_COLORS  # analysis:ignore
 
-from ..commons import qt  # analysis:ignore
+from ...commons import qt  # analysis:ignore
 
-from ...backends import raycing  # analysis:ignore
-from ...backends.raycing import materials as rmats  # analysis:ignore
-from ...multipro import GenericProcessOrThread as GP  # analysis:ignore
-from ...runner import RunCardVals  # analysis:ignore
-from ...plotter import deserialize_plots  # analysis:ignore
+from ....backends import raycing  # analysis:ignore
+from ....backends.raycing import materials as rmats  # analysis:ignore
+from ....multipro import GenericProcessOrThread as GP  # analysis:ignore
+from ....runner import RunCardVals  # analysis:ignore
+from ....plotter import deserialize_plots  # analysis:ignore
 
 
 class InstanceInspector(qt.QDialog):

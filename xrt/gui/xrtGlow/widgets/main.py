@@ -16,16 +16,16 @@ from matplotlib.colors import hsv_to_rgb  # analysis:ignore
 from matplotlib.figure import Figure  # analysis:ignore
 from matplotlib.widgets import RectangleSelector  # analysis:ignore
 
-from ._constants import _DEBUG_  # analysis:ignore
-from ._utils import is_source, is_oe, is_aperture, is_screen, basis_rotation_q  # analysis:ignore
-from ._widgets_inspector import InstanceInspector  # analysis:ignore
-from ._widgets_opengl import xrtGlWidget  # analysis:ignore
+from .._constants import _DEBUG_  # analysis:ignore
+from .._utils import is_source, is_oe, is_aperture, is_screen, basis_rotation_q  # analysis:ignore
+from .inspector import InstanceInspector  # analysis:ignore
+from .opengl import xrtGlWidget  # analysis:ignore
 
-from ..commons import qt  # analysis:ignore
+from ...commons import qt  # analysis:ignore
 
-from ...backends import raycing  # analysis:ignore
-from ...backends.raycing import sources as rsources  # analysis:ignore
-from ...plotter import colorFactor, colorSaturation  # analysis:ignore
+from ....backends import raycing  # analysis:ignore
+from ....backends.raycing import sources as rsources  # analysis:ignore
+from ....plotter import colorFactor, colorSaturation  # analysis:ignore
 
 
 class xrtGlow(qt.QWidget):
@@ -41,7 +41,7 @@ class xrtGlow(qt.QWidget):
             os.path.dirname(os.path.abspath(__file__)), '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
         iconsQookDir = os.path.join(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__))), 'xrtQook', '_icons')
+            os.path.abspath(__file__))), '../xrtQook', '_icons')
         self.iconLib = {}
         for oeType in ['source', 'oe', 'aperture', 'screen']:
             self.iconLib[oeType] = qt.QIcon(os.path.join(

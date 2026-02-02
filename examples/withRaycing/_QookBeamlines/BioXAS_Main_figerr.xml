@@ -39,7 +39,7 @@
 				<name type="param">CVD</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.material.Material</_object>
 		</CVD>
 		<Rh type="value">
 			<properties type="prop">
@@ -54,7 +54,7 @@
 				<name type="param">Rh</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.material.Material</_object>
 		</Rh>
 		<Si220 type="value">
 			<properties type="prop">
@@ -79,7 +79,7 @@
 				<efficiencyFile type="param">None</efficiencyFile>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.CrystalSi</_object>
+			<_object type="param">xrt.backends.raycing.materials.crystals_basic.CrystalSi</_object>
 		</Si220>
 		<CVDcoating type="value">
 			<properties type="prop">
@@ -94,7 +94,7 @@
 				<name type="param">CVDcoating</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.material.Material</_object>
 		</CVDcoating>
 		<Si type="value">
 			<properties type="prop">
@@ -109,7 +109,7 @@
 				<name type="param">Si</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.material.Material</_object>
 		</Si>
 		<RhOnSi type="value">
 			<properties type="prop">
@@ -122,7 +122,7 @@
 				<name type="param">RhOnSi</name>
 				<geom type="param">reflected</geom>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.Coated</_object>
+			<_object type="param">xrt.backends.raycing.materials.multilayer.Coated</_object>
 		</RhOnSi>
 		<CVDonSi type="value">
 			<properties type="prop">
@@ -135,7 +135,7 @@
 				<name type="param">CVDonSi</name>
 				<geom type="param">reflected</geom>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.Coated</_object>
+			<_object type="param">xrt.backends.raycing.materials.multilayer.Coated</_object>
 		</CVDonSi>
 		<Si220harm type="value">
 			<properties type="prop">
@@ -167,7 +167,7 @@
 				<efficiencyFile type="param">None</efficiencyFile>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials.CrystalHarmonics</_object>
+			<_object type="param">xrt.backends.raycing.materials.crystals_basic.CrystalHarmonics</_object>
 		</Si220harm>
 	</Materials>
 	<BioXAS_Main type="value">
@@ -177,7 +177,7 @@
 			<alignE type="param">8000</alignE>
 			<fileName type="param">None</fileName>
 			<name type="param">BioXAS_Main</name>
-			<description type="param"></description>
+			<description type="param">None</description>
 		</properties>
 		<_object type="param">xrt.backends.raycing.BeamLine</_object>
 		<Wiggler type="value">
@@ -196,7 +196,7 @@
 				<eEpsilonX type="param">18.099999999999998</eEpsilonX>
 				<eEpsilonZ type="param">0.0362</eEpsilonZ>
 				<betaX type="param">9.1</betaX>
-				<betaZ type="param">2.8000000000000003</betaZ>
+				<betaZ type="param">2.8000000000000007</betaZ>
 				<xPrimeMax type="param">0.25</xPrimeMax>
 				<zPrimeMax type="param">0.25</zPrimeMax>
 				<distE type="param">eV</distE>
@@ -230,8 +230,8 @@
 				<center type="param">[0.0, 12000.0, 0.0]</center>
 				<kind type="param">['left', 'right', 'bottom', 'top']</kind>
 				<opening type="param">[-12, 12, -1.75, 1.75]</opening>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<alarmLevel type="param">None</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 			</properties>
@@ -301,8 +301,8 @@
 				<center type="param">[0.0, 14000.0, 0.0]</center>
 				<kind type="param">['left', 'right', 'bottom', 'top']</kind>
 				<opening type="param">[-10, 10, -1, 1]</opening>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<alarmLevel type="param">None</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 			</properties>
@@ -373,8 +373,8 @@
 				<center type="param">[0, 15600, 'auto']</center>
 				<kind type="param">['left', 'right', 'bottom', 'top']</kind>
 				<opening type="param">[-5, 5, -2, 2]</opening>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<alarmLevel type="param">None</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 			</properties>
@@ -457,8 +457,8 @@
 				<bl type="param">BioXAS_Main</bl>
 				<name type="param">PreM2Screen</name>
 				<center type="param">[0, 26000, 'auto']</center>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
 				<limPhysX type="param">[0.0, 0.0]</limPhysX>
@@ -533,8 +533,8 @@
 				<center type="param">[0, 28300, 'auto']</center>
 				<kind type="param">['left', 'right', 'bottom', 'top']</kind>
 				<opening type="param">[-5, 5, -2, 2]</opening>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<alarmLevel type="param">None</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 			</properties>
@@ -649,8 +649,8 @@
 				<center type="param">[0, 30350, 'auto']</center>
 				<kind type="param">['left', 'right', 'bottom', 'top']</kind>
 				<opening type="param">[-5, 5, -0.2, 0.2]</opening>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<alarmLevel type="param">None</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 			</properties>
@@ -671,8 +671,8 @@
 				<bl type="param">BioXAS_Main</bl>
 				<name type="param">SampleScreen</name>
 				<center type="param">[0, 30650, 'auto']</center>
-				<x type="param">(1.0, -0.0, 0.0)</x>
-				<z type="param">(0.0, 0.0, 1.0)</z>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
 				<limPhysX type="param">[0.0, 0.0]</limPhysX>
@@ -698,12 +698,12 @@
 			<properties type="prop">
 				<name type="param">randomRoughness01</name>
 				<baseFE type="param">None</baseFE>
-				<limPhysX type="param">None</limPhysX>
-				<limPhysY type="param">None</limPhysY>
+				<limPhysX type="param">[-100.0, 100.0]</limPhysX>
+				<limPhysY type="param">[-100.0, 100.0]</limPhysY>
 				<gridStep type="param">0.5</gridStep>
 				<rms type="param">1.0</rms>
-				<corrLength type="param">None</corrLength>
-				<seed type="param">None</seed>
+				<corrLength type="param">5.0</corrLength>
+				<seed type="param">309050513322318869414767123371457748157</seed>
 			</properties>
 			<_object type="param">xrt.backends.raycing.figure_error.RandomRoughness</_object>
 		</randomRoughness01>
