@@ -76,9 +76,6 @@ import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:igno
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats
-# import xrt.backends.raycing.materials_elemental as rmatsel
-# import xrt.backends.raycing.materials_compounds as rmatsco
-# import xrt.backends.raycing.materials_crystals as rmatscr
 import xrt.backends.raycing.oes as roes
 import xrt.backends.raycing.apertures as rapts
 import xrt.backends.raycing.run as rrun
@@ -203,23 +200,23 @@ def define_plots(beamLine):
     edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
     beamLine.screenZ = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
 
-    plot = xrtplot.XYCPlot(
+    plotEs = xrtplot.XYCPlot(
         "waveSlit", aspect=1,
         xaxis=xrtplot.XYCAxis("x", bins=binsx, ppb=ppbx, limits=limx),
         yaxis=xrtplot.XYCAxis("z", bins=binsy, ppb=ppby, limits=limy),
         caxis=xrtplot.XYCAxis(
             "energy", "eV", bins=binsy, ppb=ppby, limits=elim),
         fluxKind="s", title="hor-pol")
-    plots.append(plot)
+    plots.append(plotEs)
 
-    plot = xrtplot.XYCPlot(
+    plotEp = xrtplot.XYCPlot(
         "waveSlit", aspect=1,
         xaxis=xrtplot.XYCAxis("x", bins=binsx, ppb=ppbx, limits=limx),
         yaxis=xrtplot.XYCAxis("z", bins=binsy, ppb=ppby, limits=limy),
         caxis=xrtplot.XYCAxis(
             "energy", "eV", bins=binsy, ppb=ppby, limits=elim),
         fluxKind="p", title="ver-pol")
-    plots.append(plot)
+    plots.append(plotEp)
 
     plot = xrtplot.XYCPlot(
         "waveSlit", aspect=1,
@@ -260,6 +257,22 @@ def define_plots(beamLine):
         plot.saveName = [plot.baseName + '.png']
 
     return plots
+
+
+def get_vorticity():
+    beamLine = build_beamline()
+    theta = np.linspace(limx[0]/m1y, limx[1]/m1y, binsx)
+    psi = np.linspace(limy[0]/m1y, limy[1]/m1y, binsy)
+    Is, Ip, OAMs, OAMp, Es, Ep = beamLine.source.intensities_on_mesh(
+        [E0], theta, psi, resultKind='vortex')
+    fluxIs = np.trapezoid(np.trapezoid(Is, psi), theta)
+    fluxIp = np.trapezoid(np.trapezoid(Ip, psi), theta)
+    # flux = fluxIs + fluxIp
+    lEs = OAMs / fluxIs
+    lEp = OAMp / fluxIp
+    vEs = np.trapezoid(np.trapezoid(lEs, psi), theta)
+    vEp = np.trapezoid(np.trapezoid(lEp, psi), theta)
+    print('vorticity: Es = {0}, Ep = {1}'.format(vEs, vEp))
 
 
 def plot_field():
@@ -331,6 +344,8 @@ def main():
 
 
 if __name__ == '__main__':
-    plot_field()
+    # plot_field()
     # see_trajectory()
-    # main()
+    # get_vorticity()
+    main()  # needs a decent GPU
+    print("Done")
