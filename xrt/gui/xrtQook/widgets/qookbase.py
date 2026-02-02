@@ -18,11 +18,11 @@ import inspect  # analysis:ignore
 from functools import partial  # analysis:ignore
 from collections import OrderedDict  # analysis:ignore
 
-from ._constants import (redStr, isUnitsEnabled, useSlidersInTree, path_to_xrt,  # analysis:ignore
+from .._constants import (redStr, isUnitsEnabled, useSlidersInTree, path_to_xrt,  # analysis:ignore
                          myTab, withSlidersInTree, slidersInTreeScale, _DEBUG_)
-from ._objects_custom import (SphinxWorker, LevelRestrictedModel,  # analysis:ignore
+from .._objects_custom import (SphinxWorker, LevelRestrictedModel,  # analysis:ignore
                               BusyIconWorker)
-from ._widgets_custom import (QWebView, TreeViewEx, PlotViewer,  # analysis:ignore
+from .custom import (QWebView, TreeViewEx, PlotViewer,  # analysis:ignore
                               QDockWidgetNoClose)
 
 try:
@@ -39,33 +39,33 @@ except cl.LogicError:
 import platform as pythonplatform  # analysis:ignore
 import webbrowser  # analysis:ignore
 
-from ..commons import ext  # analysis:ignore
+from ...commons import ext  # analysis:ignore
 
-sys.path.append(os.path.join('..', '..', '..'))
+sys.path.append(os.path.join('..', '..', '..', '..'))
 import xrt  #analysis:ignore
-from ...backends import raycing  # analysis:ignore
-from ...backends.raycing import sources as rsources  # analysis:ignore
-from ...backends.raycing import screens as rscreens  # analysis:ignore
-from ...backends.raycing import materials as rmats  # analysis:ignore
-from ...backends.raycing import figure_error as rfe  # analysis:ignore
-from ...backends.raycing import oes as roes  # analysis:ignore
-from ...backends.raycing import apertures as rapts  # analysis:ignore
-from ...backends.raycing import oes as roes  # analysis:ignore
-from ...backends.raycing import run as rrun  # analysis:ignore
-from ...version import __version__ as xrtversion  # analysis:ignore
-from ... import plotter as xrtplot  # analysis:ignore
-from ... import runner as xrtrun  # analysis:ignore
-from ..commons import qt  # analysis:ignore
-from ..commons import gl  # analysis:ignore
-from . import tutorial  # analysis:ignore
+from ....backends import raycing  # analysis:ignore
+from ....backends.raycing import sources as rsources  # analysis:ignore
+from ....backends.raycing import screens as rscreens  # analysis:ignore
+from ....backends.raycing import materials as rmats  # analysis:ignore
+from ....backends.raycing import figure_error as rfe  # analysis:ignore
+from ....backends.raycing import oes as roes  # analysis:ignore
+from ....backends.raycing import apertures as rapts  # analysis:ignore
+from ....backends.raycing import oes as roes  # analysis:ignore
+from ....backends.raycing import run as rrun  # analysis:ignore
+from ....version import __version__ as xrtversion  # analysis:ignore
+from .... import plotter as xrtplot  # analysis:ignore
+from .... import runner as xrtrun  # analysis:ignore
+from ...commons import qt  # analysis:ignore
+from ...commons import gl  # analysis:ignore
+from .. import tutorial  # analysis:ignore
 
-from .. import xrtGlow as xrtglow  # analysis:ignore
-from ..xrtGlow import InstanceInspector  # analysis:ignore
+from ... import xrtGlow as xrtglow  # analysis:ignore
+from ...xrtGlow import InstanceInspector  # analysis:ignore
 
 try:
-    from ...backends.raycing.materials import elemental as rmatsel
-    from ...backends.raycing.materials import compounds as rmatsco
-    from ...backends.raycing.materials import crystals as rmatscr
+    from ....backends.raycing.materials import elemental as rmatsel
+    from ....backends.raycing.materials import compounds as rmatsco
+    from ....backends.raycing.materials import crystals as rmatscr
     pdfMats = True
 except ImportError:
     pdfMats = False
@@ -104,7 +104,7 @@ class XrtQookBase(qt.QMainWindow):
         self.experimentalModeFilter = ['propagate_wave',
                                        'diffract', 'expose_wave']
         self.statusUpdate.connect(self.updateProgressBar)
-        self.iconsDir = os.path.join(self.xrtQookDir, '_icons')
+        self.iconsDir = os.path.join(self.xrtQookDir, '../_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
 
         self.xrtModules = ['rsources', 'rscreens',

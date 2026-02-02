@@ -35,7 +35,7 @@ __date__ = "16 Nov 2025"
 
 
 import sys  # analysis:ignore
-from ._widgets_qook import XrtQook  # analysis:ignore
+from .widgets import XrtQook  # analysis:ignore
 from ..commons import qt  # analysis:ignore
 
 if __name__ == '__main__':

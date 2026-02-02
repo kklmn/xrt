@@ -9,11 +9,11 @@ __date__ = "27 Jan 2026"
 
 import copy  # analysis:ignore
 from collections import OrderedDict  # analysis:ignore
-from ._widgets_qookbase import XrtQookBase  # analysis:ignore
-from ._constants import _DEBUG_  # analysis:ignore
-from ..commons import qt  # analysis:ignore
-from ..xrtGlow import is_screen, is_aperture  # analysis:ignore
-from ...backends import raycing  # analysis:ignore
+from .qookbase import XrtQookBase  # analysis:ignore
+from .._constants import _DEBUG_  # analysis:ignore
+from ...commons import qt  # analysis:ignore
+from ...xrtGlow import is_screen, is_aperture  # analysis:ignore
+from ....backends import raycing  # analysis:ignore
 
 
 class XrtQookElements(XrtQookBase):

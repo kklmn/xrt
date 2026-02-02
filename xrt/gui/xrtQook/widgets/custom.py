@@ -7,9 +7,9 @@ Created on Tue Jan 27 18:01:38 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-from ..commons import qt  # analysis:ignore
-from ..xrtGlow import ConfigurablePlotWidget  # analysis:ignore
-from ...backends import raycing  # analysis:ignore
+from ...commons import qt  # analysis:ignore
+from ...xrtGlow import ConfigurablePlotWidget  # analysis:ignore
+from ....backends import raycing  # analysis:ignore
 
 
 try:

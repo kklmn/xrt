@@ -12,28 +12,28 @@ import re  # analysis:ignore
 import inspect  # analysis:ignore
 from collections import OrderedDict  # analysis:ignore
 from datetime import date  # analysis:ignore
-from ._widgets_qookelements import XrtQookElements  # analysis:ignore
-from ._constants import path_to_xrt, myTab  # analysis:ignore
+from .qookelements import XrtQookElements  # analysis:ignore
+from .._constants import path_to_xrt, myTab  # analysis:ignore
 
-from ..commons import qt  # analysis:ignore
-from ..commons import ext  # analysis:ignore
+from ...commons import qt  # analysis:ignore
+from ...commons import ext  # analysis:ignore
 import xrt  #analysis:ignore
-from ...backends import raycing  # analysis:ignore
-from ...backends.raycing import sources as rsources  # analysis:ignore
-from ...backends.raycing import screens as rscreens  # analysis:ignore
-from ...backends.raycing import materials as rmats  # analysis:ignore
-from ...backends.raycing import figure_error as rfe  # analysis:ignore
-from ...backends.raycing import oes as roes  # analysis:ignore
-from ...backends.raycing import apertures as rapts  # analysis:ignore
-from ...backends.raycing import oes as roes  # analysis:ignore
-from ...backends.raycing import run as rrun  # analysis:ignore
-from ...version import __version__ as xrtversion  # analysis:ignore
-from ... import plotter as xrtplot  # analysis:ignore
-from ... import runner as xrtrun  # analysis:ignore
+from ....backends import raycing  # analysis:ignore
+from ....backends.raycing import sources as rsources  # analysis:ignore
+from ....backends.raycing import screens as rscreens  # analysis:ignore
+from ....backends.raycing import materials as rmats  # analysis:ignore
+from ....backends.raycing import figure_error as rfe  # analysis:ignore
+from ....backends.raycing import oes as roes  # analysis:ignore
+from ....backends.raycing import apertures as rapts  # analysis:ignore
+from ....backends.raycing import oes as roes  # analysis:ignore
+from ....backends.raycing import run as rrun  # analysis:ignore
+from ....version import __version__ as xrtversion  # analysis:ignore
+from .... import plotter as xrtplot  # analysis:ignore
+from .... import runner as xrtrun  # analysis:ignore
 try:
-    from ...backends.raycing.materials import elemental as rmatsel  # analysis:ignore
-    from ...backends.raycing.materials import compounds as rmatsco  # analysis:ignore
-    from ...backends.raycing.materials import crystals as rmatscr  # analysis:ignore
+    from ....backends.raycing.materials import elemental as rmatsel  # analysis:ignore
+    from ....backends.raycing.materials import compounds as rmatsco  # analysis:ignore
+    from ....backends.raycing.materials import crystals as rmatscr  # analysis:ignore
     pdfMats = True
 except ImportError:
     pdfMats = False
