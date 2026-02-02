@@ -57,7 +57,7 @@ def build_beamline():
         eMax=10010.0,
         rho=10.00692285594456)
 
-    myTestBeamline.oe01 = raycing.oes_base.OE(
+    myTestBeamline.oe01 = raycing.oes.OE(
         bl=myTestBeamline,
         name=r"oe01",
         center=[0, 20000, 0],

@@ -3,7 +3,7 @@ import copy
 import numpy as np
 from scipy import interpolate
 
-from .oes_base import OE
+from .base import OE
 
 try:
     from stl import mesh

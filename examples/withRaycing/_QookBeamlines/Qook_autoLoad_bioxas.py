@@ -265,7 +265,7 @@ def build_beamline():
         x=[1.0, -0.0, 0.0],
         z=[0.0, 0.0, 1.0])
 
-    BioXAS_Main.DBHR1 = raycing.oes_base.OE(
+    BioXAS_Main.DBHR1 = raycing.oes.OE(
         bl=BioXAS_Main,
         name=r"DBHR1",
         center=[0, 29900, r"auto"],
@@ -277,7 +277,7 @@ def build_beamline():
         limOptY=[-75, 75],
         order=1)
 
-    BioXAS_Main.DBHR2 = raycing.oes_base.OE(
+    BioXAS_Main.DBHR2 = raycing.oes.OE(
         bl=BioXAS_Main,
         name=r"DBHR2",
         center=[0, 30075, r"auto"],

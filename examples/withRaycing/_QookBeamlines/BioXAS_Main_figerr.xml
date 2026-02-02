@@ -279,14 +279,14 @@
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float64</precisionOpenCL>
 			</properties>
-			<_object type="param">xrt.backends.raycing.oes_refractive.Plate</_object>
+			<_object type="param">xrt.backends.raycing.oes.refractive.Plate</_object>
 			<double_refract type="prop">
 				<parameters type="prop">
 					<beam type="param">Wiggler_global</beam>
 					<needLocal type="param">True</needLocal>
 					<returnLocalAbsorbed type="param">0</returnLocalAbsorbed>
 				</parameters>
-				<_object type="param">xrt.backends.raycing.oes_refractive.Plate.double_refract</_object>
+				<_object type="param">xrt.backends.raycing.oes.refractive.Plate.double_refract</_object>
 				<output type="prop">
 					<beamGlobal type="param">DiamondFilter_global</beamGlobal>
 					<beamLocal1 type="param">DiamondFilter_local1</beamLocal1>
@@ -435,7 +435,7 @@
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float64</precisionOpenCL>
 			</properties>
-			<_object type="param">xrt.backends.raycing.oes_dcm.DCM</_object>
+			<_object type="param">xrt.backends.raycing.oes.dcm.DCM</_object>
 			<double_reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">Mirror1_global</beam>
@@ -444,7 +444,7 @@
 					<fromVacuum2 type="param">True</fromVacuum2>
 					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
-				<_object type="param">xrt.backends.raycing.oes_dcm.DCM.double_reflect</_object>
+				<_object type="param">xrt.backends.raycing.oes.dcm.DCM.double_reflect</_object>
 				<output type="prop">
 					<beamGlobal type="param">SSRL_DCM_global</beamGlobal>
 					<beamLocal1 type="param">SSRL_DCM_local1</beamLocal1>
@@ -581,7 +581,7 @@
 				<precisionOpenCL type="param">float64</precisionOpenCL>
 				<figureError type="param">None</figureError>
 			</properties>
-			<_object type="param">xrt.backends.raycing.oes_base.OE</_object>
+			<_object type="param">xrt.backends.raycing.oes.base.OE</_object>
 			<reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">Mirror2_global</beam>
@@ -589,7 +589,7 @@
 					<noIntersectionSearch type="param">False</noIntersectionSearch>
 					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
-				<_object type="param">xrt.backends.raycing.oes_base.OE.reflect</_object>
+				<_object type="param">xrt.backends.raycing.oes.base.OE.reflect</_object>
 				<output type="prop">
 					<beamGlobal type="param">DBHR1_global</beamGlobal>
 					<beamLocal type="param">DBHR1_local</beamLocal>
@@ -627,7 +627,7 @@
 				<precisionOpenCL type="param">float64</precisionOpenCL>
 				<figureError type="param">None</figureError>
 			</properties>
-			<_object type="param">xrt.backends.raycing.oes_base.OE</_object>
+			<_object type="param">xrt.backends.raycing.oes.base.OE</_object>
 			<reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">DBHR1_global</beam>
@@ -635,7 +635,7 @@
 					<noIntersectionSearch type="param">False</noIntersectionSearch>
 					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
-				<_object type="param">xrt.backends.raycing.oes_base.OE.reflect</_object>
+				<_object type="param">xrt.backends.raycing.oes.base.OE.reflect</_object>
 				<output type="prop">
 					<beamGlobal type="param">DBHR2_global</beamGlobal>
 					<beamLocal type="param">DBHR2_local</beamLocal>

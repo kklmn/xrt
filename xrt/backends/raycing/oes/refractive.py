@@ -3,10 +3,10 @@ import copy
 import numpy as np
 import inspect
 
-from .. import raycing
-from . import sources as rs
+from ... import raycing
+from .. import sources as rs
 
-from .oes_dcm import DCM
+from .dcm import DCM
 
 
 class Plate(DCM):

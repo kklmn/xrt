@@ -1,9 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 import numpy as np
 
-from .. import raycing
-from . import sources as rs
-from .oes_base import OE
+from ... import raycing
+from .. import sources as rs
+from .base import OE
 
 
 class EllipticalMirrorParam(OE):

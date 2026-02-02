@@ -4,9 +4,9 @@ import numpy as np
 import inspect
 import copy
 
-from .. import raycing
-from . import sources as rs
-from .oes_base import OE
+from ... import raycing
+from .. import sources as rs
+from .base import OE
 
 
 class DCM(OE):

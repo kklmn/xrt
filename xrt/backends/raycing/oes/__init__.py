@@ -147,39 +147,39 @@ import os
 # import gc
 import numpy as np
 
-from .. import raycing
-from . import myopencl as mcl
-from . import stages as rst
-from .physconsts import CH  # keep it  # analysis:ignore
+from ... import raycing
+from .. import myopencl as mcl
+from .. import stages as rst
+from ..physconsts import CH  # keep it  # analysis:ignore
 
-from .oes_base import OE, allArguments
+from .base import OE, allArguments
 
-from .oes_dcm import DCM
+from .dcm import DCM
 
-from .oes_bragg import (
+from .bragg import (
     DicedOE, JohannCylinder, JohanssonCylinder, JohannToroid, JohanssonToroid,
     GeneralBraggToroid, DicedJohannToroid, DicedJohanssonToroid)
 
-from .oes_laue import (
+from .laue import (
     LauePlate, BentLaueCylinder, BentLaue2D, GroundBentLaueCylinder,
     BentLaueSphere)
 
-from .oes_parametric import (
+from .parametric import (
     EllipticalMirrorParam, EllipticalMirror,
     ParabolicalMirrorParam, ParabolicMirror,
     HyperbolicMirrorParam, HyperbolicMirror,
     SurfaceOfRevolution, ParaboloidCapillaryMirror, EllipsoidCapillaryMirror,
     HyperboloidCapillaryMirror)
 
-from .oes_refractive import (
+from .refractive import (
     Plate, ParaboloidFlatLens, ParabolicCylinderFlatLens, DoubleParaboloidLens,
     DoubleParabolicCylinderLens)
 
-from .oes_gratings import (
+from .gratings import (
     NormalFZP, GeneralFZPin0YZ, BlazedGrating, LaminarGrating,
     VLSLaminarGrating, VLSGrating)
 
-from .oes_3d import MeshOE
+from ._3d import MeshOE
 
 # try:
 #     import pyopencl as cl  # analysis:ignore

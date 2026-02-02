@@ -2,8 +2,8 @@
 import os
 import numpy as np
 
-from .. import raycing
-from .oes_base import OE
+from ... import raycing
+from .base import OE
 
 __fdir__ = os.path.dirname(__file__)
 

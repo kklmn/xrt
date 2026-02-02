@@ -3,9 +3,9 @@ import time
 import numpy as np
 import inspect
 
-from .. import raycing
-from . import sources as rs
-from .physconsts import CH, CHBAR
+from ... import raycing
+from .. import sources as rs
+from ..physconsts import CH, CHBAR
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Feb 2026"

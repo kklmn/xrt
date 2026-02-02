@@ -1,19 +1,18 @@
 ﻿# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import os
-import time
 import numpy as np
-import inspect
 import copy
 from scipy.spatial.transform import Rotation as scprot
 
 import matplotlib as mpl
-from .. import raycing
-from . import sources as rs
-from . import myopencl as mcl
-from .physconsts import CH, CHBAR, SQRT2PI
-from .materials import EmptyMaterial
-from.oes_reflect import OEMainMethods
+
+from ... import raycing
+from .. import sources as rs
+from .. import myopencl as mcl
+from ..physconsts import CH, CHBAR, SQRT2PI
+from ..materials import EmptyMaterial
+from .reflect import OEMainMethods
 
 # try:
 #     import pyopencl as cl  # analysis:ignore
