@@ -2,8 +2,8 @@
 import time
 import numpy as np
 
-from .. import raycing
-from .physconsts import CH, CHBAR
+from ... import raycing
+from ..physconsts import CH, CHBAR
 
 ch = CH  # left here for copatibility
 chbar = CHBAR  # left here for copatibility

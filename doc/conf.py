@@ -101,9 +101,9 @@ sys.path.insert(0, '.')
 #sys.path.append('..')
 sys.path.append(os.path.abspath('exts'))
 
-import xrt.backends.raycing.materials_elemental as xrtelem
-import xrt.backends.raycing.materials_compounds as xrtcomp
-import xrt.backends.raycing.materials_crystals as xrtxtal
+import xrt.backends.raycing.materials.elemental as xrtelem
+import xrt.backends.raycing.materials.compounds as xrtcomp
+import xrt.backends.raycing.materials.crystals as xrtxtal
 import xrt.backends.raycing.pyTTE_x.elastic_tensors as xrtxelt
 
 

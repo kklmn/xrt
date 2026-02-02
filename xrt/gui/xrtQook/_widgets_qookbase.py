@@ -63,9 +63,9 @@ from .. import xrtGlow as xrtglow  # analysis:ignore
 from ..xrtGlow import InstanceInspector  # analysis:ignore
 
 try:
-    from ...backends.raycing import materials_elemental as rmatsel
-    from ...backends.raycing import materials_compounds as rmatsco
-    from ...backends.raycing import materials_crystals as rmatscr
+    from ...backends.raycing.materials import elemental as rmatsel
+    from ...backends.raycing.materials import compounds as rmatsco
+    from ...backends.raycing.materials import crystals as rmatscr
     pdfMats = True
 except ImportError:
     pdfMats = False

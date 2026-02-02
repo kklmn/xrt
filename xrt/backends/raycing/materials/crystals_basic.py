@@ -1,9 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 import numpy as np
-from .. import raycing
-from .physconsts import PI, CH, AVOGADRO
-from .materials_element import Element
-from .materials_crystal import Crystal
+from ... import raycing
+from ..physconsts import PI, CH, AVOGADRO
+from .element import Element
+from .crystal import Crystal
 
 
 class CrystalFcc(Crystal):
@@ -156,7 +156,7 @@ class CrystalFromCell(Crystal):
     """:class:`CrystalFromCell` builds a crystal from cell parameters and
     atomic positions which can be found e.g. in Crystals.dat of XOP [XOP]_ or
     xraylib. See also predefined crystals in module
-    :mod:`~xrt.backends.raycing.materials_crystals`.
+    :mod:`~xrt.backends.raycing.materials.crystals`.
 
     Examples:
         >>> xtalQu = rm.CrystalFromCell(

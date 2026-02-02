@@ -3,7 +3,7 @@ import sys
 import os
 import numpy as np
 
-from .. import raycing
+from ... import raycing
 
 tablesCaching = True
 
@@ -17,10 +17,11 @@ elementsList = (
     'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
     'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U')
 
+dataDir = os.path.dirname(os.path.dirname(__file__))
+
 
 def read_f0_all():
     f0data = {}
-    dataDir = os.path.dirname(__file__)
     with open(os.path.join(dataDir, 'data', 'f0_xop.dat')) as f:
         field_symbol = field_data = None
         for li in f:
@@ -43,7 +44,6 @@ def read_f0_all():
 
 def read_f1f2_all():
     f1f2tables = {}
-    dataDir = os.path.dirname(__file__)
     for tableFName in ['Henke', 'Chantler', 'BrCo']:
         pname = os.path.join(dataDir, 'data', tableFName+'.npz')
         with open(pname, 'rb') as f:
@@ -54,7 +54,6 @@ def read_f1f2_all():
 
 def read_atomic_data_all():
     atomicDataDict = {}
-    dataDir = os.path.dirname(__file__)
     with open(os.path.join(dataDir, 'data', 'AtomicData.dat')) as f:
         for li in f:
             fields = li.split()
@@ -95,7 +94,6 @@ def read_atomic_data(elem):
         if atomicData is not None:
             return atomicData
 
-    dataDir = os.path.dirname(__file__)
     with open(os.path.join(dataDir, 'data', 'AtomicData.dat')) as f:
         for li in f:
             fields = li.split()
@@ -182,7 +180,6 @@ class Element(object):
             if f0data is not None:
                 return f0data
 
-        dataDir = os.path.dirname(__file__)
         with open(os.path.join(dataDir, 'data', 'f0_xop.dat')) as f:
             for li in f:
                 if li.startswith("#S"):
@@ -223,7 +220,6 @@ class Element(object):
                          np.array(f1f2data[self.name+f2key]))
                 return ef1f2
 
-        dataDir = os.path.dirname(__file__)
         pname = os.path.join(dataDir, 'data', table_fn+'.npz')
 
         with open(pname, 'rb') as f:

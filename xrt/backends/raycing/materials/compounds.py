@@ -1,5 +1,5 @@
 r"""
-The module :mod:`~xrt.backends.raycing.materials_compounds` contains predefined
+The module :mod:`~xrt.backends.raycing.materials.compounds` contains predefined
 classes for compound materials found at the
 `CXRO Table of Densities of Common Materials
 <https://henke.lbl.gov/cgi-bin/density.pl>`_.
@@ -13,7 +13,7 @@ instantiate its class:
 
 .. code-block:: python
 
-    import xrt.backends.raycing.materials_compounds as xcomp
+    import xrt.backends.raycing.materials.compounds as xcomp
     kapton = xcomp.Polyimide()
 
 The compound materials inherit from :class:`.Material` and can use its methods
@@ -23,7 +23,7 @@ refractive index etc.
 .. note::
     The compound materials do not provide crystal diffraction amplitudes even
     if they occur naturally as crystals. To calculate diffraction on crystals
-    please use :mod:`~xrt.backends.raycing.materials_crystals`.
+    please use :mod:`~xrt.backends.raycing.materials.crystals`.
 
 The following compound classes are defined in this module (sorted by chemical
 formula):
@@ -34,7 +34,7 @@ formula):
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "6 Jul 2017"
 
-from . import materials as rmat
+from .material import Material
 import collections
 
 __all__ = ('SilverBromide', 'AluminumArsenide', 'Sapphire',
@@ -93,7 +93,7 @@ __allSectioned__ = collections.OrderedDict([
         ('Vacuum', 'Air', 'Water'))])
 
 
-class SilverBromide(rmat.Material):
+class SilverBromide(Material):
     def __init__(self, name='AgBr',
                  elements=['Ag', 'Br'],
                  quantities=[1, 1],
@@ -103,7 +103,7 @@ class SilverBromide(rmat.Material):
            *args, **kwargs)
 
 
-class AluminumArsenide(rmat.Material):
+class AluminumArsenide(Material):
     def __init__(self, name='AlAs',
                  elements=['Al', 'As'],
                  quantities=[1, 1],
@@ -113,7 +113,7 @@ class AluminumArsenide(rmat.Material):
            *args, **kwargs)
 
 
-class Sapphire(rmat.Material):
+class Sapphire(Material):
     def __init__(self, name='Al2O3',
                  elements=['Al', 'O'],
                  quantities=[2.0, 3.0],
@@ -123,7 +123,7 @@ class Sapphire(rmat.Material):
            *args, **kwargs)
 
 
-class AluminumPhosphide(rmat.Material):
+class AluminumPhosphide(Material):
     def __init__(self, name='AlP',
                  elements=['Al', 'P'],
                  quantities=[1, 1],
@@ -133,7 +133,7 @@ class AluminumPhosphide(rmat.Material):
            *args, **kwargs)
 
 
-class BoronOxide(rmat.Material):
+class BoronOxide(Material):
     def __init__(self, name='B2O3',
                  elements=['B', 'O'],
                  quantities=[2.0, 3.0],
@@ -143,7 +143,7 @@ class BoronOxide(rmat.Material):
            *args, **kwargs)
 
 
-class BoronCarbide(rmat.Material):
+class BoronCarbide(Material):
     def __init__(self, name='B4C',
                  elements=['B', 'C'],
                  quantities=[4.0, 1],
@@ -153,7 +153,7 @@ class BoronCarbide(rmat.Material):
            *args, **kwargs)
 
 
-class BerylliumOxide(rmat.Material):
+class BerylliumOxide(Material):
     def __init__(self, name='BeO',
                  elements=['Be', 'O'],
                  quantities=[1, 1],
@@ -163,7 +163,7 @@ class BerylliumOxide(rmat.Material):
            *args, **kwargs)
 
 
-class BoronNitride(rmat.Material):
+class BoronNitride(Material):
     def __init__(self, name='BN',
                  elements=['B', 'N'],
                  quantities=[1, 1],
@@ -173,7 +173,7 @@ class BoronNitride(rmat.Material):
            *args, **kwargs)
 
 
-class Polyimide(rmat.Material):
+class Polyimide(Material):
     def __init__(self, name='C22H10N2O5',
                  elements=['C', 'H', 'N', 'O'],
                  quantities=[22.0, 10.0, 2.0, 5.0],
@@ -183,7 +183,7 @@ class Polyimide(rmat.Material):
            *args, **kwargs)
 
 
-class Polypropylene(rmat.Material):
+class Polypropylene(Material):
     def __init__(self, name='C3H6',
                  elements=['C', 'H'],
                  quantities=[3.0, 6.0],
@@ -193,7 +193,7 @@ class Polypropylene(rmat.Material):
            *args, **kwargs)
 
 
-class PMMA(rmat.Material):
+class PMMA(Material):
     def __init__(self, name='C5H8O2',
                  elements=['C', 'H', 'O'],
                  quantities=[5.0, 8.0, 2.0],
@@ -203,7 +203,7 @@ class PMMA(rmat.Material):
            *args, **kwargs)
 
 
-class Polycarbonate(rmat.Material):
+class Polycarbonate(Material):
     def __init__(self, name='C16H14O3',
                  elements=['C', 'H', 'O'],
                  quantities=[16.0, 14.0, 3.0],
@@ -213,7 +213,7 @@ class Polycarbonate(rmat.Material):
            *args, **kwargs)
 
 
-class Kimfol(rmat.Material):
+class Kimfol(Material):
     def __init__(self, name='C16H14O3',
                  elements=['C', 'H', 'O'],
                  quantities=[16.0, 14.0, 3.0],
@@ -223,7 +223,7 @@ class Kimfol(rmat.Material):
            *args, **kwargs)
 
 
-class Mylar(rmat.Material):
+class Mylar(Material):
     def __init__(self, name='C10H8O4',
                  elements=['C', 'H', 'O'],
                  quantities=[10.0, 8.0, 4.0],
@@ -233,7 +233,7 @@ class Mylar(rmat.Material):
            *args, **kwargs)
 
 
-class Teflon(rmat.Material):
+class Teflon(Material):
     def __init__(self, name='C2F4',
                  elements=['C', 'F'],
                  quantities=[2.0, 4.0],
@@ -243,7 +243,7 @@ class Teflon(rmat.Material):
            *args, **kwargs)
 
 
-class ParyleneC(rmat.Material):
+class ParyleneC(Material):
     def __init__(self, name='C8H7Cl',
                  elements=['C', 'H', 'Cl'],
                  quantities=[8.0, 7.0, 1],
@@ -253,7 +253,7 @@ class ParyleneC(rmat.Material):
            *args, **kwargs)
 
 
-class ParyleneN(rmat.Material):
+class ParyleneN(Material):
     def __init__(self, name='C8H8',
                  elements=['C', 'H'],
                  quantities=[8.0, 8.0],
@@ -263,7 +263,7 @@ class ParyleneN(rmat.Material):
            *args, **kwargs)
 
 
-class Fluorite(rmat.Material):
+class Fluorite(Material):
     def __init__(self, name='CaF2',
                  elements=['Ca', 'F'],
                  quantities=[1, 2.0],
@@ -273,7 +273,7 @@ class Fluorite(rmat.Material):
            *args, **kwargs)
 
 
-class CadmiumTungstate(rmat.Material):
+class CadmiumTungstate(Material):
     def __init__(self, name='CdWO4',
                  elements=['Cd', 'W', 'O'],
                  quantities=[1, 1, 4.0],
@@ -283,7 +283,7 @@ class CadmiumTungstate(rmat.Material):
            *args, **kwargs)
 
 
-class CadmiumSulfide(rmat.Material):
+class CadmiumSulfide(Material):
     def __init__(self, name='CdS',
                  elements=['Cd', 'S'],
                  quantities=[1, 1],
@@ -293,7 +293,7 @@ class CadmiumSulfide(rmat.Material):
            *args, **kwargs)
 
 
-class CadmiumTelluride(rmat.Material):
+class CadmiumTelluride(Material):
     def __init__(self, name='CdTe',
                  elements=['Cd', 'Te'],
                  quantities=[1, 1],
@@ -303,7 +303,7 @@ class CadmiumTelluride(rmat.Material):
            *args, **kwargs)
 
 
-class CobaltSilicide(rmat.Material):
+class CobaltSilicide(Material):
     def __init__(self, name='CoSi2',
                  elements=['Co', 'Si'],
                  quantities=[1, 2.0],
@@ -313,7 +313,7 @@ class CobaltSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class Cromium3Oxide(rmat.Material):
+class Cromium3Oxide(Material):
     def __init__(self, name='Cr2O3',
                  elements=['Cr', 'O'],
                  quantities=[2.0, 3.0],
@@ -323,7 +323,7 @@ class Cromium3Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class CesiumIodide(rmat.Material):
+class CesiumIodide(Material):
     def __init__(self, name='CsI',
                  elements=['Cs', 'I'],
                  quantities=[1, 1],
@@ -333,7 +333,7 @@ class CesiumIodide(rmat.Material):
            *args, **kwargs)
 
 
-class CopperIodide(rmat.Material):
+class CopperIodide(Material):
     def __init__(self, name='CuI',
                  elements=['Cu', 'I'],
                  quantities=[1, 1],
@@ -343,7 +343,7 @@ class CopperIodide(rmat.Material):
            *args, **kwargs)
 
 
-class IndiumNitride(rmat.Material):
+class IndiumNitride(Material):
     def __init__(self, name='InN',
                  elements=['In', 'N'],
                  quantities=[1, 1],
@@ -353,7 +353,7 @@ class IndiumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class Indium3Oxide(rmat.Material):
+class Indium3Oxide(Material):
     def __init__(self, name='In2O3',
                  elements=['In', 'O'],
                  quantities=[2.0, 3.0],
@@ -363,7 +363,7 @@ class Indium3Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class IndiumAntimonide(rmat.Material):
+class IndiumAntimonide(Material):
     def __init__(self, name='InSb',
                  elements=['In', 'Sb'],
                  quantities=[1, 1],
@@ -373,7 +373,7 @@ class IndiumAntimonide(rmat.Material):
            *args, **kwargs)
 
 
-class IridiumOxide(rmat.Material):
+class IridiumOxide(Material):
     def __init__(self, name='IrO2',
                  elements=['Ir', 'O'],
                  quantities=[1, 2.0],
@@ -383,7 +383,7 @@ class IridiumOxide(rmat.Material):
            *args, **kwargs)
 
 
-class GalliumArsenide(rmat.Material):
+class GalliumArsenide(Material):
     def __init__(self, name='GaAs',
                  elements=['Ga', 'As'],
                  quantities=[1, 1],
@@ -393,7 +393,7 @@ class GalliumArsenide(rmat.Material):
            *args, **kwargs)
 
 
-class GalliumNitride(rmat.Material):
+class GalliumNitride(Material):
     def __init__(self, name='GaN',
                  elements=['Ga', 'N'],
                  quantities=[1, 1],
@@ -403,7 +403,7 @@ class GalliumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class GalliumPhosphide(rmat.Material):
+class GalliumPhosphide(Material):
     def __init__(self, name='GaP',
                  elements=['Ga', 'P'],
                  quantities=[1, 1],
@@ -413,7 +413,7 @@ class GalliumPhosphide(rmat.Material):
            *args, **kwargs)
 
 
-class HafniumOxide(rmat.Material):
+class HafniumOxide(Material):
     def __init__(self, name='HfO2',
                  elements=['Hf', 'O'],
                  quantities=[1, 2.0],
@@ -423,7 +423,7 @@ class HafniumOxide(rmat.Material):
            *args, **kwargs)
 
 
-class LithiumFluoride(rmat.Material):
+class LithiumFluoride(Material):
     def __init__(self, name='LiF',
                  elements=['Li', 'F'],
                  quantities=[1, 1],
@@ -433,7 +433,7 @@ class LithiumFluoride(rmat.Material):
            *args, **kwargs)
 
 
-class LithiumHydride(rmat.Material):
+class LithiumHydride(Material):
     def __init__(self, name='LiH',
                  elements=['Li', 'H'],
                  quantities=[1, 1],
@@ -443,7 +443,7 @@ class LithiumHydride(rmat.Material):
            *args, **kwargs)
 
 
-class LithiumHydroxide(rmat.Material):
+class LithiumHydroxide(Material):
     def __init__(self, name='LiOH',
                  elements=['Li', 'O', 'H'],
                  quantities=[1, 1, 1],
@@ -453,7 +453,7 @@ class LithiumHydroxide(rmat.Material):
            *args, **kwargs)
 
 
-class MagnesiumFluoride(rmat.Material):
+class MagnesiumFluoride(Material):
     def __init__(self, name='MgF2',
                  elements=['Mg', 'F'],
                  quantities=[1, 2.0],
@@ -463,7 +463,7 @@ class MagnesiumFluoride(rmat.Material):
            *args, **kwargs)
 
 
-class MagnesiumOxide(rmat.Material):
+class MagnesiumOxide(Material):
     def __init__(self, name='MgO',
                  elements=['Mg', 'O'],
                  quantities=[1, 1],
@@ -473,7 +473,7 @@ class MagnesiumOxide(rmat.Material):
            *args, **kwargs)
 
 
-class MagnesiumSilicide(rmat.Material):
+class MagnesiumSilicide(Material):
     def __init__(self, name='Mg2Si',
                  elements=['Mg', 'Si'],
                  quantities=[2.0, 1],
@@ -483,7 +483,7 @@ class MagnesiumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class Mica(rmat.Material):
+class Mica(Material):
     def __init__(self, name='KAl3Si3O12H2',
                  elements=['K', 'Al', 'Si', 'O', 'H'],
                  quantities=[1, 3.0, 3.0, 12.0, 2.0],
@@ -493,7 +493,7 @@ class Mica(rmat.Material):
            *args, **kwargs)
 
 
-class Manganese2Oxide(rmat.Material):
+class Manganese2Oxide(Material):
     def __init__(self, name='MnO',
                  elements=['Mn', 'O'],
                  quantities=[1, 1],
@@ -503,7 +503,7 @@ class Manganese2Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class Manganese4Oxide(rmat.Material):
+class Manganese4Oxide(Material):
     def __init__(self, name='MnO2',
                  elements=['Mn', 'O'],
                  quantities=[1, 2.0],
@@ -513,7 +513,7 @@ class Manganese4Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class Molybdenum4Oxide(rmat.Material):
+class Molybdenum4Oxide(Material):
     def __init__(self, name='MoO2',
                  elements=['Mo', 'O'],
                  quantities=[1, 2.0],
@@ -523,7 +523,7 @@ class Molybdenum4Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class Molybdenum6Oxide(rmat.Material):
+class Molybdenum6Oxide(Material):
     def __init__(self, name='MoO3',
                  elements=['Mo', 'O'],
                  quantities=[1, 3.0],
@@ -533,7 +533,7 @@ class Molybdenum6Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class MolybdenumSilicide(rmat.Material):
+class MolybdenumSilicide(Material):
     def __init__(self, name='MoSi2',
                  elements=['Mo', 'Si'],
                  quantities=[1, 2.0],
@@ -543,7 +543,7 @@ class MolybdenumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class RockSalt(rmat.Material):
+class RockSalt(Material):
     def __init__(self, name='NaCl',
                  elements=['Na', 'Cl'],
                  quantities=[1, 1],
@@ -553,7 +553,7 @@ class RockSalt(rmat.Material):
            *args, **kwargs)
 
 
-class NiobiumSilicide(rmat.Material):
+class NiobiumSilicide(Material):
     def __init__(self, name='NbSi2',
                  elements=['Nb', 'Si'],
                  quantities=[1, 2.0],
@@ -563,7 +563,7 @@ class NiobiumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class NiobiumNitride(rmat.Material):
+class NiobiumNitride(Material):
     def __init__(self, name='NbN',
                  elements=['Nb', 'N'],
                  quantities=[1, 1],
@@ -573,7 +573,7 @@ class NiobiumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class NickelOxide(rmat.Material):
+class NickelOxide(Material):
     def __init__(self, name='NiO',
                  elements=['Ni', 'O'],
                  quantities=[1, 1],
@@ -583,7 +583,7 @@ class NickelOxide(rmat.Material):
            *args, **kwargs)
 
 
-class NickelSilicide(rmat.Material):
+class NickelSilicide(Material):
     def __init__(self, name='Ni2Si',
                  elements=['Ni', 'Si'],
                  quantities=[2.0, 1],
@@ -593,7 +593,7 @@ class NickelSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class RutheniumSilicide(rmat.Material):
+class RutheniumSilicide(Material):
     def __init__(self, name='Ru2Si3',
                  elements=['Ru', 'Si'],
                  quantities=[2.0, 3.0],
@@ -603,7 +603,7 @@ class RutheniumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class Ruthenium4Oxide(rmat.Material):
+class Ruthenium4Oxide(Material):
     def __init__(self, name='RuO2',
                  elements=['Ru', 'O'],
                  quantities=[1, 2.0],
@@ -613,7 +613,7 @@ class Ruthenium4Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class SiliconCarbide(rmat.Material):
+class SiliconCarbide(Material):
     def __init__(self, name='SiC',
                  elements=['Si', 'C'],
                  quantities=[1, 1],
@@ -623,7 +623,7 @@ class SiliconCarbide(rmat.Material):
            *args, **kwargs)
 
 
-class SiliconNitride(rmat.Material):
+class SiliconNitride(Material):
     def __init__(self, name='Si3N4',
                  elements=['Si', 'N'],
                  quantities=[3.0, 4.0],
@@ -633,7 +633,7 @@ class SiliconNitride(rmat.Material):
            *args, **kwargs)
 
 
-class Silica(rmat.Material):
+class Silica(Material):
     def __init__(self, name='SiO2',
                  elements=['Si', 'O'],
                  quantities=[1, 2.0],
@@ -643,7 +643,7 @@ class Silica(rmat.Material):
            *args, **kwargs)
 
 
-class Quartz(rmat.Material):
+class Quartz(Material):
     def __init__(self, name='SiO2',
                  elements=['Si', 'O'],
                  quantities=[1, 2.0],
@@ -653,7 +653,7 @@ class Quartz(rmat.Material):
            *args, **kwargs)
 
 
-class TantalumNitride(rmat.Material):
+class TantalumNitride(Material):
     def __init__(self, name='TaN',
                  elements=['Ta', 'N'],
                  quantities=[1, 1],
@@ -663,7 +663,7 @@ class TantalumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class TantalumOxide(rmat.Material):
+class TantalumOxide(Material):
     def __init__(self, name='Ta2O5',
                  elements=['Ta', 'O'],
                  quantities=[2.0, 5.0],
@@ -673,7 +673,7 @@ class TantalumOxide(rmat.Material):
            *args, **kwargs)
 
 
-class TitaniumNitride(rmat.Material):
+class TitaniumNitride(Material):
     def __init__(self, name='TiN',
                  elements=['Ti', 'N'],
                  quantities=[1, 1],
@@ -683,7 +683,7 @@ class TitaniumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class TitaniumSilicide(rmat.Material):
+class TitaniumSilicide(Material):
     def __init__(self, name='TiSi2',
                  elements=['Ti', 'Si'],
                  quantities=[1, 2.0],
@@ -693,7 +693,7 @@ class TitaniumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class TantalumSilicide(rmat.Material):
+class TantalumSilicide(Material):
     def __init__(self, name='Ta2Si',
                  elements=['Ta', 'Si'],
                  quantities=[2.0, 1],
@@ -703,7 +703,7 @@ class TantalumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class Rutile(rmat.Material):
+class Rutile(Material):
     def __init__(self, name='TiO2',
                  elements=['Ti', 'O'],
                  quantities=[1, 2.0],
@@ -713,7 +713,7 @@ class Rutile(rmat.Material):
            *args, **kwargs)
 
 
-class ULEGlass(rmat.Material):
+class ULEGlass(Material):
     def __init__(self, name='Si.925Ti.075O2',
                  elements=['Si', 'Ti', 'O'],
                  quantities=[0.925, 0.075, 2.0],
@@ -723,7 +723,7 @@ class ULEGlass(rmat.Material):
            *args, **kwargs)
 
 
-class Uranium4Oxide(rmat.Material):
+class Uranium4Oxide(Material):
     def __init__(self, name='UO2',
                  elements=['U', 'O'],
                  quantities=[1, 2.0],
@@ -733,7 +733,7 @@ class Uranium4Oxide(rmat.Material):
            *args, **kwargs)
 
 
-class VanadiumNitride(rmat.Material):
+class VanadiumNitride(Material):
     def __init__(self, name='VN',
                  elements=['V', 'N'],
                  quantities=[1, 1],
@@ -743,7 +743,7 @@ class VanadiumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class Vacuum(rmat.Material):
+class Vacuum(Material):
     def __init__(self, name=' ',
                  elements=['H'],
                  quantities=[1],
@@ -753,7 +753,7 @@ class Vacuum(rmat.Material):
            *args, **kwargs)
 
 
-class Water(rmat.Material):
+class Water(Material):
     def __init__(self, name='H2O',
                  elements=['H', 'O'],
                  quantities=[2.0, 1],
@@ -763,7 +763,7 @@ class Water(rmat.Material):
            *args, **kwargs)
 
 
-class TungstenCarbide(rmat.Material):
+class TungstenCarbide(Material):
     def __init__(self, name='WC',
                  elements=['W', 'C'],
                  quantities=[1, 1],
@@ -773,7 +773,7 @@ class TungstenCarbide(rmat.Material):
            *args, **kwargs)
 
 
-class Zerodur(rmat.Material):
+class Zerodur(Material):
     def __init__(self, name='Si.56Al.5P.16Li.04Ti.02Zr.02Zn.03O2.46',
                  elements=['Si', 'Al', 'P', 'Li', 'Ti', 'Zr', 'Zn', 'O'],
                  quantities=[0.56, 0.5, 0.16, 0.04, 0.02, 0.02, 0.03, 2.46],
@@ -783,7 +783,7 @@ class Zerodur(rmat.Material):
            *args, **kwargs)
 
 
-class ZincOxide(rmat.Material):
+class ZincOxide(Material):
     def __init__(self, name='ZnO',
                  elements=['Zn', 'O'],
                  quantities=[1, 1],
@@ -793,7 +793,7 @@ class ZincOxide(rmat.Material):
            *args, **kwargs)
 
 
-class ZincSulfide(rmat.Material):
+class ZincSulfide(Material):
     def __init__(self, name='ZnS',
                  elements=['Zn', 'S'],
                  quantities=[1, 1],
@@ -803,7 +803,7 @@ class ZincSulfide(rmat.Material):
            *args, **kwargs)
 
 
-class ZirconiumNitride(rmat.Material):
+class ZirconiumNitride(Material):
     def __init__(self, name='ZrN',
                  elements=['Zr', 'N'],
                  quantities=[1, 1],
@@ -813,7 +813,7 @@ class ZirconiumNitride(rmat.Material):
            *args, **kwargs)
 
 
-class Zirconia(rmat.Material):
+class Zirconia(Material):
     def __init__(self, name='ZrO2',
                  elements=['Zr', 'O'],
                  quantities=[1, 2.0],
@@ -823,7 +823,7 @@ class Zirconia(rmat.Material):
            *args, **kwargs)
 
 
-class ZirconiumSilicide(rmat.Material):
+class ZirconiumSilicide(Material):
     def __init__(self, name='ZrSi2',
                  elements=['Zr', 'Si'],
                  quantities=[1, 2.0],
@@ -833,7 +833,7 @@ class ZirconiumSilicide(rmat.Material):
            *args, **kwargs)
 
 
-class Air(rmat.Material):
+class Air(Material):
     def __init__(self, name='N0.781O0.209Ar0.009',
                  elements=['N', 'O', 'Ar'],
                  quantities=[0.781, 0.209, 0.009],
@@ -843,7 +843,7 @@ class Air(rmat.Material):
            *args, **kwargs)
 
 
-class CVDDiamond(rmat.Material):
+class CVDDiamond(Material):
     def __init__(self, name='C',
                  elements=['C'],
                  quantities=[1],

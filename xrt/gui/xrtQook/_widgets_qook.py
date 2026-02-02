@@ -31,9 +31,9 @@ from ...version import __version__ as xrtversion  # analysis:ignore
 from ... import plotter as xrtplot  # analysis:ignore
 from ... import runner as xrtrun  # analysis:ignore
 try:
-    from ...backends.raycing import materials_elemental as rmatsel  # analysis:ignore
-    from ...backends.raycing import materials_compounds as rmatsco  # analysis:ignore
-    from ...backends.raycing import materials_crystals as rmatscr  # analysis:ignore
+    from ...backends.raycing.materials import elemental as rmatsel  # analysis:ignore
+    from ...backends.raycing.materials import compounds as rmatsco  # analysis:ignore
+    from ...backends.raycing.materials import crystals as rmatscr  # analysis:ignore
     pdfMats = True
 except ImportError:
     pdfMats = False

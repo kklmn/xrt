@@ -50,15 +50,15 @@ Predefined Materials
 
    .. tab:: Crystals
 
-      .. automodule:: xrt.backends.raycing.materials_crystals
+      .. automodule:: xrt.backends.raycing.materials.crystals
 
    .. tab:: Compounds
 
-      .. automodule:: xrt.backends.raycing.materials_compounds
+      .. automodule:: xrt.backends.raycing.materials.compounds
 
    .. tab:: Elemental
 
-      .. automodule:: xrt.backends.raycing.materials_elemental
+      .. automodule:: xrt.backends.raycing.materials.elemental
 
 """
 __author__ = "Konstantin Klementiev, Roman Chernikov"
@@ -79,13 +79,13 @@ __allSectioned__ = collections.OrderedDict([
     ])
 
 
-from .. import raycing
-from .physconsts import CH, CHBAR
-from .materials_element import elementsList, Element
-from .materials_material import Material
-from .materials_multilayer import Multilayer, GradedMultilayer, Coated
-from .materials_crystal import Crystal
-from .materials_crystals_basic import (
+from ... import raycing
+from ..physconsts import CH, CHBAR
+from .element import elementsList, Element
+from .material import Material
+from .multilayer import Multilayer, GradedMultilayer, Coated
+from .crystal import Crystal
+from .crystals_basic import (
     CrystalFcc, CrystalDiamond, CrystalSi, CrystalFromCell, Powder,
     CrystalHarmonics, MonoCrystal)
 

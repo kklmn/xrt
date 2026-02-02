@@ -2,14 +2,14 @@
 import time
 import numpy as np
 # from scipy.special import jn as besselJn
-from .physconsts import PI, PI2, CH, CHBAR, R0, SQRT2PI
-from .materials_material import Material
+from ..physconsts import PI, PI2, CH, CHBAR, R0, SQRT2PI
+from .material import Material
 
 ch = CH  # left here for copatibility
 chbar = CHBAR  # left here for copatibility
 
 try:
-    from .pyTTE_x import TTcrystal, Quantity
+    from ..pyTTE_x import TTcrystal, Quantity
     isPyTTE = True
     # print("Importing pyTTE")
 except ImportError:
@@ -89,7 +89,7 @@ class Crystal(Material):
             Poisson's ratio. Can be used for calculation of reflectivity
             in bent isotropic crystals with [PyTTE1]_. Not required for plain
             crystals or for crystals with predefined compliance matrix, see
-            :mod:`~xrt.backends.raycing.materials_crystals`. If
+            :mod:`~xrt.backends.raycing.materials.crystals`. If
             provided, overrides existing compliance matrix.
 
         *mosaicity*: float, radians
@@ -182,7 +182,7 @@ class Crystal(Material):
 
             if hasattr(self, '_VInit') and self._VInit is None:
                 self.V = (self.d * self.sqrthkl2)**3
-    
+
             if hasattr(self, '_V'):
                 self.chiToF = -R0 / PI / self.V  # minus!
                 self.chiToFd2 = abs(self.chiToF) * self.d**2

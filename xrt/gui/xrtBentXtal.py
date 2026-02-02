@@ -64,7 +64,7 @@ from xrt.backends.raycing.pyTTE_x.elastic_tensors import CRYSTALS
 from xrt.backends.raycing.pyTTE_x import TTcrystal, TTscan, Quantity
 from xrt.backends.raycing.pyTTE_x.pyTTE_rkpy_qt import TakagiTaupin,\
     CalculateAmplitudes  # , integrate_single_scan_step
-from xrt.backends.raycing import materials_crystals as rxtl
+from xrt.backends.raycing.materials import crystals as rxtl
 from xrt.backends.raycing.physconsts import CH
 path_to_xrt = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))

@@ -4,9 +4,9 @@ import pickle
 import numpy as np
 from scipy.interpolate import interp1d
 
-from .. import raycing
-from .physconsts import PI2, CH, CHBAR, R0, AVOGADRO
-from .materials_element import Element
+from ... import raycing
+from ..physconsts import PI2, CH, CHBAR, R0, AVOGADRO
+from .element import Element
 
 spl_kw = {'kind': 'cubic', 'bounds_error': False, 'fill_value': 'extrapolate'}
 
@@ -16,8 +16,8 @@ class Material(object):
     :class:`Material` serves for getting reflectivity, transmittivity,
     refractive index and absorption coefficient of a material specified by its
     chemical formula and density. See also predefined materials in modules
-    :mod:`~xrt.backends.raycing.materials_compounds` and
-    :mod:`~xrt.backends.raycing.materials_elemental`.
+    :mod:`~xrt.backends.raycing.materials.compounds` and
+    :mod:`~xrt.backends.raycing.materials.elemental`.
 
 
     """
@@ -282,8 +282,6 @@ class Material(object):
                     self.name += '$_{' + '{0}'.format(xi) + '}$'
 
     def read_ri_file(self, fname):
-        # dataDir = os.path.dirname(__file__)
-        # dataFile = os.path.join(dataDir, 'data', fname)
         dataPath = os.path.abspath(fname)
         if os.path.exists(dataPath):
             En = None

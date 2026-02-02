@@ -20,9 +20,9 @@ sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats
-import xrt.backends.raycing.materials_elemental as rmatsel
-import xrt.backends.raycing.materials_compounds as rmatsco
-import xrt.backends.raycing.materials_crystals as rmatscr
+import xrt.backends.raycing.materials.elemental as rmatsel
+import xrt.backends.raycing.materials.compounds as rmatsco
+import xrt.backends.raycing.materials.crystals as rmatscr
 import xrt.backends.raycing.oes as roes
 import xrt.backends.raycing.apertures as rapts
 import xrt.backends.raycing.run as rrun

@@ -80,7 +80,7 @@ import os, sys;
 sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 
 import xrt.backends.raycing.materials as rm
-import xrt.backends.raycing.materials_crystals as rmc
+import xrt.backends.raycing.materials.crystals as rmc
 import xrt.backends.raycing as raycing  # analysis:ignore
 from xrt.backends.raycing.pyTTE_x import TTcrystal as TTcrystalX
 from xrt.backends.raycing.pyTTE_x import TTscan as TTscanX

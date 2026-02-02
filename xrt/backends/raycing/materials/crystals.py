@@ -1,5 +1,5 @@
 r"""
-The module :mod:`~xrt.backends.raycing.materials_crystals` contains predefined
+The module :mod:`~xrt.backends.raycing.materials.crystals` contains predefined
 classes for most commonly used crystals. Lattice parameters, atomic positions
 and references have been semi-automatically parsed from XOP/DABAX [XOP]_
 ``Crystals.dat``. To use a crystal in a script simply import the module and
@@ -7,7 +7,7 @@ instantiate its class:
 
 .. code-block:: python
 
-    import xrt.backends.raycing.materials_crystals as xcryst
+    import xrt.backends.raycing.materials.crystals as xcryst
     myInSbXtal = xcryst.InSb(hkl=(3, 1, 1))  # default hkl=(1, 1, 1)
 
 The crystals inherit from :class:`.Crystal` and can use its methods to
@@ -22,7 +22,7 @@ volume in Å³), marked in bold are those with available elastic constants:
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "6 Jul 2017"
 
-from . import materials as rmat
+from .. import materials as rmat
 import collections
 
 __all__ = ('Si', 'Ge', 'Diamond', 'GaAs', 'GaSb', 'GaP',

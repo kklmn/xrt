@@ -1,5 +1,5 @@
 r"""
-The module :mod:`~xrt.backends.raycing.materials_elemental` contains predefined
+The module :mod:`~xrt.backends.raycing.materials.elemental` contains predefined
 classes for elemental materials. Most atomic densities have been adopted from
 the `NIST table of X-Ray Mass Attenuation Coefficients
 <https://physics.nist.gov/PhysRefData/XrayMassCoef/tab1.html>`_.
@@ -19,7 +19,7 @@ instantiate its class:
 
 .. code-block:: python
 
-    import xrt.backends.raycing.materials_elemental as xmat
+    import xrt.backends.raycing.materials.elemental as xmat
     nitrogenGas = xmat.N()
 
 The elemental materials inherit from :class:`.Material` and can use its methods
@@ -29,7 +29,7 @@ refractive index etc.
 .. note::
     The elemental materials do not provide crystal diffraction amplitudes even
     if they occur naturally as crystals. To calculate diffraction on crystals
-    please use :mod:`~xrt.backends.raycing.materials_crystals`.
+    please use :mod:`~xrt.backends.raycing.materials.crystals`.
 
 The following elemental classes are defined in this module:
 
@@ -39,7 +39,7 @@ The following elemental classes are defined in this module:
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "6 Jul 2017"
 
-from . import materials as rmat
+from .. import materials as rmat
 import collections
 
 __all__ = (

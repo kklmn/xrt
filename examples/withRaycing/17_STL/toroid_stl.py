@@ -17,9 +17,9 @@ sys.path.append(r"C:\GitHub\xrt")
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats
-import xrt.backends.raycing.materials_elemental as rmatsel
-import xrt.backends.raycing.materials_compounds as rmatsco
-import xrt.backends.raycing.materials_crystals as rmatscr
+import xrt.backends.raycing.materials.elemental as rmatsel
+import xrt.backends.raycing.materials.compounds as rmatsco
+import xrt.backends.raycing.materials.crystals as rmatscr
 import xrt.backends.raycing.oes as roes
 import xrt.backends.raycing.apertures as rapts
 import xrt.backends.raycing.run as rrun
@@ -85,14 +85,14 @@ def build_beamline():
 
 #    print("lim X", BeamLine.toroidMirrorSTL.limPhysX,
 #          "\nlim Y", BeamLine.toroidMirrorSTL.limPhysY)
-#    nd = 100    
+#    nd = 100
 #    xl, yl = np.meshgrid(np.linspace(-2, 2, nd), np.linspace(-2, 2, nd))
 #    zl = BeamLine.toroidMirrorSTL.local_z(xl.flatten(), yl.flatten())
 #    print(zl)
-    
+
 #    from matplotlib import pyplot as plt
 #    from matplotlib import cm
-#    
+#
 #    plt.figure()
 #    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 #    surf = ax.plot_surface(xl, yl, zl.reshape(nd, nd), cmap=cm.jet,
@@ -100,7 +100,7 @@ def build_beamline():
 #    fig.colorbar(surf, shrink=0.5, aspect=5)
 #
 #    plt.show()
-    
+
 
     BeamLine.screen01 = rscreens.Screen(
         bl=BeamLine,
@@ -257,7 +257,7 @@ BeamLine = build_beamline()
 def main():
     BeamLine = build_beamline()
     BeamLine.glow(v2=True)
-    
+
 if __name__ == '__main__':
     main()
 
