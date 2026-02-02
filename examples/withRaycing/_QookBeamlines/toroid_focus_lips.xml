@@ -31,7 +31,7 @@
 				<efficiencyFile type="param">None</efficiencyFile>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_crystals_basic.CrystalSi</_object>
+			<_object type="param">xrt.backends.raycing.materials.CrystalSi</_object>
 		</crystalSi01>
 	</Materials>
 	<myTestBeamline type="value">
