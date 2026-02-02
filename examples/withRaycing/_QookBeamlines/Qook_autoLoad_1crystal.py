@@ -45,7 +45,7 @@ def build_beamline():
     myTestBeamline = raycing.BeamLine(
         name=r"myTestBeamline")
 
-    myTestBeamline.bendingMagnet01 = raycing.sources_synchr.BendingMagnet(
+    myTestBeamline.bendingMagnet01 = raycing.sources.synchr.BendingMagnet(
         bl=myTestBeamline,
         name=r"bendingMagnet01",
         center=[0, 0, 0],

@@ -4,7 +4,7 @@ __date__ = "21 Jun 2022"
 
 import numpy as np
 import pickle
-from .. import raycing
+from ... import raycing
 
 defaultEnergy = 9.0e3
 allArguments = ('bl', 'name', 'center', 'pitch', 'roll', 'yaw', 'nrays',

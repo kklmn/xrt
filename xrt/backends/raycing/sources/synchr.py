@@ -7,12 +7,11 @@ from scipy import special
 from scipy.interpolate import interp1d, UnivariateSpline
 import inspect
 
-from .. import raycing
-from .sources_beams import Beam, allArguments
-from .physconsts import E0, C, M0, EV2ERG, K2B, SIE0, EMC,\
+from ... import raycing
+from ..physconsts import E0, C, M0, EV2ERG, K2B, SIE0, EMC,\
     SIM0, FINE_STR, PI, PI2, SQ3, E2W, E2WC, CHeVcm
-
-from .sources_sybase import SourceBase, IntegratedSource
+from .beams import Beam, allArguments
+from .sybase import SourceBase, IntegratedSource
 
 # _DEBUG replaced with raycing._VERBOSITY_
 

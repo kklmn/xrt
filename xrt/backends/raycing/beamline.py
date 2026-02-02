@@ -268,7 +268,7 @@ class BeamLine(object):
                 self.materialsDict[objectName] = memObject
 
         for objectName, memObject in localsDict.items():
-            if len(re.findall('sources_beams.Beam', str(type(memObject)))) > 0:
+            if len(re.findall('beams.Beam', str(type(memObject)))) > 0:
                 self.beamsDict[objectName] = memObject
                 self.beamsRevDict[id(memObject)] = objectName
             if objectName == 'outDict':
@@ -650,7 +650,7 @@ class BeamLine(object):
             for subAttr in ['tLayer', 'bLayer', 'coating', 'substrate']:
                 if hasattr(mat, subAttr):
                     subMat = getattr(mat, subAttr)
-        
+
                     if subMat is not None and hasattr(subMat, 'uuid'):
                         if subMat.uuid not in materialsDict:
                             materialsDict[subMat.uuid] = subMat
@@ -692,14 +692,14 @@ class BeamLine(object):
             for attr in ['material', 'material2']:
                 if not hasattr(oe, attr):
                     continue
-            
+
                 attrMat = getattr(oe, attr)
-            
+
                 if is_sequence(attrMat):
                     new_val = [register_material(m) for m in attrMat]
                 else:
                     new_val = register_material(attrMat)
-            
+
                 setattr(oe, attr, new_val)
 
             for attr in ['figureError']:

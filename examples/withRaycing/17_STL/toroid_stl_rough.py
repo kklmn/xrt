@@ -43,7 +43,7 @@ def build_beamline():
         name=r"BeamLine",
         description=None)
 
-    BeamLine.geometricSource01 = raycing.sources_geoms.GeometricSource(
+    BeamLine.geometricSource01 = raycing.sources.geoms.GeometricSource(
         bl=BeamLine,
         name=r"geometricSource01",
         center=[0, 0, 0],
@@ -52,7 +52,7 @@ def build_beamline():
         dz=0.1,
         dzprime=0.001)
 
-    BeamLine.geometricSource02 = raycing.sources_geoms.GeometricSource(
+    BeamLine.geometricSource02 = raycing.sources.geoms.GeometricSource(
         bl=BeamLine,
         name=r"geometricSource02",
         center=[100, 0, 0],

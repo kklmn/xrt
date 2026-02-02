@@ -142,7 +142,7 @@ def build_beamline():
         alignE=8000,
         name=r"BioXAS_Main")
 
-    BioXAS_Main.Wiggler = raycing.sources_synchr.Wiggler(
+    BioXAS_Main.Wiggler = raycing.sources.synchr.Wiggler(
         bl=BioXAS_Main,
         name=r"Wiggler",
         center=[0, 0, 0],

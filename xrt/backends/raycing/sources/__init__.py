@@ -729,15 +729,15 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __all__ = ('GeometricSource', 'MeshSource', 'BendingMagnet', 'Wiggler',
            'Undulator', 'SourceFromField', 'BeamFromFile')
 
-from .sources_beams import Beam, BeamProxy,\
+from .beams import Beam, BeamProxy,\
     copy_beam, rotate_coherency_matrix, defaultEnergy
-from .sources_geoms import GeometricSource, MeshSource, NESWSource,\
+from .geoms import GeometricSource, MeshSource, NESWSource,\
     CollimatedMeshSource, shrink_source, make_energy, make_polarization,\
     GaussianBeam, LaguerreGaussianBeam, HermiteGaussianBeam, BeamFromFile
-from .sources_legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
+from .legacy import UndulatorUrgent, WigglerWS, BendingMagnetWS,\
     UndulatorSRW, SourceFromFieldSRW
-from .sources_synchr import BendingMagnet, Wiggler, Undulator, SourceFromField
-from .sources_sybase import SourceBase, IntegratedSource
+from .synchr import BendingMagnet, Wiggler, Undulator, SourceFromField
+from .sybase import SourceBase, IntegratedSource
 
 electronBeamArgSet = {'eE', 'eI', 'eEspread', 'eSigmaX', 'eSigmaZ',
                       'eEpsilonX', 'eEpsilonZ', 'betaX', 'betaZ'}

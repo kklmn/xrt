@@ -5,10 +5,10 @@ import numpy as np
 import scipy as sp
 import inspect
 
-from . import run as rr
-from .. import raycing
-from .sources_beams import Beam, defaultEnergy, allArguments
-from .physconsts import PI2, CHBAR
+from .. import run as rr
+from ... import raycing
+from ..physconsts import PI2, CHBAR
+from .beams import Beam, defaultEnergy, allArguments
 
 # _DEBUG replaced with raycing._VERBOSITY_
 

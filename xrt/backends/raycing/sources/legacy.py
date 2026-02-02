@@ -13,10 +13,10 @@ import time
 from multiprocessing import Pool, cpu_count
 
 import gzip
-from .. import raycing
-from .sources_beams import Beam
-from .sources_synchr import Undulator, SourceFromField
-from .physconsts import M0C2, K2B, SIE0, SIC, PI, PI2, CHeVcm, FINE_STR
+from ... import raycing
+from .beams import Beam
+from .synchr import Undulator, SourceFromField
+from ..physconsts import M0C2, K2B, SIE0, SIC, PI, PI2, CHeVcm, FINE_STR
 #basepath = os.path.dirname(raycing.__file__)
 #SRWPATH = os.path.abspath(os.path.join(basepath,'SRW'))
 #sys.path.append(SRWPATH)

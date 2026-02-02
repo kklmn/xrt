@@ -7,10 +7,10 @@ import numpy as np
 from scipy import special
 import inspect
 
-from .. import raycing
-from . import myopencl as mcl
-from .sources_beams import Beam
-from .physconsts import C, M0, EV2ERG, SIE0, SQ2, SQPI, CH, CHBAR
+from ... import raycing
+from .. import myopencl as mcl
+from ..physconsts import C, M0, EV2ERG, SIE0, SQ2, SQPI, CH, CHBAR
+from .beams import Beam
 
 # try:
 #     import pyopencl as cl  # analysis:ignore
