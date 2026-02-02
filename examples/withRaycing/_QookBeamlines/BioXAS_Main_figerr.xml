@@ -39,7 +39,7 @@
 				<name type="param">CVD</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_material.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.Material</_object>
 		</CVD>
 		<Rh type="value">
 			<properties type="prop">
@@ -54,7 +54,7 @@
 				<name type="param">Rh</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_material.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.Material</_object>
 		</Rh>
 		<Si220 type="value">
 			<properties type="prop">
@@ -79,7 +79,7 @@
 				<efficiencyFile type="param">None</efficiencyFile>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_crystals_basic.CrystalSi</_object>
+			<_object type="param">xrt.backends.raycing.materials.CrystalSi</_object>
 		</Si220>
 		<CVDcoating type="value">
 			<properties type="prop">
@@ -94,7 +94,7 @@
 				<name type="param">CVDcoating</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_material.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.Material</_object>
 		</CVDcoating>
 		<Si type="value">
 			<properties type="prop">
@@ -109,7 +109,7 @@
 				<name type="param">Si</name>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_material.Material</_object>
+			<_object type="param">xrt.backends.raycing.materials.Material</_object>
 		</Si>
 		<RhOnSi type="value">
 			<properties type="prop">
@@ -122,7 +122,7 @@
 				<name type="param">RhOnSi</name>
 				<geom type="param">reflected</geom>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_multilayer.Coated</_object>
+			<_object type="param">xrt.backends.raycing.materials.Coated</_object>
 		</RhOnSi>
 		<CVDonSi type="value">
 			<properties type="prop">
@@ -135,7 +135,7 @@
 				<name type="param">CVDonSi</name>
 				<geom type="param">reflected</geom>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_multilayer.Coated</_object>
+			<_object type="param">xrt.backends.raycing.materials.Coated</_object>
 		</CVDonSi>
 		<Si220harm type="value">
 			<properties type="prop">
@@ -167,7 +167,7 @@
 				<efficiencyFile type="param">None</efficiencyFile>
 				<refractiveIndex type="param">None</refractiveIndex>
 			</properties>
-			<_object type="param">xrt.backends.raycing.materials_crystals_basic.CrystalHarmonics</_object>
+			<_object type="param">xrt.backends.raycing.materials.CrystalHarmonics</_object>
 		</Si220harm>
 	</Materials>
 	<BioXAS_Main type="value">
