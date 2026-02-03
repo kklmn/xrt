@@ -275,7 +275,7 @@ class OEMainMethods(object):
         """
 
         if rw is None:
-            from . import waves as rw
+            from .. import waves as rw
 
         if isinstance(nrays, (int, float)):
             nsamples = int(nrays)
@@ -390,7 +390,7 @@ class OEMainMethods(object):
 
         .. Returned values: beamGlobal, beamLocal
         """
-        from . import waves as rw
+        from .. import waves as rw
         waveSize = len(wave.x) if nrays == 'auto' else int(nrays)
 #        if wave is None and beam is not None:
 #            wave = beam

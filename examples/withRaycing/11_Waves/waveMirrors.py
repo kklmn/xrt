@@ -76,7 +76,7 @@ sourceType = 'flat'
 #sourceType = 'divergent'
 
 prefix = case
-nrays = 1e6
+nrays = 1e5
 
 if sourceType == 'flat':
     kw = {'distx': 'flat', 'dx': dx, 'distz': 'flat', 'dz': dx,

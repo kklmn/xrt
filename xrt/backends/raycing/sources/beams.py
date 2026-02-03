@@ -346,7 +346,7 @@ class Beam(object):
         self.E[:] = np.random.uniform(EnewMin, EnewMax, len(self.E))
 
     def diffract(self, wave):
-        from . import waves as rw
+        from .. import waves as rw
         return rw.diffract(self, wave)
 
 

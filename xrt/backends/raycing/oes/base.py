@@ -321,10 +321,10 @@ class OE(OEMainMethods):
             if not isOpenCL:
                 raycing.colorPrint("pyopencl is not available!", "RED")
             else:
-                cl_template = os.path.join(__fdir__, r'materials.cl')
+                cl_template = os.path.join(__fdir__, r'../cl/materials.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource = f.read()
-                cl_template = os.path.join(__fdir__, r'OE.cl')
+                cl_template = os.path.join(__fdir__, r'../cl/OE.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource += f.read()
                 kernelsource = kernelsource.replace('MY_LOCAL_Z',

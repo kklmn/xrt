@@ -242,7 +242,7 @@ class XRT_CL(object):
                         self.cl_filename, autoStr, idn, idv.name))
 
             if self.kernelsource is None:
-                cl_file = os.path.join(os.path.dirname(__file__),
+                cl_file = os.path.join(os.path.dirname(__file__), 'cl',
                                        self.cl_filename)
                 with open(cl_file, 'r') as f:
                     kernelsource = f.read()
