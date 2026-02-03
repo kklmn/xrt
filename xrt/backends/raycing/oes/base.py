@@ -29,6 +29,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Feb 2026"
 
 __fdir__ = os.path.dirname(__file__)
+__cldir__ = os.join(os.path.dirname(__fdir__), 'cl')
 
 allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
@@ -321,10 +322,10 @@ class OE(OEMainMethods):
             if not isOpenCL:
                 raycing.colorPrint("pyopencl is not available!", "RED")
             else:
-                cl_template = os.path.join(__fdir__, r'../cl/materials.cl')
+                cl_template = os.path.join(__cldir__, 'materials.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource = f.read()
-                cl_template = os.path.join(__fdir__, r'../cl/OE.cl')
+                cl_template = os.path.join(__cldir__, 'OE.cl')
                 with open(cl_template, 'r') as f:
                     kernelsource += f.read()
                 kernelsource = kernelsource.replace('MY_LOCAL_Z',
