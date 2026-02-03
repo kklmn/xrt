@@ -209,7 +209,7 @@
 				<filamentBeam type="param">False</filamentBeam>
 				<uniformRayDensity type="param">False</uniformRayDensity>
 			</properties>
-			<_object type="param">xrt.backends.raycing.sources_synchr.Wiggler</_object>
+			<_object type="param">xrt.backends.raycing.sources.synchr.Wiggler</_object>
 			<shine type="prop">
 				<parameters type="prop">
 					<toGlobal type="param">True</toGlobal>
@@ -217,7 +217,7 @@
 					<fixedEnergy type="param">False</fixedEnergy>
 					<accuBeam type="param">None</accuBeam>
 				</parameters>
-				<_object type="param">xrt.backends.raycing.sources_synchr.Wiggler.shine</_object>
+				<_object type="param">xrt.backends.raycing.sources.synchr.Wiggler.shine</_object>
 				<output type="prop">
 					<beamGlobal type="param">Wiggler_global</beamGlobal>
 				</output>

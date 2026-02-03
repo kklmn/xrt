@@ -72,7 +72,7 @@
 				<filamentBeam type="param">False</filamentBeam>
 				<uniformRayDensity type="param">False</uniformRayDensity>
 			</properties>
-			<_object type="object">xrt.backends.raycing.sources_synchr.BendingMagnet</_object>
+			<_object type="object">xrt.backends.raycing.sources.synchr.BendingMagnet</_object>
 			<shine type="prop">
 				<parameters type="prop">
 					<toGlobal type="param">True</toGlobal>
@@ -80,7 +80,7 @@
 					<fixedEnergy type="param">False</fixedEnergy>
 					<accuBeam type="param">None</accuBeam>
 				</parameters>
-				<_object type="object">xrt.backends.raycing.sources_synchr.BendingMagnet.shine</_object>
+				<_object type="object">xrt.backends.raycing.sources.synchr.BendingMagnet.shine</_object>
 				<output type="prop">
 					<beamGlobal type="param">bendingMagnet01_global</beamGlobal>
 				</output>
