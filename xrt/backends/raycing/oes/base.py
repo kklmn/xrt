@@ -29,7 +29,7 @@ __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Feb 2026"
 
 __fdir__ = os.path.dirname(__file__)
-__cldir__ = os.join(os.path.dirname(__fdir__), 'cl')
+__cldir__ = os.path.join(os.path.dirname(__fdir__), 'cl')
 
 allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
