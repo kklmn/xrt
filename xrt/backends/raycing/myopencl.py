@@ -283,7 +283,7 @@ class XRT_CL(object):
                     self.cl_queue.extend([cl.CommandQueue(cl_ctx, device)])
                     self.cl_program.extend(
                         [cl.Program(cl_ctx, kernelsource).build(
-                            options=['-I', __fdir__])])
+                            options=['-I', os.path.join(__fdir__, 'cl')])])
                     self.cl_ctx.extend([cl_ctx])
                 self.cl_mf = cl.mem_flags
                 if self.autoTune and len(self.cl_ctx) < 2 and\
