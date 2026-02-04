@@ -297,6 +297,7 @@ class CrystalFromCell(Crystal):
         self.nu = nu
         self.useTT = useTT
         self.mosaicity = mosaicity
+        self.refractiveIndex = None
 
     @property
     def table(self):
