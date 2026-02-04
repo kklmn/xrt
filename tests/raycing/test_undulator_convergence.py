@@ -125,7 +125,7 @@ def main():
     alphaZ = 0.2
     zMin, zMax = -0.5*Np*L0, 0.5*Np*L0
     fieldZ = np.linspace(zMin, zMax, int(Np*L0)+1)
-    
+
     #tapered
     fieldK = Kmax*(1.-alphaZ*(0.5-(fieldZ-zMin)/(Np*L0)))*np.sin(2*np.pi*fieldZ/L0)
     fieldB = K2B * fieldK / L0
@@ -166,7 +166,7 @@ def main():
     fluxArr = []
 
     dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
-    
+
     fig = plt.figure(figsize=(4.08, 3.84))
     ax = fig.add_axes([0.17, 0.12, 0.82, 0.87])
     ax.set_xlabel("x' (µrad)")
@@ -198,9 +198,11 @@ def main():
         if saveFrameImages:
             fig.savefig("Imap_frame_{}.png".format(nord))
         if saveVideo:
-            frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-            frames.append(frame)
+            # tostring_rgb is removed in matplotlib>=3.10
+            # frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+            w, h = fig.canvas.get_width_height()
+            frame = np.array(fig.canvas.buffer_rgba()).reshape(h, w, -1)
+            frames.append(frame[:, :, :3])
         nodeArr.append(source.gNodes*source.gIntervals)
         fluxArr.append(flux)
 
@@ -210,9 +212,10 @@ def main():
             -1, # cv2.VideoWriter_fourcc(*'MP4V'),
             15, fig.canvas.get_width_height())
         for frame in frames:
-            out.write(frame[:, :, ::-1])  # bgr -> rgb
+            rgbframe = frame[:, :, ::-1]   # bgr -> rgb
+            out.write(rgbframe)
         out.release()
-        
+
     plt.figure("Total flux")
     plt.gca().set_xlabel("Number of nodes")
     plt.gca().set_ylabel(r"Flux (ph/s/0.1%bw)")

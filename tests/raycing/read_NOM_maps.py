@@ -8,7 +8,7 @@ from scipy import ndimage
 
 
 def plot_NOM_2D(fname):
-    xL, yL, zL = np.loadtxt(fname+'.dat', unpack=True)
+    xL, yL, zL = np.loadtxt(fname, unpack=True)
     nX = (yL == yL[0]).sum()
     nY = (xL == xL[0]).sum()
     x = xL[:nX]
@@ -132,7 +132,7 @@ def plot_NOM_3D(fname):
     from matplotlib import cm
     from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
-    xL, yL, zL = np.loadtxt(fname+'.dat', unpack=True)
+    xL, yL, zL = np.loadtxt(fname, unpack=True)
     nX = (yL == yL[0]).sum()
     nY = (xL == xL[0]).sum()
     x = xL.reshape((nY, nX))
@@ -167,6 +167,6 @@ def plot_NOM_3D(fname):
 
 
 if __name__ == '__main__':
-    fname = 'mock_surface'
+    fname = '../../examples/withRaycing/13_Warping/mock_surface.dat'
     plot_NOM_2D(fname)
     # plot_NOM_3D(fname)

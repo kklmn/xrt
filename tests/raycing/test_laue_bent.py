@@ -169,7 +169,7 @@ def define_plots():
         beam=r"lauePlate01beamLocal01",
         xaxis=xrtplot.XYCAxis(
             label=r"x",
-            unit='$\mu$m',
+            unit=r'$\mu$m',
             fwhmFormatStr="%.1f",
             bins=256,
             ppb=1,
@@ -177,7 +177,7 @@ def define_plots():
             limits=[-5, 5]),
         yaxis=xrtplot.XYCAxis(
             label=r"y",
-            unit='$\mu$m',
+            unit=r'$\mu$m',
             fwhmFormatStr="%.1f",
 #            factor=1000,
             bins=256,
@@ -197,7 +197,7 @@ def define_plots():
         beam=r"lauePlate01beamLocal01",
         xaxis=xrtplot.XYCAxis(
             label=r"y",
-            unit='$\mu$m',
+            unit=r'$\mu$m',
             fwhmFormatStr="%.1f",
 #            factor=1000,
             bins=256,
@@ -205,7 +205,7 @@ def define_plots():
             limits=[-50, 50]),
         yaxis=xrtplot.XYCAxis(
             label=r"z",
-            unit='$\mu$m',
+            unit=r'$\mu$m',
             fwhmFormatStr="%.1f",
             bins=256,
             ppb=1),
@@ -247,13 +247,13 @@ def define_plots():
             label=r"x",
             bins=256,
             ppb=1,
-            unit='$\mu$m',
+            unit=r'$\mu$m',
             fwhmFormatStr="%.1f"),
         yaxis=xrtplot.XYCAxis(
             label=r"z",
             bins=256,
             ppb=1,
-            unit='$\mu$m',
+            unit=r'$\mu$m',
             fwhmFormatStr="%.1f"),
         caxis=xrtplot.XYCAxis(
             label=r"energy",
