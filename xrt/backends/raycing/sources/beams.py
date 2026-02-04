@@ -148,6 +148,8 @@ class Beam(object):
                     self.Ep = np.zeros(nrays, dtype=complex)
         if type(forceState) == int:
             self.state[:] = forceState
+        if not hasattr(self, 'parentId'):
+            self.parentId = None
 
     def export_beam(self, fileName, fformat='npy'):
         """Saves the *beam* to a binary file. File format can be Numpy 'npy',
