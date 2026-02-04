@@ -109,7 +109,10 @@ def xyz_from_xz(obj, x=None, z=None):
         norm = sum([xc**2 for xc in x])**0.5
         retx = [xc/norm for xc in x]
     else:
-        retx = bl.cosAzimuth, -bl.sinAzimuth, 0.
+        if bl is None:
+            retx = 1, 0, 0.
+        else:
+            retx = bl.cosAzimuth, -bl.sinAzimuth, 0.
 
     if isinstance(z, (list, tuple, np.ndarray)):
         norm = sum([zc**2 for zc in z])**0.5
