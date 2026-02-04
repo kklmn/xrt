@@ -476,6 +476,9 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 #            self.name = '{0}{1}'.format(self.__class__.__name__,
 #                                        self.ordinalNum)
 
+        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+            self.uuid = str(raycing.uuid.uuid4())
+
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.uuid] = [self, 1]
