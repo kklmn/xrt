@@ -110,8 +110,8 @@ def define_plots(beamLine, fName):
     pAdd = 'P' if isParametric else ''
 
     plot = xrtp.XYCPlot(
-        'beamFSM1', (1,), xaxis=xrtp.XYCAxis(r'$x$', '$\mu$m'),
-        yaxis=xrtp.XYCAxis(r'$z$', '$\mu$m'), title='FSM1_E')
+        'beamFSM1', (1,), xaxis=xrtp.XYCAxis(r'$x$', r'$\mu$m'),
+        yaxis=xrtp.XYCAxis(r'$z$', r'$\mu$m'), title='FSM1_E')
     plot.caxis.fwhmFormatStr = None
 #    plot.caxis.limits = [70, 140]
     plots.append(plot)

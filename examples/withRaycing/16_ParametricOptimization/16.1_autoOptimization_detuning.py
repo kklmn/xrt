@@ -157,7 +157,7 @@ def main():
              'ro', ls='')
     plt.grid()
     axes = plt.gca()
-    axes.set_xlabel("$d\Theta$, $\mu$rad"); axes.set_ylabel("$\Delta$E, eV")
+    axes.set_xlabel(r"$d\Theta$, $\mu$rad"); axes.set_ylabel("$\Delta$E, eV")
     plt.savefig("dE_vs_dTheta.png")
 
     plt.figure('Flux vs dTheta')
@@ -166,7 +166,7 @@ def main():
              'go', ls='')
     plt.grid()
     axes = plt.gca()
-    axes.set_xlabel("$d\Theta$, $\mu$rad"); axes.set_ylabel("Flux, photons/s")
+    axes.set_xlabel(r"$d\Theta$, $\mu$rad"); axes.set_ylabel("Flux, photons/s")
     plt.savefig("Flux_vs_dTheta.png")
 
     plt.figure('Convergence')

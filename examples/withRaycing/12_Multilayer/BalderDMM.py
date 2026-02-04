@@ -63,7 +63,7 @@ def build_beamline(nrays=1e4, hkl=(1, 1, 1), stripe='Si',
     beamLine.filter1 = roe.Plate(
         beamLine, 'Filter1', (0, 23620, height),
         pitch=math.pi/2, limPhysX=(-9., 9.), limPhysY=(-4., 4.),
-        surface='diamond 60 $\mu$m', material=filterDiamond, t=0.06,
+        surface=r'diamond 60 $\mu$m', material=filterDiamond, t=0.06,
         alarmLevel=0.)
     if stripe.startswith('I'):
         beamLine.filter2 = roe.Plate(

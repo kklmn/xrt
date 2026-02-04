@@ -71,7 +71,7 @@ def build_beamline(nrays=raycing.nrays, eMinRays=550, eMaxRays=30550):
         beamLine, 'Filter1',
         (-42740.918, -17456.772, height), pitch=np.pi/2,
         limPhysX=(-20., 20.), limPhysY=(-9., 9.),
-        surface=('diamond 90 $\mu$m',), material=(filterDiamond,), t=0.09,
+        surface=(r'diamond 90 $\mu$m',), material=(filterDiamond,), t=0.09,
         targetOpenCL=targetOpenCL,
         alarmLevel=0.)
 
