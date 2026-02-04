@@ -227,7 +227,8 @@ def define_plots(beamLine):
                 beamLocal, (1,), aspect='auto',
                 xaxis=xrtp.XYCAxis(r'$\phi$', 'rad', bins=bins, ppb=2),
                 yaxis=xrtp.XYCAxis(r'$s$', 'mm', bins=bins, ppb=2),
-                caxis=xrtp.XYCAxis(r'incidence angle $\theta$', 'mrad'),
+                caxis=xrtp.XYCAxis(r'incidence angle $\theta$', 'mrad',
+                                   data=raycing.get_theta),
                 title='theta (s, phi)')
             plot.xaxis.fwhmFormatStr = '%.2f' + r'$ \pi$'
             plot.xaxis.limits = [-1, 1]  # limits are in units of pi!
