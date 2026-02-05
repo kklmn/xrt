@@ -175,7 +175,7 @@ setup(
     platforms='OS Independent',
     license='MIT License',
     keywords='',
-    # python_requires=,
+    python_requires=">=3.9",
     zip_safe=False,  # True: build zipped egg, False: unzipped
     packages=[
         'xrt',
@@ -200,7 +200,9 @@ setup(
                       # 'openpyxl',
                       ],
     extras_require={
-                    'pyqt5': ['pyqt5', 'PyQtWebEngine']
+                    'pyqt5': ['PyQt5', 'PyQtWebEngine'],
+                    'epics': ['softioc'],
+                    'all': ['PyQt5', 'PyQtWebEngine', 'softioc']
                     },
     classifiers=['Development Status :: 4 - Beta',
                  'Intended Audience :: Science/Research',
