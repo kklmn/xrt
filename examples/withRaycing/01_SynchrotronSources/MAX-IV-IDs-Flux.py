@@ -98,7 +98,7 @@ def run(case):
 
     if withSRWUndulator:
         import pickle
-        with open('c:\Ray-tracing\srw\SRWres.pickle', 'rb') as f:
+        with open(r'c:\Ray-tracing\srw\SRWres.pickle', 'rb') as f:
             energySRW, thetaSRW, psiSRW, I0SRW = pickle.load(f)[0:4]
         dtheta = thetaSRW[1] - thetaSRW[0]
         dpsi = psiSRW[1] - psiSRW[0]

@@ -113,8 +113,8 @@ openingVDouble = [
     (limx[1], lowerBottom), (limx[0], lowerBottom)]
 
 
-# case = '1-far-field'
-case = '2-near-field'
+case = '1-far-field'
+# case = '2-near-field'
 fieldFileName = 'edge_radiation.xlsx'
 
 if 'far-field' in case:
@@ -144,8 +144,8 @@ def build_beamline(nrays=nrays):
         eMin=Emin, eMax=Emax,
         xPrimeMax=[lim/m1y*1e3 for lim in limx],
         zPrimeMax=[lim/m1y*1e3 for lim in limy],
-        xPrimeMaxAutoReduce = False,
-        zPrimeMaxAutoReduce = False,
+        xPrimeMaxAutoReduce=False,
+        zPrimeMaxAutoReduce=False,
         filamentBeam=True,  # important
         uniformRayDensity=True,  # important
         R0=R0,
