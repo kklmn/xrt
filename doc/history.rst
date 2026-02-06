@@ -3,10 +3,14 @@
 Version history
 ---------------
 
-Current GitHub code (10 Jun 2025):
+1.6.2 (6 Feb 2026):
     - Enable wave propagation for two-side OEs (lenses).
 
     - Minor fixes in help pages of xrtQook.
+
+    - HyperbolicMirrorParam enabled in xrtQook
+
+    - Fix wide angle approximation for edge radiation
 
 1.6.1 (13 Nov 2024):
     - Minor bug fixes.
