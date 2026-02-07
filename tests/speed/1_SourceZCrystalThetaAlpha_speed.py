@@ -533,7 +533,7 @@ def plot_generator(plots, plotsAnalyzer, plotsDetector, plotsE,
                         else:
 #                            xrtr.runCardVals.repeats = 0
                             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
-                                  '\delta E = ${3:.3f} eV').format(
+                                  r'\delta E = ${3:.3f} eV').format(
                                 crystalLabel, '\n', thetaDegree, dELine)
                             for plot in plots:
                                 try:

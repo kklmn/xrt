@@ -209,13 +209,13 @@ Acknowledgments
 * Hasan Yavaş, Jozef Bednarčik, Dmitri Novikov and Alexey Zozulya (DESY Photon
   Science) are acknowledged for supplied cases.
 
-* Hamed Tarawneh (MAX IV Laboratory) has initiated the custom field undulator
+* Hamed Tarawneh (MAX IV Laboratory) initiated the custom field undulator
   project and supplied tables of magnetic field.
 
-* Bernard Kozioziemski (LLNL) has pointed to the importance of considering
-  the *total* absorption cross-section (not just photoelectric absorption) in
-  the cases of light materials at high energy. He also did deep tests of the
-  mosaic crystal model.
+* Bernard Kozioziemski (LLNL) pointed to the importance of considering the
+  *total* absorption cross-section (not just photoelectric absorption) in the
+  cases of light materials at high energy. He also did deep tests of the mosaic
+  crystal model.
 
 * Emilio Heredia (CLS) is thanked for valuable suggestions on GUI.
 
@@ -223,8 +223,12 @@ Acknowledgments
   calculation development, providing field tables and comparing the results
   with other codes.
 
-* Louisa Pickworth (MAX IV Laboratory) has provided curves from other codes for
+* Louisa Pickworth (MAX IV Laboratory) provided curves from other codes for
   testing reflectivity/transmittivity of multilayers.
+
+* Ferenc Borondics (Soleil Synchrotron) provided the custom magnetic field of
+  two bending magnets adjacent to a long straight section. This table is part
+  of the edge radiation example.
 
 """
 
