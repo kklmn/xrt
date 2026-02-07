@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: xrt
-Version: 1.6.1
+Version: 1.6.2
 Summary: Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI for creating a beamline and viewing it in 3D.
 Home-page: http://xrt.readthedocs.io
 Author: Konstantin Klementiev, Roman Chernikov
@@ -24,6 +24,7 @@ Requires-Dist: matplotlib>=2.0.0
 Requires-Dist: sphinx>=1.6.2
 Requires-Dist: sphinxcontrib-jquery
 Requires-Dist: distro
+Requires-Dist: sphinx-tabs>=3.4.7
 Requires-Dist: colorama
 Requires-Dist: pyopencl
 Requires-Dist: pyopengl
@@ -31,6 +32,19 @@ Requires-Dist: siphash24
 Provides-Extra: pyqt5
 Requires-Dist: pyqt5; extra == "pyqt5"
 Requires-Dist: PyQtWebEngine; extra == "pyqt5"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: platform
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: summary
 
 
 Package xrt is a python software library for ray tracing and wave propagation
