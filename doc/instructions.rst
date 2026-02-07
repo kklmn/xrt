@@ -36,6 +36,12 @@ drive. Get xrt as a zip from GitHub and unzip it to a suitable location.
 For running xrt without installation, all required dependencies must be
 installed beforehand. Look into xrt's `setup.py` and find those dependencies in
 the lists `install_requires` and `extras_require`. They are pip installable.
+
+::
+
+    pip install numpy scipy matplotlib sphinx sphinxcontrib-jquery sphinx-tabs
+    pip install colorama pyopencl pyopengl siphash24 pyqt5 PyQtWebEngine
+
 After having dependencies installed, you may run any script from `examples` or
 `tests`. The scripts refer to xrt located a few levels higher.
 
@@ -96,3 +102,4 @@ If you use a system-wide Python on Linux, do similar to this (works on Ubuntu
 
 Instead of installing ocl-icd-opencl-dev, one can locate libOpenCL.so and
 create a symbolic link in /usr/lib or any other lib folder in the path search.
+
