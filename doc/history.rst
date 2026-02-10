@@ -8,9 +8,10 @@ Version history
 
     - Minor fixes in help pages of xrtQook.
 
-    - HyperbolicMirrorParam enabled in xrtQook
+    - HyperbolicMirrorParam enabled in xrtQook.
 
-    - Fix wide angle approximation for edge radiation
+    - Fix wide angle approximation for edge radiation. Add example
+      :ref:`Infrared edge radiation <edge-radiation>`.
 
 1.6.1 (13 Nov 2024):
     - Minor bug fixes.

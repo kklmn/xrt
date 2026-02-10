@@ -340,7 +340,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
             for plot in plotsDetector:
                 plot.xaxis.limits = -6, 6
             txt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
-                   '\delta E = ${3:.3f} eV').format(
+                   r'\delta E = ${3:.3f} eV').format(
                        crystalLabel, '\n', thetaDegree, dELine)
             for plot in plots:
                 plot.textPanel.set_text(txt)
