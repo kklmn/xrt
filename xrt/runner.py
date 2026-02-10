@@ -82,6 +82,7 @@ class RunCardVals(object):
         self.passNo = 0
         self.savedResults = []
         self.iteration = 0
+        self.totalIterations = 0
         self.lastRunsPickleName = os.path.join(__fdir__, 'lastRuns.pickle')
         self.lastRuns = []
 
@@ -158,12 +159,13 @@ def start_jobs():
         print("The job is running... ")
         while True:
             # sys.stdout.flush()
+            t0 = time.time()
             res = dispatch_jobs()
-            # tFromStart = time.time() - runCardVals.tstart
-            # raycing.colorPrint('Repeat {0} of {1} done in {2:.1f} s'.format(
-            #     runCardVals.iteration, runCardVals.repeats, tFromStart),
-            #     fcolor='YELLOW')
-            if res:
+            tFromStart = time.time() - t0
+            raycing.colorPrint('Repeat {0} of {1} done in {2:.1f} s'.format(
+                runCardVals.iteration+1, runCardVals.repeats, tFromStart),
+                fcolor='YELLOW')
+            if res != 'start next':
                 return
     else:
         plot = _plots[0]
@@ -180,13 +182,11 @@ def dispatch_jobs():
     event handler of a qt-graph."""
     if (runCardVals.iteration >= runCardVals.repeats) or \
             runCardVals.stop_event.is_set():
-        on_finish()
-        return True
+        return on_finish()
     one_iteration()
     if (runCardVals.iteration >= runCardVals.repeats) or \
             runCardVals.stop_event.is_set():
-        on_finish()
-        return True
+        return on_finish()
     if runCardVals.iteration % runCardVals.updateEvery == 0:
         for plot in _plots:
             plot.plot_plots()
@@ -204,8 +204,8 @@ def one_iteration():
     outPlotQueues = [runCardVals.Queue() for plot in _plots]
     alarmQueue = runCardVals.Queue()
 
-# in the 1st iteration the plots may require some of x, y, e limits to be
-# calculated and thus this case is special:
+    # in the 1st iteration the plots may require some of x, y, e limits to be
+    # calculated and thus this case is special:
     cpus = max(runCardVals.threads, runCardVals.processes)
 
     if runCardVals.iteration == 0:
@@ -250,7 +250,7 @@ def one_iteration():
         BackendOrProcess = multipro.BackendProcess
     processes = [BackendOrProcess(runCardVals, plots2Pickle, outPlotQueues,
                                   alarmQueue, icpu) for icpu in range(cpus)]
-#    print('top process:', os.getpid())
+    # print('top process:', os.getpid())
     for pid, p in enumerate(processes):
         p.ppid = pid + runCardVals.iteration
         p.start()
@@ -309,10 +309,11 @@ def one_iteration():
             plot.textStatus.set_text(
                 "{0} of {1} in {2:.1f} s (right click to stop)".format(
                     runCardVals.iteration+1, runCardVals.repeats, tFromStart))
-#            aqueue.task_done()
+            # aqueue.task_done()
 
         if len(outList) > 0:
             runCardVals.iteration += 1
+            runCardVals.totalIterations += 1
     for p in processes:
         p.join(60.)
     if hasattr(runCardVals, 'beamLine'):
@@ -343,9 +344,9 @@ def on_finish():
         plot.save()
     runCardVals.tstop = time.time()
     runCardVals.tstopLong = time.localtime()
-    raycing.colorPrint('The ray tracing with {0} iteration{1} took {2:0.1f} s'
-                       .format(runCardVals.iteration,
-                               's' if runCardVals.iteration > 1 else '',
+    raycing.colorPrint('{0} calculation step{1} took {2:0.1f} s'
+                       .format(runCardVals.totalIterations,
+                               's' if runCardVals.totalIterations > 1 else '',
                                runCardVals.tstop-runCardVals.tstart),
                        fcolor="GREEN")
     runCardVals.finished_event.set()
@@ -354,7 +355,7 @@ def on_finish():
             plot.store_plots()
     if runCardVals.stop_event.is_set():
         raycing.colorPrint('Interrupted by user after iteration {0}'.format(
-            runCardVals.iteration), fcolor='YELLOW')
+            runCardVals.totalIterations), fcolor='YELLOW')
         return
     try:
         if runCardProcs.generatorPlot is not None:
@@ -367,8 +368,9 @@ def on_finish():
     else:
         for plot in _plots:
             plot.clean_plots()
-        start_jobs()
-        return
+        # start_jobs()
+        runCardVals.iteration = np.int64(0)
+        return 'start next'
 
     if runCardVals.globalNorm:
         aSavedResult = -1
