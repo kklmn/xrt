@@ -39,7 +39,7 @@ class FigureErrorBase():
     Instances can optionally be combined with another figure error
     object via *baseFE* to construct more complex surface maps.
     """
-    def __init__(self, name='', baseFE=None,limPhysX=None, limPhysY=None,
+    def __init__(self, name='', baseFE=None, limPhysX=None, limPhysY=None,
                  gridStep=0.5, **kwargs):
         """
         *name*: str
@@ -74,6 +74,8 @@ class FigureErrorBase():
         self._baseFE = baseFE
         self._gridStep = gridStep  # [mm]
         self._splineOrder = 3
+        self.xShift = 0.
+        self.yShift = 0.
         if limPhysX is None:
             self._limPhysX = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
@@ -82,7 +84,8 @@ class FigureErrorBase():
             self._limPhysY = raycing.Limits([-maxFeHalfSize, maxFeHalfSize])
         else:
             self._limPhysY = raycing.Limits(limPhysY)
-        self.build_spline()
+        if 'skip_build_spline' not in kwargs:
+            self.build_spline()
 
     @property
     def baseFE(self):
@@ -193,7 +196,7 @@ class FigureErrorBase():
         z = self.generate_profile()
         self.local_z_spline = interpolate.RectBivariateSpline(
             self.y1d, self.x1d, z, kx=self.splineOrder, ky=self.splineOrder)
-        self.z2d = self.local_z_distorted(self.x2d, self.y2d) * 1e6 #  in nm
+        self.z2d = self.local_z_distorted(self.x2d, self.y2d) * 1e6  # in nm
         self.get_angles()
 
     def local_z_distorted(self, x, y):
@@ -210,9 +213,9 @@ class FigureErrorBase():
             y = y.flatten()
 
         if spl == 'RBS':
-            z = self.local_z_spline.ev(y, x)
-        else:
-            z = self.local_z_spline.ev(x, y)
+            z = self.local_z_spline.ev(y+self.yShift, x+self.xShift)
+        # else:
+        #     z = self.local_z_spline.ev(x+self.xShift, y+self.yShift)
 
         if shape is not None:
             z = z.reshape(shape)
@@ -233,11 +236,15 @@ class FigureErrorBase():
             y = y.flatten()
         # z spline is built in nm; x, y in mm
         if spl == 'RBS':
-            a = self.local_z_spline.ev(y, x, dx=0, dy=1) * 1e-6
-            b = self.local_z_spline.ev(y, x, dx=1, dy=0) * 1e-6
-#        else:
-#            a = self.local_z_spline.ev(x, y, dx=1, dy=0) * 1e-6
-#            b = self.local_z_spline.ev(x, y, dx=0, dy=1) * 1e-6
+            a = self.local_z_spline.ev(
+                y+self.yShift, x+self.xShift, dx=0, dy=1) * 1e-6
+            b = self.local_z_spline.ev(
+                y+self.yShift, x+self.xShift, dx=1, dy=0) * 1e-6
+       # else:
+       #     a = self.local_z_spline.ev(
+       #         x+self.xShift, y+self.yShift, dx=1, dy=0) * 1e-6
+       #     b = self.local_z_spline.ev(
+       #         x+self.xShift, y+self.yShift, dx=0, dy=1) * 1e-6
 
         if shape is not None:
             a = a.reshape(shape)
@@ -287,8 +294,8 @@ class FigureErrorImported(FigureErrorBase):
         self._baseFE = None
         self._fileName = None
         self.columnFactors = columnFactors
+        super().__init__(**kwargs, skip_build_spline=True)
         self.fileName = fileName
-        super().__init__(**kwargs)
 
     @property
     def orientation(self):
@@ -345,10 +352,12 @@ class FigureErrorImported(FigureErrorBase):
     def read_file(self, fileName):
         path = Path(fileName)
         if not path.is_file():
+            raise ValueError('The figure error file does not exist')
             return
 
         data = np.loadtxt(path)
         if data.ndim != 2 or data.shape[1] < 3:
+            raise ValueError('Invalid figure error file')
             return
 
         try:
@@ -606,7 +615,7 @@ class GaussianBump(FigureErrorBase):
 
         z = self.bumpHeight *\
             np.exp(-(self.x2d-self.cX)**2/self.sigmaX**2
-                   -(self.y2d-self.cY)**2/self.sigmaY**2)
+                   - (self.y2d-self.cY)**2/self.sigmaY**2)
         return z + base_z
 
 
@@ -675,14 +684,15 @@ class Waviness(FigureErrorBase):
             np.cos(2*np.pi*self.y2d/self.yWaveLength)
         return z + base_z
 
+
 class PlanarRidge(FigureErrorBase):
     """
     Planar ridge (V-shaped prism) surface profile.
 
-    Represents a surface with a linear ridge: two planar faces meeting along
-    a straight ridge line, with constant slope angle relative to the base plane.
+    Represents a surface with a linear ridge: two planar faces meeting along a
+    straight ridge line, with constant slope angle relative to the base plane.
     The ridge can be arbitrarily oriented in the (x, y) plane.
-    
+
     Used for testing the underlying figure error calculations.
     """
 
@@ -745,8 +755,7 @@ class PlanarRidge(FigureErrorBase):
             base_z = self.baseFE.local_z_distorted(self.x2d, self.y2d) * 1e6
 
         Yp = -self.x2d*np.sin(self.orientationAngle) +\
-                self.y2d*np.cos(self.orientationAngle)
+            self.y2d*np.cos(self.orientationAngle)
 
         z = self.amplitude - np.tan(self.slopeAngle)*np.abs(Yp)
         return z*1e6 + base_z
-
