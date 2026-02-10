@@ -157,12 +157,12 @@ def start_jobs():
     if noTimer:
         print("The job is running... ")
         while True:
-            sys.stdout.flush()
+            # sys.stdout.flush()
             res = dispatch_jobs()
-            tFromStart = time.time() - runCardVals.tstart
-            raycing.colorPrint('Repeat {0} of {1} done in {2:.1f} s'.format(
-                runCardVals.iteration, runCardVals.repeats, tFromStart),
-                fcolor='YELLOW')
+            # tFromStart = time.time() - runCardVals.tstart
+            # raycing.colorPrint('Repeat {0} of {1} done in {2:.1f} s'.format(
+            #     runCardVals.iteration, runCardVals.repeats, tFromStart),
+            #     fcolor='YELLOW')
             if res:
                 return
     else:
