@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+.. _edge-radiation:
+
 Infrared edge radiation
 ~~~~~~~~~~~~~~~~~~~~~~~
 
