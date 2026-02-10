@@ -33,32 +33,42 @@ material classes, see below."""
 # rm.__allSectioned__['My custom materials'] = ('MyMultilayer',)
 
 
-if __name__ == '__main__':
+def main(argv=None):
     parser = argparse.ArgumentParser(description="starter of xrtQook")
-    parser.add_argument("-p", "--projectFile", metavar='NNN.xml',
-                        help="load an xml project file")
-    parser.add_argument("-v", "--verbosity", type=int, default=0,
-                        help="verbosity level for diagnostic purpose, "
-                        "int 0 (default) to 50")
-    args = parser.parse_args()
+    parser.add_argument(
+        "-p", "--projectFile",
+        metavar="NNN.xml",
+        help="load an xml project file"
+    )
+    parser.add_argument(
+        "-v", "--verbosity",
+        type=int,
+        default=0,
+        help="verbosity level for diagnostic purpose, int 0 (default) to 50"
+    )
+
+    args = parser.parse_args(argv)
 
     # DEBUG_LEVEL = args.verbosity
 
     if any('spyder' in name.lower() for name in os.environ):
-        pass  # spyder is present
+        pass
     else:
         if str(sys.executable).endswith('pythonw.exe'):
             sys.stdout = open("output.log", "w")
 
-    # If xrtQook looks too small, one can play with scaling:
-    # either with "auto" factor or with a manually set factor.
-    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" # means "yes", not factor
+    # Optional Qt scaling:
+    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     # os.environ["QT_SCALE_FACTOR"] = "1.5"
 
-    # args.append("--disable-web-security")
     app = xQ.qt.QApplication(sys.argv)
 
     ex = xQ.XrtQook(projectFile=args.projectFile)
     ex.setWindowTitle("xrtQook")
     ex.show()
-    sys.exit(app.exec_())
+
+    return app.exec_()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

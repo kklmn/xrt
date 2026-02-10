@@ -1,0 +1,36 @@
+[project]
+name = "xrt"
+version = "2.0.0b0"
+description = "Ray tracing and wave propagation in x-ray regime"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+
+[dependencies]
+python = ">=3.9"
+numpy = ">=1.8"
+scipy = ">=0.17"
+matplotlib = ">=2.0"
+sphinx = ">=1.6.2"
+sphinxcontrib-jquery = "*"
+distro = "*"
+colorama = "*"
+
+# GPU / OpenCL
+pyopencl = "*"
+
+# glow support
+pyopengl = "*"
+siphash24 = "*"
+freetype-py = "*"
+
+[pypi-dependencies]
+xrt = { path = ".", editable = true }
+
+[feature.pyqt5.dependencies]
+pyqt = "*"
+pyqtwebengine = "*"
+qtpy = "*"
+
+[environments]
+default = []
+gui = ["pyqt5"]

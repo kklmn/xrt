@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "xrt"
+version = "2.0.0b0"
+description = "Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI for creating a beamline and viewing it in 3D."
+readme = { file = "README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.9"
+
+authors = [
+    { name = "Konstantin Klementiev", email = "konstantin.klementiev@gmail.com" },
+    { name = "Roman Chernikov", email = "rchernikov@gmail.com" }
+]
+
+license = "MIT"
+license-files = ["LICENSE.txt"]
+
+keywords = []
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization"
+]
+
+dependencies = [
+    "numpy>=1.8.0",
+    "scipy>=0.17.0",
+    "matplotlib>=2.0.0",
+    "sphinx>=1.6.2",
+    "sphinxcontrib-jquery",
+    "distro",
+    "colorama",
+    "pyopencl",
+    "pyopengl",
+    "siphash24",
+    "freetype-py"
+]
+
+
+[project.optional-dependencies]
+pyqt5 = [
+    "PyQt5",
+    "PyQtWebEngine",
+    "qtpy"
+]
+
+epics = [
+    "softioc"
+]
+
+all = [
+    "PyQt5",
+    "PyQtWebEngine",
+    "qtpy",
+    "softioc"
+]
+
+
+[project.urls]
+Homepage = "http://xrt.readthedocs.io"
+Documentation = "http://xrt.readthedocs.io"
+
+
+[project.scripts]
+xrtQook = "xrt.gui.xrtQookStart:main"
+
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+
+[tool.setuptools.packages.find]
+include = ["xrt*"]
+
+
+[tool.setuptools.package-data]
+"xrt.backends.raycing" = ["data/*.npz", "data/*.dat", "cl/*.cl"]
+"xrt" = ["*.cl", "*.ico"]
+"xrt.gui" = [
+    "*.pyw",
+    "commons/_images/*.*",
+    "commons/_themes/qook/*.*",
+    "commons/_themes/qook/static/*.*",
+    "xrtQook/_icons/*.*",
+    "xrtGlow/_icons/*.*"
+]
