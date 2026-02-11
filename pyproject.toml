@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xrt"
-version = "2.0.0b0"
+version = "2.0.0b0.post1"
 description = "Ray tracing and wave propagation in x-ray regime, primarily meant for modeling synchrotron sources, beamlines and beamline elements. Includes a GUI for creating a beamline and viewing it in 3D."
 readme = { file = "README.rst", content-type = "text/x-rst" }
 requires-python = ">=3.9"
