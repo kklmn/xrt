@@ -204,6 +204,8 @@ from ._beam_props import (
     get_circular_polarization_rate, get_polarization_psi, get_phase_shift,
     get_incidence_angle, get_theta)
 
+#from .sources.beams import Beam
+
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
     renderOnlyArgSet, compoundArgs, dependentArgs, diagnosticArgs, allUnitsAng,
@@ -321,6 +323,17 @@ def get_output(plot, beamsReturnedBy_run_process):
     various properties defined in `raycing` backend.
      """
     beam = beamsReturnedBy_run_process[plot.beam]
+
+    if plot.showAbsorbed:
+        absorbBeamKey = getattr(plot, 'beamAbsorb', None)
+        if absorbBeamKey is not None:
+            ab = beamsReturnedBy_run_process.get(absorbBeamKey)
+            if ab is not None:
+                absorbedLb = copy.deepcopy(beam)
+                # may need to convert to same coordinates to track s and p
+                absorbedLb.absorb_intensity(ab)
+                beam = absorbedLb
+
     if plot.beamState is None:
         beamState = beam.state
     else:

@@ -676,6 +676,15 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.beamDict = bdu.get(elementId)
         self.dynamicPlot.beam = str(beamKey)
 
+#        flowLine = self.beamLine.flowU.get(self.elementId)
+#        if flowLine is not None:
+#            incomingElement = flowLine.get('beam')
+            
+        # auto-asign incoming beam:
+            # local1 for local2 and global if local1 in beamDict
+            # query beamline.flowU[elementId][beam] for other cases
+#        self.dynamicPlot.beamAbsorb = 
+
     def update_beam(self, beamTag):
         currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
         if self.liveUpdateEnabled and beamTag == currentTag:

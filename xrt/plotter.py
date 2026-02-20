@@ -602,7 +602,8 @@ class XYCPlot(object):
         fluxFormatStr='auto', contourLevels=None, contourColors=None,
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
-            beamState=None, beamC=None, useQtWidget=False):
+        beamState=None, beamC=None, beamAbsorb=None, 
+            showAbsorbed=False, useQtWidget=False):
         u"""
         *beam*: str
             The beam to be visualized.
@@ -858,6 +859,9 @@ class XYCPlot(object):
             self.backend = 'raycing'
         else:
             self.backend = 'dummy'
+            
+        self.beamAbsorb = beamAbsorb
+        self.showAbsorbed = showAbsorbed
 
         self.beamState = beamState
         self.beamC = beamC
@@ -2174,6 +2178,8 @@ class PlotCard2Pickle(object):
         self.beam = plot.beam
         self.beamState = plot.beamState
         self.beamC = plot.beamC
+        self.beamAbsorb = plot.beamAbsorb
+        self.showAbsorbed = plot.showAbsorbed
         self.rayFlag = plot.rayFlag
         self.invertColorMap = plot.invertColorMap
         self.ePos = plot.ePos
