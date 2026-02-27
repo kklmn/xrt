@@ -242,7 +242,8 @@ class InstanceInspector(qt.QDialog):
                            'contourColors', 'contourFmt', 'contourFactor',
                            'saveName', 'persistentName', 'oe', 'raycingParam',
                            'beamState', 'beamC', 'useQtWidget', 'title',
-                           'rayFlag', 'density', 'outline', 'fluxUnit'}
+                           'rayFlag', 'density', 'outline', 'fluxUnit',
+                           'beamAbsorb'}
 
             self.dynamicPlotWidget = ConfigurablePlotWidget(
                     plotProps, parent=self, viewOnly=False,
@@ -676,14 +677,31 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.beamDict = bdu.get(elementId)
         self.dynamicPlot.beam = str(beamKey)
 
-#        flowLine = self.beamLine.flowU.get(self.elementId)
-#        if flowLine is not None:
-#            incomingElement = flowLine.get('beam')
-            
-        # auto-asign incoming beam:
-            # local1 for local2 and global if local1 in beamDict
-            # query beamline.flowU[elementId][beam] for other cases
-#        self.dynamicPlot.beamAbsorb = 
+        flowLine = self.beamLine.flowU.get(self.elementId)
+        incomingElementId = None
+        beamAbsorb = None
+        self.dynamicPlot.beamAbsorb = None
+        _ = self.beamDict.pop('beamAbsorb', None)
+
+        if flowLine is not None:
+            for prpMeth, prpProps in flowLine.items():
+                incomingElementId = prpProps.get('beam')
+
+        if incomingElementId is not None:
+            if beamKey in ['beamLocal', 'beamLocal1']:
+                incomingDict = bdu.get(incomingElementId)
+                beamAbsorb = incomingDict.get('beamGlobal')
+            elif beamKey in ['beamLocal2']:
+                beamAbsorb = self.beamDict.get('beamLocal1')
+
+            if beamAbsorb is not None:
+                self.beamDict['beamAbsorb'] = beamAbsorb
+                self.dynamicPlot.beamAbsorb = 'beamAbsorb'
+
+        # TODO:                
+        # should we disable 'absorb' options for Global beams?
+        # what do we do with plates/filters?
+        # implement behavior for standalone plots
 
     def update_beam(self, beamTag):
         currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)

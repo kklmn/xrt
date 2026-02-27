@@ -127,7 +127,10 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     fpModel = self.mainWidget.beamModel
                 combo.setModel(fpModel)
             elif hasattr(self.mainWidget, 'beamDict'):
-                combo.addItems(list(self.mainWidget.beamDict.keys()))
+                itemsList = list(self.mainWidget.beamDict.keys())
+                if 'beamAbsorb' in itemsList:
+                    itemsList.remove('beamAbsorb')
+                combo.addItems(itemsList)
             else:
                 return QLineEdit(parent)
             return combo
