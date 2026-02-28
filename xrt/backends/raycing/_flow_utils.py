@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import time
 # import os
 import numpy as np
 # from itertools import compress
@@ -217,7 +218,7 @@ def normalize_string_input(v):
 def get_init_val(value):
 
     text = str(value).strip()
-    
+
     try:
         tree = ast.parse(text, mode="eval")
         tree = NameAsString(safe_globals.keys()).visit(tree)
@@ -273,8 +274,19 @@ def get_params(objStr):  # Returns a collection of default parameters
                             if arg not in args and arg not in hpList:
                                 uArgs[arg] = argVal
                     if namef == "__init__" or namef.endswith("pop_kwargs"):
+                        max_retries = 5
+                        delay = 0.001
+                        for retry in range(max_retries):
+                            try:
+                                objSource = inspect.getsource(objf)
+                                break
+                            except OSError:
+                                delay *= 5
+                                print("File read retry", retry, "delay", delay, "s")
+                                time.sleep(delay)                        
+                            
                         kwa = re.findall(r"(?<=kwargs\.pop).*?\)",
-                                         inspect.getsource(objf),
+                                         objSource,
                                          re.S)
                         if len(kwa) > 0:
                             kwa = [re.split(

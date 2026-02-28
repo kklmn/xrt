@@ -206,6 +206,15 @@ class SourceBase:
     center = raycing.center_property()
 
     @property
+    def filamentBeam(self):
+        return self._filamentBeam
+
+    @filamentBeam.setter
+    def filamentBeam(self, filamentBeam):
+        self._filamentBeam = filamentBeam
+        self.needReset = True
+
+    @property
     def pitch(self):
         return self._pitch
 

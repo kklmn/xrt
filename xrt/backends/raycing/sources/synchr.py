@@ -1285,7 +1285,7 @@ class Undulator(IntegratedSource):
         """
         period = kwargs.pop('period', 50)
         n = kwargs.pop('n', 50)
-        K = kwargs.pop('K', 0)
+        K = kwargs.pop('K', 1)
         Kx = kwargs.pop('Kx', 0)
         Ky = kwargs.pop('Ky', 0)
         B0x = kwargs.pop('B0x', 0)

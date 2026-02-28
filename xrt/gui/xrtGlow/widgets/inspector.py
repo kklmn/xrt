@@ -703,8 +703,6 @@ class ConfigurablePlotWidget(qt.QWidget):
                 self.dynamicPlot.beamAbsorb = 'beamAbsorb'
 
         # TODO:                
-        # should we disable 'absorb' options for Global beams?
-        # what do we do with plates/filters?
         # implement behavior for standalone plots
 
     def update_beam(self, beamTag):
