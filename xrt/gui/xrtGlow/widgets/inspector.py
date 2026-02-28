@@ -222,7 +222,11 @@ class InstanceInspector(qt.QDialog):
                        'caxis': {'label': 'energy', 'unit': 'eV'}}
 
             beamDict = self.beamLine.beamsDictU.get(elementId)
-            defBeam = list(beamDict.keys())[-1]
+            beamsList = list(beamDict.keys())
+            for beamKey in ['beamLocal2', 'beamLocal', 'beamGlobal']:
+                if beamKey in beamsList:
+                    defBeam = beamKey
+                    break
             plotProps['beam'] = (elementId, defBeam)
 
             if defBeam.endswith('lobal'):
@@ -688,7 +692,7 @@ class ConfigurablePlotWidget(qt.QWidget):
                 incomingElementId = prpProps.get('beam')
 
         if incomingElementId is not None:
-            if beamKey in ['beamLocal', 'beamLocal1']:
+            if beamKey in ['beamLocal', 'beamLocal1', 'beamGlobal']:
                 incomingDict = bdu.get(incomingElementId)
                 beamAbsorb = incomingDict.get('beamGlobal')
             elif beamKey in ['beamLocal2']:

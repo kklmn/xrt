@@ -77,7 +77,7 @@ class OEMainMethods(object):
 
 
         *returnLocalAbsorbed*: None or int
-            If not None, returns the absorbed intensity in local beam.
+            --DEPRECATED--
 
         *noIntersectionSearch*: bool
             Used in wave propagation, normally should be False. Certainly
@@ -132,10 +132,10 @@ class OEMainMethods(object):
         notGood = ~goodAfter
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
-        if returnLocalAbsorbed is not None:
-            absorbedLb = rs.Beam(copyFrom=lb)
-            absorbedLb.absorb_intensity(beam)
-            lb = absorbedLb
+#        if returnLocalAbsorbed is not None:
+#            absorbedLb = rs.Beam(copyFrom=lb)
+#            absorbedLb.absorb_intensity(beam)
+#            lb = absorbedLb
         raycing.append_to_flow(self.reflect, [gb, lb], inspect.currentframe())
 
 #        gb.parentId = self.uuid
@@ -176,7 +176,7 @@ class OEMainMethods(object):
         maximum elevation points.
 
         *returnLocalAbsorbed*: None or int
-            If not None, returns the absorbed intensity in local beam.
+            --DEPRECATED--
 
 
         .. .. Returned values: beamGlobal, beamLocal
@@ -251,10 +251,10 @@ class OEMainMethods(object):
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
 # in global(gb) and local(lbN) coordinates. lbN holds all the reflection spots.
-        if returnLocalAbsorbed is not None:
-            absorbedLb = rs.Beam(copyFrom=lb)
-            absorbedLb.absorb_intensity(beam)
-            lbN = absorbedLb
+#        if returnLocalAbsorbed is not None:
+#            absorbedLb = rs.Beam(copyFrom=lb)
+#            absorbedLb.absorb_intensity(beam)
+#            lbN = absorbedLb
 #        lbN.parentId = self.uuid
         raycing.append_to_flow(self.multiple_reflect, [gb, lbN],
                                inspect.currentframe())

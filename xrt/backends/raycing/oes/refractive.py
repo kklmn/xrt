@@ -181,11 +181,7 @@ class Plate(DCM):
         is true) systems.
 
         *returnLocalAbsorbed*: None, int
-            If not None, returned local beam represents the absorbed intensity
-            instead of transmitted. The parameter defines the ordinal number of
-            the surface in multi-surface element to return the absorbed
-            intensity, i.e. 1 for the entrance surface of the plate, 2 for the
-            exit, 0 for total intensity absorbed in the element.
+            --DEPRECATED--
 
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
@@ -215,19 +211,19 @@ class Plate(DCM):
             if self.bl.flowSource == 'double_refract':
                 self.bl.flowSource = tmpFlowSource
 
-        if returnLocalAbsorbed is not None:
-            if returnLocalAbsorbed == 0:
-                absorbedLb = rs.Beam(copyFrom=lb2)
-                absorbedLb.absorb_intensity(beam)
-                lb2 = absorbedLb
-            elif returnLocalAbsorbed == 1:
-                absorbedLb = rs.Beam(copyFrom=lb1)
-                absorbedLb.absorb_intensity(beam)
-                lb1 = absorbedLb
-            elif returnLocalAbsorbed == 2:
-                absorbedLb = rs.Beam(copyFrom=lb2)
-                absorbedLb.absorb_intensity(lb1)
-                lb2 = absorbedLb
+#        if returnLocalAbsorbed is not None:
+#            if returnLocalAbsorbed == 0:
+#                absorbedLb = rs.Beam(copyFrom=lb2)
+#                absorbedLb.absorb_intensity(beam)
+#                lb2 = absorbedLb
+#            elif returnLocalAbsorbed == 1:
+#                absorbedLb = rs.Beam(copyFrom=lb1)
+#                absorbedLb.absorb_intensity(beam)
+#                lb1 = absorbedLb
+#            elif returnLocalAbsorbed == 2:
+#                absorbedLb = rs.Beam(copyFrom=lb2)
+#                absorbedLb.absorb_intensity(lb1)
+#                lb2 = absorbedLb
 #        gb.parentId = self.uuid
 #        lb1.parentId = self.uuid
 #        lb2.parentId = self.uuid
@@ -438,9 +434,7 @@ class ParaboloidFlatLens(Plate):
         the first lens.
 
         *returnLocalAbsorbed*: None, 0 or 1
-            If not None, returns the absorbed intensity in local beam. If
-            equals zero, the last local beam returns total absorbed intensity,
-            otherwise the absorbed intensity on single element of the stack.
+            --DEPRECATED--
 
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
@@ -492,19 +486,19 @@ class ParaboloidFlatLens(Plate):
             self.centerShift = step * np.array(toward)
             self.center = tempCenter
 
-            if returnLocalAbsorbed is not None:
-                if returnLocalAbsorbed == 0:
-                    absorbedLb = rs.Beam(copyFrom=llocal2)
-                    absorbedLb.absorb_intensity(beam)
-                    llocal2 = absorbedLb
-                elif returnLocalAbsorbed == 1:
-                    absorbedLb = rs.Beam(copyFrom=llocal1)
-                    absorbedLb.absorb_intensity(beam)
-                    llocal1 = absorbedLb
-                elif returnLocalAbsorbed == 2:
-                    absorbedLb = rs.Beam(copyFrom=llocal2)
-                    absorbedLb.absorb_intensity(llocal1)
-                    llocal2 = absorbedLb
+#            if returnLocalAbsorbed is not None:
+#                if returnLocalAbsorbed == 0:
+#                    absorbedLb = rs.Beam(copyFrom=llocal2)
+#                    absorbedLb.absorb_intensity(beam)
+#                    llocal2 = absorbedLb
+#                elif returnLocalAbsorbed == 1:
+#                    absorbedLb = rs.Beam(copyFrom=llocal1)
+#                    absorbedLb.absorb_intensity(beam)
+#                    llocal1 = absorbedLb
+#                elif returnLocalAbsorbed == 2:
+#                    absorbedLb = rs.Beam(copyFrom=llocal2)
+#                    absorbedLb.absorb_intensity(llocal1)
+#                    llocal2 = absorbedLb
 
             raycing.append_to_flow(self.multiple_refract,
                                    [lglobal, llocal1, llocal2],

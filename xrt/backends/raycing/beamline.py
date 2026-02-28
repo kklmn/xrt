@@ -420,6 +420,7 @@ class BeamLine(object):
                     if autoPitch:
                         oe.pitch = 0
                     oe._braggVal = targetPitch - oe.pitch
+                    oe.get_orientation()
                     if _VERBOSITY_ > 0:
                         print("{0}: Bragg={1} at E={2}".format(
                                 oe.name, oe.bragg, alignE))

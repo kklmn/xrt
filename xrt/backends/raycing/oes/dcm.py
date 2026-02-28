@@ -88,6 +88,9 @@ class DCM(OE):
         else:
             self._braggVal = raycing.auto_units_angle(bragg)
 
+        if hasattr(self, '_fixedOffset'):
+            self.get_orientation()
+
     @property
     def braggOffset(self):
         return self._braggOffset
@@ -179,6 +182,16 @@ class DCM(OE):
         else:
             self._limPhysY2 = raycing.Limits(limPhysY2)
 
+    @property
+    def fixedOffset(self):
+        return self._fixedOffset
+
+    @fixedOffset.setter
+    def fixedOffset(self, fixedOffset):
+        self._fixedOffset = fixedOffset
+        if hasattr(self, '_braggVal') and self._braggVal is not None:
+            self.get_orientation()
+
     def get_surface_limits(self):
         """Returns surface_limits."""
         # TODO: multiple surfaces
@@ -238,10 +251,7 @@ class DCM(OE):
         is true) systems.
 
         *returnLocalAbsorbed*: None or int
-            If not None, returns the absorbed intensity in local beam. If
-            equals zero, total absorbed intensity is return in the last local
-            beam, otherwise the N-th local beam returns the
-            absorbed intensity on N-th surface of the optical element.
+            --DEPRECATED--
 
 
         .. Returned values: beamGlobal, beamLocal1, beamLocal2
@@ -308,19 +318,19 @@ class DCM(OE):
         if notGood.sum() > 0:
             rs.copy_beam(gb2, beam, notGood)
 
-        if returnLocalAbsorbed is not None:
-            if returnLocalAbsorbed == 0:
-                absorbedLb = rs.Beam(copyFrom=lo2)
-                absorbedLb.absorb_intensity(beam)
-                lo2 = absorbedLb
-            elif returnLocalAbsorbed == 1:
-                absorbedLb = rs.Beam(copyFrom=lo1)
-                absorbedLb.absorb_intensity(beam)
-                lo1 = absorbedLb
-            elif returnLocalAbsorbed == 1:
-                absorbedLb = rs.Beam(copyFrom=lo2)
-                absorbedLb.absorb_intensity(lo1)
-                lo2 = absorbedLb
+#        if returnLocalAbsorbed is not None:
+#            if returnLocalAbsorbed == 0:
+#                absorbedLb = rs.Beam(copyFrom=lo2)
+#                absorbedLb.absorb_intensity(beam)
+#                lo2 = absorbedLb
+#            elif returnLocalAbsorbed == 1:
+#                absorbedLb = rs.Beam(copyFrom=lo1)
+#                absorbedLb.absorb_intensity(beam)
+#                lo1 = absorbedLb
+#            elif returnLocalAbsorbed == 1:
+#                absorbedLb = rs.Beam(copyFrom=lo2)
+#                absorbedLb.absorb_intensity(lo1)
+#                lo2 = absorbedLb
 #        gb2.parentId = self.uuid
 #        lo1.parentId = self.uuid
 #        lo2.parentId = self.uuid
