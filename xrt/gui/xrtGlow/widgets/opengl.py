@@ -467,6 +467,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree here
             setattr(updObj, arg0, argValue)
+
             if sender == 'OEE':
                 self.updateQookTree.emit((oeid, {arg0: argValue}))
             if obj_type == "oe":
@@ -711,7 +712,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
                     self.beamUpdated.emit((msg['sender_id'], beamKey))
             elif 'histogram' in msg and self.epicsPrefix is not None:
-                histPvName = f'{raycing.to_valid_var_name(msg["sender_name"])}:image'
+                histPvName =\
+                    f'{raycing.to_valid_var_name(msg["sender_name"])}:image'
                 if histPvName in self.epicsInterface.pv_records:
                     imgHist = np.flipud(msg['histogram'])  # Appears flipped
                     self.epicsInterface.pv_records[histPvName].set(
@@ -730,6 +732,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             f"{msg['pos_attr']}" if msg['pos_attr'] in
                             ['footprint'] else f"_{msg['pos_attr']}Val",
                             msg['pos_value'])
+                    if hasattr(oeLine[0], 'get_orientation'):
+                        oeLine[0].get_orientation()
                 if msg['pos_attr'] in ['footprint']:
                     if self.autoSizeOe:
                         self.needMeshUpdate.append(msg['sender_id'])
@@ -2000,7 +2004,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             break
             return item
 
-        try:
+        if True:
             self.setSceneColors()
             gl.glClearColor(*self.bgColor)
 
@@ -2108,11 +2112,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 isSelected = oeNum == self.selectedOE
                                 gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                                  0xff)
-                            mesh3D.render_surface(
-                                mMMLoc, self.mView,
-                                self.mProj, int(is2ndXtal),
-                                isSelected=isSelected,
-                                shader=self.shaderMesh)
+                            try:
+                                mesh3D.render_surface(
+                                    mMMLoc, self.mView,
+                                    self.mProj, int(is2ndXtal),
+                                    isSelected=isSelected,
+                                    shader=self.shaderMesh)
+                            except Exception as e:
+                                print(e)
                 elif is_aperture(oeToPlot):
                     for blade in oeToPlot.kind:
                         if mesh3D.isEnabled:
@@ -2122,11 +2129,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 isSelected = oeNum == self.selectedOE
                                 gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                                  0xff)
-                            mesh3D.render_surface(
-                                mMMLoc, self.mView,
-                                self.mProj, blade, isSelected=isSelected,
-                                shader=self.shaderMesh)
-
+                            try:
+                                mesh3D.render_surface(
+                                    mMMLoc, self.mView,
+                                    self.mProj, blade, isSelected=isSelected,
+                                    shader=self.shaderMesh)
+                            except Exception as e:
+                                print(e)
                 elif is_source(oeToPlot):
                     if mesh3D.isEnabled:
                         isSelected = False
@@ -2135,9 +2144,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             isSelected = oeNum == self.selectedOE
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
-                        mesh3D.render_magnets(
-                            mMMLoc, self.mView, self.mProj,
-                            isSelected=isSelected, shader=self.shaderMag)
+                        try:
+                            mesh3D.render_magnets(
+                                mMMLoc, self.mView, self.mProj,
+                                isSelected=isSelected, shader=self.shaderMag)
+                        except Exception as e:
+                            print(e)
 
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
@@ -2165,11 +2177,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             isSelected = oeNum == self.selectedOE
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
-                        mesh3D.render_surface(
-                                mMMLoc, self.mView,
-                                self.mProj, int(is2ndXtal),
-                                isSelected=isSelected,
-                                shader=self.shaderMesh)
+                        try:
+                            mesh3D.render_surface(
+                                    mMMLoc, self.mView,
+                                    self.mProj, int(is2ndXtal),
+                                    isSelected=isSelected,
+                                    shader=self.shaderMesh)
+                        except Exception as e:
+                            print(e)
 
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
             gl.glDisable(gl.GL_STENCIL_TEST)
@@ -2196,8 +2211,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     beamTag = (oeuuid, bField)
 #                    if oeuuid == self.virtScreen:
 #                        print("Plotting virtual screen", bField)
-                    self.render_beam(beamTag, mMMLoc,
-                                     self.mView, self.mProj, target=None)
+                    try:
+                        self.render_beam(beamTag, mMMLoc,
+                                         self.mView, self.mProj, target=None)
+                    except Exception as e:
+                        print(e)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -2237,9 +2255,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                             beamStart = (sourceuuid, startField)
                             beamEnd = (eluuid, endField)
-                            self.render_beam(beamStart, mMMLoc,
-                                             self.mView, self.mProj,
-                                             target=beamEnd)
+                            try:
+                                self.render_beam(beamStart, mMMLoc,
+                                                 self.mView, self.mProj,
+                                                 target=beamEnd)
+                            except Exception as e:
+                                print(e)
+
             else:
                 for flowLine in self.beamline.flow:
                     sourceuuid = flowLine[0]
@@ -2259,9 +2281,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                         beamStart = (sourceuuid, startField)
                         beamEnd = (eluuid, endField)
-                        self.render_beam(beamStart, mMMLoc,
-                                         self.mView, self.mProj,
-                                         target=beamEnd)
+                        try:
+                            self.render_beam(beamStart, mMMLoc,
+                                             self.mView, self.mProj,
+                                             target=beamEnd)
+                        except Exception as e:
+                            print(e)
 
             self.cBox.textShader.bind()
             self.cBox.vaoText.bind()
@@ -2317,18 +2342,21 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                             labelPos.y() + sclY))
                     fbCounter += 1
 
-                endPos = self.cBox.render_text(
-                    labelPos, oeLabel, alignment=alignment,
-                    scale=0.04*self.cBox.fontScale,
-                    textColor=self.textColor)
-                labelLinesN = np.vstack(
-                    (np.array(lineHint),
-                     np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
-                     np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
-                     np.array([endPos.x(), labelPos.y()-sclY, 0.0])))
-                labelLines = labelLinesN if labelLines is None else\
-                    np.vstack((labelLines, labelLinesN))
-                lineCounter += 1
+                try:
+                    endPos = self.cBox.render_text(
+                        labelPos, oeLabel, alignment=alignment,
+                        scale=0.04*self.cBox.fontScale,
+                        textColor=self.textColor)
+                    labelLinesN = np.vstack(
+                        (np.array(lineHint),
+                         np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
+                         np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
+                         np.array([endPos.x(), labelPos.y()-sclY, 0.0])))
+                    labelLines = labelLinesN if labelLines is None else\
+                        np.vstack((labelLines, labelLinesN))
+                    lineCounter += 1
+                except Exception as e:
+                    print(e)
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
@@ -2366,22 +2394,27 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         is2ndXtalOpts.append(True)
 
                     for is2ndXtal in is2ndXtalOpts:
-                        if is2ndXtal:
-                            trMat = mesh3D.transMatrix[int(is2ndXtal)].data()
-                            oeCenter = [trMat[12], trMat[13], trMat[14]]
-                        else:
-                            oeCenter = list(oeToPlot.center)
+                        try:
+                            if is2ndXtal:
+                                trMat =\
+                                    mesh3D.transMatrix[int(is2ndXtal)].data()
+                                oeCenter = [trMat[12], trMat[13], trMat[14]]
+                            else:
+                                oeCenter = list(oeToPlot.center)
 
-                        if any([isinstance(val, str) for val in oeCenter]):
-                            continue
+                            if any([isinstance(val, str) for val in oeCenter]):
+                                continue
 
-                        oePos = (mMMLoc*qt.QVector4D(*oeCenter,
-                                                     1)).toVector3DAffine()
-                        oeNorm = mesh3D.transMatrix[int(is2ndXtal)]
-                        self.cBox.render_local_axes(
-                                mMMLoc*oeNorm, oePos, self.mView, self.mProj,
-                                self.cBox.origShader,
-                                is_screen(oeToPlot) or is_aperture(oeToPlot))
+                            oePos = (mMMLoc*qt.QVector4D(*oeCenter,
+                                                         1)).toVector3DAffine()
+                            oeNorm = mesh3D.transMatrix[int(is2ndXtal)]
+                            self.cBox.render_local_axes(
+                                    mMMLoc*oeNorm, oePos, self.mView,
+                                    self.mProj, self.cBox.origShader,
+                                    is_screen(oeToPlot) or is_aperture(
+                                            oeToPlot))
+                        except Exception as e:
+                            print(e)
                 self.cBox.vao_arrow.release()
                 self.cBox.origShader.release()
 
@@ -2469,15 +2502,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
-        except Exception as e:  # TODO: properly handle exceptions
-            raise
+#        except Exception as e:  # TODO: properly handle exceptions
+#            raise
 #            pass
-#            self.eCounter += 1
-#            if self.eCounter < 10:
-#                self.update()
-#            else:
-#                self.eCounter = 0
-#                pass
 
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
