@@ -318,39 +318,8 @@ class OE(OEMainMethods):
         self.cl_ctx = None
         self.ucl = None
         self.footprint = []
-        if targetOpenCL is not None:
-            if not isOpenCL:
-                raycing.colorPrint("pyopencl is not available!", "RED")
-            else:
-                cl_template = os.path.join(__cldir__, 'materials.cl')
-                with open(cl_template, 'r') as f:
-                    kernelsource = f.read()
-                cl_template = os.path.join(__cldir__, 'OE.cl')
-                with open(cl_template, 'r') as f:
-                    kernelsource += f.read()
-                kernelsource = kernelsource.replace('MY_LOCAL_Z',
-                                                    self.cl_local_z)
-                kernelsource = kernelsource.replace('MY_LOCAL_N',
-                                                    self.cl_local_n)
-                kernelsource = kernelsource.replace('MY_LOCAL_G',
-                                                    self.cl_local_g)
-                kernelsource = kernelsource.replace('MY_XYZPARAM',
-                                                    self.cl_xyz_param)
-                if self.isParametric:
-                    kernelsource = kernelsource.replace(
-                        'ol isParametric = false', 'ol isParametric = true')
-                self.ucl = mcl.XRT_CL(None,
-                                      targetOpenCL,
-                                      precisionOpenCL,
-                                      kernelsource)
-                if self.ucl.lastTargetOpenCL is not None:
-                    self.cl_precisionF = self.ucl.cl_precisionF
-                    self.cl_precisionC = self.ucl.cl_precisionC
-                    self.cl_queue = self.ucl.cl_queue
-                    self.cl_ctx = self.ucl.cl_ctx
-                    self.cl_program = self.ucl.cl_program
-                    self.cl_mf = self.ucl.cl_mf
-                    self.cl_is_blocking = self.ucl.cl_is_blocking
+        self.targetOpenCL = targetOpenCL
+        self.precisionOpenCL = precisionOpenCL
 
     center = raycing.center_property()
 
@@ -560,6 +529,61 @@ class OE(OEMainMethods):
             self.cosalpha = np.cos(self.alpha)
             self.sinalpha = np.sin(self.alpha)
             self.tanalpha = self.sinalpha / self.cosalpha
+
+    @property
+    def targetOpenCL(self):
+        return self._targetOpenCL
+
+    @targetOpenCL.setter
+    def targetOpenCL(self, targetOpenCL):
+        self._targetOpenCL = targetOpenCL
+        if hasattr(self, '_precisionOpenCL'):
+            self._set_cl()
+
+    @property
+    def precisionOpenCL(self):
+        return self._precisionOpenCL
+
+    @precisionOpenCL.setter
+    def precisionOpenCL(self, precisionOpenCL):
+        self._precisionOpenCL = precisionOpenCL
+        if hasattr(self, '_targetOpenCL'):
+            self._set_cl()
+
+    def _set_cl(self):
+        if self._targetOpenCL is not None:
+            if not isOpenCL:
+                raycing.colorPrint("pyopencl is not available!", "RED")
+            else:
+                cl_template = os.path.join(__cldir__, 'materials.cl')
+                with open(cl_template, 'r') as f:
+                    kernelsource = f.read()
+                cl_template = os.path.join(__cldir__, 'OE.cl')
+                with open(cl_template, 'r') as f:
+                    kernelsource += f.read()
+                kernelsource = kernelsource.replace('MY_LOCAL_Z',
+                                                    self.cl_local_z)
+                kernelsource = kernelsource.replace('MY_LOCAL_N',
+                                                    self.cl_local_n)
+                kernelsource = kernelsource.replace('MY_LOCAL_G',
+                                                    self.cl_local_g)
+                kernelsource = kernelsource.replace('MY_XYZPARAM',
+                                                    self.cl_xyz_param)
+                if self.isParametric:
+                    kernelsource = kernelsource.replace(
+                        'ol isParametric = false', 'ol isParametric = true')
+                self.ucl = mcl.XRT_CL(None,
+                                      self._targetOpenCL,
+                                      self._precisionOpenCL,
+                                      kernelsource)
+                if self.ucl.lastTargetOpenCL is not None:
+                    self.cl_precisionF = self.ucl.cl_precisionF
+                    self.cl_precisionC = self.ucl.cl_precisionC
+                    self.cl_queue = self.ucl.cl_queue
+                    self.cl_ctx = self.ucl.cl_ctx
+                    self.cl_program = self.ucl.cl_program
+                    self.cl_mf = self.ucl.cl_mf
+                    self.cl_is_blocking = self.ucl.cl_is_blocking
 
     def set_alpha(self, alpha):
         """Same as alpha.setter, left for compatibility"""

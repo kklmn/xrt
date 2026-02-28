@@ -42,3 +42,4 @@ __date__ = "27 Jan 2026"
 from .widgets import xrtGlow  # analysis:ignore
 from .widgets.inspector import InstanceInspector, ConfigurablePlotWidget  # analysis:ignore
 from ._utils import is_screen, is_aperture  # analysis:ignore
+from ..commons import qt  # analysis:ignore

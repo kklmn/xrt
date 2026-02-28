@@ -937,8 +937,9 @@ class IntegratedSource(SourceBase):
         gp = kwargs.pop('gp', 1e-6)
         gIntervals = kwargs.pop('gIntervals', 2)
         gNodes = kwargs.pop('gNodes', None)
-        targetOpenCL = kwargs.pop('targetOpenCL', raycing.targetOpenCL)
-        precisionOpenCL = kwargs.pop(
+
+        self.targetOpenCL = kwargs.pop('targetOpenCL', raycing.targetOpenCL)
+        self.precisionOpenCL = kwargs.pop(
             'precisionOpenCL', raycing.precisionOpenCL)
 
         super(IntegratedSource, self).__init__(*args, **kwargs)
@@ -959,22 +960,26 @@ class IntegratedSource(SourceBase):
 
         # OpenCL-related init
         self.cl_ctx = None
-        if (self.R0 is not None):
-            precisionOpenCL = 'float64'
-        if targetOpenCL is not None:
-            if not isOpenCL:
-                raycing.colorPrint("pyopencl is not available!", "RED")
-            else:
-                self.ucl = mcl.XRT_CL(
-                    r'undulator.cl', targetOpenCL, precisionOpenCL)
-                if self.ucl.lastTargetOpenCL is not None:
-                    self.cl_precisionF = self.ucl.cl_precisionF
-                    self.cl_precisionC = self.ucl.cl_precisionC
-                    self.cl_queue = self.ucl.cl_queue
-                    self.cl_ctx = self.ucl.cl_ctx
-                    self.cl_program = self.ucl.cl_program
-                    self.cl_mf = self.ucl.cl_mf
-                    self.cl_is_blocking = self.ucl.cl_is_blocking
+
+    @property
+    def targetOpenCL(self):
+        return self._targetOpenCL
+
+    @targetOpenCL.setter
+    def targetOpenCL(self, targetOpenCL):
+        self._targetOpenCL = targetOpenCL
+        if hasattr(self, '_precisionOpenCL'):
+            self._set_cl()
+
+    @property
+    def precisionOpenCL(self):
+        return self._precisionOpenCL
+
+    @precisionOpenCL.setter
+    def precisionOpenCL(self, precisionOpenCL):
+        self._precisionOpenCL = precisionOpenCL
+        if hasattr(self, '_targetOpenCL'):
+            self._set_cl()
 
     @property
     def gNodes(self):
@@ -988,6 +993,25 @@ class IntegratedSource(SourceBase):
         self.quadm = int(gNodes)
         self._build_integration_grid()
         # Need to recalculate the integration parameters
+
+    def _set_cl(self):
+        if hasattr(self, 'R0') and self.R0 is not None:
+            self._precisionOpenCL = 'float64'
+
+        if self._targetOpenCL is not None:
+            if not isOpenCL:
+                raycing.colorPrint("pyopencl is not available!", "RED")
+            else:
+                self.ucl = mcl.XRT_CL(
+                    r'undulator.cl', self._targetOpenCL, self._precisionOpenCL)
+                if self.ucl.lastTargetOpenCL is not None:
+                    self.cl_precisionF = self.ucl.cl_precisionF
+                    self.cl_precisionC = self.ucl.cl_precisionC
+                    self.cl_queue = self.ucl.cl_queue
+                    self.cl_ctx = self.ucl.cl_ctx
+                    self.cl_program = self.ucl.cl_program
+                    self.cl_mf = self.ucl.cl_mf
+                    self.cl_is_blocking = self.ucl.cl_is_blocking
 
     def _clenshaw_curtis(self, n):
         """
