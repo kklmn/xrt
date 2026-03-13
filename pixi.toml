@@ -26,7 +26,7 @@ freetype-py = "*"
 
 [pypi-dependencies]
 # xrt = { path = ".", editable = true }
-xrt = { git = "https://github.com/kklmn/xrt.git", rev = "e8f7562" }
+xrt = { git = "https://github.com/kklmn/xrt.git", rev = "e863369" }
 
 [feature.pyqt5.dependencies]
 pyqt = "*"
