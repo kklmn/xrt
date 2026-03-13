@@ -6,7 +6,8 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [dependencies]
-python = ">=3.9"
+#python = ">=3.9"
+python = "3.11.*"
 numpy = ">=1.8"
 scipy = ">=0.17"
 matplotlib = ">=2.0"
@@ -24,7 +25,8 @@ siphash24 = "*"
 freetype-py = "*"
 
 [pypi-dependencies]
-xrt = { path = ".", editable = true }
+# xrt = { path = ".", editable = true }
+xrt = { git = "https://github.com/kklmn/xrt.git", rev = "e8f7562" }
 
 [feature.pyqt5.dependencies]
 pyqt = "*"
