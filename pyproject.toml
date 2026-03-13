@@ -90,6 +90,7 @@ include = ["xrt*"]
     "commons/_images/*.*",
     "commons/_themes/qook/*.*",
     "commons/_themes/qook/static/*.*",
+	"commons/_fonts/*.*",
     "xrtQook/_icons/*.*",
     "xrtGlow/_icons/*.*"
 ]

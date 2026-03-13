@@ -740,7 +740,9 @@ class CoordinateBox():
             font_path = font_manager.findfont(fontName)
         except Exception:  # TODO: track exceptions
             fontpath = os.path.dirname(__file__)
-            font_path = os.path.join(fontpath, self.fontFile)
+            font_path = os.path.join(fontpath, "..", "..", "commons", "_fonts",
+                                     self.fontFile)
+            font_path = os.path.abspath(font_path)
 
         face = Face(font_path)
         face.set_pixel_sizes(self.fontSize*8, self.fontSize*8)
