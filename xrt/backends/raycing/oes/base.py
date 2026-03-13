@@ -535,8 +535,10 @@ class OE(OEMainMethods):
         return self._targetOpenCL
 
     @targetOpenCL.setter
-    def targetOpenCL(self, targetOpenCL):
-        self._targetOpenCL = targetOpenCL
+    def targetOpenCL(self, tOCL):
+        if isinstance(tOCL, str) and tOCL in mcl.ALL_CL_DEVICES:
+            tOCL = mcl.ALL_CL_DEVICES.get(tOCL)
+        self._targetOpenCL = tOCL
         if hasattr(self, '_precisionOpenCL'):
             self._set_cl()
 

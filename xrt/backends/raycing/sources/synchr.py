@@ -1875,6 +1875,7 @@ class Undulator(IntegratedSource):
         if isinstance(w, np.ndarray):
             if w.shape[0] > 1:
                 useCL = True
+
         if (self.cl_ctx is None) or not useCL:
             return self._build_I_map_conv(w, ddtheta, ddpsi, harmonic, dg)
         else:
@@ -1884,7 +1885,6 @@ class Undulator(IntegratedSource):
         #        np.seterr(invalid='ignore')
         #        np.seterr(divide='ignore')
         NRAYS = 1 if len(np.array(w).shape) == 0 else len(w)
-
         gamma = self.gamma
         if self.eEspread > 0:
             if dgamma is not None:

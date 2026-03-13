@@ -52,6 +52,7 @@ from ....backends.raycing import oes as roes  # analysis:ignore
 from ....backends.raycing import apertures as rapts  # analysis:ignore
 from ....backends.raycing import oes as roes  # analysis:ignore
 from ....backends.raycing import run as rrun  # analysis:ignore
+from ....backends.raycing.myopencl import ALL_CL_DEVICES  # analysis:ignore
 from ....version import __version__ as xrtversion  # analysis:ignore
 from .... import plotter as xrtplot  # analysis:ignore
 from .... import runner as xrtrun  # analysis:ignore
@@ -910,64 +911,64 @@ class XrtQookBase(qt.QMainWindow):
         self.boolModel.appendRow(qt.QStandardItem('False'))
         self.boolModel.appendRow(qt.QStandardItem('True'))
 
-        self.OCLModel = qt.QStandardItemModel()
-        oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-                                                     "None",
-                                                     "None")
-        oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-                                                     "auto",
-                                                     "auto")
-        if isOpenCL:
-            iDeviceCPU = []
-            iDeviceGPU = []
-            CPUdevices = []
-            GPUdevices = []
-            for platform in cl_platforms:
-                try:  # at old pyopencl versions:
-                    CPUdevices =\
-                        platform.get_devices(
-                            device_type=cl.device_type.CPU)
-                    GPUdevices =\
-                        platform.get_devices(
-                            device_type=cl.device_type.GPU)
-                except cl.RuntimeError:
-                    pass
-                if len(CPUdevices) > 0:
-                    if len(iDeviceCPU) > 0:
-                        if CPUdevices[0].vendor == \
-                                CPUdevices[0].platform.vendor:
-                            iDeviceCPU = CPUdevices
-                    else:
-                        iDeviceCPU.extend(CPUdevices)
-                iDeviceGPU.extend(GPUdevices)
-
-            if len(iDeviceCPU) > 0:
-                oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-                                                             "CPU",
-                                                             "CPU")
-            if len(iDeviceGPU) > 0:
-                oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-                                                             "GPU",
-                                                             "GPU")
-            iDeviceCPU.extend(iDeviceGPU)
-
-            for iplatform, platform in enumerate(cl_platforms):
-                for idevice, device in enumerate(platform.get_devices()):
-                    if device in iDeviceCPU:
-                        oclDev = '({0}, {1})'.format(iplatform, idevice)
-                        try:
-                            oclDevStr = cl.device_type.to_string(device.type)
-                        except ValueError:
-                            oclDevStr = str(cl.device_type)
-                        oclToolTip = 'Platform: {0}\nDevice: {1}\nType: \
-{2}\nCompute Units: {3}\nFP64 Support: {4}'.format(
-                            platform.name, device.name,
-                            oclDevStr,
-                            device.max_compute_units,
-                            bool(device.double_fp_config))
-                        oclItem, oclItemStr = self.addParam(
-                            self.OCLModel, device.name, oclDev)
-                        oclItem.setToolTip(oclToolTip)
+#        self.OCLModel = qt.QStandardItemModel()
+#        oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
+#                                                     "None",
+#                                                     "None")
+#        oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
+#                                                     "auto",
+#                                                     "auto")
+#        if isOpenCL:
+#            iDeviceCPU = []
+#            iDeviceGPU = []
+#            CPUdevices = []
+#            GPUdevices = []
+#            for platform in cl_platforms:
+#                try:  # at old pyopencl versions:
+#                    CPUdevices =\
+#                        platform.get_devices(
+#                            device_type=cl.device_type.CPU)
+#                    GPUdevices =\
+#                        platform.get_devices(
+#                            device_type=cl.device_type.GPU)
+#                except cl.RuntimeError:
+#                    pass
+#                if len(CPUdevices) > 0:
+#                    if len(iDeviceCPU) > 0:
+#                        if CPUdevices[0].vendor == \
+#                                CPUdevices[0].platform.vendor:
+#                            iDeviceCPU = CPUdevices
+#                    else:
+#                        iDeviceCPU.extend(CPUdevices)
+#                iDeviceGPU.extend(GPUdevices)
+#
+#            if len(iDeviceCPU) > 0:
+#                oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
+#                                                             "CPU",
+#                                                             "CPU")
+#            if len(iDeviceGPU) > 0:
+#                oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
+#                                                             "GPU",
+#                                                             "GPU")
+#            iDeviceCPU.extend(iDeviceGPU)
+#
+#            for iplatform, platform in enumerate(cl_platforms):
+#                for idevice, device in enumerate(platform.get_devices()):
+#                    if device in iDeviceCPU:
+#                        oclDev = '({0}, {1})'.format(iplatform, idevice)
+#                        try:
+#                            oclDevStr = cl.device_type.to_string(device.type)
+#                        except ValueError:
+#                            oclDevStr = str(cl.device_type)
+#                        oclToolTip = 'Platform: {0}\nDevice: {1}\nType: \
+#{2}\nCompute Units: {3}\nFP64 Support: {4}'.format(
+#                            platform.name, device.name,
+#                            oclDevStr,
+#                            device.max_compute_units,
+#                            bool(device.double_fp_config))
+#                        oclItem, oclItemStr = self.addParam(
+#                            self.OCLModel, device.name, oclDev)
+#                        oclItem.setToolTip(oclToolTip)
 
         self.materialsModel = qt.QStandardItemModel()
         self.rootMatItem = self.materialsModel.invisibleRootItem()
@@ -1051,6 +1052,8 @@ class XrtQookBase(qt.QMainWindow):
         self.lengthUnitList = list(raycing.allUnitsLenStr.values())
         self.angleUnitList = list(raycing.allUnitsAngStr.values())
         self.energyUnitList = list(raycing.allUnitsEnergyStr.values())
+
+        self.openClDevList = list(ALL_CL_DEVICES.keys())
 
         self.blUpdateLatchOpen = True
 

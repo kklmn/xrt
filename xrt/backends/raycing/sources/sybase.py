@@ -947,9 +947,11 @@ class IntegratedSource(SourceBase):
         gIntervals = kwargs.pop('gIntervals', 2)
         gNodes = kwargs.pop('gNodes', None)
 
-        self.targetOpenCL = kwargs.pop('targetOpenCL', raycing.targetOpenCL)
+        self.cl_ctx = None
+        self.ucl = None
+        self.targetOpenCL = kwargs.pop('targetOpenCL', 'auto')
         self.precisionOpenCL = kwargs.pop(
-            'precisionOpenCL', raycing.precisionOpenCL)
+            'precisionOpenCL', 'auto')
 
         super(IntegratedSource, self).__init__(*args, **kwargs)
         # Integration routine-related init
@@ -967,16 +969,15 @@ class IntegratedSource(SourceBase):
         self.convergenceSearchFlag = False
         self.trajectory = None
 
-        # OpenCL-related init
-        self.cl_ctx = None
-
     @property
     def targetOpenCL(self):
         return self._targetOpenCL
 
     @targetOpenCL.setter
-    def targetOpenCL(self, targetOpenCL):
-        self._targetOpenCL = targetOpenCL
+    def targetOpenCL(self, tOCL):
+        if isinstance(tOCL, str) and tOCL in mcl.ALL_CL_DEVICES:
+            tOCL = mcl.ALL_CL_DEVICES.get(tOCL)
+        self._targetOpenCL = tOCL
         if hasattr(self, '_precisionOpenCL'):
             self._set_cl()
 

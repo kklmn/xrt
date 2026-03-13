@@ -859,16 +859,20 @@ class OEMainMethods(object):
                 lb.b[goodN] = lb.b[goodN] * n1overn2 + oeNormal[1]*dn
                 lb.c[goodN] = lb.c[goodN] * n1overn2 + oeNormal[2]*dn
             elif toWhere in [5, 6, 7]:  # powder, 'monocrystal', 'harmonics'
-                trc0 = time.time()
-                aP, bP, cP, rasP, rapP =\
-                    self._reflect_crystal_cl(goodN, lb, matSur, oeNormal)
-                print('Reflect_crystal completed in {0} s'.format(
-                    time.time() - trc0))
-#                lb.concatenate(lb)
-                lb.a[goodN] = aP
-                lb.b[goodN] = bP
-                lb.c[goodN] = cP
-                goodN = (lb.state == 1) | (lb.state == 2)
+                if self.ucl is not None:
+                    trc0 = time.time()
+                    aP, bP, cP, rasP, rapP =\
+                        self._reflect_crystal_cl(goodN, lb, matSur, oeNormal)
+                    print('Reflect_crystal completed in {0} s'.format(
+                        time.time() - trc0))
+    #                lb.concatenate(lb)
+                    lb.a[goodN] = aP
+                    lb.b[goodN] = bP
+                    lb.c[goodN] = cP
+                    goodN = (lb.state == 1) | (lb.state == 2)
+                else:
+                    print('WARNING! Selected material requires active OpenCL device')
+                    print('Beam will pass through without interaction')
 #                good = np.append(good, good)
             else:  # pass straight, do nothing
                 pass
@@ -891,7 +895,10 @@ class OEMainMethods(object):
 
             if findReflectivity:
                 if toWhere in [5, 6, 7]:  # powder,
-                    refl = rasP, rapP
+                    if self.ucl is not None:
+                        refl = rasP, rapP
+                    else:
+                        refl = 1., 1.
                 elif matSur.kind == 'crystal':
                     beamOutDotSurfaceNormal = a_out*oeNormal[-3] + \
                         b_out*oeNormal[-2] + c_out*oeNormal[-1]

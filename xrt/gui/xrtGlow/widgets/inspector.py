@@ -20,6 +20,7 @@ from ...commons import qt  # analysis:ignore
 
 from ....backends import raycing  # analysis:ignore
 from ....backends.raycing import materials as rmats  # analysis:ignore
+from ....backends.raycing.myopencl import ALL_CL_DEVICES
 from ....multipro import GenericProcessOrThread as GP  # analysis:ignore
 from ....runner import RunCardVals  # analysis:ignore
 from ....plotter import deserialize_plots  # analysis:ignore
@@ -157,7 +158,9 @@ class InstanceInspector(qt.QDialog):
 #                color: white;
 #            }
 #            """)
-        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine)
+        self.openClDevList = list(ALL_CL_DEVICES.keys())
+        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
+                                                   mainWidget=self)
         self.table.setItemDelegateForColumn(1, comboDelegate)
 
         # Buttons

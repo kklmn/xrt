@@ -7,6 +7,7 @@ __date__ = "19 Mar 2017"
 import numpy as np
 import os
 import time
+from collections import OrderedDict
 from .. import raycing
 import pickle
 # import zlib
@@ -16,7 +17,7 @@ try:
     os.environ['PYOPENCL_NO_CACHE'] = '1'
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
     import pyopencl as cl
-    cl.get_platforms()
+    cl_platforms = cl.get_platforms()
     isOpenCL = True
 except Exception:
     isOpenCL = False
@@ -33,6 +34,53 @@ __fdir__ = os.path.dirname(__file__)
 _DEBUG = 20
 
 
+def list_all_devices():
+    allDevices = OrderedDict()
+    allDevices['None'] = None
+    if isOpenCL:
+        iDeviceCPU = []
+        iDeviceGPU = []
+        CPUdevices = []
+        GPUdevices = []
+        for platform in cl_platforms:
+            try:  # old pyopencl versions:
+                CPUdevices =\
+                    platform.get_devices(
+                        device_type=cl.device_type.CPU)
+                GPUdevices =\
+                    platform.get_devices(
+                        device_type=cl.device_type.GPU)
+            except cl.RuntimeError:
+                pass
+            if len(CPUdevices) > 0:
+                if len(iDeviceCPU) > 0:
+                    if CPUdevices[0].vendor == \
+                            CPUdevices[0].platform.vendor:
+                        iDeviceCPU = CPUdevices
+                else:
+                    iDeviceCPU.extend(CPUdevices)
+            iDeviceGPU.extend(GPUdevices)
+
+        if len(iDeviceCPU) > 0:
+            allDevices['CPU'] = 'CPU'
+        if len(iDeviceGPU) > 0:
+            allDevices['GPU'] = 'GPU'
+        if len(allDevices) > 1:
+            allDevices['auto'] = 'auto'
+
+        iDeviceCPU.extend(iDeviceGPU)
+
+        for iplatform, platform in enumerate(cl_platforms):
+            for idevice, device in enumerate(platform.get_devices()):
+                if device in iDeviceCPU:
+#                    oclDev = '({0}, {1})'.format(iplatform, idevice)
+                    allDevices[device.name] = (iplatform, idevice)
+    return allDevices
+
+
+ALL_CL_DEVICES = list_all_devices()
+
+
 class XRT_CL(object):
     def __init__(self, filename=None, targetOpenCL=raycing.targetOpenCL,
                  precisionOpenCL=raycing.precisionOpenCL, kernelsource=None):
@@ -42,7 +90,6 @@ class XRT_CL(object):
         self.lastPrecisionOpenCL = None
         self.autoTune = True  # TODO: to be set in set_cl
         self.targetTimePerRun = 1.
-
         self.set_cl(targetOpenCL, precisionOpenCL)
         self.cl_is_blocking = True
 
@@ -307,7 +354,6 @@ class XRT_CL(object):
                              'dimension': dimension,
                              'complexity': complexity}
 #            self.ZMQsocket.send_pyobj(outgoing_dict, protocol=0)
-#            print(outgoing_dict)
             self.send_zipped_pickle(self.ZMQsocket, outgoing_dict)
             #  Get the reply.
             ret = self.recv_zipped_pickle(self.ZMQsocket)

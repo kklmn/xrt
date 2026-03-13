@@ -216,6 +216,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.addItems(['horizontal', 'vertical',
                             '+45', '-45', 'left', 'right', 'None'])
             return combo
+        elif 'diste' in argNameL:  # source only
+            combo.addItems(['eV', 'BW'])
+            return combo
         elif 'shape' in argNameL:  # bl only
             combo.addItems(['rect', 'round'])
             return combo
@@ -248,6 +251,12 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif 'precisionopencl' in argNameL:  # bl only
             combo.addItems(['auto', 'float32', 'float64'])
             return combo
+        elif 'targetopencl' in argNameL:
+            if hasattr(self.mainWidget, 'openClDevList'):
+                combo.addItems(self.mainWidget.openClDevList)
+                return combo
+            else:
+                return QLineEdit(parent)
         elif argNameL.endswith('label'):  # plot only
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy'])

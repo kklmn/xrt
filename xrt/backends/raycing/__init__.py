@@ -330,7 +330,6 @@ def get_output(plot, beamsReturnedBy_run_process):
             ab = beamsReturnedBy_run_process.get(absorbBeamKey)
             if ab is not None:
                 absorbedLb = copy.deepcopy(beam)
-                # may need to convert to same coordinates to track s and p
                 absorbedLb.absorb_intensity(ab)
                 beam = absorbedLb
 
