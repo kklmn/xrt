@@ -111,7 +111,7 @@ class XrtQook(XrtQookElements):
                                     elif any(argName.lower().startswith(v) for v in
                                            ['figureerr', 'basefe']):
                                         if raycing.is_valid_uuid(argValue):
-                                            feObj = self.beamLine.fenamesToUUIDs.get(argValue)
+                                            feObj = self.beamLine.fesDict.get(argValue)
                                             argValue = feObj.name
 
                                     pVItem = pItem.child(k, 1)

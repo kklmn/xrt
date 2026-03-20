@@ -209,6 +209,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 group.setProperty('fieldName', 'kind')
                 return group
             return combo
+        elif argNameL == 'rmskind': 
+            combo.addItems(['height', 'slope'])
+            return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool
             combo.addItems(['histogram', 'kde'])
             return combo

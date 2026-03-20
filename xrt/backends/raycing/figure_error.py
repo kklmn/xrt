@@ -17,7 +17,7 @@ allArguments = ('bl', 'name', 'baseFE', 'limPhysX', 'limPhysY', 'gridStep',
                 'fileName', 'columnFactors', 'recenter', 'orientation',
                 'rms', 'corrLength', 'seed', 'bumpHeight', 'sigmaX', 'sigmaY',
                 'cX', 'cY', 'amplitude', 'xWaveLength', 'yWaveLength',
-                'slopeAngle', 'orientationAngle')
+                'slopeAngle', 'orientationAngle', 'rmsKind')
 
 import numpy as np
 from scipy import interpolate
@@ -149,7 +149,7 @@ class FigureErrorBase():
         return rms
 
     def get_rms_slope(self):
-        d_pitch, d_roll = self.local_n(self.x2d, self.y2d)
+        d_pitch, d_roll = self.local_n_distorted(self.x2d, self.y2d)
         return np.sqrt((d_pitch**2).mean()), np.sqrt((d_roll**2).mean())
 
     def get_dimensions(self):
@@ -453,15 +453,41 @@ class RandomRoughness(FigureErrorBase):
     and optional spatial correlation length.
     """
 
-    def __init__(self, rms=1., corrLength=5., seed=None, **kwargs):
+    def __init__(self, rms=1., rmsKind='height',
+                 corrLength=5., seed=None, **kwargs):
         """
-        *rms*: float
-            Root Mean Square amplitude roughness in [nm]
+        *rms*: float or tuple of floats
+            Target Root Mean Square value.
 
-        *corrLength*: float or None
+            - For ``rmsKind="height"``, specifies RMS height in [nm].
+              Must be a scalar.
+
+            - For ``rmsKind="slope"``, specifies RMS angular slope in [μrad].
+              May be:
+                * scalar → isotropic slope RMS
+                * (pitch, roll) → directional RMS slopes
+
+            Surface height and slope RMS are coupled through the spatial
+            spectrum of the surface; only one can be enforced at a time.
+
+        *rmsKind*: 'height' or 'slope'
+            Defines the metric used to normalize roughness.
+            - "height": RMS of surface height (z) deviations.
+            - "slope": RMS of surface slope (∂z/∂x, ∂z/∂y).
+
+        *corrLength*: float
             Spatial correlation length of the roughness in [mm].
-            If None, the roughness is generated without spatial
-            correlation (white noise).
+
+            In height mode and isotropic slope mode, this value is used for
+            both tangential and sagittal directions.
+
+            In directional slope mode, this value is interpreted as the
+            tangential correlation length; the sagittal correlation length may
+            be adjusted internally to match the requested directional slope
+            RMS.
+
+            Extremely small values may lead to numerical instability and
+            can break surface spline generation.
 
         *seed*: int or None
             Seed number for numpy random number generator. Any number
@@ -470,6 +496,7 @@ class RandomRoughness(FigureErrorBase):
 
 
         """
+        self._rmsKind = rmsKind
         self._rms = rms
         self._corrLength = corrLength
         if seed is None:
@@ -485,7 +512,25 @@ class RandomRoughness(FigureErrorBase):
     @rms.setter
     def rms(self, rms):
         self._rms = rms
-        self.build_spline()
+        if hasattr(self, '_rmsKind'):
+            if self._rmsKind == 'height' and isinstance(rms, (tuple, list)):
+                return
+            self.build_spline()
+#            print("rms height", self.get_rms(), "nm")
+#            print("rms slope", self.get_rms_slope(), "urad")
+
+    @property
+    def rmsKind(self):
+        return self._rmsKind
+
+    @rmsKind.setter
+    def rmsKind(self, rmsKind):
+        self._rmsKind = rmsKind
+        if hasattr(self, '_rms'):
+            if self._rmsKind == 'height' and\
+                    isinstance(self._rms, (tuple, list)):
+                return
+            self.build_spline()
 
     @property
     def corrLength(self):
@@ -522,15 +567,40 @@ class RandomRoughness(FigureErrorBase):
             kx = 2 * np.pi * np.fft.rfftfreq(self.nx, d=self.dx)
             ky = 2 * np.pi * np.fft.fftfreq(self.ny, d=self.dy)
             KX, KY = np.meshgrid(kx, ky, indexing='xy')
-            K2 = KX**2 + KY**2
-            filter_k = np.exp(-0.5*K2*self.corrLength**2)
+#            K2 = KX**2 + KY**2
+            if isinstance(self.rms, (tuple, list)):  # smaller rms longer corr
+                corrY = self.corrLength  # pitch
+                corrX = self.corrLength * self.rms[0] / self.rms[1]  # roll
+            else:
+                corrX = corrY = self.corrLength
+            filter_k = np.exp(-0.5*(KX**2*corrX**2 + KY**2*corrY**2))
             zf = Z * filter_k
             z = np.fft.irfft2(zf, s=(self.ny, self.nx))
 
         z -= z.mean()
-        current_rms = np.sqrt((z**2).mean())
-        if current_rms > 0:
-            z *= (self.rms / current_rms)
+        if self.rmsKind == 'height':
+            current_rms = np.sqrt((z**2).mean())
+            if current_rms > 0:
+                z *= (self.rms / current_rms)
+        elif self.rmsKind == 'slope':
+            a2d, b2d = np.gradient(z*1e-6, self.y1d, self.x1d)
+            d_pitch = np.arctan(a2d)
+            d_roll = np.arctan(b2d)
+            rms_pitch = np.sqrt((d_pitch**2).mean())
+            rms_roll = np.sqrt((d_roll**2).mean())
+
+            if isinstance(self.rms, (list, tuple)):
+                scale_y = self.rms[0] * 1e-6 / rms_pitch
+                scale_x = self.rms[1] * 1e-6 / rms_roll
+                Z = np.fft.rfft2(z)
+                Z *= np.sqrt((scale_x * KX)**2 + (scale_y * KY)**2) /\
+                    np.sqrt(KX**2 + KY**2 + 1e-30)
+                z = np.fft.irfft2(Z, s=(self.ny, self.nx))
+            else:  # float
+                scale = self.rms * 1e-6 /\
+                    np.sqrt(0.5 * (rms_pitch**2 + rms_roll**2))
+                z *= scale
+
         return z + base_z
 
 
