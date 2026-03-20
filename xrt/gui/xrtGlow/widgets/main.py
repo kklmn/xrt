@@ -1493,7 +1493,7 @@ class xrtGlow(qt.QWidget):
             menu.addAction('to Local',
                            partial(self.toLocal,
                                    str(selectedItem.data(qt.Qt.UserRole))))
-            menu.addAction('to Beam Local',
+            menu.addAction('Align Beam with Y',
                            partial(self.toBeamLocal,
                                    str(selectedItem.data(qt.Qt.UserRole))))
             menu.addAction('restore Global',
@@ -1613,7 +1613,7 @@ class xrtGlow(qt.QWidget):
                            partial(self.centerEl, oeuuid))
             menu.addAction('Transform to {} Local'.format(oeName),
                            partial(self.toLocal, oeuuid))
-            menu.addAction('Transform to {} Beam Local'.format(oeName),
+            menu.addAction('Align Beam with Y',
                            partial(self.toBeamLocal, oeuuid))
             menu.addAction('Restore Global at {}.center'.format(oeName),
                            partial(self.toGlobal, oeuuid))
@@ -1860,26 +1860,40 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def toBeamLocal(self, oeuuid):
-        beamDict = self.customGlWidget.beamline.beamsDictU[oeuuid]
-        oe = self.customGlWidget.beamline.oesDict[oeuuid][0]
-        off0 = oe.center if isinstance(oe.center, list) else oe.center.tolist()
-        mTranslation = qt.QMatrix4x4()
-        mTranslation.translate(*off0)
+        bEnd0 = None
+
+        oeStart = self.customGlWidget.beamline.oesDict[oeuuid][0]
+        bStart0 = oeStart.center
+
+        for elid, operations in self.customGlWidget.beamline.flowU.items():
+            for kwargset in operations.values():
+                if 'beam' in kwargset and kwargset['beam'] == oeuuid:
+                    oeEnd = self.customGlWidget.beamline.oesDict[elid][0]
+                    bEnd0 = oeEnd.center
+                    break
+            else:
+                continue
+            break
+
+        if any([isinstance(x, str) for x in bEnd0]):  # unresolved auto
+            return
+
+        if bEnd0 is None:
+            return
+
+        transMatrix = self.customGlWidget.meshDict[oeuuid].transMatrix[0]
+        bEndLoc = transMatrix.inverted()[0] * qt.QVector3D(*bEnd0)
+        bEndLoc.normalize()
+
+        extraQ = qt.QQuaternion.rotationTo(qt.QVector3D(0, 1, 0), bEndLoc)
+        extraRot = qt.QMatrix4x4()
+        extraRot.rotate(extraQ)
+
+        orientation = transMatrix * extraRot
+        self.customGlWidget.mModLocal = orientation.inverted()[0]
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-        if 'beamLocal1' in beamDict:
-            beam = beamDict['beamLocal1']
-        elif 'beamLocal' in beamDict:
-            beam = beamDict['beamLocal']
-        else:
-            beam = beamDict['beamGlobal']
-
-        if hasattr(beam, 'basis'):
-            rotationQ = basis_rotation_q(np.identity(3), beam.basis.T)
-            mRotation = qt.QMatrix4x4()
-            mRotation.rotate(qt.QQuaternion(*rotationQ))
-            posMatrix = mTranslation*mRotation
-            self.customGlWidget.mModLocal = posMatrix.inverted()[0]
+        self.customGlWidget.tmpOffset = np.float32(bStart0)
         self.customGlWidget.cBox.update_grid()
         self.customGlWidget.glDraw()
 

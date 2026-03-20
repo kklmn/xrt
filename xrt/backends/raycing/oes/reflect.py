@@ -141,21 +141,21 @@ class OEMainMethods(object):
 #        gb.parentId = self.uuid
 #        lb.parentId = self.uuid
 
-        oq = self.get_orientation_quaternion()
-        globalNorm = np.array(raycing.quat_vec_rotate(np.array([0, 0, 1]), oq))
-        globalNorm /= np.linalg.norm(globalNorm)
+#        oq = self.get_orientation_quaternion()
+#        globalNorm = np.array(raycing.quat_vec_rotate(np.array([0, 0, 1]), oq))
+#        globalNorm /= np.linalg.norm(globalNorm)
 #        print(self.name, "global norm", globalNorm)
-        if hasattr(beam, 'basis'):
-            newBasis = np.identity(3)
-            for line in range(3):
-                cmpt = beam.basis[line, :]
-                newcmpt = cmpt - 2*np.dot(cmpt, globalNorm)*globalNorm
-                newBasis[line, :] = newcmpt / np.linalg.norm(newcmpt)
-
-            det = np.linalg.det(newBasis)
-            if det < 0:
-                newBasis[-1, :] *= -1
-            gb.basis = newBasis
+#        if hasattr(beam, 'basis'):
+#            newBasis = np.identity(3)
+#            for line in range(3):
+#                cmpt = beam.basis[line, :]
+#                newcmpt = cmpt - 2*np.dot(cmpt, globalNorm)*globalNorm
+#                newBasis[line, :] = newcmpt / np.linalg.norm(newcmpt)
+#
+#            det = np.linalg.det(newBasis)
+#            if det < 0:
+#                newBasis[-1, :] *= -1
+#            gb.basis = newBasis
         # TODO: what if one element processing multiple beams?
 #        self.bl.flowU[self.uuid] = {'method': self.reflect.__name__,
 #                                    'kwArgsIn': kwArgsIn}
