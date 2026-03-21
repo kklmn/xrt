@@ -201,6 +201,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = 1.
         self.showLostRays = False
         self.showLocalAxes = False
+        self.showInternalBeam = False
         self.arrowSize = [0.4, 0.05, 0.025, 13]  # length, tip length, tip R
 
         self.drawGrid = True
@@ -2261,6 +2262,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                  target=beamEnd)
                             except Exception as e:
                                 print(e)
+                                
+                            if self.showInternalBeam and\
+                                    'beamLocal2' in beamStartDict:
+                                try:
+                                    self.render_beam(
+                                            (sourceuuid, 'beamLocal1'),
+                                            mMMLoc, self.mView, self.mProj,
+                                            target=(sourceuuid, 'beamLocal2'))
+                                except Exception as e:
+                                    print(e)                                    
 
             else:
                 for flowLine in self.beamline.flow:

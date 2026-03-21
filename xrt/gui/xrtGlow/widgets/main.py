@@ -691,7 +691,8 @@ class xrtGlow(qt.QWidget):
                  'Show Virtual Screen label',
                  'OE size match beam',
                  'Show lost rays',
-                 'Show local axes'],
+                 'Show local axes',
+                 'Show internal beams in multi-surface OEs'],
                 [self.checkAA,
                  self.checkGlobalColors,
                  self.checkLineDepthTest,
@@ -701,7 +702,8 @@ class xrtGlow(qt.QWidget):
                  self.checkShowLabels,
                  self.checkOEAutoSize,
                  self.checkShowLost,
-                 self.checkShowLocalAxes])):
+                 self.checkShowLocalAxes,
+                 self.checkShowInternalBeam])):
             aaCheckBox = qt.QCheckBox(cbText)
             aaCheckBox.setChecked(iCB in [1])
             aaCheckBox.stateChanged.connect(cbFunc)
@@ -1150,6 +1152,10 @@ class xrtGlow(qt.QWidget):
 
     def checkShowLocalAxes(self, state):
         self.customGlWidget.showLocalAxes = True if state > 0 else False
+        self.customGlWidget.glDraw()
+
+    def checkShowInternalBeam(self, state):
+        self.customGlWidget.showInternalBeam = True if state > 0 else False
         self.customGlWidget.glDraw()
 
     def setSceneParam(self, iAction, state):
