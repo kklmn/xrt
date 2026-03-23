@@ -46,7 +46,7 @@ class GenericProcessOrThread(object):
         self.outPlotQueues = outPlotQueues
         self.alarmQueue = alarmQueue
         self.card = locCard
-        if self.card.backend.startswith('raycing'):
+        if self.card.backend.startswith('raycing') and not beamDict:
             self.card.beamLine.flow = []
         self.beamDict = beamDict
 

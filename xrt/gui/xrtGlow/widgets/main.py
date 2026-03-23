@@ -212,12 +212,14 @@ class xrtGlow(qt.QWidget):
                              hasattr(oeObj, argName)}
                 oeProps.update(diagProps)
 
+            viewOnly = self.customGlWidget.renderingMode == 'static'
+
             elViewer = InstanceInspector(
                     self, oeProps,
                     initDict=oeInitProps,
                     epicsDict=getattr(self.customGlWidget,
                                       'epicsInterface', None),
-                    viewOnly=False,
+                    viewOnly=viewOnly,
                     beamLine=self.customGlWidget.beamline,
                     categoriesDict=catDict)
 
@@ -227,7 +229,6 @@ class xrtGlow(qt.QWidget):
             elViewer.propertiesChanged.connect(
                     partial(self.customGlWidget.update_beamline, oeuuid,
                             sender='OEE'))
-    #        if (elViewer.exec_()):
             if (elViewer.show()):
                 pass
 
@@ -1871,20 +1872,31 @@ class xrtGlow(qt.QWidget):
         oeStart = self.customGlWidget.beamline.oesDict[oeuuid][0]
         bStart0 = oeStart.center
 
-        for elid, operations in self.customGlWidget.beamline.flowU.items():
-            for kwargset in operations.values():
-                if 'beam' in kwargset and kwargset['beam'] == oeuuid:
-                    oeEnd = self.customGlWidget.beamline.oesDict[elid][0]
-                    bEnd0 = oeEnd.center
-                    break
-            else:
-                continue
-            break
-
-        if any([isinstance(x, str) for x in bEnd0]):  # unresolved auto
-            return
+        if self.customGlWidget.renderingMode == 'dynamic':
+            for elid, operations in self.customGlWidget.beamline.flowU.items():
+                for kwargset in operations.values():
+                    if 'beam' in kwargset and kwargset['beam'] == oeuuid:
+                        oeEnd = self.customGlWidget.beamline.oesDict[elid][0]
+                        bEnd0 = oeEnd.center
+                        break
+                else:
+                    continue
+                break
+        else:
+            for flowLine in self.customGlWidget.beamline.flow:
+                sourceuuid = flowLine[0]
+                if sourceuuid == oeuuid:
+                    elid = flowLine[2]
+                    oeLine = self.customGlWidget.beamline.oesDict.get(elid)
+                    if oeLine is not None:
+                        oeEnd = oeLine[0]
+                        bEnd0 = oeEnd.center
+                        break
 
         if bEnd0 is None:
+            return
+
+        if any([isinstance(x, str) for x in bEnd0]):  # unresolved auto
             return
 
         transMatrix = self.customGlWidget.meshDict[oeuuid].transMatrix[0]

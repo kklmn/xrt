@@ -1970,6 +1970,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         for oeuuid in self.beamline.oesDict:
             self.init_oe_surface(oeuuid)
 
+        self.getColorLimits()
+
         gl.glViewport(*self.viewPortGL)
         pModel = np.array(self.mView.data()).reshape(4, 4)[:-1, :-1]
         newVisAx = np.argmax(pModel, axis=0)
@@ -2262,7 +2264,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                  target=beamEnd)
                             except Exception as e:
                                 print(e)
-                                
+
                             if self.showInternalBeam and\
                                     'beamLocal2' in beamStartDict:
                                 try:
@@ -2271,7 +2273,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                             mMMLoc, self.mView, self.mProj,
                                             target=(sourceuuid, 'beamLocal2'))
                                 except Exception as e:
-                                    print(e)                                    
+                                    print(e)
 
             else:
                 for flowLine in self.beamline.flow:

@@ -39,6 +39,8 @@ class InstanceInspector(qt.QDialog):
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
                 'name'))
+        if viewOnly:
+            self.windowTitleStr += ' - Static Mode - View Only'
         self.setWindowTitle(self.windowTitleStr)
 
         self.model = qt.QStandardItemModel()
@@ -253,7 +255,7 @@ class InstanceInspector(qt.QDialog):
                            'beamAbsorb'}
 
             self.dynamicPlotWidget = ConfigurablePlotWidget(
-                    plotProps, parent=self, viewOnly=False,
+                    plotProps, parent=self, viewOnly=viewOnly,
                     beamLine=self.beamLine,
                     plotId=self.elementId,
                     hiddenProps=hiddenProps)
@@ -301,6 +303,7 @@ class InstanceInspector(qt.QDialog):
             ch1flag = self.valueFlag
 
         child1.setFlags(ch1flag)
+        child1.setEditable(not self.viewOnly)
 
         if paramName.endswith('rbk') or\
                 parent is self.itemGroups.get('Diagnostic'):
@@ -310,10 +313,12 @@ class InstanceInspector(qt.QDialog):
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
             child1u.setFlags(self.valueFlag)
+            child1u.setEditable(not self.viewOnly)
 
         if epv is not None:
             child1e = qt.QStandardItem(str(epv))
             child1e.setFlags(self.valueFlag)
+            child1e.setEditable(not self.viewOnly)
 
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\
@@ -705,7 +710,7 @@ class ConfigurablePlotWidget(qt.QWidget):
                 self.beamDict['beamAbsorb'] = beamAbsorb
                 self.dynamicPlot.beamAbsorb = 'beamAbsorb'
 
-        # TODO:                
+        # TODO:
         # implement behavior for standalone plots
 
     def update_beam(self, beamTag):
