@@ -271,7 +271,8 @@ class OEMainMethods(object):
         :class:`~xrt.backends.raycing.apertures.RoundAperture`.
         *nrays*: if int, specifies the number of randomly distributed samples
         the surface within ``self.limPhysX`` limits; if 2-tuple of ints,
-        specifies (nx, ny) sizes of a uniform mesh of samples.
+        specifies (nx, ny) sizes of a uniform mesh of samples; if 2-tuple of
+        arrays, specifies the (x, y) positions.
         """
 
         if rw is None:
@@ -280,7 +281,13 @@ class OEMainMethods(object):
         if isinstance(nrays, (int, float)):
             nsamples = int(nrays)
         elif isinstance(nrays, (list, tuple)):
-            nsamples = nrays[0] * nrays[1]
+            if isinstance(nrays[0], (int, float)):
+                nsamples = nrays[0] * nrays[1]
+            elif (isinstance(nrays[0], np.ndarray) and
+                  isinstance(nrays[1], np.ndarray)):
+                nsamples = len(nrays[0]) * len(nrays[1])
+            else:
+                raise ValueError('wrong type of `nrays`!')
         else:
             raise ValueError('wrong type of `nrays`!')
 
@@ -310,8 +317,12 @@ class OEMainMethods(object):
         elif isinstance(nrays, (list, tuple)):
             if shape.startswith('ro'):  # round
                 raise ValueError("must be rectangular")
-            xx = np.linspace(*self.limPhysX, nrays[0])
-            yy = np.linspace(*self.limPhysY, nrays[1])
+            if isinstance(nrays[0], (int, float)):
+                xx = np.linspace(*self.limPhysX, nrays[0])
+                yy = np.linspace(*self.limPhysY, nrays[1])
+            elif (isinstance(nrays[0], np.ndarray) and
+                  isinstance(nrays[1], np.ndarray)):
+                xx, yy = nrays
             X, Y = np.meshgrid(xx, yy)
             x = X.ravel()
             y = Y.ravel()
@@ -362,6 +373,7 @@ class OEMainMethods(object):
         waveLocal.areaNormal = area * areaNormalFact
         waveLocal.dS = area / float(len(good))
         waveLocal.toOE = self
+        waveLocal.parentId = self.uuid
 #        waveLocal.xGlobal = waveGlobal.x
 #        waveLocal.yGlobal = waveGlobal.y
 #        waveLocal.zGlobal = waveGlobal.z
