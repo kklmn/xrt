@@ -120,6 +120,7 @@ class RectangularAperture(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -588,6 +589,7 @@ class RoundAperture(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.uuid] = [self, 1]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
@@ -994,6 +996,7 @@ class PolygonalAperture(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook':
                 bl.oesDict[self.uuid] = [self, 1]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
