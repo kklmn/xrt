@@ -4,31 +4,31 @@ Created on Tue Jan 27 13:21:08 2026
 
 """
 
+import os
+import copy
+import numpy as np
+from functools import partial
+from multiprocessing import Process, Queue
+from collections import OrderedDict, deque
+from matplotlib.colors import hsv_to_rgb
+ 
+from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,
+                          scr_m, DEFAULT_SCENE_SETTINGS)
+from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
+                      is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)
+from ..ogl import CoordinateBox, Beam3D, OEMesh3D
+
+from ...commons import qt
+from ...commons import gl
+
+from ....backends import raycing
+from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
+                                  orientationArgSet, shapeArgSet, EpicsDevice)
+from ....backends.raycing import sources as rsources
+from ....backends.raycing import screens as rscreens
+
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
-
-import os  # analysis:ignore
-import copy  # analysis:ignore
-import numpy as np  # analysis:ignore
-from functools import partial  # analysis:ignore
-from multiprocessing import Process, Queue  # analysis:ignore
-from collections import OrderedDict, deque  # analysis:ignore
-from matplotlib.colors import hsv_to_rgb  # analysis:ignore
-
-from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,  # analysis:ignore
-                          scr_m)
-from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,  # analysis:ignore
-                      is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)  # analysis:ignore
-from ..ogl import CoordinateBox, Beam3D, OEMesh3D  # analysis:ignore
-
-from ...commons import qt  # analysis:ignore
-from ...commons import gl  # analysis:ignore
-
-from ....backends import raycing  # analysis:ignore
-from ....backends.raycing import (propagationProcess, renderOnlyArgSet,  # analysis:ignore
-                                  orientationArgSet, shapeArgSet, EpicsDevice)  # analysis:ignore
-from ....backends.raycing import sources as rsources  # analysis:ignore
-from ....backends.raycing import screens as rscreens  # analysis:ignore
 
 
 class xrtGlWidget(qt.QOpenGLWidget):
@@ -54,27 +54,41 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.parent = parent
         self.hsvTex = generate_hsv_texture(512, s=1.0, v=1.0)
         self.QookSignal = signal
+
+        self.beamline = raycing.BeamLine()
+        self.loopRunning = False
+        self.input_queue = Queue()
+        self.output_queue = Queue()
+
+        self.needMeshUpdate = deque()
+        self.needBeamUpdate = deque()
+        self.deletionQueue = deque()
+
+        for pName, pValue in DEFAULT_SCENE_SETTINGS.items():
+            if pName in ['scaleVec', 'rotations', 'tmpOffset', 'tVec',
+                         'coordOffset']:
+                pValue = np.array(pValue)
+            setattr(self, pName, pValue)
+
+        self.cameraTarget = qt.QVector3D(0., 0., 0.)
+
+        self.showOeLabels = False
+        self.enableBlending = True
+        self.newColorAxis = True
         self.showVirtualScreen = False
         self.virtBeam = None
         self.virtDotsArray = None
         self.virtDotsColor = None
         self.vScreenForColors = False
         self.globalColorIndex = None
-        self.globalColors = True
         self.isVirtScreenNormal = False
         self.vScreenSize = 0.5
         self.setMinimumSize(240, 400)
-        self.aspect = 1.
-        self.depthScaler = 0.
-        self.viewPortGL = [0, 0, 500, 500]
-        self.perspectiveEnabled = True
-        self.cameraAngle = 60
+
         self.setMouseTracking(True)
         self.surfCPOrder = 4
         self.oesToPlot = []
         self.labelsToPlot = []
-        self.tiles = [25, 25]
-        self.autoSizeOe = False
 
         self.meshDict = OrderedDict()
         self.beamBufferDict = OrderedDict()
@@ -83,14 +97,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.segmentModel = modelRoot
         self.oesList = oesList
         self.beamsToElements = b2els
-        self.needMeshUpdate = deque()
-        self.needBeamUpdate = deque()
-        self.deletionQueue = deque()
-
-        self.beamline = raycing.BeamLine()
-        self.loopRunning = False
-        self.input_queue = Queue()
-        self.output_queue = Queue()
 
         if arrayOfRays is not None:
             self.renderingMode = 'static'
@@ -165,64 +171,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.oeContour = dict()
         self.slitEdges = dict()
-        self.oeThickness = 5  # mm
-        self.oeThicknessForce = None
-        self.slitThicknessFraction = 50
+
         self.contourWidth = 2
-
-        self.projectionsVisibility = [0, 0, 0]
-        self.lineOpacity = 0.1
-        self.lineWidth = 1
-        self.pointOpacity = 0.1
-        self.pointSize = 1
-        self.linesDepthTest = False
-        self.pointsDepthTest = False
-        self.labelCoordPrec = 1
-
-        self.lineProjectionOpacity = 0.1
-        self.lineProjectionWidth = 1
-        self.pointProjectionOpacity = 0.1
-        self.pointProjectionSize = 1
-
-        self.coordOffset = [0., 0., 0.]
-        self.enableAA = False
-        self.enableBlending = True
-        self.cutoffI = 0.01
-        self.getColor = raycing.get_energy
-        self.globalNorm = True
-        self.iHSV = False
-        self.newColorAxis = True
-        self.colorMin = -1e20
-        self.colorMax = 1e20
-        self.iMax = -1e20
-        self.selColorMin = None
-        self.selColorMax = None
-        self.scaleVec = np.array([1e3, 1e1, 1e3])
-        self.maxLen = 1.
-        self.showLostRays = False
-        self.showLocalAxes = False
-        self.showInternalBeam = False
         self.arrowSize = [0.4, 0.05, 0.025, 13]  # length, tip length, tip R
-
-        self.drawGrid = True
-        self.fineGridEnabled = False
-        self.showOeLabels = False
         self.labelLines = None
-        self.aPos = [0.9, 0.9, 0.9]
+
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
         self.coordinateGridLineWidth = 1
         self.cBoxLineWidth = 1
-        self.useScalableFont = False
-        self.fontSize = 5
+#        self.useScalableFont = False
         self.scalableFontType = "Sans-serif"
         self.scalableFontWidth = 1
         self.useFontAA = False
-        self.tVec = np.array([0., 0., 0.])
-        self.tmpOffset = np.array([0., 0., 0.])
 
-        self.cameraTarget = qt.QVector3D(0., 0., 0.)
-        self.cameraDistance = 3.5
         self.cameraPos = qt.QVector3D(self.cameraDistance, 0, 0)
         self.upVec = qt.QVector3D(0., 0., 1.)
 
@@ -253,18 +215,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.mModAx = qt.QMatrix4x4()
         self.mModAx.setToIdentity()
 
-        self.mModLocal = qt.QMatrix4x4()
-        self.mModLocal.setToIdentity()
-
-        self.rotations = np.zeros(2)
-
         self.fixProj = qt.QMatrix4x4()
         self.fixProj.perspective(self.cameraAngle*1.5, 1, 0.001, 1000)
 
         pModelT = np.identity(4)
         self.visibleAxes = np.argmax(np.abs(pModelT), axis=1)
-        self.signs = np.ones_like(pModelT)
-        self.invertColors = False
+#        self.signs = np.ones_like(pModelT)
+
         self.showHelp = False
         self.beamVAO = dict()
         self.uuidDict = dict()
@@ -290,6 +247,73 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.oePropsUpdated.connect(self.update_oe_transform)
 
 #        self.getColorLimits()
+
+    @property
+    def colorAxis(self):
+        return self._colorAxis
+
+    @colorAxis.setter
+    def colorAxis(self, colorAxis):
+        funcStr = 'get_{}'.format(colorAxis)
+        if hasattr(raycing, funcStr):
+            self._colorAxis = colorAxis
+            self.getColor = getattr(raycing, funcStr)
+
+    @property
+    def globalColors(self):
+        return self._globalColors
+
+    @globalColors.setter
+    def globalColors(self, globalColors):
+        self._globalColors = globalColors
+        self.newColorAxis = True
+        self.change_beam_colorax()
+
+    @property
+    def oeThickness(self):
+        return self._oeThickness
+
+    @oeThickness.setter
+    def oeThickness(self, oeThickness):
+        self._oeThickness = oeThickness
+        self.queue_mesh_update()
+
+    @property
+    def oeThicknessForce(self):
+        return self._oeThicknessForce
+
+    @oeThicknessForce.setter
+    def oeThicknessForce(self, oeThicknessForce):
+        self._oeThicknessForce = oeThicknessForce
+        self.queue_mesh_update()
+
+    @property
+    def slitThicknessFraction(self):
+        return self._slitThicknessFraction
+
+    @slitThicknessFraction.setter
+    def slitThicknessFraction(self, slitThicknessFraction):
+        self._slitThicknessFraction = slitThicknessFraction
+        self.queue_mesh_update()
+
+    @property
+    def autoSizeOe(self):
+        return self._autoSizeOe
+
+    @autoSizeOe.setter
+    def autoSizeOe(self, autoSizeOe):
+        self._autoSizeOe = autoSizeOe
+        self.needMeshUpdate.extend(
+            list(self.beamline.oesDict.keys()))
+
+    def queue_mesh_update(self, oeuuid=None):
+        if raycing.is_valid_uuid(oeuuid):
+            self.needMeshUpdate.append(oeuuid)
+        else:
+            for oeid, oeLine in self.beamline.oesDict.items():
+                if is_oe(oeLine[0]) and\
+                        oeid not in self.needMeshUpdate:
+                    self.needMeshUpdate.append(oeid)
 
     async def update_beamline_async(self, oeid, argName, argValue):
         """Update from EPICS interface """
