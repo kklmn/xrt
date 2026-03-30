@@ -781,12 +781,13 @@ class xrtGlow(qt.QWidget):
         for ia, (axis, defv) in enumerate(zip(
                 ['OE tessellation X', 'OE tessellation Y'],
                 self.customGlWidget.tiles)):
+
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit(str(defv))
             axEdit.setValidator(oeTileValidator)
             axEdit.editingFinished.connect(
                 partial(self.updateTileFromQLE, axEdit, ia))
-
+            self.sceneTextedits[f'tiles_{ia}'] = axEdit
             layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(100)
             layout.addWidget(axLabel)
@@ -1687,7 +1688,9 @@ class xrtGlow(qt.QWidget):
             self.sceneSliders['labelCoordPrec'].setCurrentIndex(
                    params['labelCoordPrec'])
 
-#    'tiles': [25, 25]
+        if 'tiles' in params:
+            for itn, tnv in enumerate(params['tiles']):
+                self.sceneTextedits[f'tiles_{itn}'].setText(str(tnv))
 
         self.blockSignals(False)
         self.mplFig.canvas.draw()
