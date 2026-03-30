@@ -92,6 +92,7 @@ class Screen(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
 #        if any([coord == 'auto' for coord in self.center]):

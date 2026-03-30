@@ -795,7 +795,7 @@ class BeamLine(object):
             self.blViewer.customGlWidget.generator = generator
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.startFrom = startFrom
-            self.blViewer.bl = self
+#            self.blViewer.bl = self
             if scale:
                 try:
                     self.blViewer.updateScaleFromGL(scale)
@@ -803,7 +803,9 @@ class BeamLine(object):
                     pass
             if centerAt:
                 try:
-                    self.blViewer.centerEl(centerAt)
+                    eluuid = self.oenamesToUUIDs.get(centerAt)
+                    if eluuid is not None:
+                        self.blViewer.centerEl(eluuid)
                 except Exception:
                     pass
             if colorAxis:

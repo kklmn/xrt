@@ -243,6 +243,7 @@ class GeometricSource(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
         self.filamentBeam = filamentBeam
@@ -482,6 +483,7 @@ class GaussianBeam(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
         self.vortex = None
@@ -756,6 +758,7 @@ class MeshSource(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
 
@@ -892,6 +895,7 @@ class CollimatedMeshSource(object):
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
 
@@ -967,6 +971,7 @@ class BeamFromFile():
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
         self.nrays = np.int64(nrays)
