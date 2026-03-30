@@ -4,33 +4,36 @@ Created on Tue Jan 27 13:03:13 2026
 
 """
 
+import os
+import re
+import numpy as np
+from functools import partial
+import matplotlib as mpl
+from collections import OrderedDict, ChainMap
+from matplotlib.colors import hsv_to_rgb
+from matplotlib.figure import Figure
+from matplotlib.widgets import RectangleSelector
+
+from .._constants import (
+        _DEBUG_, DEFAULT_SCENE_SETTINGS, COLOR_CONTROL_LABELS,
+        SCENE_CONTROL_LABELS, SCENE_TEXTEDITS)
+from .._utils import is_source, is_oe, is_aperture, is_screen
+from .inspector import InstanceInspector
+from .opengl import xrtGlWidget
+
+from ...commons import qt
+
+from ....backends import raycing
+from ....backends.raycing import sources as rsources
+from ....plotter import colorFactor, colorSaturation
+
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
-
-import os  # analysis:ignore
-import re  # analysis:ignore
-import numpy as np  # analysis:ignore
-from functools import partial  # analysis:ignore
-import matplotlib as mpl  # analysis:ignore
-from matplotlib.colors import hsv_to_rgb  # analysis:ignore
-from matplotlib.figure import Figure  # analysis:ignore
-from matplotlib.widgets import RectangleSelector  # analysis:ignore
-
-from .._constants import _DEBUG_  # analysis:ignore
-from .._utils import is_source, is_oe, is_aperture, is_screen, basis_rotation_q  # analysis:ignore
-from .inspector import InstanceInspector  # analysis:ignore
-from .opengl import xrtGlWidget  # analysis:ignore
-
-from ...commons import qt  # analysis:ignore
-
-from ....backends import raycing  # analysis:ignore
-from ....backends.raycing import sources as rsources  # analysis:ignore
-from ....plotter import colorFactor, colorSaturation  # analysis:ignore
 
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays=None, parent=None, progressSignal=None,
-                 layout=None, epicsPrefix=None):
+                 layout=None, epicsPrefix=None, sceneSettings={}):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
         self.cAxisLabelSize = 10
@@ -156,6 +159,51 @@ class xrtGlow(qt.QWidget):
         tiltScreen.setKey("Ctrl+T")
         tiltScreen.activated.connect(self.customGlWidget.switchVScreenTilt)
 
+        sceneProps = {}
+        for key, val in DEFAULT_SCENE_SETTINGS.items():
+            sceneProps[key] = sceneSettings.get(key, val)
+
+        self.applySceneProperties(sceneProps)
+
+    def _makeCheckBox(self, cbLabel, cbControl, cbRegistry=None):
+        cb = qt.QCheckBox(cbLabel)
+        cb.setChecked(DEFAULT_SCENE_SETTINGS.get(cbControl))
+        cb.toggled.connect(partial(self._setGlFlag, cbControl))
+        if cbRegistry is not None:
+            cbRegistry[cbControl] = cb
+        return cb
+
+    def _makeLabeledLineEdit(self, label, tooptip, teControl, ctrlRegistry):
+        tLabel = qt.QLabel(label)
+        tLabel.setToolTip(tooptip)
+        tEdit = qt.QLineEdit()
+        tEdit.setToolTip(tooptip)
+
+        defv = DEFAULT_SCENE_SETTINGS.get(teControl)
+        if defv is not None:
+            tEdit.setText(str(defv))
+
+        tEdit.editingFinished.connect(
+            partial(self._setGlFlag, teControl, tEdit))
+
+        layout = qt.QHBoxLayout()
+        tLabel.setMinimumWidth(145)
+        layout.addWidget(tLabel)
+        tEdit.setMaximumWidth(96)
+        layout.addWidget(tEdit)
+        layout.addStretch()
+
+        if ctrlRegistry is not None:
+            ctrlRegistry[teControl] = tEdit
+
+        return layout
+
+    def _setGlFlag(self, pName, state):
+        if not isinstance(state, bool):  # editor
+            state = float(re.sub(',', '.', str(state.text())))
+        setattr(self.customGlWidget, pName, state)
+        self.customGlWidget.glDraw()
+
     def closeEvent(self, event):
         self.customGlWidget.close_calc_process()
         event.accept()
@@ -234,7 +282,6 @@ class xrtGlow(qt.QWidget):
 
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
-
         centerCBLabel = qt.QLabel('Center view at:')
         self.centerCB = qt.QComboBox()
         self.centerCB.setMaxVisibleItems(48)
@@ -539,18 +586,23 @@ class xrtGlow(qt.QWidget):
 #        axSlider.setValue(0.01)
 #        axSlider.valueChanged.connect(self.updateCutoff)
 #        colorLayout.addWidget(axSlider, 3+3, 0, 1, 2)
+        self.colorCbControls = OrderedDict()
+        for scControl, cbText in COLOR_CONTROL_LABELS.items():
+            aaCheckBox = self._makeCheckBox(cbText, scControl,
+                                            self.colorCbControls)
+            colorLayout.addWidget(aaCheckBox)
 
-        glNormCB = qt.QCheckBox('Global Normalization')
-        glNormCB.setChecked(True)
-        glNormCB.stateChanged.connect(self.checkGNorm)
-        colorLayout.addWidget(glNormCB)
-        self.glNormCB = glNormCB
-
-        iHSVCB = qt.QCheckBox('Intensity as HSV Value')
-        iHSVCB.setChecked(False)
-        iHSVCB.stateChanged.connect(self.checkHSV)
-        colorLayout.addWidget(iHSVCB)
-        self.iHSVCB = iHSVCB
+#        glNormCB = qt.QCheckBox('Global Normalization')
+#        glNormCB.setChecked(True)
+#        glNormCB.stateChanged.connect(self.checkGlobalNorm)
+#        colorLayout.addWidget(glNormCB)
+#        self.glNormCB = glNormCB
+#
+#        iHSVCB = qt.QCheckBox('Intensity as HSV Value')
+#        iHSVCB.setChecked(False)
+#        iHSVCB.stateChanged.connect(self.checkIHSV)
+#        colorLayout.addWidget(iHSVCB)
+#        self.iHSVCB = iHSVCB
 
         self.colorPanel.setLayout(colorLayout)
 
@@ -566,7 +618,8 @@ class xrtGlow(qt.QWidget):
         self.gridPanel.setFlat(False)
         self.gridPanel.setTitle("Show coordinate grid")
         self.gridPanel.setCheckable(True)
-        self.gridPanel.toggled.connect(self.checkDrawGrid)
+        self.gridPanel.toggled.connect(partial(
+                self._setGlFlag, 'drawGrid'))
 
         scaleValidator = qt.QDoubleValidator()
         scaleValidator.setRange(0, 7, 7)
@@ -597,7 +650,8 @@ class xrtGlow(qt.QWidget):
 
         checkBox = qt.QCheckBox('Fine grid')
         checkBox.setChecked(False)
-        checkBox.stateChanged.connect(self.checkFineGrid)
+        checkBox.toggled.connect(partial(
+                self._setGlFlag, 'fineGridEnabled'))
         xyzGridLayout.addWidget(checkBox)
         self.checkBoxFineGrid = checkBox
         self.gridControls = []
@@ -605,7 +659,8 @@ class xrtGlow(qt.QWidget):
         projectionLayout = qt.QVBoxLayout()
         checkBox = qt.QCheckBox('Perspective')
         checkBox.setChecked(True)
-        checkBox.stateChanged.connect(self.checkPerspect)
+        checkBox.toggled.connect(partial(
+                self._setGlFlag, 'perspectiveEnabled'))
         self.checkBoxPerspective = checkBox
         projectionLayout.addWidget(self.checkBoxPerspective)
 
@@ -680,67 +735,20 @@ class xrtGlow(qt.QWidget):
 
     def makeScenePanel(self):
         sceneLayout = qt.QVBoxLayout()
+        self.sceneControls = OrderedDict()
+        self.sceneTextedits = OrderedDict()
+        self.sceneSliders = OrderedDict()
 
-        self.sceneControls = []
-        for iCB, (cbText, cbFunc) in enumerate(zip(
-                ['Enable antialiasing',
-                 'Use global colors',
-                 'Depth test for Lines',
-                 'Depth test for Points',
-                 'Invert scene color',
-                 'Use scalable font',
-                 'Show Virtual Screen label',
-                 'OE size match beam',
-                 'Show lost rays',
-                 'Show local axes',
-                 'Show internal beams in multi-surface OEs'],
-                [self.checkAA,
-                 self.checkGlobalColors,
-                 self.checkLineDepthTest,
-                 self.checkPointDepthTest,
-                 self.invertSceneColor,
-                 self.checkScalableFont,
-                 self.checkShowLabels,
-                 self.checkOEAutoSize,
-                 self.checkShowLost,
-                 self.checkShowLocalAxes,
-                 self.checkShowInternalBeam])):
-            aaCheckBox = qt.QCheckBox(cbText)
-            aaCheckBox.setChecked(iCB in [1])
-            aaCheckBox.stateChanged.connect(cbFunc)
-            self.sceneControls.append(aaCheckBox)
+        for scControl, cbText in SCENE_CONTROL_LABELS.items():
+            aaCheckBox = self._makeCheckBox(cbText, scControl,
+                                            self.sceneControls)
             sceneLayout.addWidget(aaCheckBox)
 
-        for it, (what, tt, defv) in enumerate(zip(
-                ['Default OE thickness, mm',
-                 'Force OE thickness, mm',
-                 'Aperture frame size, %',
-                 'Scene limit, mm'],
-                ['For OEs that do not have thickness',
-                 'For OEs that have thickness, e.g. plates or lenses',
-                 '', ''],
-                [self.customGlWidget.oeThickness,
-                 self.customGlWidget.oeThicknessForce,
-                 self.customGlWidget.slitThicknessFraction,
-                 self.customGlWidget.maxLen])):
-            tLabel = qt.QLabel(what)
-            tLabel.setToolTip(tt)
-            tEdit = qt.QLineEdit()
-            tEdit.setToolTip(tt)
-            if defv is not None:
-                tEdit.setText(str(defv))
-            tEdit.editingFinished.connect(
-                partial(self.updateThicknessFromQLE, tEdit, it))
-            if it == 3:
-                self.maxLenEditor = tEdit
-
-            layout = qt.QHBoxLayout()
-            tLabel.setMinimumWidth(145)
-            layout.addWidget(tLabel)
-            tEdit.setMaximumWidth(96)
-            layout.addWidget(tEdit)
-            layout.addStretch()
-            sceneLayout.addLayout(layout)
+        for teControl, teProps in SCENE_TEXTEDITS.items():
+            teLayout = self._makeLabeledLineEdit(
+                    teProps['label'], teProps['tooltip'], teControl,
+                    self.sceneTextedits)
+            sceneLayout.addLayout(teLayout)
 
         axLabel = qt.QLabel('Font Size')
         axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
@@ -758,6 +766,7 @@ class xrtGlow(qt.QWidget):
             labelPrec.addItem("{}mm".format(10**-order))
         labelPrec.setCurrentIndex(1)
         labelPrec.currentIndexChanged['int'].connect(self.setLabelPrec)
+        self.sceneSliders['labelCoordPrec'] = labelPrec
         aaLabel = qt.QLabel('Label Precision')
         layout = qt.QHBoxLayout()
         aaLabel.setMinimumWidth(100)
@@ -917,22 +926,6 @@ class xrtGlow(qt.QWidget):
                     continue
                 self.addElementToModel(eluuid)
 
-#            for eluuid, operations in self.customGlWidget.beamline.flowU.items():
-#                element = self.customGlWidget.beamline.oesDict[eluuid][0]
-#                elname = element.name
-#                newRow = self.createRow(elname, 1, uuid=eluuid,
-#                                        icon=self.getIcon(element))
-#                for targetuuid, targetoperations in self.customGlWidget.beamline.flowU.items():
-#                    for kwargset in targetoperations.values():
-#                        if kwargset.get('beam', 'none') == eluuid:
-#                            try:
-#                                targetName = self.customGlWidget.beamline.oesDict[targetuuid][0].name
-#                                endBeamText = "to {}".format(targetName)
-#                                newRow[0].appendRow(self.createRow(
-#                                        endBeamText, 3, uuid=targetuuid))
-#                            except:  # analysis:ignore
-#                                continue
-
     def addElementToModel(self, uuid):
         elementLine = self.customGlWidget.beamline.oesDict.get(uuid)
         if elementLine is not None:
@@ -953,7 +946,7 @@ class xrtGlow(qt.QWidget):
                         endBeamText = "to {}".format(targetName)
                         newRow[0].appendRow(self.createRow(
                                 endBeamText, 3, uuid=targetuuid))
-                    except:  # analysis:ignore
+                    except Exception:
                         continue
         self.segmentsModelRoot.appendRow(newRow)
 
@@ -1064,7 +1057,7 @@ class xrtGlow(qt.QWidget):
                 cntr = (histArray[1][topEl[0]] + histArray[1][topEl[-1]]) * 0.5
                 newLabel = u"{0:.3f}\u00b1{1:.3f}".format(cntr, hwhm)
                 self.mplAx.set_title(newLabel, fontsize=self.cAxisLabelSize)
-            except:  # analysis:ignore
+            except Exception:
                 pass
             self.mplFig.canvas.draw()
             self.mplFig.canvas.blit()
@@ -1087,77 +1080,6 @@ class xrtGlow(qt.QWidget):
             except AttributeError:
                 pass
         self.mplFig.canvas.blit()
-
-    def checkGNorm(self, state):
-        self.customGlWidget.globalNorm = True if state > 0 else False
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
-        self.customGlWidget.glDraw()
-
-    def checkHSV(self, state):
-        self.customGlWidget.iHSV = True if state > 0 else False
-        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
-        self.customGlWidget.glDraw()
-
-    def checkDrawGrid(self, state):
-        self.customGlWidget.drawGrid = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkFineGrid(self, state):
-        self.customGlWidget.fineGridEnabled = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkPerspect(self, state):
-        self.customGlWidget.perspectiveEnabled = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkAA(self, state):
-        self.customGlWidget.enableAA = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkGlobalColors(self, state):
-        self.customGlWidget.globalColors = True if state > 0 else False
-        self.customGlWidget.newColorAxis = True
-        self.customGlWidget.change_beam_colorax()
-#        self.customGlWidget.enableBlending = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkLineDepthTest(self, state):
-        self.customGlWidget.linesDepthTest = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkPointDepthTest(self, state):
-        self.customGlWidget.pointsDepthTest = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def invertSceneColor(self, state):
-        self.customGlWidget.invertColors = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkScalableFont(self, state):
-        self.customGlWidget.useScalableFont = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkShowLabels(self, state):
-        self.customGlWidget.showOeLabels = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkOEAutoSize(self, state):
-        self.customGlWidget.autoSizeOe = True if state > 0 else False
-        self.customGlWidget.needMeshUpdate.extend(
-                list(self.customGlWidget.beamline.oesDict.keys()))
-        self.customGlWidget.glDraw()
-
-    def checkShowLost(self, state):
-        self.customGlWidget.showLostRays = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkShowLocalAxes(self, state):
-        self.customGlWidget.showLocalAxes = True if state > 0 else False
-        self.customGlWidget.glDraw()
-
-    def checkShowInternalBeam(self, state):
-        self.customGlWidget.showInternalBeam = True if state > 0 else False
-        self.customGlWidget.glDraw()
 
     def setSceneParam(self, iAction, state):
         self.sceneControls[iAction].setChecked(state)
@@ -1195,13 +1117,11 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.newColorAxis = False if\
                 self.customGlWidget.selColorMin is not None else True
         else:
-            self.customGlWidget.getColor = getattr(
-                raycing, 'get_{}'.format(selAxis))
+            self.customGlWidget.colorAxis = str(selAxis)
             self.customGlWidget.newColorAxis = True
         oldColorMin = self.customGlWidget.colorMin
         oldColorMax = self.customGlWidget.colorMax
         self.customGlWidget.change_beam_colorax()
-#        self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
         self.mplAx.set_xlabel(selAxis)
         if oldColorMin == self.customGlWidget.colorMin and\
                 oldColorMax == self.customGlWidget.colorMax and not newLimits:
@@ -1261,15 +1181,14 @@ class xrtGlow(qt.QWidget):
             slider.setValue(center)
             self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
             self.customGlWidget.glDraw()
-        except:  # analysis:ignore
+        except Exception:
             pass
 
     def updateColorSel(self, slider, position):
-        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
-            except:  # analysis:ignore
+            except Exception:
                 pass
         try:
             extents = list(self.paletteWidget.span.extents)
@@ -1285,12 +1204,11 @@ class xrtGlow(qt.QWidget):
             self.paletteWidget.span.extents = newExtents
             self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
             self.customGlWidget.glDraw()
-        except:  # analysis:ignore
+        except Exception:
             pass
 
     def updateColorSelFromQLE(self, editor, icSel):
         try:
-            # editor = self.sender()
             txt = str(editor.text())
             value = float(txt)
             extents = list(self.paletteWidget.span.extents)
@@ -1326,7 +1244,7 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.populateVerticesArray(self.segmentsModelRoot)
             self.customGlWidget.glDraw()
             self.mplFig.canvas.draw()
-        except:  # analysis:ignore
+        except Exception:
             pass
 
     def projSelection(self, ind, state):
@@ -1343,7 +1261,7 @@ class xrtGlow(qt.QWidget):
         if isinstance(position, int):
             try:
                 position /= slider.scale
-            except:  # analysis:ignore
+            except Exception:
                 pass
         editor.setText("{0:.2f}".format(position))
         self.customGlWidget.rotations[iax] = np.float32(position)
@@ -1358,12 +1276,10 @@ class xrtGlow(qt.QWidget):
             editor.setText("{0:.2f}".format(value))
 
     def updateRotationFromQLE(self, editor, slider):
-        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
     def updateScale(self, slider, iax, editor, position):
-        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -1387,26 +1303,19 @@ class xrtGlow(qt.QWidget):
             editor.setText("{0:.2f}".format(value))
 
     def updateScaleFromQLE(self, editor, slider):
-        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
     def updateMaxLenFromGL(self, value):
-        self.maxLenEditor.setText("{0:.2f}".format(float(value)))
-#        if isinstance(scale, (int, float)):
-#            scale = [scale, scale, scale]
-#        for iaxis, (slider, editor) in \
-#                enumerate(zip(self.zoomSliders, self.zoomEditors)):
-#            value = np.log10(scale[iaxis])
-#            slider.setValue(value)
-#            editor.setText("{0:.2f}".format(value))
+        mlte = self.sceneTextedits.get('maxLen')
+        if mlte is not None:
+            mlte.setText("{0:.2f}".format(float(value)))
 
     def updateFontSize(self, slider, position):
-        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
-            except:  # analysis:ignore
+            except Exception:
                 pass
         self.customGlWidget.cBox.fontScale = position
         self.customGlWidget.glDraw()
@@ -1515,11 +1424,10 @@ class xrtGlow(qt.QWidget):
             pass
 
     def updateGrid(self, slider, iax, editor, position):
-        # slider = self.sender()
         if isinstance(position, int):
             try:
                 position /= slider.scale
-            except:  # analysis:ignore
+            except Exception:
                 pass
         editor.setText("{0:.2f}".format(position))
         if position != 0:
@@ -1528,7 +1436,6 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.glDraw()
 
     def updateGridFromQLE(self, editor, slider):
-        # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
         slider.setValue(value)
 
@@ -1558,7 +1465,7 @@ class xrtGlow(qt.QWidget):
         mAction.setChecked(glw.showVirtualScreen)
         mAction.triggered.connect(glw.toggleVScreen)
         menu.addAction(mAction)
-        for iAction, actCnt in enumerate(self.sceneControls):
+        for iAction, actCnt in self.sceneControls.items():
             if 'Virtual Screen' not in actCnt.text():
                 continue
             mAction = qt.QAction(self)
@@ -1600,7 +1507,7 @@ class xrtGlow(qt.QWidget):
             subMenuP.addAction(mAction)
         menu.addSeparator()
         subMenuS = menu.addMenu('Scene')
-        for iAction, actCnt in enumerate(self.sceneControls):
+        for iAction, actCnt in self.sceneControls.items():
             if 'Virtual Screen' in actCnt.text():
                 continue
             mAction = qt.QAction(self)
@@ -1649,7 +1556,6 @@ class xrtGlow(qt.QWidget):
         saveDialog = qt.QFileDialog()
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
-#        saveDialog.selectFile("oe_name.stl")
         saveDialog.setNameFilter("STL files (*.stl)")
         saveDialog.selectNameFilter("STL files (*.stl)")
         if (saveDialog.exec_()):
@@ -1665,7 +1571,7 @@ class xrtGlow(qt.QWidget):
         saveDialog = qt.QFileDialog()
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
-        saveDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
+        saveDialog.setNameFilter("Numpy files (*.npy)")
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
             extension = 'npy'
@@ -1687,87 +1593,118 @@ class xrtGlow(qt.QWidget):
 
     def saveScene(self, filename):
         params = dict()
-        for param in ['aspect', 'cameraAngle', 'projectionsVisibility',
-                      'lineOpacity', 'lineWidth', 'pointOpacity', 'pointSize',
-                      'lineProjectionOpacity', 'lineProjectionWidth',
-                      'pointProjectionOpacity', 'pointProjectionSize',
-                      'coordOffset', 'cutoffI', 'drawGrid', 'aPos', 'scaleVec',
-                      'tVec', 'cameraPos', 'rotations',
-                      'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
-                      'colorMin', 'colorMax', 'fineGridEnabled',
-                      'useScalableFont', 'invertColors', 'perspectiveEnabled',
-                      'globalNorm', 'viewPortGL', 'iHSV']:
+        for param in list(DEFAULT_SCENE_SETTINGS.keys()):
             params[param] = getattr(self.customGlWidget, param)
         params['size'] = self.geometry()
         params['sizeGL'] = self.canvasSplitter.sizes()
-        params['colorAxis'] = str(self.colorControls[0].currentText())
+
         try:
             np.save(filename, params)
-        except:  # analysis:ignore
-            print('Error saving file')
+#            with open(filename+'.json', 'w') as json_file:
+#                json.dump(params, json_file, indent=4)
+        except Exception as e:  # analysis:ignore
+            print('Error saving file', e)
             return
         print('Saved scene to {}'.format(filename))
 
     def loadScene(self, filename):
         try:
             params = np.load(filename, allow_pickle=True).item()
-        except:  # analysis:ignore
-            print('Error loading file')
+        except Exception as e:  # analysis:ignore
+            print('Error loading file', e)
             return
 
-        for param in ['aspect', 'cameraAngle', 'projectionsVisibility',
-                      'lineOpacity', 'lineWidth', 'pointOpacity', 'pointSize',
-                      'lineProjectionOpacity', 'lineProjectionWidth',
-                      'pointProjectionOpacity', 'pointProjectionSize',
-                      'coordOffset', 'cutoffI', 'drawGrid', 'aPos', 'scaleVec',
-                      'tVec', 'cameraPos', 'rotations',
-                      'visibleAxes', 'signs', 'selColorMin', 'selColorMax',
-                      'colorMin', 'colorMax', 'fineGridEnabled',
-                      'useScalableFont', 'invertColors', 'perspectiveEnabled',
-                      'globalNorm', 'viewPortGL', 'iHSV']:
-            setattr(self.customGlWidget, param, params[param])
-        self.setGeometry(params['size'])
-        self.canvasSplitter.setSizes(params['sizeGL'])
-        self.updateScaleFromGL(self.customGlWidget.scaleVec)
+        print('Loaded scene from {}'.format(filename))
+
+        self.applySceneProperties(params)
+
+    def applySceneProperties(self, params):
+        if not params:
+            return
+
+        for pName, pValue in params.items():
+            if pName in ['scaleVec', 'rotations',
+                         'tmpOffset', 'tVec', 'coordOffset']:
+                pValue = np.array(pValue)
+            setattr(self.customGlWidget, pName, pValue)
+
+        if 'size' in params:
+            self.setGeometry(params['size'])
+        if 'sizeGL' in params:
+            self.canvasSplitter.setSizes(params['sizeGL'])
+        if 'scaleVec' in params:
+            self.updateScaleFromGL(self.customGlWidget.scaleVec)
+        if 'rotations' in params:
+            self.updateRotationFromGL(self.customGlWidget.rotations)
+
         self.blockSignals(True)
-        self.updateRotationFromGL(self.customGlWidget.rotations)
-        self.updateOpacityFromGL([self.customGlWidget.lineOpacity,
-                                  self.customGlWidget.lineWidth,
-                                  self.customGlWidget.pointOpacity,
-                                  self.customGlWidget.pointSize])
-        for iax, checkBox in enumerate(self.projectionControls):
-            checkBox.setChecked(self.customGlWidget.projectionsVisibility[iax])
-        self.gridPanel.setChecked(self.customGlWidget.drawGrid)
-        self.checkBoxFineGrid.setChecked(self.customGlWidget.fineGridEnabled)
-        self.checkBoxPerspective.setChecked(
-            self.customGlWidget.perspectiveEnabled)
-        self.updateProjectionOpacityFromGL(
-            [self.customGlWidget.lineProjectionOpacity,
-             self.customGlWidget.lineProjectionWidth,
-             self.customGlWidget.pointProjectionOpacity,
-             self.customGlWidget.pointProjectionSize])
-        self.updateGridFromGL(self.customGlWidget.aPos)
-        self.sceneControls[4].setChecked(self.customGlWidget.invertColors)
-        self.sceneControls[5].setChecked(self.customGlWidget.useScalableFont)
-        self.sceneControls[4].setChecked(self.customGlWidget.invertColors)
-        self.glNormCB.setChecked(self.customGlWidget.globalNorm)
-        self.iHSVCB.setChecked(self.customGlWidget.iHSV)
+
+        if any([x in params for x in ['lineOpacity', 'lineWidth',
+                                      'pointOpacity', 'pointSize']]):
+            self.updateOpacityFromGL([self.customGlWidget.lineOpacity,
+                                      self.customGlWidget.lineWidth,
+                                      self.customGlWidget.pointOpacity,
+                                      self.customGlWidget.pointSize])
+
+        for scCtrlName, scCtrlCB in ChainMap(self.sceneControls,
+                                             self.colorCbControls).items():
+            if scCtrlName in params:
+                scCtrlCB.setChecked(params[scCtrlName])
+
+        if any([x in params for x in ['lineProjectionOpacity',
+                                      'lineProjectionWidth',
+                                      'pointProjectionOpacity',
+                                      'pointProjectionSize']]):
+            self.updateProjectionOpacityFromGL(
+                [self.customGlWidget.lineProjectionOpacity,
+                 self.customGlWidget.lineProjectionWidth,
+                 self.customGlWidget.pointProjectionOpacity,
+                 self.customGlWidget.pointProjectionSize])
+
+        if 'drawGrid' in params:
+            self.gridPanel.setChecked(self.customGlWidget.drawGrid)
+        if 'projectionsVisibility' in params:
+            for iax, checkBox in enumerate(self.projectionControls):
+                checkBox.setChecked(
+                        self.customGlWidget.projectionsVisibility[iax])
+#        if 'fineGrid' in params:
+#            self.checkBoxFineGrid.setChecked(
+#                    self.customGlWidget.fineGridEnabled)
+        if 'aPos' in params:
+            self.updateGridFromGL(self.customGlWidget.aPos)
+        if 'perspectiveEnabled' in params:
+            self.checkBoxPerspective.setChecked(
+                    self.customGlWidget.perspectiveEnabled)
+
+        for scProp in ['oeThickness', 'oeThicknessForce',
+                       'slitThicknessFraction', 'maxLen']:
+            if scProp in params:
+                scPval = params.get(scProp)
+                self.sceneTextedits[scProp].setText(
+                        "{0:.2f}".format(scPval) if scPval is not None else "")
+
+        if 'labelCoordPrec' in params:
+            self.sceneSliders['labelCoordPrec'].setCurrentIndex(
+                   params['labelCoordPrec'])
+
+#    'tiles': [25, 25]
 
         self.blockSignals(False)
         self.mplFig.canvas.draw()
-        colorCB = self.colorControls[0]
-        colorCB.setCurrentIndex(colorCB.findText(params['colorAxis']))
-        newExtents = list(self.paletteWidget.span.extents)
-        newExtents[0] = params['selColorMin']
-        newExtents[1] = params['selColorMax']
 
-        try:
-            self.paletteWidget.span.extents = newExtents
-        except:  # analysis:ignore
-            pass
-        self.updateColorSelFromMPL(0, 0)
+        if 'colorAxis' in params:
+            colorCB = self.colorControls[0]
+            colorCB.setCurrentIndex(colorCB.findText(params['colorAxis']))
 
-        print('Loaded scene from {}'.format(filename))
+#        newExtents = list(self.paletteWidget.span.extents)
+#        newExtents[0] = params['selColorMin']
+#        newExtents[1] = params['selColorMax']
+
+#        try:
+#            self.paletteWidget.span.extents = newExtents
+#        except:  # analysis:ignore
+#            pass
+#        self.updateColorSelFromMPL(0, 0)
 
     def startRecordingMovie(self):  # by F7
         if self.generator is None:
@@ -1836,8 +1773,10 @@ class xrtGlow(qt.QWidget):
         oeLine = self.customGlWidget.beamline.oesDict.get(oeName)
         if oeLine is None:
             return
+        if any([isinstance(x, str) for x in oeLine[0].center]):  # raw 'auto'
+            return
         off0 = np.array(oeLine[0].center) - np.array(
-            self.customGlWidget.tmpOffset)  # TODO: may fail on raw 'auto'
+            self.customGlWidget.tmpOffset)
         cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
         off1 = self.customGlWidget.mModLocal * cOffset
         self.customGlWidget.coordOffset = np.array(
@@ -1971,25 +1910,6 @@ class xrtGlow(qt.QWidget):
                 enumerate(zip(self.opacitySliders, self.opacityEditors, ops)):
             slider.setValue(op)
             editor.setText("{0:.2f}".format(op))
-
-    def updateThicknessFromQLE(self, editor, ia):
-        # editor = self.sender()
-        value = float(str(editor.text())) if editor.text() else None
-        if ia == 0:
-            self.customGlWidget.oeThickness = value
-        elif ia == 1:
-            self.customGlWidget.oeThicknessForce = value
-        elif ia == 2:
-            self.customGlWidget.slitThicknessFraction = value
-        elif ia == 3:
-            self.customGlWidget.maxLen = value
-        else:
-            return
-        for oeid, oeLine in self.customGlWidget.beamline.oesDict.items():
-            if is_oe(oeLine[0]) and\
-                    oeid not in self.customGlWidget.needMeshUpdate:
-                self.customGlWidget.needMeshUpdate.append(oeid)
-        self.customGlWidget.glDraw()
 
     def updateTileFromQLE(self, editor, ia):
         # editor = self.sender()
