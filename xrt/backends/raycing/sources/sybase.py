@@ -128,6 +128,7 @@ class SourceBase:
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 0]
+                bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
         self._pitch = raycing.auto_units_angle(pitch)
