@@ -523,10 +523,13 @@ class OEMesh3D():
     uniform mat4 model;
     uniform mat4 projection;
     uniform mat4 view;
+    uniform vec3 cScale;
+
+    vec3 rPos = position*cScale;
 
     void main()
     {
-        gl_Position = projection*view*model*vec4(position, 1.);
+        gl_Position = projection*view*model*vec4(rPos, 1.);
     }
     '''
 
@@ -1418,9 +1421,11 @@ class OEMesh3D():
             gl.glGetError()
             self.vao[nsIndex] = None
 
-    def generate_instance_data(self, num):
-        period = self.oe.period if hasattr(self.oe, 'period') else 40  # [mm]
-        gap = 10  # [mm]
+    def generate_instance_data(self, num, magnetShape):
+        period = getattr(self.oe, 'period',
+                         magnetShape.get('period', 40))
+        gap = magnetShape.get('gap', 10)
+        mag_dz = magnetShape.get('dz', 20)
 
         instancePositions = np.zeros((int(num*2), 3), dtype=np.float32)
         instanceColors = np.zeros((int(num*2), 3), dtype=np.float32)
@@ -1430,8 +1435,8 @@ class OEMesh3D():
             dy = n - 0.5*num if num > 1 else 0
             pos_y = period * dy
 
-            instancePositions[2*n] = (pos_x, pos_y, gap+0.5*self.mag_z_size)
-            instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*self.mag_z_size)
+            instancePositions[2*n] = (pos_x, pos_y, gap+0.5*mag_dz)
+            instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*mag_dz)
             isEven = (n % 2) == 0
             instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else\
                 (0.0, 0.0, 1.0)
@@ -1440,13 +1445,12 @@ class OEMesh3D():
 
         return instancePositions, instanceColors
 
-    def prepare_magnets(self, updateMesh=False):
+    def prepare_magnets(self, shape={}, updateMesh=False):
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
         nsIndex = 0  # to unify syntax
 
-        num_poles = int(self.oe.n*2) if hasattr(self.oe, 'n') else 1
-        self.mag_z_size = 20
+        num_poles = getattr(self.oe, 'n', 0.5) * 2
 
         if updateMesh:
             if self.vbo_positions.get(nsIndex) is not None:
@@ -1464,7 +1468,7 @@ class OEMesh3D():
                     self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
 
         instancePositions, instanceColors = self.generate_instance_data(
-                num_poles)
+                num_poles, shape)
 
         self.vbo_positions[nsIndex] = create_qt_buffer(
                 instancePositions.copy())
@@ -1573,8 +1577,8 @@ class OEMesh3D():
         shader.release()
         vao.release()
 
-    def render_magnets(self, mMod, mView, mProj, isSelected=False,
-                       shader=None):
+    def render_magnets(self, mMod, mView, mProj, shape={},
+                       isSelected=False, shader=None):
         if shader is None:
             return
         nsIndex = 0
@@ -1592,8 +1596,10 @@ class OEMesh3D():
         shader.setUniformValue("projection", mProj)
         mModScale = qt.QMatrix4x4()
         mModScale.setToIdentity()
-        mag_y = self.oe.period*0.75 if hasattr(self.oe, 'period') else 40
-        mModScale.scale(*(np.array([mag_y, mag_y, self.mag_z_size])))
+        mag_dx = shape.get('dx', 40)
+        mag_dy = getattr(self.oe, 'period', shape.get('dy', 40)) * 0.75  # TODO
+        mag_dz = shape.get('dz', 10)
+        mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
         shader.setUniformValue("scale", mModScale)
 
         mvp = mMod*mView
@@ -1626,3 +1632,178 @@ class OEMesh3D():
                 m.save(filename)
             except Exception as e:
                 print(e)
+
+    def prepare_geometric_source(self, shape={}, updateMesh=False):
+        if updateMesh:
+            return
+
+        nsIndex = 0  # to unify syntax
+        self.transMatrix[nsIndex] = self.get_loc2glo_transformation_matrix(
+            self.oe, is2ndXtal=False)
+
+        objShape = shape.get('shape', 2.0)
+
+        if objShape == 'sphere':
+            radius = shape.get('radius', 1.0)
+            stacks = shape.get('stacks', 8)
+            slices = shape.get('slices', 12)
+            vertices = []
+            indices = []
+
+            for i in range(stacks + 1):
+                theta = np.pi * i / stacks
+                sin_t = np.sin(theta)
+                cos_t = np.cos(theta)
+
+                for j in range(slices + 1):
+                    phi = 2.0 * np.pi * j / slices
+                    sin_p = np.sin(phi)
+                    cos_p = np.cos(phi)
+
+                    x = radius * sin_t * cos_p
+                    y = radius * cos_t
+                    z = radius * sin_t * sin_p
+
+                    vertices.append((x, y, z))
+
+            row = slices + 1
+            for i in range(stacks):
+                for j in range(slices):
+                    a = i * row + j
+                    b = a + 1
+                    c = (i + 1) * row + j
+                    d = c + 1
+
+                    if i != 0:
+                        indices.append((a, c, b))
+                    if i != stacks - 1:
+                        indices.append((b, c, d))
+
+            vertices = np.array(vertices, dtype=np.float32)
+            indices = np.array(indices, dtype=np.uint32).reshape(-1)
+#            normals = vertices / np.linalg.norm(vertices, axis=1,
+#                                                keepdims=True)
+
+        else:  # defaults to dodecahedron //if objShape == 'sddh':
+            spikeScale = shape.get('spikeScale', 2.0)
+            phi = (1 + np.sqrt(5)) / 2
+            invphi = 1 / phi
+
+            vertices = np.array([
+                [phi, 0, invphi],    # V0
+                [phi, 0, -invphi],    # V1
+                [-phi, 0, invphi],    # V2
+                [-phi, 0, -invphi],    # V3
+                [0, invphi, phi],    # V4
+                [0, -invphi, phi],    # V5
+                [0, invphi, -phi],    # V6
+                [0, -invphi, -phi],    # V7
+                [invphi, phi, 0],     # V8
+                [-invphi, phi, 0],     # V9
+                [invphi, -phi, 0],     # V10
+                [-invphi, -phi, 0],    # V11
+                [1, 1, 1],       # V12
+                [1, 1, -1],       # V13
+                [1, -1, 1],       # V14
+                [1, -1, -1],       # V15
+                [-1, 1, 1],       # V16
+                [-1, 1, -1],       # V17
+                [-1, -1, 1],       # V18
+                [-1, -1, -1],       # V19
+            ])
+
+            face_polygons = [
+                    [0, 12, 4, 5, 14],
+                    [2, 16, 4, 5, 18],
+                    [16, 9, 8, 12, 4],
+                    [5, 14, 10, 11, 18],
+                    [2, 3, 19, 11, 18],
+                    [14, 10, 15, 1, 0],
+                    [15, 7, 6, 13, 1],
+                    [19, 11, 10, 15, 7],
+                    [17, 9, 8, 13, 6],
+                    [19, 7, 6, 17, 3],
+                    [16, 9, 17, 3, 2],
+                    [1, 0, 12, 8, 13]]
+
+            triangles = []
+            for face in face_polygons:
+                coords = np.stack([vertices[i] for i in face])
+                center = np.average(coords, axis=0)
+                vertices = np.vstack([vertices, center * spikeScale])
+                for ivert in range(len(face)):
+                    inext = ivert+1 if ivert < len(face) - 1 else 0
+                    triangles.append([face[ivert], face[inext],
+                                      len(vertices)-1])
+
+            vertices = np.array(vertices, dtype=np.float32)
+            indices = np.array(triangles, dtype=np.uint32).reshape(-1)
+
+        self.vbo_vertices[nsIndex] = create_qt_buffer(vertices.copy())
+#        self.vbo_normals[nsIndex] = create_qt_buffer(normals.copy())
+        self.ibo[nsIndex] = create_qt_buffer(indices, isIndex=True)
+        self.arrLengths[nsIndex] = len(indices)
+
+        vao = qt.QOpenGLVertexArrayObject()
+        vao.create()
+        vao.bind()
+
+        self.vbo_vertices[nsIndex].bind()
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(0)
+        self.vbo_vertices[nsIndex].release()
+
+        self.ibo[nsIndex].bind()
+
+#        self.vbo_normals[nsIndex].bind()
+#        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+#        gl.glEnableVertexAttribArray(1)
+#        self.vbo_normals[nsIndex].release()
+
+        vao.release()
+
+        self.vao[nsIndex] = vao
+#        self.ibo[nsIndex] = None
+
+    def render_geometric_source(self, mMod, mView, mProj, scale,
+                                shape={}, oeIndex=0,
+                                isSelected=False, shader=None):
+        vao = self.vao[oeIndex]
+
+        oeOrientation = self.transMatrix[oeIndex]
+        arrLen = self.arrLengths[oeIndex]
+
+        dx = getattr(self.oe, 'dx', 0)
+        dy = getattr(self.oe, 'dy', 0)
+        dz = getattr(self.oe, 'dz', 0)
+
+        maxScale = np.max([dx, dy, dz]) * 2
+        if maxScale == 0:
+            maxScale = 0.1
+        compScale = 1./scale * maxScale * np.max(scale)
+
+        shader.bind()
+        vao.bind()
+
+        faceColor = shape.get('faceColor', [0.1, 0.9, 0.9, 1])
+        if isSelected:
+            faceColor = [0.7, 0.7, 0.1, 1]
+
+        edgeColor = shape.get('edgeColor', [1, 0, 1, 1])
+
+        shader.setUniformValue("model", mMod*oeOrientation)
+        shader.setUniformValue("view", mView)
+        shader.setUniformValue("projection", mProj)
+        shader.setUniformValue("cScale", qt.QVector3D(*compScale.tolist()))
+        shader.setUniformValue("cColor", qt.QVector4D(*faceColor))
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
+                          gl.GL_UNSIGNED_INT, [])
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+        shader.setUniformValue("cColor", qt.QVector4D(*edgeColor))
+        gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
+                          gl.GL_UNSIGNED_INT, [])
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+
+        shader.release()
+        vao.release()

@@ -11,7 +11,7 @@ from functools import partial
 from multiprocessing import Process, Queue
 from collections import OrderedDict, deque
 from matplotlib.colors import hsv_to_rgb
- 
+
 from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,
                           scr_m, DEFAULT_SCENE_SETTINGS)
 from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
@@ -613,6 +613,21 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            print('\nshaderMag: Done!')
         self.shaderMag = shaderMag
         gl.glGetError()
+        shaderGeo = qt.QOpenGLShaderProgram()
+        shaderGeo.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, OEMesh3D.vertex_contour)
+        shaderGeo.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, OEMesh3D.fragment_contour)
+        gl.glGetError()
+        if not shaderGeo.link():
+            print("Linking Error", str(shaderGeo.log()))
+            print('shaderMag: Failed to link dummy renderer shader!')
+        else:
+            pass
+#            print('\nshaderMag: Done!')
+        self.shaderGeo = shaderGeo
+        gl.glGetError()
+
 
     def init_coord_grid(self):
         self.cBox = CoordinateBox(self)
@@ -1323,7 +1338,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:  # must be the source
             try:
                 mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
-                mesh3D.prepare_magnets()
+                if isinstance(oeToPlot, raycing.sources.GeometricSource):
+                    mesh3D.prepare_geometric_source(shape=self.geomSrcParam)
+                else:
+                    mesh3D.prepare_magnets(shape=self.magnetShape)
                 mesh3D.isEnabled = True
             except:
                 mesh3D.isEnabled = False
@@ -1349,9 +1367,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.glDraw()
 
     def update_oe_surface(self, oeuuid):
-        if is_source(self.meshDict[oeuuid].oe):
+        oeToPlot = self.meshDict[oeuuid].oe
+        if is_source(oeToPlot):
             try:
-                self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
+                if isinstance(oeToPlot, raycing.sources.GeometricSource):
+                    self.meshDict[oeuuid].prepare_geometric_source(
+                            updateMesh=True)
+                else:
+                    self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
             except Exception as e:
                 print(e)
                 print("Update failed, disabling mesh for", oeuuid)
@@ -2172,9 +2195,19 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
                         try:
-                            mesh3D.render_magnets(
-                                mMMLoc, self.mView, self.mProj,
-                                isSelected=isSelected, shader=self.shaderMag)
+                            if isinstance(oeToPlot, raycing.sources.GeometricSource):
+                                mesh3D.render_geometric_source(
+                                    mMMLoc, self.mView, self.mProj,
+                                    scale = self.scaleVec,
+                                    shape=self.geomSrcParam,
+                                    isSelected=isSelected,
+                                    shader=self.shaderGeo)
+                            else:
+                                mesh3D.render_magnets(
+                                    mMMLoc, self.mView, self.mProj,
+                                    shape=self.magnetShape,
+                                    isSelected=isSelected,
+                                    shader=self.shaderMag)
                         except Exception as e:
                             print(e)
 
