@@ -557,7 +557,8 @@ class CoordinateBox():
 
         self.shader.bind()
         self.shader.setUniformValue("pvm", projection*view*model)
-        self.shader.setUniformValue("lineColor", self.parent.lineColor)
+        self.shader.setUniformValue("lineColor",
+                                    qt.QVector3D(*self.parent.lineColor))
 
         self.vaoFrame.bind()
         self.shader.setUniformValue("lineOpacity", 0.75)
@@ -619,9 +620,10 @@ class CoordinateBox():
                                                  self.precisionLabels[iAx])):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
                     tickPos = (vpMat*qt.QVector4D(*tick, 1)).toVector3DAffine()
-                    self.render_text(tickPos, valueStr, alignment=alignment,
-                                     scale=0.04*self.fontScale,
-                                     textColor=self.parent.lineColor)
+                    self.render_text(
+                            tickPos, valueStr, alignment=alignment,
+                            scale=0.04*self.fontScale,
+                            textColor=qt.QVector3D(*self.parent.lineColor))
         self.vaoText.release()
         self.textShader.release()
 
