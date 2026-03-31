@@ -51,6 +51,19 @@ DEFAULT_SCENE_SETTINGS = {
     'cameraAngle': 60.,
     'cameraDistance': 3.5,
 
+    'sceneColors': {
+        'normalColors': {
+                'bgColor': [0.0, 0.0, 0.0],
+                'lineColor': [1.0, 1.0, 1.0],
+                'textColor': [1.0, 1.0, 0.0]
+                },
+        'invertedColors': {
+                'bgColor': [1.0, 1.0, 1.0],
+                'lineColor': [0.0, 0.0, 0.0],
+                'textColor': [0.0, 0.0, 1.0]
+                }
+        },
+
     'scaleVec': [1e3, 1e1, 1e3],
     'rotations': [0., 0.],
 
@@ -101,6 +114,7 @@ DEFAULT_SCENE_SETTINGS = {
     'fontSize': 5,
     'labelCoordPrec': 1,
     'tiles': [25, 25],
+
     'geomSrcParam': {'shape': 'sddh',  # or 'sphere'
                      'radius': 1,
                      'stacks': 8,

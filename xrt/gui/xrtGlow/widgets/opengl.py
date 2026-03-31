@@ -315,6 +315,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         oeid not in self.needMeshUpdate:
                     self.needMeshUpdate.append(oeid)
 
+    @property
+    def invertColors(self):
+        return self._invertColors
+
+    @invertColors.setter
+    def invertColors(self, invertColors):
+        self._invertColors = invertColors
+        self.set_scene_colors()
+
     async def update_beamline_async(self, oeid, argName, argValue):
         """Update from EPICS interface """
         self.update_beamline(oeid, {argName: argValue}, sender="epics")
@@ -1578,17 +1587,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                  useCaption=False):
         pass
 
-    def setSceneColors(self):
-        if self.invertColors:
-            self.lineColor = qt.QVector3D(0.0, 0.0, 0.0)
-            self.bgColor = [1.0, 1.0, 1.0, 1.0]
-#            self.bgColor = [1.0, 1.0, 1.0, 1.0]
-            self.textColor = qt.QVector3D(0.0, 0.0, 1.0)
-        else:
-            self.lineColor = qt.QVector3D(1.0, 1.0, 1.0)
-#            self.bgColor = [0.1, 0.1, 0.2, 1.0]
-            self.bgColor = [0.0, 0.0, 0.0, 1.0]
-            self.textColor = qt.QVector3D(1.0, 1.0, 0.0)
+    def set_scene_colors(self):
+        colorTable = 'invertedColors' if self.invertColors else 'normalColors'
+        if hasattr(self, 'sceneColors'):
+            for colorKey, colorValue in self.sceneColors[colorTable].items():
+                setattr(self, colorKey, colorValue)
 
     def quatMult(self, qf, qt):
         return [qf[0]*qt[0]-qf[1]*qt[1]-qf[2]*qt[2]-qf[3]*qt[3],
@@ -2055,8 +2058,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             return item
 
         if True:
-            self.setSceneColors()
-            gl.glClearColor(*self.bgColor)
+            gl.glClearColor(*self.bgColor, 1.0)
 
             gl.glClear(gl.GL_COLOR_BUFFER_BIT |
                        gl.GL_DEPTH_BUFFER_BIT |
@@ -2416,7 +2418,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     endPos = self.cBox.render_text(
                         labelPos, oeLabel, alignment=alignment,
                         scale=0.04*self.cBox.fontScale,
-                        textColor=self.textColor)
+                        textColor=qt.QVector3D(*self.textColor))
                     labelLinesN = np.vstack(
                         (np.array(lineHint),
                          np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
@@ -2435,7 +2437,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 self.cBox.shader.bind()
                 self.cBox.shader.setUniformValue("lineOpacity", 0.85)
-                self.cBox.shader.setUniformValue("lineColor", self.textColor)
+                self.cBox.shader.setUniformValue("lineColor",
+                                                 qt.QVector3D(*self.textColor))
                 self.labelvao.bind()
                 self.cBox.shader.setUniformValue(
                         "pvm", qt.QMatrix4x4())
