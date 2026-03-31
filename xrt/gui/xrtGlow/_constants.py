@@ -100,7 +100,22 @@ DEFAULT_SCENE_SETTINGS = {
 
     'fontSize': 5,
     'labelCoordPrec': 1,
-    'tiles': [25, 25]
+    'tiles': [25, 25],
+    'geomSrcParam': {'shape': 'sddh',  # or 'sphere'
+                     'radius': 1,
+                     'stacks': 8,
+                     'slices': 12,
+                     'spikeScale': 2,
+                     'faceColor': [0.1, 0.9, 0.9, 1],
+                     'edgeColor': [1, 0, 1, 1]
+                     },
+
+    'magnetShape': {'gap': 10,
+                    'period': 40,
+                    'dx': 40,
+                    'dy': 40,
+                    'dz': 10
+                    }
     }
 
 COLOR_CONTROL_LABELS = {
