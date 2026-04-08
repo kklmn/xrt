@@ -1419,7 +1419,9 @@ class xrtGlow(qt.QWidget):
             menu.addAction('View Properties',
                            partial(self.runElementViewer,
                                    str(selectedItem.data(qt.Qt.UserRole))))
-
+            menu.addAction('Export OE shape to STL',
+                           partial(self.exportOeShape,
+                                   str(selectedItem.data(qt.Qt.UserRole))))
             menu.exec_(self.oeTree.viewport().mapToGlobal(position))
         else:
             pass
@@ -1534,6 +1536,8 @@ class xrtGlow(qt.QWidget):
                            partial(self.toGlobal, oeuuid))
             menu.addAction('View Properties',
                            partial(self.runElementViewer, oeuuid))
+            menu.addAction('Export OE shape to STL',
+                           partial(self.exportOeShape, oeuuid))
         menu.addSeparator()
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
@@ -1566,7 +1570,7 @@ class xrtGlow(qt.QWidget):
                 filename = "{0}.{1}".format(filename, extension)
             mesh = self.customGlWidget.meshDict.get(oeid)
             if mesh is not None:
-                mesh.export_to_stl(filename)
+                mesh.export_stl(filename)
 
     def saveSceneDialog(self):
         saveDialog = qt.QFileDialog()
