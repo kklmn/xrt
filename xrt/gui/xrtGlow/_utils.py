@@ -4,18 +4,20 @@ Created on Tue Jan 27 13:17:55 2026
 
 """
 
+import numpy as np
+from matplotlib.colors import hsv_to_rgb
+
+from ..commons import qt
+
+from ...backends.raycing import sources as rsources
+from ...backends.raycing import screens as rscreens
+from ...backends.raycing import oes as roes
+from ...backends.raycing import apertures as rapertures
+
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-import numpy as np  # analysis:ignore
-from matplotlib.colors import hsv_to_rgb  # analysis:ignore
-
-from ..commons import qt  # analysis:ignore
-
-from ...backends.raycing import sources as rsources  # analysis:ignore
-from ...backends.raycing import screens as rscreens  # analysis:ignore
-from ...backends.raycing import oes as roes  # analysis:ignore
-from ...backends.raycing import apertures as rapertures  # analysis:ignore
+BUF_RESERVE = 1.5
 
 
 def create_qt_buffer(data, isIndex=False,
@@ -28,7 +30,8 @@ def create_qt_buffer(data, isIndex=False,
     buffer.setUsagePattern(usage_hint)
     buffer.bind()
     data = np.array(data, np.uint32 if isIndex else np.float32)
-    buffer.allocate(data.tobytes(), data.nbytes)
+    buffer.allocate(int(data.nbytes*BUF_RESERVE))
+    buffer.write(0, data, data.nbytes)
     buffer.release()
 
     return buffer
@@ -37,6 +40,10 @@ def create_qt_buffer(data, isIndex=False,
 def update_qt_buffer(buffer, data, isIndex=False):
     buffer.bind()
     data = np.array(data, np.uint32 if isIndex else np.float32)
+    dataSize = data.nbytes
+    allocatedSize = buffer.size()
+    if dataSize > allocatedSize:
+        buffer.allocate(int(dataSize*BUF_RESERVE))
     buffer.write(0, data, data.nbytes)
     buffer.release()
 
