@@ -24,6 +24,7 @@ from ...commons import gl
 from ....backends import raycing
 from ....backends.raycing import oes as roes
 from ....backends.raycing import materials as rmats
+from ....backends.raycing.sources import Beam
 
 try:
     from stl import mesh
@@ -784,110 +785,31 @@ class OEMesh3D():
 
     @staticmethod
     def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
-        if is_oe(oe):
-            dx, dy, dz = 0, 0, 0
-            extraAnglesSign = 1.  # only for pitch and yaw
 
-            if is_dcm(oe):
-                if is2ndXtal:
-                    try:
-                        pitch = -oe.pitch - oe.bragg + oe.cryst2pitch +\
-                            oe.cryst2finePitch
-                    except (ValueError, TypeError):
-                        pitch = 0
-                        print("Unresolved value in", oe.name, "pitch")
-                    roll = oe.roll + oe.cryst2roll + oe.positionRoll
-                    yaw = -oe.yaw
-                    dx = -oe.dx
-                    dy = oe.cryst2longTransl
-                    dz = -oe.cryst2perpTransl
-                    extraAnglesSign = -1.
+        if hasattr(oe, 'local_to_global'):  # all OEs except Sources
+            lb = Beam(nrays=4)
+            lb.x[1] = lb.y[2] = lb.z[3] = 1.
+
+            try:
+                if is_screen(oe):
+                    gb = Beam(copyFrom=lb)
+                    gb.x, gb.y, gb.z = oe.local_to_global(lb.x, lb.y, lb.z)
                 else:
-                    try:
-                        pitch = oe.pitch + oe.bragg
-                    except (ValueError, TypeError):
-                        pitch = 0
-                        print("Unresolved value in", oe.name, "pitch")
-                    roll = oe.roll + oe.positionRoll + oe.cryst1roll
-                    yaw = oe.yaw
-                    dx = oe.dx
-            else:
-                pitch = oe.pitch
-                roll = oe.roll + oe.positionRoll
-                yaw = oe.yaw
+                    gb = oe.local_to_global(lb, returnBeam=True,
+                                            is2ndXtal=is2ndXtal)
+            except Exception as e:
+                print(e)
+                return qt.QMatrix4x4()
+            tr = np.array([gb.x[0], gb.y[0], gb.z[0]])
 
-            rotAx = {'x': pitch,
-                     'y': roll,
-                     'z': yaw}
-            extraRotAx = {'x': extraAnglesSign*oe.extraPitch,
-                          'y': oe.extraRoll,
-                          'z': extraAnglesSign*oe.extraYaw}
-
-            rotSeq = (oe.rotationSequence[slice(1, None, 2)])[::-1]
-            extraRotSeq = (oe.extraRotationSequence[slice(1, None, 2)])[::-1]
-
-            try:
-                rotation = (scprot.from_euler(
-                        rotSeq, [rotAx[i] for i in rotSeq])).as_quat()
-                extraRot = (scprot.from_euler(
-                        extraRotSeq,
-                        [extraRotAx[i] for i in extraRotSeq])).as_quat()
-            except ValueError:
-                rotation = (scprot.from_euler(
-                        rotSeq, [0, 0, 0])).as_quat()
-                extraRot = (scprot.from_euler(
-                        extraRotSeq, [0, 0, 0])).as_quat()
-                print("Unresolved values in", oe.name, "rotation sequence:",
-                      [rotAx[i] for i in rotSeq])
-            rotation = [rotation[-1], rotation[0], rotation[1], rotation[2]]
-            extraRot = [extraRot[-1], extraRot[0], extraRot[1], extraRot[2]]
-
-            # 1. Only for DCM - translate to 2nd crystal position
-            m2ndXtalPos = qt.QMatrix4x4()
-            m2ndXtalPos.translate(dx, dy, dz)
-
-            # 2. Apply extra rotation
-            mExtraRot = qt.QMatrix4x4()
-            mExtraRot.rotate(qt.QQuaternion(*extraRot))
-
-            # 3. Apply rotation
-            mRotation = qt.QMatrix4x4()
-            mRotation.rotate(qt.QQuaternion(*rotation))
-
-            # 4. Only for DCM - flip 2nd crystal
-            m2ndXtalRot = qt.QMatrix4x4()
-            if is_dcm(oe):
-                if is2ndXtal:
-                    m2ndXtalRot.rotate(180, 0, 1, 0)
-
-            # 5. Move to position in global coordinates
-            mTranslation = qt.QMatrix4x4()
-            try:
-                mTranslation.translate(*oe.center)
-            except TypeError:  # Unresolved 'auto' in the center list
-                print("Unresolved values in", oe.name, "center:", oe.center)
-            orientation = mTranslation * m2ndXtalRot * mRotation *\
-                mExtraRot * m2ndXtalPos
-        elif is_screen(oe) or is_aperture(oe):  # Screens, Apertures
-            bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
-#            bStart = np.column_stack(([1, 0, 0], [0, 1, 0], [0, 0, 1]))
-#            bStart = np.column_stack(([1, 0, 0], [0, 0, -1], [0, 1, 0]))
-            bEnd = np.column_stack((oe.x / np.linalg.norm(oe.x),
-                                    oe.y / np.linalg.norm(oe.y),
-                                    oe.z / np.linalg.norm(oe.z)))
-
-            rotationQ = basis_rotation_q(bStart, bEnd)
-
-            mRotation = qt.QMatrix4x4()
-            mRotation.rotate(qt.QQuaternion(*rotationQ))
-
-            posMatr = qt.QMatrix4x4()
-            try:
-                posMatr.translate(*oe.center)
-            except TypeError:  # Unresolved 'auto' in the center list
-                print("Unresolved values in", oe.name, "center:", oe.center)
-            orientation = posMatr*mRotation
-        else:  # source
+            rot = []
+            for i in range(3):
+                rot.append(np.array([gb.x[i+1], gb.y[i+1], gb.z[i+1]]) - tr)
+            orientation = qt.QMatrix4x4(rot[0][0], rot[1][0], rot[2][0], tr[0],
+                                        rot[0][1], rot[1][1], rot[2][1], tr[1],
+                                        rot[0][2], rot[1][2], rot[2][2], tr[2],
+                                        0.0, 0.0, 0.0, 1.0)
+        else:
             posMatr = qt.QMatrix4x4()
             posMatr.translate(*oe.center)
             orientation = posMatr
@@ -928,6 +850,19 @@ class OEMesh3D():
 
             return thickness
 
+        def screen_z(x, y):
+            R = getattr(self.oe, 'R', None)
+            z = np.zeros_like(x) if R is None else np.sqrt(R**2 - x**2 - y**2)
+            return z
+
+        def screen_n(x, y):
+            R = getattr(self.oe, 'R', None)
+            if R is None or R == 0:
+                return [0, 0, 1]
+            else:
+                z = np.sqrt(R**2 - x**2 - y**2)
+                return x/R, y/R, z/R
+
         gl.glGetError()
 
         is2ndXtal = False
@@ -948,7 +883,6 @@ class OEMesh3D():
 
         if hasattr(self.oe, 'stl_mesh') and hasattr(self.oe, 'points'):
             self.isStl = True
-
             self.vbo_vertices[nsIndex] = create_qt_buffer(
                     self.oe.points.copy())
             self.vbo_normals[nsIndex] = create_qt_buffer(
@@ -985,10 +919,9 @@ class OEMesh3D():
         self.bBox[:, 1] = -1e10
 
         # TODO: Consider plates
-        oeShape = self.oe.shape if hasattr(self.oe, 'shape') else 'rect'
-        oeDx = self.oe.dx if hasattr(self.oe, 'dx') else 0
-        isOeParametric = self.oe.isParametric if hasattr(
-                self.oe, 'isParametric') else False
+        oeShape = getattr(self.oe, 'shape', 'rect')
+        oeDx = getattr(self.oe, 'dx', 0)
+        isOeParametric = getattr(self.oe, 'isParametric', False)
 
         yDim = 1
         if isScreen:
@@ -1011,6 +944,13 @@ class OEMesh3D():
                     self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
             else:
                 yLimits = [-10, 10]
+
+            if hasattr(self.oe, 'R'):
+                xLimits = [max(-self.oe.R, min(xLimits)),
+                           min(self.oe.R, max(xLimits))]
+                yLimits = [max(-self.oe.R, min(yLimits)),
+                           min(self.oe.R, max(yLimits))]
+
             yDim = 2
         elif isAperture:
             renderStyle = getattr(self.oe, 'renderStyle', 'mask')
@@ -1064,14 +1004,14 @@ class OEMesh3D():
             if autoSize and hasattr(self.oe, 'footprint') and len(
                     self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
-            elif self.oe.limOptX is not None and not\
+            elif getattr(self.oe, 'limOptX', None) is not None and not\
                     np.all(np.abs(self.oe.limOptX) == raycing.maxHalfSizeOfOE):
                 xLimits = list(self.oe.limOptX)
         if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
             if autoSize and hasattr(self.oe, 'footprint') and len(
                     self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
-            elif self.oe.limOptY is not None and not\
+            elif getattr(self.oe, 'limOptY', None) is not None and not\
                     np.all(np.abs(self.oe.limOptY) == raycing.maxHalfSizeOfOE):
                 yLimits = list(self.oe.limOptY)
 
@@ -1119,8 +1059,8 @@ class OEMesh3D():
             zExt = '1' if hasattr(self.oe, 'local_z1') else ''
 
         if isScreen:
-            local_n = lambda x, y: [0, 0, 1]
-            local_z = lambda x, y: np.zeros_like(x)
+            local_n = screen_n
+            local_z =  screen_z
         elif isAperture:
             apThick = 0.1
             local_n = lambda x, y: [0, 0, 1]
@@ -1174,9 +1114,12 @@ class OEMesh3D():
 
         if not isPlate:
             bottomPoints = points.copy()
-            bottomPoints[:, 2] = -thickness
-            bottomNormals = np.zeros((len(points), 3))
-            bottomNormals[:, 2] = -1
+            if isScreen:
+                bottomNormals = -1 * nv.copy()
+            if not isScreen:
+                bottomNormals = np.zeros((len(points), 3))
+                bottomPoints[:, 2] = -thickness
+                bottomNormals[:, 2] = -1
 
         # side: x, y
         zs = []
@@ -1292,6 +1235,14 @@ class OEMesh3D():
                                             indArrOffset,
                                             triFB.simplices.flatten() +
                                             indArrOffset+len(tF)))
+
+        if isScreen:
+            if hasattr(self.oe, 'R'):
+                allSurfaces[:, [0, 1, 2]] = allSurfaces[:, [2, 1, 0]]
+#                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
+            else:
+                allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+#                allNormals[:, [1, 2]] = allNormals[:, [2 ,1]]
 
         surfmesh['points'] = allSurfaces.copy()
         surfmesh['normals'] = allNormals.copy()
@@ -1521,8 +1472,17 @@ class OEMesh3D():
             surfOpacity = 0.75
 #        elif is_aperture(self.oe):
 #            xLimits, yLimits = self.xLimits, self.yLimits
+
+        rotOffsets = qt.QMatrix4x4()
+        if is_screen(self.oe):
+            phiOffset = getattr(self.oe, 'phiOffset', 0)
+            thetaOffset = getattr(self.oe, 'thetaOffset', 0)
+            rotOffsets.rotate(np.degrees(phiOffset), 0, 0, 1)
+            rotOffsets.rotate(-np.degrees(thetaOffset), 0, 1, 0)
+
         oeOrientation = self.transMatrix[0] if is_aperture(self.oe) else\
-            self.transMatrix[oeIndex]
+            self.transMatrix[oeIndex]*rotOffsets
+
         arrLen = self.arrLengths[oeIndex]
 
         shader.bind()
@@ -1587,7 +1547,14 @@ class OEMesh3D():
         if not self.vao:
             return
 
-        oeOrientation = self.transMatrix[0]
+        rPitch = getattr(self.oe, 'pitch', 0)
+        rYaw = getattr(self.oe, 'yaw', 0)
+
+        rotOffsets = qt.QMatrix4x4()
+        rotOffsets.rotate(np.degrees(rYaw), 0, 0, 1)
+        rotOffsets.rotate(-np.degrees(rPitch), 1, 0, 0)
+
+        oeOrientation = self.transMatrix[0] * rotOffsets
 
         self.vao[nsIndex].bind()
 
@@ -1617,7 +1584,7 @@ class OEMesh3D():
         shader.setUniformValue("frontMaterial.specular", specular_in)
         shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
-        gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, self.num_poles*2)
+        gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, int(self.num_poles*2))
         self.vao[nsIndex].release()
         shader.release()
 
@@ -1647,26 +1614,29 @@ class OEMesh3D():
             radius = shape.get('radius', 1.0)
             stacks = shape.get('stacks', 8)
             slices = shape.get('slices', 12)
+            thetaMax = shape.get('thetaMax', np.pi)
             vertices = []
             indices = []
 
             for i in range(stacks + 1):
-                theta = np.pi * i / stacks
-                sin_t = np.sin(theta)
-                cos_t = np.cos(theta)
+                theta = thetaMax * i / stacks
+                sinTheta = np.sin(theta)
+                cosTheta = np.cos(theta)
 
                 for j in range(slices + 1):
                     phi = 2.0 * np.pi * j / slices
-                    sin_p = np.sin(phi)
-                    cos_p = np.cos(phi)
+                    sinPhi = np.sin(phi)
+                    cosPhi = np.cos(phi)
 
-                    x = radius * sin_t * cos_p
-                    y = radius * cos_t
-                    z = radius * sin_t * sin_p
+                    x = radius * sinTheta * cosPhi
+                    y = radius * cosTheta
+                    z = radius * sinTheta * sinPhi
 
                     vertices.append((x, y, z))
 
             row = slices + 1
+            isBottomPole = np.isclose(thetaMax, np.pi)
+
             for i in range(stacks):
                 for j in range(slices):
                     a = i * row + j
@@ -1676,7 +1646,7 @@ class OEMesh3D():
 
                     if i != 0:
                         indices.append((a, c, b))
-                    if i != stacks - 1:
+                    if not (isBottomPole and i == stacks - 1):
                         indices.append((b, c, d))
 
             vertices = np.array(vertices, dtype=np.float32)

@@ -710,7 +710,8 @@ class RoundAperture(object):
 
             return lo
 
-    def local_to_global(self, glo, **kwargs):
+    def local_to_global(self, glo, **kwargs):  # TODO: support orientation
+        """ """
         raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, rw=None):
@@ -1123,7 +1124,7 @@ class PolygonalAperture(object):
 
             return lo
 
-    def local_to_global(self, glo, **kwargs):
+    def local_to_global(self, glo, **kwargs):  # TODO: support orientation
         raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays):

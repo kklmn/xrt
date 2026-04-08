@@ -39,7 +39,7 @@ shininess['Screen'] = 80.
 ambient['selected'] = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.)
 
 scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, -1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
-# scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, 1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
+#scr_m = qt.QMatrix4x4(0, 0, 1, 0,  1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 1)
 # scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1)
 
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
@@ -115,11 +115,13 @@ DEFAULT_SCENE_SETTINGS = {
     'labelCoordPrec': 1,
     'tiles': [25, 25],
 
-    'geomSrcParam': {'shape': 'sddh',  # or 'sphere'
-                     'radius': 1,
+    'geomSrcParam': {
+#                     'shape': 'sddh',  # or 'sphere'
+                     'shape': 'sphere',
+                     'radius': 2,
                      'stacks': 8,
                      'slices': 12,
-                     'spikeScale': 2,
+                     'spikeScale': 5,
                      'faceColor': [0.1, 0.9, 0.9, 1],
                      'edgeColor': [1, 0, 1, 1]
                      },
