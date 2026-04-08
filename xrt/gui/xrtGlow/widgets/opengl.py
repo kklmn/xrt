@@ -851,7 +851,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if beam is None:
                 return
 
-        data = np.dstack((beam.x, beam.y, beam.z)).copy()
+        data = np.column_stack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag).copy()
 #        dataColor = self.getColor(beam).copy()
         state = np.where((
@@ -1800,7 +1800,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.parent.updateMaxLenFromGL(self.maxLen)
         self.newColorAxis = False
         self.labelLines = np.zeros((len(self.beamline.oesDict)*4, 3))
-        self.llVBO = create_qt_buffer(self.labelLines)
+        self.llVBO = create_qt_buffer(self.labelLines)  # TODO
         self.labelvao = qt.QOpenGLVertexArrayObject()
         self.labelvao.create()
         self.labelvao.bind()
