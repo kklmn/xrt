@@ -1177,7 +1177,7 @@ class OE(OEMainMethods):
     def local_to_global(self, lb, returnBeam=False, **kwargs):
         dx, dy, dz = 0, 0, 0
         extraAnglesSign = 1.  # only for pitch and yaw
-        # if isinstance(self, DCM):
+
         if hasattr(self, 'cryst2pitch'):
             is2ndXtal = kwargs.get('is2ndXtal', False)
             if is2ndXtal:
