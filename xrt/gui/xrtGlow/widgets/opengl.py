@@ -1071,23 +1071,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         if self.renderingMode == 'dynamic':
             oeuuid = beamTag[0]
-            oe = self.beamline.oesDict[oeuuid][0]
             oeIndex = int(beamTag[1] == 'beamLocal2')
             oeOrientation = self.meshDict[oeuuid].transMatrix[oeIndex]
             if 'Global' not in beamTag[1]:
                 modelStart *= oeOrientation
-            if is_screen(oe) or is_aperture(oe):
-                modelStart *= scr_m
 
             if target is not None:
                 enduuid = target[0]
-                targetOe = self.beamline.oesDict[enduuid][0]
                 modelEnd = copy.deepcopy(model)
                 oeIndex = int(target[1] == 'beamLocal2')
                 oeOrientation = self.meshDict[enduuid].transMatrix[oeIndex]
                 modelEnd *= oeOrientation
-                if is_screen(targetOe) or is_aperture(targetOe):
-                    modelEnd *= scr_m
 
         shader.setUniformValue("modelStart", modelStart)
         if target is not None:
@@ -1329,7 +1323,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     mesh3D.prepare_surface_mesh(nsIndex=int(is2ndXtal),
                                                 autoSize=self.autoSizeOe)
                     mesh3D.isEnabled = True
-                except:
+                except Exception:
                     mesh3D.isEnabled = False
                 assign_stencil_num(mesh3D)
 
@@ -1598,207 +1592,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 qf[0]*qt[1]+qf[1]*qt[0]+qf[2]*qt[3]-qf[3]*qt[2],
                 qf[0]*qt[2]-qf[1]*qt[3]+qf[2]*qt[0]+qf[3]*qt[1],
                 qf[0]*qt[3]+qf[1]*qt[2]-qf[2]*qt[1]+qf[3]*qt[0]]
-
-    def plotScreen(self, oe, dimensions=None, frameColor=None, plotFWHM=False):
-        scAbsZ = np.linalg.norm(oe.z * self.scaleVec)
-        scAbsX = np.linalg.norm(oe.x * self.scaleVec)
-        if dimensions is not None:
-            vScrHW = dimensions[0]
-            vScrHH = dimensions[1]
-        else:
-            vScrHW = self.vScreenSize
-            vScrHH = self.vScreenSize
-
-        dX = vScrHW * np.array(oe.x) * self.maxLen / scAbsX
-        dZ = vScrHH * np.array(oe.z) * self.maxLen / scAbsZ
-
-        vScreenBody = np.zeros((4, 3))
-        vScreenBody[0, :] = vScreenBody[1, :] = oe.center - dX
-        vScreenBody[2, :] = vScreenBody[3, :] = oe.center + dX
-        vScreenBody[0, :] -= dZ
-        vScreenBody[1, :] += dZ
-        vScreenBody[2, :] += dZ
-        vScreenBody[3, :] -= dZ
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-        gl.glBegin(gl.GL_QUADS)
-
-#        if self.invertColors:
-#            gl.glColor4f(0.0, 0.0, 0.0, 0.2)
-#        else:
-#            gl.glColor4f(1.0, 1.0, 1.0, 0.2)
-
-        for i in range(4):
-            gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
-                                             self.coordOffset))
-        gl.glEnd()
-
-        if frameColor is not None:
-            gl.glEnable(gl.GL_LINE_SMOOTH)
-            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-            gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
-            if self.virtScreen is not None:
-                self.virtScreen.frame = vScreenBody
-            gl.glDisable(gl.GL_LIGHTING)
-            gl.glDisable(gl.GL_NORMALIZE)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            gl.glLineWidth(2)
-            gl.glBegin(gl.GL_QUADS)
-            gl.glColor4f(*frameColor)
-            for i in range(4):
-                gl.glVertex3f(*self.modelToWorld(vScreenBody[i, :] -
-                                                 self.coordOffset))
-            gl.glEnd()
-            if not self.enableAA:
-                gl.glDisable(gl.GL_LINE_SMOOTH)
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-            gl.glEnable(gl.GL_LIGHTING)
-            gl.glEnable(gl.GL_NORMALIZE)
-
-        if plotFWHM:
-            gl.glLineWidth(1)
-            gl.glDisable(gl.GL_LINE_SMOOTH)
-
-            gl.glDisable(gl.GL_LIGHTING)
-            gl.glDisable(gl.GL_NORMALIZE)
-
-            if self.invertColors:
-                gl.glColor4f(0.0, 0.0, 0.0, 1.)
-            else:
-                gl.glColor4f(1.0, 1.0, 1.0, 1.)
-            startVec = np.array([0, 1, 0])
-            destVec = np.array(oe.y / self.scaleVec)
-            rotVec = np.cross(startVec, destVec)
-            rotAngle = np.degrees(np.arccos(
-                np.dot(startVec, destVec) /
-                np.linalg.norm(startVec) / np.linalg.norm(destVec)))
-            rotVecGL = np.float32(np.hstack((rotAngle, rotVec)))
-
-            pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
-            pModel = gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX)
-            pProjection = gl.glGetDoublev(gl.GL_PROJECTION_MATRIX)
-            scr = np.zeros((3, 3))
-            for iAx in range(3):
-                scr[iAx] = np.array(gl.gluProject(
-                    *(self.modelToWorld(vScreenBody[iAx] - self.coordOffset)),
-                    model=pModel, proj=pProjection, view=pView))
-
-            vFlip = 2. if scr[0, 1] > scr[1, 1] else 0.
-            hFlip = 2. if scr[1, 0] > scr[2, 0] else 0.
-
-            for iAx, text in enumerate(oe.FWHMstr):
-                fontScale = self.fontSize / 12500.
-                coord = self.modelToWorld(
-                    (vScreenBody[iAx + 1] + vScreenBody[iAx + 2]) * 0.5 -
-                    self.coordOffset)
-                coordShift = np.zeros(3, dtype=np.float32)
-                if iAx == 0:  # Horizontal Label
-                    coordShift[0] = (hFlip - 1.) * fontScale *\
-                        len(text) * 104.76 * 0.5
-                    coordShift[2] = fontScale * 200.
-                else:  # Vertical Label
-                    coordShift[0] = fontScale * 200.
-                    coordShift[2] = (vFlip - 1.) * fontScale *\
-                        len(text) * 104.76 * 0.5
-
-                gl.glPushMatrix()
-                gl.glTranslatef(*coord)
-                gl.glRotatef(*rotVecGL)
-                gl.glTranslatef(*coordShift)
-                gl.glRotatef(180.*(vFlip*0.5), 1, 0, 0)
-                gl.glRotatef(180.*(hFlip*0.5), 0, 0, 1)
-                if iAx > 0:
-                    gl.glRotatef(-90, 0, 1, 0)
-                if iAx == 0:  # Horizontal Label to half height
-                    gl.glTranslatef(0, 0, -50. * fontScale)
-                else:  # Vertical Label to half height
-                    gl.glTranslatef(-50. * fontScale, 0, 0)
-                gl.glRotatef(90, 1, 0, 0)
-                gl.glScalef(fontScale, fontScale, fontScale)
-#                for symbol in text:
-#                    gl.glutStrokeCharacter(
-#                        gl.GLUT_STROKE_MONO_ROMAN, ord(symbol))
-                gl.glPopMatrix()
-            gl.glEnable(gl.GL_LIGHTING)
-            gl.glEnable(gl.GL_NORMALIZE)
-            if self.enableAA:
-                gl.glEnable(gl.GL_LINE_SMOOTH)
-
-    def plotHemiScreen(self, oe, dimensions=None):
-        try:
-            rMajor = oe.R
-        except:  # analysis:ignore
-            rMajor = 1000.
-
-        if dimensions is not None:
-            rMinor = dimensions
-        else:
-            rMinor = self.vScreenSize
-
-        if rMinor > rMajor:
-            rMinor = rMajor
-
-        yVec = np.array(oe.x)
-
-        sphereCenter = np.array(oe.center)
-
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-
-        if self.invertColors:
-            gl.glColor4f(0.0, 0.0, 0.0, 0.2)
-        else:
-            gl.glColor4f(1.0, 1.0, 1.0, 0.2)
-
-        gl.glEnable(gl.GL_MAP2_VERTEX_3)
-
-        dAngle = np.arctan2(rMinor, rMajor)
-
-        xLimits = [-dAngle + yVec[0], dAngle + yVec[0]]
-        yLimits = [-dAngle + yVec[2], dAngle + yVec[2]]
-
-        for i in range(self.tiles[0]):
-            deltaX = (xLimits[1] - xLimits[0]) /\
-                float(self.tiles[0])
-            xGridOe = np.linspace(xLimits[0] + i*deltaX,
-                                  xLimits[0] + (i+1)*deltaX,
-                                  self.surfCPOrder)
-            for k in range(self.tiles[1]):
-                deltaY = (yLimits[1] - yLimits[0]) /\
-                    float(self.tiles[1])
-                yGridOe = np.linspace(yLimits[0] + k*deltaY,
-                                      yLimits[0] + (k+1)*deltaY,
-                                      self.surfCPOrder)
-                xv, yv = np.meshgrid(xGridOe, yGridOe)
-                xv = xv.flatten()
-                yv = yv.flatten()
-
-                ibp = rsources.Beam(nrays=len(xv))
-                ibp.x[:] = sphereCenter[0]
-                ibp.y[:] = sphereCenter[1]
-                ibp.z[:] = sphereCenter[2]
-                ibp.b[:] = yVec[1]
-                ibp.a = xv
-                ibp.c = yv
-                ibp.state[:] = 1
-
-                gbp = oe.expose_global(beam=ibp)
-
-                surfCP = np.vstack((gbp.x - self.coordOffset[0],
-                                    gbp.y - self.coordOffset[1],
-                                    gbp.z - self.coordOffset[2])).T
-
-                gl.glMap2f(gl.GL_MAP2_VERTEX_3, 0, 1, 0, 1,
-                           self.modelToWorld(surfCP.reshape(
-                               self.surfCPOrder,
-                               self.surfCPOrder, 3)))
-
-                gl.glMapGrid2f(self.surfCPOrder, 0.0, 1.0,
-                               self.surfCPOrder, 0.0, 1.0)
-
-                gl.glEvalMesh2(gl.GL_FILL, 0, self.surfCPOrder,
-                               0, self.surfCPOrder)
-
-        gl.glDisable(gl.GL_MAP2_VERTEX_3)
 
     def drawLocalAxes(self, oe, is2ndXtal):
         pass  # keep it here
@@ -2493,32 +2286,32 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # RENDER GRID ON SCREENS
 
-            self.cBox.shader.bind()
-            self.cBox.shader.setUniformValue("lineColor",
-                                             qt.QVector3D(0.0, 1.0, 1.0))
-
-            for oeuuid, mesh3D in self.meshDict.items():
-                continue
-                item = getItem(oeuuid, 'surface')
-                if item is None or item.checkState() != 2:
-                    continue
-
-                if is_screen(mesh3D.oe):
-                    mesh3D.grid_vbo['vertices'].bind()
-                    gl.glVertexAttribPointer(
-                            0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-                    gl.glEnableVertexAttribArray(0)
-                    oeOrientation = mesh3D.transMatrix[0]
-                    grMod = mMMLoc*oeOrientation*scr_m
-                    pvm = self.mProj*self.mView*grMod
-                    self.cBox.shader.setUniformValue("pvm", pvm)
-                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)
-                    gl.glLineWidth(1.)
-                    gl.glDrawArrays(gl.GL_LINES, 0,
-                                    mesh3D.grid_vbo['gridLen'])
-                    mesh3D.grid_vbo['vertices'].release()
-
-            self.cBox.shader.release()
+#            self.cBox.shader.bind()
+#            self.cBox.shader.setUniformValue("lineColor",
+#                                             qt.QVector3D(0.0, 1.0, 1.0))
+#
+#            for oeuuid, mesh3D in self.meshDict.items():
+#                continue
+#                item = getItem(oeuuid, 'surface')
+#                if item is None or item.checkState() != 2:
+#                    continue
+#
+#                if is_screen(mesh3D.oe):
+#                    mesh3D.grid_vbo['vertices'].bind()
+#                    gl.glVertexAttribPointer(
+#                            0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+#                    gl.glEnableVertexAttribArray(0)
+#                    oeOrientation = mesh3D.transMatrix[0]
+#                    grMod = mMMLoc*oeOrientation
+#                    pvm = self.mProj*self.mView*grMod
+#                    self.cBox.shader.setUniformValue("pvm", pvm)
+#                    self.cBox.shader.setUniformValue("lineOpacity", 0.3)
+#                    gl.glLineWidth(1.)
+#                    gl.glDrawArrays(gl.GL_LINES, 0,
+#                                    mesh3D.grid_vbo['gridLen'])
+#                    mesh3D.grid_vbo['vertices'].release()
+#
+#            self.cBox.shader.release()
 
             # RENDER COORDINATE BOX
 
