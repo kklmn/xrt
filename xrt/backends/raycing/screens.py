@@ -180,7 +180,6 @@ class Screen(object):
         if isinstance(self._z, raycing.basestring):
             self._z = None
         self._x, self.y, self._z = raycing.xyz_from_xz(self, self._x, self._z)
-        print(self.name, self._x, self.y, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
