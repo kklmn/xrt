@@ -180,6 +180,7 @@ class Screen(object):
         if isinstance(self._z, raycing.basestring):
             self._z = None
         self._x, self.y, self._z = raycing.xyz_from_xz(self, self._x, self._z)
+        print(self.name, self._x, self.y, self._z)
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
@@ -187,7 +188,7 @@ class Screen(object):
         self._z = copy.copy(z)
         self._set_orientation()
 
-    def local_to_global(self, x=0, y=0, z=0):
+    def local_to_global(self, x=0, y=0, z=0, **kwargs):
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
         yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
         zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
@@ -439,31 +440,35 @@ class HemisphericScreen(Screen):
 
 
         """
-        self.bl = bl
-        if bl is not None:
-            if self not in bl.screens:
-                bl.screens.append(self)
-                self.ordinalNum = len(bl.screens)
-                self.lostNum = -self.ordinalNum - 2000
-        raycing.set_name(self, name)
-        self._x = x
-        self._z = z
-        self._set_orientation()
-
-        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
-            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
-                str(raycing.uuid.uuid4())
-
-        if bl is not None:
-            if self.bl.flowSource != 'Qook':
-                bl.oesDict[self.uuid] = [self, 1]
-
-        self.center = center
+#        self.bl = bl
+#        if bl is not None:
+#            if self not in bl.screens:
+#                bl.screens.append(self)
+#                self.ordinalNum = len(bl.screens)
+#                self.lostNum = -self.ordinalNum - 2000
+#        raycing.set_name(self, name)
+#        self._x = x
+#        self._z = z
+#        self._set_orientation()
+#
+#        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
+#            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+#                str(raycing.uuid.uuid4())
+#
+#        if bl is not None:
+#            if self.bl.flowSource != 'Qook0':
+#                bl.oesDict[self.uuid] = [self, 1]
+#                bl.oenamesToUUIDs[self.name] = self.uuid
+#
+#        self.center = center
 #        if any([coord == 'auto' for coord in self.center]):
 #            self._center = copy.copy(self.center)
+        super().__init__(bl, name, center, x, z, **kwargs)
         self.R = R
         self.phiOffset = phiOffset
         self.thetaOffset = thetaOffset
+#        self.isParametric = True
+#        print(self.name, self._x, self.y, self._z)
 
     def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
@@ -485,15 +490,16 @@ class HemisphericScreen(Screen):
                                .format(xdotz), 'RED')
         self.y = np.cross(self._z, self._x)
 
-    def local_to_global(self, phi, theta):
+    def local_to_global_sph(self, phi, theta, **kwargs):
         thetaO = theta + self.thetaOffset
         phiO = phi + self.phiOffset
         z = np.sin(thetaO) * self.R
         y = np.cos(thetaO) * np.sin(phiO) * self.R
         x = np.cos(thetaO) * np.cos(phiO) * self.R
-        xglo, yglo, zglo = Screen.local_to_global(self, x, y, z)
+        xglo, yglo, zglo = self.local_to_global(x, y, z, **kwargs)
         return x, y, z, xglo, yglo, zglo
 
+#    @raycing.append_to_flow_decorator
     def expose_global(self, beam=None):
         kwArgsIn = {}
         if self.bl is not None:
@@ -505,7 +511,7 @@ class HemisphericScreen(Screen):
             self.bl.auto_align(self, beam)
         glo = self.expose(beam)
         _, _, _, glo.x[:], glo.y[:], glo.z[:] = \
-            self.local_to_global(glo.phi, glo.theta)
+            self.local_to_global_sph(glo.phi, glo.theta)
         return glo
 
     @raycing.append_to_flow_decorator
@@ -517,14 +523,7 @@ class HemisphericScreen(Screen):
 
         .. Returned values: beamLocal
         """
-#        kwArgsIn = {'onlyPositivePath': onlyPositivePath}
-#        if self.bl is not None:
-#            if raycing.is_valid_uuid(beam):
-#                kwArgsIn['beam'] = beam
-#                beam = self.bl.beamsDictU[beam]['beamGlobal']
-#            else:
-#                kwArgsIn['beam'] = beam.parentId
-#            self.bl.auto_align(self, beam)
+
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
         sqb_2 = (beam.a * (beam.x-self.center[0]) +
                  beam.b * (beam.y-self.center[1]) +
@@ -557,9 +556,5 @@ class HemisphericScreen(Screen):
             blo.Ep *= propPhase
         raycing.append_to_flow(self.expose, [blo],
                                inspect.currentframe())
-#        blo.parentId = self.uuid
-#        self.bl.flowU[self.uuid] = {'method': self.expose,
-#                                    'kwArgsIn': kwArgsIn}
-#        self.bl.beamsDictU[self.uuid] = {'beamLocal': blo}
 
         return blo
