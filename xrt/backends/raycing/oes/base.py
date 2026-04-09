@@ -299,6 +299,9 @@ class OE(OEMainMethods):
         self.extraRotationSequence = extraRotationSequence
         self.alarmLevel = alarmLevel
 
+        self.isParametric = isParametric
+        self.shape = shape
+
         self.surface = surface
         self.material = material  # can be uuid
         self.figureError = figureError
@@ -309,10 +312,9 @@ class OE(OEMainMethods):
         self.limOptY = limOptY
         self.limPhysX = limPhysX
         self.limPhysY = limPhysY
-        self.isParametric = isParametric
         self.use_rays_good_gn = False  # use rays_good_gn instead of rays_good
 
-        self.shape = shape
+
         self.gratingDensity = gratingDensity
         self.order = order
 #        self.get_surface_limits()
@@ -813,6 +815,7 @@ class OE(OEMainMethods):
         x = x0 + a*t
         y = y0 + b*t
         z = z0 + c*t
+        
         if derivOrder == 0:
             if self.isParametric:
                 if local_f is None:
@@ -1056,7 +1059,7 @@ class OE(OEMainMethods):
 
     def get_surface_limits(self):
         """Returns surface_limits."""
-
+        
         if not all([hasattr(self, arg) for arg in [
                 'curSurface', 'limPhysX', 'limPhysY', 'limOptX', 'limOptY']]):
             return
