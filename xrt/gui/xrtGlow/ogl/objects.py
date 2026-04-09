@@ -1263,7 +1263,7 @@ class OEMesh3D():
                                             triFB.simplices.flatten() +
                                             indArrOffset+len(tF)))
 
-        if isScreen:
+        if isScreen or isAperture:
             if hasattr(self.oe, 'R'):
                 allSurfaces[:, [0, 1, 2]] = allSurfaces[:, [2, 1, 0]]
 #                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
