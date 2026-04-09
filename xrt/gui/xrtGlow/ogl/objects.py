@@ -863,6 +863,23 @@ class OEMesh3D():
                 z = np.sqrt(R**2 - x**2 - y**2)
                 return x/R, y/R, z/R
 
+        def triangulate_closed(ns, nphi):
+            idx = np.arange(nphi * ns, dtype=np.uint32).reshape(nphi, ns)
+        
+            row0 = idx
+            row1 = np.roll(idx, -1, axis=0)
+        
+            tra = row0[:, :-1]
+            trb = row0[:, 1:]
+            trc = row1[:, :-1]
+            trd = row1[:, 1:]
+        
+            triangles = np.empty((nphi, ns - 1, 2, 3), dtype=np.uint32)
+            triangles[:, :, 0, :] = np.stack((tra, trc, trb), axis=-1)
+            triangles[:, :, 1, :] = np.stack((trb, trc, trd), axis=-1)
+        
+            return triangles.ravel()
+
         gl.glGetError()
 
         is2ndXtal = False
@@ -1038,7 +1055,8 @@ class OEMesh3D():
 
         xGridOe = np.linspace(xLimits[0], xLimits[1],
                               localTiles[0]) + oeDx
-        yGridOe = np.linspace(yLimits[0], yLimits[1], localTiles[1])
+        yGridOe = np.linspace(yLimits[0], yLimits[1], localTiles[1],
+                              endpoint=not isClosedSurface)
 
         xv, yv = np.meshgrid(xGridOe, yGridOe)
 
@@ -1050,8 +1068,8 @@ class OEMesh3D():
         if oeShape == 'round':
             xv, yv = rX*xv*np.cos(yv)+cX, rY*xv*np.sin(yv)+cY
 
-        xv = xv.flatten()
-        yv = yv.flatten()
+        xv = xv.ravel()
+        yv = yv.ravel()
 
         if is2ndXtal:
             zExt = '2'
@@ -1093,7 +1111,7 @@ class OEMesh3D():
         if len(nv) == 3:  # flat
             nv = np.ones_like(zv)[:, np.newaxis] * np.array(nv)
 
-        if isOeParametric and not isClosedSurface:
+        if isOeParametric:
             xv, yv, zv = self.oe.param_to_xyz(xv, yv, zv)
 
 #        zmax = np.max(zv)
@@ -1110,13 +1128,23 @@ class OEMesh3D():
         points = np.vstack((xv, yv, zv)).T
         surfmesh = {}
 
-        triS = Delaunay(points[:, :-1])
+        if isClosedSurface:
+            allIndices = triangulate_closed(*localTiles)
+        else:
+            triS = Delaunay(points[:, :-1])
+            allIndices = triS.simplices.flatten()
 
         if not isPlate:
             bottomPoints = points.copy()
             if isScreen:
                 bottomNormals = -1 * nv.copy()
-            if not isScreen:
+
+            if isClosedSurface:
+                bottomPoints[:, [0, 2]] *= 1.1
+            
+            if isScreen or isClosedSurface:
+                bottomNormals = -1 * nv.copy()
+            else:
                 bottomNormals = np.zeros((len(points), 3))
                 bottomPoints[:, 2] = -thickness
                 bottomNormals[:, 2] = -1
@@ -1149,7 +1177,7 @@ class OEMesh3D():
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
-        if not (isScreen):  # or isAperture):
+        if not (isScreen or isClosedSurface):  # or isAperture):
             try:
                 triLR = Delaunay(tL[:, [1, -1]])  # Works for round elements
                 useLR = True
@@ -1171,7 +1199,7 @@ class OEMesh3D():
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
-        if not (isScreen):  # or isAperture):
+        if not (isScreen or isClosedSurface):  # or isAperture):
             try:
                 triFB = Delaunay(tF[:, [0, -1]])
                 useFB = True
@@ -1198,19 +1226,18 @@ class OEMesh3D():
 
         allSurfaces = points
         allNormals = nv
-        allIndices = triS.simplices.flatten()
+#        allIndices = triS.simplices.flatten()
         indArrOffset = len(points)
 
         # Bottom Surface, use is2ndXtal for plates
         if not (isPlate):  # or isScreen or isAperture):
             allSurfaces = np.vstack((allSurfaces, bottomPoints))
             allNormals = np.vstack((nv, bottomNormals))
-            allIndices = np.hstack((allIndices,
-                                    triS.simplices.flatten() + indArrOffset))
+            allIndices = np.hstack((allIndices, allIndices + indArrOffset))
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
-        if not ((isPlate and is2ndXtal) or isScreen):  # or isAperture):
+        if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):  # or isAperture):
             if oeShape == 'round':  # Side surface
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
