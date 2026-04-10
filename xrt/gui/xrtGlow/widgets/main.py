@@ -205,6 +205,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def closeEvent(self, event):
+        self.customGlWidget.cleanup_gl_resources()
         self.customGlWidget.close_calc_process()
         event.accept()
 
