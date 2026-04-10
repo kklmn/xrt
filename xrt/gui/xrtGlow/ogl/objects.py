@@ -716,9 +716,13 @@ class OEMesh3D():
 
         if self.parent is not None:
             self.oeThickness = self.parent.oeThickness
+            self.apertureBladeThickness = self.parent.apertureBladeThickness
+            self.apertureDefaultSpan = self.parent.apertureDefaultSpan
             self.tiles = self.parent.tiles
         else:
             self.oeThickness = 5
+            self.apertureBladeThickness = 5
+            self.apertureDefaultSpan = 10
             self.tiles = [25, 25]
         self.showLocalAxes = False
         self.isEnabled = False
@@ -971,42 +975,44 @@ class OEMesh3D():
             yDim = 2
         elif isAperture:
             renderStyle = getattr(self.oe, 'renderStyle', 'mask')
+            blades = getattr(self.oe, 'blades', {})
+            if str(nsIndex) not in blades:
+                self.isEnabled = False
+                return
 
-            bt = 5.  # TODO: Must be configurable in glow UI
-            defaultWidth = 10
+            bt = self.apertureBladeThickness
+            defaultWidth = self.apertureDefaultSpan
 
-            if len(set(self.oe.kind) & {'left', 'right'}) > 1:
-                awidth = np.abs(self.oe.opening[self.oe.kind.index('left')] -
-                                self.oe.opening[self.oe.kind.index('right')])
+            if len(set(blades) & {'left', 'right'}) > 1:
+                awidth = np.abs(blades['left'] - blades['right'])
+                acenterX = 0.5 * (blades['left'] + blades['right'])
                 awidth = 0.5*awidth + bt if renderStyle == 'mask' else\
                     max(awidth, defaultWidth)
             else:
                 awidth = defaultWidth
+                acenterX = 0.
 
-            if len(set(self.oe.kind) & {'top', 'bottom'}) > 1:
-                aheight = np.abs(self.oe.opening[self.oe.kind.index('top')] -
-                                 self.oe.opening[self.oe.kind.index('bottom')])
+            if len(set(blades) & {'top', 'bottom'}) > 1:
+                aheight = np.abs(blades['top'] - blades['bottom'])
+                acenterY = 0.5 * (blades['top'] + blades['bottom'])
                 aheight = 0.5*aheight if renderStyle == 'mask' else\
                     max(aheight, defaultWidth)
             else:
                 aheight = defaultWidth
+                acenterY = 0.
 
             if str(nsIndex) == 'left':
-                xLimits = [self.oe.opening[self.oe.kind.index('left')] - bt,
-                           self.oe.opening[self.oe.kind.index('left')]]
-                yLimits = [-aheight, aheight]
+                xLimits = [blades['left'] - bt, blades['left']]
+                yLimits = [acenterY - aheight, acenterY + aheight]
             elif str(nsIndex) == 'right':
-                xLimits = [self.oe.opening[self.oe.kind.index('right')],
-                           self.oe.opening[self.oe.kind.index('right')] + bt]
-                yLimits = [-aheight, aheight]
-            elif str(nsIndex) == 'bottom':  # Limits are inverted for rendering
-                xLimits = [-awidth, awidth]
-                yLimits = [-self.oe.opening[self.oe.kind.index('bottom')],
-                           -self.oe.opening[self.oe.kind.index('bottom')] + bt]
+                xLimits = [blades['right'], blades['right'] + bt]
+                yLimits = [acenterY - aheight, acenterY + aheight]
+            elif str(nsIndex) == 'bottom':
+                xLimits = [acenterX - awidth, acenterX + awidth]
+                yLimits = [blades['bottom'] - bt, blades['bottom']]
             elif str(nsIndex) == 'top':
-                xLimits = [-awidth, awidth]
-                yLimits = [-self.oe.opening[self.oe.kind.index('top')] - bt,
-                           -self.oe.opening[self.oe.kind.index('top')]]
+                xLimits = [acenterX - awidth, acenterX + awidth]
+                yLimits = [blades['top'], blades['top'] + bt]
             yDim = 2
         elif is2ndXtal:
             xLimits = list(self.oe.limPhysX2)

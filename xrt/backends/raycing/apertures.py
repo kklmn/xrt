@@ -43,17 +43,22 @@ import copy
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
-from itertools import product
+# from itertools import product
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Nov 2019"
 __all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
            'DoubleSlit', 'PolygonalAperture', 'GridAperture', 'SiemensStar')
 
-allArguments = ('bl', 'name', 'center', 'kind', 'opening', 'x', 'z',
+_BLADE_ORDER = ('left', 'right', 'bottom', 'top')
+_DEFAULT_RECTANGULAR_BLADES = {'left': -10, 'right': 10,
+                               'bottom': -10, 'top': 10}
+_DEFAULT_POLYGON_VERTICES = [(-10, -10), (-10, 10), (10, 10), (10, -10)]
+
+allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
-                'nSpokes' 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
+                'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
                 'renderStyle')
 
 
@@ -62,9 +67,9 @@ class RectangularAperture(object):
     edges."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
-                 kind=['left', 'right', 'bottom', 'top'],
-                 opening=[-10, 10, -10, 10], x='auto', z='auto',
-                 alarmLevel=None, renderStyle='mask', **kwargs):
+                 kind=None, opening=None, x='auto', z='auto',
+                 alarmLevel=None, renderStyle='mask',
+                 blades=_DEFAULT_RECTANGULAR_BLADES, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -76,13 +81,15 @@ class RectangularAperture(object):
         *center*: 3-sequence of floats
             3D point in global system.
 
-        *kind*: sequence
-            Any combination of 'top', 'bottom', 'left', 'right'.
+        *blades*: dict or None
+            Mapping of blade names to their positions relative to the aperture
+            center. Supported keys are 'left', 'right', 'bottom' and 'top'.
+            Missing keys mean that the corresponding blade is absent.
 
-        *opening*: sequence
-            Distances (with sign according to the local coordinate system) from
-            the blade edges to the aperture center with the length
-            corresponding to *kind*.
+        *kind* and *opening*: sequence
+            Compatibility API for existing scripts. *kind* defines any
+            combination of 'top', 'bottom', 'left', 'right' and *opening*
+            supplies the corresponding blade positions.
 
         *x, z*: 3-tuples or 'auto'.
             Normalized 3D vectors in the global system which determine the
@@ -129,28 +136,40 @@ class RectangularAperture(object):
         self._z = z
         self._set_orientation()
 
-        if isinstance(kind, str):
-            self.kind = (kind,)
-            self.opening = [opening, ]
-        else:
-            self.kind = kind
-            self.opening = opening
+        self.limOptX = kwargs.get('limOptX', [-500, 500])
+        self.limOptY = kwargs.get('limOptY', [-500, 500])
+        self.limPhysX = raycing.Limits(kwargs.get('limPhysX', self.limOptX))
+        self.limPhysY = raycing.Limits(kwargs.get('limPhysY', self.limOptY))
+        self.shape = 'rect'
+        self.spotLimits = [0, 0, 0, 0]
+        self.renderStyle = renderStyle
+
+        self._blades = {}
+        self._kind = []
+        self._opening = []
+
+        if kind is not None or opening is not None:
+            if kind is None and opening is not None:
+                if raycing.is_sequence(opening):
+                    kind = list(_BLADE_ORDER[:len(opening)])
+                else:
+                    kind = [_BLADE_ORDER[0]]
+            if isinstance(kind, str):
+                self.kind = (kind,)
+                self.opening = [opening, ]
+            else:
+                self.kind = kind
+                self.opening = opening
+        elif blades is not None:
+            self.blades = blades
 #            Opening = raycing.NamedArrayFactory(kind)
 #            self.opening = Opening(opening)
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
 
-        self.limOptX = kwargs.get('limOptX', [-500, 500])
-        self.limOptY = kwargs.get('limOptY', [-500, 500])
-        self.limPhysX = raycing.Limits(kwargs.get('limPhysX', self.limOptX))
-        self.limPhysY = raycing.Limits(kwargs.get('limPhysY', self.limOptY))
-
-        if opening is not None:
-            self.set_optical_limits()
-        self.shape = 'rect'
-        self.spotLimits = [0, 0, 0, 0]
-        self.renderStyle = renderStyle
+#        if opening is not None:
+#            self.set_optical_limits()
 
     @property
     def x(self):
@@ -160,7 +179,67 @@ class RectangularAperture(object):
     def x(self, x):
         self._x = copy.copy(x)
         self._set_orientation()
-#        self.update_orientation_quaternion()
+
+    @property
+    def blades(self):
+        return copy.copy(self._blades)
+
+    @blades.setter
+    def blades(self, blades):
+        if blades is None:
+            self._blades = {}
+        else:
+            bladesDict = {key: value for key, value in dict(blades).items()
+                          if value is not None}
+            orderedBlades = {
+                key: bladesDict[key]
+                for key in _BLADE_ORDER if key in bladesDict}
+            for key, value in bladesDict.items():
+                if key not in orderedBlades:
+                    orderedBlades[key] = value
+            self._blades = orderedBlades
+        self._kind = list(self._blades.keys())
+        self._opening = list(self._blades.values())
+        if self._blades:
+            self.set_optical_limits()
+
+    @property
+    def kind(self):
+        return self._kind
+
+    @kind.setter
+    def kind(self, kind):
+        if isinstance(kind, dict):
+            self.blades = kind
+            return
+        if kind is None:
+            self._kind = []
+        else:
+            self._kind = [kind] if isinstance(kind, str) else\
+                list(copy.copy(kind))
+        if hasattr(self, '_opening'):
+            self._sync_blades_from_legacy()
+
+    @property
+    def opening(self):
+        return self._opening
+
+    @opening.setter
+    def opening(self, opening):
+        if isinstance(opening, dict):
+            opDict = self.blades
+            for key, value in opening.items():
+                opDict[key] = value
+            self.blades = opDict
+        else:
+            if opening is None:
+                self._opening = []
+            elif raycing.is_sequence(opening):
+                self._opening = list(copy.copy(opening))
+            else:
+                self._opening = [opening]
+        if hasattr(self, '_kind') and self._opening is not None:
+            self._sync_blades_from_legacy()
 
     @property
     def z(self):
@@ -170,7 +249,6 @@ class RectangularAperture(object):
     def z(self, z):
         self._z = copy.copy(z)
         self._set_orientation()
-#        self.update_orientation_quaternion()
 
     center = raycing.center_property()
 
@@ -189,9 +267,16 @@ class RectangularAperture(object):
         self._z = z
         self._set_orientation()
 
+    def _sync_blades_from_legacy(self):
+        self._blades = {
+            key: value for key, value in zip(self._kind, self._opening)
+            if value is not None}
+        if self._blades:
+            self.set_optical_limits()
+
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
-        for akind, d in zip(self.kind, self.opening):
+        for akind, d in self.blades.items():
             td = float(d)  # otherwise is of type 'numpy.float64' and
             # raycing.is_sequence(d) returns True which is unexpected.
             if akind.startswith('l'):
@@ -209,7 +294,7 @@ class RectangularAperture(object):
                             (self.center[1]-source.center[1])**2 +
                             (self.center[2]-source.center[2])**2)**0.5
         divergence = []
-        for d in self.opening:
+        for d in self.blades.values():
             divergence.append(d / sourceToAperture)
         return divergence
 
@@ -219,14 +304,15 @@ class RectangularAperture(object):
         sourceToAperture = ((self.center[0]-source.center[0])**2 +
                             (self.center[1]-source.center[1])**2 +
                             (self.center[2]-source.center[2])**2)**0.5
-        d = []
+        opening = []
         for div in divergence:
             if div > 0:
                 sgn = 1
             else:
                 sgn = -1
-            d.append(div*sourceToAperture + sgn*raycing.accuracyInPosition)
-        self.opening = d
+            opening.append(
+                div*sourceToAperture + sgn*raycing.accuracyInPosition)
+        self.blades = dict(zip(self.blades.keys(), opening))
 
     @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
@@ -256,7 +342,7 @@ class RectangularAperture(object):
         lo.path[good] += path
 
         badIndices = np.zeros(len(beam.x), dtype=bool)
-        for akind, d in zip(self.kind, self.opening):
+        for akind, d in self.blades.items():
             if akind.startswith('l'):
                 badIndices[good] = badIndices[good] | (lo.x[good] < d)
             elif akind.startswith('r'):
@@ -309,7 +395,7 @@ class RectangularAperture(object):
             return lo
 
     def touch_beam(self, beam):
-        """Adjusts the aperture (i.e. sets self.opening) so that it touches the
+        """Adjusts the aperture (i.e. sets self.blades) so that it touches the
         *beam*."""
         good = (beam.state == 1) | (beam.state == 2)
 #        good = beam.state > 0
@@ -318,24 +404,24 @@ class RectangularAperture(object):
         bl = self.bl if self.xyz == 'auto' else self.xyz
         raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
         lo.y[good] /= lo.b[good]
-        if ('left' in self.kind) or ('right' in self.kind):
+        if ('left' in self.blades) or ('right' in self.blades):
             lo.x[good] -= lo.a[good] * lo.y[good]
-        if ('top' in self.kind) or ('bottom' in self.kind):
+        if ('top' in self.blades) or ('bottom' in self.blades):
             lo.z[good] -= lo.c[good] * lo.y[good]
-        locOpening = []
+        locBlades = {}
         if good.sum() > 0:
-            for akind, d in zip(self.kind, self.opening):
+            for akind, d in self.blades.items():
                 if akind.startswith('l'):
-                    locOpening.append(lo.x[good].min())
+                    locBlades[akind] = lo.x[good].min()
                 elif akind.startswith('r'):
-                    locOpening.append(lo.x[good].max())
+                    locBlades[akind] = lo.x[good].max()
                 elif akind.startswith('t'):
-                    locOpening.append(lo.z[good].max())
+                    locBlades[akind] = lo.z[good].max()
                 elif akind.startswith('b'):
-                    locOpening.append(lo.z[good].min())
+                    locBlades[akind] = lo.z[good].min()
                 else:
                     continue
-        self.opening = locOpening
+        self.blades = locBlades
         self.set_optical_limits()
 
     def local_to_global(self, glo, returnBeam=False, **kwargs):
@@ -518,20 +604,19 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         ca = self.apertures.index(apertureName)
         self.curAperture = ca
         if ca < len(self.apertures) - 1:
-            self.kind = 'left', 'right', 'bottom', 'top'
             dx = self.dXs[ca] * 0.5
             dz = self.dZs[ca] * 0.5
             cz = targetZ - self.bl.height
-            self.opening = -dx, dx, cz-dz, cz+dz
+            self.blades = {'left': -dx, 'right': dx,
+                           'bottom': cz-dz, 'top': cz+dz}
             self.zActuator = self.z0 + targetZ - self.centerZs[ca]
         else:
             if self.apertures[-1] == 'top-edge':
-                self.kind = 'bottom',
+                self.blades = {'bottom': self.centerZs[-1] - self.bl.height}
             elif self.apertures[-1] == 'bottom-edge':
-                self.kind = 'top',
+                self.blades = {'top': self.centerZs[-1] - self.bl.height}
             else:
                 raise ValueError('not "top-edge" nor "bottom-edge"!')
-            self.opening = self.centerZs[-1] - self.bl.height,
             self.zActuator = self.z0
         maxHalfdZ = max(self.dZs) * 0.5
         minZ = min(self.centerZs) + self.zActuator - self.z0
@@ -894,7 +979,7 @@ class DoubleSlit(RectangularAperture):
         lo.z[good] += lo.c[good] * path
         lo.path[good] += path
         badIndices = np.zeros(len(beam.x), dtype=bool)
-        for akind, d in zip(self.kind, self.opening):
+        for akind, d in self.blades.items():
             if akind.startswith('l'):
                 badIndices[good] = badIndices[good] | (lo.x[good] < d)
             elif akind.startswith('r'):
@@ -949,7 +1034,8 @@ class PolygonalAperture(object):
     vertices."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
-                 opening=None, x='auto', z='auto', alarmLevel=None, **kwargs):
+                 opening=None, x='auto', z='auto', alarmLevel=None,
+                 vertices=_DEFAULT_POLYGON_VERTICES, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -962,7 +1048,10 @@ class PolygonalAperture(object):
             3D point in global system.
 
         *opening*: sequence
-            Coordinates [(x0, y0),...(xN, yN)] of the polygon vertices.
+            Compatibility alias for *vertices* used by existing scripts.
+
+        *vertices*: sequence
+            Coordinates [(x0, y0), ...(xN, yN)] of the polygon vertices.
 
         *x, z*: 3-tuples or 'auto'.
             Normalized 3D vectors in the global system which determine the
@@ -1006,8 +1095,8 @@ class PolygonalAperture(object):
         self._z = z
         self._set_orientation()
 
-        self.opening = opening
-        self.vertices = np.array(self.opening)
+        self._vertices = None
+        self.vertices = opening if opening is not None else vertices
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
@@ -1015,7 +1104,7 @@ class PolygonalAperture(object):
         self.limOptY = [-500, 500]
         self.limPhysX = self.limOptX
         self.limPhysY = self.limOptY
-        if opening is not None:
+        if self.vertices is not None:
             self.set_optical_limits()
         self.shape = 'polygon'
 
@@ -1039,6 +1128,26 @@ class PolygonalAperture(object):
         self._set_orientation()
 #        self.update_orientation_quaternion()
 
+    @property
+    def vertices(self):
+        return None if self._vertices is None else np.array(self._vertices,
+                                                            copy=True)
+
+    @vertices.setter
+    def vertices(self, vertices):
+        self._vertices = None if vertices is None else np.array(vertices,
+                                                                 copy=True)
+        if self._vertices is not None and hasattr(self, 'limOptX'):
+            self.set_optical_limits()
+
+    @property
+    def opening(self):
+        return None if self._vertices is None else self.vertices.tolist()
+
+    @opening.setter
+    def opening(self, opening):
+        self.vertices = opening
+
     center = raycing.center_property()
 
     def _set_orientation(self):
@@ -1057,6 +1166,8 @@ class PolygonalAperture(object):
 
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
+        if self.vertices is None or len(self.vertices) == 0:
+            return
         self.limOptX = [np.nanmin(self.vertices[:, 0]),
                         np.nanmax(self.vertices[:, 0])]
         self.limOptY = [np.nanmin(self.vertices[:, 1]),
@@ -1205,9 +1316,9 @@ class GridAperture(PolygonalAperture):
         xm, zm = np.meshgrid(xc, zc)
         xi = (xm.ravel(order='F') + cellx[:, np.newaxis]).ravel(order='F')
         zi = (zm.ravel(order='F') + cellz[:, np.newaxis]).ravel(order='F')
-        opening = np.column_stack((xi, zi))
+        vertices = np.column_stack((xi, zi))
 
-        super().__init__(bl=bl, name=name, center=center, opening=opening,
+        super().__init__(bl=bl, name=name, center=center, vertices=vertices,
                          x=x, z=z, alarmLevel=alarmLevel)
 
 
@@ -1267,7 +1378,7 @@ class SiemensStar(PolygonalAperture):
         ystack.append(np.zeros((nSpokes, 1)))
         starXs = np.hstack(xstack)
         starYs = np.hstack(ystack)
-        opening = list(zip(starXs.flatten(), starYs.flatten()))
+        vertices = list(zip(starXs.flatten(), starYs.flatten()))
 
-        super().__init__(bl=bl, name=name, center=center, opening=opening,
+        super().__init__(bl=bl, name=name, center=center, vertices=vertices,
                          x=x, z=z, alarmLevel=alarmLevel)
