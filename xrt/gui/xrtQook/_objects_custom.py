@@ -8,7 +8,6 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
 import os  # analysis:ignore
-import time  # analysis:ignore
 from ..commons import qt  # analysis:ignore
 from ..commons import ext  # analysis:ignore
 
@@ -57,11 +56,16 @@ class LevelRestrictedModel(qt.QStandardItemModel):
         # For now, assume we're tracking source during drag
         moved_row = self._cached_drag_row
         source_parent = self._cached_drag_parent
+        dest_parent = self.itemFromIndex(parent_index)
+        if dest_parent is None:
+            dest_parent = self.invisibleRootItem()
 
         # Move entire row (multi-column safe)
         items = source_parent.takeRow(moved_row)
-
-        dest_parent = self.itemFromIndex(parent_index)
+        if not items:
+            self._cached_drag_row = None
+            self._cached_drag_parent = None
+            return False
 
 #        if parent_index.isValid():
 #            dest_parent = self.itemFromIndex(parent_index)
@@ -71,6 +75,8 @@ class LevelRestrictedModel(qt.QStandardItemModel):
         if row < 0:
             dest_parent.appendRow(items)
         else:
+            if dest_parent is source_parent and row > moved_row:
+                row -= 1
             dest_parent.insertRow(row, items)
 
         self._cached_drag_row = None
@@ -96,12 +102,12 @@ class SphinxWorker(qt.QObject):
             argspec=self.docArgspec,
             note=self.docNote)
         ext.sphinxify(self.doc, cntx, img_path=self.img_path)
-        self.thread().terminate()
         self.html_ready.emit()
 
 
 class BusyIconWorker(qt.QObject):
     BUSYICONDT = 0.050  # s
+    icon_ready = qt.Signal(object)
 
     def prepare(self, parent):
         self.parent = parent  # XrtQook QMainWindow
@@ -111,34 +117,44 @@ class BusyIconWorker(qt.QObject):
         self.busyVar = self.busyVarLim[0]
         self.busyParticleScales = [1, 1.5, 1.5, 1.5, 1.5]
         self.shouldRedraw = True
+        self.timer = None
+
+    def start(self):
+        self.shouldRedraw = True
+        self.busyVar = self.busyVarLim[0]
+        if self.timer is None:
+            self.timer = qt.QTimer()
+            self.timer.setInterval(int(self.BUSYICONDT * 1000))
+            self.timer.timeout.connect(self.render)
+        self.render()
+        qt.QTimer.singleShot(0, self._start_timer)
+
+    def _start_timer(self):
+        if self.shouldRedraw and self.timer is not None and \
+                not self.timer.isActive():
+            self.timer.start()
 
     def render(self):
-        while self.shouldRedraw:
-            pixBusy = qt.QPixmap(self.busyPixmap0.size())
-            pixBusy.fill(qt.QColor("#000000ff"))
-            painter = qt.QPainter(pixBusy)
-            # painter.setRenderHint(qt.QPainter.SmoothPixmapTransform)
-            if self.busyVar > self.busyVarLim[1]:
-                self.busyVar = self.busyVarLim[0]
-            scale = self.busyVar
-            painter.scale(scale, scale)
-            for sc in self.busyParticleScales:
-                painter.scale(sc, sc)
-                painter.drawPixmap(32, 32, self.busyPixmap0)
-            painter.end()
-            self.busyVar += self.busyVar*self.busyVarLim[2]
-            icon = qt.QIcon(pixBusy)
-
-            # tab order is unknown:
-            tabWidget = self.parent.tabWidget
-            for itab in range(tabWidget.count()):
-                if tabWidget.tabText(itab) == self.parent.tabNameGlow:
-                    break
-            else:
-                return
-            tabWidget.setTabIcon(itab, icon)
-
-            time.sleep(self.BUSYICONDT)  # waiting in a separate thread is ok
+        if not self.shouldRedraw:
+            self.halt()
+            return
+        pixBusy = qt.QPixmap(self.busyPixmap0.size())
+        pixBusy.fill(qt.QColor("#000000ff"))
+        painter = qt.QPainter(pixBusy)
+        # painter.setRenderHint(qt.QPainter.SmoothPixmapTransform)
+        if self.busyVar > self.busyVarLim[1]:
+            self.busyVar = self.busyVarLim[0]
+        scale = self.busyVar
+        painter.scale(scale, scale)
+        for sc in self.busyParticleScales:
+            painter.scale(sc, sc)
+            painter.drawPixmap(32, 32, self.busyPixmap0)
+        painter.end()
+        self.busyVar += self.busyVar*self.busyVarLim[2]
+        icon = qt.QIcon(pixBusy)
+        self.icon_ready.emit(icon)
 
     def halt(self):
         self.shouldRedraw = False
+        if self.timer is not None and self.timer.isActive():
+            self.timer.stop()

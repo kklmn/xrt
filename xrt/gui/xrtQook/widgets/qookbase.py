@@ -96,6 +96,9 @@ class XrtQookBase(qt.QMainWindow):
         self.prbStart = 0
         self.prbRange = 100
         self.busyIconThread = None
+        self.busyIconWorker = None
+        self.busyIconActive = False
+        self._pendingSphinxRender = None
 
         self.prepareViewer = False
         self.callWizard = True
@@ -135,6 +138,8 @@ class XrtQookBase(qt.QMainWindow):
         self.sphinxWorker.moveToThread(self.sphinxThread)
         self.sphinxThread.started.connect(self.sphinxWorker.render)
         self.sphinxWorker.html_ready.connect(self._on_sphinx_thread_html_ready)
+        self.sphinxWorker.html_ready.connect(self.sphinxThread.quit)
+        self.sphinxThread.finished.connect(self._on_sphinx_thread_finished)
 
         mainBox = qt.QVBoxLayout()
         mainBox.setContentsMargins(0, 0, 0, 0)
@@ -1211,12 +1216,25 @@ class XrtQookBase(qt.QMainWindow):
             self.webHelp.setReadOnly(True)
 
     def renderLiveDoc(self, doc, docName, docArgspec, docNote, img_path=""):
-        self.sphinxWorker.prepare(doc, docName, docArgspec, docNote, img_path)
+        renderArgs = (doc, docName, docArgspec, docNote, img_path)
+        if self.sphinxThread.isRunning():
+            self._pendingSphinxRender = renderArgs
+            return
+        self._pendingSphinxRender = None
+        self.sphinxWorker.prepare(*renderArgs)
         self.sphinxThread.start()
 
     def _on_sphinx_thread_html_ready(self):
         """Set our sphinx documentation based on thread result"""
         self.webHelp.load(qt.QUrl(ext.xrtQookPage))
+
+    def _on_sphinx_thread_finished(self):
+        if self._pendingSphinxRender is None:
+            return
+        renderArgs = self._pendingSphinxRender
+        self._pendingSphinxRender = None
+        self.sphinxWorker.prepare(*renderArgs)
+        self.sphinxThread.start()
 
     def updateDescription(self):
         self.typingTimer.start(500)
@@ -2499,25 +2517,77 @@ class XrtQookBase(qt.QMainWindow):
                 raise e
 
     def updateProgressBar(self, dataTuple):
+        progress = dataTuple[0]
         self.progressBar.setValue(self.prbStart +
-                                  int(dataTuple[0] * self.prbRange))
+                                  int(progress * self.prbRange))
         self.progressBar.setFormat(dataTuple[1])
 
-        if dataTuple[0] <= 0:
+        if 0 <= progress < 1 and self.busyIconThread is None:
+            self.busyIconActive = True
             self.busyIconThread = qt.QThread(self)
             self.busyIconWorker = BusyIconWorker()
             self.busyIconWorker.moveToThread(self.busyIconThread)
             self.busyIconWorker.prepare(self)
-            self.busyIconThread.started.connect(self.busyIconWorker.render)
+            self.busyIconWorker.icon_ready.connect(self.setBusyGlowIcon)
+            self.busyIconThread.started.connect(self.busyIconWorker.start)
             self.busyIconThread.finished.connect(self.busyIconWorker.halt)
             self.busyIconThread.start()
-        elif dataTuple[0] >= 1:
+        elif progress >= 1:
             if self.busyIconThread is not None:
+                self.busyIconActive = False
                 self.busyIconWorker.shouldRedraw = False
                 self.busyIconThread.quit()
                 self.busyIconThread.deleteLater()
                 self.busyIconThread = None
+                self.busyIconWorker = None
                 self.setTabIcons()
+
+    def setBusyGlowIcon(self, icon):
+        if not self.busyIconActive:
+            return
+        if self.tabWidget is None:
+            return
+        for itab in range(self.tabWidget.count()):
+            if self.tabWidget.tabText(itab) == self.tabNameGlow:
+                self.tabWidget.setTabIcon(itab, icon)
+                break
+
+    def _shutdown_busy_icon_worker(self):
+        if self.busyIconThread is None:
+            return
+        self.busyIconActive = False
+        if self.busyIconWorker is not None:
+            self.busyIconWorker.shouldRedraw = False
+        self.busyIconThread.quit()
+        self.busyIconThread.wait(1000)
+        if self.busyIconThread.isRunning():
+            self.busyIconThread.terminate()
+            self.busyIconThread.wait(1000)
+        self.busyIconThread.deleteLater()
+        self.busyIconThread = None
+        self.busyIconWorker = None
+        self.setTabIcons()
+
+    def _shutdown_sphinx_worker(self):
+        if self.sphinxThread is None:
+            return
+        self._pendingSphinxRender = None
+        if self.sphinxThread.isRunning():
+            self.sphinxThread.quit()
+            self.sphinxThread.wait(2000)
+            if self.sphinxThread.isRunning():
+                self.sphinxThread.terminate()
+                self.sphinxThread.wait(1000)
+
+    def _shutdown_qprocess(self):
+        qprocess = getattr(self, 'qprocess', None)
+        if qprocess is None:
+            return
+        if qprocess.state() != qt.QProcess.NotRunning:
+            qprocess.terminate()
+            if not qprocess.waitForFinished(2000):
+                qprocess.kill()
+                qprocess.waitForFinished(1000)
 
     def saveCode(self):
         saveStatus = False
@@ -2582,4 +2652,7 @@ class XrtQookBase(qt.QMainWindow):
     def closeEvent(self, event):
         if self.blViewer is not None:
             self.blViewer.close()
+        self._shutdown_busy_icon_worker()
+        self._shutdown_sphinx_worker()
+        self._shutdown_qprocess()
         super().closeEvent(event)

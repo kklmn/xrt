@@ -120,8 +120,15 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif argName.startswith('beam'):
             if hasattr(self.mainWidget, 'beamModel'):
                 if parentIndexName == 'parameters':
-                    fpModel = MultiColumnFilterProxy({1: "Global"})
-                    fpModel.setSourceModel(self.mainWidget.beamModel)
+                    fpModel = MultiColumnFilterProxy({1: "Global"}, combo)
+                    hiddenBeams = self._collect_sibling_output_beams(
+                        model, index)
+                    if hiddenBeams:
+                        beamProxy = ComboFilterText(hiddenBeams, combo)
+                        beamProxy.setSourceModel(self.mainWidget.beamModel)
+                        fpModel.setSourceModel(beamProxy)
+                    else:
+                        fpModel.setSourceModel(self.mainWidget.beamModel)
                 else:
 
                     fpModel = self.mainWidget.beamModel
@@ -135,7 +142,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 return QLineEdit(parent)
             return combo
         elif argName.startswith('wave'):
-            fpModel = MultiColumnFilterProxy({1: "Local"})
+            fpModel = MultiColumnFilterProxy({1: "Local"}, combo)
             fpModel.setSourceModel(self.mainWidget.beamModel)
             combo.setModel(fpModel)
             return combo
@@ -159,7 +166,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     allElements.remove(currentElement)
                 combo.addItems(['None'] + allElements)
             elif self.mainWidget is not None:
-                proxy = ComboFilterText({currentElement,})
+                proxy = ComboFilterText({currentElement,}, combo)
                 proxy.setSourceModel(self.mainWidget.materialsModel)
                 combo.setModel(proxy)
             else:
@@ -180,7 +187,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     allElements.remove(currentElement)
                 combo.addItems(['None'] + allElements)
             elif self.mainWidget is not None:
-                proxy = ComboFilterText({currentElement,})
+                proxy = ComboFilterText({currentElement,}, combo)
                 proxy.setSourceModel(self.mainWidget.fesModel)
                 combo.setModel(proxy)
             else:
@@ -349,6 +356,32 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         else:
             return QLineEdit(parent)
 
+    def _collect_sibling_output_beams(self, model, index):
+        hiddenBeams = set()
+        parentIndex = index.parent()
+        if not parentIndex.isValid():
+            return hiddenBeams
+
+        methodIndex = parentIndex.parent()
+        if not methodIndex.isValid():
+            return hiddenBeams
+
+        methodItem = model.itemFromIndex(methodIndex)
+        if methodItem is None:
+            return hiddenBeams
+
+        for i in range(methodItem.rowCount()):
+            sectionItem = methodItem.child(i, 0)
+            if sectionItem is None or str(sectionItem.text()) != 'output':
+                continue
+            for j in range(sectionItem.rowCount()):
+                beamItem = sectionItem.child(j, 1)
+                if beamItem is not None:
+                    hiddenBeams.add(str(beamItem.text()))
+            break
+
+        return hiddenBeams
+
     def setEditorData(self, editor, index):
         value = index.data()
         if isinstance(editor, QComboBox):
@@ -410,9 +443,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):
     """Fields must be a dictionary {column: "filterValue"}"""
-    def __init__(self, fields={}, parent=None):
+    def __init__(self, fields=None, parent=None):
         super().__init__(parent)
-        self.fields = fields
+        self.fields = {} if fields is None else dict(fields)
 
     def setColumnFilter(self, fields):
         self.fields.update(fields)
