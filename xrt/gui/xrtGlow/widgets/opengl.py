@@ -147,9 +147,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     }
             self.input_queue.put(msg_init_bl)
 
-            self.timer = qt.QTimer()
-            self.timer.timeout.connect(
-                partial(self.check_progress, self.output_queue))
+            self._progressTimerSlot = partial(self.check_progress,
+                                              self.output_queue)
+            self.timer = qt.QTimer(self)
+            self.timer.timeout.connect(self._progressTimerSlot)
             self.timer.start(10)  # Adjust the interval as needed
 
             for oeid, meth in self.beamline.flowU.items():
@@ -815,13 +816,83 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                self.glDraw()
 
     def close_calc_process(self):
+        timer = getattr(self, 'timer', None)
+        if timer is not None:
+            timer.stop()
+            try:
+                timer.timeout.disconnect(getattr(self, '_progressTimerSlot',
+                                                 None))
+            except Exception:
+                pass
+            timer.deleteLater()
+            self.timer = None
+
         if hasattr(self, 'calc_process') and\
                 self.calc_process is not None:
-            self.input_queue.put(msg_exit)
+            try:
+                self.input_queue.put(msg_exit)
+            except Exception:
+                pass
             self.calc_process.join(timeout=1)
             if self.calc_process.is_alive():
                 self.calc_process.terminate()
                 self.calc_process.join()
+            self.calc_process = None
+
+        for queue_name in ['input_queue', 'output_queue']:
+            queue_obj = getattr(self, queue_name, None)
+            if queue_obj is None:
+                continue
+            try:
+                queue_obj.close()
+            except Exception:
+                pass
+            try:
+                queue_obj.cancel_join_thread()
+            except Exception:
+                pass
+            setattr(self, queue_name, None)
+
+    def cleanup_gl_resources(self):
+        if getattr(self, '_glResourcesCleaned', False):
+            return
+        if self.context() is None:
+            return
+
+        try:
+            self.makeCurrent()
+        except Exception:
+            return
+
+        try:
+            for beamTag in list(self.beamBufferDict):
+                self.delete_beam_footprint(beamTag)
+                del self.beamBufferDict[beamTag]
+
+            for meshId, mesh in list(self.meshDict.items()):
+                if mesh is not None:
+                    mesh.delete_mesh()
+                del self.meshDict[meshId]
+
+            if hasattr(self, 'cBox') and self.cBox is not None:
+                self.cBox.cleanup_gl_resources()
+                self.cBox = None
+
+            if hasattr(self, 'llVBO') and self.llVBO is not None:
+                self.llVBO.destroy()
+                self.llVBO = None
+
+            if hasattr(self, 'labelvao') and self.labelvao is not None:
+                self.labelvao.destroy()
+                self.labelvao = None
+
+            if hasattr(self, 'beamTexture') and self.beamTexture is not None:
+                self.beamTexture.destroy()
+                self.beamTexture = None
+
+            self._glResourcesCleaned = True
+        finally:
+            self.doneCurrent()
 
 #    def generate_hist_texture(self, oe, beam, is2ndXtal=False):
 #        nsIndex = int(is2ndXtal)
@@ -2537,100 +2608,102 @@ class xrtGlWidget(qt.QOpenGLWidget):
         mouseY = yView - mEvent.y()
         self.makeCurrent()
         try:
-            outStencil = gl.glReadPixels(
-                    mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX,
-                    gl.GL_UNSIGNED_INT)
-        except OSError:
-            return
-        overOE = np.squeeze(np.array(outStencil))
+            try:
+                outStencil = gl.glReadPixels(
+                        mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX,
+                        gl.GL_UNSIGNED_INT)
+            except OSError:
+                return
+            overOE = np.squeeze(np.array(outStencil))
 
-        ctrlOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ControlModifier))
+            ctrlOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ControlModifier))
 #        altOn = bool(int(mEvent.modifiers()) & int(qt.Qt.AltModifier))
-        shiftOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ShiftModifier))
+            shiftOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ShiftModifier))
 #        polarAx = qt.QVector3D(0, 0, 1)
 
-        dx = mouseX - self.prevMPos[0]
-        dy = mouseY - self.prevMPos[1]
+            dx = mouseX - self.prevMPos[0]
+            dy = mouseY - self.prevMPos[1]
 
-        xs = 2 * dx / xView
-        ys = 2 * dy / yView
-        xsn = xs * np.tan(np.radians(60))
-        ysn = ys * np.tan(np.radians(60))
-        xm = xsn * self.cameraDistance / 3.5
-        ym = ysn * self.cameraDistance / 3.5
+            xs = 2 * dx / xView
+            ys = 2 * dy / yView
+            xsn = xs * np.tan(np.radians(60))
+            ysn = ys * np.tan(np.radians(60))
+            xm = xsn * self.cameraDistance / 3.5
+            ym = ysn * self.cameraDistance / 3.5
 
-        if mEvent.buttons() == qt.Qt.LeftButton:
-            if mEvent.modifiers() == qt.Qt.NoModifier:
-                sensitivity = 120
-                self.rotations[0] -= sensitivity*self.aspect*xs
-                self.rotations[1] -= sensitivity*ys
+            if mEvent.buttons() == qt.Qt.LeftButton:
+                if mEvent.modifiers() == qt.Qt.NoModifier:
+                    sensitivity = 120
+                    self.rotations[0] -= sensitivity*self.aspect*xs
+                    self.rotations[1] -= sensitivity*ys
 
-                if self.rotations[0] < -180:
-                    self.rotations[0] += 360
+                    if self.rotations[0] < -180:
+                        self.rotations[0] += 360
 
-                if self.rotations[0] > 180:
-                    self.rotations[0] -= 360
+                    if self.rotations[0] > 180:
+                        self.rotations[0] -= 360
 
-                if self.rotations[1] >= 90:
-                    self.rotations[1] = 89.99
+                    if self.rotations[1] >= 90:
+                        self.rotations[1] = 89.99
 
-                if self.rotations[1] <= -90:
-                    self.rotations[1] = -89.99
+                    if self.rotations[1] <= -90:
+                        self.rotations[1] = -89.99
 
-                self.rotationUpdated.emit(self.rotations)
+                    self.rotationUpdated.emit(self.rotations)
 
-            elif shiftOn:
-                az, el = self.rotations
-                mouse_h = np.array([-snsc(az, 45), snsc(az, -45), 0])
-                psgn = -snsc(el, 45)
-                mouse_v = np.array([psgn*snsc(az, -45), psgn*snsc(az, 45),
-                                    snsc(el, -45)])
-                shifts = xm * mouse_h + ym * mouse_v
+                elif shiftOn:
+                    az, el = self.rotations
+                    mouse_h = np.array([-snsc(az, 45), snsc(az, -45), 0])
+                    psgn = -snsc(el, 45)
+                    mouse_v = np.array([psgn*snsc(az, -45), psgn*snsc(az, 45),
+                                        snsc(el, -45)])
+                    shifts = xm * mouse_h + ym * mouse_v
 
-                self.tVec += shifts*self.maxLen/self.scaleVec
-                self.cBox.update_grid()
+                    self.tVec += shifts*self.maxLen/self.scaleVec
+                    self.cBox.update_grid()
 
-            elif ctrlOn and self.showVirtualScreen:
-                tPlane = self.virtScreen['beamStart']
-                nPlane = self.virtScreen['beamPlane']
-                pPlane = self.getPlanePoint(mouseX, mouseY, tPlane, nPlane)
-                if self.virtScreen['offsetOn']:
-                    self.virtScreen['offset'] =\
-                        pPlane - self.virtScreen['center']
-                    self.virtScreen['offsetOn'] = False
-                self.positionVScreen(pPlane - self.virtScreen['offset'])
+                elif ctrlOn and self.showVirtualScreen:
+                    tPlane = self.virtScreen['beamStart']
+                    nPlane = self.virtScreen['beamPlane']
+                    pPlane = self.getPlanePoint(mouseX, mouseY, tPlane, nPlane)
+                    if self.virtScreen['offsetOn']:
+                        self.virtScreen['offset'] =\
+                            pPlane - self.virtScreen['center']
+                        self.virtScreen['offsetOn'] = False
+                    self.positionVScreen(pPlane - self.virtScreen['offset'])
 
-            self.doneCurrent()
-            self.glDraw()
-        else:
-            if int(overOE) in self.selectableOEs:
-                oe = self.beamline.oesDict[self.selectableOEs[int(overOE)]][0]
-                try:
-                    oePitchStr = np.degrees(
-                        oe.pitch + (oe.bragg if hasattr(oe, 'bragg')
-                                    else 0)) if hasattr(oe, 'pitch') else 0
-                except TypeError:
-                    oePitchStr = 0
-
-                try:
-                    tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
-                            oe.name, *oe.center,
-                            oePitchStr,
-                            np.degrees(oe.roll+oe.positionRoll)
-                            if is_oe(oe) else 0,
-                            np.degrees(oe.yaw)
-                            if hasattr(oe, 'yaw') else 0)
-                except ValueError:
-                    tooltipStr = str(oe.name)
-                qt.QToolTip.showText(mEvent.globalPos(), tooltipStr, self)
-            else:
-                qt.QToolTip.hideText()
-            if overOE != self.selectedOE:
-                self.selectedOE = int(overOE)
-                self.doneCurrent()
                 self.glDraw()
-        self.prevMPos[0] = mouseX
-        self.prevMPos[1] = mouseY
+            else:
+                if int(overOE) in self.selectableOEs:
+                    oe = self.beamline.oesDict[
+                        self.selectableOEs[int(overOE)]][0]
+                    try:
+                        oePitchStr = np.degrees(
+                            oe.pitch + (oe.bragg if hasattr(oe, 'bragg')
+                                        else 0)) if hasattr(oe, 'pitch') else 0
+                    except TypeError:
+                        oePitchStr = 0
+
+                    try:
+                        tooltipStr = "{0}\n[x, y, z]: [{1:.3f}, {2:.3f}, {3:.3f}]mm\n[p, r, y]: ({4:.3f}, {5:.3f}, {6:.3f})\u00B0".format(
+                                oe.name, *oe.center,
+                                oePitchStr,
+                                np.degrees(oe.roll+oe.positionRoll)
+                                if is_oe(oe) else 0,
+                                np.degrees(oe.yaw)
+                                if hasattr(oe, 'yaw') else 0)
+                    except ValueError:
+                        tooltipStr = str(oe.name)
+                    qt.QToolTip.showText(mEvent.globalPos(), tooltipStr, self)
+                else:
+                    qt.QToolTip.hideText()
+                if overOE != self.selectedOE:
+                    self.selectedOE = int(overOE)
+                    self.glDraw()
+            self.prevMPos[0] = mouseX
+            self.prevMPos[1] = mouseY
+        finally:
+            self.doneCurrent()
 
     def mouseDoubleClickEvent(self, mdcevent):
         if self.selectedOE > 0:
