@@ -143,6 +143,36 @@ class CoordinateBox():
         self.z2x = qt.QMatrix4x4()
         self.z2x.rotate(90, 0, -1, 0)
 
+    def cleanup_gl_resources(self):
+        for vbo_name in ['vbo_frame', 'vbo_grid', 'vbo_Text',
+                         'vbo_arrows', 'vbo_arr_colors']:
+            vbo = getattr(self, vbo_name, None)
+            if vbo is not None:
+                vbo.destroy()
+                setattr(self, vbo_name, None)
+
+        for vao_name in ['vaoFrame', 'vaoGrid', 'vaoFineGrid',
+                         'vaoOrigin', 'vaoText', 'vao_arrow']:
+            vao = getattr(self, vao_name, None)
+            if vao is not None:
+                vao.destroy()
+                setattr(self, vao_name, None)
+
+        for ch in self.characters:
+            tex = ch[0]
+            if tex is not None:
+                tex.destroy()
+        self.characters = []
+
+        for shader_name in ['shader', 'origShader', 'textShader']:
+            shader = getattr(self, shader_name, None)
+            if shader is not None:
+                try:
+                    shader.removeAllShaders()
+                except Exception:
+                    pass
+                setattr(self, shader_name, None)
+
         self.initialGridLen = 0
 
 #        self.vquad = [

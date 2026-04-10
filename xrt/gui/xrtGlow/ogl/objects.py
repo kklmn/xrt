@@ -1399,6 +1399,25 @@ class OEMesh3D():
             gl.glGetError()
             self.vao[nsIndex] = None
 
+        for tex in self.beamTexture.values():
+            if tex is not None:
+                tex.destroy()
+        self.beamTexture.clear()
+        self.beamLimits.clear()
+        self.transMatrix.clear()
+        self.arrLengths.clear()
+
+        grid_vbo = getattr(self, 'grid_vbo', None)
+        if grid_vbo is not None:
+            grid_vertices = grid_vbo.get('vertices')
+            if grid_vertices is not None:
+                grid_vertices.destroy()
+            self.grid_vbo = None
+
+        if self.emptyTex is not None:
+            self.emptyTex.destroy()
+            self.emptyTex = None
+
     def generate_instance_data(self, num, magnetShape):
         period = getattr(self.oe, 'period',
                          magnetShape.get('period', 40))
