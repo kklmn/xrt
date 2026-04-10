@@ -109,6 +109,8 @@ DEFAULT_SCENE_SETTINGS = {
     'oeThickness': 5.,
     'oeThicknessForce': None,
     'slitThicknessFraction': 50.,
+    'apertureBladeThickness': 5.,
+    'apertureDefaultSpan': 10.,
     'maxLen': 1.,
 
     'fontSize': 5,

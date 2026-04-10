@@ -353,6 +353,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             record = elementBase.get(f'opening.{field}')
                             if record is not None:
                                 record.set(argVal)
+                    elif key == 'blades':
+                        for field, argVal in val.items():
+                            record = elementBase.get(f'blades.{field}')
+                            if record is not None:
+                                record.set(argVal)
                     else:
                         record = elementBase.get(key)
                         if record is not None:
@@ -1401,11 +1406,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
         elif is_aperture(oeToPlot):
             if oeuuid not in self.meshDict:
                 mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
-            for blade in oeToPlot.kind:
+            for blade in oeToPlot.blades:
                 try:
                     mesh3D.prepare_surface_mesh(blade)
                     mesh3D.isEnabled = True
-                except:
+                except Exception:
                     mesh3D.isEnabled = False
                 assign_stencil_num(mesh3D)
 
@@ -1417,7 +1422,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 else:
                     mesh3D.prepare_magnets(shape=self.magnetShape)
                 mesh3D.isEnabled = True
-            except:
+            except Exception:
                 mesh3D.isEnabled = False
             assign_stencil_num(mesh3D)
 
@@ -2037,7 +2042,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             except Exception as e:
                                 print(e)
                 elif is_aperture(oeToPlot):
-                    for blade in oeToPlot.kind:
+                    for blade in oeToPlot.blades:
                         if mesh3D.isEnabled:
                             isSelected = False
                             if oeuuid in self.selectableOEs.values():
