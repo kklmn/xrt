@@ -378,8 +378,17 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
 
-    return kwargs
+    if {'opening', 'x', 'y'} & paramDictStr.keys():  # apertures compatibility hotfix
+        try:
+            if 'kind' in paramDictStr:
+                kwargs['blades'] = dict(zip(parametrize(paramDictStr['kind']),
+                      parametrize(paramDictStr['opening'])))
+            else:
+                kwargs['vertices'] = list(parametrize(paramDictStr['opening']))
+        except Exception:
+            pass
 
+    return kwargs
 
 def create_paramdict_mat(paramDictStr, defArgs, bl=None):
     kwargs = OrderedDict()

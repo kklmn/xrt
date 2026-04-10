@@ -89,7 +89,9 @@ class InstanceInspector(qt.QDialog):
             else:
                 parentItem = self.modelRoot
 
-            if key in ['center']:
+            if key == 'blades':
+                self.add_blades_params(parentItem, value, epicsTree)
+            elif key in ['center']:
                 if initDict.get(key) is not None:
                     spVal = raycing.parametrize(initDict.get(key))
                 else:
@@ -272,6 +274,31 @@ class InstanceInspector(qt.QDialog):
 
         self.edited_data = {}
 
+    def add_blades_params(self, parentItem, value, epicsTree):
+        blades = value if isinstance(value, dict) else raycing.parametrize(value)
+        if not isinstance(blades, dict):
+            blades = {}
+        for field in ['left', 'right', 'bottom', 'top']:
+            nkey = f"blades.{field}"
+            nvalue = blades.get(field, None)
+            nvalue = '0.0' if nvalue is None else str(nvalue)
+            epv = epicsTree.get(nkey) if epicsTree is not None else None
+            child0, child1 = self.add_param(parentItem, nkey, nvalue, epv=epv)
+            self.configure_blade_row(child0, child1, blades.get(field) is not None)
+            self.original_data[nkey] = nvalue if blades.get(field) is not None else None
+        self.add_param(parentItem, "blades rbk", value)
+
+    def configure_blade_row(self, keyItem, valueItem, isEnabled):
+        keyItem.setFlags(self.checkFlag)
+        keyItem.setCheckable(True)
+        keyItem.setCheckState(qt.Qt.Checked if isEnabled else qt.Qt.Unchecked)
+        valueItem.setEditable(not self.viewOnly and isEnabled)
+
+    def is_blade_row(self, item):
+        rowItem = item if item.column() == 0 else item.parent().child(
+            item.row(), 0)
+        return rowItem is not None and str(rowItem.text()).startswith('blades.')
+
     def add_prop(self, parent, propName):
         """Add non-editable Item"""
         child0 = qt.QStandardItem(str(propName))
@@ -352,6 +379,23 @@ class InstanceInspector(qt.QDialog):
         self.model.appendRow([key_item, val_item])
 
     def on_item_changed(self, item):
+        if item.column() == 0 and self.is_blade_row(item):
+            key = str(item.text())
+            parent = item.parent() or item.model().invisibleRootItem()
+            valueItem = parent.child(item.row(), 1)
+            isEnabled = item.checkState() == qt.Qt.Checked
+            valueItem.setEditable(not self.viewOnly and isEnabled)
+            if isEnabled:
+                value = raycing.parametrize(valueItem.text())
+                if value is None:
+                    valueItem.setText('0.0')
+                    value = 0.0
+                self.changed_data[key] = value
+            else:
+                self.changed_data[key] = None
+            self.set_row_highlight(valueItem, True)
+            return
+
         if item.column() != 1:
             return
 
@@ -368,7 +412,10 @@ class InstanceInspector(qt.QDialog):
             value = value_str
 
         original_value = self.original_data.get(key)
-        value_changed = value_str != original_value
+        if key.startswith('blades.') and parent.child(row, 0).checkState() != qt.Qt.Checked:
+            value_changed = key in self.changed_data
+        else:
+            value_changed = value_str != original_value
 
         # Update the changed_data dictionary
         if value_changed:
@@ -416,7 +463,9 @@ class InstanceInspector(qt.QDialog):
         if not self.changed_data:
             return  # nothing to do
 
-        self.propertiesChanged.emit(copy.deepcopy(self.changed_data))
+        changedData = self.collapse_compound_changes(copy.deepcopy(
+            self.changed_data))
+        self.propertiesChanged.emit(changedData)
 
         if self.widgetType == 'oe':
             for row in range(self.modelRoot.rowCount()):
@@ -425,8 +474,11 @@ class InstanceInspector(qt.QDialog):
                     key = str(catItem.child(j, 0).text())
                     if key in self.changed_data:
                         new_value = self.changed_data[key]
-                        self.original_data[key] = new_value
-                        catItem.child(j, 1).setText(str(new_value))
+                        if key.startswith('blades.') and new_value is None:
+                            self.original_data[key] = None
+                        else:
+                            self.original_data[key] = str(new_value)
+                            catItem.child(j, 1).setText(str(new_value))
                         self.set_row_highlight(catItem.child(j, 0), False)
         elif self.widgetType in ['mat', 'fe']:
             rootItem = self.modelRoot
@@ -439,6 +491,21 @@ class InstanceInspector(qt.QDialog):
                     self.set_row_highlight(rootItem.child(j, 0), False)
         self.changed_data.clear()
 
+    def collapse_compound_changes(self, changedData):
+        bladeKeys = [key for key in changedData if key.startswith('blades.')]
+        if bladeKeys:
+            blades = {}
+            for field in ['left', 'right', 'bottom', 'top']:
+                itemValue = changedData.get(
+                    f'blades.{field}', raycing.parametrize(
+                        self.original_data.get(f'blades.{field}', 'None')))
+                if itemValue is not None:
+                    blades[field] = itemValue
+            changedData['blades'] = blades
+            for key in bladeKeys:
+                changedData.pop(key, None)
+        return changedData
+
     def update_param(self, pTuple):
         parentItem = None
         if pTuple[0] == self.elementId:
@@ -450,6 +517,28 @@ class InstanceInspector(qt.QDialog):
                 else:
                     parentItem = self.itemGroups.get('Other')
             if parentItem is not None:
+                if pTuple[1] == 'blades':
+                    blades = pTuple[2] if isinstance(pTuple[2], dict) else\
+                        raycing.parametrize(pTuple[2])
+                    if not isinstance(blades, dict):
+                        blades = {}
+                    for field in ['left', 'right', 'bottom', 'top']:
+                        for i in range(parentItem.rowCount()):
+                            child0 = parentItem.child(i, 0)
+                            if str(child0.text()) == f'blades.{field}':
+                                child1 = parentItem.child(i, 1)
+                                value = blades.get(field, None)
+                                if value is not None:
+                                    child1.setText(str(value))
+                                self.configure_blade_row(
+                                    child0, child1, value is not None)
+                                break
+                    for i in range(parentItem.rowCount()):
+                        child0 = parentItem.child(i, 0)
+                        if str(child0.text()) == 'blades rbk':
+                            parentItem.child(i, 1).setText(str(pTuple[2]))
+                            break
+                    return
                 for i in range(parentItem.rowCount()):
                     child0 = parentItem.child(i, 0)
                     if str(child0.text()) == f'{pTuple[1]} rbk':

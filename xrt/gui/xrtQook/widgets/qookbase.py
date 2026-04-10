@@ -1434,7 +1434,8 @@ class XrtQookBase(qt.QMainWindow):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child1 = qt.QStandardItem(str(value))
+        child1 = qt.QStandardItem()
+        self.setParamItemValue(child1, paramName, value)
         if str(paramName) == 'name':
             ch1flag = self.paramFlag
         elif isinstance(parent, qt.QStandardItem) and\
@@ -1482,6 +1483,22 @@ class XrtQookBase(qt.QMainWindow):
                 self.tree.setIndexWidget(ind, slider)
 
         return child0, child1
+
+    def formatParamDisplay(self, paramName, value):
+        return str(value)
+
+    def setParamItemValue(self, item, paramName, value):
+        rawValue = str(value)
+        item.setData(rawValue, qt.Qt.UserRole + 1)
+        item.setText(self.formatParamDisplay(paramName, value))
+        if item.text() != rawValue:
+            item.setToolTip(rawValue)
+        else:
+            item.setToolTip('')
+
+    def getParamItemValue(self, item):
+        rawValue = item.data(qt.Qt.UserRole + 1)
+        return str(rawValue) if rawValue is not None else str(item.text())
 
     def addProp(self, parent, propName):
         """Add non-editable Item"""
@@ -1688,7 +1705,7 @@ class XrtQookBase(qt.QMainWindow):
                 if parent.child(itemRow, 0).foreground().color() != qt.Qt.red:
                     for defArg, defArgVal in self.getParams(obj):
                         if str(defArg) == str(parent.child(itemRow, 0).text()):
-                            if str(defArgVal) != str(item.text()):
+                            if str(defArgVal) != self.getParamItemValue(item):
                                 color = qt.Qt.blue
                             else:
                                 color = qt.Qt.black
@@ -1938,7 +1955,8 @@ class XrtQookBase(qt.QMainWindow):
             pnItem = rootItem.child(pn, 0)
             itemDict = OrderedDict()
             if not pnItem.hasChildren():
-                outDict[str(pnItem.text())] = str(rootItem.child(pn, 1).text())
+                outDict[str(pnItem.text())] = self.getParamItemValue(
+                    rootItem.child(pn, 1))
                 continue
             for pnp in range(pnItem.rowCount()):
                 pltPropItem = pnItem.child(pnp, 0)
@@ -1950,8 +1968,8 @@ class XrtQookBase(qt.QMainWindow):
                         axDict[axPropName] = axPropValue
                     itemDict[str(pltPropItem.text())] = axDict
                 else:
-                    itemDict[str(pltPropItem.text())] = str(
-                            pnItem.child(pnp, 1).text())
+                    itemDict[str(pltPropItem.text())] = self.getParamItemValue(
+                        pnItem.child(pnp, 1))
             outDict[str(pnItem.text())] = itemDict
         return outDict
 
@@ -1993,7 +2011,7 @@ class XrtQookBase(qt.QMainWindow):
                                     '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
                                         self.prefixtab,
                                         despace(str(child0.text())),
-                                        child1.text(),
+                                        self.getParamItemValue(child1),
                                         itemType)
                 elif flatModel:
                     self.confText +=\
