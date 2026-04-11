@@ -32,6 +32,7 @@ xrt = { git = "https://github.com/kklmn/xrt.git", rev = "e863369" }
 pyqt = "*"
 pyqtwebengine = "*"
 qtpy = "*"
+qtpynodeeditor = "*"
 
 [environments]
 default = []

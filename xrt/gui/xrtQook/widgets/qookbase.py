@@ -62,6 +62,8 @@ from .. import tutorial  # analysis:ignore
 
 from ... import xrtGlow as xrtglow  # analysis:ignore
 from ...xrtGlow import InstanceInspector  # analysis:ignore
+from ...xrtGlow._utils import is_source, is_aperture, is_screen
+from ...xrtGlow.widgets.nodeeditor import _FlowGraphPanel, FLOW_NODE_STYLES
 
 try:
     from ....backends.raycing.materials import elemental as rmatsel
@@ -173,6 +175,7 @@ class XrtQookBase(qt.QMainWindow):
 
         self.setCentralWidget(mainWidget)
         self.initAllTrees()
+        self.refreshFlowPanel()
         self.blRunGlow()
         self.initDocWidgets()
         style = "QMainWindow::separator {width: 7px;} " \
@@ -540,6 +543,8 @@ class XrtQookBase(qt.QMainWindow):
             self.codeConsole.setFont(self.defaultFont)
             self.codeConsole.setReadOnly(True)
 
+        self.makeFlowPanel()
+        self.tabs.addTab(self.flowPanel, "Flow")
         self.tabs.addTab(self.tree, "Beamline")
         self.tabs.addTab(self.matTree, "Materials")
         self.tabs.addTab(self.feTree, "Figure Error")
@@ -548,7 +553,153 @@ class XrtQookBase(qt.QMainWindow):
         self.tabs.addTab(self.descrEdit, "Description")
         self.tabs.addTab(self.codeEdit, "Code")
         self.tabs.addTab(self.codeConsole, "Console")
-        self.tabs.currentChanged.connect(self.showDescrByTab)
+        self.tabs.currentChanged.connect(self.onTabsCurrentChanged)
+
+    def makeFlowPanel(self):
+        layout = qt.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.flowGraphWidget = _FlowGraphPanel(self)
+        if self.flowGraphWidget.scene is not None:
+            self.flowGraphWidget.scene.node_double_clicked.connect(
+                self.onFlowNodeDoubleClicked)
+            self.flowGraphWidget.scene.connection_created.connect(
+                self.onFlowConnectionCreated)
+        layout.addWidget(self.flowGraphWidget)
+        self.flowPanel = qt.QWidget(self)
+        self.flowPanel.setLayout(layout)
+
+    def onTabsCurrentChanged(self, tab):
+        self.showDescrByTab(tab)
+        if self.tabs.widget(tab) is self.flowPanel:
+            self.refreshFlowPanel()
+
+    def onFlowNodeDoubleClicked(self, node):
+        element_id = getattr(node.model, 'element_id', None)
+        if element_id is not None:
+            self.runElementViewer(element_id)
+
+    def _findBeamlineItemByUuid(self, element_id):
+        if getattr(self, 'rootBLItem', None) is None:
+            return None
+        for iel in range(self.rootBLItem.rowCount()):
+            item = self.rootBLItem.child(iel, 0)
+            if str(item.data(qt.Qt.UserRole)) == str(element_id):
+                return item
+        return None
+
+    def _findMethodBeamValueItem(self, element_item):
+        if element_item is None:
+            return None
+        for ich in range(element_item.rowCount()):
+            method_item = element_item.child(ich, 0)
+            if method_item is None:
+                continue
+            method_name = str(method_item.text())
+            if method_name in ['_object', 'properties']:
+                continue
+            for jch in range(method_item.rowCount()):
+                branch_item = method_item.child(jch, 0)
+                if branch_item is None or str(branch_item.text()) != 'parameters':
+                    continue
+                for kch in range(branch_item.rowCount()):
+                    key_item = branch_item.child(kch, 0)
+                    if key_item is None:
+                        continue
+                    if str(key_item.text()) == 'beam':
+                        return branch_item.child(kch, 1)
+        return None
+
+    def _findPreferredBeamNameForElement(self, element_id):
+        preferred = None
+        fallback = None
+        for row in range(self.beamModel.rowCount()):
+            beam_item = self.beamModel.item(row, 0)
+            type_item = self.beamModel.item(row, 1)
+            owner_item = self.beamModel.item(row, 2)
+            if beam_item is None or owner_item is None:
+                continue
+            if str(owner_item.text()) != str(element_id):
+                continue
+            beam_name = str(beam_item.text())
+            beam_type = str(type_item.text()) if type_item is not None else ''
+            if fallback is None:
+                fallback = beam_name
+            if beam_type == 'beamGlobal':
+                preferred = beam_name
+                break
+        return preferred or fallback
+
+    def onFlowConnectionCreated(self, connection):
+        input_node, output_node = connection.nodes
+        if input_node is None or output_node is None:
+            return
+
+        target_id = getattr(input_node.model, 'element_id', None)
+        source_id = getattr(output_node.model, 'element_id', None)
+        if target_id is None or source_id is None:
+            return
+
+        beam_name = self._findPreferredBeamNameForElement(source_id)
+        if beam_name is None:
+            return
+
+        target_item = self._findBeamlineItemByUuid(target_id)
+        value_item = self._findMethodBeamValueItem(target_item)
+        if value_item is None:
+            return
+
+        if self.getParamItemValue(value_item) == beam_name:
+            return
+
+        self.setParamItemValue(value_item, 'beam', beam_name)
+
+    def refreshFlowPanel(self):
+        if (not hasattr(self, 'flowGraphWidget') or
+                getattr(self, 'beamLine', None) is None):
+            return
+
+        nodes = OrderedDict()
+        edges = []
+        order = []
+        seen = set()
+
+        def add_node(oeid, oeLine):
+            if oeid in nodes or oeLine is None:
+                return
+            oeObj = oeLine[0]
+            if oeObj.name == "VirtualScreen":
+                return
+            if is_source(oeObj):
+                node_kind = 'source'
+            elif is_aperture(oeObj):
+                node_kind = 'aperture'
+            elif is_screen(oeObj):
+                node_kind = 'screen'
+            else:
+                node_kind = 'oe'
+            nodes[oeid] = {
+                'title': oeObj.name,
+                'subtitle': type(oeObj).__name__,
+                'node_kind': node_kind,
+                'style': FLOW_NODE_STYLES.get(node_kind),
+            }
+            order.append(oeid)
+
+        for oeid in self.beamLine.flowU.keys():
+            add_node(oeid, self.beamLine.oesDict.get(oeid))
+
+        for oeid, oeLine in self.beamLine.oesDict.items():
+            add_node(oeid, oeLine)
+
+        for target_id, target_operations in self.beamLine.flowU.items():
+            for kwargset in target_operations.values():
+                source_id = kwargset.get('beam')
+                edge = (source_id, target_id)
+                if source_id in nodes and target_id in nodes and edge not in seen:
+                    edges.append(edge)
+                    seen.add(edge)
+
+        self.flowGraphWidget.set_graph(nodes, edges, order)
 
     def runElementViewer(self, oeuuid=None):
         oe = self.beamLine.oesDict.get(oeuuid)
@@ -870,8 +1021,8 @@ class XrtQookBase(qt.QMainWindow):
         index = self.runModel.indexFromItem(self.rootRunItem)
         self.runTree.setExpanded(index, True)
 
-        self.tabs.tabBar().setTabTextColor(0, qt.Qt.black)
-        self.tabs.tabBar().setTabTextColor(2, qt.Qt.black)
+        for itab in range(self.tabs.count()):
+            self.tabs.tabBar().setTabTextColor(itab, qt.Qt.black)
         self.progressBar.setValue(0)
         self.progressBar.setFormat("New beamline")
 
@@ -1328,7 +1479,7 @@ class XrtQookBase(qt.QMainWindow):
         self.docks[0].raise_()
 
     def showDescrByTab(self, tab):
-        if tab == 4:
+        if self.tabs.widget(tab) is self.descrEdit:
             self.updateDescriptionDelayed()
 
     def showTutorial(self, argDocStr, name, img_path=''):
