@@ -49,7 +49,8 @@ dependencies = [
 pyqt5 = [
     "PyQt5",
     "PyQtWebEngine",
-    "qtpy"
+    "qtpy",
+    "qtpynodeeditor"
 ]
 
 epics = [
@@ -60,6 +61,7 @@ all = [
     "PyQt5",
     "PyQtWebEngine",
     "qtpy",
+    "qtpynodeeditor",
     "softioc"
 ]
 

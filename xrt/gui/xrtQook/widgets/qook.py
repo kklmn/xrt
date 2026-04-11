@@ -173,6 +173,7 @@ class XrtQook(XrtQookElements):
             self.paintStatus(paintItem, initStatus)
 
         if self.blViewer is None or not outDict:
+            self.refreshFlowPanel()
             return
 
         self.blViewer.customGlWidget.update_beamline(
@@ -228,6 +229,7 @@ class XrtQook(XrtQookElements):
             self.paintStatus(paintItem, initStatus)
 
         if self.blViewer is None or not outDict:
+            self.refreshFlowPanel()
             return
 
         self.blViewer.customGlWidget.update_beamline(
@@ -362,6 +364,7 @@ class XrtQook(XrtQookElements):
                     paintItem = item.parent().child(item.row(), 1)
                     self.paintStatus(paintItem, initStatus)
 
+            self.refreshFlowPanel()
             if self.blViewer is None or not outDict:
                 return
 
