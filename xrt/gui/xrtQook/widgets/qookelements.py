@@ -217,6 +217,7 @@ class XrtQookElements(XrtQookBase):
             item.model().invisibleRootItem().removeRow(item.index().row())
 
         # TODO: consider non-glow case, beamline belongs to Qook widget?
+        self.refreshFlowPanel()
 
     def addMethod(self, name, parentItem, outBeams, methProps=None):
         self.beamModel.sort(3)

@@ -22,6 +22,7 @@ from .inspector import InstanceInspector
 from .opengl import xrtGlWidget
 
 from ...commons import qt
+from .nodeeditor import _FlowGraphPanel, FLOW_NODE_STYLES, FLOW_SCENE_STYLE
 
 from ....backends import raycing
 from ....backends.raycing import sources as rsources
@@ -29,6 +30,44 @@ from ....plotter import colorFactor, colorSaturation
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
+
+# Controls placement mode for xrtGlow:
+# "fixed" keeps the original right-side tab widget,
+# while the collapsible modes expose the same panels from a toolbar.
+CONTROL_TAB = "collapsible right"
+CONTROL_TAB_MODES = (
+    "fixed",
+    "collapsible top",
+    "collapsible left",
+    "collapsible right",
+)
+
+
+class _ToolbarPopupPanel(qt.QFrame):
+    popupHidden = qt.Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent, qt.Qt.Popup | qt.Qt.FramelessWindowHint)
+        self.setFrameShape(qt.QFrame.StyledPanel)
+        self.setObjectName('xrtGlowToolbarPopup')
+        self.setStyleSheet("""
+            QFrame#xrtGlowToolbarPopup {
+                background: palette(window);
+                border: 1px solid palette(mid);
+                border-radius: 6px;
+            }
+        """)
+        self.titleLabel = qt.QLabel()
+        self.titleLabel.setStyleSheet("font-weight: 600;")
+        self.stack = qt.QStackedWidget()
+        layout = qt.QVBoxLayout(self)
+        layout.setContentsMargins(10, 8, 10, 10)
+        layout.addWidget(self.titleLabel)
+        layout.addWidget(self.stack)
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self.popupHidden.emit()
 
 
 class xrtGlow(qt.QWidget):
@@ -87,26 +126,41 @@ class xrtGlow(qt.QWidget):
         self.makeColorsPanel()
         self.makeGridAndProjectionsPanel()
         self.makeScenePanel()
+        self.initControlPanels()
 
-        mainLayout = qt.QHBoxLayout()
-        sideLayout = qt.QVBoxLayout()
+        self.controlTabMode = self._resolveControlTabMode(CONTROL_TAB)
 
-        tabs = qt.QTabWidget()
-        tabs.addTab(self.navigationPanel, "Navigation")
-        tabs.addTab(self.transformationPanel, "Transformations")
-        tabs.addTab(self.colorOpacityPanel, "Colors")
-        tabs.addTab(self.projectionPanel, "Grid/Projections")
-        tabs.addTab(self.scenePanel, "Scene")
-#        tabs.setTabPosition(qt.QTabWidget.West)
-        sideLayout.addWidget(tabs)
-        self.canvasSplitter = qt.QSplitter()
-        self.canvasSplitter.setChildrenCollapsible(False)
-        self.canvasSplitter.setOrientation(qt.Qt.Horizontal)
-        mainLayout.addWidget(self.canvasSplitter)
-        sideWidget = qt.QWidget()
-        sideWidget.setLayout(sideLayout)
-        self.canvasSplitter.addWidget(self.customGlWidget)
-        self.canvasSplitter.addWidget(sideWidget)
+        if self.controlTabMode == 'fixed':
+            mainLayout = qt.QHBoxLayout()
+            mainLayout.setContentsMargins(0, 0, 0, 0)
+            self.canvasSplitter = qt.QSplitter()
+            self.canvasSplitter.setChildrenCollapsible(False)
+            self.canvasSplitter.setOrientation(qt.Qt.Horizontal)
+            mainLayout.addWidget(self.canvasSplitter)
+            self.canvasSplitter.addWidget(self.customGlWidget)
+            self.controlsTabs = self.makeControlsTabsWidget()
+            self.canvasSplitter.addWidget(self.controlsTabs)
+        else:
+            self.makeControlsToolbar(self.controlTabMode)
+            if self.controlTabMode == 'collapsible top':
+                mainLayout = qt.QVBoxLayout()
+            else:
+                mainLayout = qt.QHBoxLayout()
+            mainLayout.setContentsMargins(0, 0, 0, 0)
+            if self.controlTabMode in ['collapsible top', 'collapsible left']:
+                mainLayout.addWidget(self.controlsToolBar)
+            self.canvasSplitter = qt.QSplitter()
+            self.canvasSplitter.setChildrenCollapsible(False)
+            self.canvasSplitter.setOrientation(qt.Qt.Horizontal)
+            mainLayout.addWidget(self.canvasSplitter)
+            self.canvasSplitter.addWidget(self.customGlWidget)
+            self.sidePlaceholder = qt.QWidget()
+            self.sidePlaceholder.setMinimumWidth(0)
+            self.sidePlaceholder.setMaximumWidth(0)
+            self.canvasSplitter.addWidget(self.sidePlaceholder)
+            self.canvasSplitter.setSizes([1, 0])
+            if self.controlTabMode == 'collapsible right':
+                mainLayout.addWidget(self.controlsToolBar)
 
         self.setLayout(mainLayout)
 #        tabs.tabBar().setStyleSheet("""
@@ -164,6 +218,12 @@ class xrtGlow(qt.QWidget):
             sceneProps[key] = sceneSettings.get(key, val)
 
         self.applySceneProperties(sceneProps)
+
+    def _resolveControlTabMode(self, control_mode):
+        control_mode = str(control_mode).strip().lower()
+        if control_mode not in CONTROL_TAB_MODES:
+            return "fixed"
+        return control_mode
 
     def _makeCheckBox(self, cbLabel, cbControl, cbRegistry=None):
         cb = qt.QCheckBox(cbLabel)
@@ -801,6 +861,182 @@ class xrtGlow(qt.QWidget):
         sceneLayout.addStretch()
         self.scenePanel.setLayout(sceneLayout)
 
+    def initControlPanels(self):
+        self.controlPanels = OrderedDict([
+            ("Navigation", self.navigationPanel),
+            ("Transformations", self.transformationPanel),
+            ("Colors", self.colorOpacityPanel),
+            ("Grid/Projections", self.projectionPanel),
+            ("Scene", self.scenePanel),
+        ])
+
+    def makeControlsTabsWidget(self):
+        tabs = qt.QTabWidget()
+        for panelName, panelWidget in self.controlPanels.items():
+            tabs.addTab(panelWidget, panelName)
+        self.sideTabs = tabs
+        return tabs
+
+    def makeControlsToolbar(self, control_mode):
+        self.controlButtons = OrderedDict()
+        self.controlPopup = _ToolbarPopupPanel(self)
+        self.controlPopup.popupHidden.connect(self._resetToolbarButtons)
+
+        for panel in self.controlPanels.values():
+            self.controlPopup.stack.addWidget(panel)
+
+        toolbar = qt.QToolBar("Controls", self)
+        toolbar.setMovable(False)
+        toolbar.setFloatable(False)
+        toolbar.setIconSize(qt.QSize(16, 16))
+        toolbar.setOrientation(
+            qt.Qt.Horizontal if control_mode == 'collapsible top'
+            else qt.Qt.Vertical)
+        self.controlsToolBar = toolbar
+
+        titleLabel = qt.QLabel("Controls")
+        titleLabel.setStyleSheet("font-weight: 600; padding: 6px 4px;")
+        titleLabel.setAlignment(
+            qt.Qt.AlignLeft if control_mode == 'collapsible top'
+            else qt.Qt.AlignHCenter)
+        toolbar.addWidget(titleLabel)
+
+        for panelName in self.controlPanels.keys():
+            button = qt.QToolButton(self)
+            button.setText(panelName)
+            button.setCheckable(True)
+            button.setToolButtonStyle(qt.Qt.ToolButtonTextOnly)
+            button.clicked.connect(
+                partial(self.toggleControlPanel, panelName, button))
+            toolbar.addWidget(button)
+            self.controlButtons[panelName] = button
+
+        spacer = qt.QWidget(self)
+        if control_mode == 'collapsible top':
+            spacer.setSizePolicy(
+                qt.QSizePolicy.Expanding, qt.QSizePolicy.Preferred)
+        else:
+            spacer.setSizePolicy(
+                qt.QSizePolicy.Preferred, qt.QSizePolicy.Expanding)
+        toolbar.addWidget(spacer)
+
+    def _resetToolbarButtons(self):
+        for button in self.controlButtons.values():
+            button.blockSignals(True)
+            button.setChecked(False)
+            button.blockSignals(False)
+
+    def toggleControlPanel(self, panelName, button, checked):
+        if not checked:
+            self.controlPopup.hide()
+            return
+
+        for otherName, otherButton in self.controlButtons.items():
+            if otherName != panelName:
+                otherButton.blockSignals(True)
+                otherButton.setChecked(False)
+                otherButton.blockSignals(False)
+
+        self.controlPopup.titleLabel.setText(panelName)
+        self.controlPopup.stack.setCurrentWidget(self.controlPanels[panelName])
+        self.controlPopup.adjustSize()
+
+        popup_width = max(360, self.controlPopup.sizeHint().width())
+        popup_height = min(520, self.controlPopup.sizeHint().height())
+        self.controlPopup.resize(popup_width, popup_height)
+
+        if self.controlTabMode == 'collapsible top':
+            popup_pos = button.mapToGlobal(button.rect().bottomLeft())
+            popup_pos.setY(popup_pos.y() + 4)
+        elif self.controlTabMode == 'collapsible right':
+            popup_pos = button.mapToGlobal(button.rect().topLeft())
+            popup_pos.setX(popup_pos.x() - popup_width - 6)
+        else:
+            popup_pos = button.mapToGlobal(button.rect().topRight())
+            popup_pos.setX(popup_pos.x() + 6)
+        self.controlPopup.move(popup_pos)
+        self.controlPopup.show()
+        self.controlPopup.raise_()
+
+    def makeNodeEditorPanel(self):
+        layout = qt.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.nodeEditorWidget = _FlowGraphPanel(self)
+        if self.nodeEditorWidget.scene is not None:
+            self.nodeEditorWidget.scene.node_double_clicked.connect(
+                self.onNodeEditorDoubleClicked)
+        layout.addWidget(self.nodeEditorWidget)
+        self.nodeEditorPanel = qt.QWidget(self)
+        self.nodeEditorPanel.setLayout(layout)
+        self.refreshNodeEditorPanel()
+
+    def onNodeEditorDoubleClicked(self, node):
+        element_id = getattr(node.model, 'element_id', None)
+        if raycing.is_valid_uuid(element_id):
+            self.runElementViewer(element_id)
+
+    def _iterFlowGraph(self):
+        nodes = OrderedDict()
+        edges = []
+        order = []
+        seen_edges = set()
+        beamline = getattr(self.customGlWidget, 'beamline', None)
+        if beamline is None:
+            return nodes, edges, order
+
+        oes_dict = getattr(beamline, 'oesDict', {})
+        flow_u = getattr(beamline, 'flowU', OrderedDict())
+
+        def add_node(element_id):
+            if (not raycing.is_valid_uuid(element_id) or element_id in nodes):
+                return
+            element_line = oes_dict.get(element_id)
+            if element_line is None:
+                return
+            element_obj = element_line[0]
+            if element_obj.name == "VirtualScreen":
+                return
+            if is_source(element_obj):
+                node_kind = 'source'
+            elif is_aperture(element_obj):
+                node_kind = 'aperture'
+            elif is_screen(element_obj):
+                node_kind = 'screen'
+            else:
+                node_kind = 'oe'
+            nodes[element_id] = {
+                'title': element_obj.name,
+                'subtitle': type(element_obj).__name__,
+                'node_kind': node_kind,
+                'style': FLOW_NODE_STYLES.get(node_kind, FLOW_SCENE_STYLE),
+            }
+            order.append(element_id)
+
+        for element_id in flow_u.keys():
+            add_node(element_id)
+
+        for element_id in oes_dict.keys():
+            add_node(element_id)
+
+        for target_id, target_operations in flow_u.items():
+            if target_id not in nodes:
+                continue
+            for kwargset in target_operations.values():
+                source_id = kwargset.get('beam', None)
+                edge = (source_id, target_id)
+                if (raycing.is_valid_uuid(source_id) and source_id in nodes and
+                        edge not in seen_edges and source_id != target_id):
+                    edges.append(edge)
+                    seen_edges.add(edge)
+
+        return nodes, edges, order
+
+    def refreshNodeEditorPanel(self):
+        if not hasattr(self, 'nodeEditorWidget'):
+            return
+        nodes, edges, order = self._iterFlowGraph()
+        self.nodeEditorWidget.set_graph(nodes, edges, order)
+
     def initSegmentsModel(self, isNewModel=True):
         newModel = qt.QStandardItemModel()
         newModel.setHorizontalHeaderLabels(['Rays',
@@ -891,6 +1127,7 @@ class xrtGlow(qt.QWidget):
         self.segmentsModel = newSegmentsModel
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
         self.oeTree.setModel(self.segmentsModel)
+        self.refreshNodeEditorPanel()
 
     def getIcon(self, oe):
         if is_aperture(oe):
@@ -927,6 +1164,7 @@ class xrtGlow(qt.QWidget):
                 if elementLine[0].name == "VirtualScreen":
                     continue
                 self.addElementToModel(eluuid)
+        self.refreshNodeEditorPanel()
 
     def addElementToModel(self, uuid):
         elementLine = self.customGlWidget.beamline.oesDict.get(uuid)
@@ -967,6 +1205,7 @@ class xrtGlow(qt.QWidget):
                 targetId = targetItem.data(qt.Qt.UserRole)
                 targetName = getOeName(targetId)
                 targetItem.setText("to {}".format(targetName))
+        self.refreshNodeEditorPanel()
 
     def updateTargets(self):
 
@@ -1021,6 +1260,7 @@ class xrtGlow(qt.QWidget):
         tmpDict.clear()
         self.oeTree.resizeColumnToContents(0)
         self.centerCB.blockSignals(False)
+        self.refreshNodeEditorPanel()
 
     def drawColorMap(self, axis):
         xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
