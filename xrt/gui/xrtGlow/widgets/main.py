@@ -529,8 +529,9 @@ class xrtGlow(qt.QWidget):
 
         self.drawColorMap('energy')
         self.paletteWidget = qt.FigCanvas(self.mplFig)
-        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Maximum,
-                                         qt.QSizePolicy.Maximum)
+        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
+                                         qt.QSizePolicy.MinimumExpanding)
+        self.paletteWidget.setMinimumHeight(220)
         self.paletteWidget.span = RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL,
             # drawtype='box',
@@ -1663,7 +1664,7 @@ class xrtGlow(qt.QWidget):
             menu.addAction('Export OE shape to STL',
                            partial(self.exportOeShape,
                                    str(selectedItem.data(qt.Qt.UserRole))))
-            menu.exec_(self.oeTree.viewport().mapToGlobal(position))
+            menu.exec_(qt.QCursor.pos())
         else:
             pass
 
