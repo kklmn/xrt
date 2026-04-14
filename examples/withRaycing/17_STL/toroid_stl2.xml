@@ -3,10 +3,13 @@
 	<Beams type="prop">
 		<None type="flat"></None>
 		<geometricSource01_global type="flat"></geometricSource01_global>
+		<geometricSource02_global type="flat"></geometricSource02_global>
 		<toroidMirror01_global type="flat"></toroidMirror01_global>
 		<toroidMirror01_local type="flat"></toroidMirror01_local>
-		<screen01_local type="flat"></screen01_local>
-		<screen02_local type="flat"></screen02_local>
+		<toroidMirrorSTL_global type="flat"></toroidMirrorSTL_global>
+		<toroidMirrorSTL_local type="flat"></toroidMirrorSTL_local>
+		<screen_toroid_local type="flat"></screen_toroid_local>
+		<screen_STL_local type="flat"></screen_STL_local>
 	</Beams>
 	<Materials type="prop">
 	</Materials>
@@ -19,7 +22,7 @@
 			<name type="param">BeamLine</name>
 			<description type="param">None</description>
 		</properties>
-		<_object type="object">xrt.backends.raycing.BeamLine</_object>
+		<_object type="param">xrt.backends.raycing.BeamLine</_object>
 		<geometricSource01 type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
@@ -45,24 +48,62 @@
 				<filamentBeam type="param">False</filamentBeam>
 				<uniformRayDensity type="param">False</uniformRayDensity>
 			</properties>
-			<_object type="object">xrt.backends.raycing.sources_geoms.GeometricSource</_object>
+			<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource</_object>
 			<shine type="prop">
 				<parameters type="prop">
 					<toGlobal type="param">True</toGlobal>
 					<withAmplitudes type="param">False</withAmplitudes>
 					<accuBeam type="param">None</accuBeam>
 				</parameters>
-				<_object type="object">xrt.backends.raycing.sources_geoms.GeometricSource.shine</_object>
+				<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource.shine</_object>
 				<output type="prop">
-    				<beamGlobal type="param">geometricSource01_global</beamGlobal>
+					<beamGlobal type="param">geometricSource01_global</beamGlobal>
 				</output>
 			</shine>
 		</geometricSource01>
+		<geometricSource02 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">geometricSource02</name>
+				<center type="param">[30.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<nrays type="param">100000</nrays>
+				<distx type="param">normal</distx>
+				<dx type="param">0.01</dx>
+				<disty type="param">None</disty>
+				<dy type="param">0</dy>
+				<distz type="param">normal</distz>
+				<dz type="param">0.01</dz>
+				<distxprime type="param">normal</distxprime>
+				<dxprime type="param">0.001</dxprime>
+				<distzprime type="param">normal</distzprime>
+				<dzprime type="param">0.001</dzprime>
+				<distE type="param">lines</distE>
+				<energies type="param">(9000.0,)</energies>
+				<polarization type="param">horizontal</polarization>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<toGlobal type="param">True</toGlobal>
+					<withAmplitudes type="param">False</withAmplitudes>
+					<accuBeam type="param">None</accuBeam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">geometricSource02_global</beamGlobal>
+				</output>
+			</shine>
+		</geometricSource02>
 		<toroidMirror01 type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
 				<name type="param">toroidMirror01</name>
-				<center type="param">[0.0, 200.0, 0.0]</center>
+				<center type="param">[0.0, 100.0, 0.0]</center>
 				<pitch type="param">30deg</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
@@ -84,13 +125,14 @@
 				<gratingDensity type="param">None</gratingDensity>
 				<order type="param">1</order>
 				<shouldCheckCenter type="param">False</shouldCheckCenter>
-				<R type="param">400.00000000000006</R>
-				<r type="param">99.99999999999999</r>
+				<R type="param">200</R>
+				<r type="param">50.</r>
 				<alarmLevel type="param">None</alarmLevel>
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float64</precisionOpenCL>
+				<figureError type="param">None</figureError>
 			</properties>
-			<_object type="object">xrt.backends.raycing.oes.ToroidMirror</_object>
+			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
 			<reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">geometricSource01_global</beam>
@@ -98,71 +140,123 @@
 					<noIntersectionSearch type="param">False</noIntersectionSearch>
 					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
-				<_object type="object">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
+				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 				<output type="prop">
-    				<beamGlobal type="param">toroidMirror01_global</beamGlobal>
-    				<beamLocal type="param">toroidMirror01_local</beamLocal>
+					<beamGlobal type="param">toroidMirror01_global</beamGlobal>
+					<beamLocal type="param">toroidMirror01_local</beamLocal>
 				</output>
 			</reflect>
 		</toroidMirror01>
-		<screen01 type="value">
+		<toroidMirrorSTL type="value">
+			<properties type="prop">
+				<fileName type="param">toroidMirrorSTL100.stl</fileName>
+				<orientation type="param">XYZ</orientation>
+				<recenter type="param">True</recenter>
+				<surfaceHint type="param">quad</surfaceHint>
+				<bl type="param">BeamLine</bl>
+				<name type="param">toroidMirrorSTL</name>
+				<center type="param">[30.0, 100.0, 0.0]</center>
+				<pitch type="param">30deg</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<positionRoll type="param">0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<alarmLevel type="param">None</alarmLevel>
+				<surface type="param">None</surface>
+				<material type="param">None</material>
+				<figureError type="param">None</figureError>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-10.0, 10.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-39.999000549316406, 39.999000549316406]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float64</precisionOpenCL>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes._3d.MeshOE</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">geometricSource02_global</beam>
+					<needLocal type="param">True</needLocal>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes._3d.MeshOE.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">toroidMirrorSTL_global</beamGlobal>
+					<beamLocal type="param">toroidMirrorSTL_local</beamLocal>
+				</output>
+			</reflect>
+		</toroidMirrorSTL>
+		<screen_toroid type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
-				<name type="param">screen01</name>
-				<center type="param">[0, 300, auto]</center>
-				<x type="param">auto</x>
-				<z type="param">auto</z>
+				<name type="param">screen_toroid</name>
+				<center type="param">[0, 150, 'auto']</center>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">None</limPhysX>
-				<limPhysY type="param">None</limPhysY>
-				<cLimits type="param">None</cLimits>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<cLimits type="param">[0.0, 0.0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
-			<_object type="object">xrt.backends.raycing.screens.Screen</_object>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
 				<parameters type="prop">
 					<beam type="param">toroidMirror01_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
 					<withHistogram type="param">False</withHistogram>
 				</parameters>
-				<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">
-    				<beamLocal type="param">screen01_local</beamLocal>
+					<beamLocal type="param">screen_toroid_local</beamLocal>
 				</output>
 			</expose>
-		</screen01>
-		<screen02 type="value">
+		</screen_toroid>
+		<screen_STL type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
-				<name type="param">screen02</name>
-				<center type="param">[0, 400, 'auto']</center>
-				<x type="param">auto</x>
-				<z type="param">auto</z>
+				<name type="param">screen_STL</name>
+				<center type="param">[30, 150, 'auto']</center>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">None</limPhysX>
-				<limPhysY type="param">None</limPhysY>
-				<cLimits type="param">None</cLimits>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<cLimits type="param">[0.0, 0.0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
-			<_object type="object">xrt.backends.raycing.screens.Screen</_object>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
 				<parameters type="prop">
-					<beam type="param">toroidMirror01_global</beam>
+					<beam type="param">toroidMirrorSTL_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
 					<withHistogram type="param">False</withHistogram>
 				</parameters>
-				<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">
-    				<beamLocal type="param">screen02_local</beamLocal>
+					<beamLocal type="param">screen_STL_local</beamLocal>
 				</output>
 			</expose>
-		</screen02>
+		</screen_STL>
 	</BeamLine>
+	<FigureErrors type="prop">
+	</FigureErrors>
 	<plots type="value">
 		<plot01 type="prop">
-			<beam type="param">geometricSource01_global</beam>
+			<beam type="param">toroidMirror01_local</beam>
 			<rayFlag type="param">(1,)</rayFlag>
 			<xaxis type="prop">
 				<label type="param">x</label>
@@ -177,10 +271,10 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
-				<label type="param">z</label>
+				<label type="param">y</label>
 				<unit type="param">mm</unit>
 				<factor type="param">None</factor>
 				<data type="param">auto</data>
@@ -192,12 +286,12 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
-				<label type="param">energy</label>
-				<unit type="param">eV</unit>
-				<factor type="param">None</factor>
+				<label type="param">z</label>
+				<unit type="param">µm</unit>
+				<factor type="param">1000</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -207,13 +301,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
 			<xPos type="param">1</xPos>
 			<yPos type="param">1</yPos>
 			<ePos type="param">1</ePos>
-			<title type="param">plot01-geometricSource01_global-energy</title>
+			<title type="param">01 - Toroid mirror footprint</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
 			<fluxKind type="param">total</fluxKind>
@@ -229,11 +323,13 @@
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
+			<beamAbsorb type="param">None</beamAbsorb>
+			<showAbsorbed type="param">False</showAbsorbed>
 			<useQtWidget type="param">False</useQtWidget>
-			<_object type="object">xrt.plotter.XYCPlot</_object>
+			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot01>
 		<plot02 type="prop">
-			<beam type="param">screen01_local</beam>
+			<beam type="param">toroidMirrorSTL_local</beam>
 			<rayFlag type="param">(1,)</rayFlag>
 			<xaxis type="prop">
 				<label type="param">x</label>
@@ -248,10 +344,10 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
-				<label type="param">z</label>
+				<label type="param">y</label>
 				<unit type="param">mm</unit>
 				<factor type="param">None</factor>
 				<data type="param">auto</data>
@@ -263,12 +359,12 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
-				<label type="param">energy</label>
-				<unit type="param">eV</unit>
-				<factor type="param">None</factor>
+				<label type="param">z</label>
+				<unit type="param">µm</unit>
+				<factor type="param">1000</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -278,13 +374,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
 			<xPos type="param">1</xPos>
 			<yPos type="param">1</yPos>
 			<ePos type="param">1</ePos>
-			<title type="param">plot02-screen01_local-energy</title>
+			<title type="param">01 - STL mirror footprint</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
 			<fluxKind type="param">total</fluxKind>
@@ -300,18 +396,20 @@
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
+			<beamAbsorb type="param">None</beamAbsorb>
+			<showAbsorbed type="param">False</showAbsorbed>
 			<useQtWidget type="param">False</useQtWidget>
-			<_object type="object">xrt.plotter.XYCPlot</_object>
+			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot02>
 		<plot03 type="prop">
-			<beam type="param">screen02_local</beam>
+			<beam type="param">screen_toroid_local</beam>
 			<rayFlag type="param">(1,)</rayFlag>
 			<xaxis type="prop">
 				<label type="param">x</label>
-				<unit type="param">mm</unit>
-				<factor type="param">None</factor>
+				<unit type="param">µm</unit>
+				<factor type="param">1000</factor>
 				<data type="param">auto</data>
-				<limits type="param">None</limits>
+				<limits type="param">[-50, 50]</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -319,14 +417,14 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">z</label>
-				<unit type="param">mm</unit>
-				<factor type="param">None</factor>
+				<unit type="param">µm</unit>
+				<factor type="param">1000</factor>
 				<data type="param">auto</data>
-				<limits type="param">None</limits>
+				<limits type="param">[-50, 50]</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -334,14 +432,14 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
-				<label type="param">energy</label>
-				<unit type="param">eV</unit>
-				<factor type="param">None</factor>
+				<label type="param">xprime</label>
+				<unit type="param">mrad</unit>
+				<factor type="param">1000</factor>
 				<data type="param">auto</data>
-				<limits type="param">None</limits>
+				<limits type="param">[-5, 5]</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -349,13 +447,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
-				<_object type="object">xrt.plotter.XYCAxis</_object>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
 			<xPos type="param">1</xPos>
 			<yPos type="param">1</yPos>
 			<ePos type="param">1</ePos>
-			<title type="param">plot03-screen02_local-energy</title>
+			<title type="param">03 - Toroid mirror footprint</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
 			<fluxKind type="param">total</fluxKind>
@@ -371,13 +469,88 @@
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
+			<beamAbsorb type="param">None</beamAbsorb>
+			<showAbsorbed type="param">False</showAbsorbed>
 			<useQtWidget type="param">False</useQtWidget>
-			<_object type="object">xrt.plotter.XYCPlot</_object>
+			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot03>
+		<plot04 type="prop">
+			<beam type="param">screen_STL_local</beam>
+			<rayFlag type="param">(1,)</rayFlag>
+			<xaxis type="prop">
+				<label type="param">x</label>
+				<unit type="param">µm</unit>
+				<factor type="param">1000</factor>
+				<data type="param">auto</data>
+				<limits type="param">[-50, 50]</limits>
+				<offset type="param">0</offset>
+				<bins type="param">128</bins>
+				<ppb type="param">2</ppb>
+				<density type="param">histogram</density>
+				<invertAxis type="param">False</invertAxis>
+				<outline type="param">0.5</outline>
+				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
+			</xaxis>
+			<yaxis type="prop">
+				<label type="param">z</label>
+				<unit type="param">µm</unit>
+				<factor type="param">1000</factor>
+				<data type="param">auto</data>
+				<limits type="param">[-50, 50]</limits>
+				<offset type="param">0</offset>
+				<bins type="param">128</bins>
+				<ppb type="param">2</ppb>
+				<density type="param">histogram</density>
+				<invertAxis type="param">False</invertAxis>
+				<outline type="param">0.5</outline>
+				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
+			</yaxis>
+			<caxis type="prop">
+				<label type="param">xprime</label>
+				<unit type="param">mrad</unit>
+				<factor type="param">1000</factor>
+				<data type="param">auto</data>
+				<limits type="param">[-5, 5]</limits>
+				<offset type="param">0</offset>
+				<bins type="param">128</bins>
+				<ppb type="param">2</ppb>
+				<density type="param">histogram</density>
+				<invertAxis type="param">False</invertAxis>
+				<outline type="param">0.5</outline>
+				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<_object type="param">xrt.plotter.XYCAxis</_object>
+			</caxis>
+			<aspect type="param">equal</aspect>
+			<xPos type="param">1</xPos>
+			<yPos type="param">1</yPos>
+			<ePos type="param">1</ePos>
+			<title type="param">04 - STL mirror footprint</title>
+			<invertColorMap type="param">False</invertColorMap>
+			<negative type="param">False</negative>
+			<fluxKind type="param">total</fluxKind>
+			<fluxUnit type="param">auto</fluxUnit>
+			<fluxFormatStr type="param">auto</fluxFormatStr>
+			<contourLevels type="param">None</contourLevels>
+			<contourColors type="param">None</contourColors>
+			<contourFmt type="param">%.1f</contourFmt>
+			<contourFactor type="param">1.0</contourFactor>
+			<saveName type="param">None</saveName>
+			<persistentName type="param">None</persistentName>
+			<oe type="param">None</oe>
+			<raycingParam type="param">0</raycingParam>
+			<beamState type="param">None</beamState>
+			<beamC type="param">None</beamC>
+			<beamAbsorb type="param">None</beamAbsorb>
+			<showAbsorbed type="param">False</showAbsorbed>
+			<useQtWidget type="param">False</useQtWidget>
+			<_object type="param">xrt.plotter.XYCPlot</_object>
+		</plot04>
 	</plots>
 	<run_ray_tracing type="prop">
 		<plots type="param">plots</plots>
-		<repeats type="param">1</repeats>
+		<repeats type="param">5</repeats>
 		<updateEvery type="param">1</updateEvery>
 		<pickleEvery type="param">None</pickleEvery>
 		<energyRange type="param">None</energyRange>
@@ -392,7 +565,7 @@
 		<afterScript type="param">None</afterScript>
 		<afterScriptArgs type="param">[]</afterScriptArgs>
 		<afterScriptKWargs type="param">{}</afterScriptKWargs>
-		<_object type="object">xrt.runner.run_ray_tracing</_object>
+		<_object type="param">xrt.runner.run_ray_tracing</_object>
 	</run_ray_tracing>
 <description>None</description>
 </Project>
