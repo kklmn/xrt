@@ -978,9 +978,18 @@ class BeamLine(object):
         if elProps.get('_object') is None:
             return
         else:
-            oeModule, oeClass = elProps['_object'].rsplit('.', 1)
-            oeModule = importlib.import_module(oeModule)
-            defArgs = dict(get_params(elProps['_object']))
+            oeModuleStr, oeClass = elProps['_object'].rsplit('.', 1)
+            try:
+                oeModule = importlib.import_module(oeModuleStr)
+            except ModuleNotFoundError:  # pre-packaging paths
+                oeModuleStr, _ = oeModuleStr.rsplit('_', 1)
+                try:
+                    oeModule = importlib.import_module(oeModuleStr)
+                except Exception as e:
+                    print(oeClass, "Init problem:", e)
+                    return 1
+                
+            defArgs = dict(get_params(f'{oeModuleStr}.{oeClass}'))
 
             if isString:
                 initKWArgs = create_paramdict_oe(oeParams, defArgs, self)

@@ -219,6 +219,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif argNameL == 'rmskind': 
             combo.addItems(['height', 'slope'])
             return combo
+        elif argNameL == 'surfacehint': 
+            combo.addItems(['flat', 'quad', 'spline'])
+            return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool
             combo.addItems(['histogram', 'kde'])
             return combo

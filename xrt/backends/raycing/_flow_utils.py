@@ -241,7 +241,7 @@ def get_params(objStr):  # Returns a collection of default parameters
     module_path = '.'.join(components[:-1])
     class_name = components[-1]
     moduleObj = importlib.import_module(module_path)
-#    print("get_params for", class_name)
+
     try:
         objRef = getattr(moduleObj, class_name)
     except:  # TODO: remove if works correctly
