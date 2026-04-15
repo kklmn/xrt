@@ -250,8 +250,7 @@ class XrtQook(XrtQookElements):
                 if str(mchi.text()) == 'parameters':
                     for mchpi in range(mchi.rowCount()):
                         argName = str(mchi.child(mchpi, 0).text())
-                        argValue = self.getParamItemValue(
-                            mchi.child(mchpi, 1))
+                        argValue = str(mchi.child(mchpi, 1).text())
                         if argName == 'beam':
                             argValue = beamToUuid(argValue)
                         else:
@@ -261,8 +260,7 @@ class XrtQook(XrtQookElements):
                 elif str(mchi.text()) == 'output':
                     for mchpi in range(mchi.rowCount()):
                         argName = str(mchi.child(mchpi, 0).text())
-                        argValue = self.getParamItemValue(
-                            mchi.child(mchpi, 1))
+                        argValue = str(mchi.child(mchpi, 1).text())
                         if argName == 'beam':
                             argValue = beamToUuid(argValue)
                         else:
@@ -310,7 +308,7 @@ class XrtQook(XrtQookElements):
 
             if column == 1:  # Existing Element
                 item.setData(str(item.text()), qt.Qt.UserRole + 1)
-                argValue_str = self.getParamItemValue(item)
+                argValue_str = item.text()
                 argName = parent.child(row, 0).text()
 
                 if argName == 'beam':
