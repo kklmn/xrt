@@ -648,7 +648,7 @@ class XrtQookBase(qt.QMainWindow):
         if value_item is None:
             return
 
-        if self.getParamItemValue(value_item) == beam_name:
+        if value_item.text() == beam_name:
             return
 
         self.setParamItemValue(value_item, 'beam', beam_name)
@@ -1856,7 +1856,7 @@ class XrtQookBase(qt.QMainWindow):
                 if parent.child(itemRow, 0).foreground().color() != qt.Qt.red:
                     for defArg, defArgVal in self.getParams(obj):
                         if str(defArg) == str(parent.child(itemRow, 0).text()):
-                            if str(defArgVal) != self.getParamItemValue(item):
+                            if str(defArgVal) != str(item.text()):
                                 color = qt.Qt.blue
                             else:
                                 color = qt.Qt.black
@@ -2106,8 +2106,7 @@ class XrtQookBase(qt.QMainWindow):
             pnItem = rootItem.child(pn, 0)
             itemDict = OrderedDict()
             if not pnItem.hasChildren():
-                outDict[str(pnItem.text())] = self.getParamItemValue(
-                    rootItem.child(pn, 1))
+                outDict[str(pnItem.text())] = rootItem.child(pn, 1).text()
                 continue
             for pnp in range(pnItem.rowCount()):
                 pltPropItem = pnItem.child(pnp, 0)
@@ -2119,8 +2118,8 @@ class XrtQookBase(qt.QMainWindow):
                         axDict[axPropName] = axPropValue
                     itemDict[str(pltPropItem.text())] = axDict
                 else:
-                    itemDict[str(pltPropItem.text())] = self.getParamItemValue(
-                        pnItem.child(pnp, 1))
+                    itemDict[str(pltPropItem.text())] = \
+                        str(pnItem.child(pnp, 1).text())
             outDict[str(pnItem.text())] = itemDict
         return outDict
 
@@ -2162,7 +2161,7 @@ class XrtQookBase(qt.QMainWindow):
                                     '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
                                         self.prefixtab,
                                         despace(str(child0.text())),
-                                        self.getParamItemValue(child1),
+                                        child1.text(),
                                         itemType)
                 elif flatModel:
                     self.confText +=\
