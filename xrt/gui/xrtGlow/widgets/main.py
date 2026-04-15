@@ -864,7 +864,7 @@ class xrtGlow(qt.QWidget):
 
     def initControlPanels(self):
         self.controlPanels = OrderedDict([
-            ("Navigation", self.navigationPanel),
+            ("Selection", self.navigationPanel),
             ("Transformations", self.transformationPanel),
             ("Colors", self.colorOpacityPanel),
             ("Grid/Projections", self.projectionPanel),
@@ -882,6 +882,16 @@ class xrtGlow(qt.QWidget):
         self.controlButtons = OrderedDict()
         self.controlPopup = _ToolbarPopupPanel(self)
         self.controlPopup.popupHidden.connect(self._resetToolbarButtons)
+        iconsDir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            '_icons')
+        panelIcons = {
+            "Selection": "p_selection128.png",
+            "Transformations": "p_transform128.png",
+            "Colors": "p_colors128.png",
+            "Grid/Projections": "p_grid128.png",
+            "Scene": "p_scene128.png",
+        }
 
         for panel in self.controlPanels.values():
             self.controlPopup.stack.addWidget(panel)
@@ -889,7 +899,7 @@ class xrtGlow(qt.QWidget):
         toolbar = qt.QToolBar("Controls", self)
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
-        toolbar.setIconSize(qt.QSize(16, 16))
+        toolbar.setIconSize(qt.QSize(64, 64))
         toolbar.setOrientation(
             qt.Qt.Horizontal if control_mode == 'collapsible top'
             else qt.Qt.Vertical)
@@ -904,9 +914,17 @@ class xrtGlow(qt.QWidget):
 
         for panelName in self.controlPanels.keys():
             button = qt.QToolButton(self)
-            button.setText(panelName)
+            iconName = panelIcons.get(panelName)
+            iconPath = os.path.join(iconsDir, iconName) if iconName else None
+            if iconPath and os.path.exists(iconPath):
+                button.setIcon(qt.QIcon(iconPath))
+                button.setToolTip(panelName)
+                button.setText("")
+                button.setToolButtonStyle(qt.Qt.ToolButtonIconOnly)
+            else:
+                button.setText(panelName)
+                button.setToolButtonStyle(qt.Qt.ToolButtonTextOnly)
             button.setCheckable(True)
-            button.setToolButtonStyle(qt.Qt.ToolButtonTextOnly)
             button.clicked.connect(
                 partial(self.toggleControlPanel, panelName, button))
             toolbar.addWidget(button)
