@@ -2537,7 +2537,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.beamline.beamsDictU[scrId] =\
                     {'beamLocal': exBeam}
                 virtBeamTag = (scrId, 'beamLocal')
-                self.update_beam_footprint(beam=exBeam, beamTag=virtBeamTag)
+#                self.update_beam_footprint(beam=exBeam, beamTag=virtBeamTag)
+                self.beamUpdated.emit(virtBeamTag)
+                self.needBeamUpdate.append(virtBeamTag)
 #                self.virtScreen.beamToExpose = beamStart0
 #
 #        if self.isVirtScreenNormal:
