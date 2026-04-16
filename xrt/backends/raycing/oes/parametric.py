@@ -317,7 +317,11 @@ class ParabolicalMirrorParam(OE):
     @p.setter
     def p(self, p):
         self._p = p
-        self._reset_pq()
+        if p is not None:
+            self._q = None
+        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
+        if sum(s is not None for s in settings) == 1:
+            self._reset_pq()
 
     @property
     def q(self):
@@ -326,7 +330,11 @@ class ParabolicalMirrorParam(OE):
     @q.setter
     def q(self, q):
         self._q = q
-        self._reset_pq()
+        if q is not None:
+            self._p = None
+        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
+        if sum(s is not None for s in settings) == 1:
+            self._reset_pq()
 
     @property
     def f1(self):
@@ -335,7 +343,9 @@ class ParabolicalMirrorParam(OE):
     @f1.setter
     def f1(self, f1):
         self._f1 = f1
-        self._reset_pq()
+        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
+        if sum(s is not None for s in settings) == 1:
+            self._reset_pq()
 
     @property
     def f2(self):
@@ -344,7 +354,9 @@ class ParabolicalMirrorParam(OE):
     @f2.setter
     def f2(self, f2):
         self._f2 = f2
-        self._reset_pq()
+        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
+        if sum(s is not None for s in settings) == 1:
+            self._reset_pq()
 
     @property
     def parabolaAxis(self):
@@ -415,7 +427,7 @@ class ParabolicalMirrorParam(OE):
     def __pop_kwargs(self, **kwargs):
         self.f1 = kwargs.pop('f1', None)
         self.f2 = kwargs.pop('f2', None)
-        self.p = kwargs.pop('p', None)  # source-to-mirror
+        self.p = kwargs.pop('p', 10000)  # source-to-mirror
         self.q = kwargs.pop('q', None)  # mirror-to-focus
         self.parabolaAxis = kwargs.pop('parabolaAxis', None)
         self.isCylindrical = kwargs.pop('isCylindrical', False)
