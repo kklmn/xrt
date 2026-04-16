@@ -806,6 +806,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
         if self.liveUpdateEnabled and beamTag == currentTag:
             self.dynamicPlot.clean_plots()
+            self.set_beam(beamTag)
             self.plot_beam()
 
     def update_plot(self, outList, iteration=0):
