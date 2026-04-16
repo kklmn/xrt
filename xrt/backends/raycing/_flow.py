@@ -36,7 +36,12 @@ def propagationProcess(q_in, q_out):
                         started = True
                     else:
                         continue
-                oe = handler.bl.oesDict[oeid][0]
+                oeLine = handler.bl.oesDict.get(oeid)
+                if oeLine is None:
+                    print("Cannot find element", oeid)
+                    continue
+                else:
+                    oe = oeLine[0]
 
                 for func, fkwargs in meth.items():
                     try:

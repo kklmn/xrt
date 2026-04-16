@@ -63,15 +63,23 @@ class SourceBase:
             Energy spread relative to the beam energy, rms.
 
         *eSigmaX*, *eSigmaZ*: float
-            rms horizontal and vertical electron beam sizes (µm).
-            Alternatively, betatron functions can be specified instead of the
-            electron beam sizes.
-
+            RMS horizontal and vertical electron beam sizes (µm).
+            Alternatively, the betatron functions (*betaX*, *betaZ*) can be
+            specified instead of beam sizes.
+        
         *eEpsilonX*, *eEpsilonZ*: float
-            Horizontal and vertical electron beam emittance (nm rad).
-
-        *betaX*, *betaZ*:
-            Betatron function (m). Alternatively, beam size can be specified.
+            Horizontal and vertical electron beam emittances (nm·rad).
+        
+        *betaX*, *betaZ*: float
+            Betatron functions (m). Alternatively, beam sizes (*eSigmaX*,
+            *eSigmaZ*) can be specified.
+        
+            If beam sizes are provided, betatron functions are calculated as
+            :math:`\beta_i = \frac{\sigma_i^{2}}{\epsilon_i}`, with
+            :math:`i \in \{x, z\}`.
+        
+            Updating *betaX* or *betaZ* at runtime triggers recalculation of
+            the corresponding beam size and divergence.
 
         *R0*: float
             Distance center-to-screen for the near field calculations (mm).
@@ -148,45 +156,56 @@ class SourceBase:
 
         self._eEpsilonX = eEpsilonX * 1e-6  # input in nmrad
         self._eEpsilonZ = eEpsilonZ * 1e-6  # input in nmrad
-        self.dx = eSigmaX * 1e-3 if eSigmaX else None  # input in mkm
-        self.dz = eSigmaZ * 1e-3 if eSigmaZ else None  # input in mkm
+
         self._eMin = float(eMin)
         self._eMax = float(eMax)
 
         self.xPrimeMax = xPrimeMax
         self.zPrimeMax = zPrimeMax
 
-        # Beam size and divergence conversion
-        self._betaX = betaX * 1e3 if betaX else None  # input in m
-        self._betaZ = betaZ * 1e3 if betaX else None  # input in m
+        self.betaX = betaX
+        self.betaZ = betaZ
+        
+        self.eSigmaX = eSigmaX
+        self.eSigmaZ = eSigmaZ
 
-        if (self.dx is not None) and (self._betaX is None):
-            self._betaX = self.dx**2 / self._eEpsilonX if self._eEpsilonX\
-                else 0.
-        if (self.dz is not None) and (self._betaZ is None):
-            self._betaZ = self.dz**2 / self._eEpsilonZ if self._eEpsilonZ\
-                else 0.
 
-        if (self.dx is None) and (self._betaX is not None):
-            self.dx = np.sqrt(self._eEpsilonX*self._betaX)
-        elif (self.dx is None) and (self._betaX is None):
-            raycing.colorPrint("Set either dx or betaX!", "RED")
-        if (self.dz is None) and (self._betaZ is not None):
-            self.dz = np.sqrt(self._eEpsilonZ*self._betaZ)
-        elif (self.dz is None) and (self._betaZ is None):
-            raycing.colorPrint("Set either dz or betaZ!", "RED")
 
-        dxprime, dzprime = None, None
-        if dxprime:
-            self.dxprime = dxprime
-        else:
-            self.dxprime = self._eEpsilonX / self.dx if self.dx > 0\
-                else 0.  # [rad]
-        if dzprime:
-            self.dzprime = dzprime
-        else:
-            self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0\
-                else 0.  # [rad]
+#        self.dx = eSigmaX * 1e-3 if eSigmaX else None  # input in mkm
+#        self.dz = eSigmaZ * 1e-3 if eSigmaZ else None  # input in mkm
+#        # Beam size and divergence conversion
+#        self._betaX = betaX * 1e3 if betaX else None  # input in m
+#        self._betaZ = betaZ * 1e3 if betaX else None  # input in m
+#
+#        if (self.dx is not None) and (self._betaX is None):
+#            self._betaX = self.dx**2 / self._eEpsilonX if self._eEpsilonX\
+#                else 0.
+#        if (self.dz is not None) and (self._betaZ is None):
+#            self._betaZ = self.dz**2 / self._eEpsilonZ if self._eEpsilonZ\
+#                else 0.
+#
+#        if (self.dx is None) and (self._betaX is not None):
+#            self.dx = np.sqrt(self._eEpsilonX*self._betaX)
+#
+#        elif (self.dx is None) and (self._betaX is None):
+#            raycing.colorPrint("Set either dx or betaX!", "RED")
+#        if (self.dz is None) and (self._betaZ is not None):
+#            self.dz = np.sqrt(self._eEpsilonZ*self._betaZ)
+#        elif (self.dz is None) and (self._betaZ is None):
+#            raycing.colorPrint("Set either dz or betaZ!", "RED")
+#
+#        dxprime, dzprime = None, None
+#        if dxprime:
+#            self.dxprime = dxprime
+#        else:
+#            self.dxprime = self._eEpsilonX / self.dx if self.dx > 0\
+#                else 0.  # [rad]
+#        if dzprime:
+#            self.dzprime = dzprime
+#        else:
+#            self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0\
+#                else 0.  # [rad]
+
         if raycing._VERBOSITY_ > 10:
             print('Beam horz. size dx = {0} mm'.format(self.dx))
             print('Beam vert. size dz = {0} mm'.format(self.dz))
@@ -237,7 +256,20 @@ class SourceBase:
 
     @eSigmaX.setter
     def eSigmaX(self, eSigmaX):
-        self.dx = eSigmaX * 1e-3  # conversion from mkm to mm
+        epsilonX = getattr(self, '_eEpsilonX', None)
+
+        if eSigmaX is not None:
+            self.dx = eSigmaX * 1e-3  # conversion from mkm to mm
+            if epsilonX is not None:
+                self._betaX = 0 if epsilonX == 0 else self.dx**2 / epsilonX 
+        else:
+            self.dx = 0
+            betaX = getattr(self, '_betaX', None)
+            if epsilonX is not None and betaX is not None:
+                self.dx = np.sqrt(epsilonX * betaX)
+
+        if epsilonX is not None:
+            self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
 
     @property
     def eSigmaZ(self):
@@ -245,7 +277,20 @@ class SourceBase:
 
     @eSigmaZ.setter
     def eSigmaZ(self, eSigmaZ):
-        self.dz = eSigmaZ * 1e-3  # conversion from mkm to mm
+        epsilonZ = getattr(self, '_eEpsilonZ', None)
+
+        if eSigmaZ is not None:
+            self.dz = eSigmaZ * 1e-3  # conversion from mkm to mm
+            if epsilonZ is not None:
+                self._betaZ = 0 if epsilonZ == 0 else self.dz**2 / epsilonZ
+        else:
+            self.dz = 0
+            betaZ = getattr(self, '_betaZ', None)
+            if epsilonZ is not None and betaZ is not None:
+                self.dz = np.sqrt(epsilonZ * betaZ)
+
+        if epsilonZ is not None:
+            self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
 
     @property
     def eSigmaXprime(self):
@@ -257,43 +302,77 @@ class SourceBase:
 
     @property
     def eEpsilonX(self):
-        return self._eEpsilonX * 1e6  # returns in nmrad
+        if self._eEpsilonX is None:
+            return None
+        else:
+            return self._eEpsilonX * 1e6  # returns in nmrad
 
     @eEpsilonX.setter
     def eEpsilonX(self, eEpsilonX):
-        self._eEpsilonX = eEpsilonX * 1e-6  # conversion from nmrad to mmrad
-        self.dx = np.sqrt(self._eEpsilonX * self._betaX)
-        self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+        self._eEpsilonX = eEpsilonX
+        if eEpsilonX is not None:
+            self._eEpsilonX = eEpsilonX * 1e-6  # conversion from nmrad to mmrad
+            if getattr(self, '_betaX', None) is not None:
+                self.dx = np.sqrt(self._eEpsilonX * self._betaX)
+                self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
 
     @property
     def eEpsilonZ(self):
-        return self._eEpsilonZ * 1e6  # returns in nmrad
+        if self._eEpsilonZ is None:
+            return None
+        else:
+            return self._eEpsilonZ * 1e6  # returns in nmrad
 
     @eEpsilonZ.setter
     def eEpsilonZ(self, eEpsilonZ):
-        self._eEpsilonZ = eEpsilonZ * 1e-6  # conversion from nmrad to mmrad
-        self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
-        self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+        self._eEpsilonZ = eEpsilonZ
+        if eEpsilonZ is not None:
+            self._eEpsilonZ = eEpsilonZ * 1e-6  # conversion from nmrad to mmrad
+            if getattr(self, '_betaZ', None) is not None:
+                self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
+                self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
 
     @property
     def betaX(self):
-        return self._betaX * 1e-3  # returns in m
+        if self._betaX is None:
+            return None
+        else:
+            return self._betaX * 1e-3  # returns in m
 
     @betaX.setter
     def betaX(self, betaX):
-        self._betaX = betaX * 1e3  # conversion from m to mm
-        self.dx = np.sqrt(self._eEpsilonX * self._betaX)
-        self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+        epsilonX = getattr(self, '_eEpsilonX', None)
+        if betaX is not None:
+            self._betaX = betaX * 1e3  # conversion from m to mm
+            if epsilonX is not None:
+                self.dx = np.sqrt(self._eEpsilonX * self._betaX)
+                self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+        else:
+            self._betaX = None
+            sigmaX = getattr(self, 'dx', None)
+            if epsilonX is not None and sigmaX is not None:
+                self._betaX = 0 if epsilonX == 0 else sigmaX**2 / epsilonX
 
     @property
     def betaZ(self):
-        return self._betaZ * 1e-3  # returns in m
+        if self._betaZ is None:
+            return None
+        else:
+            return self._betaZ * 1e-3  # returns in m
 
     @betaZ.setter
     def betaZ(self, betaZ):
-        self._betaZ = betaZ * 1e3  # conversion from m to mm
-        self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
-        self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+        epsilonZ = getattr(self, '_eEpsilonZ', None)
+        if betaZ is not None:
+            self._betaZ = betaZ * 1e3  # conversion from m to mm
+            if epsilonZ is not None:
+                self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
+                self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+        else:
+            self._betaZ = None
+            sigmaZ = getattr(self, 'dz', None)
+            if epsilonZ is not None and sigmaZ is not None:
+                self._betaZ = 0 if epsilonZ == 0 else sigmaZ**2 / epsilonZ
 
     @property
     def eMin(self):
@@ -418,6 +497,12 @@ class SourceBase:
         self._R0 = R0
         self.needReset = True
         # Need to recalculate the integration parameters
+
+    def _report_source_size(self):
+        print("eEpsilon {}, {}".format(self.eEpsilonX, self.eEpsilonZ))
+        print("eSigma {}, {}".format(self.eSigmaX, self.eSigmaZ))
+        print("eSigma' {}, {}".format(self.eSigmaXprime, self.eSigmaZprime))
+        print("beta {} {}".format(self.betaX, self.betaZ))
 
     def _reset_limits(self):
         if not self._xPrimeMax:
