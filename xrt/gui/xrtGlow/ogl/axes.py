@@ -726,7 +726,7 @@ class CoordinateBox():
             if isScreen:
                 bStart = np.column_stack(([1, 0, 0], [0, 0, 1], [0, -1, 0]))
                 x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
-                y = np.matmul(moe_np, np.array([0, -1, 0, 0]))[:-1]
+                y = np.matmul(moe_np, np.array([0, 0, 1, 0]))[:-1]
             else:
                 bStart = np.column_stack(([1, 0, 0], [0, 1, 0], [0, 0, 1]))
                 x = np.matmul(moe_np, np.array([1, 0, 0, 0]))[:-1]
