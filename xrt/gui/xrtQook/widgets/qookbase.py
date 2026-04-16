@@ -2391,7 +2391,7 @@ class XrtQookBase(qt.QMainWindow):
         elif level == 1 and selText != "properties":
             tsubmenu = menu.addMenu(self.tr("Add method"))
             menu.addSeparator()
-            menu.addAction("Duplicate " + str(selectedItem.text()),
+            menu.addAction("Clone " + str(selectedItem.text()),
                            partial(self.addElement, copyFrom=selectedItem))
             menu.addSeparator()
 #            if selIndex.row() > 2:
@@ -2477,7 +2477,7 @@ class XrtQookBase(qt.QMainWindow):
         if level == 0 or level == 100:
             menu.addAction(self.tr("Add Plot"), self.addPlot)
         elif level == 1:
-            copyActionName = "Duplicate " + str(selectedItem.text())
+            copyActionName = "Clone " + str(selectedItem.text())
             menu.addAction(copyActionName, partial(self.addPlot,
                                                    selectedItem))
             deleteActionName = "Remove " + str(selectedItem.text())
