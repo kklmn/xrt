@@ -104,8 +104,8 @@ class XrtQookElements(XrtQookBase):
                 childLevel0 = copyFrom.child(i, 0)
                 if str(childLevel0.text()) == 'properties':
                     for j in range(childLevel0.rowCount()):
-                        propsDict[str(childLevel0.child(j, 0))] =\
-                            str(childLevel0.child(j, 1))
+                        propsDict[str(childLevel0.child(j, 0).text())] =\
+                            str(childLevel0.child(j, 1).text())
                     break
             propsDict['uuid'] = str(raycing.uuid.uuid4())
         else:
@@ -382,6 +382,10 @@ class XrtQookElements(XrtQookBase):
         if isinstance(copyFrom, qt.QStandardItem):
             self.cpChLevel = 0
             self.copyChildren(plotItem, copyFrom)
+            for ie in range(plotItem.rowCount()):
+                chItem = plotItem.child(ie, 0)
+                if str(chItem.text()) == 'title':
+                    plotItem.child(ie, 1).setText(str(plotName))
         else:
             for pname, pval in plotProps.items():
                 if pname in ['_object']:
