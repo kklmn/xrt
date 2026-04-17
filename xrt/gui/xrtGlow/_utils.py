@@ -115,7 +115,9 @@ def is_screen(oe):
 def is_aperture(oe):
     res = isinstance(oe, (rapertures.RectangularAperture,
                           rapertures.RoundAperture,
-                          rapertures.PolygonalAperture))
+                          rapertures.PolygonalAperture,
+                          rapertures.RoundBeamStop,
+                          rapertures.SiemensStar))
     return res
 
 
