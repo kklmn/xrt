@@ -567,7 +567,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
             self.uuid = str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
 
         self.center = center
@@ -672,7 +672,7 @@ class RoundAperture(object):
                 str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
@@ -692,6 +692,8 @@ class RoundAperture(object):
         self.limPhysX = raycing.Limits(self.limOptX)
         self.limPhysY = raycing.Limits(self.limOptY)
         self.shape = 'round'
+        self.blades = {0}
+        self.isBeamStop = False
 
     @property
     def x(self):
@@ -722,6 +724,7 @@ class RoundAperture(object):
         if isinstance(self._z, raycing.basestring):
             self._z = None
         self.xyz = raycing.xyz_from_xz(self, self._x, self._z)
+        self._x, self.y, self._z = self.xyz
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
@@ -795,9 +798,22 @@ class RoundAperture(object):
 
             return lo
 
-    def local_to_global(self, glo, **kwargs):  # TODO: support orientation
-        """ """
-        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+    def local_to_global(self, glo, returnBeam=False, **kwargs):
+        x, y, z = glo.x, glo.y, glo.z
+        xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
+        yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
+        zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        a, b, c = glo.a, glo.b, glo.c
+        aglo = a*self.x[0] + b*self.y[0] + c*self.z[0]
+        bglo = a*self.x[1] + b*self.y[1] + c*self.z[1]
+        cglo = a*self.x[2] + b*self.y[2] + c*self.z[2]
+
+        retGlo = rs.Beam(copyFrom=glo) if returnBeam else glo
+        retGlo.x, retGlo.y, retGlo.z = xglo, yglo, zglo
+        retGlo.a, retGlo.b, retGlo.c = aglo, bglo, cglo
+        if returnBeam:
+            return retGlo
+#        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, rw=None):
         """Creates the beam arrays used in wave diffraction calculations.
@@ -870,6 +886,12 @@ class RoundAperture(object):
 class RoundBeamStop(RoundAperture):
     """Implements a round beamstop. Descends from RoundAperture and has the
     same parameters."""
+
+    def __init__(self, *args, **kwargs):
+        """Same parameters as in :class:`RoundAperture`
+        """
+        super().__init__(*args, **kwargs)
+        self.isBeamStop = True
 
     @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
@@ -1084,7 +1106,7 @@ class PolygonalAperture(object):
                 str(raycing.uuid.uuid4())
 
         if bl is not None:
-            if self.bl.flowSource != 'Qook':
+            if self.bl.flowSource != 'Qook0':
                 bl.oesDict[self.uuid] = [self, 1]
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
@@ -1107,6 +1129,7 @@ class PolygonalAperture(object):
         if self.vertices is not None:
             self.set_optical_limits()
         self.shape = 'polygon'
+        self.blades = [0]
 
     @property
     def x(self):
@@ -1157,6 +1180,7 @@ class PolygonalAperture(object):
         if isinstance(self._z, raycing.basestring):
             self._z = None
         self.xyz = raycing.xyz_from_xz(self, self._x, self._z)
+        self._x, self.y, self._z = self.xyz
 
     def set_orientation(self, x=None, z=None):
         """Compatibility method. All calculations moved to setters."""
@@ -1235,8 +1259,24 @@ class PolygonalAperture(object):
 
             return lo
 
-    def local_to_global(self, glo, **kwargs):  # TODO: support orientation
-        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+#    def local_to_global(self, glo, **kwargs):  # TODO: support orientation
+#        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+
+    def local_to_global(self, glo, returnBeam=False, **kwargs):
+        x, y, z = glo.x, glo.y, glo.z
+        xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
+        yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
+        zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        a, b, c = glo.a, glo.b, glo.c
+        aglo = a*self.x[0] + b*self.y[0] + c*self.z[0]
+        bglo = a*self.x[1] + b*self.y[1] + c*self.z[1]
+        cglo = a*self.x[2] + b*self.y[2] + c*self.z[2]
+
+        retGlo = rs.Beam(copyFrom=glo) if returnBeam else glo
+        retGlo.x, retGlo.y, retGlo.z = xglo, yglo, zglo
+        retGlo.a, retGlo.b, retGlo.c = aglo, bglo, cglo
+        if returnBeam:
+            return retGlo
 
     def prepare_wave(self, prevOE, nrays):
         """Creates the beam arrays used in wave diffraction calculations.
@@ -1319,16 +1359,18 @@ class GridAperture(PolygonalAperture):
         vertices = np.column_stack((xi, zi))
 
         super().__init__(bl=bl, name=name, center=center, vertices=vertices,
-                         x=x, z=z, alarmLevel=alarmLevel)
+                         x=x, z=z, alarmLevel=alarmLevel, **kwargs)
 
 
 class SiemensStar(PolygonalAperture):
     """Implements a Siemens Star pattern.
     See `tests/raycing/test_polygonal_aperture.py`"""
 
+    hiddenParams = ['vertices']
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  x='auto', z='auto', alarmLevel=None, nSpokes=9,
-                 r=0, rx=0, rz=0, phi0=0, vortex=0, vortexNradial=7):
+                 r=1, rx=0, rz=0, phi0=0, vortex=0, vortexNradial=7, **kwargs):
         """
         *nSpokes*: int
             The number of spoke openings.
@@ -1349,12 +1391,20 @@ class SiemensStar(PolygonalAperture):
 
 
         """
+        
+        self.nSpokes = nSpokes
+#        self.r = r
+        self.phi0 = phi0
         if r:
             slitRx = r
             slitRz = slitRx
         else:
             slitRx = rx
             slitRz = rz
+
+        self.rx = slitRx
+        self.rz = slitRz
+
         star = (np.linspace(0, 2*np.pi, nSpokes*2, endpoint=False) -
                 np.pi/nSpokes/2 - phi0)
         if vortex:
@@ -1381,4 +1431,5 @@ class SiemensStar(PolygonalAperture):
         vertices = list(zip(starXs.flatten(), starYs.flatten()))
 
         super().__init__(bl=bl, name=name, center=center, vertices=vertices,
-                         x=x, z=z, alarmLevel=alarmLevel)
+                         x=x, z=z, alarmLevel=alarmLevel, **kwargs)
+

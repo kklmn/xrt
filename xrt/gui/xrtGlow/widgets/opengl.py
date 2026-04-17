@@ -1411,6 +1411,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     mesh3D.prepare_surface_mesh(blade)
                     mesh3D.isEnabled = True
                 except Exception:
+#                    raise
                     mesh3D.isEnabled = False
                 assign_stencil_num(mesh3D)
 
