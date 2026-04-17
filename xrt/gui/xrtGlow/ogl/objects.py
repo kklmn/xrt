@@ -23,6 +23,7 @@ from ...commons import gl
 
 from ....backends import raycing
 from ....backends.raycing import oes as roes
+from ....backends.raycing import apertures as rapts
 from ....backends.raycing import materials as rmats
 from ....backends.raycing.sources import Beam
 
@@ -716,12 +717,14 @@ class OEMesh3D():
 
         if self.parent is not None:
             self.oeThickness = self.parent.oeThickness
-            self.apertureBladeThickness = self.parent.apertureBladeThickness
+            self.apertureBladeWidth = self.parent.apertureBladeWidth
             self.apertureDefaultSpan = self.parent.apertureDefaultSpan
             self.tiles = self.parent.tiles
+            self.apertureThickness = self.parent.apertureThickness
         else:
             self.oeThickness = 5
-            self.apertureBladeThickness = 5
+            self.apertureThickness = 0.1
+            self.apertureBladeWidth = 5
             self.apertureDefaultSpan = 10
             self.tiles = [25, 25]
         self.showLocalAxes = False
@@ -820,10 +823,278 @@ class OEMesh3D():
 
         return orientation
 
-    def prepare_surface_mesh(self, nsIndex=0, updateMesh=False,
-                             autoSize=False):
-        def get_thickness():
+    def siemens_star(self, radius, nSpokes, phi0, thickness):
+        def append_mesh(v_all, n_all, i_all, v, n, i):
+            offset = len(v_all)
+            v_all.extend(v)
+            n_all.extend(n)
+            i_all.extend((i + offset).tolist())
 
+        vertices_all = []
+        normals_all = []
+        indices_all = []
+
+        edges = (
+            np.linspace(0, 2*np.pi, nSpokes * 2, endpoint=False)
+            - np.pi / nSpokes / 2
+            - phi0
+        )
+
+        spoke_edges = edges.reshape(nSpokes, 2)
+
+        for phimin, phimax in spoke_edges:
+            v, n, i = self.generate_disk_ring_segment(
+                rmin=0.0,
+                rmax=radius,
+                phimin=phimin,
+                phimax=phimax,
+                thickness=thickness,
+                radial_steps=1,
+                angular_steps=1
+            )
+            append_mesh(vertices_all, normals_all, indices_all, v, n, i)
+
+        return (
+            np.asarray(vertices_all, dtype=np.float32),
+            np.asarray(normals_all, dtype=np.float32),
+            np.asarray(indices_all, dtype=np.uint32),
+        )
+
+    @staticmethod
+    def generate_disk_ring_segment(
+            rmin=0, rmax=10, phimin=0, phimax=2*np.pi,
+            thickness=0.1, radial_steps=5, angular_steps=60,
+            center_z=0.0, dtype=np.float32):
+
+#        if rmax <= rmin:
+#            raise ValueError("rmax must be > rmin")
+#        if thickness <= 0:
+#            raise ValueError("thickness must be > 0")
+#        if radial_steps < 1:
+#            raise ValueError("radial_steps must be >= 1")
+#        if angular_steps < 1:
+#            raise ValueError("angular_steps must be >= 1")
+
+        dphi = phimax - phimin
+        if dphi <= 0:
+            raise ValueError("phimax must be > phimin")
+
+        full_circle = np.isclose(dphi, 2*np.pi)
+
+        z0 = center_z - thickness / 2.0
+        z1 = center_z + thickness / 2.0
+
+        vertices = []
+        normals = []
+        indices = []
+
+        def add_face_grid(vgrid, ngrid):
+            """
+            Add a structured quad grid as two triangles per cell.
+
+            vgrid, ngrid: shape (nr, na, 3)
+            """
+            base = len(vertices)
+            nr, na, _ = vgrid.shape
+
+            vertices.extend(vgrid.reshape(-1, 3))
+            normals.extend(ngrid.reshape(-1, 3))
+
+            for i in range(nr - 1):
+                for j in range(na - 1):
+                    a = base + i * na + j
+                    b = a + 1
+                    c = base + (i + 1) * na + j
+                    d = c + 1
+
+                    indices.extend([a, c, b])
+                    indices.extend([b, c, d])
+
+        # Top and bottom faces
+        rs = np.linspace(rmin, rmax, radial_steps + 1)
+        phis = np.linspace(phimin, phimax, angular_steps + 1)
+        rr, pp = np.meshgrid(rs, phis, indexing='ij')
+
+        x = rr * np.cos(pp)
+        y = rr * np.sin(pp)
+
+        # Top
+        vtop = np.stack([x, y, np.full_like(x, z1)], axis=-1)
+        ntop = np.zeros_like(vtop)
+        ntop[..., 2] = 1.0
+        add_face_grid(vtop, ntop)
+
+        # Bottom
+        # Reverse angular direction to keep outward normal consistent with winding
+        vbot = np.stack([x[:, ::-1], y[:, ::-1], np.full_like(x[:, ::-1], z0)], axis=-1)
+        nbot = np.zeros_like(vbot)
+        nbot[..., 2] = -1.0
+        add_face_grid(vbot, nbot)
+
+        # Outer cylindrical wall
+        phis_side = np.linspace(phimin, phimax, angular_steps + 1)
+        zz = np.linspace(z0, z1, 2)
+        pp2, zz2 = np.meshgrid(phis_side, zz, indexing='ij')
+
+        xo = rmax * np.cos(pp2)
+        yo = rmax * np.sin(pp2)
+
+        vouter = np.stack([xo, yo, zz2], axis=-1).transpose(1, 0, 2)
+        nouter = np.stack([np.cos(pp2), np.sin(pp2), np.zeros_like(pp2)], axis=-1).transpose(1, 0, 2)
+        add_face_grid(vouter, nouter)
+
+        # Inner cylindrical wall
+        if rmin > 0:
+            xi = rmin * np.cos(pp2)
+            yi = rmin * np.sin(pp2)
+
+            # Reverse angular order so the winding remains outward
+            vinner = np.stack([xi[::-1], yi[::-1], zz2[::-1]], axis=-1).transpose(1, 0, 2)
+            ninner = np.stack([-np.cos(pp2[::-1]), -np.sin(pp2[::-1]), np.zeros_like(pp2[::-1])],
+                              axis=-1).transpose(1, 0, 2)
+            add_face_grid(vinner, ninner)
+
+        # Radial side walls for open segment
+        if not full_circle:
+            rs_side = np.linspace(rmin, rmax, radial_steps + 1)
+            zz = np.linspace(z0, z1, 2)
+            rr2, zz2 = np.meshgrid(rs_side, zz, indexing='ij')
+
+            # Side at phi = phimin
+            c0 = np.cos(phimin)
+            s0 = np.sin(phimin)
+            x0 = rr2 * c0
+            y0 = rr2 * s0
+            vphi0 = np.stack([x0, y0, zz2], axis=-1)
+
+            # outward normal for lower angular boundary
+            n0 = np.zeros_like(vphi0)
+            n0[..., 0] = s0
+            n0[..., 1] = -c0
+            add_face_grid(vphi0, n0)
+
+            # Side at phi = phimax
+            c1 = np.cos(phimax)
+            s1 = np.sin(phimax)
+            x1 = rr2 * c1
+            y1 = rr2 * s1
+
+            # reverse radial order to keep winding outward
+            vphi1 = np.stack([x1[::-1], y1[::-1], zz2[::-1]], axis=-1)
+
+            n1 = np.zeros_like(vphi1)
+            n1[..., 0] = -s1
+            n1[..., 1] = c1
+            add_face_grid(vphi1, n1)
+
+        return (
+            np.asarray(vertices, dtype=dtype),
+            np.asarray(normals, dtype=dtype),
+            np.asarray(indices, dtype=np.uint32),
+        )
+
+    def get_limits(self, nsIndex, is2ndXtal=False, autoSize=False):
+        yDim = 1
+
+        isScreen = is_screen(self.oe)
+        isAperture = is_aperture(self.oe)
+
+        if isScreen:
+            if autoSize and hasattr(self.oe, 'footprint') and len(
+                    self.oe.footprint) > 0:
+                xLimits = self.oe.footprint[nsIndex][:, 0]
+            elif self.oe.limPhysX is not None and np.sum(np.abs(
+                    self.oe.limPhysX)) > 0:
+                xLimits = self.oe.limPhysX if isinstance(
+                    self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
+            else:
+                xLimits = [-10, 10]
+
+            if autoSize and hasattr(self.oe, 'footprint') and len(
+                    self.oe.footprint) > 0:
+                yLimits = self.oe.footprint[nsIndex][:, 2]
+            elif self.oe.limPhysY is not None and np.sum(np.abs(
+                    self.oe.limPhysY)) > 0:
+                yLimits = self.oe.limPhysY if isinstance(
+                    self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
+            else:
+                yLimits = [-10, 10]
+
+            if hasattr(self.oe, 'R'):
+                xLimits = [max(-self.oe.R, min(xLimits)),
+                           min(self.oe.R, max(xLimits))]
+                yLimits = [max(-self.oe.R, min(yLimits)),
+                           min(self.oe.R, max(yLimits))]
+
+            yDim = 2
+        elif isAperture:
+            renderStyle = getattr(self.oe, 'renderStyle', 'mask')
+            blades = getattr(self.oe, 'blades', {})
+            if str(nsIndex) not in blades:
+                self.isEnabled = False
+                return
+
+            bt = self.apertureBladeWidth
+            defaultWidth = self.apertureDefaultSpan
+
+            if len(set(blades) & {'left', 'right'}) > 1:
+                awidth = np.abs(blades['left'] - blades['right'])
+                acenterX = 0.5 * (blades['left'] + blades['right'])
+                awidth = 0.5*awidth + bt if renderStyle == 'mask' else\
+                    max(awidth, defaultWidth)
+            else:
+                awidth = defaultWidth
+                acenterX = 0.
+
+            if len(set(blades) & {'top', 'bottom'}) > 1:
+                aheight = np.abs(blades['top'] - blades['bottom'])
+                acenterY = 0.5 * (blades['top'] + blades['bottom'])
+                aheight = 0.5*aheight if renderStyle == 'mask' else\
+                    max(aheight, defaultWidth)
+            else:
+                aheight = defaultWidth
+                acenterY = 0.
+
+            if str(nsIndex) == 'left':
+                xLimits = [blades['left'] - bt, blades['left']]
+                yLimits = [acenterY - aheight, acenterY + aheight]
+            elif str(nsIndex) == 'right':
+                xLimits = [blades['right'], blades['right'] + bt]
+                yLimits = [acenterY - aheight, acenterY + aheight]
+            elif str(nsIndex) == 'bottom':
+                xLimits = [acenterX - awidth, acenterX + awidth]
+                yLimits = [blades['bottom'] - bt, blades['bottom']]
+            elif str(nsIndex) == 'top':
+                xLimits = [acenterX - awidth, acenterX + awidth]
+                yLimits = [blades['top'], blades['top'] + bt]
+            yDim = 2
+        elif is2ndXtal:
+            xLimits = list(self.oe.limPhysX2)
+            yLimits = list(self.oe.limPhysY2)
+        else:
+            xLimits = list(self.oe.limPhysX)
+            yLimits = list(self.oe.limPhysY)
+
+        if np.all(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
+            if autoSize and hasattr(self.oe, 'footprint') and len(
+                    self.oe.footprint) > 0:
+                xLimits = self.oe.footprint[nsIndex][:, 0]
+            elif getattr(self.oe, 'limOptX', None) is not None and not\
+                    np.all(np.abs(self.oe.limOptX) == raycing.maxHalfSizeOfOE):
+                xLimits = list(self.oe.limOptX)
+        if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
+            if autoSize and hasattr(self.oe, 'footprint') and len(
+                    self.oe.footprint) > 0:
+                yLimits = self.oe.footprint[nsIndex][:, yDim]
+            elif getattr(self.oe, 'limOptY', None) is not None and not\
+                    np.all(np.abs(self.oe.limOptY) == raycing.maxHalfSizeOfOE):
+                yLimits = list(self.oe.limOptY)
+
+        return xLimits, yLimits
+
+    def generate_surface_local_f(self, nsIndex, is2ndXtal, xLimits, yLimits):
+
+        def get_thickness():
             thsrc = self.parent or self
             if thsrc.oeThicknessForce is not None:
                 return thsrc.oeThicknessForce
@@ -869,180 +1140,34 @@ class OEMesh3D():
 
         def triangulate_closed(ns, nphi):
             idx = np.arange(nphi * ns, dtype=np.uint32).reshape(nphi, ns)
-        
+
             row0 = idx
             row1 = np.roll(idx, -1, axis=0)
-        
+
             tra = row0[:, :-1]
             trb = row0[:, 1:]
             trc = row1[:, :-1]
             trd = row1[:, 1:]
-        
+
             triangles = np.empty((nphi, ns - 1, 2, 3), dtype=np.uint32)
             triangles[:, :, 0, :] = np.stack((tra, trc, trb), axis=-1)
             triangles[:, :, 1, :] = np.stack((trb, trc, trd), axis=-1)
-        
+
             return triangles.ravel()
-
-        gl.glGetError()
-
-        is2ndXtal = False
-
-        if is_oe(self.oe):
-            is2ndXtal = bool(nsIndex)
-
-        self.transMatrix[int(is2ndXtal)] =\
-            self.get_loc2glo_transformation_matrix(
-                self.oe, is2ndXtal=is2ndXtal)
-
-        if nsIndex in self.vao.keys():  # Updating existing
-            vao = self.vao[nsIndex]
-        else:
-            vao = qt.QOpenGLVertexArrayObject()
-            vao.create()
-            self.vao[nsIndex] = None  # Will be updated after generation
-
-        if hasattr(self.oe, 'stl_mesh') and hasattr(self.oe, 'points'):
-            self.isStl = True
-            self.vbo_vertices[nsIndex] = create_qt_buffer(
-                    self.oe.points.copy())
-            self.vbo_normals[nsIndex] = create_qt_buffer(
-                    self.oe.normals.copy())
-            self.arrLengths[nsIndex] = len(self.oe.points)
-            gl.glGetError()
-
-            vao.bind()
-
-            self.vbo_vertices[nsIndex].bind()
-            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(0)
-            self.vbo_vertices[nsIndex].release()
-
-            self.vbo_normals[nsIndex].bind()
-            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(1)
-            self.vbo_normals[nsIndex].release()
-
-            vao.release()
-
-            self.vao[nsIndex] = vao
-            self.ibo[nsIndex] = None  # Check if works with glDrawElements
-            return
 
         isPlate = is_plate(self.oe)
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
-
-        thickness = get_thickness()
-
-        self.bBox = np.zeros((3, 2))
-        self.bBox[:, 0] = 1e10
-        self.bBox[:, 1] = -1e10
-
-        # TODO: Consider plates
         oeShape = getattr(self.oe, 'shape', 'rect')
         oeDx = getattr(self.oe, 'dx', 0)
         isOeParametric = getattr(self.oe, 'isParametric', False)
 
-        yDim = 1
-        if isScreen:
-            if autoSize and hasattr(self.oe, 'footprint') and len(
-                    self.oe.footprint) > 0:
-                xLimits = self.oe.footprint[nsIndex][:, 0]
-            elif self.oe.limPhysX is not None and np.sum(np.abs(
-                    self.oe.limPhysX)) > 0:
-                xLimits = self.oe.limPhysX if isinstance(
-                    self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
-            else:
-                xLimits = [-10, 10]
-
-            if autoSize and hasattr(self.oe, 'footprint') and len(
-                    self.oe.footprint) > 0:
-                yLimits = self.oe.footprint[nsIndex][:, 2]
-            elif self.oe.limPhysY is not None and np.sum(np.abs(
-                    self.oe.limPhysY)) > 0:
-                yLimits = self.oe.limPhysY if isinstance(
-                    self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
-            else:
-                yLimits = [-10, 10]
-
-            if hasattr(self.oe, 'R'):
-                xLimits = [max(-self.oe.R, min(xLimits)),
-                           min(self.oe.R, max(xLimits))]
-                yLimits = [max(-self.oe.R, min(yLimits)),
-                           min(self.oe.R, max(yLimits))]
-
-            yDim = 2
-        elif isAperture:
-            renderStyle = getattr(self.oe, 'renderStyle', 'mask')
-            blades = getattr(self.oe, 'blades', {})
-            if str(nsIndex) not in blades:
-                self.isEnabled = False
-                return
-
-            bt = self.apertureBladeThickness
-            defaultWidth = self.apertureDefaultSpan
-
-            if len(set(blades) & {'left', 'right'}) > 1:
-                awidth = np.abs(blades['left'] - blades['right'])
-                acenterX = 0.5 * (blades['left'] + blades['right'])
-                awidth = 0.5*awidth + bt if renderStyle == 'mask' else\
-                    max(awidth, defaultWidth)
-            else:
-                awidth = defaultWidth
-                acenterX = 0.
-
-            if len(set(blades) & {'top', 'bottom'}) > 1:
-                aheight = np.abs(blades['top'] - blades['bottom'])
-                acenterY = 0.5 * (blades['top'] + blades['bottom'])
-                aheight = 0.5*aheight if renderStyle == 'mask' else\
-                    max(aheight, defaultWidth)
-            else:
-                aheight = defaultWidth
-                acenterY = 0.
-
-            if str(nsIndex) == 'left':
-                xLimits = [blades['left'] - bt, blades['left']]
-                yLimits = [acenterY - aheight, acenterY + aheight]
-            elif str(nsIndex) == 'right':
-                xLimits = [blades['right'], blades['right'] + bt]
-                yLimits = [acenterY - aheight, acenterY + aheight]
-            elif str(nsIndex) == 'bottom':
-                xLimits = [acenterX - awidth, acenterX + awidth]
-                yLimits = [blades['bottom'] - bt, blades['bottom']]
-            elif str(nsIndex) == 'top':
-                xLimits = [acenterX - awidth, acenterX + awidth]
-                yLimits = [blades['top'], blades['top'] + bt]
-            yDim = 2
-        elif is2ndXtal:
-            xLimits = list(self.oe.limPhysX2)
-            yLimits = list(self.oe.limPhysY2)
-        else:
-            xLimits = list(self.oe.limPhysX)
-            yLimits = list(self.oe.limPhysY)
-
-        isClosedSurface = False
-        if np.all(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
-            isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
-            if autoSize and hasattr(self.oe, 'footprint') and len(
-                    self.oe.footprint) > 0:
-                xLimits = self.oe.footprint[nsIndex][:, 0]
-            elif getattr(self.oe, 'limOptX', None) is not None and not\
-                    np.all(np.abs(self.oe.limOptX) == raycing.maxHalfSizeOfOE):
-                xLimits = list(self.oe.limOptX)
-        if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
-            if autoSize and hasattr(self.oe, 'footprint') and len(
-                    self.oe.footprint) > 0:
-                yLimits = self.oe.footprint[nsIndex][:, yDim]
-            elif getattr(self.oe, 'limOptY', None) is not None and not\
-                    np.all(np.abs(self.oe.limOptY) == raycing.maxHalfSizeOfOE):
-                yLimits = list(self.oe.limOptY)
-
-        self.xLimits = copy.deepcopy(xLimits)
-        self.yLimits = copy.deepcopy(yLimits)
-
         tiles = self.parent.tiles if self.parent is not None else self.tiles
         localTiles = np.array(tiles)
+
+        isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
+
+        thickness = get_thickness()
 
         if oeShape == 'round':
             rX = np.abs((xLimits[1] - xLimits[0]))*0.5
@@ -1086,8 +1211,9 @@ class OEMesh3D():
             local_n = screen_n
             local_z =  screen_z
         elif isAperture:
-            apThick = 0.1
+            apThick = self.apertureThickness
             local_n = lambda x, y: [0, 0, 1]
+            renderStyle = getattr(self.oe, 'renderStyle', 'mask')
             if str(nsIndex) in ['left', 'right'] and renderStyle != 'mask':  # Depth for rendering only
                 local_z = lambda x, y: 0 * np.ones_like(x)  # actual thickness
                 thickness = -apThick*0.5  # Inverted position of the back side
@@ -1132,7 +1258,6 @@ class OEMesh3D():
                 xC, yC, zC = self.oe.param_to_xyz(xC, yC, zC)
 
         points = np.vstack((xv, yv, zv)).T
-        surfmesh = {}
 
         if isClosedSurface:
             allIndices = triangulate_closed(*localTiles)
@@ -1147,7 +1272,7 @@ class OEMesh3D():
 
             if isClosedSurface:
                 bottomPoints[:, [0, 2]] *= 1.1
-            
+
             if isScreen or isClosedSurface:
                 bottomNormals = -1 * nv.copy()
             else:
@@ -1276,6 +1401,85 @@ class OEMesh3D():
             else:
                 allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
 #                allNormals[:, [1, 2]] = allNormals[:, [2 ,1]]
+        return allSurfaces, allNormals, allIndices
+
+    def prepare_surface_mesh(self, nsIndex=0, updateMesh=False,
+                             autoSize=False):
+
+        gl.glGetError()
+
+        is2ndXtal = False
+
+        if is_oe(self.oe):
+            is2ndXtal = bool(nsIndex)
+
+        self.transMatrix[int(is2ndXtal)] =\
+            self.get_loc2glo_transformation_matrix(
+                self.oe, is2ndXtal=is2ndXtal)
+
+        if nsIndex in self.vao.keys():  # Updating existing
+            vao = self.vao[nsIndex]
+        else:
+            vao = qt.QOpenGLVertexArrayObject()
+            vao.create()
+            self.vao[nsIndex] = None  # Will be updated after generation
+
+        if hasattr(self.oe, 'stl_mesh') and hasattr(self.oe, 'points'):
+            self.isStl = True
+            self.vbo_vertices[nsIndex] = create_qt_buffer(
+                    self.oe.points.copy())
+            self.vbo_normals[nsIndex] = create_qt_buffer(
+                    self.oe.normals.copy())
+            self.arrLengths[nsIndex] = len(self.oe.points)
+            gl.glGetError()
+
+            vao.bind()
+
+            self.vbo_vertices[nsIndex].bind()
+            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(0)
+            self.vbo_vertices[nsIndex].release()
+
+            self.vbo_normals[nsIndex].bind()
+            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(1)
+            self.vbo_normals[nsIndex].release()
+
+            vao.release()
+
+            self.vao[nsIndex] = vao
+            self.ibo[nsIndex] = None  # Check if works with glDrawElements
+            return
+
+        surfmesh = {}
+        # TODO: Consider plates
+
+        if isinstance(self.oe, rapts.RoundAperture):
+            if self.oe.isBeamStop:
+                rmin = 0
+                rmax = self.oe.r
+            else:
+                rmin = self.oe.r
+                rmax = self.oe.r+self.apertureBladeWidth
+            allSurfaces, allNormals, allIndices =\
+                self.generate_disk_ring_segment(
+                    rmin=rmin, rmax=rmax, thickness=self.apertureThickness)
+            allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+        elif isinstance(self.oe, rapts.SiemensStar):
+            radius = self.oe.rx
+            nSpokes = self.oe.nSpokes
+            phi0 = self.oe.phi0 + 0.5*np.pi
+            allSurfaces, allNormals, allIndices =\
+                self.siemens_star(radius, nSpokes, phi0,
+                              thickness=self.apertureThickness)
+            allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+        else:
+            xLimits, yLimits = self.get_limits(nsIndex, is2ndXtal, autoSize)
+            self.xLimits = copy.deepcopy(xLimits)
+            self.yLimits = copy.deepcopy(yLimits)
+            allSurfaces, allNormals, allIndices =\
+                self.generate_surface_local_f(nsIndex, is2ndXtal,
+                                              xLimits, yLimits)
 
         surfmesh['points'] = allSurfaces.copy()
         surfmesh['normals'] = allNormals.copy()
@@ -1284,14 +1488,14 @@ class OEMesh3D():
         self.allSurfaces = allSurfaces
         self.allIndices = allIndices
 
-        if oeShape == 'round':
-            surfmesh['contour'] = tB
-        else:
-            surfmesh['contour'] = np.vstack((tL, tF, np.flip(tR, axis=0), tB))
-        surfmesh['lentb'] = len(tB)
+#        if oeShape == 'round':
+#            surfmesh['contour'] = tB
+#        else:
+#            surfmesh['contour'] = np.vstack((tL, tF, np.flip(tR, axis=0), tB))
+#        surfmesh['lentb'] = len(tB)
 
-        self.bBox[:, 0] = np.min(surfmesh['contour'], axis=0)
-        self.bBox[:, 1] = np.max(surfmesh['contour'], axis=0)
+#        self.bBox[:, 0] = np.min(surfmesh['contour'], axis=0)
+#        self.bBox[:, 1] = np.max(surfmesh['contour'], axis=0)
 
         if updateMesh:
             oldVBOpoints = self.vbo_vertices[nsIndex] if\
@@ -1351,14 +1555,14 @@ class OEMesh3D():
 
         self.vao[nsIndex] = vao
 
-        if isScreen:
-            axisGridArray, gridLabels, precisionLabels =\
-                CoordinateBox.make_plane([xLimits, yLimits])
-            self.grid_vbo = {}
-            self.grid_vbo['vertices'] = create_qt_buffer(axisGridArray)
-            self.grid_vbo['gridLen'] = len(axisGridArray)
-            self.grid_vbo['gridLabels'] = gridLabels
-            self.grid_vbo['precisionLabels'] = precisionLabels
+#        if isScreen:
+#            axisGridArray, gridLabels, precisionLabels =\
+#                CoordinateBox.make_plane([xLimits, yLimits])
+#            self.grid_vbo = {}
+#            self.grid_vbo['vertices'] = create_qt_buffer(axisGridArray)
+#            self.grid_vbo['gridLen'] = len(axisGridArray)
+#            self.grid_vbo['gridLabels'] = gridLabels
+#            self.grid_vbo['precisionLabels'] = precisionLabels
 
 #        gridvao = qt.QOpenGLVertexArrayObject()
 #        gridvao.create()
