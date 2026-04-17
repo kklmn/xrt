@@ -347,9 +347,9 @@ class xrtGlow(qt.QWidget):
         self.centerCB = qt.QComboBox()
         self.centerCB.setMaxVisibleItems(48)
         self.centerCB.setSizeAdjustPolicy(qt.QComboBox.AdjustToContents)
-        proxy_model = qt.ComboBoxFilterProxyModel()
-        proxy_model.setSourceModel(self.segmentsModel)
-        self.centerCB.setModel(proxy_model)
+        self.centerProxyModel = qt.ComboBoxFilterProxyModel(self.centerCB)
+        self.centerProxyModel.setSourceModel(self.segmentsModel)
+        self.centerCB.setModel(self.centerProxyModel)
         self.centerCB.setModelColumn(0)
         self.centerCB.currentIndexChanged['int'].connect(
                 lambda elementid: self.centerEl(
@@ -1092,61 +1092,62 @@ class xrtGlow(qt.QWidget):
             newRow.append(newItem)
         return newRow
 
-    def updateSegmentsModel(self, arrayOfRays):
-        def copyRow(item, row):
-            newRow = []
-            for iCol in range(4):
-                oldItem = item.child(row, iCol)
-                newItem = qt.QStandardItem(str(oldItem.text()))
-                newItem.setCheckable(oldItem.isCheckable())
-                if newItem.isCheckable():
-                    newItem.setCheckState(oldItem.checkState())
-                newItem.setEditable(oldItem.isEditable())
-                newRow.append(newItem)
-            return newRow
-
-        newSegmentsModel = self.initSegmentsModel(isNewModel=False)
-        newSegmentsModel.invisibleRootItem().appendRow(
-            copyRow(self.segmentsModelRoot, 0))
-        for element, elRecord in self.oesList.items():
-            for iel in range(self.segmentsModelRoot.rowCount()):
-                elItem = self.segmentsModelRoot.child(iel, 0)
-                elName = str(elItem.text())
-                if str(element) == elName:
-                    elRow = copyRow(self.segmentsModelRoot, iel)
-                    for segment in arrayOfRays[0]:
-                        if segment[3] is not None:
-                            endBeamText = "to {}".format(
-                                self.beamsToElements[segment[3]])
-                            if str(segment[1]) == str(elRecord[1]):
-                                if elItem.hasChildren():
-                                    for ich in range(elItem.rowCount()):
-                                        if str(elItem.child(ich, 0).text()) ==\
-                                                endBeamText:
-                                            elRow[0].appendRow(
-                                                copyRow(elItem, ich))
-                                            break
-                                    else:
-                                        elRow[0].appendRow(self.createRow(
-                                            endBeamText, 3))
-                                else:
-                                    elRow[0].appendRow(self.createRow(
-                                        endBeamText, 3))
-                    newSegmentsModel.invisibleRootItem().appendRow(elRow)
-                    break
-            else:
-                elRow = self.createRow(str(element), 1)
-                for segment in arrayOfRays[0]:
-                    if str(segment[1]) == str(elRecord[1]) and\
-                            segment[3] is not None:
-                        endBeamText = "to {}".format(
-                            self.beamsToElements[segment[3]])
-                        elRow[0].appendRow(self.createRow(endBeamText, 3))
-                newSegmentsModel.invisibleRootItem().appendRow(elRow)
-        self.segmentsModel = newSegmentsModel
-        self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
-        self.oeTree.setModel(self.segmentsModel)
-        self.refreshNodeEditorPanel()
+#    def updateSegmentsModel(self, arrayOfRays):
+#        def copyRow(item, row):
+#            newRow = []
+#            for iCol in range(4):
+#                oldItem = item.child(row, iCol)
+#                newItem = qt.QStandardItem(str(oldItem.text()))
+#                newItem.setCheckable(oldItem.isCheckable())
+#                if newItem.isCheckable():
+#                    newItem.setCheckState(oldItem.checkState())
+#                newItem.setEditable(oldItem.isEditable())
+#                newRow.append(newItem)
+#            return newRow
+#
+#        newSegmentsModel = self.initSegmentsModel(isNewModel=False)
+#        newSegmentsModel.invisibleRootItem().appendRow(
+#            copyRow(self.segmentsModelRoot, 0))
+#        for element, elRecord in self.oesList.items():
+#            for iel in range(self.segmentsModelRoot.rowCount()):
+#                elItem = self.segmentsModelRoot.child(iel, 0)
+#                elName = str(elItem.text())
+#                if str(element) == elName:
+#                    elRow = copyRow(self.segmentsModelRoot, iel)
+#                    for segment in arrayOfRays[0]:
+#                        if segment[3] is not None:
+#                            endBeamText = "to {}".format(
+#                                self.beamsToElements[segment[3]])
+#                            if str(segment[1]) == str(elRecord[1]):
+#                                if elItem.hasChildren():
+#                                    for ich in range(elItem.rowCount()):
+#                                        if str(elItem.child(ich, 0).text()) ==\
+#                                                endBeamText:
+#                                            elRow[0].appendRow(
+#                                                copyRow(elItem, ich))
+#                                            break
+#                                    else:
+#                                        elRow[0].appendRow(self.createRow(
+#                                            endBeamText, 3))
+#                                else:
+#                                    elRow[0].appendRow(self.createRow(
+#                                        endBeamText, 3))
+#                    newSegmentsModel.invisibleRootItem().appendRow(elRow)
+#                    break
+#            else:
+#                elRow = self.createRow(str(element), 1)
+#                for segment in arrayOfRays[0]:
+#                    if str(segment[1]) == str(elRecord[1]) and\
+#                            segment[3] is not None:
+#                        endBeamText = "to {}".format(
+#                            self.beamsToElements[segment[3]])
+#                        elRow[0].appendRow(self.createRow(endBeamText, 3))
+#                newSegmentsModel.invisibleRootItem().appendRow(elRow)
+#        self.segmentsModel = newSegmentsModel
+#        self.centerProxyModel.setSourceModel(self.segmentsModel)
+#        self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
+#        self.oeTree.setModel(self.segmentsModel)
+#        self.refreshNodeEditorPanel()
 
     def getIcon(self, oe):
         if is_aperture(oe):
