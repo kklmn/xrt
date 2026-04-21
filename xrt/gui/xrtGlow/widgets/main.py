@@ -72,7 +72,8 @@ class _ToolbarPopupPanel(qt.QFrame):
 
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays=None, parent=None, progressSignal=None,
-                 layout=None, epicsPrefix=None, sceneSettings={}):
+                 layout=None, epicsPrefix=None, epicsMap={},
+                 sceneSettings={}):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
         self.cAxisLabelSize = 10
@@ -101,7 +102,8 @@ class xrtGlow(qt.QWidget):
             self.fluxDataModel.appendRow(qt.QStandardItem(colorField))
 
         glwInitKwargs = {'parent': self, 'modelRoot': self.segmentsModelRoot,
-                         'epicsPrefix': epicsPrefix, 'signal': progressSignal}
+                         'epicsPrefix': epicsPrefix, 'epicsMap': epicsMap,
+                         'signal': progressSignal}
 
         if arrayOfRays is not None:
             glwInitKwargs.update(
@@ -343,23 +345,23 @@ class xrtGlow(qt.QWidget):
 
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
-        centerCBLabel = qt.QLabel('Center view at:')
-        self.centerCB = qt.QComboBox()
-        self.centerCB.setMaxVisibleItems(48)
-        self.centerCB.setSizeAdjustPolicy(qt.QComboBox.AdjustToContents)
-        self.centerProxyModel = qt.ComboBoxFilterProxyModel(self.centerCB)
-        self.centerProxyModel.setSourceModel(self.segmentsModel)
-        self.centerCB.setModel(self.centerProxyModel)
-        self.centerCB.setModelColumn(0)
-        self.centerCB.currentIndexChanged['int'].connect(
-                lambda elementid: self.centerEl(
-                        self.centerCB.itemData(elementid,
-                                               role=qt.Qt.UserRole)))
-        self.centerCB.setCurrentIndex(0)
+#        centerCBLabel = qt.QLabel('Center view at:')
+#        self.centerCB = qt.QComboBox()
+#        self.centerCB.setMaxVisibleItems(48)
+#        self.centerCB.setSizeAdjustPolicy(qt.QComboBox.AdjustToContents)
+#        self.centerProxyModel = qt.ComboBoxFilterProxyModel(self.centerCB)
+#        self.centerProxyModel.setSourceModel(self.segmentsModel)
+#        self.centerCB.setModel(self.centerProxyModel)
+#        self.centerCB.setModelColumn(0)
+#        self.centerCB.currentIndexChanged['int'].connect(
+#                lambda elementid: self.centerEl(
+#                        self.centerCB.itemData(elementid,
+#                                               role=qt.Qt.UserRole)))
+#        self.centerCB.setCurrentIndex(0)
 
         layout = qt.QHBoxLayout()
-        layout.addWidget(centerCBLabel)
-        layout.addWidget(self.centerCB)
+#        layout.addWidget(centerCBLabel)
+#        layout.addWidget(self.centerCB)
         layout.addStretch()
         self.navigationLayout.addLayout(layout)
         self.oeTree = qt.QTreeView()
@@ -1230,7 +1232,7 @@ class xrtGlow(qt.QWidget):
     def updateTargets(self):
 
         tmpDict = dict()
-        self.centerCB.blockSignals(True)
+#        self.centerCB.blockSignals(True)
         # Stage 1. Remove children
         for iel in range(self.segmentsModelRoot.rowCount()):
             oeItem = self.segmentsModelRoot.child(iel, 0)
@@ -1279,7 +1281,7 @@ class xrtGlow(qt.QWidget):
         # Stage 4. Clear dead references
         tmpDict.clear()
         self.oeTree.resizeColumnToContents(0)
-        self.centerCB.blockSignals(False)
+#        self.centerCB.blockSignals(False)
         self.refreshNodeEditorPanel()
 
     def drawColorMap(self, axis):

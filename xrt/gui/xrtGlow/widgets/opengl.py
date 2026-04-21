@@ -49,7 +49,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                  b2els=None,
                  signal=None,
                  beamLayout=None,
-                 epicsPrefix=None):
+                 epicsPrefix=None,
+                 epicsMap={}):
         super().__init__(parent=parent)
         self.parent = parent
         self.hsvTex = generate_hsv_texture(512, s=1.0, v=1.0)
@@ -101,6 +102,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if arrayOfRays is not None:
             self.renderingMode = 'static'
             self.epicsPrefix = None
+            self.epicsMap = {}
             self.beamline.flow = arrayOfRays[0]
             for eluuid, elline in arrayOfRays[2].items():
                 self.beamline.oesDict[elline[0].uuid] = elline
@@ -131,6 +133,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         elif beamLayout is not None:
             self.renderingMode = 'dynamic'
             self.epicsPrefix = epicsPrefix
+            self.epicsMap = epicsMap
 
             self.beamline.deserialize(beamLayout)
             self.beamline.flowSource = 'Qook'
@@ -236,7 +239,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
                 self.epicsInterface = EpicsDevice(
                         bl=self.beamline,
-                        prefix=epicsPrefix,
+                        epicsPrefix=epicsPrefix,
+                        epicsMap=epicsMap,
                         callback=self.update_beamline_async)
 #                self.build_epics_device(epicsPrefix, softioc, builder,
 #                                        asyncio_dispatcher)
@@ -344,15 +348,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     elif key in ['limPhysX', 'limPhysY', 'limPhysX2',
                                  'limPhysY2']:
                         for argVal, field in zip(val, ['lmin', 'lmax']):
-                            record = elementBase.get(f'center.{field}')
+                            record = elementBase.get(f'{key}.{field}')
                             if record is not None:
                                 record.set(argVal)
-                    elif key == 'opening':
-                        oeObj = self.beamline.oesDict[oeid][0]
-                        for argVal, field in zip(val, oeObj.kind):
-                            record = elementBase.get(f'opening.{field}')
-                            if record is not None:
-                                record.set(argVal)
+#                    elif key == 'opening':
+#                        oeObj = self.beamline.oesDict[oeid][0]
+#                        for argVal, field in zip(val, oeObj.kind):
+#                            record = elementBase.get(f'opening.{field}')
+#                            if record is not None:
+#                                record.set(argVal)
                     elif key == 'blades':
                         for field, argVal in val.items():
                             record = elementBase.get(f'blades.{field}')
@@ -466,7 +470,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             argComps = argName.split('.')
             arg0 = argComps[0]
-            if len(argComps) > 1:  # compound args: center, limits, opening
+            if len(argComps) > 1 and arg0 == 'blades':
+                field = argComps[-1]
+                bladesValue = dict(getattr(updObj, 'blades', {}) or {})
+                bladesValue[field] = argValue
+                argValue = bladesValue
+            elif len(argComps) > 1:  # compound args: center, limits, opening
                 field = argComps[-1]
                 if field == 'energy':
                     if arg0 == 'bragg':
@@ -767,12 +776,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
                     self.beamUpdated.emit((msg['sender_id'], beamKey))
             elif 'histogram' in msg and self.epicsPrefix is not None:
-                histPvName =\
-                    f'{raycing.to_valid_var_name(msg["sender_name"])}:image'
-                if histPvName in self.epicsInterface.pv_records:
-                    imgHist = np.flipud(msg['histogram'])  # Appears flipped
-                    self.epicsInterface.pv_records[histPvName].set(
-                            imgHist.flatten())
+                record = self.epicsInterface.pv_map.get(msg['sender_id'],
+                                                        {}).get('image')
+                if record is not None:
+                    imgHist = np.flipud(msg['histogram'])
+                    record.set(imgHist.flatten())
+
             elif 'repeat' in msg:
                 print("Total repeats:", msg['repeat'])
                 if self.epicsPrefix is not None:
