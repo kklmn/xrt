@@ -2389,8 +2389,13 @@ class XrtQookBase(qt.QMainWindow):
                         self._addAction(
                             tmodule, elname, self.addElement, tsubmenu)
         elif level == 1 and selText != "properties":
-            tsubmenu = menu.addMenu(self.tr("Add method"))
-            menu.addSeparator()
+#            tsubmenu = menu.addMenu(self.tr("Add method"))
+            if self.blViewer is not None:
+                elid = str(selectedItem.data(qt.Qt.UserRole))
+                menu.addAction('Center xrtGlow at ' + str(selectedItem.text()),
+                               partial(self.blViewer.centerEl, elid))                
+                menu.addSeparator()
+
             menu.addAction("Clone " + str(selectedItem.text()),
                            partial(self.addElement, copyFrom=selectedItem))
             menu.addSeparator()
@@ -2408,40 +2413,40 @@ class XrtQookBase(qt.QMainWindow):
                                                      self.tree,
                                                      selectedItem))
 
-            for ic in range(selectedItem.rowCount()):
-                if selectedItem.child(ic, 0).text() == "_object":
-                    elstr = str(selectedItem.child(ic, 1).text())
-                    break
-            else:
-                return
-            elcls = eval(elstr)
-            if hasattr(elcls, 'hiddenMethods'):
-                hmList = elcls.hiddenMethods
-            else:
-                hmList = []
-            for namef, objf in inspect.getmembers(elcls):
-                if (inspect.ismethod(objf) or inspect.isfunction(objf)) and\
-                        not str(namef).startswith("_") and\
-                        not str(namef) in hmList:
-                    fdoc = objf.__doc__
-                    if fdoc is not None:
-                        objfNm = '{0}.{1}'.format(elstr,
-                                                  objf.__name__)
-                        fdoc = re.findall(r"Returned values:.*", fdoc)
-                        if len(fdoc) > 0 and (
-                                str(objf.__name__) not in
-                                self.experimentalModeFilter or
-                                self.experimentalMode):
-                            methAction = qt.QAction(self)
-                            methAction.setText(namef + '()')
-                            methAction.hovered.connect(
-                                partial(self.showObjHelp, objfNm))
-                            outBeams = fdoc[0].replace(
-                                    "Returned values: ", '').split(',')
-                            methAction.triggered.connect(
-                                partial(self.addMethod, objfNm,
-                                        selectedItem, outBeams))
-                            tsubmenu.addAction(methAction)
+#            for ic in range(selectedItem.rowCount()):
+#                if selectedItem.child(ic, 0).text() == "_object":
+#                    elstr = str(selectedItem.child(ic, 1).text())
+#                    break
+#            else:
+#                return
+#            elcls = eval(elstr)
+#            if hasattr(elcls, 'hiddenMethods'):
+#                hmList = elcls.hiddenMethods
+#            else:
+#                hmList = []
+#            for namef, objf in inspect.getmembers(elcls):
+#                if (inspect.ismethod(objf) or inspect.isfunction(objf)) and\
+#                        not str(namef).startswith("_") and\
+#                        not str(namef) in hmList:
+#                    fdoc = objf.__doc__
+#                    if fdoc is not None:
+#                        objfNm = '{0}.{1}'.format(elstr,
+#                                                  objf.__name__)
+#                        fdoc = re.findall(r"Returned values:.*", fdoc)
+#                        if len(fdoc) > 0 and (
+#                                str(objf.__name__) not in
+#                                self.experimentalModeFilter or
+#                                self.experimentalMode):
+#                            methAction = qt.QAction(self)
+#                            methAction.setText(namef + '()')
+#                            methAction.hovered.connect(
+#                                partial(self.showObjHelp, objfNm))
+#                            outBeams = fdoc[0].replace(
+#                                    "Returned values: ", '').split(',')
+#                            methAction.triggered.connect(
+#                                partial(self.addMethod, objfNm,
+#                                        selectedItem, outBeams))
+#                            tsubmenu.addAction(methAction)
         elif level == 2 and selText != "properties":
             deleteActionName = "Remove " + str(selText)
             menu.addAction(deleteActionName, partial(self.deleteElement,
