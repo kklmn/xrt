@@ -81,8 +81,8 @@ class NormalFZP(OE):
         self.reset()
 
     def __pop_kwargs(self, **kwargs):
-        self.f = kwargs.pop('f')
-        self.E = kwargs.pop('E')
+        self.f = kwargs.pop('f', 50)
+        self.E = kwargs.pop('E', 1000)
         self.N = kwargs.pop('N', 1000)
         self.isCentralZoneBlack = kwargs.pop('isCentralZoneBlack', True)
         self.thinnestZone = kwargs.pop('thinnestZone', None)
