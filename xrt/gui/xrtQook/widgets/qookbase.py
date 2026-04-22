@@ -62,6 +62,7 @@ from .. import tutorial  # analysis:ignore
 
 from ... import xrtGlow as xrtglow  # analysis:ignore
 from ...xrtGlow import InstanceInspector  # analysis:ignore
+from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_SETTINGS
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
 from ...xrtGlow.widgets.nodeeditor import _FlowGraphPanel, FLOW_NODE_STYLES
 
@@ -1048,13 +1049,9 @@ class XrtQookBase(qt.QMainWindow):
         self.rayPath = None
         if self.blViewer is not None:
             self.blViewer.customGlWidget.clearVScreen()
-            self.blViewer.customGlWidget.selColorMin = None
-            self.blViewer.customGlWidget.selColorMax = None
-            self.blViewer.customGlWidget.tVec = np.array([0., 0., 0.])
-            self.blViewer.customGlWidget.coordOffset = [0., 0., 0.]
-            self.blViewer.customGlWidget.iMax = -1e20
-            self.blViewer.customGlWidget.colorMax = -1e20
-            self.blViewer.customGlWidget.colorMin = 1e20
+            self.blViewer.customGlWidget.selectableOEs.clear()
+            self.blViewer.customGlWidget.selectedOE = 0
+            self.blViewer.applySceneProperties(DEFAULT_GLOW_SCENE_SETTINGS)
         self.blUpdateLatchOpen = True
 
     def initAllModels(self):

@@ -1050,6 +1050,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         try:
             objType = None
             if objuuid in self.beamline.oesDict:
+                staleStencilNums = [stNum for stNum, stObj in
+                                    self.selectableOEs.items()
+                                    if stObj == objuuid]
+                for stencilNum in staleStencilNums:
+                    del self.selectableOEs[stencilNum]
+                    if self.selectedOE == int(stencilNum):
+                        self.selectedOE = 0
                 mesh = self.meshDict.get(objuuid)
                 if mesh is not None:
                     mesh.delete_mesh()
