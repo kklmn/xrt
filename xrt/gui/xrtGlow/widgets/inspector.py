@@ -345,7 +345,7 @@ class InstanceInspector(qt.QDialog):
         if epv is not None:
             child1e = qt.QStandardItem(str(epv))
             child1e.setFlags(self.valueFlag)
-            child1e.setEditable(not self.viewOnly)
+            child1e.setEditable(False)
 
         if str(paramName) == "center":
             toolTip = '\"x\" and \"z\" can be set to "auto"\

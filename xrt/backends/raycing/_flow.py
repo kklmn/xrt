@@ -30,6 +30,7 @@ def propagationProcess(q_in, q_out):
             started = True if handler.startEl is None else False
             flowLen = len(handler.bl.flowU)
             flowCounter = 0
+
             for oeid, meth in handler.bl.flowU.items():
                 if not started:  # Skip until the modified element
                     if handler.startEl == oeid:
@@ -290,8 +291,8 @@ class MessageHandler:
         kwargs = message.get('kwargs')
 #        print("handle_flow", message)
         self.bl.update_flow_from_json(oeuuid, kwargs)
-        self.bl.sort_flow()
         if self.autoUpdate:
+            self.bl.sort_flow()
             self.needUpdate = True
             self.startEl = oeuuid
 
