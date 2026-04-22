@@ -816,7 +816,7 @@ class OEMesh3D():
                                         rot[0][1], rot[1][1], rot[2][1], tr[1],
                                         rot[0][2], rot[1][2], rot[2][2], tr[2],
                                         0.0, 0.0, 0.0, 1.0)
-        else:
+        else:  # TODO: source rotation
             posMatr = qt.QMatrix4x4()
             posMatr.translate(*oe.center)
             orientation = posMatr
