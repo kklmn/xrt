@@ -2068,7 +2068,13 @@ class XrtQookBase(qt.QMainWindow):
                             self.rootPlotItem.rowCount() == 0:
                         item = self.plotModel.invisibleRootItem()
                         item.setEditable(True)
-                    self.exportModel(item)
+                    if item == self.rootBLItem:
+                        self.exportModel(
+                            item,
+                            ordered_children=self.getOrderedBeamlineItems(
+                                includeMeta=True))
+                    else:
+                        self.exportModel(item)
                 self.confText += '<description>{0}</description>\n'.format(
                     self.fileDescription)
                 self.confText += "</Project>\n"
@@ -2123,7 +2129,35 @@ class XrtQookBase(qt.QMainWindow):
             outDict[str(pnItem.text())] = itemDict
         return outDict
 
-    def exportModel(self, item):
+    def getOrderedBeamlineItems(self, includeMeta=False):
+        orderedItems = []
+        seen = set()
+        itemById = {}
+
+        for ii in range(self.rootBLItem.rowCount()):
+            child0 = self.rootBLItem.child(ii, 0)
+            if child0 is None:
+                continue
+            if str(child0.text()) in ['properties', '_object']:
+                if includeMeta:
+                    orderedItems.append(child0)
+                continue
+            itemById[str(child0.data(qt.Qt.UserRole))] = child0
+
+        for oeid in self.beamLine.flowU.keys():
+            oeid = str(oeid)
+            child0 = itemById.get(oeid)
+            if child0 is not None and oeid not in seen:
+                orderedItems.append(child0)
+                seen.add(oeid)
+
+        for oeid, child0 in itemById.items():
+            if oeid not in seen:
+                orderedItems.append(child0)
+
+        return orderedItems
+
+    def exportModel(self, item, ordered_children=None):
         def despace(pStr):
             return re.sub(' ', '_', pStr)
 
@@ -2142,10 +2176,16 @@ class XrtQookBase(qt.QMainWindow):
                 itemType)
             self.ntab += 1
             self.prefixtab = self.ntab * '\t'
-            for ii in range(item.rowCount()):
-                child0 = item.child(ii, 0)
+            if ordered_children is None:
+                children = [item.child(ii, 0) for ii in range(item.rowCount())]
+            else:
+                children = ordered_children
+            for child0 in children:
+                if child0 is None:
+                    continue
+                row = child0.row()
                 self.exportModel(child0)
-                child1 = item.child(ii, 1)
+                child1 = item.child(row, 1)
                 if child1 is not None and item.model() not in [self.beamModel]:
                     if child1.flags() != self.paramFlag or\
                             str(child0.text()) == "name" or\
@@ -2248,18 +2288,40 @@ class XrtQookBase(qt.QMainWindow):
                    blProps={'properties': beamlineInitKWargs,
                             '_object': 'xrt.backends.raycing.BeamLine'},
                    runProps=project.get('run_ray_tracing'))
-            for branch in ['Materials', 'FigureErrors', beamlineName]:
+            for branch in ['Materials', 'FigureErrors']:
                 for element, elementDict in project.get(branch).items():
                     if str(element) in ['properties', '_object']:
                         continue
-
-                    if branch == beamlineName and 'flow' in project:
-                        methDict = project['flow'].get(element)
-                        if methDict is None:  # VirtualScreen
-                            continue
-                        elementDict.update(methDict)
                     elementDict['properties']['uuid'] = element
                     self.addElement(copyFrom=elementDict)
+
+            beamlineDict = project.get(beamlineName)
+            flowDict = project.get('flow')
+            if beamlineDict is not None:
+                if not isinstance(flowDict, dict):
+                    flowDict = {}
+
+                orderedBeamline = OrderedDict()
+                for oeid in flowDict.keys():
+                    elementDict = beamlineDict.get(oeid)
+                    if elementDict is not None:
+                        orderedBeamline[oeid] = elementDict
+
+                for oeid, elementDict in beamlineDict.items():
+                    if str(oeid) in ['properties', '_object']:
+                        continue
+                    orderedBeamline.setdefault(oeid, elementDict)
+
+                for element, elementDict in orderedBeamline.items():
+                    elementProps = OrderedDict(elementDict)
+                    if 'properties' in elementProps:
+                        elementProps['properties'] = OrderedDict(
+                            elementProps['properties'])
+                    methDict = flowDict.get(element)
+                    if methDict is not None:
+                        elementProps.update(methDict)
+                    elementProps['properties']['uuid'] = element
+                    self.addElement(copyFrom=elementProps)
 
             for plotName, plotDict in project.get('plots').items():
                 bName = plotDict.get('beam')
@@ -2782,8 +2844,10 @@ class XrtQookBase(qt.QMainWindow):
                 saveStatus = True
                 saveMsg = 'Script saved to {}'.format(
                     os.path.basename(str(self.saveFileName)))
-                self.tabs.setTabText(
-                    6, os.path.basename(str(self.saveFileName)))
+                codeTabIndex = self.tabs.indexOf(self.codeEdit)
+                if codeTabIndex >= 0:
+                    self.tabs.setTabText(
+                        codeTabIndex, os.path.basename(str(self.saveFileName)))
                 if ext.isSpyderConsole:
                     self.codeConsole.wdir = os.path.dirname(
                         str(self.saveFileName))
