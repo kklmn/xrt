@@ -1281,7 +1281,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if is_screen(oe):
                     raycing.virgin_local_to_global(
                             self.beamline, beamGlo, oe.center)
-                else:
+                elif hasattr(oe, 'local_to_global'):
                     oe.local_to_global(
                             beamGlo, is2ndXtal=is2ndXtal)
             colorData = self.getColor(beamGlo)
