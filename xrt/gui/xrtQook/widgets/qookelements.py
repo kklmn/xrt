@@ -27,6 +27,7 @@ class XrtQookElements(XrtQookBase):
         copyFrom: dict with init kwargs (import from file) or another item
 
         """
+        methodProps = None
 
         if isinstance(copyFrom, qt.QStandardItem):
             for i in range(copyFrom.rowCount()):
@@ -39,12 +40,11 @@ class XrtQookElements(XrtQookBase):
             obj = copyFrom.get('_object')
             name = obj.split('.')[-1]
 
-            methodProps = {}
             for field, val in copyFrom.items():
                 if field in ['properties', '_object']:
                     continue
 #                methodProps['_object'] = val.get('_object')
-                methodProps['parameters'] = val
+                methodProps = {'parameters': val}
                 break
         elif isRoot:
             elementName = 'BeamLine'
@@ -162,9 +162,9 @@ class XrtQookElements(XrtQookBase):
 #        if not self.experimentalMode:
 
         if tree is self.tree and not isRoot:
-            if isinstance(copyFrom, dict):
+            if isinstance(copyFrom, dict) and methodProps is not None:
                 self.autoAssignMethod(elementItem, methodProps)
-            else:
+            elif not isinstance(copyFrom, dict):
                 self.autoAssignMethod(elementItem)
 
         self.isEmpty = False
