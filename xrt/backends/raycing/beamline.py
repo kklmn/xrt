@@ -544,6 +544,19 @@ class BeamLine(object):
 
         self.flowU = newFlow
 
+    def iter_oes_ordered(self):
+        seen = set()
+
+        for oeid in self.flowU.keys():
+            oeLine = self.oesDict.get(oeid)
+            if oeLine is not None and oeid not in seen:
+                seen.add(oeid)
+                yield oeid, oeLine
+
+        for oeid, oeLine in self.oesDict.items():
+            if oeid not in seen:
+                yield oeid, oeLine
+
     def sort_materials(self, matDict=None, fromJSON=False):
         visited = set()
         visiting = set()
@@ -957,6 +970,9 @@ class BeamLine(object):
                     else:
                         continue
 
+            for oeid, oeLine in self.iter_oes_ordered():
+                oesDict.setdefault(oeid, oeLine)
+
         totalBeams = len(beamDict)
         for itBeam, tBeam in enumerate(beamDict.values()):
             if signal is not None:
@@ -1326,7 +1342,7 @@ class BeamLine(object):
         beamlineDict['properties'] = blArgs
         beamlineDict['_object'] = get_obj_str(self)
 
-        for oeid, oeline in self.oesDict.items():
+        for oeid, oeline in self.iter_oes_ordered():
             oeObj = oeline[0]
             oeRecord = OrderedDict()
             oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
