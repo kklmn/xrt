@@ -1904,6 +1904,48 @@ class xrtGlow(qt.QWidget):
             self.updateScaleFromGL(self.customGlWidget.scaleVec)
         if 'rotations' in params:
             self.updateRotationFromGL(self.customGlWidget.rotations)
+        if any([x in params for x in ['colorAxis', 'colorMin', 'colorMax',
+                                      'selColorMin', 'selColorMax']]):
+            colorCB = self.colorControls[0]
+            currentIndex = colorCB.findText(self.customGlWidget.colorAxis)
+            if currentIndex >= 0:
+                updateStatus = colorCB.blockSignals(True)
+                colorCB.setCurrentIndex(currentIndex)
+                colorCB.blockSignals(updateStatus)
+            self.mplAx.set_xlabel(self.customGlWidget.colorAxis)
+            self.im.set_extent((self.customGlWidget.colorMin,
+                                self.customGlWidget.colorMax, 0, 1))
+            self.colorControls[1].setText('{0:.6g}'.format(
+                self.customGlWidget.colorMin))
+            self.colorControls[2].setText('{0:.6g}'.format(
+                self.customGlWidget.colorMax))
+            self.colorControls[3].setText('{0:.6g}'.format(
+                self.customGlWidget.selColorMin))
+            self.colorControls[4].setText('{0:.6g}'.format(
+                self.customGlWidget.selColorMax))
+            self.colorControls[1].validator().setRange(
+                -1.0e20, self.customGlWidget.colorMax, 5)
+            self.colorControls[2].validator().setRange(
+                self.customGlWidget.colorMin, 1.0e20, 5)
+            self.colorControls[3].validator().setRange(
+                self.customGlWidget.colorMin, self.customGlWidget.colorMax, 5)
+            self.colorControls[4].validator().setRange(
+                self.customGlWidget.colorMin, self.customGlWidget.colorMax, 5)
+            slider = self.colorControls[5]
+            rStep = (self.customGlWidget.colorMax -
+                     self.customGlWidget.colorMin) / 100.
+            rValue = (self.customGlWidget.colorMax +
+                      self.customGlWidget.colorMin) * 0.5
+            slider.setRange(self.customGlWidget.colorMin,
+                            self.customGlWidget.colorMax, rStep)
+            slider.setValue(rValue)
+            try:
+                self.paletteWidget.span.extents = (
+                    self.customGlWidget.selColorMin,
+                    self.customGlWidget.selColorMax, 0, 1)
+            except Exception:
+                pass
+            self.paletteWidget.span.active_handle = None
 
         self.blockSignals(True)
 
@@ -1961,10 +2003,7 @@ class xrtGlow(qt.QWidget):
 
         self.blockSignals(False)
         self.mplFig.canvas.draw()
-
-        if 'colorAxis' in params:
-            colorCB = self.colorControls[0]
-            colorCB.setCurrentIndex(colorCB.findText(params['colorAxis']))
+        self.customGlWidget.glDraw()
 
 #        newExtents = list(self.paletteWidget.span.extents)
 #        newExtents[0] = params['selColorMin']
