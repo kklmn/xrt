@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import numpy as np
 import inspect
@@ -297,6 +297,12 @@ class DCM(OE):
         else:
             lo2 = gb2
         good2 = goodAfter1
+        if needLocal and (~good2).sum() > 0:
+            # Rays that never reached surface 2 have no meaningful local2 data.
+            lo2.state[~good2] = 0
+            lo2.x[~good2] = 0.
+            lo2.y[~good2] = 0.
+            lo2.z[~good2] = 0.
         if hasattr(self, 't'):  # is instance of Plate
             gb2.state[~good2] = self.lostNum
         if good2.sum() == 0:
