@@ -1053,8 +1053,8 @@ class XrtQookBase(qt.QMainWindow):
         self.rayPath = None
         if self.blViewer is not None:
             self.blViewer.customGlWidget.clearVScreen()
-            self.blViewer.customGlWidget.selectableOEs.clear()
-            self.blViewer.customGlWidget.selectedOE = 0
+            self.blViewer.customGlWidget.vScreenManualSize = False
+            self.blViewer.customGlWidget.rebuild_selectable_oes()
             self.blViewer.applySceneProperties(DEFAULT_GLOW_SCENE_SETTINGS)
         self.blUpdateLatchOpen = True
 
