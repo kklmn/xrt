@@ -4,7 +4,7 @@ import numpy as np
 import inspect
 
 from ... import raycing
-from .. import sources as rs
+# from .. import sources as rs
 
 from .dcm import DCM
 
@@ -18,7 +18,8 @@ class Plate(DCM):
     hiddenParams = ['order', 'bragg', 'cryst1roll', 'cryst2roll',
                     'cryst2pitch', 'cryst2finePitch', 'cryst2perpTransl',
                     'cryst2longTransl', 'limPhysX2', 'limPhysY2', 'limOptX2',
-                    'limOptY2', 'surface', 'material2', 'fixedOffset']
+                    'limOptY2', 'surface', 'material2', 'fixedOffset',
+                    'braggOffset']
 
     def __init__(self, *args, **kwargs):
         r"""

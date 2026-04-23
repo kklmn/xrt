@@ -5,6 +5,7 @@ import queue
 
 from ._sets_units import (
     derivedArgSet, renderOnlyArgSet, compoundArgs, diagnosticArgs)
+from ._flow_utils import parametrize, format_energy_input
 
 from .beamline import BeamLine
 
@@ -169,16 +170,14 @@ class MessageHandler:
             if eLine is not None:
                 element = eLine[0]
                 for key, value in kwargs.items():
+                    if isinstance(value, str):
+                        value = parametrize(value)
                     args = key.split('.')
                     arg = args[0]
                     if len(args) > 1:
                         field = args[-1]
                         if field == 'energy':
-                            if arg == 'bragg':
-                                value = [float(value)]
-                            else:
-                                value = element.material.get_Bragg_angle(
-                                        float(value))
+                            value = format_energy_input(value)
                         else:
                             argIn = getattr(element, f'_{arg}', None)
                             arrayValue = getattr(element, arg, None) if\

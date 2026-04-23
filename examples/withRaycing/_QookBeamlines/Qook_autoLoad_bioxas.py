@@ -220,7 +220,7 @@ def build_beamline():
         bl=BioXAS_Main,
         name=r"SSRL_DCM",
         center=[0, 25300, r"auto"],
-        bragg=[8000],
+        bragg=r"8000 eV",
         material=Si220,
         material2=Si220,
         limPhysX=[-20.0, 20.0],

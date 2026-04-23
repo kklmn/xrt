@@ -355,7 +355,7 @@
 			<bl type="param">BioXAS_Main</bl>
 			<name type="param">SSRL channel cut DCM</name>
 			<center type="param">[0, 25300, auto]</center>
-			<bragg type="param">[8000]</bragg>
+			<bragg type="param">8000 eV</bragg>
 			<pitch type="param">0</pitch>
 			<roll type="param">0</roll>
 			<yaw type="param">0</yaw>

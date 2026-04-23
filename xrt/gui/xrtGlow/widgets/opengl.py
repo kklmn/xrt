@@ -432,6 +432,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             return
 
         for argName, argValue in kwargs.items():
+            if isinstance(argValue, str):
+                argValue = raycing.parametrize(argValue)
+                kwargs[argName] = argValue
 
             if oeid is None:
                 if self.epicsPrefix is not None:
@@ -478,11 +481,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif len(argComps) > 1:  # compound args: center, limits, opening
                 field = argComps[-1]
                 if field == 'energy':
-                    if arg0 == 'bragg':
-                        argValue = [float(argValue)]
-                    else:
-                        argValue = updObj.material.get_Bragg_angle(
-                                float(argValue))
+                    argValue = raycing.format_energy_input(argValue)
                 else:
                     argIn = getattr(updObj, f'_{arg0}', None)
                     arrayValue = getattr(updObj,
@@ -528,11 +527,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         self.parent.updateTargets()
 
                 skipUpdate = False
-                if (arg0 in ['pitch', 'bragg', 'center'] and
-                    'auto' in str(argValue)) or\
-                    (arg0 in ['bragg', 'pitch'] and
-                     isinstance(argValue, list)):
-                        skipUpdate = True
+                if arg0 == 'center':
+                    skipUpdate = 'auto' in str(getattr(updObj, '_center',
+                                                      updObj.center))
+                elif arg0 in ['pitch', 'bragg']:
+                    skipUpdate = raycing.is_auto_align_value(
+                        getattr(updObj, f'_{arg0}', None))
 
                 if arg0 in orientationArgSet and not skipUpdate:
                     self.meshDict[oeid].update_transformation_matrix()
