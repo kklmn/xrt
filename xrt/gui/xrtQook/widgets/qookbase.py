@@ -64,7 +64,8 @@ from ... import xrtGlow as xrtglow  # analysis:ignore
 from ...xrtGlow import InstanceInspector  # analysis:ignore
 from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_SETTINGS
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
-from ...xrtGlow.widgets.nodeeditor import _FlowGraphPanel, FLOW_NODE_STYLES
+from ...xrtGlow.widgets.nodeeditor import (
+    HAS_QTPYNODEEDITOR, _FlowGraphPanel, FLOW_NODE_STYLES)
 
 try:
     from ....backends.raycing.materials import elemental as rmatsel
@@ -544,8 +545,10 @@ class XrtQookBase(qt.QMainWindow):
             self.codeConsole.setFont(self.defaultFont)
             self.codeConsole.setReadOnly(True)
 
-        self.makeFlowPanel()
-        self.tabs.addTab(self.flowPanel, "Flow")
+        self.hasFlowPanel = HAS_QTPYNODEEDITOR
+        if self.hasFlowPanel:
+            self.makeFlowPanel()
+            self.tabs.addTab(self.flowPanel, "Flow")
         self.tabs.addTab(self.tree, "Beamline")
         self.tabs.addTab(self.matTree, "Materials")
         self.tabs.addTab(self.feTree, "Figure Error")
@@ -571,7 +574,8 @@ class XrtQookBase(qt.QMainWindow):
 
     def onTabsCurrentChanged(self, tab):
         self.showDescrByTab(tab)
-        if self.tabs.widget(tab) is self.flowPanel:
+        if (self.hasFlowPanel and hasattr(self, 'flowPanel') and
+                self.tabs.widget(tab) is self.flowPanel):
             self.refreshFlowPanel()
 
     def onFlowNodeDoubleClicked(self, node):
