@@ -83,6 +83,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.vScreenForColors = False
         self.globalColorIndex = None
         self.isVirtScreenNormal = False
+        self.vScreenManualSize = False
         self.vScreenSize = 0.5
         self.setMinimumSize(240, 400)
 
@@ -1035,6 +1036,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         beamBuffer.clear()
 
+    def rebuild_selectable_oes(self):
+        self.selectableOEs.clear()
+        self.selectedOE = 0
+        for oeuuid in self.beamline.oesDict:
+            mesh = self.meshDict.get(oeuuid)
+            if mesh is None:
+                continue
+            stencilNum = len(self.selectableOEs) + 1
+            self.selectableOEs[stencilNum] = oeuuid
+            mesh.stencilNum = stencilNum
+
     def delete_all_oe_buffers(self, oeid):
         for beamTag in list(self.beamBufferDict):
             if beamTag[0] == oeid:
@@ -1050,13 +1062,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         try:
             objType = None
             if objuuid in self.beamline.oesDict:
-                staleStencilNums = [stNum for stNum, stObj in
-                                    self.selectableOEs.items()
-                                    if stObj == objuuid]
-                for stencilNum in staleStencilNums:
-                    del self.selectableOEs[stencilNum]
-                    if self.selectedOE == int(stencilNum):
-                        self.selectedOE = 0
                 mesh = self.meshDict.get(objuuid)
                 if mesh is not None:
                     mesh.delete_mesh()
@@ -1402,6 +1407,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             return
 
+        useAutoSize = self.autoSizeOe and not (
+            oeuuid == self.virtScreen['uuid'] and self.vScreenManualSize)
+
         if is_oe(oeToPlot) or is_screen(oeToPlot):
             if oeuuid not in self.meshDict:
                 mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
@@ -1413,7 +1421,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for is2ndXtal in is2ndXtalOpts:
                 try:
                     mesh3D.prepare_surface_mesh(nsIndex=int(is2ndXtal),
-                                                autoSize=self.autoSizeOe)
+                                                autoSize=useAutoSize)
                     mesh3D.isEnabled = True
                 except Exception:
                     mesh3D.isEnabled = False
@@ -1464,6 +1472,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def update_oe_surface(self, oeuuid):
         oeToPlot = self.meshDict[oeuuid].oe
+        useAutoSize = self.autoSizeOe and not (
+            oeuuid == self.virtScreen['uuid'] and self.vScreenManualSize)
         if is_source(oeToPlot):
             try:
                 if isinstance(oeToPlot, raycing.sources.GeometricSource):
@@ -1480,7 +1490,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 try:
                     self.meshDict[oeuuid].prepare_surface_mesh(
                             nsIndex=surfIndex, updateMesh=True,
-                            autoSize=self.autoSizeOe)
+                            autoSize=useAutoSize)
                     self.meshDict[oeuuid].isEnabled = True
                 except Exception as e:
                     print(e)
@@ -2756,6 +2766,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 scrLine = self.beamline.oesDict.get(scrId)
                 if scrLine is not None:
                     scrObj = scrLine[0]
+                    self.vScreenManualSize = True
                     scrObj.limPhysX *= 1.1
                     scrObj.limPhysY *= 1.1
                 if scrId not in self.needMeshUpdate:
@@ -2770,6 +2781,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 scrLine = self.beamline.oesDict.get(scrId)
                 if scrLine is not None:
                     scrObj = scrLine[0]
+                    self.vScreenManualSize = True
                     scrObj.limPhysX *= 0.9
                     scrObj.limPhysY *= 0.9
                 self.needMeshUpdate.append(scrId)  # TODO: check for duplicates
