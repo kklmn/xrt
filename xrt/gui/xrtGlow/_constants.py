@@ -30,6 +30,11 @@ diffuse['Si'] = qt.QVector4D(0.50754, 0.50754, 0.50754, 1.)
 specular['Si'] = qt.QVector4D(1., 0.9, 0.8, 1.)
 shininess['Si'] = 100.
 
+ambient['Quartz'] = qt.QVector4D(0.84, 0.85, 0.87, 1.)
+diffuse['Quartz'] = qt.QVector4D(0.28*2, 0.31*2, 0.35*2, 1.)
+specular['Quartz'] = qt.QVector4D(0.92, 0.96, 1.00, 1.)
+shininess['Quartz'] = 180.
+
 ambient['Screen'] = qt.QVector4D(2*0.29225, 2.2*0.29225, 1.8*0.29225, 1.)
 # ambient['Screen'] = qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
 diffuse['Screen'] = qt.QVector4D(0.50754, 1.1*0.50754, 0.9*0.50754, 1.)
