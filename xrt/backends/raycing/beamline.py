@@ -15,6 +15,7 @@ import importlib
 import json
 import xml.etree.ElementTree as ET
 import time
+import warnings
 
 from .singletons import colorPrint, basestring, is_sequence, _VERBOSITY_
 from .physconsts import SIE0, CH  # analysis:ignore
@@ -22,7 +23,8 @@ from .physconsts import SIE0, CH  # analysis:ignore
 from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
     create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
-    create_paramdict_fe)
+    create_paramdict_fe, is_auto_align_value, get_auto_align_energy,
+    warn_deprecated_glow_v2)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
 
@@ -312,18 +314,22 @@ class BeamLine(object):
 
         if hasattr(oe, '_pitch'):
             try:
-                if isinstance(oe._pitch, (list, tuple)):
-                    alignE = float(oe._pitch[-1])
-                autoPitch = oe._pitch is not None
+                if is_auto_align_value(oe._pitch):
+                    pitchAlignE = get_auto_align_energy(oe._pitch)
+                    if pitchAlignE is not None:
+                        alignE = pitchAlignE
+                    autoPitch = True
             except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
 
         if hasattr(oe, '_bragg'):
             try:
-                if isinstance(oe._bragg, (list, tuple)):
-                    alignE = float(oe._bragg[-1])
-                autoBragg = True
+                if is_auto_align_value(oe._bragg):
+                    braggAlignE = get_auto_align_energy(oe._bragg)
+                    if braggAlignE is not None:
+                        alignE = braggAlignE
+                    autoBragg = True
             except Exception:
                 print("Automatic Bragg angle calculation failed.")
                 raise
@@ -745,8 +751,61 @@ class BeamLine(object):
         # self.fenamesToUUIDs.update(feNamesDict)
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
-             colorAxisLimits=None, generator=None, generatorArgs=[], v2=False,
-             **kwargs):
+             colorAxisLimits=None, generator=None, generatorArgs=[],
+             mode='dynamic', v2=None, epicsPrefix=None, epicsMap={}, **kwargs):
+        r"""
+        Opens the xrtGlow 3D viewer for the current beamline.
+
+
+        *scale*: float or 3-sequence of floats
+            Initial scene scale. A scalar applies the same factor to x, y and
+            z.
+
+        *centerAt*: str
+            Name of the optical element to center the initial view on.
+
+        *startFrom*: int
+            Starting flow index used when replaying *generator* frames in
+            xrtGlow, for example when recording a movie.
+
+        *colorAxis*: str or None
+            Initial beam quantity used for ray coloring, for example
+            ``'energy'``.
+
+        *colorAxisLimits*: 2-sequence of floats or None
+            Initial lower and upper limits for *colorAxis*.
+
+        *generator*: callable or None
+            Optional generator factory for scan replay or movie recording. It
+            is called as ``generator(*generatorArgs)`` and should follow the
+            same yield-based pattern as in :func:`xrt.runner.run_ray_tracing`.
+
+        *generatorArgs*: sequence
+            Positional arguments passed to *generator*.
+
+        *mode*: {'dynamic', 'static'}
+            Viewer mode. ``'dynamic'`` initializes xrtGlow from the beamline
+            layout and enables interactive updates. ``'static'`` opens a
+            snapshot view of the already traced rays. Defaults to
+            ``'dynamic'``.
+
+        *v2*: bool or None
+            Deprecated compatibility alias for *mode*. ``True`` requests the
+            dynamic viewer and ``False`` requests the legacy static viewer.
+            Use *mode* instead. Will be removed in xrt 2.0 final.
+
+        *epicsPrefix*: str or None
+            Optional EPICS prefix used by xrtGlow in dynamic mode.
+
+        *epicsMap*: dict
+            Optional EPICS PV name remapping used in dynamic mode.
+
+        *kwargs*:
+            Additional keyword arguments forwarded to
+            :class:`xrt.gui.xrtGlow.xrtGlow`, for example ``sceneSettings``.
+
+
+        """
         if generator is not None:
             gen = generator(*generatorArgs)
             try:
@@ -768,11 +827,37 @@ class BeamLine(object):
         from .run import run_process
         run_process(self)
 
+        if v2 is not None:
+            warn_deprecated_glow_v2()
+            if v2:
+                if mode == 'static':
+                    warnings.warn(
+                        "BeamLine.glow(mode='static', v2=True) is "
+                        "conflicting. The explicit mode value wins; remove "
+                        "v2 and use mode='static' instead.",
+                        FutureWarning,
+                        stacklevel=3)
+                else:
+                    mode = 'dynamic'
+            elif mode == 'dynamic':
+                warnings.warn(
+                    "BeamLine.glow(v2=False) is deprecated. It is treated as "
+                    "mode='static' for backward compatibility. Remove v2 to "
+                    "keep the default dynamic viewer, or use "
+                    "mode='static' explicitly.",
+                    FutureWarning,
+                    stacklevel=3)
+                mode = 'static'
+
+        if mode not in ('static', 'dynamic'):
+            raise ValueError("Unknown glow mode {!r}. Use 'static' or "
+                             "'dynamic'.".format(mode))
+
         if self.blViewer is None:
             app = xrtglow.qt.QApplication.instance()
             if app is None:
                 app = xrtglow.qt.QApplication(sys.argv)
-            if v2:
+            if mode == 'dynamic':
                 self.index_materials()
 #                materialsDict = OrderedDict()
 #                for ename, eLine in self.oesDict.items():
@@ -799,6 +884,8 @@ class BeamLine(object):
                 _ = self.export_to_json()  # layoutStr is populated inside
 
                 self.blViewer = xrtglow.xrtGlow(layout=self.layoutStr,
+                                                epicsPrefix=epicsPrefix,
+                                                epicsMap=dict(epicsMap),
                                                 **kwargs)
             else:
                 rayPath = self.export_to_glow()

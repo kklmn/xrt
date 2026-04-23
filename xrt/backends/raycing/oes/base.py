@@ -116,9 +116,11 @@ class OE(OEMainMethods):
         *pitch, roll, yaw*: floats
             Rotations Rx, Ry, Rz, correspondingly, defined in the local system.
             If the material belongs to `Crystal`, *pitch* can be
-            calculated automatically if alignment energy is given as a single
-            element list [energy]. If 'auto',
-            the alignment energy will be taken from beamLine.alignE.
+            calculated automatically if alignment energy is given as an
+            energy string such as '8000 eV' or '8 keV'. If 'auto', the
+            alignment energy will be taken from beamLine.alignE. The legacy
+            single element list syntax [energy] is still accepted but
+            deprecated.
 
         *positionRoll*: float
             A global roll used for putting the OE upside down (=np.pi) or
@@ -336,8 +338,10 @@ class OE(OEMainMethods):
     def pitch(self, pitch):
         if isinstance(pitch, (raycing.basestring, list, tuple)):
             self._pitchInit = copy.deepcopy(pitch)  # For glow auto-recognition
+        if isinstance(pitch, (list, tuple)):
+            raycing.warn_deprecated_list_auto_align('pitch')
 
-        pitch = raycing.auto_units_angle(pitch)
+        pitch = raycing.auto_units_angle_with_energy(pitch)
         if isinstance(pitch, (raycing.basestring, list, tuple)):
             self._pitch = copy.deepcopy(pitch)
             self._pitchVal = None

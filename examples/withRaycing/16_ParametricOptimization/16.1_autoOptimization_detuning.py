@@ -60,7 +60,7 @@ def build_beamline():
         bl=beamLine,
         name=r"Generic DCM",
         center=[0, 25300, 0],
-        bragg=[10000],
+        bragg='10000 eV',
         material=Si111,
         material2=Si111,
         cryst2perpTransl=6.5023)

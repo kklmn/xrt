@@ -222,10 +222,13 @@ from ._epics import to_valid_var_name, EpicsDevice
 from ._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
 
 from ._flow_utils import (
-    auto_units_angle, append_to_flow, append_to_flow_decorator, set_name,
-    vec_to_quat, multiply_quats, quat_vec_rotate, get_init_val, get_params,
-    parametrize, create_paramdict_oe, create_paramdict_mat, get_obj_str,
-    get_init_kwargs, is_valid_uuid, run_process_from_file, build_hist)
+    auto_units_angle, auto_units_angle_with_energy, append_to_flow,
+    append_to_flow_decorator, set_name, vec_to_quat, multiply_quats,
+    quat_vec_rotate, get_init_val, get_params, parametrize,
+    create_paramdict_oe, create_paramdict_mat, get_obj_str, get_init_kwargs,
+    is_valid_uuid, run_process_from_file, build_hist, parse_energy_string,
+    is_auto_align_value, get_auto_align_energy, format_energy_input,
+    warn_deprecated_list_auto_align, warn_deprecated_glow_v2)
 from ._flow import propagationProcess, MessageHandler
 
 from .beamline import (

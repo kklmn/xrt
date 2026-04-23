@@ -393,7 +393,7 @@
 		<SSRL_DCM type="value">
 			<properties type="prop">
 				<braggOffset type="param">0</braggOffset>
-				<bragg type="param">[8000]</bragg>
+			<bragg type="param">8000 eV</bragg>
 				<cryst1roll type="param">0</cryst1roll>
 				<cryst2roll type="param">0</cryst2roll>
 				<cryst2pitch type="param">0</cryst2pitch>
