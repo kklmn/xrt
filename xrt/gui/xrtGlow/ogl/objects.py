@@ -785,6 +785,32 @@ class OEMesh3D():
     def update_surface_mesh(self, is2ndXtal=False):
         pass
 
+    @staticmethod
+    def _contains_auto(value):
+        if isinstance(value, str):
+            return 'auto' in value.lower()
+        if isinstance(value, (list, tuple)):
+            return any(OEMesh3D._contains_auto(v) for v in value)
+        return False
+
+    @staticmethod
+    def _is_unresolved_angle(value):
+        return raycing.is_auto_align_value(value)
+
+    @staticmethod
+    def _has_unresolved_auto(oe):
+        if hasattr(oe, 'center') and OEMesh3D._contains_auto(oe.center):
+            return True
+
+        for attr in ('pitch', 'roll', 'yaw', 'positionRoll',
+                     'extraPitch', 'extraRoll', 'extraYaw', 'alpha',
+                     'bragg', 'braggOffset', 'cryst1roll', 'cryst2roll',
+                     'cryst2pitch', 'cryst2finePitch'):
+            if hasattr(oe, attr) and \
+                    OEMesh3D._is_unresolved_angle(getattr(oe, attr)):
+                return True
+        return False
+
     def update_transformation_matrix(self):
         for elIndex in range(len(self.transMatrix)):
             self.transMatrix[elIndex] = self.get_loc2glo_transformation_matrix(
@@ -794,6 +820,8 @@ class OEMesh3D():
     def get_loc2glo_transformation_matrix(oe, is2ndXtal=False):
 
         if hasattr(oe, 'local_to_global'):  # all OEs except Sources
+            if OEMesh3D._has_unresolved_auto(oe):
+                return qt.QMatrix4x4()
             lb = Beam(nrays=4)
             lb.x[1] = lb.y[2] = lb.z[3] = 1.
 

@@ -256,7 +256,7 @@ BeamLine = build_beamline()
 
 def main():
     BeamLine = build_beamline()
-    BeamLine.glow(v2=True)
+    BeamLine.glow(mode='dynamic')
 
 if __name__ == '__main__':
     main()

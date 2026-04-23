@@ -271,7 +271,7 @@ def main():
 #    BeamLine.index_materials()
 #    prj = BeamLine.export_to_json()
 #    print(prj)
-    BeamLine.glow(v2=True)
+    BeamLine.glow(mode='dynamic')
 #    plots = define_plots()
 #    xrtrun.run_ray_tracing(plots, repeats=5, beamLine=BeamLine)
 

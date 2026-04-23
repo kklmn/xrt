@@ -2,6 +2,7 @@
 
 import sys
 import time
+import warnings
 # import os
 import numpy as np
 # from itertools import compress
@@ -28,6 +29,9 @@ from ._sets_units import (
     allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams)
 
 basestring = (str, bytes)
+_ENERGY_UNIT_RE = re.compile(
+    r'^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*'
+    r'(meV|keV|MeV|GeV|eV)\s*$')
 
 safe_globals = {
     'np': np,
@@ -67,6 +71,57 @@ def auto_units_angle(angle, defaultFactor=1.):
         return angle
     else:
         return angle * defaultFactor
+
+
+def parse_energy_string(value):
+    if not isinstance(value, basestring):
+        return None
+
+    match = _ENERGY_UNIT_RE.match(value.strip())
+    if match is None:
+        return None
+
+    magnitude, unit = match.groups()
+    return float(magnitude) * allUnitsEnergy[unit]
+
+
+def auto_units_angle_with_energy(angle):
+    if isinstance(angle, basestring):
+        angle = angle.strip()
+        if ('auto' in angle.lower()) or (parse_energy_string(angle) is not None):
+            return angle
+    return auto_units_angle(angle)
+
+
+def is_auto_align_value(value):
+    return isinstance(value, (basestring, list, tuple))
+
+
+def get_auto_align_energy(value):
+    if isinstance(value, (list, tuple)):
+        return float(value[-1])
+    return parse_energy_string(value)
+
+
+def format_energy_input(value):
+    return f"{float(value):g} eV"
+
+
+def warn_deprecated_list_auto_align(param_name):
+    warnings.warn(
+        "Using {0}=[energy] for automatic alignment is deprecated and will "
+        "be removed in future versions. Use {0}='8000 eV' or {0}='auto' "
+        "instead.".format(param_name),
+        FutureWarning,
+        stacklevel=3)
+
+
+def warn_deprecated_glow_v2():
+    warnings.warn(
+        "BeamLine.glow(v2=...) is deprecated and will be removed in xrt 2.0 "
+        "final. Use BeamLine.glow(mode='dynamic') or mode='static' instead.",
+        FutureWarning,
+        stacklevel=3)
 
 
 def append_to_flow(meth, bOut, frame):

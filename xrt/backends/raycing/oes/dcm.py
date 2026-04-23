@@ -18,8 +18,10 @@ class DCM(OE):
         u"""
         *bragg*: float, str, list
             Bragg angle in rad. Can be calculated automatically if alignment
-            energy is given as a single element list [energy]. If 'auto',
-            the alignment energy will be taken from beamLine.alignE.
+            energy is given as an energy string such as '8000 eV' or '8 keV'.
+            If 'auto', the alignment energy will be taken from beamLine.alignE.
+            The legacy single element list syntax [energy] is still accepted
+            but deprecated.
 
         *braggOffset*: float
             Bragg angle offset in rad.
@@ -75,7 +77,9 @@ class DCM(OE):
     def bragg(self, bragg):
         if isinstance(bragg, (raycing.basestring, list, tuple)):
             self._braggInit = copy.deepcopy(bragg)  # For glow auto-recognition
-        bragg = raycing.auto_units_angle(bragg)
+        if isinstance(bragg, (list, tuple)):
+            raycing.warn_deprecated_list_auto_align('bragg')
+        bragg = raycing.auto_units_angle_with_energy(bragg)
         if isinstance(bragg, (raycing.basestring, list, tuple)):
             self._bragg = copy.deepcopy(bragg)
             self._braggVal = None
