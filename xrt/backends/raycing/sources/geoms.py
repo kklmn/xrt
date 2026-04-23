@@ -234,10 +234,7 @@ class GeometricSource(object):
         self.distzprime = distzprime
         self.dzprime = raycing.auto_units_angle(dzprime)
         self.distE = distE
-        if self.distE == 'lines':
-            self.energies = np.array(energies)
-        else:
-            self.energies = energies
+        self.energies = energies
         self.energyWeights = energyWeights
 
         if bl is not None:
@@ -253,6 +250,19 @@ class GeometricSource(object):
         self.yaw = raycing.auto_units_angle(yaw)
 
     center = raycing.center_property()
+
+    @property
+    def energies(self):
+        return self._energies
+
+    @energies.setter
+    def energies(self, energies):
+        if self.distE == 'lines':
+            if isinstance(energies, (int, float)):
+                energies = [energies]
+            self._energies = np.array(energies)
+        else:
+            self._energies = energies
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
