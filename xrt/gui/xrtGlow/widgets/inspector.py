@@ -17,6 +17,7 @@ from matplotlib.lines import Line2D  # analysis:ignore
 from matplotlib.colors import TABLEAU_COLORS  # analysis:ignore
 
 from ...commons import qt  # analysis:ignore
+from .._utils import is_aperture, is_screen  # analysis:ignore
 
 from ....backends import raycing  # analysis:ignore
 from ....backends.raycing import materials as rmats  # analysis:ignore
@@ -229,20 +230,27 @@ class InstanceInspector(qt.QDialog):
                        'caxis': {'label': 'energy', 'unit': 'eV'}}
 
             beamDict = self.beamLine.beamsDictU.get(elementId)
-            beamsList = list(beamDict.keys())
+            realBeamKeys = [beamKey for beamKey in beamDict.keys()
+                            if beamKey != 'beamAbsorb']
             for beamKey in ['beamLocal2', 'beamLocal', 'beamGlobal']:
-                if beamKey in beamsList:
+                if beamKey in realBeamKeys:
                     defBeam = beamKey
                     break
+            else:
+                defBeam = realBeamKeys[0]
             plotProps['beam'] = (elementId, defBeam)
+            oeLine = self.beamLine.oesDict.get(elementId)
+            oeObj = oeLine[0] if oeLine is not None else None
 
             if defBeam.endswith('lobal'):
                 axHints['yaxis']['label'] = 'z'
             else:
-                if len(beamDict) > 1:
+                if is_screen(oeObj) or is_aperture(oeObj):
+                    axHints['yaxis']['label'] = r"z"
+                elif len(realBeamKeys) > 1:
                     axHints['yaxis']['label'] = r"y"
                     plotProps['aspect'] = 'auto'
-                else:   # screen or aperture
+                else:
                     axHints['yaxis']['label'] = r"z"
 
             for pname in ['xaxis', 'yaxis', 'caxis']:
@@ -775,7 +783,13 @@ class ConfigurablePlotWidget(qt.QWidget):
         elementId, beamKey = beamTag
         self.elementId = elementId
         bdu = self.beamLine.beamsDictU
-        self.beamDict = bdu.get(elementId)
+        sourceBeamDict = bdu.get(elementId)
+        if sourceBeamDict is None:
+            self.beamDict = {}
+            self.dynamicPlot.beam = str(beamKey)
+            self.dynamicPlot.beamAbsorb = None
+            return
+        self.beamDict = copy.copy(sourceBeamDict)
         self.dynamicPlot.beam = str(beamKey)
 
         flowLine = self.beamLine.flowU.get(self.elementId)
@@ -793,7 +807,7 @@ class ConfigurablePlotWidget(qt.QWidget):
                 incomingDict = bdu.get(incomingElementId)
                 beamAbsorb = incomingDict.get('beamGlobal')
             elif beamKey in ['beamLocal2']:
-                beamAbsorb = self.beamDict.get('beamLocal1')
+                beamAbsorb = sourceBeamDict.get('beamLocal1')
 
             if beamAbsorb is not None:
                 self.beamDict['beamAbsorb'] = beamAbsorb
