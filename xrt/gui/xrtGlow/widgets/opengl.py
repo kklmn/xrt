@@ -1623,8 +1623,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def getColorLimits(self):
         self.iMax = -1e20
+        rebuildColorLimits = self.newColorAxis or not all(np.isfinite(
+            [self.colorMin, self.colorMax])) or self.colorMin >= self.colorMax
 
-        if self.newColorAxis:
+        if rebuildColorLimits:
             newColorMax = -1e20
             newColorMin = 1e20
             if self.selColorMin is None:
@@ -1645,28 +1647,32 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     startBeam.iMax = np.max(startBeam.Jss[good] +
                                             startBeam.Jpp[good])
                     self.iMax = max(self.iMax, startBeam.iMax)
-                    colorax = self.getColorData(startBeam, (oeuuid, beamKey))
-                    newColorMax = max(np.max(colorax[good]), newColorMax)
-                    newColorMin = min(np.min(colorax[good]), newColorMin)
+                    if rebuildColorLimits:
+                        colorax = self.getColorData(startBeam,
+                                                    (oeuuid, beamKey))
+                        newColorMax = max(np.max(colorax[good]), newColorMax)
+                        newColorMin = min(np.min(colorax[good]), newColorMin)
 
-#        if self.newColorAxis:
-        if newColorMin != self.colorMin:
-            self.colorMin = newColorMin
-            self.selColorMin = self.colorMin
-        if newColorMax != self.colorMax:
-            self.colorMax = newColorMax
-            self.selColorMax = self.colorMax
+        if rebuildColorLimits:
+            if newColorMin != self.colorMin:
+                self.colorMin = newColorMin
+                self.selColorMin = self.colorMin
+            if newColorMax != self.colorMax:
+                self.colorMax = newColorMax
+                self.selColorMax = self.colorMax
 
-        if self.colorMin == self.colorMax:
-            if self.colorMax == 0:
-                self.colorMin, self.colorMax = -0.1, 0.1
-            else:
-                self.colorMin = self.colorMax * 0.99
-                self.colorMax *= 1.01
+            if self.colorMin == self.colorMax:
+                if self.colorMax == 0:
+                    self.colorMin, self.colorMax = -0.1, 0.1
+                else:
+                    self.colorMin = self.colorMax * 0.99
+                    self.colorMax *= 1.01
 
         self.newColorAxis = False
         if self.parent is not None:
-            self.parent.changeColorAxis(None, newLimits=True)
+            self.parent.changeColorAxis(None, newLimits=rebuildColorLimits)
+        if not rebuildColorLimits:
+            self.glDraw()
 
     def modelToWorld(self, coords, dimension=None):
         self.maxLen = self.maxLen if self.maxLen != 0 else 1.
