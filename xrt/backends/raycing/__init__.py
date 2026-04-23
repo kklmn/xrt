@@ -130,6 +130,10 @@ Consider an example of a generator::
 
     def energy_scan(beamLine, plots, energies):
         flux = np.zeros_like(energies)
+        try:
+            trapz = np.trapezoid
+        except AttributeError:
+            trapz = np.trapz
         for ie, e in enumerate(energies):
             print(f'energy {e:.1f} eV, {ie+1} of {len(energies)}')
             beamLine.fixedEnergy = e
@@ -143,7 +147,7 @@ Consider an example of a generator::
             flux[ie] = plot.flux
 
         # now the whole scan is complete
-        integratedFlux = np.trapz(flux, energies)
+        integratedFlux = trapz(flux, energies)
         print(f'total flux = {integratedFlux:.3g} ph/s')
 
         with open("ray_tracing_c.pickle", 'wb') as f:

@@ -84,6 +84,11 @@ import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 xrtplot.colorFactor = 1.
 
+try:
+    trapz = np.trapezoid
+except AttributeError:
+    trapz = np.trapz
+
 # binsx, binsy = 896, 128
 # ppbx, ppby = 1, 1  # pixel per bin
 # limx, limy = [-84, 84], [-12, 12]
@@ -265,13 +270,13 @@ def get_vorticity():
     psi = np.linspace(limy[0]/m1y, limy[1]/m1y, binsy)
     Is, Ip, OAMs, OAMp, Es, Ep = beamLine.source.intensities_on_mesh(
         [E0], theta, psi, resultKind='vortex')
-    fluxIs = np.trapezoid(np.trapezoid(Is, psi), theta)
-    fluxIp = np.trapezoid(np.trapezoid(Ip, psi), theta)
+    fluxIs = trapz(trapz(Is, psi), theta)
+    fluxIp = trapz(trapz(Ip, psi), theta)
     # flux = fluxIs + fluxIp
     lEs = OAMs / fluxIs
     lEp = OAMp / fluxIp
-    vEs = np.trapezoid(np.trapezoid(lEs, psi), theta)
-    vEp = np.trapezoid(np.trapezoid(lEp, psi), theta)
+    vEs = trapz(trapz(lEs, psi), theta)
+    vEp = trapz(trapz(lEp, psi), theta)
     print('vorticity: Es = {0}, Ep = {1}'.format(vEs, vEp))
 
 
