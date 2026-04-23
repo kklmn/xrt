@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-__versioninfo__ = (2, 0, 0, 'b0', 'post1')
+__versioninfo__ = (2, 0, 0, 'b1')
 
 _base = '.'.join(map(str, __versioninfo__[:3]))
 
@@ -12,4 +12,4 @@ for part in __versioninfo__[3:]:
 
 __version__ = _base + _suffix
 
-__date__ = "11 Feb 2026"
+__date__ = "23 Apr 2026"
