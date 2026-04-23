@@ -95,6 +95,11 @@ import matplotlib.pyplot as plt
 # import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 
+try:
+    trapz = np.trapezoid
+except AttributeError:
+    trapz = np.trapz
+
 
 # APPLE II period 48 mm, Kx=Ky=2, ID length=4m
 period, n = 48., 83
@@ -325,16 +330,16 @@ def grid_method():
         Is, Ip, OAMs, OAMp, Es, Ep = source.intensities_on_mesh(
             [e], thetaPlus, psiPlus, eSpreadNSamples=eSpreadNSamples,
             resultKind='vortex')
-        fluxIs = np.trapz(np.trapz(
+        fluxIs = trapz(trapz(
             Is[0, whereTheta, :][:, wherePsi], psi), theta)
-        fluxIp = np.trapz(np.trapz(
+        fluxIp = trapz(trapz(
             Ip[0, whereTheta, :][:, wherePsi], psi), theta)
         flux[ie] = fluxIs + fluxIp
 
         lEs = OAMs[0, whereTheta, :][:, wherePsi] / fluxIs
         lEp = OAMp[0, whereTheta, :][:, wherePsi] / fluxIp
-        vEs = np.trapz(np.trapz(lEs, psi), theta)
-        vEp = np.trapz(np.trapz(lEp, psi), theta)
+        vEs = trapz(trapz(lEs, psi), theta)
+        vEp = trapz(trapz(lEp, psi), theta)
         vEss[ie] = vEs
         vEps[ie] = vEp
         print('vorticity: Es = {0}, Ep = {1}'.format(vEs, vEp))
@@ -350,7 +355,7 @@ def grid_method():
                 ie, theta, psi, I0, phEp, vEp, 'Ep')
 
     integrand = flux/energy*1e3 if source.distE == 'BW' else flux
-    totalPhPerS = np.trapz(integrand, energy)
+    totalPhPerS = trapz(integrand, energy)
     print('total flux = {0:.3g} ph/s'.format(totalPhPerS))
 
     dump = [energy, flux, vEss, vEps, totalPhPerS]

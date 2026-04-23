@@ -84,6 +84,11 @@ import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.run as rr
 
+try:
+    trapz = np.trapezoid
+except AttributeError:
+    trapz = np.trapz
+
 slitSize = 2., 2.
 slitPos = 20000.
 thetaMax = slitSize[0]*0.5 / slitPos
@@ -203,7 +208,7 @@ def energy_scan(beamLine, plots, outName):
         yield
         flux[ie] = plot.flux
 
-    totalPhPerS = np.trapz(flux, energy)
+    totalPhPerS = trapz(flux, energy)
     print('total flux = {0:.3g} ph/s'.format(totalPhPerS))
     dump = [energy, flux, totalPhPerS]
     outName = prefix+"ray_tracing_c.pickle"
@@ -244,12 +249,13 @@ def grid_method(kind):
         print(u'energy {0:.1f} eV, {1} of {2}'.format(e, ie+1, len(energy)))
         I0, l1, l2, l3 = source.intensities_on_mesh(
             [e], theta, psi, eSpreadNSamples=eSpreadNSamples)
-        # print(I0[:, :, wherePsi].shape, psi[wherePsi].shape)
-        flux[ie] = np.trapz(np.trapz(I0[:, :, wherePsi], psi[wherePsi])
-                            [:, whereTheta], theta[whereTheta])
+        I0 = I0[0, :, :]
+        flux[ie] = trapz(
+            trapz(I0[:, wherePsi], psi[wherePsi])[whereTheta],
+            theta[whereTheta])
 
     integrand = flux/energy*1e3 if source.distE == 'BW' else flux
-    totalPhPerS = np.trapz(integrand, energy)
+    totalPhPerS = trapz(integrand, energy)
     print('total flux = {0:.3g} ph/s'.format(totalPhPerS))
     dump = [energy, integrand, totalPhPerS]
     outName = prefix+"grid_method_{}.pickle".format(kind)
@@ -317,7 +323,7 @@ def compare_methods(methods, distE='0.1%bw', wantOffset=False):
 
     offset = 5e13 if wantOffset else 0
     for imethod, (e, flux, fluxPhPerS, label) in enumerate(data):
-        flux_eV = flux / np.trapz(flux, e) * fluxPhPerS
+        flux_eV = flux / trapz(flux, e) * fluxPhPerS
         if distE == '0.1%bw':
             y = flux_eV * e * 1e-3
         elif distE == 'eV':
