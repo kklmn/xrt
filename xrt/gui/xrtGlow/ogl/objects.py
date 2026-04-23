@@ -1726,6 +1726,8 @@ class OEMesh3D():
         surfOpacity = 1.0
         if is_screen(self.oe):
             surfOpacity = 0.75
+        elif is_plate(self.oe):
+            surfOpacity = 0.85
 #        elif is_aperture(self.oe):
 #            xLimits, yLimits = self.xLimits, self.yLimits
 
@@ -1760,6 +1762,8 @@ class OEMesh3D():
             mat = 'Cu'
         elif is_screen(self.oe):
             mat = 'Screen'
+        elif is_plate(self.oe):
+            mat = 'Quartz'
         else:
             mat = 'Si'
 
