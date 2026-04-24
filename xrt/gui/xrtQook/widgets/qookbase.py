@@ -1055,7 +1055,10 @@ class XrtQookBase(qt.QMainWindow):
             self.blViewer.customGlWidget.clearVScreen()
             self.blViewer.customGlWidget.vScreenManualSize = False
             self.blViewer.customGlWidget.rebuild_selectable_oes()
-            self.blViewer.applySceneProperties(DEFAULT_GLOW_SCENE_SETTINGS)
+            sceneSettings = dict(DEFAULT_GLOW_SCENE_SETTINGS)
+            for field in ['aspect', 'viewPortGL']:
+                sceneSettings.pop(field, None)
+            self.blViewer.applySceneProperties(sceneSettings)
         self.blUpdateLatchOpen = True
 
     def initAllModels(self):
@@ -2456,7 +2459,7 @@ class XrtQookBase(qt.QMainWindow):
             if self.blViewer is not None:
                 elid = str(selectedItem.data(qt.Qt.UserRole))
                 menu.addAction('Center xrtGlow at ' + str(selectedItem.text()),
-                               partial(self.blViewer.centerEl, elid))                
+                               partial(self.blViewer.centerEl, elid))
                 menu.addSeparator()
 
             menu.addAction("Clone " + str(selectedItem.text()),
@@ -2770,13 +2773,7 @@ class XrtQookBase(qt.QMainWindow):
             self.busyIconThread.start()
         elif progress >= 1:
             if self.busyIconThread is not None:
-                self.busyIconActive = False
-                self.busyIconWorker.shouldRedraw = False
-                self.busyIconThread.quit()
-                self.busyIconThread.deleteLater()
-                self.busyIconThread = None
-                self.busyIconWorker = None
-                self.setTabIcons()
+                self._shutdown_busy_icon_worker()
 
     def setBusyGlowIcon(self, icon):
         if not self.busyIconActive:
