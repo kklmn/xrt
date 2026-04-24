@@ -1093,7 +1093,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
 
         if self.beamBufferDict.get(beamTag) is None:
-            print("Buffers require init")
+#            print("Buffers require init")
             self.init_beam_footprint(beam, beamTag)
             return
 
