@@ -141,6 +141,8 @@ class InstanceInspector(qt.QDialog):
                     self.add_param(parentItem, f"{key} rbk", value)
                 else:
                     self.add_param(parentItem, key, value, epv=epv)
+                    if key in ['x', 'z']:
+                        self.add_param(parentItem, f"{key} rbk", value)
 
 #        for item in self.itemGroups.values():
         self.changed_data = {}
