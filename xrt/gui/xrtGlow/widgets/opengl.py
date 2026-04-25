@@ -1455,6 +1455,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def update_oe_transform(self, posData):
         oeid, pName, pValue = posData
+        if oeid == self.virtScreen['uuid'] and pName in ['center', 'x', 'z']:
+            return
         if pName in ['center']:
             try:
                 self.getMinMax()
@@ -1638,6 +1640,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             newColorMin = self.colorMin
 
         for oeuuid, beamDict in self.beamline.beamsDictU.items():
+            if oeuuid == self.virtScreen['uuid']:
+                continue
             for beamKey, startBeam in beamDict.items():
                 if startBeam is None:
                     continue
@@ -2512,67 +2516,241 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                self.clearVScreen()
 
     def positionVScreen(self, cntr=None):
+        def as_point(point):
+            if point is None:
+                return None
+            try:
+                point = np.asarray(point, dtype=float)
+            except (TypeError, ValueError):
+                return None
+            if point.shape != (3,) or not np.all(np.isfinite(point)):
+                return None
+            return point
+
+        def normalized_vector(vector):
+            vector = as_point(vector)
+            if vector is None:
+                return None
+            norm = np.linalg.norm(vector)
+            if not np.isfinite(norm) or norm <= 1e-12:
+                return None
+            return vector / norm
+
+        def find_nearest_line(p1, p2):
+            p1 = as_point(p1)
+            p2 = as_point(p2)
+            center = as_point(cntr)
+            if p1 is None or p2 is None or center is None:
+                return None, None
+            beam0 = p2 - p1
+            beamLen2 = np.dot(beam0, beam0)
+            if not np.isfinite(beamLen2) or beamLen2 <= 1e-12:
+                return None, None
+            # Finding the projection of the VScreen.center on
+            # segments
+            t = np.dot(center-p1, beam0) / beamLen2
+            t = np.clip(t, 0.0, 1.0)
+            cProjTmp = p1 + t * beam0
+            delta = cProjTmp - center
+            tmpDist = np.dot(delta, delta)
+            if not np.isfinite(tmpDist):
+                return None, None
+            return tmpDist, cProjTmp
+
+        def beamCM(beam, tmatr=None):
+            if beam is None:
+                return None
+            try:
+                state = np.asarray(beam.state)
+                good = (state == 1) | (state == 2)
+                if not np.any(good):
+                    return None
+                cm = np.array([np.mean(beam.x[good]),
+                               np.mean(beam.y[good]),
+                               np.mean(beam.z[good])], dtype=float)
+                if not np.all(np.isfinite(cm)):
+                    return None
+                if tmatr is not None:
+                    cm4 = tmatr * qt.QVector4D(cm[0], cm[1], cm[2], 1.0)
+                    cm = np.array([cm4.x(), cm4.y(), cm4.z()], dtype=float)
+            except Exception:
+                return None
+
+            return as_point(cm)
+
+        def get_trans_matrix(eluuid):
+            mesh = self.meshDict.get(eluuid)
+            if mesh is None:
+                return None
+            try:
+                return mesh.transMatrix[0]
+            except (AttributeError, IndexError, TypeError):
+                return None
+
+        def make_vscreen_axes(bStart, bEnd):
+            bStart = as_point(bStart)
+            bEnd = as_point(bEnd)
+            if bStart is None or bEnd is None:
+                return None
+            direction = normalized_vector(bEnd - bStart)
+            if direction is None:
+                return None
+            screenZ = np.array([0.0, 0.0, 1.0])
+            screenZ = normalized_vector(
+                    screenZ - np.dot(screenZ, direction) * direction)
+            if screenZ is None:
+                screenZ = np.array([1.0, 0.0, 0.0])
+                screenZ = normalized_vector(
+                        screenZ - np.dot(screenZ, direction) * direction)
+            if screenZ is None:
+                return None
+            screenX = normalized_vector(np.cross(direction, screenZ))
+            if screenX is None:
+                return None
+            screenY = normalized_vector(np.cross(screenZ, screenX))
+            if screenY is None:
+                return None
+            return screenX, screenY, screenZ
 
         if self.virtScreen is None:
             return
         if cntr is None:
             mLoc = self.mMod * self.mModLocal
-            orgLoc = mLoc.inverted()[0] * qt.QVector3D(0.0, 0.0, 0.0)
-            cntr = [orgLoc.x(), orgLoc.y(), orgLoc.z()]
-        dist = 1e12
+            mLocInv, ok = mLoc.inverted()
+            if not ok:
+                return
+            orgLoc = mLocInv * qt.QVector3D(0.0, 0.0, 0.0)
+            cntr = np.array([orgLoc.x(), orgLoc.y(), orgLoc.z()])
+        cntr = as_point(cntr)
+        if cntr is None:
+            return
+        dist = np.inf
         cProj = None
 
         if self.renderingMode == 'dynamic':
-            for eluuid, operations in self.beamline.flowU.items():
-                for kwargset in operations.values():
-                    if 'beam' in kwargset:
-                        tmpSource = kwargset['beam']
+            beamsDictU = getattr(self.beamline, 'beamsDictU', {})
+            oesDict = getattr(self.beamline, 'oesDict', {})
+            for eluuid, operations in list(
+                    getattr(self.beamline, 'flowU', {}).items()):
+                if not isinstance(operations, dict):
+                    continue
+                beamDict = beamsDictU.get(eluuid)
+                tm = get_trans_matrix(eluuid)
+                if beamDict is None or tm is None:
+                    continue
+                for kwargset in list(operations.values()):
+                    if not isinstance(kwargset, dict) or\
+                            'beam' not in kwargset:
+                        continue
 
-                        bStart0 = self.beamline.oesDict[tmpSource][0].center
-                        bEnd0 = self.beamline.oesDict[eluuid][0].center
+                    tmpSource = kwargset['beam']
+                    p1 = None
 
-                        beam0 = bEnd0 - bStart0
-                        # Finding the projection of the VScreen.center on
-                        # segments
-                        t = np.dot(cntr-bStart0, beam0) / np.dot(beam0, beam0)
-                        t = np.clip(t, 0.0, 1.0)
-                        cProjTmp = bStart0 + t * beam0
+                    if 'beamLocal1' in beamDict:
+                        beamStart = beamDict.get('beamLocal1')
+                        beamEnd = beamDict.get('beamGlobal')
+                        p1 = beamCM(beamStart, tm)
+                        p2 = beamCM(beamEnd)
+                        if p1 is not None and p2 is not None:
+                            tmpDist, cProjTmp = find_nearest_line(p1, p2)
+                            if tmpDist is not None and tmpDist < dist:
+                                oeLine = oesDict.get(eluuid)
+                                if not oeLine:
+                                    continue
+                                oeobj = oeLine[0]
+                                if not hasattr(oeobj, 'local_to_global'):
+                                    continue
+                                try:
+                                    beamLocalCopy = rsources.Beam(
+                                            copyFrom=beamStart)
+                                    beamToExpose = oeobj.local_to_global(
+                                            beamLocalCopy, returnBeam=True)
+                                except Exception:
+                                    continue
+                                dist = tmpDist
+                                bStartCenter = p1
+                                bEndCenter = p2
+                                cProj = cProjTmp
 
-                        tmpDist = np.linalg.norm(cProjTmp-cntr)
-                        if tmpDist < dist:
+                    try:
+                        sourceDict = beamsDictU.get(tmpSource)
+                    except TypeError:
+                        sourceDict = None
+                    if sourceDict is None:
+                        continue
+
+                    beamStart = sourceDict.get('beamGlobal')
+                    bStart0 = beamCM(beamStart)
+                    beamEnd = beamDict.get(
+                            'beamLocal1', beamDict.get('beamLocal', None))
+                    bEnd0 = p1 if p1 is not None else beamCM(beamEnd, tm)
+                    if bStart0 is not None and bEnd0 is not None:
+                        tmpDist, cProjTmp = find_nearest_line(bStart0, bEnd0)
+                        if tmpDist is not None and tmpDist < dist:
                             dist = tmpDist
-                            sourceuuid = tmpSource
+                            beamToExpose = beamStart
                             bStartCenter = bStart0
                             bEndCenter = bEnd0
                             cProj = cProjTmp
 
             if cProj is not None:
-                scrId = self.virtScreen['uuid']
-                screenObj = self.beamline.oesDict[scrId][0]
+                scrId = self.virtScreen.get('uuid')
+                screenLine = oesDict.get(scrId)
+                if not screenLine or beamToExpose is None:
+                    return
+                vScreenAxes = make_vscreen_axes(bStartCenter, bEndCenter)
+                if vScreenAxes is None:
+                    return
+                screenX, screenY, screenZ = vScreenAxes
+                screenObj = screenLine[0]
+                oldCenter = copy.copy(screenObj.center)
+                oldX = copy.copy(screenObj.x)
+                oldZ = copy.copy(screenObj.z)
                 screenObj.center = cProj
-                self.virtScreen['center'] = cProj
-                self.virtScreen['beamStart'] = bStartCenter
-                self.virtScreen['beamEnd'] = bEndCenter
-                self.virtScreen['beamPlane'] =\
-                    np.cross(bEndCenter-bStartCenter,
-                             np.array([0, 0, 1]))  # TODO: dynamic
-                self.meshDict[scrId].update_transformation_matrix()
-                beamToExpose =\
-                    self.beamline.beamsDictU[sourceuuid]['beamGlobal']  # TODO: DCMs
-
-                exBeam = raycing.inspect.unwrap(screenObj.expose)(
-                        screenObj,
-                        beam=beamToExpose)
+                screenObj.set_orientation(screenX, screenZ)
+                screenX = normalized_vector(screenObj.x)
+                screenY = normalized_vector(screenObj.y)
+                screenZ = normalized_vector(screenObj.z)
+                if screenX is None or screenY is None or screenZ is None:
+                    screenObj.center = oldCenter
+                    screenObj.set_orientation(oldX, oldZ)
+                    return
+                try:
+                    exBeam = raycing.inspect.unwrap(screenObj.expose)(
+                            screenObj,
+                            beam=beamToExpose)
+                except Exception:
+                    screenObj.center = oldCenter
+                    screenObj.set_orientation(oldX, oldZ)
+                    return
                 if hasattr(beamToExpose, 'iMax'):  # TODO: check
                     exBeam.iMax = beamToExpose.iMax
                 else:
-                    exBeam.iMax = self.iMax
-                self.beamline.beamsDictU[scrId] =\
-                    {'beamLocal': exBeam}
+                    exBeam.iMax = getattr(self, 'iMax', 0)
+
+                screenMesh = self.meshDict.get(scrId)
+                if screenMesh is not None:
+                    try:
+                        screenMesh.update_transformation_matrix()
+                    except Exception:
+                        screenObj.center = oldCenter
+                        screenObj.set_orientation(oldX, oldZ)
+                        return
+
+                self.virtScreen['center'] = cProj
+                self.virtScreen['beamStart'] = bStartCenter
+                self.virtScreen['beamEnd'] = bEndCenter
+                self.virtScreen['beamPlane'] = screenX
+                self.virtScreen['beamDirection'] = screenY
+                self.oePropsUpdated.emit((scrId, 'center', cProj))
+                self.oePropsUpdated.emit((scrId, 'x', screenObj.x))
+                self.oePropsUpdated.emit((scrId, 'z', screenObj.z))
+                self.beamline.beamsDictU[scrId] = {'beamLocal': exBeam}
                 virtBeamTag = (scrId, 'beamLocal')
 #                self.update_beam_footprint(beam=exBeam, beamTag=virtBeamTag)
                 self.beamUpdated.emit(virtBeamTag)
-                self.needBeamUpdate.append(virtBeamTag)
+                if virtBeamTag not in self.needBeamUpdate:
+                    self.needBeamUpdate.append(virtBeamTag)
 #                self.virtScreen.beamToExpose = beamStart0
 #
 #        if self.isVirtScreenNormal:
@@ -2610,7 +2788,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def getPlanePoint(self, mX, mY, plane_pt, plane_n):
         def getProjRay():
             x_ndc = (2 * mX) / xView - 1
-            y_ndc = 1 - (2 * mY) / yView
+#            y_ndc = 1 - (2 * mY) / yView
+            y_ndc = 2 * mY / yView - 1
             nearN = qt.QVector4D(x_ndc, y_ndc, -1.0, 1.0)
             farN = qt.QVector4D(x_ndc, y_ndc, 1.0, 1.0)
 
@@ -2705,12 +2884,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 elif ctrlOn and self.showVirtualScreen:
                     tPlane = self.virtScreen['beamStart']
                     nPlane = self.virtScreen['beamPlane']
-                    pPlane = self.getPlanePoint(mouseX, mouseY, tPlane, nPlane)
-                    if self.virtScreen['offsetOn']:
-                        self.virtScreen['offset'] =\
-                            pPlane - self.virtScreen['center']
-                        self.virtScreen['offsetOn'] = False
-                    self.positionVScreen(pPlane - self.virtScreen['offset'])
+                    if tPlane is not None and nPlane is not None:
+                        pPlane = self.getPlanePoint(
+                                mouseX, mouseY, tPlane, nPlane)
+                    else:
+                        pPlane = None
+                    if pPlane is not None:
+                        if self.virtScreen['offsetOn']:
+                            self.virtScreen['offset'] =\
+                                pPlane - self.virtScreen['center']
+                            self.virtScreen['offsetOn'] = False
+                        self.positionVScreen(
+                                pPlane - self.virtScreen['offset'])
 
                 self.glDraw()
             else:
