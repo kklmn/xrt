@@ -15,6 +15,7 @@ sphinx = ">=1.6.2"
 sphinxcontrib-jquery = "*"
 distro = "*"
 colorama = "*"
+numpy-stl = "*"
 
 # GPU / OpenCL
 pyopencl = "*"
@@ -26,7 +27,7 @@ freetype-py = "*"
 
 [pypi-dependencies]
 # xrt = { path = ".", editable = true }
-xrt = { git = "https://github.com/kklmn/xrt.git", rev = "e863369" }
+xrt = { git = "https://github.com/kklmn/xrt.git", rev = "c795a20" }
 
 [feature.pyqt5.dependencies]
 pyqt = "*"
