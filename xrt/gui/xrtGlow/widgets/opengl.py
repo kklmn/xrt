@@ -12,7 +12,7 @@ from multiprocessing import Process, Queue
 from collections import OrderedDict, deque
 from matplotlib.colors import hsv_to_rgb
 
-from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS, itemTypes,
+from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS,
                           scr_m, DEFAULT_SCENE_SETTINGS)
 from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
                       is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)
@@ -1944,24 +1944,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 retStr += '{0:.{1}f}, '.format(dim, prec)
             return retStr[:-2] + ')'
 
-        def getItem(iId, itemType='beam', targetId=None):
-            item = None
-            start_index = model.index(0, 0)
-            flags = qt.Qt.MatchExactly
-            matches = model.match(start_index, qt.Qt.UserRole, iId, hits=1,
-                                  flags=flags)
-            if matches:
-                item = model.item(matches[0].row(), itemTypes[itemType])
-                if itemType == 'beam' and item.rowCount() > 0:
-                    parent_index = model.indexFromItem(item)
-                    fcIndex = item.child(0, 0).index()
-                    tgt_matches = model.match(fcIndex, qt.Qt.UserRole,
-                                              targetId, hits=-1, flags=flags)
-                    for line in tgt_matches:
-                        if line.parent() == parent_index:
-                            item = model.itemFromIndex(line)
-                            break
-            return item
+#        def getItem(iId, itemType='beam', targetId=None):
+#            item = None
+#            start_index = model.index(0, 0)
+#            flags = qt.Qt.MatchExactly
+#            matches = model.match(start_index, qt.Qt.UserRole, iId, hits=1,
+#                                  flags=flags)
+#            if matches:
+#                item = model.item(matches[0].row(), itemTypes[itemType])
+#                if itemType == 'beam' and item.rowCount() > 0:
+#                    parent_index = model.indexFromItem(item)
+#                    fcIndex = item.child(0, 0).index()
+#                    tgt_matches = model.match(fcIndex, qt.Qt.UserRole,
+#                                              targetId, hits=-1, flags=flags)
+#                    for line in tgt_matches:
+#                        if line.parent() == parent_index:
+#                            item = model.itemFromIndex(line)
+#                            break
+#            return item
 
         if True:
             gl.glClearColor(*self.bgColor, 1.0)
@@ -2015,7 +2015,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
 #            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            model = self.segmentModel.model()
+#            model = self.segmentModel.model()
 
             while self.needMeshUpdate:  # TODO: process one element per call?
                 elementId = self.needMeshUpdate.popleft()
@@ -2051,7 +2051,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_STENCIL_TEST)
 
             for oeuuid, mesh3D in self.meshDict.items():
-                item = getItem(oeuuid, 'surface')
+                item = self.parent.getItem(oeuuid, 'surface')
                 if item is None or item.checkState() != 2:
                     continue
 
@@ -2130,7 +2130,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #                self.positionVScreen()
 
             for oeuuid, mesh3D in self.meshDict.items():
-                item = getItem(oeuuid, 'surface')
+                item = self.parent.getItem(oeuuid, 'surface')
                 if item is None or item.checkState() != 2:
                     if not (self.showVirtualScreen and
                             oeuuid == self.virtScreen['uuid']):
@@ -2165,7 +2165,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             # RENDER FOOTPRINTS
 
             for oeuuid, beamDict in self.beamline.beamsDictU.items():
-                item = getItem(oeuuid, 'footprint')
+                item = self.parent.getItem(oeuuid, 'footprint')
                 if item is None or item.checkState() != 2:
                     if not (self.showVirtualScreen and
                             oeuuid == self.virtScreen['uuid']):
@@ -2194,7 +2194,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     for kwargset in operations.values():
                         if 'beam' in kwargset:
                             sourceuuid = kwargset['beam']
-                            item = getItem(sourceuuid, 'beam', eluuid)
+                            item = self.parent.getItem(sourceuuid, 'beam',
+                                                       eluuid)
                             if item is None or item.checkState() != 2:
                                 continue
 
@@ -2244,7 +2245,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 for flowLine in self.beamline.flow:
                     sourceuuid = flowLine[0]
                     eluuid = flowLine[2]
-                    item = getItem(sourceuuid, 'beam', eluuid)
+                    item = self.parent.getItem(sourceuuid, 'beam', eluuid)
                     if item is None or item.checkState() != 2:
                         continue
                     if eluuid not in [None, sourceuuid]:
@@ -2280,7 +2281,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glDisable(gl.GL_DEPTH_TEST)
 
             for oeuuid, mesh3D in self.meshDict.items():
-                item = getItem(oeuuid, 'label')
+                item = self.parent.getItem(oeuuid, 'label')
                 if item is None or item.checkState() != 2:
                     continue
 
@@ -2362,7 +2363,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 gl.glLineWidth(min(self.cBoxLineWidth, 1.))
 
                 for oeuuid, mesh3D in self.meshDict.items():
-                    item = getItem(oeuuid, 'surface')
+                    item = self.parent.getItem(oeuuid, 'surface')
                     if item is None or item.checkState() != 2:
                         continue
 
@@ -2405,7 +2406,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #
 #            for oeuuid, mesh3D in self.meshDict.items():
 #                continue
-#                item = getItem(oeuuid, 'surface')
+#                item = self.parent.getItem(oeuuid, 'surface')
 #                if item is None or item.checkState() != 2:
 #                    continue
 #

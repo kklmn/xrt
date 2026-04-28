@@ -363,7 +363,7 @@ class XrtQookBase(qt.QMainWindow):
 
         self.vToolBar = qt.QToolBar('Add Elements buttons')
         self.vToolBar.setOrientation(qt.Qt.Vertical)
-        self.vToolBar.setIconSize(qt.QSize(56, 56))
+        self.vToolBar.setIconSize(qt.QSize(64, 64))
 
         menuNames = ['Add Source', 'Add Optic', 'Add Aperture', 'Add Screen',
                      'Add Material', 'Add Figure Error', 'Add Plot']
@@ -2460,6 +2460,16 @@ class XrtQookBase(qt.QMainWindow):
                 elid = str(selectedItem.data(qt.Qt.UserRole))
                 menu.addAction('Center xrtGlow at ' + str(selectedItem.text()),
                                partial(self.blViewer.centerEl, elid))
+                for field in ['footprint', 'surface', 'label']:
+                    fpItem = self.blViewer.getItem(elid, field)
+                    mAction = qt.QAction(self)
+                    mAction.setText(f"Show {field} in xrtGlow")
+                    mAction.setCheckable(True)
+                    mAction.setChecked(bool(fpItem.checkState()))
+                    mAction.triggered.connect(partial(
+                            self.blViewer.toggleCheckItem, elid, field))
+                    menu.addAction(mAction)
+
                 menu.addSeparator()
 
             menu.addAction("Clone " + str(selectedItem.text()),

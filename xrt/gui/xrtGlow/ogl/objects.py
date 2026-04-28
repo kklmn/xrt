@@ -4,18 +4,12 @@ Created on Tue Jan 27 13:23:24 2026
 
 """
 
-__author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "27 Jan 2026"
-
 import copy
 import numpy as np
 from scipy.spatial import Delaunay
-from scipy.spatial.transform import Rotation as scprot
 
-
-from .axes import CoordinateBox
-from .._utils import (create_qt_buffer, basis_rotation_q)
-from .._utils import (is_oe, is_dcm, is_plate, is_aperture, is_screen)
+from .._utils import create_qt_buffer
+from .._utils import (is_oe, is_plate, is_aperture, is_screen)
 from .._constants import (ambient, diffuse, specular, shininess)
 
 from ...commons import qt
@@ -32,6 +26,9 @@ try:
     isSTLsupported = True
 except ImportError:
     isSTLsupported = False
+
+__author__ = "Roman Chernikov, Konstantin Klementiev"
+__date__ = "27 Jan 2026"
 
 
 class Beam3D():
@@ -863,9 +860,8 @@ class OEMesh3D():
         indices_all = []
 
         edges = (
-            np.linspace(0, 2*np.pi, nSpokes * 2, endpoint=False)
-            - np.pi / nSpokes / 2
-            - phi0
+            np.linspace(0, 2*np.pi, nSpokes * 2, endpoint=False) -
+            np.pi/nSpokes/2 - phi0
         )
 
         spoke_edges = edges.reshape(nSpokes, 2)
@@ -893,15 +889,6 @@ class OEMesh3D():
             rmin=0, rmax=10, phimin=0, phimax=2*np.pi,
             thickness=0.1, radial_steps=5, angular_steps=60,
             center_z=0.0, dtype=np.float32):
-
-#        if rmax <= rmin:
-#            raise ValueError("rmax must be > rmin")
-#        if thickness <= 0:
-#            raise ValueError("thickness must be > 0")
-#        if radial_steps < 1:
-#            raise ValueError("radial_steps must be >= 1")
-#        if angular_steps < 1:
-#            raise ValueError("angular_steps must be >= 1")
 
         dphi = phimax - phimin
         if dphi <= 0:
@@ -953,8 +940,10 @@ class OEMesh3D():
         add_face_grid(vtop, ntop)
 
         # Bottom
-        # Reverse angular direction to keep outward normal consistent with winding
-        vbot = np.stack([x[:, ::-1], y[:, ::-1], np.full_like(x[:, ::-1], z0)], axis=-1)
+        # Reverse angular direction to keep outward normal
+        # consistent with winding
+        vbot = np.stack([x[:, ::-1], y[:, ::-1],
+                         np.full_like(x[:, ::-1], z0)], axis=-1)
         nbot = np.zeros_like(vbot)
         nbot[..., 2] = -1.0
         add_face_grid(vbot, nbot)
@@ -968,7 +957,8 @@ class OEMesh3D():
         yo = rmax * np.sin(pp2)
 
         vouter = np.stack([xo, yo, zz2], axis=-1).transpose(1, 0, 2)
-        nouter = np.stack([np.cos(pp2), np.sin(pp2), np.zeros_like(pp2)], axis=-1).transpose(1, 0, 2)
+        nouter = np.stack([np.cos(pp2), np.sin(pp2), np.zeros_like(pp2)],
+                          axis=-1).transpose(1, 0, 2)
         add_face_grid(vouter, nouter)
 
         # Inner cylindrical wall
@@ -977,8 +967,10 @@ class OEMesh3D():
             yi = rmin * np.sin(pp2)
 
             # Reverse angular order so the winding remains outward
-            vinner = np.stack([xi[::-1], yi[::-1], zz2[::-1]], axis=-1).transpose(1, 0, 2)
-            ninner = np.stack([-np.cos(pp2[::-1]), -np.sin(pp2[::-1]), np.zeros_like(pp2[::-1])],
+            vinner = np.stack([xi[::-1], yi[::-1], zz2[::-1]],
+                              axis=-1).transpose(1, 0, 2)
+            ninner = np.stack([-np.cos(pp2[::-1]), -np.sin(pp2[::-1]),
+                               np.zeros_like(pp2[::-1])],
                               axis=-1).transpose(1, 0, 2)
             add_face_grid(vinner, ninner)
 
@@ -1136,7 +1128,8 @@ class OEMesh3D():
                     if hasattr(self.oe, 'zmax'):
                         if self.oe.zmax is not None:
                             thickness += self.oe.zmax
-                            if isinstance(self.oe, roes.DoubleParaboloidLens):
+                            if isinstance(self.oe,
+                                          roes.DoubleParaboloidLens):
                                 thickness += self.oe.zmax
                     return thickness
             if hasattr(self.oe, "material"):
@@ -1237,12 +1230,12 @@ class OEMesh3D():
 
         if isScreen:
             local_n = screen_n
-            local_z =  screen_z
+            local_z = screen_z
         elif isAperture:
             apThick = self.apertureThickness
             local_n = lambda x, y: [0, 0, 1]
             renderStyle = getattr(self.oe, 'renderStyle', 'mask')
-            if str(nsIndex) in ['left', 'right'] and renderStyle != 'mask':  # Depth for rendering only
+            if str(nsIndex) in ['left', 'right'] and renderStyle != 'mask':
                 local_z = lambda x, y: 0 * np.ones_like(x)  # actual thickness
                 thickness = -apThick*0.5  # Inverted position of the back side
             else:
