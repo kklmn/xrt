@@ -4,27 +4,27 @@ Created on Tue Jan 27 13:28:37 2026
 
 """
 
+import re
+import copy
+import numpy as np
+from datetime import datetime
+from functools import partial
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.colors import TABLEAU_COLORS
+
+from ...commons import qt
+from .._utils import is_aperture, is_screen
+
+from ....backends import raycing
+from ....backends.raycing import materials as rmats
+from ....backends.raycing.myopencl import ALL_CL_DEVICES
+from ....multipro import GenericProcessOrThread as GP
+from ....runner import RunCardVals
+from ....plotter import deserialize_plots
+
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
-
-import re  # analysis:ignore
-import copy  # analysis:ignore
-import numpy as np  # analysis:ignore
-from datetime import datetime  # analysis:ignore
-from functools import partial  # analysis:ignore
-from matplotlib.figure import Figure  # analysis:ignore
-from matplotlib.lines import Line2D  # analysis:ignore
-from matplotlib.colors import TABLEAU_COLORS  # analysis:ignore
-
-from ...commons import qt  # analysis:ignore
-from .._utils import is_aperture, is_screen  # analysis:ignore
-
-from ....backends import raycing  # analysis:ignore
-from ....backends.raycing import materials as rmats  # analysis:ignore
-from ....backends.raycing.myopencl import ALL_CL_DEVICES
-from ....multipro import GenericProcessOrThread as GP  # analysis:ignore
-from ....runner import RunCardVals  # analysis:ignore
-from ....plotter import deserialize_plots  # analysis:ignore
 
 
 class InstanceInspector(qt.QDialog):
@@ -38,8 +38,8 @@ class InstanceInspector(qt.QDialog):
                  categoriesDict=None):
         super().__init__(parent)
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
-        self.windowTitleStr = "{} Live Object Properties".format(dataDict.get(
-                'name'))
+        self.windowTitleStr =\
+            "{} Live Object Properties".format(dataDict.get('name'))
         if viewOnly:
             self.windowTitleStr += ' - Static Mode - View Only'
         self.setWindowTitle(self.windowTitleStr)
@@ -49,7 +49,7 @@ class InstanceInspector(qt.QDialog):
         self.original_data = raycing.OrderedDict()
         headerLine = ["Property", "Value"]
         self.viewOnly = viewOnly
-        self.liveUpdateEnabled = True  # TODO: configurable
+        self.liveUpdateEnabled = True
         self.widgetType = 'oe'
         self.objectFlag = qt.Qt.ItemFlags(0)
         self.paramFlag = qt.Qt.ItemFlags(
@@ -77,7 +77,8 @@ class InstanceInspector(qt.QDialog):
             for groupName in categoriesDict.keys():
                 self.itemGroups[groupName] = self.add_prop(
                         self.modelRoot, groupName)
-            self.itemGroups['Other'] = self.add_prop(self.modelRoot, 'Other')
+            self.itemGroups['Other'] =\
+                self.add_prop(self.modelRoot, 'Other')
 
         for key, value in dataDict.items():
             if categoriesDict is not None:
@@ -156,7 +157,8 @@ class InstanceInspector(qt.QDialog):
 #        self.table.resizeRowsToContents()
         self.table.setAlternatingRowColors(True)
         self.table.setContextMenuPolicy(qt.Qt.CustomContextMenu)
-        self.table.customContextMenuRequested.connect(self.show_context_menu)
+        self.table.customContextMenuRequested.connect(
+                self.show_context_menu)
         self.table.expandAll()
         self.table.setUniformRowHeights(False)
 #        self.table.setStyleSheet("""
@@ -261,7 +263,8 @@ class InstanceInspector(qt.QDialog):
 
             hiddenProps = {'xPos', 'yPos', 'ePos', 'contourLevels',
                            'contourColors', 'contourFmt', 'contourFactor',
-                           'saveName', 'persistentName', 'oe', 'raycingParam',
+                           'saveName', 'persistentName', 'oe',
+                           'raycingParam',
                            'beamState', 'beamC', 'useQtWidget', 'title',
                            'rayFlag', 'density', 'outline', 'fluxUnit',
                            'beamAbsorb'}
@@ -285,7 +288,8 @@ class InstanceInspector(qt.QDialog):
         self.edited_data = {}
 
     def add_blades_params(self, parentItem, value, epicsTree):
-        blades = value if isinstance(value, dict) else raycing.parametrize(value)
+        blades = value if isinstance(value, dict) else\
+            raycing.parametrize(value)
         if not isinstance(blades, dict):
             blades = {}
         for field in ['left', 'right', 'bottom', 'top']:
@@ -293,21 +297,26 @@ class InstanceInspector(qt.QDialog):
             nvalue = blades.get(field, None)
             nvalue = '0.0' if nvalue is None else str(nvalue)
             epv = epicsTree.get(nkey) if epicsTree is not None else None
-            child0, child1 = self.add_param(parentItem, nkey, nvalue, epv=epv)
-            self.configure_blade_row(child0, child1, blades.get(field) is not None)
-            self.original_data[nkey] = nvalue if blades.get(field) is not None else None
+            child0, child1 = self.add_param(parentItem, nkey, nvalue,
+                                            epv=epv)
+            self.configure_blade_row(child0, child1,
+                                     blades.get(field) is not None)
+            self.original_data[nkey] = nvalue if\
+                blades.get(field) is not None else None
         self.add_param(parentItem, "blades rbk", value)
 
     def configure_blade_row(self, keyItem, valueItem, isEnabled):
         keyItem.setFlags(self.checkFlag)
         keyItem.setCheckable(True)
-        keyItem.setCheckState(qt.Qt.Checked if isEnabled else qt.Qt.Unchecked)
+        keyItem.setCheckState(qt.Qt.Checked if
+                              isEnabled else qt.Qt.Unchecked)
         valueItem.setEditable(not self.viewOnly and isEnabled)
 
     def is_blade_row(self, item):
         rowItem = item if item.column() == 0 else item.parent().child(
             item.row(), 0)
-        return rowItem is not None and str(rowItem.text()).startswith('blades.')
+        return rowItem is not None and\
+            str(rowItem.text()).startswith('blades.')
 
     def add_prop(self, parent, propName):
         """Add non-editable Item"""
@@ -340,7 +349,9 @@ class InstanceInspector(qt.QDialog):
             ch1flag = self.valueFlag
 
         child1.setFlags(ch1flag)
-        child1.setEditable(not self.viewOnly)
+
+        if self.viewOnly:
+            child1.setEditable(False)
 
         if paramName.endswith('rbk') or\
                 parent is self.itemGroups.get('Diagnostic'):
@@ -350,7 +361,7 @@ class InstanceInspector(qt.QDialog):
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
             child1u.setFlags(self.valueFlag)
-            child1u.setEditable(not self.viewOnly)
+#            child1u.setEditable(not self.viewOnly)
 
         if epv is not None:
             child1e = qt.QStandardItem(str(epv))
@@ -381,12 +392,12 @@ class InstanceInspector(qt.QDialog):
 
         return child0, child1
 
-    def add_row(self, key, value):
-        key_item = qt.QStandardItem(key)
-        key_item.setEditable(False)
-        val_item = qt.QStandardItem(str(value))
-        val_item.setEditable(not self.viewOnly)
-        self.model.appendRow([key_item, val_item])
+#    def add_row(self, key, value):
+#        key_item = qt.QStandardItem(key)
+#        key_item.setEditable(False)
+#        val_item = qt.QStandardItem(str(value))
+#        val_item.setEditable(not self.viewOnly)
+#        self.model.appendRow([key_item, val_item])
 
     def on_item_changed(self, item):
         if item.column() == 0 and self.is_blade_row(item):
@@ -422,7 +433,8 @@ class InstanceInspector(qt.QDialog):
             value = value_str
 
         original_value = self.original_data.get(key)
-        if key.startswith('blades.') and parent.child(row, 0).checkState() != qt.Qt.Checked:
+        if key.startswith('blades.') and\
+                parent.child(row, 0).checkState() != qt.Qt.Checked:
             value_changed = key in self.changed_data
         else:
             value_changed = value_str != original_value
@@ -502,7 +514,8 @@ class InstanceInspector(qt.QDialog):
         self.changed_data.clear()
 
     def collapse_compound_changes(self, changedData):
-        bladeKeys = [key for key in changedData if key.startswith('blades.')]
+        bladeKeys = [key for key in changedData if
+                     key.startswith('blades.')]
         if bladeKeys:
             blades = {}
             for field in ['left', 'right', 'bottom', 'top']:
@@ -567,8 +580,8 @@ class InstanceInspector(qt.QDialog):
 
 
 class ConfigurablePlotWidget(qt.QWidget):
-    def __init__(self, plotProps, parent=None, viewOnly=False, beamLine=None,
-                 plotId=None, hiddenProps={}):
+    def __init__(self, plotProps, parent=None, viewOnly=False,
+                 beamLine=None, plotId=None, hiddenProps={}):
         super().__init__(parent)
 #        self.setAttribute(qt.Qt.WA_DeleteOnClose)
 #        self.setWindowTitle("Live Plot Builder")
@@ -589,7 +602,7 @@ class ConfigurablePlotWidget(qt.QWidget):
             qt.Qt.ItemIsSelectable)
 
         self.plotProps = plotProps
-        self.liveUpdateEnabled = True  # TODO: configurable
+        self.liveUpdateEnabled = True
         self.beamLine = beamLine
         self.dynamicPlot = plotObj[0]
 
@@ -679,7 +692,8 @@ class ConfigurablePlotWidget(qt.QWidget):
             else:
                 model = self.models['top']
                 parentItem = model.invisibleRootItem()
-                if key in ['beam'] and raycing.is_valid_uuid(self.elementId):
+                if key in ['beam'] and\
+                        raycing.is_valid_uuid(self.elementId):
                     value = value[-1]
 
                 if key not in self.hiddenProps:
@@ -819,7 +833,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         # implement behavior for standalone plots
 
     def update_beam(self, beamTag):
-        currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
+        currentTag = (getattr(self, 'elementId', None),
+                      self.dynamicPlot.beam)
         if self.liveUpdateEnabled and beamTag == currentTag:
             self.dynamicPlot.clean_plots()
             self.set_beam(beamTag)
@@ -906,7 +921,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         saveDialog.selectNameFilter("JPG files (*.jpg)")
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
-            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            extension =\
+                str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             try:
@@ -927,7 +943,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         saveDialog.selectNameFilter("Pickle files (*.pickle)")
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
-            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            extension =\
+                str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             try:
@@ -948,7 +965,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         saveDialog.selectNameFilter("NPY files (*.npy)")
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
-            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            extension =\
+                str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             beam = self.beamDict.get(self.dynamicPlot.beam)
@@ -969,8 +987,10 @@ class ConfigurablePlotWidget(qt.QWidget):
             b1 = self.dynamicPlot.ax1dHistEbar.get_position().bounds
             ep = self.dynamicPlot.caxis.pixels
 
-        self.dynamicPlot.ax1dHistX.set_position([b2[0], x1[1], b2[2], x1[3]])
-        self.dynamicPlot.ax1dHistY.set_position([y1[0], b2[1], y1[2], b2[3]])
+        self.dynamicPlot.ax1dHistX.set_position(
+                [b2[0], x1[1], b2[2], x1[3]])
+        self.dynamicPlot.ax1dHistY.set_position(
+                [y1[0], b2[1], y1[2], b2[3]])
 
         if self.dynamicPlot.ePos == 1:
             self.dynamicPlot.ax1dHistE.set_position(
@@ -1177,7 +1197,8 @@ class Curve1dWidget(qt.QWidget):
                 self.tree_view.setIndexWidget(item_value.index(), w)
             else:
                 item_value = qt.QStandardItem(str(ival))
-                item_value.setFlags(item_value.flags() | qt.Qt.ItemIsEditable)
+                item_value.setFlags(
+                        item_value.flags() | qt.Qt.ItemIsEditable)
                 plot_item.appendRow([item_name, item_value])
 
             if "emin" in iname.lower() and eMin is not None:

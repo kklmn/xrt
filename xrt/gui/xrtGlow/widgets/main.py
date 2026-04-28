@@ -16,7 +16,7 @@ from matplotlib.widgets import RectangleSelector
 
 from .._constants import (
         _DEBUG_, DEFAULT_SCENE_SETTINGS, COLOR_CONTROL_LABELS,
-        SCENE_CONTROL_LABELS, SCENE_TEXTEDITS)
+        SCENE_CONTROL_LABELS, SCENE_TEXTEDITS, itemTypes)
 from .._utils import is_source, is_oe, is_aperture, is_screen
 from .inspector import InstanceInspector
 from .opengl import xrtGlWidget
@@ -1076,6 +1076,35 @@ class xrtGlow(qt.QWidget):
             newModel.invisibleRootItem().appendRow(headerRow)
         newModel.itemChanged.connect(self.updateRaysList)
         return newModel
+
+    def getItem(self, iId, itemType='beam', targetId=None):
+        item = None
+        model = self.segmentsModel
+        start_index = model.index(0, 0)
+        flags = qt.Qt.MatchExactly
+        matches = model.match(start_index, qt.Qt.UserRole, iId, hits=1,
+                              flags=flags)
+        if matches:
+            item = model.item(matches[0].row(), itemTypes[itemType])
+            if itemType == 'beam' and item.rowCount() > 0:
+                parent_index = model.indexFromItem(item)
+                fcIndex = item.child(0, 0).index()
+                tgt_matches = model.match(fcIndex, qt.Qt.UserRole,
+                                          targetId, hits=-1, flags=flags)
+                for line in tgt_matches:
+                    if line.parent() == parent_index:
+                        item = model.itemFromIndex(line)
+                        break
+        return item
+
+    def toggleCheckItem(self, oeid, field, status):
+        for ie in range(self.segmentsModelRoot.rowCount()):
+            item = self.segmentsModelRoot.child(ie, 0)
+            itemId = item.data(qt.Qt.UserRole)
+            if itemId == oeid:
+                fpItem = self.segmentsModelRoot.child(ie, itemTypes[field])
+                fpItem.setCheckState(int(status)*2)
+                break
 
     def createRow(self, text, segMode, uuid=None, icon=None):
         newRow = []
