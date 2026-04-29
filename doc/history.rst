@@ -3,10 +3,106 @@
 Version history
 ---------------
 
-Current GitHub code (10 Jun 2025):
+2.0.0b1 (26 Apr 2026):
+    This beta focuses on restoring and stabilizing xrtGlow and xrtQook workflows
+    after the major GUI and architecture refactoring introduced in 2.0.0b0.
+    
+    Added
+    -----
+    - Visual beamline flow editor based on *qtpynodeeditor*
+    - Selectable object support for geometric sources in xrtGlow
+    - Dynamically adjustable number of rays (*nrays*) in xrtGlow
+    - Figure error definition based on slope RMS
+    - EPICS PV initialization via mapping syntax ``{"oe:property": "pv"}``
+    
+    Changed
+    -------
+    - Updated xrtGlow scene import/export
+    - Improved overall stability and robustness of GUI workflows
+    
+    Fixed
+    -----
+    - Beam local coordinate system transformation
+    - Static-mode operation in xrtGlow
+    - Initialization from saved Glow configuration
+    - Closed-surface rendering
+    - Hemispheric screen rendering
+    - Rendering of rays inside multi-surface optical elements
+    - Dynamic slit blade configuration
+    - STL surface auto-positioning
+    
+    API Changes
+    -----------
+    - ``BeamLine.glow()`` now accepts ``mode='dynamic'`` or ``mode='static'``  
+      (the previous ``v2`` argument is deprecated but still supported)
+    - Energy-based auto-alignment for ``pitch`` and ``bragg`` now accepts
+      unit strings (e.g. ``'8 keV'``, ``'8000 eV'``, or ``'auto'``);
+      the previous list-based syntax remains temporarily supported
+
+
+2.0.0b0.post1 (11 Feb 2026):
+    Packaging-only update for 2.0.0b0.
+    
+    Fixed
+    -----
+    - Package discovery and data file inclusion issues after module
+    restructuring
+    
+    No functional changes.
+
+2.0.0b0 (6 Feb 2026):
+    Version 2.0 introduces a major refactoring of the internal architecture,
+    focused on improving interactivity, performance, and flexibility of
+    beamline simulations and visualization.
+    
+    This is a pre-release intended for testing and feedback.
+    APIs and behavior may still change before the final release.
+    
+    Added
+    -----
+    - Dynamic object model allowing modification of optical elements, materials,
+      figure errors, and plots without full reinitialization
+    - UUID-based addressing of optical elements and beams
+    - JSON support for import/export alongside XML
+    - Direct execution of beamline definitions from JSON/XML templates
+    - Import of beamlines into Qook from Python scripts (with limitations)
+    - Interactive GUI tools for inspecting optical elements, materials,
+      figure errors, and plots
+    - Real-time visualization of applied changes
+    - EPICS integration for interactive control of beamline components via PVs
+    
+    Changed
+    -------
+    - Rendering migrated from legacy OpenGL to modern shader-based OpenGL
+    - Visualization propagation redesigned to operate interactively,
+      segment-by-segment
+    - 3D geometry generation moved to object creation/modification time
+    - Visualization propagation moved to a separate Python process,
+      improving GUI responsiveness
+    - xrtGlow now supports macOS
+    
+    Improved
+    --------
+    - Rendering performance for complex optical systems
+    - Interactive workflows in xrtGlow and xrtQook
+    - Figure error handling with dedicated classes and GUI controls
+    
+    Notes
+    -----
+    - Importing beamlines from Python scripts may not work for complex runtime
+    logic
+    - Documentation for new workflows is still evolving
+    - EPICS control currently requires running xrtGlow with ``epicsPrefix``
+
+1.6.2 (6 Feb 2026):
     - Enable wave propagation for two-side OEs (lenses).
 
     - Minor fixes in help pages of xrtQook.
+
+    - HyperbolicMirrorParam enabled in xrtQook.
+
+    - Fix wide angle approximation for edge radiation. Add example
+      :ref:`Infrared edge radiation <edge-radiation>`.
 
 1.6.1 (13 Nov 2024):
     - Minor bug fixes.

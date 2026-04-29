@@ -39,7 +39,7 @@ class SourceBase:
                  xPrimeMax=0.01, zPrimeMax=0.01, R0=None,
                  uniformRayDensity=False, filamentBeam=False,
                  pitch=0, yaw=0, eN=51, nx=25, nz=25, **kwargs):
-        u"""
+        r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Sourcess are added to its
             `sources` list.
