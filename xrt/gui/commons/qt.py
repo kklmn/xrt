@@ -3,22 +3,27 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "16 Nov 2025"
 
 import qtpy
-from qtpy import QtCore, QtGui, QtWidgets
-from qtpy.QtCore import (
-    QObject, QProcess, QSize, QSortFilterProxyModel, QThread, QTimer, QUrl,
-    Qt, Signal)
-from qtpy.QtGui import (
-    QBrush, QColor, QCursor, QDoubleValidator, QFont, QIcon, QImage,
-    QIntValidator, QKeySequence, QMatrix4x4, QPainter, QPixmap, QQuaternion,
-    QVector2D, QVector3D, QVector4D)
-from qtpy.QtWidgets import (
-    QAbstractItemView, QAction, QApplication, QCheckBox, QComboBox, QDialog,
-    QDialogButtonBox, QDockWidget, QFileDialog, QFrame, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
-    QOpenGLWidget, QProgressBar, QPushButton, QSizePolicy, QSlider,
-    QShortcut, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTabBar,
-    QTabWidget, QTextEdit, QToolBar, QToolButton, QToolTip, QTreeView,
-    QVBoxLayout, QWidget)
+from qtpy.QtCore import *
+from qtpy.QtGui import *
+from qtpy.QtWidgets import *
+from qtpy.QtOpenGL import *
+
+#from qtpy import QtCore, QtGui, QtWidgets
+#from qtpy.QtCore import (
+#    QObject, QProcess, QSize, QSortFilterProxyModel, QThread, QTimer, QUrl,
+#    Qt, Signal)
+#from qtpy.QtGui import (
+#    QBrush, QColor, QCursor, QDoubleValidator, QFont, QIcon, QImage,
+#    QIntValidator, QKeySequence, QMatrix4x4, QPainter, QPixmap, QQuaternion,
+#    QVector2D, QVector3D, QVector4D)
+#from qtpy.QtWidgets import (
+#    QAbstractItemView, QAction, QApplication, QCheckBox, QComboBox, QDialog,
+#    QDialogButtonBox, QDockWidget, QFileDialog, QFrame, QGroupBox,
+#    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
+#    QOpenGLWidget, QProgressBar, QPushButton, QSizePolicy, QSlider,
+#    QShortcut, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTabBar,
+#    QTabWidget, QTextEdit, QToolBar, QToolButton, QToolTip, QTreeView,
+#    QVBoxLayout, QWidget)
 from functools import partial
 
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
@@ -33,13 +38,13 @@ def _qt_attr(name, *modules):
     raise ImportError(f"cannot import name {name!r} from {moduleNames}")
 
 
-QOpenGLBuffer = _qt_attr("QOpenGLBuffer", QtGui)
-QOpenGLShader = _qt_attr("QOpenGLShader", QtGui)
-QOpenGLShaderProgram = _qt_attr("QOpenGLShaderProgram", QtGui)
-QOpenGLTexture = _qt_attr("QOpenGLTexture", QtGui)
-QOpenGLVertexArrayObject = _qt_attr("QOpenGLVertexArrayObject", QtGui)
-QStandardItem = _qt_attr("QStandardItem", QtGui, QtCore)
-QStandardItemModel = _qt_attr("QStandardItemModel", QtGui, QtCore)
+#QOpenGLBuffer = _qt_attr("QOpenGLBuffer", QtGui)
+#QOpenGLShader = _qt_attr("QOpenGLShader", QtGui)
+#QOpenGLShaderProgram = _qt_attr("QOpenGLShaderProgram", QtGui)
+#QOpenGLTexture = _qt_attr("QOpenGLTexture", QtGui)
+#QOpenGLVertexArrayObject = _qt_attr("QOpenGLVertexArrayObject", QtGui)
+#QStandardItem = _qt_attr("QStandardItem", QtGui, QtCore)
+#QStandardItemModel = _qt_attr("QStandardItemModel", QtGui, QtCore)
 
 QtName = qtpy.API_NAME
 
