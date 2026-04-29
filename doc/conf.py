@@ -18,7 +18,7 @@ autodoc_mock_imports = [
     'xrt.gui.commons.qt',
     'matplotlib.backends.backend_qt5agg',
     'spyder.widgets', 'spyderlib.widgets',
-    'cv2', 'zmq',
+    'cv2', 'zmq', 'freetype',
     'multiprocess', 'pyTTE']
 
 __fdir__ = os.path.dirname(os.path.abspath(__file__))
