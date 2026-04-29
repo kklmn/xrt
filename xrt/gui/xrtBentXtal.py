@@ -50,8 +50,11 @@ from datetime import datetime
 # from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import make_interp_spline, PPoly
 
-sys.path.append('commons')  # analysis:ignore
-import qt  # analysis:ignore
+try:  # RTFD compatibility
+    from .commons import qt  # analysis:ignore
+except ImportError:
+    sys.path.append('commons')  # analysis:ignore
+    import qt  # analysis:ignore
 
 import matplotlib as mpl
 #from matplotlib.backend_tools import ToolBase

@@ -66,18 +66,18 @@ class SourceBase:
             RMS horizontal and vertical electron beam sizes (µm).
             Alternatively, the betatron functions (*betaX*, *betaZ*) can be
             specified instead of beam sizes.
-        
+
         *eEpsilonX*, *eEpsilonZ*: float
             Horizontal and vertical electron beam emittances (nm·rad).
-        
+
         *betaX*, *betaZ*: float
             Betatron functions (m). Alternatively, beam sizes (*eSigmaX*,
             *eSigmaZ*) can be specified.
-        
+
             If beam sizes are provided, betatron functions are calculated as
             :math:`\beta_i = \frac{\sigma_i^{2}}{\epsilon_i}`, with
             :math:`i \in \{x, z\}`.
-        
+
             Updating *betaX* or *betaZ* at runtime triggers recalculation of
             the corresponding beam size and divergence.
 
@@ -165,7 +165,7 @@ class SourceBase:
 
         self.betaX = betaX
         self.betaZ = betaZ
-        
+
         self.eSigmaX = eSigmaX
         self.eSigmaZ = eSigmaZ
 
@@ -261,7 +261,7 @@ class SourceBase:
         if eSigmaX is not None:
             self.dx = eSigmaX * 1e-3  # conversion from mkm to mm
             if epsilonX is not None:
-                self._betaX = 0 if epsilonX == 0 else self.dx**2 / epsilonX 
+                self._betaX = 0 if epsilonX == 0 else self.dx**2 / epsilonX
         else:
             self.dx = 0
             betaX = getattr(self, '_betaX', None)
