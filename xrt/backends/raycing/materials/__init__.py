@@ -81,7 +81,7 @@ __allSectioned__ = collections.OrderedDict([
 
 from ... import raycing
 from ..physconsts import CH, CHBAR
-from .element import elementsList, Element
+from .element import elementsList, Element, read_atomic_data
 from .material import Material
 from .multilayer import Multilayer, GradedMultilayer, Coated
 from .crystal import Crystal

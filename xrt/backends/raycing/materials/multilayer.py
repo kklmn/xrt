@@ -23,7 +23,7 @@ class Multilayer(object):
                  nPairs=0, substrate=None, tThicknessLow=0., bThicknessLow=0.,
                  idThickness=0., power=2., substRoughness=0.,
                  substThickness=np.inf, name='', geom='reflected', **kwargs):
-        u"""
+        r"""
         *tLayer*, *bLayer*, *substrate*: instance of :class:`Material`
             The top layer material, the bottom layer material and the substrate
             material.

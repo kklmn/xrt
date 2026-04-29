@@ -3,14 +3,43 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "16 Nov 2025"
 
 import qtpy
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
-from qtpy.QtOpenGL import *
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import (
+    QObject, QProcess, QSize, QSortFilterProxyModel, QThread, QTimer, QUrl,
+    Qt, Signal)
+from qtpy.QtGui import (
+    QBrush, QColor, QCursor, QDoubleValidator, QFont, QIcon, QImage,
+    QIntValidator, QKeySequence, QMatrix4x4, QPainter, QPixmap, QQuaternion,
+    QVector2D, QVector3D, QVector4D)
+from qtpy.QtWidgets import (
+    QAbstractItemView, QAction, QApplication, QCheckBox, QComboBox, QDialog,
+    QDialogButtonBox, QDockWidget, QFileDialog, QFrame, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
+    QOpenGLWidget, QProgressBar, QPushButton, QSizePolicy, QSlider,
+    QShortcut, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTabBar,
+    QTabWidget, QTextEdit, QToolBar, QToolButton, QToolTip, QTreeView,
+    QVBoxLayout, QWidget)
 from functools import partial
 
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
+
+
+def _qt_attr(name, *modules):
+    for module in modules:
+        if hasattr(module, name):
+            return getattr(module, name)
+    moduleNames = ", ".join(module.__name__ for module in modules)
+    raise ImportError(f"cannot import name {name!r} from {moduleNames}")
+
+
+QOpenGLBuffer = _qt_attr("QOpenGLBuffer", QtGui)
+QOpenGLShader = _qt_attr("QOpenGLShader", QtGui)
+QOpenGLShaderProgram = _qt_attr("QOpenGLShaderProgram", QtGui)
+QOpenGLTexture = _qt_attr("QOpenGLTexture", QtGui)
+QOpenGLVertexArrayObject = _qt_attr("QOpenGLVertexArrayObject", QtGui)
+QStandardItem = _qt_attr("QStandardItem", QtGui, QtCore)
+QStandardItemModel = _qt_attr("QStandardItemModel", QtGui, QtCore)
 
 QtName = qtpy.API_NAME
 
@@ -20,9 +49,6 @@ if QtName == "PyQt4":
         FigureCanvasQTAgg as FigCanvas,
         NavigationToolbar2QT as NavigationToolbar)
 else:
-    # import PyQt5.QtCore
-    # print(list(vars(PyQt5.QtCore.Qt)))
-    # locals().update(vars(PyQt5.QtCore.Qt))
     try:
         from qtpy import QtWebEngineWidgets as QtWeb
     except ImportError:
@@ -56,26 +82,6 @@ class mySlider(QSlider):
 
 glowSlider = mySlider
 glowTopScale = QSlider.TicksAbove
-
-
-#class QComboBox(StdQComboBox):
-#    """
-#    Disabling off-focus mouse wheel scroll is based on the following solution:
-#    https://stackoverflow.com/questions/3241830/qt-how-to-disable-mouse-scrolling-of-qcombobox/3242107#3242107
-#    """
-#    def __init__(self, *args, **kwargs):
-#        super(QComboBox, self).__init__(*args, **kwargs)
-##        self.scrollWidget=scrollWidget
-#        self.setFocusPolicy(QtCore.Qt.StrongFocus)
-#
-#    def wheelEvent(self, *args, **kwargs):
-#        if self.hasFocus():
-#            return StdQComboBox.wheelEvent(self, *args, **kwargs)
-#        else:
-#            try:
-#                return self.parent().wheelEvent(*args, **kwargs)
-#            except RuntimeError:
-#                return
 
 
 class DynamicArgumentDelegate(QStyledItemDelegate):
@@ -166,7 +172,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     allElements.remove(currentElement)
                 combo.addItems(['None'] + allElements)
             elif self.mainWidget is not None:
-                proxy = ComboFilterText({currentElement,}, combo)
+                proxy = ComboFilterText({currentElement, }, combo)
                 proxy.setSourceModel(self.mainWidget.materialsModel)
                 combo.setModel(proxy)
             else:
@@ -187,7 +193,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     allElements.remove(currentElement)
                 combo.addItems(['None'] + allElements)
             elif self.mainWidget is not None:
-                proxy = ComboFilterText({currentElement,}, combo)
+                proxy = ComboFilterText({currentElement, }, combo)
                 proxy.setSourceModel(self.mainWidget.fesModel)
                 combo.setModel(proxy)
             else:
@@ -216,10 +222,10 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 group.setProperty('fieldName', 'kind')
                 return group
             return combo
-        elif argNameL == 'rmskind': 
+        elif argNameL == 'rmskind':
             combo.addItems(['height', 'slope'])
             return combo
-        elif argNameL == 'surfacehint': 
+        elif argNameL == 'surfacehint':
             combo.addItems(['flat', 'quad', 'spline'])
             return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool

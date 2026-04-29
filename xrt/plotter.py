@@ -61,6 +61,7 @@ try:
     from .gui.commons import qt
     hasQt = True
 except ImportError:
+    qt = None
     hasQt = False
 
 from matplotlib.figure import Figure
