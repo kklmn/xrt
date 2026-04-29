@@ -3,96 +3,78 @@
 Version history
 ---------------
 
-2.0.0b1 (26 Apr 2026):
-    This beta focuses on restoring and stabilizing xrtGlow and xrtQook workflows
-    after the major GUI and architecture refactoring introduced in 2.0.0b0.
-    
-    Added
-    -----
-    - Visual beamline flow editor based on *qtpynodeeditor*
-    - Selectable object support for geometric sources in xrtGlow
-    - Dynamically adjustable number of rays (*nrays*) in xrtGlow
-    - Figure error definition based on slope RMS
-    - EPICS PV initialization via mapping syntax ``{"oe:property": "pv"}``
-    
-    Changed
-    -------
-    - Updated xrtGlow scene import/export
-    - Improved overall stability and robustness of GUI workflows
-    
-    Fixed
-    -----
-    - Beam local coordinate system transformation
-    - Static-mode operation in xrtGlow
-    - Initialization from saved Glow configuration
-    - Closed-surface rendering
-    - Hemispheric screen rendering
-    - Rendering of rays inside multi-surface optical elements
-    - Dynamic slit blade configuration
-    - STL surface auto-positioning
-    
-    API Changes
-    -----------
-    - ``BeamLine.glow()`` now accepts ``mode='dynamic'`` or ``mode='static'``  
-      (the previous ``v2`` argument is deprecated but still supported)
-    - Energy-based auto-alignment for ``pitch`` and ``bragg`` now accepts
-      unit strings (e.g. ``'8 keV'``, ``'8000 eV'``, or ``'auto'``);
-      the previous list-based syntax remains temporarily supported
+2.0.0b1 (beta) (26 Apr 2026):
+    - Restoration and stabilization of xrtGlow and xrtQook workflows after
+      the major GUI refactor in 2.0.0b0.
+
+    - Added visual beamline flow editor based on qtpynodeeditor.
+
+    - Restored static-mode operation in xrtGlow and initialization from saved
+      Glow configuration parameters.
+
+    - Updated xrtGlow scene import/export.
+
+    - Added selectable object support for geometric sources and dynamically
+      adjustable number of rays (nrays) in xrtGlow.
+
+    - Added figure-error definition by slope RMS.
+
+    - Added EPICS PV initialization via {"oe:property": "pv"} mapping.
+
+    - Fixed beam local coordinate system transformation.
+
+    - Fixed rendering issues including closed surfaces, hemispheric screens,
+      rays inside multi-surface optical elements, and STL surface positioning.
+
+    - Fixed dynamic slit blade configuration.
+
+    - Improved overall stability.
+
+    - API changes:
+        * BeamLine.glow() now accepts mode='dynamic' or mode='static';
+          the previous v2 argument is deprecated.
+        * Energy-based auto-alignment for pitch and bragg now accepts
+          unit strings (e.g. '8 keV', '8000 eV', or 'auto');
+          the previous list-based syntax is deprecated.
 
 
-2.0.0b0.post1 (11 Feb 2026):
-    Packaging-only update for 2.0.0b0.
-    
-    Fixed
-    -----
-    - Package discovery and data file inclusion issues after module
-    restructuring
-    
-    No functional changes.
+2.0.0b0.post1 (beta) (11 Feb 2026):
+    - Packaging update fixing package discovery and data file inclusion issues.
+      No functional changes.
 
-2.0.0b0 (6 Feb 2026):
-    Version 2.0 introduces a major refactoring of the internal architecture,
-    focused on improving interactivity, performance, and flexibility of
-    beamline simulations and visualization.
-    
-    This is a pre-release intended for testing and feedback.
-    APIs and behavior may still change before the final release.
-    
-    Added
-    -----
-    - Dynamic object model allowing modification of optical elements, materials,
-      figure errors, and plots without full reinitialization
-    - UUID-based addressing of optical elements and beams
-    - JSON support for import/export alongside XML
-    - Direct execution of beamline definitions from JSON/XML templates
-    - Import of beamlines into Qook from Python scripts (with limitations)
-    - Interactive GUI tools for inspecting optical elements, materials,
-      figure errors, and plots
-    - Real-time visualization of applied changes
-    - EPICS integration for interactive control of beamline components via PVs
-    
-    Changed
-    -------
-    - Rendering migrated from legacy OpenGL to modern shader-based OpenGL
-    - Visualization propagation redesigned to operate interactively,
-      segment-by-segment
-    - 3D geometry generation moved to object creation/modification time
-    - Visualization propagation moved to a separate Python process,
-      improving GUI responsiveness
-    - xrtGlow now supports macOS
-    
-    Improved
-    --------
-    - Rendering performance for complex optical systems
-    - Interactive workflows in xrtGlow and xrtQook
-    - Figure error handling with dedicated classes and GUI controls
-    
-    Notes
-    -----
-    - Importing beamlines from Python scripts may not work for complex runtime
-    logic
-    - Documentation for new workflows is still evolving
-    - EPICS control currently requires running xrtGlow with ``epicsPrefix``
+
+2.0.0b0 (beta) (6 Feb 2026):
+    - First beta release of xrt 2.0 with major internal refactoring aimed at
+      improving interactivity, performance, and flexibility.
+
+    - Introduced dynamic object model allowing modification of optical elements,
+      materials, figure errors, and plots without full reinitialization.
+
+    - Optical elements and beams are now tracked by UUID.
+
+    - Added JSON support alongside XML for import/export and execution of
+      beamline definitions.
+
+    - Added interactive GUI tools for inspecting optical elements, materials,
+      figure errors, and plots with real-time updates.
+
+    - Rendering migrated to modern shader-based OpenGL with significant
+      performance improvements.
+
+    - Visualization changed to interactive, segment-by-segment propagation and
+      moved to a separate Python process, improving GUI responsiveness.
+
+    - xrtGlow now works on macOS.
+
+    - Improved figure error handling with dedicated classes and GUI controls.
+
+    - Added EPICS integration for interactive control of beamline components
+      via process variables (PVs).
+
+    - Notes:
+        * Importing beamlines from Python scripts may not work for complex logic.
+        * Documentation for new workflows is still evolving.
+        * EPICS control currently requires running xrtGlow with epicsPrefix.
 
 1.6.2 (6 Feb 2026):
     - Enable wave propagation for two-side OEs (lenses).
