@@ -154,7 +154,9 @@ class GenericProcessOrThread(object):
                 y, x, bins=xybins, range=xyrange, weights=intensity.real)
             hist2di, t1, t2 = histogram2d(
                 y, x, bins=xybins, range=xyrange, weights=intensity.imag)
+            nin, t1, t2 = histogram2d(y, x, bins=xybins, range=xyrange)
             hist2d = hist2dr + 1j*hist2di
+            hist2d[nin > 0] /= nin[nin > 0]
 
             if plot.fluxKind.lower().endswith('4d'):
                 hist4d = np.outer(hist2d, hist2d.conjugate())
@@ -170,6 +172,8 @@ class GenericProcessOrThread(object):
             for i in range(3):  # over RGB components
                 hist2dRGB[:, :, i], yedges, xedges = histogram2d(
                     y, x, bins=xybins, range=xyrange, weights=cDataRGB[:, i])
+                if plot.fluxKind.startswith('E'):
+                    hist2dRGB[:, :, i][nin > 0] /= nin[nin > 0]
         return hist2d, hist2dRGB, hist4d
 
     def update_limits(self, axis, x):
