@@ -37,17 +37,15 @@ class Beam3D():
     #version 410 core
 
     layout(location = 0) in vec3 position_start;
-    layout(location = 4) in vec3 position_end;
+    layout(location = 3) in vec3 position_end;
 
     layout(location = 1) in float colorAxis;
-    layout(location = 2) in float state;
-    layout(location = 3) in float intensity;
+    layout(location = 2) in float intensity;
 
     uniform sampler1D hsvTexture;
 
     uniform float opacity;
     uniform float iMax;
-    uniform int isLost;
     uniform vec2 colorMinMax;
 
     uniform mat4 mPV;
@@ -72,12 +70,10 @@ class Beam3D():
                            gridProjection);
      vs_out_end = mPV * (gridMask * (modelEnd * vec4(position_end, 1.0)) +
                          gridProjection);
-     if (isLost > 0) {
-             hrgb = vec4(0.9, 0., 0., 0.1);}
-     else {
-         hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-         intensity_v = opacity*intensity/iMax;
-         hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);}
+
+     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+     intensity_v = opacity*intensity/iMax;
+     hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
 
      vs_out_color = hrgb;
 
@@ -202,8 +198,7 @@ class Beam3D():
 
     layout(location = 0) in vec3 position_start;
     layout(location = 1) in float colorAxis;
-    layout(location = 2) in float state;
-    layout(location = 3) in float intensity;
+    layout(location = 2) in float intensity;
 
     uniform sampler1D hsvTexture;
 
@@ -232,15 +227,9 @@ class Beam3D():
                           gridProjection);
      gl_PointSize = pointSize;
 
-//     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-//     hrgb = vec4(texture(hsvTexture, hue).rgb, opacity*intensity/iMax);
-
-     if (isLost > 0) {
-             hrgb = vec4(0.9, 0., 0., 0.1);}
-     else {
-         hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-         intensity_v = opacity*intensity/iMax;
-         hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);}
+     hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
+     intensity_v = opacity*intensity/iMax;
+     hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
 
      vs_out_color = hrgb;
 

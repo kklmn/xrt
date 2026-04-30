@@ -69,6 +69,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if pName in ['scaleVec', 'rotations', 'tmpOffset', 'tVec',
                          'coordOffset']:
                 pValue = np.array(pValue)
+            elif pName == 'rayFlag':
+                pValue = set(pValue)
             setattr(self, pName, pValue)
 
         self.cameraTarget = qt.QVector3D(0., 0., 0.)
@@ -940,36 +942,40 @@ class xrtGlWidget(qt.QOpenGLWidget):
         data = np.column_stack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag).copy()
 #        dataColor = self.getColor(beam).copy()
-        state = np.where((
-                (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
 
         vbo = {}
 
         vbo['position'] = create_qt_buffer(data)
         vbo['color'] = create_qt_buffer(dataColor)
-        vbo['state'] = create_qt_buffer(state)
         vbo['intensity'] = create_qt_buffer(intensity)
 #        goodRays = np.where(((state > 0) & (intensity/self.iMax >
 #                             self.cutoffI)))[0]
 
-        goodRays = np.where((state > 0))[0]
-#        lowIntRays = np.where((intensity/self.iMax > self.cutoffI))[0]
         oeObj = self.beamline.oesDict.get(beamTag[0])
         if oeObj is not None and hasattr(oeObj[0], 'lostNum'):
-            lostRays = np.where((beam.state == oeObj[0].lostNum))[0]
+            lostRays = np.where(beam.state == oeObj[0].lostNum)[0]
         else:
             lostRays = np.array([])
+        rayIndices = {
+                1: np.where(beam.state == 1)[0],
+                2: np.where(beam.state == 2)[0],
+                3: np.where(beam.state == 3)[0],
+                4: lostRays}
+        goodRays = np.concatenate(
+                [rayIndices[rayFlag] for rayFlag in (1, 2, 3)])
+#        lowIntRays = np.where((intensity/self.iMax > self.cutoffI))[0]
 #        if beamTag[0] == self.virtScreen:
 #            print(data, dataColor, state, intensity, goodRays, len(goodRays))
 
-        vbo['indices_lost'] = create_qt_buffer(beam.state.copy(), isIndex=True)
-        update_qt_buffer(vbo['indices_lost'], lostRays.copy(), isIndex=True)
-        vbo['lostLen'] = len(lostRays)
-
-        vbo['indices'] = create_qt_buffer(beam.state.copy(), isIndex=True)
-        update_qt_buffer(vbo['indices'], goodRays.copy(), isIndex=True)
-        vbo['goodLen'] = len(goodRays)
+        vbo['indices_by_flag'] = {}
+        vbo['rayLen_by_flag'] = {}
+        for rayFlag, rayIndex in rayIndices.items():
+            vbo['indices_by_flag'][rayFlag] = create_qt_buffer(
+                    beam.state.copy(), isIndex=True)
+            update_qt_buffer(vbo['indices_by_flag'][rayFlag],
+                             rayIndex.copy(), isIndex=True)
+            vbo['rayLen_by_flag'][rayFlag] = len(rayIndex)
 
         gl.glGetError()
         vao = qt.QOpenGLVertexArrayObject()
@@ -986,14 +992,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glEnableVertexAttribArray(1)  # Attribute 1: colorAxis
         vbo['color'].release()
 
-        vbo['state'].bind()
-        gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glEnableVertexAttribArray(2)  # Attribute 2: state
-        vbo['state'].release()
-
         vbo['intensity'].bind()
-        gl.glVertexAttribPointer(3, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glEnableVertexAttribArray(3)  # Attribute 3: intensity
+        gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(2)  # Attribute 2: intensity
         vbo['intensity'].release()
 
         vao.release()
@@ -1019,13 +1020,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         vbo = beamBuffer.get('vbo')
         if vbo is not None:
-            for buffKey in ['position', 'color', 'state',
-                            'intensity', 'indices', 'indices_lost']:
+            for buffKey in ['position', 'color',
+                            'intensity']:
                 buff = vbo.get(buffKey)
                 if buff is not None:
                     buff.destroy()
                     gl.glGetError()
                 buff = None
+            for buff in vbo.get('indices_by_flag', {}).values():
+                if buff is not None:
+                    buff.destroy()
+                    gl.glGetError()
             vbo.clear()
 
         vao = beamBuffer.get('vao')
@@ -1100,29 +1105,31 @@ class xrtGlWidget(qt.QOpenGLWidget):
         beamvbo = self.beamBufferDict[beamTag]['vbo']
         data = np.dstack((beam.x, beam.y, beam.z)).copy()
         dataColor = self.getColorData(beam, beamTag)
-        state = np.where((
-                (beam.state == 1) | (beam.state == 2)), 1, 0).copy()
         intensity = np.float32(beam.Jss+beam.Jpp).copy()
         oeObj = self.beamline.oesDict.get(beamTag[0])
         if oeObj is not None and hasattr(oeObj[0], 'lostNum'):
-            lostRays = np.where((beam.state == oeObj[0].lostNum))[0]
+            lostRays = np.where(beam.state == oeObj[0].lostNum)[0]
         else:
             lostRays = np.array([])
-        update_qt_buffer(beamvbo['indices_lost'],
-                         lostRays.copy(), isIndex=True)
-        goodRays = np.where((state > 0))[0]
+        rayIndices = {
+                1: np.where(beam.state == 1)[0],
+                2: np.where(beam.state == 2)[0],
+                3: np.where(beam.state == 3)[0],
+                4: lostRays}
+        goodRays = np.concatenate(
+                [rayIndices[rayFlag] for rayFlag in (1, 2, 3)])
         update_qt_buffer(beamvbo['position'], data)
         update_qt_buffer(beamvbo['color'], dataColor)
-        update_qt_buffer(beamvbo['state'], state)
         update_qt_buffer(beamvbo['intensity'], intensity)
-        update_qt_buffer(beamvbo['indices'], goodRays.copy(), isIndex=True)
-        beamvbo['goodLen'] = len(goodRays)
-        beamvbo['lostLen'] = len(lostRays)
+        for rayFlag, rayIndex in rayIndices.items():
+            update_qt_buffer(beamvbo['indices_by_flag'][rayFlag],
+                             rayIndex.copy(), isIndex=True)
+            beamvbo['rayLen_by_flag'][rayFlag] = len(rayIndex)
 
         beam.iMax = np.max(beam.Jss[goodRays] + beam.Jpp[goodRays]) if\
             len(goodRays) > 0 else 0
 
-        beamvbo['iMax'] = beam.iMax
+        self.beamBufferDict[beamTag]['iMax'] = beam.iMax
 
     def render_beam(self, beamTag, model, view, projection, target=None):
         """beam: ('oeuuid', 'beamKey') """
@@ -1154,14 +1161,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         if target is not None:
             targetvbo['position'].bind()
-            gl.glVertexAttribPointer(4, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(4)
-            targetvbo['indices'].bind()
-            arrLen = targetvbo['goodLen']
-
-        else:
-            beamvbo['indices'].bind()
-            arrLen = beamvbo['goodLen']
+            gl.glVertexAttribPointer(3, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(3)
 
         modelStart = copy.deepcopy(model)
         modelEnd = copy.deepcopy(model)
@@ -1214,63 +1215,65 @@ class xrtGlWidget(qt.QOpenGLWidget):
         shader.setUniformValue(
                 "iMax",
                 float(self.iMax if self.globalNorm else beamBuffers['iMax']))
-        shader.setUniformValue("isLost", int(0))
 
         if target is not None and self.lineWidth > 0:
             gl.glLineWidth(min(self.lineWidth, 1.))
 
-        gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                          gl.GL_UNSIGNED_INT, None)
-
         if target is not None and self.lineProjectionWidth > 0:
             gl.glLineWidth(min(self.lineProjectionWidth, 1.))
 
-        for dim in range(3):
-            if self.projectionsVisibility[dim] > 0:
-                gridMask = [1.]*4
-                gridMask[dim] = 0.
-                gridProjection = [0.]*4
-                gridProjection[dim] = -self.aPos[dim] *\
-                    self.cBox.axPosModifier[dim]
-                shader.setUniformValue(
-                        "gridMask",
-                        qt.QVector4D(*gridMask))
-                shader.setUniformValue(
-                        "gridProjection",
-                        qt.QVector4D(*gridProjection))
-                shader.setUniformValue(
-                        "pointSize",
-                        float(self.pointProjectionSize if target is None
-                              else self.lineProjectionWidth))
-                shader.setUniformValue(
-                        "opacity",
-                        float(self.pointProjectionOpacity if target is None
-                              else self.lineProjectionOpacity))
-
-                gl.glDrawElements(gl.GL_POINTS,  arrLen,
-                                  gl.GL_UNSIGNED_INT, None)
-
-        if target is not None:
-            targetvbo['indices'].release()
-        else:
-            beamvbo['indices'].release()
-
+        activeFlags = set(self.rayFlag)
         if self.showLostRays:
-            if target is not None:
-                targetvbo['indices_lost'].bind()
-                arrLen = targetvbo['lostLen']
-            else:
-                beamvbo['indices_lost'].bind()
-                arrLen = beamvbo['lostLen']
-            shader.setUniformValue("isLost", int(0))  # TODO: controllable
+            activeFlags.add(4)
+        activeFlags = sorted(activeFlags & {1, 2, 3, 4})
+        indexOwner = targetvbo if target is not None else beamvbo
+
+        for rayFlag in activeFlags:
+            arrLen = indexOwner['rayLen_by_flag'].get(rayFlag, 0)
+            if arrLen <= 0:
+                continue
+
+            indexOwner['indices_by_flag'][rayFlag].bind()
 
             gl.glDrawElements(gl.GL_POINTS,  arrLen,
                               gl.GL_UNSIGNED_INT, None)
 
-            if target is not None:
-                targetvbo['indices_lost'].release()
-            else:
-                beamvbo['indices_lost'].release()
+            for dim in range(3):
+                if self.projectionsVisibility[dim] > 0:
+                    gridMask = [1.]*4
+                    gridMask[dim] = 0.
+                    gridProjection = [0.]*4
+                    gridProjection[dim] = -self.aPos[dim] *\
+                        self.cBox.axPosModifier[dim]
+                    shader.setUniformValue(
+                            "gridMask",
+                            qt.QVector4D(*gridMask))
+                    shader.setUniformValue(
+                            "gridProjection",
+                            qt.QVector4D(*gridProjection))
+                    shader.setUniformValue(
+                            "pointSize",
+                            float(self.pointProjectionSize if target is None
+                                  else self.lineProjectionWidth))
+                    shader.setUniformValue(
+                            "opacity",
+                            float(self.pointProjectionOpacity if target is None
+                                  else self.lineProjectionOpacity))
+
+                    gl.glDrawElements(gl.GL_POINTS,  arrLen,
+                                      gl.GL_UNSIGNED_INT, None)
+
+            indexOwner['indices_by_flag'][rayFlag].release()
+            shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
+            shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
+            shader.setUniformValue(
+                    "pointSize",
+                    float(self.pointSize if target is None else
+                          self.lineWidth))
+            shader.setUniformValue(
+                    "opacity",
+                    float(self.pointOpacity if target is None else
+                          self.lineOpacity))
 
         if target is not None:
             targetvbo['position'].release()

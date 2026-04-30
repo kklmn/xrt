@@ -107,6 +107,7 @@ DEFAULT_SCENE_SETTINGS = {
     'pointsDepthTest': False,
     'invertColors': False,
     'autoSizeOe': True,
+    'rayFlag': {1, 2, 3},
     'showLostRays': False,
     'showLocalAxes': False,
     'showInternalBeam': True,
@@ -156,7 +157,6 @@ SCENE_CONTROL_LABELS = {
     'pointsDepthTest': 'Depth test for Points',
     'invertColors': 'Invert scene color',
     'autoSizeOe': 'OE size match beam',
-    'showLostRays': 'Show lost rays',
     'showLocalAxes': 'Show local axes',
     'showInternalBeam': 'Show internal beams in multi-surface OEs',
     }

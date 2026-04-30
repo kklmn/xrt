@@ -218,6 +218,8 @@ class xrtGlow(qt.QWidget):
         sceneProps = {}
         for key, val in DEFAULT_SCENE_SETTINGS.items():
             sceneProps[key] = sceneSettings.get(key, val)
+            if key == 'rayFlag':
+                sceneProps[key] = set(sceneProps[key])
 
         self.applySceneProperties(sceneProps)
 
@@ -265,6 +267,42 @@ class xrtGlow(qt.QWidget):
             state = float(re.sub(',', '.', str(state.text())))
         setattr(self.customGlWidget, pName, state)
         self.customGlWidget.glDraw()
+
+    def _setRayFlag(self, rayFlag, state):
+        flags = set(getattr(self.customGlWidget, 'rayFlag', set()))
+        if state:
+            flags.add(rayFlag)
+        else:
+            flags.discard(rayFlag)
+        self.customGlWidget.rayFlag = flags
+        if rayFlag == 4:
+            self.customGlWidget.showLostRays = state
+        self.customGlWidget.glDraw()
+
+    def _makeRayVisibilityPanel(self):
+        rayPanel = qt.QGroupBox('Ray Visibility', self)
+        rayLayout = qt.QHBoxLayout()
+        rayLayout.setContentsMargins(6, 8, 6, 6)
+        rayLayout.setSpacing(8)
+        self.rayFlagControls = OrderedDict()
+        rayFlagProps = OrderedDict([
+            (1, ('Good', 'Rays hit the surface within optical limits')),
+            (2, ('Out', 'Rays hit the surface within physical limits, '
+                 'but outside optical limits')),
+            (3, ('Over', 'Rays went over the surface without interaction')),
+            (4, ('Lost', 'Rays absorbed at the optical element')),
+            ])
+        rayFlags = set(getattr(self.customGlWidget, 'rayFlag', set()))
+        for rayFlag, (label, tooltip) in rayFlagProps.items():
+            checkBox = qt.QCheckBox(label)
+            checkBox.setToolTip(tooltip)
+            checkBox.setChecked(rayFlag in rayFlags)
+            checkBox.toggled.connect(partial(self._setRayFlag, rayFlag))
+            self.rayFlagControls[rayFlag] = checkBox
+            rayLayout.addWidget(checkBox)
+        rayLayout.addStretch()
+        rayPanel.setLayout(rayLayout)
+        return rayPanel
 
     def closeEvent(self, event):
         self.customGlWidget.cleanup_gl_resources()
@@ -802,6 +840,7 @@ class xrtGlow(qt.QWidget):
         self.sceneControls = OrderedDict()
         self.sceneTextedits = OrderedDict()
         self.sceneSliders = OrderedDict()
+        self.rayFlagControls = OrderedDict()
 
         for scControl, cbText in SCENE_CONTROL_LABELS.items():
             aaCheckBox = self._makeCheckBox(cbText, scControl,
@@ -861,6 +900,7 @@ class xrtGlow(qt.QWidget):
             sceneLayout.addLayout(layout)
 
         self.scenePanel = qt.QWidget(self)
+        sceneLayout.addWidget(self._makeRayVisibilityPanel())
         sceneLayout.addStretch()
         self.scenePanel.setLayout(sceneLayout)
 
@@ -1923,6 +1963,8 @@ class xrtGlow(qt.QWidget):
             if pName in ['scaleVec', 'rotations',
                          'tmpOffset', 'tVec', 'coordOffset']:
                 pValue = np.array(pValue)
+            elif pName == 'rayFlag':
+                pValue = set(pValue)
             setattr(self.customGlWidget, pName, pValue)
 
         if 'size' in params:
@@ -2014,6 +2056,17 @@ class xrtGlow(qt.QWidget):
         if 'perspectiveEnabled' in params:
             self.checkBoxPerspective.setChecked(
                     self.customGlWidget.perspectiveEnabled)
+
+        if 'showLostRays' in params and params['showLostRays']:
+            self.customGlWidget.rayFlag = set(self.customGlWidget.rayFlag)
+            self.customGlWidget.rayFlag.add(4)
+        if 'rayFlag' in params or 'showLostRays' in params:
+            rayFlags = set(getattr(self.customGlWidget, 'rayFlag', set()))
+            for rayFlag, rayFlagCB in self.rayFlagControls.items():
+                rayFlagCB.blockSignals(True)
+                rayFlagCB.setChecked(rayFlag in rayFlags)
+                rayFlagCB.blockSignals(False)
+            self.customGlWidget.showLostRays = 4 in rayFlags
 
         for scProp in ['oeThickness', 'oeThicknessForce',
                        'slitThicknessFraction', 'maxLen']:
