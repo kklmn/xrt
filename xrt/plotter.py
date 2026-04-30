@@ -603,7 +603,7 @@ class XYCPlot(object):
         fluxFormatStr='auto', contourLevels=None, contourColors=None,
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
-        beamState=None, beamC=None, beamAbsorb=None, 
+        beamState=None, beamC=None, beamAbsorb=None,
             showAbsorbed=False, useQtWidget=False):
         u"""
         *beam*: str
@@ -860,7 +860,7 @@ class XYCPlot(object):
             self.backend = 'raycing'
         else:
             self.backend = 'dummy'
-            
+
         self.beamAbsorb = beamAbsorb
         self.showAbsorbed = showAbsorbed
 
@@ -1626,11 +1626,12 @@ class XYCPlot(object):
             if not isinstance(axis.limits, str):
                 graph.set_ylim(ll)
 
-        weighted1D = axis.total1D * axis.binCenters
-        xxAve = axis.total1D.sum()
-        if xxAve != 0:
-            xxAve = weighted1D.sum() / xxAve
-        return xxAve, histFWHMhigh - histFWHMlow
+        # weighted1D = axis.total1D * axis.binCenters
+        # xxAve = axis.total1D.sum()
+        # if xxAve != 0:
+        #     xxAve = weighted1D.sum() / xxAve
+        # return xxAve, histFWHMhigh - histFWHMlow
+        return (histFWHMhigh + histFWHMlow)*0.5, histFWHMhigh - histFWHMlow
 
     def plot_colorbar(self):
         """
