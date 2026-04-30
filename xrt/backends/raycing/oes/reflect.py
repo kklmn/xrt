@@ -8,7 +8,7 @@ from .. import sources as rs
 from ..physconsts import CH, CHBAR
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
-__date__ = "1 Feb 2026"
+__date__ = "30 Apr 2026"
 
 
 class OEMainMethods(object):
@@ -333,33 +333,54 @@ class OEMainMethods(object):
         else:
             raise ValueError('wrong type of `nrays`!')
 
-        # These are approximate samples (exact for undistorted and
-        # non-parametric cases). This works even for a parametric case because
-        # `reflect()` (that follows `diffract()`) will make it exact. Make sure
-        # that `noIntersectionSearch=False` in `reflect()`.
-        z = self.local_z(x, y)
+        if self.isParametric:
+            s, phi, r = self.xyz_to_param(x, y, 0)
+            r = self.local_r(s, phi)
+            z = self.param_to_xyz(s, phi, r)[2]
+        else:
+            z = self.local_z(x, y)
         lb.x[:] = x
         lb.y[:] = y
         lb.z[:] = z
         self.local_to_global(lb)
-        lb.a[:] = lb.x - prevOE.center[0]
-        lb.b[:] = lb.y - prevOE.center[1]
-        lb.c[:] = lb.z - prevOE.center[2]
+        if hasattr(prevOE, 'rotationSequence'):  # OE
+            # we put prevCenter not to the OE center but to the middle point
+            # of limPhysX and limPhysY on the surface
+            cx = (prevOE.limPhysX[1] + prevOE.limPhysX[0])*0.5
+            cy = (prevOE.limPhysY[1] + prevOE.limPhysY[0])*0.5
+            if prevOE.isParametric:
+                s, phi, r = prevOE.xyz_to_param(cx, cy, 0)
+                r = prevOE.local_r(s, phi)
+                cz = prevOE.param_to_xyz(s, phi, r)[2]
+            else:
+                cz = prevOE.local_z(cx, cy)
+            lbc = rs.Beam(nrays=1)
+            lbc.x[:] = cx
+            lbc.y[:] = cy
+            lbc.z[:] = cz
+            prevOE.local_to_global(lbc)
+            prevCenter = [lbc.x[0], lbc.y[0], lbc.z[0]]
+        else:
+            prevCenter = prevOE.center
+
+        lb.a[:] = lb.x - prevCenter[0]
+        lb.b[:] = lb.y - prevCenter[1]
+        lb.c[:] = lb.z - prevCenter[2]
         norm = (lb.a**2 + lb.b**2 + lb.c**2)**0.5
         lb.a /= norm
         lb.b /= norm
         lb.c /= norm
-        lb.x[:] = prevOE.center[0]
-        lb.y[:] = prevOE.center[1]
-        lb.z[:] = prevOE.center[2]
+        lb.x[:] = prevCenter[0]
+        lb.y[:] = prevCenter[1]
+        lb.z[:] = prevCenter[2]
 
         lbn = rs.Beam(nrays=1)
         lbn.b[:] = 0.
         lbn.c[:] = 1.
         self.local_to_global(lbn)
-        a = lbn.x - prevOE.center[0]
-        b = lbn.y - prevOE.center[1]
-        c = lbn.z - prevOE.center[2]
+        a = lbn.x - prevCenter[0]
+        b = lbn.y - prevCenter[1]
+        c = lbn.z - prevCenter[2]
         norm = (a**2 + b**2 + c**2)**0.5
         areaNormalFact = \
             abs(float((a*lbn.a[0] + b*lbn.b[0] + c*lbn.c[0]) / norm))
