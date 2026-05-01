@@ -244,7 +244,10 @@ class DCM(OE):
 
     def get_orientation(self):
         if self.fixedOffset not in [0, None]:
-            self.cryst2perpTransl = self.fixedOffset/2./np.cos(self.bragg)
+            bragg = getattr(self, '_braggVal', None)
+            if bragg is None:
+                return
+            self.cryst2perpTransl = self.fixedOffset/2./np.cos(bragg)
 
     @raycing.append_to_flow_decorator
     def double_reflect(self, beam=None, needLocal=True,

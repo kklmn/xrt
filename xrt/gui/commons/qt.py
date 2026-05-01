@@ -243,7 +243,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif 'diste' in argNameL:  # source only
             combo.addItems(['eV', 'BW'])
             return combo
-        elif 'shape' in argNameL:  # bl only
+        elif argNameL == 'shape':  # bl only
             combo.addItems(['rect', 'round'])
             return combo
         elif 'renderstyle' in argNameL:  # bl only
