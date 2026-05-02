@@ -391,7 +391,7 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
             str(date.today()), path_to_xrt, self.fileDescription)
         codeDeclarations = """\n"""
         codeBuildBeamline = "\ndef build_beamline():\n"
-        codeBuildBeamline += '{2}{0} = {1}.BeamLine('.format(
+        codeBuildBeamline += '{2}bl = {1}.BeamLine('.format(
             BLName, raycing.__name__, myTab)
         self.progressBar.setFormat("Defining the beamline.")
         for ib in range(self.rootBLItem.rowCount()):
@@ -412,7 +412,7 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
                             paraname, paravalue, myTab*2)
         codeBuildBeamline = codeBuildBeamline.rstrip(',') + ')\n\n'
 
-        codeRunProcess = '\ndef run_process({}):\n'.format(BLName)
+        codeRunProcess = '\ndef run_process(bl):\n'
 
         codeMain = "\ndef main():\n"
         codeMain += '{0}{1} = build_beamline()\n'.format(myTab, BLName)
@@ -542,6 +542,8 @@ if __name__ == '__main__':
                                 [self.quotize(c) for c in cCoord]))
                         if paravalue != str(arg_def) or\
                                 paraname == 'bl':
+                            if paraname == 'bl':
+                                paravalue = 'bl'
                             if paraname.lower() not in\
                                     ['bl', 'center', 'material',
                                      'material2', 'figureerror']:
@@ -594,14 +596,14 @@ if __name__ == '__main__':
                                         e0str = '{2}E0 = 0.5 * ({0}.{1}.eMin +\n{3}{0}.{1}.eMax)\n'.format( # analysis:ignore
                                             BLName, tItem.text(), myTab,
                                             myTab*4)
-                    codeRunProcess += '{5}{0} = {1}.{2}.{3}({4})\n\n'.format( # analysis:ignore
-                        paraOutput.rstrip(', '), BLName, tItem.text(),
+                    codeRunProcess += '{4}{0} = bl.{1}.{2}({3})\n\n'.format( # analysis:ignore
+                        paraOutput.rstrip(', '), tItem.text(),
                         str(pItem.text()).strip('()'),
                         ierun.rstrip(','), myTab)
 
-            codeBuildBeamline += '{3}{0}.{1} = {2})\n\n'.format(
+            codeBuildBeamline += '{3}bl.{1} = {2})\n\n'.format(
                 BLName, str(tItem.text()), ieinit.rstrip(','), myTab)
-        codeBuildBeamline += "{0}return {1}\n\n".format(myTab, BLName)
+        codeBuildBeamline += "{0}return bl\n\n".format(myTab)
         codeRunProcess += r"{0}outDict = ".format(myTab) + "{"
         self.progressBar.setValue(60)
         self.progressBar.setFormat("Defining the propagation.")

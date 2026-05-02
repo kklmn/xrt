@@ -1872,12 +1872,29 @@ class XrtQookBase(qt.QMainWindow):
                 child0 = item.child(i, 0)
                 if str(child0.text()) == 'properties':
                     pyname = raycing.to_valid_var_name(item.text())
+                    oldname = None
+                    for j in range(child0.rowCount()):
+                        if str(child0.child(j, 0).text()) == 'name':
+                            oldname = str(child0.child(j, 1).text())
+                            break
                     item.model().blockSignals(True)
                     item.setText(pyname)
                     buuid = str(item.data(qt.Qt.UserRole))
                     item.model().blockSignals(False)
 
-                    if item.model() is self.materialsModel:
+                    if item is self.rootBLItem:
+                        oldname = oldname or self.beamLine.name
+                        self.beamLine.name = pyname
+                        glWidget = getattr(getattr(self, 'blViewer', None),
+                                           'customGlWidget', None)
+                        if glWidget is not None and\
+                                getattr(glWidget, 'beamline', None) is not None:
+                            glWidget.beamline.name = pyname
+                        self.iterateRename(self.rootBLItem, oldname, pyname,
+                                           ['bl'])
+                        self.iterateRename(self.rootRunItem, oldname, pyname,
+                                           ['beamLine'])
+                    elif item.model() is self.materialsModel:
                         mat = self.beamLine.materialsDict.get(buuid)
                         oldname = mat.name
 #                        print(pyname, oldname)
@@ -1928,7 +1945,9 @@ class XrtQookBase(qt.QMainWindow):
 #            self.tabs.tabBar().setTabTextColor(2, color)
 
     def iterateRename(self, rootItem, old_name, new_name, mask):
-        rootItem.model().blockSignals(True)
+        model = rootItem.model()
+        signalsBlocked = model.signalsBlocked()
+        model.blockSignals(True)
 
         def recurse(item):
             for row in range(item.rowCount()):
@@ -1938,8 +1957,10 @@ class XrtQookBase(qt.QMainWindow):
                         any([m in argName.text() for m in mask]):
                     argValue.setText(new_name)
                 recurse(item.child(row, 0))
-        recurse(rootItem)
-        rootItem.model().blockSignals(False)
+        try:
+            recurse(rootItem)
+        finally:
+            model.blockSignals(signalsBlocked)
 
     def getArgDescr(self, obj):
         argDesc = dict()
