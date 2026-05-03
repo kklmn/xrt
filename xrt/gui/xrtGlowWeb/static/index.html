@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>xrtGlow Web</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <div class="toolbar">
+      <div class="brand">xrtGlow Web</div>
+      <button id="runButton" class="primary" type="button">Run</button>
+      <label class="field">
+        <span>Rays</span>
+        <input id="rayBudget" type="number" min="100" max="200000" step="1000" value="10000">
+      </label>
+      <label class="field">
+        <span>Size</span>
+        <input id="raySize" type="range" min="1" max="8" step="0.5" value="2.5">
+      </label>
+      <label class="field compact">
+        <span>Pt</span>
+        <input id="pointOpacity" type="range" min="0" max="1" step="0.01" value="0.1">
+      </label>
+      <label class="field compact">
+        <span>Ln</span>
+        <input id="lineOpacity" type="range" min="0" max="1" step="0.01" value="0.1">
+      </label>
+      <label class="field compact">
+        <span>X</span>
+        <input id="scaleX" type="range" min="-2" max="4" step="0.05" value="0">
+      </label>
+      <label class="field compact">
+        <span>Y</span>
+        <input id="scaleY" type="range" min="-4" max="2" step="0.05" value="0">
+      </label>
+      <label class="field compact">
+        <span>Z</span>
+        <input id="scaleZ" type="range" min="-2" max="4" step="0.05" value="0">
+      </label>
+      <label class="field toggle" title="Show optical element meshes">
+        <input id="showMeshes" type="checkbox" checked>
+        <span>OEs</span>
+      </label>
+      <select id="beamSelect" title="Beam"></select>
+      <div id="status" class="status">Idle</div>
+    </div>
+    <section class="workspace">
+      <div id="viewport" class="viewport"></div>
+      <aside class="sidebar">
+        <div class="panel-title">Elements</div>
+        <div id="elementList" class="element-list"></div>
+        <div class="panel-title">Beams</div>
+        <div id="beamList" class="beam-list"></div>
+      </aside>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

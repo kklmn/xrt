@@ -73,6 +73,7 @@ Documentation = "http://xrt.readthedocs.io"
 
 [project.scripts]
 xrtQook = "xrt.gui.xrtQookStart:main"
+xrtGlowWeb = "xrt.gui.xrtGlowWeb.server:main"
 
 
 [tool.setuptools]
@@ -94,5 +95,6 @@ include = ["xrt*"]
     "commons/_themes/qook/static/*.*",
 	"commons/_fonts/*.*",
     "xrtQook/_icons/*.*",
-    "xrtGlow/_icons/*.*"
+    "xrtGlow/_icons/*.*",
+    "xrtGlowWeb/static/*.*"
 ]
