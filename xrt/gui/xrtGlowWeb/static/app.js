@@ -1,5 +1,6 @@
 const viewport = document.querySelector("#viewport");
 const runButton = document.querySelector("#runButton");
+const layoutUploadControl = document.querySelector("#layoutUploadControl");
 const layoutUpload = document.querySelector("#layoutUpload");
 const rayBudget = document.querySelector("#rayBudget");
 const raySize = document.querySelector("#raySize");
@@ -86,6 +87,7 @@ let showBeamLines = true;
 let hiddenSurfaceIds = new Set();
 let hiddenFootprintIds = new Set();
 let hiddenBeamLineIds = new Set();
+let allowLayoutUpload = false;
 
 if (!gl) {
   setStatus("WebGL unavailable");
@@ -1624,7 +1626,28 @@ async function runPropagation() {
   }
 }
 
+async function loadConfig() {
+  try {
+    const config = await fetchJson("/api/config");
+    configureLayoutUpload(Boolean(config.allowLayoutUpload));
+  } catch (error) {
+    console.warn("Could not load xrtGlowWeb config", error);
+    configureLayoutUpload(false);
+  }
+}
+
+function configureLayoutUpload(allowed) {
+  allowLayoutUpload = allowed;
+  layoutUploadControl.hidden = !allowed;
+  layoutUpload.disabled = !allowed;
+}
+
 async function uploadLayout() {
+  if (!allowLayoutUpload) {
+    layoutUpload.value = "";
+    setStatus("XML upload disabled");
+    return;
+  }
   const file = layoutUpload.files?.[0];
   if (!file) return;
   if (!file.name.toLowerCase().endsWith(".xml")) {
@@ -1885,6 +1908,7 @@ async function init() {
   resize();
   setStatus("Loading");
   try {
+    await loadConfig();
     const payload = await fetchJson("/api/scene");
     renderScenePayload(payload);
     setStatus(`${payload.elements.length} elements`);

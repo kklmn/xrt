@@ -24,8 +24,11 @@ MAX_LAYOUT_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 class XrtGlowWebState:
-    def __init__(self, layout, max_rays=DEFAULT_MAX_RAYS):
+    def __init__(
+            self, layout, max_rays=DEFAULT_MAX_RAYS,
+            allow_layout_upload=False):
         self.max_rays = int(max_rays)
+        self.allow_layout_upload = bool(allow_layout_upload)
         self.layout = layout
         self.scene = scene_from_layout(layout)
         self.session = PropagationSession(layout, max_rays=self.max_rays)
@@ -101,6 +104,10 @@ class XrtGlowWebHandler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/api/layout":
                 self.send_json(self.state.layout)
+            elif parsed.path == "/api/config":
+                self.send_json({
+                    "allowLayoutUpload": self.state.allow_layout_upload,
+                })
             elif parsed.path == "/api/scene":
                 self.send_json(self.state.scene)
             elif parsed.path == "/api/status":
@@ -136,6 +143,13 @@ class XrtGlowWebHandler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True,
                                 "status": self.state.session.status()})
             elif parsed.path == "/api/layout/upload":
+                if not self.state.allow_layout_upload:
+                    self.send_json({
+                        "error": (
+                            "XML upload is disabled. Restart xrtGlowWeb with "
+                            "--allow-layout-upload to enable it.")
+                    }, status=403)
+                    return
                 payload = read_json(
                     self, max_bytes=MAX_LAYOUT_UPLOAD_BYTES * 2)
                 filename = payload.get("filename", "layout.xml")
@@ -196,8 +210,11 @@ class XrtGlowWebServer(ThreadingHTTPServer):
         self.state = state
 
 
-def serve(host="127.0.0.1", port=8765, layout=None, max_rays=DEFAULT_MAX_RAYS):
-    state = XrtGlowWebState(layout, max_rays=max_rays)
+def serve(
+        host="127.0.0.1", port=8765, layout=None,
+        max_rays=DEFAULT_MAX_RAYS, allow_layout_upload=False):
+    state = XrtGlowWebState(
+        layout, max_rays=max_rays, allow_layout_upload=allow_layout_upload)
     server = XrtGlowWebServer((host, int(port)), state)
 
     def shutdown(*_args):
@@ -210,6 +227,10 @@ def serve(host="127.0.0.1", port=8765, layout=None, max_rays=DEFAULT_MAX_RAYS):
         pass
 
     print("xrtGlowWeb listening on http://{}:{}/".format(host, port))
+    if allow_layout_upload:
+        print("XML layout upload enabled.")
+    else:
+        print("XML layout upload disabled; use --allow-layout-upload to enable.")
     try:
         server.serve_forever()
     finally:
@@ -228,6 +249,9 @@ def build_arg_parser():
         help="Python module_or_path:object returning a BeamLine or layout dict.")
     parser.add_argument("--max-rays", type=int, default=DEFAULT_MAX_RAYS)
     parser.add_argument(
+        "--allow-layout-upload", "--allow-upload", action="store_true",
+        help="Enable browser XML layout upload and replacement.")
+    parser.add_argument(
         "--print-scene", action="store_true",
         help="Print the browser scene payload and exit.")
     return parser
@@ -239,7 +263,9 @@ def main(argv=None):
     if args.print_scene:
         print(json.dumps(clean_json(scene_from_layout(layout)), indent=2))
         return 0
-    serve(host=args.host, port=args.port, layout=layout, max_rays=args.max_rays)
+    serve(
+        host=args.host, port=args.port, layout=layout, max_rays=args.max_rays,
+        allow_layout_upload=args.allow_layout_upload)
     return 0
 
 

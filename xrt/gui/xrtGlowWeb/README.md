@@ -21,10 +21,13 @@ http://127.0.0.1:8765/
 ```
 
 Press **Run** in the browser to trigger propagation and draw sampled beam rays.
-Use **XML** to upload an xrtQook/xrtGlow XML layout into the current model. Use
-the mouse wheel to scale the model, Ctrl-wheel to zoom the camera, drag to orbit,
-and Shift-drag to pan. The X/Y/Z sliders use xrtGlow's logarithmic `0..7` scale
-range.
+Use the mouse wheel to scale the model, Ctrl-wheel to zoom the camera, drag to
+orbit, and Shift-drag to pan. The X/Y/Z sliders use xrtGlow's logarithmic `0..7`
+scale range.
+
+Browser XML upload is disabled by default so the served model is the one loaded
+at startup. Add `--allow-layout-upload` if you want the toolbar **XML** control
+and `POST /api/layout/upload` endpoint enabled.
 
 The scene uses the same axis convention as xrtGlow: X is left-right, Y is
 back-front along the beamline, and Z is up-down. The default scale is X=1000,
@@ -77,8 +80,10 @@ pixi run python -m xrt.gui.xrtGlowWeb --beamline examples\my_bl.py:build_beamlin
 
 - `/api/scene` returns a browser-friendly scene graph.
 - `/api/layout` returns the original serialized layout.
+- `GET /api/config` returns viewer feature flags such as layout upload support.
 - `POST /api/layout/upload` accepts an XML filename and content, reloads the
-  current model, and returns the new scene.
+  current model, and returns the new scene when the server was started with
+  `--allow-layout-upload`.
 - `POST /api/run?maxRays=10000` sets source `nrays`, runs propagation, returns
   sampled beam data, and refreshes auto-aligned scene transforms.
 - `POST /api/modify` forwards a small `modify` message to the propagation
