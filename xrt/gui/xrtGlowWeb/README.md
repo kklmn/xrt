@@ -28,7 +28,9 @@ range.
 
 The scene uses the same axis convention as xrtGlow: X is left-right, Y is
 back-front along the beamline, and Z is up-down. The default scale is X=1000,
-Y=1, Z=1000 for long beamlines with narrow beams.
+Y=1, Z=1000 for long beamlines with narrow beams. The X/Y/Z sliders still use
+xrtGlow's logarithmic range, and the adjacent numeric boxes show and edit the
+actual scale factors.
 
 The **Opt**, **Slits**, and **Screens** checkboxes independently hide optical
 surfaces, slit/aperture surfaces, and screen surfaces while keeping links,

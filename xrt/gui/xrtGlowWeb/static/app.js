@@ -8,6 +8,9 @@ const lineOpacityInput = document.querySelector("#lineOpacity");
 const scaleXInput = document.querySelector("#scaleX");
 const scaleYInput = document.querySelector("#scaleY");
 const scaleZInput = document.querySelector("#scaleZ");
+const scaleXValueInput = document.querySelector("#scaleXValue");
+const scaleYValueInput = document.querySelector("#scaleYValue");
+const scaleZValueInput = document.querySelector("#scaleZValue");
 const showOpticsInput = document.querySelector("#showOptics");
 const showAperturesInput = document.querySelector("#showApertures");
 const showScreensInput = document.querySelector("#showScreens");
@@ -47,6 +50,12 @@ const colors = {
   axisY: [0.3, 0.8, 0.35],
   axisZ: [0.25, 0.52, 1.0],
 };
+
+const scaleControls = [
+  { slider: scaleXInput, value: scaleXValueInput },
+  { slider: scaleYInput, value: scaleYValueInput },
+  { slider: scaleZInput, value: scaleZValueInput },
+];
 
 let scenePayload = null;
 let beams = new Map();
@@ -603,6 +612,7 @@ function updateSceneMetrics({ preserveTarget = true } = {}) {
 }
 
 function updateSceneScale({ refit = true } = {}) {
+  syncScaleValueInputs();
   sceneScale = scaleFromInputs();
   if (scenePayload) {
     if (refit) {
@@ -617,11 +627,42 @@ function updateSceneScale({ refit = true } = {}) {
 }
 
 function scaleFromInputs() {
-  return [
-    Math.pow(10, Number(scaleXInput.value)),
-    Math.pow(10, Number(scaleYInput.value)),
-    Math.pow(10, Number(scaleZInput.value)),
-  ];
+  return scaleControls.map((control) => scaleValueFromSlider(control.slider));
+}
+
+function scaleValueFromSlider(slider) {
+  return Math.pow(10, Number(slider.value));
+}
+
+function syncScaleValueInputs() {
+  scaleControls.forEach(({ slider, value }) => {
+    value.value = formatScaleValue(scaleValueFromSlider(slider));
+  });
+}
+
+function setSliderFromScaleValue(control) {
+  const min = Number(control.value.min) || 1;
+  const max = Number(control.value.max) || 1e7;
+  const parsed = clamp(Number(control.value.value), min, max);
+  if (!Number.isFinite(parsed)) {
+    syncScaleValueInputs();
+    return;
+  }
+  const sliderMin = Number(control.slider.min);
+  const sliderMax = Number(control.slider.max);
+  control.slider.value = clamp(Math.log10(parsed), sliderMin, sliderMax).toFixed(4);
+  control.value.value = formatScaleValue(scaleValueFromSlider(control.slider));
+}
+
+function formatScaleValue(value) {
+  if (value >= 1000) return String(Math.round(value));
+  if (value >= 100) return trimNumber(value.toFixed(1));
+  if (value >= 10) return trimNumber(value.toFixed(2));
+  return trimNumber(value.toFixed(3));
+}
+
+function trimNumber(value) {
+  return String(value).replace(/\.?0+$/, "");
 }
 
 function renderScenePayload(payload, options = {}) {
@@ -1636,9 +1677,19 @@ function cameraPosition() {
 
 function currentMatrix() {
   const aspect = Math.max(canvas.width, 1) / Math.max(canvas.height, 1);
-  const projection = perspective(Math.PI / 4, aspect, sceneRadius / 1000, sceneRadius * 20 + 10);
+  const { near, far } = clippingPlanes();
+  const projection = perspective(Math.PI / 4, aspect, near, far);
   const view = lookAt(cameraPosition(), target, [0, 0, 1]);
   return multiply(projection, view);
+}
+
+function clippingPlanes() {
+  const radius = Math.max(sceneRadius, 1);
+  const eye = cameraPosition();
+  const sceneDistance = length(sub(sceneCenter, eye));
+  const near = Math.max(1e-4, Math.min(distance * 0.01, radius * 0.001));
+  const far = Math.max(distance + radius * 4, sceneDistance + radius * 4, near * 100);
+  return { near, far };
 }
 
 function draw() {
@@ -1780,9 +1831,18 @@ for (const input of [pointOpacityInput, lineOpacityInput]) {
     draw();
   });
 }
-for (const input of [scaleXInput, scaleYInput, scaleZInput]) {
-  input.addEventListener("input", () => updateSceneScale({ refit: false }));
-}
+scaleControls.forEach((control) => {
+  control.slider.addEventListener("input", () => updateSceneScale({ refit: false }));
+  control.value.addEventListener("change", () => {
+    setSliderFromScaleValue(control);
+    updateSceneScale({ refit: false });
+  });
+  control.value.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      control.value.blur();
+    }
+  });
+});
 for (const input of [showOpticsInput, showAperturesInput, showScreensInput]) {
   input.addEventListener("change", () => {
     showOptics = showOpticsInput.checked;
@@ -1821,6 +1881,7 @@ runButton.addEventListener("click", runPropagation);
 window.addEventListener("resize", resize);
 
 async function init() {
+  syncScaleValueInputs();
   resize();
   setStatus("Loading");
   try {
@@ -1858,12 +1919,12 @@ function formatScale(scale) {
 
 function adjustUniformScale(factor) {
   const delta = Math.log10(factor);
-  for (const input of [scaleXInput, scaleYInput, scaleZInput]) {
-    const min = Number(input.min);
-    const max = Number(input.max);
-    const next = clamp(Number(input.value) + delta, min, max);
-    input.value = next.toFixed(4);
-  }
+  scaleControls.forEach(({ slider }) => {
+    const min = Number(slider.min);
+    const max = Number(slider.max);
+    const next = clamp(Number(slider.value) + delta, min, max);
+    slider.value = next.toFixed(4);
+  });
   updateSceneScale({ refit: false });
 }
 
