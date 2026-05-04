@@ -8,11 +8,15 @@ const lineOpacityInput = document.querySelector("#lineOpacity");
 const scaleXInput = document.querySelector("#scaleX");
 const scaleYInput = document.querySelector("#scaleY");
 const scaleZInput = document.querySelector("#scaleZ");
-const showMeshesInput = document.querySelector("#showMeshes");
-const beamSelect = document.querySelector("#beamSelect");
+const showOpticsInput = document.querySelector("#showOptics");
+const showAperturesInput = document.querySelector("#showApertures");
+const showScreensInput = document.querySelector("#showScreens");
+const showFootprintsInput = document.querySelector("#showFootprints");
+const showBeamLinesInput = document.querySelector("#showBeamLines");
 const statusEl = document.querySelector("#status");
 const elementList = document.querySelector("#elementList");
-const beamList = document.querySelector("#beamList");
+const footprintList = document.querySelector("#footprintList");
+const beamLineList = document.querySelector("#beamLineList");
 
 const canvas = document.createElement("canvas");
 const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
@@ -31,6 +35,10 @@ const colors = {
   oe: [0.18, 0.67, 0.86],
   aperture: [0.88, 0.65, 0.26],
   screen: [0.78, 0.49, 1.0],
+  sourceFace: [0.1, 0.9, 0.9],
+  sourceEdge: [1.0, 0.0, 1.0],
+  magnetRed: [1.0, 0.0, 0.0],
+  magnetBlue: [0.0, 0.0, 1.0],
   element: [0.72, 0.75, 0.79],
   link: [0.36, 0.40, 0.45],
   grid: [0.18, 0.21, 0.25],
@@ -42,7 +50,6 @@ const colors = {
 
 let scenePayload = null;
 let beams = new Map();
-let selectedBeam = "";
 let sceneCenter = [0, 0, 0];
 let sceneCenterModel = [0, 0, 0];
 let sceneRadius = 1000;
@@ -59,9 +66,17 @@ let coordBounds = null;
 let coordHalfWorld = 1;
 let beamSequence = [];
 let beamGroups = new Map();
+let footprints = [];
 let beamLinks = [];
 let sceneScale = scaleFromInputs();
-let showMeshes = true;
+let showOptics = true;
+let showApertures = true;
+let showScreens = true;
+let showFootprints = true;
+let showBeamLines = true;
+let hiddenSurfaceIds = new Set();
+let hiddenFootprintIds = new Set();
+let hiddenBeamLineIds = new Set();
 
 if (!gl) {
   setStatus("WebGL unavailable");
@@ -125,6 +140,48 @@ void main() {
 }
 `);
 
+const meshProgram = createProgram(gl, `
+attribute vec3 a_position;
+attribute vec3 a_normal;
+attribute vec3 a_color;
+attribute float a_opacity;
+uniform mat4 u_matrix;
+varying vec3 v_position;
+varying vec3 v_normal;
+varying vec3 v_color;
+varying float v_opacity;
+void main() {
+  v_position = a_position;
+  v_normal = normalize(a_normal);
+  v_color = a_color;
+  v_opacity = a_opacity;
+  gl_Position = u_matrix * vec4(a_position, 1.0);
+}
+`, `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec3 u_viewPos;
+varying vec3 v_position;
+varying vec3 v_normal;
+varying vec3 v_color;
+varying float v_opacity;
+void main() {
+  vec3 normalDirection = normalize(v_normal);
+  vec3 lightDirection = normalize(vec3(0.0, 0.0, 3.0));
+  vec3 viewDirection = normalize(u_viewPos - v_position);
+  float diffuse = abs(dot(normalDirection, lightDirection));
+  vec3 reflectDirection = reflect(-lightDirection, normalDirection);
+  float specular = pow(max(dot(reflectDirection, viewDirection), 0.0), 80.0);
+  vec3 ambientLighting = 0.45 * v_color;
+  vec3 diffuseReflection = 0.65 * diffuse * v_color;
+  vec3 specularReflection = 0.22 * specular * vec3(1.0, 0.95, 0.86);
+  gl_FragColor = vec4(ambientLighting + diffuseReflection + specularReflection, v_opacity);
+}
+`);
+
 const attribs = {
   position: gl.getAttribLocation(program, "a_position"),
   color: gl.getAttribLocation(program, "a_color"),
@@ -148,10 +205,22 @@ const beamUniforms = {
   roundPoints: gl.getUniformLocation(beamProgram, "u_roundPoints"),
 };
 
+const meshAttribs = {
+  position: gl.getAttribLocation(meshProgram, "a_position"),
+  normal: gl.getAttribLocation(meshProgram, "a_normal"),
+  color: gl.getAttribLocation(meshProgram, "a_color"),
+  opacity: gl.getAttribLocation(meshProgram, "a_opacity"),
+};
+const meshUniforms = {
+  matrix: gl.getUniformLocation(meshProgram, "u_matrix"),
+  viewPos: gl.getUniformLocation(meshProgram, "u_viewPos"),
+};
+
 const buffers = {
   grid: makeBuffer(),
   axes: makeBuffer(),
   links: makeBuffer(),
+  oeMeshes: makeMeshBuffer(),
   surfaces: makeBuffer(),
   edges: makeBuffer(),
   beams: makeBeamBuffer(),
@@ -184,6 +253,16 @@ function makeBeamBuffer() {
     roundPoints: true,
     colorMinMax: [0, 1],
     iMax: 1,
+  };
+}
+
+function makeMeshBuffer() {
+  return {
+    position: gl.createBuffer(),
+    normal: gl.createBuffer(),
+    color: gl.createBuffer(),
+    opacity: gl.createBuffer(),
+    count: 0,
   };
 }
 
@@ -234,6 +313,43 @@ function drawBuffer(buffer, matrix) {
   gl.enableVertexAttribArray(attribs.color);
 
   gl.drawArrays(buffer.mode, 0, buffer.count);
+}
+
+function uploadMesh(buffer, positions, normals, colorValues, opacityValues) {
+  buffer.count = positions.length / 3;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.position);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.normal);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.color);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorValues), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.opacity);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(opacityValues), gl.STATIC_DRAW);
+}
+
+function drawMeshBuffer(buffer, matrix) {
+  if (!buffer.count) return;
+  gl.useProgram(meshProgram);
+  gl.uniformMatrix4fv(meshUniforms.matrix, false, matrix);
+  gl.uniform3fv(meshUniforms.viewPos, cameraPosition());
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.position);
+  gl.vertexAttribPointer(meshAttribs.position, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(meshAttribs.position);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.normal);
+  gl.vertexAttribPointer(meshAttribs.normal, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(meshAttribs.normal);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.color);
+  gl.vertexAttribPointer(meshAttribs.color, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(meshAttribs.color);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.opacity);
+  gl.vertexAttribPointer(meshAttribs.opacity, 1, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(meshAttribs.opacity);
+
+  gl.drawArrays(gl.TRIANGLES, 0, buffer.count);
 }
 
 function uploadBeam(buffer, positions, colorAxis, intensity, mode, pointSize, opacity, roundPoints, colorMinMax, iMax) {
@@ -338,6 +454,27 @@ function addVertex(positions, colorValues, point, color) {
 function addSegment(positions, colorValues, a, b, color) {
   addVertex(positions, colorValues, a, color);
   addVertex(positions, colorValues, b, color);
+}
+
+function addMeshVertex(positions, normals, colorValues, opacityValues, point, normal, color, opacity = 1) {
+  const scaled = scaledPoint(point);
+  const scaledNorm = scaledNormal(normal);
+  positions.push(scaled[0], scaled[1], scaled[2]);
+  normals.push(scaledNorm[0], scaledNorm[1], scaledNorm[2]);
+  colorValues.push(
+    clamp(color[0], 0, 1),
+    clamp(color[1], 0, 1),
+    clamp(color[2], 0, 1),
+  );
+  opacityValues.push(clamp(opacity, 0, 1));
+}
+
+function scaledNormal(normal) {
+  return normalize([
+    normal[0] / Math.max(sceneScale[0], 1e-9),
+    normal[1] / Math.max(sceneScale[1], 1e-9),
+    normal[2] / Math.max(sceneScale[2], 1e-9),
+  ]);
 }
 
 function addBoxFrame(positions, colorValues, min, max, color) {
@@ -492,10 +629,13 @@ function renderScenePayload(payload, options = {}) {
   scenePayload = payload;
   if (clearBeams) {
     beams = new Map();
-    selectedBeam = "";
     beamSequence = [];
     beamGroups = new Map();
+    footprints = [];
     beamLinks = [];
+    hiddenSurfaceIds = new Set();
+    hiddenFootprintIds = new Set();
+    hiddenBeamLineIds = new Set();
   }
   if (refit) {
     fitScene();
@@ -504,7 +644,8 @@ function renderScenePayload(payload, options = {}) {
   }
   buildStaticGeometry();
   renderElementList();
-  renderBeamList();
+  renderFootprintList();
+  renderBeamLineList();
   draw();
 }
 
@@ -588,6 +729,10 @@ function buildLinks() {
 }
 
 function buildElementGeometry() {
+  const meshPositions = [];
+  const meshNormals = [];
+  const meshColors = [];
+  const meshOpacities = [];
   const surfacePositions = [];
   const surfaceColors = [];
   const edgePositions = [];
@@ -596,6 +741,17 @@ function buildElementGeometry() {
   const minDepth = Math.max(sceneRadius * 0.006, 0.2);
 
   scenePayload.elements.forEach((el) => {
+    if (!isSurfaceVisible(el)) {
+      return;
+    }
+    if (el.kind === "source" && addSourceGeometry(
+      meshPositions, meshNormals, meshColors, meshOpacities,
+      edgePositions, edgeColors, el)) {
+      return;
+    }
+    if (addRealisticMesh(meshPositions, meshNormals, meshColors, meshOpacities, el)) {
+      return;
+    }
     const c = colors[el.kind] || colors.element;
     const geom = el.geometry || {};
     const width = Math.max(Number(geom.width || 1), minSize);
@@ -615,8 +771,257 @@ function buildElementGeometry() {
       }
     });
   });
+  uploadMesh(buffers.oeMeshes, meshPositions, meshNormals, meshColors, meshOpacities);
   upload(buffers.surfaces, surfacePositions, surfaceColors, gl.TRIANGLES, 1);
   upload(buffers.edges, edgePositions, edgeColors, gl.LINES, 1);
+}
+
+function addSourceGeometry(meshPositions, meshNormals, meshColors, meshOpacities, edgePositions, edgeColors, el) {
+  const geom = el.geometry || {};
+  if (geom.sourceType === "magnet") {
+    addMagnetSource(meshPositions, meshNormals, meshColors, meshOpacities, el);
+    return true;
+  }
+  if (geom.sourceType === "geometric") {
+    addGeometricSource(meshPositions, meshNormals, meshColors, meshOpacities, edgePositions, edgeColors, el);
+    return true;
+  }
+  return false;
+}
+
+function isSurfaceVisible(el) {
+  if (hiddenSurfaceIds.has(elementSurfaceKey(el))) return false;
+  if (el.kind === "source") return true;
+  if (el.kind === "screen") return showScreens;
+  if (el.kind === "aperture") return showApertures;
+  return showOptics;
+}
+
+function elementSurfaceKey(el) {
+  return String(el.uuid || el.name || "");
+}
+
+function addRealisticMesh(positions, normals, colorValues, opacityValues, el) {
+  const mesh = el.mesh;
+  if (!mesh?.parts?.length) return false;
+  const material = mesh.material || {};
+  const color = (material.diffuse || colors[el.kind] || colors.element).slice(0, 3);
+  const opacity = Number.isFinite(Number(mesh.opacity)) ? Number(mesh.opacity) : 1;
+  let added = false;
+  mesh.parts.forEach((part) => {
+    const partPositions = part.positions || [];
+    const partNormals = part.normals || [];
+    const count = Math.min(partPositions.length, partNormals.length);
+    for (let i = 0; i < count; i += 1) {
+      addMeshVertex(
+        positions, normals, colorValues, opacityValues,
+        vec3From(partPositions[i]), vec3From(partNormals[i]), color, opacity);
+      added = true;
+    }
+  });
+  return added;
+}
+
+function addMagnetSource(positions, normals, colorValues, opacityValues, el) {
+  const geom = el.geometry || {};
+  const center = vec3From(el.position);
+  const period = positiveNumber(geom.period, 40);
+  const poles = Math.max(1, Math.floor(positiveNumber(geom.n, 0.5) * 2));
+  const gap = positiveNumber(geom.gap, 10);
+  const magDx = positiveNumber(geom.magnetDx, 40);
+  const magDy = positiveNumber(geom.magnetDy, period * 0.75);
+  const magDz = positiveNumber(geom.magnetDz, 10);
+
+  for (let pole = 0; pole < poles; pole += 1) {
+    const dy = poles > 1 ? pole - 0.5 * poles : 0;
+    const y = period * dy;
+    const even = pole % 2 === 0;
+    addMeshBox(
+      positions, normals, colorValues, opacityValues,
+      [0, y, gap + 0.5 * magDz], [magDx, magDy, magDz],
+      even ? colors.magnetRed : colors.magnetBlue,
+      (point) => sourceLocalToWorld(point, center, geom, true));
+    addMeshBox(
+      positions, normals, colorValues, opacityValues,
+      [0, y, -gap - 0.5 * magDz], [magDx, magDy, magDz],
+      even ? colors.magnetBlue : colors.magnetRed,
+      (point) => sourceLocalToWorld(point, center, geom, true));
+  }
+}
+
+function addGeometricSource(positions, normals, colorValues, opacityValues, edgePositions, edgeColors, el) {
+  const geom = el.geometry || {};
+  const center = vec3From(el.position);
+  const shape = String(geom.sourceShape || "sphere").toLowerCase();
+  const faceColor = (geom.faceColor || colors.sourceFace).slice(0, 3);
+  const edgeColor = (geom.edgeColor || colors.sourceEdge).slice(0, 3);
+  const sourceScale = geometricSourceScale(geom);
+
+  const transform = (point) => [
+    center[0] + point[0] * sourceScale[0],
+    center[1] + point[1] * sourceScale[1],
+    center[2] + point[2] * sourceScale[2],
+  ];
+
+  const mesh = shape === "sphere" ? sourceSphereMesh(geom) : sourceSpikyDodecahedron(geom);
+  mesh.triangles.forEach((triangle) => {
+    const a = transform(mesh.vertices[triangle[0]]);
+    const b = transform(mesh.vertices[triangle[1]]);
+    const c = transform(mesh.vertices[triangle[2]]);
+    const normal = triangleNormal(a, b, c);
+    [a, b, c].forEach((point) => addMeshVertex(
+      positions, normals, colorValues, opacityValues,
+      point, normal, faceColor, 1));
+    addSegment(edgePositions, edgeColors, a, b, edgeColor);
+    addSegment(edgePositions, edgeColors, b, c, edgeColor);
+    addSegment(edgePositions, edgeColors, c, a, edgeColor);
+  });
+}
+
+function geometricSourceScale(geom) {
+  const maxPhysical = Math.max(
+    Math.abs(Number(geom.dx) || 0),
+    Math.abs(Number(geom.dy) || 0),
+    Math.abs(Number(geom.dz) || 0),
+  ) * 2;
+  const maxScale = Math.max(sceneScale[0], sceneScale[1], sceneScale[2]);
+  const base = maxPhysical > 0 ? maxPhysical : 0.1;
+  return sceneScale.map((value) => base * maxScale / Math.max(value, 1e-9));
+}
+
+function sourceSphereMesh(geom) {
+  const radius = positiveNumber(geom.radius, 2);
+  const stacks = Math.max(3, Math.floor(positiveNumber(geom.stacks, 8)));
+  const slices = Math.max(4, Math.floor(positiveNumber(geom.slices, 12)));
+  const thetaMax = positiveNumber(geom.thetaMax, Math.PI);
+  const vertices = [];
+  const triangles = [];
+
+  for (let i = 0; i <= stacks; i += 1) {
+    const theta = thetaMax * i / stacks;
+    const sinTheta = Math.sin(theta);
+    const cosTheta = Math.cos(theta);
+    for (let j = 0; j <= slices; j += 1) {
+      const phi = 2 * Math.PI * j / slices;
+      vertices.push([
+        radius * sinTheta * Math.cos(phi),
+        radius * cosTheta,
+        radius * sinTheta * Math.sin(phi),
+      ]);
+    }
+  }
+
+  const row = slices + 1;
+  const isBottomPole = Math.abs(thetaMax - Math.PI) < 1e-9;
+  for (let i = 0; i < stacks; i += 1) {
+    for (let j = 0; j < slices; j += 1) {
+      const a = i * row + j;
+      const b = a + 1;
+      const c = (i + 1) * row + j;
+      const d = c + 1;
+      if (i !== 0) triangles.push([a, c, b]);
+      if (!(isBottomPole && i === stacks - 1)) triangles.push([b, c, d]);
+    }
+  }
+  return { vertices, triangles };
+}
+
+function sourceSpikyDodecahedron(geom) {
+  const spikeScale = positiveNumber(geom.spikeScale, 5);
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const invphi = 1 / phi;
+  const vertices = [
+    [phi, 0, invphi], [phi, 0, -invphi], [-phi, 0, invphi], [-phi, 0, -invphi],
+    [0, invphi, phi], [0, -invphi, phi], [0, invphi, -phi], [0, -invphi, -phi],
+    [invphi, phi, 0], [-invphi, phi, 0], [invphi, -phi, 0], [-invphi, -phi, 0],
+    [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
+    [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
+  ];
+  const faces = [
+    [0, 12, 4, 5, 14], [2, 16, 4, 5, 18], [16, 9, 8, 12, 4],
+    [5, 14, 10, 11, 18], [2, 3, 19, 11, 18], [14, 10, 15, 1, 0],
+    [15, 7, 6, 13, 1], [19, 11, 10, 15, 7], [17, 9, 8, 13, 6],
+    [19, 7, 6, 17, 3], [16, 9, 17, 3, 2], [1, 0, 12, 8, 13],
+  ];
+  const triangles = [];
+  faces.forEach((face) => {
+    const center = [0, 0, 0];
+    face.forEach((index) => {
+      center[0] += vertices[index][0];
+      center[1] += vertices[index][1];
+      center[2] += vertices[index][2];
+    });
+    center[0] = center[0] / face.length * spikeScale;
+    center[1] = center[1] / face.length * spikeScale;
+    center[2] = center[2] / face.length * spikeScale;
+    vertices.push(center);
+    const centerIndex = vertices.length - 1;
+    for (let i = 0; i < face.length; i += 1) {
+      triangles.push([face[i], face[(i + 1) % face.length], centerIndex]);
+    }
+  });
+  return { vertices, triangles };
+}
+
+function addMeshBox(positions, normals, colorValues, opacityValues, center, size, color, transform) {
+  const x = size[0] * 0.5;
+  const y = size[1] * 0.5;
+  const z = size[2] * 0.5;
+  const p = [
+    [center[0] - x, center[1] - y, center[2] - z],
+    [center[0] + x, center[1] - y, center[2] - z],
+    [center[0] + x, center[1] + y, center[2] - z],
+    [center[0] - x, center[1] + y, center[2] - z],
+    [center[0] - x, center[1] - y, center[2] + z],
+    [center[0] + x, center[1] - y, center[2] + z],
+    [center[0] + x, center[1] + y, center[2] + z],
+    [center[0] - x, center[1] + y, center[2] + z],
+  ].map(transform);
+  [
+    [0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4],
+    [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7],
+  ].forEach((face) => {
+    const a = p[face[0]];
+    const b = p[face[1]];
+    const c = p[face[2]];
+    const d = p[face[3]];
+    const normal = triangleNormal(a, b, c);
+    [a, b, c, a, c, d].forEach((point) => addMeshVertex(
+      positions, normals, colorValues, opacityValues, point, normal, color, 1));
+  });
+}
+
+function sourceLocalToWorld(point, center, geom, rotate) {
+  let x = point[0];
+  let y = point[1];
+  let z = point[2];
+  if (rotate) {
+    const pitch = -Number(geom.pitch || 0);
+    const cp = Math.cos(pitch);
+    const sp = Math.sin(pitch);
+    const y1 = y * cp - z * sp;
+    const z1 = y * sp + z * cp;
+    y = y1;
+    z = z1;
+
+    const yaw = Number(geom.yaw || 0);
+    const cy = Math.cos(yaw);
+    const sy = Math.sin(yaw);
+    const x1 = x * cy - y * sy;
+    const y2 = x * sy + y * cy;
+    x = x1;
+    y = y2;
+  }
+  return [center[0] + x, center[1] + y, center[2] + z];
+}
+
+function triangleNormal(a, b, c) {
+  return normalize(cross(sub(b, a), sub(c, a)));
+}
+
+function positiveNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function addAperture(edgePositions, edgeColors, center, width, height, depth, color) {
@@ -712,16 +1117,15 @@ function buildBeamGeometry() {
   const linePositions = [];
   const lineColorAxis = [];
   const lineIntensities = [];
-  beamSequence.forEach((beam) => {
-    const group = beamGroups.get(beam.elementId);
-    if (isHiddenFootprintBeam(beam, group)) return;
-    if (selectedBeam && beam.key !== selectedBeam) return;
+  footprints.forEach((footprint) => {
+    if (hiddenFootprintIds.has(footprint.id)) return;
+    const beam = footprint.beam;
     beam.points.forEach((point, index) => {
       addBeamVertex(positions, colorAxis, intensities, point, beam.colorAxis[index], beam.intensity[index]);
     });
   });
-  beamLinks.forEach(({ start, end }) => {
-    if (selectedBeam && selectedBeam !== start.key && selectedBeam !== end.key) return;
+  beamLinks.forEach(({ id, start, end }) => {
+    if (hiddenBeamLineIds.has(id)) return;
     const previousByIndex = new Map();
     start.indices.forEach((rayIndex, j) => previousByIndex.set(rayIndex, j));
     end.indices.forEach((rayIndex, j) => {
@@ -758,11 +1162,6 @@ function addBeamVertex(positions, colorAxis, intensities, point, colorValue, int
   intensities.push(Number.isFinite(intensityValue) ? Math.max(intensityValue, 0) : 1);
 }
 
-function isHiddenFootprintBeam(beam, group) {
-  if (!group || beam.beamName !== "beamGlobal") return false;
-  return group.beams.has("beamLocal") || group.beams.has("beamLocal1");
-}
-
 function renderElementList() {
   elementList.textContent = "";
   if (!scenePayload?.elements.length) {
@@ -770,58 +1169,169 @@ function renderElementList() {
     return;
   }
   scenePayload.elements.forEach((el) => {
-    const row = document.createElement("button");
-    row.className = "row";
-    row.type = "button";
+    const row = document.createElement("div");
+    row.className = "row element-row";
+    const toggle = document.createElement("input");
+    toggle.className = "row-toggle";
+    toggle.type = "checkbox";
+    toggle.checked = !hiddenSurfaceIds.has(elementSurfaceKey(el));
+    toggle.title = "Show surface";
+    toggle.addEventListener("change", () => {
+      const key = elementSurfaceKey(el);
+      if (toggle.checked) {
+        hiddenSurfaceIds.delete(key);
+      } else {
+        hiddenSurfaceIds.add(key);
+      }
+      buildElementGeometry();
+      draw();
+    });
+
+    const focus = document.createElement("button");
+    focus.className = "row-focus";
+    focus.type = "button";
     const color = rgbCss(colors[el.kind] || colors.element);
-    row.innerHTML = `
+    focus.innerHTML = `
       <span class="swatch" style="background:${color}"></span>
       <span class="row-main">
         <span class="row-name">${escapeHtml(el.name)}</span>
         <span class="row-meta">${escapeHtml(el.kind)}</span>
       </span>`;
-    row.addEventListener("click", () => {
+    focus.addEventListener("click", () => {
       targetModel = vec3From(el.position);
       target = scaledPoint(targetModel);
       refreshCoordinateBox();
       draw();
     });
+    row.append(toggle, focus);
     elementList.appendChild(row);
   });
 }
 
-function renderBeamList() {
-  beamSelect.textContent = "";
-  beamList.textContent = "";
-  const allOption = document.createElement("option");
-  allOption.value = "";
-  allOption.textContent = "All beams";
-  beamSelect.appendChild(allOption);
-  for (const [key, beam] of beams.entries()) {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = key;
-    beamSelect.appendChild(option);
-
-    const row = document.createElement("button");
-    row.className = "row";
-    row.type = "button";
-    row.innerHTML = `
-      <span class="swatch" style="background:${rgbCss(beam.color)}"></span>
-      <span class="row-main">
-        <span class="row-name">${escapeHtml(key)}</span>
-        <span class="row-meta">${beam.count} rays</span>
-      </span>`;
-    row.addEventListener("click", () => {
-      selectedBeam = key;
-      beamSelect.value = key;
-      buildBeamGeometry();
-      draw();
-    });
-    beamList.appendChild(row);
+function renderFootprintList() {
+  footprintList.textContent = "";
+  if (!footprints.length) {
+    footprintList.textContent = "No footprints";
+    syncVisibilityMasterControls();
+    return;
   }
-  selectedBeam = "";
-  beamSelect.value = "";
+  footprints.forEach((footprint) => {
+    const row = createVisibilityRow({
+      checked: !hiddenFootprintIds.has(footprint.id),
+      color: footprint.beam.color,
+      name: footprint.label,
+      meta: `${footprint.beam.beamName} - ${footprint.beam.count} rays`,
+      title: "Show footprint",
+      onToggle: (checked) => {
+        if (checked) {
+          hiddenFootprintIds.delete(footprint.id);
+        } else {
+          hiddenFootprintIds.add(footprint.id);
+        }
+        syncVisibilityMasterControls();
+        buildBeamGeometry();
+        draw();
+      },
+      onFocus: () => focusElement(footprint.elementId),
+    });
+    footprintList.appendChild(row);
+  });
+  syncVisibilityMasterControls();
+}
+
+function renderBeamLineList() {
+  beamLineList.textContent = "";
+  if (!beamLinks.length) {
+    beamLineList.textContent = "No beam links";
+    syncVisibilityMasterControls();
+    return;
+  }
+  beamLinks.forEach((link) => {
+    const row = createVisibilityRow({
+      checked: !hiddenBeamLineIds.has(link.id),
+      color: averageColor(link.start.color, link.end.color),
+      name: link.label,
+      meta: `${link.start.beamName} -> ${link.end.beamName}`,
+      title: "Show connecting beam",
+      onToggle: (checked) => {
+        if (checked) {
+          hiddenBeamLineIds.delete(link.id);
+        } else {
+          hiddenBeamLineIds.add(link.id);
+        }
+        syncVisibilityMasterControls();
+        buildBeamGeometry();
+        draw();
+      },
+      onFocus: () => focusBeamLine(link),
+    });
+    beamLineList.appendChild(row);
+  });
+  syncVisibilityMasterControls();
+}
+
+function syncVisibilityMasterControls() {
+  syncMasterToggle(showFootprintsInput, footprints, hiddenFootprintIds, showFootprints);
+  syncMasterToggle(showBeamLinesInput, beamLinks, hiddenBeamLineIds, showBeamLines);
+}
+
+function syncMasterToggle(input, items, hiddenSet, defaultVisible) {
+  const total = items.length;
+  input.disabled = total === 0;
+  if (!total) {
+    input.indeterminate = false;
+    input.checked = defaultVisible;
+    return;
+  }
+  const visible = items.reduce((count, item) => count + (hiddenSet.has(item.id) ? 0 : 1), 0);
+  input.indeterminate = visible > 0 && visible < total;
+  input.checked = visible === total;
+}
+
+function createVisibilityRow({ checked, color, name, meta, title, onToggle, onFocus }) {
+  const row = document.createElement("div");
+  row.className = "row element-row";
+  const toggle = document.createElement("input");
+  toggle.className = "row-toggle";
+  toggle.type = "checkbox";
+  toggle.checked = checked;
+  toggle.title = title;
+  toggle.addEventListener("change", () => onToggle(toggle.checked));
+
+  const focus = document.createElement("button");
+  focus.className = "row-focus";
+  focus.type = "button";
+  focus.innerHTML = `
+    <span class="swatch" style="background:${rgbCss(color)}"></span>
+    <span class="row-main">
+      <span class="row-name">${escapeHtml(name)}</span>
+      <span class="row-meta">${escapeHtml(meta)}</span>
+    </span>`;
+  focus.addEventListener("click", onFocus);
+  row.append(toggle, focus);
+  return row;
+}
+
+function focusElement(elementId) {
+  const element = scenePayload?.elements.find((el) => String(el.uuid) === String(elementId));
+  if (!element) return;
+  targetModel = vec3From(element.position);
+  target = scaledPoint(targetModel);
+  refreshCoordinateBox();
+  draw();
+}
+
+function focusBeamLine(link) {
+  const start = scenePayload?.elements.find((el) => String(el.uuid) === String(link.start.elementId));
+  const end = scenePayload?.elements.find((el) => String(el.uuid) === String(link.end.elementId));
+  if (start && end) {
+    targetModel = scaleVec(add(vec3From(start.position), vec3From(end.position)), 0.5);
+  } else {
+    targetModel = vec3From((start || end || {}).position);
+  }
+  target = scaledPoint(targetModel);
+  refreshCoordinateBox();
+  draw();
 }
 
 function escapeHtml(value) {
@@ -836,6 +1346,14 @@ function escapeHtml(value) {
 
 function rgbCss(color) {
   return `rgb(${Math.round(color[0] * 255)},${Math.round(color[1] * 255)},${Math.round(color[2] * 255)})`;
+}
+
+function averageColor(a, b) {
+  return [
+    ((a?.[0] || 0) + (b?.[0] || 0)) * 0.5,
+    ((a?.[1] || 0) + (b?.[1] || 0)) * 0.5,
+    ((a?.[2] || 0) + (b?.[2] || 0)) * 0.5,
+  ];
 }
 
 function beamColor(index) {
@@ -861,6 +1379,7 @@ function renderBeams(messages) {
   beams = new Map();
   beamSequence = [];
   beamGroups = new Map();
+  footprints = [];
   beamLinks = [];
   let index = 0;
   messages.forEach((message) => {
@@ -874,7 +1393,7 @@ function renderBeams(messages) {
     }
     Object.entries(message.beam).forEach(([beamName, beam]) => {
       if (!beam.positions?.length) return;
-      const key = `${elementName}:${beamName}`;
+      const key = `${elementId}:${beamName}`;
       const payload = {
         key,
         elementId,
@@ -895,12 +1414,57 @@ function renderBeams(messages) {
       index += 1;
     });
   });
+  footprints = buildFootprints();
   beamLinks = buildBeamLinks();
+  applyBeamVisibilityDefaults();
   updateSceneMetrics({ preserveTarget: true });
   buildStaticGeometry();
-  renderBeamList();
+  renderFootprintList();
+  renderBeamLineList();
   buildBeamGeometry();
   draw();
+}
+
+function buildFootprints() {
+  const result = [];
+  beamGroups.forEach((group) => {
+    const element = sceneElement(group.id);
+    const beamsForElement = isSourceElement(element) ?
+      [group.beams.get("beamGlobal")].filter(Boolean) :
+      sortedLocalBeams(group);
+    beamsForElement.forEach((beam) => {
+      result.push({
+        id: beam.key,
+        elementId: group.id,
+        elementName: group.name,
+        label: footprintLabel(group, beam),
+        beam,
+      });
+    });
+  });
+  return result;
+}
+
+function sortedLocalBeams(group) {
+  const order = ["beamLocal", "beamLocal1", "beamLocal2"];
+  const result = [];
+  order.forEach((name) => {
+    const beam = group.beams.get(name);
+    if (beam) result.push(beam);
+  });
+  group.beams.forEach((beam, name) => {
+    if (name.toLowerCase().startsWith("beamlocal") && !order.includes(name)) {
+      result.push(beam);
+    }
+  });
+  return result;
+}
+
+function footprintLabel(group, beam) {
+  if (beam.beamName === "beamGlobal") return group.name;
+  if (beam.beamName === "beamLocal1") return `${group.name} surface 1`;
+  if (beam.beamName === "beamLocal2") return `${group.name} surface 2`;
+  return group.name;
 }
 
 function buildBeamLinks() {
@@ -915,13 +1479,35 @@ function buildBeamLinks() {
       const start = pickBeam(startGroup, ["beamLocal", "beamLocal2", "beamGlobal"]);
       const end = pickBeam(endGroup, ["beamLocal", "beamLocal1", "beamGlobal"]);
       if (start && end) {
-        links.push({ start, end });
+        links.push(makeBeamLink(startGroup, endGroup, start, end));
       }
       addInternalBeamLink(links, internalLinks, startGroup);
     });
   });
   beamGroups.forEach((group) => addInternalBeamLink(links, internalLinks, group));
   return links;
+}
+
+function applyBeamVisibilityDefaults() {
+  if (!showFootprints) {
+    footprints.forEach((footprint) => hiddenFootprintIds.add(footprint.id));
+  }
+  if (!showBeamLines) {
+    beamLinks.forEach((link) => hiddenBeamLineIds.add(link.id));
+  }
+}
+
+function makeBeamLink(startGroup, endGroup, start, end, label = null) {
+  const startName = startGroup?.name || start?.elementName || "Start";
+  const endName = endGroup?.name || end?.elementName || "End";
+  return {
+    id: `${start.key}->${end.key}`,
+    label: label || `${startName} -> ${endName}`,
+    start,
+    end,
+    startElementName: startName,
+    endElementName: endName,
+  };
 }
 
 function pickBeam(group, names) {
@@ -938,8 +1524,16 @@ function addInternalBeamLink(links, seen, group) {
   const start = group.beams.get("beamLocal1");
   const end = group.beams.get("beamLocal2");
   if (!start || !end || seen.has(group.id)) return;
-  links.push({ start, end });
+  links.push(makeBeamLink(group, group, start, end, `${group.name} surface 1 -> surface 2`));
   seen.add(group.id);
+}
+
+function sceneElement(elementId) {
+  return scenePayload?.elements.find((element) => String(element.uuid) === String(elementId));
+}
+
+function isSourceElement(element) {
+  return element?.kind === "source";
 }
 
 function makeBeamColorAxis(beam) {
@@ -1063,7 +1657,15 @@ function draw() {
   drawBuffer(buffers.grid, matrix);
   drawBuffer(buffers.axes, matrix);
   drawBuffer(buffers.links, matrix);
-  if (showMeshes) {
+  if (hasVisibleSurfaces()) {
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    drawMeshBuffer(buffers.oeMeshes, matrix);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.useProgram(program);
     drawBuffer(buffers.surfaces, matrix);
     drawBuffer(buffers.edges, matrix);
   }
@@ -1078,6 +1680,10 @@ function draw() {
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.BLEND);
   updateLabels(matrix);
+}
+
+function hasVisibleSurfaces() {
+  return Boolean(buffers.oeMeshes.count || buffers.surfaces.count || buffers.edges.count);
 }
 
 function updateLabels(matrix) {
@@ -1177,12 +1783,36 @@ for (const input of [pointOpacityInput, lineOpacityInput]) {
 for (const input of [scaleXInput, scaleYInput, scaleZInput]) {
   input.addEventListener("input", () => updateSceneScale({ refit: false }));
 }
-showMeshesInput.addEventListener("change", () => {
-  showMeshes = showMeshesInput.checked;
+for (const input of [showOpticsInput, showAperturesInput, showScreensInput]) {
+  input.addEventListener("change", () => {
+    showOptics = showOpticsInput.checked;
+    showApertures = showAperturesInput.checked;
+    showScreens = showScreensInput.checked;
+    buildElementGeometry();
+    draw();
+  });
+}
+showFootprintsInput.addEventListener("change", () => {
+  showFootprints = showFootprintsInput.checked;
+  showFootprintsInput.indeterminate = false;
+  if (showFootprints) {
+    hiddenFootprintIds.clear();
+  } else {
+    footprints.forEach((footprint) => hiddenFootprintIds.add(footprint.id));
+  }
+  renderFootprintList();
+  buildBeamGeometry();
   draw();
 });
-beamSelect.addEventListener("change", () => {
-  selectedBeam = beamSelect.value;
+showBeamLinesInput.addEventListener("change", () => {
+  showBeamLines = showBeamLinesInput.checked;
+  showBeamLinesInput.indeterminate = false;
+  if (showBeamLines) {
+    hiddenBeamLineIds.clear();
+  } else {
+    beamLinks.forEach((link) => hiddenBeamLineIds.add(link.id));
+  }
+  renderBeamLineList();
   buildBeamGeometry();
   draw();
 });

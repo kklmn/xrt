@@ -44,6 +44,8 @@ select {
   padding: 8px 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .brand {
@@ -236,6 +238,28 @@ select {
   margin: 8px 0 6px;
 }
 
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  text-transform: none;
+  font-size: 12px;
+  user-select: none;
+}
+
+.panel-toggle input {
+  width: auto;
+  accent-color: var(--accent);
+}
+
 .element-list,
 .beam-list {
   display: grid;
@@ -260,6 +284,35 @@ select {
 
 .row:hover {
   border-color: var(--accent);
+}
+
+.element-row {
+  grid-template-columns: 28px 1fr;
+  gap: 0;
+  padding: 0;
+  cursor: default;
+}
+
+.row-toggle {
+  width: 14px;
+  height: 14px;
+  margin: 0 auto;
+  accent-color: var(--accent);
+}
+
+.row-focus {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px 6px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .swatch {

@@ -23,6 +23,16 @@ from ...backends.raycing import propagationProcess
 from ...backends.raycing.run import run_process
 from ...backends.raycing.sources import Beam
 from ...backends.raycing import screens as rscreens
+from ...backends.raycing import apertures as rapts
+
+try:
+    from ..xrtGlow.ogl.objects import OEMesh3D
+    from ..xrtGlow._constants import ambient, diffuse, specular, shininess
+    from ..xrtGlow._utils import is_aperture, is_plate, is_screen
+except Exception:
+    OEMesh3D = None
+    ambient = diffuse = specular = shininess = {}
+    is_aperture = is_plate = is_screen = None
 
 
 DEFAULT_MAX_RAYS = 10000
@@ -307,7 +317,7 @@ def scene_from_layout(layout):
             "geometry": element_geometry_payload(props, object_name),
         })
 
-    render_instances = render_instances_from_layout(layout)
+    render_instances, render_meshes = render_payloads_from_layout(layout)
     for element in elements:
         instances = render_instances.get(element["uuid"]) or \
             render_instances.get(element["name"])
@@ -318,6 +328,10 @@ def scene_from_layout(layout):
                 "position": element["position"],
             }]
         element["renderInstances"] = instances
+        mesh = render_meshes.get(element["uuid"]) or \
+            render_meshes.get(element["name"])
+        if mesh is not None:
+            element["mesh"] = mesh
 
     flow = project.get("flow") or extract_flow_from_record(record)
     ordered_ids = [str(key) for key in flow.keys()]
@@ -344,14 +358,19 @@ def scene_from_layout(layout):
     }
 
 
-def render_instances_from_layout(layout):
+def render_payloads_from_layout(layout):
     try:
         bl = raycing.BeamLine()
         bl.deserialize(copy.deepcopy(ensure_project_layout(layout)))
     except Exception:
-        return {}
+        return {}, {}
 
-    return render_instances_from_beamline(bl)
+    return render_instances_from_beamline(bl), render_meshes_from_beamline(bl)
+
+
+def render_instances_from_layout(layout):
+    instances, _meshes = render_payloads_from_layout(layout)
+    return instances
 
 
 def render_instances_from_beamline(bl):
@@ -379,6 +398,179 @@ def render_instances_for_oe(oe):
             "position": xrt_to_three(surface_center(oe, is2ndXtal=True)),
         })
     return item
+
+
+def render_meshes_from_beamline(bl):
+    meshes = {}
+    for oeid, line in bl.oesDict.items():
+        oe = line[0]
+        if oe is None:
+            continue
+        mesh = realistic_mesh_payload(oe)
+        if mesh is None:
+            continue
+        meshes[str(oeid)] = mesh
+        meshes[str(getattr(oe, "name", oeid))] = mesh
+    return meshes
+
+
+def realistic_mesh_payload(oe):
+    if OEMesh3D is None or not hasattr(oe, "local_to_global"):
+        return None
+
+    parts = []
+    for ns_index, is2nd in realistic_mesh_indices(oe):
+        try:
+            points, normals, indices = realistic_mesh_local(oe, ns_index, is2nd)
+            tri_points = points[np.asarray(indices, dtype=np.int64)]
+            tri_normals = normals[np.asarray(indices, dtype=np.int64)]
+            global_points = local_points_to_global(oe, tri_points, is2nd)
+            global_normals = local_normals_to_global(
+                oe, tri_points, tri_normals, is2nd)
+        except Exception:
+            continue
+
+        if global_points is None or global_normals is None:
+            continue
+        parts.append({
+            "nsIndex": ns_index,
+            "is2ndXtal": is2nd,
+            "positions": np.round(global_points, 6).tolist(),
+            "normals": np.round(global_normals, 6).tolist(),
+        })
+
+    if not parts:
+        return None
+
+    mat = oe_material_payload(oe)
+    return {
+        "source": "xrtGlow.ogl.objects.OEMesh3D",
+        "parts": parts,
+        "material": mat,
+        "opacity": mesh_opacity(oe),
+    }
+
+
+def realistic_mesh_indices(oe):
+    if is_aperture is not None and is_aperture(oe):
+        if isinstance(oe, (rapts.RoundAperture, rapts.SiemensStar)):
+            return [(0, False)]
+        blades = getattr(oe, "blades", {})
+        if isinstance(blades, dict):
+            return [(key, False) for key in blades.keys()]
+        if blades is None:
+            return []
+        try:
+            return [(key, False) for key in list(blades)]
+        except TypeError:
+            return []
+    count = 2 if hasattr(oe, "cryst2pitch") else 1
+    return [(ns_index, bool(ns_index)) for ns_index in range(count)]
+
+
+def realistic_mesh_local(oe, ns_index, is2nd):
+    mesh = OEMesh3D.__new__(OEMesh3D)
+    mesh.oe = oe
+    mesh.parent = None
+    mesh.oeThickness = 5
+    mesh.oeThicknessForce = None
+    mesh.apertureThickness = 0.1
+    mesh.apertureBladeWidth = 5
+    mesh.apertureDefaultSpan = 10
+    mesh.tiles = [25, 25]
+    mesh.isEnabled = True
+    mesh.defaultLimits = np.array([[-1.] * 3, [1.] * 3])
+
+    if isinstance(oe, rapts.RoundAperture):
+        if getattr(oe, "isBeamStop", False):
+            rmin, rmax = 0, float(getattr(oe, "r", 1))
+        else:
+            rmin = float(getattr(oe, "r", 1))
+            rmax = rmin + mesh.apertureBladeWidth
+        points, normals, indices = mesh.generate_disk_ring_segment(
+            rmin=rmin, rmax=rmax, thickness=mesh.apertureThickness)
+        points[:, [1, 2]] = points[:, [2, 1]]
+        return points, normals, indices
+
+    if isinstance(oe, rapts.SiemensStar):
+        points, normals, indices = mesh.siemens_star(
+            float(getattr(oe, "rx", 1)),
+            int(getattr(oe, "nSpokes", 16)),
+            float(getattr(oe, "phi0", 0)) + 0.5 * np.pi,
+            mesh.apertureThickness)
+        points[:, [1, 2]] = points[:, [2, 1]]
+        return points, normals, indices
+
+    x_limits, y_limits = mesh.get_limits(ns_index, is2nd, autoSize=False)
+    return mesh.generate_surface_local_f(
+        ns_index, is2nd, x_limits, y_limits)
+
+
+def local_points_to_global(oe, points, is2nd=False):
+    points = np.asarray(points, dtype=float)
+    if points.size == 0:
+        return points.reshape(0, 3)
+    try:
+        if isinstance(oe, rscreens.Screen):
+            xg, yg, zg = oe.local_to_global(
+                x=points[:, 0], y=points[:, 1], z=points[:, 2])
+            return np.column_stack((xg, yg, zg))
+        lb = Beam(nrays=len(points))
+        lb.x = points[:, 0].copy()
+        lb.y = points[:, 1].copy()
+        lb.z = points[:, 2].copy()
+        gb = oe.local_to_global(lb, returnBeam=True, is2ndXtal=bool(is2nd))
+        return np.column_stack((gb.x, gb.y, gb.z))
+    except Exception:
+        return None
+
+
+def local_normals_to_global(oe, points, normals, is2nd=False):
+    p0 = local_points_to_global(oe, points, is2nd)
+    p1 = local_points_to_global(oe, np.asarray(points) + np.asarray(normals),
+                                is2nd)
+    if p0 is None or p1 is None:
+        return None
+    out = p1 - p0
+    norm = np.linalg.norm(out, axis=1, keepdims=True)
+    norm[norm == 0] = 1
+    return out / norm
+
+
+def qvec_to_list(value, fallback):
+    if value is None:
+        return list(fallback)
+    try:
+        return [float(value.x()), float(value.y()), float(value.z()),
+                float(value.w())]
+    except Exception:
+        return list(fallback)
+
+
+def oe_material_payload(oe):
+    if is_aperture is not None and is_aperture(oe):
+        key = "Cu"
+    elif is_screen is not None and is_screen(oe):
+        key = "Screen"
+    elif is_plate is not None and is_plate(oe):
+        key = "Quartz"
+    else:
+        key = "Si"
+    return {
+        "name": key,
+        "ambient": qvec_to_list(ambient.get(key), [0.45, 0.45, 0.45, 1.0]),
+        "diffuse": qvec_to_list(diffuse.get(key), [0.6, 0.6, 0.6, 1.0]),
+        "specular": qvec_to_list(specular.get(key), [1.0, 1.0, 1.0, 1.0]),
+        "shininess": float(shininess.get(key, 80.0)),
+    }
+
+
+def mesh_opacity(oe):
+    if is_screen is not None and is_screen(oe):
+        return 0.75
+    if is_plate is not None and is_plate(oe):
+        return 0.85
+    return 1.0
 
 
 def surface_center(oe, is2ndXtal=False):
@@ -410,7 +602,7 @@ def apply_scene_updates(scene, updates):
             by_key.get(str(update.get("name")))
         if element is None:
             continue
-        for key in ("center", "position", "renderInstances"):
+        for key in ("center", "position", "renderInstances", "mesh"):
             if key in update:
                 element[key] = update[key]
 
@@ -429,9 +621,49 @@ def apply_scene_updates(scene, updates):
 def element_geometry_payload(props, object_name):
     kind = element_kind(object_name)
     if kind == "source":
-        dx = abs(to_float(props.get("dx"), 0.4)) or 0.4
-        dz = abs(to_float(props.get("dz"), 0.4)) or 0.4
-        return {"shape": "source", "width": dx, "height": dz, "depth": max(dx, dz)}
+        dx = abs(to_float(props.get("dx"), 0.0))
+        dy = abs(to_float(props.get("dy"), 0.0))
+        dz = abs(to_float(props.get("dz"), 0.0))
+        lowered = object_name.lower()
+        if "geometricsource" in lowered:
+            max_dim = max(dx, dy, dz, 0.05)
+            return {
+                "shape": "geometricSource",
+                "sourceType": "geometric",
+                "sourceShape": "sphere",
+                "radius": 2.0,
+                "stacks": 8,
+                "slices": 12,
+                "spikeScale": 5.0,
+                "faceColor": [0.1, 0.9, 0.9, 1.0],
+                "edgeColor": [1.0, 0.0, 1.0, 1.0],
+                "dx": dx,
+                "dy": dy,
+                "dz": dz,
+                "width": max_dim,
+                "height": max_dim,
+                "depth": max_dim,
+            }
+        period = abs(to_float(props.get("period"), 40.0)) or 40.0
+        n_periods = abs(to_float(props.get("n"), 0.5)) or 0.5
+        mag_dx, mag_dz = 40.0, 10.0
+        mag_dy = period * 0.75
+        total_y = max(period * max(n_periods * 2, 1), mag_dy)
+        return {
+            "shape": "magnetSource",
+            "sourceType": "magnet",
+            "period": period,
+            "n": n_periods,
+            "gap": 10.0,
+            "magnetDx": mag_dx,
+            "magnetDy": mag_dy,
+            "magnetDz": mag_dz,
+            "pitch": to_float(props.get("pitch"), 0.0),
+            "yaw": to_float(props.get("yaw"), 0.0),
+            "width": mag_dx,
+            "height": 2 * (10.0 + mag_dz),
+            "depth": total_y,
+        }
     if kind == "screen":
         lx = numeric_limits(props.get("limPhysX"), [-1.0, 1.0])
         ly = numeric_limits(props.get("limPhysY"), [-1.0, 1.0])
@@ -635,14 +867,18 @@ class BeamRenderContext:
                 continue
             center = surface_center(oe, is2ndXtal=False)
             name = str(getattr(oe, "name", oeid))
-            updates.append({
+            update = {
                 "uuid": str(oeid),
                 "name": name,
                 "center": to_vec3(center),
                 "position": xrt_to_three(center),
                 "renderInstances": instances.get(str(oeid)) or
                 instances.get(name) or render_instances_for_oe(oe),
-            })
+            }
+            mesh = realistic_mesh_payload(oe)
+            if mesh is not None:
+                update["mesh"] = mesh
+            updates.append(update)
         return updates
 
 

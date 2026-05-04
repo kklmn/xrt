@@ -30,8 +30,24 @@ The scene uses the same axis convention as xrtGlow: X is left-right, Y is
 back-front along the beamline, and Z is up-down. The default scale is X=1000,
 Y=1, Z=1000 for long beamlines with narrow beams.
 
-The **OEs** checkbox hides the schematic optical element meshes while keeping
-links, labels, beams, and footprints visible.
+The **Opt**, **Slits**, and **Screens** checkboxes independently hide optical
+surfaces, slit/aperture surfaces, and screen surfaces while keeping links,
+labels, beams, and footprints visible.
+
+Beam visibility follows the xrtGlow navigation split: **Footprints** are point
+clouds from the source `beamGlobal` and from local beams on each downstream
+element, including both local surfaces of multi-surface optics. **Beams** are
+the ray-line connections between those footprints and are listed by their
+starting and ending objects.
+
+Surfaces are generated in Python with xrtGlow's `OEMesh3D` surface mesh logic
+when the element transform is resolved, including realistic optics, screens,
+and slit/aperture blades. Unresolved auto-aligned elements fall back to the
+lightweight schematic mesh until propagation updates them.
+
+Sources follow xrtGlow's source styling: `GeometricSource` instances render as
+the geometric source abstraction, while physical magnetic sources render as the
+alternating red/blue magnet array used by `prepare_magnets`/`render_magnets`.
 
 ## Run an existing Qook/xrtGlow XML layout
 
