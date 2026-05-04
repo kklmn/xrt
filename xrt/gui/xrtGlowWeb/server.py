@@ -8,6 +8,7 @@ import json
 import mimetypes
 import signal
 import sys
+import tempfile
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -19,13 +20,22 @@ from .adapter import (
 
 
 STATIC_DIR = Path(__file__).with_name("static")
+MAX_LAYOUT_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 class XrtGlowWebState:
     def __init__(self, layout, max_rays=DEFAULT_MAX_RAYS):
+        self.max_rays = int(max_rays)
         self.layout = layout
         self.scene = scene_from_layout(layout)
-        self.session = PropagationSession(layout, max_rays=max_rays)
+        self.session = PropagationSession(layout, max_rays=self.max_rays)
+
+    def replace_layout(self, layout):
+        old_session = self.session
+        self.layout = layout
+        self.scene = scene_from_layout(layout)
+        self.session = PropagationSession(layout, max_rays=self.max_rays)
+        old_session.stop()
 
 
 def json_bytes(payload):
@@ -33,11 +43,46 @@ def json_bytes(payload):
         "utf-8")
 
 
-def read_json(handler):
+def read_json(handler, max_bytes=None):
     length = int(handler.headers.get("Content-Length", "0") or 0)
     if length <= 0:
         return {}
+    if max_bytes is not None and length > int(max_bytes):
+        raise ValueError("Request is too large.")
     return json.loads(handler.rfile.read(length).decode("utf-8"))
+
+
+def safe_upload_stem(filename):
+    stem = Path(str(filename or "layout")).stem
+    stem = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in stem)
+    return (stem or "layout")[:80]
+
+
+def load_uploaded_xml(filename, content):
+    if not str(filename or "").lower().endswith(".xml"):
+        raise ValueError("Only .xml layouts can be uploaded.")
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("Uploaded XML is empty.")
+    encoded_size = len(content.encode("utf-8"))
+    if encoded_size > MAX_LAYOUT_UPLOAD_BYTES:
+        raise ValueError("Uploaded XML is larger than 10 MB.")
+
+    temp_path = None
+    with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", suffix=".xml",
+            prefix="xrtglowweb_{}__".format(safe_upload_stem(filename)),
+            delete=False) as stream:
+        stream.write(content)
+        temp_path = Path(stream.name)
+
+    try:
+        return load_layout(layout_path=temp_path)
+    finally:
+        if temp_path is not None:
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
 
 
 class XrtGlowWebHandler(BaseHTTPRequestHandler):
@@ -90,6 +135,18 @@ class XrtGlowWebHandler(BaseHTTPRequestHandler):
                     payload.get("kwargs", {}))
                 self.send_json({"ok": True,
                                 "status": self.state.session.status()})
+            elif parsed.path == "/api/layout/upload":
+                payload = read_json(
+                    self, max_bytes=MAX_LAYOUT_UPLOAD_BYTES * 2)
+                filename = payload.get("filename", "layout.xml")
+                layout = load_uploaded_xml(filename, payload.get("content"))
+                self.state.replace_layout(layout)
+                self.send_json({
+                    "ok": True,
+                    "filename": Path(str(filename)).name,
+                    "scene": self.state.scene,
+                    "status": self.state.session.status(),
+                })
             else:
                 self.send_response(404)
                 self.end_headers()

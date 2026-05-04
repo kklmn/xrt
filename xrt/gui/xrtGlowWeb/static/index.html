@@ -11,6 +11,10 @@
     <div class="toolbar">
       <div class="brand">xrtGlow Web</div>
       <button id="runButton" class="primary" type="button">Run</button>
+      <label class="file-button" title="Load XML layout">
+        <input id="layoutUpload" type="file" accept=".xml,text/xml,application/xml">
+        <span>XML</span>
+      </label>
       <label class="field">
         <span>Rays</span>
         <input id="rayBudget" type="number" min="100" max="200000" step="1000" value="10000">
@@ -29,15 +33,15 @@
       </label>
       <label class="field compact">
         <span>X</span>
-        <input id="scaleX" type="range" min="-2" max="4" step="0.05" value="0">
+        <input id="scaleX" type="range" min="0" max="7" step="0.01" value="3">
       </label>
       <label class="field compact">
         <span>Y</span>
-        <input id="scaleY" type="range" min="-4" max="2" step="0.05" value="0">
+        <input id="scaleY" type="range" min="0" max="7" step="0.01" value="0">
       </label>
       <label class="field compact">
         <span>Z</span>
-        <input id="scaleZ" type="range" min="-2" max="4" step="0.05" value="0">
+        <input id="scaleZ" type="range" min="0" max="7" step="0.01" value="3">
       </label>
       <label class="field toggle" title="Show optical element meshes">
         <input id="showMeshes" type="checkbox" checked>

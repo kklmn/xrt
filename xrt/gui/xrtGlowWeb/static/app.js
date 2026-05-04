@@ -1,5 +1,6 @@
 const viewport = document.querySelector("#viewport");
 const runButton = document.querySelector("#runButton");
+const layoutUpload = document.querySelector("#layoutUpload");
 const rayBudget = document.querySelector("#rayBudget");
 const raySize = document.querySelector("#raySize");
 const pointOpacityInput = document.querySelector("#pointOpacity");
@@ -55,10 +56,11 @@ let lastPointer = null;
 let labelNodes = [];
 let coordTicks = [];
 let coordBounds = null;
+let coordHalfWorld = 1;
 let beamSequence = [];
 let beamGroups = new Map();
 let beamLinks = [];
-let sceneScale = [1, 1, 1];
+let sceneScale = scaleFromInputs();
 let showMeshes = true;
 
 if (!gl) {
@@ -401,20 +403,29 @@ function computeBounds(points, { scaled = false } = {}) {
   return { min, max, center, radius: Math.max(radius, 1) };
 }
 
-function expandedBounds(bounds) {
-  const min = [...bounds.min];
-  const max = [...bounds.max];
-  for (let i = 0; i < 3; i += 1) {
-    const span = Math.max(max[i] - min[i], 1);
-    const pad = niceGridStep(span / 20) * 2;
-    min[i] -= pad;
-    max[i] += pad;
-    if (min[i] < 0 && max[i] > 0) {
-      min[i] = Math.min(min[i], -pad);
-      max[i] = Math.max(max[i], pad);
-    }
-  }
-  return { min, max };
+function coordinateHalfWorld(bounds) {
+  const span = Math.max(
+    bounds.max[0] - bounds.min[0],
+    bounds.max[1] - bounds.min[1],
+    bounds.max[2] - bounds.min[2],
+    1,
+  );
+  return span * 0.9;
+}
+
+function fixedCoordinateBounds() {
+  const center = targetModel || sceneCenterModel || [0, 0, 0];
+  const half = sceneScale.map((value) => coordHalfWorld / Math.max(value, 1e-9));
+  return {
+    min: [center[0] - half[0], center[1] - half[1], center[2] - half[2]],
+    max: [center[0] + half[0], center[1] + half[1], center[2] + half[2]],
+  };
+}
+
+function refreshCoordinateBox() {
+  coordBounds = fixedCoordinateBounds();
+  buildGrid();
+  buildAxes();
 }
 
 function ticksForRange(min, max, targetCount) {
@@ -441,22 +452,21 @@ function updateSceneMetrics({ preserveTarget = true } = {}) {
   sceneCenterModel = modelBounds.center;
   sceneCenter = scaledBounds.center;
   sceneRadius = scaledBounds.radius;
-  coordBounds = expandedBounds(modelBounds);
+  coordHalfWorld = coordinateHalfWorld(modelBounds);
   if (preserveTarget) {
     target = scaledPoint(targetModel);
   } else {
     targetModel = [...sceneCenterModel];
     target = scaledPoint(targetModel);
   }
-  distance = Math.max(distance, sceneRadius * 0.02);
+  coordBounds = fixedCoordinateBounds();
+  if (!Number.isFinite(distance) || distance <= 0) {
+    distance = Math.max(sceneRadius * 0.02, 1);
+  }
 }
 
 function updateSceneScale({ refit = true } = {}) {
-  sceneScale = [
-    Math.pow(10, Number(scaleXInput.value)),
-    Math.pow(10, Number(scaleYInput.value)),
-    Math.pow(10, Number(scaleZInput.value)),
-  ];
+  sceneScale = scaleFromInputs();
   if (scenePayload) {
     if (refit) {
       fitScene();
@@ -467,6 +477,14 @@ function updateSceneScale({ refit = true } = {}) {
     buildBeamGeometry();
     draw();
   }
+}
+
+function scaleFromInputs() {
+  return [
+    Math.pow(10, Number(scaleXInput.value)),
+    Math.pow(10, Number(scaleYInput.value)),
+    Math.pow(10, Number(scaleZInput.value)),
+  ];
 }
 
 function renderScenePayload(payload, options = {}) {
@@ -501,7 +519,7 @@ function buildGrid() {
   const positions = [];
   const colorValues = [];
   coordTicks = [];
-  const bounds = coordBounds || expandedBounds(computeBounds(collectModelPoints()));
+  const bounds = coordBounds || fixedCoordinateBounds();
   const min = bounds.min;
   const max = bounds.max;
   const xTicks = ticksForRange(min[0], max[0], 9);
@@ -542,7 +560,7 @@ function buildGrid() {
 function buildAxes() {
   const positions = [];
   const colorValues = [];
-  const bounds = coordBounds || expandedBounds(computeBounds(collectModelPoints()));
+  const bounds = coordBounds || fixedCoordinateBounds();
   const min = bounds.min;
   const max = bounds.max;
   const origin = [
@@ -765,6 +783,7 @@ function renderElementList() {
     row.addEventListener("click", () => {
       targetModel = vec3From(el.position);
       target = scaledPoint(targetModel);
+      refreshCoordinateBox();
       draw();
     });
     elementList.appendChild(row);
@@ -970,6 +989,37 @@ async function runPropagation() {
   }
 }
 
+async function uploadLayout() {
+  const file = layoutUpload.files?.[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".xml")) {
+    setStatus("Error: XML only");
+    layoutUpload.value = "";
+    return;
+  }
+
+  runButton.disabled = true;
+  setStatus("Loading XML");
+  try {
+    const payload = await fetchJson("/api/layout/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        content: await file.text(),
+      }),
+    });
+    renderScenePayload(payload.scene, { clearBeams: true, refit: true });
+    setStatus(`${payload.scene.elements.length} elements`);
+  } catch (error) {
+    console.error(error);
+    setStatus(`Error: ${String(error.message || error).slice(0, 80)}`);
+  } finally {
+    layoutUpload.value = "";
+    runButton.disabled = false;
+  }
+}
+
 function resize() {
   const rect = viewport.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1069,9 +1119,13 @@ function updateCoordReadout() {
 
 canvas.addEventListener("wheel", (event) => {
   event.preventDefault();
-  const factor = event.deltaY < 0 ? 0.88 : 1 / 0.88;
-  distance = Math.max(sceneRadius * 0.02, distance * factor);
-  draw();
+  const scaleFactor = event.deltaY < 0 ? 1.1 : 0.9;
+  if (event.ctrlKey) {
+    distance = Math.max(sceneRadius * 0.02, distance * (event.deltaY < 0 ? 0.9 : 1.1));
+    draw();
+    return;
+  }
+  adjustUniformScale(scaleFactor);
 }, { passive: false });
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -1107,6 +1161,7 @@ function panCamera(dx, dy) {
   const amount = distance * 0.0015;
   target = add(target, add(scaleVec(right, -dx * amount), scaleVec(up, dy * amount)));
   targetModel = unscaledPoint(target);
+  refreshCoordinateBox();
 }
 
 raySize.addEventListener("input", () => {
@@ -1131,6 +1186,7 @@ beamSelect.addEventListener("change", () => {
   buildBeamGeometry();
   draw();
 });
+layoutUpload.addEventListener("change", uploadLayout);
 runButton.addEventListener("click", runPropagation);
 window.addEventListener("resize", resize);
 
@@ -1168,6 +1224,17 @@ function formatScale(scale) {
     const exponent = Math.log10(value);
     return Number.isInteger(exponent) ? `1e${exponent}` : value.toPrecision(2);
   }).join(" ");
+}
+
+function adjustUniformScale(factor) {
+  const delta = Math.log10(factor);
+  for (const input of [scaleXInput, scaleYInput, scaleZInput]) {
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const next = clamp(Number(input.value) + delta, min, max);
+    input.value = next.toFixed(4);
+  }
+  updateSceneScale({ refit: false });
 }
 
 function add(a, b) {

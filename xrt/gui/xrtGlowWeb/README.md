@@ -21,13 +21,14 @@ http://127.0.0.1:8765/
 ```
 
 Press **Run** in the browser to trigger propagation and draw sampled beam rays.
-Use the mouse wheel to zoom, drag to orbit, and Shift-drag to pan. The X/Y/Z
-sliders are logarithmic scale controls, similar in spirit to xrtGlow's
-independent scene scaling.
+Use **XML** to upload an xrtQook/xrtGlow XML layout into the current model. Use
+the mouse wheel to scale the model, Ctrl-wheel to zoom the camera, drag to orbit,
+and Shift-drag to pan. The X/Y/Z sliders use xrtGlow's logarithmic `0..7` scale
+range.
 
 The scene uses the same axis convention as xrtGlow: X is left-right, Y is
-back-front along the beamline, and Z is up-down. For long beamlines, reduce the
-Y scale and enlarge X/Z as needed.
+back-front along the beamline, and Z is up-down. The default scale is X=1000,
+Y=1, Z=1000 for long beamlines with narrow beams.
 
 The **OEs** checkbox hides the schematic optical element meshes while keeping
 links, labels, beams, and footprints visible.
@@ -58,6 +59,8 @@ pixi run python -m xrt.gui.xrtGlowWeb --beamline examples\my_bl.py:build_beamlin
 
 - `/api/scene` returns a browser-friendly scene graph.
 - `/api/layout` returns the original serialized layout.
+- `POST /api/layout/upload` accepts an XML filename and content, reloads the
+  current model, and returns the new scene.
 - `POST /api/run?maxRays=10000` sets source `nrays`, runs propagation, returns
   sampled beam data, and refreshes auto-aligned scene transforms.
 - `POST /api/modify` forwards a small `modify` message to the propagation

@@ -67,6 +67,27 @@ select {
   cursor: progress;
 }
 
+.file-button {
+  height: 32px;
+  min-width: 50px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--panel-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.file-button:hover {
+  border-color: var(--accent);
+}
+
+.file-button input {
+  display: none;
+}
+
 .field {
   display: flex;
   align-items: center;
