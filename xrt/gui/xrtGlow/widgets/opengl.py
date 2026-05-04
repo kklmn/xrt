@@ -1555,7 +1555,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
         newVisAx = np.argmax(pModel, axis=0)
         if len(np.unique(newVisAx)) == 3:
             self.visibleAxes = newVisAx
-        self.cBox.update_grid()
+        self.update_coord_grid()
+
+    def update_coord_grid(self):
+        cBox = getattr(self, 'cBox', None)
+        if cBox is None:
+            return
+
+        makeCurrent = True
+        if hasattr(qt, 'QOpenGLContext'):
+            makeCurrent = qt.QOpenGLContext.currentContext() != self.context()
+
+        if makeCurrent:
+            self.makeCurrent()
+        try:
+            cBox.update_grid()
+        finally:
+            if makeCurrent:
+                self.doneCurrent()
 
     def vecToQ(self, vec, alpha):
         """ Quaternion from vector and angle"""
@@ -1936,7 +1953,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         newVisAx = np.argmax(pModel, axis=0)
         if len(np.unique(newVisAx)) == 3:
             self.visibleAxes = newVisAx
-        self.cBox.update_grid()
+        self.update_coord_grid()
         self.toggleLoop()
 
     def paintGL(self):
@@ -2883,7 +2900,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     shifts = xm * mouse_h + ym * mouse_v
 
                     self.tVec += shifts*self.maxLen/self.scaleVec
-                    self.cBox.update_grid()
+                    self.update_coord_grid()
 
                 elif ctrlOn and self.showVirtualScreen:
                     tPlane = self.virtScreen['beamStart']
@@ -2992,7 +3009,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             self.scaleUpdated.emit(self.scaleVec)
 
-        self.cBox.update_grid()
+        self.update_coord_grid()
         self.glDraw()
 
     def glDraw(self):

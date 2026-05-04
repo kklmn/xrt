@@ -144,7 +144,7 @@ class CoordinateBox():
         self.z2x.rotate(90, 0, -1, 0)
 
     def cleanup_gl_resources(self):
-        for vbo_name in ['vbo_frame', 'vbo_grid', 'vbo_Text',
+        for vbo_name in ['vbo_frame', 'vbo_grid', 'vbo_fineGrid', 'vbo_Text',
                          'vbo_arrows', 'vbo_arr_colors']:
             vbo = getattr(self, vbo_name, None)
             if vbo is not None:
@@ -287,6 +287,33 @@ class CoordinateBox():
         bottom[:, 2] *= self.axPosModifier[2]
         self.halfCube = np.float32(np.vstack((back, side, bottom)))
 
+    @staticmethod
+    def _grid_values(limits, step):
+        low, high = limits
+        if step <= 0 or low >= high:
+            return np.array([], dtype=np.float32)
+
+        eps = abs(step) * 1e-9
+        start = np.ceil((low - eps) / step) * step
+        values = np.arange(start, high + eps, step)
+        values = values[(values >= low - eps) & (values <= high + eps)]
+        return np.clip(values, low, high)
+
+    @staticmethod
+    def _without_coarse_ticks(fineGrid, coarseGrid, fineStep):
+        if len(fineGrid) == 0 or len(coarseGrid) == 0:
+            return fineGrid
+
+        coarseInds = np.searchsorted(coarseGrid, fineGrid)
+        isCoarse = np.zeros(len(fineGrid), dtype=bool)
+        atol = abs(fineStep) * 1e-6
+        for offset in [0, -1]:
+            inds = coarseInds + offset
+            valid = (inds >= 0) & (inds < len(coarseGrid))
+            isCoarse[valid] |= np.isclose(
+                fineGrid[valid], coarseGrid[inds[valid]], rtol=0, atol=atol)
+        return fineGrid[~isCoarse]
+
     def make_coarse_grid(self):
 
         self.gridLabels = []
@@ -297,6 +324,7 @@ class CoordinateBox():
         allLimits = limits * self.parent.maxLen / self.parent.scaleVec -\
             self.parent.tVec + self.parent.coordOffset
         axisGridArray = []
+        fineGridArray = []
 
         for iAx in range(3):
             m2 = self.parent.aPos[iAx] / 0.9
@@ -316,24 +344,20 @@ class CoordinateBox():
             else:
                 decimalX = 0
 
-            gridX = np.arange(np.int32(allLimits[:, iAx][0]/step)*step,
-                              allLimits[:, iAx][1], step)
-            gridX = gridX if gridX[0] >= allLimits[:, iAx][0] else\
-                gridX[1:]
+            gridX = self._grid_values(allLimits[:, iAx], step)
             self.gridLabels.extend([gridX])
             self.precisionLabels.extend([np.ones_like(gridX)*decimalX])
             axisGridArray.extend([gridX - self.parent.coordOffset[iAx]])
-#            if self.parent.fineGridEnabled:
-#                fineStep = step * 0.2
-#                fineGrid = np.arange(
-#                    np.int32(allLimits[:, iAx][0]/fineStep)*fineStep,
-#                    allLimits[:, iAx][1], fineStep)
-#                fineGrid = fineGrid if\
-#                    fineGrid[0] >= allLimits[:, iAx][0] else fineGrid[1:]
-#                fineGridArray.extend([fineGrid - self.parent.coordOffset[iAx]])
+
+            fineStep = step * 0.2
+            fineGrid = self._grid_values(allLimits[:, iAx], fineStep)
+            fineGrid = self._without_coarse_ticks(fineGrid, gridX, fineStep)
+            fineGridArray.extend([fineGrid - self.parent.coordOffset[iAx]])
 
         self.axisL, self.axGrid = self.populate_grid(axisGridArray)
         self.gridLen = len(self.axGrid)
+        _, self.fineAxGrid = self.populate_grid(fineGridArray)
+        self.fineGridLen = len(self.fineAxGrid)
 
 #        for iAx in range(3):
 #            if not (not self.perspectiveEnabled and
@@ -366,10 +390,6 @@ class CoordinateBox():
 #                    self.axisL[iAx][self.parent.visibleAxes[0], :] *= 1.05  # side
 
     def update_grid(self):
-        if hasattr(self, "vbo_frame"):
-            self.make_frame(self.parent.aPos)
-            update_qt_buffer(self.vbo_frame, self.halfCube)
-
         if hasattr(self, "vbo_grid"):
             self.make_coarse_grid()
 #            if self.gridLen < self.initialGridLen:  # initial grid size x10
@@ -396,23 +416,21 @@ class CoordinateBox():
 #                self.vbo_grid.release()
 #                self.vaoGrid.release()
 
+        if hasattr(self, "vbo_fineGrid"):
+            update_qt_buffer(self.vbo_fineGrid, self.fineAxGrid)
+
+        if hasattr(self, "vbo_frame"):
+            self.make_frame(self.parent.aPos)
+            update_qt_buffer(self.vbo_frame, self.halfCube)
+
     def prepare_grid(self):
         self.make_font()
 
-        self.make_frame(self.parent.aPos)
-
         self.make_coarse_grid()
+        self.make_frame(self.parent.aPos)
         self.initialGridLen = self.gridLen*10
 #        print("Initial grid", self.initialGridLen)
-#        if self.parent.fineGridEnabled:
-#            fineGridArray = []
 #        print(axisL)
-#        if self.parent.fineGridEnabled:
-#            tmp, fineAxGrid = self.populateGrid(fineGridArray)
-#            self.fineGridLen = len(fineAxGrid)
-#            self.vaoFineGrid.bind()
-#            self.vbo_fineGrid = self.setVertexBuffer(fineAxGrid, 3, self.shader, "position" )
-#            self.vaoFineGrid.release()
 
 #        cLines = np.array([[-self.parent.aPos[0], 0, 0],
 #                           [self.parent.aPos[0], 0, 0],
@@ -447,6 +465,18 @@ class CoordinateBox():
         gl.glGetError()
         self.vbo_grid.release()
         self.vaoGrid.release()
+        gl.glGetError()
+
+        self.vbo_fineGrid = create_qt_buffer(
+            np.tile(self.fineAxGrid, 10).copy())
+        self.vaoFineGrid.bind()
+        self.vbo_fineGrid.bind()
+        gl.glGetError()
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(0)
+        gl.glGetError()
+        self.vbo_fineGrid.release()
+        self.vaoFineGrid.release()
         gl.glGetError()
 
 #        self.vaoOrigin.bind()
@@ -596,19 +626,17 @@ class CoordinateBox():
         gl.glDrawArrays(gl.GL_LINES, 0, 24)
         self.vaoFrame.release()
 
+        gl.glLineWidth(min(self.parent.cBoxLineWidth, 1.))
+        if getattr(self.parent, 'fineGridEnabled', False):
+            self.vaoFineGrid.bind()
+            self.shader.setUniformValue("lineOpacity", 0.25)
+            gl.glDrawArrays(gl.GL_LINES, 0, self.fineGridLen)
+            self.vaoFineGrid.release()
+
         self.vaoGrid.bind()
         self.shader.setUniformValue("lineOpacity", 0.5)
-
-        gl.glLineWidth(min(self.parent.cBoxLineWidth, 1.))
         gl.glDrawArrays(gl.GL_LINES, 0, self.gridLen)
         self.vaoGrid.release()
-
-#        if self.parent.fineGridEnabled:
-#            self.vaoFineGrid.bind()
-#            self.shader.setUniformValue("lineOpacity", 0.25)
-#            gl.glLineWidth(self.parent.cBoxLineWidth)
-#            gl.glDrawArrays(gl.GL_LINES, 0, self.fineGridLen)
-#            self.vaoFineGrid.release()
         self.shader.release()
 
 #        self.origShader.bind()

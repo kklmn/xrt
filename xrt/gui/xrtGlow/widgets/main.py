@@ -1602,11 +1602,18 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def updateRotationFromGL(self, actPos):
+        self.customGlWidget.rotations = np.float32(actPos)
         for iaxis, (slider, editor) in\
                 enumerate(zip(self.rotationSliders, self.rotationEditors)):
             value = actPos[iaxis]
-            slider.setValue(value)
-            editor.setText("{0:.2f}".format(value))
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(value)
+                editor.setText("{0:.2f}".format(value))
+            finally:
+                slider.blockSignals(oldState)
+        self.customGlWidget.updateQuats()
+        self.customGlWidget.glDraw()
 
     def updateRotationFromQLE(self, editor, slider):
         value = float(re.sub(',', '.', str(editor.text())))
@@ -1621,7 +1628,7 @@ class xrtGlow(qt.QWidget):
         editor.setText("{0:.2f}".format(position))
         self.customGlWidget.scaleVec[iax] = np.float32(np.power(10, position))
         try:
-            self.customGlWidget.cBox.update_grid()
+            self.customGlWidget.update_coord_grid()
         except AttributeError:
             pass
         self.customGlWidget.glDraw()
@@ -1629,11 +1636,21 @@ class xrtGlow(qt.QWidget):
     def updateScaleFromGL(self, scale):
         if isinstance(scale, (int, float)):
             scale = [scale, scale, scale]
+        self.customGlWidget.scaleVec = np.float32(scale)
         for iaxis, (slider, editor) in \
                 enumerate(zip(self.zoomSliders, self.zoomEditors)):
             value = np.log10(scale[iaxis])
-            slider.setValue(value)
-            editor.setText("{0:.2f}".format(value))
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(value)
+                editor.setText("{0:.2f}".format(value))
+            finally:
+                slider.blockSignals(oldState)
+        try:
+            self.customGlWidget.update_coord_grid()
+        except AttributeError:
+            pass
+        self.customGlWidget.glDraw()
 
     def updateScaleFromQLE(self, editor, slider):
         value = float(re.sub(',', '.', str(editor.text())))
@@ -1767,7 +1784,7 @@ class xrtGlow(qt.QWidget):
         editor.setText("{0:.2f}".format(position))
         if position != 0:
             self.customGlWidget.aPos[iax] = np.float32(position)
-            self.customGlWidget.cBox.update_grid()
+            self.customGlWidget.update_coord_grid()
             self.customGlWidget.glDraw()
 
     def updateGridFromQLE(self, editor, slider):
@@ -1775,11 +1792,18 @@ class xrtGlow(qt.QWidget):
         slider.setValue(value)
 
     def updateGridFromGL(self, aPos):
+        self.customGlWidget.aPos = np.float32(aPos)
         for iaxis, (slider, editor) in\
                 enumerate(zip(self.gridSliders, self.gridEditors)):
             value = aPos[iaxis]
-            slider.setValue(value)
-            editor.setText("{0:.2f}".format(value))
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(value)
+                editor.setText("{0:.2f}".format(value))
+            finally:
+                slider.blockSignals(oldState)
+        self.customGlWidget.update_coord_grid()
+        self.customGlWidget.glDraw()
 
     def glMenu(self, position):
         glw = self.customGlWidget
@@ -2174,7 +2198,7 @@ class xrtGlow(qt.QWidget):
             [off1.x(), off1.y(), off1.z()])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         if hasattr(self.customGlWidget, 'cBox'):
-            self.customGlWidget.cBox.update_grid()
+            self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
 
     def toLocal(self, oeuuid):
@@ -2184,7 +2208,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.tmpOffset = oe.center
-        self.customGlWidget.cBox.update_grid()
+        self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
 
     def toGlobal(self, oeuuid):
@@ -2193,7 +2217,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.coordOffset = list(
                 self.customGlWidget.beamline.oesDict[oeuuid][0].center)
         self.customGlWidget.tVec = np.float32([0, 0, 0])
-        self.customGlWidget.cBox.update_grid()
+        self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
 
     def toBeamLocal(self, oeuuid):
@@ -2242,7 +2266,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.coordOffset = np.float32([0, 0, 0])
         self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.tmpOffset = np.float32(bStart0)
-        self.customGlWidget.cBox.update_grid()
+        self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
 
     def updateCutoffFromQLE(self, editor):
