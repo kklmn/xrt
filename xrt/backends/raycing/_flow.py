@@ -10,8 +10,8 @@ from ._flow_utils import parametrize, format_energy_input
 from .beamline import BeamLine
 
 
-def propagationProcess(q_in, q_out):
-    handler = MessageHandler()
+def propagationProcess(q_in, q_out, with_epics_histograms=False):
+    handler = MessageHandler(with_epics_histograms=with_epics_histograms)
     repeats = 0
     while True:
         try:
@@ -46,8 +46,10 @@ def propagationProcess(q_in, q_out):
                     oe = oeLine[0]
 
                 for func, fkwargs in meth.items():
+                    method = getattr(oe, func)
+                    call_kwargs = handler.prepare_method_kwargs(fkwargs)
                     try:
-                        getattr(oe, func)(**fkwargs)
+                        method(**call_kwargs)
                     except Exception as e:
                         raise
                         print("Error in PropagationProcess\n", e)
@@ -129,13 +131,22 @@ def propagationProcess(q_in, q_out):
 
 
 class MessageHandler:
-    def __init__(self, bl=None):
+    def __init__(self, bl=None, with_epics_histograms=False):
         self.bl = bl
         self.stop = True
         self.needUpdate = False
         self.autoUpdate = True
         self.startEl = None
         self.exit = False
+        self.with_epics_histograms = with_epics_histograms
+
+    def prepare_method_kwargs(self, kwargs):
+        if not self.with_epics_histograms or 'withHistogram' not in kwargs:
+            return kwargs
+
+        kwargs = kwargs.copy()
+        kwargs['withHistogram'] = True
+        return kwargs
 
     def handle_create(self, message):
         objuuid = message.get("uuid")

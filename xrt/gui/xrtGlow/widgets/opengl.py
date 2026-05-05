@@ -23,7 +23,8 @@ from ...commons import gl
 
 from ....backends import raycing
 from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
-                                  orientationArgSet, shapeArgSet, EpicsDevice)
+                                  orientationArgSet, shapeArgSet)
+from ....backends.raycing.epics import EpicsDevice
 from ....backends.raycing import sources as rsources
 from ....backends.raycing import screens as rscreens
 
@@ -143,7 +144,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             self.calc_process = Process(
                     target=propagationProcess,
-                    args=(self.input_queue, self.output_queue))
+                    args=(self.input_queue, self.output_queue,
+                          epicsPrefix is not None))
             self.calc_process.start()
 
             msg_init_bl = {
@@ -783,7 +785,19 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                         {}).get('image')
                 if record is not None:
                     imgHist = np.flipud(msg['histogram'])
-                    record.set(imgHist.flatten())
+                    flatHist = imgHist.flatten()
+                    recordLength = getattr(
+                        self.epicsInterface, 'image_lengths', {}).get(
+                            msg['sender_id'], getattr(record, '_nelm', None))
+                    if recordLength is not None and len(flatHist) > recordLength:
+                        print(
+                            f"Skipping EPICS image update for "
+                            f"{msg['sender_name']}: histogram has "
+                            f"{len(flatHist)} pixels, waveform length is "
+                            f"{recordLength}. Increase imageMaxLength when "
+                            f"creating EpicsDevice.")
+                    else:
+                        record.set(flatHist)
 
             elif 'repeat' in msg:
                 print("Total repeats:", msg['repeat'])
