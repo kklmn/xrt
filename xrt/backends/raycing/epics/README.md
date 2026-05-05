@@ -83,15 +83,15 @@ line parsing can treat the final backslash as escaping the closing quote, so
 the quote becomes part of the path. Prefer one of these forms:
 
 ```powershell
---output "c:\nsls\bmm"
---output "c:\nsls\bmm\."
---output "c:/nsls/bmm/"
+--output "c:\xrt_beamlines\beamline1"
+--output "c:\xrt_beamlines\beamline1\."
+--output "c:/xrt_beamlines/beamline1/"
 ```
 
 Avoid:
 
 ```powershell
---output "c:\nsls\bmm\"
+--output "c:\xrt_beamlines\beamline1\"
 ```
 
 ## Examples
