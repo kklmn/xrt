@@ -54,7 +54,8 @@ pyqt5 = [
 ]
 
 epics = [
-    "softioc"
+    "softioc",
+    "phoebusgen"
 ]
 
 all = [
@@ -62,7 +63,8 @@ all = [
     "PyQtWebEngine",
     "qtpy",
     "qtpynodeeditor",
-    "softioc"
+    "softioc",
+    "phoebusgen"
 ]
 
 
@@ -86,6 +88,7 @@ include = ["xrt*"]
 
 [tool.setuptools.package-data]
 "xrt.backends.raycing" = ["data/*.npz", "data/*.dat", "cl/*.cl"]
+"xrt.backends.raycing.epics" = ["*.md", "*.bob", "*/*.bob"]
 "xrt" = ["*.cl", "*.ico"]
 "xrt.gui" = [
     "*.pyw",

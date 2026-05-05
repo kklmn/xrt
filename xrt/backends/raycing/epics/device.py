@@ -4,9 +4,11 @@ import numpy as np
 from functools import partial
 import re
 
-from .physconsts import SIE0, CH  # analysis:ignore
-from ._sets_units import orientationArgSet, shapeArgSet
-from ._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
+from ..physconsts import SIE0, CH  # analysis:ignore
+from .._sets_units import orientationArgSet, shapeArgSet
+from .._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
+
+DEFAULT_IMAGE_WAVEFORM_LENGTH = 1024 * 1024
 
 def to_valid_var_name(name, default='unnamed'):
     # Replace invalid characters with underscores
@@ -157,7 +159,8 @@ def to_valid_var_name(name, default='unnamed'):
 
 
 class EpicsDevice:
-    def __init__(self, bl, epicsPrefix, epicsMap, callback):
+    def __init__(self, bl, epicsPrefix, epicsMap, callback,
+                 imageMaxLength=None):
         u"""
         Create SoftIOC records for a beamline and connect writable PVs to xrt
         property updates.
@@ -207,6 +210,12 @@ class EpicsDevice:
 
             where ``argName`` is an internal xrt property path.
 
+        *imageMaxLength*: int or None
+            Maximum number of pixels allocated for screen image waveform
+            records. The EPICS waveform length is fixed at IOC startup, while
+            screen ``histShape`` can change at runtime. If omitted, image
+            waveform records reserve space for at least a 1024 x 1024 image,
+            or the initial screen ``histShape`` if it is larger.
 
         Notes
         -----
@@ -221,6 +230,8 @@ class EpicsDevice:
         self.bl = bl
         self.epicsPrefix = epicsPrefix + ":" if epicsPrefix else ""
         self.epicsMap = epicsMap
+        self.imageMaxLength = imageMaxLength
+        self.image_lengths = {}
         self.pv_map = {}
         self.dbl = set()
 
@@ -254,6 +265,9 @@ class EpicsDevice:
         for oeid, oeline in bl.oesDict.items():
             oeObj = oeline[0]
             oename = to_valid_var_name(oeObj.name)
+            oePvFields = set(pvFields)
+            if hasattr(oeObj, 'shine') and hasattr(oeObj, 'nrays'):
+                oePvFields.add('nrays')
 
             self.pv_map[oeid] = {}
 
@@ -284,6 +298,11 @@ class EpicsDevice:
                 pvname = f'{oename}:image'
                 histShape = getattr(oeObj, 'histShape')
                 imageLength = int(histShape[0]*histShape[1])
+                if self.imageMaxLength is not None:
+                    imageLength = max(imageLength, int(self.imageMaxLength))
+                else:
+                    imageLength = max(imageLength,
+                                      DEFAULT_IMAGE_WAVEFORM_LENGTH)
                 if not self.epicsMap or pvname in self.epicsMap:
                     newname = self.epicsMap.get(pvname)
                     if newname is not None:
@@ -293,6 +312,7 @@ class EpicsDevice:
                         length=imageLength
                         )
                     self.pv_map[oeid]['image'] = pv_records[pvname]
+                    self.image_lengths[oeid] = imageLength
 
                 for fIndex, field in enumerate(['width', 'height']):
                     pvname = f'{oename}:histShape:{field}'
@@ -311,7 +331,7 @@ class EpicsDevice:
                             self.pv_map[oeid][f'histShape.{field}'] =\
                                 pv_records[pvname]
 
-            for argName in pvFields:
+            for argName in oePvFields:
                 if argName in ['shape', 'renderStyle']:
                     continue
                 if hasattr(oeObj, argName):
@@ -391,7 +411,8 @@ class EpicsDevice:
                             if newname is not None:
                                 pvname = newname
                             initial_value = getattr(oeObj, argName)
-                            if isinstance(initial_value, (int, float)):  # TODO: process sequence args
+                            if isinstance(initial_value, (int, float,
+                                                         np.number)):  # TODO: process sequence args
                                 pv_records[pvname] = builder.aOut(
                                     pvname,
                                     initial_value=initial_value,
