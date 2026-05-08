@@ -309,25 +309,23 @@ class OEMesh3D():
     vec2 texUV;
     vec4 histColor;
 
-    struct lightSource
-    {
-      vec4 position;
-      vec4 diffuse;
-      vec4 specular;
-      float constantAttenuation, linearAttenuation, quadraticAttenuation;
-      float spotCutoff, spotExponent;
-      vec3 spotDirection;
-    };
-
-    lightSource light0 = lightSource(
-      vec4(0.0,  0.0,  3.0, 0.0),
-      vec4(0.6,  0.6,  0.6, 1.0),
-      vec4(1.0,  1.0,  1.0, 1.0),
-      0.0, 1.0, 0.0,
-      90.0, 0.0,
-      vec3(0.0, 0.0, -1.0)
+    const int lightCount = 8;
+    const vec3 lightDirections[8] = vec3[8](
+      vec3( 1.0,  1.0,  1.0),
+      vec3( 1.0,  1.0, -1.0),
+      vec3( 1.0, -1.0,  1.0),
+      vec3( 1.0, -1.0, -1.0),
+      vec3(-1.0,  1.0,  1.0),
+      vec3(-1.0,  1.0, -1.0),
+      vec3(-1.0, -1.0,  1.0),
+      vec3(-1.0, -1.0, -1.0)
     );
-    vec4 scene_ambient = vec4(0.5, 0.5, 0.5, 1.0);
+    const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
+    const vec3 lightSpecular = vec3(1.0, 1.0, 1.0);
+    const float diffuseScale = 0.22;
+    const float specularScale = 0.75;
+    const float fresnelScale = 0.25;
+    vec4 scene_ambient = vec4(0.48, 0.48, 0.48, 1.0);
 
     struct material
     {
@@ -344,59 +342,30 @@ class OEMesh3D():
       vec3 normalDirection = normalize(varyingNormalDirection);
       vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
                                           w_position));
-      vec3 lightDirection;
-      float attenuation;
-
-      if (0.0 == light0.position.w) // directional light?
-        {
-          attenuation = 1.0; // no attenuation
-          lightDirection = normalize(vec3(light0.position));
-        }
-      else // point light or spotlight (or other kind of light)
-        {
-          vec3 positionToLightSource = -viewDirection;
-          //vec3 positionToLightSource = vec3(light0.position - w_position);
-          float distance = length(positionToLightSource);
-          lightDirection = normalize(positionToLightSource);
-          attenuation = 1.0 / (light0.constantAttenuation
-                               + light0.linearAttenuation * distance
-                               + light0.quadraticAttenuation * distance *
-                               distance);
-
-          if (light0.spotCutoff <= 90.0) // spotlight?
-        {
-          float clampedCosine = max(0.0, dot(-lightDirection,
-                                             light0.spotDirection));
-          if (clampedCosine < cos(radians(light0.spotCutoff)))
-            {
-              attenuation = 0.0;
-            }
-          else
-            {
-              attenuation = attenuation * pow(clampedCosine,
-                                              light0.spotExponent);
-            }
-        }
-        }
 
       vec3 ambientLighting = vec3(scene_ambient) * vec3(frontMaterial.ambient);
 
-      vec3 diffuseReflection = attenuation
-        * vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
-        * max(0.0, dot(normalDirection, lightDirection));
-
-      vec3 specularReflection;
-      if (dot(normalDirection, lightDirection) < 0.0)
+      vec3 diffuseReflection = vec3(0.0, 0.0, 0.0);
+      vec3 specularReflection = vec3(0.0, 0.0, 0.0);
+      float gloss = max(frontMaterial.shininess * 1.6, 120.0);
+      for (int i = 0; i < lightCount; ++i)
         {
-          specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+          vec3 lightDirection = normalize(lightDirections[i]);
+          float normalLight = max(0.0, dot(normalDirection, lightDirection));
+          diffuseReflection += lightDiffuse * vec3(frontMaterial.diffuse) *
+            normalLight;
+          if (normalLight > 0.0)
+            {
+              specularReflection += lightSpecular *
+                vec3(frontMaterial.specular) *
+                pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
+                                 viewDirection)), gloss);
+            }
         }
-      else // light source on the right side
-        {
-          specularReflection = attenuation * vec3(light0.specular) *
-          vec3(frontMaterial.specular) *
-          pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
-                           viewDirection)), frontMaterial.shininess);
-        }
+      diffuseReflection *= diffuseScale;
+      specularReflection *= specularScale;
+      specularReflection += vec3(frontMaterial.specular) * fresnelScale *
+        pow(1.0 - max(0.0, dot(normalDirection, viewDirection)), 5.0);
      texUV = vec2((localPos.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
                  (localPos.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
 
@@ -573,26 +542,23 @@ class OEMesh3D():
 
     uniform mat4 v_inv;
 
-    struct lightSource
-    {
-      vec4 position;
-      vec4 diffuse;
-      vec4 specular;
-      float constantAttenuation, linearAttenuation, quadraticAttenuation;
-      float spotCutoff, spotExponent;
-      vec3 spotDirection;
-    };
-
-    lightSource light0 = lightSource(
-      vec4(0.0,  0.0,  3.0, 0.0),
-      vec4(0.6,  0.6,  0.6, 1.0),
-      vec4(1.0,  1.0,  1.0, 1.0),
-      0.0, 1.0, 0.0,
-      90.0, -0.7,
-      vec3(0.0, 0.0, -1.0)
+    const int lightCount = 8;
+    const vec3 lightDirections[8] = vec3[8](
+      vec3( 1.0,  1.0,  1.0),
+      vec3( 1.0,  1.0, -1.0),
+      vec3( 1.0, -1.0,  1.0),
+      vec3( 1.0, -1.0, -1.0),
+      vec3(-1.0,  1.0,  1.0),
+      vec3(-1.0,  1.0, -1.0),
+      vec3(-1.0, -1.0,  1.0),
+      vec3(-1.0, -1.0, -1.0)
     );
-
-    vec4 scene_ambient = vec4(0.5, 0.5, 0.5, 1.0);
+    const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
+    const vec3 lightSpecular = vec3(1.0, 1.0, 1.0);
+    const float diffuseScale = 0.08;
+    const float specularScale = 1.15;
+    const float fresnelScale = 0.20;
+    vec4 scene_ambient = vec4(0.28, 0.28, 0.28, 1.0);
 
     struct material
     {
@@ -610,59 +576,30 @@ class OEMesh3D():
       vec3 normalDirection = normalize(varyingNormalDirection);
       vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
                                           w_position));
-      vec3 lightDirection;
-      float attenuation;
-
-      if (0.0 == light0.position.w) // directional light?
-        {
-          attenuation = 1.0; // no attenuation
-          lightDirection = normalize(vec3(light0.position));
-        }
-      else // point light or spotlight (or other kind of light)
-        {
-          vec3 positionToLightSource = -viewDirection;
-          //vec3 positionToLightSource = vec3(light0.position - w_position);
-          float distance = length(positionToLightSource);
-          lightDirection = normalize(positionToLightSource);
-          attenuation = 1.0 / (light0.constantAttenuation
-                               + light0.linearAttenuation * distance
-                               + light0.quadraticAttenuation * distance *
-                               distance);
-
-          if (light0.spotCutoff <= 90.0) // spotlight?
-        {
-          float clampedCosine = max(0.0, dot(-lightDirection,
-                                             light0.spotDirection));
-          if (clampedCosine < cos(radians(light0.spotCutoff)))
-            {
-              attenuation = 0.0;
-            }
-          else
-            {
-              attenuation = attenuation * pow(clampedCosine,
-                                              light0.spotExponent);
-            }
-        }
-        }
 
       vec3 ambientLighting = DiffuseColor * vec3(frontMaterial.ambient);
 
-      vec3 diffuseReflection = attenuation
-        * vec3(light0.diffuse) * vec3(frontMaterial.diffuse) * DiffuseColor
-        * max(0.0, dot(normalDirection, lightDirection));
-
-      vec3 specularReflection;
-      if (dot(normalDirection, lightDirection) < 0.0)
+      vec3 diffuseReflection = vec3(0.0, 0.0, 0.0);
+      vec3 specularReflection = vec3(0.0, 0.0, 0.0);
+      float gloss = max(frontMaterial.shininess * 1.6, 120.0);
+      for (int i = 0; i < lightCount; ++i)
         {
-          specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+          vec3 lightDirection = normalize(lightDirections[i]);
+          float normalLight = max(0.0, dot(normalDirection, lightDirection));
+          diffuseReflection += lightDiffuse * vec3(frontMaterial.diffuse) *
+            DiffuseColor * normalLight;
+          if (normalLight > 0.0)
+            {
+              specularReflection += lightSpecular *
+                vec3(frontMaterial.specular) *
+                pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
+                                 viewDirection)), gloss);
+            }
         }
-      else // light source on the right side
-        {
-          specularReflection = attenuation * vec3(light0.specular) *
-          vec3(frontMaterial.specular) *
-          pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
-                           viewDirection)), frontMaterial.shininess);
-        }
+      diffuseReflection *= diffuseScale;
+      specularReflection *= specularScale;
+      specularReflection += vec3(frontMaterial.specular) * fresnelScale *
+        pow(1.0 - max(0.0, dot(normalDirection, viewDirection)), 5.0);
 
         fragColor = vec4(ambientLighting + diffuseReflection +
                          specularReflection, 1.0);
@@ -1378,7 +1315,7 @@ class OEMesh3D():
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
-        if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):  # or isAperture):
+        if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):
             if oeShape == 'round':  # Side surface
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
@@ -1409,7 +1346,7 @@ class OEMesh3D():
                 allSurfaces[:, [0, 1, 2]] = allSurfaces[:, [2, 1, 0]]
 #                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
             else:
-                allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+                allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
 #                allNormals[:, [1, 2]] = allNormals[:, [2 ,1]]
         return allSurfaces, allNormals, allIndices
 
@@ -1474,15 +1411,15 @@ class OEMesh3D():
             allSurfaces, allNormals, allIndices =\
                 self.generate_disk_ring_segment(
                     rmin=rmin, rmax=rmax, thickness=self.apertureThickness)
-            allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+            allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
         elif isinstance(self.oe, rapts.SiemensStar):
             radius = self.oe.rx
             nSpokes = self.oe.nSpokes
             phi0 = self.oe.phi0 + 0.5*np.pi
             allSurfaces, allNormals, allIndices =\
                 self.siemens_star(radius, nSpokes, phi0,
-                              thickness=self.apertureThickness)
-            allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+                                  thickness=self.apertureThickness)
+            allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
         else:
             xLimits, yLimits = self.get_limits(nsIndex, is2ndXtal, autoSize)
             self.xLimits = copy.deepcopy(xLimits)
@@ -1756,12 +1693,13 @@ class OEMesh3D():
         shader.bind()
         vao.bind()
 
-        shader.setUniformValue("model", mMod*oeOrientation)
+        model = mMod*oeOrientation
+        shader.setUniformValue("model", model)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
 
-        mvp = mMod*oeOrientation*mView
-        shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
+#        mvp = mMod*oeOrientation*mView
+        shader.setUniformValue("m_3x3_inv_transp", model.normalMatrix())
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
         shader.setUniformValue("texlimitsx", qt.QVector2D(*xLimits))
@@ -1828,7 +1766,8 @@ class OEMesh3D():
 
         self.vao[nsIndex].bind()
 
-        shader.setUniformValue("model", mMod*oeOrientation)
+        model = mMod*oeOrientation
+        shader.setUniformValue("model", model)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
         mModScale = qt.QMatrix4x4()
@@ -1839,8 +1778,8 @@ class OEMesh3D():
         mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
         shader.setUniformValue("scale", mModScale)
 
-        mvp = mMod*mView
-        shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
+#        mvp = mMod*mView
+        shader.setUniformValue("m_3x3_inv_transp", model.normalMatrix())
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
         mat = 'Si'
