@@ -175,6 +175,7 @@ class MessageHandler:
         objuuid = message.get("uuid")
         object_type = message.get("object_type")
         kwargs = message.get("kwargs", {})
+        modified_kwargs = kwargs.copy()
         if object_type == 'oe':
             eLine = self.bl.oesDict.get(objuuid)
 
@@ -221,12 +222,9 @@ class MessageHandler:
                 else:
                     modifiedEl = objuuid
 
-                if self.needUpdate:
-                    keys = list(self.bl.flowU.keys())
-                    if self.startEl is None:
-                        self.startEl = modifiedEl
-                    elif keys.index(modifiedEl) < keys.index(self.startEl):
-                        self.startEl = modifiedEl
+                if not (len(modified_kwargs) == 1 and
+                        (modified_kwargs.keys() & renderOnlyArgSet)):
+                    self._set_start_element(modifiedEl)
         elif object_type == 'mat':
             # element = self.bl.materialsDict.get(objuuid)
             # We reinstantiate the material object instead of updating. Single-
@@ -359,7 +357,9 @@ class MessageHandler:
     def handle_run_once(self, message):
         print("Starting processing loop.")
         self.needUpdate = True
-        self.startEl = None
+        startEl = message.get('start_el')
+        if startEl is not None:
+            self.startEl = startEl
 
     def handle_auto_update(self, message):
         # print("Starting processing loop.")
@@ -376,6 +376,15 @@ class MessageHandler:
     def handle_stop(self, message):
         print("Stopping processing loop.")
         self.stop = True
+
+    def _set_start_element(self, oeid):
+        keys = list(self.bl.flowU.keys())
+        if oeid not in keys:
+            return
+        if self.startEl is None or self.startEl not in keys:
+            self.startEl = oeid
+        elif keys.index(oeid) < keys.index(self.startEl):
+            self.startEl = oeid
 
     def process_message(self, message):
         # Build a dispatch dictionary mapping commands to methods.

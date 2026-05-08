@@ -22,6 +22,7 @@ from ....backends.raycing.myopencl import ALL_CL_DEVICES
 from ....multipro import GenericProcessOrThread as GP
 from ....runner import RunCardVals
 from ....plotter import deserialize_plots
+from .scan import ScanRangeDialog
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
@@ -32,6 +33,7 @@ class InstanceInspector(qt.QDialog):
     This is a basic version of element editor.
     """
     propertiesChanged = qt.Signal(dict)
+    scanCreated = qt.Signal(dict)
 
     def __init__(self, parent=None, dataDict={}, initDict={},
                  epicsDict={}, viewOnly=False, beamLine=None,
@@ -63,6 +65,7 @@ class InstanceInspector(qt.QDialog):
 
         elementId = dataDict.get('uuid')
         self.elementId = elementId
+        self.elementName = dataDict.get('name', elementId)
         epicsTree = None
         if epicsDict:
             epicsTree = epicsDict.pv_map.get(elementId)
@@ -286,6 +289,7 @@ class InstanceInspector(qt.QDialog):
             canvasSplitter.addWidget(widgetR)
 
         self.edited_data = {}
+        self.scanItems = []
 
     def add_blades_params(self, parentItem, value, epicsTree):
         blades = value if isinstance(value, dict) else\
@@ -469,13 +473,43 @@ class InstanceInspector(qt.QDialog):
         menu = qt.QMenu(self.table)
         copy_action = qt.QAction("Copy value", self)
         menu.addAction(copy_action)
+        scan_action = None
+
+        rowParent = index.parent()
+        if rowParent.isValid():
+            keyIndex = index.sibling(index.row(), 0)
+            valueIndex = index.sibling(index.row(), 1)
+            keyItem = self.model.itemFromIndex(keyIndex)
+            valueItem = self.model.itemFromIndex(valueIndex)
+            if keyItem is not None and valueItem is not None:
+                propName = str(keyItem.text())
+                canScan = not (propName.endswith('rbk') or
+                               propName in ['uuid', 'name'] or
+                               propName in raycing.diagnosticArgs)
+                if canScan:
+                    scan_action = qt.QAction("Create scan...", self)
+                    menu.addAction(scan_action)
 
         def copy_value():
             value = self.model.itemFromIndex(index).text()
             qt.QApplication.clipboard().setText(value)
 
+        def create_scan():
+            dialog = ScanRangeDialog(self.elementId, propName,
+                                     valueItem.text(),
+                                     target_name=self.elementName,
+                                     parent=self)
+            dialog.scanCreated.connect(self.add_scan_item)
+            dialog.exec_()
+
         copy_action.triggered.connect(copy_value)
+        if scan_action is not None:
+            scan_action.triggered.connect(create_scan)
         menu.exec_(self.table.viewport().mapToGlobal(position))
+
+    def add_scan_item(self, item):
+        self.scanItems.append(copy.deepcopy(item))
+        self.scanCreated.emit(item)
 
     def on_ok_clicked(self):
         self.apply_changes()  # apply changes before accepting
