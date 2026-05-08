@@ -446,7 +446,7 @@ class ScanInstructionDialog(qt.QDialog):
                     'property': prop.get('name'),
                     'value': value,
                     }
-            target_item.setExpanded(True)
+            target_item.setExpanded(False)
         self.propertyTree.resizeColumnToContents(0)
 
     def _selection_changed(self):
