@@ -19,6 +19,7 @@ from ....backends import raycing
 from ....backends.raycing import oes as roes
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import materials as rmats
+from ....backends.raycing import sources as rsources
 from ....backends.raycing.sources import Beam
 
 try:
@@ -521,7 +522,7 @@ class OEMesh3D():
     void main()
     {
         vec4 scaledPos = vec4(inPosition, 1.0) * scale;
-        w_position = model * vec4(scaledPos + vec4(instancePosition, 1.0));
+        w_position = model * vec4(scaledPos.xyz + instancePosition, 1.0);
 
         gl_Position = projection * view * w_position;
 
@@ -556,7 +557,7 @@ class OEMesh3D():
     const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
     const vec3 lightSpecular = vec3(1.0, 1.0, 1.0);
     const float diffuseScale = 0.08;
-    const float specularScale = 1.15;
+    const float specularScale = 0.55;
     const float fresnelScale = 0.20;
     vec4 scene_ambient = vec4(0.28, 0.28, 0.28, 1.0);
 
@@ -1575,36 +1576,141 @@ class OEMesh3D():
             self.emptyTex.destroy()
             self.emptyTex = None
 
+    def _resolve_magnet_shape(self, magnetShape):
+        if magnetShape:
+            return magnetShape
+        if self.parent is not None:
+            parentShape = getattr(self.parent, 'magnetShape', None)
+            if parentShape:
+                return parentShape
+        return {}
+
+    def _magnet_dimensions(self, magnetShape):
+        mag_dx = float(magnetShape.get('dx', 40))
+        mag_dy = self._magnet_pole_pitch(magnetShape) * 0.75
+        mag_dz = float(magnetShape.get('dz', 10))
+        gap = float(magnetShape.get('gap', 10))
+        if isinstance(self.oe, rsources.BendingMagnet) and\
+                not getattr(self.oe, 'isMPW', False):
+            bm_dy = self._bending_magnet_length_from_acceptance()
+            if bm_dy is not None:
+                mag_dy = bm_dy
+        return mag_dx, mag_dy, mag_dz, gap
+
+    def _magnet_pole_pitch(self, magnetShape):
+        period = float(getattr(self.oe, 'period',
+                               magnetShape.get('period', 40)))
+        num_poles = float(getattr(self.oe, 'n', 0.5)) * 2.0
+        return 0.5 * period if num_poles > 1.0 else period
+
+    def _bending_magnet_length_from_acceptance(self):
+        rho = getattr(self.oe, 'rho', None)
+        if rho is None:
+            rho = getattr(self.oe, 'ro', None)
+        if rho is None or rho == 0:
+            return None
+
+        xPrimeMax = getattr(self.oe, 'xPrimeMax', None)
+        if xPrimeMax is None:
+            return None
+
+        if isinstance(xPrimeMax, (tuple, list, np.ndarray)):
+            if len(xPrimeMax) < 2:
+                angle_span = abs(float(xPrimeMax[0])) * 2e-3
+            else:
+                angle_span = abs(float(xPrimeMax[-1]) -
+                                 float(xPrimeMax[0])) * 1e-3
+        else:
+            angle_span = abs(float(xPrimeMax)) * 2e-3
+
+        if angle_span <= 0:
+            return None
+        return abs(float(rho)) * 1e3 * angle_span
+
+    def _uses_bending_magnet_arc(self, num_poles):
+        return isinstance(self.oe, rsources.BendingMagnet) and\
+            not getattr(self.oe, 'isMPW', False) and\
+            np.isclose(num_poles, 1.0)
+
+    def _magnet_polarity_sign(self):
+        for attrName in ('B0', 'B', 'B0y', 'Ky', 'K', 'rho', 'ro'):
+            try:
+                value = float(getattr(self.oe, attrName))
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if value != 0:
+                return 1.0 if value > 0 else -1.0
+        return 1.0
+
+    def generate_bending_magnet_mesh(self, magnetShape):
+        mag_dx, mag_dy, mag_dz, _ = self._magnet_dimensions(magnetShape)
+        rho = getattr(self.oe, 'rho', None)
+        if rho is None:
+            rho = getattr(self.oe, 'ro', None)
+        if rho is None or rho == 0:
+            raise ValueError("Bending magnet radius is not defined")
+
+        radius = abs(float(rho)) * 1e3  # rho is in meters, scene is in mm.
+        if radius <= 0:
+            raise ValueError("Bending magnet radius must be positive")
+
+        half_width = abs(mag_dx) * 0.5
+        rmin = max(radius - half_width, radius * 1e-9)
+        rmax = radius + half_width
+        arc_angle = abs(mag_dy) / radius
+        if arc_angle <= 0:
+            raise ValueError("Bending magnet arc length must be positive")
+
+        angular_steps = max(8, min(96, int(abs(mag_dy) / 2.) + 1))
+        vertices, normals, indices = self.generate_disk_ring_segment(
+            rmin=rmin, rmax=rmax,
+            phimin=-0.5*arc_angle, phimax=0.5*arc_angle,
+            thickness=abs(mag_dz),
+            radial_steps=1, angular_steps=angular_steps,
+            dtype=np.float64)
+
+        bend_sign = 1.0 if float(rho) >= 0 else -1.0
+        vertices[:, 0] = bend_sign * (radius - vertices[:, 0])
+        normals[:, 0] *= -bend_sign
+
+        return (vertices[indices].astype(np.float32),
+                normals[indices].astype(np.float32))
+
     def generate_instance_data(self, num, magnetShape):
-        period = getattr(self.oe, 'period',
-                         magnetShape.get('period', 40))
-        gap = magnetShape.get('gap', 10)
-        mag_dz = magnetShape.get('dz', 20)
+        magnetShape = self._resolve_magnet_shape(magnetShape)
+        polePitch = self._magnet_pole_pitch(magnetShape)
+        _, _, mag_dz, gap = self._magnet_dimensions(magnetShape)
 
         instancePositions = np.zeros((int(num*2), 3), dtype=np.float32)
         instanceColors = np.zeros((int(num*2), 3), dtype=np.float32)
+        polaritySign = self._magnet_polarity_sign()
 
         for n in range(int(num)):
             pos_x = 0
             dy = n - 0.5*num if num > 1 else 0
-            pos_y = period * dy
+            pos_y = polePitch * dy
 
             instancePositions[2*n] = (pos_x, pos_y, gap+0.5*mag_dz)
             instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*mag_dz)
-            isEven = (n % 2) == 0
-            instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else\
+            topIsRed = ((n % 2) == 0) == (polaritySign > 0)
+            instanceColors[2*n] = (1.0, 0.0, 0.0) if topIsRed else\
                 (0.0, 0.0, 1.0)
-            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if isEven else\
+            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if topIsRed else\
                 (1.0, 0.0, 0.0)
 
         return instancePositions, instanceColors
 
     def prepare_magnets(self, shape={}, updateMesh=False):
+        shape = self._resolve_magnet_shape(shape)
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
         nsIndex = 0  # to unify syntax
 
         num_poles = getattr(self.oe, 'n', 0.5) * 2
+        useBmArc = self._uses_bending_magnet_arc(num_poles)
+        baseWasArc = getattr(self, 'magnet_base_is_arc', None)
+        rebuildBase = (not updateMesh) or useBmArc or baseWasArc != useBmArc or\
+            self.vbo_vertices.get(nsIndex) is None
 
         if updateMesh:
             if self.vbo_positions.get(nsIndex) is not None:
@@ -1615,14 +1721,35 @@ class OEMesh3D():
                 self.vbo_colors[nsIndex].destroy()
                 self.vbo_colors[nsIndex] = None
                 gl.glGetError()
-        else:
-            self.vbo_vertices[nsIndex] = create_qt_buffer(
-                    self.cube_vertices.reshape(-1, 6)[:, :3].copy())
-            self.vbo_normals[nsIndex] = create_qt_buffer(
-                    self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+            if rebuildBase:
+                if self.vbo_vertices.get(nsIndex) is not None:
+                    self.vbo_vertices[nsIndex].destroy()
+                    self.vbo_vertices[nsIndex] = None
+                    gl.glGetError()
+                if self.vbo_normals.get(nsIndex) is not None:
+                    self.vbo_normals[nsIndex].destroy()
+                    self.vbo_normals[nsIndex] = None
+                    gl.glGetError()
+
+        if rebuildBase:
+            if useBmArc:
+                vertices, normals = self.generate_bending_magnet_mesh(shape)
+                self.vbo_vertices[nsIndex] = create_qt_buffer(vertices)
+                self.vbo_normals[nsIndex] = create_qt_buffer(normals)
+                self.magnet_vertex_count = len(vertices)
+                self.magnet_scale_in_shader = False
+            else:
+                self.vbo_vertices[nsIndex] = create_qt_buffer(
+                        self.cube_vertices.reshape(-1, 6)[:, :3].copy())
+                self.vbo_normals[nsIndex] = create_qt_buffer(
+                        self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+                self.magnet_vertex_count = 36
+                self.magnet_scale_in_shader = True
+            self.magnet_base_is_arc = useBmArc
 
         instancePositions, instanceColors = self.generate_instance_data(
                 num_poles, shape)
+        self.magnet_instance_count = len(instancePositions)
 
         self.vbo_positions[nsIndex] = create_qt_buffer(
                 instancePositions.copy())
@@ -1749,6 +1876,7 @@ class OEMesh3D():
                        isSelected=False, shader=None):
         if shader is None:
             return
+        shape = self._resolve_magnet_shape(shape)
         nsIndex = 0
 
         shader.bind()
@@ -1772,10 +1900,9 @@ class OEMesh3D():
         shader.setUniformValue("projection", mProj)
         mModScale = qt.QMatrix4x4()
         mModScale.setToIdentity()
-        mag_dx = shape.get('dx', 40)
-        mag_dy = getattr(self.oe, 'period', shape.get('dy', 40)) * 0.75  # TODO
-        mag_dz = shape.get('dz', 10)
-        mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
+        if getattr(self, 'magnet_scale_in_shader', True):
+            mag_dx, mag_dy, mag_dz, _ = self._magnet_dimensions(shape)
+            mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
         shader.setUniformValue("scale", mModScale)
 
 #        mvp = mMod*mView
@@ -1793,7 +1920,11 @@ class OEMesh3D():
         shader.setUniformValue("frontMaterial.specular", specular_in)
         shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
-        gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, int(self.num_poles*2))
+        vertex_count = getattr(self, 'magnet_vertex_count', 36)
+        instance_count = getattr(
+            self, 'magnet_instance_count', int(self.num_poles*2))
+        gl.glDrawArraysInstanced(
+            gl.GL_TRIANGLES, 0, vertex_count, instance_count)
         self.vao[nsIndex].release()
         shader.release()
 

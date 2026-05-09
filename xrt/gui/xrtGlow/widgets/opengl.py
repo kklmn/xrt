@@ -561,6 +561,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 elif arg0 in shapeArgSet:
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
+                elif is_source(updObj) and (
+                        arg0 in rsources.magneticStructureArgSet or
+                        arg0 in rsources.sourceLimitsArgSet):
+                    if oeid not in self.needMeshUpdate:
+                        self.needMeshUpdate.append(oeid)
                 elif arg0 in {'name'}:
                     if self.parent is not None:
                         self.parent.updateNames()
