@@ -768,10 +768,40 @@ class OEMesh3D():
                                         rot[0][1], rot[1][1], rot[2][1], tr[1],
                                         rot[0][2], rot[1][2], rot[2][2], tr[2],
                                         0.0, 0.0, 0.0, 1.0)
-        else:  # TODO: source rotation
-            posMatr = qt.QMatrix4x4()
-            posMatr.translate(*oe.center)
-            orientation = posMatr
+        else:
+            if OEMesh3D._has_unresolved_auto(oe):
+                return qt.QMatrix4x4()
+
+            lb = Beam(nrays=4)
+            lb.x[1] = lb.y[2] = lb.z[3] = 1.
+
+            pitch = getattr(oe, 'pitch', 0)
+            roll = getattr(oe, 'roll', 0)
+            yaw = getattr(oe, 'yaw', 0)
+            if pitch or roll or yaw:
+                raycing.rotate_beam(
+                    lb, pitch=pitch, roll=roll, yaw=yaw, skip_abc=True)
+
+            center = getattr(oe, 'center', None)
+            beamLine = getattr(oe, 'bl', None)
+            if beamLine is not None:
+                raycing.virgin_local_to_global(
+                    beamLine, lb, center, skip_abc=True)
+            elif center is not None:
+                lb.x += center[0]
+                lb.y += center[1]
+                lb.z += center[2]
+
+            tr = np.array([lb.x[0], lb.y[0], lb.z[0]])
+
+            rot = []
+            for i in range(3):
+                rot.append(np.array(
+                    [lb.x[i+1], lb.y[i+1], lb.z[i+1]]) - tr)
+            orientation = qt.QMatrix4x4(rot[0][0], rot[1][0], rot[2][0], tr[0],
+                                        rot[0][1], rot[1][1], rot[2][1], tr[1],
+                                        rot[0][2], rot[1][2], rot[2][2], tr[2],
+                                        0.0, 0.0, 0.0, 1.0)
 
         return orientation
 
@@ -1969,13 +1999,6 @@ class OEMesh3D():
         if not self.vao:
             return
 
-        rPitch = getattr(self.oe, 'pitch', 0)
-        rYaw = getattr(self.oe, 'yaw', 0)
-
-        rotOffsets = qt.QMatrix4x4()
-        rotOffsets.rotate(np.degrees(rYaw), 0, 0, 1)
-        rotOffsets.rotate(-np.degrees(rPitch), 1, 0, 0)
-
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
 
@@ -2009,7 +2032,7 @@ class OEMesh3D():
 
             arrayRoll = qt.QMatrix4x4()
             arrayRoll.rotate(arrayDef.get('roll', 0.0), 0, 1, 0)
-            oeOrientation = self.transMatrix[0] * rotOffsets * arrayRoll
+            oeOrientation = self.transMatrix[0] * arrayRoll
 
             vao.bind()
 

@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Beams type="prop">
+		<None type="flat"></None>
+		<undulator01_global type="flat"></undulator01_global>
+		<screen01_local type="flat"></screen01_local>
+		<undulator02_global type="flat"></undulator02_global>
+		<screen02_local type="flat"></screen02_local>
+		<bendingMagnet01_global type="flat"></bendingMagnet01_global>
+		<screen03_local type="flat"></screen03_local>
+		<rectangularAperture01_local type="flat"></rectangularAperture01_local>
+	</Beams>
+	<Materials type="prop">
+	</Materials>
+	<BeamLine type="value">
+		<properties type="prop">
+			<azimuth type="param">0.0</azimuth>
+			<height type="param">0.0</height>
+			<alignE type="param">auto</alignE>
+			<fileName type="param">None</fileName>
+			<name type="param">BeamLine</name>
+			<description type="param">None</description>
+		</properties>
+		<_object type="param">xrt.backends.raycing.BeamLine</_object>
+		<undulator01 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">undulator01</name>
+				<center type="param">[10.0, 500.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<yaw type="param">-0.04363323129985824</yaw>
+				<nrays type="param">100000</nrays>
+				<eE type="param">6.0</eE>
+				<eI type="param">0.1</eI>
+				<eEspread type="param">0.0</eEspread>
+				<eSigmaX type="param">94.86832980505137</eSigmaX>
+				<eSigmaZ type="param">4.47213595499958</eSigmaZ>
+				<eEpsilonX type="param">1.0</eEpsilonX>
+				<eEpsilonZ type="param">0.01</eEpsilonZ>
+				<betaX type="param">9.0</betaX>
+				<betaZ type="param">2.0</betaZ>
+				<xPrimeMax type="param">0.01</xPrimeMax>
+				<zPrimeMax type="param">0.01</zPrimeMax>
+				<xPrimeMaxAutoReduce type="param">True</xPrimeMaxAutoReduce>
+				<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
+				<distE type="param">eV</distE>
+				<targetE type="param">None</targetE>
+				<eMin type="param">9000</eMin>
+				<eMax type="param">9100</eMax>
+				<K type="param">0.0</K>
+				<Kx type="param">0</Kx>
+				<Ky type="param">1.0</Ky>
+				<B0x type="param">0.21419493033966502</B0x>
+				<B0y type="param">0</B0y>
+				<period type="param">50</period>
+				<n type="param">5</n>
+				<phaseDeg type="param">0</phaseDeg>
+				<taper type="param">None</taper>
+				<R0 type="param">None</R0>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+				<gp type="param">1e-6</gp>
+				<targetOpenCL type="param">auto</targetOpenCL>
+				<precisionOpenCL type="param">auto</precisionOpenCL>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.synchr.Undulator</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<toGlobal type="param">True</toGlobal>
+					<withAmplitudes type="param">True</withAmplitudes>
+					<fixedEnergy type="param">False</fixedEnergy>
+					<wave type="param">None</wave>
+					<accuBeam type="param">None</accuBeam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.synchr.Undulator.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">undulator01_global</beamGlobal>
+				</output>
+			</shine>
+		</undulator01>
+		<screen01 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">screen01</name>
+				<center type="param">[0.0, 1500.0, 0.0]</center>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<histShape type="param">[256, 256]</histShape>
+			</properties>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">undulator01_global</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+					<withHistogram type="param">False</withHistogram>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">screen01_local</beamLocal>
+				</output>
+			</expose>
+		</screen01>
+		<undulator02 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">undulator02</name>
+				<center type="param">[10.0, -500.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<yaw type="param">0.04363323129985824</yaw>
+				<nrays type="param">100000</nrays>
+				<eE type="param">6.0</eE>
+				<eI type="param">0.1</eI>
+				<eEspread type="param">0.0</eEspread>
+				<eSigmaX type="param">94.86832980505137</eSigmaX>
+				<eSigmaZ type="param">4.47213595499958</eSigmaZ>
+				<eEpsilonX type="param">1.0</eEpsilonX>
+				<eEpsilonZ type="param">0.01</eEpsilonZ>
+				<betaX type="param">9.0</betaX>
+				<betaZ type="param">2.0</betaZ>
+				<xPrimeMax type="param">0.01</xPrimeMax>
+				<zPrimeMax type="param">0.01</zPrimeMax>
+				<xPrimeMaxAutoReduce type="param">True</xPrimeMaxAutoReduce>
+				<zPrimeMaxAutoReduce type="param">True</zPrimeMaxAutoReduce>
+				<distE type="param">eV</distE>
+				<targetE type="param">None</targetE>
+				<eMin type="param">9000</eMin>
+				<eMax type="param">9100</eMax>
+				<K type="param">0.0</K>
+				<Kx type="param">1.0</Kx>
+				<Ky type="param">1.0</Ky>
+				<B0x type="param">0.21419493033966502</B0x>
+				<B0y type="param">0</B0y>
+				<period type="param">50</period>
+				<n type="param">5</n>
+				<phaseDeg type="param">0</phaseDeg>
+				<taper type="param">None</taper>
+				<R0 type="param">None</R0>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+				<gp type="param">1e-6</gp>
+				<targetOpenCL type="param">auto</targetOpenCL>
+				<precisionOpenCL type="param">auto</precisionOpenCL>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.synchr.Undulator</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<toGlobal type="param">True</toGlobal>
+					<withAmplitudes type="param">True</withAmplitudes>
+					<fixedEnergy type="param">False</fixedEnergy>
+					<wave type="param">None</wave>
+					<accuBeam type="param">None</accuBeam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.synchr.Undulator.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">undulator02_global</beamGlobal>
+				</output>
+			</shine>
+		</undulator02>
+		<screen02 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">screen02</name>
+				<center type="param">[0.0, 1500.0, 0.0]</center>
+				<x type="param">[1.0, -0.0, 0.0]</x>
+				<z type="param">[0.0, 0.0, 1.0]</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<histShape type="param">[256, 256]</histShape>
+			</properties>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">undulator02_global</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+					<withHistogram type="param">False</withHistogram>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">screen02_local</beamLocal>
+				</output>
+			</expose>
+		</screen02>
+		<bendingMagnet01 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">bendingMagnet01</name>
+				<center type="param">(0, 0, 0)</center>
+				<pitch type="param">0</pitch>
+				<yaw type="param">0</yaw>
+				<nrays type="param">100000</nrays>
+				<eE type="param">6.0</eE>
+				<eI type="param">0.1</eI>
+				<eEspread type="param">0.0</eEspread>
+				<eSigmaX type="param">None</eSigmaX>
+				<eSigmaZ type="param">None</eSigmaZ>
+				<eEpsilonX type="param">1.0</eEpsilonX>
+				<eEpsilonZ type="param">0.01</eEpsilonZ>
+				<betaX type="param">9.0</betaX>
+				<betaZ type="param">2.0</betaZ>
+				<xPrimeMax type="param">10</xPrimeMax>
+				<zPrimeMax type="param">0.01</zPrimeMax>
+				<distE type="param">eV</distE>
+				<eMin type="param">9000</eMin>
+				<eMax type="param">9100</eMax>
+				<B0 type="param">1.</B0>
+				<rho type="param">None</rho>
+				<R0 type="param">None</R0>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.BendingMagnet</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<toGlobal type="param">True</toGlobal>
+					<withAmplitudes type="param">True</withAmplitudes>
+					<fixedEnergy type="param">False</fixedEnergy>
+					<accuBeam type="param">None</accuBeam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.BendingMagnet.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">bendingMagnet01_global</beamGlobal>
+				</output>
+			</shine>
+		</bendingMagnet01>
+		<rectangularAperture01 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">rectangularAperture01</name>
+				<center type="param">[0, 1200, 0]</center>
+				<blades type="param">{'left': -5, 'right': 5, 'bottom': -5, 'top': 5}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">bendingMagnet01_global</beam>
+					<needNewGlobal type="param">False</needNewGlobal>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">rectangularAperture01_local</beamLocal>
+				</output>
+			</propagate>
+		</rectangularAperture01>
+		<screen03 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">screen03</name>
+				<center type="param">[0, 1500, 0]</center>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+				<limPhysX type="param">None</limPhysX>
+				<limPhysY type="param">None</limPhysY>
+				<cLimits type="param">None</cLimits>
+				<histShape type="param">[256, 256]</histShape>
+			</properties>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">bendingMagnet01_global</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+					<withHistogram type="param">False</withHistogram>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">screen03_local</beamLocal>
+				</output>
+			</expose>
+		</screen03>
+	</BeamLine>
+	<FigureErrors type="prop">
+	</FigureErrors>
+	<plots type="value">
+	</plots>
+	<run_ray_tracing type="prop">
+		<plots type="param">plots</plots>
+		<repeats type="param">1</repeats>
+		<updateEvery type="param">1</updateEvery>
+		<pickleEvery type="param">None</pickleEvery>
+		<energyRange type="param">None</energyRange>
+		<backend type="param">raycing</backend>
+		<beamLine type="param">BeamLine</beamLine>
+		<threads type="param">1</threads>
+		<processes type="param">1</processes>
+		<generator type="param">None</generator>
+		<generatorArgs type="param">[]</generatorArgs>
+		<generatorKWargs type="param">auto</generatorKWargs>
+		<globalNorm type="param">0</globalNorm>
+		<afterScript type="param">None</afterScript>
+		<afterScriptArgs type="param">[]</afterScriptArgs>
+		<afterScriptKWargs type="param">{}</afterScriptKWargs>
+		<_object type="param">xrt.runner.run_ray_tracing</_object>
+	</run_ray_tracing>
+<description>None</description>
+</Project>

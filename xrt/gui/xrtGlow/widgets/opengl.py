@@ -533,6 +533,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.updateQookTree.emit((oeid, {arg0: argValue}))
             if obj_type == "oe":
                 meshUpdateQueued = False
+                renderUpdateQueued = False
                 if arg0.lower().startswith('center'):
                     flow = copy.deepcopy(self.beamline.flowU)
                     self.beamline.sort_flow()
@@ -556,6 +557,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.maxLen = np.max(np.abs(
                             self.minmax[0, :] - self.minmax[1, :]))
                     self.parent.updateMaxLenFromGL(self.maxLen)
+                    renderUpdateQueued = True
                     if arg0 in ['pitch'] and hasattr(updObj, 'reset_pq'):
                         if oeid not in self.needMeshUpdate:
                             self.needMeshUpdate.append(oeid)
@@ -574,7 +576,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if self.parent is not None:
                         self.parent.updateNames()
 
-                if meshUpdateQueued or arg0 in renderOnlyArgSet:
+                if meshUpdateQueued or renderUpdateQueued or\
+                        arg0 in renderOnlyArgSet:
                     self.glDraw()
 
                 # updating the beamline model in the runner
