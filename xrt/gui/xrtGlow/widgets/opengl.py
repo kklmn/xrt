@@ -532,6 +532,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if sender == 'OEE':
                 self.updateQookTree.emit((oeid, {arg0: argValue}))
             if obj_type == "oe":
+                meshUpdateQueued = False
                 if arg0.lower().startswith('center'):
                     flow = copy.deepcopy(self.beamline.flowU)
                     self.beamline.sort_flow()
@@ -558,19 +559,22 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if arg0 in ['pitch'] and hasattr(updObj, 'reset_pq'):
                         if oeid not in self.needMeshUpdate:
                             self.needMeshUpdate.append(oeid)
+                        meshUpdateQueued = True
                 elif arg0 in shapeArgSet:
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
+                    meshUpdateQueued = True
                 elif is_source(updObj) and (
                         arg0 in rsources.magneticStructureArgSet or
                         arg0 in rsources.sourceLimitsArgSet):
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
+                    meshUpdateQueued = True
                 elif arg0 in {'name'}:
                     if self.parent is not None:
                         self.parent.updateNames()
 
-                if arg0 in renderOnlyArgSet:
+                if meshUpdateQueued or arg0 in renderOnlyArgSet:
                     self.glDraw()
 
                 # updating the beamline model in the runner
