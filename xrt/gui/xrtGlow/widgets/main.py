@@ -54,6 +54,8 @@ SCAN_ANGLE_PROPERTIES = {
     'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alpha', 'theta',
     'wedgeAngle',
 }
+SCAN_LIMIT_PROPERTIES = ('limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2')
+SCAN_AXIS_PROPERTIES = ('x', 'z')
 
 
 class _ToolbarPopupPanel(qt.QFrame):
@@ -73,6 +75,9 @@ class _ToolbarPopupPanel(qt.QFrame):
         self.titleLabel = qt.QLabel()
         self.titleLabel.setStyleSheet("font-weight: 600;")
         self.stack = qt.QStackedWidget()
+        self.stack.setMinimumSize(0, 0)
+        self.stack.setSizePolicy(qt.QSizePolicy.Ignored,
+                                 qt.QSizePolicy.Ignored)
         layout = qt.QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 10)
         layout.addWidget(self.titleLabel)
@@ -529,10 +534,14 @@ class xrtGlow(qt.QWidget):
             parsed = raycing.parametrize(value)
         else:
             parsed = value
-        if name == 'center':
-            fields = ['x', 'y', 'z']
-        else:
-            fields = raycing.compoundArgs.get(name)
+        fields = raycing.compoundArgs.get(name)
+        if name == 'blades':
+            if not isinstance(parsed, dict):
+                return None
+            return [{
+                'name': f'{name}.{field}',
+                'value': self._scan_format_value(parsed[field]),
+                } for field in parsed.keys()]
         if not fields or not isinstance(parsed, (list, tuple, np.ndarray)):
             return None
         items = []
@@ -544,6 +553,19 @@ class xrtGlow(qt.QWidget):
                 'value': self._scan_format_value(parsed[index]),
                 })
         return items
+
+    def _scan_extra_property_names(self, oeObj):
+        names = []
+        if hasattr(oeObj, 'blades'):
+            names.append('blades')
+        for name in SCAN_LIMIT_PROPERTIES:
+            if hasattr(oeObj, name):
+                names.append(name)
+        if is_screen(oeObj) or is_aperture(oeObj):
+            for name in SCAN_AXIS_PROPERTIES:
+                if hasattr(oeObj, name):
+                    names.append(name)
+        return names
 
     def _scan_element_property_value(self, oeObj, name, value):
         initValue = getattr(oeObj, f'_{name}Init', None)
@@ -564,6 +586,9 @@ class xrtGlow(qt.QWidget):
                                                 blname=blName)
             except Exception:
                 props = {}
+            for name in self._scan_extra_property_names(oeObj):
+                if name not in props:
+                    props[name] = getattr(oeObj, name)
             prop_items = []
             for name, value in props.items():
                 if name in ['uuid', 'name'] or str(name).endswith('rbk'):
@@ -1098,7 +1123,7 @@ class xrtGlow(qt.QWidget):
         self.paletteWidget = qt.FigCanvas(self.mplFig)
         self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
                                          qt.QSizePolicy.MinimumExpanding)
-        self.paletteWidget.setMinimumHeight(220)
+        self.paletteWidget.setMinimumHeight(260)
         self.paletteWidget.span = RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL,
             # drawtype='box',
@@ -1120,6 +1145,7 @@ class xrtGlow(qt.QWidget):
         layout.addStretch()
         colorLayout.addLayout(layout)
         colorLayout.addWidget(self.paletteWidget)
+        colorLayout.addSpacing(8)
 
         layout = qt.QHBoxLayout()
         for icSel, cSelText in enumerate(['Color Axis min', 'Color Axis max']):
@@ -1236,6 +1262,7 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setLayout(colorLayout)
 
         self.colorOpacityPanel = qt.QWidget(self)
+        self.colorOpacityPanel.setProperty('popupMinHeight', 620)
         colorOpacityLayout = qt.QVBoxLayout()
         colorOpacityLayout.addWidget(self.colorPanel)
         colorOpacityLayout.addWidget(self.opacityPanel)
@@ -1516,6 +1543,81 @@ class xrtGlow(qt.QWidget):
             button.setChecked(False)
             button.blockSignals(False)
 
+    def _controlPopupSize(self, panelWidget):
+        layout = self.controlPopup.layout()
+        margins = layout.contentsMargins()
+        spacing = layout.spacing()
+        frame = 2 * self.controlPopup.frameWidth()
+        titleHint = self.controlPopup.titleLabel.sizeHint()
+        panelHint = panelWidget.sizeHint()
+        panelMinHint = panelWidget.minimumSizeHint()
+        panelMin = panelWidget.minimumSize()
+
+        panelWidth = max(panelHint.width(), panelMinHint.width(),
+                         panelMin.width(), 280)
+        panelHeight = max(panelHint.height(), panelMinHint.height(),
+                          panelMin.height(), 120)
+        popupMinHeight = panelWidget.property('popupMinHeight')
+        if popupMinHeight is not None:
+            panelHeight = max(panelHeight, int(popupMinHeight))
+        if panelWidget is getattr(self, 'navigationPanel', None):
+            model = self.oeTree.model()
+            columnCount = model.columnCount() if model is not None else 0
+            treeWidth = sum(self.oeTree.columnWidth(column)
+                            for column in range(columnCount))
+            rowCount = 0
+            parents = [qt.QModelIndex()]
+            while model is not None and parents:
+                parent = parents.pop()
+                for row in range(model.rowCount(parent)):
+                    rowCount += 1
+                    index = model.index(row, 0, parent)
+                    if self.oeTree.isExpanded(index):
+                        parents.append(index)
+            rowHeight = max(self.oeTree.sizeHintForRow(0),
+                            self.oeTree.iconSize().height() + 8,
+                            self.oeTree.fontMetrics().height() + 8)
+            treeHeight = self.oeTree.header().height() + rowCount * rowHeight
+            panelWidth = max(panelWidth, treeWidth + 48, 420)
+            panelHeight = max(panelHeight, treeHeight + 32)
+
+        width = max(titleHint.width(), panelHint.width(),
+                    panelMinHint.width(), panelMin.width(), panelWidth)
+        height = titleHint.height() + spacing + panelHeight
+
+        width += margins.left() + margins.right() + frame
+        height += margins.top() + margins.bottom() + frame
+
+        viewSize = self.customGlWidget.size()
+        maxWidth = max(420, min(760, int(viewSize.width() * 0.70)))
+        if panelWidget in [getattr(self, 'navigationPanel', None),
+                           getattr(self, 'colorOpacityPanel', None)]:
+            maxHeight = max(320, self.height(), viewSize.height())
+        else:
+            maxHeight = max(320, min(760, int(viewSize.height() * 0.85)))
+        return qt.QSize(min(width, maxWidth), min(height, maxHeight))
+
+    def _controlPopupPosition(self, button, popupSize):
+        if self.controlTabMode == 'collapsible top':
+            pos = button.mapToGlobal(button.rect().bottomLeft())
+            pos.setY(pos.y() + 4)
+        elif self.controlTabMode == 'collapsible right':
+            pos = button.mapToGlobal(button.rect().topLeft())
+            pos.setX(pos.x() - popupSize.width() - 6)
+        else:
+            pos = button.mapToGlobal(button.rect().topRight())
+            pos.setX(pos.x() + 6)
+
+        margin = 6
+        origin = self.mapToGlobal(self.rect().topLeft())
+        minX = origin.x() + margin
+        minY = origin.y() + margin
+        maxX = origin.x() + self.width() - popupSize.width() - margin
+        maxY = origin.y() + self.height() - popupSize.height() - margin
+        pos.setX(min(max(pos.x(), minX), max(minX, maxX)))
+        pos.setY(min(max(pos.y(), minY), max(minY, maxY)))
+        return pos
+
     def toggleControlPanel(self, panelName, button, checked):
         if not checked:
             self.controlPopup.hide()
@@ -1528,23 +1630,14 @@ class xrtGlow(qt.QWidget):
                 otherButton.blockSignals(False)
 
         self.controlPopup.titleLabel.setText(panelName)
-        self.controlPopup.stack.setCurrentWidget(self.controlPanels[panelName])
+        panelWidget = self.controlPanels[panelName]
+        self.controlPopup.stack.setCurrentWidget(panelWidget)
         self.controlPopup.adjustSize()
 
-        popup_width = max(360, self.controlPopup.sizeHint().width())
-        popup_height = min(520, self.controlPopup.sizeHint().height())
-        self.controlPopup.resize(popup_width, popup_height)
-
-        if self.controlTabMode == 'collapsible top':
-            popup_pos = button.mapToGlobal(button.rect().bottomLeft())
-            popup_pos.setY(popup_pos.y() + 4)
-        elif self.controlTabMode == 'collapsible right':
-            popup_pos = button.mapToGlobal(button.rect().topLeft())
-            popup_pos.setX(popup_pos.x() - popup_width - 6)
-        else:
-            popup_pos = button.mapToGlobal(button.rect().topRight())
-            popup_pos.setX(popup_pos.x() + 6)
-        self.controlPopup.move(popup_pos)
+        popupSize = self._controlPopupSize(panelWidget)
+        self.controlPopup.resize(popupSize)
+        popupSize = self.controlPopup.size()
+        self.controlPopup.move(self._controlPopupPosition(button, popupSize))
         self.controlPopup.show()
         self.controlPopup.raise_()
 
