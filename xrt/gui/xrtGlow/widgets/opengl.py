@@ -501,17 +501,22 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                          arg0) if argIn is None else argIn
 
                     # avoid writing string to numpy array
-                    if hasattr(arrayValue, 'tolist'):
-                        arrayValue = arrayValue.tolist()
-                    elif isinstance(arrayValue, tuple):
-                        arrayValue = list(arrayValue)
+                    if isinstance(arrayValue, dict):
+                        arrayValue = dict(arrayValue)
+                        arrayValue[field] = argValue
+                        argValue = arrayValue
+                    else:
+                        if hasattr(arrayValue, 'tolist'):
+                            arrayValue = arrayValue.tolist()
+                        elif isinstance(arrayValue, tuple):
+                            arrayValue = list(arrayValue)
 
-                    for fList in raycing.compoundArgs.values():
-                        if field in fList:
-                            idx = fList.index(field)
-                            break
-                    arrayValue[idx] = argValue
-                    argValue = arrayValue
+                        for fList in raycing.compoundArgs.values():
+                            if field in fList:
+                                idx = fList.index(field)
+                                break
+                        arrayValue[idx] = argValue
+                        argValue = arrayValue
 
             elif any(arg0.lower().startswith(v) for v in
                      ['mater', 'tlay', 'blay', 'coat', 'substrate']):

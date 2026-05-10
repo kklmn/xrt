@@ -148,6 +148,32 @@ class MessageHandler:
         kwargs['withHistogram'] = True
         return kwargs
 
+    def _compound_value(self, element, arg, field, value):
+        if field == 'energy':
+            return format_energy_input(value)
+        if arg == 'blades':
+            blades = dict(getattr(element, 'blades', {}) or {})
+            blades[field] = value
+            return blades
+
+        argIn = getattr(element, f'_{arg}', None)
+        arrayValue = getattr(element, arg, None) if argIn is None else argIn
+
+        if isinstance(arrayValue, dict):
+            arrayValue = dict(arrayValue)
+            arrayValue[field] = value
+            return arrayValue
+        if hasattr(arrayValue, 'tolist'):
+            arrayValue = arrayValue.tolist()
+        elif isinstance(arrayValue, tuple):
+            arrayValue = list(arrayValue)
+
+        for fList in compoundArgs.values():
+            if field in fList:
+                arrayValue[fList.index(field)] = value
+                return arrayValue
+        return value
+
     def handle_create(self, message):
         objuuid = message.get("uuid")
 
@@ -188,24 +214,8 @@ class MessageHandler:
                     arg = args[0]
                     if len(args) > 1:
                         field = args[-1]
-                        if field == 'energy':
-                            value = format_energy_input(value)
-                        else:
-                            argIn = getattr(element, f'_{arg}', None)
-                            arrayValue = getattr(element, arg, None) if\
-                                argIn is None else argIn
-
-                            if hasattr(arrayValue, 'tolist'):
-                                arrayValue = arrayValue.tolist()
-                            elif isinstance(arrayValue, tuple):
-                                arrayValue = list(arrayValue)
-
-                            for fList in compoundArgs.values():
-                                if field in fList:
-                                    idx = fList.index(field)
-                                    break
-                            arrayValue[idx] = value
-                            value = arrayValue
+                        value = self._compound_value(
+                            element, arg, field, value)
 
                     setattr(element, arg, value)
                     if arg.lower().startswith('center'):
@@ -262,21 +272,8 @@ class MessageHandler:
                     arg = args[0]
                     if len(args) > 1:
                         field = args[-1]
-                        argIn = getattr(feObj, f'_{arg}', None)
-                        arrayValue = getattr(feObj, arg, None) if\
-                            argIn is None else argIn
-
-                        if hasattr(arrayValue, 'tolist'):
-                            arrayValue = arrayValue.tolist()
-                        elif isinstance(arrayValue, tuple):
-                            arrayValue = list(arrayValue)
-
-                        for fList in compoundArgs.values():
-                            if field in fList:
-                                idx = fList.index(field)
-                                break
-                        arrayValue[idx] = value
-                        value = arrayValue
+                        value = self._compound_value(
+                            feObj, arg, field, value)
 
                     setattr(feObj, arg, value)
 
