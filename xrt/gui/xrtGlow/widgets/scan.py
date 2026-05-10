@@ -20,6 +20,9 @@ __date__ = "7 May 2026"
 
 
 SCENE_TARGETS = {'Scene', 'scene', 'xrtGlow', 'xrtglow'}
+FRAME_SECTIONS = {'id', 'objects', 'scene', 'actions', 'output', 'vars'}
+SCENE_PROPERTY_NAMES = {
+    'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec'}
 DEFAULT_OUTPUT = {'glowFrameName': 'frame{index:04d}.jpg'}
 
 
@@ -62,6 +65,27 @@ def _format_scan_value(value, unit):
     if not unit:
         return value
     return f'{value:g} {unit}'
+
+
+def default_scan_description():
+    return {
+        'version': 1,
+        'kind': 'timeline_recipe',
+        'frames': 0,
+        'output': copy.deepcopy(DEFAULT_OUTPUT),
+        'items': [],
+        }
+
+
+def _frame_sort_key(frame_id):
+    match = re.match(r'^frame_(\d+)$', str(frame_id))
+    if match is None:
+        return (1, str(frame_id))
+    return (0, int(match.group(1)))
+
+
+def _looks_like_frame_key(key):
+    return re.match(r'^frame_\d+$', str(key)) is not None
 
 
 def _scan_default_bounds(value):
@@ -137,11 +161,17 @@ class BaseScan:
     """A compact timeline recipe that expands into explicit frame patches."""
 
     def __init__(self, description=None):
-        self.description = copy.deepcopy(description or {})
+        self.description = copy.deepcopy(
+            description or default_scan_description())
         self.version = self.description.get('version', 1)
         self.kind = self.description.get('kind', 'timeline_recipe')
-        self.frame_count = int(self.description.get(
-            'frames', self.description.get('frameCount', 0)))
+        self.expanded_frames = self._expanded_frames_from_description(
+            self.description)
+        frame_count = self.description.get(
+            'frameCount', self.description.get('frames', 0))
+        if isinstance(frame_count, dict):
+            frame_count = len(frame_count)
+        self.frame_count = int(frame_count or 0)
         self.items = list(self.description.get(
             'items', self.description.get('tracks', [])))
         self.actions = copy.deepcopy(self.description.get('actions', {}))
@@ -160,6 +190,7 @@ class BaseScan:
                       max_value, points, frames=None, target_name=None):
         points = int(points)
         start_frame = int(start_frame)
+        target = target_name or target
         return cls({
             'version': 1,
             'kind': 'timeline_recipe',
@@ -171,7 +202,6 @@ class BaseScan:
                 'start': start_frame,
                 'duration': points,
                 'target': target,
-                'targetName': target_name or target,
                 'property': property_name,
                 'values': {
                     'type': 'linspace',
@@ -185,14 +215,78 @@ class BaseScan:
     def to_json(self, **kwargs):
         return json.dumps(self.description, **kwargs)
 
+    def _expanded_frames_from_description(self, description):
+        candidates = description.get('expandedFrames',
+                                     description.get('frameDict'))
+        if candidates is None and isinstance(description.get('frames'), dict):
+            candidates = description.get('frames')
+        if candidates is None:
+            frame_items = [(key, value) for key, value in description.items()
+                           if _looks_like_frame_key(key)]
+            if frame_items:
+                candidates = OrderedDict(sorted(frame_items,
+                                                key=lambda item:
+                                                _frame_sort_key(item[0])))
+        if candidates is None:
+            return None
+        return OrderedDict(sorted(candidates.items(),
+                                  key=lambda item: _frame_sort_key(item[0])))
+
+    def _normalize_expanded_frame(self, frame_id, frame, index):
+        if not isinstance(frame, dict):
+            frame = {'objects': copy.deepcopy(frame)}
+        frame = copy.deepcopy(frame)
+        if any(key in FRAME_SECTIONS for key in frame):
+            normalized = OrderedDict()
+            normalized['id'] = frame.get('id', frame_id)
+            for section in ['objects', 'scene', 'actions', 'output', 'vars']:
+                if section in frame:
+                    normalized[section] = frame[section]
+            for key, value in frame.items():
+                if key in FRAME_SECTIONS:
+                    continue
+                if key in SCENE_PROPERTY_NAMES:
+                    normalized.setdefault('scene', OrderedDict())[key] = value
+                else:
+                    normalized.setdefault(
+                        'objects', OrderedDict())[key] = value
+        else:
+            normalized = OrderedDict([('id', frame_id)])
+            for key, value in frame.items():
+                if key in SCENE_PROPERTY_NAMES:
+                    normalized.setdefault('scene', OrderedDict())[key] = value
+                else:
+                    normalized.setdefault('objects', OrderedDict())[key] = value
+        if self.actions and 'actions' not in normalized:
+            normalized['actions'] = copy.deepcopy(self.actions)
+        if self.output and 'output' not in normalized:
+            variables = {'index': index, 'frame': frame_id}
+            normalized['output'] = self._format_mapping(
+                self.output, variables)
+        return normalized
+
+    def _compile_expanded_frames(self):
+        frames = OrderedDict()
+        for index, (frame_id, frame) in enumerate(
+                self.expanded_frames.items()):
+            frames[frame_id] = self._normalize_expanded_frame(
+                frame_id, frame, index)
+        self.frame_count = len(frames)
+        return frames
+
     def _ensure_frame_count(self):
+        if self.expanded_frames is not None:
+            self.frame_count = len(self.expanded_frames)
+            return
         if self.frame_count:
             return
         frame_count = 0
         for item in self.items:
             item_type = item.get('type', 'track')
             if item_type == 'event':
-                frame_count = max(frame_count, int(item.get('frame', 0)) + 1)
+                frame_count = max(
+                    frame_count, int(item.get('frame', 0)) +
+                    int(item.get('duration', item.get('steps', 1))))
             elif item_type == 'loopBlock':
                 frame_count = max(frame_count, int(item.get('start', 0)) +
                                   self._loop_block_length(item))
@@ -256,8 +350,10 @@ class BaseScan:
         for section in ['objects', 'scene', 'actions', 'output']:
             if section in item:
                 patch[section] = copy.deepcopy(item[section])
-        self._merge_frame(frames, frame_index, patch,
-                          item.get('id', 'event'))
+        duration = max(1, int(item.get('duration', item.get('steps', 1))))
+        for offset in range(duration):
+            self._merge_frame(frames, frame_index + offset,
+                              copy.deepcopy(patch), item.get('id', 'event'))
 
     def _loop_values(self, loops):
         if not loops:
@@ -298,7 +394,10 @@ class BaseScan:
 
     def compile_frames(self):
         self.warnings = []
-        frames = self._make_empty_frames()
+        if self.expanded_frames is not None:
+            frames = self._compile_expanded_frames()
+        else:
+            frames = self._make_empty_frames()
         for item in self.items:
             item_type = item.get('type', 'track')
             if item_type == 'event':
@@ -307,6 +406,7 @@ class BaseScan:
                 self._compile_loop_block(frames, item)
             else:
                 self._compile_track(frames, item)
+        self.frame_count = len(frames)
         return frames
 
 
@@ -318,11 +418,10 @@ class ScanRangeDialog(qt.QDialog):
     def __init__(self, target, property_name, current_value=None,
                  target_name=None, parent=None):
         super().__init__(parent)
-        self.target = target
-        self.target_name = target_name or target
+        self.target = target_name or target
         self.property_name = property_name
         self.setWindowTitle(
-            f'Create scan: {self.target_name}.{property_name}')
+            f'Create scan: {self.target}.{property_name}')
 
         self.startFrameEdit = qt.QLineEdit('0')
         min_value, max_value = _scan_default_bounds(current_value)
@@ -332,7 +431,7 @@ class ScanRangeDialog(qt.QDialog):
 
         layout = qt.QVBoxLayout(self)
         form = qt.QFormLayout()
-        form.addRow('Target', qt.QLabel(str(self.target_name)))
+        form.addRow('Target', qt.QLabel(str(self.target)))
         form.addRow('Property', qt.QLabel(str(property_name)))
         form.addRow('Start frame', self.startFrameEdit)
         form.addRow('Min value', self.minValueEdit)
@@ -350,11 +449,10 @@ class ScanRangeDialog(qt.QDialog):
         points = int(self.pointsEdit.text())
         return {
             'type': 'track',
-            'id': f'{self.target_name}.{self.property_name}',
+            'id': f'{self.target}.{self.property_name}',
             'start': int(self.startFrameEdit.text()),
             'duration': points,
             'target': self.target,
-            'targetName': self.target_name,
             'property': self.property_name,
             'values': {
                 'type': 'linspace',
@@ -381,11 +479,14 @@ class ScanInstructionDialog(qt.QDialog):
 
     scanCreated = qt.Signal(dict)
 
-    def __init__(self, catalog, start_frame=0, parent=None):
+    def __init__(self, catalog, start_frame=0, edit_item=None, parent=None):
         super().__init__(parent)
         self.catalog = list(catalog or [])
         self.propertyMap = {}
+        self.propertyItems = {}
         self.selectedProperty = None
+        self.editItem = copy.deepcopy(edit_item)
+        self._editValuesEditable = True
         self.setWindowTitle('Add scan instruction')
         self.resize(520, 520)
 
@@ -425,29 +526,115 @@ class ScanInstructionDialog(qt.QDialog):
         layout.addWidget(self.buttonBox)
 
         self._populate_tree()
+        if self.editItem is not None:
+            self._apply_edit_item()
 
     def _populate_tree(self):
         self.propertyTree.clear()
         self.propertyMap.clear()
+        self.propertyItems.clear()
         for target in self.catalog:
+            target_name = str(target.get('name', target.get('target', '')))
             target_item = qt.QTreeWidgetItem([
-                str(target.get('name', target.get('target', ''))), ''])
+                target_name, ''])
             target_item.setFirstColumnSpanned(True)
             self.propertyTree.addTopLevelItem(target_item)
             for prop in target.get('properties', []):
-                key = f"{target.get('target')}::{prop.get('name')}"
+                key = f"{target_name}::{prop.get('name')}"
                 value = prop.get('value', '')
                 child = qt.QTreeWidgetItem([str(prop.get('name')), str(value)])
                 child.setData(0, qt.Qt.UserRole, key)
                 target_item.addChild(child)
                 self.propertyMap[key] = {
-                    'target': target.get('target'),
-                    'targetName': target.get('name', target.get('target')),
+                    'target': target_name,
                     'property': prop.get('name'),
                     'value': value,
                     }
+                self.propertyItems[key] = child
             target_item.setExpanded(False)
         self.propertyTree.resizeColumnToContents(0)
+
+    def _apply_edit_item(self):
+        target, property_name = self._item_target_property(self.editItem)
+        start, points, start_value, stop_value, editable = \
+            self._item_dialog_values(self.editItem)
+        if target is None or property_name is None:
+            return
+        self.setWindowTitle(f'Edit scan: {target}.{property_name}')
+        key = f'{target}::{property_name}'
+        self.selectedProperty = self.propertyMap.get(key, {
+            'target': target,
+            'property': property_name,
+            'value': start_value,
+            })
+        item = self.propertyItems.get(key)
+        if item is not None:
+            self.propertyTree.setCurrentItem(item)
+        self.propertyTree.setEnabled(False)
+        self.startFrameEdit.setText(str(start))
+        self.minValueEdit.setText(str(start_value))
+        self.maxValueEdit.setText(str(stop_value))
+        self.pointsEdit.setText(str(points))
+        self.minValueEdit.setReadOnly(not editable)
+        self.maxValueEdit.setReadOnly(not editable)
+        self._editValuesEditable = editable
+
+    def _item_target_property(self, item):
+        if item.get('target') and item.get('property'):
+            return item.get('target'), item.get('property')
+        objects = item.get('objects', {})
+        if len(objects) == 1:
+            target, patch = next(iter(objects.items()))
+            if isinstance(patch, dict) and len(patch) == 1:
+                return target, next(iter(patch.keys()))
+        scene = item.get('scene', {})
+        if isinstance(scene, dict) and len(scene) == 1:
+            return 'Scene', next(iter(scene.keys()))
+        return None, None
+
+    def _item_dialog_values(self, item):
+        start = int(item.get('frame', item.get('start', 0)))
+        points = int(item.get('duration', item.get('steps', 1)))
+        if item.get('type') == 'loopBlock':
+            return start, points, '', '', False
+        if item.get('type') == 'event':
+            value = self._single_event_value(item)
+            value = '' if value is None else value
+            return start, points, value, value, value != ''
+        values = item.get('values')
+        if isinstance(values, dict):
+            value_type = values.get('type')
+            points = int(item.get('duration',
+                                  values.get('steps', points)))
+            if value_type == 'linspace':
+                return start, points, values.get('start', ''), \
+                    values.get('stop', ''), True
+            if value_type == 'constant':
+                value = values.get('value', '')
+                return start, points, value, value, True
+            if value_type == 'list':
+                value_list = list(values.get('values', []))
+                if not value_list:
+                    return start, points, '', '', False
+                return start, len(value_list), value_list[0], \
+                    value_list[-1], False
+        if isinstance(values, (list, tuple)):
+            if not values:
+                return start, points, '', '', False
+            return start, len(values), values[0], values[-1], False
+        return start, points, values, values, True
+
+    def _single_event_value(self, item):
+        values = []
+        for patch in item.get('objects', {}).values():
+            if isinstance(patch, dict):
+                values.extend(patch.values())
+        scene = item.get('scene', {})
+        if isinstance(scene, dict):
+            values.extend(scene.values())
+        if len(values) != 1:
+            return None
+        return values[0]
 
     def _selection_changed(self):
         self.selectedProperty = self._current_property()
@@ -465,7 +652,10 @@ class ScanInstructionDialog(qt.QDialog):
         if item is None:
             return None
         key = item.data(0, qt.Qt.UserRole)
-        return self.propertyMap.get(key)
+        prop = self.propertyMap.get(key)
+        if prop is None and self.selectedProperty is not None:
+            return self.selectedProperty
+        return prop
 
     def _patch_for_value(self, value):
         prop = self._current_property()
@@ -484,7 +674,21 @@ class ScanInstructionDialog(qt.QDialog):
         start_value = self.minValueEdit.text()
         stop_value = self.maxValueEdit.text()
         prop = self.selectedProperty
-        item_id = f"{prop['targetName']}.{prop['property']}"
+        if self.editItem is not None and not self._editValuesEditable:
+            item = copy.deepcopy(self.editItem)
+            if item.get('type') == 'event':
+                item.pop('start', None)
+                item['frame'] = start
+                if points > 1:
+                    item['duration'] = points
+                else:
+                    item.pop('duration', None)
+                    item.pop('steps', None)
+            else:
+                item['start'] = start
+                item['duration'] = points
+            return item
+        item_id = f"{prop['target']}.{prop['property']}"
 
         if points == 1:
             item = OrderedDict([
@@ -509,7 +713,6 @@ class ScanInstructionDialog(qt.QDialog):
             ('start', start),
             ('duration', points),
             ('target', prop['target']),
-            ('targetName', prop['targetName']),
             ('property', prop['property']),
             ('values', values),
             ])
@@ -526,60 +729,6 @@ class ScanInstructionDialog(qt.QDialog):
         super().accept()
 
 
-class TimelineGraphicsView(qt.QGraphicsView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.sceneObj = qt.QGraphicsScene(self)
-        self.setScene(self.sceneObj)
-        self.setMinimumHeight(160)
-        self.frame_count = 0
-        self.items = []
-        self.current_frame = 0
-
-    def set_timeline(self, items, frame_count):
-        self.items = list(items)
-        self.frame_count = int(frame_count)
-        self.rebuild()
-
-    def set_current_frame(self, frame_index):
-        self.current_frame = max(0, int(frame_index))
-        self.rebuild()
-
-    def rebuild(self):
-        self.sceneObj.clear()
-        left = 80
-        row_h = 24
-        width = max(1, self.frame_count) * 4
-        self.sceneObj.addLine(left, 8, left + width, 8)
-        for index, item in enumerate(self.items):
-            y = 28 + index * row_h
-            label = item.get('id', item.get('type', 'track'))
-            self.sceneObj.addText(str(label)).setPos(0, y - 8)
-            item_type = item.get('type', 'track')
-            if item_type == 'event':
-                start = int(item.get('frame', item.get('start', 0)))
-                self.sceneObj.addRect(left + start * 4, y, 5, 14)
-            else:
-                start = int(item.get('start', 0))
-                if item_type == 'loopBlock':
-                    duration = BaseScan({'items': [item]})._loop_block_length(
-                        item)
-                else:
-                    duration = int(item.get('duration',
-                                            item.get('steps', 1)))
-                rect = self.sceneObj.addRect(left + start * 4, y,
-                                             max(4, duration * 4), 14)
-                rect.setBrush(qt.QBrush(qt.QColor('#6fa8dc')))
-        playhead_x = left + self.current_frame * 4
-        pen = qt.QPen(qt.QColor('#d64545'))
-        pen.setWidth(2)
-        playhead = self.sceneObj.addLine(playhead_x, 4, playhead_x,
-                                         34 + max(1, len(self.items)) * row_h,
-                                         pen)
-        playhead.setZValue(10)
-        self.setSceneRect(self.sceneObj.itemsBoundingRect())
-
-
 class TimelineFrameListWidget(qt.QWidget):
     """Preview widget for scan timeline items and expanded frames."""
 
@@ -590,6 +739,18 @@ class TimelineFrameListWidget(qt.QWidget):
     outputTemplateChanged = qt.Signal(str)
     instructionRequested = qt.Signal(int)
     trackDeleteRequested = qt.Signal(int)
+    scanLoadRequested = qt.Signal()
+    scanSaveRequested = qt.Signal()
+    trackTimingChanged = qt.Signal(int, dict)
+    trackEditRequested = qt.Signal(int)
+
+    TRACK_COL_ID = 0
+    TRACK_COL_VALUE_START = 1
+    TRACK_COL_VALUE_END = 2
+    TRACK_COL_FRAMES = 3
+    TRACK_COL_START_FRAME = 4
+    TRACK_VALUE_COLUMNS = {TRACK_COL_VALUE_START, TRACK_COL_VALUE_END}
+    TRACK_TIMING_COLUMNS = {TRACK_COL_FRAMES, TRACK_COL_START_FRAME}
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -599,29 +760,29 @@ class TimelineFrameListWidget(qt.QWidget):
         self.currentFrame = 0
         self._playing = False
         self._updatingSelection = False
+        self._updatingTracks = False
 
         layout = qt.QVBoxLayout(self)
         controls = qt.QHBoxLayout()
         self.addInstructionButton = qt.QPushButton('Add instruction')
         self.deleteTrackButton = qt.QPushButton('Delete track')
+        self.loadScanButton = qt.QPushButton('Load JSON')
+        self.saveScanButton = qt.QPushButton('Save JSON')
         self.startButton = qt.QPushButton('Start')
         self.pauseButton = qt.QPushButton('Pause')
         self.stopButton = qt.QPushButton('Stop')
-        self.currentFrameSpin = qt.QSpinBox()
-        self.currentFrameSpin.setMinimum(0)
-        self.currentFrameSpin.setMaximum(0)
-        self.currentFrameLabel = qt.QLabel('Frame 0 / 0')
+        self.currentFrameLabel = qt.QLabel('Current frame 0 / 0')
         self.outputTemplateEdit = qt.QLineEdit(
             DEFAULT_OUTPUT['glowFrameName'])
         controls.addWidget(self.addInstructionButton)
         controls.addWidget(self.deleteTrackButton)
+        controls.addWidget(self.loadScanButton)
+        controls.addWidget(self.saveScanButton)
         controls.addSpacing(12)
         controls.addWidget(self.startButton)
         controls.addWidget(self.pauseButton)
         controls.addWidget(self.stopButton)
         controls.addSpacing(12)
-        controls.addWidget(qt.QLabel('Current frame'))
-        controls.addWidget(self.currentFrameSpin)
         controls.addWidget(self.currentFrameLabel)
         controls.addSpacing(12)
         controls.addWidget(qt.QLabel('Filename template'))
@@ -632,14 +793,16 @@ class TimelineFrameListWidget(qt.QWidget):
         splitter = qt.QSplitter(qt.Qt.Vertical)
         layout.addWidget(splitter)
 
-        self.trackTable = qt.QTableWidget(0, 6)
+        self.trackTable = qt.QTableWidget(0, 5)
         self.trackTable.setHorizontalHeaderLabels(
-            ['Id', 'Type', 'Start', 'End', 'Target', 'Property'])
+            ['Id', 'Start', 'End', 'Frames', 'startFrame'])
         self.trackTable.setContextMenuPolicy(qt.Qt.CustomContextMenu)
-        self.trackTable.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
+        self.trackTable.setEditTriggers(
+            qt.QAbstractItemView.DoubleClicked |
+            qt.QAbstractItemView.EditKeyPressed |
+            qt.QAbstractItemView.SelectedClicked)
         self.trackTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
         self.trackTable.setSelectionMode(qt.QAbstractItemView.SingleSelection)
-        self.timelineView = TimelineGraphicsView()
         self.frameTable = qt.QTableWidget(0, 4)
         self.frameTable.setHorizontalHeaderLabels(
             ['Frame', 'Objects', 'Scene', 'Output'])
@@ -653,20 +816,21 @@ class TimelineFrameListWidget(qt.QWidget):
             self._track_context_menu)
         self.frameTable.itemSelectionChanged.connect(
             self._on_frame_selection_changed)
-        self.currentFrameSpin.valueChanged.connect(self.set_current_frame)
+        self.trackTable.itemChanged.connect(self._on_track_item_changed)
+        self.trackTable.itemDoubleClicked.connect(
+            self._on_track_item_double_clicked)
         self.addInstructionButton.clicked.connect(
             self._request_instruction_at_current_frame)
         self.deleteTrackButton.clicked.connect(self._delete_selected_track)
+        self.loadScanButton.clicked.connect(self.scanLoadRequested.emit)
+        self.saveScanButton.clicked.connect(self.scanSaveRequested.emit)
         self.startButton.clicked.connect(self.start_scan)
         self.pauseButton.clicked.connect(self.pause_scan)
         self.stopButton.clicked.connect(self.stop_scan)
         self.outputTemplateEdit.editingFinished.connect(
             self._output_template_edited)
 
-        top = qt.QSplitter(qt.Qt.Horizontal)
-        top.addWidget(self.trackTable)
-        top.addWidget(self.timelineView)
-        splitter.addWidget(top)
+        splitter.addWidget(self.trackTable)
 
         bottom = qt.QTabWidget()
         bottom.addTab(self.frameTable, 'Frames')
@@ -731,19 +895,9 @@ class TimelineFrameListWidget(qt.QWidget):
             return
         self.trackDeleteRequested.emit(rows[0].row())
 
-    def _target_names(self):
-        names = {}
-        for item in self.scan.items:
-            target = item.get('target')
-            target_name = item.get('targetName')
-            if target and target_name:
-                names[target] = target_name
-        return names
-
     def rebuild(self):
         frames = self.scan.compile_frames()
         self._populate_tracks()
-        self.timelineView.set_timeline(self.scan.items, self.scan.frame_count)
         self._populate_frames(frames)
         self._populate_warnings()
         self.set_current_frame(min(self.currentFrame,
@@ -799,22 +953,12 @@ class TimelineFrameListWidget(qt.QWidget):
     def set_current_frame(self, frame_index, emit_signal=True):
         if not self.frameIds:
             self.currentFrame = 0
-            self.timelineView.set_current_frame(0)
-            self.currentFrameSpin.blockSignals(True)
-            self.currentFrameSpin.setMaximum(0)
-            self.currentFrameSpin.setValue(0)
-            self.currentFrameSpin.blockSignals(False)
-            self.currentFrameLabel.setText('Frame 0 / 0')
+            self.currentFrameLabel.setText('Current frame 0 / 0')
             return
         frame_index = max(0, min(int(frame_index), len(self.frameIds) - 1))
         self.currentFrame = frame_index
-        self.timelineView.set_current_frame(frame_index)
-        self.currentFrameSpin.blockSignals(True)
-        self.currentFrameSpin.setMaximum(len(self.frameIds) - 1)
-        self.currentFrameSpin.setValue(frame_index)
-        self.currentFrameSpin.blockSignals(False)
         self.currentFrameLabel.setText(
-            f'Frame {frame_index + 1} / {len(self.frameIds)}')
+            f'Current frame {frame_index + 1} / {len(self.frameIds)}')
         self._updatingSelection = True
         self.frameTable.setCurrentCell(frame_index, 0)
         self.frameTable.selectRow(frame_index)
@@ -824,35 +968,128 @@ class TimelineFrameListWidget(qt.QWidget):
             self.currentFrameChanged.emit(frame_index, self.frames[frame_id])
 
     def _populate_tracks(self):
-        self.trackTable.setRowCount(len(self.scan.items))
-        for row, item in enumerate(self.scan.items):
-            start = int(item.get('frame', item.get('start', 0)))
-            if item.get('type') == 'event':
-                end = start
-            elif item.get('type') == 'loopBlock':
-                end = start + self.scan._loop_block_length(item) - 1
-            else:
-                end = start + int(item.get('duration',
-                                           item.get('steps', 1))) - 1
-            values = [item.get('id', ''), item.get('type', 'track'),
-                      start, end,
-                      item.get('targetName', item.get('target', '')),
-                      item.get('property', '')]
-            for col, value in enumerate(values):
-                self.trackTable.setItem(row, col,
-                                        qt.QTableWidgetItem(str(value)))
+        self._updatingTracks = True
+        try:
+            self.trackTable.setRowCount(len(self.scan.items))
+            for row, item in enumerate(self.scan.items):
+                start_frame, frames = self._track_timing(item)
+                start_value, end_value, _ = self._track_values(item)
+                values = [item.get('id', ''), start_value, end_value,
+                          frames, start_frame]
+                for col, value in enumerate(values):
+                    table_item = qt.QTableWidgetItem(str(value))
+                    flags = table_item.flags()
+                    if self._track_column_is_editable(item, col):
+                        flags |= qt.Qt.ItemIsEditable
+                    else:
+                        flags &= ~qt.Qt.ItemIsEditable
+                    table_item.setFlags(flags)
+                    self.trackTable.setItem(row, col, table_item)
+            self.trackTable.resizeColumnsToContents()
+        finally:
+            self._updatingTracks = False
+
+    def _track_timing(self, item):
+        start_frame = int(item.get('frame', item.get('start', 0)))
+        if item.get('type') == 'loopBlock':
+            frames = self.scan._loop_block_length(item)
+        else:
+            frames = int(item.get('duration', item.get('steps', 1)))
+        frames = max(1, frames)
+        return start_frame, frames
+
+    def _track_values(self, item):
+        item_type = item.get('type', 'track')
+        if item_type == 'loopBlock':
+            return '', '', False
+        if item_type == 'event':
+            value = self._single_event_value(item)
+            editable = value is not None
+            value = '' if value is None else value
+            return value, value, editable
+        values = item.get('values')
+        if isinstance(values, dict):
+            value_type = values.get('type')
+            if value_type == 'linspace':
+                return values.get('start', ''), values.get('stop', ''), True
+            if value_type == 'constant':
+                value = values.get('value', '')
+                return value, value, True
+            if value_type == 'list':
+                value_list = list(values.get('values', []))
+                if not value_list:
+                    return '', '', False
+                return value_list[0], value_list[-1], False
+        if isinstance(values, (list, tuple)):
+            if not values:
+                return '', '', False
+            return values[0], values[-1], False
+        return values, values, True
+
+    def _single_event_value(self, item):
+        patches = []
+        for patch in item.get('objects', {}).values():
+            if isinstance(patch, dict):
+                patches.extend(patch.values())
+        scene = item.get('scene', {})
+        if isinstance(scene, dict):
+            patches.extend(scene.values())
+        if len(patches) != 1:
+            return None
+        return patches[0]
+
+    def _track_column_is_editable(self, item, column):
+        if column in self.TRACK_VALUE_COLUMNS:
+            return self._track_values(item)[2]
+        if column not in self.TRACK_TIMING_COLUMNS:
+            return False
+        if item.get('type') == 'loopBlock' and \
+                column != self.TRACK_COL_START_FRAME:
+            return False
+        return True
+
+    def _on_track_item_changed(self, table_item):
+        if self._updatingTracks:
+            return
+        row = table_item.row()
+        column = table_item.column()
+        if row < 0 or row >= len(self.scan.items):
+            return
+        item = self.scan.items[row]
+        if not self._track_column_is_editable(item, column):
+            return
+        if column in self.TRACK_VALUE_COLUMNS:
+            key = 'startValue' if column == self.TRACK_COL_VALUE_START else \
+                'endValue'
+            self.trackTimingChanged.emit(row, {key: table_item.text()})
+            return
+        try:
+            value = int(str(table_item.text()).strip())
+        except ValueError:
+            self.rebuild()
+            return
+        start_frame, frames = self._track_timing(item)
+        if column == self.TRACK_COL_START_FRAME:
+            start_frame = max(0, value)
+        elif column == self.TRACK_COL_FRAMES:
+            frames = max(1, value)
+        self.trackTimingChanged.emit(row, {
+            'startFrame': start_frame,
+            'frames': frames,
+            })
+
+    def _on_track_item_double_clicked(self, table_item):
+        if table_item.column() != self.TRACK_COL_ID:
+            return
+        self.trackEditRequested.emit(table_item.row())
 
     def _populate_frames(self, frames):
         self.frames = frames
         self.frameIds = list(frames.keys())
-        target_names = self._target_names()
         self.frameTable.setRowCount(len(frames))
         for row, (frame_id, frame) in enumerate(frames.items()):
-            objects = OrderedDict()
-            for target, patch in frame.get('objects', {}).items():
-                objects[target_names.get(target, target)] = patch
             values = [frame_id,
-                      json.dumps(objects),
+                      json.dumps(frame.get('objects', {})),
                       json.dumps(frame.get('scene', {})),
                       json.dumps(frame.get('output', {}))]
             for col, value in enumerate(values):
@@ -860,13 +1097,9 @@ class TimelineFrameListWidget(qt.QWidget):
                                         qt.QTableWidgetItem(value))
 
     def _populate_warnings(self):
-        target_names = self._target_names()
         self.warningList.clear()
         for warning in self.scan.warnings:
             path = str(warning.get('path'))
-            for target, target_name in target_names.items():
-                path = path.replace(f'objects.{target}.',
-                                    f'objects.{target_name}.')
             self.warningList.addItem(
                 f"{warning.get('frame')}: {path} "
                 f"overwritten by {warning.get('item')}")

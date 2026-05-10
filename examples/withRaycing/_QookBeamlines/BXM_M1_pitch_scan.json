@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "kind": "timeline_recipe",
+  "frames": 10,
+  "output": {
+    "glowFrameName": "frame{index:04d}.jpg"
+  },
+  "items": [
+    {
+      "type": "track",
+      "id": "Mirror1.pitch",
+      "start": 0,
+      "duration": 10,
+      "target": "Mirror1",
+      "property": "pitch",
+      "values": {
+        "type": "linspace",
+        "start": "0.11 deg",
+        "stop": "0.2 deg",
+        "steps": 10
+      }
+    }
+  ]
+}

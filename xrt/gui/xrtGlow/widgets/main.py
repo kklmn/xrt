@@ -7,6 +7,7 @@ Created on Tue Jan 27 13:03:13 2026
 import os
 import re
 import copy
+import json
 import numpy as np
 from functools import partial
 import matplotlib as mpl
@@ -20,7 +21,10 @@ from .._constants import (
         SCENE_CONTROL_LABELS, SCENE_TEXTEDITS, itemTypes)
 from .._utils import is_source, is_oe, is_aperture, is_screen
 from .inspector import InstanceInspector
-from .scan import BaseScan, ScanInstructionDialog, TimelineFrameListWidget
+from .scan import (
+    BaseScan, DEFAULT_OUTPUT, FRAME_SECTIONS, SCENE_PROPERTY_NAMES,
+    SCENE_TARGETS, ScanInstructionDialog, TimelineFrameListWidget,
+    default_scan_description)
 from .opengl import xrtGlWidget
 
 from ...commons import qt
@@ -91,7 +95,7 @@ class _ToolbarPopupPanel(qt.QFrame):
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays=None, parent=None, progressSignal=None,
                  layout=None, epicsPrefix=None, epicsMap={},
-                 sceneSettings={}):
+                 sceneSettings={}, scanDescription=None):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
         self.cAxisLabelSize = 10
@@ -142,13 +146,8 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
         self.customGlWidget.openElViewer.connect(self.runElementViewer)
-        self.scanDescription = {
-            'version': 1,
-            'kind': 'timeline_recipe',
-            'frames': 0,
-            'output': {'glowFrameName': 'frame{index:04d}.jpg'},
-            'items': [],
-            }
+        self.scanDescription = self._scan_description_from_input(
+            scanDescription)
         self.scanRunning = False
         self.scanPaused = False
         self.scanStopRequested = False
@@ -421,12 +420,195 @@ class xrtGlow(qt.QWidget):
             if (elViewer.show()):
                 pass
 
+    def _scan_description_from_input(self, scanDescription):
+        if scanDescription is None:
+            description = default_scan_description()
+        elif isinstance(scanDescription, BaseScan):
+            description = scanDescription.description
+        elif isinstance(scanDescription, dict):
+            description = scanDescription
+        elif isinstance(scanDescription, (list, tuple)):
+            description = default_scan_description()
+            description['items'] = list(scanDescription)
+        elif isinstance(scanDescription, (str, os.PathLike)):
+            source = os.fspath(scanDescription).strip()
+            if not source:
+                description = default_scan_description()
+            elif os.path.exists(source):
+                with open(source, 'r', encoding='utf-8') as jsonFile:
+                    description = json.load(jsonFile)
+            else:
+                description = json.loads(source)
+        else:
+            raise TypeError(
+                'scanDescription must be a dict, list, JSON string, '
+                'JSON file path, BaseScan or None')
+
+        description = copy.deepcopy(description)
+        if 'items' not in description and 'tracks' in description:
+            description['items'] = copy.deepcopy(description['tracks'])
+        description.setdefault('version', 1)
+        if BaseScan(description).expanded_frames is not None:
+            description.setdefault('kind', 'expanded_frames')
+        else:
+            description.setdefault('kind', 'timeline_recipe')
+            description.setdefault('frames', 0)
+            description.setdefault('items', [])
+        output = description.setdefault('output', {})
+        output.setdefault('glowFrameName', DEFAULT_OUTPUT['glowFrameName'])
+        return self._scan_portable_description(description)
+
+    def setScanDescription(self, scanDescription):
+        self.scanDescription = self._scan_description_from_input(
+            scanDescription)
+        self.refreshScanPanel()
+
+    def _scan_sync_output_template(self):
+        if not hasattr(self, 'scanWidget'):
+            return
+        self.scanDescription.setdefault('output', {})[
+            'glowFrameName'] = self.scanWidget.output_template()
+
+    def _scan_object_name_map(self):
+        mapping = {}
+        bl = getattr(self.customGlWidget, 'beamline', None)
+        if bl is None:
+            return mapping
+        for object_id, oeLine in getattr(bl, 'oesDict', {}).items():
+            try:
+                name = getattr(oeLine[0], 'name', None)
+            except Exception:
+                name = None
+            if name:
+                mapping[str(object_id)] = name
+        for dict_name in ['materialsDict', 'fesDict']:
+            for object_id, obj in getattr(bl, dict_name, {}).items():
+                name = getattr(obj, 'name', None)
+                if name:
+                    mapping[str(object_id)] = name
+        return mapping
+
+    def _scan_portable_target(self, target, fallback=None):
+        if target in SCENE_TARGETS:
+            return 'Scene'
+        return self._scan_object_name_map().get(str(target),
+                                                fallback or target)
+
+    def _scan_portable_objects(self, objects):
+        portable = OrderedDict()
+        for target, patch in (objects or {}).items():
+            portable[self._scan_portable_target(target)] = copy.deepcopy(patch)
+        return portable
+
+    def _scan_portable_frame(self, frame):
+        if not isinstance(frame, dict):
+            return copy.deepcopy(frame)
+        frame = copy.deepcopy(frame)
+        if 'objects' in frame:
+            frame['objects'] = self._scan_portable_objects(frame['objects'])
+        for target in list(frame.keys()):
+            if target in FRAME_SECTIONS or target in SCENE_PROPERTY_NAMES:
+                continue
+            value = frame.pop(target)
+            portable_target = self._scan_portable_target(target)
+            if 'objects' in frame:
+                existing = frame['objects'].setdefault(
+                    portable_target, OrderedDict())
+                if isinstance(existing, dict) and isinstance(value, dict):
+                    existing.update(value)
+                else:
+                    frame['objects'][portable_target] = value
+            else:
+                frame[portable_target] = value
+        return frame
+
+    def _scan_portable_item(self, item):
+        item = copy.deepcopy(item)
+        fallback = item.pop('targetName', None)
+        if 'target' in item:
+            item['target'] = self._scan_portable_target(
+                item['target'], fallback=fallback)
+        if 'objects' in item:
+            item['objects'] = self._scan_portable_objects(item['objects'])
+        return item
+
+    def _scan_portable_description(self, description):
+        description = copy.deepcopy(description)
+        description.pop('tracks', None)
+        if 'items' in description:
+            description['items'] = [
+                self._scan_portable_item(item)
+                for item in description.get('items', [])]
+        for frame_key in ['expandedFrames', 'frameDict']:
+            if isinstance(description.get(frame_key), dict):
+                description[frame_key] = OrderedDict(
+                    (key, self._scan_portable_frame(frame))
+                    for key, frame in description[frame_key].items())
+        if isinstance(description.get('frames'), dict):
+            description['frames'] = OrderedDict(
+                (key, self._scan_portable_frame(frame))
+                for key, frame in description['frames'].items())
+        for key, frame in list(description.items()):
+            if re.match(r'^frame_\d+$', str(key)):
+                description[key] = self._scan_portable_frame(frame)
+        return description
+
+    def saveScanToJson(self):
+        self._scan_sync_output_template()
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+        saveDialog.setNameFilter("JSON files (*.json)")
+        if not saveDialog.exec_():
+            return
+        filename = saveDialog.selectedFiles()[0]
+        if not filename.lower().endswith('.json'):
+            filename = "{0}.json".format(filename)
+        try:
+            description = self._scan_portable_description(
+                self.scanDescription)
+            with open(filename, 'w', encoding='utf-8',
+                      newline='\r\n') as jsonFile:
+                json.dump(description, jsonFile, indent=2)
+                jsonFile.write('\n')
+        except Exception as exc:
+            qt.QMessageBox.warning(
+                self, 'Save scan', f'Cannot save scan JSON: {exc}')
+
+    def loadScanFromJson(self):
+        if self.scanRunning:
+            qt.QMessageBox.warning(
+                self, 'Load scan',
+                'Stop the running scan before loading another one.')
+            return
+        loadDialog = qt.QFileDialog()
+        loadDialog.setFileMode(qt.QFileDialog.ExistingFile)
+        loadDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
+        loadDialog.setNameFilter("JSON files (*.json)")
+        if not loadDialog.exec_():
+            return
+        filename = loadDialog.selectedFiles()[0]
+        try:
+            self.setScanDescription(filename)
+        except Exception as exc:
+            qt.QMessageBox.warning(
+                self, 'Load scan', f'Cannot load scan JSON: {exc}')
+            return
+        self.openScanPanel()
+
     def addScanItem(self, item):
-        self.scanDescription['items'].append(item)
-        start = int(item.get('start', item.get('frame', 0)))
-        duration = int(item.get('duration', item.get('steps', 1)))
-        self.scanDescription['frames'] = max(
-            int(self.scanDescription.get('frames', 0)), start + duration)
+        item = self._scan_portable_item(item)
+        self.scanDescription.setdefault('items', []).append(item)
+        start, duration = self._scan_item_span(item)
+        frames_value = self.scanDescription.get('frames', 0)
+        if isinstance(frames_value, dict):
+            frames_key = 'frameCount'
+            frames_value = self.scanDescription.get(
+                frames_key, len(frames_value))
+        else:
+            frames_key = 'frames'
+        self.scanDescription[frames_key] = max(
+            int(frames_value or 0), start + duration)
         self.refreshScanPanel()
         self.openScanPanel()
 
@@ -442,6 +624,10 @@ class xrtGlow(qt.QWidget):
         self.scanWidget.instructionRequested.connect(
             self.openScanInstructionDialog)
         self.scanWidget.trackDeleteRequested.connect(self.deleteScanItem)
+        self.scanWidget.scanLoadRequested.connect(self.loadScanFromJson)
+        self.scanWidget.scanSaveRequested.connect(self.saveScanToJson)
+        self.scanWidget.trackTimingChanged.connect(self.updateScanItemTiming)
+        self.scanWidget.trackEditRequested.connect(self.editScanItem)
         layout.addWidget(self.scanWidget)
         self.scanPanel = qt.QWidget(self)
         self.scanPanel.setLayout(layout)
@@ -475,18 +661,141 @@ class xrtGlow(qt.QWidget):
         self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
         self.refreshScanPanel()
 
+    def replaceScanItem(self, item_index, item):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        items[item_index] = self._scan_portable_item(item)
+        self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
+        self.refreshScanPanel()
+
+    def editScanItem(self, item_index):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        dialog = ScanInstructionDialog(
+            self.scanInstructionCatalog(), edit_item=items[item_index],
+            parent=self)
+        dialog.scanCreated.connect(
+            lambda item, row=item_index: self.replaceScanItem(row, item))
+        dialog.exec_()
+
+    def updateScanItemTiming(self, item_index, timing):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        item = items[item_index]
+        current_start, current_frames = self._scan_item_span(item)
+        start = max(0, int(timing.get(
+            'startFrame', timing.get('start', current_start))))
+        frames = max(1, int(timing.get('frames', current_frames)))
+        item_type = item.get('type', 'track')
+        if item_type == 'loopBlock':
+            item['start'] = start
+        elif item_type == 'event':
+            item.pop('start', None)
+            item['frame'] = start
+            self._scan_update_event_value(item, timing)
+            if frames > 1:
+                item['duration'] = frames
+            else:
+                item.pop('duration', None)
+                item.pop('steps', None)
+        else:
+            item['start'] = start
+            item['duration'] = frames
+            self._scan_update_track_values(item, timing, frames)
+        self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
+        self.refreshScanPanel()
+
+    def _scan_update_track_values(self, item, timing, frames):
+        has_start = 'startValue' in timing
+        has_end = 'endValue' in timing
+        if not has_start and not has_end:
+            values = item.get('values')
+            if isinstance(values, dict) and values.get('type') in [
+                    'linspace', 'constant']:
+                values['steps'] = frames
+            return
+
+        values = item.get('values')
+        if isinstance(values, dict):
+            value_type = values.get('type')
+            if value_type == 'linspace':
+                if has_start:
+                    values['start'] = timing['startValue']
+                if has_end:
+                    values['stop'] = timing['endValue']
+                values['steps'] = frames
+                return
+            if value_type == 'constant':
+                start_value = timing.get('startValue', values.get('value'))
+                end_value = timing.get('endValue', values.get('value'))
+                if start_value != end_value and frames > 1:
+                    item['values'] = {
+                        'type': 'linspace',
+                        'start': start_value,
+                        'stop': end_value,
+                        'steps': frames,
+                        }
+                else:
+                    values['value'] = start_value
+                    values['steps'] = frames
+                return
+
+        value = timing.get('startValue', timing.get('endValue', values))
+        if has_start and has_end and timing['startValue'] != \
+                timing['endValue'] and frames > 1:
+            item['values'] = {
+                'type': 'linspace',
+                'start': timing['startValue'],
+                'stop': timing['endValue'],
+                'steps': frames,
+                }
+        else:
+            item['values'] = {
+                'type': 'constant',
+                'value': value,
+                'steps': frames,
+                }
+
+    def _scan_update_event_value(self, item, timing):
+        if 'startValue' not in timing and 'endValue' not in timing:
+            return
+        value = timing.get('startValue', timing.get('endValue'))
+        patches = []
+        for patch in item.get('objects', {}).values():
+            if isinstance(patch, dict):
+                for key in patch.keys():
+                    patches.append((patch, key))
+        scene = item.get('scene', {})
+        if isinstance(scene, dict):
+            for key in scene.keys():
+                patches.append((scene, key))
+        if len(patches) != 1:
+            return
+        patch, key = patches[0]
+        patch[key] = value
+
     def _scan_recipe_frame_count(self, items):
         frame_count = 0
         for item in items:
-            if item.get('type') == 'event':
-                frame_count = max(
-                    frame_count, int(item.get('frame',
-                                              item.get('start', 0))) + 1)
-            else:
-                start = int(item.get('start', 0))
-                duration = int(item.get('duration', item.get('steps', 1)))
-                frame_count = max(frame_count, start + duration)
+            start, duration = self._scan_item_span(item)
+            frame_count = max(frame_count, start + duration)
         return frame_count
+
+    def _scan_item_span(self, item):
+        item_type = item.get('type', 'track')
+        if item_type == 'event':
+            start = int(item.get('frame', item.get('start', 0)))
+            duration = int(item.get('duration', item.get('steps', 1)))
+        elif item_type == 'loopBlock':
+            start = int(item.get('start', 0))
+            duration = BaseScan({'items': [item]})._loop_block_length(item)
+        else:
+            start = int(item.get('start', 0))
+            duration = int(item.get('duration', item.get('steps', 1)))
+        return start, max(1, duration)
 
     def _scan_format_value(self, value):
         if hasattr(value, 'uuid'):
@@ -606,7 +915,7 @@ class xrtGlow(qt.QWidget):
                         })
             if prop_items:
                 catalog.append({
-                    'target': oeid,
+                    'target': getattr(oeObj, 'name', oeid),
                     'name': getattr(oeObj, 'name', oeid),
                     'properties': prop_items,
                     })
@@ -646,7 +955,34 @@ class xrtGlow(qt.QWidget):
             self.parentRef.isGlowAutoUpdate = state
         self.customGlWidget.set_auto_update(state)
 
+    def _scan_target_id_map(self):
+        mapping = {}
+        bl = getattr(self.customGlWidget, 'beamline', None)
+        if bl is None:
+            return mapping
+        for object_id, oeLine in getattr(bl, 'oesDict', {}).items():
+            mapping[str(object_id)] = object_id
+            try:
+                name = getattr(oeLine[0], 'name', None)
+            except Exception:
+                name = None
+            if name:
+                mapping[str(name)] = object_id
+        for dict_name in ['materialsDict', 'fesDict']:
+            for object_id, obj in getattr(bl, dict_name, {}).items():
+                mapping[str(object_id)] = object_id
+                name = getattr(obj, 'name', None)
+                if name:
+                    mapping[str(name)] = object_id
+        return mapping
+
+    def _scan_resolve_target_id(self, object_id):
+        if object_id in SCENE_TARGETS:
+            return object_id
+        return self._scan_target_id_map().get(str(object_id), object_id)
+
     def _scan_object_for_id(self, object_id):
+        object_id = self._scan_resolve_target_id(object_id)
         bl = self.customGlWidget.beamline
         if object_id in bl.oesDict:
             return bl.oesDict[object_id][0]
@@ -687,6 +1023,7 @@ class xrtGlow(qt.QWidget):
         scene = OrderedDict()
         for frame in frames.values():
             for object_id, patch in frame.get('objects', {}).items():
+                object_id = self._scan_resolve_target_id(object_id)
                 obj = self._scan_object_for_id(object_id)
                 if obj is None:
                     continue
@@ -705,6 +1042,7 @@ class xrtGlow(qt.QWidget):
 
     def _scan_apply_frame(self, frame):
         for object_id, patch in frame.get('objects', {}).items():
+            object_id = self._scan_resolve_target_id(object_id)
             self.customGlWidget.update_beamline(
                 object_id, dict(patch), sender='scan')
         if frame.get('scene'):
@@ -714,6 +1052,8 @@ class xrtGlow(qt.QWidget):
     def _scan_expand_scene_patch(self, patch):
         scene = OrderedDict()
         for name, value in patch.items():
+            if name == 'offsetCoord' or name.startswith('offsetCoord.'):
+                name = name.replace('offsetCoord', 'coordOffset', 1)
             if '.' not in name:
                 scene[name] = self._scan_parse_scene_value(name, value)
                 continue
