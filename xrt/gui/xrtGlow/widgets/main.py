@@ -1809,9 +1809,13 @@ class xrtGlow(qt.QWidget):
         glw = self.customGlWidget
         menu = qt.QMenu()
         subMenuF = menu.addMenu('File')
-        for actText, actFunc in zip(['Export to image', 'Save scene geometry',
+        for actText, actFunc in zip(['Export to image',
+                                     'Copy image to clipboard',
+                                     'Save scene geometry',
                                      'Load scene geometry'],
-                                    [self.exportToImage, self.saveSceneDialog,
+                                    [self.exportToImage,
+                                     self.copyImageToClipboard,
+                                     self.saveSceneDialog,
                                      self.loadSceneDialog]):
             mAction = qt.QAction(self)
             mAction.setText(actText)
@@ -1912,6 +1916,14 @@ class xrtGlow(qt.QWidget):
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             image.save(filename)
+
+    def copyImageToClipboard(self):
+        image = self.customGlWidget.grabFramebuffer()
+        qt.QApplication.clipboard().setPixmap(qt.QPixmap.fromImage(image))
+        if getattr(self, 'parentRef', None) is not None:
+            progressBar = getattr(self.parentRef, 'progressBar', None)
+            if progressBar is not None:
+                progressBar.setFormat('Scene image copied to clipboard')
 
     def exportOeShape(self, oeid):
         saveDialog = qt.QFileDialog()
