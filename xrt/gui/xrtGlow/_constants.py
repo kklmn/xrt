@@ -44,8 +44,6 @@ shininess['Screen'] = 80.
 ambient['selected'] = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.)
 
 scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, -1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
-#scr_m = qt.QMatrix4x4(0, 0, 1, 0,  1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 1)
-# scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1)
 
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 MAXRAYS = 500000
@@ -117,7 +115,7 @@ DEFAULT_SCENE_SETTINGS = {
     'slitThicknessFraction': 50.,
     'apertureBladeWidth': 5.,
     'apertureDefaultSpan': 10.,
-    'apertureThickness': 0.1,
+    'apertureThickness': 1.,
     'maxLen': 1.,
 
     'fontSize': 5,

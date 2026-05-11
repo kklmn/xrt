@@ -6,6 +6,8 @@ Created on Tue Jan 27 13:03:13 2026
 
 import os
 import re
+import copy
+import json
 import numpy as np
 from functools import partial
 import matplotlib as mpl
@@ -19,6 +21,10 @@ from .._constants import (
         SCENE_CONTROL_LABELS, SCENE_TEXTEDITS, itemTypes)
 from .._utils import is_source, is_oe, is_aperture, is_screen
 from .inspector import InstanceInspector
+from .scan import (
+    BaseScan, DEFAULT_OUTPUT, FRAME_SECTIONS, SCENE_PROPERTY_NAMES,
+    SCENE_TARGETS, ScanInstructionDialog, TimelineFrameListWidget,
+    default_scan_description)
 from .opengl import xrtGlWidget
 
 from ...commons import qt
@@ -41,6 +47,19 @@ CONTROL_TAB_MODES = (
     "collapsible left",
     "collapsible right",
 )
+SCAN_SCENE_COMPONENTS = OrderedDict([
+    ('scaleVec', ['x', 'y', 'z']),
+    ('rotations', ['azimuth', 'elevation']),
+    ('coordOffset', ['x', 'y', 'z']),
+    ('tVec', ['x', 'y', 'z']),
+])
+SCAN_ANGLE_PROPERTIES = {
+    'pitch', 'roll', 'yaw', 'bragg', 'braggOffset', 'positionRoll',
+    'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alpha', 'theta',
+    'wedgeAngle',
+}
+SCAN_LIMIT_PROPERTIES = ('limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2')
+SCAN_AXIS_PROPERTIES = ('x', 'z')
 
 
 class _ToolbarPopupPanel(qt.QFrame):
@@ -60,6 +79,9 @@ class _ToolbarPopupPanel(qt.QFrame):
         self.titleLabel = qt.QLabel()
         self.titleLabel.setStyleSheet("font-weight: 600;")
         self.stack = qt.QStackedWidget()
+        self.stack.setMinimumSize(0, 0)
+        self.stack.setSizePolicy(qt.QSizePolicy.Ignored,
+                                 qt.QSizePolicy.Ignored)
         layout = qt.QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 10)
         layout.addWidget(self.titleLabel)
@@ -73,7 +95,7 @@ class _ToolbarPopupPanel(qt.QFrame):
 class xrtGlow(qt.QWidget):
     def __init__(self, arrayOfRays=None, parent=None, progressSignal=None,
                  layout=None, epicsPrefix=None, epicsMap={},
-                 sceneSettings={}):
+                 sceneSettings={}, scanDescription=None):
         super(xrtGlow, self).__init__()
         self.parentRef = parent
         self.cAxisLabelSize = 10
@@ -119,15 +141,32 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
         self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
+        self.customGlWidget.propagationComplete.connect(
+            self.onScanPropagationComplete)
         self.customGlWidget.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
         self.customGlWidget.openElViewer.connect(self.runElementViewer)
+        self.scanDescription = self._scan_description_from_input(
+            scanDescription)
+        self.scanOutputDirectory = None
+        self.scanRunning = False
+        self.scanPaused = False
+        self.scanStopRequested = False
+        self.scanWaitingPropagation = False
+        self.scanFrames = OrderedDict()
+        self.scanFrameIds = []
+        self.scanFrameIndex = 0
+        self.scanInitialState = None
+        self.scanAutoUpdateState = True
+        self.scanRestoringInitialState = False
+        self.scanFinishWasStopped = False
 
         self.makeNavigationPanel()
         self.makeTransformationPanel()
         self.makeColorsPanel()
         self.makeGridAndProjectionsPanel()
         self.makeScenePanel()
+        self.makeScanPanel()
         self.initControlPanels()
 
         self.controlTabMode = self._resolveControlTabMode(CONTROL_TAB)
@@ -378,8 +417,903 @@ class xrtGlow(qt.QWidget):
             elViewer.propertiesChanged.connect(
                     partial(self.customGlWidget.update_beamline, oeuuid,
                             sender='OEE'))
+            elViewer.scanCreated.connect(self.addScanItem)
             if (elViewer.show()):
                 pass
+
+    def _scan_description_from_input(self, scanDescription):
+        if scanDescription is None:
+            description = default_scan_description()
+        elif isinstance(scanDescription, BaseScan):
+            description = scanDescription.description
+        elif isinstance(scanDescription, dict):
+            description = scanDescription
+        elif isinstance(scanDescription, (list, tuple)):
+            description = default_scan_description()
+            description['items'] = list(scanDescription)
+        elif isinstance(scanDescription, (str, os.PathLike)):
+            source = os.fspath(scanDescription).strip()
+            if not source:
+                description = default_scan_description()
+            elif os.path.exists(source):
+                with open(source, 'r', encoding='utf-8') as jsonFile:
+                    description = json.load(jsonFile)
+            else:
+                description = json.loads(source)
+        else:
+            raise TypeError(
+                'scanDescription must be a dict, list, JSON string, '
+                'JSON file path, BaseScan or None')
+
+        description = copy.deepcopy(description)
+        if 'items' not in description and 'tracks' in description:
+            description['items'] = copy.deepcopy(description['tracks'])
+        description.setdefault('version', 1)
+        if BaseScan(description).expanded_frames is not None:
+            description.setdefault('kind', 'expanded_frames')
+        else:
+            description.setdefault('kind', 'timeline_recipe')
+            description.setdefault('frames', 0)
+            description.setdefault('items', [])
+        output = description.setdefault('output', {})
+        output.setdefault('glowFrameName', DEFAULT_OUTPUT['glowFrameName'])
+        return self._scan_portable_description(description)
+
+    def setScanDescription(self, scanDescription):
+        self.scanDescription = self._scan_description_from_input(
+            scanDescription)
+        self.refreshScanPanel()
+
+    def _scan_sync_output_template(self):
+        if not hasattr(self, 'scanWidget'):
+            return
+        self.scanDescription.setdefault('output', {})[
+            'glowFrameName'] = self.scanWidget.output_template()
+
+    def _scan_object_name_map(self):
+        mapping = {}
+        bl = getattr(self.customGlWidget, 'beamline', None)
+        if bl is None:
+            return mapping
+        for object_id, oeLine in getattr(bl, 'oesDict', {}).items():
+            try:
+                name = getattr(oeLine[0], 'name', None)
+            except Exception:
+                name = None
+            if name:
+                mapping[str(object_id)] = name
+        for dict_name in ['materialsDict', 'fesDict']:
+            for object_id, obj in getattr(bl, dict_name, {}).items():
+                name = getattr(obj, 'name', None)
+                if name:
+                    mapping[str(object_id)] = name
+        return mapping
+
+    def _scan_portable_target(self, target, fallback=None):
+        if target in SCENE_TARGETS:
+            return 'Scene'
+        return self._scan_object_name_map().get(str(target),
+                                                fallback or target)
+
+    def _scan_portable_objects(self, objects):
+        portable = OrderedDict()
+        for target, patch in (objects or {}).items():
+            portable[self._scan_portable_target(target)] = copy.deepcopy(patch)
+        return portable
+
+    def _scan_portable_frame(self, frame):
+        if not isinstance(frame, dict):
+            return copy.deepcopy(frame)
+        frame = copy.deepcopy(frame)
+        if 'objects' in frame:
+            frame['objects'] = self._scan_portable_objects(frame['objects'])
+        for target in list(frame.keys()):
+            if target in FRAME_SECTIONS or target in SCENE_PROPERTY_NAMES:
+                continue
+            value = frame.pop(target)
+            portable_target = self._scan_portable_target(target)
+            if 'objects' in frame:
+                existing = frame['objects'].setdefault(
+                    portable_target, OrderedDict())
+                if isinstance(existing, dict) and isinstance(value, dict):
+                    existing.update(value)
+                else:
+                    frame['objects'][portable_target] = value
+            else:
+                frame[portable_target] = value
+        return frame
+
+    def _scan_portable_item(self, item):
+        item = copy.deepcopy(item)
+        fallback = item.pop('targetName', None)
+        if 'target' in item:
+            item['target'] = self._scan_portable_target(
+                item['target'], fallback=fallback)
+        if 'objects' in item:
+            item['objects'] = self._scan_portable_objects(item['objects'])
+        return item
+
+    def _scan_portable_description(self, description):
+        description = copy.deepcopy(description)
+        description.pop('tracks', None)
+        if 'items' in description:
+            description['items'] = [
+                self._scan_portable_item(item)
+                for item in description.get('items', [])]
+        for frame_key in ['expandedFrames', 'frameDict']:
+            if isinstance(description.get(frame_key), dict):
+                description[frame_key] = OrderedDict(
+                    (key, self._scan_portable_frame(frame))
+                    for key, frame in description[frame_key].items())
+        if isinstance(description.get('frames'), dict):
+            description['frames'] = OrderedDict(
+                (key, self._scan_portable_frame(frame))
+                for key, frame in description['frames'].items())
+        for key, frame in list(description.items()):
+            if re.match(r'^frame_\d+$', str(key)):
+                description[key] = self._scan_portable_frame(frame)
+        return description
+
+    def saveScanToJson(self):
+        self._scan_sync_output_template()
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+        saveDialog.setNameFilter("JSON files (*.json)")
+        self._scan_set_dialog_directory(saveDialog)
+        if not saveDialog.exec_():
+            return
+        filename = saveDialog.selectedFiles()[0]
+        if not filename.lower().endswith('.json'):
+            filename = "{0}.json".format(filename)
+        try:
+            description = self._scan_portable_description(
+                self.scanDescription)
+            with open(filename, 'w', encoding='utf-8',
+                      newline='\r\n') as jsonFile:
+                json.dump(description, jsonFile, indent=2)
+                jsonFile.write('\n')
+        except Exception as exc:
+            qt.QMessageBox.warning(
+                self, 'Save scan', f'Cannot save scan JSON: {exc}')
+
+    def loadScanFromJson(self):
+        if self.scanRunning:
+            qt.QMessageBox.warning(
+                self, 'Load scan',
+                'Stop the running scan before loading another one.')
+            return
+        loadDialog = qt.QFileDialog()
+        loadDialog.setFileMode(qt.QFileDialog.ExistingFile)
+        loadDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
+        loadDialog.setNameFilter("JSON files (*.json)")
+        self._scan_set_dialog_directory(loadDialog)
+        if not loadDialog.exec_():
+            return
+        filename = loadDialog.selectedFiles()[0]
+        try:
+            self.setScanDescription(filename)
+        except Exception as exc:
+            qt.QMessageBox.warning(
+                self, 'Load scan', f'Cannot load scan JSON: {exc}')
+            return
+        self.openScanPanel()
+
+    def addScanItem(self, item):
+        item = self._scan_portable_item(item)
+        self.scanDescription.setdefault('items', []).append(item)
+        start, duration = self._scan_item_span(item)
+        frames_value = self.scanDescription.get('frames', 0)
+        if isinstance(frames_value, dict):
+            frames_key = 'frameCount'
+            frames_value = self.scanDescription.get(
+                frames_key, len(frames_value))
+        else:
+            frames_key = 'frames'
+        self.scanDescription[frames_key] = max(
+            int(frames_value or 0), start + duration)
+        self.refreshScanPanel()
+        self.openScanPanel()
+
+    def makeScanPanel(self):
+        layout = qt.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.scanWidget = TimelineFrameListWidget(self)
+        self.scanWidget.scanStarted.connect(self.startScan)
+        self.scanWidget.scanPaused.connect(self.pauseScan)
+        self.scanWidget.scanStopped.connect(self.stopScan)
+        self.scanWidget.outputTemplateChanged.connect(
+            self.setScanOutputTemplate)
+        self.scanWidget.instructionRequested.connect(
+            self.openScanInstructionDialog)
+        self.scanWidget.trackDeleteRequested.connect(self.deleteScanItem)
+        self.scanWidget.scanLoadRequested.connect(self.loadScanFromJson)
+        self.scanWidget.scanSaveRequested.connect(self.saveScanToJson)
+        self.scanWidget.trackTimingChanged.connect(self.updateScanItemTiming)
+        self.scanWidget.trackEditRequested.connect(self.editScanItem)
+        layout.addWidget(self.scanWidget)
+        self.scanPanel = qt.QWidget(self)
+        self.scanPanel.setLayout(layout)
+        self.refreshScanPanel()
+
+    def refreshScanPanel(self):
+        if hasattr(self, 'scanWidget'):
+            self.scanWidget.set_scan(BaseScan(self.scanDescription))
+
+    def openScanPanel(self):
+        if hasattr(self, 'sideTabs') and hasattr(self, 'scanPanel'):
+            self.sideTabs.setCurrentWidget(self.scanPanel)
+            return
+        if hasattr(self, 'controlButtons'):
+            button = self.controlButtons.get("Scans")
+            if button is not None:
+                button.setChecked(True)
+                self.toggleControlPanel("Scans", button, True)
+
+    def setScanOutputDirectory(self, directory):
+        if directory is None:
+            self.scanOutputDirectory = None
+            return
+        directory = os.fspath(directory).strip()
+        self.scanOutputDirectory = (
+            os.path.abspath(directory) if directory else None)
+
+    def _scan_resolve_output_filename(self, filename):
+        filename = os.fspath(filename)
+        if os.path.isabs(filename):
+            return filename
+        directory = getattr(self, 'scanOutputDirectory', None)
+        if directory:
+            return os.path.join(directory, filename)
+        return filename
+
+    def _scan_set_dialog_directory(self, dialog):
+        directory = getattr(self, 'scanOutputDirectory', None)
+        if directory:
+            dialog.setDirectory(directory)
+
+    def setScanOutputTemplate(self, template):
+        template = str(template).strip() or 'frame{index:04d}.jpg'
+        self.scanDescription.setdefault('output', {})[
+            'glowFrameName'] = template
+        self.refreshScanPanel()
+
+    def deleteScanItem(self, item_index):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        del items[item_index]
+        self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
+        self.refreshScanPanel()
+
+    def replaceScanItem(self, item_index, item):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        items[item_index] = self._scan_portable_item(item)
+        self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
+        self.refreshScanPanel()
+
+    def editScanItem(self, item_index):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        dialog = ScanInstructionDialog(
+            self.scanInstructionCatalog(), edit_item=items[item_index],
+            parent=self)
+        dialog.scanCreated.connect(
+            lambda item, row=item_index: self.replaceScanItem(row, item))
+        dialog.exec_()
+
+    def updateScanItemTiming(self, item_index, timing):
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        item = items[item_index]
+        current_start, current_frames = self._scan_item_span(item)
+        start = max(0, int(timing.get(
+            'startFrame', timing.get('start', current_start))))
+        frames = max(1, int(timing.get('frames', current_frames)))
+        item_type = item.get('type', 'track')
+        if item_type == 'loopBlock':
+            item['start'] = start
+        elif item_type == 'event':
+            item.pop('start', None)
+            item['frame'] = start
+            self._scan_update_event_value(item, timing)
+            if frames > 1:
+                item['duration'] = frames
+            else:
+                item.pop('duration', None)
+                item.pop('steps', None)
+        else:
+            item['start'] = start
+            item['duration'] = frames
+            self._scan_update_track_values(item, timing, frames)
+        self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
+        self.refreshScanPanel()
+
+    def _scan_update_track_values(self, item, timing, frames):
+        has_start = 'startValue' in timing
+        has_end = 'endValue' in timing
+        if not has_start and not has_end:
+            values = item.get('values')
+            if isinstance(values, dict) and values.get('type') in [
+                    'linspace', 'constant']:
+                values['steps'] = frames
+            return
+
+        values = item.get('values')
+        if isinstance(values, dict):
+            value_type = values.get('type')
+            if value_type == 'linspace':
+                if has_start:
+                    values['start'] = timing['startValue']
+                if has_end:
+                    values['stop'] = timing['endValue']
+                values['steps'] = frames
+                return
+            if value_type == 'constant':
+                start_value = timing.get('startValue', values.get('value'))
+                end_value = timing.get('endValue', values.get('value'))
+                if start_value != end_value and frames > 1:
+                    item['values'] = {
+                        'type': 'linspace',
+                        'start': start_value,
+                        'stop': end_value,
+                        'steps': frames,
+                        }
+                else:
+                    values['value'] = start_value
+                    values['steps'] = frames
+                return
+
+        value = timing.get('startValue', timing.get('endValue', values))
+        if has_start and has_end and timing['startValue'] != \
+                timing['endValue'] and frames > 1:
+            item['values'] = {
+                'type': 'linspace',
+                'start': timing['startValue'],
+                'stop': timing['endValue'],
+                'steps': frames,
+                }
+        else:
+            item['values'] = {
+                'type': 'constant',
+                'value': value,
+                'steps': frames,
+                }
+
+    def _scan_update_event_value(self, item, timing):
+        if 'startValue' not in timing and 'endValue' not in timing:
+            return
+        value = timing.get('startValue', timing.get('endValue'))
+        patches = []
+        for patch in item.get('objects', {}).values():
+            if isinstance(patch, dict):
+                for key in patch.keys():
+                    patches.append((patch, key))
+        scene = item.get('scene', {})
+        if isinstance(scene, dict):
+            for key in scene.keys():
+                patches.append((scene, key))
+        if len(patches) != 1:
+            return
+        patch, key = patches[0]
+        patch[key] = value
+
+    def _scan_recipe_frame_count(self, items):
+        frame_count = 0
+        for item in items:
+            start, duration = self._scan_item_span(item)
+            frame_count = max(frame_count, start + duration)
+        return frame_count
+
+    def _scan_item_span(self, item):
+        item_type = item.get('type', 'track')
+        if item_type == 'event':
+            start = int(item.get('frame', item.get('start', 0)))
+            duration = int(item.get('duration', item.get('steps', 1)))
+        elif item_type == 'loopBlock':
+            start = int(item.get('start', 0))
+            duration = BaseScan({'items': [item]})._loop_block_length(item)
+        else:
+            start = int(item.get('start', 0))
+            duration = int(item.get('duration', item.get('steps', 1)))
+        return start, max(1, duration)
+
+    def _scan_format_value(self, value):
+        if hasattr(value, 'uuid'):
+            return value.uuid
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, set):
+            return sorted(value)
+        if isinstance(value, (np.integer, np.floating)):
+            return value.item()
+        return value
+
+    def _scan_scene_properties(self):
+        props = []
+        for name, fields in SCAN_SCENE_COMPONENTS.items():
+            value = getattr(self.customGlWidget, name,
+                            DEFAULT_SCENE_SETTINGS.get(name))
+            if value is None:
+                continue
+            for index, field in enumerate(fields):
+                try:
+                    field_value = value[index]
+                except Exception:
+                    field_value = ''
+                props.append({
+                    'name': f'{name}.{field}',
+                    'value': self._scan_format_value(field_value),
+                    })
+        return props
+
+    def _scan_angle_value(self, value):
+        if isinstance(value, str):
+            if re.search(r'[A-Za-z]', value):
+                return value
+            try:
+                return f'{float(value) * 1e3:g} mrad'
+            except ValueError:
+                return value
+        if isinstance(value, (int, float, np.integer, np.floating)):
+            return f'{float(value) * 1e3:g} mrad'
+        return value
+
+    def _scan_split_compound_property(self, name, value):
+        if isinstance(value, str):
+            parsed = raycing.parametrize(value)
+        else:
+            parsed = value
+        fields = raycing.compoundArgs.get(name)
+        if name == 'blades':
+            if not isinstance(parsed, dict):
+                return None
+            return [{
+                'name': f'{name}.{field}',
+                'value': self._scan_format_value(parsed[field]),
+                } for field in parsed.keys()]
+        if not fields or not isinstance(parsed, (list, tuple, np.ndarray)):
+            return None
+        items = []
+        for index, field in enumerate(fields):
+            if index >= len(parsed):
+                break
+            items.append({
+                'name': f'{name}.{field}',
+                'value': self._scan_format_value(parsed[index]),
+                })
+        return items
+
+    def _scan_extra_property_names(self, oeObj):
+        names = []
+        if hasattr(oeObj, 'blades'):
+            names.append('blades')
+        for name in SCAN_LIMIT_PROPERTIES:
+            if hasattr(oeObj, name):
+                names.append(name)
+        if is_screen(oeObj) or is_aperture(oeObj):
+            for name in SCAN_AXIS_PROPERTIES:
+                if hasattr(oeObj, name):
+                    names.append(name)
+        return names
+
+    def _scan_init_defaults(self, oeObj):
+        try:
+            return OrderedDict(raycing.get_params(raycing.get_obj_str(oeObj)))
+        except Exception:
+            return OrderedDict()
+
+    def _scan_is_default_scannable(self, defaults, name):
+        root = str(name).split('.', 1)[0]
+        if root not in defaults:
+            return False
+        default = defaults[root]
+        return default is not None and not isinstance(default, (str, bool))
+
+    def _scan_element_property_value(self, oeObj, name, value):
+        initValue = getattr(oeObj, f'_{name}Init', None)
+        if initValue is not None and str(initValue).lower() != 'none':
+            value = initValue
+        if name in SCAN_ANGLE_PROPERTIES:
+            value = self._scan_angle_value(value)
+        return self._scan_format_value(value)
+
+    def _scan_element_properties(self):
+        bl = self.customGlWidget.beamline
+        blName = getattr(bl, 'name', None)
+        catalog = []
+        for oeid, oeLine in bl.oesDict.items():
+            oeObj = oeLine[0]
+            defaults = self._scan_init_defaults(oeObj)
+            try:
+                props = raycing.get_init_kwargs(oeObj, compact=False,
+                                                blname=blName)
+            except Exception:
+                props = {}
+            for name in self._scan_extra_property_names(oeObj):
+                if name not in props:
+                    props[name] = getattr(oeObj, name)
+            prop_items = []
+            for name, value in props.items():
+                if name in ['uuid', 'name'] or str(name).endswith('rbk'):
+                    continue
+                if not self._scan_is_default_scannable(defaults, name):
+                    continue
+                value = self._scan_element_property_value(
+                    oeObj, name, value)
+                compound_items = self._scan_split_compound_property(
+                    name, value)
+                if compound_items is not None:
+                    prop_items.extend(compound_items)
+                else:
+                    prop_items.append({
+                        'name': name,
+                        'value': value,
+                        })
+            if prop_items:
+                catalog.append({
+                    'target': getattr(oeObj, 'name', oeid),
+                    'name': getattr(oeObj, 'name', oeid),
+                    'properties': prop_items,
+                    })
+        return catalog
+
+    def scanInstructionCatalog(self):
+        catalog = [{
+            'target': 'Scene',
+            'name': 'Scene',
+            'properties': self._scan_scene_properties(),
+            }]
+        catalog.extend(self._scan_element_properties())
+        return catalog
+
+    def openScanInstructionDialog(self, frame_index=0):
+        dialog = ScanInstructionDialog(
+            self.scanInstructionCatalog(), start_frame=frame_index,
+            parent=self)
+        dialog.scanCreated.connect(self.addScanItem)
+        dialog.exec_()
+
+    def _scan_status(self, progress, message):
+        signal = getattr(self.customGlWidget, 'QookSignal', None)
+        if signal is not None:
+            signal.emit((progress, message))
+
+    def _scan_auto_update_state(self):
+        if self.parentRef is not None and hasattr(
+                self.parentRef, 'isGlowAutoUpdate'):
+            return bool(self.parentRef.isGlowAutoUpdate)
+        return bool(getattr(self.customGlWidget, 'autoUpdate', True))
+
+    def _set_scan_auto_update(self, state):
+        state = bool(state)
+        if self.parentRef is not None and hasattr(
+                self.parentRef, 'isGlowAutoUpdate'):
+            self.parentRef.isGlowAutoUpdate = state
+        self.customGlWidget.set_auto_update(state)
+
+    def _scan_target_id_map(self):
+        mapping = {}
+        bl = getattr(self.customGlWidget, 'beamline', None)
+        if bl is None:
+            return mapping
+        for object_id, oeLine in getattr(bl, 'oesDict', {}).items():
+            mapping[str(object_id)] = object_id
+            try:
+                name = getattr(oeLine[0], 'name', None)
+            except Exception:
+                name = None
+            if name:
+                mapping[str(name)] = object_id
+        for dict_name in ['materialsDict', 'fesDict']:
+            for object_id, obj in getattr(bl, dict_name, {}).items():
+                mapping[str(object_id)] = object_id
+                name = getattr(obj, 'name', None)
+                if name:
+                    mapping[str(name)] = object_id
+        return mapping
+
+    def _scan_resolve_target_id(self, object_id):
+        if object_id in SCENE_TARGETS:
+            return object_id
+        return self._scan_target_id_map().get(str(object_id), object_id)
+
+    def _scan_object_for_id(self, object_id):
+        object_id = self._scan_resolve_target_id(object_id)
+        bl = self.customGlWidget.beamline
+        if object_id in bl.oesDict:
+            return bl.oesDict[object_id][0]
+        if object_id in bl.materialsDict:
+            return bl.materialsDict[object_id]
+        if object_id in bl.fesDict:
+            return bl.fesDict[object_id]
+        return None
+
+    def _scan_snapshot_value(self, obj, prop):
+        prop = prop.split('.')[0]
+        no_value = object()
+        raw_value = getattr(obj, f'_{prop}', no_value)
+        resolved_value = getattr(obj, prop, raw_value)
+        raw_value_attr = getattr(obj, f'_{prop}Val', no_value)
+        init_value = getattr(obj, f'_{prop}Init', no_value)
+        if raw_value is not no_value and raw_value is not None and \
+                raw_value_attr is None and \
+                raycing.is_auto_align_value(raw_value):
+            if init_value is not no_value and init_value is not None:
+                value = init_value
+            else:
+                value = raw_value
+        elif raw_value is not no_value and raw_value is not None and \
+                raw_value_attr is None:
+            value = raw_value
+        else:
+            value = resolved_value
+        if hasattr(value, 'uuid'):
+            value = value.uuid
+        elif hasattr(value, 'name') and prop.lower().startswith(
+                ('mater', 'tlay', 'blay', 'coat', 'substrate')):
+            value = value.name
+        return copy.deepcopy(value)
+
+    def _scan_collect_initial_state(self, frames):
+        objects = OrderedDict()
+        scene = OrderedDict()
+        for frame in frames.values():
+            for object_id, patch in frame.get('objects', {}).items():
+                object_id = self._scan_resolve_target_id(object_id)
+                obj = self._scan_object_for_id(object_id)
+                if obj is None:
+                    continue
+                object_state = objects.setdefault(object_id, OrderedDict())
+                for prop in patch.keys():
+                    root_prop = prop.split('.')[0]
+                    if root_prop not in object_state:
+                        object_state[root_prop] = self._scan_snapshot_value(
+                            obj, root_prop)
+            for prop in frame.get('scene', {}).keys():
+                root_prop = prop.split('.')[0]
+                if root_prop not in scene:
+                    scene[root_prop] = copy.deepcopy(
+                        getattr(self.customGlWidget, root_prop, None))
+        return {'objects': objects, 'scene': scene}
+
+    def _scan_apply_frame(self, frame):
+        for object_id, patch in frame.get('objects', {}).items():
+            object_id = self._scan_resolve_target_id(object_id)
+            self.customGlWidget.update_beamline(
+                object_id, dict(patch), sender='scan')
+        if frame.get('scene'):
+            scene = self._scan_expand_scene_patch(frame['scene'])
+            self.applySceneProperties(scene)
+
+    def _scan_expand_scene_patch(self, patch):
+        scene = OrderedDict()
+        for name, value in patch.items():
+            if name == 'offsetCoord' or name.startswith('offsetCoord.'):
+                name = name.replace('offsetCoord', 'coordOffset', 1)
+            if '.' not in name:
+                scene[name] = self._scan_parse_scene_value(name, value)
+                continue
+            root, field = name.split('.', 1)
+            fields = SCAN_SCENE_COMPONENTS.get(root)
+            if fields is None or field not in fields:
+                scene[name] = self._scan_parse_scene_value(name, value)
+                continue
+            if root not in scene:
+                current = copy.deepcopy(
+                    getattr(self.customGlWidget, root,
+                            DEFAULT_SCENE_SETTINGS.get(root)))
+                if hasattr(current, 'tolist'):
+                    current = current.tolist()
+                else:
+                    current = list(current)
+                scene[root] = current
+            scene[root][fields.index(field)] = self._scan_parse_scene_value(
+                root, value)
+        return scene
+
+    def _scan_parse_scene_value(self, name, value):
+        if not isinstance(value, str):
+            return value
+        root = name.split('.')[0]
+        reference = getattr(self.customGlWidget, name,
+                            getattr(self.customGlWidget, root,
+                                    DEFAULT_SCENE_SETTINGS.get(root)))
+        text = value.strip()
+        if isinstance(reference, bool):
+            return text.lower() in ['1', 'true', 'yes', 'on']
+        try:
+            parsed = raycing.parametrize(text)
+        except Exception:
+            parsed = text
+        if root in SCAN_SCENE_COMPONENTS:
+            return float(parsed)
+        if isinstance(reference, set):
+            if isinstance(parsed, (list, tuple, set)):
+                return set(parsed)
+            if parsed in ['', None]:
+                return set()
+            return {parsed}
+        if isinstance(reference, np.ndarray):
+            return np.array(parsed)
+        if isinstance(reference, (list, tuple)):
+            return parsed
+        if isinstance(reference, (int, np.integer)) and not isinstance(
+                reference, bool):
+            return int(parsed)
+        if isinstance(reference, (float, np.floating)):
+            return float(parsed)
+        return parsed
+
+    def _scan_restore_initial_state(self):
+        if not self.scanInitialState:
+            return False
+        hasObjects = bool(self.scanInitialState.get('objects'))
+        for object_id, patch in self.scanInitialState.get(
+                'objects', {}).items():
+            self.customGlWidget.update_beamline(
+                object_id, dict(patch), sender='scan')
+        scene = self.scanInitialState.get('scene', {})
+        if scene:
+            self.applySceneProperties(dict(scene))
+        else:
+            self.customGlWidget.glDraw()
+        return hasObjects
+
+    def startScan(self):
+        if self.scanRunning:
+            if self.scanPaused:
+                self.scanPaused = False
+                self._scan_status(0., 'Resuming scan')
+                if not self.scanWaitingPropagation:
+                    qt.QTimer.singleShot(0, self.runScanFrame)
+            return
+
+        scan = BaseScan(self.scanDescription)
+        self.scanFrames = scan.compile_frames()
+        self.scanFrameIds = list(self.scanFrames.keys())
+        if not self.scanFrameIds:
+            return
+
+        self.scanInitialState = self._scan_collect_initial_state(
+            self.scanFrames)
+        self.scanAutoUpdateState = self._scan_auto_update_state()
+        self._set_scan_auto_update(False)
+        self.scanRunning = True
+        self.scanPaused = False
+        self.scanStopRequested = False
+        self.scanWaitingPropagation = False
+        self.scanRestoringInitialState = False
+        self.scanFinishWasStopped = False
+        self.scanFrameIndex = 0
+        self.scanWidget.set_current_frame(0, emit_signal=False)
+        self._scan_status(0., 'Starting scan')
+        qt.QTimer.singleShot(0, self.runScanFrame)
+
+    def pauseScan(self):
+        if not self.scanRunning:
+            return
+        self.scanPaused = True
+        self._scan_status(0., 'Scan paused')
+
+    def stopScan(self):
+        if not self.scanRunning:
+            return
+        self.scanStopRequested = True
+        self.scanPaused = False
+        self._scan_status(0., 'Stopping scan')
+        if not self.scanWaitingPropagation:
+            self.finishScan()
+
+    def runScanFrame(self):
+        if not self.scanRunning:
+            return
+        if self.scanPaused or self.scanWaitingPropagation:
+            return
+        if self.scanStopRequested or self.scanFrameIndex >= len(
+                self.scanFrameIds):
+            self.finishScan()
+            return
+
+        frame_id = self.scanFrameIds[self.scanFrameIndex]
+        frame = self.scanFrames[frame_id]
+        self.scanWidget.set_current_frame(self.scanFrameIndex)
+        self._scan_apply_frame(frame)
+        progress = self.scanFrameIndex / max(1, len(self.scanFrameIds))
+        self._scan_status(progress, f'Running scan {frame_id}')
+
+        if not frame.get('objects'):
+            self.customGlWidget.glDraw()
+            qt.QTimer.singleShot(0, self.saveScanFrameAndContinue)
+            return
+
+        calc_process = getattr(self.customGlWidget, 'calc_process', None)
+        if calc_process is None or not calc_process.is_alive():
+            self.customGlWidget.glDraw()
+            qt.QTimer.singleShot(0, self.saveScanFrameAndContinue)
+            return
+
+        self.scanWaitingPropagation = True
+        self.customGlWidget.update_beamline(
+            None, {'Acquire': '1'}, sender='scan')
+
+    def onScanPropagationComplete(self, msg):
+        if self.scanRestoringInitialState:
+            self.scanWaitingPropagation = False
+            self.customGlWidget.glDraw()
+            qt.QTimer.singleShot(0, self.completeScan)
+            return
+        if not self.scanRunning or not self.scanWaitingPropagation:
+            return
+        self.scanWaitingPropagation = False
+        self.customGlWidget.glDraw()
+        qt.QTimer.singleShot(0, self.saveScanFrameAndContinue)
+
+    def saveScanFrameAndContinue(self):
+        if not self.scanRunning:
+            return
+        if self.scanFrameIndex >= len(self.scanFrameIds):
+            self.finishScan()
+            return
+        if self.scanStopRequested:
+            self.finishScan()
+            return
+
+        frame_id = self.scanFrameIds[self.scanFrameIndex]
+        frame = self.scanFrames[frame_id]
+        filename = frame.get('output', {}).get('glowFrameName')
+        if filename:
+            filename = self._scan_resolve_output_filename(filename)
+            folder = os.path.dirname(filename)
+            if folder and not os.path.exists(folder):
+                os.makedirs(folder)
+            self.customGlWidget.repaint()
+            image = self.customGlWidget.grabFramebuffer()
+            image.save(filename)
+
+        self.scanFrameIndex += 1
+        progress = self.scanFrameIndex / max(1, len(self.scanFrameIds))
+        self._scan_status(progress, f'Saved {frame_id}')
+        if self.scanPaused:
+            return
+        else:
+            qt.QTimer.singleShot(0, self.runScanFrame)
+
+    def finishScan(self):
+        self.scanFinishWasStopped = self.scanStopRequested
+        self.scanWaitingPropagation = False
+        try:
+            needsPropagation = self._scan_restore_initial_state()
+        except Exception:
+            self.completeScan()
+            raise
+        calc_process = getattr(self.customGlWidget, 'calc_process', None)
+        if needsPropagation and calc_process is not None and \
+                calc_process.is_alive():
+            self.scanRestoringInitialState = True
+            self.scanWaitingPropagation = True
+            self._scan_status(1., 'Restoring initial beamline state')
+            self.customGlWidget.update_beamline(
+                None, {'Acquire': '1'}, sender='scan')
+            return
+        self.completeScan()
+
+    def completeScan(self):
+        was_stopped = self.scanFinishWasStopped
+        self.scanRestoringInitialState = False
+        self.scanWaitingPropagation = False
+        self._set_scan_auto_update(self.scanAutoUpdateState)
+        self.scanRunning = False
+        self.scanPaused = False
+        self.scanStopRequested = False
+        self.scanInitialState = None
+        self.scanWidget.mark_scan_finished()
+        msg = 'Scan stopped' if was_stopped else 'Scan complete'
+        self._scan_status(1., msg)
 
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
@@ -571,7 +1505,7 @@ class xrtGlow(qt.QWidget):
         self.paletteWidget = qt.FigCanvas(self.mplFig)
         self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
                                          qt.QSizePolicy.MinimumExpanding)
-        self.paletteWidget.setMinimumHeight(220)
+        self.paletteWidget.setMinimumHeight(260)
         self.paletteWidget.span = RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL,
             # drawtype='box',
@@ -593,6 +1527,7 @@ class xrtGlow(qt.QWidget):
         layout.addStretch()
         colorLayout.addLayout(layout)
         colorLayout.addWidget(self.paletteWidget)
+        colorLayout.addSpacing(8)
 
         layout = qt.QHBoxLayout()
         for icSel, cSelText in enumerate(['Color Axis min', 'Color Axis max']):
@@ -709,6 +1644,7 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setLayout(colorLayout)
 
         self.colorOpacityPanel = qt.QWidget(self)
+        self.colorOpacityPanel.setProperty('popupMinHeight', 620)
         colorOpacityLayout = qt.QVBoxLayout()
         colorOpacityLayout.addWidget(self.colorPanel)
         colorOpacityLayout.addWidget(self.opacityPanel)
@@ -911,6 +1847,7 @@ class xrtGlow(qt.QWidget):
             ("Colors", self.colorOpacityPanel),
             ("Grid/Projections", self.projectionPanel),
             ("Scene", self.scenePanel),
+            ("Scans", self.scanPanel),
         ])
 
     def makeControlsTabsWidget(self):
@@ -933,6 +1870,7 @@ class xrtGlow(qt.QWidget):
             "Colors": "p_colors128.png",
             "Grid/Projections": "p_grid128.png",
             "Scene": "p_scene128.png",
+            "Scans": "p_scan128.png",
         }
 
         for panel in self.controlPanels.values():
@@ -987,6 +1925,81 @@ class xrtGlow(qt.QWidget):
             button.setChecked(False)
             button.blockSignals(False)
 
+    def _controlPopupSize(self, panelWidget):
+        layout = self.controlPopup.layout()
+        margins = layout.contentsMargins()
+        spacing = layout.spacing()
+        frame = 2 * self.controlPopup.frameWidth()
+        titleHint = self.controlPopup.titleLabel.sizeHint()
+        panelHint = panelWidget.sizeHint()
+        panelMinHint = panelWidget.minimumSizeHint()
+        panelMin = panelWidget.minimumSize()
+
+        panelWidth = max(panelHint.width(), panelMinHint.width(),
+                         panelMin.width(), 280)
+        panelHeight = max(panelHint.height(), panelMinHint.height(),
+                          panelMin.height(), 120)
+        popupMinHeight = panelWidget.property('popupMinHeight')
+        if popupMinHeight is not None:
+            panelHeight = max(panelHeight, int(popupMinHeight))
+        if panelWidget is getattr(self, 'navigationPanel', None):
+            model = self.oeTree.model()
+            columnCount = model.columnCount() if model is not None else 0
+            treeWidth = sum(self.oeTree.columnWidth(column)
+                            for column in range(columnCount))
+            rowCount = 0
+            parents = [qt.QModelIndex()]
+            while model is not None and parents:
+                parent = parents.pop()
+                for row in range(model.rowCount(parent)):
+                    rowCount += 1
+                    index = model.index(row, 0, parent)
+                    if self.oeTree.isExpanded(index):
+                        parents.append(index)
+            rowHeight = max(self.oeTree.sizeHintForRow(0),
+                            self.oeTree.iconSize().height() + 8,
+                            self.oeTree.fontMetrics().height() + 8)
+            treeHeight = self.oeTree.header().height() + rowCount * rowHeight
+            panelWidth = max(panelWidth, treeWidth + 48, 420)
+            panelHeight = max(panelHeight, treeHeight + 32)
+
+        width = max(titleHint.width(), panelHint.width(),
+                    panelMinHint.width(), panelMin.width(), panelWidth)
+        height = titleHint.height() + spacing + panelHeight
+
+        width += margins.left() + margins.right() + frame
+        height += margins.top() + margins.bottom() + frame
+
+        viewSize = self.customGlWidget.size()
+        maxWidth = max(420, min(760, int(viewSize.width() * 0.70)))
+        if panelWidget in [getattr(self, 'navigationPanel', None),
+                           getattr(self, 'colorOpacityPanel', None)]:
+            maxHeight = max(320, self.height(), viewSize.height())
+        else:
+            maxHeight = max(320, min(760, int(viewSize.height() * 0.85)))
+        return qt.QSize(min(width, maxWidth), min(height, maxHeight))
+
+    def _controlPopupPosition(self, button, popupSize):
+        if self.controlTabMode == 'collapsible top':
+            pos = button.mapToGlobal(button.rect().bottomLeft())
+            pos.setY(pos.y() + 4)
+        elif self.controlTabMode == 'collapsible right':
+            pos = button.mapToGlobal(button.rect().topLeft())
+            pos.setX(pos.x() - popupSize.width() - 6)
+        else:
+            pos = button.mapToGlobal(button.rect().topRight())
+            pos.setX(pos.x() + 6)
+
+        margin = 6
+        origin = self.mapToGlobal(self.rect().topLeft())
+        minX = origin.x() + margin
+        minY = origin.y() + margin
+        maxX = origin.x() + self.width() - popupSize.width() - margin
+        maxY = origin.y() + self.height() - popupSize.height() - margin
+        pos.setX(min(max(pos.x(), minX), max(minX, maxX)))
+        pos.setY(min(max(pos.y(), minY), max(minY, maxY)))
+        return pos
+
     def toggleControlPanel(self, panelName, button, checked):
         if not checked:
             self.controlPopup.hide()
@@ -999,23 +2012,14 @@ class xrtGlow(qt.QWidget):
                 otherButton.blockSignals(False)
 
         self.controlPopup.titleLabel.setText(panelName)
-        self.controlPopup.stack.setCurrentWidget(self.controlPanels[panelName])
+        panelWidget = self.controlPanels[panelName]
+        self.controlPopup.stack.setCurrentWidget(panelWidget)
         self.controlPopup.adjustSize()
 
-        popup_width = max(360, self.controlPopup.sizeHint().width())
-        popup_height = min(520, self.controlPopup.sizeHint().height())
-        self.controlPopup.resize(popup_width, popup_height)
-
-        if self.controlTabMode == 'collapsible top':
-            popup_pos = button.mapToGlobal(button.rect().bottomLeft())
-            popup_pos.setY(popup_pos.y() + 4)
-        elif self.controlTabMode == 'collapsible right':
-            popup_pos = button.mapToGlobal(button.rect().topLeft())
-            popup_pos.setX(popup_pos.x() - popup_width - 6)
-        else:
-            popup_pos = button.mapToGlobal(button.rect().topRight())
-            popup_pos.setX(popup_pos.x() + 6)
-        self.controlPopup.move(popup_pos)
+        popupSize = self._controlPopupSize(panelWidget)
+        self.controlPopup.resize(popupSize)
+        popupSize = self.controlPopup.size()
+        self.controlPopup.move(self._controlPopupPosition(button, popupSize))
         self.controlPopup.show()
         self.controlPopup.raise_()
 

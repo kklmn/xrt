@@ -24,8 +24,15 @@ derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
 renderOnlyArgSet = {'renderStyle', 'name'}
 
 compoundArgs = {'center': ['x', 'y', 'z'],
+                'x': ['x', 'y', 'z'],
+                'z': ['x', 'y', 'z'],
                 'lim': ['lmin', 'lmax'],
+                'limPhysX': ['lmin', 'lmax'],
+                'limPhysY': ['lmin', 'lmax'],
+                'limPhysX2': ['lmin', 'lmax'],
+                'limPhysY2': ['lmin', 'lmax'],
                 'opening': ['left', 'right', 'bottom', 'top'],
+                'blades': ['left', 'right', 'bottom', 'top'],
                 'image': ['width', 'height']}
 
 dependentArgs = {'eSigmaX', 'eSigmaZ', 'betaX', 'betaZ',

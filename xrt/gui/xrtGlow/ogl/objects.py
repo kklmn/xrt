@@ -19,6 +19,7 @@ from ....backends import raycing
 from ....backends.raycing import oes as roes
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import materials as rmats
+from ....backends.raycing import sources as rsources
 from ....backends.raycing.sources import Beam
 
 try:
@@ -309,25 +310,23 @@ class OEMesh3D():
     vec2 texUV;
     vec4 histColor;
 
-    struct lightSource
-    {
-      vec4 position;
-      vec4 diffuse;
-      vec4 specular;
-      float constantAttenuation, linearAttenuation, quadraticAttenuation;
-      float spotCutoff, spotExponent;
-      vec3 spotDirection;
-    };
-
-    lightSource light0 = lightSource(
-      vec4(0.0,  0.0,  3.0, 0.0),
-      vec4(0.6,  0.6,  0.6, 1.0),
-      vec4(1.0,  1.0,  1.0, 1.0),
-      0.0, 1.0, 0.0,
-      90.0, 0.0,
-      vec3(0.0, 0.0, -1.0)
+    const int lightCount = 8;
+    const vec3 lightDirections[8] = vec3[8](
+      vec3( 1.0,  1.0,  1.0),
+      vec3( 1.0,  1.0, -1.0),
+      vec3( 1.0, -1.0,  1.0),
+      vec3( 1.0, -1.0, -1.0),
+      vec3(-1.0,  1.0,  1.0),
+      vec3(-1.0,  1.0, -1.0),
+      vec3(-1.0, -1.0,  1.0),
+      vec3(-1.0, -1.0, -1.0)
     );
-    vec4 scene_ambient = vec4(0.5, 0.5, 0.5, 1.0);
+    const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
+    const vec3 lightSpecular = vec3(1.0, 1.0, 1.0);
+    const float diffuseScale = 0.22;
+    const float specularScale = 0.75;
+    const float fresnelScale = 0.25;
+    vec4 scene_ambient = vec4(0.48, 0.48, 0.48, 1.0);
 
     struct material
     {
@@ -344,59 +343,30 @@ class OEMesh3D():
       vec3 normalDirection = normalize(varyingNormalDirection);
       vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
                                           w_position));
-      vec3 lightDirection;
-      float attenuation;
-
-      if (0.0 == light0.position.w) // directional light?
-        {
-          attenuation = 1.0; // no attenuation
-          lightDirection = normalize(vec3(light0.position));
-        }
-      else // point light or spotlight (or other kind of light)
-        {
-          vec3 positionToLightSource = -viewDirection;
-          //vec3 positionToLightSource = vec3(light0.position - w_position);
-          float distance = length(positionToLightSource);
-          lightDirection = normalize(positionToLightSource);
-          attenuation = 1.0 / (light0.constantAttenuation
-                               + light0.linearAttenuation * distance
-                               + light0.quadraticAttenuation * distance *
-                               distance);
-
-          if (light0.spotCutoff <= 90.0) // spotlight?
-        {
-          float clampedCosine = max(0.0, dot(-lightDirection,
-                                             light0.spotDirection));
-          if (clampedCosine < cos(radians(light0.spotCutoff)))
-            {
-              attenuation = 0.0;
-            }
-          else
-            {
-              attenuation = attenuation * pow(clampedCosine,
-                                              light0.spotExponent);
-            }
-        }
-        }
 
       vec3 ambientLighting = vec3(scene_ambient) * vec3(frontMaterial.ambient);
 
-      vec3 diffuseReflection = attenuation
-        * vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
-        * max(0.0, dot(normalDirection, lightDirection));
-
-      vec3 specularReflection;
-      if (dot(normalDirection, lightDirection) < 0.0)
+      vec3 diffuseReflection = vec3(0.0, 0.0, 0.0);
+      vec3 specularReflection = vec3(0.0, 0.0, 0.0);
+      float gloss = max(frontMaterial.shininess * 1.6, 120.0);
+      for (int i = 0; i < lightCount; ++i)
         {
-          specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+          vec3 lightDirection = normalize(lightDirections[i]);
+          float normalLight = max(0.0, dot(normalDirection, lightDirection));
+          diffuseReflection += lightDiffuse * vec3(frontMaterial.diffuse) *
+            normalLight;
+          if (normalLight > 0.0)
+            {
+              specularReflection += lightSpecular *
+                vec3(frontMaterial.specular) *
+                pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
+                                 viewDirection)), gloss);
+            }
         }
-      else // light source on the right side
-        {
-          specularReflection = attenuation * vec3(light0.specular) *
-          vec3(frontMaterial.specular) *
-          pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
-                           viewDirection)), frontMaterial.shininess);
-        }
+      diffuseReflection *= diffuseScale;
+      specularReflection *= specularScale;
+      specularReflection += vec3(frontMaterial.specular) * fresnelScale *
+        pow(1.0 - max(0.0, dot(normalDirection, viewDirection)), 5.0);
      texUV = vec2((localPos.x-texlimitsx.x)/(texlimitsx.y-texlimitsx.x),
                  (localPos.y-texlimitsy.x)/(texlimitsy.y-texlimitsy.x));
 
@@ -552,7 +522,7 @@ class OEMesh3D():
     void main()
     {
         vec4 scaledPos = vec4(inPosition, 1.0) * scale;
-        w_position = model * vec4(scaledPos + vec4(instancePosition, 1.0));
+        w_position = model * vec4(scaledPos.xyz + instancePosition, 1.0);
 
         gl_Position = projection * view * w_position;
 
@@ -573,26 +543,23 @@ class OEMesh3D():
 
     uniform mat4 v_inv;
 
-    struct lightSource
-    {
-      vec4 position;
-      vec4 diffuse;
-      vec4 specular;
-      float constantAttenuation, linearAttenuation, quadraticAttenuation;
-      float spotCutoff, spotExponent;
-      vec3 spotDirection;
-    };
-
-    lightSource light0 = lightSource(
-      vec4(0.0,  0.0,  3.0, 0.0),
-      vec4(0.6,  0.6,  0.6, 1.0),
-      vec4(1.0,  1.0,  1.0, 1.0),
-      0.0, 1.0, 0.0,
-      90.0, -0.7,
-      vec3(0.0, 0.0, -1.0)
+    const int lightCount = 8;
+    const vec3 lightDirections[8] = vec3[8](
+      vec3( 1.0,  1.0,  1.0),
+      vec3( 1.0,  1.0, -1.0),
+      vec3( 1.0, -1.0,  1.0),
+      vec3( 1.0, -1.0, -1.0),
+      vec3(-1.0,  1.0,  1.0),
+      vec3(-1.0,  1.0, -1.0),
+      vec3(-1.0, -1.0,  1.0),
+      vec3(-1.0, -1.0, -1.0)
     );
-
-    vec4 scene_ambient = vec4(0.5, 0.5, 0.5, 1.0);
+    const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
+    const vec3 lightSpecular = vec3(1.0, 1.0, 1.0);
+    const float diffuseScale = 0.08;
+    const float specularScale = 0.55;
+    const float fresnelScale = 0.20;
+    vec4 scene_ambient = vec4(0.28, 0.28, 0.28, 1.0);
 
     struct material
     {
@@ -610,59 +577,30 @@ class OEMesh3D():
       vec3 normalDirection = normalize(varyingNormalDirection);
       vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
                                           w_position));
-      vec3 lightDirection;
-      float attenuation;
-
-      if (0.0 == light0.position.w) // directional light?
-        {
-          attenuation = 1.0; // no attenuation
-          lightDirection = normalize(vec3(light0.position));
-        }
-      else // point light or spotlight (or other kind of light)
-        {
-          vec3 positionToLightSource = -viewDirection;
-          //vec3 positionToLightSource = vec3(light0.position - w_position);
-          float distance = length(positionToLightSource);
-          lightDirection = normalize(positionToLightSource);
-          attenuation = 1.0 / (light0.constantAttenuation
-                               + light0.linearAttenuation * distance
-                               + light0.quadraticAttenuation * distance *
-                               distance);
-
-          if (light0.spotCutoff <= 90.0) // spotlight?
-        {
-          float clampedCosine = max(0.0, dot(-lightDirection,
-                                             light0.spotDirection));
-          if (clampedCosine < cos(radians(light0.spotCutoff)))
-            {
-              attenuation = 0.0;
-            }
-          else
-            {
-              attenuation = attenuation * pow(clampedCosine,
-                                              light0.spotExponent);
-            }
-        }
-        }
 
       vec3 ambientLighting = DiffuseColor * vec3(frontMaterial.ambient);
 
-      vec3 diffuseReflection = attenuation
-        * vec3(light0.diffuse) * vec3(frontMaterial.diffuse) * DiffuseColor
-        * max(0.0, dot(normalDirection, lightDirection));
-
-      vec3 specularReflection;
-      if (dot(normalDirection, lightDirection) < 0.0)
+      vec3 diffuseReflection = vec3(0.0, 0.0, 0.0);
+      vec3 specularReflection = vec3(0.0, 0.0, 0.0);
+      float gloss = max(frontMaterial.shininess * 1.6, 120.0);
+      for (int i = 0; i < lightCount; ++i)
         {
-          specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+          vec3 lightDirection = normalize(lightDirections[i]);
+          float normalLight = max(0.0, dot(normalDirection, lightDirection));
+          diffuseReflection += lightDiffuse * vec3(frontMaterial.diffuse) *
+            DiffuseColor * normalLight;
+          if (normalLight > 0.0)
+            {
+              specularReflection += lightSpecular *
+                vec3(frontMaterial.specular) *
+                pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
+                                 viewDirection)), gloss);
+            }
         }
-      else // light source on the right side
-        {
-          specularReflection = attenuation * vec3(light0.specular) *
-          vec3(frontMaterial.specular) *
-          pow(max(0.0, dot(reflect(-lightDirection, normalDirection),
-                           viewDirection)), frontMaterial.shininess);
-        }
+      diffuseReflection *= diffuseScale;
+      specularReflection *= specularScale;
+      specularReflection += vec3(frontMaterial.specular) * fresnelScale *
+        pow(1.0 - max(0.0, dot(normalDirection, viewDirection)), 5.0);
 
         fragColor = vec4(ambientLighting + diffuseReflection +
                          specularReflection, 1.0);
@@ -830,10 +768,40 @@ class OEMesh3D():
                                         rot[0][1], rot[1][1], rot[2][1], tr[1],
                                         rot[0][2], rot[1][2], rot[2][2], tr[2],
                                         0.0, 0.0, 0.0, 1.0)
-        else:  # TODO: source rotation
-            posMatr = qt.QMatrix4x4()
-            posMatr.translate(*oe.center)
-            orientation = posMatr
+        else:
+            if OEMesh3D._has_unresolved_auto(oe):
+                return qt.QMatrix4x4()
+
+            lb = Beam(nrays=4)
+            lb.x[1] = lb.y[2] = lb.z[3] = 1.
+
+            pitch = getattr(oe, 'pitch', 0)
+            roll = getattr(oe, 'roll', 0)
+            yaw = getattr(oe, 'yaw', 0)
+            if pitch or roll or yaw:
+                raycing.rotate_beam(
+                    lb, pitch=pitch, roll=roll, yaw=yaw, skip_abc=True)
+
+            center = getattr(oe, 'center', None)
+            beamLine = getattr(oe, 'bl', None)
+            if beamLine is not None:
+                raycing.virgin_local_to_global(
+                    beamLine, lb, center, skip_abc=True)
+            elif center is not None:
+                lb.x += center[0]
+                lb.y += center[1]
+                lb.z += center[2]
+
+            tr = np.array([lb.x[0], lb.y[0], lb.z[0]])
+
+            rot = []
+            for i in range(3):
+                rot.append(np.array(
+                    [lb.x[i+1], lb.y[i+1], lb.z[i+1]]) - tr)
+            orientation = qt.QMatrix4x4(rot[0][0], rot[1][0], rot[2][0], tr[0],
+                                        rot[0][1], rot[1][1], rot[2][1], tr[1],
+                                        rot[0][2], rot[1][2], rot[2][2], tr[2],
+                                        0.0, 0.0, 0.0, 1.0)
 
         return orientation
 
@@ -1378,7 +1346,7 @@ class OEMesh3D():
             indArrOffset += len(points)
 
         # Side Surface, do not plot for 2ndXtal of Plate
-        if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):  # or isAperture):
+        if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):
             if oeShape == 'round':  # Side surface
                 allSurfaces = np.vstack((allSurfaces, tB))
                 allNormals = np.vstack((allNormals, normsB))
@@ -1409,7 +1377,7 @@ class OEMesh3D():
                 allSurfaces[:, [0, 1, 2]] = allSurfaces[:, [2, 1, 0]]
 #                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
             else:
-                allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+                allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
 #                allNormals[:, [1, 2]] = allNormals[:, [2 ,1]]
         return allSurfaces, allNormals, allIndices
 
@@ -1474,15 +1442,15 @@ class OEMesh3D():
             allSurfaces, allNormals, allIndices =\
                 self.generate_disk_ring_segment(
                     rmin=rmin, rmax=rmax, thickness=self.apertureThickness)
-            allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+            allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
         elif isinstance(self.oe, rapts.SiemensStar):
             radius = self.oe.rx
             nSpokes = self.oe.nSpokes
             phi0 = self.oe.phi0 + 0.5*np.pi
             allSurfaces, allNormals, allIndices =\
                 self.siemens_star(radius, nSpokes, phi0,
-                              thickness=self.apertureThickness)
-            allSurfaces[:, [1, 2]] = allSurfaces[:, [2 ,1]]
+                                  thickness=self.apertureThickness)
+            allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
         else:
             xLimits, yLimits = self.get_limits(nsIndex, is2ndXtal, autoSize)
             self.xLimits = copy.deepcopy(xLimits)
@@ -1638,86 +1606,299 @@ class OEMesh3D():
             self.emptyTex.destroy()
             self.emptyTex = None
 
-    def generate_instance_data(self, num, magnetShape):
-        period = getattr(self.oe, 'period',
-                         magnetShape.get('period', 40))
-        gap = magnetShape.get('gap', 10)
-        mag_dz = magnetShape.get('dz', 20)
+    def _resolve_magnet_shape(self, magnetShape):
+        if magnetShape:
+            return magnetShape
+        if self.parent is not None:
+            parentShape = getattr(self.parent, 'magnetShape', None)
+            if parentShape:
+                return parentShape
+        return {}
+
+    def _magnet_dimensions(self, magnetShape):
+        mag_dx = float(magnetShape.get('dx', 40))
+        mag_dy = self._magnet_pole_pitch(magnetShape) * 0.75
+        mag_dz = float(magnetShape.get('dz', 10))
+        gap = float(magnetShape.get('gap', 10))
+        if self._has_crossed_periodic_magnet_arrays():
+            mag_dx = min(abs(mag_dx), abs(gap) * 0.75)
+        if isinstance(self.oe, rsources.BendingMagnet) and\
+                not getattr(self.oe, 'isMPW', False):
+            bm_dy = self._bending_magnet_length_from_acceptance()
+            if bm_dy is not None:
+                mag_dy = bm_dy
+        return mag_dx, mag_dy, mag_dz, gap
+
+    def _magnet_pole_pitch(self, magnetShape):
+        period = float(getattr(self.oe, 'period',
+                               magnetShape.get('period', 40)))
+        num_poles = float(getattr(self.oe, 'n', 0.5)) * 2.0
+        return 0.5 * period if num_poles > 1.0 else period
+
+    def _magnet_period(self, magnetShape):
+        return float(getattr(self.oe, 'period',
+                             magnetShape.get('period', 40)))
+
+    def _bending_magnet_length_from_acceptance(self):
+        rho = getattr(self.oe, 'rho', None)
+        if rho is None:
+            rho = getattr(self.oe, 'ro', None)
+        if rho is None or rho == 0:
+            return None
+
+        xPrimeMax = getattr(self.oe, 'xPrimeMax', None)
+        if xPrimeMax is None:
+            return None
+
+        if isinstance(xPrimeMax, (tuple, list, np.ndarray)):
+            if len(xPrimeMax) < 2:
+                angle_span = abs(float(xPrimeMax[0])) * 2e-3
+            else:
+                angle_span = abs(float(xPrimeMax[-1]) -
+                                 float(xPrimeMax[0])) * 1e-3
+        else:
+            angle_span = abs(float(xPrimeMax)) * 2e-3
+
+        if angle_span <= 0:
+            return None
+        return abs(float(rho)) * 1e3 * angle_span
+
+    def _uses_bending_magnet_arc(self, num_poles):
+        return isinstance(self.oe, rsources.BendingMagnet) and\
+            not getattr(self.oe, 'isMPW', False) and\
+            np.isclose(num_poles, 1.0)
+
+    def _magnet_component_value(self, component=None):
+        if component == 'x':
+            attrNames = ('B0x', 'Kx')
+        elif component == 'y':
+            attrNames = ('B0y', 'Ky', 'K', 'B0', 'B', 'rho', 'ro')
+        else:
+            attrNames = ('B0', 'B', 'B0y', 'Ky', 'K', 'rho', 'ro')
+        for attrName in attrNames:
+            try:
+                value = float(getattr(self.oe, attrName))
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if value != 0:
+                return value
+        return 0.0
+
+    def _magnet_polarity_sign(self, component=None):
+        value = self._magnet_component_value(component)
+        return 1.0 if value >= 0 else -1.0
+
+    def _is_periodic_magnet_source(self, num_poles):
+        return num_poles > 1.0 and hasattr(self.oe, 'period') and not\
+            isinstance(self.oe, rsources.SourceFromField)
+
+    def _has_crossed_periodic_magnet_arrays(self):
+        num_poles = float(getattr(self.oe, 'n', 0.5)) * 2.0
+        return self._is_periodic_magnet_source(num_poles) and\
+            self._magnet_component_value('x') != 0 and\
+            self._magnet_component_value('y') != 0
+
+    def _magnet_array_defs(self, num_poles, magnetShape):
+        useBmArc = self._uses_bending_magnet_arc(num_poles)
+        if self._is_periodic_magnet_source(num_poles):
+            arrays = []
+            if self._magnet_component_value('y') != 0:
+                arrays.append(dict(
+                    nsIndex=0, component='y', roll=0.0, phaseShift=0.0,
+                    polaritySign=self._magnet_polarity_sign('y'),
+                    useBmArc=False))
+            if self._magnet_component_value('x') != 0:
+                phase = float(getattr(self.oe, 'phase', 0.0))
+                phaseShift = -phase / (2*np.pi) *\
+                    self._magnet_period(magnetShape)
+                arrays.append(dict(
+                    nsIndex=1, component='x', roll=90.0,
+                    phaseShift=phaseShift,
+                    polaritySign=self._magnet_polarity_sign('x'),
+                    useBmArc=False))
+            if arrays:
+                return arrays
+
+        return [dict(
+            nsIndex=0, component='y', roll=0.0, phaseShift=0.0,
+            polaritySign=self._magnet_polarity_sign(), useBmArc=useBmArc)]
+
+    def generate_bending_magnet_mesh(self, magnetShape):
+        mag_dx, mag_dy, mag_dz, _ = self._magnet_dimensions(magnetShape)
+        rho = getattr(self.oe, 'rho', None)
+        if rho is None:
+            rho = getattr(self.oe, 'ro', None)
+        if rho is None or rho == 0:
+            raise ValueError("Bending magnet radius is not defined")
+
+        radius = abs(float(rho)) * 1e3  # rho is in meters, scene is in mm.
+        if radius <= 0:
+            raise ValueError("Bending magnet radius must be positive")
+
+        half_width = abs(mag_dx) * 0.5
+        rmin = max(radius - half_width, radius * 1e-9)
+        rmax = radius + half_width
+        arc_angle = abs(mag_dy) / radius
+        if arc_angle <= 0:
+            raise ValueError("Bending magnet arc length must be positive")
+
+        angular_steps = max(8, min(96, int(abs(mag_dy) / 2.) + 1))
+        vertices, normals, indices = self.generate_disk_ring_segment(
+            rmin=rmin, rmax=rmax,
+            phimin=-0.5*arc_angle, phimax=0.5*arc_angle,
+            thickness=abs(mag_dz),
+            radial_steps=1, angular_steps=angular_steps,
+            dtype=np.float64)
+
+        bend_sign = 1.0 if float(rho) >= 0 else -1.0
+        vertices[:, 0] = bend_sign * (radius - vertices[:, 0])
+        normals[:, 0] *= -bend_sign
+
+        return (vertices[indices].astype(np.float32),
+                normals[indices].astype(np.float32))
+
+    def generate_instance_data(self, num, magnetShape, phaseShift=0.0,
+                               polaritySign=None):
+        magnetShape = self._resolve_magnet_shape(magnetShape)
+        polePitch = self._magnet_pole_pitch(magnetShape)
+        _, _, mag_dz, gap = self._magnet_dimensions(magnetShape)
 
         instancePositions = np.zeros((int(num*2), 3), dtype=np.float32)
         instanceColors = np.zeros((int(num*2), 3), dtype=np.float32)
+        polaritySign = self._magnet_polarity_sign() if polaritySign is None\
+            else polaritySign
 
         for n in range(int(num)):
             pos_x = 0
             dy = n - 0.5*num if num > 1 else 0
-            pos_y = period * dy
+            pos_y = polePitch * dy + phaseShift
 
             instancePositions[2*n] = (pos_x, pos_y, gap+0.5*mag_dz)
             instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*mag_dz)
-            isEven = (n % 2) == 0
-            instanceColors[2*n] = (1.0, 0.0, 0.0) if isEven else\
+            topIsRed = ((n % 2) == 0) == (polaritySign > 0)
+            instanceColors[2*n] = (1.0, 0.0, 0.0) if topIsRed else\
                 (0.0, 0.0, 1.0)
-            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if isEven else\
+            instanceColors[2*n+1] = (0.0, 0.0, 1.0) if topIsRed else\
                 (1.0, 0.0, 0.0)
 
         return instancePositions, instanceColors
 
+    def _destroy_magnet_buffers(self, nsIndex, destroyBase=True):
+        if self.vbo_positions.get(nsIndex) is not None:
+            self.vbo_positions[nsIndex].destroy()
+            self.vbo_positions[nsIndex] = None
+            gl.glGetError()
+        if self.vbo_colors.get(nsIndex) is not None:
+            self.vbo_colors[nsIndex].destroy()
+            self.vbo_colors[nsIndex] = None
+            gl.glGetError()
+        if destroyBase:
+            if self.vbo_vertices.get(nsIndex) is not None:
+                self.vbo_vertices[nsIndex].destroy()
+                self.vbo_vertices[nsIndex] = None
+                gl.glGetError()
+            if self.vbo_normals.get(nsIndex) is not None:
+                self.vbo_normals[nsIndex].destroy()
+                self.vbo_normals[nsIndex] = None
+                gl.glGetError()
+            if self.vao.get(nsIndex) is not None:
+                self.vao[nsIndex].destroy()
+                self.vao[nsIndex] = None
+                gl.glGetError()
+
     def prepare_magnets(self, shape={}, updateMesh=False):
+        shape = self._resolve_magnet_shape(shape)
         self.transMatrix[0] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
-        nsIndex = 0  # to unify syntax
 
         num_poles = getattr(self.oe, 'n', 0.5) * 2
+        magnetArrays = self._magnet_array_defs(num_poles, shape)
+        self.magnet_arrays = magnetArrays
+        activeIndices = {arrayDef['nsIndex'] for arrayDef in magnetArrays}
 
-        if updateMesh:
-            if self.vbo_positions.get(nsIndex) is not None:
-                self.vbo_positions[nsIndex].destroy()
-                self.vbo_positions[nsIndex] = None
-                gl.glGetError()
-            if self.vbo_colors.get(nsIndex) is not None:
-                self.vbo_colors[nsIndex].destroy()
-                self.vbo_colors[nsIndex] = None
-                gl.glGetError()
-        else:
-            self.vbo_vertices[nsIndex] = create_qt_buffer(
-                    self.cube_vertices.reshape(-1, 6)[:, :3].copy())
-            self.vbo_normals[nsIndex] = create_qt_buffer(
-                    self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+        baseIsArc = getattr(self, 'magnet_base_is_arc', {})
+        if not isinstance(baseIsArc, dict):
+            baseIsArc = {0: baseIsArc}
+        self.magnet_base_is_arc = baseIsArc
+        self.magnet_vertex_counts = getattr(self, 'magnet_vertex_counts', {})
+        self.magnet_instance_counts = getattr(
+            self, 'magnet_instance_counts', {})
+        self.magnet_scale_in_shader = getattr(
+            self, 'magnet_scale_in_shader', {})
+        if not isinstance(self.magnet_scale_in_shader, dict):
+            self.magnet_scale_in_shader = {0: self.magnet_scale_in_shader}
 
-        instancePositions, instanceColors = self.generate_instance_data(
-                num_poles, shape)
+        for oldIndex in set(self.vao.keys()) - activeIndices:
+            self._destroy_magnet_buffers(oldIndex)
 
-        self.vbo_positions[nsIndex] = create_qt_buffer(
-                instancePositions.copy())
-        self.vbo_colors[nsIndex] = create_qt_buffer(instanceColors.copy())
+        for arrayDef in magnetArrays:
+            nsIndex = arrayDef['nsIndex']
+            useBmArc = arrayDef['useBmArc']
+            baseWasArc = self.magnet_base_is_arc.get(nsIndex)
+            rebuildBase = (not updateMesh) or useBmArc or\
+                baseWasArc != useBmArc or\
+                self.vbo_vertices.get(nsIndex) is None
 
-        if not self.vao:
-            self.vao[nsIndex] = qt.QOpenGLVertexArrayObject()
-            self.vao[nsIndex].create()
+            if updateMesh:
+                self._destroy_magnet_buffers(
+                    nsIndex, destroyBase=rebuildBase)
+            elif rebuildBase:
+                self._destroy_magnet_buffers(nsIndex)
 
-        self.vao[nsIndex].bind()
+            if rebuildBase:
+                if useBmArc:
+                    vertices, normals = self.generate_bending_magnet_mesh(
+                        shape)
+                    self.vbo_vertices[nsIndex] = create_qt_buffer(vertices)
+                    self.vbo_normals[nsIndex] = create_qt_buffer(normals)
+                    self.magnet_vertex_counts[nsIndex] = len(vertices)
+                    self.magnet_scale_in_shader[nsIndex] = False
+                else:
+                    self.vbo_vertices[nsIndex] = create_qt_buffer(
+                            self.cube_vertices.reshape(-1, 6)[:, :3].copy())
+                    self.vbo_normals[nsIndex] = create_qt_buffer(
+                            self.cube_vertices.reshape(-1, 6)[:, 3:].copy())
+                    self.magnet_vertex_counts[nsIndex] = 36
+                    self.magnet_scale_in_shader[nsIndex] = True
+                self.magnet_base_is_arc[nsIndex] = useBmArc
 
-        self.vbo_vertices[nsIndex].bind()
-        gl.glEnableVertexAttribArray(0)
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        self.vbo_vertices[nsIndex].release()
-        # Normal attribute
-        self.vbo_normals[nsIndex].bind()
-        gl.glEnableVertexAttribArray(1)
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        self.vbo_normals[nsIndex].release()
-        # Instance arrays
-        self.vbo_positions[nsIndex].bind()
-        gl.glEnableVertexAttribArray(2)
-        gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glVertexAttribDivisor(2, 1)
-        self.vbo_positions[nsIndex].release()
-        self.vbo_colors[nsIndex].bind()
-        gl.glEnableVertexAttribArray(3)
-        gl.glVertexAttribPointer(3, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glVertexAttribDivisor(3, 1)
-        self.vbo_colors[nsIndex].release()
-        self.vao[nsIndex].release()
+            instancePositions, instanceColors = self.generate_instance_data(
+                    num_poles, shape,
+                    phaseShift=arrayDef.get('phaseShift', 0.0),
+                    polaritySign=arrayDef.get('polaritySign'))
+            self.magnet_instance_counts[nsIndex] = len(instancePositions)
+
+            self.vbo_positions[nsIndex] = create_qt_buffer(
+                    instancePositions.copy())
+            self.vbo_colors[nsIndex] = create_qt_buffer(instanceColors.copy())
+
+            if self.vao.get(nsIndex) is None:
+                self.vao[nsIndex] = qt.QOpenGLVertexArrayObject()
+                self.vao[nsIndex].create()
+
+            self.vao[nsIndex].bind()
+
+            self.vbo_vertices[nsIndex].bind()
+            gl.glEnableVertexAttribArray(0)
+            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            self.vbo_vertices[nsIndex].release()
+            # Normal attribute
+            self.vbo_normals[nsIndex].bind()
+            gl.glEnableVertexAttribArray(1)
+            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            self.vbo_normals[nsIndex].release()
+            # Instance arrays
+            self.vbo_positions[nsIndex].bind()
+            gl.glEnableVertexAttribArray(2)
+            gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glVertexAttribDivisor(2, 1)
+            self.vbo_positions[nsIndex].release()
+            self.vbo_colors[nsIndex].bind()
+            gl.glEnableVertexAttribArray(3)
+            gl.glVertexAttribPointer(3, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glVertexAttribDivisor(3, 1)
+            self.vbo_colors[nsIndex].release()
+            self.vao[nsIndex].release()
         self.num_poles = num_poles
 
     def render_surface(self, mMod, mView, mProj, oeIndex=0,
@@ -1756,12 +1937,13 @@ class OEMesh3D():
         shader.bind()
         vao.bind()
 
-        shader.setUniformValue("model", mMod*oeOrientation)
+        model = mMod*oeOrientation
+        shader.setUniformValue("model", model)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
 
-        mvp = mMod*oeOrientation*mView
-        shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
+#        mvp = mMod*oeOrientation*mView
+        shader.setUniformValue("m_3x3_inv_transp", model.normalMatrix())
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
         shader.setUniformValue("texlimitsx", qt.QVector2D(*xLimits))
@@ -1811,36 +1993,15 @@ class OEMesh3D():
                        isSelected=False, shader=None):
         if shader is None:
             return
-        nsIndex = 0
+        shape = self._resolve_magnet_shape(shape)
 
         shader.bind()
         if not self.vao:
             return
 
-        rPitch = getattr(self.oe, 'pitch', 0)
-        rYaw = getattr(self.oe, 'yaw', 0)
-
-        rotOffsets = qt.QMatrix4x4()
-        rotOffsets.rotate(np.degrees(rYaw), 0, 0, 1)
-        rotOffsets.rotate(-np.degrees(rPitch), 1, 0, 0)
-
-        oeOrientation = self.transMatrix[0] * rotOffsets
-
-        self.vao[nsIndex].bind()
-
-        shader.setUniformValue("model", mMod*oeOrientation)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
-        mModScale = qt.QMatrix4x4()
-        mModScale.setToIdentity()
-        mag_dx = shape.get('dx', 40)
-        mag_dy = getattr(self.oe, 'period', shape.get('dy', 40)) * 0.75  # TODO
-        mag_dz = shape.get('dz', 10)
-        mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
-        shader.setUniformValue("scale", mModScale)
 
-        mvp = mMod*mView
-        shader.setUniformValue("m_3x3_inv_transp", mvp.normalMatrix())
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
         mat = 'Si'
@@ -1854,8 +2015,46 @@ class OEMesh3D():
         shader.setUniformValue("frontMaterial.specular", specular_in)
         shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
-        gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, int(self.num_poles*2))
-        self.vao[nsIndex].release()
+        magnetArrays = getattr(
+            self, 'magnet_arrays',
+            [dict(nsIndex=0, roll=0.0)])
+        vertexCounts = getattr(self, 'magnet_vertex_counts', {})
+        instanceCounts = getattr(self, 'magnet_instance_counts', {})
+        scaleInShader = getattr(self, 'magnet_scale_in_shader', {})
+        if not isinstance(scaleInShader, dict):
+            scaleInShader = {0: scaleInShader}
+
+        for arrayDef in magnetArrays:
+            nsIndex = arrayDef['nsIndex']
+            vao = self.vao.get(nsIndex)
+            if vao is None:
+                continue
+
+            arrayRoll = qt.QMatrix4x4()
+            arrayRoll.rotate(arrayDef.get('roll', 0.0), 0, 1, 0)
+            oeOrientation = self.transMatrix[0] * arrayRoll
+
+            vao.bind()
+
+            model = mMod*oeOrientation
+            shader.setUniformValue("model", model)
+            mModScale = qt.QMatrix4x4()
+            mModScale.setToIdentity()
+            if scaleInShader.get(nsIndex, True):
+                mag_dx, mag_dy, mag_dz, _ = self._magnet_dimensions(shape)
+                mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
+            shader.setUniformValue("scale", mModScale)
+
+#            mvp = mMod*mView
+            shader.setUniformValue("m_3x3_inv_transp", model.normalMatrix())
+
+            vertex_count = vertexCounts.get(
+                nsIndex, getattr(self, 'magnet_vertex_count', 36))
+            instance_count = instanceCounts.get(
+                nsIndex, int(self.num_poles*2))
+            gl.glDrawArraysInstanced(
+                gl.GL_TRIANGLES, 0, vertex_count, instance_count)
+            vao.release()
         shader.release()
 
     def export_stl(self, filename):

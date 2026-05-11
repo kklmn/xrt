@@ -41,6 +41,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
     updateQookTree = qt.Signal(tuple)
     histogramUpdated = qt.Signal(tuple)
     openElViewer = qt.Signal(str)
+    propagationComplete = qt.Signal(dict)
 
     def __init__(self,
                  parent=None,
@@ -59,6 +60,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.beamline = raycing.BeamLine()
         self.loopRunning = False
+        self.autoUpdate = True
         self.input_queue = Queue()
         self.output_queue = Queue()
 
@@ -338,6 +340,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
         """Update from EPICS interface """
         self.update_beamline(oeid, {argName: argValue}, sender="epics")
 
+    def request_propagation_once(self):
+        if self.epicsPrefix is not None:
+            self.epicsInterface.pv_records['AcquireStatus'].set(1)
+        if hasattr(self, 'input_queue'):
+            self.input_queue.put({
+                        "command": "run_once",
+                        "object_type": "beamline"
+                        })
+
+    def set_auto_update(self, value):
+        self.autoUpdate = bool(value)
+        if hasattr(self, 'input_queue'):
+            self.input_queue.put({
+                        "command": "auto_update",
+                        "object_type": "beamline",
+                        "kwargs": {"value": int(self.autoUpdate)}
+                        })
+
     def update_epics_record(self, oeid, kwargs):
         """Update EPICS record if the value was changed from Qook or Explorer
         """
@@ -442,22 +462,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 kwargs[argName] = argValue
 
             if oeid is None:
-                if self.epicsPrefix is not None:
-                    if argName == 'Acquire':
-                        self.epicsInterface.pv_records['AcquireStatus'].set(1)
-                        if str(argValue) == '1':
-                            if hasattr(self, 'input_queue'):
-                                self.input_queue.put({
-                                            "command": "run_once",
-                                            "object_type": "beamline"
-                                            })
-                    elif argName == 'AutoUpdate':
-                        if hasattr(self, 'input_queue'):
-                            self.input_queue.put({
-                                        "command": "auto_update",
-                                        "object_type": "beamline",
-                                        "kwargs": {"value": int(argValue)}
-                                        })
+                if argName == 'Acquire' and str(argValue) == '1':
+                    self.request_propagation_once()
+                elif argName == 'AutoUpdate':
+                    self.set_auto_update(argValue)
                 return
 
             if oeid in self.beamline.oesDict:
@@ -493,17 +501,22 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                          arg0) if argIn is None else argIn
 
                     # avoid writing string to numpy array
-                    if hasattr(arrayValue, 'tolist'):
-                        arrayValue = arrayValue.tolist()
-                    elif isinstance(arrayValue, tuple):
-                        arrayValue = list(arrayValue)
+                    if isinstance(arrayValue, dict):
+                        arrayValue = dict(arrayValue)
+                        arrayValue[field] = argValue
+                        argValue = arrayValue
+                    else:
+                        if hasattr(arrayValue, 'tolist'):
+                            arrayValue = arrayValue.tolist()
+                        elif isinstance(arrayValue, tuple):
+                            arrayValue = list(arrayValue)
 
-                    for fList in raycing.compoundArgs.values():
-                        if field in fList:
-                            idx = fList.index(field)
-                            break
-                    arrayValue[idx] = argValue
-                    argValue = arrayValue
+                        for fList in raycing.compoundArgs.values():
+                            if field in fList:
+                                idx = fList.index(field)
+                                break
+                        arrayValue[idx] = argValue
+                        argValue = arrayValue
 
             elif any(arg0.lower().startswith(v) for v in
                      ['mater', 'tlay', 'blay', 'coat', 'substrate']):
@@ -524,6 +537,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if sender == 'OEE':
                 self.updateQookTree.emit((oeid, {arg0: argValue}))
             if obj_type == "oe":
+                meshUpdateQueued = False
+                renderUpdateQueued = False
                 if arg0.lower().startswith('center'):
                     flow = copy.deepcopy(self.beamline.flowU)
                     self.beamline.sort_flow()
@@ -533,11 +548,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 skipUpdate = False
                 if arg0 == 'center':
-                    skipUpdate = 'auto' in str(getattr(updObj, '_center',
-                                                      updObj.center))
+                    centerRaw = getattr(updObj, '_center', updObj.center)
+                    skipUpdate = 'auto' in str(centerRaw)
                 elif arg0 in ['pitch', 'bragg']:
-                    skipUpdate = raycing.is_auto_align_value(
-                        getattr(updObj, f'_{arg0}', None))
+                    rawValue = getattr(updObj, f'_{arg0}', None)
+                    rawValueActual = getattr(updObj, f'_{arg0}Val', None)
+                    skipUpdate = (rawValueActual is None and
+                                  raycing.is_auto_align_value(rawValue))
 
                 if arg0 in orientationArgSet and not skipUpdate:
                     self.meshDict[oeid].update_transformation_matrix()
@@ -545,17 +562,27 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.maxLen = np.max(np.abs(
                             self.minmax[0, :] - self.minmax[1, :]))
                     self.parent.updateMaxLenFromGL(self.maxLen)
+                    renderUpdateQueued = True
                     if arg0 in ['pitch'] and hasattr(updObj, 'reset_pq'):
                         if oeid not in self.needMeshUpdate:
                             self.needMeshUpdate.append(oeid)
+                        meshUpdateQueued = True
                 elif arg0 in shapeArgSet:
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
+                    meshUpdateQueued = True
+                elif is_source(updObj) and (
+                        arg0 in rsources.magneticStructureArgSet or
+                        arg0 in rsources.sourceLimitsArgSet):
+                    if oeid not in self.needMeshUpdate:
+                        self.needMeshUpdate.append(oeid)
+                    meshUpdateQueued = True
                 elif arg0 in {'name'}:
                     if self.parent is not None:
                         self.parent.updateNames()
 
-                if arg0 in renderOnlyArgSet:
+                if meshUpdateQueued or renderUpdateQueued or\
+                        arg0 in renderOnlyArgSet:
                     self.glDraw()
 
                 # updating the beamline model in the runner
@@ -806,6 +833,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.colorsUpdated.emit()
                 if self.QookSignal is not None:
                     self.QookSignal.emit((1., "Propagation complete"))
+                self.propagationComplete.emit(msg)
             elif 'pos_attr' in msg:  # TODO: Update epics rbv
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
