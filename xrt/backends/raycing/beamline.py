@@ -752,7 +752,8 @@ class BeamLine(object):
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[],
-             mode='dynamic', v2=None, epicsPrefix=None, epicsMap={}, **kwargs):
+             mode='dynamic', v2=None, epicsPrefix=None, epicsMap={},
+             scanDescription=None, scan=None, **kwargs):
         r"""
         Opens the xrtGlow 3D viewer for the current beamline.
 
@@ -783,6 +784,15 @@ class BeamLine(object):
         *generatorArgs*: sequence
             Positional arguments passed to *generator*.
 
+        *scanDescription*: dict, str or None
+            Optional xrtGlow timeline scan recipe. A dict is used directly; a
+            string may be a JSON file path or JSON text. If *generator* is not
+            callable, it is interpreted as a scan description for convenient
+            migration from previous ``generator=...`` movie scripts.
+
+        *scan*: dict, str or None
+            Alias for *scanDescription*.
+
         *mode*: {'dynamic', 'static'}
             Viewer mode. ``'dynamic'`` initializes xrtGlow from the beamline
             layout and enables interactive updates. ``'static'`` opens a
@@ -806,6 +816,16 @@ class BeamLine(object):
 
 
         """
+        if scanDescription is None:
+            scanDescription = scan
+        if generator is not None and not callable(generator):
+            if scanDescription is None:
+                scanDescription = generator
+            generator = None
+            generatorArgs = []
+        if scanDescription is not None:
+            kwargs['scanDescription'] = scanDescription
+
         if generator is not None:
             gen = generator(*generatorArgs)
             try:
@@ -889,7 +909,8 @@ class BeamLine(object):
                                                 **kwargs)
             else:
                 rayPath = self.export_to_glow()
-                self.blViewer = xrtglow.xrtGlow(rayPath)
+                self.blViewer = xrtglow.xrtGlow(
+                    rayPath, scanDescription=scanDescription)
             self.blViewer.generator = generator
             self.blViewer.generatorArgs = generatorArgs
             self.blViewer.customGlWidget.generator = generator
@@ -926,6 +947,9 @@ class BeamLine(object):
             self.blViewer.show()
             sys.exit(app.exec_())
         else:
+            if scanDescription is not None and hasattr(
+                    self.blViewer, 'setScanDescription'):
+                self.blViewer.setScanDescription(scanDescription)
             self.blViewer.show()
 
     def explore(self, plots=None):
