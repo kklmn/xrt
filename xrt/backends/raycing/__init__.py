@@ -283,6 +283,9 @@ def center_property():
                 except ValueError:
                     pass
                 tmp.append(value)
+            center = tmp
+        elif isinstance(center, tuple):
+            center = list(center)
 
         if any([isinstance(x, str) for x in center]):
             self._centerInit = centerInit
