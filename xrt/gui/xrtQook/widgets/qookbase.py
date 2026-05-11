@@ -64,6 +64,7 @@ from ... import xrtGlow as xrtglow  # analysis:ignore
 from ...xrtGlow import InstanceInspector  # analysis:ignore
 from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_SETTINGS
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
+from ...xrtGlow.widgets.scan import ScanRangeDialog, find_catalog_property
 from ...xrtGlow.widgets.nodeeditor import (
     HAS_QTPYNODEEDITOR, _FlowGraphPanel, FLOW_NODE_STYLES)
 
@@ -771,6 +772,7 @@ class XrtQookBase(qt.QMainWindow):
             elViewer.propertiesChanged.connect(
                     partial(glWidget.update_beamline, oeuuid,
                             sender='OEE'))
+            elViewer.scanCreated.connect(self.addGlowScanItem)
 #            elViewer.propertiesChanged.connect(
 #                    partial(self.updateBeamlineModel, oeuuid))
 #        if (elViewer.exec_()):
@@ -2120,6 +2122,7 @@ class XrtQookBase(qt.QMainWindow):
                     self.progressBar.setValue(0)
                     self.progressBar.setFormat(messageStr)
 #            self.statusBar.showMessage(messageStr, 3000)
+        self.updateGlowScanOutputDirectory()
         return saveStatus
 
     def exportLayoutAs(self):
@@ -2368,6 +2371,7 @@ class XrtQookBase(qt.QMainWindow):
                 self.addPlot(copyFrom=plotDict, plotName=plotName)
 
             self.layoutFileName = openFileName
+            self.updateGlowScanOutputDirectory()
             self.fileDescription = project.get('description')
             if self.fileDescription is not None:
                 self.descrEdit.setText(self.fileDescription)
@@ -2435,10 +2439,74 @@ class XrtQookBase(qt.QMainWindow):
                         self.addMethod(objfNm, elItem, outBeams, methProps)
                         break
 
+    def scanContextFromBeamlineProperty(self, selectedItem):
+        if selectedItem is None:
+            return None
+        parentItem = selectedItem.parent()
+        if parentItem is None or str(parentItem.text()) != 'properties':
+            return None
+        propItem = parentItem.child(selectedItem.row(), 0)
+        valueItem = parentItem.child(selectedItem.row(), 1)
+        elementItem = parentItem.parent()
+        if propItem is None or valueItem is None or elementItem is None:
+            return None
+        if elementItem is getattr(self, 'rootBLItem', None):
+            return None
+        propName = str(propItem.text())
+        if not propName or propName.startswith('_') or propName == 'name':
+            return None
+        scanProperty = self.scanCatalogProperty(str(elementItem.text()),
+                                                propName)
+        if scanProperty is None:
+            return None
+        currentValue = scanProperty.get(
+            'value', self.getParamItemValue(valueItem))
+        return elementItem, propName, currentValue
+
+    def scanCatalogProperty(self, targetName, propName):
+        if self.blViewer is None:
+            return None
+        if not hasattr(self.blViewer, 'scanInstructionCatalog'):
+            return None
+        try:
+            catalog = self.blViewer.scanInstructionCatalog()
+        except Exception:
+            return None
+        return find_catalog_property(
+            catalog, targetName, propName)
+
+    def addGlowScanItem(self, item):
+        if self.blViewer is None or not hasattr(self.blViewer, 'addScanItem'):
+            return
+        self.updateGlowScanOutputDirectory()
+        self.blViewer.addScanItem(item)
+        if hasattr(self.blViewer, 'openScanPanel'):
+            self.blViewer.openScanPanel()
+        if hasattr(self, 'docks') and len(self.docks) > 1:
+            self.docks[1].raise_()
+
+    def createScanFromBeamlineProperty(self, selectedItem):
+        scanContext = self.scanContextFromBeamlineProperty(selectedItem)
+        if scanContext is None:
+            return
+        if self.blViewer is None or not hasattr(self.blViewer, 'addScanItem'):
+            qt.QMessageBox.warning(
+                self, 'Create scan',
+                'xrtGlow must be available before creating a scan.')
+            return
+        elementItem, propName, currentValue = scanContext
+        self.updateGlowScanOutputDirectory()
+        dialog = ScanRangeDialog(
+            str(elementItem.text()), propName, currentValue, parent=self)
+        dialog.scanCreated.connect(self.addGlowScanItem)
+        dialog.exec_()
+
     def openMenu(self, position):
         indexes = self.tree.selectedIndexes()
 
         level = 100
+        selectedItem = None
+        selText = ''
         if len(indexes) > 0:
             level = 0
             selIndex = indexes[0]
@@ -2560,6 +2628,13 @@ class XrtQookBase(qt.QMainWindow):
                     self.tree.indexWidget(child1.index()) is not None:
                 menu.addAction(self.tr("Plot " + child1.text()),
                                partial(self.addPlotBeam, child1.text()))
+
+        scanContext = self.scanContextFromBeamlineProperty(selectedItem)
+        if scanContext is not None and self.blViewer is not None:
+            if menu.actions():
+                menu.addSeparator()
+            menu.addAction("Create Scan", partial(
+                self.createScanFromBeamlineProperty, selectedItem))
 
         menu.exec_(self.tree.viewport().mapToGlobal(position))
 
@@ -2778,6 +2853,7 @@ class XrtQookBase(qt.QMainWindow):
                 self.blViewer.parentRef = self
 #                self.blViewer.parentSignal = self.statusUpdate
                 self.beamLine = self.blViewer.customGlWidget.beamline
+                self.updateGlowScanOutputDirectory()
                 self.blViewer.customGlWidget.updateQookTree.connect(
                     self.updateBeamlineModel)
             except AttributeError:
@@ -2785,6 +2861,17 @@ class XrtQookBase(qt.QMainWindow):
             except Exception as e:
                 print('Cannot create xrtGlow')
                 raise e
+
+    def updateGlowScanOutputDirectory(self):
+        if self.blViewer is None:
+            return
+        if not hasattr(self.blViewer, 'setScanOutputDirectory'):
+            return
+        if not self.layoutFileName:
+            self.blViewer.setScanOutputDirectory(None)
+            return
+        directory = os.path.dirname(os.path.abspath(str(self.layoutFileName)))
+        self.blViewer.setScanOutputDirectory(directory)
 
     def updateProgressBar(self, dataTuple):
         progress = dataTuple[0]

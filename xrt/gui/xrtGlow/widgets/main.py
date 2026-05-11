@@ -148,6 +148,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.openElViewer.connect(self.runElementViewer)
         self.scanDescription = self._scan_description_from_input(
             scanDescription)
+        self.scanOutputDirectory = None
         self.scanRunning = False
         self.scanPaused = False
         self.scanStopRequested = False
@@ -559,6 +560,7 @@ class xrtGlow(qt.QWidget):
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
         saveDialog.setNameFilter("JSON files (*.json)")
+        self._scan_set_dialog_directory(saveDialog)
         if not saveDialog.exec_():
             return
         filename = saveDialog.selectedFiles()[0]
@@ -585,6 +587,7 @@ class xrtGlow(qt.QWidget):
         loadDialog.setFileMode(qt.QFileDialog.ExistingFile)
         loadDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
         loadDialog.setNameFilter("JSON files (*.json)")
+        self._scan_set_dialog_directory(loadDialog)
         if not loadDialog.exec_():
             return
         filename = loadDialog.selectedFiles()[0]
@@ -646,6 +649,28 @@ class xrtGlow(qt.QWidget):
             if button is not None:
                 button.setChecked(True)
                 self.toggleControlPanel("Scans", button, True)
+
+    def setScanOutputDirectory(self, directory):
+        if directory is None:
+            self.scanOutputDirectory = None
+            return
+        directory = os.fspath(directory).strip()
+        self.scanOutputDirectory = (
+            os.path.abspath(directory) if directory else None)
+
+    def _scan_resolve_output_filename(self, filename):
+        filename = os.fspath(filename)
+        if os.path.isabs(filename):
+            return filename
+        directory = getattr(self, 'scanOutputDirectory', None)
+        if directory:
+            return os.path.join(directory, filename)
+        return filename
+
+    def _scan_set_dialog_directory(self, dialog):
+        directory = getattr(self, 'scanOutputDirectory', None)
+        if directory:
+            dialog.setDirectory(directory)
 
     def setScanOutputTemplate(self, template):
         template = str(template).strip() or 'frame{index:04d}.jpg'
@@ -876,6 +901,19 @@ class xrtGlow(qt.QWidget):
                     names.append(name)
         return names
 
+    def _scan_init_defaults(self, oeObj):
+        try:
+            return OrderedDict(raycing.get_params(raycing.get_obj_str(oeObj)))
+        except Exception:
+            return OrderedDict()
+
+    def _scan_is_default_scannable(self, defaults, name):
+        root = str(name).split('.', 1)[0]
+        if root not in defaults:
+            return False
+        default = defaults[root]
+        return default is not None and not isinstance(default, (str, bool))
+
     def _scan_element_property_value(self, oeObj, name, value):
         initValue = getattr(oeObj, f'_{name}Init', None)
         if initValue is not None and str(initValue).lower() != 'none':
@@ -890,6 +928,7 @@ class xrtGlow(qt.QWidget):
         catalog = []
         for oeid, oeLine in bl.oesDict.items():
             oeObj = oeLine[0]
+            defaults = self._scan_init_defaults(oeObj)
             try:
                 props = raycing.get_init_kwargs(oeObj, compact=False,
                                                 blname=blName)
@@ -901,6 +940,8 @@ class xrtGlow(qt.QWidget):
             prop_items = []
             for name, value in props.items():
                 if name in ['uuid', 'name'] or str(name).endswith('rbk'):
+                    continue
+                if not self._scan_is_default_scannable(defaults, name):
                     continue
                 value = self._scan_element_property_value(
                     oeObj, name, value)
@@ -1226,6 +1267,7 @@ class xrtGlow(qt.QWidget):
         frame = self.scanFrames[frame_id]
         filename = frame.get('output', {}).get('glowFrameName')
         if filename:
+            filename = self._scan_resolve_output_filename(filename)
             folder = os.path.dirname(filename)
             if folder and not os.path.exists(folder):
                 os.makedirs(folder)

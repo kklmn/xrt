@@ -9,6 +9,7 @@ patches; the widgets provide a first UI surface for inspecting those recipes.
 
 import copy
 import json
+import os
 import re
 import string
 from collections import OrderedDict
@@ -75,6 +76,23 @@ def default_scan_description():
         'output': copy.deepcopy(DEFAULT_OUTPUT),
         'items': [],
         }
+
+
+def find_catalog_property(catalog, target, property_name):
+    target = str(target)
+    property_name = str(property_name)
+    for target_info in catalog or []:
+        target_names = [
+            target_info.get('target'),
+            target_info.get('name'),
+            ]
+        if target not in [str(name) for name in target_names
+                          if name is not None]:
+            continue
+        for prop in target_info.get('properties', []):
+            if str(prop.get('name')) == property_name:
+                return prop
+    return None
 
 
 def _frame_sort_key(frame_id):
@@ -256,7 +274,8 @@ class BaseScan:
                 if key in SCENE_PROPERTY_NAMES:
                     normalized.setdefault('scene', OrderedDict())[key] = value
                 else:
-                    normalized.setdefault('objects', OrderedDict())[key] = value
+                    normalized.setdefault('objects',
+                                          OrderedDict())[key] = value
         if self.actions and 'actions' not in normalized:
             normalized['actions'] = copy.deepcopy(self.actions)
         if self.output and 'output' not in normalized:
@@ -334,7 +353,8 @@ class BaseScan:
         start = int(item.get('start', 0))
         duration = int(item.get('duration', item.get('steps', 1)))
         values = _value_sequence(item.get('values'), duration)
-        item_id = item.get('id', f"{item.get('target')}.{item.get('property')}")
+        item_id = item.get('id',
+                           f"{item.get('target')}.{item.get('property')}")
         for offset in range(duration):
             if not values:
                 break
@@ -764,16 +784,24 @@ class TimelineFrameListWidget(qt.QWidget):
 
         layout = qt.QVBoxLayout(self)
         controls = qt.QHBoxLayout()
-        self.addInstructionButton = qt.QPushButton('Add instruction')
-        self.deleteTrackButton = qt.QPushButton('Delete track')
-        self.loadScanButton = qt.QPushButton('Load JSON')
-        self.saveScanButton = qt.QPushButton('Save JSON')
-        self.startButton = qt.QPushButton('Start')
-        self.pauseButton = qt.QPushButton('Pause')
-        self.stopButton = qt.QPushButton('Stop')
+        self.addInstructionButton = self._make_tool_button(
+            's_add.png', 'Add instruction')
+        self.deleteTrackButton = self._make_tool_button(
+            's_remove.png', 'Delete selected scan')
+        self.loadScanButton = self._make_tool_button(
+            's_open.png', 'Load scan JSON')
+        self.saveScanButton = self._make_tool_button(
+            's_save.png', 'Save scan JSON')
+        self.startButton = self._make_tool_button(
+            's_play.png', 'Start scan')
+        self.pauseButton = self._make_tool_button(
+            's_pause.png', 'Pause scan')
+        self.stopButton = self._make_tool_button(
+            's_stop.png', 'Stop scan')
         self.currentFrameLabel = qt.QLabel('Current frame 0 / 0')
         self.outputTemplateEdit = qt.QLineEdit(
             DEFAULT_OUTPUT['glowFrameName'])
+        info_controls = qt.QHBoxLayout()
         controls.addWidget(self.addInstructionButton)
         controls.addWidget(self.deleteTrackButton)
         controls.addWidget(self.loadScanButton)
@@ -782,13 +810,14 @@ class TimelineFrameListWidget(qt.QWidget):
         controls.addWidget(self.startButton)
         controls.addWidget(self.pauseButton)
         controls.addWidget(self.stopButton)
-        controls.addSpacing(12)
-        controls.addWidget(self.currentFrameLabel)
-        controls.addSpacing(12)
-        controls.addWidget(qt.QLabel('Filename template'))
-        controls.addWidget(self.outputTemplateEdit)
         controls.addStretch()
         layout.addLayout(controls)
+        info_controls.addWidget(self.currentFrameLabel)
+        info_controls.addSpacing(12)
+        info_controls.addWidget(qt.QLabel('Filename template'))
+        info_controls.addWidget(self.outputTemplateEdit)
+        info_controls.addStretch()
+        layout.addLayout(info_controls)
 
         splitter = qt.QSplitter(qt.Qt.Vertical)
         layout.addWidget(splitter)
@@ -806,6 +835,7 @@ class TimelineFrameListWidget(qt.QWidget):
         self.frameTable = qt.QTableWidget(0, 4)
         self.frameTable.setHorizontalHeaderLabels(
             ['Frame', 'Objects', 'Scene', 'Output'])
+        self.frameTable.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
         self.warningList = qt.QListWidget()
         self.frameTable.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.frameTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
@@ -840,6 +870,18 @@ class TimelineFrameListWidget(qt.QWidget):
         self.deleteTrackShortcut.setKey(qt.QKeySequence.Delete)
         self.deleteTrackShortcut.activated.connect(self._delete_selected_track)
         self._update_play_buttons()
+
+    def _make_tool_button(self, icon_name, tooltip):
+        button = qt.QToolButton(self)
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), '_icons', icon_name)
+        button.setIcon(qt.QIcon(icon_path))
+        button.setIconSize(qt.QSize(48, 48))
+        button.setToolTip(tooltip)
+        button.setAccessibleName(tooltip)
+        button.setToolButtonStyle(qt.Qt.ToolButtonIconOnly)
+        button.setAutoRaise(True)
+        return button
 
     def set_scan(self, scan):
         self.scan = scan if isinstance(scan, BaseScan) else BaseScan(scan)
@@ -1093,8 +1135,10 @@ class TimelineFrameListWidget(qt.QWidget):
                       json.dumps(frame.get('scene', {})),
                       json.dumps(frame.get('output', {}))]
             for col, value in enumerate(values):
-                self.frameTable.setItem(row, col,
-                                        qt.QTableWidgetItem(value))
+                table_item = qt.QTableWidgetItem(value)
+                table_item.setToolTip(value)
+                self.frameTable.setItem(row, col, table_item)
+        self.frameTable.resizeColumnsToContents()
 
     def _populate_warnings(self):
         self.warningList.clear()

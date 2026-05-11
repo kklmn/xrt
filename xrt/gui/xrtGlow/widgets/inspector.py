@@ -22,7 +22,7 @@ from ....backends.raycing.myopencl import ALL_CL_DEVICES
 from ....multipro import GenericProcessOrThread as GP
 from ....runner import RunCardVals
 from ....plotter import deserialize_plots
-from .scan import ScanRangeDialog
+from .scan import ScanRangeDialog, find_catalog_property
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
@@ -474,6 +474,7 @@ class InstanceInspector(qt.QDialog):
         copy_action = qt.QAction("Copy value", self)
         menu.addAction(copy_action)
         scan_action = None
+        scanProperty = None
 
         rowParent = index.parent()
         if rowParent.isValid():
@@ -483,10 +484,8 @@ class InstanceInspector(qt.QDialog):
             valueItem = self.model.itemFromIndex(valueIndex)
             if keyItem is not None and valueItem is not None:
                 propName = str(keyItem.text())
-                canScan = not (propName.endswith('rbk') or
-                               propName in ['uuid', 'name'] or
-                               propName in raycing.diagnosticArgs)
-                if canScan:
+                scanProperty = self.scanCatalogProperty(propName)
+                if scanProperty is not None:
                     scan_action = qt.QAction("Create scan...", self)
                     menu.addAction(scan_action)
 
@@ -495,8 +494,9 @@ class InstanceInspector(qt.QDialog):
             qt.QApplication.clipboard().setText(value)
 
         def create_scan():
+            currentValue = scanProperty.get('value', valueItem.text())
             dialog = ScanRangeDialog(self.elementId, propName,
-                                     valueItem.text(),
+                                     currentValue,
                                      target_name=self.elementName,
                                      parent=self)
             dialog.scanCreated.connect(self.add_scan_item)
@@ -506,6 +506,25 @@ class InstanceInspector(qt.QDialog):
         if scan_action is not None:
             scan_action.triggered.connect(create_scan)
         menu.exec_(self.table.viewport().mapToGlobal(position))
+
+    def scanInstructionCatalog(self):
+        parent = self.parent()
+        try:
+            if hasattr(parent, 'scanInstructionCatalog'):
+                return parent.scanInstructionCatalog()
+        except Exception:
+            return []
+        glowObj = getattr(parent, 'blViewer', None)
+        try:
+            if hasattr(glowObj, 'scanInstructionCatalog'):
+                return glowObj.scanInstructionCatalog()
+        except Exception:
+            return []
+        return []
+
+    def scanCatalogProperty(self, propName):
+        return find_catalog_property(
+            self.scanInstructionCatalog(), self.elementName, propName)
 
     def add_scan_item(self, item):
         self.scanItems.append(copy.deepcopy(item))
