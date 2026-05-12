@@ -306,7 +306,44 @@ class xrtGlWidget(qt.QOpenGLWidget):
     @slitThicknessFraction.setter
     def slitThicknessFraction(self, slitThicknessFraction):
         self._slitThicknessFraction = slitThicknessFraction
-        self.queue_mesh_update()
+        self.queue_mesh_update(predicate=is_aperture)
+
+    @property
+    def apertureBladeWidth(self):
+        return self._apertureBladeWidth
+
+    @apertureBladeWidth.setter
+    def apertureBladeWidth(self, apertureBladeWidth):
+        self._apertureBladeWidth = apertureBladeWidth
+        self.queue_mesh_update(predicate=is_aperture)
+
+    @property
+    def apertureDefaultSpan(self):
+        return self._apertureDefaultSpan
+
+    @apertureDefaultSpan.setter
+    def apertureDefaultSpan(self, apertureDefaultSpan):
+        self._apertureDefaultSpan = apertureDefaultSpan
+        self.queue_mesh_update(predicate=is_aperture)
+
+    @property
+    def apertureThickness(self):
+        return self._apertureThickness
+
+    @apertureThickness.setter
+    def apertureThickness(self, apertureThickness):
+        self._apertureThickness = apertureThickness
+        self.queue_mesh_update(predicate=is_aperture)
+
+    @property
+    def magnetShape(self):
+        return self._magnetShape
+
+    @magnetShape.setter
+    def magnetShape(self, magnetShape):
+        magnetShape = {} if magnetShape is None else magnetShape
+        self._magnetShape = copy.deepcopy(magnetShape)
+        self.queue_mesh_update(predicate=is_source)
 
     @property
     def autoSizeOe(self):
@@ -318,12 +355,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.needMeshUpdate.extend(
             list(self.beamline.oesDict.keys()))
 
-    def queue_mesh_update(self, oeuuid=None):
+    def queue_mesh_update(self, oeuuid=None, predicate=None):
         if raycing.is_valid_uuid(oeuuid):
             self.needMeshUpdate.append(oeuuid)
         else:
+            predicate = is_oe if predicate is None else predicate
             for oeid, oeLine in self.beamline.oesDict.items():
-                if is_oe(oeLine[0]) and\
+                if predicate(oeLine[0]) and\
                         oeid not in self.needMeshUpdate:
                     self.needMeshUpdate.append(oeid)
 

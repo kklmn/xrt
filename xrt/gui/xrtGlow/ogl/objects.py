@@ -2083,8 +2083,9 @@ class OEMesh3D():
             if taperGapDelta is not None and num > 1:
                 poleGap += taperGapDelta * (n / (num - 1.) - 0.5)
 
-            instancePositions[2*n] = (pos_x, pos_y, poleGap+0.5*mag_dz)
-            instancePositions[2*n+1] = (pos_x, pos_y, -poleGap-0.5*mag_dz)
+            poleCenterZ = 0.5 * (poleGap + mag_dz)
+            instancePositions[2*n] = (pos_x, pos_y, poleCenterZ)
+            instancePositions[2*n+1] = (pos_x, pos_y, -poleCenterZ)
             topIsRed = ((n % 2) == 0) == (polaritySign > 0)
             instanceColors[2*n] = (1.0, 0.0, 0.0) if topIsRed else\
                 (0.0, 0.0, 1.0)

@@ -90,7 +90,7 @@ DEFAULT_SCENE_SETTINGS = {
 
     'drawGrid': True,
     'perspectiveEnabled': True,
-    # 'fineGridEnabled': False,
+    'fineGridEnabled': False,
     'aPos': [0.9, 0.9, 0.9],
     'projectionsVisibility': [0, 0, 0],
 
@@ -158,26 +158,50 @@ SCENE_CONTROL_LABELS = {
     'linesDepthTest': 'Depth test for Lines',
     'pointsDepthTest': 'Depth test for Points',
     'invertColors': 'Invert scene color',
-    'autoSizeOe': 'OE size match beam',
     'showLocalAxes': 'Show local axes',
     'showInternalBeam': 'Show internal beams in multi-surface OEs',
-    'showElectronTrajectory': 'Show electron trajectory',
-    'trajectoryWithEmittance': 'With emittance',
+    }
+
+RENDERING_CONTROL_LABELS = {
+    'autoSizeOe': 'OE size match beam',
     }
 
 SCENE_TEXTEDITS = {
+    'maxLen': {
+            'label': 'Scene limit, mm',
+            'tooltip': ''},
+    }
+
+RENDERING_TEXTEDITS = {
     'oeThickness': {
             'label': 'Default OE thickness, mm',
             'tooltip': 'For OEs that do not have thickness'},
     'oeThicknessForce': {
             'label': 'Force OE thickness, mm',
             'tooltip': 'For OEs that have thickness, e.g. plates or lenses'},
+    }
+
+APERTURE_RENDERING_TEXTEDITS = {
     'slitThicknessFraction': {
             'label': 'Aperture frame size, %',
             'tooltip': ''},
-    'maxLen': {
-            'label': 'Scene limit, mm',
+    'apertureBladeWidth': {
+            'label': 'Aperture blade width, mm',
             'tooltip': ''},
+    'apertureDefaultSpan': {
+            'label': 'Aperture default span, mm',
+            'tooltip': ''},
+    'apertureThickness': {
+            'label': 'Aperture thickness, mm',
+            'tooltip': ''},
+    }
+
+SOURCE_RENDERING_CONTROL_LABELS = {
+    'showElectronTrajectory': 'Show electron trajectory',
+    'trajectoryWithEmittance': 'With emittance',
+    }
+
+SOURCE_RENDERING_TEXTEDITS = {
     'electronEnvelopeStep': {
             'label': 'Electron envelope step, mm',
             'tooltip': 'Spacing between transverse emittance ellipses'},
@@ -185,4 +209,16 @@ SCENE_TEXTEDITS = {
             'label': 'Electron envelope size, sigma',
             'tooltip': 'Multiplier for electron beam sigma in trajectory '
                        'envelope rendering'},
-   }
+    }
+
+SOURCE_MAGNET_TEXTEDITS = {
+    'gap': {
+            'label': 'Magnet gap, mm',
+            'tooltip': ''},
+    'dx': {
+            'label': 'Magnet width dx, mm',
+            'tooltip': ''},
+    'dz': {
+            'label': 'Magnet height dz, mm',
+            'tooltip': ''},
+    }

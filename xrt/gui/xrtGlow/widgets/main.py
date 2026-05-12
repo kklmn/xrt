@@ -18,6 +18,9 @@ from matplotlib.widgets import RectangleSelector
 
 from .._constants import (
         _DEBUG_, DEFAULT_SCENE_SETTINGS, COLOR_CONTROL_LABELS,
+        APERTURE_RENDERING_TEXTEDITS, RENDERING_CONTROL_LABELS,
+        RENDERING_TEXTEDITS, SOURCE_MAGNET_TEXTEDITS,
+        SOURCE_RENDERING_CONTROL_LABELS, SOURCE_RENDERING_TEXTEDITS,
         SCENE_CONTROL_LABELS, SCENE_TEXTEDITS, itemTypes)
 from .._utils import is_source, is_oe, is_aperture, is_screen
 from .inspector import InstanceInspector
@@ -166,6 +169,7 @@ class xrtGlow(qt.QWidget):
         self.makeColorsPanel()
         self.makeGridAndProjectionsPanel()
         self.makeScenePanel()
+        self.makeRenderingPanel()
         self.makeScanPanel()
         self.initControlPanels()
 
@@ -301,10 +305,46 @@ class xrtGlow(qt.QWidget):
 
         return layout
 
+    def _makeNestedLabeledLineEdit(self, label, tooltip, rootControl,
+                                   teControl, ctrlRegistry):
+        tLabel = qt.QLabel(label)
+        tLabel.setToolTip(tooltip)
+        tEdit = qt.QLineEdit()
+        tEdit.setToolTip(tooltip)
+
+        defDict = DEFAULT_SCENE_SETTINGS.get(rootControl, {})
+        defv = defDict.get(teControl) if isinstance(defDict, dict) else None
+        if defv is not None:
+            tEdit.setText(str(defv))
+
+        tEdit.editingFinished.connect(
+            partial(self._setNestedGlFloat, rootControl, teControl, tEdit))
+
+        layout = qt.QHBoxLayout()
+        tLabel.setMinimumWidth(145)
+        layout.addWidget(tLabel)
+        tEdit.setMaximumWidth(96)
+        layout.addWidget(tEdit)
+        layout.addStretch()
+
+        if ctrlRegistry is not None:
+            ctrlRegistry[f'{rootControl}.{teControl}'] = tEdit
+
+        return layout
+
     def _setGlFlag(self, pName, state):
         if not isinstance(state, bool):  # editor
             state = float(re.sub(',', '.', str(state.text())))
         setattr(self.customGlWidget, pName, state)
+        self.customGlWidget.glDraw()
+
+    def _setNestedGlFloat(self, rootName, pName, editor):
+        value = float(re.sub(',', '.', str(editor.text())))
+        rootValue = copy.deepcopy(getattr(self.customGlWidget, rootName, {}))
+        if not isinstance(rootValue, dict):
+            rootValue = {}
+        rootValue[pName] = value
+        setattr(self.customGlWidget, rootName, rootValue)
         self.customGlWidget.glDraw()
 
     def _setRayFlag(self, rayFlag, state):
@@ -1687,7 +1727,8 @@ class xrtGlow(qt.QWidget):
             xyzGridLayout.addLayout(layout)
 
         checkBox = qt.QCheckBox('Fine grid')
-        checkBox.setChecked(False)
+        checkBox.setChecked(DEFAULT_SCENE_SETTINGS.get(
+            'fineGridEnabled', False))
         checkBox.toggled.connect(partial(
                 self._setGlFlag, 'fineGridEnabled'))
         xyzGridLayout.addWidget(checkBox)
@@ -1815,6 +1856,27 @@ class xrtGlow(qt.QWidget):
         layout.addStretch()
         sceneLayout.addLayout(layout)
 
+        self.scenePanel = qt.QWidget(self)
+        sceneLayout.addWidget(self._makeRayVisibilityPanel())
+        sceneLayout.addStretch()
+        self.scenePanel.setLayout(sceneLayout)
+
+    def makeRenderingPanel(self):
+        renderingLayout = qt.QVBoxLayout()
+        self.renderingControls = OrderedDict()
+        self.renderingTextedits = OrderedDict()
+
+        for rdControl, cbText in RENDERING_CONTROL_LABELS.items():
+            aaCheckBox = self._makeCheckBox(cbText, rdControl,
+                                            self.renderingControls)
+            renderingLayout.addWidget(aaCheckBox)
+
+        for teControl, teProps in RENDERING_TEXTEDITS.items():
+            teLayout = self._makeLabeledLineEdit(
+                    teProps['label'], teProps['tooltip'], teControl,
+                    self.renderingTextedits)
+            renderingLayout.addLayout(teLayout)
+
         oeTileValidator = qt.QIntValidator()
         oeTileValidator.setRange(1, 200)
         for ia, (axis, defv) in enumerate(zip(
@@ -1826,19 +1888,47 @@ class xrtGlow(qt.QWidget):
             axEdit.setValidator(oeTileValidator)
             axEdit.editingFinished.connect(
                 partial(self.updateTileFromQLE, axEdit, ia))
-            self.sceneTextedits[f'tiles_{ia}'] = axEdit
+            self.renderingTextedits[f'tiles_{ia}'] = axEdit
             layout = qt.QHBoxLayout()
             axLabel.setMinimumWidth(100)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
             layout.addWidget(axEdit)
             layout.addStretch()
-            sceneLayout.addLayout(layout)
+            renderingLayout.addLayout(layout)
 
-        self.scenePanel = qt.QWidget(self)
-        sceneLayout.addWidget(self._makeRayVisibilityPanel())
-        sceneLayout.addStretch()
-        self.scenePanel.setLayout(sceneLayout)
+        aperturePanel = qt.QGroupBox('Apertures', self)
+        apertureLayout = qt.QVBoxLayout()
+        for teControl, teProps in APERTURE_RENDERING_TEXTEDITS.items():
+            teLayout = self._makeLabeledLineEdit(
+                    teProps['label'], teProps['tooltip'], teControl,
+                    self.renderingTextedits)
+            apertureLayout.addLayout(teLayout)
+        aperturePanel.setLayout(apertureLayout)
+        renderingLayout.addWidget(aperturePanel)
+
+        sourcePanel = qt.QGroupBox('Source', self)
+        sourceLayout = qt.QVBoxLayout()
+        for rdControl, cbText in SOURCE_RENDERING_CONTROL_LABELS.items():
+            aaCheckBox = self._makeCheckBox(cbText, rdControl,
+                                            self.renderingControls)
+            sourceLayout.addWidget(aaCheckBox)
+        for teControl, teProps in SOURCE_RENDERING_TEXTEDITS.items():
+            teLayout = self._makeLabeledLineEdit(
+                    teProps['label'], teProps['tooltip'], teControl,
+                    self.renderingTextedits)
+            sourceLayout.addLayout(teLayout)
+        for teControl, teProps in SOURCE_MAGNET_TEXTEDITS.items():
+            teLayout = self._makeNestedLabeledLineEdit(
+                    teProps['label'], teProps['tooltip'], 'magnetShape',
+                    teControl, self.renderingTextedits)
+            sourceLayout.addLayout(teLayout)
+        sourcePanel.setLayout(sourceLayout)
+        renderingLayout.addWidget(sourcePanel)
+
+        self.renderingPanel = qt.QWidget(self)
+        renderingLayout.addStretch()
+        self.renderingPanel.setLayout(renderingLayout)
 
     def initControlPanels(self):
         self.controlPanels = OrderedDict([
@@ -1847,6 +1937,7 @@ class xrtGlow(qt.QWidget):
             ("Colors", self.colorOpacityPanel),
             ("Grid/Projections", self.projectionPanel),
             ("Scene", self.scenePanel),
+            ("Rendering", self.renderingPanel),
             ("Scans", self.scanPanel),
         ])
 
@@ -1870,6 +1961,7 @@ class xrtGlow(qt.QWidget):
             "Colors": "p_colors128.png",
             "Grid/Projections": "p_grid128.png",
             "Scene": "p_scene128.png",
+            "Rendering": "p_mesh128.png",
             "Scans": "p_scan128.png",
         }
 
@@ -2421,6 +2513,9 @@ class xrtGlow(qt.QWidget):
     def setSceneParam(self, iAction, state):
         self.sceneControls[iAction].setChecked(state)
 
+    def setRenderingParam(self, iAction, state):
+        self.renderingControls[iAction].setChecked(state)
+
     def setProjectionParam(self, iAction, state):
         self.projectionControls[iAction].setChecked(state)
 
@@ -2884,6 +2979,16 @@ class xrtGlow(qt.QWidget):
             mAction.triggered.connect(partial(self.setSceneParam, iAction))
             subMenuS.addAction(mAction)
         menu.addSeparator()
+        subMenuR = menu.addMenu('Rendering')
+        for iAction, actCnt in self.renderingControls.items():
+            mAction = qt.QAction(self)
+            mAction.setText(actCnt.text())
+            mAction.setCheckable(True)
+            mAction.setChecked(bool(actCnt.checkState()))
+            mAction.triggered.connect(partial(
+                self.setRenderingParam, iAction))
+            subMenuR.addAction(mAction)
+        menu.addSeparator()
         if glw.selectedOE in glw.selectableOEs:
             oe = glw.beamline.oesDict[glw.selectableOEs[int(
                     glw.selectedOE)]][0]
@@ -3068,6 +3173,7 @@ class xrtGlow(qt.QWidget):
                                       self.customGlWidget.pointSize])
 
         for scCtrlName, scCtrlCB in ChainMap(self.sceneControls,
+                                             self.renderingControls,
                                              self.colorCbControls).items():
             if scCtrlName in params:
                 scCtrlCB.setChecked(params[scCtrlName])
@@ -3088,9 +3194,9 @@ class xrtGlow(qt.QWidget):
             for iax, checkBox in enumerate(self.projectionControls):
                 checkBox.setChecked(
                         self.customGlWidget.projectionsVisibility[iax])
-#        if 'fineGrid' in params:
-#            self.checkBoxFineGrid.setChecked(
-#                    self.customGlWidget.fineGridEnabled)
+        if 'fineGridEnabled' in params:
+            self.checkBoxFineGrid.setChecked(
+                    self.customGlWidget.fineGridEnabled)
         if 'aPos' in params:
             self.updateGridFromGL(self.customGlWidget.aPos)
         if 'perspectiveEnabled' in params:
@@ -3108,13 +3214,20 @@ class xrtGlow(qt.QWidget):
                 rayFlagCB.blockSignals(False)
             self.customGlWidget.showLostRays = 4 in rayFlags
 
-        for scProp in ['oeThickness', 'oeThicknessForce',
-                       'slitThicknessFraction', 'maxLen',
-                       'electronEnvelopeStep', 'electronEnvelopeSize']:
-            if scProp in params:
+        for scProp, textEdit in ChainMap(self.sceneTextedits,
+                                         self.renderingTextedits).items():
+            if '.' not in scProp and scProp in params:
                 scPval = params.get(scProp)
-                self.sceneTextedits[scProp].setText(
+                textEdit.setText(
                         "{0:.2f}".format(scPval) if scPval is not None else "")
+
+        if 'magnetShape' in params:
+            magnetShape = params.get('magnetShape') or {}
+            for shapeProp in SOURCE_MAGNET_TEXTEDITS:
+                textEdit = self.renderingTextedits.get(
+                    f'magnetShape.{shapeProp}')
+                if textEdit is not None and shapeProp in magnetShape:
+                    textEdit.setText("{0:.2f}".format(magnetShape[shapeProp]))
 
         if 'labelCoordPrec' in params:
             self.sceneSliders['labelCoordPrec'].setCurrentIndex(
@@ -3122,7 +3235,9 @@ class xrtGlow(qt.QWidget):
 
         if 'tiles' in params:
             for itn, tnv in enumerate(params['tiles']):
-                self.sceneTextedits[f'tiles_{itn}'].setText(str(tnv))
+                textEdit = self.renderingTextedits.get(f'tiles_{itn}')
+                if textEdit is not None:
+                    textEdit.setText(str(tnv))
 
         self.blockSignals(False)
         self.mplFig.canvas.draw()
