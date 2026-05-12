@@ -2061,6 +2061,14 @@ class OEMesh3D():
         magnetShape = self._resolve_magnet_shape(magnetShape)
         polePitch = self._magnet_pole_pitch(magnetShape)
         _, _, mag_dz, gap = self._magnet_dimensions(magnetShape)
+        taperGapDelta = None
+        taper = getattr(self.oe, 'taper', None)
+        if isinstance(taper, (tuple, list, np.ndarray)) and len(taper) == 2:
+            try:
+                taperGapDelta = float(taper[0])
+                gap = float(taper[1])
+            except (TypeError, ValueError):
+                taperGapDelta = None
 
         instancePositions = np.zeros((int(num*2), 3), dtype=np.float32)
         instanceColors = np.zeros((int(num*2), 3), dtype=np.float32)
@@ -2071,9 +2079,12 @@ class OEMesh3D():
             pos_x = 0
             dy = n - 0.5*num if num > 1 else 0
             pos_y = polePitch * dy + phaseShift
+            poleGap = gap
+            if taperGapDelta is not None and num > 1:
+                poleGap += taperGapDelta * (n / (num - 1.) - 0.5)
 
-            instancePositions[2*n] = (pos_x, pos_y, gap+0.5*mag_dz)
-            instancePositions[2*n+1] = (pos_x, pos_y, -gap-0.5*mag_dz)
+            instancePositions[2*n] = (pos_x, pos_y, poleGap+0.5*mag_dz)
+            instancePositions[2*n+1] = (pos_x, pos_y, -poleGap-0.5*mag_dz)
             topIsRed = ((n % 2) == 0) == (polaritySign > 0)
             instanceColors[2*n] = (1.0, 0.0, 0.0) if topIsRed else\
                 (0.0, 0.0, 1.0)
