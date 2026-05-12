@@ -1347,7 +1347,9 @@ class XYCPlot(object):
         if self.areProcessAlreadyRunning:
             return
         self.areProcessAlreadyRunning = True
-        runner.dispatch_jobs()
+        res = runner.dispatch_jobs()
+        if res == 'start next':
+            runner.start_jobs()
 
     def set_axes_limits(self, xmin, xmax, ymin, ymax, emin, emax):
         """

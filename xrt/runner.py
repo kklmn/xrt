@@ -162,10 +162,13 @@ def start_jobs():
             t0 = time.time()
             res = dispatch_jobs()
             tFromStart = time.time() - t0
-            raycing.colorPrint('Repeat {0} of {1} done in {2:.1f} s'.format(
-                runCardVals.iteration+1, runCardVals.repeats, tFromStart),
-                fcolor='YELLOW')
-            if res != 'start next':
+            if res is None:
+                raycing.colorPrint(
+                    'Repeat {0} of {1} done in {2:.1f} s'.format(
+                        runCardVals.iteration, runCardVals.repeats,
+                        tFromStart),
+                    fcolor='YELLOW')
+            if res == 'finished':
                 return
     else:
         plot = _plots[0]
@@ -182,11 +185,11 @@ def dispatch_jobs():
     event handler of a qt-graph."""
     if (runCardVals.iteration >= runCardVals.repeats) or \
             runCardVals.stop_event.is_set():
-        return on_finish()
+        return on_finish() or 'finished'
     one_iteration()
     if (runCardVals.iteration >= runCardVals.repeats) or \
             runCardVals.stop_event.is_set():
-        return on_finish()
+        return on_finish() or 'finished'
     if runCardVals.iteration % runCardVals.updateEvery == 0:
         for plot in _plots:
             plot.plot_plots()
