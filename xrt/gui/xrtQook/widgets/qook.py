@@ -30,6 +30,7 @@ from ....backends.raycing import run as rrun  # analysis:ignore
 from ....version import __version__ as xrtversion  # analysis:ignore
 from .... import plotter as xrtplot  # analysis:ignore
 from .... import runner as xrtrun  # analysis:ignore
+from ...xrtGlow.widgets.scan import BaseScan, SCENE_TARGETS
 try:
     from ....backends.raycing.materials import elemental as rmatsel  # analysis:ignore
     from ....backends.raycing.materials import compounds as rmatsco  # analysis:ignore
@@ -48,6 +49,294 @@ else:
 class XrtQook(XrtQookElements):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def glowScanDescription(self):
+        glowWidget = getattr(self, 'blViewer', None)
+        description = getattr(glowWidget, 'scanDescription', None)
+        return description if isinstance(description, dict) else None
+
+    def availableGlowScanGenerators(self):
+        description = self.glowScanDescription()
+        if not self._has_glow_scan(description):
+            return []
+        try:
+            tracks, _ = self._scan_tracks_from_description(description)
+        except Exception:
+            return []
+        return ['glow_scan'] if tracks else []
+
+    def _has_glow_scan(self, description):
+        if not isinstance(description, dict):
+            return False
+        if description.get('items') or description.get('tracks'):
+            return True
+        frames = description.get('frames')
+        if isinstance(frames, dict) and frames:
+            return True
+        return any(str(key).startswith('frame_') for key in description)
+
+    def _scan_literal(self, value):
+        if hasattr(value, 'tolist'):
+            return repr(value.tolist())
+        if isinstance(value, dict):
+            items = [
+                f'{self._scan_literal(key)}: {self._scan_literal(val)}'
+                for key, val in value.items()]
+            return '{' + ', '.join(items) + '}'
+        if isinstance(value, (list, tuple)):
+            return '[' + ', '.join(self._scan_literal(v) for v in value) + ']'
+        return repr(value)
+
+    def _scan_identifier(self, *parts):
+        text = '_'.join(str(part) for part in parts if str(part))
+        text = re.sub(r'\W+', '_', text).strip('_').lower()
+        if not text or text[0].isdigit():
+            text = 'scan_' + text
+        return text
+
+    def _scan_target_expr(self, target):
+        target = str(target)
+        return f'beamLine.{target}' if target.isidentifier() else \
+            f'getattr(beamLine, {target!r})'
+
+    def _scan_frame_index(self, frame_id):
+        match = re.match(r'^frame_(\d+)$', str(frame_id))
+        return int(match.group(1)) if match is not None else None
+
+    def _scan_values_expr(self, values, duration):
+        duration = max(1, int(duration))
+        if isinstance(values, dict):
+            value_type = values.get('type', 'linspace')
+            if value_type == 'linspace':
+                return 'xrtrun.get_scan_values({0}, {1}, {2})'.format(
+                    self._scan_literal(values.get('start', 0.0)),
+                    self._scan_literal(values.get('stop', 0.0)),
+                    duration)
+            if value_type == 'list':
+                return 'xrtrun.get_scan_values({0}, frames={1})'.format(
+                    self._scan_literal(list(values.get('values', []))),
+                    duration)
+            if value_type == 'constant':
+                return 'xrtrun.get_scan_values({0}, frames={1})'.format(
+                    self._scan_literal(values.get('value')), duration)
+        if isinstance(values, (list, tuple)):
+            return 'xrtrun.get_scan_values({0}, frames={1})'.format(
+                self._scan_literal(list(values)), duration)
+        return 'xrtrun.get_scan_values({0}, frames={1})'.format(
+            self._scan_literal(values), duration)
+
+    def _scan_track_summary(self, target, prop, start, duration, values):
+        end = start + max(1, int(duration)) - 1
+        span = f'frame {start}' if start == end else f'frames {start}..{end}'
+        if isinstance(values, dict):
+            value_type = values.get('type', 'linspace')
+            if value_type == 'linspace':
+                return f'{target}.{prop}: {span}, ' \
+                    f'{values.get("start")} -> {values.get("stop")}'
+            if value_type == 'constant':
+                return f'{target}.{prop}: {span}, {values.get("value")}'
+            if value_type == 'list':
+                return f'{target}.{prop}: {span}, list values'
+        return f'{target}.{prop}: {span}'
+
+    def _scan_add_track(self, tracks, target, prop, start, duration,
+                        values_expr, summary):
+        base_name = self._scan_identifier(target, prop)
+        used = {track['name'] for track in tracks}
+        name = base_name
+        index = 2
+        while name in used:
+            name = f'{base_name}_{index}'
+            index += 1
+        if start is None:
+            start_value = None
+            duration_value = 0
+        else:
+            start_value = int(start)
+            duration_value = max(1, int(duration))
+        tracks.append({
+            'name': name,
+            'target': str(target),
+            'property': str(prop),
+            'start': start_value,
+            'duration': duration_value,
+            'values_expr': values_expr,
+            'summary': summary,
+            })
+
+    def _scan_event_tracks(self, item):
+        tracks = []
+        frame_index = int(item.get('frame', item.get('start', 0)))
+        duration = max(1, int(item.get('duration', item.get('steps', 1))))
+        for target, patch in item.get('objects', {}).items():
+            if str(target) in SCENE_TARGETS or not isinstance(patch, dict):
+                continue
+            for prop, value in patch.items():
+                expr = 'xrtrun.get_scan_values({0}, frames={1})'.format(
+                    self._scan_literal(value), duration)
+                summary = f'{target}.{prop}: frame {frame_index}, {value}'
+                tracks.append((target, prop, frame_index, duration, expr,
+                               summary))
+        return tracks
+
+    def _scan_expanded_tracks(self, scan):
+        schedules = OrderedDict()
+        try:
+            frames = BaseScan(scan).compile_frames()
+        except Exception:
+            return []
+        for frame_id, frame in frames.items():
+            frame_index = self._scan_frame_index(frame_id)
+            if frame_index is None:
+                continue
+            for target, patch in frame.get('objects', {}).items():
+                if str(target) in SCENE_TARGETS or not isinstance(patch, dict):
+                    continue
+                for prop, value in patch.items():
+                    key = (str(target), str(prop))
+                    schedules.setdefault(key, OrderedDict())[frame_index] = \
+                        value
+        tracks = []
+        for (target, prop), schedule in schedules.items():
+            expr = self._scan_literal(schedule)
+            summary = f'{target}.{prop}: explicit frame values'
+            tracks.append((target, prop, None, None, expr, summary))
+        return tracks
+
+    def _scan_tracks_from_description(self, description):
+        tracks = []
+        skipped = []
+        items = description.get('items', description.get('tracks', []))
+        for item in items:
+            item_type = item.get('type', 'track')
+            if item_type == 'track':
+                target = item.get('target')
+                prop = item.get('property')
+                if target is None or prop is None:
+                    skipped.append(item.get('id', 'unnamed scan track'))
+                    continue
+                if str(target) in SCENE_TARGETS:
+                    skipped.append(item.get('id', f'{target}.{prop}'))
+                    continue
+                start = int(item.get('start', 0))
+                duration = int(item.get('duration', item.get('steps', 1)))
+                values = item.get('values')
+                self._scan_add_track(
+                    tracks, target, prop, start, duration,
+                    self._scan_values_expr(values, duration),
+                    self._scan_track_summary(
+                        target, prop, start, duration, values))
+            elif item_type == 'event':
+                for track in self._scan_event_tracks(item):
+                    self._scan_add_track(tracks, *track)
+            else:
+                fallback = {'items': [item]}
+                for track in self._scan_expanded_tracks(fallback):
+                    self._scan_add_track(tracks, *track)
+
+        if not items:
+            for track in self._scan_expanded_tracks(description):
+                self._scan_add_track(tracks, *track)
+        return tracks, skipped
+
+    def _scan_frame_count(self, description, tracks):
+        try:
+            frame_count = len(BaseScan(description).compile_frames())
+            if frame_count:
+                return frame_count
+        except Exception:
+            pass
+        return max([track['start'] + track['duration']
+                    for track in tracks
+                    if track['start'] is not None] or [1])
+
+    def _scan_assignment_lines(self, target, prop, value_expr, indent):
+        target_expr = self._scan_target_expr(target)
+        if '.' not in prop:
+            return [f'{indent}{target_expr}.{prop} = {value_expr}']
+
+        root, field = prop.split('.', 1)
+        component_indices = {
+            'center': {'x': 0, 'y': 1, 'z': 2},
+            'x': {'x': 0, 'y': 1, 'z': 2},
+            'z': {'x': 0, 'y': 1, 'z': 2},
+            'limPhysX': {'lmin': 0, 'lmax': 1},
+            'limPhysY': {'lmin': 0, 'lmax': 1},
+            'limPhysX2': {'lmin': 0, 'lmax': 1},
+            'limPhysY2': {'lmin': 0, 'lmax': 1},
+            'opening': {
+                'left': 0, 'right': 1, 'bottom': 2, 'top': 3},
+            }
+        if root == 'blades':
+            lines = [
+                f'{indent}{root} = dict({target_expr}.{root})',
+                f'{indent}{root}[{field!r}] = {value_expr}',
+                f'{indent}{target_expr}.{root} = {root}',
+                ]
+            return lines
+        index = component_indices.get(root, {}).get(field)
+        if index is None:
+            return [
+                f'{indent}# Unsupported compound scan field: '
+                f'{target}.{prop}']
+        lines = [
+            f'{indent}{root} = list({target_expr}.{root})',
+            f'{indent}{root}[{index}] = {value_expr}',
+            f'{indent}{target_expr}.{root} = {root}',
+            ]
+        return lines
+
+    def makeGlowScanCode(self):
+        description = self.glowScanDescription()
+        if not self._has_glow_scan(description):
+            return ''
+
+        tracks, skipped = self._scan_tracks_from_description(description)
+        frame_count = self._scan_frame_count(description, tracks)
+        track_word = 'track' if len(tracks) == 1 else 'tracks'
+
+        lines = [
+            '\ndef glow_scan(plots, beamLine):',
+            f'{myTab}"""Generated from the current xrtGlow scan."""',
+            f'{myTab}# xrtGlow scan: {len(tracks)} {track_word}, '
+            f'{frame_count} frames',
+            ]
+        for track in tracks:
+            lines.append(f'{myTab}# {track["summary"]}')
+        for item_id in skipped:
+            lines.append(f'{myTab}# Skipped scene-only scan track: {item_id}')
+        lines.append('')
+
+        for track in tracks:
+            if track['start'] is None:
+                lines.append(f'{myTab}{track["name"]} = '
+                             f'{track["values_expr"]}')
+            else:
+                lines.append(f'{myTab}{track["name"]} = dict(zip(')
+                lines.append(f'{myTab*2}range({track["start"]}, '
+                             f'{track["start"] + track["duration"]}),')
+                lines.append(f'{myTab*2}{track["values_expr"]}))')
+        if not tracks:
+            lines.append(f'{myTab}# No beamline-property tracks to apply.')
+        lines.extend([
+            '',
+            f'{myTab}for iFrame in range({frame_count}):',
+            ])
+        for track in tracks:
+            lines.append(f'{myTab*2}if iFrame in {track["name"]}:')
+            value_expr = f'{track["name"]}[iFrame]'
+            lines.extend(self._scan_assignment_lines(
+                track['target'], track['property'], value_expr, myTab*3))
+            lines.append('')
+        lines.extend([
+            f'{myTab*2}frame_file_name = "frame{{0:04d}}.jpg".format('
+            f'iFrame)',
+            f'{myTab*2}for plot in plots:',
+            f'{myTab*3}plot.saveName = plot.title + "_" + frame_file_name',
+            f'{myTab*2}yield',
+            '\n',
+            ])
+        return '\n'.join(lines)
 
     def updateBeamModel(self):
         """This function cleans the beam model. It will do nothing if
@@ -413,6 +702,7 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
         codeBuildBeamline = codeBuildBeamline.rstrip(',') + ')\n\n'
 
         codeRunProcess = '\ndef run_process(bl):\n'
+        codeScanGenerator = ''
 
         codeMain = "\ndef main():\n"
         codeMain += '{0}{1} = build_beamline()\n'.format(myTab, BLName)
@@ -744,6 +1034,7 @@ if __name__ == '__main__':
                     break
 
             ieinit = ""
+            selectedGenerator = None
 
             runParams = dict(self.getParams(elstr))
 
@@ -751,6 +1042,8 @@ if __name__ == '__main__':
                 if self.rootRunItem.child(ie, 0).text() != '_object':
                     paraname = str(self.rootRunItem.child(ie, 0).text())
                     paravalue = str(self.rootRunItem.child(ie, 1).text())
+                    if paraname == "generator":
+                        selectedGenerator = paravalue
                     if paraname == "plots":
                         paravalue = str(self.rootPlotItem.text())
                     if paraname == "backend":
@@ -762,9 +1055,17 @@ if __name__ == '__main__':
                         ieinit += "{0}{1}={2},\n".format(
                             myTab*2, paraname, paravalue)
             codeMain += ieinit.rstrip(",\n") + ")\n"
+            if selectedGenerator == 'glow_scan':
+                codeScanGenerator = self.makeGlowScanCode()
+                if not codeScanGenerator:
+                    codeScanGenerator = \
+                        '\ndef glow_scan(plots, beamLine):\n' +\
+                        '{0}# No xrtGlow scan was available when code was '\
+                        'generated.\n{0}yield\n\n'.format(myTab)
 
         fullCode = codeDeclarations + codeBuildBeamline +\
-            codeRunProcess + codePlots + codeMain + codeFooter
+            codeRunProcess + codePlots + codeScanGenerator +\
+            codeMain + codeFooter
         for xrtAlias in self.xrtModules:
             fullModName = (eval(xrtAlias)).__name__
             fullCode = fullCode.replace(fullModName+".", xrtAlias+".")

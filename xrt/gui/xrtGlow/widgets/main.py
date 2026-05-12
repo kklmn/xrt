@@ -137,6 +137,9 @@ class xrtGlow(qt.QWidget):
         elif layout is not None:
             glwInitKwargs.update({'beamLayout': layout})
 
+        if scanDescription is None and layout is not None:
+            scanDescription = raycing.get_layout_scan_description(layout)
+
         self.customGlWidget = xrtGlWidget(**glwInitKwargs)
 
         self.populateSegmentsModel(arrayOfRays)
@@ -149,6 +152,8 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
         self.customGlWidget.openElViewer.connect(self.runElementViewer)
+        self.generator = None
+        self.generatorArgs = []
         self.scanDescription = self._scan_description_from_input(
             scanDescription)
         self.scanOutputDirectory = None
@@ -713,7 +718,7 @@ class xrtGlow(qt.QWidget):
             dialog.setDirectory(directory)
 
     def setScanOutputTemplate(self, template):
-        template = str(template).strip() or 'frame{index:04d}.jpg'
+        template = str(template).strip()
         self.scanDescription.setdefault('output', {})[
             'glowFrameName'] = template
         self.refreshScanPanel()
@@ -3253,21 +3258,53 @@ class xrtGlow(qt.QWidget):
 #            pass
 #        self.updateColorSelFromMPL(0, 0)
 
+    def _hasScanToRun(self):
+        scanDescription = getattr(self, 'scanDescription', None)
+        if not isinstance(scanDescription, dict):
+            return False
+        if scanDescription.get('items') or scanDescription.get('tracks'):
+            return True
+        for frameKey in ['frames', 'expandedFrames', 'frameDict']:
+            frames = scanDescription.get(frameKey)
+            if isinstance(frames, dict) and frames:
+                return True
+            try:
+                if int(frames or 0) > 0:
+                    return True
+            except (TypeError, ValueError):
+                pass
+        try:
+            if int(scanDescription.get('frameCount', 0) or 0) > 0:
+                return True
+        except (TypeError, ValueError):
+            pass
+        return any(str(key).startswith('frame_') for key in scanDescription)
+
     def startRecordingMovie(self):  # by F7
-        if self.generator is None:
+        generator = getattr(self, 'generator', None)
+        if callable(generator):
+            self.recordGeneratorMovie(generator)
+        elif self._hasScanToRun() and hasattr(self, 'scanWidget'):
+            self.scanWidget.start_scan()
+
+    def recordGeneratorMovie(self, generator):
+        beamLine = getattr(self, 'bl', None)
+        if beamLine is None:
+            beamLine = getattr(self.customGlWidget, 'beamline', None)
+        if beamLine is None:
             return
         startFrom = self.startFrom if hasattr(self, 'startFrom') else 0
-        for it in self.generator(*self.generatorArgs):
-            self.bl.propagate_flow(startFrom=startFrom)
-            rayPath = self.bl.export_to_glow()
+        for it in generator(*self.generatorArgs):
+            beamLine.propagate_flow(startFrom=startFrom)
+            rayPath = beamLine.export_to_glow()
             self.updateOEsList(rayPath)
             self.customGlWidget.glDraw()
             if self.isHidden():
                 self.show()
             image = self.customGlWidget.grabFrameBuffer(withAlpha=True)
             try:
-                image.save(self.bl.glowFrameName)
-                cNameSp = os.path.splitext(self.bl.glowFrameName)
+                image.save(beamLine.glowFrameName)
+                cNameSp = os.path.splitext(beamLine.glowFrameName)
                 cName = cNameSp[0] + "_color" + cNameSp[1]
                 self.mplFig.savefig(cName)
             except AttributeError:
@@ -3285,8 +3322,7 @@ class xrtGlow(qt.QWidget):
 - **F4**: Dock/Undock xrtGlow if launched from xrtQook
 - **F5/F6**: Quick Save/Load Scene
                     """
-        if hasattr(self, 'generator'):
-            helpText += "- **F7**: Start recording movie"
+        helpText += "- **F7**: Start movie generator or scan"
         helpText += """
 - **LeftMouse**: Rotate the Scene
 - **SHIFT+LeftMouse**: Translate in perpendicular to the shortest view axis

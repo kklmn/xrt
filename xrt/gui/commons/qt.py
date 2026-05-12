@@ -124,6 +124,16 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         if str(argValue).lower() in ['false', 'true']:
             combo.addItems(['False', 'True'])
             return combo
+        elif argNameL == 'generator':
+            combo.addItems(['None'])
+            if hasattr(self.mainWidget, 'availableGlowScanGenerators'):
+                for generatorName in \
+                        self.mainWidget.availableGlowScanGenerators():
+                    if combo.findText(generatorName) < 0:
+                        combo.addItem(generatorName)
+            if argValue and combo.findText(argValue) < 0:
+                combo.addItem(argValue)
+            return combo
 #        elif argName in ['bl', 'beamline']:
 #            combo.setEditable(True)
 #            combo.setModel(self.mainWidget.beamLineModel)
@@ -402,6 +412,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             idx = editor.findText(value)
             if idx >= 0:
                 editor.setCurrentIndex(idx)
+            elif editor.isEditable():
+                editor.setEditText(value)
         elif isinstance(editor, QLineEdit):
             editor.setText(value)
 #        elif isinstance(editor, QWidget):  # TODO: need better condition

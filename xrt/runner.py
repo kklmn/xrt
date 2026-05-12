@@ -12,6 +12,7 @@ import sys
 import time
 import inspect
 import pickle
+import re
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -136,6 +137,53 @@ def _simple_generator():
     examples for generators that run complex ray-tracing studies.
     """
     yield
+
+
+def get_scan_values(start, stop=None, frames=None):
+    """
+    Return a list of scan values for generator-style parameter scans.
+
+    If *stop* is given, *start* and *stop* may be numbers or strings with the
+    same unit suffix, e.g. ``'10 keV'`` and ``'20 keV'``. If *stop* is None,
+    *start* is treated as a constant or an explicit list of values.
+    """
+    frames = None if frames is None else int(frames)
+
+    if stop is None:
+        if isinstance(start, (list, tuple, np.ndarray)):
+            values = list(start)
+            if frames is None:
+                return values
+            if values and len(values) < frames:
+                values += [values[-1]] * (frames - len(values))
+            return values[:frames]
+        return [start] * (1 if frames is None else frames)
+
+    frames = 1 if frames is None else frames
+    if frames <= 1:
+        return [start]
+
+    def split_numeric_unit(value):
+        if isinstance(value, (int, float)):
+            return float(value), ''
+        match = re.match(r'^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)'
+                         r'(?:[eE][+-]?\d+)?)\s*(.*?)\s*$',
+                         str(value))
+        if match is None:
+            raise ValueError(
+                "Cannot interpolate scan value {0!r}".format(value))
+        return float(match.group(1)), match.group(2)
+
+    start_value, start_unit = split_numeric_unit(start)
+    stop_value, stop_unit = split_numeric_unit(stop)
+    if start_unit != stop_unit:
+        raise ValueError(
+            "Cannot interpolate different units: {0!r} and {1!r}".format(
+                start_unit, stop_unit))
+
+    return [value if not start_unit else "{0:g} {1}".format(
+        value, start_unit)
+        for value in np.linspace(start_value, stop_value, frames)]
 
 
 def start_jobs():

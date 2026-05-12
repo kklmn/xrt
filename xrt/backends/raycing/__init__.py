@@ -233,7 +233,9 @@ from ._flow import propagationProcess, MessageHandler
 
 from .beamline import (
     distance_xy, distance_xyz, global_to_virgin_local, virgin_local_to_global,
-    xyz_from_xz, is_auto_align_required, AlignmentBeam, BeamLine)
+    xyz_from_xz, is_auto_align_required, AlignmentBeam, BeamLine,
+    get_layout_beamline_name, get_layout_scan_description,
+    set_layout_scan_description)
 
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 

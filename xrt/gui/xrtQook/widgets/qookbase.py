@@ -999,6 +999,7 @@ class XrtQookBase(qt.QMainWindow):
         self.runTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
 #        self.runTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         self.runTree.model().setHorizontalHeaderLabels(headers)
+        self.runTree.setItemDelegateForColumn(1, comboDelegate)
 
 #        for name, obj in inspect.getmembers(xrtrun):
 #            if inspect.isfunction(obj) and name == "run_ray_tracing":
@@ -2045,9 +2046,59 @@ class XrtQookBase(qt.QMainWindow):
         else:
             pass
 
+    def _has_layout_scan_description(self, scanDescription):
+        if not isinstance(scanDescription, dict):
+            return False
+        if scanDescription.get('items') or scanDescription.get('tracks'):
+            return True
+        frames = scanDescription.get('frames')
+        if isinstance(frames, dict) and frames:
+            return True
+        for value in [scanDescription.get('frameCount', 0), frames]:
+            try:
+                if int(value or 0) > 0:
+                    return True
+            except (TypeError, ValueError):
+                pass
+        return any(str(key).startswith('frame_') for key in scanDescription)
+
+    def _layout_scan_description(self):
+        glowObj = getattr(self, 'blViewer', None)
+        if glowObj is not None and hasattr(glowObj, 'scanDescription'):
+            if hasattr(glowObj, '_scan_sync_output_template'):
+                glowObj._scan_sync_output_template()
+            scanDescription = glowObj.scanDescription
+            if hasattr(glowObj, '_scan_portable_description'):
+                scanDescription = glowObj._scan_portable_description(
+                    scanDescription)
+        else:
+            scanDescription = getattr(self.beamLine, 'scanDescription', None)
+            if scanDescription is None and getattr(
+                    self.beamLine, 'layoutStr', None) is not None:
+                scanDescription = raycing.get_layout_scan_description(
+                    self.beamLine.layoutStr)
+        if self._has_layout_scan_description(scanDescription):
+            return scanDescription
+        return None
+
+    def _appendScanLayoutXml(self, scanDescription=None):
+        if scanDescription is None:
+            scanDescription = self._layout_scan_description()
+        if scanDescription is None:
+            return
+        scanJson = raycing.json.dumps(scanDescription, indent=2)
+        scanJson = scanJson.replace(']]>', ']]]]><![CDATA[>')
+        self.confText += '\t<xrtGlow type="prop">\n'
+        self.confText += '\t\t<scanDescription type="param"><![CDATA[\n'
+        self.confText += scanJson + '\n'
+        self.confText += '\t\t]]></scanDescription>\n'
+        self.confText += '\t</xrtGlow>\n'
+
     def exportLayout(self):
         saveStatus = False
         self.beamModel.sort(3)
+        layoutScanDescription = self._layout_scan_description()
+        self.beamLine.scanDescription = layoutScanDescription
         if self.layoutFileName == "":
             saveDialog = qt.QFileDialog()
             saveDialog.setFileMode(qt.QFileDialog.AnyFile)
@@ -2068,6 +2119,9 @@ class XrtQookBase(qt.QMainWindow):
                         runDict
                     self.beamLine.layoutStr['Project']['description'] = \
                         self.fileDescription
+                    raycing.set_layout_scan_description(
+                        self.beamLine.layoutStr,
+                        layoutScanDescription)
 
                 with open(self.layoutFileName, 'w',
                           encoding="utf-8") as json_file:
@@ -2106,6 +2160,7 @@ class XrtQookBase(qt.QMainWindow):
                         self.exportModel(item)
                 self.confText += '<description>{0}</description>\n'.format(
                     self.fileDescription)
+                self._appendScanLayoutXml(layoutScanDescription)
                 self.confText += "</Project>\n"
                 if not str(self.layoutFileName).endswith('.xml'):
                     self.layoutFileName += '.xml'
@@ -2293,6 +2348,7 @@ class XrtQookBase(qt.QMainWindow):
                 self.progressBar.setFormat(
                             "No layout")
                 return
+            scanDescription = raycing.get_layout_scan_description(project)
 
             tmpAutoUpdate = self.isGlowAutoUpdate
             if tmpAutoUpdate:
@@ -2305,8 +2361,9 @@ class XrtQookBase(qt.QMainWindow):
                 oeItem = self.rootBLItem.child(row, 0)
                 self.deleteElement(self.tree, oeItem)
 
-            beamlineName = next(raycing.islice(project.keys(), 2, 3))
+            beamlineName = raycing.get_layout_beamline_name(project)
             self.beamLine.name = beamlineName
+            self.beamLine.scanDescription = scanDescription
 
             beamlineInitKWargs = project[beamlineName]['properties']
             beamlineInitKWargs['name'] = beamlineName
@@ -2374,6 +2431,9 @@ class XrtQookBase(qt.QMainWindow):
 
             self.layoutFileName = openFileName
             self.updateGlowScanOutputDirectory()
+            if self.blViewer is not None and hasattr(
+                    self.blViewer, 'setScanDescription'):
+                self.blViewer.setScanDescription(scanDescription)
             self.fileDescription = project.get('description')
             if self.fileDescription is not None:
                 self.descrEdit.setText(self.fileDescription)

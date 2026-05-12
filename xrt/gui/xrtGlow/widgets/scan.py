@@ -893,8 +893,7 @@ class TimelineFrameListWidget(qt.QWidget):
         self.rebuild()
 
     def output_template(self):
-        template = str(self.outputTemplateEdit.text()).strip()
-        return template or DEFAULT_OUTPUT['glowFrameName']
+        return str(self.outputTemplateEdit.text()).strip()
 
     def _output_template_edited(self):
         template = self.output_template()

@@ -30,6 +30,12 @@ from ._named_arrays import Center
 
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 
+LAYOUT_GLOW_KEY = 'xrtGlow'
+LAYOUT_SCAN_KEY = 'scanDescription'
+LAYOUT_METADATA_KEYS = {
+    'Beams', 'Materials', 'FigureErrors', 'flow', 'plots',
+    'run_ray_tracing', 'description', LAYOUT_GLOW_KEY}
+
 
 def distance_xy(p1, p2):
     """Calculates 2D distance between p1 and p2. p1 and p2 are vectors of
@@ -154,6 +160,66 @@ def is_auto_align_required(oe):
     return needAutoAlign
 
 
+def _layout_project(layout):
+    if isinstance(layout, dict) and 'Project' in layout:
+        return layout['Project']
+    return layout
+
+
+def _decode_layout_scan_description(scanDescription):
+    if scanDescription is None:
+        return None
+    if isinstance(scanDescription, str):
+        scanDescription = scanDescription.strip()
+        if not scanDescription:
+            return None
+        return json.loads(scanDescription)
+    return copy.deepcopy(scanDescription)
+
+
+def get_layout_scan_description(layout):
+    project = _layout_project(layout)
+    if not isinstance(project, dict):
+        return None
+
+    glowMeta = project.get(LAYOUT_GLOW_KEY)
+    if not isinstance(glowMeta, dict):
+        return None
+    return _decode_layout_scan_description(glowMeta.get(LAYOUT_SCAN_KEY))
+
+
+def set_layout_scan_description(layout, scanDescription):
+    project = _layout_project(layout)
+    if not isinstance(project, dict):
+        return
+    scanDescription = _decode_layout_scan_description(scanDescription)
+    if scanDescription is None:
+        project.pop(LAYOUT_GLOW_KEY, None)
+        return
+    glowMeta = project.get(LAYOUT_GLOW_KEY)
+    if not isinstance(glowMeta, dict):
+        glowMeta = OrderedDict()
+    glowMeta[LAYOUT_SCAN_KEY] = scanDescription
+    project[LAYOUT_GLOW_KEY] = glowMeta
+
+
+def get_layout_beamline_name(project):
+    project = _layout_project(project)
+    if not isinstance(project, dict):
+        return None
+    for key, value in project.items():
+        if key in LAYOUT_METADATA_KEYS or not isinstance(value, dict):
+            continue
+        objName = value.get('_object')
+        if str(objName).endswith('.BeamLine'):
+            return key
+    for key, value in project.items():
+        if key not in LAYOUT_METADATA_KEYS and isinstance(value, dict) and\
+                'properties' in value:
+            return key
+    return next(islice(project.keys(), 2, 3), None)
+
+
 class AlignmentBeam(object):
     def __init__(self):
         for prop in ['a', 'b', 'c', 'x', 'y', 'z', 'E']:
@@ -215,6 +281,7 @@ class BeamLine(object):
         self.blExplorer = None
         self.statusSignal = None
         self.layoutStr = None
+        self.scanDescription = None
         if fileName:
             if str(fileName).lower().endswith("xml"):
                 self.load_from_xml(fileName)
@@ -818,6 +885,8 @@ class BeamLine(object):
         """
         if scanDescription is None:
             scanDescription = scan
+        if scanDescription is None:
+            scanDescription = getattr(self, 'scanDescription', None)
         if generator is not None and not callable(generator):
             if scanDescription is None:
                 scanDescription = generator
@@ -916,7 +985,7 @@ class BeamLine(object):
             self.blViewer.customGlWidget.generator = generator
             self.blViewer.setWindowTitle("xrtGlow")
             self.blViewer.startFrom = startFrom
-#            self.blViewer.bl = self
+            self.blViewer.bl = self
             if scale:
                 try:
                     self.blViewer.updateScaleFromGL(scale)
@@ -1383,7 +1452,8 @@ class BeamLine(object):
             data = {'Project': data}
 
         self.layoutStr = data
-        beamlineName = next(islice(data['Project'].keys(), 2, 3))
+        self.scanDescription = get_layout_scan_description(data)
+        beamlineName = get_layout_beamline_name(data['Project'])
         self.name = beamlineName
         beamlineInitKWargs = data['Project'][beamlineName].get('properties')
         if beamlineInitKWargs is None:
@@ -1412,11 +1482,16 @@ class BeamLine(object):
         plotsDict = OrderedDict()
         runDict = None
         descriptionStr = None
+        scanDescription = getattr(self, 'scanDescription', None)
 
         if self.layoutStr is not None:
             plotsDict = self.layoutStr['Project'].get('plots')
             runDict = self.layoutStr['Project'].get('run_ray_tracing')
             descriptionStr = self.layoutStr['Project'].get('description')
+            layoutScanDescription = get_layout_scan_description(
+                self.layoutStr)
+            if layoutScanDescription is not None:
+                scanDescription = layoutScanDescription
 
             if not isinstance(plotsDict, dict):
                 plotsDict = {}
@@ -1495,12 +1570,18 @@ class BeamLine(object):
         if plotsDict is not None:
             for plot, props in plotsDict.items():
                 for argName, argVal in props.items():
-                    if argName == 'beam' and argVal in self.beamNamesDict:
+                    try:
+                        isKnownBeam = argVal in self.beamNamesDict
+                    except TypeError:
+                        isKnownBeam = False
+                    if argName == 'beam' and isKnownBeam:
                         props[argName] = self.beamNamesDict.get(argVal)
                         break
         projectDict['plots'] = plotsDict
         projectDict['run_ray_tracing'] = runDict
         projectDict['description'] = descriptionStr
+        set_layout_scan_description(projectDict, scanDescription)
+        self.scanDescription = scanDescription
 
         self.layoutStr = {'Project': projectDict}
 #        print("EXPORT:", self.layoutStr)
