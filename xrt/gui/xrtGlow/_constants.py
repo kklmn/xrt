@@ -109,6 +109,8 @@ DEFAULT_SCENE_SETTINGS = {
     'showLostRays': False,
     'showLocalAxes': False,
     'showInternalBeam': True,
+    'showElectronTrajectory': False,
+    'trajectoryWithEmittance': False,
 
     'oeThickness': 5.,
     'oeThicknessForce': None,
@@ -116,6 +118,8 @@ DEFAULT_SCENE_SETTINGS = {
     'apertureBladeWidth': 5.,
     'apertureDefaultSpan': 10.,
     'apertureThickness': 1.,
+    'electronEnvelopeStep': 10.,
+    'electronEnvelopeSize': 3.,  # in sigma's
     'maxLen': 1.,
 
     'fontSize': 5,
@@ -157,6 +161,8 @@ SCENE_CONTROL_LABELS = {
     'autoSizeOe': 'OE size match beam',
     'showLocalAxes': 'Show local axes',
     'showInternalBeam': 'Show internal beams in multi-surface OEs',
+    'showElectronTrajectory': 'Show electron trajectory',
+    'trajectoryWithEmittance': 'With emittance',
     }
 
 SCENE_TEXTEDITS = {
@@ -172,4 +178,11 @@ SCENE_TEXTEDITS = {
     'maxLen': {
             'label': 'Scene limit, mm',
             'tooltip': ''},
+    'electronEnvelopeStep': {
+            'label': 'Electron envelope step, mm',
+            'tooltip': 'Spacing between transverse emittance ellipses'},
+    'electronEnvelopeSize': {
+            'label': 'Electron envelope size, sigma',
+            'tooltip': 'Multiplier for electron beam sigma in trajectory '
+                       'envelope rendering'},
    }

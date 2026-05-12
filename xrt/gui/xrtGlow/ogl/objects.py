@@ -5,10 +5,11 @@ Created on Tue Jan 27 13:23:24 2026
 """
 
 import copy
+import inspect
 import numpy as np
 from scipy.spatial import Delaunay
 
-from .._utils import create_qt_buffer
+from .._utils import create_qt_buffer, update_qt_buffer
 from .._utils import (is_oe, is_plate, is_aperture, is_screen)
 from .._constants import (ambient, diffuse, specular, shininess)
 
@@ -608,6 +609,47 @@ class OEMesh3D():
     }
     """
 
+    vertex_trajectory = """
+    #version 410 core
+    layout (location = 0) in vec3 inPosition;
+    layout (location = 1) in vec3 instanceShift;
+    layout (location = 2) in vec3 instanceAxisX;
+    layout (location = 3) in vec3 instanceAxisZ;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    uniform int renderEnvelope;
+    uniform vec2 envelopeRadii;
+
+    vec3 localPosition;
+
+    void main()
+    {
+        if (renderEnvelope == 0)
+            localPosition = inPosition + instanceShift;
+        else
+            localPosition = instanceShift +
+                envelopeRadii.x * inPosition.x * instanceAxisX +
+                envelopeRadii.y * inPosition.y * instanceAxisZ;
+
+        gl_Position = projection * view * model * vec4(localPosition, 1.0);
+    }
+    """
+
+    fragment_trajectory = """
+    #version 410 core
+
+    uniform vec4 trajectoryColor;
+
+    out vec4 fragColor;
+
+    void main()
+    {
+        fragColor = trajectoryColor;
+    }
+    """
+
     def __init__(self, parentOE, parentWidget):
         self.emptyTex = qt.QOpenGLTexture(
                 qt.QImage(np.zeros((256, 256, 4)),
@@ -638,6 +680,20 @@ class OEMesh3D():
         self.vbo_colors = {}
 
         self.vbo_contour = {}
+        self.trajectory = None
+        self.trajectory_vao = None
+        self.trajectory_vbo_vertices = None
+        self.trajectory_vbo_shifts = None
+        self.trajectory_vertex_count = 0
+        self.trajectory_instance_count = 0
+        self.envelope_vao = None
+        self.envelope_vbo_vertices = None
+        self.envelope_vbo_centers = None
+        self.envelope_vbo_axes_x = None
+        self.envelope_vbo_axes_z = None
+        self.envelope_vertex_count = 0
+        self.envelope_instance_count = 0
+        self.envelope_step = None
 
         if self.parent is not None:
             self.oeThickness = self.parent.oeThickness
@@ -1602,9 +1658,252 @@ class OEMesh3D():
                 grid_vertices.destroy()
             self.grid_vbo = None
 
+        self._destroy_trajectory_buffers()
+
         if self.emptyTex is not None:
             self.emptyTex.destroy()
             self.emptyTex = None
+
+    def _destroy_trajectory_buffers(self):
+        for bufferName in ('trajectory_vbo_vertices',
+                           'trajectory_vbo_shifts',
+                           'envelope_vbo_vertices',
+                           'envelope_vbo_centers',
+                           'envelope_vbo_axes_x',
+                           'envelope_vbo_axes_z'):
+            buffer = getattr(self, bufferName, None)
+            if buffer is not None:
+                buffer.destroy()
+                gl.glGetError()
+            setattr(self, bufferName, None)
+
+        if self.trajectory_vao is not None:
+            self.trajectory_vao.destroy()
+            gl.glGetError()
+            self.trajectory_vao = None
+
+        if self.envelope_vao is not None:
+            self.envelope_vao.destroy()
+            gl.glGetError()
+            self.envelope_vao = None
+
+        self.trajectory = None
+        self.trajectory_vertex_count = 0
+        self.trajectory_instance_count = 0
+        self.envelope_vertex_count = 0
+        self.envelope_instance_count = 0
+        self.envelope_step = None
+
+    def _call_zero_arg_trajectory_builder(self):
+        builder = getattr(self.oe, 'build_trajectory', None)
+        if not callable(builder):
+            return None
+
+        try:
+            signature = inspect.signature(builder)
+        except (TypeError, ValueError):
+            return None
+
+        requiredArgs = [
+            param for param in signature.parameters.values()
+            if param.default is inspect.Parameter.empty and
+            param.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                           inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                           inspect.Parameter.KEYWORD_ONLY)]
+        if requiredArgs:
+            return None
+
+        return builder()
+
+    def _trajectory_points_from_source(self):
+        trajectory = self._call_zero_arg_trajectory_builder()
+        if trajectory is None:
+            trajectory = getattr(self.oe, 'trajectory', None)
+        if trajectory is None or len(trajectory) != 3:
+            return None
+
+        try:
+            trajx, trajy, trajz = [
+                np.asarray(axis, dtype=np.float32).ravel()
+                for axis in trajectory]
+        except (TypeError, ValueError):
+            return None
+
+        nPoints = min(len(trajx), len(trajy), len(trajz))
+        if nPoints < 2:
+            return None
+
+        points = np.column_stack(
+            (trajx[:nPoints], trajz[:nPoints], trajy[:nPoints])).astype(
+                np.float32)
+        points = points[np.all(np.isfinite(points), axis=1)]
+        if len(points) < 2:
+            return None
+        return points
+
+    def prepare_trajectory(self, updateMesh=False):
+        points = self._trajectory_points_from_source()
+        if points is None:
+            self._destroy_trajectory_buffers()
+            return
+
+        if updateMesh or self.trajectory_vao is not None:
+            self._destroy_trajectory_buffers()
+
+        self.trajectory = points
+        self.trajectory_vertex_count = len(points)
+        self.trajectory_instance_count = 1
+
+        self.trajectory_vbo_vertices = create_qt_buffer(points.copy())
+        self.trajectory_vbo_shifts = create_qt_buffer(
+            np.zeros((1, 3), dtype=np.float32))
+
+        self.trajectory_vao = qt.QOpenGLVertexArrayObject()
+        self.trajectory_vao.create()
+        self.trajectory_vao.bind()
+
+        self.trajectory_vbo_vertices.bind()
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        self.trajectory_vbo_vertices.release()
+
+        self.trajectory_vbo_shifts.bind()
+        gl.glEnableVertexAttribArray(1)
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glVertexAttribDivisor(1, 1)
+        self.trajectory_vbo_shifts.release()
+
+        self.trajectory_vao.release()
+
+    @staticmethod
+    def _trajectory_envelope_basis(tangent):
+        tangent = np.asarray(tangent, dtype=np.float64)
+        tangentNorm = np.linalg.norm(tangent)
+        if tangentNorm <= 0:
+            return None, None
+        tangent /= tangentNorm
+
+        verticalRef = np.array([0., 0., 1.])
+        verticalAxis = verticalRef - np.dot(verticalRef, tangent) * tangent
+        verticalNorm = np.linalg.norm(verticalAxis)
+        if verticalNorm < 1e-12:
+            verticalRef = np.array([1., 0., 0.])
+            verticalAxis = verticalRef - np.dot(verticalRef, tangent) * tangent
+            verticalNorm = np.linalg.norm(verticalAxis)
+        if verticalNorm < 1e-12:
+            return None, None
+        verticalAxis /= verticalNorm
+
+        horizontalAxis = np.cross(tangent, verticalAxis)
+        horizontalNorm = np.linalg.norm(horizontalAxis)
+        if horizontalNorm < 1e-12:
+            return None, None
+        horizontalAxis /= horizontalNorm
+        return horizontalAxis, verticalAxis
+
+    def _trajectory_envelope_instances(self, step):
+        points = self.trajectory
+        if points is None or len(points) < 2:
+            return None
+
+        deltas = np.diff(points, axis=0).astype(np.float64)
+        segmentLengths = np.linalg.norm(deltas, axis=1)
+        valid = segmentLengths > 1e-12
+        if not np.any(valid):
+            return None
+
+        starts = points[:-1][valid].astype(np.float64)
+        deltas = deltas[valid]
+        segmentLengths = segmentLengths[valid]
+        cumulative = np.concatenate(([0.], np.cumsum(segmentLengths)))
+        totalLength = cumulative[-1]
+        if totalLength <= 0:
+            return None
+
+        samples = np.arange(0., totalLength, step)
+        if len(samples) == 0 or not np.isclose(samples[-1], totalLength):
+            samples = np.append(samples, totalLength)
+
+        centers = []
+        axesX = []
+        axesZ = []
+        for distance in samples:
+            idx = np.searchsorted(cumulative, distance, side='right') - 1
+            idx = min(max(idx, 0), len(segmentLengths)-1)
+            frac = (distance - cumulative[idx]) / segmentLengths[idx]
+            center = starts[idx] + frac * deltas[idx]
+            tangent = deltas[idx] / segmentLengths[idx]
+            axisX, axisZ = self._trajectory_envelope_basis(tangent)
+            if axisX is None:
+                continue
+            centers.append(center)
+            axesX.append(axisX)
+            axesZ.append(axisZ)
+
+        if len(centers) == 0:
+            return None
+
+        return (np.asarray(centers, dtype=np.float32),
+                np.asarray(axesX, dtype=np.float32),
+                np.asarray(axesZ, dtype=np.float32))
+
+    def prepare_trajectory_envelope(self, step):
+        try:
+            step = abs(float(step))
+        except (TypeError, ValueError):
+            return False
+        if step <= 0:
+            return False
+
+        if self.envelope_step == step and self.envelope_instance_count > 0:
+            return True
+
+        instances = self._trajectory_envelope_instances(step)
+        if instances is None:
+            self.envelope_instance_count = 0
+            self.envelope_step = None
+            return False
+        centers, axesX, axesZ = instances
+
+        if self.envelope_vao is None:
+            phi = np.linspace(0., 2*np.pi, 65, dtype=np.float32)
+            unitCircle = np.column_stack(
+                (np.cos(phi), np.sin(phi), np.zeros_like(phi))).astype(
+                    np.float32)
+            self.envelope_vertex_count = len(unitCircle)
+            self.envelope_vbo_vertices = create_qt_buffer(unitCircle)
+            self.envelope_vbo_centers = create_qt_buffer(centers)
+            self.envelope_vbo_axes_x = create_qt_buffer(axesX)
+            self.envelope_vbo_axes_z = create_qt_buffer(axesZ)
+
+            self.envelope_vao = qt.QOpenGLVertexArrayObject()
+            self.envelope_vao.create()
+            self.envelope_vao.bind()
+
+            self.envelope_vbo_vertices.bind()
+            gl.glEnableVertexAttribArray(0)
+            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            self.envelope_vbo_vertices.release()
+
+            for attr, buffer in ((1, self.envelope_vbo_centers),
+                                 (2, self.envelope_vbo_axes_x),
+                                 (3, self.envelope_vbo_axes_z)):
+                buffer.bind()
+                gl.glEnableVertexAttribArray(attr)
+                gl.glVertexAttribPointer(
+                    attr, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+                gl.glVertexAttribDivisor(attr, 1)
+                buffer.release()
+
+            self.envelope_vao.release()
+        else:
+            update_qt_buffer(self.envelope_vbo_centers, centers)
+            update_qt_buffer(self.envelope_vbo_axes_x, axesX)
+            update_qt_buffer(self.envelope_vbo_axes_z, axesZ)
+
+        self.envelope_instance_count = len(centers)
+        self.envelope_step = step
+        return True
 
     def _resolve_magnet_shape(self, magnetShape):
         if magnetShape:
@@ -1901,6 +2200,12 @@ class OEMesh3D():
             self.vao[nsIndex].release()
         self.num_poles = num_poles
 
+        try:
+            self.prepare_trajectory(updateMesh=updateMesh)
+        except Exception as e:
+            print(e)
+            self._destroy_trajectory_buffers()
+
     def render_surface(self, mMod, mView, mProj, oeIndex=0,
                        isSelected=False, shader=None):
 
@@ -1988,6 +2293,64 @@ class OEMesh3D():
             beamTexture.release()
         shader.release()
         vao.release()
+
+    def render_trajectory(self, mMod, mView, mProj, shifts=None,
+                          envelopeRadii=None, envelopeStep=None,
+                          shader=None):
+        if shader is None:
+            return
+        if self.trajectory is None:
+            self.prepare_trajectory(updateMesh=True)
+        if self.trajectory is None or self.trajectory_vao is None:
+            return
+
+        shifts = [] if shifts is None else shifts
+        try:
+            shifts = np.asarray(shifts, dtype=np.float32).reshape(-1, 3)
+        except (TypeError, ValueError):
+            shifts = np.zeros((0, 3), dtype=np.float32)
+        shifts = np.vstack((np.zeros((1, 3), dtype=np.float32), shifts))
+        update_qt_buffer(self.trajectory_vbo_shifts, shifts)
+        self.trajectory_instance_count = len(shifts)
+
+        oeOrientation = self.transMatrix.get(0)
+        if oeOrientation is None:
+            oeOrientation = self.get_loc2glo_transformation_matrix(
+                self.oe, is2ndXtal=False)
+            self.transMatrix[0] = oeOrientation
+
+        shader.bind()
+        self.trajectory_vao.bind()
+
+        shader.setUniformValue("model", mMod*oeOrientation)
+        shader.setUniformValue("view", mView)
+        shader.setUniformValue("projection", mProj)
+        shader.setUniformValue("renderEnvelope", 0)
+        shader.setUniformValue("envelopeRadii", qt.QVector2D(0., 0.))
+        shader.setUniformValue("trajectoryColor",
+                               qt.QVector4D(1.0, 0.9, 0.0, 0.95))
+
+        gl.glDrawArraysInstanced(
+            gl.GL_LINE_STRIP, 0, self.trajectory_vertex_count,
+            self.trajectory_instance_count)
+        self.trajectory_vao.release()
+
+        if envelopeRadii is not None and envelopeStep is not None:
+            sigmaX, sigmaZ = [float(v) for v in envelopeRadii]
+            if sigmaX > 0 and sigmaZ > 0 and\
+                    self.prepare_trajectory_envelope(envelopeStep):
+                self.envelope_vao.bind()
+                shader.setUniformValue("renderEnvelope", 1)
+                shader.setUniformValue(
+                    "envelopeRadii", qt.QVector2D(sigmaX, sigmaZ))
+                shader.setUniformValue(
+                    "trajectoryColor", qt.QVector4D(1.0, 0.75, 0.0, 0.55))
+                gl.glDrawArraysInstanced(
+                    gl.GL_LINE_STRIP, 0, self.envelope_vertex_count,
+                    self.envelope_instance_count)
+                self.envelope_vao.release()
+
+        shader.release()
 
     def render_magnets(self, mMod, mView, mProj, shape={},
                        isSelected=False, shader=None):

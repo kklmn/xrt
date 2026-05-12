@@ -3109,7 +3109,8 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.showLostRays = 4 in rayFlags
 
         for scProp in ['oeThickness', 'oeThicknessForce',
-                       'slitThicknessFraction', 'maxLen']:
+                       'slitThicknessFraction', 'maxLen',
+                       'electronEnvelopeStep', 'electronEnvelopeSize']:
             if scProp in params:
                 scPval = params.get(scProp)
                 self.sceneTextedits[scProp].setText(

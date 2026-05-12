@@ -16,6 +16,55 @@ from .sybase import SourceBase, IntegratedSource
 # _DEBUG replaced with raycing._VERBOSITY_
 
 
+def _build_undulator_trajectory(grid, period, Kx, Ky, phase, gamma,
+                                taperVal=None, center=False,
+                                trajectoryPhase=0.):
+    gamma2 = gamma**2
+    betam = 1. - (1. + 0.5*Kx**2 + 0.5*Ky**2) / 2. / gamma2
+    wu = PI / period / gamma2 * \
+        (2*gamma2 - 1 - 0.5*Kx**2 - 0.5*Ky**2) / E2WC
+
+    z = 2*np.pi*(grid + trajectoryPhase)/period
+    tgw = period / 2. / np.pi
+    sinz = np.sin(z)
+    cosz = np.cos(z)
+    sinzph = np.sin(z + phase)
+    coszph = np.cos(z + phase)
+    sin2z = 2*sinz*cosz
+    sin2zph = 2*sinzph*coszph
+
+    if taperVal is None:
+        taperC = 1.
+        trajxTerm = sinz
+        trajzTermY = Ky**2 * sin2z
+    else:
+        alphaOverW = taperVal / E2WC / wu
+        taperC = 1. - alphaOverW*z
+        trajxTerm = sinz + alphaOverW*(1. - cosz - z*sinz)
+        trajzTermY = Ky**2 * (
+            sin2z - 2*alphaOverW*(z**2 + cosz**2 + z*sin2z))
+
+    betax = taperC * Ky / gamma * cosz
+    betay = -Kx / gamma * coszph
+    trajx = tgw * Ky / gamma * trajxTerm
+    trajy = -tgw * Kx / gamma * sinzph
+    trajz = tgw * (betam*z - 0.125/gamma2 *
+                   (trajzTermY + Kx**2 * sin2zph))
+
+    if center:
+        length = grid[-1] - grid[0]
+        if length:
+            trajx = trajx - np.trapz(trajx, grid) / length
+            trajy = trajy - np.trapz(trajy, grid) / length
+            trajz = trajz - np.trapz(trajz, grid) / length
+        else:
+            trajx = trajx - trajx.mean()
+            trajy = trajy - trajy.mean()
+            trajz = trajz - trajz.mean()
+
+    return betax, betay, [betam], trajx, trajy, trajz, wu
+
+
 class BendingMagnet(SourceBase):
     u"""
     Bending magnet source. The computation is reasonably fast and thus a GPU
@@ -29,7 +78,6 @@ class BendingMagnet(SourceBase):
 
         *rho*: float
             Curvature radius (m). Alternatively, specify *B0*.
-
 
         """
         B0 = kwargs.pop('B0', 1.)
@@ -81,6 +129,57 @@ class BendingMagnet(SourceBase):
 
     def prefix_save_name(self):
         return '3-BM-xrt'
+
+    def _xprime_range(self):
+        if not self._xPrimeMax:
+            return -1e-3, 1e-3
+        xPrime = self.xPrimeMax
+        if isinstance(xPrime, (tuple, list)):
+            return float(xPrime[0]) * 1e-3, float(xPrime[-1]) * 1e-3
+        xPrime = float(xPrime) * 1e-3
+        return -xPrime, xPrime
+
+    def build_trajectory(self, step=0.1, gamma=None, phase=None):
+        u"""
+        Calculates the nominal electron trajectory.
+
+        The returned arrays use the common source convention:
+        ``[x, y, z]`` in mm, where ``z`` is the longitudinal coordinate and
+        ``y`` is vertical. For wigglers, *phase* is a longitudinal phase shift
+        in mm and defaults to a quarter period.
+        """
+        if gamma is None:
+            gamma = self.gamma
+        if step is None:
+            return None
+        step = abs(float(step))
+        if step <= 0:
+            return None
+
+        if self.isMPW:
+            if phase is None:
+                phase = 0.25*self.L0
+            length = abs(float(self.L0 * self.Np))
+            nSteps = max(int(np.ceil(length / step)), 1)
+            grid = np.linspace(-0.5*length, 0.5*length, nSteps+1)
+            _, _, _, trajx, trajy, trajz, _ = _build_undulator_trajectory(
+                grid, self.L0, 0., self.K, 0., gamma, center=True,
+                trajectoryPhase=phase)
+            trajx = -trajx
+            return [trajx, trajy, trajz]
+
+        if self.ro is None or self.ro == 0:
+            return None
+
+        thetaMin, thetaMax = self._xprime_range()
+        rho = self.ro * 1e3
+        arcLength = abs(rho * (thetaMax - thetaMin))
+        nSteps = max(int(np.ceil(arcLength / step)), 1)
+        theta = np.linspace(thetaMin, thetaMax, nSteps+1)
+        trajx = rho * (1. - np.cos(theta))
+        trajy = np.zeros_like(theta)
+        trajz = rho * np.sin(theta)
+        return [trajx, trajy, trajz]
 
     def build_I_map(self, dde, ddtheta, ddpsi, harmonic=None, dg=None):
         if self.needReset:
@@ -1033,22 +1132,10 @@ class SourceFromField(IntegratedSource):
     def build_trajectory_periodic(self, Bx, By, Bz, gamma=None):
         if gamma is None:
             gamma = self.gamma
-        gamma2 = gamma**2
-        betam = 1. - (1. + 0.5*self.Kx**2 + 0.5*self.Ky**2) / 2. / gamma2
-
-        self.wu = PI / self.L0 / gamma2 * \
-            (2*gamma2 - 1 - 0.5*self.Kx**2 - 0.5*self.Ky**2) / E2WC
-
-        z = 2*np.pi*self.tg/self.L0
-        tgw = self.L0 / 2. / np.pi
-        betax = self.Ky / gamma * np.cos(z)
-        betay = -self.Kx / gamma * np.cos(z + self.phase)
-        trajx = tgw * self.Ky / gamma * np.sin(z)
-        trajy = -tgw * self.Kx / gamma * np.sin(z + self.phase)
-        trajz = tgw * (betam*z - 0.125/gamma**2 *
-                       (self.Ky**2 * np.sin(2*z) +
-                        self.Kx**2 * np.sin(2*(z + self.phase))))
-        return betax, betay, [betam], trajx, trajy, trajz
+        betax, betay, betazav, trajx, trajy, trajz, self.wu = \
+            _build_undulator_trajectory(
+                self.tg, self.L0, self.Kx, self.Ky, self.phase, gamma)
+        return betax, betay, betazav, trajx, trajy, trajz
 
     def _build_I_map_custom_field_CL(
             self, w, ddtheta, ddpsi, harmonic=None, dgamma=None):
@@ -1280,7 +1367,6 @@ class Undulator(IntegratedSource):
             Whether to reduce too large angular ranges down to the feasible
             values in order to improve efficiency. It is highly recommended to
             keep them True.
-
 
         """
         period = kwargs.pop('period', 50)
@@ -1542,6 +1628,31 @@ class Undulator(IntegratedSource):
             return '4-elu-xrt'
         else:
             return '1-und-xrt'
+
+    def build_trajectory(self, step=0.1, gamma=None, phase=0.):
+        u"""
+        Calculates the nominal electron trajectory for the full undulator.
+
+        The returned arrays are in the same order and units as for
+        :class:`SourceFromField`: ``[x, y, z]`` in mm, where ``z`` is the
+        longitudinal coordinate. *phase* is a longitudinal phase shift in mm.
+        """
+        if gamma is None:
+            gamma = self.gamma
+        if step is None:
+            return None
+        step = abs(float(step))
+        if step <= 0:
+            return None
+
+        length = abs(float(self.L0 * self.Np))
+        nSteps = max(int(np.ceil(length / step)), 1)
+        grid = np.linspace(-0.5*length, 0.5*length, nSteps+1)
+        _, _, _, trajx, trajy, trajz, _ = _build_undulator_trajectory(
+            grid, self.L0, self.Kx, self.Ky, self.phase, gamma,
+            self._taperVal, center=True, trajectoryPhase=phase)
+        trajx = -trajx
+        return [trajx, trajy, trajz]
 
     def tuning_curves(self, energy, theta, psi, harmonics, Ks):
         """Calculates *tuning curves* -- maximum flux of given *harmomonics* at

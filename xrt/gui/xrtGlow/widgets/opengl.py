@@ -669,6 +669,20 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            print('\nshaderMag: Done!')
         self.shaderMag = shaderMag
         gl.glGetError()
+        shaderTrajectory = qt.QOpenGLShaderProgram()
+        shaderTrajectory.addShaderFromSourceCode(
+                qt.QOpenGLShader.Vertex, OEMesh3D.vertex_trajectory)
+        shaderTrajectory.addShaderFromSourceCode(
+                qt.QOpenGLShader.Fragment, OEMesh3D.fragment_trajectory)
+        gl.glGetError()
+        if not shaderTrajectory.link():
+            print("Linking Error", str(shaderTrajectory.log()))
+            print('shaderTrajectory: Failed to link dummy renderer shader!')
+        else:
+            pass
+#            print('\nshaderTrajectory: Done!')
+        self.shaderTrajectory = shaderTrajectory
+        gl.glGetError()
         shaderGeo = qt.QOpenGLShaderProgram()
         shaderGeo.addShaderFromSourceCode(
                 qt.QOpenGLShader.Vertex, OEMesh3D.vertex_contour)
@@ -1325,6 +1339,51 @@ class xrtGlWidget(qt.QOpenGLWidget):
         shader.release()
         if self.beamTexture is not None:
             self.beamTexture.release()
+
+    @staticmethod
+    def _trajectory_sigma(value):
+        if value is None:
+            return 0.
+        if isinstance(value, (list, tuple, np.ndarray)):
+            value = np.asarray(value).ravel()
+            if value.size == 0:
+                return 0.
+            value = value[0]
+        try:
+            return abs(float(value))
+        except (TypeError, ValueError):
+            return 0.
+
+    def get_trajectory_shifts(self, source):
+        if not self.trajectoryWithEmittance:
+            return []
+
+        envelopeSize = self._trajectory_sigma(
+            getattr(self, 'electronEnvelopeSize', 1.))
+        sigmaX = envelopeSize * self._trajectory_sigma(
+            getattr(source, 'dx', 0.))
+        sigmaZ = envelopeSize * self._trajectory_sigma(
+            getattr(source, 'dz', 0.))
+        shifts = []
+        if sigmaX > 0:
+            shifts.extend([[-sigmaX, 0., 0.], [sigmaX, 0., 0.]])
+        if sigmaZ > 0:
+            shifts.extend([[0., 0., -sigmaZ], [0., 0., sigmaZ]])
+        return shifts
+
+    def get_trajectory_envelope_radii(self, source):
+        if not self.trajectoryWithEmittance:
+            return None
+
+        envelopeSize = self._trajectory_sigma(
+            getattr(self, 'electronEnvelopeSize', 1.))
+        sigmaX = envelopeSize * self._trajectory_sigma(
+            getattr(source, 'dx', 0.))
+        sigmaZ = envelopeSize * self._trajectory_sigma(
+            getattr(source, 'dz', 0.))
+        if sigmaX <= 0 or sigmaZ <= 0:
+            return None
+        return sigmaX, sigmaZ
 
     def getColorData(self, beam, beamTag):
         """beamTag: ('oeuuid', 'beamKey') """
@@ -2328,6 +2387,27 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                              target=beamEnd)
                         except Exception as e:
                             print(e)
+
+            if self.showElectronTrajectory:
+                if self.lineWidth > 0:
+                    gl.glLineWidth(min(self.lineWidth, 1.))
+                for oeuuid, mesh3D in self.meshDict.items():
+                    if not is_source(mesh3D.oe):
+                        continue
+                    if not mesh3D.isEnabled or not hasattr(
+                            mesh3D, 'trajectory'):
+                        continue
+                    shifts = self.get_trajectory_shifts(mesh3D.oe)
+                    envelopeRadii = self.get_trajectory_envelope_radii(
+                        mesh3D.oe)
+                    try:
+                        mesh3D.render_trajectory(
+                            mMMLoc, self.mView, self.mProj, shifts=shifts,
+                            envelopeRadii=envelopeRadii,
+                            envelopeStep=self.electronEnvelopeStep,
+                            shader=self.shaderTrajectory)
+                    except Exception as e:
+                        print(e)
 
             self.cBox.textShader.bind()
             self.cBox.vaoText.bind()
