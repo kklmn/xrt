@@ -20,6 +20,24 @@ class XrtQookElements(XrtQookBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    def _validImportedName(self, name, rootItem):
+        baseName = raycing.to_valid_var_name(str(name or 'element'))
+        existingNames = set()
+        for i in range(rootItem.rowCount()):
+            child = rootItem.child(i, 0)
+            if child is not None:
+                existingNames.add(str(child.text()))
+
+        if baseName not in existingNames:
+            return baseName
+
+        for i in range(2, 1000):
+            candidate = '{0}_{1}'.format(baseName, i)
+            if candidate not in existingNames:
+                return candidate
+
+        return '{0}_{1}'.format(baseName, raycing.uuid.uuid4().hex[:8])
+
     def addElement(self, name=None, obj=None, copyFrom=None, isRoot=False):
         """
         name: class name
@@ -64,6 +82,12 @@ class XrtQookElements(XrtQookBase):
         else:
             tree = self.tree
             rootItem = self.rootBLItem
+
+        if isinstance(copyFrom, dict):
+            elementName = self._validImportedName(elementName, rootItem)
+            copyFrom['properties']['name'] = elementName
+            if isRoot:
+                self.beamLine.name = elementName
 
         if not isinstance(copyFrom, dict):  # None or another item
             if not isRoot:

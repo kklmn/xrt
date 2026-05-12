@@ -1016,6 +1016,8 @@ class XrtQookBase(qt.QMainWindow):
             runProps['plots'] = self.rootPlotItem.text()
             runProps['beamLine'] = self.rootBLItem.text()
             runProps['_object'] = 'xrt.runner.run_ray_tracing'
+        else:
+            runProps['beamLine'] = self.rootBLItem.text()
 
         for arg, argVal in runProps.items():
             if arg == '_object':
