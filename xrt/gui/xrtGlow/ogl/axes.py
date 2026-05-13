@@ -392,29 +392,7 @@ class CoordinateBox():
     def update_grid(self):
         if hasattr(self, "vbo_grid"):
             self.make_coarse_grid()
-#            if self.gridLen < self.initialGridLen:  # initial grid size x10
-#            print("Gridlen", self.gridLen)
             update_qt_buffer(self.vbo_grid, self.axGrid)
-#            else:
-#                print("That'll be a humongous grid")
-#                print(self.initialGridLen)
-#                self.vbo_grid.destroy()
-#                gl.glGetError()
-#                self.vaoGrid.destroy()
-#                gl.glGetError()
-#                self.vaoGrid = qt.QOpenGLVertexArrayObject()
-#                self.vaoGrid.create()
-#                self.initialGridLen = self.gridLen*10
-#                self.vbo_grid = create_qt_buffer(np.tile(self.axGrid, 10).copy())
-#                gl.glGetError()
-#                self.vaoGrid.bind()
-#                self.vbo_grid.bind()
-#                gl.glGetError()
-#                gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-#                gl.glEnableVertexAttribArray(0)
-#                gl.glGetError()
-#                self.vbo_grid.release()
-#                self.vaoGrid.release()
 
         if hasattr(self, "vbo_fineGrid"):
             update_qt_buffer(self.vbo_fineGrid, self.fineAxGrid)
@@ -429,23 +407,6 @@ class CoordinateBox():
         self.make_coarse_grid()
         self.make_frame(self.parent.aPos)
         self.initialGridLen = self.gridLen*10
-#        print("Initial grid", self.initialGridLen)
-#        print(axisL)
-
-#        cLines = np.array([[-self.parent.aPos[0], 0, 0],
-#                           [self.parent.aPos[0], 0, 0],
-#                           [0, -self.parent.aPos[1], 0],
-#                           [0, self.parent.aPos[1], 0],
-#                           [0, 0, -self.parent.aPos[2]],
-#                           [0, 0, self.parent.aPos[2]]])*0.5
-#
-#        cLineColors = np.array([[0, 0.5, 1],
-#                                [0, 0.5, 1],
-#                                [0, 0.9, 0],
-#                                [0, 0.9, 0],
-#                                [0.8, 0, 0],
-#                                [0.8, 0, 0]])
-
         self.vbo_frame = create_qt_buffer(self.halfCube.copy())
         self.vaoFrame.bind()
         self.vbo_frame.bind()
@@ -479,12 +440,6 @@ class CoordinateBox():
         self.vaoFineGrid.release()
         gl.glGetError()
 
-#        self.vaoOrigin.bind()
-#        self.vbo_origin = setVertexBuffer(
-#                cLines, 3, self.origShader, "position")
-#        self.vbo_oc = setVertexBuffer(
-#                cLineColors, 3, self.origShader, "linecolor")
-#        self.vaoOrigin.release()
         # TODO: Move font init outside
         # x  y  u  v
         vquad = np.array([
@@ -520,6 +475,7 @@ class CoordinateBox():
             self.arrows = np.vstack((self.arrows,
                                      np.matmul(coneVertices, m3rot.T)))
         self.arrowLen = len(coneVertices)
+        self.arrows = np.vstack((self.arrows, coneVertices))  # for crystals
         self.vbo_arrows = create_qt_buffer(self.arrows)
         colorArr = None
         for line in range(3):
@@ -527,6 +483,8 @@ class CoordinateBox():
                                self.arrowLen)
             colorArr = np.vstack(
                     (colorArr, oneColor)) if colorArr is not None else oneColor
+        crColor = np.tile(np.array([1, 1, 0]), self.arrowLen)
+        colorArr = np.vstack((colorArr, crColor))
         self.vbo_arr_colors = create_qt_buffer(colorArr)
 
         vao = qt.QOpenGLVertexArrayObject()
@@ -744,7 +702,8 @@ class CoordinateBox():
             ch[0].release()
         return mMod*qt.QVector4D(1.0, 0.0, 0.0, 1.0)
 
-    def render_local_axes(self, moe, trans, view, proj, shader, isScreen):
+    def render_local_axes(self, moe, trans, view, proj, shader, isScreen,
+                          alpha=None):
 
         mRotation = qt.QMatrix4x4()
 
@@ -781,6 +740,16 @@ class CoordinateBox():
         gl.glDrawArrays(gl.GL_LINES, self.arrowLen, 2)
         gl.glDrawArrays(gl.GL_LINES, self.arrowLen*2, 2)
 
+        if alpha is not None:
+            mAlpha = qt.QMatrix4x4()
+            mAlpha.rotate(-np.degrees(alpha), 1, 0, 0)
+            shader.setUniformValue("pvm", proj*view*mRotation*mAlpha)
+            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, self.arrowLen*3+1,
+                            self.arrowLen-1)
+            gl.glDrawArrays(gl.GL_LINES, self.arrowLen*3, 2)
+
+        return mRotation
+
     def get_sans_font(self):
         fallback_fonts = ["Arial", "Helvetica", "DejaVu Sans",
                           "Liberation Sans", "Sans-serif"]
@@ -798,7 +767,7 @@ class CoordinateBox():
         try:
             fontName = self.get_sans_font()
             font_path = font_manager.findfont(fontName)
-        except Exception:  # TODO: track exceptions
+        except Exception:
             fontpath = os.path.dirname(__file__)
             font_path = os.path.join(fontpath, "..", "..", "commons", "_fonts",
                                      self.fontFile)

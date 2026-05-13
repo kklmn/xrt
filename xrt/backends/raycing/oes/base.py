@@ -532,9 +532,9 @@ class OE(OEMainMethods):
         cos(alpha) and sin(alpha) which are then used for rotating the normal
         to the crystal planes."""
         self._alpha = raycing.auto_units_angle(alpha)
-        if self.alpha is not None:
-            self.cosalpha = np.cos(self.alpha)
-            self.sinalpha = np.sin(self.alpha)
+        if self._alpha is not None:
+            self.cosalpha = np.cos(self._alpha)
+            self.sinalpha = np.sin(self._alpha)
             self.tanalpha = self.sinalpha / self.cosalpha
 
     @property

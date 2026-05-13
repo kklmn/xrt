@@ -1272,7 +1272,7 @@ class OEMesh3D():
             xv, yv, zv = self.oe.xyz_to_param(xv, yv, zv)
 
         zv = np.array(local_z(xv, yv))
-        nv = np.array(local_n(xv, yv)).T
+        nv = np.array(local_n(xv, yv)[-3:]).T
 
         if len(nv) == 3:  # flat
             nv = np.ones_like(zv)[:, np.newaxis] * np.array(nv)

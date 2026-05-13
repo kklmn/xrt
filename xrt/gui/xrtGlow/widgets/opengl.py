@@ -736,7 +736,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.shaderGeo = shaderGeo
         gl.glGetError()
 
-
     def init_coord_grid(self):
         self.cBox = CoordinateBox(self)
         shaderCoord = qt.QOpenGLShaderProgram()
@@ -868,7 +867,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     recordLength = getattr(
                         self.epicsInterface, 'image_lengths', {}).get(
                             msg['sender_id'], getattr(record, '_nelm', None))
-                    if recordLength is not None and len(flatHist) > recordLength:
+                    if recordLength is not None and\
+                            len(flatHist) > recordLength:
                         print(
                             f"Skipping EPICS image update for "
                             f"{msg['sender_name']}: histogram has "
@@ -1192,7 +1192,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
 
         if self.beamBufferDict.get(beamTag) is None:
-#            print("Buffers require init")
             self.init_beam_footprint(beam, beamTag)
             return
 
@@ -1577,7 +1576,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     mesh3D.prepare_surface_mesh(blade)
                     mesh3D.isEnabled = True
                 except Exception:
-#                    raise
                     mesh3D.isEnabled = False
                 assign_stencil_num(mesh3D)
 
@@ -1867,177 +1865,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def drawLocalAxes(self, oe, is2ndXtal):
         pass  # keep it here
-#        def drawArrow(color, arrowArray, yText='hkl'):
-#            gridColor = np.zeros((len(arrowArray) - 1, 4))
-#            gridColor[:, 3] = 0.75
-#            if color == 4:
-#                gridColor[:, 0] = 1
-#                gridColor[:, 1] = 1
-#            elif color == 5:
-#                gridColor[:, 0] = 1
-#                gridColor[:, 1] = 0.5
-#            else:
-#                gridColor[:, color] = 1
-#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
-#            gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-#            gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-#            gridArray = gl.vbo.VBO(np.float32(arrowArray[1:, :]))
-#            gridArray.bind()
-#            gl.glVertexPointerf(gridArray)
-#            gridColorArray = gl.vbo.VBO(np.float32(gridColor))
-#            gridColorArray.bind()
-#            gl.glColorPointerf(gridColorArray)
-#            gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(gridArray))
-#            gridArray.unbind()
-#            gridColorArray.unbind()
-#            gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-#            gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-#            gl.glEnable(gl.GL_LINE_SMOOTH)
-#            gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-#            gl.glBegin(gl.GL_LINES)
-#            colorVec = [0, 0, 0, 0.75]
-#            if color == 4:
-#                colorVec[0] = 1
-#                colorVec[1] = 1
-#            elif color == 5:
-#                colorVec[0] = 1
-#                colorVec[1] = 0.5
-#            else:
-#                colorVec[color] = 1
-#            gl.glColor4f(*colorVec)
-#            gl.glVertex3f(*arrowArray[0, :])
-#            gl.glVertex3f(*arrowArray[1, :])
-#            gl.glEnd()
-#            gl.glColor4f(*colorVec)
-#            gl.glRasterPos3f(*arrowArray[1, :])
-#            if color == 0:
-#                axSymb = 'Z'
-#            elif color == 1:
-#                axSymb = 'Y'
-#            elif color == 2:
-#                axSymb = 'X'
-#            elif color == 4:
-#                axSymb = yText
-#            else:
-#                axSymb = ''
-#
-#            for symbol in "  {}".format(axSymb):
-#                gl.glutBitmapCharacter(self.fixedFont, ord(symbol))
-#            gl.glDisable(gl.GL_LINE_SMOOTH)
-#
-#        z, r, nFacets = 0.25, 0.02, 20
-#        phi = np.linspace(0, 2*np.pi, nFacets)
-#        xp = np.insert(r * np.cos(phi), 0, [0., 0.])
-#        yp = np.insert(r * np.sin(phi), 0, [0., 0.])
-#        zp = np.insert(z*0.8*np.ones_like(phi), 0, [0., z])
-#
-#        crPlaneZ = None
-#        yText = None
-#        if hasattr(oe, 'local_n'):
-#            material = None
-#            if hasattr(oe, 'material'):
-#                material = oe.material
-#            if is2ndXtal:
-#                zExt = '2'
-#                if hasattr(oe, 'material2'):
-#                    material = oe.material2
-#            else:
-#                zExt = '1' if hasattr(oe, 'local_n1') else ''
-#            if raycing.is_sequence(material):
-#                material = material[oe.curSurface]
-#
-#            local_n = getattr(oe, 'local_n{}'.format(zExt))
-#            normals = local_n(0, 0)
-#            if len(normals) > 3:
-#                crPlaneZ = np.array(normals[:3], dtype=float)
-#                crPlaneZ /= np.linalg.norm(crPlaneZ)
-#                if material not in [None, 'None']:
-#                    if hasattr(material, 'hkl'):
-#                        hklSeparator = ',' if np.any(np.array(
-#                            material.hkl) >= 10) else ''
-#                        yText = '[{0[0]}{1}{0[1]}{1}{0[2]}]'.format(
-#                            list(material.hkl), hklSeparator)
-##                        yText = '{}'.format(list(material.hkl))
-#
-#        cb = rsources.Beam(nrays=nFacets+2)
-#        cb.a[:] = cb.b[:] = cb.c[:] = 0.
-#        cb.a[0] = cb.b[1] = cb.c[2] = 1.
-#
-#        if crPlaneZ is not None:  # Adding asymmetric crystal orientation
-#            asAlpha = np.arccos(crPlaneZ[2])
-#            acpX = np.array([0., 0., 1.], dtype=float) if asAlpha == 0 else\
-#                np.cross(np.array([0., 0., 1.], dtype=float), crPlaneZ)
-#            acpX /= np.linalg.norm(acpX)
-#
-#            cb.a[3] = acpX[0]
-#            cb.b[3] = acpX[1]
-#            cb.c[3] = acpX[2]
-#
-#        cb.state[:] = 1
-#
-#        if isinstance(oe, (rscreens.HemisphericScreen, rscreens.Screen)):
-#            cb.x[:] += oe.center[0]
-#            cb.y[:] += oe.center[1]
-#            cb.z[:] += oe.center[2]
-#            oeNormX = oe.x
-#            oeNormY = oe.y
-#        else:
-#            if is2ndXtal:
-#                oe.local_to_global(cb, is2ndXtal=is2ndXtal)
-#            else:
-#                oe.local_to_global(cb)
-#            oeNormX = np.array([cb.a[0], cb.b[0], cb.c[0]])
-#            oeNormY = np.array([cb.a[1], cb.b[1], cb.c[1]])
-#
-#        scNormX = oeNormX * self.scaleVec
-#        scNormY = oeNormY * self.scaleVec
-#
-#        scNormX /= np.linalg.norm(scNormX)
-#        scNormY /= np.linalg.norm(scNormY)
-#        scNormZ = np.cross(scNormX, scNormY)
-#        scNormZ /= np.linalg.norm(scNormZ)
-#
-#        for iAx in range(3):
-#            if iAx == 0:
-#                xVec = scNormX
-#                yVec = scNormY
-#                zVec = scNormZ
-#            elif iAx == 2:
-#                xVec = scNormY
-#                yVec = scNormZ
-#                zVec = scNormX
-#            else:
-#                xVec = scNormZ
-#                yVec = scNormX
-#                zVec = scNormY
-#
-#            dX = xp[:, np.newaxis] * xVec
-#            dY = yp[:, np.newaxis] * yVec
-#            dZ = zp[:, np.newaxis] * zVec
-#            coneCP = self.modelToWorld(np.vstack((
-#                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
-#                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
-#            drawArrow(iAx, coneCP)
-#
-#        if crPlaneZ is not None:  # drawAsymmetricPlane:
-#            crPlaneX = np.array([cb.a[3], cb.b[3], cb.c[3]])
-#            crPlaneNormX = crPlaneX * self.scaleVec
-#            crPlaneNormX /= np.linalg.norm(crPlaneNormX)
-#            crPlaneNormZ = self.rotateVecQ(
-#                scNormZ, self.vecToQ(crPlaneNormX, asAlpha))
-#            crPlaneNormZ /= np.linalg.norm(crPlaneNormZ)
-#            crPlaneNormY = np.cross(crPlaneNormX, crPlaneNormZ)
-#            crPlaneNormY /= np.linalg.norm(crPlaneNormY)
-#
-#            color = 4
-#
-#            dX = xp[:, np.newaxis] * crPlaneNormX
-#            dY = yp[:, np.newaxis] * crPlaneNormY
-#            dZ = zp[:, np.newaxis] * crPlaneNormZ
-#            coneCP = self.modelToWorld(np.vstack((
-#                cb.x - self.coordOffset[0], cb.y - self.coordOffset[1],
-#                cb.z - self.coordOffset[2])).T) + dX + dY + dZ
-#            drawArrow(color, coneCP, yText)
 
     def initializeGL(self):
         gl.glGetError()
@@ -2096,31 +1923,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.toggleLoop()
 
     def paintGL(self):
-        # TODO: might be better to use dedicated dicts for sources, oes etc.
         def makeCenterStr(centerList, prec):
             retStr = '('
             for dim in centerList:
                 retStr += '{0:.{1}f}, '.format(dim, prec)
             return retStr[:-2] + ')'
-
-#        def getItem(iId, itemType='beam', targetId=None):
-#            item = None
-#            start_index = model.index(0, 0)
-#            flags = qt.Qt.MatchExactly
-#            matches = model.match(start_index, qt.Qt.UserRole, iId, hits=1,
-#                                  flags=flags)
-#            if matches:
-#                item = model.item(matches[0].row(), itemTypes[itemType])
-#                if itemType == 'beam' and item.rowCount() > 0:
-#                    parent_index = model.indexFromItem(item)
-#                    fcIndex = item.child(0, 0).index()
-#                    tgt_matches = model.match(fcIndex, qt.Qt.UserRole,
-#                                              targetId, hits=-1, flags=flags)
-#                    for line in tgt_matches:
-#                        if line.parent() == parent_index:
-#                            item = model.itemFromIndex(line)
-#                            break
-#            return item
 
         if True:
             gl.glClearColor(*self.bgColor, 1.0)
@@ -2194,18 +2001,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             while self.deletionQueue:
                 oeid = self.deletionQueue.popleft()
                 self.delete_all_oe_buffers(oeid)
-#            self.needBeamUpdate = []
-
-#            if self.needMeshUpdate is not None:
-#                gl.glGetError()
-#                if is_source(self.meshDict[self.needMeshUpdate].oe):
-#                    self.meshDict[self.needMeshUpdate].prepare_magnets(
-#                            updateMesh=True)
-#                else:
-#                    for surfIndex in self.meshDict[self.needMeshUpdate].vao.keys():
-#                        self.meshDict[self.needMeshUpdate].prepare_surface_mesh(
-#                                nsIndex=surfIndex, updateMesh=True)
-#                self.needMeshUpdate = None
 
             gl.glEnable(gl.GL_STENCIL_TEST)
 
@@ -2283,10 +2078,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             else:
                 gl.glDisable(gl.GL_DEPTH_TEST)
             # Screens are semi-transparent, DepthMask must be OFF
-#            for ioe in range(self.segmentModel.rowCount() - 1):
-
-#            if self.showVirtualScreen:
-#                self.positionVScreen()
 
             for oeuuid, mesh3D in self.meshDict.items():
                 item = self.parent.getItem(oeuuid, 'surface')
@@ -2541,6 +2332,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.cBox.vao_arrow.bind()
                 self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
                 gl.glLineWidth(min(self.cBoxLineWidth, 1.))
+                locTransforms = []
+                alphas = []
 
                 for oeuuid, mesh3D in self.meshDict.items():
                     item = self.parent.getItem(oeuuid, 'surface')
@@ -2562,21 +2355,77 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             else:
                                 oeCenter = list(oeToPlot.center)
 
+                            alpha = getattr(oeToPlot, 'alpha', None)
+                            mat = getattr(oeToPlot, 'material', None)
+                            hkl = getattr(mat, 'hkl', None)
+
                             if any([isinstance(val, str) for val in oeCenter]):
                                 continue
 
                             oePos = (mMMLoc*qt.QVector4D(*oeCenter,
                                                          1)).toVector3DAffine()
                             oeNorm = mesh3D.transMatrix[int(is2ndXtal)]
-                            self.cBox.render_local_axes(
+
+                            ltr = self.cBox.render_local_axes(
                                     mMMLoc*oeNorm, oePos, self.mView,
                                     self.mProj, self.cBox.origShader,
                                     is_screen(oeToPlot) or is_aperture(
-                                            oeToPlot))
+                                            oeToPlot), alpha)
+                            locTransforms.append(ltr)
+                            if alpha is not None:
+                                alphas.append((ltr, alpha,
+                                              ''.join(map(str, hkl))))
+                            
                         except Exception as e:
                             print(e)
                 self.cBox.vao_arrow.release()
                 self.cBox.origShader.release()
+
+                self.cBox.textShader.bind()
+                self.cBox.vaoText.bind()
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+                gl.glDisable(gl.GL_DEPTH_TEST)
+    #            labelPos = qt.QVector3D(0.05, 0, 0) + qt.QVector3D(0, 0, 0.4)
+                drl = 0.025
+                arl = self.arrowSize[0] + drl
+                for transform in locTransforms:
+                    axPos = self.mProj * self.mView * transform
+                    for label, labelPos, labelColor in zip(
+                            ["x", "y", "z"],
+                            [[arl, 0, 0], [0, arl, 0], [0, 0, arl]],
+                            [[0.4, 0.4, 1], [0.1, 1, 0.1], [1, 0.0, 0.0]]):
+                        self.cBox.render_text(
+                            (axPos*qt.QVector4D(*labelPos, 1)).toVector3DAffine(),
+                            label, alignment=('right', 'top'),
+                            scale=0.052*self.cBox.fontScale,
+                            textColor=qt.QVector3D(0, 0, 0))
+                        self.cBox.render_text(
+                            (axPos*qt.QVector4D(*labelPos, 1)).toVector3DAffine(),
+                            label, alignment=('right', 'top'),
+                            scale=0.05*self.cBox.fontScale,
+                            textColor=qt.QVector3D(*labelColor))
+
+                for alphaTuple in alphas:
+                    mAlpha = qt.QMatrix4x4()
+                    mAlpha.rotate(-np.degrees(alphaTuple[1]), 1, 0, 0)
+                    axPos = self.mProj * self.mView * alphaTuple[0] * mAlpha
+                    labelPos = [0, 0, arl]
+                    self.cBox.render_text(
+                        (axPos*qt.QVector4D(*labelPos, 1)).toVector3DAffine(),
+                        '[{}]'.format(alphaTuple[-1]),
+                        alignment=('left', 'top'),
+                        scale=0.052*self.cBox.fontScale,
+                        textColor=qt.QVector3D(0, 0, 0))
+                    self.cBox.render_text(
+                        (axPos*qt.QVector4D(*labelPos, 1)).toVector3DAffine(),
+                        '[{}]'.format(alphaTuple[-1]),
+                        alignment=('left', 'top'),
+                        scale=0.05*self.cBox.fontScale,
+                        textColor=qt.QVector3D(1, 1, 0))
+
+                self.cBox.textShader.release()
+                self.cBox.vaoText.release()
+
 
             # RENDER GRID ON SCREENS
 
@@ -2647,15 +2496,21 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
             gl.glDisable(gl.GL_DEPTH_TEST)
 #            labelPos = qt.QVector3D(0.05, 0, 0) + qt.QVector3D(0, 0, 0.4)
+            arl = self.arrowSize[0]
             for label, labelPos, labelColor in zip(
                     ["x", "y", "z"],
-                    [[0.5, 0, 0], [0, 0.5, 0], [0, 0, -0.6]],
+                    [[arl, 0, 0], [0, arl, 0], [0, 0, -arl]],
                     [[0.5, 0.5, 1], [0.3, 1, 0.3], [1, 0.3, 0.3]]):
-
-                endPos = self.cBox.render_text(
+                self.cBox.render_text(
                     (fixView * self.fixProj *
                      qt.QVector4D(*labelPos, 0)).toVector3D(),
-                    label, alignment=None,
+                    label, alignment=('right', 'top'),
+                    scale=0.041*self.cBox.fontScale,
+                    textColor=qt.QVector3D(0, 0, 0))
+                self.cBox.render_text(
+                    (fixView * self.fixProj *
+                     qt.QVector4D(*labelPos, 0)).toVector3D(),
+                    label, alignment=('right', 'top'),
                     scale=0.04*self.cBox.fontScale,
                     textColor=qt.QVector3D(*labelColor))
 
