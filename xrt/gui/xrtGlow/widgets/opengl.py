@@ -25,11 +25,88 @@ from ....backends import raycing
 from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
                                   orientationArgSet, shapeArgSet)
 from ....backends.raycing.epics import EpicsDevice
+from ....backends.raycing import apertures as rapts
 from ....backends.raycing import sources as rsources
 from ....backends.raycing import screens as rscreens
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
+
+
+def _grid_cells(oe):
+    if hasattr(oe, 'get_render_cells'):
+        return oe.get_render_cells()
+    ncols = 2*int(getattr(oe, 'nx', 0)) + 1
+    nrows = 2*int(getattr(oe, 'nz', 0)) + 1
+    dx, dz = getattr(oe, 'dx', 0), getattr(oe, 'dz', 0)
+    px, pz = getattr(oe, 'px', 0), getattr(oe, 'pz', 0)
+    xCenters = np.linspace(-1, 1, ncols) * px * int(getattr(oe, 'nx', 0))
+    zCenters = np.linspace(-1, 1, nrows) * pz * int(getattr(oe, 'nz', 0))
+    return [(xc - 0.5*dx, xc + 0.5*dx, zc - 0.5*dz, zc + 0.5*dz)
+            for xc in xCenters for zc in zCenters]
+
+
+def _grid_intervals(oe):
+    cells = _grid_cells(oe)
+    xIntervals = sorted({(cell[0], cell[1]) for cell in cells})
+    zIntervals = sorted({(cell[2], cell[3]) for cell in cells})
+    return xIntervals, zIntervals
+
+
+def _grid_aperture_surfaces(oe):
+    xIntervals, zIntervals = _grid_intervals(oe)
+    surfaces = ['gridFrame:left', 'gridFrame:right',
+                'gridFrame:bottom', 'gridFrame:top']
+    for ix in range(len(xIntervals)-1):
+        if xIntervals[ix+1][0] > xIntervals[ix][1]:
+            surfaces.append(f'gridVBar:{ix}')
+    for iz in range(len(zIntervals)-1):
+        if zIntervals[iz+1][0] > zIntervals[iz][1]:
+            surfaces.extend(
+                f'gridHBar:{ix}:{iz}' for ix in range(len(xIntervals)))
+    return surfaces
+
+
+def _grid_beam_stop_surfaces(oe):
+    return [f'gridCell:{i}' for i in range(len(_grid_cells(oe)))]
+
+
+def _aperture_surfaces(oe):
+    if isinstance(oe, rapts.GridBeamStop):
+        return _grid_beam_stop_surfaces(oe)
+    if isinstance(oe, rapts.GridAperture):
+        return _grid_aperture_surfaces(oe)
+    if isinstance(oe, rapts.DoubleBeamStop):
+        return ['bottomSlit', 'topSlit']
+    if isinstance(oe, rapts.RectangularBeamStop):
+        return [0]
+    if isinstance(oe, rapts.DoubleSlit):
+        return list(oe.blades) + ['shade']
+    return oe.blades
+
+
+def _clear_surface_mesh(mesh3D):
+    surfaceKeys = set(mesh3D.vao)
+    for meshStoreName in ('ibo', 'vbo_vertices', 'vbo_normals',
+                          'vbo_positions', 'vbo_colors'):
+        surfaceKeys.update(getattr(mesh3D, meshStoreName))
+
+    for nsIndex in surfaceKeys:
+        vao = mesh3D.vao.get(nsIndex)
+        if vao is not None:
+            vao.destroy()
+            gl.glGetError()
+        for meshStoreName in ('ibo', 'vbo_vertices', 'vbo_normals',
+                              'vbo_positions', 'vbo_colors'):
+            buffer = getattr(mesh3D, meshStoreName).get(nsIndex)
+            if buffer is not None:
+                buffer.destroy()
+                gl.glGetError()
+
+    for meshStoreName in ('vao', 'ibo', 'vbo_vertices', 'vbo_normals',
+                          'vbo_positions', 'vbo_colors'):
+        getattr(mesh3D, meshStoreName).clear()
+    mesh3D.arrLengths.clear()
 
 
 class xrtGlWidget(qt.QOpenGLWidget):
@@ -1571,7 +1648,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         elif is_aperture(oeToPlot):
             if oeuuid not in self.meshDict:
                 mesh3D = OEMesh3D(oeToPlot, self)  # need to pass context
-            for blade in oeToPlot.blades:
+            for blade in _aperture_surfaces(oeToPlot):
                 try:
                     mesh3D.prepare_surface_mesh(blade)
                     mesh3D.isEnabled = True
@@ -1623,6 +1700,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             updateMesh=True)
                 else:
                     self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
+            except Exception as e:
+                print(e)
+                print("Update failed, disabling mesh for", oeuuid)
+                self.meshDict[oeuuid].isEnabled = False
+        elif is_aperture(oeToPlot):
+            try:
+                mesh3D = self.meshDict[oeuuid]
+                _clear_surface_mesh(mesh3D)
+                for blade in _aperture_surfaces(oeToPlot):
+                    mesh3D.prepare_surface_mesh(nsIndex=blade,
+                                                autoSize=useAutoSize)
+                mesh3D.isEnabled = True
             except Exception as e:
                 print(e)
                 print("Update failed, disabling mesh for", oeuuid)
@@ -2033,7 +2122,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             except Exception as e:
                                 print(e)
                 elif is_aperture(oeToPlot):
-                    for blade in oeToPlot.blades:
+                    for blade in _aperture_surfaces(oeToPlot):
                         if mesh3D.isEnabled:
                             isSelected = False
                             if oeuuid in self.selectableOEs.values():

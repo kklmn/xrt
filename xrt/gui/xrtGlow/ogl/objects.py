@@ -322,12 +322,14 @@ class OEMesh3D():
       vec3(-1.0, -1.0,  1.0),
       vec3(-1.0, -1.0, -1.0)
     );
-    const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
+    const vec3 lightDiffuse = vec3(0.45, 0.45, 0.45);
+//    const vec3 lightDiffuse = vec3(0.35, 0.35, 0.35);
     const vec3 lightSpecular = vec3(1.0, 1.0, 1.0);
     const float diffuseScale = 0.22;
     const float specularScale = 0.75;
     const float fresnelScale = 0.25;
-    vec4 scene_ambient = vec4(0.48, 0.48, 0.48, 1.0);
+    vec4 scene_ambient = vec4(0.28, 0.28, 0.28, 1.0);
+//    vec4 scene_ambient = vec4(0.48, 0.48, 0.48, 1.0);
 
     struct material
     {
@@ -696,16 +698,13 @@ class OEMesh3D():
         self.envelope_step = None
 
         if self.parent is not None:
-            self.oeThickness = self.parent.oeThickness
-            self.apertureBladeWidth = self.parent.apertureBladeWidth
-            self.apertureDefaultSpan = self.parent.apertureDefaultSpan
-            self.tiles = self.parent.tiles
-            self.apertureThickness = self.parent.apertureThickness
+            self.sync_rendering_settings()
         else:
             self.oeThickness = 5
             self.apertureThickness = 0.1
             self.apertureBladeWidth = 5
             self.apertureDefaultSpan = 10
+            self.slitThicknessFraction = 50
             self.tiles = [25, 25]
         self.showLocalAxes = False
         self.isEnabled = False
@@ -761,6 +760,25 @@ class OEMesh3D():
             0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
             -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
         ], dtype=np.float32)
+
+    def sync_rendering_settings(self):
+        if self.parent is None:
+            return
+        self.oeThickness = self.parent.oeThickness
+        self.apertureBladeWidth = self.parent.apertureBladeWidth
+        self.apertureDefaultSpan = self.parent.apertureDefaultSpan
+        self.apertureThickness = self.parent.apertureThickness
+        self.slitThicknessFraction = self.parent.slitThicknessFraction
+        self.tiles = self.parent.tiles
+
+    def get_aperture_frame_width(self, renderStyle=None):
+        if renderStyle != 'mask':
+            return self.apertureBladeWidth
+        try:
+            scale = float(self.slitThicknessFraction) / 50.
+        except (TypeError, ValueError):
+            scale = 1.
+        return self.apertureBladeWidth * scale
 
     def update_surface_mesh(self, is2ndXtal=False):
         pass
@@ -1026,6 +1044,58 @@ class OEMesh3D():
             np.asarray(indices, dtype=np.uint32),
         )
 
+    def get_grid_intervals(self):
+        cells = self.get_grid_cells()
+        xIntervals = sorted({(cell[0], cell[1]) for cell in cells})
+        zIntervals = sorted({(cell[2], cell[3]) for cell in cells})
+        return xIntervals, zIntervals
+
+    def get_grid_cells(self):
+        oe = self.oe
+        if hasattr(oe, 'get_render_cells'):
+            return oe.get_render_cells()
+        nx, nz = int(getattr(oe, 'nx', 0)), int(getattr(oe, 'nz', 0))
+        dx, dz = getattr(oe, 'dx', 0), getattr(oe, 'dz', 0)
+        px, pz = getattr(oe, 'px', 0), getattr(oe, 'pz', 0)
+        xCenters = np.linspace(-1, 1, 2*nx+1) * px * nx
+        zCenters = np.linspace(-1, 1, 2*nz+1) * pz * nz
+        return [(xc - 0.5*dx, xc + 0.5*dx,
+                 zc - 0.5*dz, zc + 0.5*dz)
+                for xc in xCenters for zc in zCenters]
+
+    def get_grid_limits(self, nsIndex):
+        part = str(nsIndex).split(':')
+        xIntervals, zIntervals = self.get_grid_intervals()
+        xmin, xmax = xIntervals[0][0], xIntervals[-1][1]
+        zmin, zmax = zIntervals[0][0], zIntervals[-1][1]
+        bt = self.get_aperture_frame_width(getattr(self.oe, 'renderStyle',
+                                                   None))
+
+        if part[0] == 'gridFrame' and len(part) == 2:
+            if part[1] == 'left':
+                return [xmin - bt, xmin], [zmin, zmax]
+            if part[1] == 'right':
+                return [xmax, xmax + bt], [zmin, zmax]
+            if part[1] == 'bottom':
+                return [xmin - bt, xmax + bt], [zmin - bt, zmin]
+            if part[1] == 'top':
+                return [xmin - bt, xmax + bt], [zmax, zmax + bt]
+        elif part[0] == 'gridVBar' and len(part) == 2:
+            ix = int(part[1])
+            xLimits = [xIntervals[ix][1], xIntervals[ix+1][0]]
+            return (xLimits, [zmin, zmax]) if xLimits[1] > xLimits[0] else None
+        elif part[0] == 'gridHBar' and len(part) == 3:
+            ix, iz = int(part[1]), int(part[2])
+            yLimits = [zIntervals[iz][1], zIntervals[iz+1][0]]
+            return (list(xIntervals[ix]), yLimits) if yLimits[1] >\
+                yLimits[0] else None
+        elif part[0] == 'gridCell' and len(part) == 2:
+            cell = self.get_grid_cells()[int(part[1])]
+            return [cell[0], cell[1]], [cell[2], cell[3]]
+        elif part[0] == 'gridCell' and len(part) == 3:
+            ix, iz = int(part[1]), int(part[2])
+            return list(xIntervals[ix]), list(zIntervals[iz])
+
     def get_limits(self, nsIndex, is2ndXtal=False, autoSize=False):
         yDim = 1
 
@@ -1063,44 +1133,121 @@ class OEMesh3D():
         elif isAperture:
             renderStyle = getattr(self.oe, 'renderStyle', 'mask')
             blades = getattr(self.oe, 'blades', {})
-            if str(nsIndex) not in blades:
+            if isinstance(self.oe, rapts.GridAperture) and\
+                    str(nsIndex).startswith('grid'):
+                gridLimits = self.get_grid_limits(nsIndex)
+                if gridLimits is None:
+                    self.isEnabled = False
+                    return
+                xLimits, yLimits = gridLimits
+                yDim = 2
+            elif isinstance(self.oe, rapts.DoubleSlit) and\
+                    str(nsIndex) in ('shade', 'bottomSlit', 'topSlit'):
+                if len(set(blades) & {'bottom', 'top'}) < 2:
+                    self.isEnabled = False
+                    return
+
+                bottom, top = blades['bottom'], blades['top']
+                shadeMin = 0.5 * (1 - self.oe.shadeFraction)
+                shadeMax = shadeMin + self.oe.shadeFraction
+                shadeBottom = bottom + (top - bottom) * shadeMin
+                shadeTop = bottom + (top - bottom) * shadeMax
+
+                if len(set(blades) & {'left', 'right'}) > 1:
+                    left, right = blades['left'], blades['right']
+                else:
+                    defaultWidth = self.apertureDefaultSpan
+                    center = 0
+                    left, right = center-defaultWidth, center+defaultWidth
+
+                if str(nsIndex) == 'shade':
+                    if len(set(blades) & {'left', 'right'}) > 1:
+                        width = abs(right - left)
+                        bt = self.get_aperture_frame_width(renderStyle)
+                        center = 0.5 * (left + right)
+                        halfWidth = 0.5*width + bt if renderStyle == 'mask'\
+                            else max(width, self.apertureDefaultSpan)
+                        xLimits = [center - halfWidth, center + halfWidth]
+                    else:
+                        xLimits = [left, right]
+                    yLimits = [shadeBottom, shadeTop]
+                elif str(nsIndex) == 'bottomSlit':
+                    xLimits = [left, right]
+                    yLimits = [bottom, shadeBottom]
+                else:
+                    xLimits = [left, right]
+                    yLimits = [shadeTop, top]
+                yDim = 2
+            elif isinstance(self.oe, rapts.RectangularBeamStop) and\
+                    nsIndex in (0, '0'):
+                defaultWidth = self.apertureDefaultSpan
+                if len(set(blades) & {'left', 'right'}) > 1:
+                    xLimits = [blades['left'], blades['right']]
+                elif 'left' in blades:
+                    xLimits = [blades['left'] - defaultWidth, blades['left']]
+                elif 'right' in blades:
+                    xLimits = [blades['right'], blades['right'] + defaultWidth]
+                else:
+                    xLimits = [-defaultWidth, defaultWidth]
+
+                if len(set(blades) & {'top', 'bottom'}) > 1:
+                    yLimits = [blades['bottom'], blades['top']]
+                elif 'bottom' in blades:
+                    yLimits = [blades['bottom'] - defaultWidth,
+                               blades['bottom']]
+                elif 'top' in blades:
+                    yLimits = [blades['top'], blades['top'] + defaultWidth]
+                else:
+                    yLimits = [-defaultWidth, defaultWidth]
+                yDim = 2
+            elif not isinstance(self.oe, rapts.RectangularAperture) and\
+                    nsIndex in (0, '0'):
+                xLimits = list(self.oe.limOptX)
+                yLimits = list(self.oe.limOptY)
+                yDim = 2
+            elif str(nsIndex) not in blades and nsIndex not in blades:
                 self.isEnabled = False
                 return
-
-            bt = self.apertureBladeWidth
-            defaultWidth = self.apertureDefaultSpan
-
-            if len(set(blades) & {'left', 'right'}) > 1:
-                awidth = np.abs(blades['left'] - blades['right'])
-                acenterX = 0.5 * (blades['left'] + blades['right'])
-                awidth = 0.5*awidth + bt if renderStyle == 'mask' else\
-                    max(awidth, defaultWidth)
             else:
-                awidth = defaultWidth
-                acenterX = 0.
+                btX = self.apertureBladeWidth
+                btY = self.apertureBladeWidth
+                defaultWidth = self.apertureDefaultSpan
 
-            if len(set(blades) & {'top', 'bottom'}) > 1:
-                aheight = np.abs(blades['top'] - blades['bottom'])
-                acenterY = 0.5 * (blades['top'] + blades['bottom'])
-                aheight = 0.5*aheight if renderStyle == 'mask' else\
-                    max(aheight, defaultWidth)
-            else:
-                aheight = defaultWidth
-                acenterY = 0.
+                if len(set(blades) & {'left', 'right'}) > 1:
+                    awidth = np.abs(blades['left'] - blades['right'])
+                    acenterX = 0.5 * (blades['left'] + blades['right'])
+                    btX = self.get_aperture_frame_width(renderStyle) if\
+                        renderStyle == 'mask' else self.apertureBladeWidth
+                    awidth = 0.5*awidth + btX if renderStyle == 'mask' else\
+                        max(awidth, defaultWidth)
+                else:
+                    awidth = defaultWidth
+                    acenterX = 0.
 
-            if str(nsIndex) == 'left':
-                xLimits = [blades['left'] - bt, blades['left']]
-                yLimits = [acenterY - aheight, acenterY + aheight]
-            elif str(nsIndex) == 'right':
-                xLimits = [blades['right'], blades['right'] + bt]
-                yLimits = [acenterY - aheight, acenterY + aheight]
-            elif str(nsIndex) == 'bottom':
-                xLimits = [acenterX - awidth, acenterX + awidth]
-                yLimits = [blades['bottom'] - bt, blades['bottom']]
-            elif str(nsIndex) == 'top':
-                xLimits = [acenterX - awidth, acenterX + awidth]
-                yLimits = [blades['top'], blades['top'] + bt]
-            yDim = 2
+                if len(set(blades) & {'top', 'bottom'}) > 1:
+                    aheight = np.abs(blades['top'] - blades['bottom'])
+                    acenterY = 0.5 * (blades['top'] + blades['bottom'])
+                    btY = self.get_aperture_frame_width(renderStyle) if\
+                        renderStyle == 'mask' else self.apertureBladeWidth
+                    aheight = 0.5*aheight if renderStyle == 'mask' else\
+                        max(aheight, defaultWidth)
+                else:
+                    aheight = defaultWidth
+                    acenterY = 0.
+
+                if str(nsIndex) == 'left':
+                    xLimits = [blades['left'] - btX, blades['left']]
+                    yLimits = [acenterY - aheight, acenterY + aheight]
+                elif str(nsIndex) == 'right':
+                    xLimits = [blades['right'], blades['right'] + btX]
+                    yLimits = [acenterY - aheight, acenterY + aheight]
+                elif str(nsIndex) == 'bottom':
+                    xLimits = [acenterX - awidth, acenterX + awidth]
+                    yLimits = [blades['bottom'] - btY, blades['bottom']]
+                elif str(nsIndex) == 'top':
+                    xLimits = [acenterX - awidth, acenterX + awidth]
+                    yLimits = [blades['top'], blades['top'] + btY]
+                yDim = 2
         elif is2ndXtal:
             xLimits = list(self.oe.limPhysX2)
             yLimits = list(self.oe.limPhysY2)
@@ -1193,7 +1340,7 @@ class OEMesh3D():
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
         oeShape = getattr(self.oe, 'shape', 'rect')
-        oeDx = getattr(self.oe, 'dx', 0)
+        oeDx = 0 if isAperture else getattr(self.oe, 'dx', 0)
         isOeParametric = getattr(self.oe, 'isParametric', False)
 
         tiles = self.parent.tiles if self.parent is not None else self.tiles
@@ -1440,6 +1587,7 @@ class OEMesh3D():
     def prepare_surface_mesh(self, nsIndex=0, updateMesh=False,
                              autoSize=False):
 
+        self.sync_rendering_settings()
         gl.glGetError()
 
         is2ndXtal = False
@@ -1494,7 +1642,8 @@ class OEMesh3D():
                 rmax = self.oe.r
             else:
                 rmin = self.oe.r
-                rmax = self.oe.r+self.apertureBladeWidth
+                rmax = self.oe.r+self.get_aperture_frame_width(
+                    getattr(self.oe, 'renderStyle', None))
             allSurfaces, allNormals, allIndices =\
                 self.generate_disk_ring_segment(
                     rmin=rmin, rmax=rmax, thickness=self.apertureThickness)

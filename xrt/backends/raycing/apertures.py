@@ -21,16 +21,24 @@ size that lets the whole beam through.
 .. autoclass:: xrt.backends.raycing.apertures.RoundAperture()
    :members: __init__, get_divergence, propagate
 
+.. autoclass:: xrt.backends.raycing.apertures.RectangularBeamStop()
+
 .. autoclass:: xrt.backends.raycing.apertures.RoundBeamStop()
 
 .. autoclass:: xrt.backends.raycing.apertures.DoubleSlit()
    :members: __init__
 
+.. autoclass:: xrt.backends.raycing.apertures.DoubleBeamStop()
+
 .. autoclass:: xrt.backends.raycing.apertures.PolygonalAperture()
    :members: __init__
 
+.. autoclass:: xrt.backends.raycing.apertures.PolygonalBeamStop()
+
 .. autoclass:: xrt.backends.raycing.apertures.GridAperture()
    :members: __init__
+
+.. autoclass:: xrt.backends.raycing.apertures.GridBeamStop()
 
 .. autoclass:: xrt.backends.raycing.apertures.SiemensStar()
    :members: __init__
@@ -47,8 +55,10 @@ from .physconsts import CHBAR
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "1 Nov 2019"
-__all__ = ('RectangularAperture', 'RoundAperture', 'RoundBeamStop',
-           'DoubleSlit', 'PolygonalAperture', 'GridAperture', 'SiemensStar')
+__all__ = ('RectangularAperture', 'RectangularBeamStop', 'RoundAperture',
+           'RoundBeamStop', 'DoubleSlit', 'DoubleBeamStop',
+           'PolygonalAperture', 'PolygonalBeamStop', 'GridAperture',
+           'GridBeamStop', 'SiemensStar')
 
 _BLADE_ORDER = ('left', 'right', 'bottom', 'top')
 _DEFAULT_RECTANGULAR_BLADES = {'left': -10, 'right': 10,
@@ -69,7 +79,8 @@ class RectangularAperture(object):
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=None, opening=None, x='auto', z='auto',
                  alarmLevel=None, renderStyle='mask',
-                 blades=_DEFAULT_RECTANGULAR_BLADES, **kwargs):
+                 blades=_DEFAULT_RECTANGULAR_BLADES,
+                 **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -106,6 +117,7 @@ class RectangularAperture(object):
         *renderStyle*: str
             Controls rendering style in xrtGlow. Can be either single-piece
             'mask' or a set of individual 'blades'.
+
 
         """
         self.bl = bl
@@ -167,7 +179,7 @@ class RectangularAperture(object):
         self.alarmLevel = alarmLevel
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
-
+        self.isBeamStop = False
 #        if opening is not None:
 #            self.set_optical_limits()
 
@@ -351,6 +363,8 @@ class RectangularAperture(object):
                 badIndices[good] = badIndices[good] | (lo.z[good] < d)
             elif akind.startswith('t'):
                 badIndices[good] = badIndices[good] | (lo.z[good] > d)
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
 
         lo.state[:] = beam.state
@@ -521,6 +535,18 @@ class RectangularAperture(object):
             retGlo = rw.diffract(wave, waveOnSelf)
         waveOnSelf.parentId = self.uuid
         return retGlo, waveOnSelf
+
+
+class RectangularBeamStop(RectangularAperture):
+    """Convenience class for RectangularAperture in beam-stop mode.
+
+    In beam-stop mode the nominal aperture opening is the stopped (solid)
+    region, while rays outside it pass through.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.isBeamStop = True
 
 
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
@@ -767,6 +793,8 @@ class RoundAperture(object):
 
         badIndices = np.zeros(len(beam.x), dtype=bool)
         badIndices[good] = lo.r > self.r
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
         lo.state[good] = beam.state[good]
         lo.y[good] = 0.
@@ -885,80 +913,17 @@ class RoundAperture(object):
 
 class RoundBeamStop(RoundAperture):
     """Implements a round beamstop. Descends from RoundAperture and has the
-    same parameters."""
+    same parameters.
+
+    In beam-stop mode the nominal aperture opening is the stopped (solid)
+    region, while rays outside it pass through.
+    """
 
     def __init__(self, *args, **kwargs):
         """Same parameters as in :class:`RoundAperture`
         """
         super().__init__(*args, **kwargs)
         self.isBeamStop = True
-
-    @raycing.append_to_flow_decorator
-    def propagate(self, beam=None, needNewGlobal=False):
-        """Assigns the "lost" value to *beam.state* array for the rays
-        intercepted by the aperture. The "lost" value is
-        ``-self.ordinalNum - 1000.``
-
-
-        .. Returned values: beamLocal
-        """
-#        kwArgsIn = {'needNewGlobal': needNewGlobal}
-#        if self.bl is not None:
-#            if raycing.is_valid_uuid(beam):
-#                kwArgsIn['beam'] = beam
-#                beam = self.bl.beamsDictU[beam]['beamGlobal']
-#            else:
-#                kwArgsIn['beam'] = beam.parentId
-#            self.bl.auto_align(self, beam)
-        good = beam.state > 0
-# beam in local coordinates
-        lo = rs.Beam(copyFrom=beam)
-        bl = self.bl if self.xyz == 'auto' else self.xyz
-        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
-        with np.errstate(divide='ignore'):
-            path = -lo.y[good] / lo.b[good]
-        indBad = np.where(np.isnan(path))
-        path[indBad] = 0.
-        indBad = np.where(np.isinf(path))
-        path[indBad] = 0.
-        lo.x[good] += lo.a[good] * path
-        lo.z[good] += lo.c[good] * path
-        lo.r = (lo.x[good]**2 + lo.z[good]**2)**0.5
-        lo.path[good] += path
-
-        badIndices = np.zeros(len(beam.x), dtype=bool)
-        badIndices[good] = lo.r < self.r
-        beam.state[badIndices] = self.lostNum
-        lo.state[good] = beam.state[good]
-        lo.y[good] = 0.
-
-        if hasattr(lo, 'Es'):
-            propPhase = np.exp(1e7j * (lo.E[good]/CHBAR) * path)
-            lo.Es[good] *= propPhase
-            lo.Ep[good] *= propPhase
-
-        if self.alarmLevel is not None:
-            raycing.check_alarm(self, good, beam)
-
-#        self.bl.flowU[self.uuid] = {'method': self.propagate,
-#                                    'kwArgsIn': kwArgsIn}
-
-        if needNewGlobal:
-            glo = rs.Beam(copyFrom=lo)
-            raycing.virgin_local_to_global(self.bl, glo, self.center, good)
-            glo.path[good] += beam.path[good]
-
-#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
-#                                             'beamLocal': lo}
-
-            return glo, lo
-        else:
-            raycing.append_to_flow(self.propagate, [lo],
-                                   inspect.currentframe())
-
-#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
-
-            return lo
 
 
 class DoubleSlit(RectangularAperture):
@@ -1017,6 +982,8 @@ class DoubleSlit(RectangularAperture):
         st = dsb + (dst - dsb) * shadeMax
         badIndices[good] = \
             badIndices[good] | ((lo.z[good] > sb) & (lo.z[good] < st))
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
 
         lo.state[good] = beam.state[good]
@@ -1051,13 +1018,26 @@ class DoubleSlit(RectangularAperture):
             return lo
 
 
+class DoubleBeamStop(DoubleSlit):
+    """Convenience class for DoubleSlit in beam-stop mode.
+
+    In beam-stop mode the nominal slit openings are the stopped (solid)
+    regions, while rays outside them pass through.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.isBeamStop = True
+
+
 class PolygonalAperture(object):
     """Implements an aperture or an obstacle defined as a set of polygon
     vertices."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  opening=None, x='auto', z='auto', alarmLevel=None,
-                 vertices=_DEFAULT_POLYGON_VERTICES, **kwargs):
+                 vertices=_DEFAULT_POLYGON_VERTICES,
+                 **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -1086,7 +1066,6 @@ class PolygonalAperture(object):
             Allowed fraction of number of rays absorbed at the aperture
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
-
 
         """
         self.bl = bl
@@ -1120,6 +1099,7 @@ class PolygonalAperture(object):
         self._vertices = None
         self.vertices = opening if opening is not None else vertices
         self.alarmLevel = alarmLevel
+        self.isBeamStop = False
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-500, 500]
@@ -1227,6 +1207,8 @@ class PolygonalAperture(object):
         footprint = mplPath(self.vertices)
         badIndices = np.invert(footprint.contains_points(np.array(
                 list(zip(lo.x, lo.z)))))
+        if self.isBeamStop:
+            badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
 
         lo.state[good] = beam.state[good]
@@ -1326,13 +1308,27 @@ class PolygonalAperture(object):
         return wave
 
 
+class PolygonalBeamStop(PolygonalAperture):
+    """Convenience class for PolygonalAperture in beam-stop mode.
+
+    In beam-stop mode the nominal polygonal opening is the stopped (solid)
+    region, while rays outside it pass through.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.isBeamStop = True
+
+
 class GridAperture(PolygonalAperture):
     """Implements a grid of rectangular apertures.
     See `tests/raycing/test_polygonal_aperture.py`"""
 
+    hiddenParams = ['vertices']
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  x='auto', z='auto', alarmLevel=None,
-                 dx=0.5, dz=0.5, px=1.0, pz=1.0, nx=7, nz=7):
+                 dx=0.5, dz=0.5, px=1.0, pz=1.0, nx=7, nz=7, **kwargs):
         """
         *dx* and *dz*: float
             Opening sizes (horizontal and vertical).
@@ -1347,19 +1343,119 @@ class GridAperture(PolygonalAperture):
 
 
         """
-        # 4 corners + the 1st one to close the path + nan to disconnect patches
-        cellx = np.array([dx, -dx, -dx, dx, dx, np.nan]) * 0.5
-        cellz = np.array([dz, dz, -dz, -dz, dz, np.nan]) * 0.5
-
-        xc = np.linspace(-1, 1, 2*nx+1) * px * nx
-        zc = np.linspace(-1, 1, 2*nz+1) * pz * nz
-        xm, zm = np.meshgrid(xc, zc)
-        xi = (xm.ravel(order='F') + cellx[:, np.newaxis]).ravel(order='F')
-        zi = (zm.ravel(order='F') + cellz[:, np.newaxis]).ravel(order='F')
-        vertices = np.column_stack((xi, zi))
+        self._dx = dx
+        self._dz = dz
+        self._px = px
+        self._pz = pz
+        self._nx = int(nx)
+        self._nz = int(nz)
+        vertices = self._make_vertices()
 
         super().__init__(bl=bl, name=name, center=center, vertices=vertices,
                          x=x, z=z, alarmLevel=alarmLevel, **kwargs)
+
+    def _make_vertices(self):
+        # 4 corners + the 1st one to close the path + nan to disconnect patches
+        cellx = np.array(
+            [self._dx, -self._dx, -self._dx, self._dx, self._dx, np.nan]) * 0.5
+        cellz = np.array(
+            [self._dz, self._dz, -self._dz, -self._dz, self._dz, np.nan]) * 0.5
+
+        xc = np.linspace(-1, 1, 2*self._nx+1) * self._px * self._nx
+        zc = np.linspace(-1, 1, 2*self._nz+1) * self._pz * self._nz
+        xm, zm = np.meshgrid(xc, zc)
+        xi = (xm.ravel(order='F') + cellx[:, np.newaxis]).ravel(order='F')
+        zi = (zm.ravel(order='F') + cellz[:, np.newaxis]).ravel(order='F')
+        return np.column_stack((xi, zi))
+
+    def _update_vertices(self):
+        if hasattr(self, '_vertices'):
+            self.vertices = self._make_vertices()
+
+    @property
+    def dx(self):
+        return self._dx
+
+    @dx.setter
+    def dx(self, dx):
+        self._dx = dx
+        self._update_vertices()
+
+    @property
+    def dz(self):
+        return self._dz
+
+    @dz.setter
+    def dz(self, dz):
+        self._dz = dz
+        self._update_vertices()
+
+    @property
+    def px(self):
+        return self._px
+
+    @px.setter
+    def px(self, px):
+        self._px = px
+        self._update_vertices()
+
+    @property
+    def pz(self):
+        return self._pz
+
+    @pz.setter
+    def pz(self, pz):
+        self._pz = pz
+        self._update_vertices()
+
+    @property
+    def nx(self):
+        return self._nx
+
+    @nx.setter
+    def nx(self, nx):
+        self._nx = int(nx)
+        self._update_vertices()
+
+    @property
+    def nz(self):
+        return self._nz
+
+    @nz.setter
+    def nz(self, nz):
+        self._nz = int(nz)
+        self._update_vertices()
+
+    def get_render_cells(self):
+        """Returns rectangular cell limits generated from the polygon data."""
+        cells = []
+        cell = []
+        for point in self.vertices:
+            if np.any(np.isnan(point)):
+                if cell:
+                    cell = np.array(cell)
+                    cells.append((cell[:, 0].min(), cell[:, 0].max(),
+                                  cell[:, 1].min(), cell[:, 1].max()))
+                    cell = []
+            else:
+                cell.append(point)
+        if cell:
+            cell = np.array(cell)
+            cells.append((cell[:, 0].min(), cell[:, 0].max(),
+                          cell[:, 1].min(), cell[:, 1].max()))
+        return cells
+
+
+class GridBeamStop(GridAperture):
+    """Convenience class for GridAperture in beam-stop mode.
+
+    In beam-stop mode the nominal grid openings are the stopped (solid)
+    regions, while rays outside them pass through.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.isBeamStop = True
 
 
 class SiemensStar(PolygonalAperture):

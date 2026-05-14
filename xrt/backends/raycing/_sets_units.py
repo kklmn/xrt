@@ -15,6 +15,7 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
 
 shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
                'blades', 'vertices',
+               'shadeFraction', 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
                'parabolaAxis', 'shape', 'renderStyle',
                'n', 'period', 'fileName', 'orientation'}  # TODO: sources
@@ -101,4 +102,6 @@ lengthUnitParams = {'center': 'mm',
                     'dx': 'mm',
                     'dy': 'mm',
                     'dz': 'mm',
+                    'px': 'mm',
+                    'pz': 'mm',
                     'beta': 'm'}  # WIP
