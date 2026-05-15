@@ -11,18 +11,18 @@ except ImportError:
 if isOpenGL:
 
     from OpenGL.GL import (
-        glBlendFunc, glClear, glClearColor, glDepthMask, glDisable,
-        glDrawArrays, glDrawArraysInstanced, glDrawElements, glEnable,
-        glEnableVertexAttribArray, glGetError, glGetIntegerv, glHint,
+        glBlendFunc, glBlendFuncSeparate, glClear, glClearColor, glDepthMask,
+        glDisable, glDrawArrays, glDrawArraysInstanced, glDrawElements,
+        glEnable, glEnableVertexAttribArray, glGetError, glGetIntegerv, glHint,
         glLineWidth, glPolygonMode, glReadPixels, glStencilFunc, glStencilOp,
         glVertexAttribDivisor, glVertexAttribPointer, glViewport,
         GL_ALWAYS, GL_BLEND, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
         GL_DEPTH_TEST, GL_FALSE, GL_FILL, GL_FLOAT, GL_FRONT_AND_BACK,
         GL_KEEP, GL_LINE, GL_LINES, GL_LINE_SMOOTH, GL_LINE_SMOOTH_HINT,
-        GL_MULTISAMPLE, GL_NICEST, GL_ONE_MINUS_SRC_ALPHA, GL_POINTS,
+        GL_MULTISAMPLE, GL_NICEST, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_POINTS,
         GL_PROGRAM_POINT_SIZE, GL_REPLACE, GL_SRC_ALPHA, GL_STENCIL_BUFFER_BIT,
         GL_STENCIL_INDEX, GL_STENCIL_TEST, GL_TRIANGLE_FAN, GL_TRIANGLES,
-        GL_TRUE, GL_UNSIGNED_INT, GL_VIEWPORT, GL_LINE_STRIP)
+        GL_TRUE, GL_UNSIGNED_INT, GL_VIEWPORT, GL_LINE_STRIP, GL_ZERO)
 
 #    from OpenGL import GL
 

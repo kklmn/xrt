@@ -1961,7 +1961,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         gl.glEnable(gl.GL_MULTISAMPLE)
         gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glBlendFuncSeparate(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA,
+                               gl.GL_ZERO, gl.GL_ONE)
         gl.glGetError()
 #        gl.glEnable(gl.GL_POINT_SMOOTH)
 #        gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
@@ -2058,7 +2059,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if self.enableBlending:
                 gl.glEnable(gl.GL_MULTISAMPLE)
                 gl.glEnable(gl.GL_BLEND)
-                gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+                gl.glBlendFuncSeparate(
+                    gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA,
+                    gl.GL_ZERO, gl.GL_ONE)
 #                gl.glEnable(gl.GL_POINT_SMOOTH)
 #                gl.glHint(gl.GL_POINT_SMOOTH_HINT, gl.GL_NICEST)
 

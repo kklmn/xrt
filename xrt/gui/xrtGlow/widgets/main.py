@@ -3033,7 +3033,7 @@ class xrtGlow(qt.QWidget):
 
     def copyImageToClipboard(self):
         image = self.customGlWidget.grabFramebuffer()
-        qt.QApplication.clipboard().setPixmap(qt.QPixmap.fromImage(image))
+        qt.QApplication.clipboard().setImage(qt.QImage(image))
         if getattr(self, 'parentRef', None) is not None:
             progressBar = getattr(self.parentRef, 'progressBar', None)
             if progressBar is not None:
