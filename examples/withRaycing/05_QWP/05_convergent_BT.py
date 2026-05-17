@@ -259,7 +259,7 @@ def define_plots(beamLine):
     return plots
 
 
-def plot_generator(plots, beamLine):
+def plot_generator(plots=None, beamLine=None):
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 
@@ -269,40 +269,66 @@ def plot_generator(plots, beamLine):
     posTheta = np.logspace(0, 13, 14, base=2)
     departureTheta = np.hstack((-posTheta[::-1], 0, posTheta))
 
-    for polar in polarization:
-        beamLine.sources[0].polarization = polar
-        suffix = polar
-        if suffix is None:
-            suffix = 'none'
-        for thick in thickness:
-            crystalDiamond.t = thick * 1e-3  # in mm
-            for iTheta, dTheta in enumerate(departureTheta):
-                beamLine.qwp.pitch = theta0 + math.radians(dTheta / 3600.)
-                for plot in plots:
-                    plot.xaxis.fwhmFormatStr = '%.1f'
-                    plot.yaxis.fwhmFormatStr = '%.1f'
-                    fileName = '{0}_{1}_{2}_{3:04.0f}um_{4:02d}'.\
-                        format(prefix, plot.title, suffix, thick, iTheta)
-                    plot.saveName = fileName + '.png'
+    if showIn3D:
+        sourceName = beamLine.sources[0].name
+        frames = {}
+        iFrame = 0
+        for polar in polarization:
+            suffix = polar
+            if suffix is None:
+                suffix = 'none'
+            for thick in thickness:
+                for iTheta, dTheta in enumerate(departureTheta):
+                    pitch = theta0 + math.radians(dTheta / 3600.)
+                    frames['frame_{0:04d}'.format(iFrame)] = {
+                        'objects': {
+                            sourceName: {'polarization': polar},
+                            'Diamond': {'t': thick * 1e-3},
+                            'QWP': {'pitch': pitch}},
+                        'output': {
+                            'glowFrameName':
+                                '{0}_{1}_{2:04.0f}um_{3:02d}.jpg'.format(
+                                    prefix, suffix, thick, iTheta)}}
+                    iFrame += 1
+        return {
+            'version': 1,
+            'kind': 'expanded_frames',
+            'frames': frames}
+
+    def _run_generator():
+        for polar in polarization:
+            beamLine.sources[0].polarization = polar
+            suffix = polar
+            if suffix is None:
+                suffix = 'none'
+            for thick in thickness:
+                crystalDiamond.t = thick * 1e-3  # in mm
+                for iTheta, dTheta in enumerate(departureTheta):
+                    beamLine.qwp.pitch = \
+                        theta0 + math.radians(dTheta / 3600.)
+                    for plot in plots:
+                        plot.xaxis.fwhmFormatStr = '%.1f'
+                        plot.yaxis.fwhmFormatStr = '%.1f'
+                        fileName = '{0}_{1}_{2}_{3:04.0f}um_{4:02d}'.\
+                            format(prefix, plot.title, suffix, thick, iTheta)
+                        plot.saveName = fileName + '.png'
 #                    plot.persistentName = fileName + '.pickle'
-                    try:
-                        plot.textPanel.set_text(
-                            u'{0}\n{1:4.0f} µm\n{2:+4.0f} arcsec'.
-                            format(suffix, thick, dTheta))
-                    except AttributeError:
-                        pass
-                if showIn3D:
-                    beamLine.glowFrameName = \
-                        '{0}_{1}_{2:04.0f}um_{3:02d}.jpg'.format(
-                            prefix, suffix, thick, iTheta)
-                yield
+                        try:
+                            plot.textPanel.set_text(
+                                u'{0}\n{1:4.0f} µm\n{2:+4.0f} arcsec'.
+                                format(suffix, thick, dTheta))
+                        except AttributeError:
+                            pass
+                    yield
+    return _run_generator()
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        scan = plot_generator(beamLine=beamLine)
         beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-2,
-                      generator=plot_generator, generatorArgs=[[], beamLine],
+                      scan=scan,
                       colorAxis='circular_polarization_rate',
                       colorAxisLimits=[-1, 1])
         return
