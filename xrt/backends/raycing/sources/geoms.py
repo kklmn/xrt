@@ -95,6 +95,9 @@ def make_polarization(polarization, bo, nrays=raycing.nrays):
               {\rm polarization[2]} - i * {\rm polarization[3]} &
               {\rm polarization[1]}\end{array} \right)
 
+        9) linear polarization by numeric angle in degrees, or by string with
+           an explicit 'rad' suffix.
+
         """
     def _fill_beam(Jss, Jpp, Jsp, Es, Ep):
         bo.Jss.fill(Jss)
@@ -107,29 +110,47 @@ def make_polarization(polarization, bo, nrays=raycing.nrays):
             else:
                 bo.Ep.fill(Ep)
 
-    if (polarization is None) or (polarization.startswith('un')):
+    def _as_linear_angle(value):
+        if isinstance(value, (bool, np.bool_)):
+            return None
+        angle = raycing.auto_units_angle(
+            value, defaultFactor=np.pi / 180.,
+            aliases={'h': 0., 'v': np.pi / 2.})
+        if not isinstance(angle, (int, float, np.integer, np.floating)):
+            return None
+        return angle
+
+    def _fill_linear(angle):
+        Es = np.cos(angle)
+        Ep = np.sin(angle)
+        _fill_beam(Es*Es, Ep*Ep, Es*Ep, Es, Ep)
+
+    if polarization is None:
         _fill_beam(0.5, 0.5, 0, 2**(-0.5), 'random phase')
-    elif isinstance(polarization, tuple):
+    elif isinstance(polarization, (tuple, list, np.ndarray)):
         if len(polarization) != 4:
-            raise ValueError('wrong coherency matrix: must be a 4-tuple!')
+            raise ValueError('wrong coherency matrix: must be a 4-sequence!')
         bo.Jss.fill(polarization[0])
         bo.Jpp.fill(polarization[1])
         bo.Jsp.fill(polarization[2] + 1j*polarization[3])
-    else:
-        if polarization.startswith('h'):
-            _fill_beam(1, 0, 0, 1, 0)
-        elif polarization.startswith('v'):
-            _fill_beam(0, 1, 0, 0, 1)
-        elif polarization == '+45':
-            _fill_beam(0.5, 0.5, 0.5, 2**(-0.5), 2**(-0.5))
-        elif polarization == '-45':
-            _fill_beam(0.5, 0.5, -0.5, 2**(-0.5), -2**(-0.5))
+    elif isinstance(polarization, str):
+        polarization = polarization.lower()
+        if polarization.startswith('un'):
+            _fill_beam(0.5, 0.5, 0, 2**(-0.5), 'random phase')
         elif polarization.startswith('r'):
             _fill_beam(0.5, 0.5, 0.5j, 2**(-0.5), -1j * 2**(-0.5))
         elif polarization.startswith('l'):
             _fill_beam(0.5, 0.5, -0.5j, 2**(-0.5), 1j * 2**(-0.5))
         else:
+            angle = _as_linear_angle(polarization)
+            if angle is None:
+                raise ValueError('wrong polarization!')
+            _fill_linear(angle)
+    else:
+        angle = _as_linear_angle(polarization)
+        if angle is None:
             raise ValueError('wrong polarization!')
+        _fill_linear(angle)
 
 
 class GeometricSource(object):
@@ -182,8 +203,9 @@ class GeometricSource(object):
 
         *polarization*:
             'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]', 'l[eft]',
-            None, custom. In the latter case the polarization is given by a
-            tuple of 4 components of the coherency matrix:
+            None, numeric angle in degrees, custom. In the latter case the
+            polarization is given by a sequence of 4 components of the
+            coherency matrix:
             (Jss, Jpp, Re(Jsp), Im(Jsp)).
 
         *filamentBeam*: bool
@@ -454,8 +476,9 @@ class GaussianBeam(object):
 
         *polarization*:
             'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]', 'l[eft]',
-            None, custom. In the latter case the polarization is given by a
-            tuple of 4 components of the coherency matrix:
+            None, numeric angle in degrees, custom. In the latter case the
+            polarization is given by a sequence of 4 components of the
+            coherency matrix:
             (Jss, Jpp, Re(Jsp), Im(Jsp)).
 
         *pitch*, *roll*, *yaw*: float
@@ -720,8 +743,9 @@ class MeshSource(object):
             of each line. Must be of the shape of *energies*.
 
         *polarization*: 'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]',
-            'l[eft]', None, custom. In the latter case the polarization is
-            given by a tuple of 4 components of the coherency matrix:
+            'l[eft]', None, numeric angle in degrees, custom. In the latter
+            case the polarization is given by a sequence of 4 components of
+            the coherency matrix:
             (Jss, Jpp, Re(Jsp), Im(Jsp)).
 
         *withCentralRay*: bool

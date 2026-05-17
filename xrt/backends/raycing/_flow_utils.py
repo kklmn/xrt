@@ -50,8 +50,14 @@ class NameAsString(ast.NodeTransformer):
         return ast.Constant(node.id)
 
 
-def auto_units_angle(angle, defaultFactor=1.):
+def auto_units_angle(angle, defaultFactor=1., aliases=None):
     if isinstance(angle, basestring):
+        angleText = angle.strip()
+        angleLow = angleText.lower()
+        if aliases is not None:
+            for alias, aliasValue in aliases.items():
+                if angleLow.startswith(alias):
+                    return aliasValue
         if len(re.findall("auto", angle)) > 0:
             return angle
         elif len(re.findall("mrad", angle)) > 0:
@@ -65,8 +71,11 @@ def auto_units_angle(angle, defaultFactor=1.):
         elif len(re.findall("deg", angle)) > 0:
             return np.radians(float(angle.split("d")[0].strip()))
         else:
-            print("Could not identify the units")
-            return angle
+            try:
+                return float(angleText)*defaultFactor
+            except ValueError:
+                print("Could not identify the units")
+                return angle
     elif angle is None or isinstance(angle, (list, tuple)):
         return angle
     else:
