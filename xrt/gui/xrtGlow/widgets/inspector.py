@@ -249,16 +249,15 @@ class InstanceInspector(qt.QDialog):
             oeLine = self.beamLine.oesDict.get(elementId)
             oeObj = oeLine[0] if oeLine is not None else None
 
-            if defBeam.endswith('lobal'):
-                axHints['yaxis']['label'] = 'z'
+            if is_screen(oeObj) or is_aperture(oeObj):
+                axHints['yaxis']['label'] = r"z"
+            elif defBeam.endswith('lobal'):
+                axHints['yaxis']['label'] = r"z"
+            elif len(realBeamKeys) > 1:
+                axHints['yaxis']['label'] = r"y"
+                plotProps['aspect'] = 'auto'
             else:
-                if is_screen(oeObj) or is_aperture(oeObj):
-                    axHints['yaxis']['label'] = r"z"
-                elif len(realBeamKeys) > 1:
-                    axHints['yaxis']['label'] = r"y"
-                    plotProps['aspect'] = 'auto'
-                else:
-                    axHints['yaxis']['label'] = r"z"
+                axHints['yaxis']['label'] = r"z"
 
             for pname in ['xaxis', 'yaxis', 'caxis']:
                 plotProps[pname] = copy.deepcopy(axDefArgs)
@@ -656,6 +655,7 @@ class ConfigurablePlotWidget(qt.QWidget):
 
         self.plotProps = plotProps
         self.liveUpdateEnabled = True
+        self.yAxisUserSet = False
         self.beamLine = beamLine
         self.dynamicPlot = plotObj[0]
 
@@ -828,6 +828,9 @@ class ConfigurablePlotWidget(qt.QWidget):
         if paramTuple[0] != self.plotId:
             return
 
+        if paramTuple[1] == 'yaxis' and paramTuple[2] in ['label', 'data']:
+            self.yAxisUserSet = True
+
         if paramTuple[2] == 'beam':
             self.set_beam(paramTuple[3])
         elif paramTuple[1].endswith('axis'):  # we only check if it's 'axis'
@@ -884,6 +887,13 @@ class ConfigurablePlotWidget(qt.QWidget):
 
         # TODO:
         # implement behavior for standalone plots
+
+        oeLine = self.beamLine.oesDict.get(self.elementId)
+        oeObj = oeLine[0] if oeLine is not None else None
+        if (is_screen(oeObj) or is_aperture(oeObj)) and \
+                not self.yAxisUserSet:
+            self.dynamicPlot.yaxis.label = r"z"
+            self.dynamicPlot.yaxis.data = 'auto'
 
     def update_beam(self, beamTag):
         currentTag = (getattr(self, 'elementId', None),
