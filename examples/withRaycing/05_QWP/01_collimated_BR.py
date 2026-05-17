@@ -176,35 +176,53 @@ def define_plots(beamLine):
     return plots
 
 
-def plot_generator(plots, beamLine):
+def plot_generator(plots=None, beamLine=None):
 #    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
 #                    None]
     polarization = '+45',
-    for polar in polarization:
-        beamLine.sources[0].polarization = polar
-        suffix = polar
-        if suffix is None:
-            suffix = 'none'
-        for plot in plots:
-            plot.xaxis.fwhmFormatStr = '%.1f'
-            plot.yaxis.fwhmFormatStr = '%.1f'
-            fileName = '{0}{1}_{2}'.format(prefix, plot.title, suffix)
-            plot.saveName = fileName + '.png'
-#            plot.persistentName = fileName + '.pickle'
-            try:
-                plot.textPanel.set_text('{0}'.format(suffix))
-            except AttributeError:
-                pass
-        if showIn3D:
-            beamLine.glowFrameName = '{0}_{1}.jpg'.format(prefix, suffix)
-        yield
+    if showIn3D:
+        sourceName = beamLine.sources[0].name
+        frames = {}
+        for iFrame, polar in enumerate(polarization):
+            suffix = polar
+            if suffix is None:
+                suffix = 'none'
+            frames['frame_{0:04d}'.format(iFrame)] = {
+                'objects': {
+                    sourceName: {'polarization': polar}},
+                'output': {
+                    'glowFrameName': '{0}_{1}.jpg'.format(prefix, suffix)}}
+        return {
+            'version': 1,
+            'kind': 'expanded_frames',
+            'frames': frames}
+
+    def _run_generator():
+        for polar in polarization:
+            beamLine.sources[0].polarization = polar
+            suffix = polar
+            if suffix is None:
+                suffix = 'none'
+            for plot in plots:
+                plot.xaxis.fwhmFormatStr = '%.1f'
+                plot.yaxis.fwhmFormatStr = '%.1f'
+                fileName = '{0}{1}_{2}'.format(prefix, plot.title, suffix)
+                plot.saveName = fileName + '.png'
+#                plot.persistentName = fileName + '.pickle'
+                try:
+                    plot.textPanel.set_text('{0}'.format(suffix))
+                except AttributeError:
+                    pass
+            yield
+    return _run_generator()
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        scan = plot_generator(beamLine=beamLine)
         beamLine.glow(scale=3e2, centerAt='QWP', startFrom=1,
-                      generator=plot_generator, generatorArgs=[[], beamLine],
+                      scan=scan,
                       colorAxis='circular_polarization_rate',
                       colorAxisLimits=[-1, 1])
         return
