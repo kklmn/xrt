@@ -444,8 +444,74 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE
 
 
+def make_glow_scan():
+    """Creates explicit xrtGlow frames for the elliptical von Hamos scan.
+
+    The scan is compiled from the same geometry formulas as the generator:
+    source divergence, analyzer pose and detector orientation are derived from
+    ``thetaDegree``, ``Rs`` and the elongation. The source modes are discrete
+    lists, so a frame dictionary is clearer than a compact ``linspace`` recipe.
+    """
+    hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
+    crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
+        crystalMaterial, crystal.hkl, hklSeparator)
+    theta = np.radians(thetaDegree)
+    sinTheta = np.sin(theta)
+    sin2Theta = np.sin(2 * theta)
+    cos2Theta = np.cos(2 * theta)
+    p = Rs / sinTheta
+    q = p * elongation if isElliptical else p
+    yDet = p + q*cos2Theta
+    zDet = q*sin2Theta
+    dxprime = 1.1 * dxCrystal / p
+    dzprime = dyCrystal * np.sin(theta) / p / 4
+    E0raw = rm.ch / (2 * crystal.d * sinTheta)
+    dTheta = crystal.get_dtheta_symmetric_Bragg(E0raw)
+    E0 = rm.ch / (2 * crystal.d * np.sin(theta + dTheta))
+    dELine = E0 * eAxisFlat/3.
+    sourceModes = [
+        ('flat', 'flat', [E0 * (1 - eAxisFlat),
+                          E0 * (1 + eAxisFlat)]),
+        ('line', 'lines', [E0]),
+        ('7lin', 'lines', [E0 + dELine*i for i in range(-3, 4)]),
+        ]
+    frames = {}
+    for isource, (sourcename, distE, energies) in enumerate(sourceModes):
+        frames['frame_{0:04d}'.format(isource)] = {
+            'objects': {
+                'GeometricSource': {
+                    'dxprime': dxprime,
+                    'dzprime': dzprime,
+                    'distE': distE,
+                    'energies': energies,
+                    },
+                analyzerName: {
+                    'surface': [crystalLabel],
+                    'material': crystal.uuid,
+                    'center': [0, p, 0],
+                    'pitch': theta,
+                    },
+                'Detector': {
+                    'center': [0, yDet, zDet],
+                    'z': [0, -sin2Theta, cos2Theta],
+                    },
+                },
+            'output': {'glowFrameName': '{0}{1}-{2}-{3}.jpg'.format(
+                analyzerName, thetaDegree, isource, sourcename)},
+            }
+    return {'version': 1, 'kind': 'timeline_recipe',
+            'expandedFrames': frames}
+
+
 def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                    plotsE=[], plotDetE=[]):
+    """Classic runner generator for the elliptical von Hamos source sequence.
+
+    The yielding version remains for ``run_ray_tracing()`` because it can use
+    plot results between frames. Glow uses ``make_glow_scan()`` instead: a
+    precomputed frame list with source-energy lists and derived spectrometer
+    geometry.
+    """
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
         crystalMaterial, crystal.hkl, hklSeparator)
@@ -551,8 +617,9 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        scan = make_glow_scan()
         beamLine.glow(scale=4, centerAt=analyzerName,
-                      generator=plot_generator, generatorArgs=[beamLine])
+                      scan=scan)
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE = \
         define_plots(beamLine)

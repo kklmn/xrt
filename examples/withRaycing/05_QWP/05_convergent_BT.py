@@ -260,6 +260,14 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare the convergent-beam QWP thickness and pitch frames.
+
+    The runner uses the yielded loop for plot labels and saved PNG names. For
+    xrtGlow we compile explicit frames: source polarization, diamond
+    thickness and QWP pitch are written together. The pitch offsets come from
+    a custom logarithmic list, so frames/lists are a better teaching example
+    than a compact ``linspace`` track.
+    """
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 

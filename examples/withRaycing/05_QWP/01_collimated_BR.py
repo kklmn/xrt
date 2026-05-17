@@ -177,6 +177,28 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare the QWP polarization scan for ray tracing or xrtGlow.
+
+    In ordinary ray tracing this function returns the classic yielding
+    generator. In xrtGlow mode it returns a scan dictionary with explicit
+    frames. The simplest equivalent JSON recipe would be a single list track::
+
+        {
+          "version": 1,
+          "kind": "timeline_recipe",
+          "output": {"glowFrameName": "polarization{index:04d}.jpg"},
+          "items": [{
+            "type": "track",
+            "target": "GeometricSource",
+            "property": "polarization",
+            "values": {"type": "list", "values": ["+45"]}
+          }]
+        }
+
+    We use a list for polarization because the values are named states rather
+    than a numeric interval. For numeric scans with uniform spacing, use the
+    shorter ``linspace`` form.
+    """
 #    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
 #                    None]
     polarization = '+45',

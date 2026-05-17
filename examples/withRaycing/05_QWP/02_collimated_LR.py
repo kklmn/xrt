@@ -178,6 +178,14 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare the QWP polarization frames for ray tracing or xrtGlow.
+
+    The classic runner receives a yielding generator so it can update plot
+    filenames and labels. In xrtGlow mode we return explicit frame patches:
+    each frame writes one source polarization and one output filename. This is
+    intentionally a list-like scan because polarization states are named
+    discrete inputs, not values to interpolate with ``linspace``.
+    """
 #    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
 #                    None]
     polarization = '+45',

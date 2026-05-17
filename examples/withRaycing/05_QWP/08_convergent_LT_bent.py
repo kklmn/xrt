@@ -248,6 +248,14 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare bent-QWP radius and pitch frames.
+
+    The runner path remains a yielding generator for plot annotations. In
+    xrtGlow mode we return explicit frame patches because the radius choices
+    and logarithmic pitch offsets are custom lists. This keeps the generated
+    scan close to hand-written code; ``linspace`` would only describe a simple
+    uniform numeric sweep.
+    """
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 

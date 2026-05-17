@@ -23,6 +23,34 @@ mirror = 'vfm'
 mirrorText = 'collimating' if mirror == 'vcm' else 'focusing'
 
 
+def make_glow_scan(beamLine):
+    """Creates a compact xrtGlow scan from the aligned mirror radius.
+
+    The radius scan starts from the currently aligned value, so the absolute
+    values are calculated in Python and stored as a ``list`` track. A plain
+    JSON ``linspace`` would be shorter but would hide that the scan range is a
+    multiplier of the aligned mirror radius.
+    """
+    targetName = 'VCM' if mirror == 'vcm' else 'VFM'
+    target = beamLine.vcm if mirror == 'vcm' else beamLine.vfm
+    values = (np.linspace(0.6, 1.4, 21) * target.R).tolist()
+    return {
+        'version': 1,
+        'kind': 'timeline_recipe',
+        'frames': len(values),
+        'output': {'glowFrameName': '{0}R{{index:04d}}.jpg'.format(mirror)},
+        'items': [{
+            'type': 'track',
+            'id': '{0}.R'.format(targetName),
+            'start': 0,
+            'duration': len(values),
+            'target': targetName,
+            'property': 'R',
+            'values': {'type': 'list', 'values': values},
+            }],
+        }
+
+
 def define_plots():
     plots = []
     if mirror == 'vcm':
@@ -61,6 +89,32 @@ def define_plots():
 
 
 def plot_generator(plots, beamLine):
+    """Classic runner generator for scanning a mirror radius.
+
+    A compact xrtGlow scan description can represent the same idea, but here
+    the absolute radius values depend on the already aligned beamline::
+
+        values = (np.linspace(0.6, 1.4, 21) * beamLine.vfm.R).tolist()
+        scan = {
+          "version": 1,
+          "kind": "timeline_recipe",
+          "output": {"glowFrameName": "vfmR{index:04d}.jpg"},
+          "items": [{
+            "type": "track",
+            "id": "VFM.R",
+            "start": 0,
+            "duration": len(values),
+            "target": "VFM",
+            "property": "R",
+            "values": {"type": "list", "values": values}
+          }]
+        }
+
+    We use ``list`` rather than ``linspace`` for this JSON-style scan because
+    the scan is derived from the aligned mirror radius. Storing absolute
+    values in the scan makes the glow frames deterministic; recomputing the
+    list in Python keeps the relationship to the current beamline explicit.
+    """
     Rs = np.linspace(0.6, 1.4, 21)
     if mirror == 'vcm':
         Rs *= beamLine.vcm.R
@@ -90,8 +144,9 @@ def main():
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     BalderBL.align_beamline(myBalder, energy=E0)
     if showIn3D:
+        scan = make_glow_scan(myBalder)
         myBalder.glow(centerAt='VFM', startFrom=2,
-                      generator=plot_generator, generatorArgs=[[], myBalder])
+                      scan=scan)
         return
     plots = define_plots()
     xrtr.run_ray_tracing(

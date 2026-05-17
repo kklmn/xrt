@@ -12,6 +12,8 @@ import BalderBL
 
 showIn3D = False
 BalderBL.showIn3D = showIn3D
+GLOW_SCAN_FILE = os.path.join(
+    os.path.dirname(__file__), 'filter_thickness_glow_scan.json')
 
 
 def run_process(beamLine):
@@ -89,6 +91,35 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, beamLine):
+    """Classic runner generator for a filter-thickness scan.
+
+    xrtGlow can run the same simple scan from JSON instead of replaying this
+    generator. This example uses ``filter_thickness_glow_scan.json`` in 3D
+    mode::
+
+        {
+          "version": 1,
+          "kind": "timeline_recipe",
+          "output": {"glowFrameName": "filter{index:04d}.jpg"},
+          "items": [{
+            "type": "track",
+            "target": "Filter1",
+            "property": "t",
+            "values": {
+              "type": "linspace",
+              "start": 0,
+              "stop": 0.4,
+              "steps": 21
+            }
+          }]
+        }
+
+    We use a JSON file here because the scan is declarative and reusable:
+    xrtGlow resolves the user-facing target name to the current UUID at run
+    time. ``linspace`` is the compact form for uniformly spaced numeric scans.
+    Use ``{"type": "list", "values": [...]}`` instead when values are not
+    evenly spaced or must be precomputed by the Python beamline script.
+    """
     thicknesses = np.linspace(0, 0.4, 21)
     for t in thicknesses:
         beamLine.filter1.t = t
@@ -108,7 +139,7 @@ def main():
     BalderBL.align_beamline(myBalder)
     if showIn3D:
         myBalder.glow(centerAt='Filter1_Entrance', startFrom=1,
-                      generator=plot_generator, generatorArgs=[[], myBalder])
+                      scan=GLOW_SCAN_FILE)
         return
     plots = define_plots(myBalder)
     xrtr.run_ray_tracing(

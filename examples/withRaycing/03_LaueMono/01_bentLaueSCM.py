@@ -103,7 +103,75 @@ def define_plots(beamLine):
     return plots
 
 
+def make_glow_scan():
+    """Returns explicit xrtGlow frames for the Laue SCM parameter grid.
+
+    The frame values are calculated from the same nested choices as the runner
+    generator: polarization, bending radius, energy and asymmetry. This is a
+    frame dictionary rather than a compact JSON ``linspace`` because each
+    frame combines several derived values such as source bandwidth and crystal
+    pitch. Lists are used for source energy ranges because they are exact
+    per-frame inputs, not interpolated scan axes.
+    """
+    frames = {}
+    frameIndex = 0
+    for polar in polarization:
+        suffix = 'none' if polar is None else polar
+        for iradius, radius in enumerate(radii):
+            if radius == np.inf:
+                radiusStr = 'inf'
+            elif radius == -np.inf:
+                radiusStr = '-inf'
+            else:
+                radiusStr = '{0:05.1f} m'.format(radius * 1e-3)
+            for ienergy, energy in enumerate(energies):
+                theta0 = np.arcsin(rm.ch / (2*siCrystal.d*energy))
+                dEE = dEOverE[iradius] * ddEOverE[ienergy]
+                eAxisMin = energy * (1 - dEE/2.)
+                eAxisMax = energy * (1 + dEE/2.)
+                for alpha in asymmetries:
+                    pitch = np.pi/2 + theta0 + alpha
+                    for distE in 'flat', :  # 'lines':
+                        if distE == 'flat':
+                            energiesValue = [eAxisMin, eAxisMax]
+                            sourcename = 'flat'
+                        else:
+                            energiesValue = [energy]
+                            sourcename = 'line'
+                        frameName = (
+                            '{0}_{1}_R={2}_{3:02.0f}keV_a={4:02.0f}deg_'
+                            '{5}.jpg').format(
+                                prefix, suffix, radiusStr, energy*1e-3,
+                                np.degrees(alpha), sourcename)
+                        frames['frame_{0:04d}'.format(frameIndex)] = {
+                            'objects': {
+                                'GeometricSource': {
+                                    'polarization': polar,
+                                    'energies': energiesValue,
+                                    'distE': distE,
+                                    },
+                                'LaueSCM': {
+                                    'R': radius,
+                                    'pitch': pitch,
+                                    'alpha': alpha,
+                                    },
+                                },
+                            'output': {'glowFrameName': frameName},
+                            }
+                        frameIndex += 1
+    return {'version': 1, 'kind': 'timeline_recipe',
+            'expandedFrames': frames}
+
+
 def plot_generator(plots, beamLine):
+    """Classic runner generator for the Laue SCM study.
+
+    ``run_ray_tracing()`` keeps this generator because plot limits, labels and
+    filenames are tied to each ``yield``. For xrtGlow, ``make_glow_scan()``
+    converts the same nested parameter grid into explicit frames. We use
+    frames here because radius, energy bandwidth, pitch and alpha change
+    together; a single ``linspace`` track would hide that relationship.
+    """
     for polar in polarization:
         beamLine.sources[0].polarization = polar
         suffix = polar
@@ -169,8 +237,9 @@ def plot_generator(plots, beamLine):
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        scan = make_glow_scan()
         beamLine.glow(scale=[30, 3, 30], centerAt='LaueSCM', startFrom=1,
-                      generator=plot_generator, generatorArgs=[[], beamLine])
+                      scan=scan)
         return
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(

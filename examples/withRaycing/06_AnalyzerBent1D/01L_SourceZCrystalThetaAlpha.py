@@ -259,8 +259,90 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
+def make_glow_scan():
+    """Creates xrtGlow frames from the active Laue analyzer table rows.
+
+    The active masks select discrete crystal/theta/source combinations. Glow
+    gets explicit frames because every selected row derives source divergence,
+    analyzer position, pitch and detector orientation from the same geometry.
+    """
+    frames = {}
+    frameIndex = 0
+    for bvs in beamV:
+        for icrystal, crystal in enumerate(crystals):
+            if not crystalsMask[icrystal]:
+                continue
+            hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
+            crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
+                crystalMaterial, crystal.hkl, hklSeparator)
+            for ithetaDegree, thetaDegree in enumerate(thetasDegree):
+                if not thetaMask[ithetaDegree]:
+                    continue
+                theta = np.radians(thetaDegree)
+                E0 = rm.ch / (2 * crystal.d * math.sin(theta))
+                for alphaDegree in alphasDegree:
+                    alpha = np.radians(alphaDegree)
+                    p = 2. * R * math.cos(theta + alpha)
+                    sin2Theta = math.sin(2 * theta)
+                    cos2Theta = math.cos(2 * theta)
+                    yDet = p + lCrystDet * cos2Theta
+                    zDet = -lCrystDet * sin2Theta
+                    pdp = 2. * R * math.cos(
+                        theta + alpha + dyCrystal/6/R)
+                    dxprime = dxCrystal / pdp
+                    dzprime = dyCrystal * math.cos(theta - alpha) / pdp
+                    eAxisFlat = eAxesFlat[ithetaDegree][icrystal]
+                    eAxisMin = E0 * (1. - eAxisFlat)
+                    eAxisMax = E0 * (1. + eAxisFlat)
+                    dELine = E0 * eAxisFlat/3.
+                    sourceModes = [
+                        ('flat', 'flat', [eAxisMin, eAxisMax]),
+                        ('line', 'lines', [E0]),
+                        ('7lin', 'lines',
+                         [E0 + dELine*i for i in range(-3, 4)]),
+                        ]
+                    for isource, (sourcename, distE, energies) in enumerate(
+                            sourceModes):
+                        frameName = '{0}-{1}-{2:.0f}-{3}-{4}.jpg'.format(
+                            bentName, crystalLabel, thetaDegree, isource,
+                            sourcename)
+                        frames['frame_{0:04d}'.format(frameIndex)] = {
+                            'objects': {
+                                'GeometricSource': {
+                                    'dz': bvs,
+                                    'dxprime': dxprime,
+                                    'dzprime': dzprime,
+                                    'distE': distE,
+                                    'energies': energies,
+                                    },
+                                analyzerName: {
+                                    'surface': [crystalLabel],
+                                    'material': crystal.uuid,
+                                    'alpha': alpha,
+                                    'center': [0, p, 0],
+                                    'pitch': math.pi/2 - theta - alpha,
+                                    },
+                                'Detector': {
+                                    'center': [0, yDet, zDet],
+                                    'z': [0, sin2Theta, cos2Theta],
+                                    },
+                                },
+                            'output': {'glowFrameName': frameName},
+                            }
+                        frameIndex += 1
+    return {'version': 1, 'kind': 'timeline_recipe',
+            'expandedFrames': frames}
+
+
 def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                    plotsE=[], plotAnE=[], plotDetE=[]):
+    """Classic runner generator for the 1D Laue analyzer table.
+
+    The runner keeps the generator because it uses measured plot widths after
+    each ``yield``. xrtGlow uses ``make_glow_scan()`` instead, expanding the
+    active masks into explicit frame dictionaries. Lists are used for the
+    source energies because each frame is a discrete source mode.
+    """
     if not showIn3D:
         fOut1 = open(crystalMaterial + bentName + '_long.txt', 'w')
         E0table = [[0 for ic in crystals] for it in thetasDegree]
@@ -419,8 +501,9 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        scan = make_glow_scan()
         beamLine.glow(scale=4, centerAt=analyzerName,
-                      generator=plot_generator, generatorArgs=[beamLine])
+                      scan=scan)
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)

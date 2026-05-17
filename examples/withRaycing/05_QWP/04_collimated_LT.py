@@ -185,6 +185,14 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare the QWP thickness and pitch frames.
+
+    ``run_ray_tracing()`` still gets a yielding generator for plot updates.
+    The xrtGlow branch returns explicit frame patches because the angular
+    offsets are logarithmically spaced and the pitch is derived from
+    ``theta0``. Lists/frames preserve those exact values; ``linspace`` would
+    only be appropriate for a simple uniformly spaced numeric scan.
+    """
 #    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
 #        None]
     polarization = '+45',
