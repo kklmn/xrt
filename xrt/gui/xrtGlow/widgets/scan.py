@@ -25,6 +25,7 @@ FRAME_SECTIONS = {'id', 'objects', 'scene', 'actions', 'output', 'vars'}
 SCENE_PROPERTY_NAMES = {
     'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec'}
 DEFAULT_OUTPUT = {'glowFrameName': 'frame{index:04d}.jpg'}
+FRAMES_CLEAN_KEY = 'framesClean'
 
 
 class _SafeFormatter(string.Formatter):
@@ -414,6 +415,9 @@ class BaseScan:
 
     def compile_frames(self):
         self.warnings = []
+        if self.description.get(FRAMES_CLEAN_KEY):
+            self.frame_count = 0
+            return OrderedDict()
         if self.expanded_frames is not None:
             frames = self._compile_expanded_frames()
         else:
@@ -763,6 +767,8 @@ class TimelineFrameListWidget(qt.QWidget):
     scanSaveRequested = qt.Signal()
     trackTimingChanged = qt.Signal(int, dict)
     trackEditRequested = qt.Signal(int)
+    framePopulateRequested = qt.Signal()
+    frameClearRequested = qt.Signal()
 
     TRACK_COL_ID = 0
     TRACK_COL_VALUE_START = 1
@@ -801,6 +807,12 @@ class TimelineFrameListWidget(qt.QWidget):
         self.currentFrameLabel = qt.QLabel('Current frame 0 / 0')
         self.outputTemplateEdit = qt.QLineEdit(
             DEFAULT_OUTPUT['glowFrameName'])
+        self.populateFramesButton = qt.QPushButton('Populate frames', self)
+        self.populateFramesButton.setToolTip(
+            'Bake the current preview into an explicit frame sequence')
+        self.clearFramesButton = qt.QPushButton('Clean frames', self)
+        self.clearFramesButton.setToolTip(
+            'Remove the explicit frame sequence and keep scan tracks')
         info_controls = qt.QHBoxLayout()
         controls.addWidget(self.addInstructionButton)
         controls.addWidget(self.deleteTrackButton)
@@ -816,6 +828,9 @@ class TimelineFrameListWidget(qt.QWidget):
         info_controls.addSpacing(12)
         info_controls.addWidget(qt.QLabel('Filename template'))
         info_controls.addWidget(self.outputTemplateEdit)
+        info_controls.addSpacing(12)
+        info_controls.addWidget(self.populateFramesButton)
+        info_controls.addWidget(self.clearFramesButton)
         info_controls.addStretch()
         layout.addLayout(info_controls)
 
@@ -857,6 +872,10 @@ class TimelineFrameListWidget(qt.QWidget):
         self.startButton.clicked.connect(self.start_scan)
         self.pauseButton.clicked.connect(self.pause_scan)
         self.stopButton.clicked.connect(self.stop_scan)
+        self.populateFramesButton.clicked.connect(
+            self.framePopulateRequested.emit)
+        self.clearFramesButton.clicked.connect(
+            self.frameClearRequested.emit)
         self.outputTemplateEdit.editingFinished.connect(
             self._output_template_edited)
 
@@ -870,6 +889,19 @@ class TimelineFrameListWidget(qt.QWidget):
         self.deleteTrackShortcut.setKey(qt.QKeySequence.Delete)
         self.deleteTrackShortcut.activated.connect(self._delete_selected_track)
         self._update_play_buttons()
+
+    def _has_frame_sequence(self):
+        description = self.scan.description
+        for key in ['expandedFrames', 'frameDict']:
+            if isinstance(description.get(key), dict) and description[key]:
+                return True
+        if isinstance(description.get('frames'), dict) and \
+                description['frames']:
+            return True
+        return any(_looks_like_frame_key(key) for key in description)
+
+    def _has_frames_to_clean(self):
+        return self._has_frame_sequence() or bool(self.frameIds)
 
     def _make_tool_button(self, icon_name, tooltip):
         button = qt.QToolButton(self)
@@ -979,6 +1011,9 @@ class TimelineFrameListWidget(qt.QWidget):
         self.pauseButton.setEnabled(has_frames and self._playing)
         self.stopButton.setEnabled(has_frames)
         self.deleteTrackButton.setEnabled(bool(self.scan.items))
+        self.populateFramesButton.setEnabled(
+            has_frames or bool(self.scan.items) or self._has_frame_sequence())
+        self.clearFramesButton.setEnabled(self._has_frames_to_clean())
 
     def _on_frame_selection_changed(self):
         if self._updatingSelection:
