@@ -658,6 +658,21 @@ class OEMainMethods(object):
             lb.elevationY[good] = tY
             lb.elevationZ[good] = tZ
 
+        txmX = txmY = txmZ = txmA = txmB = txmC = None
+        if is2ndXtal and hasattr(self, 't'):
+            txmX = np.zeros_like(lb.x)
+            txmY = np.zeros_like(lb.y)
+            txmZ = np.zeros_like(lb.z)
+            txmA = np.zeros_like(lb.a)
+            txmB = np.zeros_like(lb.b)
+            txmC = np.zeros_like(lb.c)
+            txmX[good] = -lb.x[good]
+            txmY[good] = lb.y[good]
+            txmZ[good] = lb.z[good] + self.t
+            txmA[good] = -lb.a[good]
+            txmB[good] = lb.b[good]
+            txmC[good] = lb.c[good]
+
         _lost = None
         if noIntersectionSearch:
             # lb.x[good], lb.y[good], lb.z[good] unchanged
@@ -877,8 +892,19 @@ class OEMainMethods(object):
                     lb.b[goodN] = b_out
                     lb.c[goodN] = c_out
             elif toWhere == 1:  # refract
-                refractive_index = \
-                    matSur.get_refractive_index(lb.E[goodN]).real
+                if getattr(matSur, 'needsSpatialAmplitude', False):
+                    if (not fromVacuum) and txmX is not None:
+                        riX = txmX[goodN] + txmA[goodN] * tMax[goodN]
+                        riY = txmY[goodN] + txmB[goodN] * tMax[goodN]
+                        riZ = txmZ[goodN] + txmC[goodN] * tMax[goodN]
+                    else:
+                        riX, riY, riZ = \
+                            lb.x[goodN], lb.y[goodN], lb.z[goodN]
+                    refractive_index = matSur.get_refractive_index(
+                        lb.E[goodN], riX, riY, riZ).real
+                else:
+                    refractive_index = \
+                        matSur.get_refractive_index(lb.E[goodN]).real
                 if fromVacuum:
                     n1overn2 = 1. / refractive_index
                 else:
@@ -983,6 +1009,17 @@ class OEMainMethods(object):
                             hasEfficiency = True
                     if hasEfficiency:
                         refl = matSur.get_grating_efficiency(lb, goodN)
+                    elif getattr(matSur, 'needsSpatialAmplitude', False):
+                        if (not fromVacuum) and txmX is not None:
+                            refl = matSur.get_amplitude(
+                                lb.E[goodN], beamInDotNormal, fromVacuum,
+                                x=txmX[goodN], y=txmY[goodN], z=txmZ[goodN],
+                                a=txmA[goodN], b=txmB[goodN], c=txmC[goodN],
+                                tMax=tMax[goodN])
+                        else:
+                            refl = matSur.get_amplitude(
+                                lb.E[goodN], beamInDotNormal, fromVacuum,
+                                x=lb.x[goodN], y=lb.y[goodN], z=lb.z[goodN])
                     else:
                         refl = matSur.get_amplitude(
                             lb.E[goodN], beamInDotNormal, fromVacuum)
