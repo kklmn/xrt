@@ -27,7 +27,13 @@ MATERIAL_COLORS = {
     4: "tab:red",
     5: "tab:cyan",
 }
-
+MATERIALS = {0: "Water",
+        1: "Rock Salt",
+        2: "Air",
+        3: "Kapton",
+        4: "Fluorite",
+        5: "Mylar",
+        }
 
 def load_sample(file_name):
     with h5py.File(file_name, "r") as h5:
@@ -66,7 +72,7 @@ def save_scatter(grid, xlim, ylim, zlim, output, max_points=80000, seed=11):
         ax.scatter(
             x[ix[mask]] * 1e3, z[iz[mask]] * 1e3, y[iy[mask]] * 1e3,
             s=1, alpha=0.45, color=MATERIAL_COLORS[value],
-            label="material {0}".format(value))
+            label="{0}".format(MATERIALS.get(value)))
 
     ax.set_xlabel("x (um)")
     ax.set_ylabel("z (um)")
