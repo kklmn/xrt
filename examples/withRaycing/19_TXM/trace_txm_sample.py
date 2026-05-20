@@ -221,8 +221,8 @@ def _set_screen_frame(plots, output_dir, index, parameter, value):
 
 def _set_plot_energy_limits(plots, energy):
 #    limits = [energy - 4*ENERGY_SIGMA, energy + 4*ENERGY_SIGMA]
-    limits = [min(ENERGY_VALUES)- 4*ENERGY_SIGMA,
-              max(ENERGY_VALUES)- 4*ENERGY_SIGMA]
+    limits = [min(ENERGY_VALUES) - 4*ENERGY_SIGMA,
+              max(ENERGY_VALUES) + 4*ENERGY_SIGMA]
     for plot in plots:
         plot.caxis.limits = limits
 
