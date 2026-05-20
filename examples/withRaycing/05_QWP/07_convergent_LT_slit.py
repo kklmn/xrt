@@ -244,6 +244,13 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare QWP slit-width and pitch frames.
+
+    ``run_ray_tracing()`` keeps the yielding generator for plot updates. The
+    xrtGlow branch returns explicit frames because each frame combines a slit
+    opening from a list with a selected logarithmic pitch offset. This is a
+    by-frame scan, not a uniform ``linspace`` over one property.
+    """
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 

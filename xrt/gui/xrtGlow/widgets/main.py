@@ -25,9 +25,9 @@ from .._constants import (
 from .._utils import is_source, is_oe, is_aperture, is_screen
 from .inspector import InstanceInspector
 from .scan import (
-    BaseScan, DEFAULT_OUTPUT, FRAME_SECTIONS, SCENE_PROPERTY_NAMES,
-    SCENE_TARGETS, ScanInstructionDialog, TimelineFrameListWidget,
-    default_scan_description)
+    BaseScan, DEFAULT_OUTPUT, FRAMES_CLEAN_KEY, FRAME_SECTIONS,
+    SCENE_PROPERTY_NAMES, SCENE_TARGETS, ScanInstructionDialog,
+    TimelineFrameListWidget, default_scan_description)
 from .opengl import xrtGlWidget
 
 from ...commons import qt
@@ -676,6 +676,9 @@ class xrtGlow(qt.QWidget):
         self.scanWidget.scanSaveRequested.connect(self.saveScanToJson)
         self.scanWidget.trackTimingChanged.connect(self.updateScanItemTiming)
         self.scanWidget.trackEditRequested.connect(self.editScanItem)
+        self.scanWidget.framePopulateRequested.connect(
+            self.populateScanFrames)
+        self.scanWidget.frameClearRequested.connect(self.clearScanFrames)
         layout.addWidget(self.scanWidget)
         self.scanPanel = qt.QWidget(self)
         self.scanPanel.setLayout(layout)
@@ -721,6 +724,47 @@ class xrtGlow(qt.QWidget):
         template = str(template).strip()
         self.scanDescription.setdefault('output', {})[
             'glowFrameName'] = template
+        self.refreshScanPanel()
+
+    def _scan_remove_frame_sequence(self):
+        self.scanDescription.pop('expandedFrames', None)
+        self.scanDescription.pop('frameDict', None)
+        if isinstance(self.scanDescription.get('frames'), dict):
+            self.scanDescription.pop('frames', None)
+        for key in list(self.scanDescription.keys()):
+            if re.match(r'^frame_\d+$', str(key)):
+                self.scanDescription.pop(key, None)
+
+    def populateScanFrames(self):
+        if self.scanRunning:
+            qt.QMessageBox.warning(
+                self, 'Populate frames',
+                'Stop the running scan before changing its frame sequence.')
+            return
+        self._scan_sync_output_template()
+        description = copy.deepcopy(self.scanDescription)
+        description.pop(FRAMES_CLEAN_KEY, None)
+        scan = BaseScan(description)
+        frames = scan.compile_frames()
+        if not frames:
+            return
+        self._scan_remove_frame_sequence()
+        self.scanDescription.pop(FRAMES_CLEAN_KEY, None)
+        self.scanDescription['expandedFrames'] = OrderedDict(
+            (key, self._scan_portable_frame(frame))
+            for key, frame in frames.items())
+        self.scanDescription['frames'] = len(frames)
+        self.refreshScanPanel()
+
+    def clearScanFrames(self):
+        if self.scanRunning:
+            qt.QMessageBox.warning(
+                self, 'Clean frames',
+                'Stop the running scan before changing its frame sequence.')
+            return
+        self._scan_remove_frame_sequence()
+        self.scanDescription[FRAMES_CLEAN_KEY] = True
+        self.scanDescription['frames'] = 0
         self.refreshScanPanel()
 
     def deleteScanItem(self, item_index):
@@ -3261,6 +3305,8 @@ class xrtGlow(qt.QWidget):
     def _hasScanToRun(self):
         scanDescription = getattr(self, 'scanDescription', None)
         if not isinstance(scanDescription, dict):
+            return False
+        if scanDescription.get(FRAMES_CLEAN_KEY):
             return False
         if scanDescription.get('items') or scanDescription.get('tracks'):
             return True

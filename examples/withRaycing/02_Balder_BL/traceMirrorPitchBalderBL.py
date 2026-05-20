@@ -14,6 +14,8 @@ showIn3D = False
 BalderBL.showIn3D = showIn3D
 
 stripe = 'Ir'
+GLOW_SCAN_FILE = os.path.join(
+    os.path.dirname(__file__), 'vcm_pitch_glow_scan.json')
 
 
 def run_process(beamLine, shineOnly1stSource=False):
@@ -93,6 +95,34 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, beamLine):
+    """Classic runner generator for scanning the VCM pitch.
+
+    In 3D mode this example loads ``vcm_pitch_glow_scan.json`` instead of
+    replaying the generator::
+
+        {
+          "version": 1,
+          "kind": "timeline_recipe",
+          "output": {"glowFrameName": "vcmPitch{index:04d}.jpg"},
+          "items": [{
+            "type": "track",
+            "target": "VCM",
+            "property": "pitch",
+            "values": {
+              "type": "linspace",
+              "start": "1 mrad",
+              "stop": "4 mrad",
+              "steps": 31
+            }
+          }]
+        }
+
+    JSON keeps this glow scan editable outside Python and portable across runs:
+    element names are stored in the file and resolved to UUIDs by xrtGlow.
+    ``linspace`` is used because the pitch steps are uniform. If the values
+    come from alignment code or a table of materials/energies, prefer an
+    explicit ``list`` so the JSON contains exactly the frame values to apply.
+    """
     pitches = np.linspace(1., 4., 31)
     for pitch in pitches:
         beamLine.vcm.pitch = pitch * 1e-3
@@ -115,7 +145,7 @@ def main():
     BalderBL.align_beamline(myBalder)
     if showIn3D:
         myBalder.glow(centerAt='VCM', startFrom=2,
-                      generator=plot_generator, generatorArgs=[[], myBalder])
+                      scan=GLOW_SCAN_FILE)
         return
     plots = define_plots(myBalder)
     xrtr.run_ray_tracing(

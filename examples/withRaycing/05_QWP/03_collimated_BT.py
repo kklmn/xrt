@@ -190,6 +190,18 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare the QWP thickness and pitch scan.
+
+    The xrtGlow branch below returns explicit frame patches because the frame
+    values are computed from script constants: crystal thickness, ``theta0``
+    and the logarithmic ``departureTheta`` sequence. Users can save the
+    returned dictionary as JSON and pass the file name to ``beamLine.glow``.
+
+    A compact JSON recipe is preferable for simple inputs, for example one
+    ``linspace`` track over ``QWP.pitch``. Use explicit frames or ``list``
+    values when each frame comes from Python calculations or a non-uniform
+    table.
+    """
 #    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
 #        None]
     polarization = '+45',

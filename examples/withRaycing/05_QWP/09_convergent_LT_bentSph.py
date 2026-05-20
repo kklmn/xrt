@@ -248,6 +248,14 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare spherically bent QWP radius and pitch frames.
+
+    ``run_ray_tracing()`` uses the generator form for plot labels. xrtGlow
+    receives explicit frame patches because the radius factors and pitch
+    offsets are selected lists with derived values. This by-frame form is the
+    right example for non-uniform scans; a JSON ``linspace`` is better for
+    simple min/max/steps sweeps.
+    """
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 

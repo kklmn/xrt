@@ -236,6 +236,14 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots=None, beamLine=None):
+    """Prepare the convergent Laue QWP thickness and pitch frames.
+
+    The non-glow path remains a normal yielding generator for plot updates.
+    In xrtGlow mode we return explicit frame patches because the pitch offsets
+    are a hand-built logarithmic list around ``theta0``. This by-frame form is
+    useful when values are computed or non-uniform; use ``linspace`` only for
+    simple uniform scans.
+    """
 #    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
     polarization = 'horiz',
 

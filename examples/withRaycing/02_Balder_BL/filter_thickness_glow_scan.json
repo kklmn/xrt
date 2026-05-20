@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "kind": "timeline_recipe",
+  "frames": 21,
+  "output": {
+    "glowFrameName": "filter{index:04d}.jpg"
+  },
+  "items": [
+    {
+      "type": "track",
+      "id": "Filter1.t",
+      "start": 0,
+      "duration": 21,
+      "target": "Filter1",
+      "property": "t",
+      "values": {
+        "type": "linspace",
+        "start": 0,
+        "stop": 0.4,
+        "steps": 21
+      }
+    }
+  ]
+}
