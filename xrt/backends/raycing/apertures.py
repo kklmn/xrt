@@ -443,16 +443,15 @@ class RectangularAperture(object):
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
         yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
         zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        glo.x, glo.y, glo.z = xglo, yglo, zglo
         a, b, c = glo.a, glo.b, glo.c
         aglo = a*self.x[0] + b*self.y[0] + c*self.z[0]
         bglo = a*self.x[1] + b*self.y[1] + c*self.z[1]
         cglo = a*self.x[2] + b*self.y[2] + c*self.z[2]
+        glo.a, glo.b, glo.c = aglo, bglo, cglo
 
-        retGlo = rs.Beam(copyFrom=glo) if returnBeam else glo
-        retGlo.x, retGlo.y, retGlo.z = xglo, yglo, zglo
-        retGlo.a, retGlo.b, retGlo.c = aglo, bglo, cglo
         if returnBeam:
-            return retGlo
+            return rs.Beam(copyFrom=glo)
         # if returnBeam:
         #     retGlo = rs.Beam(copyFrom=glo)
         #     raycing.virgin_local_to_global(self.bl, retGlo,
@@ -831,16 +830,15 @@ class RoundAperture(object):
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
         yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
         zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        glo.x, glo.y, glo.z = xglo, yglo, zglo
         a, b, c = glo.a, glo.b, glo.c
         aglo = a*self.x[0] + b*self.y[0] + c*self.z[0]
         bglo = a*self.x[1] + b*self.y[1] + c*self.z[1]
         cglo = a*self.x[2] + b*self.y[2] + c*self.z[2]
+        glo.a, glo.b, glo.c = aglo, bglo, cglo
 
-        retGlo = rs.Beam(copyFrom=glo) if returnBeam else glo
-        retGlo.x, retGlo.y, retGlo.z = xglo, yglo, zglo
-        retGlo.a, retGlo.b, retGlo.c = aglo, bglo, cglo
         if returnBeam:
-            return retGlo
+            return rs.Beam(copyFrom=glo)
 #        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
     def prepare_wave(self, prevOE, nrays, rw=None):
@@ -1139,7 +1137,7 @@ class PolygonalAperture(object):
     @vertices.setter
     def vertices(self, vertices):
         self._vertices = None if vertices is None else np.array(vertices,
-                                                                 copy=True)
+                                                                copy=True)
         if self._vertices is not None and hasattr(self, 'limOptX'):
             self.set_optical_limits()
 
@@ -1241,24 +1239,23 @@ class PolygonalAperture(object):
 
             return lo
 
-#    def local_to_global(self, glo, **kwargs):  # TODO: support orientation
-#        raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
+    # def local_to_global(self, glo, **kwargs):  # TODO: support orientation
+    #     raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
 
     def local_to_global(self, glo, returnBeam=False, **kwargs):
         x, y, z = glo.x, glo.y, glo.z
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
         yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
         zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        glo.x, glo.y, glo.z = xglo, yglo, zglo
         a, b, c = glo.a, glo.b, glo.c
         aglo = a*self.x[0] + b*self.y[0] + c*self.z[0]
         bglo = a*self.x[1] + b*self.y[1] + c*self.z[1]
         cglo = a*self.x[2] + b*self.y[2] + c*self.z[2]
+        glo.a, glo.b, glo.c = aglo, bglo, cglo
 
-        retGlo = rs.Beam(copyFrom=glo) if returnBeam else glo
-        retGlo.x, retGlo.y, retGlo.z = xglo, yglo, zglo
-        retGlo.a, retGlo.b, retGlo.c = aglo, bglo, cglo
         if returnBeam:
-            return retGlo
+            return rs.Beam(copyFrom=glo)
 
     def prepare_wave(self, prevOE, nrays):
         """Creates the beam arrays used in wave diffraction calculations.
@@ -1487,9 +1484,9 @@ class SiemensStar(PolygonalAperture):
 
 
         """
-        
+
         self.nSpokes = nSpokes
-#        self.r = r
+        # self.r = r
         self.phi0 = phi0
         if r:
             slitRx = r
@@ -1528,4 +1525,3 @@ class SiemensStar(PolygonalAperture):
 
         super().__init__(bl=bl, name=name, center=center, vertices=vertices,
                          x=x, z=z, alarmLevel=alarmLevel, **kwargs)
-
