@@ -14,6 +14,9 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
 .. autoclass:: Material()
    :members: __init__, get_refractive_index, get_absorption_coefficient,
              get_amplitude
+.. autoclass:: TXMMaterial()
+   :members: __init__, get_refractive_index, get_absorption_coefficient,
+             get_amplitude
 
 .. autoclass:: Multilayer()
    :members: __init__, get_t_thickness, get_b_thickness, get_amplitude,
@@ -64,7 +67,8 @@ Predefined Materials
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "6 Jul 2023"
 
-__all__ = ('Material', 'EmptyMaterial', 'Multilayer', 'GradedMultilayer',
+__all__ = ('Material', 'TXMMaterial', 'EmptyMaterial',
+           'Multilayer', 'GradedMultilayer',
            'Coated', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics', 'MonoCrystal')
@@ -74,6 +78,7 @@ __allSectioned__ = collections.OrderedDict([
     ('Crystals', ('CrystalSi', 'CrystalDiamond', 'CrystalFcc',
                   'CrystalFromCell')),  # don't include 'Crystal'
     ('Layered', ('Coated', 'Multilayer', 'GradedMultilayer')),
+    ('Volume', ('TXMMaterial',)),
     ('Advanced', ('Powder', 'CrystalHarmonics', 'MonoCrystal',
                   'EmptyMaterial'))
     ])
@@ -82,7 +87,7 @@ __allSectioned__ = collections.OrderedDict([
 from ... import raycing
 from ..physconsts import CH, CHBAR
 from .element import elementsList, Element, read_atomic_data
-from .material import Material
+from .material import Material, TXMMaterial
 from .multilayer import Multilayer, GradedMultilayer, Coated
 from .crystal import Crystal
 from .crystals_basic import (

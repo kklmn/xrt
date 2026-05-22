@@ -347,6 +347,8 @@ class BaseScan:
             for missing in range(len(frames), index + 1):
                 frames[f'frame_{missing:04d}'] = OrderedDict([
                     ('id', f'frame_{missing:04d}')])
+        if 'output' in patch and frame_id in frames:
+            frames[frame_id].pop('output', None)
         _merge_dict(frames[frame_id], patch, (frame_id,), self.warnings,
                     item_id)
 
@@ -354,16 +356,36 @@ class BaseScan:
         start = int(item.get('start', 0))
         duration = int(item.get('duration', item.get('steps', 1)))
         values = _value_sequence(item.get('values'), duration)
+        var_sequences = OrderedDict()
+        for var_name, var_spec in item.get('vars', {}).items():
+            var_sequences[str(var_name)] = _value_sequence(
+                var_spec, duration)
         item_id = item.get('id',
                            f"{item.get('target')}.{item.get('property')}")
         for offset in range(duration):
             if not values:
                 break
             value = values[min(offset, len(values) - 1)]
+            frame_index = start + offset
+            frame_id = f'frame_{frame_index:04d}'
+            variables = {'index': frame_index, 'frame': frame_id,
+                         'value': value}
+            item_var = item.get('var', item.get('variable'))
+            if item_var:
+                variables[str(item_var)] = value
+            for var_name, var_values in var_sequences.items():
+                variables[var_name] = (
+                    var_values[min(offset, len(var_values) - 1)]
+                    if var_values else None)
             patch = OrderedDict()
             _set_patch_value(patch, item.get('target'),
                              item.get('property'), value)
-            self._merge_frame(frames, start + offset, patch, item_id)
+            if 'output' in item:
+                patch['output'] = self._format_mapping(
+                    item['output'], variables)
+            if item_var or var_sequences or 'output' in item:
+                patch['vars'] = variables
+            self._merge_frame(frames, frame_index, patch, item_id)
 
     def _compile_event(self, frames, item):
         frame_index = int(item.get('frame', item.get('start', 0)))

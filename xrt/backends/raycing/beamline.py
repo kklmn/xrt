@@ -636,6 +636,20 @@ class BeamLine(object):
         sortedMatList = []
         matDeps = ['tLayer', 'bLayer', 'coating', 'substrate']
 
+        def get_table_deps(materialTable):
+            if isinstance(materialTable, str):
+                materialTable = parametrize(materialTable)
+            if not isinstance(materialTable, dict):
+                return []
+
+            deps = []
+            for material in materialTable.values():
+                if isinstance(material, str):
+                    deps.append(material)
+                elif material is not None and hasattr(material, 'uuid'):
+                    deps.append(getattr(material, 'uuid'))
+            return deps
+
         def get_dep_obj(matObj):
             deps = []
             for attr in matDeps:
@@ -645,6 +659,8 @@ class BeamLine(object):
                         deps.append(v)
                     elif v is not None and hasattr(v, 'uuid'):
                         deps.append(getattr(v, 'uuid'))
+            if hasattr(matObj, 'materialTable'):
+                deps.extend(get_table_deps(matObj.materialTable))
             return deps
 
         def get_dep_json(pDict):
@@ -655,6 +671,9 @@ class BeamLine(object):
                     v = props.get(attr)
                     if v is not None:
                         deps.append(v)
+                materialTable = props.get('materialTable')
+                if materialTable is not None:
+                    deps.extend(get_table_deps(materialTable))
             return deps
 
         def dfs(mId, mProps):
@@ -666,7 +685,7 @@ class BeamLine(object):
             visiting.add(mId)
             if mProps is not None:
                 for dep in get_dependencies(mProps):
-                    dfs(dep, None)
+                    dfs(dep, matDict.get(dep))
             visiting.remove(mId)
             visited.add(mId)
             sortedMatList.append(mId)
@@ -736,6 +755,14 @@ class BeamLine(object):
         def register_material(mat):
             if mat is None:
                 return None
+
+            if hasattr(mat, 'materialTable'):
+                for subMat in mat.materialTable.values():
+                    if subMat is not None and hasattr(subMat, 'uuid') and\
+                            subMat.uuid not in materialsDict:
+                        materialsDict[subMat.uuid] = subMat
+                        matNamesDict[subMat.name] = subMat.uuid
+                        materialsDict.move_to_end(subMat.uuid, last=False)
 
             for subAttr in ['tLayer', 'bLayer', 'coating', 'substrate']:
                 if hasattr(mat, subAttr):

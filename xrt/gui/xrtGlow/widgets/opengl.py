@@ -1325,6 +1325,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if target is not None and targetvbo is None:
             return
 
+        def bind_scalar_attributes(vbo):
+            vbo['color'].bind()
+            gl.glVertexAttribPointer(1, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(1)
+            vbo['color'].release()
+
+            vbo['intensity'].bind()
+            gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(2)
+            vbo['intensity'].release()
+
         shader.bind()
 
         beamvao.bind()
@@ -1333,6 +1344,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             targetvbo['position'].bind()
             gl.glVertexAttribPointer(3, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
             gl.glEnableVertexAttribArray(3)
+            targetvbo['position'].release()
+            bind_scalar_attributes(targetvbo)
+
+        scalarBuffers = targetBuffers if target is not None else beamBuffers
 
         modelStart = copy.deepcopy(model)
         modelEnd = copy.deepcopy(model)
@@ -1370,8 +1385,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             shader.setUniformValue(
                         "colorMinMax",
-                        qt.QVector2D(beamBuffers.get('colorMin', 0),
-                                     beamBuffers.get('colorMax', 0)))
+                        qt.QVector2D(scalarBuffers.get('colorMin', 0),
+                                     scalarBuffers.get('colorMax', 0)))
         shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
         shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
 
@@ -1384,7 +1399,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                       self.lineOpacity))
         shader.setUniformValue(
                 "iMax",
-                float(self.iMax if self.globalNorm else beamBuffers['iMax']))
+                float(self.iMax if self.globalNorm else
+                      scalarBuffers['iMax']))
 
         if target is not None and self.lineWidth > 0:
             gl.glLineWidth(min(self.lineWidth, 1.))
@@ -1446,7 +1462,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                           self.lineOpacity))
 
         if target is not None:
-            targetvbo['position'].release()
+            bind_scalar_attributes(beamvbo)
 
         beamvao.release()
 

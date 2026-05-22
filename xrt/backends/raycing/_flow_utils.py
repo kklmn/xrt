@@ -401,6 +401,16 @@ def parametrize(value):
     return value
 
 
+def _material_ref_to_uuid(material, bl=None):
+    if hasattr(material, 'uuid'):
+        return material.uuid
+    if bl is not None and isinstance(material, str):
+        matId = bl.matnamesToUUIDs.get(material)
+        if matId is not None:
+            return matId
+    return material
+
+
 def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
     kwargs = OrderedDict()
 
@@ -460,8 +470,15 @@ def create_paramdict_mat(paramDictStr, defArgs, bl=None):
     for paraname, paravalue in paramDictStr.items():
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
                 paravalue == 'bl':
-            if paraname.lower() in ['tlayer', 'blayer', 'coating',
-                                    'substrate']:
+            paranameL = paraname.lower()
+            if paranameL == 'materialtable':
+                paravalue = parametrize(paravalue)
+                if isinstance(paravalue, dict):
+                    paravalue = {
+                        key: _material_ref_to_uuid(value, bl)
+                        for key, value in paravalue.items()}
+            elif paranameL in ['tlayer', 'blayer', 'coating',
+                               'substrate']:
                 if str(paravalue) in bl.matnamesToUUIDs:
                     paravalue = bl.matnamesToUUIDs[paravalue]
 #                if is_valid_uuid(paravalue):
@@ -519,7 +536,11 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
 
                 if str(arg).lower().startswith(
                         ('material', 'coating', 'substrate', 'tlay', 'blay')):
-                    if is_sequence(realval):
+                    if arg == 'materialTable' and isinstance(realval, dict):
+                        realval = {
+                            key: _material_ref_to_uuid(value)
+                            for key, value in realval.items()}
+                    elif is_sequence(realval):
                         outv = []
                         for trval in realval:
                             if hasattr(trval, 'uuid'):
