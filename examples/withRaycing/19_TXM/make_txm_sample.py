@@ -101,17 +101,20 @@ def write_sample(file_name, n=500, width=0.05, height=0.05, thickness=0.01):
 
         h5.attrs["units"] = "mm"
         h5.attrs["shapeDescriptions"] = (
-            "1 sphere, 2 cube, 4 cylinder, 8 bar")
+            "1 sphere, 2 cube, 3 cylinder, 4 bar, 5 additional feature")
         h5.attrs["sphere"] = (
-            "center=(125, 375, 125) points, diameter=200 points")
+            "index=1, center=(125, 375, 125) points, "
+            "diameter=200 points")
         h5.attrs["cube"] = (
-            "center=(375, 125, 375) points, side=180 points")
+            "index=2, center=(375, 125, 375) points, side=180 points")
         h5.attrs["cylinder"] = (
-            "center=(250, 375, 375) points, x length=2*n/3, "
+            "index=3, center=(250, 375, 375) points, x length=2*n/3, "
             "diameter=n/8")
         h5.attrs["bar"] = (
-            "center=(250, 125, 125) points, x length=2*n/3, "
+            "index=4, center=(250, 125, 125) points, x length=2*n/3, "
             "cross-section=n/10 by n/10")
+        h5.attrs["index5"] = (
+            "index=5, additional geometry written by make_grid()")
 
     return grid
 
