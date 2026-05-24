@@ -599,7 +599,7 @@ def qualify_sampling(wave, E, goodlen):
         NAz = (c.max() - c.min()) * 0.5
     invLambda = E / CH * 1e7
     fn = (NAx**2 + NAz**2) * wave.rDiffr.mean() * invLambda  # Fresnel number
-    samplesPerZone = goodlen / fn
+    samplesPerZone = abs(goodlen / fn)
     return fn, samplesPerZone
 
 
@@ -814,7 +814,8 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
 
             norm = -wave.a*oeNormal[-3] - wave.b*oeNormal[-2] -\
                 wave.c*oeNormal[-1]
-            norm[norm < 0] = 0
+            # norm[norm < 0] = 0  # fails with reversed direction
+            norm = np.abs(norm)
             for b in (wave, glo):
                 b.Jss *= norm
                 b.Jpp *= norm
