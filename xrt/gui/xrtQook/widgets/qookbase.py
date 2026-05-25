@@ -18,12 +18,13 @@ import inspect  # analysis:ignore
 from functools import partial  # analysis:ignore
 from collections import OrderedDict  # analysis:ignore
 
-from .._constants import (redStr, isUnitsEnabled, useSlidersInTree, path_to_xrt,  # analysis:ignore
-                         myTab, withSlidersInTree, slidersInTreeScale, _DEBUG_)
+from .._constants import (redStr, isUnitsEnabled, useSlidersInTree,  # analysis:ignore
+                          path_to_xrt, myTab, withSlidersInTree,
+                          slidersInTreeScale, _DEBUG_)
 from .._objects_custom import (SphinxWorker, LevelRestrictedModel,  # analysis:ignore
-                              BusyIconWorker)
+                               BusyIconWorker)
 from .custom import (QWebView, TreeViewEx, PlotViewer,  # analysis:ignore
-                              QDockWidgetNoClose)
+                     QDockWidgetNoClose)
 
 try:
     import pyopencl as cl
@@ -331,7 +332,8 @@ class XrtQookBase(qt.QMainWindow):
         runScriptAction.triggered.connect(self.execCode)
 
         glowAction = qt.QAction(
-            qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),
+            qt.QIcon(os.path.join(self.iconsDir, 'view-refresh-5.png')),
+#            qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),
             'Enable xrtGlow Live Update',
             self)
         if gl.isOpenGL:
