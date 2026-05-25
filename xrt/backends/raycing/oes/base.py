@@ -303,6 +303,7 @@ class OE(OEMainMethods):
 
         self.isParametric = isParametric
         self.shape = shape
+        self.overEdge = kwargs['overEdge'] if 'overEdge' in kwargs else 'yMax'
 
         self.surface = surface
         self.material = material  # can be uuid
@@ -1136,25 +1137,20 @@ class OE(OEMainMethods):
                 if surfOptY is not None:
                     locState[((surfPhysY[0] <= y) & (y < surfOptY[0])) |
                              ((surfOptY[1] <= y) & (y < surfPhysY[1]))] = 2
-                if not hasattr(self, 'overEdge'):
-                    self.overEdge = 'yMax'
-                ovE = self.overEdge.lower()
-                if ovE.startswith('x') and ovE.endswith('in'):
-                    locState[x < surfPhysX[0]] = 3
-                    locState[(y < surfPhysY[0]) | (y > surfPhysY[1]) |
-                             (x > surfPhysX[1])] = self.lostNum
-                elif ovE.startswith('x') and ovE.endswith('ax'):
-                    locState[x > surfPhysX[1]] = 3
-                    locState[(y < surfPhysY[0]) | (y > surfPhysY[1]) |
-                             (x < surfPhysX[0])] = self.lostNum
-                elif ovE.startswith('y') and ovE.endswith('in'):
-                    locState[y < surfPhysY[0]] = 3
-                    locState[(x < surfPhysX[0]) | (x > surfPhysX[1]) |
-                             (y > surfPhysY[1])] = self.lostNum
-                elif ovE.startswith('y') and ovE.endswith('ax'):
-                    locState[y > surfPhysY[1]] = 3
-                    locState[(x < surfPhysX[0]) | (x > surfPhysX[1]) |
-                             (y < surfPhysY[0])] = self.lostNum
+                ovE = str(getattr(self, 'overEdge', 'yMax')).lower()
+                outside = (x < surfPhysX[0]) | (x > surfPhysX[1]) |\
+                    (y < surfPhysY[0]) | (y > surfPhysY[1])
+                over = np.zeros_like(outside)
+                if 'xmin' in ovE:
+                    over |= x < surfPhysX[0]
+                if 'xmax' in ovE:
+                    over |= x > surfPhysX[1]
+                if 'ymin' in ovE:
+                    over |= y < surfPhysY[0]
+                if 'ymax' in ovE:
+                    over |= y > surfPhysY[1]
+                locState[outside] = self.lostNum
+                locState[over] = 3
             elif self.shape.startswith('ro'):
                 centerX = (surfPhysX[0]+surfPhysX[1]) * 0.5
                 if np.isnan(centerX):

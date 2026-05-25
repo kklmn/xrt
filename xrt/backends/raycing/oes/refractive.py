@@ -32,6 +32,7 @@ class Plate(DCM):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
+        kwargs.setdefault('overEdge', '')
         DCM.__init__(self, *args, **kwargs)
         self.cryst2perpTransl = -self.t
         self.cryst2pitch = self.wedgeAngle
