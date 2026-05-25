@@ -829,17 +829,19 @@ class TimelineFrameListWidget(qt.QWidget):
         self.currentFrameLabel = qt.QLabel('Current frame 0 / 0')
         self.outputTemplateEdit = qt.QLineEdit(
             DEFAULT_OUTPUT['glowFrameName'])
-        self.populateFramesButton = qt.QPushButton('Populate frames', self)
-        self.populateFramesButton.setToolTip(
+        self.populateFramesButton = self._make_tool_button(
+            'db_update-2.png',
             'Bake the current preview into an explicit frame sequence')
-        self.clearFramesButton = qt.QPushButton('Clean frames', self)
-        self.clearFramesButton.setToolTip(
+        self.clearFramesButton = self._make_tool_button(
+            'db_remove-2.png',
             'Remove the explicit frame sequence and keep scan tracks')
         info_controls = qt.QHBoxLayout()
         controls.addWidget(self.addInstructionButton)
         controls.addWidget(self.deleteTrackButton)
         controls.addWidget(self.loadScanButton)
         controls.addWidget(self.saveScanButton)
+        controls.addWidget(self.populateFramesButton)
+        controls.addWidget(self.clearFramesButton)
         controls.addSpacing(12)
         controls.addWidget(self.startButton)
         controls.addWidget(self.pauseButton)
@@ -850,9 +852,6 @@ class TimelineFrameListWidget(qt.QWidget):
         info_controls.addSpacing(12)
         info_controls.addWidget(qt.QLabel('Filename template'))
         info_controls.addWidget(self.outputTemplateEdit)
-        info_controls.addSpacing(12)
-        info_controls.addWidget(self.populateFramesButton)
-        info_controls.addWidget(self.clearFramesButton)
         info_controls.addStretch()
         layout.addLayout(info_controls)
 
