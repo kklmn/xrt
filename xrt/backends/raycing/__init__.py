@@ -215,7 +215,7 @@ from ._sets_units import (
     renderOnlyArgSet, compoundArgs, dependentArgs, diagnosticArgs, allUnitsAng,
     allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,
-    allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams)
+    allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams, auto_unit)
 
 from .epics import to_valid_var_name, EpicsDevice
 
