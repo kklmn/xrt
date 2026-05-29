@@ -105,3 +105,28 @@ lengthUnitParams = {'center': 'mm',
                     'px': 'mm',
                     'pz': 'mm',
                     'beta': 'm'}  # WIP
+
+
+def auto_unit(lbl, unit):
+    uRet = unit
+    fRet = None
+    if lbl in ['x', 'y', 'z']:
+        if unit not in (allUnitsLenStr.keys() |
+                        allUnitsLenStr.values()):
+            uRet = 'mm'
+            fRet = 1
+    elif lbl in ["x'", "y'", "z'"]:
+        if unit not in (allUnitsAngStr.keys() |
+                        allUnitsAngStr.values()):
+            uRet = 'mrad'
+            fRet = 1e3
+    elif lbl in ['energy', 'e']:
+        if unit not in (allUnitsEnergyStr.keys() |
+                        allUnitsEnergyStr.values()):
+            uRet = 'eV'
+            fRet = 1
+    else:
+        uRet = ''
+
+    return uRet, fRet
+

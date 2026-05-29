@@ -797,6 +797,15 @@ class ConfigurablePlotWidget(qt.QWidget):
 
             row = item.row()
             paramName = str(parent.child(row, 0).text())
+            if paramName == "label":
+                unit, factor = raycing.auto_unit(paramValue, "")
+                # unit: +1; factor: +2; data: +3
+                parent.child(row+3, 1).setText("auto")
+                parent.child(row+2, 1).setText("None")
+                item.model().blockSignals(True)
+                parent.child(row+1, 1).setText(unit)
+                item.model().blockSignals(False)
+
             if paramName == 'beam':
                 paramValue = self.get_beam_tag(paramValue)
             plotParamTuple = self.plotId, objChng, paramName, paramValue

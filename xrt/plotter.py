@@ -386,10 +386,11 @@ class XYCAxis(object):
     @label.setter
     def label(self, label):
         self._label = label
+        lbl = self.label.strip("$ _").replace("'", "prime")
         self.auto_assign_unit()
         self.set_display_label()
         if hasattr(self, '_dataInit') and self._dataInit == 'auto' and\
-                self.label.strip("$ _") in raycing.allBeamFields:
+                lbl in raycing.allBeamFields:
             self.auto_assign_data()
 
     @property
@@ -421,6 +422,8 @@ class XYCAxis(object):
 
     @data.setter
     def data(self, data):
+        if isinstance(data, str):
+            data = getattr(raycing, f'get_{data}', 'auto')
         self._data = data
         self._dataInit = data
         if hasattr(self, '_label') and data == 'auto':
@@ -480,20 +483,8 @@ class XYCAxis(object):
     def auto_assign_unit(self):
         if hasattr(self, '_label') and hasattr(self, '_unit'):
             lbl = self._label.strip("$ _").lower()
-            if lbl in ['x', 'y', 'z']:
-                if self.unit not in (raycing.allUnitsLenStr.keys() |
-                                     raycing.allUnitsLenStr.values()):
-                    self.unit = 'mm'
-            elif lbl in ["x'", "y'", "z'"]:
-                if self.unit not in (raycing.allUnitsAngStr.keys() |
-                                     raycing.allUnitsAngStr.values()):
-                    self.unit = 'mrad'
-            elif lbl in ['energy', 'e']:
-                if self.unit not in (raycing.allUnitsEnergyStr.keys() |
-                                     raycing.allUnitsEnergyStr.values()):
-                    self.unit = 'eV'
-            else:
-                self.unit = ''
+            unit, factor = raycing.auto_unit(lbl, self.unit)
+            self.unit = unit
 
     def auto_assign_data(self, backend='raycing'):
         """
@@ -539,13 +530,17 @@ class XYCAxis(object):
 
     def auto_assign_factor(self, backend='raycing'):
         """
-        Automatically assign factor given the axis label."""
+        Automatically assign factor given the axis label.
+        These are two different µ's below:
+        'µ',   U+00B5 micro sign
+        'μ',   U+03BC Greek mu
+        """
         factor = 1.
         if self.unit in ['keV', ]:
             factor = 1e-3
         elif self.unit in ['mrad', 'meV']:
             factor = 1.0e3
-        elif self.unit in [r'$\mu$rad', u'µrad', u'urad']:
+        elif self.unit in [r'$\mu$rad', 'µrad', 'μrad', 'urad']:
             factor = 1.0e6
         elif self.unit in ['MeV']:
             factor = 1.0e-6
@@ -557,7 +552,7 @@ class XYCAxis(object):
                     factor = 1e-2
                 elif self.unit in ['mm', ]:
                     factor = 10.
-                elif self.unit in [r'$\mu$m', u'µm', 'um']:
+                elif self.unit in [r'$\mu$m', 'µm', 'μm', 'um']:
                     factor = 1.0e4
                 elif self.unit in ['nm', ]:
                     factor = 1.0e7
@@ -568,11 +563,11 @@ class XYCAxis(object):
                     factor = 1e-6
                 elif self.unit in ['mm', ]:
                     factor = 1.
-                elif self.unit in [r'$\mu$m', u'µm', 'um']:
+                elif self.unit in [r'$\mu$m', 'µm', 'μm', 'um']:
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6
-                elif self.unit in [u'Å', 'angstroem']:
+                elif self.unit in [u'Å', 'angstroem', 'angstrom']:
                     factor = 1.0e7
                 elif self.unit in ['pm', 'nrad']:
                     factor = 1.0e9
