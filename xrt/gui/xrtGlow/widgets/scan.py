@@ -345,8 +345,9 @@ class BaseScan:
         frame_id = f'frame_{index:04d}'
         if frame_id not in frames:
             for missing in range(len(frames), index + 1):
-                frames[f'frame_{missing:04d}'] = OrderedDict([
-                    ('id', f'frame_{missing:04d}')])
+                missing_id = f'frame_{missing:04d}'
+                frames[missing_id] = self._normalize_expanded_frame(
+                    missing_id, {}, missing)
         if 'output' in patch and frame_id in frames:
             frames[frame_id].pop('output', None)
         _merge_dict(frames[frame_id], patch, (frame_id,), self.warnings,
