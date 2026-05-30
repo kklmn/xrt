@@ -24,7 +24,7 @@ from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
     create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
     create_paramdict_fe, is_auto_align_value, get_auto_align_energy,
-    warn_deprecated_glow_v2)
+    warn_deprecated_glow_v2, normalize_string_input)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
 
@@ -1592,7 +1592,7 @@ class BeamLine(object):
         projectDict['Materials'] = matDict
         projectDict[self.name] = beamlineDict
         projectDict['FigureErrors'] = feDict
-        projectDict['flow'] = self.flowU
+        projectDict['flow'] = normalize_string_input(self.flowU)
 
         if plotsDict is not None:
             for plot, props in plotsDict.items():

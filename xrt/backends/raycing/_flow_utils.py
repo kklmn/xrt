@@ -270,6 +270,10 @@ def normalize_string_input(v):
     if isinstance(v, np.ndarray):
         return [normalize_string_input(x) for x in v.tolist()]
 
+    if isinstance(v, dict):
+        return {key: normalize_string_input(value)
+                for key, value in v.items()}
+
     if isinstance(v, list):
         return [normalize_string_input(x) for x in v]
 
@@ -346,9 +350,11 @@ def get_params(objStr):  # Returns a collection of default parameters
                                 break
                             except OSError:
                                 delay *= 5
-                                print("File read retry", retry, "delay", delay, "s")
-                                time.sleep(delay)                        
-                            
+                                print("File read retry",
+                                      retry, "delay",
+                                      delay, "s")
+                                time.sleep(delay)
+
                         kwa = re.findall(r"(?<=kwargs\.pop).*?\)",
                                          objSource,
                                          re.S)
@@ -452,17 +458,19 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
 
-    if {'opening', 'x', 'y'} & paramDictStr.keys():  # apertures compatibility hotfix
+    if {'opening', 'x', 'y'} & paramDictStr.keys():
         try:
             if 'kind' in paramDictStr:
-                kwargs['blades'] = dict(zip(parametrize(paramDictStr['kind']),
-                      parametrize(paramDictStr['opening'])))
+                kwargs['blades'] = dict(zip(
+                        parametrize(paramDictStr['kind']),
+                        parametrize(paramDictStr['opening'])))
             else:
                 kwargs['vertices'] = list(parametrize(paramDictStr['opening']))
         except Exception:
             pass
 
     return kwargs
+
 
 def create_paramdict_mat(paramDictStr, defArgs, bl=None):
     kwargs = OrderedDict()
@@ -491,6 +499,7 @@ def create_paramdict_mat(paramDictStr, defArgs, bl=None):
             kwargs[paraname] = paravalue
     return kwargs
 
+
 def create_paramdict_fe(paramDictStr, defArgs, bl=None):
     kwargs = OrderedDict()
 
@@ -504,6 +513,7 @@ def create_paramdict_fe(paramDictStr, defArgs, bl=None):
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
     return kwargs
+
 
 def get_obj_str(obj):
     return "{0}.{1}".format(obj.__module__, type(obj).__name__)
@@ -568,6 +578,8 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     else:
                         pass
 #                        print("Cannot resolve material")
+                realval = normalize_string_input(realval)
+                val = normalize_string_input(val)
                 if realval != val:
                     if isinstance(realval, tuple):
                         realval = list(realval)

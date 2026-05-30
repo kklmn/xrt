@@ -15,6 +15,7 @@ import string
 from collections import OrderedDict
 
 from ...commons import qt
+from ....backends.raycing._flow_utils import normalize_string_input
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "7 May 2026"
@@ -180,8 +181,8 @@ class BaseScan:
     """A compact timeline recipe that expands into explicit frame patches."""
 
     def __init__(self, description=None):
-        self.description = copy.deepcopy(
-            description or default_scan_description())
+        self.description = normalize_string_input(copy.deepcopy(
+            description or default_scan_description()))
         self.version = self.description.get('version', 1)
         self.kind = self.description.get('kind', 'timeline_recipe')
         self.expanded_frames = self._expanded_frames_from_description(

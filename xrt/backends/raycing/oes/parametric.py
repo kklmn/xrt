@@ -133,7 +133,7 @@ class EllipticalMirrorParam(OE):
             axis = [c-f for c, f in zip(self.center, self.f1)]
             self._p = p
         else:
-            axis = self.pAxis if self.pAxis else [0, 1, 0]
+            axis = self.pAxis if self.pAxis is not None else [0, 1, 0]
 
         norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
@@ -394,7 +394,8 @@ class ParabolicalMirrorParam(OE):
             q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
             axis = [c-f for c, f in zip(self.center, self.f2)]
         else:
-            axis = self.parabolaAxis if self.parabolaAxis else [0, 1, 0]
+            axis = self.parabolaAxis if self.parabolaAxis is not None else \
+                [0, 1, 0]
 
         norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
@@ -597,7 +598,7 @@ class HyperbolicMirrorParam(OE):
             axis = [c-f for c, f in zip(self.center, self.f1)]
             self._p = p
         else:
-            axis = self.pAxis if self.pAxis else [0, 1, 0]
+            axis = self.pAxis if self.pAxis is not None else [0, 1, 0]
 
         norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm

@@ -655,9 +655,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 meshUpdateQueued = False
                 renderUpdateQueued = False
                 if arg0.lower().startswith('center'):
-                    flow = copy.deepcopy(self.beamline.flowU)
+                    flowOrder = tuple(self.beamline.flowU)
                     self.beamline.sort_flow()
-                    if self.parent is not None and flow != self.beamline.flowU:
+                    if self.parent is not None and \
+                            flowOrder != tuple(self.beamline.flowU):
                         print("Flow updated. Updating targets")
                         self.parent.updateTargets()
 
