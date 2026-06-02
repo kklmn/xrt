@@ -45,7 +45,7 @@ ENERGY_VALUES = range(220, 650, 5)  # eV
 BINS = 512
 
 
-def make_material_table():
+def make_materials_index():
     return {
         0: xcomp.Water(kind="plate"),
         1: xcomp.RockSalt(kind="plate"),
@@ -71,7 +71,7 @@ def build_beamline(nrays=500000, energy=520.0):
     sampleThickness = float(zLimits[1] - zLimits[0])
 
     txmMaterial = rm.TXMMaterial(
-        str(SAMPLE_FILE), make_material_table(), name="indexed TXM sample")
+        str(SAMPLE_FILE), make_materials_index(), name="indexed TXM sample")
 
     beamLine.source = rsources.GeometricSource(
         bl=beamLine,

@@ -1,12 +1,14 @@
 """
 Create a synthetic indexed-volume TXM sample.
 
-The HDF5 layout is:
+The fixed HDF5 layout expected by TXMMaterial is:
 
     /indexGrid       uint8, shape (nz, ny, nx), axisOrder="zyx"
     /limits/x        [xmin, xmax] in mm
     /limits/y        [ymin, ymax] in mm
     /limits/z        [zmin, zmax] in mm
+
+The optional /indexGrid backgroundIndex attribute defaults to 0.
 """
 
 from __future__ import print_function

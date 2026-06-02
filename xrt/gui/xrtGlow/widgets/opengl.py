@@ -633,6 +633,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         arrayValue[idx] = argValue
                         argValue = arrayValue
 
+            elif arg0 == 'materialsIndex':
+                pass
             elif any(arg0.lower().startswith(v) for v in
                      ['mater', 'tlay', 'blay', 'coat', 'substrate']):
                 if not raycing.is_valid_uuid(argValue):

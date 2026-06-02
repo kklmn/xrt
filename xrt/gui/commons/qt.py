@@ -172,6 +172,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #            combo.setEditable(True)
 #            combo.setInsertPolicy(QComboBox.InsertAtCurrent)
 #            return combo
+        elif argNameL == 'materialsindex':
+            return QLineEdit(parent)
         elif any(argNameL.startswith(v) for v in
                  ['mater', 'tlay', 'blay', 'coat', 'substrate']):  # mat and bl
             currentElement = None
@@ -345,13 +347,16 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             if prtItem is None:
                 prtItem = model.invisibleRootItem()
 
-            for i in range(prtItem.rowCount()):
+            for i in range(prtItem.rowCount()):  # query siblings
                 fieldName = str(prtItem.child(i, 0).text())
                 if fieldName.lower() == 'distributions':
                     fExts = ["NPY", "NPZ"]
                     break
                 elif fieldName.lower() == 'basefe':
                     fExts = ["All"]
+                    break
+                elif fieldName.lower() == 'materialsindex':
+                    fExts = ["H5", "HDF5", "All"]
                     break
             btn = QPushButton("Open file...", parent)
             btn.clicked.connect(partial(self.openDialog, index, fExts))
@@ -453,14 +458,17 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         openDialog = QFileDialog()
         openDialog.setFileMode(QFileDialog.ExistingFile)
         openDialog.setAcceptMode(QFileDialog.AcceptOpen)
-        if 'All' in fileFormats:
-            exts = 'All'
-            mask = '*'
-        else:
-            exts = " ".join(f"{e}" for e in fileFormats)
-            mask = " ".join(f"*.{e.lower()}" for e in fileFormats)
-        openDialog.setNameFilter(
-                f"{exts} files ({mask})")
+        formats = [fmt for fmt in fileFormats if fmt.lower() != 'all']
+        filters = []
+        if formats:
+            exts = " ".join(formats)
+            mask = " ".join(f"*.{fmt.lower()}" for fmt in formats)
+            filters.append(f"{exts} files ({mask})")
+        if any(fmt.lower() == 'all' for fmt in fileFormats):
+            filters.append("All files (*)")
+        if not filters:
+            filters.append("All files (*)")
+        openDialog.setNameFilters(filters)
         if (openDialog.exec_()):
             openFileName = openDialog.selectedFiles()[0]
             if openFileName:

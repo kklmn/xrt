@@ -636,14 +636,14 @@ class BeamLine(object):
         sortedMatList = []
         matDeps = ['tLayer', 'bLayer', 'coating', 'substrate']
 
-        def get_table_deps(materialTable):
-            if isinstance(materialTable, str):
-                materialTable = parametrize(materialTable)
-            if not isinstance(materialTable, dict):
+        def get_index_deps(materialsIndex):
+            if isinstance(materialsIndex, str):
+                materialsIndex = parametrize(materialsIndex)
+            if not isinstance(materialsIndex, dict):
                 return []
 
             deps = []
-            for material in materialTable.values():
+            for material in materialsIndex.values():
                 if isinstance(material, str):
                     deps.append(material)
                 elif material is not None and hasattr(material, 'uuid'):
@@ -659,8 +659,8 @@ class BeamLine(object):
                         deps.append(v)
                     elif v is not None and hasattr(v, 'uuid'):
                         deps.append(getattr(v, 'uuid'))
-            if hasattr(matObj, 'materialTable'):
-                deps.extend(get_table_deps(matObj.materialTable))
+            if hasattr(matObj, 'materialsIndex'):
+                deps.extend(get_index_deps(matObj.materialsIndex))
             return deps
 
         def get_dep_json(pDict):
@@ -671,9 +671,9 @@ class BeamLine(object):
                     v = props.get(attr)
                     if v is not None:
                         deps.append(v)
-                materialTable = props.get('materialTable')
-                if materialTable is not None:
-                    deps.extend(get_table_deps(materialTable))
+                materialsIndex = props.get('materialsIndex')
+                if materialsIndex is not None:
+                    deps.extend(get_index_deps(materialsIndex))
             return deps
 
         def dfs(mId, mProps):
@@ -756,8 +756,8 @@ class BeamLine(object):
             if mat is None:
                 return None
 
-            if hasattr(mat, 'materialTable'):
-                for subMat in mat.materialTable.values():
+            if hasattr(mat, 'materialsIndex'):
+                for subMat in mat.materialsIndex.values():
                     if subMat is not None and hasattr(subMat, 'uuid') and\
                             subMat.uuid not in materialsDict:
                         materialsDict[subMat.uuid] = subMat

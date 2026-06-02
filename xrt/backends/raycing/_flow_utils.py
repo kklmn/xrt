@@ -479,7 +479,7 @@ def create_paramdict_mat(paramDictStr, defArgs, bl=None):
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
                 paravalue == 'bl':
             paranameL = paraname.lower()
-            if paranameL == 'materialtable':
+            if paranameL == 'materialsindex':
                 paravalue = parametrize(paravalue)
                 if isinstance(paravalue, dict):
                     paravalue = {
@@ -546,7 +546,7 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
 
                 if str(arg).lower().startswith(
                         ('material', 'coating', 'substrate', 'tlay', 'blay')):
-                    if arg == 'materialTable' and isinstance(realval, dict):
+                    if arg == 'materialsIndex' and isinstance(realval, dict):
                         realval = {
                             key: _material_ref_to_uuid(value)
                             for key, value in realval.items()}
