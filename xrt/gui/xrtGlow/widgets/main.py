@@ -3153,7 +3153,10 @@ class xrtGlow(qt.QWidget):
         if not params:
             return
 
+        sceneKeys = set(DEFAULT_SCENE_SETTINGS.keys())
         for pName, pValue in params.items():
+            if pName not in sceneKeys:
+                continue
             if pName in ['scaleVec', 'rotations',
                          'tmpOffset', 'tVec', 'coordOffset']:
                 pValue = np.array(pValue)
