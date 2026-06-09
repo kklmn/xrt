@@ -280,15 +280,19 @@ class RectangularAperture(object):
         self._set_orientation()
 
     def _sync_blades_from_legacy(self):
-        self._blades = {
-            key: value for key, value in zip(self._kind, self._opening)
-            if value is not None}
+        self._blades = self._legacy_blades_from_opening()
         if self._blades:
             self.set_optical_limits()
 
+    def _legacy_blades_from_opening(self):
+        return {
+            key: value for key, value in zip(self._kind, self._opening)
+            if value is not None}
+
     def set_optical_limits(self):
         """For plotting footprint images with the envelope aperture."""
-        for akind, d in self.blades.items():
+        self._blades = self._legacy_blades_from_opening()
+        for akind, d in self._blades.items():
             td = float(d)  # otherwise is of type 'numpy.float64' and
             # raycing.is_sequence(d) returns True which is unexpected.
             if akind.startswith('l'):
