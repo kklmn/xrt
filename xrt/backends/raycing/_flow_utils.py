@@ -530,10 +530,13 @@ def normalize_ref(value, bl=None, refKind='material', target='uuid'):
             return value
         if textValue is not None:
             uuidValue = uuid_from_name(textValue)
-            if uuidValue is None:
+            if uuidValue is None and is_valid_uuid(textValue):
                 uuidValue = textValue
+            if uuidValue is None:
+                return value
             obj = object_from_uuid(uuidValue)
-            return obj if obj is not None else value
+            return obj if obj is not None else (
+                None if bl is not None else value)
         return value
 
 

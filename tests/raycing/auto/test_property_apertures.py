@@ -82,6 +82,21 @@ class AperturePropertyRoundTripTest(unittest.TestCase):
 
         assert_equivalent(self, aperture.blades, {'left': -1., 'right': 1.})
 
+    def test_rectangular_in_place_opening_update_refreshes_blades(self):
+        aperture = rapts.RectangularAperture(
+            bl=raycing.BeamLine(), name='slit',
+            kind=['left', 'right', 'bottom', 'top'],
+            opening=[-1., 1., -2., 2.])
+
+        aperture.opening[2] = 4.
+        aperture.opening[3] = 8.
+        aperture.set_optical_limits()
+
+        assert_equivalent(
+            self, aperture.blades,
+            {'left': -1., 'right': 1., 'bottom': 4., 'top': 8.})
+        assert_equivalent(self, aperture.limOptY, [4., 8.])
+
     def test_rectangular_opening_dict_updates_blades(self):
         aperture = rapts.RectangularAperture(
             bl=raycing.BeamLine(), name='slit',

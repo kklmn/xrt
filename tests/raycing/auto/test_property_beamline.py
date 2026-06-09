@@ -11,6 +11,8 @@ if _XRT_ROOT not in sys.path:
     sys.path.insert(0, _XRT_ROOT)  # analysis:ignore
 
 from xrt.backends import raycing
+from xrt.backends.raycing import materials as rmats
+from xrt.backends.raycing import oes as roes
 
 from tests.raycing.auto._property_test_helpers import (
     assert_equivalent, assert_metadata_contract, assert_plain_roundtrip)
@@ -80,6 +82,21 @@ class BeamLinePropertyRoundTripTest(unittest.TestCase):
                 'beamNamesDict'):
             with self.subTest(attr=attr):
                 assert_equivalent(self, dict(getattr(beamline, attr)), {})
+
+
+class BeamLineReferenceIndexingTest(unittest.TestCase):
+    def test_index_materials_keeps_refractive_uuid_safe(self):
+        material = rmats.Material(
+            elements='C', quantities=[1], rho=3.52, kind='plate', name='CVD')
+        beamline = raycing.BeamLine(name='bl')
+        plate = roes.Plate(
+            bl=beamline, name='plate', material=material, t=1.)
+
+        beamline.index_materials()
+
+        self.assertEqual(plate._material, material.uuid)
+        self.assertIs(plate.material, material)
+        self.assertIs(beamline.materialsDict[material.uuid], material)
 
 
 if __name__ == '__main__':

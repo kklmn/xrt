@@ -131,6 +131,15 @@ class ReferenceNormalizationTest(unittest.TestCase):
             normalize_ref(OE_UUID, self.bl, 'oe', 'object'),
             self.bl.oe)
 
+    def test_normalize_ref_unknown_uuid_object_defaults_to_none(self):
+        unknown_uuid = '99999999-9999-4999-8999-999999999999'
+
+        self.assertIsNone(
+            normalize_ref(unknown_uuid, self.bl, 'material', 'object'))
+        self.assertEqual(
+            normalize_ref(unknown_uuid, None, 'material', 'object'),
+            unknown_uuid)
+
     def test_normalize_ref_rejects_unknown_kind_or_target(self):
         with self.assertRaises(KeyError):
             normalize_ref('Water', self.bl, 'beam', 'uuid')
