@@ -1048,7 +1048,17 @@ class BeamLine(object):
                 self.blViewer.setScanDescription(scanDescription)
             self.blViewer.show()
 
-    def explore(self, plots=None):
+    def explore(self, plots=None, block=None, closePlots=True):
+        def caller_docstring():
+            frame = inspect.currentframe()
+            try:
+                caller = (
+                    frame.f_back.f_back if frame and frame.f_back else None)
+                module = inspect.getmodule(caller)
+                return inspect.getdoc(module)
+            except Exception:
+                return None
+
         try:
             from ...gui import xrtQook as xrtqook
         except ImportError as e:
@@ -1060,12 +1070,18 @@ class BeamLine(object):
         from .run import run_process
         run_process(self)
 
+        app = xrtqook.qt.QApplication.instance()
+        if app is None:
+            app = xrtqook.qt.QApplication(sys.argv)
+
         if self.blExplorer is None:
-            app = xrtqook.qt.QApplication.instance()
-            if app is None:
-                app = xrtqook.qt.QApplication(sys.argv)
             self.index_materials()
             layout = self.export_to_json()
+
+            if not layout.get('description'):
+                description = self.description or caller_docstring()
+                if description:
+                    layout['description'] = description
 
             if plots is not None and not layout['plots']:
                 layout['plots'].update(plots)
@@ -1073,6 +1089,23 @@ class BeamLine(object):
             self.blExplorer = xrtqook.XrtQook(loadLayout=layout)
             self.blExplorer.setWindowTitle("xrtQook")
             self.blExplorer.show()
+        else:
+            self.blExplorer.show()
+
+        try:
+            loopLevel = app.thread().loopLevel()
+        except AttributeError:
+            loopLevel = 0
+
+        doBlock = block if block is not None else loopLevel == 0
+        if doBlock:
+            if closePlots:
+                try:
+                    import matplotlib.pyplot as plt
+                    plt.close('all')
+                except Exception:
+                    pass
+            return app.exec_()
 
     def export_to_glow(self, signal=None):
         def calc_weighted_center(beam):
