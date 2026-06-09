@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
+from ... import raycing
 from ..physconsts import CHBAR
 from .material import Material
 
@@ -138,16 +139,8 @@ class TXMMaterial(Material):
             for i, v in enumerate(materialsIndex)}
 
     def _resolve_materials_index_entry(self, material):
-        if not isinstance(material, str):
-            return material
-
-        if self.bl is not None:
-            matId = self.bl.matnamesToUUIDs.get(material, material)
-            resolved = self.bl.materialsDict.get(matId)
-            if resolved is not None:
-                return resolved
-
-        return material
+        return raycing.normalize_ref(
+            material, self.bl, 'material', target='object')
 
     def reload(self, strict=False):
         """

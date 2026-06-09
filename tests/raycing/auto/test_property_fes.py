@@ -100,7 +100,8 @@ class FigureErrorReferencePropertyTest(unittest.TestCase):
         fe = rfe.Waviness(name='wave', bl=bl, **FE_BASE_KWARGS)
 
         assert_reference_roundtrip(
-            self, fe, 'baseFE', bl, 'figureError', refs['base_fe'])
+            self, fe, 'baseFE', bl, 'figureError', refs['base_fe'],
+            direct_object_forms=('object', 'uuid', 'name'))
 
 
 if __name__ == '__main__':

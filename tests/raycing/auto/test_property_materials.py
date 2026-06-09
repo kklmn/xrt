@@ -77,18 +77,22 @@ class MaterialReferencePropertyTest(unittest.TestCase):
         multilayer = rmats.Multilayer(name='ml', bl=bl)
 
         assert_reference_roundtrip(
-            self, multilayer, 'tLayer', bl, 'material', refs['water'])
+            self, multilayer, 'tLayer', bl, 'material', refs['water'],
+            direct_object_forms=('object', 'uuid', 'name'))
         assert_reference_roundtrip(
-            self, multilayer, 'bLayer', bl, 'material', refs['silicon'])
+            self, multilayer, 'bLayer', bl, 'material', refs['silicon'],
+            direct_object_forms=('object', 'uuid', 'name'))
         assert_reference_roundtrip(
-            self, multilayer, 'substrate', bl, 'material', refs['water'])
+            self, multilayer, 'substrate', bl, 'material', refs['water'],
+            direct_object_forms=('object', 'uuid', 'name'))
 
     def test_coated_coating_reference_forms(self):
         bl, refs = make_reference_beamline()
         coated = rmats.Coated(name='coated', bl=bl)
 
         assert_reference_roundtrip(
-            self, coated, 'coating', bl, 'material', refs['silicon'])
+            self, coated, 'coating', bl, 'material', refs['silicon'],
+            direct_object_forms=('object', 'uuid', 'name'))
 
     def test_txm_materials_index_reference_forms(self):
         bl, refs = make_reference_beamline()

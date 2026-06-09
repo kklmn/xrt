@@ -439,22 +439,11 @@ class OE(OEMainMethods):
 
     @property
     def material(self):
-        def resolve(mat):
-            if not raycing.is_valid_uuid(mat):
-                return mat
-
-            if self.bl is None:
-                print(f"Material with UUID {mat} doesn't exist!")
-                return None
-
-            return self.bl.materialsDict.get(mat)
-
-        m = self._material
-
-        if raycing.is_sequence(m):
-            return [resolve(x) for x in m]
-        else:
-            return resolve(m)
+        material = raycing.normalize_ref(
+            self._material, self.bl, 'material', target='object')
+        if raycing.is_sequence(self._material):
+            return list(material)
+        return material
 
     @material.setter
     def material(self, material):
@@ -462,15 +451,8 @@ class OE(OEMainMethods):
 
     @property
     def figureError(self):
-        if raycing.is_valid_uuid(self._figureError):
-            if self.bl is not None:
-                fe = self.bl.fesDict.get(self._figureError)
-            else:
-                fe = None
-                print(f"Figure Error instance with UUID {self._material} doesn't exist!")
-        else:
-            fe = self._figureError
-        return fe
+        return raycing.normalize_ref(
+            self._figureError, self.bl, 'figureError', target='object')
 
     @figureError.setter
     def figureError(self, figureError):

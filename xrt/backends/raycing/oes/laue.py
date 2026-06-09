@@ -100,12 +100,8 @@ class BentLaueCylinder(OE):
         else:
             matSur = self._material
 
-        if raycing.is_valid_uuid(matSur) and self.bl is not None:
-            mat = self.bl.materialsDict.get(matSur)
-        else:
-            mat = matSur
-
-        return mat
+        return raycing.normalize_ref(
+            matSur, self.bl, 'material', target='object')
 
     @material.setter
     def material(self, material):
@@ -323,12 +319,8 @@ class BentLaue2D(OE):
         else:
             matSur = self._material
 
-        if raycing.is_valid_uuid(matSur) and self.bl is not None:
-            mat = self.bl.materialsDict.get(matSur)
-        else:
-            mat = matSur
-
-        return mat
+        return raycing.normalize_ref(
+            matSur, self.bl, 'material', target='object')
 
     @material.setter
     def material(self, material):

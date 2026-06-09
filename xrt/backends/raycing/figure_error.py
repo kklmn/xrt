@@ -89,11 +89,8 @@ class FigureErrorBase():
 
     @property
     def baseFE(self):
-        if raycing.is_valid_uuid(self._baseFE) and self.bl is not None:
-            fe = self.bl.fesDict.get(self._baseFE)
-        else:
-            fe = self._baseFE
-        return fe
+        return raycing.normalize_ref(
+            self._baseFE, self.bl, 'figureError', target='object')
 
     @baseFE.setter
     def baseFE(self, baseFE):

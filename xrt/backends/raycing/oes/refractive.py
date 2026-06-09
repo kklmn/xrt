@@ -49,18 +49,8 @@ class Plate(DCM):
 #        self.material2 = self.material
 
     def _resolve_material(self, mat):
-        if mat is None:
-            return None
-
-        if raycing.is_valid_uuid(mat) and self.bl is not None:
-            return self.bl.materialsDict.get(mat)
-
-        if isinstance(mat, str) and self.bl is not None and \
-                mat in self.bl.matnamesToUUIDs:
-            uuid = self.bl.matnamesToUUIDs.get(mat)
-            return self.bl.materialsDict.get(uuid)
-
-        return mat
+        return raycing.normalize_ref(
+            mat, self.bl, 'material', target='object')
 
     @property
     def t(self):
