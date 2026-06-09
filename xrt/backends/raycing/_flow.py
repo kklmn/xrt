@@ -255,8 +255,9 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_material", "_material2"]:
                     try:
-                        matProp = getattr(oeObj, prop, None)
-                        if matProp == objuuid:
+                        if self.bl._ref_contains(
+                                getattr(oeObj, prop, None),
+                                'material', objuuid):
                             self.startEl = oeid
                             break
                     except AttributeError:
@@ -265,6 +266,7 @@ class MessageHandler:
             if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True
         elif object_type == 'fe':
+            self.startEl = None
             feObj = self.bl.fesDict.get(objuuid)
             if feObj is not None:
                 for key, value in kwargs.items():
@@ -281,8 +283,9 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_figureError"]:
                     try:
-                        feProp = getattr(oeObj, prop, None)
-                        if feProp == objuuid:
+                        if self.bl._ref_contains(
+                                getattr(oeObj, prop, None),
+                                'figureError', objuuid):
                             self.startEl = oeid
                             break
                     except AttributeError:
@@ -315,8 +318,9 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_material", "_material2"]:
                     try:
-                        matProp = getattr(oeObj, prop, None)
-                        if matProp == objuuid:
+                        if self.bl._ref_contains(
+                                getattr(oeObj, prop, None),
+                                'material', objuuid):
                             self.startEl = oeid
                             break
                     except AttributeError:
@@ -331,8 +335,9 @@ class MessageHandler:
                 oeObj = oeLine[0]
                 for prop in ["_figureError"]:
                     try:
-                        feProp = getattr(oeObj, prop, None)
-                        if feProp == objuuid:
+                        if self.bl._ref_contains(
+                                getattr(oeObj, prop, None),
+                                'figureError', objuuid):
                             self.startEl = oeid
                             break
                     except AttributeError:

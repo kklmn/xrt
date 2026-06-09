@@ -407,14 +407,144 @@ def parametrize(value):
     return value
 
 
-def _material_ref_to_uuid(material, bl=None):
-    if hasattr(material, 'uuid'):
-        return material.uuid
-    if bl is not None and isinstance(material, str):
-        matId = bl.matnamesToUUIDs.get(material)
-        if matId is not None:
-            return matId
-    return material
+REFERENCE_KINDS = {
+    'material': {
+        'dict': 'materialsDict',
+        'names': 'matnamesToUUIDs',
+        'fields': {
+            'material', 'material2', 'tlayer', 'blayer', 'coating',
+            'substrate', 'materialsindex'},
+        'prefixes': ('material', 'tlay', 'blay', 'coat', 'substrate'),
+    },
+    'figureError': {
+        'dict': 'fesDict',
+        'names': 'fenamesToUUIDs',
+        'fields': {'figureerror', 'basefe'},
+        'prefixes': ('figureerr', 'basefe'),
+    },
+    'oe': {
+        'dict': 'oesDict',
+        'names': 'oenamesToUUIDs',
+        'objectIndex': 0,
+        'fields': set(),
+        'prefixes': tuple(),
+    },
+}
+
+def ref_kind_for_arg(argName):
+    argNameL = str(argName).lower()
+    for refKind, spec in REFERENCE_KINDS.items():
+        if argNameL in spec.get('fields', set()):
+            return refKind
+        if any(argNameL.startswith(prefix) for
+               prefix in spec.get('prefixes', tuple())):
+            return refKind
+    return None
+
+
+def normalize_ref(value, bl=None, refKind='material', target='uuid'):
+    """
+    Normalize references between GUI names, UUIDs and runtime objects.
+
+    ``value`` can be a scalar, list, tuple or dict. Containers are traversed
+    recursively; dict keys are preserved and only dict values are normalized.
+
+    ``refKind`` selects the reference registry entry, for example
+    ``'material'``, ``'figureError'`` or ``'oe'``. ``target`` can be:
+
+    * ``'display'`` or ``'name'``: object/UUID -> human-readable name.
+    * ``'uuid'``: object/name -> UUID.
+    * ``'object'``: name/UUID -> runtime object.
+
+    Unknown values are returned unchanged. This lets scripts keep literal
+    objects or already-normalized identifiers without special casing.
+    """
+    if isinstance(value, dict):
+        return {
+            key: normalize_ref(item, bl, refKind, target)
+            for key, item in value.items()}
+    if isinstance(value, list):
+        return [normalize_ref(item, bl, refKind, target) for item in value]
+    if isinstance(value, tuple):
+        return tuple(normalize_ref(item, bl, refKind, target)
+                     for item in value)
+
+    if refKind not in REFERENCE_KINDS:
+        raise KeyError('Unknown reference kind {0!r}'.format(refKind))
+
+    target = str(target).lower()
+    if target == 'name':
+        target = 'display'
+    if target not in {'display', 'uuid', 'object'}:
+        raise ValueError('Unknown reference target {0!r}'.format(target))
+
+    spec = REFERENCE_KINDS[refKind]
+    if value is None:
+        return None
+
+    def string_value(ref):
+        if isinstance(ref, bytes):
+            return ref.decode()
+        return ref if isinstance(ref, str) else None
+
+    def object_from_uuid(ref):
+        if bl is None:
+            return None
+        refDict = getattr(bl, spec['dict'], {})
+        obj = refDict.get(ref)
+        objIndex = spec.get('objectIndex')
+        if obj is not None and objIndex is not None:
+            try:
+                obj = obj[objIndex]
+            except (IndexError, TypeError):
+                pass
+        return obj
+
+    def uuid_from_name(ref):
+        if bl is None:
+            return None
+        namesDict = getattr(bl, spec['names'], {})
+        return namesDict.get(ref)
+
+    textValue = string_value(value)
+
+    if target == 'display':
+        if hasattr(value, 'name'):
+            return value.name
+        if textValue is not None:
+            obj = object_from_uuid(textValue)
+            if obj is not None and hasattr(obj, 'name'):
+                return obj.name
+        return value
+
+    if target == 'uuid':
+        if hasattr(value, 'uuid'):
+            return value.uuid
+        if textValue is not None:
+            uuidValue = uuid_from_name(textValue)
+            return uuidValue if uuidValue is not None else value
+        return value
+
+    if target == 'object':
+        if hasattr(value, 'uuid'):
+            return value
+        if textValue is not None:
+            uuidValue = uuid_from_name(textValue)
+            if uuidValue is None and is_valid_uuid(textValue):
+                uuidValue = textValue
+            if uuidValue is None:
+                return value
+            obj = object_from_uuid(uuidValue)
+            return obj if obj is not None else (
+                None if bl is not None else value)
+        return value
+
+
+def _parametrize_reference(value, bl=None, refKind='material'):
+    if not (isinstance(value, basestring) and is_valid_uuid(value)):
+        value = parametrize(value)
+    return normalize_ref(value, bl, refKind, target='uuid')
+
 
 
 def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
@@ -438,24 +568,15 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                     [get_init_val(c.strip())
                      for c in str.split(
                      paravalue, ',')]
-            elif paraname.startswith('material'):
-                if str(paravalue) in beamLine.matnamesToUUIDs:
-                    paravalue = beamLine.matnamesToUUIDs[paravalue]
-                elif is_valid_uuid(paravalue):
-                    pass
-                else:  # tuple or list
-                    paravalue = paravalue.strip('[]() ')
-                    paravalue =\
-                        [get_init_val(c.strip())
-                         for c in str.split(
-                         paravalue, ',')]
-            elif paraname.startswith('figure'):
-                if str(paravalue) in beamLine.fenamesToUUIDs:
-                    paravalue = beamLine.fenamesToUUIDs[paravalue]
             elif paraname == 'bl':
                 paravalue = beamLine
             else:
-                paravalue = parametrize(paravalue)
+                refKind = ref_kind_for_arg(paraname)
+                if refKind is not None:
+                    paravalue = _parametrize_reference(
+                        paravalue, beamLine, refKind)
+                else:
+                    paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
 
     if {'opening', 'x', 'y'} & paramDictStr.keys():
@@ -478,22 +599,9 @@ def create_paramdict_mat(paramDictStr, defArgs, bl=None):
     for paraname, paravalue in paramDictStr.items():
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
                 paravalue == 'bl':
-            paranameL = paraname.lower()
-            if paranameL == 'materialsindex':
-                paravalue = parametrize(paravalue)
-                if isinstance(paravalue, dict):
-                    paravalue = {
-                        key: _material_ref_to_uuid(value, bl)
-                        for key, value in paravalue.items()}
-            elif paranameL in ['tlayer', 'blayer', 'coating',
-                               'substrate']:
-                if str(paravalue) in bl.matnamesToUUIDs:
-                    paravalue = bl.matnamesToUUIDs[paravalue]
-#                if is_valid_uuid(paravalue):
-#                    paravalue = bl.materialsDict[paravalue]
-#                elif paravalue in bl.matnamesToUUIDs:
-#                    paravalue = bl.materialsDict.get(
-#                            bl.matnamesToUUIDs[paravalue])
+            refKind = ref_kind_for_arg(paraname)
+            if refKind is not None:
+                paravalue = _parametrize_reference(paravalue, bl, refKind)
             else:
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
@@ -506,9 +614,9 @@ def create_paramdict_fe(paramDictStr, defArgs, bl=None):
     for paraname, paravalue in paramDictStr.items():
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
                 paravalue == 'bl':
-            if paraname.lower() in ['basefe']:
-                if str(paravalue) in bl.fenamesToUUIDs:
-                    paravalue = bl.fenamesToUUIDs[paravalue]
+            refKind = ref_kind_for_arg(paraname)
+            if refKind is not None:
+                paravalue = _parametrize_reference(paravalue, bl, refKind)
             else:
                 paravalue = parametrize(paravalue)
             kwargs[paraname] = paravalue
@@ -526,6 +634,17 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
         globRev = {str(v): k for k, v in globals().items()}
 
     defArgs = dict(get_params(get_obj_str(oeObj)))
+    bl = getattr(oeObj, 'bl', None)
+
+    def get_global_name(value):
+        if isinstance(value, dict):
+            return {key: get_global_name(item)
+                    for key, item in value.items()}
+        if isinstance(value, list):
+            return [get_global_name(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(get_global_name(item) for item in value)
+        return globRev.get(str(value), value)
 
     initArgs = {}
     for arg, val in defArgs.items():
@@ -544,40 +663,13 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                 if arg == 'elements':
                     realval = [x.name for x in realval]
 
-                if str(arg).lower().startswith(
-                        ('material', 'coating', 'substrate', 'tlay', 'blay')):
-                    if arg == 'materialsIndex' and isinstance(realval, dict):
-                        realval = {
-                            key: _material_ref_to_uuid(value)
-                            for key, value in realval.items()}
-                    elif is_sequence(realval):
-                        outv = []
-                        for trval in realval:
-                            if hasattr(trval, 'uuid'):
-                                trval = trval.uuid
-                            elif needRevG:
-                                trval = globRev[str(trval)]
-                            else:  # already uuid or something is wrong
-                                pass
-                            outv.append(trval)
-                        realval = outv
-                    else:
-                        if hasattr(realval, 'uuid'):
-                            realval = realval.uuid
-                        elif needRevG:
-                            realval = globRev[str(realval)]
-                        else:  # already uuid or something is wrong
-                            pass
+                refKind = ref_kind_for_arg(arg)
+                if refKind is not None:
+                    realval = normalize_ref(
+                        realval, bl, refKind, target='uuid')
+                    if needRevG:
+                        realval = get_global_name(realval)
 
-                if str(arg).lower().startswith(
-                        ('figureerr', 'basefe')):
-                    if hasattr(realval, 'uuid'):
-                        realval = realval.uuid
-                    elif needRevG:
-                        realval = globRev[str(realval)]
-                    else:
-                        pass
-#                        print("Cannot resolve material")
                 realval = normalize_string_input(realval)
                 val = normalize_string_input(val)
                 if realval != val:

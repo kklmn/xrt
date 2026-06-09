@@ -57,6 +57,16 @@ from matplotlib.ticker import MaxNLocator
 from . import runner
 # from runner import runCardVals, runCardProcs
 from .backends import raycing
+
+_RAYCING_BEAM_FIELDS = {field.lower(): field for field in raycing.allBeamFields}
+
+
+def _label_tokens(label):
+    for char in "$_\\'\".,;:()[]{}<>+-=*/|":
+        label = label.replace(char, ' ')
+    return set(label.split())
+
+
 try:
     from .gui.commons import qt
     hasQt = True
@@ -271,23 +281,38 @@ class XYCAxis(object):
                 polarization properties. Alternatively, you may pass an array
                 of the length of the beam arrays.
 
+                .. note::
+
+                    In Shadow, x', y' and z' are stored ray direction
+                    components (often described as direction or divergence).
+                    Their direct raycing analogs are a, b and c. For
+                    convenience and historical compatibility, raycing
+                    auto-assigns x' and z' to the slopes a/b and c/b, i.e. to
+                    raycing.get_xprime and raycing.get_zprime. The label y' has
+                    no analogous slope definition because b is the reference
+                    direction; it is therefore auto-assigned to raycing.get_b.
+
                 =======  ===================================================
                  x       raycing.get_x
                  y       raycing.get_y
                  z       raycing.get_z
-                 x'      raycing.get_xprime
-                 z'      raycing.get_zprime
+                 x'      raycing.get_xprime = a/b
+                 y'      raycing.get_b
+                 z'      raycing.get_zprime = c/b
                  energy  raycing.get_energy
                 =======  ===================================================
 
             If *data* = 'auto' then *label* is searched for "x", "y", "z",
-            "x'", "z'", "energy" and if one of them is found, *data* is
-            assigned to the listed above index or function. In raycing backend
-            the automatic assignment is additionally implemented for *label*
-            containing 'degree (for degree of polarization)', 'circular' (for
-            circular polarization rate), 'path', 'incid' or 'theta' (for
-            incident angle), 'order' (for grating diffraction order), 's',
-            'phi', 'r' or 's' (for parametric representation of OE).
+            "x'", "y'", "z'", "energy" and if one of them is found, *data* is
+            assigned to the listed above index or function. In raycing backend,
+            automatic assignment first checks whether a corresponding
+            ``get_<label>`` function exists and then falls back to matching
+            labels containing 'degree (for degree of polarization)', 'circular'
+            (for circular polarization rate), 'polarization' and 'angle' (for
+            angle of polarization ellipse), 'ellipse' or 'axes' (for ratio of
+            ellipse axes), 'phase', 'path', 'incid' or 'theta' (for incident
+            angle), 'order' (for grating diffraction order), and standalone
+            's', 'phi', 'r', 'a' or 'b'.
 
         *limits*: 2-list of floats [min, max]
             Axis limits. If None, the *limits* are taken as ``np.min`` and
@@ -506,6 +531,11 @@ class XYCAxis(object):
                 data = 5
             elif backend == 'raycing':
                 data = raycing.get_zprime
+        elif lbl in ["y'", "yprime"]:
+            if backend == 'shadow':
+                data = 4
+            elif backend == 'raycing':
+                data = raycing.get_b
         elif lbl in ["x"]:
             if backend == 'shadow':
                 data = 0
@@ -521,8 +551,36 @@ class XYCAxis(object):
                 data = 2
             elif backend == 'raycing':
                 data = raycing.get_z
-        elif lbl in raycing.allBeamFields:
-            data = getattr(raycing, 'get_{}'.format(lbl))
+        elif backend == 'raycing' and lbl in _RAYCING_BEAM_FIELDS:
+            data = getattr(raycing, 'get_{}'.format(
+                _RAYCING_BEAM_FIELDS[lbl]))
+        elif backend == 'raycing' and "degree" in lbl:
+            data = raycing.get_polarization_degree
+        elif backend == 'raycing' and "circular" in lbl:
+            data = raycing.get_circular_polarization_rate
+        elif backend == 'raycing' and "polarization" in lbl and\
+                "angle" in lbl:
+            data = raycing.get_polarization_psi
+        elif backend == 'raycing' and ("ellipse" in lbl or "axes" in lbl):
+            data = raycing.get_ratio_ellipse_axes
+        elif backend == 'raycing' and "phase" in lbl:
+            data = raycing.get_phase_shift
+        elif backend == 'raycing' and ("incid" in lbl or "theta" in lbl):
+            data = raycing.get_incidence_angle
+        elif backend == 'raycing' and "phi" in lbl:
+            data = raycing.get_phi
+        elif backend == 'raycing' and "order" in lbl:
+            data = raycing.get_order
+        elif backend == 'raycing' and "path" in lbl:
+            data = raycing.get_path
+        elif backend == 'raycing' and "s" in _label_tokens(lbl):
+            data = raycing.get_s
+        elif backend == 'raycing' and "r" in _label_tokens(lbl):
+            data = raycing.get_r
+        elif backend == 'raycing' and "a" in _label_tokens(lbl):
+            data = raycing.get_a
+        elif backend == 'raycing' and "b" in _label_tokens(lbl):
+            data = raycing.get_b
         else:
             raise ValueError(
                 'cannot auto-assign data for axis "{0}"!'.format(self.label))

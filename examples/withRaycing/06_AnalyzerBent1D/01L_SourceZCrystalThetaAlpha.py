@@ -14,8 +14,11 @@ switch off/on the corresponding angles or crystals. The source sizes, axis
 limits, number of iterations etc. were determined experimentally and are given
 by lists in the upper part of the script. The outputs are the plots and a text
 file with the resulted energy resolutions."""
+
 __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
+
+
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import math
 import numpy as np
@@ -507,8 +510,8 @@ def main():
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)
-    args = [plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE,
-            beamLine]
+    args = [beamLine, plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE,
+            plotDetE]
     xrtr.run_ray_tracing(
         plots, generator=plot_generator, generatorArgs=args,
         beamLine=beamLine, processes='half')

@@ -163,11 +163,8 @@ class Multilayer(object):
 
     @property
     def tLayer(self):
-        if raycing.is_valid_uuid(self._tLayer) and self.bl is not None:
-            mat = self.bl.materialsDict.get(self._tLayer)
-        else:
-            mat = self._tLayer
-        return mat
+        return raycing.normalize_ref(
+            self._tLayer, self.bl, 'material', target='object')
 
     @tLayer.setter
     def tLayer(self, tLayer):
@@ -175,11 +172,8 @@ class Multilayer(object):
 
     @property
     def bLayer(self):
-        if raycing.is_valid_uuid(self._bLayer) and self.bl is not None:
-            mat = self.bl.materialsDict.get(self._bLayer)
-        else:
-            mat = self._bLayer
-        return mat
+        return raycing.normalize_ref(
+            self._bLayer, self.bl, 'material', target='object')
 
     @bLayer.setter
     def bLayer(self, bLayer):
@@ -187,11 +181,8 @@ class Multilayer(object):
 
     @property
     def substrate(self):
-        if raycing.is_valid_uuid(self._substrate) and self.bl is not None:
-            mat = self.bl.materialsDict.get(self._substrate)
-        else:
-            mat = self._substrate
-        return mat
+        return raycing.normalize_ref(
+            self._substrate, self.bl, 'material', target='object')
 
     @substrate.setter
     def substrate(self, substrate):

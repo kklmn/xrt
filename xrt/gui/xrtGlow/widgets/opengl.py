@@ -633,19 +633,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         arrayValue[idx] = argValue
                         argValue = arrayValue
 
-            elif arg0 == 'materialsIndex':
-                pass
-            elif any(arg0.lower().startswith(v) for v in
-                     ['mater', 'tlay', 'blay', 'coat', 'substrate']):
-                if not raycing.is_valid_uuid(argValue):
-                    # objects need material uuid rather than name
-                    argValue = self.beamline.matnamesToUUIDs.get(argValue)
-                    kwargs[arg0] = argValue
-            elif any(arg0.lower().startswith(v) for v in
-                     ['figureerr', 'basefe']):
-                if not raycing.is_valid_uuid(argValue):
-                    # objects need fe uuid rather than name
-                    argValue = self.beamline.fenamesToUUIDs.get(argValue)
+            else:
+                refKind = raycing.ref_kind_for_arg(arg0)
+                if refKind is not None:
+                    argValue = raycing.normalize_ref(
+                        argValue, self.beamline, refKind, target='uuid')
                     kwargs[arg0] = argValue
 
             # updating local beamline tree here

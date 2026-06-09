@@ -100,21 +100,24 @@ class OEReferencePropertyTest(unittest.TestCase):
         oe = roes.OE(bl=bl, name='oe')
 
         assert_reference_roundtrip(
-            self, oe, 'material', bl, 'material', refs['water'])
+            self, oe, 'material', bl, 'material', refs['water'],
+            direct_object_forms=('object', 'uuid', 'name'))
 
     def test_oe_figure_error_reference_forms(self):
         bl, refs = make_reference_beamline()
         oe = roes.OE(bl=bl, name='oe')
 
         assert_reference_roundtrip(
-            self, oe, 'figureError', bl, 'figureError', refs['bump'])
+            self, oe, 'figureError', bl, 'figureError', refs['bump'],
+            direct_object_forms=('object', 'uuid', 'name'))
 
     def test_dcm_material2_reference_forms(self):
         bl, refs = make_reference_beamline()
         dcm = roes.DCM(bl=bl, name='dcm')
 
         assert_reference_roundtrip(
-            self, dcm, 'material2', bl, 'material', refs['silicon'])
+            self, dcm, 'material2', bl, 'material', refs['silicon'],
+            direct_object_forms=('object', 'uuid', 'name'))
 
     def test_plate_material_reference_forms(self):
         bl, refs = make_reference_beamline()

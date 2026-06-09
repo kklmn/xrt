@@ -163,8 +163,8 @@ def define_plots(beamLine, prefix, suffix):
         caxis='category', title=beamLine.BSBlock.name, oe=beamLine.BSBlock)
     add_plot(plots, plot, prefix, suffix)
 
-    op = beamLine.slitAfterDCM.opening
-    cz = (op[2] + op[3]) / 2
+    blades = beamLine.slitAfterDCM.blades
+    cz = (blades['bottom'] + blades['top']) / 2
     plot = xrtp.XYCPlot(
         'beamSlitAfterDCMlocal', (1, 2, beamLine.slitAfterDCM.lostNum),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-8, 8]),
@@ -180,8 +180,8 @@ def define_plots(beamLine, prefix, suffix):
         caxis='category', title='VFM_footprint', oe=beamLine.vfm)
     add_plot(plots, plot, prefix, suffix)
 
-    op = beamLine.slitAfterVFM.opening
-    cz = (op[2] + op[3]) / 2
+    blades = beamLine.slitAfterVFM.blades
+    cz = (blades['bottom'] + blades['top']) / 2
     plot = xrtp.XYCPlot(
         'beamSlitAfterVFMlocal', (1, 2, beamLine.slitAfterVFM.lostNum),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-8, 8]),
@@ -197,9 +197,9 @@ def define_plots(beamLine, prefix, suffix):
         caxis='category', title=beamLine.ohPS.name, oe=beamLine.ohPS)
     add_plot(plots, plot, prefix, suffix)
 #
-    op = beamLine.slitEH.opening
-    cz = (op[2] + op[3]) / 2
-    dx = (op[1] - op[0]) / 2
+    blades = beamLine.slitEH.blades
+    cz = (blades['bottom'] + blades['top']) / 2
+    dx = (blades['right'] - blades['left']) / 2
     plot = xrtp.XYCPlot(
         'beamSlitEHLocal', (1, 2, beamLine.slitEH.lostNum),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-dx, dx]),

@@ -24,7 +24,7 @@ from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
     create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
     create_paramdict_fe, is_auto_align_value, get_auto_align_energy,
-    warn_deprecated_glow_v2, normalize_string_input)
+    warn_deprecated_glow_v2, normalize_string_input, normalize_ref)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
 
@@ -630,6 +630,45 @@ class BeamLine(object):
             if oeid not in seen:
                 yield oeid, oeLine
 
+    def _normalized_ref_values(self, value, refKind):
+        value = normalize_ref(value, self, refKind, target='uuid')
+        if isinstance(value, dict):
+            values = value.values()
+        elif is_sequence(value):
+            values = value
+        else:
+            values = (value,)
+        return [v for v in values if v is not None and str(v) != 'None']
+
+    def _clear_ref_value(self, value, refKind, refId):
+        normValue = normalize_ref(value, self, refKind, target='uuid')
+        if isinstance(normValue, dict):
+            newValue = value.copy() if hasattr(value, 'copy') else dict(value)
+            changed = False
+            for key, item in normValue.items():
+                if item == refId:
+                    newValue[key] = None
+                    changed = True
+            return newValue if changed else value
+
+        if is_sequence(normValue):
+            changed = False
+            newItems = []
+            for oldItem, normItem in zip(value, normValue):
+                if normItem == refId:
+                    newItems.append(None)
+                    changed = True
+                else:
+                    newItems.append(oldItem)
+            if not changed:
+                return value
+            return tuple(newItems) if isinstance(value, tuple) else newItems
+
+        return None if normValue == refId else value
+
+    def _ref_contains(self, value, refKind, refId):
+        return refId in self._normalized_ref_values(value, refKind)
+
     def sort_materials(self, matDict=None, fromJSON=False):
         visited = set()
         visiting = set()
@@ -642,23 +681,14 @@ class BeamLine(object):
             if not isinstance(materialsIndex, dict):
                 return []
 
-            deps = []
-            for material in materialsIndex.values():
-                if isinstance(material, str):
-                    deps.append(material)
-                elif material is not None and hasattr(material, 'uuid'):
-                    deps.append(getattr(material, 'uuid'))
-            return deps
+            return self._normalized_ref_values(materialsIndex, 'material')
 
         def get_dep_obj(matObj):
             deps = []
             for attr in matDeps:
                 if hasattr(matObj, attr):
-                    v = getattr(matObj, attr)
-                    if is_valid_uuid(v):
-                        deps.append(v)
-                    elif v is not None and hasattr(v, 'uuid'):
-                        deps.append(getattr(v, 'uuid'))
+                    deps.extend(self._normalized_ref_values(
+                        getattr(matObj, attr), 'material'))
             if hasattr(matObj, 'materialsIndex'):
                 deps.extend(get_index_deps(matObj.materialsIndex))
             return deps
@@ -670,7 +700,8 @@ class BeamLine(object):
                 for attr in matDeps:
                     v = props.get(attr)
                     if v is not None:
-                        deps.append(v)
+                        deps.extend(self._normalized_ref_values(
+                            v, 'material'))
                 materialsIndex = props.get('materialsIndex')
                 if materialsIndex is not None:
                     deps.extend(get_index_deps(materialsIndex))
@@ -710,11 +741,8 @@ class BeamLine(object):
             deps = []
             for attr in feDeps:
                 if hasattr(feObj, attr):
-                    v = getattr(feObj, attr)
-                    if is_valid_uuid(v):
-                        deps.append(v)
-                    elif v is not None and hasattr(v, 'uuid'):
-                        deps.append(getattr(v, 'uuid'))
+                    deps.extend(self._normalized_ref_values(
+                        getattr(feObj, attr), 'figureError'))
             return deps
 
         def get_dep_json(pDict):
@@ -724,7 +752,8 @@ class BeamLine(object):
                 for attr in feDeps:
                     v = props.get(attr)
                     if v is not None:
-                        deps.append(v)
+                        deps.extend(self._normalized_ref_values(
+                            v, 'figureError'))
             return deps
 
         def dfs(mId, mProps):
@@ -736,7 +765,7 @@ class BeamLine(object):
             visiting.add(mId)
             if mProps is not None:
                 for dep in get_dependencies(mProps):
-                    dfs(dep, None)
+                    dfs(dep, feDict.get(dep))
             visiting.remove(mId)
             visited.add(mId)
             sortedFEList.append(mId)
@@ -756,30 +785,57 @@ class BeamLine(object):
             if mat is None:
                 return None
 
+            originalMat = mat
+            mat = normalize_ref(mat, self, 'material', target='object')
+            if mat is None:
+                return None
+            if not hasattr(mat, 'uuid'):
+                return normalize_ref(
+                    originalMat, self, 'material', target='uuid')
+
             if hasattr(mat, 'materialsIndex'):
                 for subMat in mat.materialsIndex.values():
-                    if subMat is not None and hasattr(subMat, 'uuid') and\
-                            subMat.uuid not in materialsDict:
-                        materialsDict[subMat.uuid] = subMat
-                        matNamesDict[subMat.name] = subMat.uuid
-                        materialsDict.move_to_end(subMat.uuid, last=False)
+                    subMatId = register_material(subMat)
+                    if subMatId in materialsDict:
+                        materialsDict.move_to_end(subMatId, last=False)
 
             for subAttr in ['tLayer', 'bLayer', 'coating', 'substrate']:
                 if hasattr(mat, subAttr):
                     subMat = getattr(mat, subAttr)
-
-                    if subMat is not None and hasattr(subMat, 'uuid'):
-                        if subMat.uuid not in materialsDict:
-                            materialsDict[subMat.uuid] = subMat
-                            matNamesDict[subMat.name] = subMat.uuid
-                            materialsDict.move_to_end(subMat.uuid, last=False)
-                        setattr(mat, subAttr, subMat.uuid)
+                    subMatId = register_material(subMat)
+                    if subMatId is not None:
+                        if subMatId in materialsDict:
+                            materialsDict.move_to_end(subMatId, last=False)
+                        setattr(mat, subAttr, subMatId)
 
             if mat.uuid not in materialsDict:
                 materialsDict[mat.uuid] = mat
                 matNamesDict[mat.name] = mat.uuid
 
             return mat.uuid
+
+        def register_fe(fe):
+            if fe is None:
+                return None
+
+            originalFE = fe
+            fe = normalize_ref(fe, self, 'figureError', target='object')
+            if fe is None:
+                return None
+            if not hasattr(fe, 'uuid'):
+                return normalize_ref(
+                    originalFE, self, 'figureError', target='uuid')
+
+            if hasattr(fe, 'baseFE'):
+                subFEId = register_fe(getattr(fe, 'baseFE', None))
+                if subFEId is not None:
+                    setattr(fe, 'baseFE', subFEId)
+
+            if fe.uuid not in feDict:
+                feDict[fe.uuid] = fe
+                feNamesDict[fe.name] = fe.uuid
+
+            return fe.uuid
 
         materialsDict = OrderedDict()
         matNamesDict = OrderedDict()
@@ -821,23 +877,8 @@ class BeamLine(object):
 
             for attr in ['figureError']:
                 if hasattr(oe, attr):
-                    newFE = getattr(oe, attr, None)
-                    if hasattr(newFE, 'uuid') and newFE.uuid not in feDict:
-                        feDict[newFE.uuid] = newFE
-                        feNamesDict[newFE.name] = newFE.uuid
-                        setattr(oe, 'figureError', newFE.uuid)
-
-                    for subAttr in ['baseFE']:
-                        if hasattr(newFE, subAttr):
-                            subFE = getattr(newFE, subAttr, None)
-                            if hasattr(subFE, 'uuid') and\
-                                    subFE.uuid not in feDict:
-                                feDict[subFE.uuid] = subFE
-                                feNamesDict[subFE.name] = subFE.uuid
-                                feDict.move_to_end(
-                                        subFE.uuid,
-                                        last=False)
-                                setattr(subFE, 'baseFE', subFE.uuid)
+                    newFE = register_fe(getattr(oe, attr, None))
+                    setattr(oe, attr, newFE)
 
         self.materialsDict.update(materialsDict)
         # self.matnamesToUUIDs.update(matNamesDict)
@@ -1285,45 +1326,66 @@ class BeamLine(object):
             del self.oesDict[elid]
 
     def delete_mat_by_id(self, matid):
-        for matname, tmpid in self.matnamesToUUIDs.items():
-            if tmpid == matid:
-                del self.matnamesToUUIDs[matname]
-                break
+        if matid not in self.materialsDict:
+            for matname, tmpid in list(self.matnamesToUUIDs.items()):
+                if tmpid == matid:
+                    del self.matnamesToUUIDs[matname]
+                    break
+            return
 
         for elid, elLine in self.oesDict.items():
             elObj = elLine[0]
             for prop in ['material', 'material2']:
-                if hasattr(elObj, prop) and \
-                        getattr(elObj, prop) == self.materialsDict[matid]:
-                    setattr(elObj, prop, None)
+                if hasattr(elObj, prop):
+                    newValue = self._clear_ref_value(
+                        getattr(elObj, prop), 'material', matid)
+                    setattr(elObj, prop, newValue)
 
-        for tmpid, matobj in self.materialsDict.items():
+        for tmpid, matobj in list(self.materialsDict.items()):
             for prop in ['tLayer', 'bLayer', 'coating', 'substrate']:
-                if hasattr(matobj, prop) and \
-                        getattr(matobj, prop) == self.materialsDict[matid]:
-                    setattr(matobj, prop, None)
+                if hasattr(matobj, prop):
+                    newValue = self._clear_ref_value(
+                        getattr(matobj, prop), 'material', matid)
+                    setattr(matobj, prop, newValue)
+            if hasattr(matobj, 'materialsIndex'):
+                matobj.materialsIndex = self._clear_ref_value(
+                    matobj.materialsIndex, 'material', matid)
+
+        for matname, tmpid in list(self.matnamesToUUIDs.items()):
+            if tmpid == matid:
+                del self.matnamesToUUIDs[matname]
+                break
 
         if matid in self.materialsDict:
             del self.materialsDict[matid]
 
     def delete_fe_by_id(self, feid):
-        for fename, tmpid in self.fenamesToUUIDs.items():
-            if tmpid == feid:
-                del self.fenamesToUUIDs[fename]
-                break
+        if feid not in self.fesDict:
+            for fename, tmpid in list(self.fenamesToUUIDs.items()):
+                if tmpid == feid:
+                    del self.fenamesToUUIDs[fename]
+                    break
+            return
 
         for elid, elLine in self.oesDict.items():
             elObj = elLine[0]
             for prop in ['figureError']:
-                if hasattr(elObj, prop) and \
-                        getattr(elObj, prop) == self.fesDict[feid]:
-                    setattr(elObj, prop, None)
+                if hasattr(elObj, prop):
+                    newValue = self._clear_ref_value(
+                        getattr(elObj, prop), 'figureError', feid)
+                    setattr(elObj, prop, newValue)
 
-        for tmpid, feobj in self.fesDict.items():
+        for tmpid, feobj in list(self.fesDict.items()):
             for prop in ['baseFE']:
-                if hasattr(feobj, prop) and \
-                        getattr(feobj, prop) == self.fesDict[feid]:
-                    setattr(feobj, prop, None)
+                if hasattr(feobj, prop):
+                    newValue = self._clear_ref_value(
+                        getattr(feobj, prop), 'figureError', feid)
+                    setattr(feobj, prop, newValue)
+
+        for fename, tmpid in list(self.fenamesToUUIDs.items()):
+            if tmpid == feid:
+                del self.fenamesToUUIDs[fename]
+                break
 
         if feid in self.fesDict:
             del self.fesDict[feid]
