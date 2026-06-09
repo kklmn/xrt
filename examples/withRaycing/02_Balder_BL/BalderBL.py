@@ -61,7 +61,8 @@ def build_beamline(nrays=raycing.nrays, hkl=(1, 1, 1), stripe='Si',
     beamLine.fsm0 = rsc.Screen(beamLine, 'FSM0', (0, 15000, height))
     beamLine.feFixedMask = ra.RectangularAperture(
         beamLine, 'FEFixedMask', (0, 15750, height),
-        ('left', 'right', 'bottom', 'top'), [-3.15, 3.15, -0.7875, 0.7875])
+        blades={'left': -3.15, 'right': 3.15,
+                'bottom': -0.7875, 'top': 0.7875})
     beamLine.fsmFE = rsc.Screen(beamLine, 'FSM-FE', (0, 16000, height))
 
     beamLine.filter1 = roe.Plate(
@@ -92,11 +93,12 @@ def build_beamline(nrays=raycing.nrays, hkl=(1, 1, 1), stripe='Si',
         limPhysX2=(-10, 10), limPhysY2=(-90, 90), alarmLevel=0.)
 
     beamLine.BSBlock = ra.RectangularAperture(
-        beamLine, 'BSBlock', (0, 29100, height), ('bottom',),
-        (22,), alarmLevel=0.)
+        beamLine, 'BSBlock', (0, 29100, height),
+        blades={'bottom': 22}, alarmLevel=0.)
     beamLine.slitAfterDCM = ra.RectangularAperture(
         beamLine, 'SlitAfterDCM', (0, 29200, height),
-        ('left', 'right', 'bottom', 'top'), [-7, 7, -2, 2], alarmLevel=0.5)
+        blades={'left': -7, 'right': 7, 'bottom': -2, 'top': 2},
+        alarmLevel=0.5)
     beamLine.fsmDCM = rsc.Screen(beamLine, 'FSM-DCM', (0, 29400, height))
 
     beamLine.vfm = roe.SimpleVFM(
@@ -107,15 +109,18 @@ def build_beamline(nrays=raycing.nrays, hkl=(1, 1, 1), stripe='Si',
         positionRoll=math.pi, R=5.0e6, r=40.77, alarmLevel=0.2)
     beamLine.slitAfterVFM = ra.RectangularAperture(
         beamLine, 'SlitAfterVFM', (0, 31720, height),
-        ('left', 'right', 'bottom', 'top'), [-7, 7, -2, 2], alarmLevel=0.5)
+        blades={'left': -7, 'right': 7, 'bottom': -2, 'top': 2},
+        alarmLevel=0.5)
     beamLine.fsmVFM = rsc.Screen(beamLine, 'FSM-VFM', (0, 32000, height))
     beamLine.ohPS = ra.RectangularAperture(
         beamLine, 'OH-PS', (0, 32070, height),
-        ('left', 'right', 'bottom', 'top'), (-20, 20, 25, 55), alarmLevel=0.2)
+        blades={'left': -20, 'right': 20, 'bottom': 25, 'top': 55},
+        alarmLevel=0.2)
 
     beamLine.slitEH = ra.RectangularAperture(
         beamLine, 'slitEH', (0, 43000, height),
-        ('left', 'right', 'bottom', 'top'), [-20, 20, -7, 7], alarmLevel=0.5)
+        blades={'left': -20, 'right': 20, 'bottom': -7, 'top': 7},
+        alarmLevel=0.5)
     beamLine.fsmSample = rsc.Screen(
         beamLine, 'FSM-Sample', (0, 45863, height))
 
@@ -219,8 +224,7 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
         beamLine.vfm.R = vfmR
     fefm = beamLine.feFixedMask
     op = fefm.center[1] * aceptanceV / 2 * min(1, pitch/2e-3)
-    fefm.opening[2] = -op
-    fefm.opening[3] = op
+    fefm.blades = dict(fefm.blades, bottom=-op, top=op)
 
     beamLine.vcm.pitch = pitch
     p = raycing.distance_xy(beamLine.vcm.center, beamLine.sources[0].center)
@@ -274,10 +278,11 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
         beamLine.vfm.center,
         (beamLine.slitAfterDCM.center[0], beamLine.slitAfterDCM.center[1]))
     slitHeight = heightVFM - p * math.tan(2 * pitch)
-    dz = beamLine.slitAfterDCM.opening[3] - beamLine.slitAfterDCM.opening[2]
-    beamLine.slitAfterDCM.opening[2] = slitHeight - beamLine.height - dz/2
-    beamLine.slitAfterDCM.opening[3] = slitHeight - beamLine.height + dz/2
-    beamLine.slitAfterDCM.set_optical_limits()
+    blades = beamLine.slitAfterDCM.blades
+    dz = blades['top'] - blades['bottom']
+    beamLine.slitAfterDCM.blades = dict(
+        blades, bottom=slitHeight - beamLine.height - dz/2,
+        top=slitHeight - beamLine.height + dz/2)
 
     p = raycing.distance_xy(beamLine.vfm.center, beamLine.fsmDCM.center)
     fsmHeight = heightVFM - p * math.tan(2 * pitch)
@@ -292,10 +297,11 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
     print('VFM.R = {0:.0f}'.format(beamLine.vfm.R))
     print('VFM.r = {0:.3f}'.format(beamLine.vfm.r))
 
-    dz = beamLine.slitAfterVFM.opening[3] - beamLine.slitAfterVFM.opening[2]
-    beamLine.slitAfterVFM.opening[2] = heightVFM - beamLine.height - dz/2
-    beamLine.slitAfterVFM.opening[3] = heightVFM - beamLine.height + dz/2
-    beamLine.slitAfterVFM.set_optical_limits()
+    blades = beamLine.slitAfterVFM.blades
+    dz = blades['top'] - blades['bottom']
+    beamLine.slitAfterVFM.blades = dict(
+        blades, bottom=heightVFM - beamLine.height - dz/2,
+        top=heightVFM - beamLine.height + dz/2)
 
     p = raycing.distance_xy(beamLine.vfm.center, beamLine.sources[0].center)
     q = 1./(2 * np.sin(pitch)/beamLine.vfm.r - 1./p)
@@ -307,12 +313,12 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
         (beamLine.slitEH.center[0], beamLine.slitEH.center[1]),
         beamLine.vfm.center)
     s = abs(1. - qr / q) * p * aceptanceH / 2
-    beamLine.slitEH.opening[0] = -s * 1.2
-    beamLine.slitEH.opening[1] = s * 1.2
-    dz = beamLine.slitEH.opening[3] - beamLine.slitEH.opening[2]
-    beamLine.slitEH.opening[2] = heightVFM - beamLine.height - dz/2
-    beamLine.slitEH.opening[3] = heightVFM - beamLine.height + dz/2
-    beamLine.slitEH.set_optical_limits()
+    blades = beamLine.slitEH.blades
+    dz = blades['top'] - blades['bottom']
+    beamLine.slitEH.blades = dict(
+        blades, left=-s * 1.2, right=s * 1.2,
+        bottom=heightVFM - beamLine.height - dz/2,
+        top=heightVFM - beamLine.height + dz/2)
 
 
 if __name__ == '__main__':
