@@ -1693,7 +1693,13 @@ class SurfacePlotWidget(qt.QWidget):
         self.toolbar = qt.NavigationToolbar(self.canvas, self)
 
         layout = qt.QVBoxLayout(self)
-        layout.addWidget(self.toolbar)
+        toolbarLayout = qt.QHBoxLayout()
+        toolbarLayout.addWidget(self.toolbar)
+        toolbarLayout.addStretch()
+        self.exportButton = qt.QPushButton("Export surface...", self)
+        self.exportButton.clicked.connect(self.export_surface)
+        toolbarLayout.addWidget(self.exportButton)
+        layout.addLayout(toolbarLayout)
         layout.addWidget(self.canvas)
 
         self.surface = None
@@ -1744,3 +1750,35 @@ class SurfacePlotWidget(qt.QWidget):
         self.ax.set_zlabel("Z [nm]")
 
         self.canvas.draw_idle()
+
+    def export_surface(self):
+        if self.beamLine is None:
+            return
+        surfObj = self.beamLine.fesDict.get(self.elementId)
+        if surfObj is None or not hasattr(surfObj, 'local_z_distorted'):
+            return
+
+        fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', surfObj.name)
+        saveDialog = qt.QFileDialog()
+        saveDialog.setFileMode(qt.QFileDialog.AnyFile)
+        saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
+        saveDialog.setNameFilter("DAT files (*.dat);;All files (*)")
+        saveDialog.selectNameFilter("DAT files (*.dat)")
+        saveDialog.selectFile("{0}.dat".format(fileName))
+        if not saveDialog.exec_():
+            return
+
+        fileName = saveDialog.selectedFiles()[0]
+        if not fileName.lower().endswith('.dat'):
+            fileName = "{0}.dat".format(fileName)
+
+        x = getattr(surfObj, 'x2d', None)
+        y = getattr(surfObj, 'y2d', None)
+        if x is None or y is None:
+            return
+        z = surfObj.local_z_distorted(x, y) * 1e6
+        data = np.column_stack((x.ravel(), y.ravel(), z.ravel()))
+        try:
+            np.savetxt(fileName, data)
+        except Exception as e:
+            print(e)
