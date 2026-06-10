@@ -642,9 +642,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree here
             setattr(updObj, arg0, argValue)
+            if obj_type == "mat" and arg0 == "name":
+                for matName, matId in list(
+                        self.beamline.matnamesToUUIDs.items()):
+                    if matId == oeid:
+                        del self.beamline.matnamesToUUIDs[matName]
+                self.beamline.matnamesToUUIDs[str(updObj.name)] = oeid
 
             if sender == 'OEE':
-                self.updateQookTree.emit((oeid, {arg0: argValue}))
+                updatedArgs = {arg0: getattr(updObj, arg0)}
+                if arg0 == 'fileName' and hasattr(updObj, 'materialsIndex'):
+                    updatedArgs['materialsIndex'] = updObj.materialsIndex
+                self.updateQookTree.emit((oeid, updatedArgs))
             if obj_type == "oe":
                 meshUpdateQueued = False
                 renderUpdateQueued = False
