@@ -648,6 +648,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if matId == oeid:
                         del self.beamline.matnamesToUUIDs[matName]
                 self.beamline.matnamesToUUIDs[str(updObj.name)] = oeid
+            elif obj_type == "oe" and arg0 == "name":
+                for oeName, elId in list(self.beamline.oenamesToUUIDs.items()):
+                    if elId == oeid:
+                        del self.beamline.oenamesToUUIDs[oeName]
+                self.beamline.oenamesToUUIDs[str(updObj.name)] = oeid
+            elif obj_type == "fe" and arg0 == "name":
+                for feName, feId in list(self.beamline.fenamesToUUIDs.items()):
+                    if feId == oeid:
+                        del self.beamline.fenamesToUUIDs[feName]
+                self.beamline.fenamesToUUIDs[str(updObj.name)] = oeid
 
             if sender == 'OEE':
                 updatedArgs = {arg0: getattr(updObj, arg0)}

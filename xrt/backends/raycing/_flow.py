@@ -218,6 +218,12 @@ class MessageHandler:
                             element, arg, field, value)
 
                     setattr(element, arg, value)
+                    if arg == 'name':
+                        for oeName, elId in list(
+                                self.bl.oenamesToUUIDs.items()):
+                            if elId == objuuid:
+                                del self.bl.oenamesToUUIDs[oeName]
+                        self.bl.oenamesToUUIDs[str(element.name)] = objuuid
                     if arg.lower().startswith('center'):
                         self.bl.sort_flow()
 
@@ -249,6 +255,12 @@ class MessageHandler:
             if matObj is not None:
                 for key, value in kwargs.items():
                     setattr(matObj, key, value)
+                    if key == 'name':
+                        for matName, matId in list(
+                                self.bl.matnamesToUUIDs.items()):
+                            if matId == objuuid:
+                                del self.bl.matnamesToUUIDs[matName]
+                        self.bl.matnamesToUUIDs[str(matObj.name)] = objuuid
 
             self.startEl = None
             for oeid, oeLine in self.bl.oesDict.items():
@@ -278,6 +290,12 @@ class MessageHandler:
                             feObj, arg, field, value)
 
                     setattr(feObj, arg, value)
+                    if arg == 'name':
+                        for feName, feId in list(
+                                self.bl.fenamesToUUIDs.items()):
+                            if feId == objuuid:
+                                del self.bl.fenamesToUUIDs[feName]
+                        self.bl.fenamesToUUIDs[str(feObj.name)] = objuuid
 
             for oeid, oeLine in self.bl.oesDict.items():
                 oeObj = oeLine[0]

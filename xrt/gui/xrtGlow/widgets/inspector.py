@@ -357,17 +357,11 @@ class InstanceInspector(qt.QDialog):
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         editorHint = self.getArgumentEditorHint(paramName)
-        rawValue = raycing.serialize_editor_value(
-            value, editorHint, getattr(self, 'beamLine', None))
-        if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
-            displayValue = rawValue
-        else:
-            displayValue = str(value)
-        child1 = qt.QStandardItem(displayValue)
-        child1.setData(rawValue, qt.RAW_VALUE_ROLE)
+        child1 = qt.QStandardItem()
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
             child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
+        self.set_param_item_value(child1, paramName, value)
 
         if str(paramName) == 'name' or paramName.endswith('rbk') or\
                 parent is self.itemGroups.get('Diagnostic'):
@@ -420,6 +414,30 @@ class InstanceInspector(qt.QDialog):
             parent.insertRow(source.row() + 1, row)
 
         return child0, child1
+
+    def set_param_item_value(self, item, paramName, value):
+        editorHint = item.data(qt.EDITOR_HINT_ROLE)
+        rawValue = raycing.serialize_editor_value(
+            value, editorHint, getattr(self, 'beamLine', None))
+        if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
+            displayValue = rawValue
+        else:
+            displayValue = str(value)
+
+        model = item.model()
+        signalsBlocked = model.signalsBlocked() if model is not None else None
+        if model is not None:
+            model.blockSignals(True)
+        try:
+            item.setData(rawValue, qt.RAW_VALUE_ROLE)
+            item.setText(displayValue)
+            if item.text() != rawValue:
+                item.setToolTip(rawValue)
+            else:
+                item.setToolTip('')
+        finally:
+            if model is not None:
+                model.blockSignals(signalsBlocked)
 
 #    def add_row(self, key, value):
 #        key_item = qt.QStandardItem(key)
@@ -578,7 +596,8 @@ class InstanceInspector(qt.QDialog):
                             self.original_data[key] = None
                         else:
                             self.original_data[key] = str(new_value)
-                            catItem.child(j, 1).setText(str(new_value))
+                            self.set_param_item_value(
+                                catItem.child(j, 1), key, new_value)
                         self.set_row_highlight(catItem.child(j, 0), False)
         elif self.widgetType in ['mat', 'fe']:
             rootItem = self.modelRoot
@@ -587,7 +606,8 @@ class InstanceInspector(qt.QDialog):
                 if key in self.changed_data:
                     new_value = self.changed_data[key]
                     self.original_data[key] = str(new_value)
-                    rootItem.child(j, 1).setText(str(new_value))
+                    self.set_param_item_value(
+                        rootItem.child(j, 1), key, new_value)
                     self.set_row_highlight(rootItem.child(j, 0), False)
         self.changed_data.clear()
 
@@ -630,25 +650,29 @@ class InstanceInspector(qt.QDialog):
                                 child1 = parentItem.child(i, 1)
                                 value = blades.get(field, None)
                                 if value is not None:
-                                    child1.setText(str(value))
+                                    self.set_param_item_value(
+                                        child1, f'blades.{field}', value)
                                 self.configure_blade_row(
                                     child0, child1, value is not None)
                                 break
                     for i in range(parentItem.rowCount()):
                         child0 = parentItem.child(i, 0)
                         if str(child0.text()) == 'blades rbk':
-                            parentItem.child(i, 1).setText(str(pTuple[2]))
+                            self.set_param_item_value(
+                                parentItem.child(i, 1), 'blades rbk',
+                                pTuple[2])
                             break
                     return
                 for i in range(parentItem.rowCount()):
                     child0 = parentItem.child(i, 0)
                     if str(child0.text()) == f'{pTuple[1]} rbk':
                         child1 = parentItem.child(i, 1)
-                        child1.setText(str(pTuple[2]))
+                        self.set_param_item_value(
+                            child1, f'{pTuple[1]} rbk', pTuple[2])
                     elif parentItem is self.itemGroups.get('Diagnostic') and\
                             str(child0.text()) == f'{pTuple[1]}':
                         child1 = parentItem.child(i, 1)
-                        child1.setText(str(pTuple[2]))
+                        self.set_param_item_value(child1, pTuple[1], pTuple[2])
 #                    else:  # all other params? need more conditions?
 #                        child1 = parentItem.child(i, 1)
 #                        child1.setText(str(pTuple[2]))

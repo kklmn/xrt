@@ -427,6 +427,12 @@ class XrtQook(XrtQookElements):
             matObj.name = item.text()
             self.beamLine.matnamesToUUIDs.pop(oldName, None)
             self.beamLine.matnamesToUUIDs[str(item.text())] = matId
+            outDict = {'name': str(item.text())}
+            if self.blViewer is None:
+                self.refreshFlowPanel()
+            else:
+                self.blViewer.customGlWidget.update_beamline(
+                    matId, outDict, sender='Qook')
             return
 
         parent = item.parent()
@@ -435,9 +441,17 @@ class XrtQook(XrtQookElements):
             argValue_str = self.getParamItemValue(item)
             argName = parent.child(item.row(), 0).text()
             argValue = raycing.parametrize(argValue_str)
+            refKind = raycing.ref_kind_for_arg(argName)
+            if refKind is not None:
+                argValue = raycing.normalize_ref(
+                    argValue, self.beamLine, refKind, target='uuid')
             matObj = self.beamLine.materialsDict.get(matId)
             if matObj is not None:
+                oldName = getattr(matObj, 'name', None)
                 setattr(matObj, argName, argValue)
+                if argName == 'name':
+                    self.beamLine.matnamesToUUIDs.pop(oldName, None)
+                    self.beamLine.matnamesToUUIDs[str(matObj.name)] = matId
 
             kwargs[argName] = argValue
             if argName == 'fileName' and hasattr(matObj, 'materialsIndex'):
@@ -501,7 +515,17 @@ class XrtQook(XrtQookElements):
         paintItem = self.rootFEItem.child(feItem.row(), 1)
         # renaming existing
         if item.column() == 1 and item.text() == feItem.text():
-            self.beamLine.fesDict[feId].name = item.text()
+            feObj = self.beamLine.fesDict[feId]
+            oldName = feObj.name
+            feObj.name = item.text()
+            self.beamLine.fenamesToUUIDs.pop(oldName, None)
+            self.beamLine.fenamesToUUIDs[str(item.text())] = feId
+            outDict = {'name': str(item.text())}
+            if self.blViewer is None:
+                self.refreshFlowPanel()
+            else:
+                self.blViewer.customGlWidget.update_beamline(
+                    feId, outDict, sender='Qook')
             return
 
         parent = item.parent()
@@ -510,6 +534,17 @@ class XrtQook(XrtQookElements):
             argValue_str = self.getParamItemValue(item)
             argName = parent.child(item.row(), 0).text()
             argValue = raycing.parametrize(argValue_str)
+            refKind = raycing.ref_kind_for_arg(argName)
+            if refKind is not None:
+                argValue = raycing.normalize_ref(
+                    argValue, self.beamLine, refKind, target='uuid')
+            feObj = self.beamLine.fesDict.get(feId)
+            if feObj is not None:
+                oldName = getattr(feObj, 'name', None)
+                setattr(feObj, argName, argValue)
+                if argName == 'name':
+                    self.beamLine.fenamesToUUIDs.pop(oldName, None)
+                    self.beamLine.fenamesToUUIDs[str(feObj.name)] = feId
 
             kwargs[argName] = argValue
             outDict = kwargs
@@ -624,6 +659,21 @@ class XrtQook(XrtQookElements):
                     argValue = beamToUuid(argValue_str)
                 else:
                     argValue = raycing.parametrize(argValue_str)
+
+                if not outDict:
+                    oeLine = self.beamLine.oesDict.get(oeid)
+                    if oeLine is not None:
+                        oldName = getattr(oeLine[0], 'name', None)
+                        refKind = raycing.ref_kind_for_arg(argName)
+                        if refKind is not None:
+                            argValue = raycing.normalize_ref(
+                                argValue, self.beamLine, refKind,
+                                target='uuid')
+                        setattr(oeLine[0], argName, argValue)
+                        if argName == 'name':
+                            self.beamLine.oenamesToUUIDs.pop(oldName, None)
+                            self.beamLine.oenamesToUUIDs[
+                                str(oeLine[0].name)] = oeid
 
                 kwargs[argName] = argValue
 

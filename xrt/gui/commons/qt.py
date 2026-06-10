@@ -517,6 +517,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif 'targetopencl' in argNameL:
             if hasattr(self.mainWidget, 'openClDevList'):
                 combo.addItems(self.mainWidget.openClDevList)
+                combo.setEditable(True)
                 return combo
             else:
                 return QLineEdit(parent)
@@ -658,11 +659,23 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             for cb in editor.cb:
                 cb[0].setChecked(str(cb[1]) in value)
 
+    def _setModelValue(self, model, index, value):
+        if hasattr(model, 'itemFromIndex'):
+            item = model.itemFromIndex(index)
+            if item is not None:
+                signalsBlocked = model.signalsBlocked()
+                model.blockSignals(True)
+                try:
+                    item.setData(value, RAW_VALUE_ROLE)
+                finally:
+                    model.blockSignals(signalsBlocked)
+        model.setData(index, value)
+
     def setModelData(self, editor, model, index):
         if isinstance(editor, QComboBox):
-            model.setData(index, editor.currentText())
+            self._setModelValue(model, index, editor.currentText())
         elif isinstance(editor, QLineEdit):
-            model.setData(index, editor.text())
+            self._setModelValue(model, index, editor.text())
         elif isinstance(editor, QPushButton):
             pass
         elif editor.property('fieldName') == 'kind':
@@ -672,7 +685,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     text += "'{}',".format(cb.text())
             text = text.strip(",")
             text += "]"
-            model.setData(index, text)
+            self._setModelValue(model, index, text)
         elif editor.property('fieldName') == 'rayflag':
             text = "("
             for cb in editor.cb:
@@ -680,7 +693,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     text += "{},".format(cb[1])
 #            text = text.strip(",")
             text += ")"
-            model.setData(index, text)
+            self._setModelValue(model, index, text)
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
@@ -703,7 +716,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         if (openDialog.exec_()):
             openFileName = openDialog.selectedFiles()[0]
             if openFileName:
-                index.model().setData(index, openFileName)
+                self._setModelValue(index.model(), index, openFileName)
 
     def openDictDialog(self, index, hint):
         dialog = DictEditorDialog(
@@ -712,11 +725,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             parent=self.parent())
         if dialog.exec_():
             valueText = dialog.serialized_value()
-            if hasattr(index.model(), 'itemFromIndex'):
-                item = index.model().itemFromIndex(index)
-                if item is not None:
-                    item.setData(valueText, RAW_VALUE_ROLE)
-            index.model().setData(index, valueText)
+            self._setModelValue(index.model(), index, valueText)
 
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):

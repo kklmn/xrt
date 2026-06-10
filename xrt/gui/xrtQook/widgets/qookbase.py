@@ -1658,7 +1658,10 @@ class XrtQookBase(qt.QMainWindow):
 
     def getParamItemValue(self, item):
         rawValue = item.data(qt.RAW_VALUE_ROLE)
-        return str(rawValue) if rawValue is not None else str(item.text())
+        textValue = str(item.text())
+        if rawValue is not None and str(rawValue) == textValue:
+            return str(rawValue)
+        return textValue
 
     def addProp(self, parent, propName):
         """Add non-editable Item"""
@@ -1939,10 +1942,28 @@ class XrtQookBase(qt.QMainWindow):
                                 self.iterateRename(self.rootPlotItem, oldname,
                                                    bname, ['beam'])
 
+                    nameValueItem = None
                     for j in range(child0.rowCount()):
                         if str(child0.child(j, 0).text()) == 'name':
-                            child0.child(j, 1).setText(pyname)
+                            nameValueItem = child0.child(j, 1)
+                            signalsBlocked = item.model().signalsBlocked()
+                            item.model().blockSignals(True)
+                            try:
+                                self.setParamItemValue(
+                                    nameValueItem, 'name', pyname)
+                            finally:
+                                item.model().blockSignals(signalsBlocked)
                             break
+
+                    if (nameValueItem is not None and
+                            item is not self.rootBLItem and
+                            self.blUpdateLatchOpen):
+                        if item.model() is self.beamLineModel:
+                            self.updateBeamline(nameValueItem)
+                        elif item.model() is self.materialsModel:
+                            self.updateBeamlineMaterials(nameValueItem)
+                        elif item.model() is self.fesModel:
+                            self.updateBeamlineFEs(nameValueItem)
 
                     break
 
